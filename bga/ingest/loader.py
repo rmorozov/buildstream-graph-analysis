@@ -47,10 +47,27 @@ def load_run_context(path: Path) -> RunContext:
 
 def _parse_resource(resource_str: str) -> Resource:
     """Parse a resource string into a Resource enum."""
-    try:
-        return Resource(resource_str.upper())
-    except ValueError:
-        return Resource.OTHER
+    # Map common resource names to our enum
+    resource_map = {
+        'CPU': Resource.PROCESS,
+        'PROCESS': Resource.PROCESS,
+        'DOWNLOAD': Resource.DOWNLOAD,
+        'FETCH': Resource.DOWNLOAD,
+        'UPLOAD': Resource.UPLOAD,
+        'PUSH': Resource.UPLOAD,
+        'CACHE': Resource.CACHE,
+    }
+    
+    if isinstance(resource_str, str):
+        upper_name = resource_str.upper()
+        if upper_name in resource_map:
+            return resource_map[upper_name]
+        try:
+            return Resource(upper_name)
+        except ValueError:
+            pass
+    
+    return Resource.OTHER
 
 
 def load_trace(path: Path) -> Trace:
@@ -87,6 +104,46 @@ def load_trace(path: Path) -> Trace:
                 name=phase_data['name'],
                 ts_us=phase_data['ts_us'],
                 dur_us=phase_data['dur_us'],
+            ))
+    
+    elif 'tasks' in data:
+        # Simplified tasks array format (common in tests)
+        for task_data in data.get('tasks', []):
+            key = task_data.get('key')
+            if not key:
+                continue
+            
+            try:
+                task_key = TaskKey.from_string(key)
+            except ValueError:
+                task_key = TaskKey(
+                    element_uid=key,
+                    task_kind=TaskKind.BUILD,
+                    phase='default',
+                    attempt=0,
+                )
+            
+            start_time = task_data.get('start_time_us', 0)
+            finish_time = task_data.get('finish_time_us', 0)
+            duration = task_data.get('duration_us', finish_time - start_time)
+            
+            # Parse resource profile
+            resources = []
+            resource_profile = task_data.get('resource_profile', {})
+            if isinstance(resource_profile, dict):
+                for res_name in resource_profile.keys():
+                    resources.append(_parse_resource(res_name))
+            
+            primary_resource = None
+            if resources:
+                primary_resource = resources[0]
+            
+            spans.append(TaskSpan(
+                task_key=task_key,
+                ts_us=start_time,
+                dur_us=duration,
+                resources=resources,
+                primary_resource=primary_resource,
             ))
     
     elif 'traceEvents' in data:
@@ -157,18 +214,35 @@ def load_graph(path: Path) -> Graph:
     dependencies = []
     
     for elem_data in data.get('elements', []):
+        # Support both explicit uid and key-based identification
+        uid = elem_data.get('uid', elem_data.get('key'))
+        if uid is None:
+            raise ValueError("Element must have either 'uid' or 'key' field")
+        
         elements.append(Element(
-            uid=elem_data['uid'],
+            uid=uid,
             cache_key=elem_data.get('cache_key'),
             requested_target=elem_data.get('requested_target', False),
         ))
     
-    for dep_data in data.get('dependencies', []):
-        dependencies.append(DependencyEdge(
-            predecessor=dep_data['predecessor'],
-            successor=dep_data['successor'],
-            dependency_type=dep_data.get('dependency_type', 'build'),
-        ))
+    # Support both explicit dependencies list and inline dependencies
+    if 'dependencies' in data:
+        for dep_data in data['dependencies']:
+            dependencies.append(DependencyEdge(
+                predecessor=dep_data['predecessor'],
+                successor=dep_data['successor'],
+                dependency_type=dep_data.get('dependency_type', 'build'),
+            ))
+    else:
+        # Extract dependencies from element definitions
+        for elem_data in data.get('elements', []):
+            elem_uid = elem_data.get('uid', elem_data.get('key'))
+            for dep_key in elem_data.get('dependencies', []):
+                dependencies.append(DependencyEdge(
+                    predecessor=dep_key,
+                    successor=elem_uid,
+                    dependency_type='build',
+                ))
     
     return Graph(elements=elements, dependencies=dependencies)
 
@@ -189,11 +263,18 @@ def load_all(run_dir: Path) -> tuple[RunContext, Graph, Trace]:
     
     Expected structure:
         run_dir/
-            run_context.json
+            run-context.json  (or run_context.json for legacy)
             graph.json
             trace.json
+    
+    Supports both hyphenated and underscored filenames for compatibility.
     """
-    run_context = load_run_context(run_dir / 'run_context.json')
+    # Support both naming conventions: run-context.json and run_context.json
+    run_context_path = run_dir / 'run-context.json'
+    if not run_context_path.exists():
+        run_context_path = run_dir / 'run_context.json'
+    
+    run_context = load_run_context(run_context_path)
     graph = load_graph(run_dir / 'graph.json')
     trace = load_trace(run_dir / 'trace.json')
     

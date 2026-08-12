@@ -1,22 +1,20 @@
-```gitignore
-# Compiled Python files
-*.pyc
+```
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 # Dependencies
 .venv/
 venv/
-node_modules/
+.env
+.env.local
+.env.*
 
 # Logs and temp files
 *.log
 *.tmp
-*.swp
-
-# Environment
-.env
-.env.local
-*.env.*
 
 # Editors
 .vscode/
@@ -24,19 +22,11 @@ node_modules/
 
 # Coverage reports
 .coverage
-coverage/
 htmlcov/
-
-# Python cache
-.mypy_cache/
-.pytest_cache/
+coverage/
 
 # Build artifacts
 dist/
 build/
-target/
-
-# System files
-.DS_Store
-Thumbs.db
+*.egg-info/
 ```

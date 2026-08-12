@@ -192,6 +192,7 @@ def validate_ordering(
 def clamp_task_starts(
     normalized_spans: List[Tuple[TaskSpan, int, int]],
     ready_times: Dict[str, int],
+    graph: Graph,
 ) -> List[NormalizedTask]:
     """
     Clamp task starts to their ready times (Part 3.4).
@@ -204,6 +205,7 @@ def clamp_task_starts(
     Args:
         normalized_spans: Output from normalize_timestamps
         ready_times: Ready times from compute_ready_times
+        graph: Dependency graph
         
     Returns:
         List of NormalizedTask objects

@@ -14,6 +14,7 @@ from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .graph.edg import analyze_graph
 from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
 from .replay.scheduler import ReplayScheduler, compute_replay_makespan
+from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
 
 
 class BuildEfficiencyAnalyzer:
@@ -46,6 +47,7 @@ class BuildEfficiencyAnalyzer:
         self.analysis_result: Optional[AnalysisResult] = None
         self.blame_chain_analyzer: Optional[BlameChainAnalyzer] = None
         self.replay_scheduler: Optional[ReplayScheduler] = None
+        self.utilization_analyzer: Optional[UtilizationAnalyzer] = None
     
     def load(self, run_dir: Optional[Path] = None) -> None:
         """
@@ -118,6 +120,27 @@ class BuildEfficiencyAnalyzer:
             self.normalized_tasks,
             self.run_context,
         )
+        
+        # Initialize utilization analyzer (M4)
+        if self.run_context:
+            cpu_accounting = None
+            if self.run_context.cpu_accounting:
+                cpu_accounting = CPUAccounting(
+                    effective_cpus=self.run_context.cpu_accounting.get('effective_cpus'),
+                    cgroup_quota_us=self.run_context.cpu_accounting.get('cgroup_quota_us'),
+                    cgroup_period_us=self.run_context.cpu_accounting.get('cgroup_period_us'),
+                    accounting_method=self.run_context.cpu_accounting.get('accounting_method'),
+                )
+            
+            wall_clock_us = self.run_context.wall_clock_us or 0
+            max_jobs = self.run_context.max_jobs
+            # builders would come from run_context if available
+            
+            self.utilization_analyzer = UtilizationAnalyzer(
+                cpu_accounting=cpu_accounting,
+                wall_clock_us=wall_clock_us,
+                max_jobs=max_jobs,
+            )
     
     def _compute_floors(self) -> dict:
         """
@@ -305,6 +328,7 @@ class BuildEfficiencyAnalyzer:
         3. Graph analysis (M1)
         4. Attribution (M2)
         5. Floors computation (M3)
+        6. CPU utilization analysis (M4)
         
         Returns:
             AnalysisResult with all computed metrics
@@ -345,8 +369,11 @@ class BuildEfficiencyAnalyzer:
         # Floors (M3)
         result.floors = self._compute_floors()
         
-        # Attribution (M2 - placeholder)
+        # Attribution (M2)
         result.attribution = self._compute_attribution()
+        
+        # CPU Utilization (M4)
+        result.utilisation = self._compute_utilization(occupancy_stats)
         
         # Violations
         result.violations = self.violations
@@ -377,6 +404,61 @@ class BuildEfficiencyAnalyzer:
             'ordering_violations': ordering_violations,
             'task_count': total_tasks,
         }
+    
+    def _compute_utilization(self, occupancy_stats: dict) -> dict:
+        """
+        Compute CPU utilization analysis (M4, Part 30).
+        
+        Args:
+            occupancy_stats: Occupancy statistics from sweep analysis
+            
+        Returns:
+            Dict containing utilization metrics including:
+            - effective_cpus
+            - capacity_cpu_us
+            - buckets (useful, idle, wasted, etc.)
+            - oversubscription analysis
+            - reconciliation error
+        """
+        if not self.utilization_analyzer or not self.run_context:
+            return {}
+        
+        # Build task intervals with CPU usage
+        # For now, assume each task uses 100% of one CPU during execution
+        # In a full implementation, this would come from actual CPU accounting
+        task_intervals = []
+        for task in self.normalized_tasks:
+            interval = {
+                'task_key': str(task.task_key),
+                'start_us': task.start_us,
+                'end_us': task.finish_us,
+                'cpu_usage_us': task.dur_us,  # Assume 100% CPU usage
+                'concurrent_tasks': [str(task.task_key)],
+            }
+            task_intervals.append(interval)
+        
+        # Convert occupancy segments to format expected by utilization analyzer
+        occupancy_segments = []
+        if 'segments' in occupancy_stats:
+            for seg in occupancy_stats['segments']:
+                occupancy_segments.append({
+                    'start_us': seg.start_us,
+                    'end_us': seg.end_us,
+                    'active_tasks': list(seg.active_tasks),
+                })
+        
+        # Run utilization analysis
+        util_result = self.utilization_analyzer.analyze(
+            task_intervals=task_intervals,
+            occupancy_segments=occupancy_segments,
+            retry_tasks=set(),  # Would need retry detection
+            rebuild_tasks=set(),  # Would need rebuild detection
+        )
+        
+        # Store result for later access
+        self._utilization_result = util_result
+        
+        return util_result.to_dict()
     
     def get_summary(self) -> str:
         """

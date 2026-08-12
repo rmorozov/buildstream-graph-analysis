@@ -187,7 +187,7 @@ class BuildEfficiencyAnalyzer:
         
         # Compute work per resource type
         # Simplified: assume all tasks use PROCESS
-        process_work = sum(t.duration_us for t in self.normalized_tasks)
+        process_work = sum(t.dur_us for t in self.normalized_tasks)
         process_capacity = capacities.get('PROCESS', getattr(self.run_context, 'builders', 4) if self.run_context else 4)
         
         if process_capacity > 0:

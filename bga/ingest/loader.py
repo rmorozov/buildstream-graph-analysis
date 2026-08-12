@@ -189,11 +189,18 @@ def load_all(run_dir: Path) -> tuple[RunContext, Graph, Trace]:
     
     Expected structure:
         run_dir/
-            run_context.json
+            run-context.json  (or run_context.json for legacy)
             graph.json
             trace.json
+    
+    Supports both hyphenated and underscored filenames for compatibility.
     """
-    run_context = load_run_context(run_dir / 'run_context.json')
+    # Support both naming conventions: run-context.json and run_context.json
+    run_context_path = run_dir / 'run-context.json'
+    if not run_context_path.exists():
+        run_context_path = run_dir / 'run_context.json'
+    
+    run_context = load_run_context(run_context_path)
     graph = load_graph(run_dir / 'graph.json')
     trace = load_trace(run_dir / 'trace.json')
     

@@ -268,6 +268,6 @@ def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000) -> Tupl
     violations = validate_ordering(normalized_spans, graph.dependencies, ready_times)
     
     # Step 4: Clamp starts to ready times
-    normalized_tasks = clamp_task_starts(normalized_spans, ready_times)
+    normalized_tasks = clamp_task_starts(normalized_spans, ready_times, graph)
     
     return normalized_tasks, violations

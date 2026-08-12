@@ -220,11 +220,20 @@ def clamp_task_starts(
         # Finish time is immutable
         clamped_finish = q_finish
         
+        # Get dependencies for this task from the graph
+        deps = []
+        for dep_edge in graph.dependencies:
+            if dep_edge.successor == span.task_key.element_uid:
+                # Construct predecessor task key (simplified - assumes same phase/kind)
+                pred_key = f"{dep_edge.predecessor}|{span.task_key.task_kind.value}|{span.task_key.phase}|0"
+                deps.append(pred_key)
+        
         result.append(NormalizedTask(
             task_key=span.task_key,
             ready_us=ready_us,
             start_us=clamped_start,
             finish_us=clamped_finish,
+            dependencies=deps,
             resources=span.resources,
             primary_resource=span.primary_resource,
         ))

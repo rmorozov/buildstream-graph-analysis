@@ -193,6 +193,7 @@ class NormalizedTask:
     ready_us: int  # When task became dependency-ready
     start_us: int  # When task actually started (may be clamped)
     finish_us: int  # Immutable finish time
+    dependencies: List[str] = field(default_factory=list)  # Predecessor task keys
     resources: List[Resource] = field(default_factory=list)
     primary_resource: Optional[Resource] = None
     

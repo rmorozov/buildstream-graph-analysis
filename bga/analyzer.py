@@ -5,13 +5,14 @@ Orchestrates the complete analysis pipeline as specified in the v9 specification
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List, Set
 
-from .ingest.models import AnalysisResult, Graph, RunContext, Trace
+from .ingest.models import AnalysisResult, Graph, RunContext, Trace, PhaseSpan
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .graph.edg import analyze_graph
+from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
 
 
 class BuildEfficiencyAnalyzer:
@@ -42,6 +43,7 @@ class BuildEfficiencyAnalyzer:
         self.normalized_tasks = []
         self.violations = []
         self.analysis_result: Optional[AnalysisResult] = None
+        self.blame_chain_analyzer: Optional[BlameChainAnalyzer] = None
     
     def load(self, run_dir: Optional[Path] = None) -> None:
         """
@@ -100,6 +102,14 @@ class BuildEfficiencyAnalyzer:
             self.graph,
             epsilon_us,
         )
+        
+        # Initialize blame chain analyzer with normalized tasks
+        phase_spans = self.trace.phases if self.trace else []
+        self.blame_chain_analyzer = BlameChainAnalyzer(
+            self.normalized_tasks,
+            self.run_context,
+            phase_spans,
+        )
     
     def _compute_floors(self) -> dict:
         """
@@ -141,25 +151,96 @@ class BuildEfficiencyAnalyzer:
     
     def _compute_attribution(self) -> dict:
         """
-        Compute measured attribution (Part 11, M2).
+        Compute measured attribution using blame chain (Part 11, M2).
         
-        Currently returns placeholder - full blame-chain implementation
-        is part of M2 milestone.
+        Categories:
+        - EXECUTION_ON_CHAIN: Execution on the dependency blame chain
+        - DEPENDENCY_WAIT: Time waiting for dependencies
+        - RESOURCE_WAIT: Time waiting for resources
+        - SCHEDULER_WAIT: Time waiting for scheduler dispatch
+        - IDLE: Unexplained idle time
+        - RETRY_WAIT: Time due to retry sequencing
+        - UNTRACKED_HEAD: Time before first task
+        - UNTRACKED_TAIL: Time after last task
         
         Returns:
-            Dict containing attribution by category
+            Dict containing attribution by category in microseconds
         """
-        # Placeholder for M2 implementation
-        return {
-            'execution_on_chain_us': 0,
-            'dependency_wait_us': 0,
-            'resource_wait_us': 0,
-            'scheduler_wait_us': 0,
-            'idle_us': 0,
-            'retry_wait_us': 0,
-            'untracked_head_us': 0,
-            'untracked_tail_us': 0,
+        if not self.normalized_tasks or not self.blame_chain_analyzer or not self.graph:
+            return {
+                'execution_on_chain_us': 0,
+                'dependency_wait_us': 0,
+                'resource_wait_us': 0,
+                'scheduler_wait_us': 0,
+                'idle_us': 0,
+                'retry_wait_us': 0,
+                'untracked_head_us': 0,
+                'untracked_tail_us': 0,
+            }
+        
+        # Get graph analysis for depths and predecessors
+        graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
+        
+        # Build explicit predecessor map from graph
+        # In a full implementation, this would come from the graph structure
+        explicit_predecessors: Dict[str, List[str]] = {}
+        for dep in self.graph.dependencies:
+            # Map element-level deps to task-level
+            # Simplified: assume one task per element for now
+            succ_key = None
+            pred_key = None
+            for task in self.normalized_tasks:
+                if task.task_key.element_uid == dep.successor:
+                    succ_key = str(task.task_key)
+                if task.task_key.element_uid == dep.predecessor:
+                    pred_key = str(task.task_key)
+            
+            if succ_key:
+                if succ_key not in explicit_predecessors:
+                    explicit_predecessors[succ_key] = []
+                if pred_key:
+                    explicit_predecessors[succ_key].append(pred_key)
+        
+        # Build finish time map
+        task_finish_times: Dict[str, int] = {
+            str(t.task_key): t.finish_us
+            for t in self.normalized_tasks
         }
+        
+        # Use unweighted depth as proxy for task depths
+        task_depths: Dict[str, int] = {}
+        for task in self.normalized_tasks:
+            elem_uid = task.task_key.element_uid
+            task_depths[str(task.task_key)] = graph_analysis['unweighted_depth'].get(elem_uid, 0)
+        
+        # Compute full attribution
+        blame_chain, task_attributions, segments = self.blame_chain_analyzer.compute_full_attribution(
+            explicit_predecessors,
+            task_finish_times,
+            task_depths,
+        )
+        
+        # Reconcile attribution
+        reconciled = self.blame_chain_analyzer.reconcile_attribution(segments)
+        
+        # Build result with all categories
+        result = {
+            'execution_on_chain_us': reconciled.get('EXECUTION_ON_CHAIN', 0),
+            'dependency_wait_us': reconciled.get('DEPENDENCY_WAIT', 0),
+            'resource_wait_us': reconciled.get('RESOURCE_WAIT', 0),
+            'scheduler_wait_us': reconciled.get('SCHEDULER_WAIT', 0),
+            'idle_us': reconciled.get('IDLE', 0),
+            'retry_wait_us': reconciled.get('RETRY_WAIT', 0),
+            'untracked_head_us': 0,  # Would need wall_start comparison
+            'untracked_tail_us': 0,  # Would need wall_end comparison
+        }
+        
+        # Store detailed attribution for later use
+        self._task_attributions = task_attributions
+        self._blame_chain = blame_chain
+        self._attribution_segments = segments
+        
+        return result
     
     def analyze(self) -> AnalysisResult:
         """

@@ -15,6 +15,7 @@ from .graph.edg import analyze_graph
 from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
 from .replay.scheduler import ReplayScheduler, compute_replay_makespan
 from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
+from .diagnostics import DiagnosticsAnalyzer, analyze_diagnostics, DiagnosticsResult
 
 
 class BuildEfficiencyAnalyzer:
@@ -329,6 +330,7 @@ class BuildEfficiencyAnalyzer:
         4. Attribution (M2)
         5. Floors computation (M3)
         6. CPU utilization analysis (M4)
+        7. Advanced diagnostics (M5)
         
         Returns:
             AnalysisResult with all computed metrics
@@ -374,6 +376,9 @@ class BuildEfficiencyAnalyzer:
         
         # CPU Utilization (M4)
         result.utilisation = self._compute_utilization(occupancy_stats)
+        
+        # Advanced Diagnostics (M5)
+        result.signals.update(self._compute_diagnostics(occupancy_stats, graph_analysis))
         
         # Violations
         result.violations = self.violations
@@ -459,6 +464,135 @@ class BuildEfficiencyAnalyzer:
         self._utilization_result = util_result
         
         return util_result.to_dict()
+    
+    def _compute_diagnostics(self, occupancy_stats: dict, graph_analysis: dict) -> dict:
+        """
+        Compute advanced diagnostics (M5, Parts 20-29).
+        
+        Args:
+            occupancy_stats: Occupancy statistics from sweep analysis
+            graph_analysis: Graph analysis results
+            
+        Returns:
+            Dict containing diagnostic metrics including:
+            - wall_clock_share
+            - ready_queue
+            - blast_radius
+            - criticality_probability
+            - fetch_build_overlap
+            - duration_variability
+            - leaf_analysis
+        """
+        if not self.normalized_tasks or not graph_analysis:
+            return {}
+        
+        # Get blame chain and critical path from attribution/graph
+        blame_chain = None
+        if hasattr(self, '_blame_chain'):
+            blame_chain = [str(t) for t in self._blame_chain]
+        
+        critical_path = graph_analysis.get('critical_path', [])
+        slack = graph_analysis.get('slack', {})
+        
+        # Convert occupancy segments
+        occupancy_segments = []
+        if 'segments' in occupancy_stats:
+            for seg in occupancy_stats['segments']:
+                occupancy_segments.append({
+                    'start_us': seg.start_us,
+                    'end_us': seg.end_us,
+                    'active_tasks': list(seg.active_tasks),
+                })
+        
+        # Resource capacities
+        resource_caps = {}
+        if self.run_context:
+            resource_caps = self.run_context.resource_capacities or {}
+        
+        # Requested targets (would come from graph metadata)
+        requested_targets = None
+        
+        # Historical durations (not available in single-run analysis)
+        historical_durations = None
+        
+        # Run diagnostics analysis
+        diag_result = analyze_diagnostics(
+            normalized_tasks=self.normalized_tasks,
+            graph_analysis=graph_analysis,
+            blame_chain=blame_chain,
+            critical_path=critical_path,
+            slack=slack,
+            occupancy_segments=occupancy_segments,
+            resource_capacities=resource_caps,
+            requested_targets=requested_targets,
+            historical_durations=historical_durations,
+        )
+        
+        # Store for later access
+        self._diagnostics_result = diag_result
+        
+        # Convert to signals dict format
+        signals = {}
+        
+        # Wall-clock share (Part 20)
+        if diag_result.wall_clock_shares:
+            signals['wall_clock_share'] = {
+                s.task_key: s.wall_clock_share_us for s in diag_result.wall_clock_shares
+            }
+        
+        # Ready queue (Part 21)
+        if diag_result.ready_queue:
+            signals['ready_queue'] = {
+                'average_depth': diag_result.ready_queue.average_depth,
+                'peak_depth': diag_result.ready_queue.peak_depth,
+                'nonzero_fraction': diag_result.ready_queue.nonzero_fraction,
+            }
+        
+        # Blast radius (Part 25)
+        if diag_result.blast_radius:
+            signals['blast_radius'] = {
+                br.element_uid: {
+                    'downstream_count': br.downstream_count,
+                    'weighted_duration_us': br.downstream_weighted_duration_us,
+                    'is_leaf': br.is_leaf,
+                    'risk_score': br.risk_score,
+                }
+                for br in diag_result.blast_radius
+            }
+            signals['top_blast_radius'] = [
+                br.element_uid for br in diag_result.top_blast_radius_elements[:5]
+            ]
+        
+        # Criticality probability (Part 26)
+        if diag_result.criticality_probabilities:
+            signals['criticality_probability'] = {
+                cp.element_uid: {
+                    'probability': cp.probability,
+                    'observed_critical': cp.observed_critical,
+                    'slack_us': cp.observed_slack_us,
+                }
+                for cp in diag_result.criticality_probabilities
+            }
+        
+        # Fetch/build overlap (Part 28)
+        if diag_result.fetch_build_overlap:
+            signals['fetch_build_overlap'] = {
+                'overlap_us': diag_result.fetch_build_overlap.overlap_us,
+                'fetch_prefix_us': diag_result.fetch_build_overlap.fetch_only_prefix_us,
+                'build_suffix_us': diag_result.fetch_build_overlap.build_only_suffix_us,
+                'fraction': diag_result.fetch_build_overlap.overlap_fraction,
+            }
+        
+        # Leaf analysis (Part 24)
+        if diag_result.leaf_analysis:
+            signals['leaf_analysis'] = {
+                'leaves': [
+                    la.element_uid for la in diag_result.leaf_analysis if la.is_leaf
+                ],
+                'deferrable_count': len(diag_result.deferrable_leaves),
+            }
+        
+        return signals
     
     def get_summary(self) -> str:
         """

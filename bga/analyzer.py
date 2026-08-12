@@ -16,6 +16,7 @@ from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
 from .replay.scheduler import ReplayScheduler, compute_replay_makespan
 from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
 from .diagnostics import DiagnosticsAnalyzer, analyze_diagnostics, DiagnosticsResult
+from .structural import StructuralAnalyzer, StructuralAnalysisResult
 
 
 class BuildEfficiencyAnalyzer:
@@ -331,6 +332,7 @@ class BuildEfficiencyAnalyzer:
         5. Floors computation (M3)
         6. CPU utilization analysis (M4)
         7. Advanced diagnostics (M5)
+        8. Structural analysis (M6)
         
         Returns:
             AnalysisResult with all computed metrics
@@ -379,6 +381,9 @@ class BuildEfficiencyAnalyzer:
         
         # Advanced Diagnostics (M5)
         result.signals.update(self._compute_diagnostics(occupancy_stats, graph_analysis))
+        
+        # Structural Analysis (M6)
+        result.structural = self._compute_structural_analysis()
         
         # Violations
         result.violations = self.violations
@@ -609,6 +614,78 @@ class BuildEfficiencyAnalyzer:
             }
         
         return signals
+    
+    def _compute_structural_analysis(self) -> dict:
+        """
+        Compute structural analysis (M6, Parts 31-39).
+        
+        Returns:
+            Dict containing structural metrics including:
+            - metrics (graph topology, critical path structure, parallelism)
+            - bottleneck (choke points, resource contention)
+            - parallelism (level-by-level profile)
+            - sensitivity (improvement opportunities)
+            - deferrability (leaf deferral analysis)
+        """
+        if not self.graph or len(self.normalized_tasks) == 0:
+            return {}
+        
+        # Create task dictionary keyed by element UID
+        tasks_dict = {t.element_uid: t for t in self.normalized_tasks}
+        
+        # Initialize structural analyzer
+        from bga.graph.edg import ElementDependencyGraph
+        edg = ElementDependencyGraph(self.graph, self.normalized_tasks)
+        structural_analyzer = StructuralAnalyzer(edg, tasks_dict)
+        
+        # Run full structural analysis
+        result = structural_analyzer.run_full_analysis(historical_runs=None)
+        
+        # Convert to serializable dict format
+        return {
+            'metrics': {
+                'num_elements': result.metrics.num_elements,
+                'num_edges': result.metrics.num_edges,
+                'max_depth': result.metrics.max_depth,
+                'avg_fanout': result.metrics.avg_fanout,
+                'avg_fanin': result.metrics.avg_fanin,
+                'critical_path_length': result.metrics.critical_path_length,
+                'critical_path_ratio': result.metrics.critical_path_ratio,
+                'max_parallelism': result.metrics.max_parallelism,
+                'avg_parallelism': result.metrics.avg_parallelism,
+                'cyclomatic_complexity': result.metrics.cyclomatic_complexity,
+                'serialization_ratio': result.metrics.serialization_ratio,
+            },
+            'bottleneck': {
+                'choke_points': result.bottleneck.choke_points,
+                'choke_point_impact': result.bottleneck.choke_point_impact,
+                'resource_contention': result.bottleneck.resource_contention,
+                'longest_serial_chain': result.bottleneck.longest_serial_chain,
+                'serial_chain_length': result.bottleneck.serial_chain_length,
+                'high_fanin_elements': result.bottleneck.high_fanin_elements[:5],
+                'high_fanout_elements': result.bottleneck.high_fanout_elements[:5],
+            },
+            'parallelism': {
+                'levels': result.parallelism.levels,
+                'width_at_level': result.parallelism.width_at_level,
+                'max_width': result.parallelism.max_width,
+                'min_width': result.parallelism.min_width,
+                'mean_width': result.parallelism.mean_width,
+                'parallelism_efficiency': result.parallelism.parallelism_efficiency,
+            },
+            'sensitivity': {
+                'top_opportunities': result.sensitivity.top_opportunities[:5],
+                'total_improvable_time_us': result.sensitivity.total_improvable_time_us,
+                'best_case_speedup': result.sensitivity.best_case_speedup,
+            },
+            'deferrability': {
+                'deferrable_leaves': result.deferrability.deferrable_leaves,
+                'non_deferrable_leaves': result.deferrability.non_deferrable_leaves,
+                'recommended_deferrals': result.deferrability.recommended_deferrals,
+                'total_deferrable_work_us': result.deferrability.total_deferrable_work_us,
+            },
+            'summary': result.summary,
+        }
     
     def get_summary(self) -> str:
         """

@@ -13,6 +13,7 @@ from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .graph.edg import analyze_graph
 from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
+from .replay.scheduler import ReplayScheduler, compute_replay_makespan
 
 
 class BuildEfficiencyAnalyzer:
@@ -44,6 +45,7 @@ class BuildEfficiencyAnalyzer:
         self.violations = []
         self.analysis_result: Optional[AnalysisResult] = None
         self.blame_chain_analyzer: Optional[BlameChainAnalyzer] = None
+        self.replay_scheduler: Optional[ReplayScheduler] = None
     
     def load(self, run_dir: Optional[Path] = None) -> None:
         """
@@ -110,13 +112,25 @@ class BuildEfficiencyAnalyzer:
             self.run_context,
             phase_spans,
         )
+        
+        # Initialize replay scheduler
+        self.replay_scheduler = ReplayScheduler(
+            self.normalized_tasks,
+            self.run_context,
+        )
     
     def _compute_floors(self) -> dict:
         """
-        Compute certified and advisory floors (Part 14-16).
+        Compute certified and advisory floors (Part 14-17).
         
         Returns:
-            Dict containing floor metrics
+            Dict containing floor metrics including:
+            - t_infinity_observed: Critical path length with observed durations
+            - t_infinity_cold: Critical path with cold durations (advisory)
+            - lb: Lower bound = max(T∞, resource bounds, serialization bounds)
+            - certified_headroom: H - LB
+            - t_c: Replay makespan (Part 18)
+            - model_slack: T_C - LB
         """
         if not self.normalized_tasks:
             return {
@@ -124,6 +138,8 @@ class BuildEfficiencyAnalyzer:
                 't_infinity_cold': None,
                 'lb': None,
                 'certified_headroom': None,
+                't_c': None,
+                'model_slack': None,
             }
         
         # Get task horizon
@@ -133,20 +149,57 @@ class BuildEfficiencyAnalyzer:
         graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
         t_infinity_observed = graph_analysis['critical_path_length']
         
-        # Compute capacity lower bound (simplified - Part 16)
+        # Compute capacity lower bound (Part 16)
         # LB = max(T∞,observed, max_p(W_p / C_p), serialization bounds)
+        
+        # Start with T∞ as baseline
         lb = t_infinity_observed
         
-        # For now, just use T∞ as LB
-        # Full implementation would add resource-area bounds
+        # Add resource-area bounds if we have capacity info
+        if self.run_context and hasattr(self.run_context, 'resource_capacities'):
+            capacities = self.run_context.resource_capacities or {}
+        else:
+            capacities = {}
+        
+        # Compute work per resource type
+        # Simplified: assume all tasks use PROCESS
+        process_work = sum(t.duration_us for t in self.normalized_tasks)
+        process_capacity = capacities.get('PROCESS', getattr(self.run_context, 'builders', 4) if self.run_context else 4)
+        
+        if process_capacity > 0:
+            resource_lb = process_work // process_capacity
+            lb = max(lb, resource_lb)
+        
+        # TODO: Add DOWNLOAD/UPLOAD work bounds
+        # TODO: Add exclusive serialization bounds
         
         certified_headroom = max(0, horizon_us - lb)
+        
+        # Compute replay makespan T_C (Part 18)
+        t_c = None
+        model_slack = None
+        
+        if self.replay_scheduler:
+            # Use default capacities for replay
+            default_caps = {
+                'PROCESS': process_capacity,
+                'DOWNLOAD': capacities.get('DOWNLOAD', getattr(self.run_context, 'fetchers', 2) if self.run_context else 2),
+                'UPLOAD': capacities.get('UPLOAD', getattr(self.run_context, 'pushers', 2) if self.run_context else 2),
+            }
+            
+            replay_result = self.replay_scheduler.replay(default_caps)
+            t_c = replay_result.makespan_us
+            
+            # Model slack = T_C - LB (Part 18)
+            model_slack = max(0, t_c - lb)
         
         return {
             't_infinity_observed': t_infinity_observed,
             't_infinity_cold': None,  # Requires historical data (M6)
             'lb': lb,
             'certified_headroom': certified_headroom,
+            't_c': t_c,
+            'model_slack': model_slack,
         }
     
     def _compute_attribution(self) -> dict:

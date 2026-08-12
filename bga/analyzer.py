@@ -446,10 +446,18 @@ class BuildEfficiencyAnalyzer:
         occupancy_segments = []
         if 'segments' in occupancy_stats:
             for seg in occupancy_stats['segments']:
+                # Segments are tuples: (start_us, end_us, active_tasks_set, resource_counts_dict)
+                if isinstance(seg, tuple):
+                    start_us, end_us, active_tasks, _ = seg
+                else:
+                    start_us = seg.start_us
+                    end_us = seg.end_us
+                    active_tasks = seg.active_tasks
+                
                 occupancy_segments.append({
-                    'start_us': seg.start_us,
-                    'end_us': seg.end_us,
-                    'active_tasks': list(seg.active_tasks),
+                    'start_us': start_us,
+                    'end_us': end_us,
+                    'active_tasks': list(active_tasks),
                 })
         
         # Run utilization analysis
@@ -498,10 +506,18 @@ class BuildEfficiencyAnalyzer:
         occupancy_segments = []
         if 'segments' in occupancy_stats:
             for seg in occupancy_stats['segments']:
+                # Segments are tuples: (start_us, end_us, active_tasks_set, resource_counts_dict)
+                if isinstance(seg, tuple):
+                    start_us, end_us, active_tasks, _ = seg
+                else:
+                    start_us = seg.start_us
+                    end_us = seg.end_us
+                    active_tasks = seg.active_tasks
+                
                 occupancy_segments.append({
-                    'start_us': seg.start_us,
-                    'end_us': seg.end_us,
-                    'active_tasks': list(seg.active_tasks),
+                    'start_us': start_us,
+                    'end_us': end_us,
+                    'active_tasks': list(active_tasks),
                 })
         
         # Resource capacities

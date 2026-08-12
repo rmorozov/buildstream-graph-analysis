@@ -353,7 +353,7 @@ class DiagnosticsAnalyzer:
             task_key = str(task.task_key)
             result.append(WallClockShare(
                 task_key=task_key,
-                execution_duration_us=task.duration_us,
+                execution_duration_us=task.dur_us,
                 wall_clock_share_us=shares.get(task_key, 0.0),
             ))
         
@@ -464,7 +464,7 @@ class DiagnosticsAnalyzer:
         element_durations: Dict[str, int] = defaultdict(int)
         for task in self.tasks:
             elem_uid = task.task_key.element_uid
-            element_durations[elem_uid] += task.duration_us
+            element_durations[elem_uid] += task.dur_us
         
         results = []
         for elem_uid in downstream_counts.keys():
@@ -524,7 +524,7 @@ class DiagnosticsAnalyzer:
         
         # Get base durations
         base_durations: Dict[str, int] = {
-            str(t.task_key): t.duration_us for t in self.tasks
+            str(t.task_key): t.dur_us for t in self.tasks
         }
         
         # Track critical path appearances

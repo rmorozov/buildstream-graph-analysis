@@ -47,10 +47,27 @@ def load_run_context(path: Path) -> RunContext:
 
 def _parse_resource(resource_str: str) -> Resource:
     """Parse a resource string into a Resource enum."""
-    try:
-        return Resource(resource_str.upper())
-    except ValueError:
-        return Resource.OTHER
+    # Map common resource names to our enum
+    resource_map = {
+        'CPU': Resource.PROCESS,
+        'PROCESS': Resource.PROCESS,
+        'DOWNLOAD': Resource.DOWNLOAD,
+        'FETCH': Resource.DOWNLOAD,
+        'UPLOAD': Resource.UPLOAD,
+        'PUSH': Resource.UPLOAD,
+        'CACHE': Resource.CACHE,
+    }
+    
+    if isinstance(resource_str, str):
+        upper_name = resource_str.upper()
+        if upper_name in resource_map:
+            return resource_map[upper_name]
+        try:
+            return Resource(upper_name)
+        except ValueError:
+            pass
+    
+    return Resource.OTHER
 
 
 def load_trace(path: Path) -> Trace:
@@ -87,6 +104,46 @@ def load_trace(path: Path) -> Trace:
                 name=phase_data['name'],
                 ts_us=phase_data['ts_us'],
                 dur_us=phase_data['dur_us'],
+            ))
+    
+    elif 'tasks' in data:
+        # Simplified tasks array format (common in tests)
+        for task_data in data.get('tasks', []):
+            key = task_data.get('key')
+            if not key:
+                continue
+            
+            try:
+                task_key = TaskKey.from_string(key)
+            except ValueError:
+                task_key = TaskKey(
+                    element_uid=key,
+                    task_kind=TaskKind.BUILD,
+                    phase='default',
+                    attempt=0,
+                )
+            
+            start_time = task_data.get('start_time_us', 0)
+            finish_time = task_data.get('finish_time_us', 0)
+            duration = task_data.get('duration_us', finish_time - start_time)
+            
+            # Parse resource profile
+            resources = []
+            resource_profile = task_data.get('resource_profile', {})
+            if isinstance(resource_profile, dict):
+                for res_name in resource_profile.keys():
+                    resources.append(_parse_resource(res_name))
+            
+            primary_resource = None
+            if resources:
+                primary_resource = resources[0]
+            
+            spans.append(TaskSpan(
+                task_key=task_key,
+                ts_us=start_time,
+                dur_us=duration,
+                resources=resources,
+                primary_resource=primary_resource,
             ))
     
     elif 'traceEvents' in data:

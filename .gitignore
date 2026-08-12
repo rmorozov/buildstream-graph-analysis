@@ -8,7 +8,25 @@ __pycache__/
 # Dependencies
 .venv/
 venv/
-env/
 .env
+.env.local
 .env.*
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage reports
+.coverage
+htmlcov/
+coverage/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
 ```

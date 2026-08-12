@@ -17,6 +17,8 @@ from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 import random
 
+from bga.ingest.models import TaskKind
+
 
 @dataclass(frozen=True)
 class WallClockShare:
@@ -596,8 +598,8 @@ class DiagnosticsAnalyzer:
             return None
         
         # Separate FETCH and BUILD tasks
-        fetch_tasks = [t for t in self.tasks if t.task_key.kind == 'FETCH']
-        build_tasks = [t for t in self.tasks if t.task_key.kind == 'BUILD']
+        fetch_tasks = [t for t in self.tasks if t.task_key.task_kind == TaskKind.FETCH]
+        build_tasks = [t for t in self.tasks if t.task_key.task_kind == TaskKind.BUILD]
         
         if not fetch_tasks or not build_tasks:
             return None
@@ -663,12 +665,22 @@ class DiagnosticsAnalyzer:
             )
             is_reachable = elem_uid in reachable_from_targets
             
+            # Compute deferrability
+            is_potentially_deferrable = is_leaf and not is_reachable
+            recommendation = None
+            if is_potentially_deferrable:
+                recommendation = "Consider deferring or decoupling from main build"
+            else:
+                recommendation = "Required by target or not a leaf"
+            
             results.append(LeafAnalysis(
                 element_uid=elem_uid,
                 is_leaf=is_leaf,
                 is_on_blame_chain=on_blame_chain,
                 is_on_critical_path=on_critical_path,
                 is_reachable_from_target=is_reachable,
+                is_potentially_deferrable=is_potentially_deferrable,
+                recommendation=recommendation,
             ))
         
         return results

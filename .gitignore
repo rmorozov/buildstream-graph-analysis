@@ -1,4 +1,3 @@
-```gitignore
 # Python cache files
 __pycache__/
 *.pyc
@@ -11,6 +10,11 @@ venv/
 env/
 pip-log.txt
 pip-delete-this-directory.txt
+
+.env
+.env.local
+.env.*
+
 
 # Build artifacts
 build/
@@ -26,4 +30,19 @@ dist/
 .env
 .env.local
 .env.*
+*.tmp
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage reports
+.coverage
+htmlcov/
+coverage/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
 ```

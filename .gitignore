@@ -1,5 +1,5 @@
-```
-# Python
+```gitignore
+# Python cache files
 __pycache__/
 *.pyc
 *.pyo
@@ -9,28 +9,21 @@ __pycache__/
 .venv/
 venv/
 env/
-.env
-.env.local
-*.env.*
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Build artifacts
+build/
+dist/
+*.egg
+*.egg-info/
+*.so
 
 # Logs
 *.log
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# Build
-build/
-dist/
-*.egg-info/
-
-# Testing
-.coverage
-htmlcov/
-.pytest_cache/
-.mypy_cache/
+# Environment variables
+.env
+.env.local
+.env.*
 ```

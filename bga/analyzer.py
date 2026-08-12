@@ -630,8 +630,8 @@ class BuildEfficiencyAnalyzer:
         if not self.graph or len(self.normalized_tasks) == 0:
             return {}
         
-        # Create task dictionary keyed by element UID
-        tasks_dict = {t.element_uid: t for t in self.normalized_tasks}
+        # Create task dictionary keyed by element UID (extract from task_key)
+        tasks_dict = {t.task_key.element_uid: t for t in self.normalized_tasks}
         
         # Initialize structural analyzer
         from bga.structural.analyzer import build_edg, ElementDependencyGraph

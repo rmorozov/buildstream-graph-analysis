@@ -231,6 +231,39 @@ def test_invariants():
         print("  PASSED\n")
 
 
+def test_structural_analysis():
+    """Test M6 structural analysis module."""
+    print("Running test_structural_analysis...")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        run_dir = create_test_run_data(Path(tmpdir))
+        
+        analyzer = BuildEfficiencyAnalyzer(run_dir)
+        analyzer.load()
+        analyzer.normalize()
+        analyzer.analyze()
+        
+        # Verify structural analysis results exist
+        assert analyzer.analysis_result.structural is not None
+        assert "metrics" in analyzer.analysis_result.structural
+        
+        metrics = analyzer.analysis_result.structural["metrics"]
+        assert "num_elements" in metrics
+        assert "num_edges" in metrics
+        assert "max_depth" in metrics
+        
+        # Verify bottleneck analysis
+        assert "bottleneck" in analyzer.analysis_result.structural
+        
+        # Verify parallelism profile
+        assert "parallelism" in analyzer.analysis_result.structural
+        
+        print(f"  ✓ Structural metrics: {metrics['num_elements']} elements, {metrics['num_edges']} edges")
+        print(f"  ✓ Max depth: {metrics['max_depth']}")
+        print(f"  ✓ Bottleneck analysis present: {'bottleneck' in analyzer.analysis_result.structural}")
+        print(f"  ✓ Parallelism profile present: {'parallelism' in analyzer.analysis_result.structural}")
+        print("  PASSED\n")
+
+
 def main():
     """Run all tests."""
     print("=" * 60)
@@ -244,6 +277,7 @@ def main():
         test_occupancy_computation,
         test_diagnostics,
         test_invariants,
+        test_structural_analysis,
     ]
     
     passed = 0

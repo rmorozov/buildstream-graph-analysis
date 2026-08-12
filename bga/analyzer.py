@@ -634,8 +634,8 @@ class BuildEfficiencyAnalyzer:
         tasks_dict = {t.element_uid: t for t in self.normalized_tasks}
         
         # Initialize structural analyzer
-        from bga.graph.edg import ElementDependencyGraph
-        edg = ElementDependencyGraph(self.graph, self.normalized_tasks)
+        from bga.structural.analyzer import build_edg, ElementDependencyGraph
+        edg = build_edg(self.graph)
         structural_analyzer = StructuralAnalyzer(edg, tasks_dict)
         
         # Run full structural analysis

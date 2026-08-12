@@ -17,7 +17,40 @@ from typing import Dict, List, Set, Tuple, Optional, Any
 import statistics
 
 from bga.ingest.models import NormalizedTask
-from bga.graph.edg import ElementDependencyGraph
+
+
+class ElementDependencyGraph:
+    """Wrapper for element dependency graph analysis.
+    
+    This class provides a unified interface to the graph analysis functions
+    in bga.graph.edg module.
+    """
+    
+    def __init__(self, G=None, predecessors=None, successors=None):
+        self.G = G
+        self.predecessors = predecessors or {}
+        self.successors = successors or {}
+
+
+def build_edg(graph):
+    """Build ElementDependencyGraph from a Graph object."""
+    from bga.graph.edg import build_element_graph
+    import networkx as nx
+    
+    # Build adjacency lists
+    predecessors, successors = build_element_graph(graph)
+    
+    # Build NetworkX graph
+    G = nx.DiGraph()
+    for elem_id in graph.elements:
+        G.add_node(elem_id)
+    for pred, succs in successors.items():
+        for succ in succs:
+            G.add_edge(pred, succ)
+    
+    return ElementDependencyGraph(G=G, predecessors=predecessors, successors=successors)
+
+
 from bga.structural.models import (
     StructuralMetrics,
     BottleneckAnalysis,

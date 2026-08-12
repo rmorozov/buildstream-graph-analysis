@@ -12,6 +12,7 @@ from bga.structural.models import (
     SensitivityResult,
     DeferrabilityResult,
     HistoricalTrend,
+    StructuralAnalysisResult,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "SensitivityResult",
     "DeferrabilityResult",
     "HistoricalTrend",
+    "StructuralAnalysisResult",
 ]

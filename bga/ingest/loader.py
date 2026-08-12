@@ -157,18 +157,35 @@ def load_graph(path: Path) -> Graph:
     dependencies = []
     
     for elem_data in data.get('elements', []):
+        # Support both explicit uid and key-based identification
+        uid = elem_data.get('uid', elem_data.get('key'))
+        if uid is None:
+            raise ValueError("Element must have either 'uid' or 'key' field")
+        
         elements.append(Element(
-            uid=elem_data['uid'],
+            uid=uid,
             cache_key=elem_data.get('cache_key'),
             requested_target=elem_data.get('requested_target', False),
         ))
     
-    for dep_data in data.get('dependencies', []):
-        dependencies.append(DependencyEdge(
-            predecessor=dep_data['predecessor'],
-            successor=dep_data['successor'],
-            dependency_type=dep_data.get('dependency_type', 'build'),
-        ))
+    # Support both explicit dependencies list and inline dependencies
+    if 'dependencies' in data:
+        for dep_data in data['dependencies']:
+            dependencies.append(DependencyEdge(
+                predecessor=dep_data['predecessor'],
+                successor=dep_data['successor'],
+                dependency_type=dep_data.get('dependency_type', 'build'),
+            ))
+    else:
+        # Extract dependencies from element definitions
+        for elem_data in data.get('elements', []):
+            elem_uid = elem_data.get('uid', elem_data.get('key'))
+            for dep_key in elem_data.get('dependencies', []):
+                dependencies.append(DependencyEdge(
+                    predecessor=dep_key,
+                    successor=elem_uid,
+                    dependency_type='build',
+                ))
     
     return Graph(elements=elements, dependencies=dependencies)
 

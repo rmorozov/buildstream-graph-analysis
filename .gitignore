@@ -1,5 +1,4 @@
-```
-# Python
+# Python cache files
 __pycache__/
 *.pyc
 *.pyo
@@ -8,12 +7,29 @@ __pycache__/
 # Dependencies
 .venv/
 venv/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+
 .env
 .env.local
 .env.*
 
-# Logs and temp files
+
+# Build artifacts
+build/
+dist/
+*.egg
+*.egg-info/
+*.so
+
+# Logs
 *.log
+
+# Environment variables
+.env
+.env.local
+.env.*
 *.tmp
 
 # Editors

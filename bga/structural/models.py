@@ -1,0 +1,170 @@
+"""Data models for cold structural analysis (M6).
+
+Implements data structures for:
+- Structural metrics (Part 31)
+- Bottleneck analysis (Part 32)
+- Parallelism profiles (Part 33)
+- Sensitivity results (Part 34)
+- Deferrability analysis (Part 35)
+- Historical trends (Part 36)
+"""
+
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Any
+
+
+@dataclass(frozen=True)
+class StructuralMetrics:
+    """Cold structural metrics for an element or pipeline.
+    
+    Part 31: Static analysis metrics independent of timing.
+    """
+    # Graph topology
+    num_elements: int
+    num_edges: int
+    max_depth: int
+    avg_fanout: float
+    avg_fanin: float
+    
+    # Critical path structure
+    critical_path_length: int  # Number of elements
+    critical_path_ratio: float  # critical_path_length / num_elements
+    
+    # Parallelism potential
+    max_parallelism: int  # Maximum width of any antichain
+    avg_parallelism: float  # Average width across levels
+    
+    # Complexity metrics
+    cyclomatic_complexity: int
+    serialization_ratio: float  # Elements that must run serially
+
+
+@dataclass(frozen=True)
+class BottleneckAnalysis:
+    """Bottleneck detection results.
+    
+    Part 32: Identifies structural bottlenecks that limit parallelism.
+    """
+    # Key bottlenecks
+    choke_points: List[str]  # Element keys that are choke points
+    choke_point_impact: Dict[str, int]  # Downstream count per choke point
+    
+    # Resource bottlenecks (structural)
+    resource_contention: Dict[str, List[str]]  # resource_type -> [element_keys]
+    
+    # Serialization chains
+    longest_serial_chain: List[str]
+    serial_chain_length: int
+    
+    # Fan-in/fan-out imbalances
+    high_fanin_elements: List[tuple]  # [(key, fanin_count), ...]
+    high_fanout_elements: List[tuple]  # [(key, fanout_count), ...]
+
+
+@dataclass(frozen=True)
+class ParallelismProfile:
+    """Parallelism profile across pipeline depth.
+    
+    Part 33: How parallelism varies across the pipeline.
+    """
+    # Level-by-level parallelism
+    levels: List[int]  # Depth levels
+    width_at_level: List[int]  # Number of elements at each level
+    
+    # Statistics
+    max_width: int
+    min_width: int
+    mean_width: float
+    
+    # Cumulative
+    cumulative_work: List[int]  # Total elements up to each level
+    parallelism_efficiency: float  # How well parallelism is utilized
+
+
+@dataclass(frozen=True)
+class SensitivityResult:
+    """Sensitivity analysis results.
+    
+    Part 34: How much would improving an element help overall?
+    """
+    # Per-element sensitivity
+    sensitivity_scores: Dict[str, float]  # element_key -> improvement_potential
+    
+    # Top opportunities
+    top_opportunities: List[tuple]  # [(key, score, impact), ...]
+    
+    # Aggregate metrics
+    total_improvable_time_us: int
+    best_case_speedup: float  # Theoretical max speedup if all improvable time eliminated
+    
+    # Critical path sensitivity
+    cp_sensitivity: Dict[str, float]  # How much CP changes per unit duration change
+
+
+@dataclass(frozen=True)
+class DeferrabilityResult:
+    """Deferrability analysis for leaf elements.
+    
+    Part 35: Which elements could be deferred without blocking dependents?
+    """
+    # Leaf classification
+    deferrable_leaves: List[str]  # Leaves that can be deferred
+    non_deferrable_leaves: List[str]  # Leaves that block something
+    
+    # Deferral impact
+    deferral_savings_us: Dict[str, int]  # Time saved per deferrable leaf
+    deferral_risk: Dict[str, str]  # Risk level: 'low', 'medium', 'high'
+    
+    # Recommendations
+    recommended_deferrals: List[str]  # Leaves recommended for deferral
+    total_deferrable_work_us: int
+
+
+@dataclass(frozen=True)
+class HistoricalTrend:
+    """Historical trend analysis across multiple runs.
+    
+    Part 36: How metrics evolve over time.
+    """
+    # Time series data
+    run_ids: List[str]
+    timestamps: List[int]  # Unix timestamps
+    
+    # Metric evolution
+    duration_trend: List[int]  # Total duration per run (microseconds)
+    efficiency_trend: List[float]  # Efficiency ratio per run
+    parallelism_trend: List[float]  # Avg parallelism per run
+    
+    # Statistical analysis
+    duration_slope: float  # Rate of change in duration
+    duration_volatility: float  # Standard deviation of duration
+    efficiency_slope: float
+    
+    # Anomaly detection
+    anomalies: List[dict]  # [{run_id, metric, deviation}, ...]
+    
+    # Forecasting (simple linear projection)
+    forecast_next_duration: Optional[int]
+    forecast_confidence: float  # 0.0 to 1.0
+
+
+@dataclass
+class StructuralAnalysisResult:
+    """Complete structural analysis result.
+    
+    Aggregates all M6 deliverables.
+    """
+    # Core metrics
+    metrics: StructuralMetrics
+    
+    # Analyses
+    bottleneck: BottleneckAnalysis
+    parallelism: ParallelismProfile
+    sensitivity: SensitivityResult
+    deferrability: DeferrabilityResult
+    
+    # Historical (if available)
+    historical: Optional[HistoricalTrend] = None
+    
+    # Summary
+    summary: Dict[str, Any] = field(default_factory=dict)

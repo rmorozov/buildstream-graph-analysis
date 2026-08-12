@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bga"
+version = "0.1.0"
+description = "BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "BuildStream Contributors"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+bga = "bga.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/bga"
+Documentation = "https://github.com/your-org/bga/blob/main/docs/cli.md"
+Repository = "https://github.com/your-org/bga"
+Specification = "https://github.com/your-org/bga/blob/main/docs/specification.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bga*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

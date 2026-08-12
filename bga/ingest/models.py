@@ -237,3 +237,4 @@ class AnalysisResult:
     model: dict = field(default_factory=dict)
     confidence: dict = field(default_factory=dict)
     violations: list = field(default_factory=list)
+    structural: dict = field(default_factory=dict)

@@ -48,6 +48,15 @@ from .graph import (
     analyze_graph,
     compute_critical_path,
 )
+from .structural import (
+    StructuralAnalyzer,
+    StructuralMetrics,
+    BottleneckAnalysis,
+    ParallelismProfile,
+    SensitivityResult,
+    DeferrabilityResult,
+    HistoricalTrend,
+)
 
 __all__ = [
     # Version
@@ -85,4 +94,12 @@ __all__ = [
     # Graph
     'analyze_graph',
     'compute_critical_path',
+    # Structural (M6)
+    'StructuralAnalyzer',
+    'StructuralMetrics',
+    'BottleneckAnalysis',
+    'ParallelismProfile',
+    'SensitivityResult',
+    'DeferrabilityResult',
+    'HistoricalTrend',
 ]

@@ -209,10 +209,19 @@ class BuildEfficiencyAnalyzer:
                 max_jobs=max_jobs,
             )
     
-    def _compute_floors(self) -> dict:
+    def _compute_floors(self, graph_analysis: Optional[dict] = None) -> dict:
         """
         Compute certified and advisory floors (Part 14-17).
-        
+
+        Args:
+            graph_analysis: Pre-computed analyze_graph(...) result, reused
+                from the caller (P1-21) instead of recomputing it here -
+                analyze_graph (and the compute_reachability call inside
+                it) was previously run 3 separate times per analyze()
+                call (here, in _compute_attribution, and in analyze()
+                itself) for the exact same deterministic input. Computed
+                internally only if not supplied, for standalone callers.
+
         Returns:
             Dict containing floor metrics including:
             - t_infinity_observed: Critical path length with observed durations
@@ -231,12 +240,13 @@ class BuildEfficiencyAnalyzer:
                 't_c': None,
                 'model_slack': None,
             }
-        
+
         # Get task horizon
         _, _, horizon_us = compute_task_horizon(self.normalized_tasks)
-        
+
         # Get graph analysis
-        graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
+        if graph_analysis is None:
+            graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
         t_infinity_observed = graph_analysis['critical_path_length']
         
         # Compute capacity lower bound (Part 16)
@@ -446,10 +456,10 @@ class BuildEfficiencyAnalyzer:
             'cold_confidence': 'low' if path_has_unavailable else 'high',
         }
 
-    def _compute_attribution(self) -> dict:
+    def _compute_attribution(self, graph_analysis: Optional[dict] = None) -> dict:
         """
         Compute measured attribution using blame chain (Part 11, M2).
-        
+
         Categories:
         - EXECUTION_ON_CHAIN: Execution on the dependency blame chain
         - DEPENDENCY_WAIT: Time waiting for dependencies
@@ -459,7 +469,13 @@ class BuildEfficiencyAnalyzer:
         - RETRY_WAIT: Time due to retry sequencing
         - UNTRACKED_HEAD: Time before first task
         - UNTRACKED_TAIL: Time after last task
-        
+
+        Args:
+            graph_analysis: Pre-computed analyze_graph(...) result, reused
+                from the caller (P1-21) rather than recomputed here -
+                see _compute_floors's docstring for why. Computed
+                internally only if not supplied.
+
         Returns:
             Dict containing attribution by category in microseconds
         """
@@ -474,9 +490,10 @@ class BuildEfficiencyAnalyzer:
                 'untracked_head_us': 0,
                 'untracked_tail_us': 0,
             }
-        
+
         # Get graph analysis for depths and predecessors
-        graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
+        if graph_analysis is None:
+            graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
         
         # Build explicit predecessor map from graph, at task granularity.
         #
@@ -667,7 +684,12 @@ class BuildEfficiencyAnalyzer:
             },
         }
         
-        # Graph analysis (M1)
+        # Graph analysis (M1) - computed once and reused by _compute_floors/
+        # _compute_attribution below (P1-21) instead of each recomputing it
+        # independently (previously 3x per analyze() call, tripling the
+        # cost of compute_reachability inside it - the single largest
+        # remaining hotspot after P1-16's fix).
+        graph_analysis = None
         if self.graph:
             graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
             result.signals = {
@@ -677,12 +699,12 @@ class BuildEfficiencyAnalyzer:
                 'slack': graph_analysis['slack'],
                 'unweighted_depth': graph_analysis['unweighted_depth'],
             }
-        
+
         # Floors (M3)
-        result.floors = self._compute_floors()
-        
+        result.floors = self._compute_floors(graph_analysis)
+
         # Attribution (M2)
-        result.attribution = self._compute_attribution()
+        result.attribution = self._compute_attribution(graph_analysis)
         
         # CPU Utilization (M4)
         result.utilisation = self._compute_utilization(occupancy_stats)

@@ -19,7 +19,7 @@ pip install -e .
 
 ## Testing
 
-Run all tests using the Makefile:
+The project uses pytest for testing. Run all tests using the Makefile:
 
 ```bash
 make test          # Run all tests with verbose output
@@ -32,6 +32,12 @@ Or run pytest directly:
 pytest             # Run all tests
 pytest -v          # Verbose output
 pytest --cov=bga   # With coverage report
+```
+
+Clean build artifacts and temporary files:
+
+```bash
+make clean         # Remove __pycache__, *.pyc, *.egg-info, and other temp files
 ```
 
 ## Quick Start

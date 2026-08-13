@@ -305,26 +305,39 @@ class BuildEfficiencyAnalyzer:
         # Build explicit predecessor map from graph, at task granularity.
         #
         # Element-level dependency edges (graph.dependencies) express "this
-        # element's build requires that element's build to have completed" -
-        # the real-world semantics of a BuildStream `depends:` edge. Map
-        # each edge onto the specific BUILD task of each element (not just
-        # "whichever task happened to match last", which silently produced
-        # wrong/overwritten predecessors for any element with more than one
-        # task kind - e.g. TRACK/FETCH/BUILD - and fed bogus ready-time
-        # lookups downstream). An element with no BUILD task (e.g. a FAILed
-        # or TRACK/FETCH-only run) simply contributes no edge, rather than a
-        # wrong one.
+        # element requires that element's build to have completed" - the
+        # real-world semantics of a BuildStream `depends:` edge. The
+        # predecessor side is always the specific BUILD task of the upstream
+        # element (not just "whichever task happened to match last", which
+        # silently produced wrong/overwritten predecessors for any element
+        # with more than one task kind - e.g. TRACK/FETCH/BUILD - and fed
+        # bogus ready-time lookups downstream). An upstream element with no
+        # BUILD task (e.g. a FAILed or TRACK/FETCH-only run) simply
+        # contributes no edge, rather than a wrong one.
+        #
+        # The successor side is *every* task of the downstream element, not
+        # just its BUILD task - matching bga/normalize/timestamps.py's
+        # compute_ready_times, which already gates every task kind of a
+        # dependent element on its predecessors' finish (not just BUILD).
+        # Without this, a TRACK/FETCH task's real cross-element wait had no
+        # explicit_predecessors entry, so the blame-chain walk had no way to
+        # continue into the actual responsible predecessor once it reached
+        # such a task - it just stopped, silently dropping the segment that
+        # should have explained the wait.
         build_task_by_element: Dict[str, str] = {}
+        tasks_by_element: Dict[str, List[str]] = defaultdict(list)
         for task in self.normalized_tasks:
+            key_str = str(task.task_key)
+            tasks_by_element[task.task_key.element_uid].append(key_str)
             if task.task_key.task_kind == TaskKind.BUILD:
-                build_task_by_element[task.task_key.element_uid] = str(task.task_key)
+                build_task_by_element[task.task_key.element_uid] = key_str
 
         explicit_predecessors: Dict[str, List[str]] = {}
         for dep in self.graph.dependencies:
-            succ_key = build_task_by_element.get(dep.successor)
             pred_key = build_task_by_element.get(dep.predecessor)
-
-            if succ_key and pred_key:
+            if not pred_key:
+                continue
+            for succ_key in tasks_by_element.get(dep.successor, []):
                 explicit_predecessors.setdefault(succ_key, []).append(pred_key)
         
         # Build finish time map

@@ -21,8 +21,25 @@ from ..ingest.models import (
     AttributionCategory,
     Resource,
     TaskKey,
+    TaskKind,
     RunContext,
 )
+
+# Natural intra-element task sequencing (Part 5.2's task kinds). An
+# element's BUILD cannot start before its own FETCH/PULL, which cannot
+# start before its own TRACK - but graph.json's dependency edges are
+# between *elements*, not between one element's own task kinds (Part
+# 32.2), so this ordering is never expressed as an explicit predecessor
+# edge anywhere upstream. PUSH is not a predecessor of anything else in
+# an element's own lifecycle (nothing downstream in the same element runs
+# after it) so it has no entry here as a *successor* stage.
+_PHASE_ORDER = {
+    TaskKind.TRACK: 0,
+    TaskKind.PULL: 1,
+    TaskKind.FETCH: 1,
+    TaskKind.BUILD: 2,
+    TaskKind.PUSH: 3,
+}
 
 
 @dataclass
@@ -442,7 +459,32 @@ class BlameChainAnalyzer:
                 overlapping_phases.append(phase_span.name)
         
         return overlapping_phases
-    
+
+    def _intra_element_predecessor(self, task: NormalizedTask) -> Optional[NormalizedTask]:
+        """Find the immediately-preceding same-element task in the natural
+        TRACK -> FETCH/PULL -> BUILD -> PUSH phase order (see _PHASE_ORDER),
+        if one exists. This is an unambiguous, causally-real ordering an
+        element's dependency edges (graph.json, Part 32.2) have no way to
+        express, since those are between elements, not between one
+        element's own task kinds - without it, the blame-chain walk has no
+        way to continue "into" an element's own earlier phases once its
+        inter-element predecessors are exhausted, silently dropping that
+        (real, recognized) time from the flattened timeline.
+        """
+        order = _PHASE_ORDER.get(task.task_key.task_kind)
+        if not order:
+            return None
+        element_uid = task.task_key.element_uid
+        candidates = [
+            other for other in self.tasks
+            if other.task_key.element_uid == element_uid
+            and other.task_key.attempt == task.task_key.attempt
+            and _PHASE_ORDER.get(other.task_key.task_kind, -1) < order
+        ]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda t: _PHASE_ORDER.get(t.task_key.task_kind, -1))
+
     def build_blame_chain(
         self,
         terminal_task_key: str,
@@ -494,6 +536,18 @@ class BlameChainAnalyzer:
             # would silently misreport ready time for any task outside that.
             ready_time = task.ready_us
 
+            # Extend the predecessor candidate set with the intra-element
+            # phase predecessor (P1-19), if any, so the existing tie-break
+            # (select_dependency_blame, "greatest finish time" first) can
+            # correctly choose between an inter-element dependency and the
+            # task's own earlier phase - whichever actually finished later
+            # is the one genuinely responsible for this task's start time.
+            preds = list(explicit_predecessors.get(current_key, []))
+            intra_pred = self._intra_element_predecessor(task)
+            if intra_pred is not None:
+                preds.append(str(intra_pred.task_key))
+                ready_time = max(ready_time, intra_pred.finish_us)
+
             if ready_time < task.start_us:
                 node.dependency_wait_start = ready_time
 
@@ -505,7 +559,6 @@ class BlameChainAnalyzer:
             # silently dropping every upstream task from the chain (and so
             # from the flattened timeline) whenever tasks were scheduled
             # with no gap between them.
-            preds = explicit_predecessors.get(current_key, [])
             if preds:
                 responsible = self.select_dependency_blame(
                     current_key,

@@ -223,22 +223,23 @@ def test_attribution_no_longer_produces_garbage_values(result):
     assert total <= h * 2, f"attribution total {total} is wildly larger than H {h}"
 
 
-@pytest.mark.xfail(
-    reason="P1-19: the flattened timeline only covers the single backward-walked "
-    "blame chain (BUILD-to-BUILD dependency edges); it doesn't yet cover a task's "
-    "own intra-element TRACK->FETCH->BUILD sequencing time, nor tasks entirely off "
-    "the chosen chain (parallel, non-critical-path work) - see "
-    "docs/tasks/P1-19-flattened-timeline-residual-coverage.md. On this fixture the "
-    "gap is exactly libcore.bst's own TRACK+FETCH duration (5.5s) plus every other "
-    "off-chain task's time. Remove this xfail once P1-19 lands.",
-    strict=False,
-)
 def test_attribution_identity_exact(result):
     """I4: Sigma attribution == H exactly, using the correct target (the task
     horizon, result.occupancy['horizon_us']) - not result.floors['t_infinity_observed'],
     which is the critical-path *duration* sum (Part 14.1), a different quantity
     entirely. (An earlier version of this test compared against the wrong
-    field, which also has to be fixed as part of closing this out.)
+    field, which also had to be fixed as part of closing this out.)
+
+    Regression guard for P1-19 (fixed): the blame-chain walk now considers
+    both inter-element dependency edges (extended to *every* task kind of
+    the downstream element, not just its BUILD task) and each task's own
+    intra-element phase predecessor (TRACK->FETCH->BUILD sequencing) as
+    candidates for "who is actually responsible for this wait" - since the
+    existing tie-break already picks whichever candidate finished latest,
+    the walk now naturally traces the graph's true critical path end to
+    end, which by construction spans the full task horizon for any single
+    connected component. This fixture's diamond dependency, real resource
+    contention, and multiple task kinds per element all exercise this.
     """
     h = result.occupancy["horizon_us"]
     total = _sum_attribution(result.attribution)

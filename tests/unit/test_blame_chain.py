@@ -1,7 +1,10 @@
 """Unit tests for bga.attribution.blame_chain, module-level (no full pipeline).
 
-Covers P1-02 (real scheduler-wait detection).
+Covers P1-02 (real scheduler-wait detection) and P1-01 (real resource-wait
+holder tracking).
 """
+import pytest
+
 from bga.attribution.blame_chain import BlameChainAnalyzer
 from bga.ingest.models import NormalizedTask, TaskKey, TaskKind, Resource
 
@@ -113,3 +116,85 @@ def test_resource_available_at_true_for_task_with_no_resources():
     waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[])
     analyzer = _analyzer([waiting])
     assert analyzer._resource_available_at(waiting, 100) is True
+
+
+# --- P1-01: classify_resource_wait (real holder tracking) ---------------
+
+def test_resource_wait_single_holder():
+    """Wait window [100, 200), one other task occupying PROCESS for the
+    entire window - the only possible holder, weight 1.0."""
+    waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[Resource.PROCESS])
+    holder = _task("elem-b", ready_us=0, start_us=50, finish_us=250, resources=[Resource.PROCESS])
+    analyzer = _analyzer([waiting, holder])
+
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    assert is_wait is True
+    assert info["blocking_tasks"] == {"elem-b|BUILD|BUILD|0": 1.0}
+    assert info["ambiguous"] is False
+
+
+def test_resource_wait_two_holders_split_70_30():
+    """Wait window [0, 100): holder A occupies [0, 70), holder B occupies
+    [70, 100) - time-weighted shares 0.7 / 0.3."""
+    waiting = _task("elem-a", ready_us=0, start_us=100, finish_us=200, resources=[Resource.PROCESS])
+    holder_a = _task("elem-b", ready_us=0, start_us=0, finish_us=70, resources=[Resource.PROCESS])
+    holder_b = _task("elem-c", ready_us=0, start_us=70, finish_us=200, resources=[Resource.PROCESS])
+    analyzer = _analyzer([waiting, holder_a, holder_b])
+
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    assert is_wait is True
+    blocking = info["blocking_tasks"]
+    assert blocking["elem-b|BUILD|BUILD|0"] == pytest.approx(0.7)
+    assert blocking["elem-c|BUILD|BUILD|0"] == pytest.approx(0.3)
+    assert info["ambiguous"] is False
+
+
+def test_resource_wait_no_identifiable_holder():
+    """No other task overlaps the wait window at all - blocking_tasks must
+    be the literal string "UNKNOWN", never a fabricated holder."""
+    waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[Resource.PROCESS])
+    analyzer = _analyzer([waiting])
+
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    assert is_wait is True
+    assert info["blocking_tasks"] == "UNKNOWN"
+    assert info["ambiguous"] is True
+
+
+def test_resource_wait_partial_holder_is_ambiguous():
+    """Holder only covers part of the wait window ([0, 50) of a [0, 100)
+    wait) - the identified portion is reported with its real weight, but
+    ambiguous is True since the rest of the wait is unexplained."""
+    waiting = _task("elem-a", ready_us=0, start_us=100, finish_us=200, resources=[Resource.PROCESS])
+    holder = _task("elem-b", ready_us=0, start_us=0, finish_us=50, resources=[Resource.PROCESS])
+    analyzer = _analyzer([waiting, holder])
+
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    assert is_wait is True
+    assert info["blocking_tasks"] == {"elem-b|BUILD|BUILD|0": pytest.approx(0.5)}
+    assert info["ambiguous"] is True
+
+
+def test_resource_wait_ignores_different_resource():
+    """A task overlapping the wait window but requiring a different
+    resource must not be counted as a holder."""
+    waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[Resource.PROCESS])
+    other = _task("elem-b", ready_us=0, start_us=100, finish_us=200, resources=[Resource.DOWNLOAD])
+    analyzer = _analyzer([waiting, other])
+
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    assert is_wait is True
+    assert info["blocking_tasks"] == "UNKNOWN"
+    assert info["ambiguous"] is True
+
+
+def test_resource_wait_false_when_no_resources_needed():
+    waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[])
+    analyzer = _analyzer([waiting])
+    assert analyzer.classify_resource_wait(waiting, {}, {}) == (False, None)
+
+
+def test_resource_wait_false_when_not_actually_waiting():
+    waiting = _task("elem-a", ready_us=100, start_us=100, finish_us=200, resources=[Resource.PROCESS])
+    analyzer = _analyzer([waiting])
+    assert analyzer.classify_resource_wait(waiting, {}, {}) == (False, None)

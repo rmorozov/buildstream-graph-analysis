@@ -23,7 +23,13 @@ from .floors import (
     compute_t_infinity_observed,
 )
 from .replay.scheduler import ReplayScheduler, compute_replay_makespan
-from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
+from .utilisation import (
+    CPUAccounting,
+    UtilizationAnalyzer,
+    analyze_utilization,
+    compute_rebuild_tasks,
+    compute_retry_tasks,
+)
 from .diagnostics import DiagnosticsAnalyzer, analyze_diagnostics, DiagnosticsResult
 from .structural import StructuralAnalyzer, StructuralAnalysisResult
 from .validation import compute_confidence
@@ -643,8 +649,10 @@ class BuildEfficiencyAnalyzer:
         util_result = self.utilization_analyzer.analyze(
             task_intervals=task_intervals,
             occupancy_segments=occupancy_segments,
-            retry_tasks=set(),  # Would need retry detection
-            rebuild_tasks=set(),  # Would need rebuild detection
+            retry_tasks=compute_retry_tasks(self.normalized_tasks),
+            rebuild_tasks=compute_rebuild_tasks(
+                self.graph, self.normalized_tasks, self.historical_runs,
+            ),
         )
         
         # Store result for later access

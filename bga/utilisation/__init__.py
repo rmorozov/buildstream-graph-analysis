@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 
+from .detection import compute_rebuild_tasks, compute_retry_tasks
+
 logger = logging.getLogger(__name__)
 
 

@@ -1,6 +1,15 @@
 # P2-04: Retry/rebuild detection unimplemented — utilization buckets always empty
 
-**Priority:** P2 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P2 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none
+
+## What was fixed
+Added `bga/utilisation/detection.py`:
+- `compute_retry_tasks(normalized_tasks)`: groups tasks by `(element_uid, task_kind, phase)`; every task in a group whose `attempt` isn't the group's max is a retry. Pure function, no I/O.
+- `compute_rebuild_tasks(graph, normalized_tasks, historical_runs)`: a BUILD task is a rebuild if its element's current `cache_key` (graph/v9, Part 32.2) was already built successfully in some `historical_runs` entry - the exact signal `bga.floors.cold` (`P1-06`) already keys its historical duration lookups by, so no new ingest schema field was needed, confirming the task file's own suggestion to check for an existing representable signal before adding one.
+
+Both return `Set[str]` of `str(task_key)` (the `element_uid|task_kind|phase|attempt` format), matching what `_build_cpu_intervals` already keys `task_intervals` by. Wired into `bga/analyzer.py::_compute_utilization`, replacing the hardcoded `retry_tasks=set()` / `rebuild_tasks=set()`.
+
+Verified the "Out of Scope" assumption first: `bga/utilisation/__init__.py`'s `_build_cpu_intervals` already does correct `task_key in retry_tasks` / `task_key in rebuild_tasks` membership routing to `CPUBucket.WASTED_RETRY`/`WASTED_REBUILD` - no consumer-side bug found, so no scope expansion was needed.
 
 ## Spec Reference
 Read only: `sed -n '1421,1475p' docs/specification.md` (Part 30 — Utilisation Axis, esp. 30.2 Buckets: `useful, idle_no_tasks, idle_underparallel, wasted_retry, wasted_rebuild, untracked`).
@@ -22,4 +31,23 @@ Build a fixture with: (a) a task that has two attempts for the same `element_uid
 Run: whichever test file houses this, plus `PYTHONPATH=. python3 tests/test_e2e.py`.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+112 passed   # was 100
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+
+$ make check-clean
+OK: no ignored files are tracked
+```
+New tests in `tests/unit/test_retry_rebuild_detection.py` (12 tests): 5 unit
+tests directly on `compute_retry_tasks` (non-final attempt flagged, single
+attempt not flagged, 3-attempt chain, different elements/phases don't
+interfere), 4 unit tests directly on `compute_rebuild_tasks` (matching
+historical cache_key flagged, changed cache_key not flagged - a genuine
+cache miss, no historical_runs -> empty, non-BUILD task never flagged),
+and 3 end-to-end tests through `BuildEfficiencyAnalyzer` confirming the
+real `wasted_retry`/`wasted_rebuild` CPU buckets populate with the exact
+expected microsecond values (and that a genuine cache miss stays in
+`useful`, not `wasted_rebuild`).

@@ -975,7 +975,13 @@ class BuildEfficiencyAnalyzer:
         # Get blame chain and critical path from attribution/graph
         blame_chain = None
         if hasattr(self, '_blame_chain'):
-            blame_chain = [str(t) for t in self._blame_chain]
+            # P1-22: was str(t) - t is a BlameChainNode with no __str__
+            # override, so this produced default object-repr strings
+            # (e.g. "<BlameChainNode object at 0x...>") that could never
+            # match a real task_key string anywhere downstream. Every
+            # on_blame_chain check in DiagnosticsAnalyzer was structurally
+            # always False as a result.
+            blame_chain = [str(t.task_key) for t in self._blame_chain]
         
         critical_path = graph_analysis.get('critical_path', [])
         slack = graph_analysis.get('slack', {})

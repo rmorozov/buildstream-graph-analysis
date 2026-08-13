@@ -496,16 +496,12 @@ class DiagnosticsAnalyzer:
             elem_uid = task.task_key.element_uid
             element_durations[elem_uid] += task.dur_us
 
-        # Element UIDs on the critical path, precomputed once - O(1)
-        # membership check per element below instead of an any(...) scan
-        # over self.critical_path per element (O(N) work per element,
-        # O(N^2) overall; the single largest hotspot found while
-        # profiling P1-16's fix, P1-21).
-        critical_path_element_uids = {
-            self.task_map[tk].task_key.element_uid
-            for tk in self.critical_path
-            if self.task_map.get(tk)
-        }
+        # self.critical_path is already a set of element UIDs
+        # (compute_critical_path operates on the element graph, Part
+        # 5.3/14.1) - compared directly below, O(1) per element (P1-21).
+        # P1-22: previously routed through self.task_map as if members
+        # were task_key strings, which they never were - on_critical_path
+        # was structurally always False regardless of true membership.
 
         results = []
         for elem_uid in downstream_counts.keys():
@@ -523,7 +519,7 @@ class DiagnosticsAnalyzer:
             is_leaf = downstream_count == 0
 
             # Check if on critical path
-            elem_on_cp = elem_uid in critical_path_element_uids
+            elem_on_cp = elem_uid in self.critical_path
 
             # Check if required by target (reachable from requested targets)
             # If no targets specified, assume all are required
@@ -766,25 +762,29 @@ class DiagnosticsAnalyzer:
         if not requested_targets:
             reachable_from_targets = set(downstream_counts.keys())
 
-        # Element UIDs on the blame chain / critical path, precomputed
-        # once - O(1) membership check per element below instead of an
-        # any(...) scan per element (P1-21, same fix as compute_blast_radius).
+        # Element UIDs on the blame chain, precomputed once - O(1)
+        # membership check per element below instead of an any(...) scan
+        # per element (P1-21). self.blame_chain holds task_key strings
+        # (P1-22 fixed its source, bga/analyzer.py::_compute_diagnostics,
+        # to pass str(node.task_key) instead of str(node) - the latter
+        # produced default object-repr strings that could never match
+        # anything in self.task_map), so this translation via task_map is
+        # correct here.
         blame_chain_element_uids = {
             self.task_map[tk].task_key.element_uid
             for tk in self.blame_chain
             if self.task_map.get(tk)
         }
-        critical_path_element_uids = {
-            self.task_map[tk].task_key.element_uid
-            for tk in self.critical_path
-            if self.task_map.get(tk)
-        }
+        # self.critical_path is already a set of element UIDs (see
+        # compute_blast_radius's identical note) - compared directly,
+        # not routed through task_map (P1-22: that lookup could never
+        # match, since critical_path never held task_key strings).
 
         results = []
         for elem_uid, downstream_count in downstream_counts.items():
             is_leaf = downstream_count == 0
             on_blame_chain = elem_uid in blame_chain_element_uids
-            on_critical_path = elem_uid in critical_path_element_uids
+            on_critical_path = elem_uid in self.critical_path
             is_reachable = elem_uid in reachable_from_targets
             
             # Compute deferrability

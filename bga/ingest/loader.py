@@ -51,6 +51,7 @@ def load_run_context(path: Path) -> RunContext:
         resource_capacities=data.get('resource_capacities', {}),
         max_jobs=data.get('max_jobs'),
         cpu_accounting=data.get('cpu_accounting'),
+        exclusive_resources=data.get('exclusive_resources', []),
     )
 
 
@@ -318,5 +319,20 @@ def load_all(run_dir: Path) -> tuple[RunContext, Graph, Trace]:
     run_context = load_run_context(run_context_path)
     graph = load_graph(run_dir / 'graph.json')
     trace = load_trace(run_dir / 'trace.json')
-    
+
     return run_context, graph, trace
+
+
+def load_historical_runs(run_dirs: List[Path]) -> List[tuple[RunContext, Graph, Trace]]:
+    """
+    Load one or more prior runs' trace/graph data (Part 15.2 - the
+    duration-source hierarchy for the advisory cold structural floor
+    needs historical execution data to resolve cold durations from).
+
+    Each directory is loaded independently via load_all; a directory
+    that fails to load (missing/malformed files) raises, same as load_all -
+    callers that want best-effort loading across many historical runs
+    should catch per-directory rather than relying on this function to
+    skip failures silently.
+    """
+    return [load_all(run_dir) for run_dir in run_dirs]

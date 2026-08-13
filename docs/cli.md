@@ -76,6 +76,15 @@ Save the report to a file instead of stdout:
 bga analyze /path/to/run --output report.txt
 ```
 
+#### Cold Structural Floor (advisory)
+Compute the advisory cold structural floor (`T∞,cold`) using prior runs' observed durations as an estimate source. Off by default - never affects `LB`, `certified_headroom`, primary `confidence`, or measured attribution:
+```bash
+bga analyze /path/to/run --cold --history-dir /path/to/prior-run-1 --history-dir /path/to/prior-run-2
+```
+- `--cold` alone (no `--history-dir`) reports `T∞,cold` as unavailable - there's nothing to estimate from.
+- By default, if any element on the resolved cold critical path has no resolvable historical duration, `T∞,cold` reports as unavailable rather than a misleading partial number.
+- `--allow-partial-cold` (only meaningful together with `--cold`; a no-op with a warning if passed alone) instead publishes a value with `partial=true`/`confidence=low` in that case.
+
 ## Advanced Commands
 
 ### Version

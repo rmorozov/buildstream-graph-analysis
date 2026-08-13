@@ -118,13 +118,18 @@ class ReplayScheduler:
     
     def _get_task_resources(self, task_key: str) -> Dict[str, int]:
         """
-        Determine resource requirements for a task.
-        
-        In a full implementation, this would come from task metadata.
-        For now, we assume PROCESS is required for all tasks.
+        Determine resource requirements for a task, from the task's own
+        observed `resources` (falling back to `primary_resource`, then to
+        PROCESS if a task declares no resources at all - preserving the
+        old default for that case).
         """
-        # Simplified: all tasks need 1 PROCESS slot
-        return {'PROCESS': 1}
+        task = self._task_map.get(task_key)
+        if task is None:
+            return {'PROCESS': 1}
+        resources = task.resources or ([task.primary_resource] if task.primary_resource else [])
+        if not resources:
+            return {'PROCESS': 1}
+        return {res.value: 1 for res in resources}
     
     def replay(
         self,

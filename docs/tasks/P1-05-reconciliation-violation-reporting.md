@@ -1,6 +1,9 @@
 # P1-05: No violation raised when the flattened timeline undercounts
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none now (`P1-03`/`P1-04`/`P1-19` all done - attribution identity holds exactly on every fixture tested so far, including `IDLE` gap-filling for disconnected components; this task is still valuable as defense-in-depth reporting for any future/untested scenario where a residual reappears, not eliminating a currently-known gap)
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none now
+
+## What was fixed
+`bga/analyzer.py::_compute_attribution` now compares the reconciled attribution sum against the real task horizon `H` (via `compute_task_horizon`, the same function `_compute_floors` already uses) immediately after building the `result` dict. On mismatch, it appends `{'type': 'attribution_reconciliation', 'invariant': 'I4', 'attribution_sum_us', 'horizon_us', 'residual_us'}` to `self.violations` (the same list `bga/normalize/timestamps.py`'s ordering violations already populate, and which flows into `AnalysisResult.violations` unchanged - no new field invented) and logs a WARNING. No padding or truncation - the true residual is reported. (`P1-03`/`P1-04`/`P1-19` all done - attribution identity holds exactly on every fixture tested so far, including `IDLE` gap-filling for disconnected components; this task is still valuable as defense-in-depth reporting for any future/untested scenario where a residual reappears, not eliminating a currently-known gap)
 
 ## Spec Reference
 Read only: `sed -n '1629,1719p' docs/specification.md` (Part 33 — Reconciliation and Confidence) and the I4/I10 entries in `sed -n '1720,1780p' docs/specification.md` (Part 34).
@@ -24,4 +27,18 @@ File: `bga/attribution/blame_chain.py`, function `reconcile_attribution` (around
 2. `PYTHONPATH=. python3 tests/test_e2e.py` still passes (this fixture's sum should already be exact after `P1-03`/`P1-04`, so no new violation should appear for it).
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_reconciliation_violation.py -v
+2 passed
+# test_no_spurious_violation_when_sum_is_exact: real fixture, no violation
+# test_violation_reported_when_sum_undercounts: reconcile_attribution
+#   monkeypatched to drop half of EXECUTION_ON_CHAIN (simulating a future
+#   regression, since no real fixture can currently break I4) - confirms
+#   a precise violation entry (residual_us=50000) is reported
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+64 passed
+```

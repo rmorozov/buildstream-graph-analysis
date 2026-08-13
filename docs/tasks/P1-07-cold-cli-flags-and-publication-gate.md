@@ -1,6 +1,14 @@
 # P1-07: No `--cold`/`--allow-partial-cold` CLI flags; cold publication gate unimplemented
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** `P1-06` (needs the underlying `T∞,cold` computation to exist first)
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** `P1-06` (needs the underlying `T∞,cold` computation to exist first)
+
+## What was fixed
+- Added `--cold` (store_true) and `--allow-partial-cold` (store_true) to the `analyze` subcommand.
+- Added `--history-dir PATH` (repeatable via `action='append'`), a CLI addition beyond the spec's literal flag list - spec Part 37.1 documents `--cold`/`--allow-partial-cold` but never specifies *where* historical data comes from, and the feature is unusable without a way to point at it. Judged the most natural mechanism given `P1-06`'s file-directory-based `load_historical_runs`; documented in `docs/cli.md`.
+- `cmd_analyze` loads historical runs (only when both `--cold` and at least one `--history-dir` are given) and passes `cold`/`allow_partial_cold`/`historical_runs` through to `BuildEfficiencyAnalyzer`, which only attempts cold-floor computation when `cold=True` - default behavior (no flags) is completely unchanged.
+- The publication gate itself (Part 15.3) is implemented in `_compute_cold_floor` (`P1-06`): by default, if any element on the resolved cold critical path has no resolvable duration, `t_infinity_cold` is `None`; with `--allow-partial-cold`, it publishes a value with `cold_partial=True`/`cold_confidence='low'`.
+- `--allow-partial-cold` without `--cold`: treated as a documented no-op with a logged warning (`--allow-partial-cold has no effect without --cold; ignoring`), not a hard usage error - consistent with the CLI's general style of warning rather than failing on redundant flag combinations.
+- `format_text`'s Certified Floors section now shows a `T∞,cold (advisory)` line (with a `(partial, confidence=low)` suffix when applicable) only when `t_infinity_cold` is not `None` - no change to output when `--cold` isn't passed. `format_json` already serializes the entire `floors` dict, so the new keys flow through with no formatter change needed.
 
 ## Spec Reference
 Read only: `sed -n '2133,2182p' docs/specification.md` (Part 37 — CLI, esp. 37.1 Cold Analysis flags) and `sed -n '904,996p' docs/specification.md` (Part 15.3 — Cold Publication Gate).
@@ -33,4 +41,35 @@ Key requirements (quoted):
 Run each variant manually and paste the relevant output section into the Verification Log. Also run `PYTHONPATH=. python3 tests/test_e2e.py` for regression safety.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+# 1. No --cold -> no cold-floor section, no crash
+$ PYTHONPATH=. python3 -m bga.cli analyze <fixture>
+(Certified Floors section has no T∞,cold line)
+exit: 0
+
+# 2. --cold, no --history-dir -> unavailable, no crash
+$ PYTHONPATH=. python3 -m bga.cli analyze <fixture> --cold --format json
+floors: {..., 't_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None, ...}
+exit: 0
+
+# 3. --cold --allow-partial-cold, partial historical coverage (one element
+#    genuinely unresolvable) -> value with partial=true/confidence=low
+$ PYTHONPATH=. python3 -m bga.cli analyze <fixture> --cold --allow-partial-cold --history-dir <hist>
+floors: {..., 't_infinity_cold': 40000, 'cold_partial': True, 'cold_confidence': 'low', ...}
+text format: "T∞,cold (advisory):          0.04s (partial, confidence=low)"
+
+# 4. --cold, full historical coverage -> real value, no partial flag
+$ PYTHONPATH=. python3 -m bga.cli analyze <fixture> --cold --history-dir <hist>
+floors: {..., 't_infinity_cold': 40000, 'cold_partial': False, 'cold_confidence': 'high', ...}
+
+# --allow-partial-cold without --cold -> warned, no-op, no crash
+$ PYTHONPATH=. python3 -m bga.cli analyze <fixture> --allow-partial-cold
+--allow-partial-cold has no effect without --cold; ignoring
+(report proceeds normally)
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+76 passed
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+```

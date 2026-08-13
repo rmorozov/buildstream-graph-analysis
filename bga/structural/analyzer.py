@@ -85,22 +85,17 @@ class StructuralAnalyzer:
         n_elements = len(G.nodes())
         n_edges = len(G.edges())
         
-        # Depth analysis: compute max distance from any root to each node
-        # Find roots (nodes with in_degree 0)
-        roots = [n for n in G.nodes() if G.in_degree(n) == 0]
-        
-        # Compute depth for each node as max distance from any root
+        # Depth analysis (Part 14.2): unweighted_depth is the LONGEST path in
+        # hops from any root to each node, computed via a topological DP -
+        # not nx.shortest_path_length, which finds the shortest route and so
+        # silently underestimates depth whenever a node is reachable via both
+        # a short path and a longer one (e.g. a node with both a direct
+        # dependency edge and a multi-hop dependency chain to the same root).
         max_depths = {}
-        for node in G.nodes():
-            max_dist = 0
-            for root in roots:
-                try:
-                    dist = nx.shortest_path_length(G, root, node)
-                    max_dist = max(max_dist, dist)
-                except nx.NetworkXNoPath:
-                    pass
-            max_depths[node] = max_dist
-        
+        for node in nx.topological_sort(G):
+            preds = list(G.predecessors(node))
+            max_depths[node] = 0 if not preds else 1 + max(max_depths[p] for p in preds)
+
         max_depth = max(max_depths.values()) if max_depths else 0
         
         # Fan-in/fan-out

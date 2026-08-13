@@ -137,16 +137,14 @@ def test_unweighted_depth_matches_independent_calculation(result):
     assert result.signals["unweighted_depth"] == expected
 
 
-@pytest.mark.xfail(
-    reason="P1-18: bga/structural/analyzer.py:98 computes max_depth via "
-    "nx.shortest_path_length (shortest hop count from any root), not longest "
-    "path, so it disagrees with the spec-correct signals['unweighted_depth'] "
-    "(bga/graph/edg.py) whenever a node has both a short and a long path from "
-    "a root - exactly this fixture's app.bst (2 hops via liblog directly, 3 "
-    "hops via libwidgets/libui). See docs/tasks/P1-18-structural-max-depth-shortest-path-bug.md.",
-    strict=False,
-)
 def test_structural_max_depth_matches_graph_module(result):
+    """Regression guard for P1-18 (fixed): bga/structural/analyzer.py used to
+    compute max_depth via nx.shortest_path_length (shortest hop count from
+    any root) instead of longest path, silently disagreeing with the
+    spec-correct signals['unweighted_depth'] whenever a node had both a
+    short and a long path from a root - exactly this fixture's app.bst (2
+    hops via liblog directly, 3 hops via libwidgets/libui).
+    """
     expected_max_depth = max(build_model.independent_expected_depths().values())
     assert result.structural["metrics"]["max_depth"] == expected_max_depth
 
@@ -220,14 +218,13 @@ def test_cli_end_to_end_on_synthetic_project(run_dir):
     assert "signals" in output
 
 
-@pytest.mark.xfail(
-    reason="P2-05: bga/cli.py format_json() checks hasattr(result, 'structural_metrics') "
-    "(typo - the real field is result.structural) so 'structural' is always silently "
-    "omitted from --format json output, and 'utilisation'/'confidence'/'violations'/'model' "
-    "are never referenced at all. See docs/tasks/P2-05-cli-json-missing-fields.md.",
-    strict=False,
-)
 def test_cli_json_includes_full_analysis_result(run_dir):
+    """Regression guard for P2-05 (fixed): format_json() used to check
+    hasattr(result, 'structural_metrics') (typo - the real field is
+    result.structural), so 'structural' was always silently omitted from
+    --format json output, and 'utilisation'/'confidence'/'violations' were
+    never referenced at all.
+    """
     cmd = [sys.executable, "-m", "bga.cli", "analyze", str(run_dir), "--format", "json", "--diagnostics"]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"

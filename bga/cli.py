@@ -139,18 +139,7 @@ def format_json(result: AnalysisResult) -> str:
     
     if hasattr(result, 'attribution') and result.attribution:
         data['attribution'] = result.attribution
-    
-    if hasattr(result, 'critical_path') and result.critical_path:
-        data['critical_path'] = [
-            {
-                'element': t.task_key.element_name,
-                'kind': t.task_key.kind.value,
-                'start_us': t.start_us,
-                'dur_us': t.dur_us,
-            }
-            for t in result.critical_path
-        ]
-    
+
     # occupancy field - check both occupancy (AnalysisResult field) and occupancy_stats (legacy name)
     if hasattr(result, 'occupancy') and result.occupancy:
         data['occupancy'] = result.occupancy
@@ -172,9 +161,23 @@ def format_json(result: AnalysisResult) -> str:
                 signals_data[key] = value
         data['signals'] = signals_data
     
-    if hasattr(result, 'structural_metrics') and result.structural_metrics:
-        data['structural'] = result.structural_metrics
-    
+    if hasattr(result, 'structural') and result.structural:
+        data['structural'] = result.structural
+
+    if hasattr(result, 'utilisation') and result.utilisation:
+        data['utilisation'] = result.utilisation
+
+    if hasattr(result, 'confidence') and result.confidence:
+        data['confidence'] = result.confidence
+
+    if hasattr(result, 'violations'):
+        # Always include, even when empty - an empty list means "checked,
+        # none found", which is different from the key being absent.
+        data['violations'] = result.violations
+
+    if hasattr(result, 'model') and result.model:
+        data['model'] = result.model
+
     return json.dumps(data, indent=2, default=str)
 
 

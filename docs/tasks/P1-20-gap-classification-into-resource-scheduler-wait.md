@@ -1,6 +1,15 @@
 # P1-20: Blame-chain walk never classifies a gap as RESOURCE_WAIT/SCHEDULER_WAIT
 
-**Priority:** P1 | **Status:** 🔴 Not Started (found 2026-08-13 while finishing `P1-01`) | **Depends on:** `P1-01` (done — real holder tracking), `P1-02` (done — real scheduler-wait detection)
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** `P1-01` (done — real holder tracking), `P1-02` (done — real scheduler-wait detection)
+
+## What was fixed
+Added `BlameChainAnalyzer._classify_wait_gap(task, gap_start, gap_end)`, a single shared helper that splits a `[ready_time, start)` gap into non-overlapping `(category, seg_start, seg_end)` tuples: `RESOURCE_WAIT` first (via the already-correct `classify_resource_wait`, clamped to the gap), then `SCHEDULER_WAIT` for any remainder (via `classify_scheduler_wait`), then whatever's left defaults to `DEPENDENCY_WAIT`.
+
+- `build_blame_chain` now calls this helper and stores the result on a new `BlameChainNode.wait_breakdown` field (plus `resource_wait_info` for holder metadata).
+- `_build_flattened_timeline` now loops over `wait_breakdown` and emits one `AttributionSegment` per category instead of a single hardcoded `DEPENDENCY_WAIT` segment - so `result.attribution['resource_wait_us']`/`['scheduler_wait_us']` can finally become non-zero.
+- `compute_task_attribution` was rewritten to call the same shared helper instead of its own divergent (and double-counting - see below) logic, so there is now exactly one implementation of this classification, not two.
+- Fixed the dormant double-counting bug: `compute_task_attribution` used to set `dependency_wait_us` to the *full* gap and then *also* set `resource_wait_us` to (essentially) the same interval when a holder was found. Now each field only accumulates the portion of the gap `_classify_wait_gap` actually assigned to it.
+- `classify_resource_wait`'s `holder_info` dict gained an `explained_us` key (exact integer, per Part 3.1's no-floating-point rule) so `_classify_wait_gap` can clamp precisely without re-deriving it from the (float) `blocking_tasks` weights.
 
 ## Spec Reference
 Read only: `sed -n '534,586p' docs/specification.md` (Part 7 — Dependency Gate). Key line: "If `start(t) > ready_time(t)`, **the interval is classified according to what happened during that gap**" - i.e. `[ready_time(t), start(t))` is not automatically `DEPENDENCY_WAIT`; it must be resolved to whichever of `DEPENDENCY_WAIT`/`RESOURCE_WAIT`/`SCHEDULER_WAIT` actually explains it. Cross-reference `sed -n '586,673p' docs/specification.md` (Parts 8-9): both `RESOURCE_WAIT` and `SCHEDULER_WAIT` are explicitly defined as applying to a task that is *already dependency-ready* (i.e. within this same post-`ready_time` gap), not some different interval.
@@ -26,5 +35,30 @@ Read only: `sed -n '534,586p' docs/specification.md` (Part 7 — Dependency Gate
 3. Re-run `tests/fixtures/synthetic_multi_subproject/` and confirm `Σ attribution == H` still holds exactly (I4) with the gap now properly split across categories rather than all going to `dependency_wait_us`.
 4. `PYTHONPATH=. python3 -m pytest tests/ -v` — full suite green, no regression on any `P1-03`/`P1-04`/`P1-19` exact-identity test.
 
+## What was intentionally not touched (per this task's item 4 judgment call)
+`compute_task_attribution`/`self._task_attributions` were kept, not deleted - now genuinely useful as a per-task detail view (each `TaskAttribution` correctly reflects that task's own gap breakdown), and no longer divergent from the flattened-timeline path since both now go through `_classify_wait_gap`. Still not consumed by any caller today, but it's a single correct implementation rather than two, so leaving it as a future per-task reporting hook was judged preferable to deleting working, tested code with no evidence it's actually unwanted.
+
+## Acceptance Test — as executed
+Two new end-to-end tests in `tests/unit/test_wait_gap_classification.py` (via `bga.analyze_run`, not module-level classifier calls, since the bug was entirely in the wiring between correct classifiers and the final report):
+1. `test_resource_blocked_gap_classified_as_resource_wait` - a dependency-ready-but-resource-blocked task (real single holder occupying the sole PROCESS slot for the whole gap); asserts `resource_wait_us == 100000` and `dependency_wait_us == 0`.
+2. `test_undispatched_gap_classified_as_scheduler_wait` - a dependency-ready, resource-available task where a different-resource concurrency signal proves spare capacity was free throughout the wait; asserts `scheduler_wait_us == 100000` and `dependency_wait_us == 0`.
+
+Both also assert exact `Σ attribution == H` (I4).
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_wait_gap_classification.py -v
+2 passed
+
+$ PYTHONPATH=. python3 -m pytest tests/ -v
+54 passed
+
+$ PYTHONPATH=. python3 -c "... attribution on tests/fixtures/synthetic_multi_subproject ..."
+H: 142000000  total: 142000000  match: True
+execution_on_chain_us 134000000
+dependency_wait_us 6000000
+resource_wait_us 2000000   # was 0 before this fix - real PROCESS/DOWNLOAD contention now correctly attributed
+scheduler_wait_us 0
+idle_us 0
+retry_wait_us 0
+```

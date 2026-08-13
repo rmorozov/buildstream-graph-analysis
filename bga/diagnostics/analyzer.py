@@ -12,6 +12,7 @@ Implements M5 milestone with high-value structural diagnostics:
 - Advanced leaf analysis (Part 24)
 """
 
+import bisect
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
@@ -315,6 +316,13 @@ class DiagnosticsAnalyzer:
         
         # Extract element durations from graph_analysis for perturbed critical path computation
         self._element_durations = graph_analysis.get('task_durations', {}) if graph_analysis else {}
+
+        # Sorted once, O(N log N), for _estimate_ready_count's O(log N)
+        # binary-search queries (P1-21) instead of an O(N) rescan of
+        # self.tasks per occupancy segment (O(N*segments) overall, the
+        # single largest hotspot found while profiling P1-16).
+        self._sorted_ready_times = sorted(t.ready_us for t in self.tasks)
+        self._sorted_start_times = sorted(t.start_us for t in self.tasks)
     
     def compute_wall_clock_shares(self) -> List[WallClockShare]:
         """
@@ -440,31 +448,31 @@ class DiagnosticsAnalyzer:
     
     def _estimate_ready_count(self, time_us: int, active_tasks: Set[str]) -> int:
         """
-        Estimate number of ready but not executing tasks at given time.
-        
+        Estimate number of ready but not executing tasks at given time:
+        tasks with ready_us <= time_us < start_us.
+
         Simplified heuristic based on graph structure.
+
+        Answered via binary search over self._sorted_ready_times/
+        _sorted_start_times (O(log N), P1-21) instead of an O(N) scan of
+        self.tasks per call - this was the single largest hotspot found
+        while profiling P1-16's fix, called once per occupancy segment
+        (O(N*segments) overall).
+
+        active_tasks and finish_us were checked by the original O(N)
+        version but are provably redundant for this condition: a task
+        satisfying ready_us <= time_us < start_us cannot simultaneously
+        be "active" (which requires start_us <= time_us < finish_us -
+        contradicts start_us > time_us), and start_us > time_us already
+        guarantees finish_us >= start_us > time_us (a task can't finish
+        before it starts), so the "not yet finished" check can never
+        exclude anything the ready-vs-started counts don't already rule
+        out. active_tasks is kept as a parameter for interface stability
+        (the caller still passes it) but is no longer consulted.
         """
-        # Count tasks that have finished all predecessors but haven't started
-        ready_count = 0
-        
-        for task in self.tasks:
-            task_key = str(task.task_key)
-            
-            # Skip if already active
-            if task_key in active_tasks:
-                continue
-            
-            # Skip if already finished
-            if task.finish_us <= time_us:
-                continue
-            
-            # Check if task should have started (deps done) but hasn't
-            # Simplified: check if any predecessor finished before this time
-            task_started = task.start_us <= time_us
-            if not task_started and task.ready_us <= time_us:
-                ready_count += 1
-        
-        return ready_count
+        ready_so_far = bisect.bisect_right(self._sorted_ready_times, time_us)
+        started_so_far = bisect.bisect_right(self._sorted_start_times, time_us)
+        return max(0, ready_so_far - started_so_far)
     
     def compute_blast_radius(self) -> List[BlastRadiusResult]:
         """
@@ -488,6 +496,17 @@ class DiagnosticsAnalyzer:
             elem_uid = task.task_key.element_uid
             element_durations[elem_uid] += task.dur_us
 
+        # Element UIDs on the critical path, precomputed once - O(1)
+        # membership check per element below instead of an any(...) scan
+        # over self.critical_path per element (O(N) work per element,
+        # O(N^2) overall; the single largest hotspot found while
+        # profiling P1-16's fix, P1-21).
+        critical_path_element_uids = {
+            self.task_map[tk].task_key.element_uid
+            for tk in self.critical_path
+            if self.task_map.get(tk)
+        }
+
         results = []
         for elem_uid in downstream_counts.keys():
             downstream_count = downstream_counts[elem_uid]
@@ -499,16 +518,13 @@ class DiagnosticsAnalyzer:
             # weighted_duration).
             downstream_uids = reachable_downstream.get(elem_uid, [])
             weighted_duration = sum(element_durations.get(uid, 0) for uid in downstream_uids)
-            
+
             # Check if leaf (no downstream)
             is_leaf = downstream_count == 0
-            
+
             # Check if on critical path
-            elem_on_cp = any(
-                self.task_map.get(tk) and self.task_map[tk].task_key.element_uid == elem_uid
-                for tk in self.critical_path
-            )
-            
+            elem_on_cp = elem_uid in critical_path_element_uids
+
             # Check if required by target (reachable from requested targets)
             # If no targets specified, assume all are required
             is_required = elem_uid in reachable_from_targets or not reachable_from_targets
@@ -742,25 +758,33 @@ class DiagnosticsAnalyzer:
             requested_targets: Set of requested target element UIDs
         """
         downstream_counts = self.graph_analysis.get('downstream_count', {})
-        
+
         # Get reachability from targets using graph analysis
         reachable_from_targets = set(self.graph_analysis.get('reachable_from_targets', []))
-        
+
         # If no requested_targets specified, assume all elements are reachable
         if not requested_targets:
             reachable_from_targets = set(downstream_counts.keys())
-        
+
+        # Element UIDs on the blame chain / critical path, precomputed
+        # once - O(1) membership check per element below instead of an
+        # any(...) scan per element (P1-21, same fix as compute_blast_radius).
+        blame_chain_element_uids = {
+            self.task_map[tk].task_key.element_uid
+            for tk in self.blame_chain
+            if self.task_map.get(tk)
+        }
+        critical_path_element_uids = {
+            self.task_map[tk].task_key.element_uid
+            for tk in self.critical_path
+            if self.task_map.get(tk)
+        }
+
         results = []
         for elem_uid, downstream_count in downstream_counts.items():
             is_leaf = downstream_count == 0
-            on_blame_chain = any(
-                self.task_map.get(tk) and self.task_map[tk].task_key.element_uid == elem_uid
-                for tk in self.blame_chain
-            )
-            on_critical_path = any(
-                self.task_map.get(tk) and self.task_map[tk].task_key.element_uid == elem_uid
-                for tk in self.critical_path
-            )
+            on_blame_chain = elem_uid in blame_chain_element_uids
+            on_critical_path = elem_uid in critical_path_element_uids
             is_reachable = elem_uid in reachable_from_targets
             
             # Compute deferrability

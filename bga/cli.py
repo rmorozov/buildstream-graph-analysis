@@ -29,7 +29,7 @@ from .analyzer import BuildEfficiencyAnalyzer
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
-from .report import SECTIONS, format_csv, format_json, format_sweep_text, format_text
+from .report import format_csv, format_json, format_sweep_text, format_text
 
 logger = logging.getLogger(__name__)
 

@@ -608,6 +608,7 @@ def analyze_graph(
     slack = compute_slack(graph, task_durations, critical_path_length)
     
     return {
+        'graph': graph,
         'in_degree': in_degree,
         'out_degree': out_degree,
         'unweighted_depth': unweighted_depth,

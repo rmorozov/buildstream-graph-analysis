@@ -17,6 +17,23 @@ A comprehensive tool for analyzing BuildStream build efficiency based on the v9 
 pip install -e .
 ```
 
+## Testing
+
+Run all tests using the Makefile:
+
+```bash
+make test          # Run all tests with verbose output
+make test-e2e      # Run end-to-end tests only
+```
+
+Or run pytest directly:
+
+```bash
+pytest             # Run all tests
+pytest -v          # Verbose output
+pytest --cov=bga   # With coverage report
+```
+
 ## Quick Start
 
 Analyze a BuildStream run directory:

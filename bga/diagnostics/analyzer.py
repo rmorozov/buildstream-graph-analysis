@@ -14,7 +14,7 @@ Implements M5 milestone with high-value structural diagnostics:
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
-from collections import defaultdict
+from collections import defaultdict, deque
 import random
 
 from bga.ingest.models import TaskKind
@@ -293,6 +293,11 @@ class DiagnosticsAnalyzer:
         self.blame_chain = set(blame_chain or [])
         self.critical_path = set(critical_path or [])
         self.slack = slack or {}
+        
+        # Extract graph data for structural analysis
+        self.graph = graph_analysis.get('graph', {}) if graph_analysis else {}
+        self.predecessors = graph_analysis.get('predecessors', {}) if graph_analysis else {}
+        self.successors = graph_analysis.get('successors', {}) if graph_analysis else {}
         
         # Build task maps
         self.task_map: Dict[str, object] = {

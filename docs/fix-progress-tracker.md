@@ -1,6 +1,6 @@
 # BGA Spec Compliance Fix Progress Tracker
 
-**Last Updated:** [Date]
+**Last Updated:** 2024
 **Overall Status:** In Progress
 
 ---
@@ -39,6 +39,8 @@ This document tracks the progress of fixing implementation issues identified in 
 | 1.2 | `analyze()` signature mismatch | `bga/cli.py:225`, `bga/analyzer.py:323` | 🟢 Fixed | Updated `analyze()` to accept optional `run_dir` parameter |
 | 1.3 | Output formatters reference non-existent fields | `bga/cli.py:30-180`, `bga/ingest/models.py:224-241` | 🟢 Fixed | Updated formatters to use correct `AnalysisResult` fields (`occupancy`, `floors`, etc.) |
 | 1.4 | Undeclared NetworkX dependency | `bga/structural/analyzer.py:38`, `pyproject.toml:25` | 🟢 Fixed | Added `networkx>=2.8` to dependencies |
+| 1.5 | DiagnosticsAnalyzer missing graph attribute | `bga/diagnostics/analyzer.py:273-314`, `bga/graph/edg.py:610-627` | 🟢 Fixed | Added graph, predecessors, successors extraction in DiagnosticsAnalyzer.__init__ and included graph in analyze_graph() return dict |
+| 1.6 | Missing deque import in diagnostics | `bga/diagnostics/analyzer.py:17` | 🟢 Fixed | Added `deque` to imports from collections |
 
 ---
 

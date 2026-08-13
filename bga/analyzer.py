@@ -13,8 +13,15 @@ from .ingest.models import AnalysisResult, Graph, RunContext, Trace, PhaseSpan, 
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
-from .graph.edg import analyze_graph, compute_critical_path
+from .graph.edg import analyze_graph
 from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
+from .floors import (
+    compute_capacity_lower_bound,
+    compute_cold_floor,
+    compute_default_capacities,
+    compute_exclusive_serialization_bound,
+    compute_t_infinity_observed,
+)
 from .replay.scheduler import ReplayScheduler, compute_replay_makespan
 from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
 from .diagnostics import DiagnosticsAnalyzer, analyze_diagnostics, DiagnosticsResult
@@ -71,7 +78,7 @@ class BuildEfficiencyAnalyzer:
                 bga.ingest.loader.load_historical_runs - the duration
                 source for cold-floor resolution (Part 15.2). Fully
                 isolated from LB/certified_headroom/primary confidence/
-                measured attribution (I12) - see _compute_cold_floor.
+                measured attribution (I12) - see bga.floors.cold.compute_cold_floor.
         """
         self.run_dir = run_dir
         self.capacity_override = capacity
@@ -247,83 +254,41 @@ class BuildEfficiencyAnalyzer:
         # Get graph analysis
         if graph_analysis is None:
             graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
-        t_infinity_observed = graph_analysis['critical_path_length']
-        
-        # Compute capacity lower bound (Part 16)
-        # LB = max(T∞,observed, max_p(W_p / C_p), exclusive-serialization bounds)
+        t_infinity_observed = compute_t_infinity_observed(graph_analysis)
 
-        # Start with T∞ as baseline
-        lb = t_infinity_observed
-
-        # Add resource-area bounds if we have capacity info
-        if self.run_context and hasattr(self.run_context, 'resource_capacities'):
-            capacities = self.run_context.resource_capacities or {}
-        else:
-            capacities = {}
-
-        process_capacity = capacities.get(
-            'PROCESS',
-            self.run_context.max_jobs if self.run_context and self.run_context.max_jobs else 4,
-        )
-        default_capacity_by_resource = {
-            'PROCESS': process_capacity,
-            'DOWNLOAD': capacities.get('DOWNLOAD', 2),
-            'UPLOAD': capacities.get('UPLOAD', 2),
-        }
-        exclusive_resources = set(
-            self.run_context.exclusive_resources if self.run_context else []
-        )
-
-        # W_p: observed work per resource, over every resource type actually
-        # used by any task (PROCESS/DOWNLOAD/UPLOAD/CACHE/OTHER - Part 31.2),
-        # not just PROCESS. A task using more than one resource contributes
-        # its full duration to each - each resource's own bound treats it as
-        # occupying that resource for the whole span, matching how C_p is a
-        # per-resource capacity independent of the others.
-        resource_work_us: Dict[str, int] = defaultdict(int)
-        for task in self.normalized_tasks:
-            task_resources = task.resources or ([task.primary_resource] if task.primary_resource else [])
-            for res in task_resources:
-                resource_work_us[res.value] += task.dur_us
-
-        for resource_name, work_us in resource_work_us.items():
-            if resource_name in exclusive_resources:
-                # Exclusive resources (Part 31.3) cannot overlap at all,
-                # regardless of declared capacity - a hard serialization
-                # floor equal to the full observed work for that resource.
-                lb = max(lb, work_us)
-                continue
-            capacity = capacities.get(
-                resource_name, default_capacity_by_resource.get(resource_name, 1)
-            )
-            if capacity > 0:
-                lb = max(lb, work_us // capacity)
+        # Capacity lower bound (Part 16): LB = max(T∞,observed,
+        # max_p(W_p/C_p), exclusive-serialization bounds). Computing the
+        # non-exclusive and exclusive terms as two separate maxes and
+        # combining via max() below is equivalent to a single running max
+        # over the combined resource set (max is associative/commutative),
+        # so this split changes nothing about the resulting value -
+        # bga/floors/ (P1-15).
+        capacity_lb = compute_capacity_lower_bound(self.normalized_tasks, self.run_context)
+        serialization_lb = compute_exclusive_serialization_bound(self.normalized_tasks, self.run_context)
+        lb = max(t_infinity_observed, capacity_lb, serialization_lb)
 
         certified_headroom = max(0, horizon_us - lb)
-        
+
         # Compute replay makespan T_C (Part 18)
         t_c = None
         model_slack = None
-        
+
         if self.replay_scheduler:
-            # Use default capacities for replay
-            default_caps = {
-                'PROCESS': process_capacity,
-                'DOWNLOAD': capacities.get('DOWNLOAD', getattr(self.run_context, 'fetchers', 2) if self.run_context else 2),
-                'UPLOAD': capacities.get('UPLOAD', getattr(self.run_context, 'pushers', 2) if self.run_context else 2),
-            }
-            
+            default_caps = compute_default_capacities(self.run_context)
             replay_result = self.replay_scheduler.replay(default_caps)
             t_c = replay_result.makespan_us
-            
+
             # Model slack = T_C - LB (Part 18)
             model_slack = max(0, t_c - lb)
-        
+
         # Advisory cold structural floor (Part 15) - fully isolated from
         # everything above (I12): computed independently, from observed
         # durations already finalized (lb/certified_headroom/t_c/model_slack
         # never read cold_floor, and cold_floor never reads them back).
-        cold_floor = self._compute_cold_floor()
+        cold_floor = compute_cold_floor(
+            self.graph, self.normalized_tasks, self.historical_runs,
+            self.cold, self.allow_partial_cold,
+        )
 
         return {
             't_infinity_observed': t_infinity_observed,
@@ -334,126 +299,6 @@ class BuildEfficiencyAnalyzer:
             'certified_headroom': certified_headroom,
             't_c': t_c,
             'model_slack': model_slack,
-        }
-
-    def _compute_cold_floor(self) -> dict:
-        """
-        Compute the advisory cold structural floor T∞,cold (Part 15).
-
-        Duration source hierarchy per task (Part 15.2), in priority order:
-        1. same cache_key historical execution (median if multiple)
-        2. same element_uid+task_kind+phase historical execution (median)
-        3. cohort (task_kind+phase) median across all historical runs
-        4. declared metadata estimate - no ingest schema field currently
-           carries one, so this level is checked in principle but always
-           falls through in practice given today's input data.
-        5. unavailable
-
-        Publication gate (Part 15.3): if the resulting cold critical path
-        touches any element whose duration came back unavailable,
-        T∞,cold reports as unavailable unless allow_partial_cold is set,
-        in which case it publishes with partial=true/confidence=low.
-
-        Fully independent of LB/certified_headroom/primary confidence/
-        measured attribution (I12) - reads only self.graph/
-        self.normalized_tasks/self.historical_runs, and its output is
-        merged into floors under cold-prefixed keys only.
-        """
-        if not self.cold or not self.historical_runs or not self.graph:
-            return {'t_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None}
-
-        def _median(values: List[int]) -> int:
-            ordered = sorted(values)
-            n = len(ordered)
-            mid = n // 2
-            if n % 2 == 1:
-                return ordered[mid]
-            return (ordered[mid - 1] + ordered[mid]) // 2
-
-        # Candidate duration pools from historical runs, at decreasing
-        # specificity (Part 15.2). Raw observed span durations are used
-        # directly (not run through full normalization) - these are
-        # advisory estimate sources, not measured values themselves.
-        by_cache_key: Dict[Tuple[str, str, str], List[int]] = defaultdict(list)
-        by_element_kind_phase: Dict[Tuple[str, str, str], List[int]] = defaultdict(list)
-        by_cohort: Dict[Tuple[str, str], List[int]] = defaultdict(list)
-
-        for hist_context, hist_graph, hist_trace in self.historical_runs:
-            cache_key_by_element = {elem.uid: elem.cache_key for elem in hist_graph.elements}
-            for span in hist_trace.spans:
-                kind = span.task_key.task_kind.value
-                phase = span.task_key.phase
-                elem_uid = span.task_key.element_uid
-                by_element_kind_phase[(elem_uid, kind, phase)].append(span.dur_us)
-                by_cohort[(kind, phase)].append(span.dur_us)
-                cache_key = cache_key_by_element.get(elem_uid)
-                if cache_key:
-                    by_cache_key[(cache_key, kind, phase)].append(span.dur_us)
-
-        element_cache_key = {elem.uid: elem.cache_key for elem in self.graph.elements}
-        tasks_by_element: Dict[str, List] = defaultdict(list)
-        for task in self.normalized_tasks:
-            tasks_by_element[task.task_key.element_uid].append(task)
-
-        cold_duration_by_element: Dict[str, int] = {}
-        unavailable_elements: Set[str] = set()
-
-        for elem in self.graph.elements:
-            elem_uid = elem.uid
-            tasks = tasks_by_element.get(elem_uid, [])
-            if not tasks:
-                unavailable_elements.add(elem_uid)
-                continue
-
-            # Element duration = max across its own task kinds, mirroring
-            # analyze_graph's own observed task_durations aggregation, so
-            # cold and observed critical paths are computed the same way.
-            resolved_us = 0
-            any_unavailable = False
-            cache_key = element_cache_key.get(elem_uid)
-            for task in tasks:
-                kind = task.task_key.task_kind.value
-                phase = task.task_key.phase
-                duration = None
-                if cache_key and by_cache_key.get((cache_key, kind, phase)):
-                    duration = _median(by_cache_key[(cache_key, kind, phase)])
-                elif by_element_kind_phase.get((elem_uid, kind, phase)):
-                    duration = _median(by_element_kind_phase[(elem_uid, kind, phase)])
-                elif by_cohort.get((kind, phase)):
-                    duration = _median(by_cohort[(kind, phase)])
-                # Priority 4 (declared metadata estimate): never populated
-                # by any current ingest schema field - falls through.
-
-                if duration is None:
-                    any_unavailable = True
-                else:
-                    resolved_us = max(resolved_us, duration)
-
-            if any_unavailable:
-                unavailable_elements.add(elem_uid)
-            cold_duration_by_element[elem_uid] = resolved_us
-
-        # Weighted longest path using resolved cold durations - reuse the
-        # same algorithm as T∞,observed (Part 15.1).
-        cold_length, cold_path = compute_critical_path(self.graph, cold_duration_by_element)
-
-        path_has_unavailable = any(uid in unavailable_elements for uid in cold_path)
-
-        if path_has_unavailable and not self.allow_partial_cold:
-            logger.info(
-                "Cold floor unavailable: %d element(s) on cold critical path lack a "
-                "resolvable duration (pass allow_partial_cold to publish anyway)",
-                sum(1 for uid in cold_path if uid in unavailable_elements),
-            )
-            return {'t_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None}
-
-        if path_has_unavailable:
-            logger.info("Cold floor published as partial (confidence=low)")
-
-        return {
-            't_infinity_cold': cold_length,
-            'cold_partial': bool(path_has_unavailable),
-            'cold_confidence': 'low' if path_has_unavailable else 'high',
         }
 
     def _compute_attribution(self, graph_analysis: Optional[dict] = None) -> dict:
@@ -742,7 +587,7 @@ class BuildEfficiencyAnalyzer:
         relevant concept (see inline comments), not guessed from nothing.
 
         cold_confidence stays fully separate (already lives in floors,
-        from _compute_cold_floor - never read or written here).
+        from bga.floors.cold.compute_cold_floor - never read or written here).
         """
         graph_analysis = graph_analysis or {}
         ordering_violations = sum(

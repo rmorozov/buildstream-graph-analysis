@@ -1,6 +1,11 @@
 # P1-22: `is_on_critical_path`/`is_on_blame_chain` always False in leaf/blast-radius diagnostics
 
-**Priority:** P1 | **Status:** 🔴 Not Started (found 2026-08-13 while fixing `P1-21`'s performance work) | **Depends on:** none
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none
+
+## What was fixed
+1. `bga/analyzer.py::_compute_diagnostics`: `blame_chain = [str(t) for t in self._blame_chain]` → `[str(t.task_key) for t in self._blame_chain]`. `t` is a `BlameChainNode` with no `__str__` override, so `str(t)` produced default object-repr strings (`<BlameChainNode object at 0x...>`) that could never match anything - now produces real task-key strings (`"a.bst|BUILD|BUILD|0"`), matching `self.task_map`'s key format.
+2. `bga/diagnostics/analyzer.py::compute_blast_radius`/`compute_leaf_analysis`: `self.critical_path` is already a set of element UIDs (`compute_critical_path`'s return shape) - both functions now compare `elem_uid in self.critical_path` directly instead of routing through `self.task_map` as if its members were task-key strings (they never were, so the lookup always missed). `self.blame_chain` now genuinely holds task-key strings (per fix 1), so its existing `task_map`-based translation to element UIDs is now correct and left as-is.
+3. `tests/unit/test_diagnostics_performance.py::test_leaf_analysis_and_blast_radius_match_pre_refactor_behavior` (which had documented the bug as an equivalence check) renamed and rewritten to assert the real, correct membership: on the diamond fixture (`root -> {a, b} -> merge`, `a.bst` 50000us vs `b.bst` 10000us), `root.bst`/`a.bst`/`merge.bst` are now correctly `is_on_critical_path=True`/`is_on_blame_chain=True`, and `b.bst` correctly `False`.
 
 ## Spec Reference
 Read only: `sed -n '1201,1265p' docs/specification.md` (Part 24 — Leaf and Deferrability Analysis, esp. 24.3's "leaf AND on observed blame chain or critical path AND not reachable from requested targets").
@@ -29,4 +34,17 @@ Using the diamond fixture from `tests/unit/test_diagnostics_performance.py::test
 Run: `PYTHONPATH=. python3 -m pytest tests/ -v` for regression safety.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_diagnostics_performance.py -v
+4 passed
+# test_leaf_analysis_and_blast_radius_report_real_critical_path_membership:
+#   root.bst/a.bst/merge.bst is_on_critical_path=True, is_on_blame_chain=True;
+#   b.bst False for both - matches the real critical path (a.bst 50000us
+#   beats b.bst 10000us)
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+100 passed
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+```

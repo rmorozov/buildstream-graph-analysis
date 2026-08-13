@@ -83,18 +83,19 @@ def test_estimate_ready_count_matches_brute_force_reference(tmp_path):
     assert checked > 0
 
 
-def test_leaf_analysis_and_blast_radius_match_pre_refactor_behavior(tmp_path):
-    """Precomputing blame_chain/critical_path element-UID sets instead
-    of an any(...) scan per element must reproduce the exact same
-    per-element on_blame_chain/on_critical_path values the original
-    O(N^2) code produced - a pure performance refactor, not a behavior
-    change (verified directly against git stash: DiagnosticsAnalyzer's
-    self.critical_path/self.blame_chain are actually populated with
-    element UIDs, but both the old and new code look members up as if
-    they were task_key strings against self.task_map, so on_critical_path/
-    on_blame_chain are always False today regardless of true membership -
-    a real, separate, pre-existing bug, filed as P1-22, deliberately not
-    fixed here to keep this a pure performance change).
+def test_leaf_analysis_and_blast_radius_report_real_critical_path_membership(tmp_path):
+    """P1-21 precomputed blame_chain/critical_path element-UID sets
+    instead of an any(...) scan per element (pure performance change,
+    verified equivalent to the pre-refactor code via git stash at the
+    time). That equivalence check surfaced a real, separate,
+    pre-existing bug (P1-22): self.critical_path already held element
+    UIDs, but was routed through self.task_map as if its members were
+    task_key strings - on_critical_path (and on_blame_chain, for a
+    parallel reason: the source passed str(node) instead of
+    str(node.task_key)) were structurally always False regardless of
+    true membership. P1-22 fixed both; this test now asserts the real,
+    correct membership on a diamond fixture where a.bst (50000us) is
+    genuinely on the critical path and b.bst (10000us) is not.
     """
     run_dir = tmp_path / "run"
     run_dir.mkdir()
@@ -138,14 +139,16 @@ def test_leaf_analysis_and_blast_radius_match_pre_refactor_behavior(tmp_path):
     leaf_by_uid = {la.element_uid: la for la in analyzer._diagnostics_result.leaf_analysis}
     blast_by_uid = {br.element_uid: br for br in analyzer._diagnostics_result.blast_radius}
 
-    # Confirmed via `git stash` on bga/diagnostics/analyzer.py that the
-    # pre-refactor O(N^2) any(...) code produces exactly this (buggy)
-    # result too - this test is an equivalence check, not a correctness
-    # claim.
-    for uid in ("root.bst", "a.bst", "b.bst", "merge.bst"):
-        assert leaf_by_uid[uid].is_on_critical_path is False
-        assert leaf_by_uid[uid].is_on_blame_chain is False
-        assert blast_by_uid[uid].is_on_critical_path is False
+    # root.bst -> a.bst -> merge.bst is the real critical path (a.bst's
+    # 50000us branch beats b.bst's 10000us one).
+    for uid in ("root.bst", "a.bst", "merge.bst"):
+        assert leaf_by_uid[uid].is_on_critical_path is True, uid
+        assert leaf_by_uid[uid].is_on_blame_chain is True, uid
+        assert blast_by_uid[uid].is_on_critical_path is True, uid
+
+    assert leaf_by_uid["b.bst"].is_on_critical_path is False
+    assert leaf_by_uid["b.bst"].is_on_blame_chain is False
+    assert blast_by_uid["b.bst"].is_on_critical_path is False
 
 
 def test_graph_analysis_not_recomputed_redundantly(tmp_path, monkeypatch):

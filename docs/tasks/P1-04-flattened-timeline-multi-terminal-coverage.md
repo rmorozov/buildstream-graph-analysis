@@ -1,33 +1,38 @@
 # P1-04: Flattened timeline undercounts on multi-terminal / independent-branch graphs
 
-**Priority:** P1 | **Status:** 🔴 Not Started — scope now precisely bounded and reproducible (`P1-19` landed 2026-08-13) | **Depends on:** none (`P1-03`, `P1-19` both done)
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none (`P1-03`, `P1-19` both done)
 
-## `P1-19` is done — this is now a distinct, narrower problem
-`P1-19` (intra-element phase sequencing + inter-element predecessor edges for every task kind, not just `BUILD`) turned out to fully resolve flattened-timeline coverage for any **single connected component** — the blame-chain walk's existing tie-break always follows the objectively slowest predecessor, so it naturally traces the graph's true critical path end to end, which by construction spans the full task horizon when everything is reachable from it. See `docs/tasks/P1-19-flattened-timeline-residual-coverage.md` for the full explanation of why an occupancy-sweep approach wasn't needed after all.
+## What was fixed
+`P1-19` resolved flattened-timeline coverage for any single connected component. This task closed the remaining gap: graphs with genuinely independent terminals (no dependency relationship between them at all - e.g. two unrelated requested targets in one CI run).
 
-What's left, confirmed empirically (not just theorized) via `tests/unit/test_multi_terminal_coverage.py::test_independent_terminal_extending_horizon_is_dropped_p1_04`: two **fully independent** elements (no dependency relationship between them at all) each start their own chain walk only if picked as *the* default terminal (the single task with the overall maximum finish time, per `P1-03`'s fix). Whichever one isn't picked contributes **zero** attribution unless its own time span happens to be nested within the picked terminal's span (in which case it's coincidentally invisible but harmless to the sum - see the sibling passing test in the same file for that case).
+Three pieces, all needed together:
+
+1. **Identify every genuine terminal, not just the single max-finish one.** `bga/analyzer.py::_compute_attribution` now computes `terminal_element_uids` (elements with `requested_target = True`, or with no successor in `graph.dependencies`) and passes the corresponding task keys to `compute_full_attribution` as `terminal_tasks`, instead of relying on the single-max-finish default (`P1-03`'s fix, still the correct default when the caller doesn't know its terminals explicitly).
+2. **Walk all terminals deterministically, without re-visiting shared tasks.** `compute_full_attribution` now sorts `terminal_tasks` (finish time descending, task key ascending - Part 35 determinism) and threads a shared `already_covered: Set[str]` through every `build_blame_chain` call, so if two terminals' walks converge on shared upstream lineage, the second walk stops there instead of re-adding it.
+3. **Prevent overlapping segments when independent terminals run concurrently in wall-clock time.** This was the subtle part: two tasks with *no dependency relationship at all* can still temporally overlap (e.g. both scheduled to run at the same time using separate capacity). Task-identity dedup (`already_covered`) doesn't catch that. New `covered_intervals: List[Tuple[int, int]]`, also threaded through every walk: before a node is added to a chain, its own `[wait_start or execution_start, execution_end)` span is checked against every interval a higher-priority walk (processed first, by the same finish-time-descending order) already claimed; on overlap, the walk stops there rather than double-claiming that wall-clock window. Verified with a fixture where two independent terminals genuinely overlap in time (`tests/unit/test_multi_terminal_coverage.py::test_independent_terminals_running_concurrently_do_not_double_count`).
+4. **Fill genuinely uncovered gaps with `IDLE`, not silence.** Discovered while fixing this: no code anywhere in the pipeline ever produced an `IDLE` segment - `idle_us` was structurally always `0`. `_build_flattened_timeline` now walks the final sorted segment list and fills any gap (before the first segment, between two segments, after the last) with an `AttributionSegment(category=IDLE)`, spanning `[min_start, max_finish)` of the task horizon. This is what makes exact identity (`Σ == H`) hold even when there's genuine dead time between disconnected components, not just when everything happens to be covered.
 
 ## Spec Reference
-Read only: `sed -n '788,839p' docs/specification.md` (Part 12 — Flattened Timeline).
-Key requirement (quoted): "segments are ordered / segments do not overlap / segments cover the selected horizon." "There is no generic interval-eclipsing engine." No category may "win" by priority.
+`sed -n '788,839p' docs/specification.md` (Part 12 — Flattened Timeline). "Segments are ordered / segments do not overlap / segments cover the selected horizon." `Σ segment_duration == H` exactly.
 
-## Current Broken Behavior
-File: `bga/attribution/blame_chain.py`, `compute_full_attribution`'s default `terminal_tasks` (single task, max finish time - see `P1-03`) and `build_blame_chain` (single linear walk from that one task). A second, fully disconnected element/component is never walked at all, so its `task_attributions` (computed for it, like every task, in `compute_full_attribution`'s per-task loop) never becomes a flattened-timeline segment. `reconcile_attribution` sums only from `segments`, so this loss is invisible downstream — nothing flags it (that reporting gap is `P1-05`, not this task).
+## Out of Scope (unchanged)
+- The reporting behavior for cases where coverage still comes up short (`P1-05`) - not needed here since coverage is now exact, but the violation-reporting mechanism itself is still a separate task for other scenarios.
+- `select_dependency_blame`'s tie-break logic - untouched, already correct.
 
-## Required Fix
-1. Identify all **genuine** terminal tasks - tasks belonging to elements that (a) have `requested_target = True` (or, absent that, no successors in the real dependency graph - not the old broken finish-time-matching heuristic `P1-03` removed) and (b) are not reachable from any other terminal's own walk. Reuse `explicit_predecessors`/the graph's real structure for this, not a heuristic.
-2. Run the backward blame-chain walk (`build_blame_chain`, already correct after `P1-03`/`P1-19`) from **every** genuine terminal, merging the resulting segments. Since each walk only follows the objectively-slowest-predecessor tie-break through its own connected component, walks from genuinely independent components should never revisit the same task - no dedup logic should be needed if terminal identification (step 1) is correct, but verify this empirically with the two-independent-terminal fixture below rather than assuming it.
-3. Confirm the flattened timeline now covers the full task horizon `H` for a graph with genuinely disconnected components.
-
-## Out of Scope
-- Don't add the violation-reporting behavior for cases where coverage still comes up short after this fix — that's `P1-05`.
-- Don't touch `select_dependency_blame`'s tie-break logic — it's correct and already doing the right thing (see `P1-19`); this task is only about *which terminals get walked*, not how a walk picks its own predecessors.
-
-## Acceptance Test
-1. `tests/unit/test_multi_terminal_coverage.py::test_independent_terminal_extending_horizon_is_dropped_p1_04` currently documents the gap with `assert total == 200000` (the buggy shortfall) and an explicit comment: once fixed, change that assertion to `assert total == h` (exact identity) and update the docstring/comment accordingly.
-2. `tests/unit/test_multi_terminal_coverage.py::test_independent_terminal_nested_within_the_other_is_invisible_but_harmless` must still pass unchanged (that case already passes today, coincidentally, and should keep passing for the right reason once this is properly fixed).
-3. Add a third case with more than two independent components, and one with three-plus elements per component (not just single-task terminals) for broader coverage once the above two are solid.
-4. `PYTHONPATH=. python3 -m pytest tests/ -v` — full suite green.
+## Acceptance Test — as executed
+1. `tests/unit/test_multi_terminal_coverage.py::test_independent_terminal_extending_horizon_now_covered` (renamed from `..._is_dropped_p1_04`) - now asserts exact identity (`Σ == H`) and `idle_us == 100000` for the genuine gap, replacing the old "documents the known shortfall" assertion.
+2. `tests/unit/test_multi_terminal_coverage.py::test_independent_terminal_nested_within_the_other` (renamed, no longer "harmless coincidence" - now correct because `covered_intervals` actually prevents double-counting the nested case).
+3. New: `test_independent_terminals_running_concurrently_do_not_double_count` (the overlap case) and `test_three_independent_terminals_all_covered` (3+ components, per the original acceptance test's request).
+4. Full suite: `PYTHONPATH=. python3 -m pytest tests/ -v` — 45 passed, 0 xfailed.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_multi_terminal_coverage.py -v
+4 passed
+
+$ python3 -c "... synthetic_multi_subproject attribution ..."
+idle_us: 0   # correctly unaffected - single connected component, no real gaps
+
+$ PYTHONPATH=. python3 -m pytest tests/ -v
+45 passed, 0 xfailed
+```

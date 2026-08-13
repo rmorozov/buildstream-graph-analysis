@@ -491,43 +491,69 @@ class BlameChainAnalyzer:
         task_finish_times: Dict[str, int],
         explicit_predecessors: Dict[str, List[str]],
         task_depths: Dict[str, int],
+        already_covered: Optional[Set[str]] = None,
+        covered_intervals: Optional[List[Tuple[int, int]]] = None,
     ) -> List[BlameChainNode]:
         """
         Build the complete blame chain backward from a terminal task (Part 6).
-        
+
         The chain proceeds:
             task execution -> dependency wait -> predecessor execution -> ...
-        
+
         Until wall_start or an attribution boundary is reached.
-        
+
         Args:
             terminal_task_key: Starting task (usually a terminal element)
             task_finish_times: Map of task keys to finish times
             explicit_predecessors: Map of task keys to predecessor lists
             task_depths: Map of task keys to depths
-            
+            already_covered: Task keys already claimed by an earlier walk
+                (P1-04, multi-terminal support) - this walk stops rather
+                than re-adding a node another terminal's walk already
+                covers, so two walks that happen to converge (e.g. two
+                requested targets sharing upstream lineage) don't
+                double-count the shared portion. Mutated in place with
+                every node this walk visits, so the caller can pass the
+                same set across multiple terminals.
+            covered_intervals: [start_us, end_us) spans already claimed by
+                an earlier walk (P1-04). Two genuinely independent
+                terminals (no dependency relationship at all) can still
+                run *concurrently* in wall-clock time - already_covered's
+                task-identity check alone doesn't catch that, and without
+                this, two such walks would each contribute a segment for
+                the same wall-clock window, violating Part 12.1's "segments
+                do not overlap" contract and inflating Sigma past H. A
+                walk stops (without adding the node) the moment its own
+                span would overlap something an earlier, higher-priority
+                walk already claimed. Mutated in place, same as
+                already_covered.
+
         Returns:
             List of BlameChainNode representing the chain
         """
         chain = []
         visited = set()
         current_key = terminal_task_key
-        
-        while current_key and current_key not in visited:
+
+        while (
+            current_key
+            and current_key not in visited
+            and (already_covered is None or current_key not in already_covered)
+        ):
             visited.add(current_key)
-            
+
             if current_key not in self.task_by_key:
                 break
-            
+
             task = self.task_by_key[current_key]
-            
+
             # Create chain node
             node = BlameChainNode(
                 task_key=task.task_key,
                 execution_start=task.start_us,
                 execution_end=task.finish_us,
             )
-            
+
             # Dependency wait: use task.ready_us, already correctly computed
             # during normalization (bga/normalize/timestamps.py) across all
             # of a predecessor element's tasks - not a second, independent
@@ -550,6 +576,22 @@ class BlameChainAnalyzer:
 
             if ready_time < task.start_us:
                 node.dependency_wait_start = ready_time
+
+            span_start = node.dependency_wait_start if node.dependency_wait_start is not None else node.execution_start
+            span_end = node.execution_end
+            if covered_intervals is not None and any(
+                span_start < end and span_end > start for start, end in covered_intervals
+            ):
+                # This node's whole time span (wait + execution) already
+                # overlaps a higher-priority walk's claim - stop here
+                # without adding it, rather than double-covering that
+                # wall-clock window.
+                break
+
+            if already_covered is not None:
+                already_covered.add(current_key)
+            if covered_intervals is not None:
+                covered_intervals.append((span_start, span_end))
 
             # Continue the walk to the responsible predecessor whenever one
             # exists - regardless of whether the wait was zero. A wait of
@@ -575,7 +617,7 @@ class BlameChainAnalyzer:
             # No predecessors - chain ends here
             chain.append(node)
             break
-        
+
         return chain
     
     def compute_task_attribution(
@@ -704,16 +746,34 @@ class BlameChainAnalyzer:
             else:
                 terminal_tasks = set()
         
-        # Build blame chains from all terminals
+        # Build blame chains from all terminals (P1-04: multiple genuinely
+        # independent terminals are supported here - a caller with several
+        # disconnected requested targets passes all of them in
+        # terminal_tasks). Process in a deterministic order (finish time
+        # descending, task key ascending as the tiebreak - the same rule
+        # used elsewhere, e.g. select_dependency_blame) rather than
+        # iterating the set directly, per the determinism contract (Part
+        # 35: no set/dict iteration order may influence results). already_covered
+        # is shared across every walk so that if two terminals' walks
+        # happen to converge on shared upstream lineage, the second walk
+        # stops there instead of re-adding (and double-counting) it.
         all_chain_nodes: List[BlameChainNode] = []
         chain_task_keys: Set[str] = set()
-        
-        for terminal_key in terminal_tasks:
+        already_covered: Set[str] = set()
+        covered_intervals: List[Tuple[int, int]] = []
+
+        ordered_terminals = sorted(
+            terminal_tasks,
+            key=lambda k: (-task_finish_times.get(k, 0), k),
+        )
+        for terminal_key in ordered_terminals:
             chain = self.build_blame_chain(
                 terminal_key,
                 task_finish_times,
                 explicit_predecessors,
                 task_depths,
+                already_covered=already_covered,
+                covered_intervals=covered_intervals,
             )
             all_chain_nodes.extend(chain)
             for node in chain:
@@ -803,11 +863,38 @@ class BlameChainAnalyzer:
         
         # Sort segments by start time
         segments.sort(key=lambda s: (s.start_us, s.end_us))
-        
-        # Merge overlapping segments if needed
-        # (In theory, blame chain segments shouldn't overlap)
-        
-        return segments
+
+        # Fill any remaining gap - before the first segment, between two
+        # segments, or after the last - with IDLE (Part 11: "No recognized
+        # work explains the interval"). With build_blame_chain's
+        # covered_intervals check preventing overlapping claims across
+        # multiple terminal walks (P1-04), segments here should already be
+        # non-overlapping; this only ever *adds* time, never subtracts or
+        # reorders what's already there, so it can't reintroduce overlap.
+        # This is what makes Sigma segment_duration == H hold exactly even
+        # for genuinely disconnected components with real dead time between
+        # them (e.g. two independent requested targets where nothing runs
+        # in the gap) - previously idle_us was always silently 0, since
+        # nothing anywhere ever produced an IDLE segment.
+        filled_segments: List[AttributionSegment] = []
+        cursor = min_start
+        for seg in segments:
+            if seg.start_us > cursor:
+                filled_segments.append(AttributionSegment(
+                    start_us=cursor,
+                    end_us=seg.start_us,
+                    category=AttributionCategory.IDLE,
+                ))
+            filled_segments.append(seg)
+            cursor = max(cursor, seg.end_us)
+        if cursor < max_finish:
+            filled_segments.append(AttributionSegment(
+                start_us=cursor,
+                end_us=max_finish,
+                category=AttributionCategory.IDLE,
+            ))
+
+        return filled_segments
     
     def reconcile_attribution(
         self,

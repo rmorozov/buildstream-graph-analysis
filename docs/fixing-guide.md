@@ -52,6 +52,18 @@ Status legend (same as the tracker):
 - Reference the task file path in the commit body if the message needs more than one line.
 - Do not bundle multiple task IDs into one commit, even if they touch the same file — this makes it possible to revert or re-review one fix without losing another.
 
+## 4a. Repository hygiene — mandatory before every commit
+
+**A real incident, so this isn't hypothetical:** a prior fixing session ran `pip install "networkx>=2.8"` in a shell that mangled the unquoted `>`, redirecting command output into a literal file named `=2.8`, then committed it — along with `bga.egg-info/` and every package's `__pycache__/*.pyc` — straight into the repo, even though `.gitignore` already listed all of those patterns. `.gitignore` only stops *new* untracked files from being added by `git add .`/`git add -A`; it does nothing once a file is already tracked, and it does nothing to stop `git add <specific-ignored-path>` or a broad `git commit -a` from re-adding something after the fact.
+
+Rules to prevent a repeat:
+1. **Never run `git add -A` or `git add .`.** Stage specific files by name/path so you can see exactly what's going in.
+2. **Before every commit, run `git status` and read the full list of staged files.** If anything looks like a build artifact, cache file, log, or a filename you don't recognize authoring, stop and investigate before committing — don't assume it's fine.
+3. **Run `make check-clean` before committing.** It fails loudly if any tracked file matches a `.gitignore` pattern (this is exactly the check that would have caught the `=2.8`/`egg-info`/`__pycache__` incident). If it fails on a *pre-existing* tracked artifact you didn't add, still fix it — `git rm -r --cached <path>` and commit that removal — rather than leaving it for the next session.
+4. **Watch shell redirection when running install/build commands.** `pip install "networkx>=2.8"` (quoted) is safe; `pip install networkx>=2.8` (unquoted) is a shell redirect waiting to happen in some shells/contexts. Quote version specifiers, and check `git status` immediately after running any command with `>` or `>>` in it.
+5. **Temporary/scratch files belong outside the repo**, or at minimum in a path already covered by `.gitignore` (e.g. don't invent new throwaway fixture files under the repo root — put reusable fixtures under `tests/fixtures/`, per `docs/tasks/P3-01-topology-fixture-library.md`, and anything truly throwaway outside the repo entirely).
+6. If you're ever unsure whether something should be committed, leave it uncommitted and note it in the task's Verification Log rather than guessing.
+
 ## 5. Hard rules (do not violate these)
 
 - **Never mark a task 🟢 without a pasted, passing verification command.**

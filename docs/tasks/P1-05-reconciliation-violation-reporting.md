@@ -1,6 +1,6 @@
 # P1-05: No violation raised when the flattened timeline undercounts
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** `P1-04` (fix the undercounting first; this task is about *detecting and reporting* any residual gap, not eliminating it — there may always be a legitimate reason for a small residual, e.g. untracked head/tail)
+**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none now (`P1-03`/`P1-04`/`P1-19` all done - attribution identity holds exactly on every fixture tested so far, including `IDLE` gap-filling for disconnected components; this task is still valuable as defense-in-depth reporting for any future/untested scenario where a residual reappears, not eliminating a currently-known gap)
 
 ## Spec Reference
 Read only: `sed -n '1629,1719p' docs/specification.md` (Part 33 — Reconciliation and Confidence) and the I4/I10 entries in `sed -n '1720,1780p' docs/specification.md` (Part 34).

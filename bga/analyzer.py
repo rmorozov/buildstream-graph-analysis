@@ -351,12 +351,40 @@ class BuildEfficiencyAnalyzer:
         for task in self.normalized_tasks:
             elem_uid = task.task_key.element_uid
             task_depths[str(task.task_key)] = graph_analysis['unweighted_depth'].get(elem_uid, 0)
-        
+
+        # Identify genuine terminal tasks (P1-04): elements the graph
+        # actually has no dependent for, or elements the run explicitly
+        # requested as a target - covering the case of several
+        # independent requested targets in one run, not just the single
+        # element whose own finish happens to be latest. A blame-chain
+        # walk is started from each; already_covered (inside
+        # compute_full_attribution) prevents double-counting if two
+        # terminals' walks converge on shared upstream lineage.
+        successor_elements: Dict[str, List[str]] = defaultdict(list)
+        for dep in self.graph.dependencies:
+            successor_elements[dep.predecessor].append(dep.successor)
+
+        terminal_element_uids = {
+            elem.uid for elem in self.graph.elements
+            if elem.requested_target or not successor_elements.get(elem.uid)
+        }
+
+        terminal_tasks: Set[str] = set()
+        for elem_uid in terminal_element_uids:
+            elem_task_keys = tasks_by_element.get(elem_uid, [])
+            if not elem_task_keys:
+                continue
+            rep_key = build_task_by_element.get(elem_uid)
+            if rep_key is None:
+                rep_key = max(elem_task_keys, key=lambda k: task_finish_times.get(k, 0))
+            terminal_tasks.add(rep_key)
+
         # Compute full attribution
         blame_chain, task_attributions, segments = self.blame_chain_analyzer.compute_full_attribution(
             explicit_predecessors,
             task_finish_times,
             task_depths,
+            terminal_tasks=terminal_tasks or None,
         )
         
         # Reconcile attribution

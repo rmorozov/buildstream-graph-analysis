@@ -70,5 +70,6 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
-# Project specific
-docs/fix-progress-tracker.md
+# Project specific logs and temp files (keep tracker document)
+*.log
+*.tmp

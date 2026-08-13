@@ -473,25 +473,32 @@ class DiagnosticsAnalyzer:
         Uses reverse reachability from graph analysis.
         """
         downstream_counts = self.graph_analysis.get('downstream_count', {})
-        
+
         # Get reachable from targets from graph analysis
         reachable_from_targets = set(self.graph_analysis.get('reachable_from_targets', []))
-        
+
+        # Actual downstream element sets, already computed once for the
+        # whole graph by analyze_graph's O(N+E) reverse traversal (Part 41)
+        # - reused here rather than re-traversing per element.
+        reachable_downstream = self.graph_analysis.get('reachable_downstream', {})
+
         # Build element duration map
         element_durations: Dict[str, int] = defaultdict(int)
         for task in self.tasks:
             elem_uid = task.task_key.element_uid
             element_durations[elem_uid] += task.dur_us
-        
+
         results = []
         for elem_uid in downstream_counts.keys():
             downstream_count = downstream_counts[elem_uid]
-            
-            # Compute weighted downstream duration
-            # Would need full downstream traversal for accurate calculation
-            # Simplified: use average duration × count
-            avg_duration = sum(element_durations.values()) / len(element_durations) if element_durations else 0
-            weighted_duration = int(downstream_count * avg_duration)
+
+            # Weighted downstream duration = sum of the *actual* downstream
+            # elements' own durations, not a global average multiplied by
+            # count (two elements with the same downstream_count but very
+            # different real downstream workloads must not report the same
+            # weighted_duration).
+            downstream_uids = reachable_downstream.get(elem_uid, [])
+            weighted_duration = sum(element_durations.get(uid, 0) for uid in downstream_uids)
             
             # Check if leaf (no downstream)
             is_leaf = downstream_count == 0
@@ -555,29 +562,38 @@ class DiagnosticsAnalyzer:
                 # Apply ±perturbation_pct uniformly
                 factor = 1.0 + rng.uniform(-perturbation_pct, perturbation_pct)
                 perturbed[task_key] = int(duration * factor)
-            
-            # Recompute critical path with perturbed durations
-            # Simplified: use existing critical path as approximation
-            # Full implementation would re-run critical path algorithm
+
+            # Recompute the critical path with these perturbed durations -
+            # a genuine per-sample resample, not a cached/unperturbed
+            # approximation. Returns element UIDs (critical path is
+            # defined on the element graph, Part 24.1), not task keys.
             perturbed_cp = self._compute_perturbed_critical_path(perturbed)
-            
-            for task_key in perturbed_cp:
-                critical_counts[task_key] += 1
-        
+
+            for elem_uid_on_path in perturbed_cp:
+                critical_counts[elem_uid_on_path] += 1
+
         # Build results
         results = []
         for task in self.tasks:
             task_key = str(task.task_key)
             elem_uid = task.task_key.element_uid
-            
-            count = critical_counts.get(task_key, 0)
+
+            # critical_counts is keyed by element UID (see above) - looking
+            # this up by the full task_key string always missed, silently
+            # collapsing every probability to 0.0 regardless of how many
+            # samples actually landed on this element's critical path.
+            count = critical_counts.get(elem_uid, 0)
             probability = count / num_samples if num_samples > 0 else 0.0
             
             # Get observed slack
             obs_slack = self.slack.get(task_key, 0)
-            
-            # Check if observed critical
-            obs_critical = task_key in self.critical_path
+
+            # self.critical_path is a set of element UIDs (compute_critical_path
+            # operates on the element graph, Part 5.3/14.1), not task_key
+            # strings - same key-format mismatch as critical_counts above,
+            # which silently made this always False regardless of the
+            # element's real observed criticality.
+            obs_critical = elem_uid in self.critical_path
             
             results.append(CriticalityProbability(
                 element_uid=elem_uid,

@@ -1,0 +1,2 @@
+[console_scripts]
+bga = bga.cli:main

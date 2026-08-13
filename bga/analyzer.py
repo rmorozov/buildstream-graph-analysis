@@ -4,6 +4,7 @@ Main analyzer module.
 Orchestrates the complete analysis pipeline as specified in the v9 specification.
 """
 
+import logging
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
@@ -18,6 +19,8 @@ from .replay.scheduler import ReplayScheduler, compute_replay_makespan
 from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
 from .diagnostics import DiagnosticsAnalyzer, analyze_diagnostics, DiagnosticsResult
 from .structural import StructuralAnalyzer, StructuralAnalysisResult
+
+logger = logging.getLogger(__name__)
 
 
 class BuildEfficiencyAnalyzer:
@@ -514,7 +517,15 @@ class BuildEfficiencyAnalyzer:
         
         # Basic coverage calculation
         total_tasks = len(self.normalized_tasks) if self.normalized_tasks else 0
-        
+
+        if ordering_violations == 0:
+            logger.info("Ordering gate: passed (%d tasks checked)", total_tasks)
+        else:
+            logger.warning(
+                "Ordering gate: failed (%d ordering violations out of %d tasks)",
+                ordering_violations, total_tasks,
+            )
+
         return {
             'primary': 1.0 if ordering_violations == 0 else 0.5,
             'ordering_violations': ordering_violations,

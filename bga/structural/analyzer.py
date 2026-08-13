@@ -12,11 +12,14 @@ Implements Parts 31-39:
 - Optimization recommendations (Part 39)
 """
 
+import logging
 from collections import defaultdict, deque
 from typing import Dict, List, Set, Tuple, Optional, Any
 import statistics
 
 from bga.ingest.models import NormalizedTask
+
+logger = logging.getLogger(__name__)
 
 
 class ElementDependencyGraph:
@@ -507,6 +510,11 @@ class StructuralAnalyzer:
             cp_length, cp_nodes = graph_compute_critical_path(graph_obj, task_durations)
             return cp_nodes
         except Exception:
+            logger.warning(
+                "Structural critical-path computation failed; "
+                "critical_path_length/max_depth will read as 0",
+                exc_info=True,
+            )
             return []
     
     def _compute_level_decomposition(self) -> Dict[int, Set[str]]:

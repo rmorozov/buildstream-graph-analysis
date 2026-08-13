@@ -9,6 +9,7 @@ Key principles:
 - Finish times are immutable; duration absorbs corrections
 """
 
+import logging
 from typing import List, Dict, Optional, Tuple
 
 from ..ingest.models import (
@@ -18,6 +19,8 @@ from ..ingest.models import (
     Trace,
     DependencyEdge,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def quantize_timestamp(ts_us: int, epsilon_us: int) -> int:
@@ -177,6 +180,11 @@ def validate_ordering(
                     succ_start = q_start
         
         if succ_start is not None and pred_finish > succ_start:
+            logger.debug(
+                "Ordering violation: %s finishes at %d after %s starts at %d (gap %dus)",
+                dep.predecessor, pred_finish, dep.successor, succ_start,
+                succ_start - pred_finish,
+            )
             violations.append({
                 'type': 'ordering_violation',
                 'predecessor': dep.predecessor,
@@ -185,7 +193,7 @@ def validate_ordering(
                 'successor_start': succ_start,
                 'gap_us': succ_start - pred_finish,  # Negative means violation
             })
-    
+
     return violations
 
 
@@ -218,7 +226,12 @@ def clamp_task_starts(
         
         # Clamp start to ready time if necessary
         clamped_start = max(q_start, ready_us)
-        
+        if clamped_start > q_start:
+            logger.debug(
+                "Clamped start of %s: %d -> %d (ready at %d)",
+                task_key_str, q_start, clamped_start, ready_us,
+            )
+
         # Finish time is immutable
         clamped_finish = q_finish
         
@@ -269,5 +282,10 @@ def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000) -> Tupl
     
     # Step 4: Clamp starts to ready times
     normalized_tasks = clamp_task_starts(normalized_spans, ready_times, graph)
-    
+
+    logger.info(
+        "Normalized %d tasks (%d ordering violations)",
+        len(normalized_tasks), len(violations),
+    )
+
     return normalized_tasks, violations

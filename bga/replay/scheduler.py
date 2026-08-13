@@ -7,6 +7,7 @@ The replay scheduler simulates execution under different capacity constraints
 to answer "what-if" questions about resource allocation.
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Set
 from collections import defaultdict
@@ -14,6 +15,8 @@ import heapq
 
 from ..ingest.models import RunContext
 from ..normalize.timestamps import NormalizedTask
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -281,7 +284,11 @@ class ReplayScheduler:
         
         # Compute makespan
         makespan = max((t.finish_us for t in scheduled_tasks), default=0)
-        
+        logger.info(
+            "Replay (%s, capacities=%s): makespan=%dus over %d tasks",
+            priority_rule, capacities, makespan, len(scheduled_tasks),
+        )
+
         return ReplayResult(
             makespan_us=makespan,
             scheduled_tasks=scheduled_tasks,

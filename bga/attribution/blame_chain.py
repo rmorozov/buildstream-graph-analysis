@@ -88,12 +88,20 @@ class AttributionSegment:
 class BlameChainNode:
     """
     One node in the backward blame chain walk (Part 6).
-    
+
     Attributes:
         task_key: The task being analyzed
         execution_start: When execution started
         execution_end: When execution finished
-        dependency_wait_start: When dependency wait started (if any)
+        dependency_wait_start: When the wait gap (of any kind) started, if
+            any - this is the earliest point of wait_breakdown, kept for
+            backward-compat dependency_wait_duration_us; use wait_breakdown
+            for how that span actually splits into categories.
+        wait_breakdown: How [dependency_wait_start, execution_start) splits
+            across categories (Part 7: "the interval is classified
+            according to what happened during that gap") - a list of
+            (AttributionCategory, start_us, end_us) tuples, contiguous and
+            non-overlapping, covering the full wait span exactly.
         responsible_predecessor: Predecessor responsible for readiness (if any)
         resource_wait_info: Resource wait information (if applicable)
         scheduler_wait_info: Scheduler wait information (if applicable)
@@ -102,6 +110,7 @@ class BlameChainNode:
     execution_start: int
     execution_end: int
     dependency_wait_start: Optional[int] = None
+    wait_breakdown: List[Tuple[AttributionCategory, int, int]] = field(default_factory=list)
     responsible_predecessor: Optional[TaskKey] = None
     resource_wait_info: Optional[dict] = None
     scheduler_wait_info: Optional[dict] = None
@@ -374,6 +383,7 @@ class BlameChainAnalyzer:
         if not holder_time_us:
             holder_info['blocking_tasks'] = 'UNKNOWN'
             holder_info['ambiguous'] = True
+            holder_info['explained_us'] = 0
             return True, holder_info
 
         # Sorted by task key ascending (Part 35 determinism, same tie-break
@@ -384,6 +394,13 @@ class BlameChainAnalyzer:
         }
         explained_us = sum(holder_time_us.values())
         holder_info['ambiguous'] = explained_us < wait_duration
+        # Raw integer microseconds explained by identified holders - kept
+        # alongside the normalized (float) 'blocking_tasks' weights so
+        # callers needing exact arithmetic (e.g. P1-20's gap classification
+        # in build_blame_chain) don't have to reverse a float multiplication
+        # against invariant-sensitive durations (Part 3.1: no floating point
+        # in timeline accounting).
+        holder_info['explained_us'] = explained_us
         return True, holder_info
     
     def _resource_available_at(self, task: NormalizedTask, ts: int) -> bool:
@@ -517,6 +534,68 @@ class BlameChainAnalyzer:
             return None
         return max(candidates, key=lambda t: _PHASE_ORDER.get(t.task_key.task_kind, -1))
 
+    def _classify_wait_gap(
+        self,
+        task: NormalizedTask,
+        gap_start: int,
+        gap_end: int,
+    ) -> Tuple[List[Tuple[AttributionCategory, int, int]], Optional[dict]]:
+        """Split a task's post-ready wait gap [gap_start, gap_end) into
+        DEPENDENCY_WAIT/RESOURCE_WAIT/SCHEDULER_WAIT sub-segments (Part 7:
+        "the interval is classified according to what happened during that
+        gap" - not automatically all DEPENDENCY_WAIT).
+
+        Split order: resource-wait first (using classify_resource_wait's
+        holder-weighted overlap, P1-01), then scheduler-wait for any
+        remainder (classify_scheduler_wait, P1-02), then whatever's left
+        defaults to DEPENDENCY_WAIT - the one category the spec doesn't
+        require "sufficient evidence" for, so it's the safe fallback when
+        neither more specific classifier confirms an explanation.
+
+        `gap_start` may be later than `task.ready_us` (e.g. when an
+        intra-element phase predecessor pushed the effective ready time
+        forward, P1-19) - classify_resource_wait's own internal wait
+        window always starts at `task.ready_us`, so its 'explained_us' is
+        clamped to fit within [gap_start, gap_end) here. This is a known
+        approximation for the (rare) case where resource contention and
+        intra-element sequencing overlap in complex ways; see P1-20's task
+        file for the honest accounting of this simplification.
+
+        Returns (segments, resource_wait_holder_info) - segments cover
+        [gap_start, gap_end) exactly, contiguously, no overlap;
+        holder_info is classify_resource_wait's raw return, for callers
+        that want to record it (e.g. on the BlameChainNode), or None if
+        resource-wait wasn't applicable.
+        """
+        segments: List[Tuple[AttributionCategory, int, int]] = []
+        cursor = gap_start
+        resource_wait_holder_info: Optional[dict] = None
+
+        if task.resources:
+            is_resource_wait, holder_info = self.classify_resource_wait(
+                task, self.active_tasks_at_time, self.resource_capacity,
+            )
+            if is_resource_wait and holder_info:
+                resource_wait_holder_info = holder_info
+                explained_us = min(holder_info.get('explained_us', 0), gap_end - cursor)
+                if explained_us > 0:
+                    segments.append((AttributionCategory.RESOURCE_WAIT, cursor, cursor + explained_us))
+                    cursor += explained_us
+
+        if cursor < gap_end:
+            resource_available = self._resource_available_at(task, task.ready_us)
+            is_scheduler_wait = self.classify_scheduler_wait(
+                task, resource_available, self.max_jobs, self.concurrent_jobs_at_time,
+            )
+            if is_scheduler_wait:
+                segments.append((AttributionCategory.SCHEDULER_WAIT, cursor, gap_end))
+                cursor = gap_end
+
+        if cursor < gap_end:
+            segments.append((AttributionCategory.DEPENDENCY_WAIT, cursor, gap_end))
+
+        return segments, resource_wait_holder_info
+
     def build_blame_chain(
         self,
         terminal_task_key: str,
@@ -608,6 +687,9 @@ class BlameChainAnalyzer:
 
             if ready_time < task.start_us:
                 node.dependency_wait_start = ready_time
+                node.wait_breakdown, node.resource_wait_info = self._classify_wait_gap(
+                    task, ready_time, task.start_us,
+                )
 
             span_start = node.dependency_wait_start if node.dependency_wait_start is not None else node.execution_start
             span_end = node.execution_end
@@ -686,46 +768,26 @@ class BlameChainAnalyzer:
             execution_duration_us=task.dur_us,
         )
         
-        # Dependency wait: [ready_time, start_us). Use task.ready_us
-        # directly (see build_blame_chain for why this replaced the
-        # separate, narrower compute_ready_time recomputation).
+        # Wait gap [ready_time, start_us), classified into DEPENDENCY_WAIT/
+        # RESOURCE_WAIT/SCHEDULER_WAIT via the same _classify_wait_gap
+        # build_blame_chain uses (P1-20) - previously this method
+        # independently recomputed dependency_wait_us as the *full* gap and
+        # then *also* added resource_wait_us for essentially the same
+        # interval, double-counting the same wall-clock time across two
+        # fields on the same TaskAttribution. Sharing one classification
+        # implementation also avoids two call sites silently diverging.
         ready_time = task.ready_us
-
         if task.start_us > ready_time:
-            attribution.dependency_wait_us = task.start_us - ready_time
-        
-        # Resource wait classification (Part 8)
-        # Check if task waited for resources during [ready_us, start_us)
-        if task.start_us > task.ready_us and task.resources:
-            is_resource_wait, holder_info = self.classify_resource_wait(
-                task,
-                self.active_tasks_at_time,
-                self.resource_capacity,
-            )
-            if is_resource_wait and holder_info:
-                # Attribute the wait time to resource wait
-                resource_wait_duration = task.start_us - max(ready_time, task.ready_us)
-                if resource_wait_duration > 0:
-                    attribution.resource_wait_us = resource_wait_duration
-        
-        # Scheduler wait classification (Part 9)
-        # Check if task was ready but not scheduled despite resources being available
-        if task.start_us > task.ready_us:
-            resource_available = self._resource_available_at(task, task.ready_us)
-            is_scheduler_wait = self.classify_scheduler_wait(
-                task,
-                resource_available,
-                self.max_jobs,
-                self.concurrent_jobs_at_time,
-            )
-            if is_scheduler_wait:
-                # Attribute remaining unexplained wait to scheduler wait
-                already_attributed = attribution.dependency_wait_us + attribution.resource_wait_us
-                total_wait = task.start_us - task.ready_us
-                scheduler_wait_duration = max(0, total_wait - already_attributed)
-                if scheduler_wait_duration > 0:
-                    attribution.scheduler_wait_us = scheduler_wait_duration
-        
+            segments, _holder_info = self._classify_wait_gap(task, ready_time, task.start_us)
+            for category, seg_start, seg_end in segments:
+                duration = seg_end - seg_start
+                if category == AttributionCategory.RESOURCE_WAIT:
+                    attribution.resource_wait_us += duration
+                elif category == AttributionCategory.SCHEDULER_WAIT:
+                    attribution.scheduler_wait_us += duration
+                else:
+                    attribution.dependency_wait_us += duration
+
         # Phase annotations
         attribution.phase_annotations = self.annotate_phases(task)
         
@@ -882,16 +944,24 @@ class BlameChainAnalyzer:
                     phase=attribution.phase_annotations[0] if attribution.phase_annotations else None,
                 )
                 segments.append(seg)
-                
-                # Dependency wait
-                if node.dependency_wait_start is not None:
-                    dep_wait_seg = AttributionSegment(
-                        start_us=node.dependency_wait_start,
-                        end_us=node.execution_start,
-                        category=AttributionCategory.DEPENDENCY_WAIT,
+
+                # Wait gap, split across DEPENDENCY_WAIT/RESOURCE_WAIT/
+                # SCHEDULER_WAIT per Part 7 (P1-20) - wait_breakdown covers
+                # [dependency_wait_start, execution_start) exactly,
+                # contiguously, already classified by _classify_wait_gap.
+                for category, seg_start, seg_end in node.wait_breakdown:
+                    wait_seg = AttributionSegment(
+                        start_us=seg_start,
+                        end_us=seg_end,
+                        category=category,
                         task_key=node.task_key,
+                        metadata=(
+                            {'holder_info': node.resource_wait_info}
+                            if category == AttributionCategory.RESOURCE_WAIT and node.resource_wait_info
+                            else {}
+                        ),
                     )
-                    segments.append(dep_wait_seg)
+                    segments.append(wait_seg)
         
         # Sort segments by start time
         segments.sort(key=lambda s: (s.start_us, s.end_us))

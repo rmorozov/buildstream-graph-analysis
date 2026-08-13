@@ -313,46 +313,78 @@ class BlameChainAnalyzer:
     ) -> Tuple[bool, Optional[dict]]:
         """
         Classify resource wait intervals (Part 8).
-        
+
+        Holder identification is derived directly from the observed
+        [start_us, finish_us) intervals of every other task requiring at
+        least one of the same resources, time-weighted against the wait
+        window [ready_us, start_us) - not from a capacity-threshold sweep.
+        This sidesteps needing to trust `resource_capacity` numbers (a
+        separate concern, e.g. invariant I6) for identifying *who* was
+        actually occupying the resource: if another task's interval
+        overlaps the wait window and requires the same resource, it's a
+        real, measured holder for that overlap, independent of whether
+        declared capacity data agrees. `resource_capacity` is accepted for
+        interface stability but not used by this method.
+
         Args:
             task: The task to analyze
             active_tasks_at_time: Map of timestamps to sets of active tasks
+                (unused - see docstring; kept for interface stability)
             resource_capacity: Available capacity per resource type
-            
+                (unused - see docstring; kept for interface stability)
+
         Returns:
-            Tuple of (is_resource_wait, holder_info)
+            Tuple of (is_resource_wait, holder_info). holder_info['blocking_tasks']
+            is either a dict of {task_key: time-weighted share} (Part 8.2)
+            or the literal string "UNKNOWN" if no holder could be
+            identified for any part of the wait, with 'ambiguous' set
+            True whenever any portion of the wait isn't explained by an
+            identified holder - never fabricating a holder to fill the gap.
         """
         if not task.resources:
             return False, None
-        
+
         # Check if task had to wait after becoming ready
         if task.start_us <= task.ready_us:
             return False, None
-        
-        # Analyze what was happening during [ready_us, start_us)
-        wait_interval_start = task.ready_us
-        wait_interval_end = task.start_us
-        
-        # Find tasks that were using the required resources during wait
-        holder_counts: Dict[Resource, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        
-        for res in task.resources:
-            # Scan through the wait interval
-            # In a full implementation, we'd use the occupancy step function
-            pass
-        
-        # Simplified: check if resource was at capacity
-        # Full implementation would track exact holders
+
+        wait_start = task.ready_us
+        wait_end = task.start_us
+        wait_duration = wait_end - wait_start
+
+        required = set(task.resources)
+        holder_time_us: Dict[str, int] = defaultdict(int)
+
+        for other in self.tasks:
+            if other.task_key == task.task_key:
+                continue
+            if not (required & set(other.resources)):
+                continue
+            overlap_start = max(wait_start, other.start_us)
+            overlap_end = min(wait_end, other.finish_us)
+            if overlap_start < overlap_end:
+                holder_time_us[str(other.task_key)] += overlap_end - overlap_start
+
         holder_info = {
-            'wait_start_us': wait_interval_start,
-            'wait_end_us': wait_interval_end,
+            'wait_start_us': wait_start,
+            'wait_end_us': wait_end,
             'required_resources': [str(r) for r in task.resources],
-            'blocking_tasks': {},  # Would be populated from occupancy data
-            'ambiguous': False,
         }
-        
-        # For now, assume there was resource contention if we have resources
-        return len(task.resources) > 0, holder_info
+
+        if not holder_time_us:
+            holder_info['blocking_tasks'] = 'UNKNOWN'
+            holder_info['ambiguous'] = True
+            return True, holder_info
+
+        # Sorted by task key ascending (Part 35 determinism, same tie-break
+        # pattern used elsewhere in this file, e.g. select_dependency_blame).
+        holder_info['blocking_tasks'] = {
+            key: holder_time_us[key] / wait_duration
+            for key in sorted(holder_time_us.keys())
+        }
+        explained_us = sum(holder_time_us.values())
+        holder_info['ambiguous'] = explained_us < wait_duration
+        return True, holder_info
     
     def _resource_available_at(self, task: NormalizedTask, ts: int) -> bool:
         """True if every resource `task` requires had at least one free

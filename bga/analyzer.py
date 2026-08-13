@@ -6,6 +6,7 @@ Orchestrates the complete analysis pipeline as specified in the v9 specification
 
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
+from collections import defaultdict
 
 from .ingest.models import AnalysisResult, Graph, RunContext, Trace, PhaseSpan
 from .ingest.loader import load_all
@@ -33,14 +34,32 @@ class BuildEfficiencyAnalyzer:
       Never mix the three.
     """
     
-    def __init__(self, run_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        run_dir: Optional[Path] = None,
+        capacity: Optional[int] = None,
+        run_replay: bool = False,
+        replay_heuristic: str = 'lpt',
+        run_diagnostics: bool = False,
+        verbose: bool = False,
+    ):
         """
         Initialize the analyzer.
         
         Args:
             run_dir: Path to the run directory containing input files
+            capacity: Override system resource capacity (optional)
+            run_replay: Whether to run replay scheduling
+            replay_heuristic: Heuristic for replay scheduling ('lpt', 'spt', 'fifo', 'depth')
+            run_diagnostics: Whether to run advanced diagnostics
+            verbose: Enable verbose logging
         """
         self.run_dir = run_dir
+        self.capacity_override = capacity
+        self.run_replay = run_replay
+        self.replay_heuristic = replay_heuristic
+        self.run_diagnostics = run_diagnostics
+        self.verbose = verbose
         self.run_context: Optional[RunContext] = None
         self.graph: Optional[Graph] = None
         self.trace: Optional[Trace] = None
@@ -111,10 +130,34 @@ class BuildEfficiencyAnalyzer:
         
         # Initialize blame chain analyzer with normalized tasks
         phase_spans = self.trace.phases if self.trace else []
+        
+        # Build active_tasks_at_time and concurrent_jobs_at_time for classification
+        active_tasks_at_time: Dict[int, Set[str]] = defaultdict(set)
+        concurrent_jobs_at_time: Dict[int, int] = defaultdict(int)
+        
+        for task in self.normalized_tasks:
+            # Mark task as active during its execution [start_us, finish_us)
+            active_tasks_at_time[task.start_us].add(str(task.task_key))
+            # Track concurrent jobs at start time
+            concurrent_jobs_at_time[task.start_us] += 1
+        
+        # Resource capacity from run context
+        resource_capacity = {}
+        if self.run_context:
+            if hasattr(self.run_context, 'builders') and self.run_context.builders:
+                from .ingest.models import Resource
+                resource_capacity[Resource.PROCESS] = self.run_context.builders
+        
+        max_jobs = self.run_context.max_jobs if self.run_context else None
+        
         self.blame_chain_analyzer = BlameChainAnalyzer(
             self.normalized_tasks,
             self.run_context,
             phase_spans,
+            active_tasks_at_time=active_tasks_at_time,
+            resource_capacity=resource_capacity,
+            max_jobs=max_jobs,
+            concurrent_jobs_at_time=concurrent_jobs_at_time,
         )
         
         # Initialize replay scheduler
@@ -320,7 +363,7 @@ class BuildEfficiencyAnalyzer:
         
         return result
     
-    def analyze(self) -> AnalysisResult:
+    def analyze(self, run_dir: Optional[Path] = None) -> AnalysisResult:
         """
         Perform complete analysis.
         
@@ -334,13 +377,30 @@ class BuildEfficiencyAnalyzer:
         7. Advanced diagnostics (M5)
         8. Structural analysis (M6)
         
+        Args:
+            run_dir: Path to run directory (uses instance run_dir if not provided)
+        
         Returns:
             AnalysisResult with all computed metrics
         """
+        # Load data if needed
+        if run_dir is not None:
+            self.load(run_dir)
+        elif self.run_dir is not None and (self.run_context is None or self.graph is None or self.trace is None):
+            self.load()
+        
         if self.normalized_tasks is None or len(self.normalized_tasks) == 0:
             self.normalize()
         
         result = AnalysisResult()
+        
+        # Set run_id and total_duration from context/trace
+        if self.run_context:
+            result.run_id = getattr(self.run_context, 'run_id', '') or getattr(self.run_context, 'uuid', '')
+        
+        # Compute horizon for total duration
+        occupancy_stats = compute_occupancy_stats(self.normalized_tasks)
+        result.total_duration_us = occupancy_stats.get('horizon_us', 0)
         
         # Occupancy analysis (M0)
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)

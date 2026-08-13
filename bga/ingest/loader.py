@@ -29,8 +29,11 @@ def load_run_context(path: Path) -> RunContext:
     
     Expected schema: run-context/v9 (Part 32.1)
     """
-    with open(path, 'r') as f:
-        data = json.load(f)
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Malformed JSON in run context file {path}: {e}")
     
     wall_clock = data.get('wall_clock', {})
     
@@ -77,8 +80,11 @@ def load_trace(path: Path) -> Trace:
     Expected schema: trace/v9 (Part 32.3)
     Also supports Chrome trace format with conversion.
     """
-    with open(path, 'r') as f:
-        data = json.load(f)
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Malformed JSON in trace file {path}: {e}")
     
     spans = []
     phases = []
@@ -110,21 +116,42 @@ def load_trace(path: Path) -> Trace:
         # Simplified tasks array format (common in tests)
         for task_data in data.get('tasks', []):
             key = task_data.get('key')
-            if not key:
+            element_uid = task_data.get('element_uid')
+            
+            if not key and not element_uid:
                 continue
             
-            try:
-                task_key = TaskKey.from_string(key)
-            except ValueError:
+            # Build task key from either explicit 'key' or from element_uid + other fields
+            if key:
+                try:
+                    task_key = TaskKey.from_string(key)
+                except ValueError:
+                    task_key = TaskKey(
+                        element_uid=key,
+                        task_kind=TaskKind.BUILD,
+                        phase='default',
+                        attempt=0,
+                    )
+            else:
+                # Construct from element_uid and optional kind/phase/attempt fields
+                task_kind_str = task_data.get('kind', 'BUILD')
+                phase_str = task_data.get('phase', 'EXECUTION')
+                attempt = task_data.get('attempt', 1)
+                
+                try:
+                    task_kind = TaskKind(task_kind_str)
+                except ValueError:
+                    task_kind = TaskKind.BUILD
+                
                 task_key = TaskKey(
-                    element_uid=key,
-                    task_kind=TaskKind.BUILD,
-                    phase='default',
-                    attempt=0,
+                    element_uid=element_uid,
+                    task_kind=task_kind,
+                    phase=phase_str,
+                    attempt=attempt,
                 )
             
-            start_time = task_data.get('start_time_us', 0)
-            finish_time = task_data.get('finish_time_us', 0)
+            start_time = task_data.get('start_us', task_data.get('start_time_us', 0))
+            finish_time = task_data.get('finish_us', task_data.get('finish_time_us', 0))
             duration = task_data.get('duration_us', finish_time - start_time)
             
             # Parse resource profile

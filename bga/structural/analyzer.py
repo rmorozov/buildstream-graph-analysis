@@ -40,9 +40,10 @@ def build_edg(graph):
     # Build adjacency lists
     predecessors, successors = build_element_graph(graph)
     
-    # Build NetworkX graph
+    # Build NetworkX graph - use element UIDs (graph.elements is a list of Element objects)
     G = nx.DiGraph()
-    for elem_id in graph.elements:
+    for elem in graph.elements:
+        elem_id = elem.uid if hasattr(elem, 'uid') else elem
         G.add_node(elem_id)
     for pred, succs in successors.items():
         for succ in succs:
@@ -84,9 +85,23 @@ class StructuralAnalyzer:
         n_elements = len(G.nodes())
         n_edges = len(G.edges())
         
-        # Depth analysis
-        depths = nx.single_source_shortest_path_length(G.reverse(), list(G.nodes())[0] if G.nodes() else None)
-        max_depth = max(depths.values()) if depths else 0
+        # Depth analysis: compute max distance from any root to each node
+        # Find roots (nodes with in_degree 0)
+        roots = [n for n in G.nodes() if G.in_degree(n) == 0]
+        
+        # Compute depth for each node as max distance from any root
+        max_depths = {}
+        for node in G.nodes():
+            max_dist = 0
+            for root in roots:
+                try:
+                    dist = nx.shortest_path_length(G, root, node)
+                    max_dist = max(max_dist, dist)
+                except nx.NetworkXNoPath:
+                    pass
+            max_depths[node] = max_dist
+        
+        max_depth = max(max_depths.values()) if max_depths else 0
         
         # Fan-in/fan-out
         fanouts = [G.out_degree(n) for n in G.nodes()]
@@ -474,10 +489,28 @@ class StructuralAnalyzer:
     
     def _compute_critical_path_nodes(self) -> List[str]:
         """Get nodes on the critical path."""
-        # Use existing critical path computation from EDG
+        # Use existing critical path computation from EDG module
+        # The edg.G is a NetworkX DiGraph, we need to compute critical path using bga.graph.edg functions
         try:
-            cp_result = self.edg.compute_critical_path([t for t in self.tasks.values()])
-            return cp_result.path if cp_result else []
+            from bga.graph.edg import compute_critical_path as graph_compute_critical_path
+            
+            # Get task durations from tasks dict
+            task_durations = {}
+            for elem_uid, task in self.tasks.items():
+                if hasattr(task, 'dur_us'):
+                    task_durations[elem_uid] = task.dur_us
+            
+            # Build a Graph object from our NetworkX graph for the function
+            from bga.ingest.models import Graph, Element, DependencyEdge
+            elements = [Element(uid=node) for node in self._graph.nodes()]
+            dependencies = []
+            for pred, succ in self._graph.edges():
+                dependencies.append(DependencyEdge(predecessor=pred, successor=succ))
+            
+            graph_obj = Graph(elements=elements, dependencies=dependencies)
+            
+            cp_length, cp_nodes = graph_compute_critical_path(graph_obj, task_durations)
+            return cp_nodes
         except Exception:
             return []
     

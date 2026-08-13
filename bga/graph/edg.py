@@ -82,39 +82,38 @@ def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
     Raises:
         ValueError: If the graph contains a cycle
     """
-    predecessors, _ = build_element_graph(graph)
+    _, successors = build_element_graph(graph)
     in_degree, _ = compute_in_out_degree(graph)
-    
+
     depth: Dict[str, int] = {}
-    
+
     # Initialize sources with depth 0
     queue = deque()
     for elem_uid, deg in in_degree.items():
         if deg == 0:
             depth[elem_uid] = 0
             queue.append(elem_uid)
-    
+
     processed_count = 0
-    
-    # Process in topological order
+
+    # Process in topological order - O(N+E): each edge is visited exactly
+    # once via the precomputed successors adjacency list, instead of
+    # rescanning the full flat graph.dependencies list per dequeued node.
     while queue:
         current = queue.popleft()
         current_depth = depth[current]
         processed_count += 1
-        
-        # Find successors
-        for dep in graph.dependencies:
-            if dep.predecessor == current:
-                successor = dep.successor
-                # Update depth if this path is longer
-                if successor not in depth:
-                    depth[successor] = 0
-                depth[successor] = max(depth[successor], current_depth + 1)
-                
-                in_degree[successor] -= 1
-                if in_degree[successor] == 0:
-                    queue.append(successor)
-    
+
+        for successor in successors.get(current, []):
+            # Update depth if this path is longer
+            if successor not in depth:
+                depth[successor] = 0
+            depth[successor] = max(depth[successor], current_depth + 1)
+
+            in_degree[successor] -= 1
+            if in_degree[successor] == 0:
+                queue.append(successor)
+
     # Check for cycles: if we didn't process all elements, there's a cycle
     if processed_count != len(graph.elements):
         # Find which elements are in cycles
@@ -144,12 +143,12 @@ def compute_weighted_depth(
     Raises:
         ValueError: If the graph contains a cycle
     """
-    predecessors, _ = build_element_graph(graph)
+    _, successors = build_element_graph(graph)
     in_degree, _ = compute_in_out_degree(graph)
-    
+
     # earliest_finish[elem] = earliest time elem can finish
     earliest_finish: Dict[str, int] = {}
-    
+
     # Initialize sources
     queue = deque()
     processed_count = 0
@@ -157,30 +156,27 @@ def compute_weighted_depth(
         if deg == 0:
             earliest_finish[elem_uid] = task_durations.get(elem_uid, 0)
             queue.append(elem_uid)
-    
-    # Process in topological order
+
+    # Process in topological order - O(N+E), see compute_unweighted_depth.
     while queue:
         current = queue.popleft()
         current_finish = earliest_finish[current]
         processed_count += 1
-        
-        for dep in graph.dependencies:
-            if dep.predecessor == current:
-                successor = dep.successor
-                
-                if successor not in earliest_finish:
-                    earliest_finish[successor] = 0
-                
-                # Successor can start when all predecessors finish
-                earliest_start = current_finish
-                earliest_finish[successor] = max(
-                    earliest_finish[successor],
-                    earliest_start + task_durations.get(successor, 0)
-                )
-                
-                in_degree[successor] -= 1
-                if in_degree[successor] == 0:
-                    queue.append(successor)
+
+        for successor in successors.get(current, []):
+            if successor not in earliest_finish:
+                earliest_finish[successor] = 0
+
+            # Successor can start when all predecessors finish
+            earliest_start = current_finish
+            earliest_finish[successor] = max(
+                earliest_finish[successor],
+                earliest_start + task_durations.get(successor, 0)
+            )
+
+            in_degree[successor] -= 1
+            if in_degree[successor] == 0:
+                queue.append(successor)
     
     # Check for cycles
     if processed_count != len(graph.elements):
@@ -359,33 +355,31 @@ def compute_dominators(graph: Graph, start_elements: Optional[Set[str]] = None) 
     Returns:
         Dict mapping element uid to its set of dominators
     """
-    predecessors, _ = build_element_graph(graph)
+    predecessors, successors = build_element_graph(graph)
     in_degree, _ = compute_in_out_degree(graph)
-    
+
     if start_elements is None:
         start_elements = {uid for uid, deg in in_degree.items() if deg == 0}
-    
+
     # Initialize dominators
     dom: Dict[str, Set[str]] = {}
-    
-    # Topological sort
+
+    # Topological sort - O(N+E), see compute_unweighted_depth.
     topo_order = []
     queue = deque(start_elements)
     temp_in_degree = {uid: deg for uid, deg in in_degree.items()}
-    
+
     for start in start_elements:
         dom[start] = {start}
-    
+
     while queue:
         current = queue.popleft()
         topo_order.append(current)
-        
-        for dep in graph.dependencies:
-            if dep.predecessor == current:
-                successor = dep.successor
-                temp_in_degree[successor] -= 1
-                if temp_in_degree[successor] == 0:
-                    queue.append(successor)
+
+        for successor in successors.get(current, []):
+            temp_in_degree[successor] -= 1
+            if temp_in_degree[successor] == 0:
+                queue.append(successor)
     
     # Iterative dominator computation
     changed = True

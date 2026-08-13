@@ -1,6 +1,9 @@
 # P1-10: Blast-radius weighted duration uses a fake average
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none
+
+## What was fixed
+`compute_blast_radius` now sums the real durations of the elements actually in `graph_analysis['reachable_downstream'][elem_uid]` - the exact downstream set - instead of `downstream_count * global_average_duration`. `reachable_downstream` was already computed once for the whole graph by `analyze_graph`'s reverse traversal (used elsewhere for `downstream_count`), so this required no new traversal - just consuming a field that was already present in `graph_analysis` but previously unused here.
 
 ## Spec Reference
 Read only: `sed -n '1266,1300p' docs/specification.md` (Part 25 — Rebuild Blast Radius).
@@ -29,4 +32,18 @@ Build a fixture with two elements having equal `downstream_count` (e.g. both hav
 Run: whichever test file houses this, plus `PYTHONPATH=. python3 tests/test_e2e.py`.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_blast_radius.py -v
+2 passed
+# test_equal_downstream_count_different_weighted_duration: light.bst and
+#   heavy.bst both downstream_count=2; weighted_duration_us 2000 vs 20000
+#   (old fake-average code would have made these equal)
+# test_leaf_element_has_zero_weighted_duration: leaf -> 0 downstream,
+#   weighted_duration_us == 0
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+69 passed
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+```

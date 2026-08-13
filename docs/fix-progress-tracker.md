@@ -49,7 +49,7 @@ This is not a criticism of any particular session — it's the reason the verifi
 | ID | Issue | Depends on | Status | Task File |
 |---|---|---|---|---|
 | P1-01 | Resource-wait holder tracking is a stub (no real occupancy-based holder set, `ambiguous` hardcoded False) | — | 🟡 corrected from 🟢 | [P1-01](tasks/P1-01-resource-wait-holder-tracking.md) |
-| P1-02 | Scheduler-wait detection unconditionally returns False | — | 🔴 corrected from 🟢 | [P1-02](tasks/P1-02-scheduler-wait-detection.md) |
+| P1-02 | Scheduler-wait detection unconditionally returns False | — | 🟢 Done (also fixed a tautological call-site `resource_available` check that would have made this fix unobservable) | [P1-02](tasks/P1-02-scheduler-wait-detection.md) |
 | P1-03 | **Attribution identity (I4) violated on resource-constrained chains** — new finding, live bug | P1-01, P1-02 likely related | 🔴 NEW | [P1-03](tasks/P1-03-attribution-identity-resource-chains.md) |
 | P1-04 | Flattened timeline undercounts on multi-terminal / independent-branch graphs | — | 🔴 | [P1-04](tasks/P1-04-flattened-timeline-multi-terminal-coverage.md) |
 | P1-05 | No violation raised when timeline undercounts | P1-04 | 🔴 | [P1-05](tasks/P1-05-reconciliation-violation-reporting.md) |

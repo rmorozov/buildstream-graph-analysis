@@ -337,6 +337,37 @@ class BlameChainAnalyzer:
         # For now, assume there was resource contention if we have resources
         return len(task.resources) > 0, holder_info
     
+    def _resource_available_at(self, task: NormalizedTask, ts: int) -> bool:
+        """True if every resource `task` requires had at least one free
+        capacity slot at timestamp `ts`, based on which other tasks were
+        occupying that resource over their [start_us, finish_us) interval.
+        Vacuously True for tasks that require no resources. Returns True
+        for a resource with no known capacity - absence of capacity data is
+        not evidence of unavailability.
+
+        This is a point check, not a full occupancy sweep (that belongs to
+        the resource-wait holder tracking in classify_resource_wait /
+        P1-01) - it exists only to give classify_scheduler_wait a real
+        signal instead of the tautological "task has no resources" check
+        that used to stand in for it.
+        """
+        if not task.resources:
+            return True
+        for resource in task.resources:
+            capacity = self.resource_capacity.get(resource)
+            if capacity is None:
+                continue
+            occupied = sum(
+                1
+                for other in self.tasks
+                if other.task_key != task.task_key
+                and resource in other.resources
+                and other.start_us <= ts < other.finish_us
+            )
+            if occupied >= capacity:
+                return False
+        return True
+
     def classify_scheduler_wait(
         self,
         task: NormalizedTask,
@@ -363,13 +394,24 @@ class BlameChainAnalyzer:
         """
         if task.start_us <= task.ready_us:
             return False
-        
+
         if not resource_available:
             return False
-        
-        # Check if we hit max_jobs during the wait period
-        # Simplified implementation
-        return False  # Would need more context to determine
+
+        if max_jobs is None:
+            # No capacity evidence available - per Part 9, the analyzer must
+            # not infer scheduler failure merely because a task did not run.
+            return False
+
+        # Evidence-based check: did any recorded concurrency snapshot within
+        # [ready_us, start_us) show spare job capacity while this task,
+        # already dependency-ready and resource-available, still wasn't
+        # dispatched?
+        for ts, concurrency in concurrent_jobs_at_time.items():
+            if task.ready_us <= ts < task.start_us and concurrency < max_jobs:
+                return True
+
+        return False
     
     def annotate_phases(
         self,
@@ -539,7 +581,7 @@ class BlameChainAnalyzer:
         # Scheduler wait classification (Part 9)
         # Check if task was ready but not scheduled despite resources being available
         if task.start_us > task.ready_us:
-            resource_available = not task.resources or len(task.resources) == 0
+            resource_available = self._resource_available_at(task, task.ready_us)
             is_scheduler_wait = self.classify_scheduler_wait(
                 task,
                 resource_available,

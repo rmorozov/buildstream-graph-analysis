@@ -11,6 +11,7 @@ Implements Parts 6-12:
 - Flattened timeline
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
@@ -24,6 +25,8 @@ from ..ingest.models import (
     TaskKind,
     RunContext,
 )
+
+logger = logging.getLogger(__name__)
 
 # Natural intra-element task sequencing (Part 5.2's task kinds). An
 # element's BUILD cannot start before its own FETCH/PULL, which cannot
@@ -1029,5 +1032,7 @@ class BlameChainAnalyzer:
         # Add total
         total_h = sum(totals.values())
         result['total_h_us'] = total_h
-        
+
+        logger.info("Attribution reconciled: %s (total_h=%dus)", result, total_h)
+
         return result

@@ -19,12 +19,17 @@ Examples:
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 from typing import Optional
 
 from . import __version__
 from .analyzer import BuildEfficiencyAnalyzer, AnalysisResult
+from .exceptions import AnalysisError, IngestionError
+from .logging_config import configure_logging
+
+logger = logging.getLogger(__name__)
 
 
 def format_text(result: AnalysisResult) -> str:
@@ -223,16 +228,18 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 for success, non-zero for errors)
     """
+    configure_logging(verbose=args.verbose, quiet=args.quiet, log_file=args.log_file)
+
     run_dir = Path(args.directory)
-    
+
     if not run_dir.exists():
         print(f"Error: Directory does not exist: {run_dir}", file=sys.stderr)
         return 1
-    
+
     if not run_dir.is_dir():
         print(f"Error: Not a directory: {run_dir}", file=sys.stderr)
         return 1
-    
+
     try:
         # Initialize analyzer with configuration from args
         analyzer = BuildEfficiencyAnalyzer(
@@ -271,24 +278,27 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         # "missing files" precondition problem (docs/cli.md exit code 1),
         # distinct from malformed *content* in a file that does exist
         # (exit code 2, handled below).
+        logger.error("Required input file not found: %s", e)
         print(f"Error: Required input file not found - {e}", file=sys.stderr)
         return 1
+    except AnalysisError as e:
+        # Graph cycles and other analysis-pipeline failures - exit code 3
+        # per docs/cli.md. Checked by type, not by string-matching the
+        # message, since AnalysisError is now raised specifically for this.
+        logger.error("Analysis failed: %s", e)
+        print(f"Error: {e}", file=sys.stderr)
+        return 3
+    except (IngestionError, json.JSONDecodeError) as e:
+        logger.error("Ingestion failed: %s", e)
+        print(f"Error: Malformed input - {e}", file=sys.stderr)
+        return 2
     except ValueError as e:
-        # Cycle detection and other validation errors - exit code 3 per docs/cli.md
-        if 'cycle' in str(e).lower():
-            print(f"Error: Graph contains a cycle - {e}", file=sys.stderr)
-            return 3
-        else:
-            print(f"Error: {e}", file=sys.stderr)
-            return 2
-    except json.JSONDecodeError as e:
-        print(f"Error: Malformed JSON in input file - {e}", file=sys.stderr)
+        logger.error("Error: %s", e)
+        print(f"Error: {e}", file=sys.stderr)
         return 2
     except Exception as e:
-        if args.verbose:
-            import traceback
-            traceback.print_exc()
-        else:
+        logger.exception("Unexpected error")
+        if not args.verbose:
             print(f"Error: {e}", file=sys.stderr)
         return 2
 
@@ -374,9 +384,23 @@ def create_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument(
         '-v', '--verbose',
         action='store_true',
-        help='Enable verbose logging for debugging'
+        help='Enable verbose (DEBUG-level) logging for debugging'
     )
-    
+
+    analyze_parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        help='Suppress all log output except errors'
+    )
+
+    analyze_parser.add_argument(
+        '--log-file',
+        type=str,
+        default=None,
+        metavar='PATH',
+        help='Also write log output to PATH, independent of console verbosity'
+    )
+
     analyze_parser.set_defaults(func=cmd_analyze)
     
     return parser

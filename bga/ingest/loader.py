@@ -6,6 +6,7 @@ Currently supports Chrome JSON trace format.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -21,6 +22,9 @@ from .models import (
     TaskSpan,
     Trace,
 )
+from ..exceptions import IngestionError
+
+logger = logging.getLogger(__name__)
 
 
 def load_run_context(path: Path) -> RunContext:
@@ -33,10 +37,12 @@ def load_run_context(path: Path) -> RunContext:
         with open(path, 'r') as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Malformed JSON in run context file {path}: {e}")
-    
+        raise IngestionError(f"Malformed JSON in run context file {path}: {e}")
+
     wall_clock = data.get('wall_clock', {})
-    
+
+    logger.info("Loaded run context from %s", path)
+
     return RunContext(
         trace_epsilon_us=data.get('trace_epsilon_us', 50000),
         wall_start_us=wall_clock.get('start_us'),
@@ -84,8 +90,8 @@ def load_trace(path: Path) -> Trace:
         with open(path, 'r') as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Malformed JSON in trace file {path}: {e}")
-    
+        raise IngestionError(f"Malformed JSON in trace file {path}: {e}")
+
     spans = []
     phases = []
     
@@ -225,6 +231,7 @@ def load_trace(path: Path) -> Trace:
                     dur_us=dur,
                 ))
     
+    logger.info("Loaded trace from %s: %d spans, %d phases", path, len(spans), len(phases))
     return Trace(spans=spans, phases=phases)
 
 
@@ -238,16 +245,16 @@ def load_graph(path: Path) -> Graph:
         with open(path, 'r') as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Malformed JSON in graph file {path}: {e}")
-    
+        raise IngestionError(f"Malformed JSON in graph file {path}: {e}")
+
     elements = []
     dependencies = []
-    
+
     for elem_data in data.get('elements', []):
         # Support both explicit uid and key-based identification
         uid = elem_data.get('uid', elem_data.get('key'))
         if uid is None:
-            raise ValueError("Element must have either 'uid' or 'key' field")
+            raise IngestionError("Element must have either 'uid' or 'key' field")
         
         elements.append(Element(
             uid=uid,
@@ -274,6 +281,10 @@ def load_graph(path: Path) -> Graph:
                     dependency_type='build',
                 ))
     
+    logger.info(
+        "Loaded graph from %s: %d elements, %d dependencies",
+        path, len(elements), len(dependencies),
+    )
     return Graph(elements=elements, dependencies=dependencies)
 
 

@@ -7,10 +7,14 @@ Implements Part 5: Static Dependency Graph including:
 - Structural metrics (depth, reachability, dominators, critical path)
 """
 
+import logging
 from typing import Dict, List, Set, Tuple, Optional
 from collections import defaultdict, deque
 
 from ..ingest.models import Graph, Element, NormalizedTask, DependencyEdge
+from ..exceptions import AnalysisError
+
+logger = logging.getLogger(__name__)
 
 
 def build_element_graph(graph: Graph) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
@@ -115,8 +119,9 @@ def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
     if processed_count != len(graph.elements):
         # Find which elements are in cycles
         unprocessed = [elem.uid for elem in graph.elements if elem.uid not in depth]
-        raise ValueError(f"Graph contains a cycle involving elements: {', '.join(unprocessed)}")
-    
+        logger.error("Cycle detected involving elements: %s", ', '.join(unprocessed))
+        raise AnalysisError(f"Graph contains a cycle involving elements: {', '.join(unprocessed)}")
+
     return depth
 
 
@@ -180,7 +185,8 @@ def compute_weighted_depth(
     # Check for cycles
     if processed_count != len(graph.elements):
         unprocessed = [elem.uid for elem in graph.elements if elem.uid not in earliest_finish]
-        raise ValueError(f"Graph contains a cycle involving elements: {', '.join(unprocessed)}")
+        logger.error("Cycle detected involving elements: %s", ', '.join(unprocessed))
+        raise AnalysisError(f"Graph contains a cycle involving elements: {', '.join(unprocessed)}")
     
     return earliest_finish
 

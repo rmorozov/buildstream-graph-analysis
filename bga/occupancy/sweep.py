@@ -13,11 +13,14 @@ The occupancy step function is the core architectural primitive that supports:
 - ready-queue depth
 """
 
+import logging
 from typing import List, Dict, Set, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import IntEnum
 
 from ..ingest.models import NormalizedTask, Resource, PhaseSpan
+
+logger = logging.getLogger(__name__)
 
 
 class EventType(IntEnum):
@@ -315,7 +318,12 @@ def compute_occupancy_stats(
     avg_concurrency = compute_average_concurrency(segments, horizon_us)
     peak_tasks, peak_resources = compute_peak_occupancy(segments)
     resource_occupancy = compute_resource_occupancy(segments, horizon_us)
-    
+
+    logger.debug(
+        "Occupancy: horizon=%dus, idle=%dus, peak_concurrency=%d",
+        horizon_us, idle_us, peak_tasks,
+    )
+
     return {
         'segments': segments,
         'horizon_start': horizon_start,

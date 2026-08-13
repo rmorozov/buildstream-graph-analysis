@@ -5,9 +5,12 @@ Implements Part 30 (Utilisation Axis) and M4 milestone.
 Handles CPU capacity calculation, bucketing, and oversubscription detection.
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class CPUBucket(Enum):
@@ -389,6 +392,12 @@ class UtilizationAnalyzer:
             
             # If error exceeds tolerance, add to unaccounted
             if self.reconciliation_error_pct > self.RECONCILIATION_TOLERANCE_PCT:
+                logger.warning(
+                    "CPU reconciliation error %.2f%% exceeds %.2f%% tolerance "
+                    "(accounted=%dus, capacity=%dus)",
+                    self.reconciliation_error_pct, self.RECONCILIATION_TOLERANCE_PCT,
+                    self.total_accounted_us, self.capacity_cpu_us,
+                )
                 self.unaccounted_us = int(diff)
                 self.buckets[CPUBucket.UNTRACKED] = self.unaccounted_us
         else:

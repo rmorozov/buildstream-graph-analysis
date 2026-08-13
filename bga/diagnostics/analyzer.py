@@ -12,6 +12,7 @@ Implements M5 milestone with high-value structural diagnostics:
 - Advanced leaf analysis (Part 24)
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict, deque
@@ -19,6 +20,8 @@ import random
 
 from bga.ingest.models import TaskKind
 from bga.graph.edg import build_element_graph, compute_in_out_degree
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -910,9 +913,11 @@ def analyze_diagnostics(
         slack=slack,
     )
     
-    return analyzer.run_full_diagnostics(
+    result = analyzer.run_full_diagnostics(
         occupancy_segments=occupancy_segments,
         resource_capacities=resource_capacities,
         requested_targets=requested_targets,
         historical_durations=historical_durations,
     )
+    logger.info("Diagnostics computed for %d tasks", len(normalized_tasks))
+    return result

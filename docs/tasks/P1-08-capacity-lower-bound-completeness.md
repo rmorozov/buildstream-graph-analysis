@@ -1,6 +1,11 @@
 # P1-08: Capacity lower bound only accounts for PROCESS pool
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none
+
+## What was fixed
+- `bga/analyzer.py::_compute_floors` now sums observed work (`W_p`) per resource over every resource actually used by any task (not just a hardcoded `PROCESS`), and takes `LB = max(T∞,observed, max_p(W_p/C_p), exclusive-serialization bounds)`.
+- Added `exclusive_resources: List[str]` to `RunContext` (Part 31.3), wired through `bga/ingest/loader.py::load_run_context`. For any resource named there, the bound is the full summed work (`W_p`, not `W_p/C_p`) - exclusive resources can't overlap at all regardless of declared capacity.
+- **Newly-found, previously-latent bug fixed alongside this**: `bga/replay/scheduler.py::ReplayScheduler._get_task_resources` was hardcoded to always return `{'PROCESS': 1}` regardless of a task's actual resources. This was invisible before, because LB's own PROCESS-only under-approximation could never exceed T_C's (also PROCESS-only) makespan. Once LB correctly reflects a real DOWNLOAD/UPLOAD/CACHE bottleneck, it can exceed T_C's stubbed schedule, violating I2 (`LB <= T_C`) - confirmed empirically before the fix (`LB=400000 > T_C=150000` on the DOWNLOAD-bottleneck fixture below). Fixed `_get_task_resources` to derive requirements from the task's own `resources` (falling back to `primary_resource`, then `PROCESS` only if a task declares no resources at all). This changes only the resource-requirement *lookup*, not replay's scheduling algorithm/heuristics/tie-breaks - judged in-scope as necessary to keep I1/I2 true, since leaving it broken would mean this task's own fix produced an invariant-violating result.
 
 ## Spec Reference
 Read only: `sed -n '976,1016p' docs/specification.md` (Part 16 — Capacity Lower Bound, and Part 17 — Certified Headroom).
@@ -29,4 +34,24 @@ Construct a fixture where `DOWNLOAD` work, not `PROCESS` work, is the actual bot
 3. `PYTHONPATH=. python3 tests/test_e2e.py` still passes (no regression on the existing single-PROCESS fixture, where the new general formula should reduce to the same answer as before).
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_capacity_lower_bound.py -v
+3 passed
+# test_lb_reflects_download_bottleneck_not_just_process: LB=400000 (DOWNLOAD
+#   bound), not the PROCESS-only 12500; H=450000>=LB; LB<=T_C=400000 (I1/I2)
+# test_exclusive_resource_forces_full_serialization_floor: LB=200000 (full
+#   serialization), not 100000 (naive work_us//capacity)
+# test_single_process_fixture_unchanged: LB=100000, matches old formula exactly
+
+# Before the replay/_get_task_resources fix, on the DOWNLOAD-bottleneck
+# fixture:
+#   lb: 400000  t_c: 150000  LB <= T_C: False   <- I2 violated
+# After:
+#   lb: 400000  t_c: 400000  LB <= T_C: True
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+67 passed
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+```

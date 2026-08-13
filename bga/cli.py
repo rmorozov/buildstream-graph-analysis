@@ -27,6 +27,7 @@ from typing import Optional
 from . import __version__
 from .analyzer import BuildEfficiencyAnalyzer, AnalysisResult
 from .exceptions import AnalysisError, IngestionError
+from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,9 @@ def format_text(result: AnalysisResult) -> str:
     t_replay = floors.get('t_c') or floors.get('t_replay_us')
     if t_replay is not None:
         lines.append(f"  T_C (replay makespan):       {t_replay / 1e6:.2f}s")
+    if floors.get('t_infinity_cold') is not None:
+        partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
+        lines.append(f"  T∞,cold (advisory):          {floors['t_infinity_cold'] / 1e6:.2f}s{partial_note}")
     lines.append("")
     
     # Attribution (Part 11-12)
@@ -240,7 +244,15 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         print(f"Error: Not a directory: {run_dir}", file=sys.stderr)
         return 1
 
+    if args.allow_partial_cold and not args.cold:
+        logger.warning("--allow-partial-cold has no effect without --cold; ignoring")
+
     try:
+        historical_runs = []
+        if args.cold and args.history_dir:
+            historical_runs = load_historical_runs([Path(p) for p in args.history_dir])
+            logger.info("Loaded %d historical run(s) for cold-floor analysis", len(historical_runs))
+
         # Initialize analyzer with configuration from args
         analyzer = BuildEfficiencyAnalyzer(
             capacity=args.capacity,
@@ -248,8 +260,11 @@ def cmd_analyze(args: argparse.Namespace) -> int:
             replay_heuristic=args.heuristic,
             run_diagnostics=args.diagnostics,
             verbose=args.verbose,
+            cold=args.cold,
+            allow_partial_cold=args.allow_partial_cold,
+            historical_runs=historical_runs,
         )
-        
+
         # Run full analysis pipeline
         result = analyzer.analyze(run_dir)
         
@@ -379,6 +394,26 @@ def create_parser() -> argparse.ArgumentParser:
         '-d', '--diagnostics',
         action='store_true',
         help='Enable advanced diagnostics (blast radius, criticality probability, wall-clock shares). Adds computation time.'
+    )
+
+    analyze_parser.add_argument(
+        '--cold',
+        action='store_true',
+        help='Enable the advisory cold structural floor (T-infinity,cold, Part 15). Requires --history-dir to produce anything but "unavailable".'
+    )
+
+    analyze_parser.add_argument(
+        '--allow-partial-cold',
+        action='store_true',
+        help='With --cold: publish T-infinity,cold as partial=true/confidence=low when some cold-critical-path element has no resolvable historical duration, instead of reporting unavailable. No effect without --cold.'
+    )
+
+    analyze_parser.add_argument(
+        '--history-dir',
+        action='append',
+        default=[],
+        metavar='PATH',
+        help='Path to a prior run directory to use as cold-floor duration history (Part 15.2). Repeatable. Only consulted with --cold.'
     )
     
     analyze_parser.add_argument(

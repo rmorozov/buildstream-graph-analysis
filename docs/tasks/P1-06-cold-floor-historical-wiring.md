@@ -1,6 +1,14 @@
 # P1-06: `T∞,cold` hardcoded None; historical data never wired in
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none
+
+## What was fixed
+- Added `bga/ingest/loader.py::load_historical_runs(run_dirs)`, a thin wrapper loading one or more prior run directories via the existing `load_all`.
+- `BuildEfficiencyAnalyzer.__init__` gained `cold`, `allow_partial_cold`, and `historical_runs` parameters (all off/empty by default - existing callers are unaffected).
+- Added `BuildEfficiencyAnalyzer._compute_cold_floor`, implementing the Part 15.2 duration source hierarchy exactly in priority order: same `cache_key` historical execution → same `element_uid+task_kind+phase` historical execution → cohort (`task_kind+phase`) median across all historical runs → declared metadata estimate (checked in principle, but no current ingest schema field carries one, so this level always falls through given today's input data) → unavailable. Each candidate pool takes the median when multiple historical observations exist.
+- `T∞,cold` is computed as the weighted longest path over these resolved per-element durations, reusing `bga/graph/edg.py::compute_critical_path` (the same algorithm `T∞,observed` uses) rather than a duplicate implementation.
+- I12 isolation: `_compute_cold_floor`'s result is merged into `floors` only under `t_infinity_cold`/`cold_partial`/`cold_confidence` keys, computed independently of and after `lb`/`certified_headroom`/`t_c`/`model_slack` - verified bit-for-bit identical with/without historical data supplied (see Verification Log).
+- The publication gate itself (Part 15.3: unavailable-by-default, `partial=true`/`confidence=low` with `--allow-partial-cold`) was implemented together with `P1-07` in the same round, since both were in scope this session and splitting them would have meant leaving the computation half-wired; see `P1-07` for the CLI-flag side of this.
 
 ## Spec Reference
 Read only: `sed -n '904,996p' docs/specification.md` (Part 15 — Cold Structural Floor, including 15.1 Definition, 15.2 Duration Source Hierarchy, 15.3 Cold Publication Gate).
@@ -32,4 +40,26 @@ Write a test with a small synthetic 2-run history (one older run's trace/graph, 
 Run: whatever test file you add this to, plus `PYTHONPATH=. python3 tests/test_e2e.py` for regression safety.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_cold_floor.py -v
+5 passed
+# test_cache_key_match_uses_exact_historical_duration: cache_key match ->
+#   t_infinity_cold == 40000 (exact historical value)
+# test_element_kind_phase_fallback_when_no_cache_key_match: cache_key
+#   changed, element+kind+phase match still resolves -> 25000
+# test_no_history_at_all_is_unavailable_by_default: t_infinity_cold is None
+# test_partial_history_unavailable_unless_allow_partial_cold: one element
+#   genuinely unresolvable (no cache_key/element/cohort match) -> None by
+#   default; allow_partial_cold=True -> value with partial=True,
+#   confidence='low'
+# test_cold_floor_isolated_from_observed_values: every floors key except
+#   the three cold-prefixed ones is bit-for-bit identical with/without
+#   history (I12); attribution and confidence also identical; the cold
+#   value itself genuinely differs, proving the check isn't vacuous
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+76 passed
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+```

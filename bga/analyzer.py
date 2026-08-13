@@ -13,7 +13,7 @@ from .ingest.models import AnalysisResult, Graph, RunContext, Trace, PhaseSpan, 
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
-from .graph.edg import analyze_graph
+from .graph.edg import analyze_graph, compute_critical_path
 from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
 from .replay.scheduler import ReplayScheduler, compute_replay_makespan
 from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
@@ -45,10 +45,13 @@ class BuildEfficiencyAnalyzer:
         replay_heuristic: str = 'lpt',
         run_diagnostics: bool = False,
         verbose: bool = False,
+        cold: bool = False,
+        allow_partial_cold: bool = False,
+        historical_runs: Optional[List[Tuple[RunContext, Graph, Trace]]] = None,
     ):
         """
         Initialize the analyzer.
-        
+
         Args:
             run_dir: Path to the run directory containing input files
             capacity: Override system resource capacity (optional)
@@ -56,6 +59,19 @@ class BuildEfficiencyAnalyzer:
             replay_heuristic: Heuristic for replay scheduling ('lpt', 'spt', 'fifo', 'depth')
             run_diagnostics: Whether to run advanced diagnostics
             verbose: Enable verbose logging
+            cold: Whether to compute the advisory cold structural floor
+                T∞,cold (Part 15) - off by default, only meaningful when
+                historical_runs is also supplied.
+            allow_partial_cold: When True, publish T∞,cold with
+                partial=true/confidence=low instead of unavailable when
+                some cold-critical-path element has no resolvable
+                duration (Part 15.3). Ignored unless cold is also True.
+            historical_runs: Optional list of (RunContext, Graph, Trace)
+                tuples for prior runs, e.g. from
+                bga.ingest.loader.load_historical_runs - the duration
+                source for cold-floor resolution (Part 15.2). Fully
+                isolated from LB/certified_headroom/primary confidence/
+                measured attribution (I12) - see _compute_cold_floor.
         """
         self.run_dir = run_dir
         self.capacity_override = capacity
@@ -63,6 +79,9 @@ class BuildEfficiencyAnalyzer:
         self.replay_heuristic = replay_heuristic
         self.run_diagnostics = run_diagnostics
         self.verbose = verbose
+        self.cold = cold
+        self.allow_partial_cold = allow_partial_cold
+        self.historical_runs = historical_runs or []
         self.run_context: Optional[RunContext] = None
         self.graph: Optional[Graph] = None
         self.trace: Optional[Trace] = None
@@ -221,29 +240,55 @@ class BuildEfficiencyAnalyzer:
         t_infinity_observed = graph_analysis['critical_path_length']
         
         # Compute capacity lower bound (Part 16)
-        # LB = max(T∞,observed, max_p(W_p / C_p), serialization bounds)
-        
+        # LB = max(T∞,observed, max_p(W_p / C_p), exclusive-serialization bounds)
+
         # Start with T∞ as baseline
         lb = t_infinity_observed
-        
+
         # Add resource-area bounds if we have capacity info
         if self.run_context and hasattr(self.run_context, 'resource_capacities'):
             capacities = self.run_context.resource_capacities or {}
         else:
             capacities = {}
-        
-        # Compute work per resource type
-        # Simplified: assume all tasks use PROCESS
-        process_work = sum(t.dur_us for t in self.normalized_tasks)
-        process_capacity = capacities.get('PROCESS', getattr(self.run_context, 'builders', 4) if self.run_context else 4)
-        
-        if process_capacity > 0:
-            resource_lb = process_work // process_capacity
-            lb = max(lb, resource_lb)
-        
-        # TODO: Add DOWNLOAD/UPLOAD work bounds
-        # TODO: Add exclusive serialization bounds
-        
+
+        process_capacity = capacities.get(
+            'PROCESS',
+            self.run_context.max_jobs if self.run_context and self.run_context.max_jobs else 4,
+        )
+        default_capacity_by_resource = {
+            'PROCESS': process_capacity,
+            'DOWNLOAD': capacities.get('DOWNLOAD', 2),
+            'UPLOAD': capacities.get('UPLOAD', 2),
+        }
+        exclusive_resources = set(
+            self.run_context.exclusive_resources if self.run_context else []
+        )
+
+        # W_p: observed work per resource, over every resource type actually
+        # used by any task (PROCESS/DOWNLOAD/UPLOAD/CACHE/OTHER - Part 31.2),
+        # not just PROCESS. A task using more than one resource contributes
+        # its full duration to each - each resource's own bound treats it as
+        # occupying that resource for the whole span, matching how C_p is a
+        # per-resource capacity independent of the others.
+        resource_work_us: Dict[str, int] = defaultdict(int)
+        for task in self.normalized_tasks:
+            task_resources = task.resources or ([task.primary_resource] if task.primary_resource else [])
+            for res in task_resources:
+                resource_work_us[res.value] += task.dur_us
+
+        for resource_name, work_us in resource_work_us.items():
+            if resource_name in exclusive_resources:
+                # Exclusive resources (Part 31.3) cannot overlap at all,
+                # regardless of declared capacity - a hard serialization
+                # floor equal to the full observed work for that resource.
+                lb = max(lb, work_us)
+                continue
+            capacity = capacities.get(
+                resource_name, default_capacity_by_resource.get(resource_name, 1)
+            )
+            if capacity > 0:
+                lb = max(lb, work_us // capacity)
+
         certified_headroom = max(0, horizon_us - lb)
         
         # Compute replay makespan T_C (Part 18)
@@ -264,15 +309,143 @@ class BuildEfficiencyAnalyzer:
             # Model slack = T_C - LB (Part 18)
             model_slack = max(0, t_c - lb)
         
+        # Advisory cold structural floor (Part 15) - fully isolated from
+        # everything above (I12): computed independently, from observed
+        # durations already finalized (lb/certified_headroom/t_c/model_slack
+        # never read cold_floor, and cold_floor never reads them back).
+        cold_floor = self._compute_cold_floor()
+
         return {
             't_infinity_observed': t_infinity_observed,
-            't_infinity_cold': None,  # Requires historical data (M6)
+            't_infinity_cold': cold_floor['t_infinity_cold'],
+            'cold_partial': cold_floor['cold_partial'],
+            'cold_confidence': cold_floor['cold_confidence'],
             'lb': lb,
             'certified_headroom': certified_headroom,
             't_c': t_c,
             'model_slack': model_slack,
         }
-    
+
+    def _compute_cold_floor(self) -> dict:
+        """
+        Compute the advisory cold structural floor T∞,cold (Part 15).
+
+        Duration source hierarchy per task (Part 15.2), in priority order:
+        1. same cache_key historical execution (median if multiple)
+        2. same element_uid+task_kind+phase historical execution (median)
+        3. cohort (task_kind+phase) median across all historical runs
+        4. declared metadata estimate - no ingest schema field currently
+           carries one, so this level is checked in principle but always
+           falls through in practice given today's input data.
+        5. unavailable
+
+        Publication gate (Part 15.3): if the resulting cold critical path
+        touches any element whose duration came back unavailable,
+        T∞,cold reports as unavailable unless allow_partial_cold is set,
+        in which case it publishes with partial=true/confidence=low.
+
+        Fully independent of LB/certified_headroom/primary confidence/
+        measured attribution (I12) - reads only self.graph/
+        self.normalized_tasks/self.historical_runs, and its output is
+        merged into floors under cold-prefixed keys only.
+        """
+        if not self.cold or not self.historical_runs or not self.graph:
+            return {'t_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None}
+
+        def _median(values: List[int]) -> int:
+            ordered = sorted(values)
+            n = len(ordered)
+            mid = n // 2
+            if n % 2 == 1:
+                return ordered[mid]
+            return (ordered[mid - 1] + ordered[mid]) // 2
+
+        # Candidate duration pools from historical runs, at decreasing
+        # specificity (Part 15.2). Raw observed span durations are used
+        # directly (not run through full normalization) - these are
+        # advisory estimate sources, not measured values themselves.
+        by_cache_key: Dict[Tuple[str, str, str], List[int]] = defaultdict(list)
+        by_element_kind_phase: Dict[Tuple[str, str, str], List[int]] = defaultdict(list)
+        by_cohort: Dict[Tuple[str, str], List[int]] = defaultdict(list)
+
+        for hist_context, hist_graph, hist_trace in self.historical_runs:
+            cache_key_by_element = {elem.uid: elem.cache_key for elem in hist_graph.elements}
+            for span in hist_trace.spans:
+                kind = span.task_key.task_kind.value
+                phase = span.task_key.phase
+                elem_uid = span.task_key.element_uid
+                by_element_kind_phase[(elem_uid, kind, phase)].append(span.dur_us)
+                by_cohort[(kind, phase)].append(span.dur_us)
+                cache_key = cache_key_by_element.get(elem_uid)
+                if cache_key:
+                    by_cache_key[(cache_key, kind, phase)].append(span.dur_us)
+
+        element_cache_key = {elem.uid: elem.cache_key for elem in self.graph.elements}
+        tasks_by_element: Dict[str, List] = defaultdict(list)
+        for task in self.normalized_tasks:
+            tasks_by_element[task.task_key.element_uid].append(task)
+
+        cold_duration_by_element: Dict[str, int] = {}
+        unavailable_elements: Set[str] = set()
+
+        for elem in self.graph.elements:
+            elem_uid = elem.uid
+            tasks = tasks_by_element.get(elem_uid, [])
+            if not tasks:
+                unavailable_elements.add(elem_uid)
+                continue
+
+            # Element duration = max across its own task kinds, mirroring
+            # analyze_graph's own observed task_durations aggregation, so
+            # cold and observed critical paths are computed the same way.
+            resolved_us = 0
+            any_unavailable = False
+            cache_key = element_cache_key.get(elem_uid)
+            for task in tasks:
+                kind = task.task_key.task_kind.value
+                phase = task.task_key.phase
+                duration = None
+                if cache_key and by_cache_key.get((cache_key, kind, phase)):
+                    duration = _median(by_cache_key[(cache_key, kind, phase)])
+                elif by_element_kind_phase.get((elem_uid, kind, phase)):
+                    duration = _median(by_element_kind_phase[(elem_uid, kind, phase)])
+                elif by_cohort.get((kind, phase)):
+                    duration = _median(by_cohort[(kind, phase)])
+                # Priority 4 (declared metadata estimate): never populated
+                # by any current ingest schema field - falls through.
+
+                if duration is None:
+                    any_unavailable = True
+                else:
+                    resolved_us = max(resolved_us, duration)
+
+            if any_unavailable:
+                unavailable_elements.add(elem_uid)
+            cold_duration_by_element[elem_uid] = resolved_us
+
+        # Weighted longest path using resolved cold durations - reuse the
+        # same algorithm as T∞,observed (Part 15.1).
+        cold_length, cold_path = compute_critical_path(self.graph, cold_duration_by_element)
+
+        path_has_unavailable = any(uid in unavailable_elements for uid in cold_path)
+
+        if path_has_unavailable and not self.allow_partial_cold:
+            logger.info(
+                "Cold floor unavailable: %d element(s) on cold critical path lack a "
+                "resolvable duration (pass allow_partial_cold to publish anyway)",
+                sum(1 for uid in cold_path if uid in unavailable_elements),
+            )
+            return {'t_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None}
+
+        if path_has_unavailable:
+            logger.info("Cold floor published as partial (confidence=low)")
+
+        return {
+            't_infinity_cold': cold_length,
+            'cold_partial': bool(path_has_unavailable),
+            'cold_confidence': 'low' if path_has_unavailable else 'high',
+        }
+
     def _compute_attribution(self) -> dict:
         """
         Compute measured attribution using blame chain (Part 11, M2).
@@ -392,7 +565,7 @@ class BuildEfficiencyAnalyzer:
         
         # Reconcile attribution
         reconciled = self.blame_chain_analyzer.reconcile_attribution(segments)
-        
+
         # Build result with all categories
         result = {
             'execution_on_chain_us': reconciled.get('EXECUTION_ON_CHAIN', 0),
@@ -404,12 +577,38 @@ class BuildEfficiencyAnalyzer:
             'untracked_head_us': 0,  # Would need wall_start comparison
             'untracked_tail_us': 0,  # Would need wall_end comparison
         }
-        
+
+        # I4 reconciliation check (Part 33/34): Sigma attribution must equal
+        # the task horizon H exactly. P1-03/P1-04/P1-19/P1-20 closed every
+        # known undercounting gap, so this should never fire today - but per
+        # the spec's "no silent correction" philosophy (ordering violations
+        # are reported, not hidden; resource ambiguity is UNKNOWN, not
+        # invented), any future residual must be reported, not silently
+        # absorbed. Never pad or truncate to force the sum to match.
+        _, _, horizon_us = compute_task_horizon(self.normalized_tasks)
+        attribution_sum_us = sum(result[k] for k in (
+            'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
+            'scheduler_wait_us', 'idle_us', 'retry_wait_us',
+        ))
+        if attribution_sum_us != horizon_us:
+            residual_us = horizon_us - attribution_sum_us
+            logger.warning(
+                "Attribution reconciliation (I4) failed: Sigma=%dus != H=%dus (residual %dus)",
+                attribution_sum_us, horizon_us, residual_us,
+            )
+            self.violations.append({
+                'type': 'attribution_reconciliation',
+                'invariant': 'I4',
+                'attribution_sum_us': attribution_sum_us,
+                'horizon_us': horizon_us,
+                'residual_us': residual_us,
+            })
+
         # Store detailed attribution for later use
         self._task_attributions = task_attributions
         self._blame_chain = blame_chain
         self._attribution_segments = segments
-        
+
         return result
     
     def analyze(self, run_dir: Optional[Path] = None) -> AnalysisResult:
@@ -498,36 +697,171 @@ class BuildEfficiencyAnalyzer:
         result.violations = self.violations
         
         # Confidence (Part 33)
-        result.confidence = self._compute_confidence()
+        result.confidence = self._compute_confidence(graph_analysis, result.attribution, result.floors)
         
         self.analysis_result = result
         return result
     
-    def _compute_confidence(self) -> dict:
+    def _compute_confidence(self, graph_analysis: Optional[dict], attribution: dict, floors: dict) -> dict:
         """
         Compute confidence metrics (Part 33).
-        
-        Returns:
-            Dict containing confidence scores
+
+        Hard gates (33.1): ordering_violations == 0, critical_path_coverage
+        == 1.0, dominator_coverage == 1.0, blame_chain_coverage == 1.0.
+        Soft gates (33.2, defaults): task_coverage >= 0.95, duration_coverage
+        >= 0.98 - these reduce confidence (via coverage_score's min, below)
+        rather than hard-failing.
+
+        confidence = min(provenance_score, coverage_score, model_score,
+        attribution_score) (33.4). The spec names these four sub-scores and
+        gives attribution_score's exact inputs, but does not spell out
+        provenance_score/coverage_score/model_score's formulas - each is
+        grounded in the one other place the spec actually defines the
+        relevant concept (see inline comments), not guessed from nothing.
+
+        cold_confidence stays fully separate (already lives in floors,
+        from _compute_cold_floor - never read or written here).
         """
-        # Count violations
+        graph_analysis = graph_analysis or {}
         ordering_violations = sum(
             1 for v in self.violations if v.get('type') == 'ordering_violation'
         )
-        
-        # Basic coverage calculation
-        total_tasks = len(self.normalized_tasks) if self.normalized_tasks else 0
+        reconciliation_violations = [
+            v for v in self.violations if v.get('type') == 'attribution_reconciliation'
+        ]
 
-        if ordering_violations == 0:
-            logger.info("Ordering gate: passed (%d tasks checked)", total_tasks)
+        total_tasks = len(self.normalized_tasks) if self.normalized_tasks else 0
+        _, _, horizon_us = compute_task_horizon(self.normalized_tasks) if self.normalized_tasks else (0, 0, 0)
+
+        # --- Coverage metrics ---
+        critical_path = graph_analysis.get('critical_path', [])
+        elements_with_tasks = {t.task_key.element_uid for t in self.normalized_tasks}
+        if critical_path:
+            resolved = sum(1 for uid in critical_path if uid in elements_with_tasks)
+            critical_path_coverage = resolved / len(critical_path)
         else:
+            critical_path_coverage = 1.0
+
+        dominators = graph_analysis.get('dominators', {})
+        total_elements = len(self.graph.elements) if self.graph else 0
+        dominator_coverage = (len(dominators) / total_elements) if total_elements > 0 else 1.0
+
+        attribution_sum_us = sum(attribution.get(k, 0) for k in (
+            'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
+            'scheduler_wait_us', 'idle_us', 'retry_wait_us',
+        ))
+        blame_chain_coverage = (attribution_sum_us / horizon_us) if horizon_us > 0 else 1.0
+
+        declared_task_count = len(self.trace.spans) if self.trace else 0
+        task_coverage = (total_tasks / declared_task_count) if declared_task_count > 0 else 1.0
+
+        declared_duration_us = sum(s.dur_us for s in self.trace.spans) if self.trace else 0
+        accounted_duration_us = sum(t.dur_us for t in self.normalized_tasks)
+        duration_coverage = (
+            accounted_duration_us / declared_duration_us if declared_duration_us > 0 else 1.0
+        )
+
+        # --- Hard gates (33.1) ---
+        hard_gates = {
+            'ordering_violations_zero': ordering_violations == 0,
+            'critical_path_coverage_full': critical_path_coverage >= 1.0,
+            'dominator_coverage_full': dominator_coverage >= 1.0,
+            'blame_chain_coverage_full': blame_chain_coverage >= 1.0,
+        }
+        # Only critical_path_coverage/dominator_coverage failures need a new
+        # violation entry - ordering violations are already individually
+        # reported by normalize_trace, and blame_chain_coverage < 1.0 is
+        # exactly the condition P1-05's attribution_reconciliation violation
+        # already reports. Adding another entry for either would just
+        # duplicate an existing, more specific one.
+        if not hard_gates['critical_path_coverage_full']:
+            self.violations.append({
+                'type': 'hard_gate_failed', 'gate': 'critical_path_coverage',
+                'value': critical_path_coverage,
+            })
+        if not hard_gates['dominator_coverage_full']:
+            self.violations.append({
+                'type': 'hard_gate_failed', 'gate': 'dominator_coverage',
+                'value': dominator_coverage,
+            })
+        for gate_name, passed in hard_gates.items():
+            if not passed:
+                logger.warning("Hard gate failed: %s", gate_name)
+        if all(hard_gates.values()):
+            logger.info("All hard gates passed (%d tasks checked)", total_tasks)
+
+        # --- Soft gates (33.2) - logged, not hard-failed; the actual
+        # confidence reduction comes from coverage_score's min() below.
+        TASK_COVERAGE_THRESHOLD = 0.95
+        DURATION_COVERAGE_THRESHOLD = 0.98
+        if task_coverage < TASK_COVERAGE_THRESHOLD:
             logger.warning(
-                "Ordering gate: failed (%d ordering violations out of %d tasks)",
-                ordering_violations, total_tasks,
+                "Soft gate failed: task_coverage %.3f < %.2f", task_coverage, TASK_COVERAGE_THRESHOLD,
+            )
+        if duration_coverage < DURATION_COVERAGE_THRESHOLD:
+            logger.warning(
+                "Soft gate failed: duration_coverage %.3f < %.2f",
+                duration_coverage, DURATION_COVERAGE_THRESHOLD,
             )
 
+        # --- Sub-scores (33.4) ---
+        # provenance_score: the spec's only other use of "provenance" (Part
+        # 4.3) is wall_clock's preferred run_context source vs the reduced-
+        # provenance trace_horizon fallback - mirrored here directly.
+        if self.run_context and self.run_context.wall_start_us is not None and self.run_context.wall_end_us is not None:
+            provenance_score = 1.0
+        else:
+            provenance_score = 0.5
+
+        coverage_score = min(
+            critical_path_coverage, dominator_coverage, blame_chain_coverage,
+            task_coverage, duration_coverage,
+        )
+
+        # model_score: reflects whether the replay counterfactual model
+        # (Part 18) stayed consistent with the certified lower bound
+        # (I2: LB <= T_C) - the concrete "model validity" signal already
+        # computed elsewhere in the pipeline, rather than a new one invented
+        # from nothing.
+        model_score = 1.0
+        if floors.get('t_c') is not None and floors.get('lb') is not None:
+            if floors['t_c'] < floors['lb']:
+                model_score = 0.5
+                logger.warning("Model score reduced: T_C (%d) < LB (%d)", floors['t_c'], floors['lb'])
+
+        # attribution_score (33.4): untracked_time, ambiguous_wait_time,
+        # violation_time - never penalizes legitimate phase overlap (phase
+        # annotations don't change a segment's category, so this formula
+        # never even looks at them).
+        untracked_us = attribution.get('untracked_head_us', 0) + attribution.get('untracked_tail_us', 0)
+        ambiguous_wait_us = sum(
+            seg.end_us - seg.start_us
+            for seg in getattr(self, '_attribution_segments', [])
+            if seg.category.value == 'RESOURCE_WAIT'
+            and seg.metadata.get('holder_info', {}).get('ambiguous')
+        )
+        violation_us = sum(
+            abs(v.get('gap_us', 0)) for v in self.violations if v.get('type') == 'ordering_violation'
+        )
+        violation_us += sum(abs(v.get('residual_us', 0)) for v in reconciliation_violations)
+
+        penalized_us = untracked_us + ambiguous_wait_us + violation_us
+        attribution_score = max(0.0, 1.0 - (penalized_us / horizon_us)) if horizon_us > 0 else 1.0
+
+        confidence = min(provenance_score, coverage_score, model_score, attribution_score)
+
         return {
-            'primary': 1.0 if ordering_violations == 0 else 0.5,
+            'primary': confidence,
+            'provenance_score': provenance_score,
+            'coverage_score': coverage_score,
+            'model_score': model_score,
+            'attribution_score': attribution_score,
+            'critical_path_coverage': critical_path_coverage,
+            'dominator_coverage': dominator_coverage,
+            'blame_chain_coverage': blame_chain_coverage,
+            'task_coverage': task_coverage,
+            'duration_coverage': duration_coverage,
+            'hard_gates': hard_gates,
             'ordering_violations': ordering_violations,
             'task_count': total_tasks,
         }
@@ -647,8 +981,16 @@ class BuildEfficiencyAnalyzer:
         if self.run_context:
             resource_caps = self.run_context.resource_capacities or {}
         
-        # Requested targets (would come from graph metadata)
+        # Requested targets, from the graph's own requested_target markers.
+        # Previously hardcoded to None, which made compute_leaf_analysis's
+        # `if not requested_targets: reachable_from_targets = <everything>`
+        # fallback fire unconditionally - every element was treated as
+        # "required by target" regardless of what the graph actually
+        # declared, so no leaf could ever be flagged deferrable (P1-11).
         requested_targets = None
+        if self.graph:
+            explicit_targets = {elem.uid for elem in self.graph.elements if elem.requested_target}
+            requested_targets = explicit_targets or None
         
         # Historical durations (not available in single-run analysis)
         historical_durations = None

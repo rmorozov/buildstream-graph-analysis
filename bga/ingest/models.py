@@ -55,6 +55,7 @@ class RunContext:
     resource_capacities: Dict[str, int] = field(default_factory=dict)
     max_jobs: Optional[int] = None
     cpu_accounting: Optional[dict] = None
+    exclusive_resources: List[str] = field(default_factory=list)  # Part 31.3
     
     @property
     def wall_clock_us(self) -> Optional[int]:

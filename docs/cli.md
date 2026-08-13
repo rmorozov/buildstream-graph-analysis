@@ -99,6 +99,21 @@ Enable debug logging to troubleshoot ingestion or normalization issues:
 bga analyze /path/to/run --verbose
 ```
 
+## Section Subcommands
+
+`analyze` is the primary command and produces the full report (every section together). `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` are thin aliases over the same analysis pipeline - each restricts output to just its own section, so you don't have to grep a full report or a `jq` filter out of `--format json` for a narrow question. They accept the same relevant `analyze` flags (`--format`/`--output`/`--capacity`/`--verbose`/`--quiet`/`--log-file`, plus each subcommand's own natural options) and the same exit-code contract.
+
+```bash
+bga graph /path/to/run          # static dependency graph, critical path, structural metrics
+bga floors /path/to/run --cold  # certified/advisory floors (T-infinity, LB, certified headroom, cold floor)
+bga replay /path/to/run --heuristic spt   # deterministic replay makespan (T_C)
+bga sweep /path/to/run --resource PROCESS --min-capacity 1 --max-capacity 16  # capacity sweep (Part 19)
+bga utilisation /path/to/run    # CPU utilisation accounting
+bga diagnostics /path/to/run    # blast radius, criticality probability, wall-clock shares
+```
+
+`floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value.
+
 ## Example Workflows
 
 ### 1. Quick Efficiency Check

@@ -369,15 +369,25 @@ class ReplayScheduler:
             
             result = self.replay(capacities)
             
+            # prev_makespan starts at +inf (no prior sample yet) - guard on
+            # finiteness, not just positivity, so the first sample doesn't
+            # compute (inf - x) / inf = NaN (previously always shown for
+            # the first row; this code path was entirely unreachable from
+            # the CLI/analyzer before P1-14 added `bga sweep`, so nothing
+            # had ever exercised it).
+            has_prior_sample = prev_makespan < float('inf')
             sweep_entry = {
                 'capacity': capacities.copy(),
                 'makespan_us': result.makespan_us,
-                'normalized_improvement': (prev_makespan - result.makespan_us) / prev_makespan if prev_makespan > 0 else 0,
+                'normalized_improvement': (
+                    (prev_makespan - result.makespan_us) / prev_makespan
+                    if has_prior_sample and prev_makespan > 0 else 0
+                ),
             }
             sweeps.append(sweep_entry)
-            
+
             # Detect knee point (where improvement drops below threshold)
-            if prev_makespan > 0:
+            if has_prior_sample and prev_makespan > 0:
                 improvement = (prev_makespan - result.makespan_us) / prev_makespan
                 if improvement < 0.05 and knee_point is None:  # 5% threshold
                     knee_point = cap - step if cap > min_capacity else cap

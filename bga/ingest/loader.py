@@ -231,11 +231,14 @@ def load_trace(path: Path) -> Trace:
 def load_graph(path: Path) -> Graph:
     """
     Load dependency graph from a JSON file.
-    
+
     Expected schema: graph/v9 (Part 32.2)
     """
-    with open(path, 'r') as f:
-        data = json.load(f)
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Malformed JSON in graph file {path}: {e}")
     
     elements = []
     dependencies = []

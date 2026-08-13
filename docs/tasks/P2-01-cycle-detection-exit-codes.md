@@ -1,6 +1,13 @@
 # P2-01: No cycle detection; exit code 3 never produced
 
-**Priority:** P2 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P2 | **Status:** 🟢 Fixed & Verified — was actually already implemented; this task's original diagnosis was stale (2026-08-13) | **Depends on:** none
+
+## Correction: this was already fixed before this task file was ever written
+Re-verifying before starting work (per `docs/fixing-guide.md`'s mandatory rule) found that `bga/graph/edg.py::compute_unweighted_depth` and `compute_weighted_depth` **already** raise `ValueError("Graph contains a cycle involving elements: ...")` when Kahn's-algorithm-based topological processing doesn't reach every node, and `bga/cli.py::cmd_analyze` **already** catches this specific `ValueError`, checks for `'cycle'` in the message, and returns exit code `3` — all landed in commit `ad8a2db` (the same P0-fixing commit this whole tracker was originally built from). The very first version of this task file mis-diagnosed this as unstarted without independently re-running the reproduction — exactly the failure mode the fixing-guide's verification rule exists to prevent, now caught on the fixing side too, not just on prior "Fixed" claims.
+
+Confirmed empirically (not just by reading code) with a genuine two-element cycle fixture: `python3 -m bga.cli analyze <cyclic-fixture>` prints "Error: Graph contains a cycle - Graph contains a cycle involving elements: a.bst, b.bst" and exits `3`; a non-cyclic fixture exits `0`. See `tests/unit/test_cli_exit_codes.py` (new) for a permanent regression test.
+
+No code changes were needed for this task specifically - see `P2-02`'s task file for two small, related gaps found in the same investigation (missing-file exit code, `load_graph`'s JSON error wrapping) that were real and got fixed.
 
 ## Spec Reference
 This is a "just works" issue, not a spec-nuance one, but it's also documented behavior: `sed -n '1,136p' docs/cli.md` — find the exit-code table (documents `0` success, `1` bad args/missing files, `2` ingestion failure, `3` analysis failure e.g. graph cycles).
@@ -25,4 +32,17 @@ This is a "just works" issue, not a spec-nuance one, but it's also documented be
 3. `PYTHONPATH=. python3 tests/test_e2e.py` still passes.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ python3 -m bga.cli analyze <cyclic 2-element fixture>
+Error: Graph contains a cycle - Graph contains a cycle involving elements: a.bst, b.bst
+exit: 3
+
+$ python3 -m bga.cli analyze <non-cyclic fixture>
+exit: 0
+
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_cli_exit_codes.py -v
+5 passed
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+43 passed
+```

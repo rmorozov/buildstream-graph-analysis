@@ -265,6 +265,14 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         
         return 0
         
+    except FileNotFoundError as e:
+        # A required input file (run-context.json/graph.json/trace.json) is
+        # missing from an otherwise-existing run directory - this is a
+        # "missing files" precondition problem (docs/cli.md exit code 1),
+        # distinct from malformed *content* in a file that does exist
+        # (exit code 2, handled below).
+        print(f"Error: Required input file not found - {e}", file=sys.stderr)
+        return 1
     except ValueError as e:
         # Cycle detection and other validation errors - exit code 3 per docs/cli.md
         if 'cycle' in str(e).lower():

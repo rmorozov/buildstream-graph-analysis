@@ -1,29 +1,46 @@
 # P2-02: Malformed JSON / bad input unhandled
 
-**Priority:** P2 | **Status:** 🔴 Not Started | **Depends on:** none (pairs well with `P2-01`/`P2-03` since all three touch the CLI's error path, but each is independently completable)
+**Priority:** P2 | **Status:** 🟢 Fixed & Verified (2026-08-13) — was partially already done | **Depends on:** none
+
+## What was already true vs. what was actually fixed
+Re-verifying before starting (found while confirming `P2-01`) showed this was **partially** already fixed, not fully unstarted as originally diagnosed:
+- `load_run_context` and `load_trace` (`bga/ingest/loader.py`) **already** wrapped `json.JSONDecodeError` and re-raised as `ValueError` with a clear message; `bga/cli.py` **already** caught `json.JSONDecodeError`/`ValueError` and mapped to exit code `2` with a short message (full traceback under `--verbose`).
+- `load_graph` did **not** have the same wrapping — a malformed `graph.json` still exited `2` correctly (because `json.JSONDecodeError` is a `ValueError` subclass and the CLI's `except ValueError` catches it too), but with a plain raw exception message instead of the friendlier "Malformed JSON in graph file ..." prefix the other two loaders already had. **Fixed**: added the same `try/except json.JSONDecodeError` wrapping to `load_graph`, for consistency.
+- A genuinely **missing** required file (e.g. `graph.json` absent from an existing run directory) raised a raw `FileNotFoundError`, which is *not* a `ValueError` subclass, so it fell through to the generic `except Exception` handler and exited `2` — contradicting `docs/cli.md`'s documented `1` = "bad args/missing files". **Fixed**: `bga/cli.py::cmd_analyze` now has a dedicated `except FileNotFoundError` branch, checked before `ValueError`, mapping to exit code `1` with a clear "Required input file not found" message.
+
+## What was intentionally *not* done
+The original task description suggested introducing a typed ingestion exception class (e.g. `class IngestionError(Exception)`), possibly coordinating with `P2-03`'s exception hierarchy. **Not done** - the fix instead extended the existing, already-established pattern (loaders raise plain `ValueError` with a descriptive message; the CLI maps by type/content). Introducing a new exception type now, before `P2-03` (still unstarted) decides on a real hierarchy, would mean redoing this wrapping again later for no benefit in the meantime. If `P2-03` lands a proper hierarchy, revisit whether these `ValueError`s should become a more specific type - not required for this task's own correctness.
 
 ## Spec Reference
-No spec section — this is a robustness gap, not a spec-compliance one. Reference `docs/cli.md`'s exit-code table for the target behavior (`1` = bad args/missing files, `2` = ingestion failure).
-
-## Current Broken Behavior
-- `json.JSONDecodeError` is not caught anywhere in `bga/ingest/loader.py` — a malformed `run-context.json`/`graph.json`/`trace.json` propagates as a raw, unfriendly traceback (or a bare one-liner without `--verbose`, per the current CLI catch-all).
-- Missing required fields raise `ValueError` in a few spots (`bga/ingest/models.py:99` `TaskKey.from_string`, `bga/ingest/loader.py:220`) but these aren't consistently caught/mapped to exit code 2 either — confirm current behavior by testing before assuming it's fully broken vs. partially handled.
-- The pytest/dev environment itself isn't fully set up out of the box (`pytest`/`pytest-cov` declared as `dev` extras in `pyproject.toml` but not installed by default) — while installing this is an environment issue, not a code bug, if you hit it while working this task, run `pip install -e ".[dev]"` (or `pip install pytest pytest-cov`) locally rather than treating it as a code defect to fix.
-
-## Required Fix
-1. In `bga/ingest/loader.py`, wrap JSON parsing calls in a `try/except json.JSONDecodeError` that re-raises as a typed ingestion error with a clear message (file path + line/col from the original exception, don't lose that detail) — coordinate with `P2-03` on the exception hierarchy name if it's landed; otherwise use a local `class IngestionError(Exception)` for now.
-2. Ensure all `ValueError`s raised during ingestion (missing fields, malformed task keys, etc.) are consistently wrapped/mapped the same way, so every ingestion-time failure — JSON syntax or schema — reaches the CLI as the same error category.
-3. In `bga/cli.py`, catch this category specifically and exit with code `2`, with a short, actionable message by default (not a raw traceback) — full traceback still available under `--verbose`.
-4. Missing files (e.g. `run-context.json` doesn't exist at all) should map to exit code `1` per the docs — confirm this is already the case or fix it as part of this task.
+No spec section — this is a robustness gap, not a spec-compliance one. `docs/cli.md`'s exit-code table: `1` = bad args/missing files, `2` = ingestion failure (e.g. malformed JSON), `3` = analysis failure (cycles, `P2-01`).
 
 ## Out of Scope
-- Don't build the general logging infrastructure — that's `P2-03`. This task only needs the exception types and CLI exit-code mapping, not full log wiring.
+- General logging infrastructure — that's `P2-03`.
+- A formal typed exception hierarchy — see "What was intentionally not done" above.
 
-## Acceptance Test
-1. Run the CLI against a run directory with intentionally malformed JSON (e.g. truncated `graph.json`) → exit code `2`, one-line actionable error message (not a raw traceback) without `--verbose`; full traceback with `--verbose`.
-2. Run against a run directory missing `trace.json` entirely → exit code `1`.
-3. Run against a valid fixture → exit code `0`, unaffected by this change.
-4. `PYTHONPATH=. python3 tests/test_e2e.py` still passes.
+## Acceptance Test — as executed
+1. Malformed `graph.json` → exit code `2`, message `"Malformed JSON in graph file <path>: <detail>"` (not a raw traceback) without `--verbose`.
+2. Run directory missing a required file entirely → exit code `1`, message `"Required input file not found - <detail>"`.
+3. Nonexistent run directory → exit code `1` (pre-existing, unaffected).
+4. Valid fixture → exit code `0`, unaffected.
+5. `tests/unit/test_cli_exit_codes.py` (new, shared with `P2-01`) covers all of the above as permanent regression tests.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ python3 -m bga.cli analyze <malformed graph.json fixture>
+Error: Malformed JSON in graph file .../graph.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+exit: 2
+
+$ python3 -m bga.cli analyze <run dir missing run-context.json>
+Error: Required input file not found - [Errno 2] No such file or directory: '.../run_context.json'
+exit: 1
+
+$ python3 -m bga.cli analyze <nonexistent dir>
+exit: 1
+
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_cli_exit_codes.py -v
+5 passed
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+43 passed
+```

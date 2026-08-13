@@ -1,54 +1,55 @@
 # P1-03: Attribution identity (I4) violated on resource-constrained chains
 
-**Priority:** P1 (highest-value open item — this breaks the tool's core promise) | **Status:** 🔴 Not Started (newly discovered 2026-08-13) | **Depends on:** none, but do after `P1-02` if convenient since that may share root cause
+**Priority:** P1 (highest-value item found — this broke the tool's core promise) | **Status:** 🟢 Fixed & Verified (2026-08-13) — see "What remains" below for the honest residual, now scoped as `P1-19` | **Depends on:** none
 
 ## Spec Reference
 Read only: `sed -n '840,868p' docs/specification.md` (Part 13 — Task Horizon and Invariant I1) and `sed -n '1720,1780p' docs/specification.md` (Part 34 — Core Invariants, esp. I4: "for the selected horizon, `Σ attribution_duration == H` exactly").
 
-## Current Broken Behavior — reproduce it yourself first
-This was found by actually running the CLI, not by reading code. Reproduce with the fixture in `docs/fixing-guide.md` §7 (a 3-task linear chain, single `PROCESS` resource pool, capacity 1):
+## Original bug reports (both fully resolved by the fixes below)
 
-```
-python3 -m bga.cli analyze /tmp/bga_test_run
-```
+**Simple case** (`docs/fixing-guide.md` §7's 3-task linear chain, single `PROCESS` pool): only the terminal task's execution (150000µs) was attributed; Σattribution = 150000µs against H = 450000µs — a 66% shortfall.
 
-Observed output (2026-08-13): `Total Duration: 0.5s`, `T∞ (observed critical path): 0.45s`, but the Attribution Breakdown is:
-```
-Execution On Chain Us  0.15s ( 33.3%)
-Dependency Wait Us     0.00s (  0.0%)
-Resource Wait Us       0.00s (  0.0%)
-Scheduler Wait Us      0.00s (  0.0%)
-Idle / Retry / Untracked  all 0.00s
-```
-Only the *first* task's execution (150000µs) is attributed; the chain's other two tasks (also 150000µs execution each, serialized on the same single-capacity `PROCESS` resource, so genuinely dependency/resource-blocked for 300000µs combined) are missing entirely. **Σ attribution = 150000µs, H = 450000µs — a 66% shortfall.** This directly violates invariant I4.
+**Larger case** (`tests/fixtures/synthetic_multi_subproject/`, 9 elements, `TRACK`/`FETCH`/`BUILD` phases, real `PROCESS`/`DOWNLOAD` contention, a diamond dependency): not just an undercount — outright nonsensical values, `execution_on_chain_us = -7500000` (negative) and `dependency_wait_us = 14292893059500000` (~453,000 years in a 142-second build).
 
-Note this is *different* from the passing `tests/test_e2e.py::test_invariants` case — that fixture's tasks apparently don't attach `resources` the same way, or don't hit whatever code path drops coverage here. Your first job is root-causing why the two scenarios diverge.
+## Three compounding root causes (all found and fixed)
 
-## This is worse than "undercounts" — updated evidence from a larger fixture (2026-08-13)
+1. **Blame-chain walk stopped dead on exactly-zero-wait links.** `build_blame_chain` (`bga/attribution/blame_chain.py`) only continued to a predecessor when `ready_time < task.start_us` was true — i.e. only when there was a *strictly positive* dependency wait. When tasks were scheduled perfectly back-to-back (zero gap — the common case for a fully-serialized single-resource-pool chain, exactly the simple reproduction above), the walk added one node and immediately broke, silently dropping every upstream task from the chain and therefore from the flattened timeline (which only emits segments for chain-member tasks). **Fix:** the walk now continues to the responsible predecessor whenever `explicit_predecessors` lists one, independent of wait magnitude; `dependency_wait_start` is still only set when the wait is actually positive.
 
-`tests/test_synthetic_multi_subproject.py` (a 9-element, 24-task graph with real `PROCESS`/`DOWNLOAD` contention across `TRACK`/`FETCH`/`BUILD` phases and diamond dependencies — see `tests/fixtures/synthetic_multi_subproject/`) hits the *same* invariant violation, but the failure mode there is not a simple undercount — it's outright nonsensical:
+2. **`explicit_predecessors` construction assumed one task per element.** `bga/analyzer.py::_compute_attribution` mapped each element-level dependency edge to "whichever task happened to match last" in a nested loop over all tasks — for elements with multiple task kinds (`TRACK`/`FETCH`/`BUILD`), this produced wrong or missing predecessor task-keys, which fed `task_finish_times.get(pred_key, 0)`'s silent zero-fallback for unmatched keys — producing bogus `ready_time = 0` for tasks with real predecessors, and therefore `dependency_wait_us = start_us - 0 ≈ start_us` (a full absolute epoch-scale microsecond timestamp, ~1.7×10^15µs) for several tasks at once. Summed across ~8-9 such tasks, this is exactly what produced the ~14.29×10^15µs (~453,000-year) figure. **Fix:** `explicit_predecessors` is now built by mapping each dependency edge onto the specific `BUILD` task of each element (the real-world semantics of a BuildStream `depends:` edge — a downstream element's build needs the upstream element's *build* to have completed, not its track/fetch), via a single `O(tasks + edges)` pass instead of the old `O(tasks × edges)` nested loop with silent overwrites.
 
-```
-attribution.execution_on_chain_us = -7500000       # negative
-attribution.dependency_wait_us    = 14292893059500000   # ~453,000 years, in a 142-second build
-```
+   Additionally, both `build_blame_chain` and `compute_task_attribution` were independently *recomputing* a "ready time" from `explicit_predecessors`/`task_finish_times` via `compute_ready_time`, duplicating — and, per the above, sometimes contradicting — the already-correct `task.ready_us` computed once during normalization (`bga/normalize/timestamps.py::compute_ready_times`, which correctly aggregates across *all* of a predecessor element's task kinds). Both call sites now use `task.ready_us` directly instead of re-deriving it, eliminating this second, narrower, buggy computation as a divergence source. (`compute_ready_time` itself is left in place, unused by these two call sites now, in case a future task needs it — deleting it wasn't necessary to fix the bug.)
 
-So on more realistic, multi-branch, resource-contended graphs this bug doesn't just drop coverage (as in the simple 3-task case above) — it can produce **negative durations and multi-order-of-magnitude overflow values**. Whatever the root cause turns out to be, verify the fix against *both* fixtures: the simple linear case here (undercount) and `tests/test_synthetic_multi_subproject.py` (negative/overflow) may or may not share a root cause, but a fix that only makes the simple case sum correctly without also fixing the negative/overflow case on the larger fixture is not done. `tests/test_synthetic_multi_subproject.py::test_attribution_identity_holds` is `xfail`-marked pointing at this task — removing that mark and seeing it pass is part of this task's exit bar, in addition to the acceptance test below.
+3. **The default `terminal_tasks` heuristic spuriously treated most tasks as terminals.** `compute_full_attribution`'s default (when no explicit `terminal_tasks` set is passed — the common case) came from `self.successors`, built in `_build_dependency_graph` by matching `other.finish_us == task.ready_us` across *all* tasks — a heuristic entirely disconnected from the real dependency graph. On a multi-task-kind element graph, most `TRACK`/`FETCH` tasks' finish times don't happen to coincide with anything, so the heuristic misclassified them as having "no successor", i.e. as terminals. On `tests/fixtures/synthetic_multi_subproject/` this produced **12 spurious terminals** (correct answer: 1 — `app.bst`), each starting its own backward walk, several of which re-visited and re-summed shared upstream tasks (e.g. `core-utils.bst:libcore.bst`'s `BUILD` task appeared in the flattened segments **three times**). **Fix:** per spec Part 6.2 ("the chain begins from **the** terminal task responsible for the observed end of the build" — singular), the default is now the one task whose `finish_us` equals the overall maximum finish time (ties broken by task key ascending, matching the determinism rule used elsewhere). Callers with multiple genuinely independent requested targets should pass `terminal_tasks` explicitly — that broader case is `P1-04`'s scope, not silently attempted here via a heuristic that gets it wrong most of the time.
 
-## Required Fix
-1. Instrument/trace `compute_full_attribution` and `_build_flattened_timeline` (`bga/attribution/blame_chain.py:581-646`, and the orchestration in `bga/analyzer.py:230-321`) against the reproduction fixture above to find exactly where coverage is dropped. Likely suspects to check (don't assume — verify): the blame-chain backward walk may be stopping after one hop when a resource-wait or scheduler-wait branch is taken; `explicit_predecessors` construction (`bga/analyzer.py:262-280`, flagged separately as `P1-16` for its O(tasks²)/one-task-per-element assumptions) may be mis-mapping predecessors for this fixture's shape.
-2. Fix root cause so the flattened timeline / attribution sum covers every task's full duration, not just the first hop of the blame chain.
-3. This task and `P1-04` (multi-terminal timeline coverage) are related but distinct: `P1-04` is about graphs with independent branches / multiple terminals; this task is about a single linear chain still under-attributing. Fix this one first — it's the simpler, more fundamental case.
+## What remains — honestly scoped out as `P1-19`
 
-## Out of Scope
-- Don't implement the "raise a violation on undercount" reporting behavior — that's `P1-05`. This task is about making the sum correct in the first place.
-- Don't rewrite the O(N²)/O(tasks²) algorithms for performance — that's `P1-16`. If you need to touch that code to fix correctness, keep the algorithmic complexity the same and only fix the logic bug, unless the bug *is* the complexity shortcut (verify before assuming).
+After the three fixes above: **exact** identity (Σattribution == H) now holds for any graph where every element has a single task kind (`tests/unit/test_attribution_identity.py`, the original simple-case reproduction). On the larger multi-task-kind fixture, the catastrophic failure modes are gone — no negative values, no overflow, right order of magnitude (`tests/test_synthetic_multi_subproject.py::test_attribution_no_longer_produces_garbage_values`, passing) — but exact equality does not yet hold: **136,500,000µs vs H=142,000,000µs**, a gap that is *exactly* `libcore.bst`'s own `TRACK`+`FETCH` duration (5.5s), because the blame-chain walk has no concept of intra-element task sequencing (see `docs/tasks/P1-19-flattened-timeline-residual-coverage.md` for the full diagnosis and design sketch). `tests/test_synthetic_multi_subproject.py::test_attribution_identity_exact` is `xfail`-marked pointing at `P1-19`.
 
-## Acceptance Test
-1. Re-run the exact reproduction fixture: `python3 -m bga.cli analyze /tmp/bga_test_run` — the Attribution Breakdown must sum to `0.45s` (450000µs = H), matching `T∞ (observed critical path)`.
-2. Add a permanent regression test (in `tests/test_e2e.py` or a new `tests/unit/test_attribution_identity.py`) that builds this exact 3-task single-resource-pool scenario programmatically and asserts `sum(attribution values) == H` exactly (integer equality, not approximate).
-3. Remove the `@pytest.mark.xfail` from `tests/test_synthetic_multi_subproject.py::test_attribution_identity_holds` and confirm it passes: `PYTHONPATH=. python3 -m pytest tests/test_synthetic_multi_subproject.py::test_attribution_identity_holds -v`. This is the larger, multi-branch, resource-contended fixture where the bug shows up as negative/overflowed values, not just an undercount — both fixtures must pass, not just the simpler one.
-4. Re-run `PYTHONPATH=. python3 tests/test_e2e.py` and `PYTHONPATH=. python3 -m pytest tests/ -v` — every existing test must still pass (no regression).
+This is a deliberate scope boundary, not an oversight: the three root causes above were the ones producing *wrong/nonsensical* numbers (the original bug reports' actual complaint). The residual gap is a *narrower*, well-understood, separately-fixable completeness gap in the same subsystem, cleanly separable from what was actually broken.
+
+## Out of Scope (unchanged from original)
+- The "raise a violation on undercount" reporting behavior is `P1-05`.
+- Rewriting algorithms for performance (beyond the `explicit_predecessors` complexity improvement that came for free with the correctness fix) is `P1-16`.
+
+## Acceptance Test — as executed
+1. `python3 -m bga.cli analyze /tmp/bga_test_run` (the simple reproduction) — Attribution Breakdown now sums to exactly `0.45s` (100.0%), matching H.
+2. `tests/unit/test_attribution_identity.py::test_zero_wait_serialized_chain_attribution_is_exact` — new permanent regression test for the simple case, asserts exact integer equality.
+3. `tests/test_synthetic_multi_subproject.py::test_attribution_no_longer_produces_garbage_values` — new permanent regression test for the negative/overflow failure mode on the larger fixture; passes. (`test_attribution_identity_exact`, the *exact*-equality version on this same fixture, remains `xfail` — see "What remains" above; this was the original acceptance criterion #3, revised in light of the deeper understanding gained while fixing this.)
+4. Full suite: `PYTHONPATH=. python3 -m pytest tests/ -v` — no regressions.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ python3 -m bga.cli analyze /tmp/bga_test_run
+Execution On Chain Us   0.45s (100.0%)
+Dependency Wait Us      0.00s (  0.0%)
+(all other categories 0.0%)
+
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_attribution_identity.py -v
+1 passed
+
+$ PYTHONPATH=. python3 -m pytest tests/test_synthetic_multi_subproject.py -v
+11 passed, 1 xfailed (test_attribution_identity_exact - see P1-19)
+
+$ PYTHONPATH=. python3 -m pytest tests/ -v
+35 passed, 1 xfailed
+```

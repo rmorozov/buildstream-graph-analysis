@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
 
-from .ingest.models import AnalysisResult, Graph, RunContext, Trace, PhaseSpan
+from .ingest.models import AnalysisResult, Graph, RunContext, Trace, PhaseSpan, TaskKind
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
@@ -302,25 +302,30 @@ class BuildEfficiencyAnalyzer:
         # Get graph analysis for depths and predecessors
         graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
         
-        # Build explicit predecessor map from graph
-        # In a full implementation, this would come from the graph structure
+        # Build explicit predecessor map from graph, at task granularity.
+        #
+        # Element-level dependency edges (graph.dependencies) express "this
+        # element's build requires that element's build to have completed" -
+        # the real-world semantics of a BuildStream `depends:` edge. Map
+        # each edge onto the specific BUILD task of each element (not just
+        # "whichever task happened to match last", which silently produced
+        # wrong/overwritten predecessors for any element with more than one
+        # task kind - e.g. TRACK/FETCH/BUILD - and fed bogus ready-time
+        # lookups downstream). An element with no BUILD task (e.g. a FAILed
+        # or TRACK/FETCH-only run) simply contributes no edge, rather than a
+        # wrong one.
+        build_task_by_element: Dict[str, str] = {}
+        for task in self.normalized_tasks:
+            if task.task_key.task_kind == TaskKind.BUILD:
+                build_task_by_element[task.task_key.element_uid] = str(task.task_key)
+
         explicit_predecessors: Dict[str, List[str]] = {}
         for dep in self.graph.dependencies:
-            # Map element-level deps to task-level
-            # Simplified: assume one task per element for now
-            succ_key = None
-            pred_key = None
-            for task in self.normalized_tasks:
-                if task.task_key.element_uid == dep.successor:
-                    succ_key = str(task.task_key)
-                if task.task_key.element_uid == dep.predecessor:
-                    pred_key = str(task.task_key)
-            
-            if succ_key:
-                if succ_key not in explicit_predecessors:
-                    explicit_predecessors[succ_key] = []
-                if pred_key:
-                    explicit_predecessors[succ_key].append(pred_key)
+            succ_key = build_task_by_element.get(dep.successor)
+            pred_key = build_task_by_element.get(dep.predecessor)
+
+            if succ_key and pred_key:
+                explicit_predecessors.setdefault(succ_key, []).append(pred_key)
         
         # Build finish time map
         task_finish_times: Dict[str, int] = {

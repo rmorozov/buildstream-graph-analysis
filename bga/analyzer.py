@@ -26,6 +26,7 @@ from .replay.scheduler import ReplayScheduler, compute_replay_makespan
 from .utilisation import UtilizationAnalyzer, CPUAccounting, analyze_utilization
 from .diagnostics import DiagnosticsAnalyzer, analyze_diagnostics, DiagnosticsResult
 from .structural import StructuralAnalyzer, StructuralAnalysisResult
+from .validation import compute_confidence
 
 logger = logging.getLogger(__name__)
 
@@ -565,174 +566,29 @@ class BuildEfficiencyAnalyzer:
         
         # Confidence (Part 33)
         result.confidence = self._compute_confidence(graph_analysis, result.attribution, result.floors)
-        
+
         self.analysis_result = result
         return result
-    
+
     def _compute_confidence(self, graph_analysis: Optional[dict], attribution: dict, floors: dict) -> dict:
         """
-        Compute confidence metrics (Part 33).
-
-        Hard gates (33.1): ordering_violations == 0, critical_path_coverage
-        == 1.0, dominator_coverage == 1.0, blame_chain_coverage == 1.0.
-        Soft gates (33.2, defaults): task_coverage >= 0.95, duration_coverage
-        >= 0.98 - these reduce confidence (via coverage_score's min, below)
-        rather than hard-failing.
-
-        confidence = min(provenance_score, coverage_score, model_score,
-        attribution_score) (33.4). The spec names these four sub-scores and
-        gives attribution_score's exact inputs, but does not spell out
-        provenance_score/coverage_score/model_score's formulas - each is
-        grounded in the one other place the spec actually defines the
-        relevant concept (see inline comments), not guessed from nothing.
-
-        cold_confidence stays fully separate (already lives in floors,
-        from bga.floors.cold.compute_cold_floor - never read or written here).
+        Compute confidence metrics (Part 33) - see
+        bga.validation.invariants.compute_confidence for the full
+        computation. Thin orchestrator: appends the hard-gate-failure
+        violations that function finds to self.violations (kept as a
+        side effect here, at the call site, rather than inside the
+        extracted function, so bga.validation.invariants.compute_confidence
+        stays a pure function of its inputs - bga/floors/, bga/report/,
+        bga/validation/ extraction, P1-15).
         """
-        graph_analysis = graph_analysis or {}
-        ordering_violations = sum(
-            1 for v in self.violations if v.get('type') == 'ordering_violation'
+        confidence, new_violations = compute_confidence(
+            self.normalized_tasks, self.run_context, self.trace, self.graph,
+            self.violations, getattr(self, '_attribution_segments', []),
+            graph_analysis, attribution, floors,
         )
-        reconciliation_violations = [
-            v for v in self.violations if v.get('type') == 'attribution_reconciliation'
-        ]
+        self.violations.extend(new_violations)
+        return confidence
 
-        total_tasks = len(self.normalized_tasks) if self.normalized_tasks else 0
-        _, _, horizon_us = compute_task_horizon(self.normalized_tasks) if self.normalized_tasks else (0, 0, 0)
-
-        # --- Coverage metrics ---
-        critical_path = graph_analysis.get('critical_path', [])
-        elements_with_tasks = {t.task_key.element_uid for t in self.normalized_tasks}
-        if critical_path:
-            resolved = sum(1 for uid in critical_path if uid in elements_with_tasks)
-            critical_path_coverage = resolved / len(critical_path)
-        else:
-            critical_path_coverage = 1.0
-
-        dominators = graph_analysis.get('dominators', {})
-        total_elements = len(self.graph.elements) if self.graph else 0
-        dominator_coverage = (len(dominators) / total_elements) if total_elements > 0 else 1.0
-
-        attribution_sum_us = sum(attribution.get(k, 0) for k in (
-            'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
-            'scheduler_wait_us', 'idle_us', 'retry_wait_us',
-        ))
-        blame_chain_coverage = (attribution_sum_us / horizon_us) if horizon_us > 0 else 1.0
-
-        declared_task_count = len(self.trace.spans) if self.trace else 0
-        task_coverage = (total_tasks / declared_task_count) if declared_task_count > 0 else 1.0
-
-        declared_duration_us = sum(s.dur_us for s in self.trace.spans) if self.trace else 0
-        accounted_duration_us = sum(t.dur_us for t in self.normalized_tasks)
-        duration_coverage = (
-            accounted_duration_us / declared_duration_us if declared_duration_us > 0 else 1.0
-        )
-
-        # --- Hard gates (33.1) ---
-        hard_gates = {
-            'ordering_violations_zero': ordering_violations == 0,
-            'critical_path_coverage_full': critical_path_coverage >= 1.0,
-            'dominator_coverage_full': dominator_coverage >= 1.0,
-            'blame_chain_coverage_full': blame_chain_coverage >= 1.0,
-        }
-        # Only critical_path_coverage/dominator_coverage failures need a new
-        # violation entry - ordering violations are already individually
-        # reported by normalize_trace, and blame_chain_coverage < 1.0 is
-        # exactly the condition P1-05's attribution_reconciliation violation
-        # already reports. Adding another entry for either would just
-        # duplicate an existing, more specific one.
-        if not hard_gates['critical_path_coverage_full']:
-            self.violations.append({
-                'type': 'hard_gate_failed', 'gate': 'critical_path_coverage',
-                'value': critical_path_coverage,
-            })
-        if not hard_gates['dominator_coverage_full']:
-            self.violations.append({
-                'type': 'hard_gate_failed', 'gate': 'dominator_coverage',
-                'value': dominator_coverage,
-            })
-        for gate_name, passed in hard_gates.items():
-            if not passed:
-                logger.warning("Hard gate failed: %s", gate_name)
-        if all(hard_gates.values()):
-            logger.info("All hard gates passed (%d tasks checked)", total_tasks)
-
-        # --- Soft gates (33.2) - logged, not hard-failed; the actual
-        # confidence reduction comes from coverage_score's min() below.
-        TASK_COVERAGE_THRESHOLD = 0.95
-        DURATION_COVERAGE_THRESHOLD = 0.98
-        if task_coverage < TASK_COVERAGE_THRESHOLD:
-            logger.warning(
-                "Soft gate failed: task_coverage %.3f < %.2f", task_coverage, TASK_COVERAGE_THRESHOLD,
-            )
-        if duration_coverage < DURATION_COVERAGE_THRESHOLD:
-            logger.warning(
-                "Soft gate failed: duration_coverage %.3f < %.2f",
-                duration_coverage, DURATION_COVERAGE_THRESHOLD,
-            )
-
-        # --- Sub-scores (33.4) ---
-        # provenance_score: the spec's only other use of "provenance" (Part
-        # 4.3) is wall_clock's preferred run_context source vs the reduced-
-        # provenance trace_horizon fallback - mirrored here directly.
-        if self.run_context and self.run_context.wall_start_us is not None and self.run_context.wall_end_us is not None:
-            provenance_score = 1.0
-        else:
-            provenance_score = 0.5
-
-        coverage_score = min(
-            critical_path_coverage, dominator_coverage, blame_chain_coverage,
-            task_coverage, duration_coverage,
-        )
-
-        # model_score: reflects whether the replay counterfactual model
-        # (Part 18) stayed consistent with the certified lower bound
-        # (I2: LB <= T_C) - the concrete "model validity" signal already
-        # computed elsewhere in the pipeline, rather than a new one invented
-        # from nothing.
-        model_score = 1.0
-        if floors.get('t_c') is not None and floors.get('lb') is not None:
-            if floors['t_c'] < floors['lb']:
-                model_score = 0.5
-                logger.warning("Model score reduced: T_C (%d) < LB (%d)", floors['t_c'], floors['lb'])
-
-        # attribution_score (33.4): untracked_time, ambiguous_wait_time,
-        # violation_time - never penalizes legitimate phase overlap (phase
-        # annotations don't change a segment's category, so this formula
-        # never even looks at them).
-        untracked_us = attribution.get('untracked_head_us', 0) + attribution.get('untracked_tail_us', 0)
-        ambiguous_wait_us = sum(
-            seg.end_us - seg.start_us
-            for seg in getattr(self, '_attribution_segments', [])
-            if seg.category.value == 'RESOURCE_WAIT'
-            and seg.metadata.get('holder_info', {}).get('ambiguous')
-        )
-        violation_us = sum(
-            abs(v.get('gap_us', 0)) for v in self.violations if v.get('type') == 'ordering_violation'
-        )
-        violation_us += sum(abs(v.get('residual_us', 0)) for v in reconciliation_violations)
-
-        penalized_us = untracked_us + ambiguous_wait_us + violation_us
-        attribution_score = max(0.0, 1.0 - (penalized_us / horizon_us)) if horizon_us > 0 else 1.0
-
-        confidence = min(provenance_score, coverage_score, model_score, attribution_score)
-
-        return {
-            'primary': confidence,
-            'provenance_score': provenance_score,
-            'coverage_score': coverage_score,
-            'model_score': model_score,
-            'attribution_score': attribution_score,
-            'critical_path_coverage': critical_path_coverage,
-            'dominator_coverage': dominator_coverage,
-            'blame_chain_coverage': blame_chain_coverage,
-            'task_coverage': task_coverage,
-            'duration_coverage': duration_coverage,
-            'hard_gates': hard_gates,
-            'ordering_violations': ordering_violations,
-            'task_count': total_tasks,
-        }
-    
     def _compute_utilization(self, occupancy_stats: dict) -> dict:
         """
         Compute CPU utilization analysis (M4, Part 30).

@@ -234,19 +234,23 @@ class BlameChainAnalyzer:
         For each task, find which other tasks it depends on by checking
         which tasks finish at or before its ready time.
         """
-        # Sort tasks by finish time for efficient lookup
-        sorted_tasks = sorted(self.tasks, key=lambda t: t.finish_us)
-        
+        # Group tasks by finish time once, O(N) - turns the "which tasks
+        # finish exactly at this task's ready time" lookup into an O(1)
+        # dict access per task instead of an O(N) rescan (was O(N^2)
+        # overall, run on every analysis - Part 41).
+        tasks_by_finish: Dict[int, List] = defaultdict(list)
+        for other in self.tasks:
+            tasks_by_finish[other.finish_us].append(other)
+
         for task in self.tasks:
             task_key_str = str(task.task_key)
             ready = task.ready_us
-            
-            # Find all tasks that finish exactly at ready time
-            # These are the immediate predecessors (dependency blockers)
-            for other in sorted_tasks:
-                if other.finish_us == ready:
-                    self.predecessors[task_key_str].append(str(other.task_key))
-                    self.successors[str(other.task_key)].append(task_key_str)
+
+            # Tasks that finish exactly at ready time are the immediate
+            # predecessors (dependency blockers).
+            for other in tasks_by_finish.get(ready, []):
+                self.predecessors[task_key_str].append(str(other.task_key))
+                self.successors[str(other.task_key)].append(task_key_str)
     
     def compute_ready_time(
         self,

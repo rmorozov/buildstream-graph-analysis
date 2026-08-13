@@ -1,35 +1,50 @@
 # P1-19: Flattened timeline residual coverage (intra-element + off-chain time)
 
-**Priority:** P1 | **Status:** 🔴 Not Started (scoped out of `P1-03` 2026-08-13, after that task's fixes made the remaining gap precise and well-understood) | **Depends on:** `P1-03` (done — this is the next layer), closely related to `P1-04` (read that task too; they may turn out to be the same fix — see below)
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** `P1-03` (done)
 
 ## Spec Reference
 Read only: `sed -n '466,534p' docs/specification.md` (Part 6, esp. 6.2: "It proceeds backward until `wall_start` or until an attribution boundary is reached. The remaining time is represented as a **measured residual** rather than artificially forcing it through the dependency graph.") and `sed -n '788,839p' docs/specification.md` (Part 12, esp. `Σ segment_duration == H` exactly).
 
-## Where this comes from
-`P1-03` fixed three compounding bugs that were producing outright garbage attribution values (negative durations, ~453,000-year overflow). After those fixes, attribution identity (I4) holds **exactly** for graphs where every element has a single task kind (see `tests/unit/test_attribution_identity.py`). On `tests/fixtures/synthetic_multi_subproject/` (elements with `TRACK`/`FETCH`/`BUILD` phases, real resource contention, a diamond dependency), attribution is now sane (no negatives, right order of magnitude — `tests/test_synthetic_multi_subproject.py::test_attribution_no_longer_produces_garbage_values`) but still short of exact: **136,500,000µs vs H=142,000,000µs, a 5,500,000µs gap** that is *exactly* `core-utils.bst:libcore.bst`'s own `TRACK`(1.5s) + `FETCH`(4s) duration (`tests/test_synthetic_multi_subproject.py::test_attribution_identity_exact`, currently `xfail` pointing here).
+## Where this came from
+`P1-03` fixed three compounding bugs producing outright garbage attribution values. After those fixes, attribution identity (I4) held exactly for single-task-kind graphs, but on `tests/fixtures/synthetic_multi_subproject/` (multi-task-kind elements, diamond dependency, real resource contention) there was a 5,500,000µs gap out of H=142,000,000µs, exactly matching `libcore.bst`'s own `TRACK`+`FETCH` duration.
 
-## Root cause (precisely identified)
-The blame-chain walk (`bga/attribution/blame_chain.py::build_blame_chain`) only follows **inter-element** dependency edges (`explicit_predecessors`, built from `graph.dependencies`, scoped to `BUILD`-task-to-`BUILD`-task edges as of `P1-03`'s fix). It has no concept of **intra-element** task sequencing (`TRACK` → `FETCH` → `BUILD` for the same element) — there is no predecessor edge from a `BUILD` task back to its own element's `FETCH`/`TRACK` task. So when the walk reaches an element with no further *element-level* dependencies (e.g. `libcore.bst`, a root with no dependencies of its own), it stops — even though that element's `BUILD` task didn't start at time 0; it started after its own `TRACK`+`FETCH` finished. That earlier, real, recognized time is simply never visited by the walk, and (per the current architecture) never gets a flattened-timeline segment.
+## Two fixes — turned out simpler than the original design sketch predicted
 
-More generally, this is one instance of a broader gap: **the flattened timeline only ever covers the single backward-walked chain.** Any task not on that chain — an element's own non-`BUILD` phases, or an entire element that isn't on the critical path at all (e.g. `net-stack.bst:libcrypto.bst`, `data-format.bst:libjson.bst` in this fixture, which run in parallel with the chain but aren't part of it) — contributes zero segments today. On this fixture the *only* reason the gap is just 5.5s (not much larger) is that most of the other elements' work happens to overlap in wall-clock time with chain execution rather than extending the horizon — but that's fixture-specific luck, not a property the current implementation guarantees.
+The original design sketch (below, kept for reference) assumed this needed two separate pieces of work: (1) intra-element sequencing, straightforward, and (2) off-chain parallel-work coverage, expected to need a full occupancy-sweep-based reconciliation to avoid double-counting overlapping wall-clock time. In practice, **one coherent fix covered both**, because of how `select_dependency_blame`'s tie-break already works:
 
-## Relationship to P1-04
-`P1-04` ("flattened timeline undercounts on multi-terminal / independent-branch graphs") describes the same underlying limitation — "the flattened timeline only covers what the single chain walk reaches" — from a different angle (multiple disconnected terminals rather than intra-element sequencing or off-chain parallel work). **Read both task files before starting either.** They may be best solved by the same underlying change: a proper mechanism for covering 100% of the task horizon, not just the chain's own span. Whoever picks this up first should decide whether to solve both in one pass (recommended, since they're the same architectural gap) and close out whichever task file didn't end up separately relevant.
+1. **Intra-element phase predecessor.** New `BlameChainAnalyzer._intra_element_predecessor()` (`bga/attribution/blame_chain.py`) finds, for a task with no intra-element predecessor searched yet, the immediately-preceding same-element task in `TRACK → FETCH/PULL → BUILD → PUSH` order (a new `_PHASE_ORDER` mapping). `build_blame_chain` now adds this candidate to the predecessor pool alongside `explicit_predecessors`, with `ready_time = max(inter-element ready_us, intra-element predecessor's finish_us)`.
+2. **`explicit_predecessors` extended to every task kind, not just `BUILD`.** `bga/analyzer.py::_compute_attribution` previously only mapped dependency edges onto the successor element's `BUILD` task. Extended so *every* task of the downstream element gets an edge to the upstream element's `BUILD` task — matching `bga/normalize/timestamps.py::compute_ready_times`, which already (correctly) gates every task kind of a dependent element on its predecessors' finish, not just `BUILD`. Without this, a `TRACK`/`FETCH` task's real cross-element wait had no predecessor entry for the walk to continue into.
 
-## Required Fix (design sketch — verify against the spec before committing to details)
-The core question, per Part 6.2's "measured residual" language: once you know the chain's own contiguous span `[chain_start, chain_end)` doesn't cover the full horizon `[H_start, H_end)`, how should the *rest* be categorized? Two aspects to resolve:
+**Why this also solved "off-chain parallel work" without an occupancy sweep:** `select_dependency_blame`'s tie-break already picks whichever predecessor candidate has the *latest* finish time — the true bottleneck. With the predecessor pool now complete (inter-element, every task kind, plus intra-element phase order), the walk at every step follows the objectively slowest path back through the graph. That is, by construction, the graph's actual (weighted) critical path — and a connected graph's critical path spans exactly `[min_start, max_finish)` of everything reachable from it, because nothing on that critical path can start before the path's own earliest predecessor finishes, and nothing off the critical path (by definition of "critical") extends past what the critical path already accounts for in time. So "off-chain but transitively connected" work turned out not to need separate coverage at all — it's implicitly bounded by (nested within, or feeding into) the critical path's own span.
 
-1. **Intra-element sequencing** (this fixture's actual gap): an element's own `TRACK`/`FETCH` time immediately preceding its chain-walked `BUILD` task is a legitimate, unambiguous extension of the chain — it's the same element, sequentially blocking its own `BUILD`. Consider extending `build_blame_chain` to, after exhausting inter-element predecessors, check whether the current task has an earlier same-element task (by `task_kind` ordering `TRACK < FETCH < BUILD < PUSH`, or by wall-clock adjacency) immediately preceding it with no gap, and continue the walk into that task too, before terminating. This part is well-scoped and should produce exact-or-near-exact identity for graphs without independent parallel branches.
-2. **Off-chain parallel work** (elements/tasks not on the chosen chain at all, e.g. `libcrypto.bst`, `libjson.bst` in this fixture): this is the harder, more architectural piece. These genuinely run *concurrently* with chain execution — you cannot just sum their own attribution on top of the chain's without double-counting overlapping wall-clock time (this is exactly the failure mode `P1-03` fixed at the multi-terminal level; the same risk applies here at the multi-branch level). A correct fix likely needs an occupancy-sweep-based reconciliation (similar in spirit to `bga/occupancy/sweep.py`) that, for any horizon time not covered by the chain, determines from the full task set what best explains that interval — without falling back to "no interval eclipsing" priority tricks the spec explicitly forbids (Part 12.2). Do not attempt a quick hack here (e.g. "just add every off-chain task's own execution segment") without checking for overlap against the chain's segments and against each other first — that reproduces the exact `P1-03` terminal-heuristic double-counting bug at a different scope.
+**What this does *not* solve** (confirmed empirically, not assumed): genuinely **disconnected** components — two elements with no dependency relationship to each other at all, each an independent "terminal" — are a different situation, since `compute_full_attribution` only walks from the single task with the overall maximum finish time (`P1-03`'s fix for the old broken multi-terminal heuristic). If an independent second component starts and finishes at times not nested within the first terminal's own span, its entire execution is dropped. This is confirmed as **`P1-04`'s distinct, still-open scope** — see `tests/unit/test_multi_terminal_coverage.py`, added as a permanent regression/documentation test for exactly this gap.
 
-## Out of Scope
-- Don't touch `P1-01` (resource-holder tracking) or `P1-02` (scheduler-wait) — those are correctness fixes to what a task's *own* attribution should contain, orthogonal to which tasks get a segment in the flattened timeline at all.
-- Don't attempt a full architectural rewrite in one sitting if the off-chain/occupancy-sweep piece turns out to be large — landing the intra-element sequencing fix alone (item 1 above) is real, verifiable progress; leave the off-chain piece as a further-scoped follow-up if needed, following the same honesty standard `P1-03` used (verify exactly what's fixed, document exactly what remains, don't claim more than what's proven).
+## Original design sketch (superseded by the above — kept for context)
+<details>
+<summary>What I originally thought this would require</summary>
 
-## Acceptance Test
-1. Remove the `@pytest.mark.xfail` from `tests/test_synthetic_multi_subproject.py::test_attribution_identity_exact` and confirm it passes: `PYTHONPATH=. python3 -m pytest tests/test_synthetic_multi_subproject.py::test_attribution_identity_exact -v`.
-2. `tests/test_synthetic_multi_subproject.py::test_attribution_no_longer_produces_garbage_values` and `tests/unit/test_attribution_identity.py` must still pass (no regression on what `P1-03` already fixed).
-3. `PYTHONPATH=. python3 -m pytest tests/ -v` — full suite green.
+1. Intra-element sequencing: extend `build_blame_chain` to check for an earlier same-element task and continue the walk into it. (This part matched what was actually needed.)
+2. Off-chain parallel work: expected to need "an occupancy-sweep-based reconciliation ... that, for any horizon time not covered by the chain, determines from the full task set what best explains that interval." **This turned out to be unnecessary** for the connected-component case — see above for why.
+</details>
+
+## Out of Scope (as executed)
+- Did not touch `P1-01` (resource-holder tracking) or `P1-02` (scheduler-wait, already done) - orthogonal to which tasks get a flattened-timeline segment.
+- Did not attempt disconnected multi-terminal support - that's confirmed as `P1-04`'s scope, now precisely bounded and testable rather than an open question.
+
+## Acceptance Test — as executed
+1. `tests/test_synthetic_multi_subproject.py::test_attribution_identity_exact` - `xfail` mark removed, now a plain passing assertion.
+2. `tests/test_synthetic_multi_subproject.py::test_attribution_no_longer_produces_garbage_values` and `tests/unit/test_attribution_identity.py` - still pass, no regression.
+3. `tests/unit/test_multi_terminal_coverage.py` (new) - documents and locks in exactly what remains open for `P1-04`, so that task now has a concrete, runnable reproduction instead of a design question.
+4. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ python3 -c "... attribution on tests/fixtures/synthetic_multi_subproject ..."
+H: 142000000  total: 142000000  gap: 0  exact match: True
+
+$ python3 -c "... attribution on /tmp/bga_test_run (simple 3-task chain) ..."
+H: 450000  total: 450000  match: True
+
+$ PYTHONPATH=. python3 -m pytest tests/ -v
+38 passed, 0 xfailed
+```

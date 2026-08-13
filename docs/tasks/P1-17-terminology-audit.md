@@ -1,6 +1,9 @@
 # P1-17: Terminology audit against spec Part 43 avoid-list
 
-**Priority:** P1 (low risk, quick — good task for a very small context budget) | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P1 (low risk, quick — good task for a very small context budget) | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none
+
+## What was found
+Zero matches for any Part 43 avoid-list term anywhere in `bga/`, `docs/cli.md`, or `README.md`. No code change was needed - the codebase was already clean.
 
 ## Spec Reference
 Read only: `sed -n '2674,2712p' docs/specification.md` (Part 43 — Terminology). It lists preferred terms (e.g. "Measured blame-chain attribution," "Occupancy step function," "Trace epsilon," "Certified headroom") vs. an explicit "avoid" list (e.g. "Interval eclipsing," "Mathematically optimal schedule," "Cold floor as certified bound," "Resource blocker as causal predecessor").
@@ -21,4 +24,7 @@ Not yet audited. This is a quick grep-and-fix task, not a design task.
 Re-run the grep from step 1 — zero matches remaining in user-facing strings (CLI output, `docs/cli.md`, `README.md`). Paste the before/after grep output into the Verification Log.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ grep -rniE "interval eclipsing|absolute graph time|pure configuration overhead|mathematically optimal|exact runtime inefficiency|true minimum build time|cold floor.*certified|resource blocker.*causal" bga/ docs/cli.md README.md
+(no output - zero matches)
+```

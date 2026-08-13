@@ -24,6 +24,17 @@ Only the *first* task's execution (150000µs) is attributed; the chain's other t
 
 Note this is *different* from the passing `tests/test_e2e.py::test_invariants` case — that fixture's tasks apparently don't attach `resources` the same way, or don't hit whatever code path drops coverage here. Your first job is root-causing why the two scenarios diverge.
 
+## This is worse than "undercounts" — updated evidence from a larger fixture (2026-08-13)
+
+`tests/test_synthetic_multi_subproject.py` (a 9-element, 24-task graph with real `PROCESS`/`DOWNLOAD` contention across `TRACK`/`FETCH`/`BUILD` phases and diamond dependencies — see `tests/fixtures/synthetic_multi_subproject/`) hits the *same* invariant violation, but the failure mode there is not a simple undercount — it's outright nonsensical:
+
+```
+attribution.execution_on_chain_us = -7500000       # negative
+attribution.dependency_wait_us    = 14292893059500000   # ~453,000 years, in a 142-second build
+```
+
+So on more realistic, multi-branch, resource-contended graphs this bug doesn't just drop coverage (as in the simple 3-task case above) — it can produce **negative durations and multi-order-of-magnitude overflow values**. Whatever the root cause turns out to be, verify the fix against *both* fixtures: the simple linear case here (undercount) and `tests/test_synthetic_multi_subproject.py` (negative/overflow) may or may not share a root cause, but a fix that only makes the simple case sum correctly without also fixing the negative/overflow case on the larger fixture is not done. `tests/test_synthetic_multi_subproject.py::test_attribution_identity_holds` is `xfail`-marked pointing at this task — removing that mark and seeing it pass is part of this task's exit bar, in addition to the acceptance test below.
+
 ## Required Fix
 1. Instrument/trace `compute_full_attribution` and `_build_flattened_timeline` (`bga/attribution/blame_chain.py:581-646`, and the orchestration in `bga/analyzer.py:230-321`) against the reproduction fixture above to find exactly where coverage is dropped. Likely suspects to check (don't assume — verify): the blame-chain backward walk may be stopping after one hop when a resource-wait or scheduler-wait branch is taken; `explicit_predecessors` construction (`bga/analyzer.py:262-280`, flagged separately as `P1-16` for its O(tasks²)/one-task-per-element assumptions) may be mis-mapping predecessors for this fixture's shape.
 2. Fix root cause so the flattened timeline / attribution sum covers every task's full duration, not just the first hop of the blame chain.
@@ -36,7 +47,8 @@ Note this is *different* from the passing `tests/test_e2e.py::test_invariants` c
 ## Acceptance Test
 1. Re-run the exact reproduction fixture: `python3 -m bga.cli analyze /tmp/bga_test_run` — the Attribution Breakdown must sum to `0.45s` (450000µs = H), matching `T∞ (observed critical path)`.
 2. Add a permanent regression test (in `tests/test_e2e.py` or a new `tests/unit/test_attribution_identity.py`) that builds this exact 3-task single-resource-pool scenario programmatically and asserts `sum(attribution values) == H` exactly (integer equality, not approximate).
-3. Re-run `PYTHONPATH=. python3 tests/test_e2e.py` — all 7 existing tests must still pass (no regression).
+3. Remove the `@pytest.mark.xfail` from `tests/test_synthetic_multi_subproject.py::test_attribution_identity_holds` and confirm it passes: `PYTHONPATH=. python3 -m pytest tests/test_synthetic_multi_subproject.py::test_attribution_identity_holds -v`. This is the larger, multi-branch, resource-contended fixture where the bug shows up as negative/overflowed values, not just an undercount — both fixtures must pass, not just the simpler one.
+4. Re-run `PYTHONPATH=. python3 tests/test_e2e.py` and `PYTHONPATH=. python3 -m pytest tests/ -v` — every existing test must still pass (no regression).
 
 ## Verification Log
 _(append real command + output here once run, before marking 🟢)_

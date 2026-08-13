@@ -1,0 +1,962 @@
+[
+  {
+    "name": "process_name",
+    "ph": "M",
+    "pid": 1,
+    "args": {
+      "name": "Build System Wrapper"
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "name": "Sequential Commands"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "sort_index": 0
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "name": "Builder 1 (9febc285)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "sort_index": 100
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "name": "Builder 2 (6fdfb270)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "sort_index": 101
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "name": "Builder 3 (e0529ab8)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "sort_index": 102
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "name": "Builder 4 (8831d233)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "sort_index": 103
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "name": "Builder 5 (ec81a0ce)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "sort_index": 104
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "name": "Builder 6 (3ddbb74e)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "sort_index": 105
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "name": "Builder 7 (c1f9b619)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "sort_index": 106
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "name": "Builder 8 (dbbdafc8)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "sort_index": 107
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "name": "Builder 9 (a6a8ce83)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "sort_index": 108
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "name": "Builder 10 (4399b8d4)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "sort_index": 109
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "name": "Builder 11 (2d42907d)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "sort_index": 110
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 111,
+    "args": {
+      "name": "Builder 12 (ca503094)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 111,
+    "args": {
+      "sort_index": 111
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 112,
+    "args": {
+      "name": "Builder 13 (db2bed62)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 112,
+    "args": {
+      "sort_index": 112
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 113,
+    "args": {
+      "name": "Builder 14 (bebfa640)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 113,
+    "args": {
+      "sort_index": 113
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 114,
+    "args": {
+      "name": "Builder 15 (432106c4)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 114,
+    "args": {
+      "sort_index": 114
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 115,
+    "args": {
+      "name": "Builder 16 (94d023cf)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 115,
+    "args": {
+      "sort_index": 115
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 116,
+    "args": {
+      "name": "Builder 17 (81f96df8)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 116,
+    "args": {
+      "sort_index": 116
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 117,
+    "args": {
+      "name": "Builder 18 (64895c32)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 117,
+    "args": {
+      "sort_index": 117
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 118,
+    "args": {
+      "name": "Builder 19 (2c3bc163)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 118,
+    "args": {
+      "sort_index": 118
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 119,
+    "args": {
+      "name": "Builder 20 (440f83da)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 119,
+    "args": {
+      "sort_index": 119
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 120,
+    "args": {
+      "name": "Builder 21 (600f7571)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 120,
+    "args": {
+      "sort_index": 120
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 121,
+    "args": {
+      "name": "Builder 22 (3cdd8d69)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 121,
+    "args": {
+      "sort_index": 121
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 122,
+    "args": {
+      "name": "Builder 23 (c485859d)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 122,
+    "args": {
+      "sort_index": 122
+    }
+  },
+  {
+    "name": "thread_name",
+    "ph": "M",
+    "pid": 1,
+    "tid": 123,
+    "args": {
+      "name": "Builder 24 (b8457aad)"
+    }
+  },
+  {
+    "name": "thread_sort_index",
+    "ph": "M",
+    "pid": 1,
+    "tid": 123,
+    "args": {
+      "sort_index": 123
+    }
+  },
+  {
+    "name": "bst build app.bst",
+    "cat": "bst-invocation",
+    "ph": "B",
+    "ts": 1786611600000000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Full Command": "bst build app.bst"
+    }
+  },
+  {
+    "name": "core-utils.bst:libcore.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611600000000,
+    "pid": 1,
+    "tid": 100
+  },
+  {
+    "name": "core-utils.bst:liblog.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611600000000,
+    "pid": 1,
+    "tid": 101
+  },
+  {
+    "name": "core-utils.bst:libcore.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611601500000,
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "core-utils.bst:liblog.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611601500000,
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "core-utils.bst:libcore.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611601500000,
+    "pid": 1,
+    "tid": 102
+  },
+  {
+    "name": "core-utils.bst:liblog.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611601500000,
+    "pid": 1,
+    "tid": 103
+  },
+  {
+    "name": "core-utils.bst:libcore.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611605500000,
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Fetching sources"
+    }
+  },
+  {
+    "name": "core-utils.bst:liblog.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611605500000,
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Fetching sources"
+    }
+  },
+  {
+    "name": "core-utils.bst:libcore.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611605500000,
+    "pid": 1,
+    "tid": 104
+  },
+  {
+    "name": "data-format.bst:libjson.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611605500000,
+    "pid": 1,
+    "tid": 105
+  },
+  {
+    "name": "data-format.bst:libxml.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611605500000,
+    "pid": 1,
+    "tid": 106
+  },
+  {
+    "name": "data-format.bst:libjson.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611607500000,
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "data-format.bst:libxml.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611607500000,
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "data-format.bst:libjson.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611607500000,
+    "pid": 1,
+    "tid": 107
+  },
+  {
+    "name": "data-format.bst:libxml.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611607500000,
+    "pid": 1,
+    "tid": 108
+  },
+  {
+    "name": "core-utils.bst:libcore.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "data-format.bst:libjson.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Fetching sources"
+    }
+  },
+  {
+    "name": "data-format.bst:libxml.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Fetching sources"
+    }
+  },
+  {
+    "name": "core-utils.bst:liblog.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 109
+  },
+  {
+    "name": "data-format.bst:libjson.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 110
+  },
+  {
+    "name": "data-format.bst:libxml.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 111
+  },
+  {
+    "name": "net-stack.bst:libcrypto.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 112
+  },
+  {
+    "name": "net-stack.bst:libnet.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611613500000,
+    "pid": 1,
+    "tid": 113
+  },
+  {
+    "name": "net-stack.bst:libcrypto.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611615500000,
+    "pid": 1,
+    "tid": 112,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "net-stack.bst:libnet.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611615500000,
+    "pid": 1,
+    "tid": 113,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "net-stack.bst:libnet.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611615500000,
+    "pid": 1,
+    "tid": 114
+  },
+  {
+    "name": "core-utils.bst:liblog.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611621500000,
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "net-stack.bst:libnet.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611621500000,
+    "pid": 1,
+    "tid": 114,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Fetching sources"
+    }
+  },
+  {
+    "name": "net-stack.bst:libcrypto.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611621500000,
+    "pid": 1,
+    "tid": 115
+  },
+  {
+    "name": "ui-toolkit.bst:libui.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611621500000,
+    "pid": 1,
+    "tid": 116
+  },
+  {
+    "name": "ui-toolkit.bst:libwidgets.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611621500000,
+    "pid": 1,
+    "tid": 117
+  },
+  {
+    "name": "ui-toolkit.bst:libui.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611624000000,
+    "pid": 1,
+    "tid": 116,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "ui-toolkit.bst:libwidgets.bst [Tracking]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611624000000,
+    "pid": 1,
+    "tid": 117,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Tracking"
+    }
+  },
+  {
+    "name": "ui-toolkit.bst:libui.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611624000000,
+    "pid": 1,
+    "tid": 118
+  },
+  {
+    "name": "ui-toolkit.bst:libwidgets.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611624000000,
+    "pid": 1,
+    "tid": 119
+  },
+  {
+    "name": "data-format.bst:libjson.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611631500000,
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "data-format.bst:libxml.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611631500000,
+    "pid": 1,
+    "tid": 111,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "ui-toolkit.bst:libui.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611632000000,
+    "pid": 1,
+    "tid": 118,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Fetching sources"
+    }
+  },
+  {
+    "name": "ui-toolkit.bst:libwidgets.bst [Fetching sources]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611632000000,
+    "pid": 1,
+    "tid": 119,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Fetching sources"
+    }
+  },
+  {
+    "name": "ui-toolkit.bst:libwidgets.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611632000000,
+    "pid": 1,
+    "tid": 120
+  },
+  {
+    "name": "net-stack.bst:libcrypto.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611639500000,
+    "pid": 1,
+    "tid": 115,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "net-stack.bst:libnet.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611639500000,
+    "pid": 1,
+    "tid": 121
+  },
+  {
+    "name": "net-stack.bst:libnet.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611657500000,
+    "pid": 1,
+    "tid": 121,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "ui-toolkit.bst:libwidgets.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611667000000,
+    "pid": 1,
+    "tid": 120,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "ui-toolkit.bst:libui.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611667000000,
+    "pid": 1,
+    "tid": 122
+  },
+  {
+    "name": "ui-toolkit.bst:libui.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611702000000,
+    "pid": 1,
+    "tid": 122,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "app.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1786611702000000,
+    "pid": 1,
+    "tid": 123
+  },
+  {
+    "name": "app.bst [Running build commands]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1786611742000000,
+    "pid": 1,
+    "tid": 123,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "Running build commands"
+    }
+  },
+  {
+    "name": "bst build app.bst",
+    "cat": "bst-invocation",
+    "ph": "E",
+    "ts": 1786611743000000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Return Code": "0"
+    }
+  }
+]

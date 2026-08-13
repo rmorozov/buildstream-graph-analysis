@@ -1,0 +1,111 @@
+{
+  "elements": [
+    {
+      "uid": "app.bst",
+      "cache_key": "0533a7eb29b07e39",
+      "requested_target": true
+    },
+    {
+      "uid": "core-utils.bst:libcore.bst",
+      "cache_key": "373717e9543fc69c",
+      "requested_target": false
+    },
+    {
+      "uid": "core-utils.bst:liblog.bst",
+      "cache_key": "cc0290601ed767d5",
+      "requested_target": false
+    },
+    {
+      "uid": "data-format.bst:libjson.bst",
+      "cache_key": "bd2e4ae93fb68c06",
+      "requested_target": false
+    },
+    {
+      "uid": "data-format.bst:libxml.bst",
+      "cache_key": "eaced29da3c095d2",
+      "requested_target": false
+    },
+    {
+      "uid": "net-stack.bst:libcrypto.bst",
+      "cache_key": "b41ed454fb8f7b21",
+      "requested_target": false
+    },
+    {
+      "uid": "net-stack.bst:libnet.bst",
+      "cache_key": "b5d1b9506f20b35b",
+      "requested_target": false
+    },
+    {
+      "uid": "ui-toolkit.bst:libui.bst",
+      "cache_key": "98d584a7f968f3aa",
+      "requested_target": false
+    },
+    {
+      "uid": "ui-toolkit.bst:libwidgets.bst",
+      "cache_key": "891f721d9a5c23d8",
+      "requested_target": false
+    }
+  ],
+  "dependencies": [
+    {
+      "predecessor": "net-stack.bst:libnet.bst",
+      "successor": "app.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "ui-toolkit.bst:libui.bst",
+      "successor": "app.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "data-format.bst:libxml.bst",
+      "successor": "app.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "core-utils.bst:liblog.bst",
+      "successor": "app.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "core-utils.bst:libcore.bst",
+      "successor": "core-utils.bst:liblog.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "core-utils.bst:libcore.bst",
+      "successor": "data-format.bst:libjson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "core-utils.bst:libcore.bst",
+      "successor": "data-format.bst:libxml.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "net-stack.bst:libcrypto.bst",
+      "successor": "net-stack.bst:libnet.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "core-utils.bst:liblog.bst",
+      "successor": "net-stack.bst:libnet.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "ui-toolkit.bst:libwidgets.bst",
+      "successor": "ui-toolkit.bst:libui.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "data-format.bst:libjson.bst",
+      "successor": "ui-toolkit.bst:libui.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "core-utils.bst:libcore.bst",
+      "successor": "ui-toolkit.bst:libwidgets.bst",
+      "dependency_type": "build"
+    }
+  ]
+}

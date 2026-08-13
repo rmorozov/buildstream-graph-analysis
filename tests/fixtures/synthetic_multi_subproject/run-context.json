@@ -1,0 +1,13 @@
+{
+  "trace_epsilon_us": 50000,
+  "wall_clock": {
+    "start_us": 1786611600000000,
+    "end_us": 1786611743000000
+  },
+  "host": "ci-runner-synthetic-01",
+  "resource_capacities": {
+    "DOWNLOAD": 2,
+    "PROCESS": 4
+  },
+  "max_jobs": 4
+}

@@ -65,6 +65,7 @@ This is not a criticism of any particular session — it's the reason the verifi
 | P1-15 | Missing `bga/floors/`, `bga/report/`, `bga/validation/` packages (architecture) | P1-06..P1-13 mostly done first | 🔴 do last | [P1-15](tasks/P1-15-package-architecture-refactor.md) |
 | P1-16 | Several graph/attribution algorithms are O(N·E)/O(N²), spec wants O(N+E) | — | 🔴 | [P1-16](tasks/P1-16-performance-on-plus-e-algorithms.md) |
 | P1-17 | Terminology audit against spec Part 43 avoid-list | — | 🔴 quick/low-risk | [P1-17](tasks/P1-17-terminology-audit.md) |
+| P1-18 | `structural.metrics.max_depth` uses shortest-path not longest-path (disagrees with `signals.unweighted_depth`) | — | 🔴 NEW, root cause found | [P1-18](tasks/P1-18-structural-max-depth-shortest-path-bug.md) |
 
 ---
 
@@ -76,6 +77,7 @@ This is not a criticism of any particular session — it's the reason the verifi
 | P2-02 | Malformed JSON / bad input unhandled | — | 🔴 | [P2-02](tasks/P2-02-malformed-input-error-handling.md) |
 | P2-03 | No logging module wired anywhere; `--verbose` does nothing but toggle traceback printing | — | 🔴 | [P2-03](tasks/P2-03-logging-infrastructure.md) |
 | P2-04 | Retry/rebuild detection unimplemented — utilization buckets always empty | — | 🔴 | [P2-04](tasks/P2-04-retry-rebuild-detection.md) |
+| P2-05 | `--format json` silently omits `structural`/`utilisation`/`confidence`/`violations` (typo'd `hasattr` check + missing fields) | — | 🔴 NEW, root cause found | [P2-05](tasks/P2-05-cli-json-missing-fields.md) |
 
 ---
 
@@ -84,14 +86,15 @@ This is not a criticism of any particular session — it's the reason the verifi
 | ID | Issue | Depends on | Status | Task File |
 |---|---|---|---|---|
 | P3-01 | Shared synthetic topology fixture library | — | 🔴 build first, everything else reuses it | [P3-01](tasks/P3-01-topology-fixture-library.md) |
-| P3-02 | CLI integration tests (`tests/test_cli.py`) | — | 🔴 highest leverage, do early | [P3-02](tasks/P3-02-cli-integration-tests.md) |
+| P3-02 | CLI integration tests (`tests/test_cli.py`) | — | 🟢 Done (7/7 pass) | [P3-02](tasks/P3-02-cli-integration-tests.md) |
 | P3-03 | Attribution identity tests (I4) across topologies | P3-01, P1-03 | 🔴 | [P3-03](tasks/P3-03-attribution-identity-tests.md) |
 | P3-04 | Tie-break + resource-holder tests | P3-01, P1-01 | 🔴 | [P3-04](tasks/P3-04-tie-break-and-resource-holder-tests.md) |
 | P3-05 | Phase overlap + occupancy edge-case tests | P3-01 | 🔴 | [P3-05](tasks/P3-05-phase-and-occupancy-edge-case-tests.md) |
 | P3-06 | CPU reconciliation (I9) + cold-floor tests | P3-01, P1-06 | 🔴 | [P3-06](tasks/P3-06-cpu-reconciliation-and-cold-floor-tests.md) |
 | P3-07 | Monte-Carlo criticality + determinism-harness tests | P1-09, P1-12 | 🔴 | [P3-07](tasks/P3-07-montecarlo-and-determinism-tests.md) |
-| P3-08 | Golden/regression tests (full-pipeline snapshot) | P3-01 | 🔴 | [P3-08](tasks/P3-08-golden-regression-tests.md) |
+| P3-08 | Golden/regression tests (full-pipeline snapshot) | P3-01 | 🟡 partially covered by P3-10's anti-drift check | [P3-08](tasks/P3-08-golden-regression-tests.md) |
 | P3-09 | Per-module unit test split (normalize/occupancy/edg/blame_chain/replay/utilisation/diagnostics) | — | 🔴 | [P3-09](tasks/P3-09-per-module-unit-tests.md) |
+| P3-10 | Large multi-subproject synthetic-project integration test, using the real `tools/bst_log_to_chrome_trace.py` converter | — | 🟢 Done — found `P1-18` and `P2-05`, amplified `P1-03` evidence | [P3-10](tasks/P3-10-synthetic-multi-subproject-large-test.md) |
 
 ---
 
@@ -108,5 +111,6 @@ This is not a criticism of any particular session — it's the reason the verifi
 
 | Date | Change |
 |---|---|
-| 2026-08-13 | Reworked tracker into index-only format; moved details into `docs/tasks/*.md`; corrected P1-01/P1-02 status after re-verification found stub code still present; added P1-03 as a newly discovered live invariant violation; added `docs/fixing-guide.md` as mandatory session entry point. |
+| 2026-08-13 | Added `P3-10`: a large multi-subproject synthetic BuildStream project (9 elements, 4 junctioned subprojects, diamond dependency, real resource contention), fed through the user-supplied `tools/bst_log_to_chrome_trace.py` converter end-to-end. Found two new bugs (`P1-18` structural max_depth shortest-vs-longest-path bug; `P2-05` CLI JSON output silently missing several `AnalysisResult` fields) and amplified `P1-03`'s evidence (negative/~453,000-year overflow values on a realistic graph, not just undercounting). Confirmed `P3-02` (CLI integration tests) was already done by a prior session and marked it `🟢`. Repo housekeeping: removed `bga.egg-info/`, all committed `__pycache__/*.pyc`, and a stray `=2.8` file from git tracking; added `make check-clean` and mandatory pre-commit hygiene rules to `docs/fixing-guide.md`. |
+| 2026-08-13 (earlier) | Reworked tracker into index-only format; moved details into `docs/tasks/*.md`; corrected P1-01/P1-02 status after re-verification found stub code still present; added P1-03 as a newly discovered live invariant violation; added `docs/fixing-guide.md` as mandatory session entry point. |
 | (prior) | Original tracker created from `docs/bga-spec-compliance-review.md`; P0 and several P1 items marked fixed (P0 confirmed correct on re-verification; some P1 marks corrected above). |

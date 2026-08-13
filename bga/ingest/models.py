@@ -238,3 +238,5 @@ class AnalysisResult:
     confidence: dict = field(default_factory=dict)
     violations: list = field(default_factory=list)
     structural: dict = field(default_factory=dict)
+    run_id: str = ""
+    total_duration_us: int = 0

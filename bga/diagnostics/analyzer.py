@@ -18,6 +18,7 @@ from collections import defaultdict
 import random
 
 from bga.ingest.models import TaskKind
+from bga.graph.edg import build_element_graph, compute_in_out_degree
 
 
 @dataclass(frozen=True)
@@ -303,6 +304,9 @@ class DiagnosticsAnalyzer:
         for task in self.tasks:
             elem_uid = task.task_key.element_uid
             self.element_tasks[elem_uid].append(str(task.task_key))
+        
+        # Extract element durations from graph_analysis for perturbed critical path computation
+        self._element_durations = graph_analysis.get('task_durations', {}) if graph_analysis else {}
     
     def compute_wall_clock_shares(self) -> List[WallClockShare]:
         """
@@ -462,6 +466,9 @@ class DiagnosticsAnalyzer:
         """
         downstream_counts = self.graph_analysis.get('downstream_count', {})
         
+        # Get reachable from targets from graph analysis
+        reachable_from_targets = set(self.graph_analysis.get('reachable_from_targets', []))
+        
         # Build element duration map
         element_durations: Dict[str, int] = defaultdict(int)
         for task in self.tasks:
@@ -487,8 +494,9 @@ class DiagnosticsAnalyzer:
                 for tk in self.critical_path
             )
             
-            # Check if required by target (simplified - would need graph.reachable_from_targets)
-            is_required = True  # Assume all are required unless proven otherwise
+            # Check if required by target (reachable from requested targets)
+            # If no targets specified, assume all are required
+            is_required = elem_uid in reachable_from_targets or not reachable_from_targets
             
             results.append(BlastRadiusResult(
                 element_uid=elem_uid,
@@ -578,15 +586,81 @@ class DiagnosticsAnalyzer:
         """
         Compute critical path with perturbed durations.
         
-        Simplified implementation - returns original critical path.
-        Full implementation would re-run DAG longest path algorithm.
+        Re-runs the longest path algorithm using the perturbed durations
+        to get a genuine Monte Carlo sample.
         """
-        # For now, return original critical path
-        # A full implementation would:
-        # 1. Build task graph with perturbed durations
-        # 2. Run longest path algorithm (like in EDG analyzer)
-        # 3. Return new critical path
-        return self.critical_path
+        # Build task graph with perturbed durations
+        # Use the same algorithm as compute_critical_path but with perturbed values
+        
+        # Get element UIDs from task keys
+        elem_durations: Dict[str, int] = {}
+        for task_key_str, duration in perturbed_durations.items():
+            # Extract element_uid from task_key string (format: element_uid|kind|phase|attempt)
+            elem_uid = task_key_str.split('|')[0]
+            # Aggregate if multiple tasks per element
+            if elem_uid in elem_durations:
+                elem_durations[elem_uid] += duration
+            else:
+                elem_durations[elem_uid] = duration
+        
+        # Run longest path algorithm with perturbed durations
+        predecessors, successors = build_element_graph(self.graph)
+        in_degree, _ = compute_in_out_degree(self.graph)
+        
+        earliest_finish: Dict[str, int] = {}
+        pred_on_critical: Dict[str, Optional[str]] = {}
+        
+        queue = deque()
+        for elem_uid, deg in in_degree.items():
+            if deg == 0:
+                earliest_finish[elem_uid] = elem_durations.get(elem_uid, 0)
+                pred_on_critical[elem_uid] = None
+                queue.append(elem_uid)
+        
+        temp_in_degree = dict(in_degree)
+        
+        while queue:
+            current = queue.popleft()
+            
+            for succ in successors.get(current, []):
+                potential_finish = earliest_finish[current] + elem_durations.get(succ, 0)
+                
+                if succ not in earliest_finish:
+                    earliest_finish[succ] = potential_finish
+                    pred_on_critical[succ] = current
+                elif potential_finish > earliest_finish[succ]:
+                    earliest_finish[succ] = potential_finish
+                    pred_on_critical[succ] = current
+                
+                temp_in_degree[succ] -= 1
+                if temp_in_degree[succ] == 0:
+                    queue.append(succ)
+        
+        if not earliest_finish:
+            return set()
+        
+        # Find terminal with maximum finish time
+        critical_length = 0
+        critical_end = None
+        
+        for elem_uid, finish in earliest_finish.items():
+            if elem_uid not in successors or not successors[elem_uid]:
+                if finish > critical_length:
+                    critical_length = finish
+                    critical_end = elem_uid
+        
+        if critical_end is None:
+            critical_length = max(earliest_finish.values())
+            critical_end = max(earliest_finish, key=earliest_finish.get)
+        
+        # Reconstruct critical path
+        critical_path = []
+        current = critical_end
+        while current is not None:
+            critical_path.append(current)
+            current = pred_on_critical.get(current)
+        
+        return set(critical_path)
     
     def compute_fetch_build_overlap(self) -> Optional[FetchBuildOverlap]:
         """
@@ -645,12 +719,12 @@ class DiagnosticsAnalyzer:
         """
         downstream_counts = self.graph_analysis.get('downstream_count', {})
         
-        # Get reachability from targets (simplified)
-        # Full implementation would compute reverse reachability from requested_targets
-        reachable_from_targets = set(requested_targets or [])
-        # Assume all elements are reachable for now
-        for elem_uid in downstream_counts.keys():
-            reachable_from_targets.add(elem_uid)
+        # Get reachability from targets using graph analysis
+        reachable_from_targets = set(self.graph_analysis.get('reachable_from_targets', []))
+        
+        # If no requested_targets specified, assume all elements are reachable
+        if not requested_targets:
+            reachable_from_targets = set(downstream_counts.keys())
         
         results = []
         for elem_uid, downstream_count in downstream_counts.items():

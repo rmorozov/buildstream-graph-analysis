@@ -156,6 +156,10 @@ class BlameChainAnalyzer:
         normalized_tasks: List[NormalizedTask],
         run_context: Optional[RunContext] = None,
         phase_spans: Optional[List] = None,
+        active_tasks_at_time: Optional[Dict[int, Set[str]]] = None,
+        resource_capacity: Optional[Dict[Resource, int]] = None,
+        max_jobs: Optional[int] = None,
+        concurrent_jobs_at_time: Optional[Dict[int, int]] = None,
     ):
         """
         Initialize the blame chain analyzer.
@@ -164,10 +168,20 @@ class BlameChainAnalyzer:
             normalized_tasks: List of normalized tasks with ready times
             run_context: Run context with wall clock info
             phase_spans: Optional list of phase spans for annotation
+            active_tasks_at_time: Map of timestamps to sets of active tasks
+            resource_capacity: Available capacity per resource type
+            max_jobs: Maximum concurrent jobs allowed
+            concurrent_jobs_at_time: Map of timestamps to concurrent job count
         """
         self.tasks = normalized_tasks
         self.run_context = run_context
         self.phase_spans = phase_spans or []
+        
+        # Resource/scheduler tracking for classification
+        self.active_tasks_at_time = active_tasks_at_time or {}
+        self.resource_capacity = resource_capacity or {}
+        self.max_jobs = max_jobs
+        self.concurrent_jobs_at_time = concurrent_jobs_at_time or {}
         
         # Build task lookup
         self.task_by_key: Dict[str, NormalizedTask] = {
@@ -507,6 +521,38 @@ class BlameChainAnalyzer:
         # Dependency wait: [ready_time, start_us)
         if task.start_us > ready_time:
             attribution.dependency_wait_us = task.start_us - ready_time
+        
+        # Resource wait classification (Part 8)
+        # Check if task waited for resources during [ready_us, start_us)
+        if task.start_us > task.ready_us and task.resources:
+            is_resource_wait, holder_info = self.classify_resource_wait(
+                task,
+                self.active_tasks_at_time,
+                self.resource_capacity,
+            )
+            if is_resource_wait and holder_info:
+                # Attribute the wait time to resource wait
+                resource_wait_duration = task.start_us - max(ready_time, task.ready_us)
+                if resource_wait_duration > 0:
+                    attribution.resource_wait_us = resource_wait_duration
+        
+        # Scheduler wait classification (Part 9)
+        # Check if task was ready but not scheduled despite resources being available
+        if task.start_us > task.ready_us:
+            resource_available = not task.resources or len(task.resources) == 0
+            is_scheduler_wait = self.classify_scheduler_wait(
+                task,
+                resource_available,
+                self.max_jobs,
+                self.concurrent_jobs_at_time,
+            )
+            if is_scheduler_wait:
+                # Attribute remaining unexplained wait to scheduler wait
+                already_attributed = attribution.dependency_wait_us + attribution.resource_wait_us
+                total_wait = task.start_us - task.ready_us
+                scheduler_wait_duration = max(0, total_wait - already_attributed)
+                if scheduler_wait_duration > 0:
+                    attribution.scheduler_wait_us = scheduler_wait_duration
         
         # Phase annotations
         attribution.phase_annotations = self.annotate_phases(task)

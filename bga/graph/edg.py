@@ -74,6 +74,9 @@ def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
         
     Returns:
         Dict mapping element uid to unweighted depth
+        
+    Raises:
+        ValueError: If the graph contains a cycle
     """
     predecessors, _ = build_element_graph(graph)
     in_degree, _ = compute_in_out_degree(graph)
@@ -87,10 +90,13 @@ def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
             depth[elem_uid] = 0
             queue.append(elem_uid)
     
+    processed_count = 0
+    
     # Process in topological order
     while queue:
         current = queue.popleft()
         current_depth = depth[current]
+        processed_count += 1
         
         # Find successors
         for dep in graph.dependencies:
@@ -105,10 +111,11 @@ def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
                 if in_degree[successor] == 0:
                     queue.append(successor)
     
-    # Handle any remaining elements (cycles or disconnected)
-    for elem in graph.elements:
-        if elem.uid not in depth:
-            depth[elem.uid] = 0
+    # Check for cycles: if we didn't process all elements, there's a cycle
+    if processed_count != len(graph.elements):
+        # Find which elements are in cycles
+        unprocessed = [elem.uid for elem in graph.elements if elem.uid not in depth]
+        raise ValueError(f"Graph contains a cycle involving elements: {', '.join(unprocessed)}")
     
     return depth
 
@@ -128,6 +135,9 @@ def compute_weighted_depth(
         
     Returns:
         Dict mapping element uid to weighted depth (earliest finish time)
+        
+    Raises:
+        ValueError: If the graph contains a cycle
     """
     predecessors, _ = build_element_graph(graph)
     in_degree, _ = compute_in_out_degree(graph)
@@ -137,6 +147,7 @@ def compute_weighted_depth(
     
     # Initialize sources
     queue = deque()
+    processed_count = 0
     for elem_uid, deg in in_degree.items():
         if deg == 0:
             earliest_finish[elem_uid] = task_durations.get(elem_uid, 0)
@@ -146,6 +157,7 @@ def compute_weighted_depth(
     while queue:
         current = queue.popleft()
         current_finish = earliest_finish[current]
+        processed_count += 1
         
         for dep in graph.dependencies:
             if dep.predecessor == current:
@@ -164,6 +176,11 @@ def compute_weighted_depth(
                 in_degree[successor] -= 1
                 if in_degree[successor] == 0:
                     queue.append(successor)
+    
+    # Check for cycles
+    if processed_count != len(graph.elements):
+        unprocessed = [elem.uid for elem in graph.elements if elem.uid not in earliest_finish]
+        raise ValueError(f"Graph contains a cycle involving elements: {', '.join(unprocessed)}")
     
     return earliest_finish
 

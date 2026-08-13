@@ -48,11 +48,15 @@ def format_text(result: AnalysisResult) -> str:
     # Certified Floors (Parts 14-17)
     lines.append("Certified Floors:")
     floors = result.floors
-    lines.append(f"  T∞ (observed critical path): {floors['t_infinity_observed_us'] / 1e6:.2f}s")
-    lines.append(f"  LB (resource lower bound):   {floors['lb_us'] / 1e6:.2f}s")
-    lines.append(f"  Certified Headroom:          {floors['certified_headroom_us'] / 1e6:.2f}s")
-    if 't_replay_us' in floors:
-        lines.append(f"  T_C (replay makespan):       {floors['t_replay_us'] / 1e6:.2f}s")
+    t_inf = floors.get('t_infinity_observed') or floors.get('t_infinity_observed_us', 0)
+    lb_val = floors.get('lb') or floors.get('lb_us', 0)
+    headroom = floors.get('certified_headroom') or floors.get('certified_headroom_us', 0)
+    lines.append(f"  T∞ (observed critical path): {t_inf / 1e6:.2f}s")
+    lines.append(f"  LB (resource lower bound):   {lb_val / 1e6:.2f}s")
+    lines.append(f"  Certified Headroom:          {headroom / 1e6:.2f}s")
+    t_replay = floors.get('t_c') or floors.get('t_replay_us')
+    if t_replay is not None:
+        lines.append(f"  T_C (replay makespan):       {t_replay / 1e6:.2f}s")
     lines.append("")
     
     # Attribution (Part 11-12)
@@ -83,10 +87,22 @@ def format_text(result: AnalysisResult) -> str:
     if hasattr(result, 'signals') and result.signals:
         lines.append("Advanced Diagnostics:")
         if 'blast_radius' in result.signals:
-            max_blast = max((br.blast_count for br in result.signals['blast_radius']), default=0)
-            lines.append(f"  Max Blast Radius: {max_blast} downstream elements")
+            br_data = result.signals['blast_radius']
+            # Handle both dict format and dataclass format
+            if isinstance(br_data, dict) and br_data:
+                max_blast = max((v.get('downstream_count', 0) if isinstance(v, dict) else getattr(v, 'blast_count', 0)) for v in br_data.values())
+                lines.append(f"  Max Blast Radius: {max_blast} downstream elements")
+            elif isinstance(br_data, list) and br_data:
+                max_blast = max((br.blast_count for br in br_data if hasattr(br, 'blast_count')), default=0)
+                lines.append(f"  Max Blast Radius: {max_blast} downstream elements")
         if 'criticality_probability' in result.signals:
-            high_crit = sum(1 for cp in result.signals['criticality_probability'] if cp.probability > 0.5)
+            cp_data = result.signals['criticality_probability']
+            # Handle both dict format and dataclass format
+            high_crit = 0
+            if isinstance(cp_data, dict):
+                high_crit = sum(1 for v in cp_data.values() if (isinstance(v, dict) and v.get('probability', 0) > 0.5) or (hasattr(v, 'probability') and v.probability > 0.5))
+            elif isinstance(cp_data, list):
+                high_crit = sum(1 for cp in cp_data if getattr(cp, 'probability', 0) > 0.5)
             lines.append(f"  High Criticality Elements: {high_crit} (>50% probability)")
         lines.append("")
     
@@ -135,7 +151,10 @@ def format_json(result: AnalysisResult) -> str:
             for t in result.critical_path
         ]
     
-    if hasattr(result, 'occupancy_stats'):
+    # occupancy field - check both occupancy (AnalysisResult field) and occupancy_stats (legacy name)
+    if hasattr(result, 'occupancy') and result.occupancy:
+        data['occupancy'] = result.occupancy
+    elif hasattr(result, 'occupancy_stats'):
         data['occupancy'] = result.occupancy_stats
     
     if hasattr(result, 'signals') and result.signals:
@@ -243,6 +262,17 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         
         return 0
         
+    except ValueError as e:
+        # Cycle detection and other validation errors - exit code 3 per docs/cli.md
+        if 'cycle' in str(e).lower():
+            print(f"Error: Graph contains a cycle - {e}", file=sys.stderr)
+            return 3
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+            return 2
+    except json.JSONDecodeError as e:
+        print(f"Error: Malformed JSON in input file - {e}", file=sys.stderr)
+        return 2
     except Exception as e:
         if args.verbose:
             import traceback

@@ -1,6 +1,9 @@
 # P1-04: Flattened timeline undercounts on multi-terminal / independent-branch graphs
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** do after `P1-03` lands (shares the same subsystem; fixing `P1-03` first gives you a correct single-chain baseline to diff against)
+**Priority:** P1 | **Status:** 🔴 Not Started (`P1-03` now done — this can proceed) | **Depends on:** none now (`P1-03` landed 2026-08-13)
+
+## Read `P1-19` first
+While fixing `P1-03`, a closely related gap was found and separately scoped as `docs/tasks/P1-19-flattened-timeline-residual-coverage.md`: the flattened timeline only ever covers the single backward-walked chain, so any task off that chain — including a whole independent branch/terminal (this task's concern) or just an element's own intra-element `TRACK`/`FETCH` time preceding its walked `BUILD` task (`P1-19`'s concern) — contributes zero segments. These are almost certainly the same underlying architectural gap (100% horizon coverage beyond one linear chain) approached from two different angles. **Read both task files before starting either, and strongly consider solving them together** rather than landing two overlapping partial fixes.
 
 ## Spec Reference
 Read only: `sed -n '788,839p' docs/specification.md` (Part 12 — Flattened Timeline).

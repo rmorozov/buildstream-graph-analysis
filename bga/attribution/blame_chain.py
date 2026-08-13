@@ -486,33 +486,40 @@ class BlameChainAnalyzer:
                 execution_end=task.finish_us,
             )
             
-            # Compute dependency wait
-            ready_time = self.compute_ready_time(
-                current_key,
-                task_finish_times,
-                explicit_predecessors,
-            )
-            
+            # Dependency wait: use task.ready_us, already correctly computed
+            # during normalization (bga/normalize/timestamps.py) across all
+            # of a predecessor element's tasks - not a second, independent
+            # recomputation from explicit_predecessors/task_finish_times,
+            # which only ever covers BUILD-to-BUILD edges (see below) and
+            # would silently misreport ready time for any task outside that.
+            ready_time = task.ready_us
+
             if ready_time < task.start_us:
                 node.dependency_wait_start = ready_time
-                
-                # Select responsible predecessor
-                preds = explicit_predecessors.get(current_key, [])
-                if preds:
-                    responsible = self.select_dependency_blame(
-                        current_key,
-                        preds,
-                        task_finish_times,
-                        task_depths,
-                    )
-                    if responsible:
-                        node.responsible_predecessor = TaskKey.from_string(responsible)
-                        # Continue chain with responsible predecessor
-                        current_key = responsible
-                        chain.append(node)
-                        continue
-            
-            # No dependency wait or no predecessors - chain ends here
+
+            # Continue the walk to the responsible predecessor whenever one
+            # exists - regardless of whether the wait was zero. A wait of
+            # exactly zero (perfectly back-to-back scheduling) still means
+            # the predecessor is part of the causal history; previously the
+            # walk stopped dead the moment wait wasn't strictly positive,
+            # silently dropping every upstream task from the chain (and so
+            # from the flattened timeline) whenever tasks were scheduled
+            # with no gap between them.
+            preds = explicit_predecessors.get(current_key, [])
+            if preds:
+                responsible = self.select_dependency_blame(
+                    current_key,
+                    preds,
+                    task_finish_times,
+                    task_depths,
+                )
+                if responsible:
+                    node.responsible_predecessor = TaskKey.from_string(responsible)
+                    current_key = responsible
+                    chain.append(node)
+                    continue
+
+            # No predecessors - chain ends here
             chain.append(node)
             break
         
@@ -552,15 +559,11 @@ class BlameChainAnalyzer:
             execution_duration_us=task.dur_us,
         )
         
-        # Compute ready time
-        task_key_str = str(task.task_key)
-        ready_time = self.compute_ready_time(
-            task_key_str,
-            task_finish_times,
-            explicit_predecessors,
-        )
-        
-        # Dependency wait: [ready_time, start_us)
+        # Dependency wait: [ready_time, start_us). Use task.ready_us
+        # directly (see build_blame_chain for why this replaced the
+        # separate, narrower compute_ready_time recomputation).
+        ready_time = task.ready_us
+
         if task.start_us > ready_time:
             attribution.dependency_wait_us = task.start_us - ready_time
         
@@ -620,13 +623,33 @@ class BlameChainAnalyzer:
         Returns:
             Tuple of (blame_chain, task_attributions, flattened_segments)
         """
-        # Determine terminal tasks
+        # Determine terminal tasks. Part 6.2: "the chain begins from THE
+        # terminal task responsible for the observed end of the build" -
+        # singular. Previously this defaulted to every task the heuristic,
+        # finish-time-matching self.successors graph (built in
+        # _build_dependency_graph, unrelated to the real dependency graph)
+        # considered to have "no successor" - on a multi-task-kind element
+        # graph that heuristic misclassifies most TRACK/FETCH tasks as
+        # terminals too (their finish time rarely coincides with another
+        # task's ready time), producing many spurious chain walks that
+        # revisit and double/triple-count shared upstream tasks (e.g. a
+        # widely-depended-on library's BUILD task appearing in several
+        # terminals' walks). The task whose finish_us equals the overall
+        # maximum finish time is unambiguously the one that determined the
+        # observed end of the build; ties are broken by task key ascending
+        # (same determinism rule used elsewhere, e.g. select_dependency_blame).
+        # Callers with multiple genuinely independent requested targets
+        # should pass terminal_tasks explicitly - see docs/tasks/P1-04.
         if terminal_tasks is None:
-            terminal_tasks = {
-                str(t.task_key)
-                for t in self.tasks
-                if str(t.task_key) not in self.successors or not self.successors[str(t.task_key)]
-            }
+            if self.tasks:
+                max_finish = max(t.finish_us for t in self.tasks)
+                terminal_tasks = {
+                    min(
+                        (str(t.task_key) for t in self.tasks if t.finish_us == max_finish)
+                    )
+                }
+            else:
+                terminal_tasks = set()
         
         # Build blame chains from all terminals
         all_chain_nodes: List[BlameChainNode] = []

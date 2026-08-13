@@ -50,8 +50,8 @@ This is not a criticism of any particular session — it's the reason the verifi
 |---|---|---|---|---|
 | P1-01 | Resource-wait holder tracking is a stub (no real occupancy-based holder set, `ambiguous` hardcoded False) | — | 🟡 corrected from 🟢 | [P1-01](tasks/P1-01-resource-wait-holder-tracking.md) |
 | P1-02 | Scheduler-wait detection unconditionally returns False | — | 🟢 Done (also fixed a tautological call-site `resource_available` check that would have made this fix unobservable) | [P1-02](tasks/P1-02-scheduler-wait-detection.md) |
-| P1-03 | **Attribution identity (I4) violated on resource-constrained chains** — new finding, live bug | P1-01, P1-02 likely related | 🔴 NEW | [P1-03](tasks/P1-03-attribution-identity-resource-chains.md) |
-| P1-04 | Flattened timeline undercounts on multi-terminal / independent-branch graphs | — | 🔴 | [P1-04](tasks/P1-04-flattened-timeline-multi-terminal-coverage.md) |
+| P1-03 | Attribution identity (I4) violated on resource-constrained chains — 3 root causes fixed (zero-wait walk termination, multi-task-per-element predecessor mismapping, spurious multi-terminal heuristic) | — | 🟢 Done (residual gap scoped as `P1-19`) | [P1-03](tasks/P1-03-attribution-identity-resource-chains.md) |
+| P1-04 | Flattened timeline undercounts on multi-terminal / independent-branch graphs | — | 🔴 unblocked, closely related to `P1-19` — read both first | [P1-04](tasks/P1-04-flattened-timeline-multi-terminal-coverage.md) |
 | P1-05 | No violation raised when timeline undercounts | P1-04 | 🔴 | [P1-05](tasks/P1-05-reconciliation-violation-reporting.md) |
 | P1-06 | `T∞,cold` hardcoded None; `historical_runs` never supplied | — | 🔴 | [P1-06](tasks/P1-06-cold-floor-historical-wiring.md) |
 | P1-07 | No `--cold`/`--allow-partial-cold` CLI flags; cold publication gate unimplemented | P1-06 | 🔴 | [P1-07](tasks/P1-07-cold-cli-flags-and-publication-gate.md) |
@@ -66,6 +66,7 @@ This is not a criticism of any particular session — it's the reason the verifi
 | P1-16 | Several graph/attribution algorithms are O(N·E)/O(N²), spec wants O(N+E) | — | 🔴 | [P1-16](tasks/P1-16-performance-on-plus-e-algorithms.md) |
 | P1-17 | Terminology audit against spec Part 43 avoid-list | — | 🔴 quick/low-risk | [P1-17](tasks/P1-17-terminology-audit.md) |
 | P1-18 | `structural.metrics.max_depth` uses shortest-path not longest-path (disagrees with `signals.unweighted_depth`) | — | 🟢 Done | [P1-18](tasks/P1-18-structural-max-depth-shortest-path-bug.md) |
+| P1-19 | Flattened timeline doesn't cover intra-element `TRACK→FETCH→BUILD` sequencing or off-chain parallel task time | P1-03 (done) | 🔴 NEW, scoped out of P1-03, read alongside P1-04 | [P1-19](tasks/P1-19-flattened-timeline-residual-coverage.md) |
 
 ---
 
@@ -100,17 +101,18 @@ This is not a criticism of any particular session — it's the reason the verifi
 
 ## Recommended Order for a Sequence of Small-Context Sessions
 
-1. `P1-02` (scheduler wait — small, self-contained, high spec-fidelity value)
-2. `P1-03` (attribution identity — the most consequential live bug found; a build tool whose headline numbers don't sum correctly is not trustworthy)
-3. `P3-02` (CLI integration tests — locks in P0 and prevents this whole class of regression from recurring silently)
-4. `P1-01` (real resource-holder tracking — likely related to P1-03's root cause, do after P1-03 lands so there's a passing baseline to diff against)
-5. `P2-01`, `P2-03` (cycle detection + logging — cheap, high diagnostic value for every session after)
-6. Everything else in ID order within its priority tier, respecting the Depends-on column.
+`P1-02`, `P1-03`, `P1-18`, `P2-05`, and `P3-02` are now done (see Change Log). Next up:
+
+1. `P1-19` and `P1-04` together (read both — likely the same underlying fix: covering the flattened timeline beyond the single walked chain, for both intra-element sequencing and multi-terminal/independent-branch cases)
+2. `P1-01` (real resource-holder tracking — now that `P1-03`'s ready-time/chain-walk fixes landed, this has a correct baseline to build on)
+3. `P2-01`, `P2-03` (cycle detection + logging — cheap, high diagnostic value for every session after)
+4. Everything else in ID order within its priority tier, respecting the Depends-on column.
 
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-13 (latest) | Fixed `P1-02` (real scheduler-wait detection, plus a tautological call-site `resource_available` check that would have made it unobservable) and `P1-03` (attribution identity I4 — three compounding root causes: blame-chain walk stopping on exactly-zero-wait links, `explicit_predecessors` mismapping tasks on multi-task-kind elements, and a spurious multi-terminal heuristic causing triple-counting). Scoped the honest residual of `P1-03` as new task `P1-19`. Added `tests/unit/` (first module-level unit test directory) with `test_blame_chain.py` and `test_attribution_identity.py`. |
 | 2026-08-13 | Added `P3-10`: a large multi-subproject synthetic BuildStream project (9 elements, 4 junctioned subprojects, diamond dependency, real resource contention), fed through the user-supplied `tools/bst_log_to_chrome_trace.py` converter end-to-end. Found two new bugs (`P1-18` structural max_depth shortest-vs-longest-path bug; `P2-05` CLI JSON output silently missing several `AnalysisResult` fields) and amplified `P1-03`'s evidence (negative/~453,000-year overflow values on a realistic graph, not just undercounting). Confirmed `P3-02` (CLI integration tests) was already done by a prior session and marked it `🟢`. Repo housekeeping: removed `bga.egg-info/`, all committed `__pycache__/*.pyc`, and a stray `=2.8` file from git tracking; added `make check-clean` and mandatory pre-commit hygiene rules to `docs/fixing-guide.md`. |
 | 2026-08-13 (earlier) | Reworked tracker into index-only format; moved details into `docs/tasks/*.md`; corrected P1-01/P1-02 status after re-verification found stub code still present; added P1-03 as a newly discovered live invariant violation; added `docs/fixing-guide.md` as mandatory session entry point. |
 | (prior) | Original tracker created from `docs/bga-spec-compliance-review.md`; P0 and several P1 items marked fixed (P0 confirmed correct on re-verification; some P1 marks corrected above). |

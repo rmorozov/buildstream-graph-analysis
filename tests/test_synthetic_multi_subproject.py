@@ -182,17 +182,8 @@ def test_certified_floor_invariants(result):
         assert t_c >= lb, f"T_C ({t_c}) < LB ({lb})"  # I2
 
 
-@pytest.mark.xfail(
-    reason="P1-03: attribution identity (I4) is violated on resource-constrained "
-    "multi-task graphs - see docs/tasks/P1-03-attribution-identity-resource-chains.md. "
-    "This fixture's PROCESS/DOWNLOAD contention reproduces it at scale. Remove this "
-    "xfail once P1-03 is fixed and verified, so this test starts guarding I4 for real.",
-    strict=False,
-)
-def test_attribution_identity_holds(result):
-    """I4: Sigma attribution == H exactly. Expected to fail today - tracked as P1-03."""
-    attribution = result.attribution
-    total_work_us = sum(
+def _sum_attribution(attribution):
+    return sum(
         attribution.get(k, 0)
         for k in (
             "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
@@ -200,9 +191,58 @@ def test_attribution_identity_holds(result):
             "untracked_head_us", "untracked_tail_us",
         )
     )
-    h = result.floors["t_infinity_observed"]
-    assert total_work_us > 0
-    assert total_work_us == h
+
+
+def test_attribution_no_longer_produces_garbage_values(result):
+    """Regression guard for P1-03's most severe symptom (fixed): on this
+    fixture's real multi-branch resource contention, attribution used to
+    include a negative execution_on_chain_us and a dependency_wait_us of
+    ~14.29e15us (~453,000 years) - not just an undercount, outright garbage.
+    Three compounding root causes produced this (all fixed, see
+    docs/tasks/P1-03-attribution-identity-resource-chains.md): explicit
+    predecessor construction mismapping tasks for multi-task-kind elements,
+    the blame-chain walk stopping dead on exactly-zero-wait links instead of
+    continuing to the predecessor, and a terminal-task heuristic that
+    treated most TRACK/FETCH tasks as spurious "terminals", causing widely-
+    shared tasks to be walked and summed multiple times.
+
+    This test only asserts sanity (non-negative, same order of magnitude as
+    H), not exact equality - that remains P1-19's scope, see
+    test_attribution_identity_close_but_not_exact below.
+    """
+    attribution = result.attribution
+    for key, value in attribution.items():
+        assert value >= 0, f"{key} is negative: {value}"
+
+    h = result.occupancy["horizon_us"]
+    total = _sum_attribution(attribution)
+    assert total > 0
+    # A real bug produced a total ~100,000x larger than H; a healthy total
+    # should be within a small constant factor of H, never orders of
+    # magnitude off.
+    assert total <= h * 2, f"attribution total {total} is wildly larger than H {h}"
+
+
+@pytest.mark.xfail(
+    reason="P1-19: the flattened timeline only covers the single backward-walked "
+    "blame chain (BUILD-to-BUILD dependency edges); it doesn't yet cover a task's "
+    "own intra-element TRACK->FETCH->BUILD sequencing time, nor tasks entirely off "
+    "the chosen chain (parallel, non-critical-path work) - see "
+    "docs/tasks/P1-19-flattened-timeline-residual-coverage.md. On this fixture the "
+    "gap is exactly libcore.bst's own TRACK+FETCH duration (5.5s) plus every other "
+    "off-chain task's time. Remove this xfail once P1-19 lands.",
+    strict=False,
+)
+def test_attribution_identity_exact(result):
+    """I4: Sigma attribution == H exactly, using the correct target (the task
+    horizon, result.occupancy['horizon_us']) - not result.floors['t_infinity_observed'],
+    which is the critical-path *duration* sum (Part 14.1), a different quantity
+    entirely. (An earlier version of this test compared against the wrong
+    field, which also has to be fixed as part of closing this out.)
+    """
+    h = result.occupancy["horizon_us"]
+    total = _sum_attribution(result.attribution)
+    assert total == h
 
 
 # --- Full-stack CLI proof -------------------------------------------------

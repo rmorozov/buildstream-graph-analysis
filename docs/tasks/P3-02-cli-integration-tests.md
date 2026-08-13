@@ -1,6 +1,9 @@
 # P3-02: CLI integration tests
 
-**Priority:** P3, but **highest leverage of all open test tasks** | **Status:** 🔴 Not Started | **Depends on:** none — do this early, independent of `P3-01`
+**Priority:** P3, but **highest leverage of all open test tasks** | **Status:** 🟢 Fixed & Verified (`tests/test_cli.py` already exists and passes; re-verified 2026-08-13) | **Depends on:** none — do this early, independent of `P3-01`
+
+## Status note (2026-08-13)
+`tests/test_cli.py` already exists, covering `--help`, `analyze --help`, a nonexistent-dir exit-code-1 case, `analyze` with `--format json`/`text`/`csv`, and `--version` — 7 tests, all passing (see Verification Log). It does **not** yet cover exit codes 2/3 (ingestion/cycle failures, since `P2-01`/`P2-02` aren't done) — those cases should be added, `xfail`-marked pointing at `P2-01`/`P2-02`, once picked up; not required to re-open this task's status for that, treat it as a natural extension. `tests/test_synthetic_multi_subproject.py` (`P3-10`) adds a second, larger CLI end-to-end case on top of this.
 
 ## Why this matters most
 The original P0 breakage (CLI constructor mismatch, broken output formatters) went completely undetected by the existing test suite because **zero existing tests invoke `bga.cli` at all** — every test calls into `bga.analyzer`/other modules directly. A single integration test that runs `bga analyze` end-to-end would have caught the entire P0 class of bug immediately. This task closes that gap permanently.
@@ -23,4 +26,15 @@ Create `tests/test_cli.py`:
 `PYTHONPATH=. python3 -m pytest tests/test_cli.py -v` — all cases pass (or are `xfail` with a clear reason pointing at the blocking task). This test file itself, once created, becomes part of the standard regression check every other task's Verification Log should reference alongside `tests/test_e2e.py`.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/test_cli.py -v
+tests/test_cli.py::test_cli_help PASSED
+tests/test_cli.py::test_cli_analyze_help PASSED
+tests/test_cli.py::test_cli_analyze_nonexistent_dir PASSED
+tests/test_cli.py::test_cli_analyze_fixture PASSED
+tests/test_cli.py::test_cli_analyze_text_format PASSED
+tests/test_cli.py::test_cli_analyze_csv_format PASSED
+tests/test_cli.py::test_cli_version PASSED
+7 passed
+```
+(2026-08-13, re-verified while building `tests/test_synthetic_multi_subproject.py` / `P3-10`.)

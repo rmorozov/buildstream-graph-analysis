@@ -31,9 +31,10 @@ For every task, before marking it done:
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
 3. Also run the full existing suite to confirm you didn't regress anything else:
    ```
-   PYTHONPATH=. python3 tests/test_e2e.py
+   pip install pytest   # if not already installed in this session - confirmed installable via pip
+   PYTHONPATH=. python3 -m pytest tests/ -v
    ```
-   (Add `python3 -m pytest -q` too, once `pytest` is available in the environment — see `docs/tasks/P2-02-malformed-input-error-handling.md` area for environment notes; for now the direct-run e2e script is the reliable baseline.)
+   `tests/test_e2e.py` is also directly runnable without pytest (`PYTHONPATH=. python3 tests/test_e2e.py`) if you want the fastest possible sanity check, but prefer the full `pytest tests/ -v` run before marking anything 🟢 — it now also covers `tests/test_cli.py` and `tests/test_synthetic_multi_subproject.py` (a larger multi-subproject fixture; see `docs/tasks/P3-10-synthetic-multi-subproject-large-test.md`), both of which the single e2e script does not run. Tests marked `xfail` (a handful, each pointing at the specific task file that will fix them) are expected — only genuinely new failures are regressions.
 4. Only then: update the status cell in `docs/fix-progress-tracker.md` to 🟢, and update the task file's own status line.
 5. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
 

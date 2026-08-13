@@ -1,0 +1,221 @@
+{
+  "spans": [
+    {
+      "task_key": "core-utils.bst:libcore.bst|TRACK|TRACK|0",
+      "ts_us": 1786611600000000,
+      "dur_us": 1500000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "core-utils.bst:liblog.bst|TRACK|TRACK|0",
+      "ts_us": 1786611600000000,
+      "dur_us": 1500000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "core-utils.bst:libcore.bst|FETCH|FETCH|0",
+      "ts_us": 1786611601500000,
+      "dur_us": 4000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "core-utils.bst:liblog.bst|FETCH|FETCH|0",
+      "ts_us": 1786611601500000,
+      "dur_us": 4000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "core-utils.bst:libcore.bst|BUILD|BUILD|0",
+      "ts_us": 1786611605500000,
+      "dur_us": 8000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "data-format.bst:libjson.bst|TRACK|TRACK|0",
+      "ts_us": 1786611605500000,
+      "dur_us": 2000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "data-format.bst:libxml.bst|TRACK|TRACK|0",
+      "ts_us": 1786611605500000,
+      "dur_us": 2000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "data-format.bst:libjson.bst|FETCH|FETCH|0",
+      "ts_us": 1786611607500000,
+      "dur_us": 6000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "data-format.bst:libxml.bst|FETCH|FETCH|0",
+      "ts_us": 1786611607500000,
+      "dur_us": 6000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "core-utils.bst:liblog.bst|BUILD|BUILD|0",
+      "ts_us": 1786611613500000,
+      "dur_us": 8000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "data-format.bst:libjson.bst|BUILD|BUILD|0",
+      "ts_us": 1786611613500000,
+      "dur_us": 18000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "data-format.bst:libxml.bst|BUILD|BUILD|0",
+      "ts_us": 1786611613500000,
+      "dur_us": 18000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "net-stack.bst:libcrypto.bst|TRACK|TRACK|0",
+      "ts_us": 1786611613500000,
+      "dur_us": 2000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "net-stack.bst:libnet.bst|TRACK|TRACK|0",
+      "ts_us": 1786611613500000,
+      "dur_us": 2000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "net-stack.bst:libnet.bst|FETCH|FETCH|0",
+      "ts_us": 1786611615500000,
+      "dur_us": 6000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "net-stack.bst:libcrypto.bst|BUILD|BUILD|0",
+      "ts_us": 1786611621500000,
+      "dur_us": 18000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "ui-toolkit.bst:libui.bst|TRACK|TRACK|0",
+      "ts_us": 1786611621500000,
+      "dur_us": 2500000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "ui-toolkit.bst:libwidgets.bst|TRACK|TRACK|0",
+      "ts_us": 1786611621500000,
+      "dur_us": 2500000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "ui-toolkit.bst:libui.bst|FETCH|FETCH|0",
+      "ts_us": 1786611624000000,
+      "dur_us": 8000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "ui-toolkit.bst:libwidgets.bst|FETCH|FETCH|0",
+      "ts_us": 1786611624000000,
+      "dur_us": 8000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "ui-toolkit.bst:libwidgets.bst|BUILD|BUILD|0",
+      "ts_us": 1786611632000000,
+      "dur_us": 35000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "net-stack.bst:libnet.bst|BUILD|BUILD|0",
+      "ts_us": 1786611639500000,
+      "dur_us": 18000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "ui-toolkit.bst:libui.bst|BUILD|BUILD|0",
+      "ts_us": 1786611667000000,
+      "dur_us": 35000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "app.bst|BUILD|BUILD|0",
+      "ts_us": 1786611702000000,
+      "dur_us": 40000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

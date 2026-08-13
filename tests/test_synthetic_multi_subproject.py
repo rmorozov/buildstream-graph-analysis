@@ -182,15 +182,25 @@ def test_certified_floor_invariants(result):
         assert t_c >= lb, f"T_C ({t_c}) < LB ({lb})"  # I2
 
 
+_TASK_HORIZON_KEYS = (
+    "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
+    "scheduler_wait_us", "idle_us", "retry_wait_us",
+)
+
+
+def _sum_task_horizon_attribution(attribution):
+    """Part 12.1's task-horizon identity: Sigma over the 6 task-horizon
+    categories only - excludes UNTRACKED_HEAD/UNTRACKED_TAIL, which live
+    outside the task horizon by definition (Part 11)."""
+    return sum(attribution.get(k, 0) for k in _TASK_HORIZON_KEYS)
+
+
 def _sum_attribution(attribution):
-    return sum(
-        attribution.get(k, 0)
-        for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
-            "untracked_head_us", "untracked_tail_us",
-        )
-    )
+    """All 8 canonical categories (Part 11), including UNTRACKED_HEAD/
+    UNTRACKED_TAIL - Part 12.1's full-wall-clock identity target."""
+    return _sum_task_horizon_attribution(attribution) + attribution.get(
+        "untracked_head_us", 0
+    ) + attribution.get("untracked_tail_us", 0)
 
 
 def test_attribution_no_longer_produces_garbage_values(result):
@@ -224,8 +234,9 @@ def test_attribution_no_longer_produces_garbage_values(result):
 
 
 def test_attribution_identity_exact(result):
-    """I4: Sigma attribution == H exactly, using the correct target (the task
-    horizon, result.occupancy['horizon_us']) - not result.floors['t_infinity_observed'],
+    """I4 (task-horizon variant, Part 12.1): Sigma over the 6 task-horizon
+    categories == H exactly, using the correct target (the task horizon,
+    result.occupancy['horizon_us']) - not result.floors['t_infinity_observed'],
     which is the critical-path *duration* sum (Part 14.1), a different quantity
     entirely. (An earlier version of this test compared against the wrong
     field, which also had to be fixed as part of closing this out.)
@@ -240,10 +251,35 @@ def test_attribution_identity_exact(result):
     end, which by construction spans the full task horizon for any single
     connected component. This fixture's diamond dependency, real resource
     contention, and multiple task kinds per element all exercise this.
+
+    UNTRACKED_HEAD/UNTRACKED_TAIL are deliberately excluded from this sum -
+    they live outside the task horizon by definition (Part 11) - see
+    test_full_wall_clock_attribution_identity_exact below for the separate
+    identity that does include them.
     """
     h = result.occupancy["horizon_us"]
-    total = _sum_attribution(result.attribution)
+    total = _sum_task_horizon_attribution(result.attribution)
     assert total == h
+
+
+def test_full_wall_clock_attribution_identity_exact(result, fixture_artifacts):
+    """I4 (full-wall-clock variant, Part 12.1): UNTRACKED_HEAD + Sigma
+    task-horizon attribution + UNTRACKED_TAIL == wall_clock exactly.
+
+    Regression guard for P1-23 (fixed): UNTRACKED_HEAD/UNTRACKED_TAIL used
+    to be hardcoded to 0 regardless of the real gap between run-context's
+    wall-clock bounds and the first/last recognized task activity - this
+    fixture's real converter output has a genuine ~1s gap after the last
+    measured task finishes (the wrapper invocation's own teardown extends
+    past it), so it's the first fixture in this suite that actually
+    exercises a nonzero UNTRACKED_TAIL.
+    """
+    wall_clock = fixture_artifacts["run_context"]["wall_clock"]
+    wall_clock_us = wall_clock["end_us"] - wall_clock["start_us"]
+
+    assert result.attribution["untracked_head_us"] >= 0
+    assert result.attribution["untracked_tail_us"] > 0
+    assert _sum_attribution(result.attribution) == wall_clock_us
 
 
 # --- Full-stack CLI proof -------------------------------------------------

@@ -185,7 +185,14 @@ def compute_confidence(
     violation_us += sum(abs(v.get('residual_us', 0)) for v in reconciliation_violations)
 
     penalized_us = untracked_us + ambiguous_wait_us + violation_us
-    attribution_score = max(0.0, 1.0 - (penalized_us / horizon_us)) if horizon_us > 0 else 1.0
+    # untracked_us lives outside the task horizon by definition (Part 11),
+    # while ambiguous_wait_us/violation_us live inside it - the correct
+    # normalizer for their sum is the full wall-clock horizon (task
+    # horizon + untracked), not the task horizon alone (P1-23: before
+    # untracked_head_us/untracked_tail_us were computed for real, this
+    # was unreachable dead code, since untracked_us was always 0).
+    full_horizon_us = horizon_us + untracked_us
+    attribution_score = max(0.0, 1.0 - (penalized_us / full_horizon_us)) if full_horizon_us > 0 else 1.0
 
     confidence = min(provenance_score, coverage_score, model_score, attribution_score)
 

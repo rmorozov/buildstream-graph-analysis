@@ -435,6 +435,26 @@ class BuildEfficiencyAnalyzer:
         # Reconcile attribution
         reconciled = self.blame_chain_analyzer.reconcile_attribution(segments)
 
+        # Task-horizon boundaries (Part 13), reused below both for the
+        # I4 task-horizon check and for UNTRACKED_HEAD/UNTRACKED_TAIL
+        # (Part 11/12.1's full-wall-clock identity).
+        min_start_us, max_finish_us, horizon_us = compute_task_horizon(self.normalized_tasks)
+
+        # UNTRACKED_HEAD/UNTRACKED_TAIL (Part 11): the gap between the run's
+        # wall-clock bounds and the first/last recognized task activity.
+        # Only computable when run-context actually supplies wall-clock
+        # bounds (Part 4.3's provenance hierarchy - falls back to 0/0, not
+        # an estimate, when unavailable, rather than inventing a value).
+        untracked_head_us = 0
+        untracked_tail_us = 0
+        if (
+            self.run_context and self.normalized_tasks
+            and self.run_context.wall_start_us is not None
+            and self.run_context.wall_end_us is not None
+        ):
+            untracked_head_us = max(0, min_start_us - self.run_context.wall_start_us)
+            untracked_tail_us = max(0, self.run_context.wall_end_us - max_finish_us)
+
         # Build result with all categories
         result = {
             'execution_on_chain_us': reconciled.get('EXECUTION_ON_CHAIN', 0),
@@ -443,8 +463,8 @@ class BuildEfficiencyAnalyzer:
             'scheduler_wait_us': reconciled.get('SCHEDULER_WAIT', 0),
             'idle_us': reconciled.get('IDLE', 0),
             'retry_wait_us': reconciled.get('RETRY_WAIT', 0),
-            'untracked_head_us': 0,  # Would need wall_start comparison
-            'untracked_tail_us': 0,  # Would need wall_end comparison
+            'untracked_head_us': untracked_head_us,
+            'untracked_tail_us': untracked_tail_us,
         }
 
         # I4 reconciliation check (Part 33/34): Sigma attribution must equal
@@ -454,7 +474,6 @@ class BuildEfficiencyAnalyzer:
         # are reported, not hidden; resource ambiguity is UNKNOWN, not
         # invented), any future residual must be reported, not silently
         # absorbed. Never pad or truncate to force the sum to match.
-        _, _, horizon_us = compute_task_horizon(self.normalized_tasks)
         attribution_sum_us = sum(result[k] for k in (
             'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
             'scheduler_wait_us', 'idle_us', 'retry_wait_us',

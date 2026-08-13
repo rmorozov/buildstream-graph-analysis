@@ -8,12 +8,12 @@ from bga import BuildEfficiencyAnalyzer
 from bga.graph.edg import analyze_graph
 
 
-def _write_run_dir(tmp_path, elements, dependencies, spans):
+def _write_run_dir(tmp_path, elements, dependencies, spans, wall_end_us=200000):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
         "trace_epsilon_us": 1000,
-        "wall_clock": {"start_us": 0, "end_us": 200000},
+        "wall_clock": {"start_us": 0, "end_us": wall_end_us},
         "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
     }
     graph = {
@@ -28,12 +28,16 @@ def _write_run_dir(tmp_path, elements, dependencies, spans):
 
 
 def test_perfect_coverage_gives_confidence_one(tmp_path):
+    """wall_end_us matches the single task's own finish exactly (0) - a
+    genuinely gapless run, so UNTRACKED_HEAD/UNTRACKED_TAIL (P1-23) are
+    both 0 and don't penalize attribution_score."""
     run_dir = _write_run_dir(
         tmp_path,
         elements=[("a.bst", True)],
         dependencies=[],
         spans=[{"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
                 "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
+        wall_end_us=50000,
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
     analyzer.load()

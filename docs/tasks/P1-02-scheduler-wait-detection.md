@@ -1,6 +1,9 @@
 # P1-02: Real scheduler-wait detection
 
-**Priority:** P1 | **Status:** 🔴 Not Started (mismarked 🟢 previously — verify this note is removed once actually fixed) | **Depends on:** none
+**Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none
+
+## Scope note: the call site's `resource_available` was also fixed
+While implementing this, found that `compute_task_attribution`'s call site (`bga/attribution/blame_chain.py`, then line 553) computed `resource_available = not task.resources or len(task.resources) == 0` - a tautology meaning "this task requires no resources," which is `False` for almost every real task (confirmed: every task in both `tests/test_e2e.py`'s fixture and `tests/fixtures/synthetic_multi_subproject/` has resources). This unconditionally short-circuited `classify_scheduler_wait` to `False` regardless of the fix below, making the fix unobservable in any existing test. Fixing `classify_scheduler_wait` alone without this would have shipped a function that is correct in isolation but provably never fires - exactly the kind of "looks done, isn't" the fixing-guide's verification rule exists to catch. Replaced with a real point-in-time resource-capacity check (`_resource_available_at`, new helper) evaluated at `task.ready_us`. This does **not** touch `classify_resource_wait` or its holder-tracking logic (`P1-01`'s territory) - it's a simpler binary "was capacity available" check, not holder attribution.
 
 ## Spec Reference
 Read only: `sed -n '650,673p' docs/specification.md` (Part 9 — Scheduler Wait).
@@ -29,4 +32,22 @@ Add a test case (in the same `tests/unit/test_blame_chain.py` file as `P1-01`, o
 Run: `PYTHONPATH=. python3 -m pytest tests/unit/test_blame_chain.py -q` (or standalone run). Both cases must pass, and the "always False" regression must not reappear — assert explicitly that at least one constructed case returns `True`.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_blame_chain.py -v
+9 passed (6 for classify_scheduler_wait incl. the exact scenario from this
+task's Acceptance Test, 3 for the new _resource_available_at helper)
+
+$ PYTHONPATH=. python3 -m pytest tests/ -v
+33 passed, 1 xfailed (no regressions; the 1 xfail is P1-03, unrelated)
+```
+Note on end-to-end visibility: running `bga.analyze_run` against
+`tests/fixtures/synthetic_multi_subproject/` still shows
+`scheduler_wait_us: 0` in the final attribution dict. This is expected
+and not a sign the fix is ineffective at the unit level (verified above,
+in isolation, via direct calls to `classify_scheduler_wait` and
+`_resource_available_at`) - the full-pipeline attribution totals are
+still gated by the separate, much larger `P1-03`/`P1-04` bugs (garbage
+`dependency_wait_us`, near-total coverage loss in the flattened
+timeline), which this task explicitly does not touch per its Out of
+Scope. Re-check end-to-end scheduler-wait visibility once `P1-03`/`P1-04`
+land.

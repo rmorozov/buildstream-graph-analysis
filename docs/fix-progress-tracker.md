@@ -65,7 +65,7 @@ This is not a criticism of any particular session — it's the reason the verifi
 | P1-15 | Missing `bga/floors/`, `bga/report/`, `bga/validation/` packages (architecture) | P1-06..P1-13 mostly done first | 🔴 do last | [P1-15](tasks/P1-15-package-architecture-refactor.md) |
 | P1-16 | Several graph/attribution algorithms are O(N·E)/O(N²), spec wants O(N+E) | — | 🔴 | [P1-16](tasks/P1-16-performance-on-plus-e-algorithms.md) |
 | P1-17 | Terminology audit against spec Part 43 avoid-list | — | 🔴 quick/low-risk | [P1-17](tasks/P1-17-terminology-audit.md) |
-| P1-18 | `structural.metrics.max_depth` uses shortest-path not longest-path (disagrees with `signals.unweighted_depth`) | — | 🔴 NEW, root cause found | [P1-18](tasks/P1-18-structural-max-depth-shortest-path-bug.md) |
+| P1-18 | `structural.metrics.max_depth` uses shortest-path not longest-path (disagrees with `signals.unweighted_depth`) | — | 🟢 Done | [P1-18](tasks/P1-18-structural-max-depth-shortest-path-bug.md) |
 
 ---
 
@@ -77,7 +77,7 @@ This is not a criticism of any particular session — it's the reason the verifi
 | P2-02 | Malformed JSON / bad input unhandled | — | 🔴 | [P2-02](tasks/P2-02-malformed-input-error-handling.md) |
 | P2-03 | No logging module wired anywhere; `--verbose` does nothing but toggle traceback printing | — | 🔴 | [P2-03](tasks/P2-03-logging-infrastructure.md) |
 | P2-04 | Retry/rebuild detection unimplemented — utilization buckets always empty | — | 🔴 | [P2-04](tasks/P2-04-retry-rebuild-detection.md) |
-| P2-05 | `--format json` silently omits `structural`/`utilisation`/`confidence`/`violations` (typo'd `hasattr` check + missing fields) | — | 🔴 NEW, root cause found | [P2-05](tasks/P2-05-cli-json-missing-fields.md) |
+| P2-05 | `--format json` silently omits `structural`/`utilisation`/`confidence`/`violations` (typo'd `hasattr` check + missing fields) | — | 🟢 Done | [P2-05](tasks/P2-05-cli-json-missing-fields.md) |
 
 ---
 

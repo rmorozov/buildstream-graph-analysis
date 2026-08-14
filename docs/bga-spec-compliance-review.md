@@ -1,5 +1,7 @@
 # `bga` (buildstream-graph-analysis) — Spec Compliance & Quality Review
 
+> **⚠️ Historical snapshot, not current state.** This is the original review that kicked off the multi-round fixing effort tracked in [`docs/fix-progress-tracker.md`](fix-progress-tracker.md) - it accurately describes the tool's state *before that effort began* (CLI completely non-functional, `networkx` undeclared, etc.). None of that is true today: every P0/P1/P2/P3 item below has since been resolved and verified - see the tracker for current status. This file is kept as-is, unedited, as the historical record of what was found and why the tracker's task decomposition looks the way it does.
+
 **Scope:** Review of the implementation in `bga/` against `docs/specification.md` (v9), plus a general correctness/usability/diagnosability pass. Findings below were confirmed by reading the source and by actually running the CLI and test suite, not just by static inspection — every claim has a `file:line` citation.
 
 **Bottom line:** the specification is precise and well-designed, but the implementation currently **cannot run via its own CLI**, and several headline analytical features (resource wait, scheduler wait, cold structural floor, criticality Monte-Carlo, blast radius, the entire M6 structural package) are stub, no-op, or silently wrong code paths. The one test file does not catch any of this, because its assertions check for key *presence*, not correctness, and it never exercises the CLI at all.

@@ -1,6 +1,11 @@
 # P3-04: Tie-break + resource-holder tests
 
-**Priority:** P3 | **Status:** 🔴 Not Started | **Depends on:** `P3-01`, `P1-01` (resource-holder tests need the real implementation to test against, not the stub)
+**Priority:** P3 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** `P3-01`, `P1-01` (resource-holder tests need the real implementation to test against, not the stub)
+
+## What was done
+`tests/unit/test_tie_break.py` (7 tests): `BlameChainAnalyzer.select_dependency_blame` is a pure function of its arguments (never reads `self`), so every tie-break rule (finish desc, depth desc, key asc, out-degree never used) is tested directly against it, plus one full-pipeline test using `P3-01`'s `multiple_equal_predecessors()` fixture (built exactly for this) proving an unrelated, fully disconnected graph node added elsewhere doesn't change the tie-break winner.
+
+`tests/unit/test_resource_wait.py` (7 tests): `BlameChainAnalyzer.classify_resource_wait` tested directly against hand-built `NormalizedTask` lists - single holder (weight 1.0), multiple simultaneous holders (time-weighted split matching the spec's own 70/30 worked example), a holder that only overlaps part of the wait window (partial explanation still marked `ambiguous`), holder changing mid-wait, no identifiable holder (`UNKNOWN`/`ambiguous=True`, never fabricated), and two negative controls (no wait, no resources).
 
 ## Spec Reference
 `sed -n '534,649p' docs/specification.md` (Part 7 — Dependency Gate incl. 7.1 tie-breaking, and Part 8 — Resource Wait Model).
@@ -27,4 +32,13 @@ Create `tests/unit/test_tie_break.py` and extend/create `tests/unit/test_resourc
 `PYTHONPATH=. python3 -m pytest tests/unit/test_tie_break.py tests/unit/test_resource_wait.py -v` — all cases pass.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_tie_break.py tests/unit/test_resource_wait.py -v
+14 passed
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+176 passed   # was 162
+
+$ make check-clean
+OK: no ignored files are tracked
+```

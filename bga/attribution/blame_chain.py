@@ -486,35 +486,45 @@ class BlameChainAnalyzer:
 
         return False
     
+    def _overlapping_phases(self, start_us: int, end_us: int) -> List[str]:
+        """
+        Phase names overlapping [start_us, end_us) (Part 10).
+
+        Phases are annotations, not causal categories - shared by
+        annotate_phases (task-scoped, EXECUTION_ON_CHAIN segments) and
+        _build_flattened_timeline (interval-scoped, every other segment
+        category) so every segment kind gets the same overlap check,
+        per Part 10.2's own worked examples of phase-tagged
+        SCHEDULER_WAIT/IDLE segments, not just EXECUTION_ON_CHAIN.
+        """
+        return [
+            phase_span.name for phase_span in self.phase_spans
+            if phase_span.ts_us < end_us and phase_span.ts_us + phase_span.dur_us > start_us
+        ]
+
     def annotate_phases(
         self,
         task: NormalizedTask,
     ) -> List[str]:
         """
         Annotate task with overlapping phases (Part 10).
-        
+
         Phases are annotations, not causal categories.
-        
+
         Args:
             task: The task to annotate
-            
+
         Returns:
             List of phase names that overlap the task
         """
-        overlapping_phases = []
-        
-        task_start = task.start_us
-        task_end = task.finish_us
-        
-        for phase_span in self.phase_spans:
-            phase_start = phase_span.ts_us
-            phase_end = phase_span.ts_us + phase_span.dur_us
-            
-            # Check for overlap
-            if phase_start < task_end and phase_end > task_start:
-                overlapping_phases.append(phase_span.name)
-        
-        return overlapping_phases
+        return self._overlapping_phases(task.start_us, task.finish_us)
+
+    def _first_overlapping_phase(self, start_us: int, end_us: int) -> Optional[str]:
+        """First phase name overlapping [start_us, end_us), or None -
+        matches the existing single-phase-field convention AttributionSegment
+        already uses for EXECUTION_ON_CHAIN segments (phase_annotations[0])."""
+        overlapping = self._overlapping_phases(start_us, end_us)
+        return overlapping[0] if overlapping else None
 
     def _intra_element_predecessor(self, task: NormalizedTask) -> Optional[NormalizedTask]:
         """Find the immediately-preceding same-element task in the natural
@@ -962,6 +972,7 @@ class BlameChainAnalyzer:
                         end_us=seg_end,
                         category=category,
                         task_key=node.task_key,
+                        phase=self._first_overlapping_phase(seg_start, seg_end),
                         metadata=(
                             {'holder_info': node.resource_wait_info}
                             if category == AttributionCategory.RESOURCE_WAIT and node.resource_wait_info
@@ -993,6 +1004,7 @@ class BlameChainAnalyzer:
                     start_us=cursor,
                     end_us=seg.start_us,
                     category=AttributionCategory.IDLE,
+                    phase=self._first_overlapping_phase(cursor, seg.start_us),
                 ))
             filled_segments.append(seg)
             cursor = max(cursor, seg.end_us)
@@ -1001,6 +1013,7 @@ class BlameChainAnalyzer:
                 start_us=cursor,
                 end_us=max_finish,
                 category=AttributionCategory.IDLE,
+                phase=self._first_overlapping_phase(cursor, max_finish),
             ))
 
         return filled_segments

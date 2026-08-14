@@ -106,6 +106,23 @@ This is not a criticism of any particular session — it's the reason the verifi
 
 ---
 
+## P4 — Usability, Tooling & Maintenance
+
+Not spec-mandated (no `docs/specification.md` Part references) — quality-of-life for maintainers and users on top of an already spec-compliant tool. Requested directly by the user after every P1/P2/P3 item closed, plus a few brainstormed while scoping those requests.
+
+| ID | Issue | Depends on | Status | Task File |
+|---|---|---|---|---|
+| P4-01 | README quick-start (Pareto principle) + fix stale/broken doc examples (`docs/cli.md`'s two confirmed-broken `jq` examples, placeholder `pyproject.toml` URLs) | — | 🔴 | [P4-01](tasks/P4-01-readme-quick-start-and-docs-accuracy.md) |
+| P4-02 | Refactor report output to lead with what's actionable (confidence/violations missing from text output entirely; no synthesized "what to look at first" summary) | — | 🔴 | [P4-02](tasks/P4-02-actionable-report-output.md) |
+| P4-03 | Convenience script for local development scenarios (one command: sample run dir → `bga analyze` → printed report) | — | 🔴 | [P4-03](tasks/P4-03-local-dev-convenience-script.md) |
+| P4-04 | Add basic Python linting (`make lint` is a literal no-op placeholder today) | — | 🔴 | [P4-04](tasks/P4-04-basic-python-linting.md) |
+| P4-05 | `tools/bst_log_to_chrome_trace.py` only supports wrapper-prefixed logs — a raw BuildStream log silently produces an empty trace instead of erroring or parsing | — | 🔴 | [P4-05](tasks/P4-05-log-converter-support-raw-buildstream-logs.md) |
+| P4-06 | No CI configured at all (`.github/` doesn't exist) — every verification this whole tracker documents has been run by hand | P4-04 | 🔴 | [P4-06](tasks/P4-06-add-ci-workflow.md) |
+| P4-07 | `docs/bga-spec-compliance-review.md` (the original "tool doesn't run" review) has no note marking it as a historical snapshot, not current state | — | 🔴 | [P4-07](tasks/P4-07-archive-stale-compliance-review.md) |
+| P4-08 | No real end-to-end path from a live BuildStream project to a bga-ready run directory (`graph.json`/`run-context.json` are hand-built in every fixture in this repo) | — | ⚪ Blocked — needs a product/architecture decision before scoping | [P4-08](tasks/P4-08-end-to-end-ingestion-pipeline-gap.md) |
+
+---
+
 ## Recommended Order for a Sequence of Small-Context Sessions
 
 **Every row in every table above is now 🟢 Done.** Every P1 item (P1-01 through P1-26), every P2 item (P2-01 through P2-05), and every P3 item (P3-01 through P3-10) is fixed and verified, with a real pasted command + passing output in each linked task file's Verification Log (per this tracker's own evidentiary rule). All hard-invariant families (attribution identity I4 - both the task-horizon and full-wall-clock variants, capacity lower bound I1/I2, confidence/reconciliation gates I11) hold exactly on every fixture tested; the CLI covers the full spec Part 37 command list; the codebase matches spec Part 39's recommended `bga/floors/`/`bga/report/`/`bga/validation/` architecture; the test suite spans unit, integration, golden/regression, and per-module coverage across every `bga/` package. Full suite: 231 passed.

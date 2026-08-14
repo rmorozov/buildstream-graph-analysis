@@ -24,6 +24,29 @@ from ..ingest.models import (
 logger = logging.getLogger(__name__)
 
 
+def _element_build_finish(normalized_spans: List[Tuple[TaskSpan, int, int]]) -> Dict[str, int]:
+    """
+    Map element_uid -> its own BUILD task's (quantized) finish time
+    (Part 32.2's `depends:` semantics: a downstream element's work
+    needs the upstream element's BUILD to have completed, not any of
+    its other task kinds - the same real-world semantics
+    bga/analyzer.py::_compute_attribution's explicit_predecessors
+    (P1-03) and this module's own clamp_task_starts (P1-26) already
+    use). An element with no BUILD task contributes no entry, rather
+    than a wrong one - shared by compute_ready_times and
+    validate_ordering so both apply the identical predecessor source
+    (P1-27: they previously each independently computed a max-across-
+    every-task-kind finish, which could be later than the element's
+    own BUILD finish - e.g. a trailing PUSH - over-constraining
+    ready times for tasks that don't actually depend on it).
+    """
+    element_build_finish: Dict[str, int] = {}
+    for span, _q_start, q_finish in normalized_spans:
+        if span.task_key.task_kind == TaskKind.BUILD:
+            element_build_finish[span.task_key.element_uid] = q_finish
+    return element_build_finish
+
+
 def quantize_timestamp(ts_us: int, epsilon_us: int) -> int:
     """
     Quantize a timestamp to the epsilon grid (Part 3.2).
@@ -77,56 +100,55 @@ def compute_ready_times(
 ) -> Dict[str, int]:
     """
     Compute ready times for all tasks based on dependency graph (Part 7).
-    
+
     For task t:
         ready_time(t) = max(finish(p)) for p in predecessors(t)
-    
+
     If a task has no predecessors, its ready time is its own start time
     (meaning it was ready as soon as it could have started).
-    
+
+    Cross-element dependency gating applies only to a task's own BUILD
+    task (P1-27: a real `depends:` edge only constrains the downstream
+    element's *build*, per Part 32.2 - it never gates TRACK/FETCH/PUSH,
+    which have no causal relationship to an upstream dependency). Those
+    non-BUILD tasks fall into the same "no predecessors" case as a
+    genuinely independent element - ready at their own start time - not
+    a new behavior, the same fallback root elements already used.
+
     Args:
         normalized_spans: Output from normalize_timestamps
         dependencies: List of dependency edges
-        
+
     Returns:
         Dict mapping task key string to ready time in microseconds
     """
     # Build predecessor map using element UIDs
     predecessors: Dict[str, List[str]] = {}  # successor -> list of predecessor element uids
-    
+
     for dep in dependencies:
         if dep.successor not in predecessors:
             predecessors[dep.successor] = []
         predecessors[dep.successor].append(dep.predecessor)
-    
-    # Build element finish time map
-    element_finish: Dict[str, int] = {}
-    for span, q_start, q_finish in normalized_spans:
-        element_uid = span.task_key.element_uid
-        # If multiple tasks for same element, take maximum finish time
-        if element_uid not in element_finish:
-            element_finish[element_uid] = q_finish
-        else:
-            element_finish[element_uid] = max(element_finish[element_uid], q_finish)
-    
+
+    element_build_finish = _element_build_finish(normalized_spans)
+
     # Compute ready times
     ready_times: Dict[str, int] = {}
-    
+
     for span, q_start, q_finish in normalized_spans:
         task_key_str = str(span.task_key)
         element_uid = span.task_key.element_uid
-        
-        if element_uid in predecessors and predecessors[element_uid]:
-            # Ready time is max finish of predecessors
+
+        preds = predecessors.get(element_uid) if span.task_key.task_kind == TaskKind.BUILD else None
+        if preds:
             pred_finish_times = [
-                element_finish.get(pred, 0)
-                for pred in predecessors[element_uid]
+                element_build_finish[pred] for pred in preds if pred in element_build_finish
             ]
             ready_times[task_key_str] = max(pred_finish_times) if pred_finish_times else q_start
         else:
-            # No predecessors - ready at own start time
+            # No predecessors (or not a BUILD task) - ready at own start time
             ready_times[task_key_str] = q_start
-    
+
     return ready_times
 
 
@@ -137,50 +159,42 @@ def validate_ordering(
 ) -> List[dict]:
     """
     Validate ordering constraints (Part 3.3).
-    
+
     For each dependency edge predecessor -> task:
-        finish(predecessor) <= start(task)
-    
+        finish(predecessor's BUILD) <= start(successor's BUILD)
+
+    The only task-kind pairing a real `depends:` edge actually
+    constrains (P1-27 - see compute_ready_times and
+    _element_build_finish). Checking the successor's *earliest* task
+    of any kind - as this used to - flagged spurious violations
+    whenever a TRACK/FETCH task legitimately started before the
+    dependency's build finished, which is normal, not an ordering bug.
+
     After quantization, small negative gaps should disappear.
     Large negative gaps indicate ordering violations.
-    
+
     Args:
         normalized_spans: Output from normalize_timestamps
         dependencies: List of dependency edges
         ready_times: Ready times from compute_ready_times
-        
+
     Returns:
         List of violation records
     """
     violations = []
-    
-    # Build element finish time map
-    element_finish: Dict[str, int] = {}
-    for span, q_start, q_finish in normalized_spans:
-        element_uid = span.task_key.element_uid
-        if element_uid not in element_finish:
-            element_finish[element_uid] = q_finish
-        else:
-            element_finish[element_uid] = max(element_finish[element_uid], q_finish)
-    
-    # Build task start time map
-    task_start: Dict[str, int] = {}
-    for span, q_start, q_finish in normalized_spans:
-        task_key_str = str(span.task_key)
-        task_start[task_key_str] = q_start
-    
+
+    element_build_finish = _element_build_finish(normalized_spans)
+    build_start_by_element: Dict[str, int] = {}
+    for span, q_start, _q_finish in normalized_spans:
+        if span.task_key.task_kind == TaskKind.BUILD:
+            build_start_by_element[span.task_key.element_uid] = q_start
+
     # Check each dependency
     for dep in dependencies:
-        pred_finish = element_finish.get(dep.predecessor, 0)
-        succ_start = None
-        
-        # Find the start time of the successor task
-        for span, q_start, q_finish in normalized_spans:
-            if span.task_key.element_uid == dep.successor:
-                if succ_start is None or q_start < succ_start:
-                    succ_start = q_start
-        
-        if succ_start is not None and pred_finish > succ_start:
+        pred_finish = element_build_finish.get(dep.predecessor)
+        succ_start = build_start_by_element.get(dep.successor)
+
+        if pred_finish is not None and succ_start is not None and pred_finish > succ_start:
             logger.debug(
                 "Ordering violation: %s finishes at %d after %s starts at %d (gap %dus)",
                 dep.predecessor, pred_finish, dep.successor, succ_start,

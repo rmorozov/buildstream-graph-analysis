@@ -65,6 +65,19 @@ def result(run_dir):
     return analyze_run(run_dir)
 
 
+@pytest.fixture(scope="module")
+def analyzer(run_dir):
+    """A loaded+analyzed BuildEfficiencyAnalyzer, for tests that need
+    per-task NormalizedTask data (e.g. I5 non-negativity) that
+    AnalysisResult doesn't expose directly."""
+    from bga import BuildEfficiencyAnalyzer
+
+    a = BuildEfficiencyAnalyzer(run_dir)
+    a.load()
+    a.analyze()
+    return a
+
+
 # --- Real converter integration -----------------------------------------
 
 def test_converter_produced_expected_task_count(fixture_artifacts):
@@ -231,6 +244,55 @@ def test_attribution_no_longer_produces_garbage_values(result):
     # should be within a small constant factor of H, never orders of
     # magnitude off.
     assert total <= h * 2, f"attribution total {total} is wildly larger than H {h}"
+
+
+def test_no_task_has_a_negative_duration(analyzer):
+    """I5 (all attribution durations >= 0), checked at the level it can
+    actually be violated at: individual NormalizedTask.dur_us, not just
+    the aggregated attribution categories test_attribution_no_longer_
+    produces_garbage_values above already checks.
+
+    Regression guard for P1-27: this fixture's real multi-task-kind
+    elements (TRACK/FETCH/BUILD per element, per build_model.py) used to
+    produce 8 tasks with negative dur_us - a downstream element's own
+    TRACK/FETCH task, which legitimately starts and finishes before an
+    upstream dependency's BUILD completes, had its start_us clamped past
+    its own (earlier, real) finish_us by a ready-time computation that
+    incorrectly gated every task kind of the successor on the
+    predecessor's own max-across-every-task-kind finish, instead of
+    scoping cross-element gating to BUILD-to-BUILD only (see
+    bga/normalize/timestamps.py::compute_ready_times/_element_build_finish).
+    """
+    negative = [t for t in analyzer.normalized_tasks if t.dur_us < 0]
+    assert negative == [], (
+        f"{len(negative)} task(s) have negative duration: "
+        f"{[(str(t.task_key), t.dur_us) for t in negative]}"
+    )
+
+
+def test_no_false_positive_ordering_violations(result):
+    """Regression guard for P1-27: the same ready-time bug produced 7
+    false-positive ordering_violation entries on this fixture (a
+    TRACK/FETCH task starting before an unrelated dependency's BUILD
+    finished was incorrectly flagged as violating Part 3.3, when only
+    the BUILD-to-BUILD relationship is actually constrained). This
+    fixture has no genuine ordering defects."""
+    ordering_violations = [v for v in result.violations if v.get("type") == "ordering_violation"]
+    assert ordering_violations == [], f"unexpected ordering violations: {ordering_violations}"
+
+
+def test_confidence_is_high_on_a_defect_free_fixture(result):
+    """Regression guard for P1-27: the false ordering violations and
+    the resulting duration_coverage corruption (dur_us going negative
+    shrinks accounted_duration_us) crashed confidence.primary to 0.147
+    on this fixture, despite it having no genuine defects. A
+    defect-free fixture should score high confidence, not look like a
+    broken build."""
+    assert result.confidence["primary"] > 0.9, (
+        f"confidence.primary={result.confidence['primary']} is suspiciously low "
+        f"for a fixture with no genuine ordering/attribution defects"
+    )
+    assert all(result.confidence["hard_gates"].values())
 
 
 def test_attribution_identity_exact(result):

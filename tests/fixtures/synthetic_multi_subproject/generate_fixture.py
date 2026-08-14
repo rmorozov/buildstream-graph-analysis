@@ -62,6 +62,14 @@ def build_fixture():
         "host": "ci-runner-synthetic-01",
         "resource_capacities": dict(build_model.CAPACITIES),
         "max_jobs": build_model.MAX_JOBS,
+        # Declares as many effective CPUs as the model's own PROCESS
+        # capacity - without this, CPU reconciliation (Part 33.3) falls
+        # back to the default effective_cpus=1.0 and reports a spurious
+        # >2% reconciliation error against this fixture's real (4-way
+        # concurrent) CPU usage, same class of gap fixed in
+        # tests/fixtures/topologies.py (P3-01) and
+        # tests/fixtures/golden/mixed_task_kinds/ (P3-08).
+        "cpu_accounting": {"effective_cpus": build_model.CAPACITIES["PROCESS"]},
     }
     graph = build_model.build_graph_dict()
     trace = {"spans": spans, "phases": []}

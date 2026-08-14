@@ -20,11 +20,14 @@ bga analyze /path/to/buildstream/cache/artifacts/run-<uuid>
 ```
 
 **Output:**
-By default, `bga` prints a human-readable summary to stdout, including:
+By default, `bga` prints a human-readable summary to stdout, leading with a synthesized **Key Findings** block (confidence headline, the single largest wait-category opportunity, the top elements by blast radius/criticality probability when `--diagnostics` ran, and certified headroom in plain language) before the detailed sections:
+- **Confidence & Violations**: Overall confidence score, any failed hard gates, and a one-line summary per violation - previously only visible via `--format json`.
 - **Certified Floors**: $T_\infty$, Lower Bound ($LB$), and Certified Headroom.
 - **Efficiency Metrics**: Parallelism, Utilization, and Attribution breakdown.
 - **Critical Path**: The sequence of tasks determining the minimum build time.
 - **Bottlenecks**: Elements with high blast radius or criticality probability.
+
+The Key Findings/Confidence blocks are presentation-only, shown for the full `analyze` report - `--format json`/`csv` and the section subcommands (`graph`/`floors`/`replay`/`utilisation`/`diagnostics`) are unaffected.
 
 ### Options
 

@@ -42,47 +42,67 @@ make clean         # Remove __pycache__, *.pyc, *.egg-info, and other temp files
 
 ## Quick Start
 
-Analyze a BuildStream run directory:
+`bga` reads a directory containing `run-context.json`/`graph.json`/`trace.json` (the run-context/v9, graph/v9, and trace/v9 schemas, Part 32) - it does **not** read a raw BuildStream cache/artifacts path directly. The fastest way to see a real report, with zero BuildStream install needed:
 
 ```bash
-bga analyze /path/to/buildstream/cache/artifacts/run-<uuid>
+pip install -e .
+bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics
 ```
 
-Generate a JSON report:
+(`make dev-run` does the same thing, plus `make dev-run ARGS=--large` for a bigger, more realistic sample.)
+
+To analyze a real BuildStream project, produce a run directory in the shape `bga` expects from your own project + build log in one step:
 
 ```bash
-bga analyze /path/to/run --format json > report.json
+pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/ingestion-pipeline.md
+bst -C /path/to/your/project build <targets> > build.log 2>&1
+PYTHONPATH=. python tools/bst_extract_run.py /path/to/your/project build.log /tmp/my-run   # run from the repo root
+bga analyze /tmp/my-run --diagnostics
 ```
 
-Simulate different hardware capacities:
+Generate a JSON report, or simulate different hardware capacities:
 
 ```bash
-bga analyze /path/to/run --capacity 16 --replay
+bga analyze /tmp/my-run --format json > report.json
+bga analyze /tmp/my-run --capacity 16 --replay
 ```
 
 ## Documentation
 
 - [CLI Reference](docs/cli.md) - Complete command-line interface documentation
+- [Ingestion Pipeline](docs/ingestion-pipeline.md) - How `tools/bst_extract_run.py` and friends turn a real BuildStream project + log into `bga` input
 - [v9 Specification](docs/specification.md) - The underlying analysis specification
 
 ## Example Output
 
+Real output (trimmed) from `bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics`:
+
 ```
-=== Build Efficiency Report ===
-Run: run-12345
-Duration: 450.0s
+============================================================
+Build Efficiency Report
+============================================================
+Total Duration: 0.0s
+
+Key Findings:
+  Confidence: 0.88 (high)
+  Biggest Opportunity: 14.3% of wall-clock time is UNTRACKED TAIL (0.00s)
+  Elements Most Worth Optimizing First (by blast radius):
+    1. base.bst (2 downstream elements)
+    2. lib.bst (1 downstream elements)
+    3. app.bst (0 downstream elements)
 
 Certified Floors:
-  T∞ (observed):     120.5s
-  LB (resource):      85.2s
-  Certified Headroom: 235.3s
+  T∞ (observed critical path): 0.01s
+  LB (resource lower bound):   0.01s
+  Certified Headroom:          0.00s
 
-Attribution:
-  Execution on chain:  66.7%
-  Dependency wait:     33.3%
-  
-Critical Path Length: 12 elements
-Max Parallelism: 8.4x
+Attribution Breakdown:
+  Execution On Chain Us         0.01s (100.0%)
+  Dependency Wait Us            0.00s (  0.0%)
+  ...
+
+Critical Path Length: 3 elements
+  Path: base.bst → lib.bst → app.bst
 ```
 
 ## Project Structure

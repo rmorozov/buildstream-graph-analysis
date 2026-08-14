@@ -1,6 +1,6 @@
 # P4-03: Convenience script for local development scenarios
 
-**Priority:** P4 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P4 | **Status:** 🟢 Fixed & Verified (2026-08-14) | **Depends on:** none
 
 ## Spec Reference
 Not spec-mandated - developer-experience tooling.
@@ -23,5 +23,35 @@ Consider also folding in a `--watch` or re-run-on-change mode if a lightweight f
 ## Acceptance Test
 A developer with a clean checkout can run the new command with zero setup beyond `make dev` and see a real, current analysis report within a few seconds.
 
+## What was built
+`tools/dev_run.sh` - a small, `set -euo pipefail` bash script, plus a `make dev-run` Makefile target that calls it (both entry points work, per the task's "whichever fits" note - the script is directly runnable too, useful outside `make`). Default mode reuses `tests/fixtures/golden/mixed_task_kinds/` (`P3-08`) as-is - it's small, static, and checked in, so "regenerate or reuse if unchanged" simplifies to "just use it directly," no regeneration step needed. `--large` (or `make dev-run ARGS=--large`) instead regenerates `tests/fixtures/synthetic_multi_subproject/` fresh via its own `generate_fixture.py::write_fixture` into a temp directory (cleaned up on exit via `trap`), for a bigger, more realistic report. Runs `bga analyze --diagnostics` (full report, text format) against whichever fixture was selected. `set -e` means any real failure (ingestion error, analysis error, non-zero `bga` exit code) propagates as the script's own exit code - no extra plumbing needed, confirmed by a real run against a broken invocation.
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ make dev-run
+./tools/dev_run.sh
+bga dev run - using small (golden/mixed_task_kinds) fixture: tests/fixtures/golden/mixed_task_kinds
+============================================================
+Build Efficiency Report
+...
+Key Findings:
+  Confidence: 0.88 (high)
+...
+$ echo $?
+0
+
+$ make dev-run ARGS=--large
+./tools/dev_run.sh --large
+bga dev run - using large (synthetic_multi_subproject) fixture: /tmp/tmp.XXXXXX
+============================================================
+Build Efficiency Report
+Total Duration: 142.0s
+...
+
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_dev_run_script.py -v
+5 passed   # real subprocess tests: script exists+executable, default
+           # mode, --large mode, works from any cwd, make dev-run target
+
+$ make check-clean
+OK: no ignored files are tracked
+```

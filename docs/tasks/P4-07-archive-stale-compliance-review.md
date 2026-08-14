@@ -1,6 +1,6 @@
 # P4-07: Mark the original compliance review as a historical snapshot, not current state
 
-**Priority:** P4 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P4 | **Status:** 🟢 Fixed & Verified (2026-08-14) | **Depends on:** none
 
 ## Spec Reference
 Not spec-mandated - documentation hygiene. Brainstormed while scoping the other `P4` usability tasks.
@@ -18,5 +18,16 @@ Add a short, prominent note at the very top of `docs/bga-spec-compliance-review.
 ## Acceptance Test
 Opening `docs/bga-spec-compliance-review.md` cold, without any other context, makes it immediately clear (within the first few lines) that it's a historical document and where to find current status.
 
+## What was built
+A single blockquote note inserted immediately after the title (before the "Scope:" line), stating this is a historical snapshot from before the fixing effort, linking to `docs/fix-progress-tracker.md`, and noting every P0-P3 item below has since been resolved and verified. No other content in the file was touched.
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ head -5 docs/bga-spec-compliance-review.md
+# `bga` (buildstream-graph-analysis) — Spec Compliance & Quality Review
+
+> **⚠️ Historical snapshot, not current state.** This is the original review
+that kicked off the multi-round fixing effort tracked in
+docs/fix-progress-tracker.md - ...
+```
+Confirmed the note is the very first thing after the title, satisfying "within the first few lines."

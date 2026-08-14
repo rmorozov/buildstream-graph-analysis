@@ -311,3 +311,13 @@ runs later against a since-moved branch. The most reliable fix is
 structural, not detectable after the fact - run graph extraction from
 the same checkout as the build it's paired with, ideally the same CI
 step, not as an independently-schedulable one.
+
+A stronger, opt-in check is possible for projects using BuildStream's
+`ref-storage: project.refs` (centralizing every trackable element's
+resolved source ref into one file, confirmed real against BuildStream
+2.7.0) - filed as `P4-13` (`--strict` mode), not yet built. Real
+limitation confirmed while researching it: this only works for projects
+that opt into `project.refs` and have at least one trackable-ref source
+- `ref-storage: inline` (the default) and purely `kind: local` projects
+(like `tests/fixtures/bst_show_project/`) have no single file this
+mechanism can hash/compare.

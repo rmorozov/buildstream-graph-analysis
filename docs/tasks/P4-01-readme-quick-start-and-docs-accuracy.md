@@ -1,6 +1,6 @@
 # P4-01: README quick-start (Pareto principle) + fix stale/broken doc examples
 
-**Priority:** P4 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P4 | **Status:** 🟢 Fixed & Verified (2026-08-14) | **Depends on:** none
 
 ## Spec Reference
 Not spec-mandated — usability/documentation. `docs/cli.md` and `README.md` should describe the CLI as it actually is today (Part 37's full subcommand list, `--cold`/`--diagnostics`/`--capacity`/`--replay`, exit codes).
@@ -20,7 +20,7 @@ Not spec-mandated — usability/documentation. `docs/cli.md` and `README.md` sho
 4. Fix the placeholder GitHub URLs in `pyproject.toml` if the real repo URL is known (`rmorozov/buildstream-graph-analysis` per this session's own PR history) - trivial, but currently just wrong.
 
 ## Out of Scope
-- Building a real ingestion path from a live BuildStream cache to a v9 run directory - that gap is real (see the brainstormed backlog item on this) but is a product/architecture question, not a docs fix. Document what exists honestly rather than inventing a pipeline that doesn't.
+- ~~Building a real ingestion path from a live BuildStream cache to a v9 run directory~~ - this note is now stale: that pipeline was built (`P4-05`/`P4-08`/`P4-09`/`P4-10`, `tools/bst_extract_run.py`). This task's own fix documents it honestly in the Quick Start rather than inventing a pipeline - it just no longer needs inventing, it exists.
 - Redesigning report content/structure - that's `P4-02`.
 
 ## Acceptance Test
@@ -28,5 +28,39 @@ Not spec-mandated — usability/documentation. `docs/cli.md` and `README.md` sho
 2. Every `jq` example in `docs/cli.md` produces real, non-null, correctly-shaped output when run against a real `--format json` report.
 3. `pyproject.toml`'s URLs resolve to the real repo (or are removed if genuinely unknown, not left as `your-org` placeholders).
 
+## What was built
+- `README.md`'s Quick Start rewritten around the Pareto principle: two commands (`pip install -e .` + `bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics`, `P3-08`'s checked-in fixture) get a first-time user to a real report with zero BuildStream install needed, plus a pointer to `make dev-run`. A second block honestly documents the now-real path from an actual BuildStream project + build log to a `bga`-ready run directory via `tools/bst_extract_run.py` (`P4-10`) - this used to be genuinely out of scope/nonexistent; it isn't anymore.
+- `docs/cli.md`'s "Basic Usage" section no longer implies a raw BuildStream cache/artifacts path is directly `bga`-readable (`/path/to/buildstream/cache/artifacts/run-<uuid>` → `/path/to/run-directory`, with an explicit "not a raw cache path" note and a pointer to `tools/bst_extract_run.py`).
+- Both confirmed-broken `jq` examples in `docs/cli.md`'s "Example Workflows" fixed and verified against a real `--format json` run: `.floors.certified_headroom_us` (nonexistent, silently returns `null`) → `.floors.certified_headroom`; `.signals.criticality_probability | sort_by(...)` (fails - that field is a JSON object keyed by element UID, not an array) → `.signals.criticality_probability | to_entries | sort_by(.value.probability) | reverse | .[0:10]`. The example workflow paths were also changed from the same misleading raw-cache-path pattern to an honest `/path/to/run-directory` placeholder.
+- `README.md`'s "Example Output" block regenerated from a real `bga analyze` run against the checked-in fixture (previously hand-written prose that didn't match `format_text`'s real output shape at all - wrong header format, wrong field labels, and predating `P4-02`'s Key Findings/Confidence blocks entirely).
+- `pyproject.toml`'s `[project.urls]` fixed from placeholder `your-org/bga` to the real `rmorozov/buildstream-graph-analysis` repo.
+- Added `tests/unit/test_docs_examples.py` (6 tests) as permanent regression coverage - runs the README's Quick Start command for real, confirms the real JSON field shapes both `jq` examples depend on, and (when `jq` is on `PATH`) runs both fixed `jq` commands for real against a live report.
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ pip install -e . -q && bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics
+============================================================
+Build Efficiency Report
+...
+$ echo $?
+0
+
+$ PYTHONPATH=. python3 -m bga.cli analyze tests/fixtures/golden/mixed_task_kinds --format json --diagnostics > /tmp/report.json
+$ jq '.floors.certified_headroom_us' /tmp/report.json   # the old, broken example
+null
+$ jq '.floors.certified_headroom' /tmp/report.json      # the fixed example
+0
+$ jq '.signals.criticality_probability | sort_by(.probability) | reverse | .[0:10]' /tmp/report.json   # old, broken
+jq: error (at /tmp/report.json:274): object (...) and array (...) cannot be sorted, as they are not both arrays
+$ jq '.signals.criticality_probability | to_entries | sort_by(.value.probability) | reverse | .[0:10]' /tmp/report.json   # fixed
+[{"key": "app.bst", "value": {"probability": 1.0, ...}}, ...]
+
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_docs_examples.py -v
+6 passed
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+336 passed (with bst on PATH)
+
+$ make check-clean
+OK: no ignored files are tracked
+```

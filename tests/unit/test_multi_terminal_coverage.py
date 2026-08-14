@@ -25,7 +25,6 @@ Two fully independent elements (no shared dependency, each its own
     code anywhere ever produced an IDLE segment for any scenario.
 """
 import json
-from pathlib import Path
 
 from bga import analyze_run
 

@@ -1,6 +1,6 @@
 # BuildStream Build Efficiency Analyzer - Makefile
 
-.PHONY: test test-e2e lint clean check-clean install dev help
+.PHONY: test test-e2e lint dev-run clean check-clean install dev help
 
 # Default target
 help:
@@ -8,7 +8,8 @@ help:
 	@echo ""
 	@echo "  make test        - Run all tests with pytest"
 	@echo "  make test-e2e    - Run end-to-end tests directly"
-	@echo "  make lint        - Run code linting (future)"
+	@echo "  make lint        - Run code linting (ruff)"
+	@echo "  make dev-run     - Analyze a sample fixture and print a real report (fast smoke check)"
 	@echo "  make clean       - Remove build artifacts and cache"
 	@echo "  make check-clean - Fail if any ignored/build-artifact path is tracked by git"
 	@echo "  make install     - Install package in production mode"
@@ -23,9 +24,17 @@ test:
 test-e2e:
 	python tests/test_e2e.py
 
-# Code linting (placeholder for future implementation)
+# Code linting (ruff, pyflakes rule set - see pyproject.toml's [tool.ruff])
 lint:
-	@echo "Linting not yet configured"
+	ruff check bga/ tools/ tests/
+
+# Local dev convenience: analyze a checked-in sample fixture and print a
+# real report - one command from "I changed some code" to "I can see
+# what a real report looks like" (P4-03). Pass ARGS=--large for the
+# bigger synthetic_multi_subproject fixture instead of the small,
+# instant golden one.
+dev-run:
+	./tools/dev_run.sh $(ARGS)
 
 # Clean build artifacts
 clean:

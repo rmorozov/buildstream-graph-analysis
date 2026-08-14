@@ -6,7 +6,7 @@ All timestamps and durations use int64 microseconds.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 from enum import Enum
 
 

@@ -10,7 +10,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 
-from .detection import compute_rebuild_tasks, compute_retry_tasks
+# Explicit re-export (bga/analyzer.py imports these from this package,
+# not from .detection directly) - the redundant alias tells linters this
+# is a deliberate public re-export, not a leftover unused import.
+from .detection import compute_rebuild_tasks as compute_rebuild_tasks
+from .detection import compute_retry_tasks as compute_retry_tasks
 
 logger = logging.getLogger(__name__)
 

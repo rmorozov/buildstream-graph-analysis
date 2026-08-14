@@ -94,7 +94,7 @@ def test_no_predecessors_returns_none():
 
 def _tied_predecessor_and_winner(tmp_path, topology, name):
     analyzer = topo.build_analyzer(tmp_path, topology, name=name)
-    result = analyzer.analyze()
+    analyzer.analyze()
     blame_chain = [str(node.task_key) for node in analyzer._blame_chain]
     # multiple_equal_predecessors: shallow.bst (depth 1) and deep.bst
     # (depth 2) tie in finish time - deep.bst must win per rule 2.

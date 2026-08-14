@@ -14,7 +14,7 @@ Implements Parts 31-39:
 
 import logging
 from collections import defaultdict, deque
-from typing import Dict, List, Set, Tuple, Optional, Any
+from typing import Dict, List, Set, Optional, Any
 import statistics
 
 from bga.ingest.models import NormalizedTask
@@ -412,12 +412,9 @@ class StructuralAnalyzer:
         
         # Forecasting (simple linear projection)
         if timestamps and duration_slope != 0:
-            last_ts = timestamps[-1]
             last_dur = durations[-1]
-            # Project to next timestamp (assume similar interval)
             if len(timestamps) >= 2:
                 interval = timestamps[-1] - timestamps[-2]
-                next_ts = last_ts + interval
                 forecast = int(last_dur + duration_slope * interval)
                 forecast_next = max(0, forecast)
             else:

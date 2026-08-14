@@ -10,7 +10,7 @@ Key principles:
 """
 
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Tuple
 
 from ..ingest.models import (
     Graph,

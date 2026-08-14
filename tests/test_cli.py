@@ -8,7 +8,6 @@ Tests invoke bga CLI via subprocess and assert exit codes and output shape.
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_bga(args: list[str], check: bool = True) -> subprocess.CompletedProcess:

@@ -13,7 +13,6 @@ Two layers, matching tests/unit/test_bst_show_to_graph.py's convention:
 import json
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -80,7 +79,6 @@ def test_extract_run_fails_loudly_without_a_targets_line(tmp_path):
 
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
-    cache_dir = tmp_path / "bst-cache"
     log_path = tmp_path / "real_build.log"
 
     proc = subprocess.run(

@@ -15,7 +15,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
-from enum import Enum
 
 from ..ingest.models import (
     NormalizedTask,

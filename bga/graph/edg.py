@@ -11,7 +11,7 @@ import logging
 from typing import Dict, List, Set, Tuple, Optional
 from collections import defaultdict, deque
 
-from ..ingest.models import Graph, Element, NormalizedTask, DependencyEdge
+from ..ingest.models import Graph, NormalizedTask
 from ..exceptions import AnalysisError
 
 logger = logging.getLogger(__name__)

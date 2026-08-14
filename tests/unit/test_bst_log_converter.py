@@ -16,7 +16,6 @@ installed BuildStream 2.7.0 (see docs/ingestion-pipeline.md):
    the synthetic fixture (which never nests). Fixed via per-(hash,action)
    depth counting.
 """
-import json
 
 import pytest
 

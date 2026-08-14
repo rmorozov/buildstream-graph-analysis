@@ -46,12 +46,12 @@ bga analyze /path/to/run --capacity 16
 *Note: This affects the calculation of the Lower Bound ($LB$) and Replay Makespan ($T_C$).*
 
 #### Replay Simulation
-Run the deterministic replay scheduler to compute the optimal makespan ($T_C$) under perfect scheduling:
+Run the deterministic replay scheduler to compute a feasible makespan ($T_C$) under the chosen scheduling heuristic - a counterfactual model for scheduler comparison, capacity sweeps, and model slack (Part 18), not a claim that $T_C$ is the mathematically optimal schedule:
 ```bash
 bga analyze /path/to/run --replay
 ```
 You can specify the scheduling heuristic:
-- `lpt` (Longest Processing Time first) - Default, often optimal.
+- `lpt` (Longest Processing Time first) - Default; a common, reasonable heuristic, not guaranteed optimal.
 - `spt` (Shortest Processing Time first).
 - `fifo` (First In First Out).
 - `depth` (Dependency depth priority).

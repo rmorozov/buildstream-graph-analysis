@@ -24,6 +24,9 @@ Unlike `P4-11` (`dependency_type`'s effect on ready-time gating), which has a si
 2. **Structural/junction-aware leaf analysis (Part 24)**: a `junction` element's own "work" (if recorded at all) might not belong in deferrability scoring the same way a real compiled element's does - needs real data to check whether this is a genuine gap or a non-issue.
 3. **A `bga graph --by-kind` or similar summary view**: aggregate stats (total observed duration, count, average duration) grouped by `element_kind` - a genuinely new, additive report view rather than changing any existing computation.
 
+## Related tasks
+`P4-15` (structural consolidation heuristic - `stack`/checkout batching, element-count overhead advisory) shares this task's `element_kind` foundation and its Candidate Direction 2 overlaps directly with this task's Candidate Direction 2 (`junction`-aware leaf analysis extended to `stack`-aware weighting) - resolve both together rather than picking directions independently. `P4-14` (cache-query overhead visibility) is a separate, non-`element_kind` axis (BuildStream's own cache-check cost, not plugin-kind semantics) but its large-project measurement, if done, informs whether `P4-15`'s "more elements = slower" premise is even real.
+
 ## Out of Scope (for whichever direction is chosen)
 - Don't let any kind-based heuristic silently override or replace a directly-observed timing/dependency fact - `element_kind` is metadata *about* an element, never a substitute for what was actually measured (same "no silent correction" philosophy the rest of this codebase follows).
 - Don't hardcode assumptions about specific third-party/custom plugin kind strings beyond BuildStream's own built-in kinds - handle unrecognized kinds as an explicit `"unknown"`/`OTHER`-style bucket, not silently.

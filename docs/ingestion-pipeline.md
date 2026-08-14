@@ -247,6 +247,24 @@ several wrong assumptions turned out to hide behind:
     this reason. A wrapped log doesn't have this problem (it anchors on
     the wrapper's own per-line UTC timestamp, not BuildStream's elapsed
     prefix).
+11. **BuildStream logs a real "Query cache" activity - at default
+    verbosity, no `--verbose` needed - and it is currently dropped by
+    the ingestion pipeline entirely.** Confirmed against a real `bst
+    build` (BuildStream 2.7.0, from-scratch one-element project):
+    ```
+    [--:--:--][        ][    main:core activity   ] START   Query cache
+    [00:00:00][        ][    main:core activity   ] SUCCESS Query cache
+    ```
+    alongside sibling `main:core activity` brackets for `Build`,
+    `Loading elements`, `Resolving elements`, `Initializing remote
+    caches`. This is BuildStream's own `Stream.query_cache()`
+    (`_stream.py`), real work (checking every planned element's cache-hit
+    status before any FETCH/BUILD/PULL/PUSH work begins) with a real
+    elapsed cost - but it's one aggregate, non-element-scoped line, and
+    `tools/chrome_trace_to_bga_trace.py` already, deliberately, drops
+    `action="main"` events as "not a real element task" (its own
+    docstring). So `bga` has zero visibility into this cost today - not
+    "measured as negligible," genuinely never measured. See `P4-14`.
 
 ## Why a second, separate trace/v9 adapter
 
@@ -321,3 +339,28 @@ that opt into `project.refs` and have at least one trackable-ref source
 - `ref-storage: inline` (the default) and purely `kind: local` projects
 (like `tests/fixtures/bst_show_project/`) have no single file this
 mechanism can hash/compare.
+
+## A note on cache-query and sandbox/checkout overhead visibility
+
+Three related, unmeasured gaps were raised by the user and researched
+against a real BuildStream 2.7.0 install (source-level confirmation, see
+fact 11 above and `docs/tasks/P4-14-cache-query-overhead-visibility.md`
+/ `docs/tasks/P4-15-stack-consolidation-heuristic.md`):
+
+1. **Per-element cache-query cost is real but currently invisible** -
+   confirmed (fact 11). Filed as `P4-14`, pending a real large-project
+   measurement before committing to a fix direction.
+2. **`bst artifact checkout` on a `kind: stack` element genuinely
+   batches sandbox setup and CAS export into one operation**, instead of
+   one per checked-out element - confirmed directly from `_stream.py`'s
+   `checkout()` (`_prepare_sandbox()`/`_export_artifact()` called once
+   for the whole scope). Filed as `P4-15`.
+3. **Splitting a project into subprojects/junctions does *not* reduce
+   per-element scheduler overhead** - checked against BuildStream's own
+   queue implementations (`CacheQueryQueue`, `BuildQueue`, etc.), which
+   process every planned element identically regardless of which
+   `project.conf`/junction declares it. This corrects part of the
+   original brainstorm rather than confirming it - see `P4-15`'s
+   Background for the full reasoning. Junctions are an
+   organizational/versioning tool, not a runtime-overhead-reduction
+   mechanism, on the evidence gathered so far.

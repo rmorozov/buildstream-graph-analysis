@@ -277,7 +277,7 @@ def _add_common_arguments(
         subparser.add_argument(
             '-r', '--replay',
             action='store_true',
-            help='Run deterministic replay scheduler to compute optimal makespan (T_C)'
+            help='Run deterministic replay scheduler to compute a feasible makespan (T_C) under the chosen heuristic - a counterfactual model, not a claim of scheduling optimality (Part 18)'
         )
 
         subparser.add_argument(

@@ -157,3 +157,20 @@ def test_analyze_still_shows_every_section(tmp_path):
     assert "Certified Floors" in result.stdout
     assert "Attribution Breakdown" in result.stdout
     assert "Critical Path Length" in result.stdout
+
+
+def test_replay_help_does_not_overclaim_optimality():
+    """Regression guard: Part 1.2's own non-goals explicitly disclaim
+    "the mathematically optimal real scheduler", and Part 18 defines
+    T_C as "a deterministic feasible replay" - not optimal. --replay's
+    help text used to say "compute optimal makespan (T_C)", directly
+    contradicting both. An independent spec audit found this because
+    P1-17's terminology audit only grepped for Part 43's exact banned
+    phrases, not this semantically-equivalent overclaim."""
+    result = _run_bga(["analyze", "--help"])
+    assert result.returncode == 0
+    # "optimal" itself isn't banned - only an unqualified claim of it is.
+    # The current help text does mention it, but only to disclaim it
+    # ("not a claim of scheduling optimality"), so this asserts the
+    # specific overclaiming phrase is gone, not the word entirely.
+    assert "compute optimal makespan" not in result.stdout

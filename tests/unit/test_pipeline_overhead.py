@@ -112,6 +112,105 @@ def test_converter_unmatched_terminal_status_is_ignored_defensively():
     assert converter.pipeline_overhead == []
 
 
+# --- Regression tests: `bst source track`/`bst source checkout`/`bst
+# artifact checkout` also use action="main", but wrap differently than
+# `bst build` does - real captured logs (BuildStream 2.7.0) surfaced two
+# bugs the original P4-14 implementation had, both fixed here. -----------
+
+# Real capture: `bst source track` on a one-element project with a real
+# `kind: git` source (trimmed to the lines BST_LOG_RE matches).
+REAL_TRACK_LOG_EXCERPT = """\
+[--:--:--][        ][    main:core activity                 ] START   Track
+[--:--:--][        ][    main:core activity                 ] START   Loading elements
+[00:00:00][        ][    main:core activity                 ] SUCCESS Loading elements
+[--:--:--][        ][    main:core activity                 ] START   Resolving elements
+[00:00:00][        ][    main:core activity                 ] SUCCESS Resolving elements
+[--:--:--][????????][   track:thing.bst                     ] START   ci-flow-test/thing/????????-track.log
+[--:--:--][????????][   track:thing.bst                     ] START   Tracking master from file:///srcrepo
+[00:00:00][????????][   track:thing.bst                     ] SUCCESS Tracking master from file:///srcrepo
+[00:00:00][????????][   track:thing.bst                     ] SUCCESS ci-flow-test/thing/????????-track.log
+[00:00:00][        ][    main:core activity                 ] SUCCESS Track
+"""
+
+
+def test_track_wrapper_excluded_from_pipeline_overhead():
+    """`bst source track` wraps its own pipeline-level phases in a "Track"
+    bracket (not "Build") - the pre-fix code only excluded the literal
+    string "Build", so "Track" would have been miscounted as if it were
+    real, measurable overhead (it spans the entire invocation, same as
+    "Build")."""
+    converter = WrapperTraceConverter(raw_start_time_us=0)
+    _feed_raw(converter, REAL_TRACK_LOG_EXCERPT)
+
+    phases = [e["phase"] for e in converter.pipeline_overhead]
+    assert "Track" not in phases
+    assert phases == ["Loading elements", "Resolving elements"]
+
+
+def test_track_wrapper_real_per_element_track_event_still_captured():
+    """The real per-element `track:thing.bst` action (already a
+    recognized TaskKind) must be unaffected by the "main" special-casing
+    above it."""
+    converter = WrapperTraceConverter(raw_start_time_us=0)
+    _feed_raw(converter, REAL_TRACK_LOG_EXCERPT)
+
+    builder_events = [e for e in converter.trace_events if e["cat"] == "bst-builder"]
+    assert len(builder_events) == 2
+    assert builder_events[0]["args"]["action"] == "track"
+    assert builder_events[0]["args"]["element"] == "thing.bst"
+
+
+# Real capture: `bst artifact checkout` on a one-element project (trimmed) -
+# "Staging dependencies"/"Integrating sandbox"/"Checking out files in ..."
+# are logged under action="main" but with the checked-out element's own
+# *real* hash, not a blank one - confirmed against BuildStream 2.7.0's
+# Stream.checkout() (`_prepare_sandbox()`/`_export_artifact()`, see
+# docs/tasks/P4-15-stack-consolidation-heuristic.md's Background). `bst
+# source checkout`'s "Staging sources" follows the identical pattern.
+REAL_ARTIFACT_CHECKOUT_LOG_EXCERPT = """\
+[--:--:--][        ][    main:core activity                 ] START   Loading elements
+[00:00:00][        ][    main:core activity                 ] SUCCESS Loading elements
+[--:--:--][        ][    main:core activity                 ] START   Query cache
+[00:00:00][        ][    main:core activity                 ] SUCCESS Query cache
+[--:--:--][c26a5e9e][    main:thing.bst                     ] START   Staging dependencies
+[00:00:00][c26a5e9e][    main:thing.bst                     ] SUCCESS Staging dependencies
+[--:--:--][c26a5e9e][    main:thing.bst                     ] START   Integrating sandbox
+[00:00:00][c26a5e9e][    main:thing.bst                     ] SUCCESS Integrating sandbox
+[--:--:--][c26a5e9e][    main:thing.bst                     ] START   Checking out files in '/out'
+[00:00:00][c26a5e9e][    main:thing.bst                     ] SUCCESS Checking out files in '/out'
+"""
+
+
+def test_real_hash_scoped_main_events_not_swept_into_pipeline_overhead():
+    """Regression: a real element hash under action="main" (checkout
+    phases) must never land in the blank-hash-only pipeline_overhead
+    bucket - it's genuinely per-element work, not pipeline-level."""
+    converter = WrapperTraceConverter(raw_start_time_us=0)
+    _feed_raw(converter, REAL_ARTIFACT_CHECKOUT_LOG_EXCERPT)
+
+    phases = [e["phase"] for e in converter.pipeline_overhead]
+    assert phases == ["Loading elements", "Query cache"]
+    assert "Staging dependencies" not in phases
+    assert "Integrating sandbox" not in phases
+
+
+def test_real_hash_scoped_main_events_appear_as_builder_events_instead():
+    """Falls through to the normal per-hash active_tasks path - three
+    separate real B/E pairs, one per checkout phase, each attributable to
+    the real element. (Not consumed by bga's core TaskKind pipeline at
+    all - see tools/bst_checkout_cost.py, a deliberately separate,
+    standalone tool, since a checkout invocation shares no horizon with a
+    build trace.)"""
+    converter = WrapperTraceConverter(raw_start_time_us=0)
+    _feed_raw(converter, REAL_ARTIFACT_CHECKOUT_LOG_EXCERPT)
+
+    builder_events = [e for e in converter.trace_events if e["cat"] == "bst-builder"]
+    phases = [e["args"].get("Message", e["name"]) for e in builder_events if e["ph"] == "E"]
+    assert phases == ["Staging dependencies", "Integrating sandbox", "Checking out files in '/out'"]
+    assert all(e["args"]["element"] == "thing.bst" for e in builder_events)
+    assert all(e["args"]["action"] == "main" for e in builder_events)
+
+
 # --- Analyzer / report wiring --------------------------------------------
 
 def _write_run_dir(tmp_path, pipeline_overhead):

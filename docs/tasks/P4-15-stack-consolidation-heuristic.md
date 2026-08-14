@@ -1,6 +1,6 @@
 # P4-15: Structural consolidation heuristic - `stack`-based checkout batching & element-count overhead advisory
 
-**Priority:** P4 | **Status:** 🔴 Not Started (research/design task, not a direct implementation task) | **Depends on:** `P4-12` (`element_kind` foundation), `P4-14` (recommended, not hard-blocking - shares the "is per-element overhead material" evidence base)
+**Priority:** P4 | **Status:** 🟢 Fixed & Verified (2026-08-14) - Direction 1 (structural advisory) and Direction 2 (kind-aware weighting, resolved jointly with `P4-12`) implemented; Direction 3 (documentation-only correction) already covered by `docs/ingestion-pipeline.md` | **Depends on:** `P4-12` (`element_kind` foundation, done), `P4-14` (done - real measurement confirmed per-element/pipeline overhead is material)
 
 ## Spec Reference
 Not spec-mandated - `docs/specification.md` has zero matches for "stack" as an element kind, "sandbox", or "artifact checkout" (confirmed via grep). `bga`'s own added heuristic, same non-spec territory as `P4-12`/`P4-13`/`P4-14`.
@@ -27,7 +27,44 @@ This shares its evidence base with `P4-14`: whether *build-time* per-element ove
 - Don't attempt to model `bst artifact checkout` timing at all unless a real checkout-phase log becomes part of what `bga` ingests - today's ingestion pipeline (`P4-05`/`P4-08`/`P4-09`/`P4-10`) is scoped to `bst build` logs; whether checkout logs are ever in scope is itself an open product question worth raising with the user before assuming it, not deciding unilaterally in this task.
 
 ## Acceptance Test
-Not yet defined - depends on which candidate direction is chosen, same status as `P4-12` itself. At minimum: a real or realistic multi-element fixture with a genuine `stack`-groupable cluster, demonstrating the chosen heuristic (if any code is written at all) produces a real, correct, verifiable structural observation - and no change to any existing invariant-bearing test's numeric result.
+A real multi-element fixture with a genuine `stack`-groupable cluster: `tests/fixtures/bst_show_project/elements/all.bst` (new, `kind: stack` depending on `base.bst`/`base2.bst`) plus a real 5-leaves-and-a-stack throwaway project and a real 1500-element throwaway project (both built specifically to validate this task, not checked in - see Verification Log) demonstrate the chosen heuristics produce real, correct, verifiable output. No change to any existing invariant-bearing test's numeric result (confirmed via the golden-snapshot diff - purely an additive `consolidation_candidates: []` key for the existing fixture, which has no qualifying cluster).
+
+## What was built
+1. **Real per-element checkout data made ingestible (prerequisite)**: found and fixed two real bugs in `P4-14`'s `WrapperTraceConverter` while researching `bst source checkout`/`bst artifact checkout` real log behavior - see `docs/ingestion-pipeline.md` fact 12. Both were needed before any of this task's own work could be grounded in real data rather than assumption.
+2. **`tools/bst_checkout_cost.py`** (new, deliberately standalone - not part of `bga`'s core `analyze` pipeline, since a checkout invocation shares no horizon with a build trace, I4's `Sum(attribution)==H`): `summarize`/`compare` real, measured cost from real checkout-command logs. **Real, important finding from actually measuring it** (not assumed): consolidating under a `stack` is *not* automatically a net win - it depends entirely on whether the consolidated target's own resolved closure is proportionate to what was actually needed. A real 1500-element project measurement showed checking out 5 individual elements totaled ~0s pipeline overhead (each element's own closure was trivial), while checking out the *full-project* `stack` covering all 1500 cost 6s (its closure was the whole project) - a clear net *loss* for that specific pairing. A matched-closure comparison (5 individual vs. a 5-element `stack`) showed no measurable difference at this fixture's scale. The tool reports the real `savings_us`/`savings_fraction_of_individual` for a given pair of logs rather than assuming the sign - deliberately renamed away from an earlier `pipeline_overhead_payments_avoided` framing that implied a guaranteed benefit.
+3. **Structural consolidation advisory (Direction 1)**: `bga/structural/consolidation.py::find_consolidation_candidates` - purely structural (graph topology + `element_kind` only, no timing data), groups elements sharing the exact same immediate-consumer set with no existing `stack` element already covering them. Wired into `result.structural['consolidation_candidates']` and shown in `bga graph`'s "Structural Analysis" text block when non-empty, pointing at `tools/bst_checkout_cost.py` for anyone who wants a real measurement of a flagged candidate before acting on it.
+4. **Direction 2 (kind-aware weighting)**: resolved jointly with `P4-12` (see that task's "What was built") - `is_structural_kind` (using the same `STRUCTURAL_ELEMENT_KINDS` set, which includes `stack`) on blast-radius/criticality/leaf-analysis signal entries.
+5. **Direction 3 (subproject-count correction)**: already resolved as documentation in the previous round - `docs/ingestion-pipeline.md`'s "A note on cache-query and sandbox/checkout overhead visibility" states plainly that splitting into subprojects does not reduce per-element scheduler overhead, backed by real BuildStream scheduler-queue source reading. Nothing further needed this round beyond keeping that note accurate (updated alongside the new findings above).
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢 - or record the design decision reached, e.g. "documentation-only correction, see docs/ingestion-pipeline.md", if that's how this resolves)_
+Real, mismatched-closure comparison (1500-element project, 5 individual leaf checkouts vs. the full-project stack) - the "negative savings" case:
+```
+$ python3 -m tools.bst_checkout_cost compare --individual checkout_00000.log ... checkout_00004.log --consolidated checkout_stack.log
+Individual checkouts (5 invocations):
+  Pipeline overhead (paid 5x): 0.000s
+  Total: 0.000s
+
+Consolidated checkout (1 invocation):
+  Pipeline overhead (paid 1x): 6.000s
+  Total: 6.000s
+
+Savings: -6.000s
+  Negative: the consolidated target's own resolved closure costs more pipeline overhead
+  than the individual invocations paid in total - consolidating under this target is
+  not a net win here.
+```
+Real, matched-closure comparison (same 5 elements individually vs. a 5-element `stack` covering exactly them) - no measurable difference at this scale:
+```
+$ python3 -m tools.bst_checkout_cost compare --individual ... --consolidated checkout_five.log --json
+{"savings_us": 0, "savings_fraction_of_individual": null, ...}
+```
+Golden-snapshot diff (`tests/fixtures/golden/mixed_task_kinds/expected_output.json`) confirming the structural advisory is purely additive:
+```
+$ diff /tmp/expected_before2.json tests/fixtures/golden/mixed_task_kinds/expected_output.json
+257c257,258
+<         }
+---
+>         },
+>         "consolidation_candidates": []
+```
+Added `tests/unit/test_bst_checkout_cost.py` (5 tests: synthetic-log arithmetic, the honest-negative-savings regression, and a real `bst`-gated end-to-end test against the extended `bst_show_project` fixture) and `tests/unit/test_stack_consolidation.py` (8 tests: candidate detection, existing-stack suppression, no-consumers exclusion, determinism, and analyzer/report wiring). Full suite: 387 passed with `bst` on `PATH` (379 passed + 8 skipped without it) - was 359/354+5 at the start of this round. `make lint` clean, `make check-clean` OK, `tests/test_e2e.py` 7/7.

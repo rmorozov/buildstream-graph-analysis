@@ -10,6 +10,21 @@ from typing import Dict, List, Optional, Set
 from enum import Enum
 
 
+# BuildStream plugin kinds (Element.element_kind, P4-08) that are
+# typically thin structural/aggregation elements - no real compilation of
+# their own (junction: reference to another project; import/filter/compose:
+# no-transform passthroughs; stack: BST_ELEMENT_HAS_ARTIFACT=False,
+# get_unique_key() returns a constant - confirmed via BuildStream 2.7.0
+# source, see docs/tasks/P4-15-stack-consolidation-heuristic.md). Used
+# only to *annotate/flag* diagnostic signal listings (P4-12 Direction 2/
+# P4-15 Direction 2) - never to silently exclude or reweight a directly
+# observed duration (P4-12's own Out of Scope). Deliberately a closed,
+# explicit list, not a heuristic guess: an unrecognized/custom kind (or
+# no element_kind at all) is never included here, so it's never flagged
+# as "probably not real work" without real grounds to say so.
+STRUCTURAL_ELEMENT_KINDS = frozenset({"junction", "import", "filter", "compose", "stack"})
+
+
 class TaskKind(Enum):
     """Task kinds as defined in Part 5.2."""
     TRACK = "TRACK"
@@ -259,3 +274,9 @@ class AnalysisResult:
     # {"phases": [{"phase": str, "elapsed_us": int}, ...], "total_us": int,
     # "fraction_of_horizon": Optional[float]}.
     pipeline_overhead: dict = field(default_factory=dict)
+    # Aggregate stats grouped by element_kind (P4-12 Direction 3, `bga
+    # graph --by-kind`) - not spec-mandated, additive/presentational.
+    # Shape: {kind: {"count": int, "total_duration_us": int,
+    # "avg_duration_us": float}}. Elements with no element_kind are
+    # bucketed under the explicit "unknown" key, never silently dropped.
+    element_kind_summary: dict = field(default_factory=dict)

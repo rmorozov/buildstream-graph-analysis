@@ -78,25 +78,33 @@
                 "downstream_count": 2,
                 "weighted_duration_us": 8000,
                 "is_leaf": false,
-                "risk_score": 2
+                "risk_score": 2,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             },
             "lib.bst": {
                 "downstream_count": 1,
                 "weighted_duration_us": 3000,
                 "is_leaf": false,
-                "risk_score": 1
+                "risk_score": 1,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             },
             "app.bst": {
                 "downstream_count": 0,
                 "weighted_duration_us": 0,
                 "is_leaf": true,
-                "risk_score": 0
+                "risk_score": 0,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             },
             "extra.bst": {
                 "downstream_count": 0,
                 "weighted_duration_us": 0,
                 "is_leaf": true,
-                "risk_score": 0
+                "risk_score": 0,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             }
         },
         "top_blast_radius": [
@@ -109,22 +117,30 @@
             "base.bst": {
                 "probability": 1.0,
                 "observed_critical": true,
-                "slack_us": 0
+                "slack_us": 0,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             },
             "extra.bst": {
                 "probability": 0.0,
                 "observed_critical": false,
-                "slack_us": 0
+                "slack_us": 0,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             },
             "lib.bst": {
                 "probability": 1.0,
                 "observed_critical": true,
-                "slack_us": 0
+                "slack_us": 0,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             },
             "app.bst": {
                 "probability": 1.0,
                 "observed_critical": true,
-                "slack_us": 0
+                "slack_us": 0,
+                "element_kind": "unknown",
+                "is_structural_kind": false
             }
         },
         "fetch_build_overlap": {
@@ -138,7 +154,19 @@
                 "app.bst",
                 "extra.bst"
             ],
-            "deferrable_count": 1
+            "deferrable_count": 1,
+            "leaves_detail": {
+                "app.bst": {
+                    "element_kind": "unknown",
+                    "is_structural_kind": false,
+                    "is_potentially_deferrable": false
+                },
+                "extra.bst": {
+                    "element_kind": "unknown",
+                    "is_structural_kind": false,
+                    "is_potentially_deferrable": true
+                }
+            }
         }
     },
     "structural": {
@@ -226,7 +254,8 @@
             "bottleneck_count": 0,
             "deferrable_leaves": 2,
             "best_case_speedup": 1.125
-        }
+        },
+        "consolidation_candidates": []
     },
     "utilisation": {
         "effective_cpus": 2,

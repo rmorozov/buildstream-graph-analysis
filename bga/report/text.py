@@ -47,6 +47,23 @@ def _format_violation_summary(violation: dict) -> str:
     return f"{vtype}: {violation}"
 
 
+def _structural_kind_tag(entry: dict) -> str:
+    """P4-12 Direction 2 / P4-15 Direction 2 (linked): a short, only-
+    shown-when-relevant caveat for report listings ranking elements by a
+    real, directly-observed signal (blast radius, criticality, etc.) -
+    flags when the listed element is a BuildStream plugin kind that
+    typically does no real compute work of its own (junction/import/
+    filter/compose/stack - see bga.ingest.models.STRUCTURAL_ELEMENT_KINDS),
+    so a reader can judge whether its own recorded duration means what
+    they'd assume. Never hidden, never used to reorder or exclude - the
+    ranking itself is untouched, this is purely an annotation.
+    """
+    if not entry.get('is_structural_kind'):
+        return ''
+    kind = entry.get('element_kind', 'unknown')
+    return f" [structural: {kind}, may not reflect real compute work]"
+
+
 def _format_key_findings(result: AnalysisResult) -> List[str]:
     """Synthesized "what to look at first" summary (P4-02) - presentation
     only, reads already-computed fields (result.confidence/.attribution/
@@ -96,8 +113,9 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
         lines.append("  Elements Most Worth Optimizing First (by blast radius):")
         blast_radius = signals.get('blast_radius') or {}
         for i, elem_uid in enumerate(top_blast_radius[:3], start=1):
-            count = blast_radius.get(elem_uid, {}).get('downstream_count', 0)
-            lines.append(f"    {i}. {elem_uid} ({count} downstream elements)")
+            entry = blast_radius.get(elem_uid, {})
+            count = entry.get('downstream_count', 0)
+            lines.append(f"    {i}. {elem_uid} ({count} downstream elements){_structural_kind_tag(entry)}")
 
     criticality = signals.get('criticality_probability') or {}
     if criticality:
@@ -109,7 +127,10 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
             lines.append("  Highest Criticality Elements:")
             for i, (elem_uid, data) in enumerate(nonzero_critical, start=1):
                 pct = data.get('probability', 0) * 100
-                lines.append(f"    {i}. {elem_uid} ({pct:.0f}% probability of being on critical path)")
+                lines.append(
+                    f"    {i}. {elem_uid} ({pct:.0f}% probability of being on critical path)"
+                    f"{_structural_kind_tag(data)}"
+                )
 
     # Certified headroom, in plain language
     floors = result.floors or {}
@@ -184,7 +205,28 @@ def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
     return lines
 
 
-def format_text(result: AnalysisResult, section: Optional[str] = None) -> str:
+def _format_by_kind_summary(result: AnalysisResult) -> List[str]:
+    """`bga graph --by-kind` (P4-12 Direction 3) - aggregate stats
+    grouped by BuildStream element_kind. Opt-in, additive, presentation
+    only - see docs/tasks/P4-12-element-kind-based-heuristics.md.
+    """
+    lines: List[str] = []
+    summary = getattr(result, 'element_kind_summary', None) or {}
+    if not summary:
+        return lines
+
+    lines.append("By Element Kind:")
+    for kind, entry in sorted(summary.items(), key=lambda kv: kv[1].get('total_duration_us', 0), reverse=True):
+        lines.append(
+            f"  {kind:15s} count={entry.get('count', 0):4d}  "
+            f"total={entry.get('total_duration_us', 0) / 1e6:8.2f}s  "
+            f"avg={entry.get('avg_duration_us', 0) / 1e6:8.2f}s"
+        )
+    lines.append("")
+    return lines
+
+
+def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
     """
     Format analysis results as human-readable text.
 
@@ -192,6 +234,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None) -> str:
         result: The AnalysisResult object from the analyzer
         section: Restrict output to one report section (see SECTIONS) -
             None (default) produces the full `analyze` report.
+        by_kind: Show the element_kind aggregate summary (P4-12
+            Direction 3, `bga graph --by-kind`) - opt-in, since it's
+            extra detail beyond the default graph section.
 
     Returns:
         Formatted string suitable for terminal display
@@ -341,7 +386,20 @@ def format_text(result: AnalysisResult, section: Optional[str] = None) -> str:
                     f"  Parallelism Profile: min={parallelism.get('min_width', 0):.1f}x, "
                     f"max={parallelism.get('max_width', 0):.1f}x"
                 )
+            consolidation_candidates = sm.get('consolidation_candidates') or []
+            if consolidation_candidates:
+                lines.append(
+                    f"  Stack-Consolidation Candidates: {len(consolidation_candidates)} "
+                    f"group(s) of elements always consumed together with no `stack` "
+                    f"grouping them (P4-15, structural signal only - not a timing "
+                    f"estimate; see tools/bst_checkout_cost.py for real measurement):"
+                )
+                for candidate in consolidation_candidates[:5]:
+                    lines.append(f"    - {', '.join(candidate['elements'])}")
             lines.append("")
+
+    if section in (None, 'graph') and by_kind:
+        lines.extend(_format_by_kind_summary(result))
 
     if section is None:
         lines.extend(_format_pipeline_overhead(result))

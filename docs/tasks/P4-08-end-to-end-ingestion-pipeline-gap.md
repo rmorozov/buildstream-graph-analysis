@@ -11,7 +11,7 @@ This task was originally filed as ⚪ Blocked - producing `graph.json`/`run-cont
 Everything below was verified against a **real, installed `bst` binary** (BuildStream 2.7.0 + `buildstream-plugins` + bubblewrap), not assumed from documentation - several assumptions from documentation-only research turned out to be wrong or incomplete once tested for real (see `docs/ingestion-pipeline.md`'s "Empirically confirmed facts" section), most importantly that `--format` *does* have `%{build-deps}`/`%{runtime-deps}` symbols in current BuildStream (missing from an older manpage snapshot that briefly suggested a much more complex per-element-closure-plus-transitive-reduction approach was needed).
 
 ## What was built
-- `tools/bst_show_to_graph.py`: runs `bst show --deps all --format ...` against a real project and emits `graph/v9` JSON. Uses ASCII record/field separator control characters in the format string (not newline-based parsing) because `%{build-deps}`/`%{runtime-deps}` can themselves contain embedded newlines for a multi-dependency element - confirmed by testing, and a real bug that a naive line-based parser would have shipped with. Collapses a dependency present in both `%{build-deps}` and `%{runtime-deps}` (BuildStream's default "all" type) to a single `dependency_type: "build"` edge. `cache_key` maps to `null`, never a fabricated value, when a source is inconsistent/unresolvable.
+- `tools/bst_show_to_graph.py`: runs `bst show --deps all --format ...` against a real project and emits `graph/v9` JSON. Uses ASCII record/field separator control characters in the format string (not newline-based parsing) because `%{build-deps}`/`%{runtime-deps}` can themselves contain embedded newlines for a multi-dependency element - confirmed by testing, and a real bug that a naive line-based parser would have shipped with. Collapses a dependency present in both `%{build-deps}` and `%{runtime-deps}` (BuildStream's default "all" type) to a single `dependency_type: "build"` edge. `cache_key` maps to `null`, never a fabricated value, when a source is inconsistent/unresolvable. **Update (2026-08-14):** also captures `%{kind}` (Since: BuildStream 2.6, confirmed against the real 2.7.0 install) as `element_kind` on every `Element` - the user pointed out this symbol exists and could feed future analysis heuristics; wired through `bga/ingest/models.py`/`loader.py` as inert metadata for now, no analysis consumer reads it yet - see `P4-12`.
 - `tests/fixtures/bst_show_project/`: a small, deliberately-valid, `kind: local`-only (no network needed) BuildStream project checked into the repo - exercises a multi-build-dependency element, a runtime-only dependency, and a junction (all three of the things that mattered most while designing the parser) in one small fixture.
 - `tests/unit/test_bst_show_to_graph.py`: pure-parser unit tests (always run, hermetic) plus real end-to-end tests against the fixture project via an actual `bst` invocation, `@pytest.mark.skipif`-guarded on `bst` being on `PATH` so the main suite doesn't require BuildStream+bubblewrap installed.
 - `pyproject.toml`: new `bst` optional extra (`buildstream>=2.0`) separate from `dev`, since it's a heavy, non-pip-only dependency (needs the `bwrap` system binary too) most contributors don't need.
@@ -63,4 +63,18 @@ Results: 7 passed, 0 failed
 
 $ make check-clean
 OK: no ignored files are tracked
+```
+
+**2026-08-14 update (`element_kind`):**
+```
+$ bst -C tests/fixtures/bst_show_project show --format $'%{name}\x1f%{kind}' subproj-junction.bst
+subproj-junction.bst<US>junction
+# confirmed real %{kind} values: "import" (base.bst/base2.bst/libfoo.bst/app.bst),
+# "junction" (subproj-junction.bst)
+
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_bst_show_to_graph.py -v
+15 passed   # with bst on PATH (was 12) - 3 new tests for element_kind capture
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+314 passed (with bst on PATH) / 310 passed, 4 skipped (without)   # was 311/307+4
 ```

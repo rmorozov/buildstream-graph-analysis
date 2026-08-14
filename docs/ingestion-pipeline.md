@@ -121,6 +121,15 @@ commands against a small from-scratch project
    BuildStream's platform initialization is unconditional. `apt install
    bubblewrap` (or the equivalent for your OS) is required alongside
    the `bst` optional extra, not just `pip install buildstream`.
+9. **`--format` also has `%{kind}`** (Since: BuildStream 2.6, present in
+   the real 2.7.0 install this was verified against) - the element's own
+   BuildStream plugin type (e.g. `import`, `manual`, `junction`,
+   `autotools`). Added to `bst_show_to_graph.py`'s captured fields as
+   `element_kind` on `Element` (`bga/ingest/models.py`) - an additive
+   extension beyond graph/v9's spec-minimal schema, same precedent as
+   `dependency_type`. Not read by any analysis consumer yet; see `P4-12`
+   for planned kind-based heuristics (raised directly by the user while
+   reviewing this tool's output).
 
 ## Empirically confirmed facts about real BuildStream *logs* (2026-08-14, against real `bst` 2.7.0)
 
@@ -252,25 +261,37 @@ BuildStream log at all (see fact 2 above) - a genuinely different tool
 for a genuinely different, real-data problem, not a refactor of the
 fixture-only one.
 
-## `dependency_type`'s effect on analysis - still open, now filed as `P4-11`
+## `dependency_type`'s effect on analysis - fixed (`P4-11`)
 
 `DependencyEdge.dependency_type` (`bga/ingest/models.py`) is populated
-correctly by `bst_show_to_graph.py`, but **every consumer in `bga/`
-still treats every edge identically** as a hard precedence constraint
-(`bga/normalize/timestamps.py`'s ready-time gating, `bga/graph/edg.py`'s
-structural algorithms, `bga/attribution/blame_chain.py`,
-`bga/replay/scheduler.py`) - confirmed by grep, not yet fixed. Per
-BuildStream's own semantics (confirmed via its docs): a `build`-type
-edge genuinely gates the successor's build start (the dependency's
-product must be staged first); a `runtime`-only edge does not - "an
-element's runtime dependencies are not available to the element at
-build time." Ready-time/critical-path gating (Part 7) should therefore
-only apply to `build`/`all`-type edges; a pure `runtime`-only edge
-should still count for structural analysis (reachability, blast
-radius, leaf/deferrability, Part 24/25) but shouldn't force the
-successor's build to wait. Now that `P4-10`'s real end-to-end pipeline
-exists (real `dependency_type`-carrying input to test against, not only
-synthetic fixtures), this is filed as its own task - see `P4-11`.
+correctly by `bst_show_to_graph.py`, and **every gating consumer in
+`bga/` now respects it** - `bga/normalize/timestamps.py`'s ready-time
+gating (`compute_ready_times`/`validate_ordering`/`clamp_task_starts`),
+`bga/analyzer.py`'s `explicit_predecessors` (blame-chain responsible-
+predecessor selection), and `bga/graph/edg.py`'s
+`compute_critical_path`/`compute_slack` (Part 14.1's certified T∞
+floor) plus the Monte-Carlo criticality sampling that reuses the same
+concept (Part 26) now all exclude `runtime`-only edges. Per BuildStream's
+own semantics (confirmed via its docs): a `build`-type edge genuinely
+gates the successor's build start (the dependency's product must be
+staged first); a `runtime`-only edge does not - "an element's runtime
+dependencies are not available to the element at build time."
+
+**Found a more severe issue than originally scoped while verifying**:
+`compute_critical_path` was summing a `runtime`-only edge's duration
+into T∞,observed as if it gated ordering - directly contradicting Part
+14.1's own certification claim ("no schedule ... can complete faster
+than this value"). This wasn't just a ready-time-gating gap, it was a
+genuine correctness bug in a *certified floor*. Fixed via an
+`exclude_dependency_types` parameter on `build_element_graph`/
+`compute_in_out_degree` (default unfiltered, so every other, genuinely-
+structural caller - reachability, blast radius, leaf/deferrability,
+depth, dominators, Part 24/25 - is untouched).
+
+Purely-structural analysis deliberately still reads the full,
+unfiltered graph - a `runtime`-only edge is real and should still count
+for "what's affected if this changes," it just shouldn't force the
+successor's *build* to wait or inflate a certified scheduling floor.
 
 ## A note on time-of-extraction consistency
 

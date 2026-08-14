@@ -13,11 +13,13 @@ pip install -e .
 
 ### Analyze a Build Run
 
-The primary command analyzes a directory containing BuildStream run data (specifically `run-context/v9`, `graph/v9`, and `trace/v9` artifacts).
+The primary command analyzes a directory containing `run-context.json`, `graph.json`, and `trace.json` (the run-context/v9, graph/v9, and trace/v9 schemas, Part 32) - **not** a raw BuildStream cache/artifacts path directly; nothing in a live BuildStream cache is already in this shape.
 
 ```bash
-bga analyze /path/to/buildstream/cache/artifacts/run-<uuid>
+bga analyze /path/to/run-directory
 ```
+
+To produce a real run directory in this shape from an actual BuildStream project and build log in one step, see `tools/bst_extract_run.py` (`docs/ingestion-pipeline.md`) - or try the CLI right now against a checked-in sample fixture with no BuildStream install needed at all: `bga analyze tests/fixtures/golden/mixed_task_kinds` (see the README's Quick Start).
 
 **Output:**
 By default, `bga` prints a human-readable summary to stdout, leading with a synthesized **Key Findings** block (confidence headline, the single largest wait-category opportunity, the top elements by blast radius/criticality probability when `--diagnostics` ran, and certified headroom in plain language) before the detailed sections:
@@ -122,32 +124,36 @@ bga diagnostics /path/to/run    # blast radius, criticality probability, wall-cl
 ### 1. Quick Efficiency Check
 Get a quick overview of build efficiency:
 ```bash
-bga analyze ~/.buildstream/cache/artifacts/run-12345
+bga analyze /path/to/run-directory
 ```
 
 ### 2. Generate JSON Report for CI
 Integrate into a CI pipeline to track metrics over time:
 ```bash
-bga analyze ~/.buildstream/cache/artifacts/run-12345 --format json --output metrics.json
-# Then process with jq, e.g.:
-# jq '.floors.certified_headroom_us' metrics.json
+bga analyze /path/to/run-directory --format json --output metrics.json
+# Then process with jq, e.g. (certified_headroom, not certified_headroom_us -
+# confirmed against a real --format json run):
+# jq '.floors.certified_headroom' metrics.json
 ```
 
 ### 3. Simulate Hardware Upgrade
 Estimate build time improvement if moving from 4 to 16 cores:
 ```bash
 # Current 4-core simulation
-bga analyze ~/.buildstream/cache/artifacts/run-12345 --capacity 4 --replay
+bga analyze /path/to/run-directory --capacity 4 --replay
 
 # Hypothetical 16-core simulation
-bga analyze ~/.buildstream/cache/artifacts/run-12345 --capacity 16 --replay
+bga analyze /path/to/run-directory --capacity 16 --replay
 ```
 
 ### 4. Deep Dive into Bottlenecks
 Identify which elements to optimize for maximum speedup:
 ```bash
-bga analyze ~/.buildstream/cache/artifacts/run-12345 --diagnostics --format json | \
-  jq '.signals.criticality_probability | sort_by(.probability) | reverse | .[0:10]'
+# criticality_probability is a JSON *object* keyed by element UID
+# (confirmed against a real --format json run), not an array - to_entries
+# converts it to an array of {key, value} pairs before sorting.
+bga analyze /path/to/run-directory --diagnostics --format json | \
+  jq '.signals.criticality_probability | to_entries | sort_by(.value.probability) | reverse | .[0:10]'
 ```
 
 ## Exit Codes

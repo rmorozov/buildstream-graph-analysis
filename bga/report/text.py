@@ -1,8 +1,157 @@
 """Human-readable text/CSV report formatting (Part 37)."""
-from typing import Optional
+from typing import List, Optional
 
 from ..ingest.models import AnalysisResult
 from ._shared import GRAPH_SIGNAL_KEYS
+
+# Confidence-band labels for the Key Findings headline (P4-02) - a
+# presentation-only heuristic, not a spec-defined threshold (Part 33
+# defines the confidence *computation*, not a label banding on top of
+# it). Picked so a passing analysis with no gate failures (confidence
+# 1.0) reads "high" and a genuinely degraded one reads "low" - not a
+# claim of statistical significance.
+_CONFIDENCE_HIGH = 0.8
+_CONFIDENCE_MEDIUM = 0.5
+
+
+def _confidence_band(score: float) -> str:
+    if score >= _CONFIDENCE_HIGH:
+        return "high"
+    if score >= _CONFIDENCE_MEDIUM:
+        return "medium"
+    return "low"
+
+
+def _format_violation_summary(violation: dict) -> str:
+    """One-line, human-readable summary for a single violation dict -
+    every `type` currently produced anywhere in bga/ (P4-02's own
+    required "one-line-per-violation summary"). Falls back to a generic
+    dump for an unrecognized future type rather than silently omitting
+    it (this codebase's "no silent correction" philosophy)."""
+    vtype = violation.get('type', 'unknown')
+    if vtype == 'ordering_violation':
+        return (
+            f"ordering: {violation.get('predecessor')} finished after "
+            f"{violation.get('successor')} started "
+            f"(gap {violation.get('gap_us', 0) / 1e6:.3f}s)"
+        )
+    if vtype == 'attribution_reconciliation':
+        return (
+            f"attribution (I4) mismatch: residual "
+            f"{violation.get('residual_us', 0) / 1e6:.3f}s "
+            f"(sum {violation.get('attribution_sum_us', 0) / 1e6:.3f}s vs. "
+            f"horizon {violation.get('horizon_us', 0) / 1e6:.3f}s)"
+        )
+    if vtype == 'hard_gate_failed':
+        return f"hard gate failed: {violation.get('gate')} = {violation.get('value')}"
+    return f"{vtype}: {violation}"
+
+
+def _format_key_findings(result: AnalysisResult) -> List[str]:
+    """Synthesized "what to look at first" summary (P4-02) - presentation
+    only, reads already-computed fields (result.confidence/.attribution/
+    .floors/.signals), performs no new computation. Shown before the
+    detailed sections in the full report so a reader gets the headline
+    before the flat metric dump, not instead of it.
+    """
+    lines: List[str] = ["Key Findings:"]
+
+    # Confidence headline
+    confidence = result.confidence or {}
+    primary = confidence.get('primary')
+    violations = result.violations or []
+    if primary is not None:
+        band = _confidence_band(primary)
+        if violations:
+            lines.append(
+                f"  Confidence: {primary:.2f} ({band}) - see {len(violations)} "
+                f"violation(s) below"
+            )
+        else:
+            lines.append(f"  Confidence: {primary:.2f} ({band})")
+
+    # Biggest opportunity: largest non-EXECUTION_ON_CHAIN attribution
+    # category, phrased as where the time actually went.
+    attribution = result.attribution or {}
+    total = result.total_duration_us
+    non_execution = {
+        k: v for k, v in attribution.items() if k != 'execution_on_chain_us'
+    }
+    if non_execution and total > 0:
+        top_category, top_duration_us = max(non_execution.items(), key=lambda kv: kv[1])
+        if top_duration_us > 0:
+            pct = top_duration_us / total * 100
+            label = top_category.replace('_us', '').replace('_', ' ').upper()
+            lines.append(
+                f"  Biggest Opportunity: {pct:.1f}% of wall-clock time is "
+                f"{label} ({top_duration_us / 1e6:.2f}s)"
+            )
+
+    # Top elements by blast radius / criticality probability, when
+    # diagnostics were actually run (Part 25/26) - already computed by
+    # BuildEfficiencyAnalyzer._compute_diagnostics, just surfaced here.
+    signals = result.signals or {}
+    top_blast_radius = signals.get('top_blast_radius') or []
+    if top_blast_radius:
+        lines.append("  Elements Most Worth Optimizing First (by blast radius):")
+        blast_radius = signals.get('blast_radius') or {}
+        for i, elem_uid in enumerate(top_blast_radius[:3], start=1):
+            count = blast_radius.get(elem_uid, {}).get('downstream_count', 0)
+            lines.append(f"    {i}. {elem_uid} ({count} downstream elements)")
+
+    criticality = signals.get('criticality_probability') or {}
+    if criticality:
+        nonzero_critical = sorted(
+            (item for item in criticality.items() if item[1].get('probability', 0) > 0),
+            key=lambda kv: kv[1].get('probability', 0), reverse=True,
+        )[:3]
+        if nonzero_critical:
+            lines.append("  Highest Criticality Elements:")
+            for i, (elem_uid, data) in enumerate(nonzero_critical, start=1):
+                pct = data.get('probability', 0) * 100
+                lines.append(f"    {i}. {elem_uid} ({pct:.0f}% probability of being on critical path)")
+
+    # Certified headroom, in plain language
+    floors = result.floors or {}
+    t_inf = floors.get('t_infinity_observed') or floors.get('t_infinity_observed_us', 0)
+    lb_val = floors.get('lb') or floors.get('lb_us', 0)
+    headroom = floors.get('certified_headroom') or floors.get('certified_headroom_us', 0)
+    if headroom > 0:
+        lines.append(
+            f"  Certified Headroom: up to {headroom / 1e6:.2f}s available "
+            f"(T∞={t_inf / 1e6:.2f}s, LB={lb_val / 1e6:.2f}s)"
+        )
+
+    lines.append("")
+    return lines
+
+
+def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:
+    """Confidence/violations block (P4-02 requirement 1) - previously
+    result.confidence/.violations (Part 33's hard/soft gates, P1-13) were
+    fully populated but never printed in text output at all, only
+    reachable via `--format json`."""
+    lines: List[str] = []
+    confidence = result.confidence or {}
+    if confidence:
+        lines.append("Confidence:")
+        primary = confidence.get('primary')
+        if primary is not None:
+            lines.append(f"  Overall: {primary:.2f} ({_confidence_band(primary)})")
+        hard_gates = confidence.get('hard_gates') or {}
+        failed_gates = [name for name, passed in hard_gates.items() if not passed]
+        if failed_gates:
+            lines.append(f"  Failed Hard Gates: {', '.join(failed_gates)}")
+        lines.append("")
+
+    violations = result.violations or []
+    if violations:
+        lines.append(f"Violations ({len(violations)}):")
+        for violation in violations:
+            lines.append(f"  - {_format_violation_summary(violation)}")
+        lines.append("")
+
+    return lines
 
 
 def format_text(result: AnalysisResult, section: Optional[str] = None) -> str:
@@ -24,6 +173,14 @@ def format_text(result: AnalysisResult, section: Optional[str] = None) -> str:
     lines.append(f"Run: {result.run_id}")
     lines.append(f"Total Duration: {result.total_duration_us / 1e6:.1f}s")
     lines.append("")
+
+    # Key Findings (P4-02) - synthesized summary, shown first, full
+    # report only (matches format_json's own confidence/violations
+    # gating: section is None). Subcommand-specific outputs (graph/
+    # floors/replay/utilisation/diagnostics) stay exactly as they were.
+    if section is None:
+        lines.extend(_format_key_findings(result))
+        lines.extend(_format_confidence_and_violations(result))
 
     # Certified Floors (Parts 14-17)
     if section in (None, 'floors'):

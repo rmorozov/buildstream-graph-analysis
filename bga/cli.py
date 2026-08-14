@@ -110,6 +110,49 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
     return format_sweep_text(args.resource, sweep_result)
 
 
+def _print_missing_input_hint(run_dir: Path) -> None:
+    """Print an actionable hint for the specific "some but not all of
+    run-context.json/graph.json/trace.json are present" case (P4-10) -
+    the generic FileNotFoundError message is technically correct but
+    doesn't tell a first-time user *how* to get the missing piece from a
+    real BuildStream project/build. Only fires when the directory has at
+    least one of the three real input files already (so a genuinely empty
+    or unrelated directory doesn't get a BuildStream-specific hint that
+    doesn't apply to it).
+    """
+    graph_present = (run_dir / 'graph.json').exists()
+    trace_present = (run_dir / 'trace.json').exists()
+    run_context_present = (
+        (run_dir / 'run-context.json').exists() or (run_dir / 'run_context.json').exists()
+    )
+    if not (graph_present or trace_present or run_context_present):
+        return
+
+    missing = []
+    if not graph_present:
+        missing.append(("graph.json", "tools/bst_show_to_graph.py <project_dir> <targets...> graph.json"))
+    if not trace_present:
+        missing.append(("trace.json", "tools/bst_log_to_chrome_trace.py + tools/chrome_trace_to_bga_trace.py <log>"))
+    if not run_context_present:
+        missing.append(("run-context.json", "tools/bst_run_context.py <log> run-context.json"))
+    if not missing:
+        return
+
+    print(
+        "Hint: this looks like a partially-populated run directory from a real "
+        "BuildStream project. To produce the missing file(s) from a real "
+        "BuildStream invocation's project directory and log, see:",
+        file=sys.stderr,
+    )
+    for filename, tool_hint in missing:
+        print(f"  {filename}: {tool_hint}", file=sys.stderr)
+    print(
+        "  (or run tools/bst_extract_run.py to produce all three from one "
+        "project + log in a single step - see docs/ingestion-pipeline.md)",
+        file=sys.stderr,
+    )
+
+
 def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
     """Shared directory validation, logging setup, output writing, and
     exception-to-exit-code mapping for every subcommand. produce_output
@@ -149,6 +192,7 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
         # (exit code 2, handled below).
         logger.error("Required input file not found: %s", e)
         print(f"Error: Required input file not found - {e}", file=sys.stderr)
+        _print_missing_input_hint(run_dir)
         return 1
     except AnalysisError as e:
         # Graph cycles and other analysis-pipeline failures - exit code 3

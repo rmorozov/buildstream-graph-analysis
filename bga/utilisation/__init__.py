@@ -382,17 +382,24 @@ class UtilizationAnalyzer:
     def _reconcile(self) -> None:
         """
         Reconcile CPU buckets with capacity (Part 33.3).
-        
-        Ensures sum(buckets) is within 2% of capacity_cpu_s.
-        Difference goes to unaccounted bucket.
+
+        Ensures sum(buckets) is within 2% of capacity_cpu_s. The
+        difference is *always* reported as unaccounted_cpu_s once
+        capacity data is available - per Part 33.3, "explicitly
+        reported... rather than silently forcing categories to sum" -
+        the 2% tolerance only gates whether it's additionally flagged
+        as a violation (logged, folded into the UNTRACKED bucket), not
+        whether it's reported at all. (P1-25: previously unaccounted_us
+        was left at 0 whenever the residual was under tolerance, hiding
+        a real - just not violation-worthy - discrepancy.)
         """
         self.total_accounted_us = sum(self.buckets.values())
-        
+
         if self.capacity_cpu_us > 0:
             diff = abs(self.total_accounted_us - self.capacity_cpu_us)
             self.reconciliation_error_pct = (diff / self.capacity_cpu_us) * 100.0
-            
-            # If error exceeds tolerance, add to unaccounted
+            self.unaccounted_us = int(diff)
+
             if self.reconciliation_error_pct > self.RECONCILIATION_TOLERANCE_PCT:
                 logger.warning(
                     "CPU reconciliation error %.2f%% exceeds %.2f%% tolerance "
@@ -400,7 +407,6 @@ class UtilizationAnalyzer:
                     self.reconciliation_error_pct, self.RECONCILIATION_TOLERANCE_PCT,
                     self.total_accounted_us, self.capacity_cpu_us,
                 )
-                self.unaccounted_us = int(diff)
                 self.buckets[CPUBucket.UNTRACKED] = self.unaccounted_us
         else:
             self.reconciliation_error_pct = 0.0

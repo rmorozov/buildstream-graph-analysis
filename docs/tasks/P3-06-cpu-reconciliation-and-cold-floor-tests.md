@@ -1,6 +1,11 @@
 # P3-06: CPU reconciliation (I9) + cold-floor tests
 
-**Priority:** P3 | **Status:** 🔴 Not Started | **Depends on:** `P3-01`, `P1-06` (cold-floor tests need real cold computation to exist)
+**Priority:** P3 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** `P3-01`, `P1-06` (cold-floor tests need real cold computation to exist)
+
+## What was done
+**Cold floor:** `tests/unit/test_cold_floor.py` already existed (built alongside `P1-06`/`P1-07`) and already fully covers every required case: no history (unavailable), cache-key match (used), element+kind+phase fallback, partial coverage unavailable-by-default, `allow_partial_cold` publishing partial/low-confidence, and the I12 isolation check (LB/certified_headroom/confidence/attribution bit-for-bit identical with vs without historical data). No new file needed - verified re-running it, not duplicated.
+
+**CPU reconciliation:** added `tests/unit/test_cpu_reconciliation.py` (4 tests) against `bga.utilisation.analyze_utilization` directly. Writing case #2 ("small residual under the 2% tolerance → passes, `unaccounted_cpu_s` reported but not flagged") surfaced a real bug - `unaccounted_us` was left at `0` whenever the residual was under tolerance, contradicting Part 33.3's "explicitly reported... rather than silently forcing categories to sum." Filed and fixed as `P1-25` (own task file). Also covers exact match (clean pass), over-tolerance (flagged + folded into `UNTRACKED` bucket), and missing capacity data (`capacity_cpu_us == 0`, distinguishable from a clean pass by that field, not conflated with `reconciliation_error_pct == 0.0` alone).
 
 ## Spec Reference
 `sed -n '1629,1719p' docs/specification.md` (Part 33.3 Utilization Reconciliation) and I9 in `sed -n '1720,1780p' docs/specification.md` (Part 34), plus `sed -n '904,996p' docs/specification.md` (Part 15, cold floor / 15.3 publication gate) and `sed -n '1903,2132p' docs/specification.md` (Part 36.10 for the exact cold-floor test cases the spec calls for).
@@ -28,4 +33,16 @@ Create `tests/unit/test_cpu_reconciliation.py` and `tests/unit/test_cold_floor.p
 `PYTHONPATH=. python3 -m pytest tests/unit/test_cpu_reconciliation.py tests/unit/test_cold_floor.py -v` — all cases pass.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_cpu_reconciliation.py tests/unit/test_cold_floor.py -v
+9 passed
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+193 passed   # was 188 (+1 known-flaky unrelated timing test resolved on rerun)
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+
+$ make check-clean
+OK: no ignored files are tracked
+```

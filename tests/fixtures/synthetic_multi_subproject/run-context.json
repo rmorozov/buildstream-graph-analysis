@@ -9,5 +9,8 @@
     "DOWNLOAD": 2,
     "PROCESS": 4
   },
-  "max_jobs": 4
+  "max_jobs": 4,
+  "cpu_accounting": {
+    "effective_cpus": 4
+  }
 }

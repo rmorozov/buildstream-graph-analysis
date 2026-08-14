@@ -151,3 +151,99 @@ def test_dependencies_field_maps_to_predecessors_own_build_task():
     tasks = clamp_task_starts(normalized, ready_times, graph)
     b_track = next(t for t in tasks if t.task_key.element_uid == "b.bst")
     assert b_track.dependencies == ["a.bst|BUILD|BUILD|0"]
+
+
+# --- P1-27: cross-element gating must only apply to a task's own BUILD
+# task, sourced only from the predecessor's own BUILD finish - not any
+# task kind of either side. Getting this wrong let a downstream
+# TRACK/FETCH task's start get clamped past its own (earlier, real)
+# finish, producing a negative duration (I5 violation) and a false
+# ordering violation, on any element with more than one task kind. ---
+
+def test_successor_non_build_task_is_not_gated_by_predecessor():
+    """b.bst's TRACK task starts and finishes entirely before a.bst's
+    BUILD finishes - legitimate (fetching b's own sources doesn't need
+    a's build done) - so it must get ready_us == its own start, not
+    a.bst's BUILD finish."""
+    spans = [
+        _span("a.bst", 0, 100000, kind=TaskKind.BUILD, phase="BUILD"),
+        _span("b.bst", 0, 5000, kind=TaskKind.TRACK, phase="TRACK"),
+    ]
+    normalized = normalize_timestamps(spans, epsilon_us=1000)
+    deps = [DependencyEdge("a.bst", "b.bst")]
+    ready_times = compute_ready_times(normalized, deps)
+    assert ready_times["b.bst|TRACK|TRACK|0"] == 0
+
+
+def test_successor_build_task_is_gated_by_predecessors_own_build_finish_only():
+    """a.bst has both a BUILD (finishes early) and a later PUSH -
+    b.bst's BUILD must be gated by a.bst's BUILD finish specifically,
+    not a.bst's PUSH (a later, unrelated task kind)."""
+    spans = [
+        _span("a.bst", 0, 10000, kind=TaskKind.BUILD, phase="BUILD"),
+        _span("a.bst", 10000, 50000, kind=TaskKind.PUSH, phase="PUSH"),
+        _span("b.bst", 10000, 5000, kind=TaskKind.BUILD, phase="BUILD"),
+    ]
+    normalized = normalize_timestamps(spans, epsilon_us=1000)
+    deps = [DependencyEdge("a.bst", "b.bst")]
+    ready_times = compute_ready_times(normalized, deps)
+    assert ready_times["b.bst|BUILD|BUILD|0"] == 10000  # a's BUILD finish, not 60000 (PUSH finish)
+
+
+def test_multi_task_kind_element_never_produces_negative_duration_after_clamp():
+    """Regression guard for the exact I5 violation found in
+    tests/fixtures/synthetic_multi_subproject: b.bst's own TRACK
+    legitimately runs and finishes early (before a.bst's BUILD
+    completes) - clamping must never push b.bst's TRACK start past its
+    own real finish."""
+    spans = [
+        _span("a.bst", 0, 100000, kind=TaskKind.BUILD, phase="BUILD"),
+        _span("b.bst", 0, 5000, kind=TaskKind.TRACK, phase="TRACK"),
+        _span("b.bst", 100000, 20000, kind=TaskKind.BUILD, phase="BUILD"),
+    ]
+    normalized = normalize_timestamps(spans, epsilon_us=1000)
+    deps = [DependencyEdge("a.bst", "b.bst")]
+    ready_times = compute_ready_times(normalized, deps)
+    graph = Graph(elements=[], dependencies=deps)
+
+    tasks = clamp_task_starts(normalized, ready_times, graph)
+    for task in tasks:
+        assert task.dur_us >= 0, f"{task.task_key} has negative duration {task.dur_us}"
+    b_track = next(t for t in tasks if t.task_key.element_uid == "b.bst" and t.task_key.task_kind == TaskKind.TRACK)
+    assert b_track.start_us == 0
+    assert b_track.finish_us == 5000
+
+
+def test_successor_non_build_task_starting_early_is_not_a_false_ordering_violation():
+    """Same shape as above: b.bst's TRACK legitimately starts and
+    finishes before a.bst's BUILD - validate_ordering must not report
+    this as a violation (only the BUILD-to-BUILD edge is checked)."""
+    spans = [
+        _span("a.bst", 0, 100000, kind=TaskKind.BUILD, phase="BUILD"),
+        _span("b.bst", 0, 5000, kind=TaskKind.TRACK, phase="TRACK"),
+        _span("b.bst", 100000, 20000, kind=TaskKind.BUILD, phase="BUILD"),
+    ]
+    normalized = normalize_timestamps(spans, epsilon_us=1000)
+    deps = [DependencyEdge("a.bst", "b.bst")]
+    ready_times = compute_ready_times(normalized, deps)
+
+    violations = validate_ordering(normalized, deps, ready_times)
+    assert violations == []
+
+
+def test_genuine_build_to_build_ordering_violation_is_still_caught():
+    """b.bst's BUILD genuinely starts before a.bst's BUILD finishes -
+    a real violation, must still be reported even after scoping the
+    check to BUILD-to-BUILD only."""
+    spans = [
+        _span("a.bst", 0, 100000, kind=TaskKind.BUILD, phase="BUILD"),
+        _span("b.bst", 20000, 5000, kind=TaskKind.BUILD, phase="BUILD"),
+    ]
+    normalized = normalize_timestamps(spans, epsilon_us=1000)
+    deps = [DependencyEdge("a.bst", "b.bst")]
+    ready_times = compute_ready_times(normalized, deps)
+
+    violations = validate_ordering(normalized, deps, ready_times)
+    assert len(violations) == 1
+    assert violations[0]["predecessor"] == "a.bst"
+    assert violations[0]["successor"] == "b.bst"

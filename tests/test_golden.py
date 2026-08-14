@@ -1,0 +1,59 @@
+"""P3-08: golden/regression test.
+
+Runs the full pipeline (via the real CLI, subprocess - the same
+end-to-end path a user actually invokes) against a checked-in fixture
+and diffs the output against a checked-in expected snapshot, exactly.
+No tolerance of any kind: the pipeline is fully deterministic (Part 35/
+I11, see tests/unit/test_determinism.py), so any diff here is either a
+genuine behavior change (update the snapshot deliberately, see below)
+or a real regression.
+
+This is a coarse safety net on top of the targeted unit/invariant tests
+(P3-03 through P3-07) - it catches unintended drift in *any* output
+field, but doesn't explain *why* something changed. Don't add new
+correctness assertions here; add them to the targeted test files instead.
+
+## Regenerating the expected output after a deliberate behavior change
+
+    PYTHONPATH=. python3 -m bga.cli analyze \\
+        tests/fixtures/golden/mixed_task_kinds --format json --diagnostics \\
+        | python3 -m json.tool > tests/fixtures/golden/mixed_task_kinds/expected_output.json
+
+Then re-run this file and confirm the diff you expected is the only
+change (`git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json`).
+"""
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+GOLDEN_DIR = Path(__file__).parent / "fixtures" / "golden"
+
+
+def _run_analyze(fixture_dir: Path) -> dict:
+    cmd = [
+        sys.executable, "-m", "bga.cli", "analyze", str(fixture_dir),
+        "--format", "json", "--diagnostics",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"
+    return json.loads(proc.stdout)
+
+
+def test_mixed_task_kinds_golden_snapshot():
+    fixture_dir = GOLDEN_DIR / "mixed_task_kinds"
+    expected = json.loads((fixture_dir / "expected_output.json").read_text())
+    actual = _run_analyze(fixture_dir)
+    assert actual == expected
+
+
+def test_mixed_task_kinds_golden_snapshot_is_deterministic_across_runs():
+    """Two independent CLI invocations against the same fixture must
+    produce byte-identical output (Part 35/I11) - a weaker but
+    complementary check to the fixed-snapshot comparison above, since it
+    can't be fooled by an expected_output.json that was itself captured
+    from a nondeterministic run."""
+    fixture_dir = GOLDEN_DIR / "mixed_task_kinds"
+    first = _run_analyze(fixture_dir)
+    second = _run_analyze(fixture_dir)
+    assert first == second

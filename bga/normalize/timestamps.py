@@ -15,6 +15,7 @@ from typing import List, Dict, Optional, Tuple
 from ..ingest.models import (
     Graph,
     NormalizedTask,
+    TaskKind,
     TaskSpan,
     Trace,
     DependencyEdge,
@@ -218,12 +219,28 @@ def clamp_task_starts(
     Returns:
         List of NormalizedTask objects
     """
+    # Map element_uid -> its own BUILD task key (Part 32.2 - a `depends:`
+    # edge means the downstream element's work needs the upstream
+    # element's BUILD to have completed, not whichever task kind the
+    # downstream task itself happens to be - the same real-world
+    # semantics bga/analyzer.py::_compute_attribution's
+    # explicit_predecessors already uses, Part 5.2/P1-03). An upstream
+    # element with no BUILD task contributes no edge, rather than a
+    # wrong one. NormalizedTask.dependencies is only read by
+    # bga/replay/scheduler.py; getting it wrong under-constrains
+    # replay's readiness gating, which can under-schedule the replay
+    # makespan T_C below the certified LB, violating I2 (P1-26).
+    build_task_by_element: Dict[str, str] = {}
+    for span, _q_start, _q_finish in normalized_spans:
+        if span.task_key.task_kind == TaskKind.BUILD:
+            build_task_by_element[span.task_key.element_uid] = str(span.task_key)
+
     result = []
-    
+
     for span, q_start, q_finish in normalized_spans:
         task_key_str = str(span.task_key)
         ready_us = ready_times.get(task_key_str, q_start)
-        
+
         # Clamp start to ready time if necessary
         clamped_start = max(q_start, ready_us)
         if clamped_start > q_start:
@@ -234,15 +251,15 @@ def clamp_task_starts(
 
         # Finish time is immutable
         clamped_finish = q_finish
-        
+
         # Get dependencies for this task from the graph
         deps = []
         for dep_edge in graph.dependencies:
             if dep_edge.successor == span.task_key.element_uid:
-                # Construct predecessor task key (simplified - assumes same phase/kind)
-                pred_key = f"{dep_edge.predecessor}|{span.task_key.task_kind.value}|{span.task_key.phase}|0"
-                deps.append(pred_key)
-        
+                pred_key = build_task_by_element.get(dep_edge.predecessor)
+                if pred_key:
+                    deps.append(pred_key)
+
         result.append(NormalizedTask(
             task_key=span.task_key,
             ready_us=ready_us,

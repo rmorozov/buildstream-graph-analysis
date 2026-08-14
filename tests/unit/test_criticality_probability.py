@@ -101,3 +101,39 @@ def test_probabilities_are_bounded(tmp_path):
     run_dir = _write_diamond_run_dir(tmp_path)
     for data in _criticality(run_dir).values():
         assert 0.0 <= data["probability"] <= 1.0
+
+
+def test_graph_topology_built_once_not_per_sample(tmp_path, monkeypatch):
+    """Regression guard for P1-28 (Part 41.2: "reuse the graph topology
+    and avoid rebuilding graph structures" across Monte-Carlo samples).
+    _compute_perturbed_critical_path used to call build_element_graph/
+    compute_in_out_degree fresh on every one of num_samples (default
+    200) calls, rebuilding the same static topology 200x over - an
+    independent audit found this as a direct, literal deviation from
+    the spec's explicit instruction (not asymptotically wrong, since
+    each rebuild is still O(N+E), but wasteful). Both are now built
+    once by the caller and passed in."""
+    import bga.diagnostics.analyzer as diagnostics_module
+
+    run_dir = _write_diamond_run_dir(tmp_path)
+    call_counts = {"build_element_graph": 0, "compute_in_out_degree": 0}
+    real_build_element_graph = diagnostics_module.build_element_graph
+    real_compute_in_out_degree = diagnostics_module.compute_in_out_degree
+
+    def counting_build_element_graph(*args, **kwargs):
+        call_counts["build_element_graph"] += 1
+        return real_build_element_graph(*args, **kwargs)
+
+    def counting_compute_in_out_degree(*args, **kwargs):
+        call_counts["compute_in_out_degree"] += 1
+        return real_compute_in_out_degree(*args, **kwargs)
+
+    monkeypatch.setattr(diagnostics_module, "build_element_graph", counting_build_element_graph)
+    monkeypatch.setattr(diagnostics_module, "compute_in_out_degree", counting_compute_in_out_degree)
+
+    analyzer = BuildEfficiencyAnalyzer(run_dir, run_diagnostics=True)
+    analyzer.load()
+    analyzer.analyze()
+
+    assert call_counts["build_element_graph"] == 1
+    assert call_counts["compute_in_out_degree"] == 1

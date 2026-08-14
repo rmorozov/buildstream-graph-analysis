@@ -555,18 +555,28 @@ class DiagnosticsAnalyzer:
         """
         if not self.tasks:
             return []
-        
+
         # Seed RNG for determinism
         rng = random.Random(self.MC_RANDOM_SEED)
-        
+
         # Get base durations
         base_durations: Dict[str, int] = {
             str(t.task_key): t.dur_us for t in self.tasks
         }
-        
+
         # Track critical path appearances
         critical_counts: Dict[str, int] = defaultdict(int)
-        
+
+        # Graph topology (Part 41.2: "reuse the graph topology and avoid
+        # rebuilding graph structures - only durations and dynamic
+        # programming values vary") - identical across every sample,
+        # since only elem_durations changes per sample; built once here
+        # instead of inside the sampled function (P1-28: this used to
+        # rebuild predecessors/successors/in_degree from self.graph on
+        # every one of num_samples calls).
+        predecessors, successors = build_element_graph(self.graph)
+        in_degree, _ = compute_in_out_degree(self.graph)
+
         for _ in range(num_samples):
             # Perturb durations
             perturbed = {}
@@ -579,7 +589,9 @@ class DiagnosticsAnalyzer:
             # a genuine per-sample resample, not a cached/unperturbed
             # approximation. Returns element UIDs (critical path is
             # defined on the element graph, Part 24.1), not task keys.
-            perturbed_cp = self._compute_perturbed_critical_path(perturbed)
+            perturbed_cp = self._compute_perturbed_critical_path(
+                perturbed, predecessors, successors, in_degree,
+            )
 
             for elem_uid_on_path in perturbed_cp:
                 critical_counts[elem_uid_on_path] += 1
@@ -618,16 +630,21 @@ class DiagnosticsAnalyzer:
         
         return results
     
-    def _compute_perturbed_critical_path(self, perturbed_durations: Dict[str, int]) -> Set[str]:
+    def _compute_perturbed_critical_path(
+        self,
+        perturbed_durations: Dict[str, int],
+        predecessors: Dict[str, List[str]],
+        successors: Dict[str, List[str]],
+        in_degree: Dict[str, int],
+    ) -> Set[str]:
         """
         Compute critical path with perturbed durations.
-        
+
         Re-runs the longest path algorithm using the perturbed durations
-        to get a genuine Monte Carlo sample.
+        to get a genuine Monte Carlo sample. Graph topology
+        (predecessors/successors/in_degree) is passed in, built once by
+        the caller (Part 41.2) rather than rebuilt per sample here.
         """
-        # Build task graph with perturbed durations
-        # Use the same algorithm as compute_critical_path but with perturbed values
-        
         # Get element UIDs from task keys
         elem_durations: Dict[str, int] = {}
         for task_key_str, duration in perturbed_durations.items():
@@ -638,11 +655,7 @@ class DiagnosticsAnalyzer:
                 elem_durations[elem_uid] += duration
             else:
                 elem_durations[elem_uid] = duration
-        
-        # Run longest path algorithm with perturbed durations
-        predecessors, successors = build_element_graph(self.graph)
-        in_degree, _ = compute_in_out_degree(self.graph)
-        
+
         earliest_finish: Dict[str, int] = {}
         pred_on_critical: Dict[str, Optional[str]] = {}
         

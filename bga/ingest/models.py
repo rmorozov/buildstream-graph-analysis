@@ -75,6 +75,12 @@ class Element:
     uid: str
     cache_key: Optional[str] = None
     requested_target: bool = False
+    # BuildStream's own plugin kind (e.g. "import", "manual", "junction",
+    # "autotools") - not part of graph/v9's spec-mandated minimal schema
+    # (Part 32.2), an additive extension `tools/bst_show_to_graph.py`
+    # populates from real `bst show`'s `%{kind}` symbol. Not yet read by
+    # any analysis consumer - see docs/tasks/P4-12 for planned heuristics.
+    element_kind: Optional[str] = None
 
 
 @dataclass(frozen=True)

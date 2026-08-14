@@ -23,8 +23,8 @@ FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_p
 BST_AVAILABLE = shutil.which("bst") is not None
 
 
-def _record(name, key, build_deps, runtime_deps):
-    return FIELD_SEP.join([name, key, build_deps, runtime_deps])
+def _record(name, key, build_deps, runtime_deps, kind="import"):
+    return FIELD_SEP.join([name, key, kind, build_deps, runtime_deps])
 
 
 # --- Pure parser tests ------------------------------------------------
@@ -47,9 +47,27 @@ def test_parse_dep_list_multiple_with_embedded_newline():
 
 
 def test_build_graph_marks_requested_target():
-    stdout = _record("app.bst", "abc123", "[]", "[]") + RECORD_SEP
+    stdout = _record("app.bst", "abc123", "[]", "[]", kind="manual") + RECORD_SEP
     graph = build_graph(stdout, targets=["app.bst"])
-    assert graph["elements"] == [{"uid": "app.bst", "cache_key": "abc123", "requested_target": True}]
+    assert graph["elements"] == [{
+        "uid": "app.bst", "cache_key": "abc123", "requested_target": True, "element_kind": "manual",
+    }]
+
+
+def test_build_graph_captures_element_kind():
+    stdout = (
+        _record("sub.bst", "k1", "[]", "[]", kind="junction") + RECORD_SEP
+        + _record("app.bst", "k2", "[]", "[]", kind="autotools") + RECORD_SEP
+    )
+    graph = build_graph(stdout, targets=[])
+    kinds = {e["uid"]: e["element_kind"] for e in graph["elements"]}
+    assert kinds == {"sub.bst": "junction", "app.bst": "autotools"}
+
+
+def test_build_graph_empty_kind_becomes_null():
+    stdout = _record("app.bst", "k1", "[]", "[]", kind="") + RECORD_SEP
+    graph = build_graph(stdout, targets=[])
+    assert graph["elements"][0]["element_kind"] is None
 
 
 def test_build_graph_empty_cache_key_becomes_null():
@@ -107,6 +125,16 @@ def test_build_graph_skips_malformed_record():
     assert [e["uid"] for e in graph["elements"]] == ["app.bst"]
 
 
+def test_build_graph_skips_record_with_wrong_field_count():
+    """A record with 4 fields (the pre-element_kind shape) is exactly the
+    "malformed" case now - a future/different bst version changing
+    --format's output shape must be visible, not silently misparsed."""
+    four_field_record = FIELD_SEP.join(["old.bst", "k1", "[]", "[]"]) + RECORD_SEP
+    stdout = four_field_record + _record("app.bst", "k1", "[]", "[]") + RECORD_SEP
+    graph = build_graph(stdout, targets=[])
+    assert [e["uid"] for e in graph["elements"]] == ["app.bst"]
+
+
 # --- Real end-to-end test against a live `bst` binary ------------------
 
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
@@ -130,6 +158,15 @@ def test_real_bst_show_against_fixture_project(tmp_path):
     for elem in graph["elements"]:
         assert elem["cache_key"], f"{elem['uid']} has no cache_key"
 
+    # Every element in this fixture is `kind: import` (see
+    # tests/fixtures/bst_show_project/elements/*.bst); the junction
+    # dependency's own element is `kind: import` too (subproj/elements/libfoo.bst).
+    kinds = {e["uid"]: e["element_kind"] for e in graph["elements"]}
+    assert kinds == {
+        "base.bst": "import", "base2.bst": "import",
+        "subproj-junction.bst:libfoo.bst": "import", "app.bst": "import",
+    }
+
     output_json.write_text(json.dumps(graph))
 
 
@@ -149,3 +186,4 @@ def test_real_graph_output_loads_into_bga(tmp_path):
     }
     assert any(d.dependency_type == "runtime" for d in loaded.dependencies)
     assert any(d.dependency_type == "build" for d in loaded.dependencies)
+    assert all(e.element_kind == "import" for e in loaded.elements)

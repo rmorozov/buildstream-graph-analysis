@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
 
-from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind
+from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind, STRUCTURAL_ELEMENT_KINDS
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
@@ -550,6 +550,10 @@ class BuildEfficiencyAnalyzer:
         # Pipeline overhead (P4-14, non-spec additive signal) - see
         # docs/tasks/P4-14-cache-query-overhead-visibility.md
         result.pipeline_overhead = self._compute_pipeline_overhead(result.total_duration_us)
+
+        # Element-kind summary (P4-12 Direction 3, non-spec additive
+        # signal) - see docs/tasks/P4-12-element-kind-based-heuristics.md
+        result.element_kind_summary = self._compute_element_kind_summary()
         
         # Occupancy analysis (M0)
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)
@@ -642,6 +646,39 @@ class BuildEfficiencyAnalyzer:
                 'these as pipeline-level operations, not per-element tasks.'
             ),
         }
+
+    def _element_kind_lookup(self) -> Dict[str, str]:
+        """uid -> element_kind, defaulting to the explicit "unknown"
+        bucket (never silently omitted - P4-12's own Out of Scope: an
+        unrecognized/absent kind must never be misclassified, only
+        called out as genuinely unknown)."""
+        if not self.graph:
+            return {}
+        return {e.uid: (e.element_kind or "unknown") for e in self.graph.elements}
+
+    def _compute_element_kind_summary(self) -> dict:
+        """Aggregate stats grouped by element_kind (P4-12 Direction 3,
+        `bga graph --by-kind`) - count, total observed duration, average
+        duration, per kind. Purely additive/presentational: reads
+        already-computed per-task durations, changes no existing
+        computation. See
+        docs/tasks/P4-12-element-kind-based-heuristics.md.
+        """
+        if not self.graph:
+            return {}
+        duration_by_uid: Dict[str, int] = defaultdict(int)
+        for task in self.normalized_tasks:
+            duration_by_uid[task.task_key.element_uid] += task.dur_us
+
+        summary: Dict[str, dict] = {}
+        for elem in self.graph.elements:
+            kind = elem.element_kind or "unknown"
+            entry = summary.setdefault(kind, {"count": 0, "total_duration_us": 0})
+            entry["count"] += 1
+            entry["total_duration_us"] += duration_by_uid.get(elem.uid, 0)
+        for entry in summary.values():
+            entry["avg_duration_us"] = entry["total_duration_us"] / entry["count"] if entry["count"] else 0.0
+        return summary
 
     def _compute_confidence(self, graph_analysis: Optional[dict], attribution: dict, floors: dict) -> dict:
         """
@@ -817,6 +854,7 @@ class BuildEfficiencyAnalyzer:
         
         # Convert to signals dict format
         signals = {}
+        kind_by_uid = self._element_kind_lookup()
         
         # Wall-clock share (Part 20)
         if diag_result.wall_clock_shares:
@@ -840,6 +878,11 @@ class BuildEfficiencyAnalyzer:
                     'weighted_duration_us': br.downstream_weighted_duration_us,
                     'is_leaf': br.is_leaf,
                     'risk_score': br.risk_score,
+                    # P4-12 Direction 1/2 (non-spec, additive, presentation
+                    # only - never changes downstream_count/risk_score
+                    # above, which stay the real, directly-observed data).
+                    'element_kind': kind_by_uid.get(br.element_uid, 'unknown'),
+                    'is_structural_kind': kind_by_uid.get(br.element_uid) in STRUCTURAL_ELEMENT_KINDS,
                 }
                 for br in diag_result.blast_radius
             }
@@ -854,6 +897,10 @@ class BuildEfficiencyAnalyzer:
                     'probability': cp.probability,
                     'observed_critical': cp.observed_critical,
                     'slack_us': cp.observed_slack_us,
+                    # P4-12 Direction 1/2 (non-spec, additive, presentation
+                    # only) - see the blast_radius block above.
+                    'element_kind': kind_by_uid.get(cp.element_uid, 'unknown'),
+                    'is_structural_kind': kind_by_uid.get(cp.element_uid) in STRUCTURAL_ELEMENT_KINDS,
                 }
                 for cp in diag_result.criticality_probabilities
             }
@@ -874,6 +921,22 @@ class BuildEfficiencyAnalyzer:
                     la.element_uid for la in diag_result.leaf_analysis if la.is_leaf
                 ],
                 'deferrable_count': len(diag_result.deferrable_leaves),
+                # P4-12 Direction 2 / P4-15 Direction 2 (linked - see
+                # docs/tasks/P4-12-element-kind-based-heuristics.md's
+                # "Related tasks"): per-leaf element_kind, additive, never
+                # changes is_leaf/is_potentially_deferrable above (which
+                # stay real, directly-observed graph facts) - a `junction`/
+                # `stack` leaf's own recorded duration (if any) isn't real
+                # compute work, flagged here so a reader can weigh it
+                # accordingly rather than bga silently doing so for them.
+                'leaves_detail': {
+                    la.element_uid: {
+                        'element_kind': kind_by_uid.get(la.element_uid, 'unknown'),
+                        'is_structural_kind': kind_by_uid.get(la.element_uid) in STRUCTURAL_ELEMENT_KINDS,
+                        'is_potentially_deferrable': la.is_potentially_deferrable,
+                    }
+                    for la in diag_result.leaf_analysis if la.is_leaf
+                },
             }
         
         return signals
@@ -900,9 +963,15 @@ class BuildEfficiencyAnalyzer:
         from bga.structural.analyzer import build_edg
         edg = build_edg(self.graph)
         structural_analyzer = StructuralAnalyzer(edg, tasks_dict)
-        
+
         # Run full structural analysis
         result = structural_analyzer.run_full_analysis(historical_runs=None)
+
+        # Stack-consolidation advisory (P4-15 Direction 1, non-spec
+        # additive signal) - purely structural, no timing data used or
+        # changed. See docs/tasks/P4-15-stack-consolidation-heuristic.md.
+        from bga.structural.consolidation import find_consolidation_candidates
+        consolidation_candidates = find_consolidation_candidates(self.graph)
         
         # Convert to serializable dict format
         return {
@@ -948,6 +1017,12 @@ class BuildEfficiencyAnalyzer:
                 'total_deferrable_work_us': result.deferrability.total_deferrable_work_us,
             },
             'summary': result.summary,
+            # P4-15 Direction 1 (non-spec, additive, purely structural -
+            # no timing data used) - see
+            # docs/tasks/P4-15-stack-consolidation-heuristic.md. For a
+            # real, measured comparison of a flagged candidate's actual
+            # checkout cost, run the separate tools/bst_checkout_cost.py.
+            'consolidation_candidates': consolidation_candidates,
         }
     
     def get_summary(self) -> str:

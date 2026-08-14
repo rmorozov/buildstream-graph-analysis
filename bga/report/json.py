@@ -6,7 +6,7 @@ from ..ingest.models import AnalysisResult
 from ._shared import GRAPH_SIGNAL_KEYS
 
 
-def format_json(result: AnalysisResult, section: Optional[str] = None) -> str:
+def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
     """
     Format analysis results as JSON.
 
@@ -18,6 +18,8 @@ def format_json(result: AnalysisResult, section: Optional[str] = None) -> str:
             always lives under a `"floors"` key) - only which top-level
             keys are present differs, so existing `--format json`
             consumers of the full report see no shape change.
+        by_kind: Include element_kind_summary (P4-12 Direction 3, `bga
+            graph --by-kind`) - opt-in, same gating as the text report.
 
     Returns:
         JSON string suitable for machine processing
@@ -79,5 +81,8 @@ def format_json(result: AnalysisResult, section: Optional[str] = None) -> str:
 
     if section is None and hasattr(result, 'pipeline_overhead') and result.pipeline_overhead:
         data['pipeline_overhead'] = result.pipeline_overhead
+
+    if section in (None, 'graph') and by_kind and hasattr(result, 'element_kind_summary') and result.element_kind_summary:
+        data['element_kind_summary'] = result.element_kind_summary
 
     return _json.dumps(data, indent=2, default=str)

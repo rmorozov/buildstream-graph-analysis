@@ -72,12 +72,13 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
 
     analyzer = _make_analyzer(args)
     result = analyzer.analyze(run_dir)
+    by_kind = getattr(args, 'by_kind', False)
 
     if args.format == 'json':
-        return format_json(result, section=section)
+        return format_json(result, section=section, by_kind=by_kind)
     elif args.format == 'csv':
         return format_csv(result)
-    return format_text(result, section=section)
+    return format_text(result, section=section, by_kind=by_kind)
 
 
 def _produce_sweep_output(args: argparse.Namespace) -> str:
@@ -427,6 +428,12 @@ def create_parser() -> argparse.ArgumentParser:
         description='Report the static dependency graph (Part 5), critical path (Part 14.1), and structural metrics (M6).',
     )
     _add_common_arguments(graph_parser)
+    graph_parser.add_argument(
+        '--by-kind',
+        action='store_true',
+        help='Also show aggregate stats (count, total/avg observed duration) grouped by BuildStream '
+             'element_kind (P4-12, non-spec additive signal - see docs/tasks/P4-12-element-kind-based-heuristics.md)'
+    )
     graph_parser.set_defaults(func=cmd_graph)
 
     # floors - certified/advisory floors, matches spec's `bga floors RUN --cold` examples

@@ -265,6 +265,33 @@ several wrong assumptions turned out to hide behind:
     `action="main"` events as "not a real element task" (its own
     docstring). So `bga` has zero visibility into this cost today - not
     "measured as negligible," genuinely never measured. See `P4-14`.
+12. **`action="main"` is not exclusive to the blank-hash pipeline-level
+    phases above - real commands beyond `bst build` reuse it for
+    genuinely different things.** Confirmed against real BuildStream
+    2.7.0 runs of `bst source track`, `bst source checkout`, and `bst
+    artifact checkout`:
+    - `bst source track` wraps its own pipeline-level phases in a
+      `"Track"` bracket, not `"Build"` - both are real, both span the
+      entire invocation and are excluded from `pipeline_overhead`
+      (`WrapperTraceConverter._MAIN_ACTIVITY_WRAPPER_NAMES`); the
+      original `P4-14` implementation only excluded `"Build"`, a real
+      bug found and fixed while extending this.
+    - `bst source checkout`'s `"Staging sources"` and `bst artifact
+      checkout`'s `"Staging dependencies"`/`"Integrating sandbox"`/
+      `"Checking out files in ..."` are also logged under
+      `action="main"` - but with the checked-out element's own *real*
+      hash, not the blank pipeline-level one. The original `P4-14`
+      implementation routed *all* `action="main"` events into the
+      blank-hash-only `pipeline_overhead` bucket regardless of hash,
+      which would have mis-swept this genuinely per-element data into
+      the wrong bucket - also found and fixed (`handle_bst_event` now
+      only routes there when `hash_val` is blank).
+    - Neither `bst source checkout` nor `bst artifact checkout` has any
+      outer wrapper bracket at all - their logs start directly with
+      `"Loading elements"`.
+    See `tools/bst_checkout_cost.py` and
+    `docs/tasks/P4-15-stack-consolidation-heuristic.md` for what this
+    per-element checkout data is used for.
 
 ## Why a second, separate trace/v9 adapter
 
@@ -347,14 +374,30 @@ against a real BuildStream 2.7.0 install (source-level confirmation, see
 fact 11 above and `docs/tasks/P4-14-cache-query-overhead-visibility.md`
 / `docs/tasks/P4-15-stack-consolidation-heuristic.md`):
 
-1. **Per-element cache-query cost is real but currently invisible** -
-   confirmed (fact 11). Filed as `P4-14`, pending a real large-project
-   measurement before committing to a fix direction.
+1. **Per-element/pipeline-level cache-query cost is real and material** -
+   confirmed (fact 11) and, since, actually measured: a real
+   ~2000-element fully-cached rebuild showed `Resolving elements` +
+   `Query cache` were 87% of total wall time. `P4-14` is done - see its
+   Verification Log. `bga analyze`/`bga graph` now surface this as a
+   "Pipeline Overhead" report block.
 2. **`bst artifact checkout` on a `kind: stack` element genuinely
    batches sandbox setup and CAS export into one operation**, instead of
    one per checked-out element - confirmed directly from `_stream.py`'s
    `checkout()` (`_prepare_sandbox()`/`_export_artifact()` called once
-   for the whole scope). Filed as `P4-15`.
+   for the whole scope). **Important real caveat, also measured**: this
+   is *not* automatically a net win - a consolidated target's own
+   resolved closure can cost *more* pipeline overhead than several
+   narrow individual checkouts combined, if that closure is much larger
+   than what was actually needed (a real 1500-element measurement showed
+   exactly this - see `P4-15`'s Verification Log). `tools/bst_checkout_cost.py`
+   (a deliberately standalone tool, not part of `bga`'s core `analyze`
+   pipeline - a checkout invocation shares no horizon with a build
+   trace) reports the real, measured comparison for a given pair of
+   checkout logs rather than assuming the sign. `bga`'s own report also
+   gained a purely structural, non-timing advisory (`bga graph`'s
+   "Stack-Consolidation Candidates", P4-15 Direction 1): groups of
+   elements sharing the exact same immediate consumers, with no `stack`
+   already covering them.
 3. **Splitting a project into subprojects/junctions does *not* reduce
    per-element scheduler overhead** - checked against BuildStream's own
    queue implementations (`CacheQueryQueue`, `BuildQueue`, etc.), which

@@ -115,6 +115,16 @@ def compute_ready_times(
     genuinely independent element - ready at their own start time - not
     a new behavior, the same fallback root elements already used.
 
+    Gating also only applies to `build`-type edges (P4-11, Part 5.1/32.2):
+    a `runtime`-only dependency's product is only needed at *runtime*,
+    not staged before the successor's build starts - per BuildStream's
+    own semantics, "an element's runtime dependencies are not available
+    to the element at build time." A `runtime`-only edge therefore does
+    not gate the successor's BUILD readiness at all, same as having no
+    edge for readiness purposes (it still counts fully for structural
+    analysis - reachability, blast radius, leaf/deferrability, Part
+    24/25 - which reads `graph.dependencies` directly, unfiltered).
+
     Args:
         normalized_spans: Output from normalize_timestamps
         dependencies: List of dependency edges
@@ -122,10 +132,12 @@ def compute_ready_times(
     Returns:
         Dict mapping task key string to ready time in microseconds
     """
-    # Build predecessor map using element UIDs
+    # Build predecessor map using element UIDs - build-gating edges only.
     predecessors: Dict[str, List[str]] = {}  # successor -> list of predecessor element uids
 
     for dep in dependencies:
+        if dep.dependency_type == "runtime":
+            continue
         if dep.successor not in predecessors:
             predecessors[dep.successor] = []
         predecessors[dep.successor].append(dep.predecessor)
@@ -170,6 +182,11 @@ def validate_ordering(
     whenever a TRACK/FETCH task legitimately started before the
     dependency's build finished, which is normal, not an ordering bug.
 
+    Only `build`-type edges are checked (P4-11) - a `runtime`-only
+    dependency's BUILD is not required to finish before the successor's
+    BUILD starts (see compute_ready_times), so it would be a false
+    positive to flag that as an ordering violation.
+
     After quantization, small negative gaps should disappear.
     Large negative gaps indicate ordering violations.
 
@@ -189,8 +206,10 @@ def validate_ordering(
         if span.task_key.task_kind == TaskKind.BUILD:
             build_start_by_element[span.task_key.element_uid] = q_start
 
-    # Check each dependency
+    # Check each build-gating dependency
     for dep in dependencies:
+        if dep.dependency_type == "runtime":
+            continue
         pred_finish = element_build_finish.get(dep.predecessor)
         succ_start = build_start_by_element.get(dep.successor)
 
@@ -244,6 +263,11 @@ def clamp_task_starts(
     # bga/replay/scheduler.py; getting it wrong under-constrains
     # replay's readiness gating, which can under-schedule the replay
     # makespan T_C below the certified LB, violating I2 (P1-26).
+    #
+    # Only build-gating edges are included (P4-11) - a runtime-only
+    # dependency doesn't need to be staged before the successor's build
+    # starts (see compute_ready_times's identical filter), so replay
+    # must not gate the successor's readiness on it either.
     build_task_by_element: Dict[str, str] = {}
     for span, _q_start, _q_finish in normalized_spans:
         if span.task_key.task_kind == TaskKind.BUILD:
@@ -266,9 +290,11 @@ def clamp_task_starts(
         # Finish time is immutable
         clamped_finish = q_finish
 
-        # Get dependencies for this task from the graph
+        # Get build-gating dependencies for this task from the graph
         deps = []
         for dep_edge in graph.dependencies:
+            if dep_edge.dependency_type == "runtime":
+                continue
             if dep_edge.successor == span.task_key.element_uid:
                 pred_key = build_task_by_element.get(dep_edge.predecessor)
                 if pred_key:

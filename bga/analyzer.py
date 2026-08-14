@@ -361,14 +361,22 @@ class BuildEfficiencyAnalyzer:
         # contributes no edge, rather than a wrong one.
         #
         # The successor side is *every* task of the downstream element, not
-        # just its BUILD task - matching bga/normalize/timestamps.py's
-        # compute_ready_times, which already gates every task kind of a
-        # dependent element on its predecessors' finish (not just BUILD).
-        # Without this, a TRACK/FETCH task's real cross-element wait had no
-        # explicit_predecessors entry, so the blame-chain walk had no way to
-        # continue into the actual responsible predecessor once it reached
-        # such a task - it just stopped, silently dropping the segment that
-        # should have explained the wait.
+        # just its BUILD task - the same intra-element propagation
+        # bga/normalize/timestamps.py's clamp_task_starts gives every task
+        # kind of a dependent element access to (via NormalizedTask itself),
+        # even though ready-time *gating* (compute_ready_times) is scoped to
+        # BUILD only (P1-27). Without this, a TRACK/FETCH task's real
+        # cross-element wait had no explicit_predecessors entry, so the
+        # blame-chain walk had no way to continue into the actual
+        # responsible predecessor once it reached such a task - it just
+        # stopped, silently dropping the segment that should have explained
+        # the wait.
+        #
+        # Only build-gating edges are included (P4-11, same filter as
+        # compute_ready_times/clamp_task_starts) - a runtime-only
+        # dependency's BUILD finishing has no causal bearing on when the
+        # successor's own work can start, so it must not become a
+        # responsible predecessor in the blame chain either.
         build_task_by_element: Dict[str, str] = {}
         tasks_by_element: Dict[str, List[str]] = defaultdict(list)
         for task in self.normalized_tasks:
@@ -379,6 +387,8 @@ class BuildEfficiencyAnalyzer:
 
         explicit_predecessors: Dict[str, List[str]] = {}
         for dep in self.graph.dependencies:
+            if dep.dependency_type == "runtime":
+                continue
             pred_key = build_task_by_element.get(dep.predecessor)
             if not pred_key:
                 continue

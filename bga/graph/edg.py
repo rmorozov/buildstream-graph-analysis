@@ -17,50 +17,78 @@ from ..exceptions import AnalysisError
 logger = logging.getLogger(__name__)
 
 
-def build_element_graph(graph: Graph) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
+def build_element_graph(
+    graph: Graph,
+    exclude_dependency_types: Optional[Set[str]] = None,
+) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
     """
     Build adjacency lists for the Element Dependency Graph.
-    
+
     Args:
         graph: Input graph with elements and dependencies
-        
+        exclude_dependency_types: dependency_type values to omit from the
+            adjacency lists (P4-11). None (the default) includes every
+            edge, unfiltered - the right choice for purely structural
+            queries (reachability, blast radius, leaf/deferrability, Part
+            24/25), which must count a `runtime`-only edge just as much
+            as a `build`-type one. Pass `{"runtime"}` for the *gating*
+            chain specifically (compute_critical_path/compute_slack, Part
+            14.1) - a `runtime`-only edge doesn't actually constrain
+            build scheduling (BuildStream: "an element's runtime
+            dependencies are not available to the element at build
+            time"), so including it there would inflate T∞,observed
+            past what Part 14.1 itself claims it certifies ("no schedule
+            ... can complete faster than this value" - not true if the
+            value counts a non-gating edge as if it were gating).
+
     Returns:
         Tuple of (predecessors, successors) adjacency lists
     """
     predecessors: Dict[str, List[str]] = defaultdict(list)
     successors: Dict[str, List[str]] = defaultdict(list)
-    
+
     for dep in graph.dependencies:
+        if exclude_dependency_types and dep.dependency_type in exclude_dependency_types:
+            continue
         predecessors[dep.successor].append(dep.predecessor)
         successors[dep.predecessor].append(dep.successor)
-    
+
     return dict(predecessors), dict(successors)
 
 
 def compute_in_out_degree(
     graph: Graph,
+    exclude_dependency_types: Optional[Set[str]] = None,
 ) -> Tuple[Dict[str, int], Dict[str, int]]:
     """
     Compute in-degree and out-degree for all elements (Part 5.3).
-    
+
     Args:
         graph: Input graph
-        
+        exclude_dependency_types: see build_element_graph - must be
+            passed identically wherever this and build_element_graph are
+            used together for the same topological traversal (P4-11), or
+            the in-degree counts won't match what the (possibly
+            differently-filtered) adjacency lists actually decrement
+            during the sort, breaking it silently.
+
     Returns:
         Tuple of (in_degree, out_degree) dictionaries
     """
     in_degree: Dict[str, int] = defaultdict(int)
     out_degree: Dict[str, int] = defaultdict(int)
-    
+
     # Initialize all elements with zero degree
     for elem in graph.elements:
         in_degree[elem.uid] = 0
         out_degree[elem.uid] = 0
-    
+
     for dep in graph.dependencies:
+        if exclude_dependency_types and dep.dependency_type in exclude_dependency_types:
+            continue
         out_degree[dep.predecessor] += 1
         in_degree[dep.successor] += 1
-    
+
     return dict(in_degree), dict(out_degree)
 
 
@@ -414,19 +442,27 @@ def compute_critical_path(
 ) -> Tuple[int, List[str]]:
     """
     Compute observed critical path (Part 5.3, 14.1).
-    
+
     The critical path is the longest weighted path through the graph.
     T∞,observed = weighted longest path using observed durations
-    
+
+    Only `build`-type edges gate this traversal (P4-11) - Part 14.1
+    itself defines T∞,observed as a *certified* claim ("no schedule with
+    unlimited relevant capacity can complete faster than this value"),
+    which would be false if a `runtime`-only edge (not actually
+    constraining build scheduling - BuildStream's own semantics) were
+    counted as if it gated ordering: a real schedule could beat that
+    inflated value by simply not waiting on it.
+
     Args:
         graph: Input graph
         task_durations: Dict mapping element uid to duration in microseconds
-        
+
     Returns:
         Tuple of (critical_path_length, list of element UIDs on critical path)
     """
-    predecessors, successors = build_element_graph(graph)
-    in_degree, _ = compute_in_out_degree(graph)
+    predecessors, successors = build_element_graph(graph, exclude_dependency_types={"runtime"})
+    in_degree, _ = compute_in_out_degree(graph, exclude_dependency_types={"runtime"})
     
     # earliest_finish[elem] = earliest time elem can finish
     earliest_finish: Dict[str, int] = {}
@@ -501,20 +537,26 @@ def compute_slack(
 ) -> Dict[str, int]:
     """
     Compute slack for all elements (Part 5.3).
-    
+
     Slack = latest_start - earliest_start
     Elements on critical path have zero slack.
-    
+
+    Must use the same gating-only (`build`-type) graph traversal as
+    compute_critical_path (P4-11) - `critical_path_length` was computed
+    over that filtered graph, so computing earliest/latest start here
+    over a *different* (unfiltered) graph would produce internally
+    inconsistent, meaningless slack values.
+
     Args:
         graph: Input graph
         task_durations: Dict mapping element uid to duration
         critical_path_length: Length of critical path
-        
+
     Returns:
         Dict mapping element uid to slack in microseconds
     """
-    predecessors, successors = build_element_graph(graph)
-    in_degree, _ = compute_in_out_degree(graph)
+    predecessors, successors = build_element_graph(graph, exclude_dependency_types={"runtime"})
+    in_degree, _ = compute_in_out_degree(graph, exclude_dependency_types={"runtime"})
     
     # Compute earliest start times
     earliest_start: Dict[str, int] = {}

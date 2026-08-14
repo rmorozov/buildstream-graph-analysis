@@ -31,6 +31,15 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
 ]
+# Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
+# (tests/unit/test_bst_show_to_graph.py) - skipped automatically when
+# `bst` isn't on PATH, so this extra is optional, not part of `dev`.
+# Also needs the bubblewrap system package (`apt install bubblewrap` /
+# equivalent) and, for real (non-`kind: local`) projects,
+# buildstream-plugins - see docs/ingestion-pipeline.md.
+bst = [
+    "buildstream>=2.0",
+]
 
 [project.scripts]
 bga = "bga.cli:main"

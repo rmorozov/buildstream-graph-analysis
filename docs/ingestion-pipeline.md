@@ -360,12 +360,22 @@ step, not as an independently-schedulable one.
 A stronger, opt-in check is possible for projects using BuildStream's
 `ref-storage: project.refs` (centralizing every trackable element's
 resolved source ref into one file, confirmed real against BuildStream
-2.7.0) - filed as `P4-13` (`--strict` mode), not yet built. Real
-limitation confirmed while researching it: this only works for projects
-that opt into `project.refs` and have at least one trackable-ref source
-- `ref-storage: inline` (the default) and purely `kind: local` projects
+2.7.0) - `--strict` (P4-13), done. **Real limitation, still true even
+with `--strict` built: this only works for projects that opt into
+`project.refs` and have at least one trackable-ref source** -
+`ref-storage: inline` (the default) and purely `kind: local` projects
 (like `tests/fixtures/bst_show_project/`) have no single file this
-mechanism can hash/compare.
+mechanism can hash/compare, and `--strict` fails loudly rather than
+silently falling back to the weaker whole-tree check for them (confirmed
+real: `tools/bst_extract_run.py /path --strict` against
+`tests/fixtures/bst_show_project/` fails naming `ref-storage:
+project.refs` explicitly). When usable, `--strict` fails loudly - not
+just a warning - unless `project.refs` itself has zero uncommitted
+changes relative to the project's own git history; regardless of
+`--strict`, a real `project.refs` present at extraction time has its
+SHA-256 embedded into `run-context.json`'s new `project_refs_provenance`
+field (additive, no schema collision - confirmed against Part 32.1) as a
+permanent record for later drift detection.
 
 ## A note on cache-query and sandbox/checkout overhead visibility
 

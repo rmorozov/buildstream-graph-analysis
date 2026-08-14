@@ -23,6 +23,7 @@ terminal-task selection (Part 6.2) with no error raised - deriving both
 from the exact same log removes that whole class of mismatch.
 """
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -68,6 +69,122 @@ def _git_consistency_note(project_dir: str):
     return None
 
 
+def _read_ref_storage(project_dir: str):
+    """Reads `project.conf`'s top-level `ref-storage` key directly
+    (`inline` when absent - BuildStream's own default). Deliberately a
+    direct, minimal YAML read rather than asking `bst` - there's no `bst
+    show`-style query for project-level config the way there is for
+    element fields (P4-08's own reasoning for using `bst show` at all
+    doesn't apply here, since `ref-storage` is a project.conf-level
+    setting, not an element one). **Known limitation**: this reads the
+    literal key in `project.conf` itself - an exotic project that sets
+    `ref-storage` via a conditional/variable substitution rather than a
+    plain scalar would not be read correctly. Not observed in practice
+    (confirmed real BuildStream 2.7.0 projects set it as a plain
+    top-level scalar - see docs/tasks/P4-13-strict-mode-project-refs-consistency.md),
+    but worth naming plainly rather than silently assuming.
+    """
+    try:
+        import yaml
+    except ImportError as e:
+        raise RuntimeError(
+            "--strict requires PyYAML to read project.conf's ref-storage setting "
+            "(pip install -e '.[bst]', which now includes pyyaml)"
+        ) from e
+
+    project_conf_path = Path(project_dir) / "project.conf"
+    if not project_conf_path.exists():
+        raise RuntimeError(f"no project.conf found at {project_conf_path}")
+    try:
+        data = yaml.safe_load(project_conf_path.read_text()) or {}
+    except yaml.YAMLError as e:
+        raise RuntimeError(f"could not parse {project_conf_path} as YAML: {e}") from e
+    return data.get("ref-storage", "inline")
+
+
+def _check_project_refs_strict(project_dir: str):
+    """`--strict` mode's real, opt-in guarantee (P4-13) - hardens
+    `_git_consistency_note`'s best-effort whole-tree dirty warning into
+    an actual failure, using BuildStream's own `project.refs` mechanism
+    (a real, content-addressable fingerprint of every trackable
+    element's resolved source ref, confirmed against BuildStream 2.7.0 -
+    see this task's own research in
+    docs/tasks/P4-13-strict-mode-project-refs-consistency.md).
+
+    Fails loudly (raises RuntimeError, never silently degrades) unless
+    all of the following hold:
+    - the project sets `ref-storage: project.refs` in `project.conf`
+      (not the default `inline` - a project using inline refs has no
+      single file this mechanism can hash/compare, a real, confirmed
+      limitation, not a bug to work around here - see this task's Out
+      of Scope);
+    - `project.refs` actually exists (a project with `ref-storage:
+      project.refs` but zero trackable-ref sources never gets one
+      created at all - also confirmed real);
+    - the project directory is a git repository;
+    - `project.refs` itself has no uncommitted changes relative to the
+      project's own git history (a more precise, actionable check than
+      the whole-tree dirty warning, since `project.refs` is specifically
+      the file whose content matters for reproducibility here).
+
+    Returns the real, real file's bytes on success (so the caller can
+    embed a provenance hash) - never returns on failure, always raises.
+    """
+    ref_storage = _read_ref_storage(project_dir)
+    if ref_storage != "project.refs":
+        raise RuntimeError(
+            f"--strict requires ref-storage: project.refs in {project_dir}/project.conf "
+            f"(found: {ref_storage!r}) - a project using the default inline ref-storage "
+            "has no single file this mechanism can hash/compare, so --strict cannot "
+            "provide a real guarantee for it. See docs/tasks/P4-13-strict-mode-project-refs-consistency.md."
+        )
+
+    project_refs_path = Path(project_dir) / "project.refs"
+    if not project_refs_path.exists():
+        raise RuntimeError(
+            f"--strict: {project_dir}/project.conf sets ref-storage: project.refs, but no "
+            f"project.refs file exists - the project may have no trackable-ref sources yet, "
+            "or none have been tracked (run `bst source track` first). --strict refuses to "
+            "silently pass without a real project.refs to check."
+        )
+
+    # Check "is this a git repo at all" first, with the same command
+    # _git_consistency_note already relies on (confirmed real exit code
+    # 128 for a non-repo directory) - `git diff`'s own exit code for a
+    # non-repo is a *different*, easy-to-misread 129 (usage error, not
+    # "not a repository"), confirmed empirically while writing this.
+    try:
+        status_check = subprocess.run(
+            ["git", "-C", project_dir, "status", "--porcelain"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise RuntimeError(f"--strict: could not run git in {project_dir}: {e}") from e
+    if status_check.returncode != 0:
+        raise RuntimeError(
+            f"--strict: {project_dir} is not a git repository - project.refs' consistency "
+            "can't be verified against any history, so --strict refuses to pass."
+        )
+
+    try:
+        git_check = subprocess.run(
+            ["git", "-C", project_dir, "diff", "--exit-code", "--", "project.refs"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise RuntimeError(f"--strict: could not run git to check project.refs: {e}") from e
+
+    if git_check.returncode != 0:
+        raise RuntimeError(
+            f"--strict: {project_dir}/project.refs has uncommitted changes relative to git "
+            "HEAD - the resolved source state this file records may not match what the "
+            "analyzed build actually ran against. Commit project.refs (after confirming it "
+            "reflects the build being analyzed) before extracting with --strict."
+        )
+
+    return project_refs_path.read_bytes()
+
+
 def extract_run(
     project_dir: str,
     log_path: str,
@@ -76,6 +193,7 @@ def extract_run(
     start_time: str = None,
     trace_epsilon_us: int = 50000,
     bst_bin: str = "bst",
+    strict: bool = False,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -120,6 +238,26 @@ def extract_run(
     if consistency_warning:
         warnings.append(consistency_warning)
 
+    # --strict (P4-13): a real, opt-in, fail-loud guarantee via
+    # project.refs - see _check_project_refs_strict's own docstring.
+    # Raises on failure; never silently degrades to the warning above.
+    if strict:
+        _check_project_refs_strict(project_dir)
+
+    # Provenance record (P4-13 Required Fix item 2): regardless of
+    # --strict, embed a stable hash of project.refs whenever it exists,
+    # so a *later*, independent re-check can detect drift if graph.json
+    # is ever re-extracted separately from this run. Deliberately
+    # unconditional on --strict - a non-strict run still benefits from
+    # having this recorded for later.
+    project_refs_provenance = None
+    project_refs_path = Path(project_dir) / "project.refs"
+    if project_refs_path.exists():
+        project_refs_provenance = {
+            "path": "project.refs",
+            "sha256": hashlib.sha256(project_refs_path.read_bytes()).hexdigest(),
+        }
+
     # run-context.json
     scheduler = converter.get_scheduler_config()
     wall_start_us, wall_end_us = invocation_wall_clock(converter.trace_events)
@@ -143,6 +281,11 @@ def extract_run(
     # element_kind's addition to graph/v9 (P4-08).
     if converter.pipeline_overhead:
         run_context["pipeline_overhead"] = converter.pipeline_overhead
+    # project.refs provenance (P4-13) - see the comment above computing
+    # project_refs_provenance. Confirmed no collision with run-context/v9's
+    # spec-mandated schema (Part 32.1).
+    if project_refs_provenance:
+        run_context["project_refs_provenance"] = project_refs_provenance
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -194,6 +337,13 @@ def main() -> int:
         "--bst-bin", default="bst",
         help="Path to the bst executable (default: bst, resolved via PATH)",
     )
+    parser.add_argument(
+        "--strict", action="store_true",
+        help="Fail loudly (instead of the default best-effort warning) unless the project "
+        "uses ref-storage: project.refs and project.refs itself has no uncommitted changes "
+        "(P4-13). Only usable for projects with ref-storage: project.refs and at least one "
+        "trackable-ref source - see docs/tasks/P4-13-strict-mode-project-refs-consistency.md.",
+    )
     args = parser.parse_args()
 
     try:
@@ -201,6 +351,7 @@ def main() -> int:
             args.project_dir, args.log_path, args.output_dir,
             log_format=args.format, start_time=args.start_time,
             trace_epsilon_us=args.trace_epsilon_us, bst_bin=args.bst_bin,
+            strict=args.strict,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

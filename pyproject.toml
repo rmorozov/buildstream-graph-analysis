@@ -37,9 +37,12 @@ dev = [
 # `bst` isn't on PATH, so this extra is optional, not part of `dev`.
 # Also needs the bubblewrap system package (`apt install bubblewrap` /
 # equivalent) and, for real (non-`kind: local`) projects,
-# buildstream-plugins - see docs/ingestion-pipeline.md.
+# buildstream-plugins - see docs/ingestion-pipeline.md. pyyaml is for
+# tools/bst_extract_run.py's --strict mode (P4-13), which reads a real
+# project's project.conf directly to check ref-storage.
 bst = [
     "buildstream>=2.0",
+    "pyyaml>=6.0",
 ]
 
 [project.scripts]

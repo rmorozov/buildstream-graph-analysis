@@ -574,8 +574,17 @@ class DiagnosticsAnalyzer:
         # instead of inside the sampled function (P1-28: this used to
         # rebuild predecessors/successors/in_degree from self.graph on
         # every one of num_samples calls).
-        predecessors, successors = build_element_graph(self.graph)
-        in_degree, _ = compute_in_out_degree(self.graph)
+        #
+        # Only build-gating edges (P4-11) - criticality probability is
+        # "probability of being on the critical (gating) path under
+        # duration perturbation" (Part 26), the same critical-path
+        # concept compute_critical_path/compute_slack use (Part 14.1) -
+        # a runtime-only edge doesn't gate build scheduling, so including
+        # it here would make this Monte-Carlo path disagree with the
+        # analyzer's own single observed critical path over what "the
+        # critical path" even means.
+        predecessors, successors = build_element_graph(self.graph, exclude_dependency_types={"runtime"})
+        in_degree, _ = compute_in_out_degree(self.graph, exclude_dependency_types={"runtime"})
 
         for _ in range(num_samples):
             # Perturb durations

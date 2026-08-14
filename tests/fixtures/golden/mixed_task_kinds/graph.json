@@ -1,0 +1,12 @@
+{
+  "elements": [
+    {"uid": "base.bst", "cache_key": "cache-base-1", "requested_target": false},
+    {"uid": "lib.bst", "cache_key": "cache-lib-1", "requested_target": false},
+    {"uid": "app.bst", "cache_key": "cache-app-1", "requested_target": true},
+    {"uid": "extra.bst", "cache_key": "cache-extra-1", "requested_target": false}
+  ],
+  "dependencies": [
+    {"predecessor": "base.bst", "successor": "lib.bst", "dependency_type": "build"},
+    {"predecessor": "lib.bst", "successor": "app.bst", "dependency_type": "build"}
+  ]
+}

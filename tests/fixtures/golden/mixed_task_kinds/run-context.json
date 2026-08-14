@@ -1,0 +1,8 @@
+{
+  "trace_epsilon_us": 1000,
+  "wall_clock": {"start_us": 0, "end_us": 16000},
+  "host": "golden-fixture-host",
+  "resource_capacities": {"PROCESS": 2, "DOWNLOAD": 1},
+  "max_jobs": 2,
+  "cpu_accounting": {"effective_cpus": 2}
+}

@@ -149,26 +149,49 @@ class WrapperTraceConverter:
         # task), so this is a no-op there - verified byte-identical.
         self.active_tasks = {}
 
-        # BuildStream also logs a family of top-level, non-element-scoped
-        # "main:core activity" phases (Loading elements, Resolving
-        # elements, Initializing remote caches, Query cache), all wrapped
-        # by an outer "Build" bracket, before/around any real per-element
-        # FETCH/BUILD/PULL/PUSH work. These are real work with a real
-        # elapsed cost - confirmed material on a real ~2000-element
-        # fully-cached rebuild (P4-14) - but chrome_trace_to_bga_trace.py
-        # already, deliberately, drops action="main" events as "not a
-        # real element task" since they have no per-element TaskKind
-        # equivalent. Tracked here as a small, separate side list (never
-        # fed into active_tasks/trace_events - the general per-hash depth
+        # BuildStream also logs a family of top-level, blank-hash,
+        # non-element-scoped "main:core activity" phases (Loading
+        # elements, Resolving elements, Initializing remote caches, Query
+        # cache) before/around any real per-element FETCH/BUILD/PULL/PUSH
+        # work. These are real work with a real elapsed cost - confirmed
+        # material on a real ~2000-element fully-cached rebuild (P4-14) -
+        # but chrome_trace_to_bga_trace.py already, deliberately, drops
+        # action="main" events as "not a real element task" since they
+        # have no per-element TaskKind equivalent. Tracked here as a
+        # small, separate side list (never fed into
+        # active_tasks/trace_events - the general per-hash depth
         # collapsing above is for genuinely nested sub-phases of one real
         # task, not this) so a consumer can surface each phase's own
         # aggregate elapsed time as a single number - not a per-element
         # breakdown, since that's not what BuildStream's own log
         # provides. These phases are confirmed strictly sequential, never
-        # overlapping each other (only "Build" itself wraps them), so a
-        # simple stack suffices. "Build" itself is excluded from the
-        # recorded list - it spans the entire invocation and is redundant
-        # with the horizon bga already computes elsewhere.
+        # overlapping each other.
+        #
+        # A real `bst build` wraps them all in an outer "Build" bracket
+        # (also action="main", also blank hash); `bst source track` wraps
+        # them in "Track" instead (confirmed against a real build - see
+        # docs/ingestion-pipeline.md) - both spans the entire invocation
+        # and are redundant with the horizon bga already computes
+        # elsewhere, so both are excluded from the recorded list.
+        # `bst source checkout`/`bst artifact checkout` have no such
+        # outer wrapper at all (confirmed - their logs start directly
+        # with "Loading elements") - nothing to exclude there.
+        #
+        # Critically, action="main" is *also* used for genuinely
+        # per-element, real-hash-scoped work outside a plain `bst build`
+        # (e.g. `bst source checkout`'s "Staging sources" and `bst
+        # artifact checkout`'s "Staging dependencies"/"Integrating
+        # sandbox"/"Checking out files in ..." - all logged under the
+        # checked-out element's own real hash, confirmed against a real
+        # build). Those must NOT be swept into this blank-hash-only
+        # pipeline-level bucket - handle_bst_event only routes here when
+        # hash_val is blank; a real hash falls through to the normal
+        # active_tasks path below instead (see tools/bst_checkout_cost.py
+        # for the separate, standalone tool that extracts *that* data -
+        # checkout timing has no shared horizon with a build trace, so it
+        # deliberately isn't threaded into this converter's main
+        # trace/TaskKind output at all).
+        self._MAIN_ACTIVITY_WRAPPER_NAMES = {"Build", "Track"}
         self.pipeline_overhead = []
         self._main_activity_stack = []
 
@@ -295,7 +318,7 @@ class WrapperTraceConverter:
         action = action.strip()
         element = element.strip()
 
-        if action == "main":
+        if action == "main" and not hash_val.strip():
             self._handle_main_activity(ts, status, msg)
             return
 
@@ -367,9 +390,9 @@ class WrapperTraceConverter:
             # happen in a real log, ignore defensively.
             return
         frame = self._main_activity_stack.pop()
-        if frame["phase"] == "Build":
-            # The outermost wrapper spans the entire invocation - redundant
-            # with the horizon bga already computes elsewhere.
+        if frame["phase"] in self._MAIN_ACTIVITY_WRAPPER_NAMES:
+            # The outermost command wrapper spans the entire invocation -
+            # redundant with the horizon bga already computes elsewhere.
             return
         self.pipeline_overhead.append({
             "phase": frame["phase"],

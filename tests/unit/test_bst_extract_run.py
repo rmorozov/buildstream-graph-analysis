@@ -143,3 +143,42 @@ def test_different_target_lists_produce_different_requested_targets(tmp_path):
     assert targets_b == ["base2.bst"]
     assert requested_b == {"base2.bst"}
     assert requested_a != requested_b
+
+
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
+    """P4-14: rebuilding an already-built project logs a real "Query
+    cache" pipeline-level activity (see docs/ingestion-pipeline.md fact
+    11) - confirm it round-trips into run-context.json's
+    `pipeline_overhead` field and that bga's own report picks it up, even
+    though `bst`'s own per-element FETCH/BUILD queues are entirely empty
+    for a fully-cached rebuild (fact 9)."""
+    import os
+
+    env = {"HOME": str(tmp_path), "PATH": os.environ["PATH"]}
+
+    # First build populates the cache.
+    subprocess.run(
+        ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
+        capture_output=True, text=True, env=env,
+    )
+    # Second build is fully cached - this is the log we extract from.
+    proc = subprocess.run(
+        ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
+        capture_output=True, text=True, env=env,
+    )
+    log_path = tmp_path / "cached_rebuild.log"
+    log_path.write_text(proc.stdout + proc.stderr)
+
+    out_dir = tmp_path / "run"
+    extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto")
+
+    run_context = json.loads((out_dir / "run-context.json").read_text())
+    phases = {e["phase"] for e in run_context.get("pipeline_overhead", [])}
+    assert "Query cache" in phases
+    assert "Build" not in phases
+
+    from bga import analyze_run
+    from bga.report.text import format_text
+    result = analyze_run(out_dir)
+    assert "Pipeline Overhead" in format_text(result)

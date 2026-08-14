@@ -154,6 +154,36 @@ def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:
     return lines
 
 
+def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
+    """Pipeline-level overhead block (P4-14) - BuildStream's own
+    top-level "main:core activity" phases (Query cache, Resolving
+    elements, etc.) are real work with a real elapsed cost, confirmed
+    material on a real large-project rebuild (see
+    docs/tasks/P4-14-cache-query-overhead-visibility.md), but they are
+    not attributable to any individual element - only to the pipeline as
+    a whole. This is deliberately a coarse, one-number-per-phase signal,
+    never a fabricated per-element breakdown: BuildStream's own log
+    doesn't provide more precision than this.
+    """
+    lines: List[str] = []
+    overhead = getattr(result, 'pipeline_overhead', None) or {}
+    phases = overhead.get('phases') or []
+    if not phases:
+        return lines
+
+    lines.append("Pipeline Overhead (not attributable to individual elements):")
+    for entry in phases:
+        lines.append(f"  {entry.get('phase', '?'):25s} {entry.get('elapsed_us', 0) / 1e6:8.2f}s")
+    total_us = overhead.get('total_us', 0)
+    fraction = overhead.get('fraction_of_horizon')
+    if fraction is not None:
+        lines.append(f"  Total: {total_us / 1e6:.2f}s ({fraction * 100:.1f}% of total duration)")
+    else:
+        lines.append(f"  Total: {total_us / 1e6:.2f}s")
+    lines.append("")
+    return lines
+
+
 def format_text(result: AnalysisResult, section: Optional[str] = None) -> str:
     """
     Format analysis results as human-readable text.
@@ -312,6 +342,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None) -> str:
                     f"max={parallelism.get('max_width', 0):.1f}x"
                 )
             lines.append("")
+
+    if section is None:
+        lines.extend(_format_pipeline_overhead(result))
 
     lines.append("=" * 60)
     return "\n".join(lines)

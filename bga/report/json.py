@@ -77,4 +77,7 @@ def format_json(result: AnalysisResult, section: Optional[str] = None) -> str:
     if section is None and hasattr(result, 'model') and result.model:
         data['model'] = result.model
 
+    if section is None and hasattr(result, 'pipeline_overhead') and result.pipeline_overhead:
+        data['pipeline_overhead'] = result.pipeline_overhead
+
     return _json.dumps(data, indent=2, default=str)

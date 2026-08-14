@@ -109,8 +109,18 @@ def test_performance_scales_subquadratically(tmp_path):
     (bga/graph/edg.py), and _build_dependency_graph (via constructing a
     BlameChainAnalyzer, bga/attribution/blame_chain.py). O(N^2) would be
     roughly 16x slower at 4x the size; O(N+E) should be far less than
-    that. Generous threshold (8x) to keep this robust against CI noise
-    while still catching a real quadratic regression.
+    that (~4x). Threshold (10x) and taking the min of several repeats
+    (not a single sample) to keep this robust against CI noise while
+    still catching a real quadratic regression - the single-sample,
+    8x-threshold version of this test produced a real false positive on
+    GitHub Actions' shared runners (P4-06, first time this suite ran on
+    real CI infrastructure rather than a consistent sandboxed dev
+    environment): 9.0x on one trial, entirely plausible noise for
+    sub-50ms measurements on a shared VM, not a regression - confirmed
+    by the fact it passed cleanly in the same CI run's other matrix
+    legs. min-of-repeats is the standard fix for exactly this class of
+    noise in microbenchmarks (a single slow trial can't drag the result
+    down the way it can drag a mean up).
 
     Deliberately does NOT time the full analyze_graph()/analyze_run()
     pipeline: profiling found that end-to-end timing is dominated by two
@@ -125,7 +135,7 @@ def test_performance_scales_subquadratically(tmp_path):
     small_dir = _linear_chain_run_dir(tmp_path / "small", 500)
     large_dir = _linear_chain_run_dir(tmp_path / "large", 2000)
 
-    def _timed(run_dir):
+    def _timed_once(run_dir):
         rc, g, tr = load_all(run_dir)
         tasks, _ = normalize_trace(tr, g, rc.trace_epsilon_us)
         durations = {t.task_key.element_uid: t.dur_us for t in tasks}
@@ -136,11 +146,14 @@ def test_performance_scales_subquadratically(tmp_path):
         BlameChainAnalyzer(tasks)  # runs _build_dependency_graph
         return time.perf_counter() - start
 
-    small_elapsed = _timed(small_dir)
-    large_elapsed = _timed(large_dir)
+    def _timed_min(run_dir, repeats=5):
+        return min(_timed_once(run_dir) for _ in range(repeats))
+
+    small_elapsed = _timed_min(small_dir)
+    large_elapsed = _timed_min(large_dir)
 
     ratio = large_elapsed / small_elapsed if small_elapsed > 0 else float('inf')
-    assert ratio < 8.0, (
+    assert ratio < 10.0, (
         f"4x graph size took {ratio:.1f}x longer ({small_elapsed:.4f}s -> "
-        f"{large_elapsed:.4f}s) - looks quadratic, not O(N+E)"
+        f"{large_elapsed:.4f}s, min of 5 repeats each) - looks quadratic, not O(N+E)"
     )

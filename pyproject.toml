@@ -31,15 +31,22 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.6",
+    # tools/bst_extract_run.py --strict mode's project.conf reader
+    # (P4-13). Listed here too (not just under `bst` below) because most
+    # of its own unit tests (tests/unit/test_bst_extract_run_strict.py)
+    # are hermetic - real `git`, no real `bst` needed - and must run
+    # under plain `pip install -e ".[dev]"` (what CI installs, since the
+    # `bst` extra needs the bubblewrap system package CI doesn't have) -
+    # a real CI failure (ModuleNotFoundError: yaml) caught this being
+    # missing from here originally.
+    "pyyaml>=6.0",
 ]
 # Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
 # (tests/unit/test_bst_show_to_graph.py) - skipped automatically when
 # `bst` isn't on PATH, so this extra is optional, not part of `dev`.
 # Also needs the bubblewrap system package (`apt install bubblewrap` /
 # equivalent) and, for real (non-`kind: local`) projects,
-# buildstream-plugins - see docs/ingestion-pipeline.md. pyyaml is for
-# tools/bst_extract_run.py's --strict mode (P4-13), which reads a real
-# project's project.conf directly to check ref-storage.
+# buildstream-plugins - see docs/ingestion-pipeline.md.
 bst = [
     "buildstream>=2.0",
     "pyyaml>=6.0",

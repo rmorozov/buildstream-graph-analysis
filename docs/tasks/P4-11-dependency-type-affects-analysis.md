@@ -1,6 +1,6 @@
 # P4-11: `dependency_type` (build vs. runtime) doesn't affect analysis anywhere
 
-**Priority:** P4 | **Status:** 🔴 Not Started | **Depends on:** `P4-10` (done - the real ingestion pipeline that can now supply genuine `dependency_type`-carrying input to test against, not only synthetic fixtures)
+**Priority:** P4 | **Status:** 🟢 Fixed & Verified (2026-08-14) | **Depends on:** `P4-10` (done - the real ingestion pipeline that can now supply genuine `dependency_type`-carrying input to test against, not only synthetic fixtures)
 
 ## Spec Reference
 Part 5.1 (`build`/`runtime` dependency scope, explicit in the graph model), Part 32.2 (`graph/v9`'s `dependency_type` field), Part 7 (ready-time gating), Part 24/25 (leaf/deferrability, blast radius - structural analysis).
@@ -27,5 +27,39 @@ Per BuildStream's own semantics (confirmed via its docs while researching `P4-08
 ## Acceptance Test
 A fixture with two elements: A is a `runtime`-only dependency of B, with A's BUILD finishing *after* B's BUILD would otherwise be ready to start (e.g. no other constraint). B's BUILD must NOT be gated on A's BUILD finish (ready_us should not be pushed back by A), while a structural query (e.g. `is_reachable(A, B)`) must still return true. A parallel fixture with A as a `build`-type dependency of B under the same timing must show the existing gating behavior unchanged (regression).
 
+## What was built
+Filtered every ready-time/ordering/critical-path *gating* consumer to `build`-type edges only, while deliberately leaving every purely-structural consumer (reachability, blast radius, leaf/deferrability, `unweighted_depth`/`weighted_depth`, dominators - Part 24/25) reading the full, unfiltered graph:
+
+- `bga/normalize/timestamps.py::compute_ready_times`/`validate_ordering`/`clamp_task_starts` - the predecessor maps and `NormalizedTask.dependencies` now skip `dependency_type == "runtime"` edges.
+- `bga/analyzer.py`'s `explicit_predecessors` construction (feeds the blame-chain's "responsible predecessor" selection, Part 7.1) - same filter.
+- **`bga/graph/edg.py::compute_critical_path`/`compute_slack`** (Part 14.1, T∞,observed): found and fixed a **more severe issue than the task's original ready-time-only scope** while verifying the acceptance-test fixture - `compute_critical_path` was summing a `runtime`-only edge's duration into the "critical path" as if it gated ordering, which directly contradicts Part 14.1's own certification claim ("no schedule with unlimited relevant capacity can complete faster than this value" - false if the value counts a non-gating edge as gating; a real schedule could beat it by simply not waiting on that edge). Added an `exclude_dependency_types` parameter to `build_element_graph`/`compute_in_out_degree` (default `None` = unfiltered, preserving every other call site's behavior exactly) and passed `{"runtime"}` from `compute_critical_path`/`compute_slack` (which must stay mutually consistent - `compute_slack` consumes `compute_critical_path`'s output) and from `bga/diagnostics/analyzer.py`'s Monte-Carlo criticality-probability sampling (Part 26, the same critical-path concept under perturbation - would otherwise disagree with the analyzer's own single observed critical path over what "the critical path" means).
+- Confirmed via `tests/fixtures/synthetic_multi_subproject/`'s own model (hardcodes `dependency_type: "build"` for every edge) that this is a genuine no-op for every existing pinned fixture - byte-identical results.
+- Verified against **real typed input** from the completed `P4-10` pipeline: `tests/fixtures/bst_show_project/` already has a genuine `runtime`-only edge (`subproj-junction.bst:libfoo.bst -> app.bst`) - a real end-to-end run (`bst_extract_run.py` + `bga analyze`) completes with no errors and no ordering-violation false positives.
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+```
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_dependency_type_gating.py -v
+10 passed   # direct unit tests on compute_ready_times/validate_ordering/
+            # clamp_task_starts/compute_critical_path/compute_reachability,
+            # plus one end-to-end test via analyze_run
+
+$ PYTHONPATH=. python3 -m pytest tests/test_synthetic_multi_subproject.py -q
+16 passed   # flagship fixture unaffected - every edge is dependency_type:
+            # "build" there, confirming the filter is a genuine no-op
+
+$ PYTHONPATH=. python3 -m pytest tests/ -q
+324 passed (with bst on PATH) / 320 passed, 4 skipped (without)   # was 314/310+4
+
+# Real end-to-end run against tests/fixtures/bst_show_project's genuine
+# runtime-only edge (subproj-junction.bst:libfoo.bst -> app.bst):
+$ bst -C tests/fixtures/bst_show_project build app.bst > real_build.log 2>&1
+$ PYTHONPATH=. python3 tools/bst_extract_run.py tests/fixtures/bst_show_project real_build.log /tmp/extracted_run
+$ PYTHONPATH=. python3 -m bga.cli analyze /tmp/extracted_run
+# full report produced, no crash, no false-positive ordering violations
+
+$ PYTHONPATH=. python3 tests/test_e2e.py
+Results: 7 passed, 0 failed
+
+$ make check-clean
+OK: no ignored files are tracked
+```

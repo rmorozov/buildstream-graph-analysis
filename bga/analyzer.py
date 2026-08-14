@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
 
-from .ingest.models import AnalysisResult, Graph, RunContext, Trace, PhaseSpan, TaskKind
+from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .graph.edg import analyze_graph
-from .attribution.blame_chain import BlameChainAnalyzer, AttributionSegment
+from .attribution.blame_chain import BlameChainAnalyzer
 from .floors import (
     compute_capacity_lower_bound,
     compute_cold_floor,
@@ -22,16 +22,15 @@ from .floors import (
     compute_exclusive_serialization_bound,
     compute_t_infinity_observed,
 )
-from .replay.scheduler import ReplayScheduler, compute_replay_makespan
+from .replay.scheduler import ReplayScheduler
 from .utilisation import (
     CPUAccounting,
     UtilizationAnalyzer,
-    analyze_utilization,
     compute_rebuild_tasks,
     compute_retry_tasks,
 )
-from .diagnostics import DiagnosticsAnalyzer, analyze_diagnostics, DiagnosticsResult
-from .structural import StructuralAnalyzer, StructuralAnalysisResult
+from .diagnostics import analyze_diagnostics
+from .structural import StructuralAnalyzer
 from .validation import compute_confidence
 
 logger = logging.getLogger(__name__)
@@ -859,7 +858,7 @@ class BuildEfficiencyAnalyzer:
         tasks_dict = {t.task_key.element_uid: t for t in self.normalized_tasks}
         
         # Initialize structural analyzer
-        from bga.structural.analyzer import build_edg, ElementDependencyGraph
+        from bga.structural.analyzer import build_edg
         edg = build_edg(self.graph)
         structural_analyzer = StructuralAnalyzer(edg, tasks_dict)
         

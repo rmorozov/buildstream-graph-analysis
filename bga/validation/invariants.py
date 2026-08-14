@@ -18,7 +18,7 @@ cold_confidence stays fully separate (already lives in floors, from
 bga.floors.cold.compute_cold_floor - never read or written here).
 """
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from ..ingest.models import Graph, NormalizedTask, RunContext, Trace
 from ..occupancy.sweep import compute_task_horizon

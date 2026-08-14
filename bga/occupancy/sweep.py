@@ -18,7 +18,7 @@ from typing import List, Dict, Set, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import IntEnum
 
-from ..ingest.models import NormalizedTask, Resource, PhaseSpan
+from ..ingest.models import NormalizedTask, Resource
 
 logger = logging.getLogger(__name__)
 

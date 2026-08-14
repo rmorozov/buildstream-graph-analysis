@@ -30,6 +30,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "ruff>=0.6",
 ]
 # Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
 # (tests/unit/test_bst_show_to_graph.py) - skipped automatically when
@@ -45,14 +46,29 @@ bst = [
 bga = "bga.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/your-org/bga"
-Documentation = "https://github.com/your-org/bga/blob/main/docs/cli.md"
-Repository = "https://github.com/your-org/bga"
-Specification = "https://github.com/your-org/bga/blob/main/docs/specification.md"
+Homepage = "https://github.com/rmorozov/buildstream-graph-analysis"
+Documentation = "https://github.com/rmorozov/buildstream-graph-analysis/blob/main/docs/cli.md"
+Repository = "https://github.com/rmorozov/buildstream-graph-analysis"
+Specification = "https://github.com/rmorozov/buildstream-graph-analysis/blob/main/docs/specification.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["bga*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+# Deliberately small, high-value rule set to start (P4-04): pyflakes
+# (F) only - unused imports/variables, undefined names, obvious bugs.
+# No style/formatting rules (E/W/line-length enforcement) yet - a
+# from-scratch strict config on an existing ~30-module codebase risks
+# either a wall of unrelated noise or blanket-suppressing everything.
+# Widen the rule set in a later, separate task once the team has
+# opinions on style rules (line length, quote style, etc.) - see
+# docs/tasks/P4-04-basic-python-linting.md's own scoping note.
+select = ["F"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

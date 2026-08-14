@@ -149,6 +149,29 @@ class WrapperTraceConverter:
         # task), so this is a no-op there - verified byte-identical.
         self.active_tasks = {}
 
+        # BuildStream also logs a family of top-level, non-element-scoped
+        # "main:core activity" phases (Loading elements, Resolving
+        # elements, Initializing remote caches, Query cache), all wrapped
+        # by an outer "Build" bracket, before/around any real per-element
+        # FETCH/BUILD/PULL/PUSH work. These are real work with a real
+        # elapsed cost - confirmed material on a real ~2000-element
+        # fully-cached rebuild (P4-14) - but chrome_trace_to_bga_trace.py
+        # already, deliberately, drops action="main" events as "not a
+        # real element task" since they have no per-element TaskKind
+        # equivalent. Tracked here as a small, separate side list (never
+        # fed into active_tasks/trace_events - the general per-hash depth
+        # collapsing above is for genuinely nested sub-phases of one real
+        # task, not this) so a consumer can surface each phase's own
+        # aggregate elapsed time as a single number - not a per-element
+        # breakdown, since that's not what BuildStream's own log
+        # provides. These phases are confirmed strictly sequential, never
+        # overlapping each other (only "Build" itself wraps them), so a
+        # simple stack suffices. "Build" itself is excluded from the
+        # recorded list - it spans the entire invocation and is redundant
+        # with the horizon bga already computes elsewhere.
+        self.pipeline_overhead = []
+        self._main_activity_stack = []
+
     def get_scheduler_config(self):
         """Real (or defaulted) scheduler concurrency limits as observed in
         the log - see DEFAULT_* module constants for the fallback values
@@ -272,6 +295,10 @@ class WrapperTraceConverter:
         action = action.strip()
         element = element.strip()
 
+        if action == "main":
+            self._handle_main_activity(ts, status, msg)
+            return
+
         if status == "START":
             if hash_val in self.active_tasks:
                 # Nested sub-phase of an already-open task (same hash+action) -
@@ -324,6 +351,30 @@ class WrapperTraceConverter:
                     },
                 }
             )
+
+    def _handle_main_activity(self, ts, status, msg):
+        """Track BuildStream's top-level "main:core activity" phases
+        (see the `pipeline_overhead`/`_main_activity_stack` comment in
+        __init__) - a small, separate stack, deliberately not routed
+        through active_tasks/trace_events at all.
+        """
+        phase = msg.strip()
+        if status == "START":
+            self._main_activity_stack.append({"phase": phase, "start_ts": ts})
+            return
+        if not self._main_activity_stack:
+            # Unmatched terminal status with nothing open - shouldn't
+            # happen in a real log, ignore defensively.
+            return
+        frame = self._main_activity_stack.pop()
+        if frame["phase"] == "Build":
+            # The outermost wrapper spans the entire invocation - redundant
+            # with the horizon bga already computes elsewhere.
+            return
+        self.pipeline_overhead.append({
+            "phase": frame["phase"],
+            "elapsed_us": ts - frame["start_ts"],
+        })
 
     def process_line(self, line):
         """Process one line, auto-detecting wrapped vs. raw format per

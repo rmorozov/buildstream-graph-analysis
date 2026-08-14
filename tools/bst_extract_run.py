@@ -137,6 +137,12 @@ def extract_run(
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:
         warnings.append("no bst-invocation span found - wall_clock omitted from run-context.json")
+    # BuildStream's own top-level pipeline overhead (Query cache,
+    # Resolving elements, etc. - P4-14), if the log has any. A non-spec,
+    # additive extension of run-context/v9 (Part 32.1), same precedent as
+    # element_kind's addition to graph/v9 (P4-08).
+    if converter.pipeline_overhead:
+        run_context["pipeline_overhead"] = converter.pipeline_overhead
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

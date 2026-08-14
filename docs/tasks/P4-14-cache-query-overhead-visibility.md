@@ -1,6 +1,6 @@
 # P4-14: Surface BuildStream's cache-query overhead as a reportable signal
 
-**Priority:** P4 | **Status:** 🔴 Not Started (needs a real large-project measurement before committing to a direction) | **Depends on:** `P4-10` (real ingestion pipeline this would extend)
+**Priority:** P4 | **Status:** 🟢 Fixed & Verified (2026-08-14) - aggregate pipeline-level signal (Candidate Direction 2); the remote-cache per-element `Cache-query` case (Candidate Direction 1) remains unimplemented, see "What was built" | **Depends on:** `P4-10` (real ingestion pipeline this extends)
 
 ## Spec Reference
 Not spec-mandated - `docs/specification.md` has zero matches for "CAS", "sandbox", "Query cache", or "cache-query" (confirmed via grep). This is `bga`'s own added heuristic, same non-spec territory as `P4-12`/`P4-13`.
@@ -45,5 +45,63 @@ Whether either case sums to a *material* fraction of wall-clock time on a large 
 - A real, large (thousands-of-elements-scale, or as large as practically constructible) project's actual "Query cache" elapsed value measured and reported, to settle whether Candidate Direction 3 (do nothing further) applies.
 - If the remote-cache per-element case is pursued: a real log excerpt from an actual remote-cache-configured build showing the `Cache-query` action's real line format, captured before writing any parsing code for it.
 
+## What was built
+The real large-project measurement (Acceptance Test item 2) settled the direction: a real, freshly-installed BuildStream 2.7.0, a from-scratch 2001-element project (2000 `kind: import` elements + one `kind: stack` depending on all of them), built once (cold) then rebuilt (fully cached). On the fully-cached rebuild, total wall clock (BuildStream's own "Build" elapsed) was 8s - of that, "Resolving elements" alone was 5s and "Query cache" was 2s, **7 of 8 seconds (87%) of total wall time**, entirely outside any per-element FETCH/BUILD/PULL/PUSH task bga could see. This settled Candidate Direction 3 ("do nothing further") as **not applicable** - the cost is real and material, not negligible. It also showed "Resolving elements" (not "Query cache") was the larger of the two on this fixture, so the fix was scoped to the whole `main:core activity` phase family (Loading elements / Resolving elements / Initializing remote caches / Query cache), not `Query cache` alone, which the original Background section had focused on before this measurement.
+
+Implemented (Candidate Direction 2 - aggregate, per-phase pipeline-level numbers, not a per-element breakdown):
+- `tools/bst_log_to_chrome_trace.py`'s `WrapperTraceConverter`: `action == "main"` events are now tracked via a small, separate stack (`_main_activity_stack`) into a new `pipeline_overhead` list (`{"phase": str, "elapsed_us": int}` per completed phase) - deliberately never routed through `active_tasks`/`trace_events` (zero risk to the existing, tested per-element nested-sub-phase collapsing logic). The outer "Build" wrapper is excluded (redundant with the horizon bga computes elsewhere).
+- `tools/bst_extract_run.py`: writes `converter.pipeline_overhead` into `run-context.json`'s new `pipeline_overhead` field when non-empty - an additive extension of run-context/v9 (Part 32.1), same precedent as `element_kind`'s addition to graph/v9 (`P4-08`). Confirmed no schema collision (`docs/specification.md` Part 32.1 has no such field).
+- `bga/ingest/models.py`: `RunContext.pipeline_overhead` (loaded field) and `AnalysisResult.pipeline_overhead` (computed field: `{"phases": [...], "total_us": int, "fraction_of_horizon": Optional[float], "note": str}`).
+- `bga/ingest/loader.py`: reads the new `run-context.json` field.
+- `bga/analyzer.py`: `_compute_pipeline_overhead()` - thin pass-through plus a total and a horizon-relative fraction; empty dict (no report section at all) when the log had no pipeline-overhead lines, so every existing fixture/test is byte-identical.
+- `bga/report/text.py` / `bga/report/json.py`: a new "Pipeline Overhead (not attributable to individual elements)" block/`pipeline_overhead` key, full-report only (same gating as `structural`/`confidence`), explicitly labeled as not per-element.
+
+Not implemented (Candidate Direction 1, remote-cache per-element `Cache-query` scheduler queue): still not directly observed in a real log - this environment has no remote artifact cache to configure against, so the real line format remains unverified. Left as a documented, deliberate gap rather than guessed at - a future round with remote-cache access can pick this up following the same `TaskKind`-extension pattern already used for `TRACK`/`FETCH`/`PULL`/`BUILD`/`PUSH`.
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+Real large-project measurement (BuildStream 2.7.0 in a throwaway venv, 2001-element from-scratch project - see "What was built" above):
+```
+$ time bst --log-file cold.log build all.bst   # first build, populates cache
+real  0m47.336s
+...
+Pipeline Summary
+    Total:       2001
+    Fetch Queue: processed 2001, skipped 0, failed 0
+    Build Queue: processed 2001, skipped 0, failed 0
+
+$ time bst --log-file warm.log build all.bst   # rebuild, fully cached
+real  0m9.792s
+...
+    Fetch Queue: processed 0, skipped 2001, failed 0
+    Build Queue: processed 0, skipped 2001, failed 0
+
+$ grep -n "Query cache\|Resolving elements\|SUCCESS Build" warm.log
+[00:00:00]... SUCCESS Loading elements
+[00:00:05]... SUCCESS Resolving elements
+[00:00:00]... SUCCESS Initializing remote caches
+[00:00:02]... SUCCESS Query cache
+[00:00:08]... SUCCESS Build
+```
+Real end-to-end extraction + `bga analyze` against `warm.log` (the exact scenario the user originally worried about - a fully-cached build where bga's own horizon sees nothing at all):
+```
+$ python3 -m tools.bst_extract_run project warm.log rundir --bst-bin bst
+Wrote run directory to rundir - targets=['all.bst'], 2001 elements, 2000 dependencies, 0 spans
+
+$ python3 -c "import json; print(json.load(open('rundir/run-context.json'))['pipeline_overhead'])"
+[{'phase': 'Loading elements', 'elapsed_us': 0}, {'phase': 'Resolving elements', 'elapsed_us': 5000000},
+ {'phase': 'Initializing remote caches', 'elapsed_us': 0}, {'phase': 'Query cache', 'elapsed_us': 2000000}]
+
+$ python3 -m bga.cli analyze rundir
+Build Efficiency Report
+Total Duration: 0.0s          # <- bga's own horizon: nothing, 0 spans (fully cached)
+...
+Pipeline Overhead (not attributable to individual elements):
+  Loading elements              0.00s
+  Resolving elements            5.00s
+  Initializing remote caches     0.00s
+  Query cache                   2.00s
+  Total: 7.00s               # <- the real cost, previously entirely invisible
+```
+Added `tests/unit/test_pipeline_overhead.py` (11 tests: raw-log extraction against a real captured log excerpt, the "Build" exclusion, no spurious `bst-builder` trace events, nonzero-elapsed arithmetic, defensive handling of an unmatched terminal status, analyzer/report wiring including `fraction_of_horizon` and the both-present/both-absent JSON/text cases). Added `test_pipeline_overhead_extracted_from_a_real_cached_rebuild` to `tests/unit/test_bst_extract_run.py` (builds `tests/fixtures/bst_show_project/` twice - cold then a real cached rebuild - and confirms `Query cache` round-trips through `run-context.json` into the text report; skipped without `bst` on `PATH`, passed for real against the throwaway venv install used for the large-project measurement above).
+
+Full suite: 359 passed with `bst` on `PATH` (354 passed + 5 skipped without it) - was 347/343+4. `make lint` clean. `make check-clean` OK. `tests/test_e2e.py` 7/7.

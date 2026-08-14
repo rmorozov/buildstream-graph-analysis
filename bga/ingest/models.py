@@ -56,6 +56,12 @@ class RunContext:
     max_jobs: Optional[int] = None
     cpu_accounting: Optional[dict] = None
     exclusive_resources: List[str] = field(default_factory=list)  # Part 31.3
+    # BuildStream's own top-level, non-element-scoped pipeline phases
+    # (e.g. "Query cache", "Resolving elements") - not part of run-context/v9's
+    # spec-mandated minimal schema (Part 32.1), an additive extension
+    # `tools/bst_extract_run.py` populates from the real log. Each entry:
+    # {"phase": str, "elapsed_us": int}. See docs/tasks/P4-14-cache-query-overhead-visibility.md.
+    pipeline_overhead: List[dict] = field(default_factory=list)
     
     @property
     def wall_clock_us(self) -> Optional[int]:
@@ -247,3 +253,9 @@ class AnalysisResult:
     structural: dict = field(default_factory=dict)
     run_id: str = ""
     total_duration_us: int = 0
+    # BuildStream's own top-level pipeline overhead (Query cache, Resolving
+    # elements, etc.) - not part of analysis/v9's spec-mandated schema
+    # (Part 32.4), an additive, presentation-only signal (P4-14). Shape:
+    # {"phases": [{"phase": str, "elapsed_us": int}, ...], "total_us": int,
+    # "fraction_of_horizon": Optional[float]}.
+    pipeline_overhead: dict = field(default_factory=dict)

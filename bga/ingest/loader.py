@@ -52,6 +52,7 @@ def load_run_context(path: Path) -> RunContext:
         max_jobs=data.get('max_jobs'),
         cpu_accounting=data.get('cpu_accounting'),
         exclusive_resources=data.get('exclusive_resources', []),
+        pipeline_overhead=data.get('pipeline_overhead', []),
     )
 
 

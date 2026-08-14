@@ -546,6 +546,10 @@ class BuildEfficiencyAnalyzer:
         # Compute horizon for total duration
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)
         result.total_duration_us = occupancy_stats.get('horizon_us', 0)
+
+        # Pipeline overhead (P4-14, non-spec additive signal) - see
+        # docs/tasks/P4-14-cache-query-overhead-visibility.md
+        result.pipeline_overhead = self._compute_pipeline_overhead(result.total_duration_us)
         
         # Occupancy analysis (M0)
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)
@@ -603,6 +607,41 @@ class BuildEfficiencyAnalyzer:
 
         self.analysis_result = result
         return result
+
+    def _compute_pipeline_overhead(self, horizon_us: int) -> dict:
+        """BuildStream's own top-level "main:core activity" pipeline
+        phases (Query cache, Resolving elements, Loading elements,
+        Initializing remote caches) are real work with a real elapsed
+        cost - confirmed material on a real ~2000-element fully-cached
+        rebuild (Query cache + Resolving elements together were ~87% of
+        total wall time there - see
+        docs/tasks/P4-14-cache-query-overhead-visibility.md's
+        Verification Log), but they are not attributable to any
+        individual element, only to the pipeline as a whole.
+        `tools/bst_extract_run.py` extracts them into
+        run-context.json's `pipeline_overhead` field; this is a thin
+        pass-through plus a total/fraction-of-horizon summary - a
+        deliberately coarse, one-number-per-phase signal, never a
+        fabricated per-element breakdown (this codebase's "no silent
+        correction" discipline).
+        """
+        entries = self.run_context.pipeline_overhead if self.run_context else []
+        if not entries:
+            return {}
+        phases = [
+            {'phase': e.get('phase', ''), 'elapsed_us': e.get('elapsed_us', 0)}
+            for e in entries
+        ]
+        total_us = sum(p['elapsed_us'] for p in phases)
+        return {
+            'phases': phases,
+            'total_us': total_us,
+            'fraction_of_horizon': (total_us / horizon_us) if horizon_us else None,
+            'note': (
+                'Not attributable to individual elements - BuildStream logs '
+                'these as pipeline-level operations, not per-element tasks.'
+            ),
+        }
 
     def _compute_confidence(self, graph_analysis: Optional[dict], attribution: dict, floors: dict) -> dict:
         """

@@ -551,6 +551,35 @@ class BlameChainAnalyzer:
             return None
         return max(candidates, key=lambda t: _PHASE_ORDER.get(t.task_key.task_kind, -1))
 
+    def _retry_predecessor(self, task: NormalizedTask) -> Optional[NormalizedTask]:
+        """Find the immediately-preceding attempt of the same
+        element_uid|task_kind|phase (Part 5.2's `attempt` field), if `task`
+        itself is a retry (attempt > 0). BuildStream serializes attempts of
+        the same task - an attempt cannot start before the prior attempt of
+        the same element/task_kind/phase finished - but graph.json's
+        dependency edges (Part 32.2) have no way to express this, since
+        they're between elements, not between attempts of one task. Without
+        this, the blame-chain walk (and per-task attribution,
+        compute_task_attribution) has no way to recognize that wait as
+        caused by retry sequencing (Part 11.1's RETRY_WAIT) rather than
+        falling through to generic IDLE/DEPENDENCY_WAIT (P1-30).
+        """
+        if task.task_key.attempt <= 0:
+            return None
+        element_uid = task.task_key.element_uid
+        task_kind = task.task_key.task_kind
+        phase = task.task_key.phase
+        candidates = [
+            other for other in self.tasks
+            if other.task_key.element_uid == element_uid
+            and other.task_key.task_kind == task_kind
+            and other.task_key.phase == phase
+            and other.task_key.attempt < task.task_key.attempt
+        ]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda t: t.task_key.attempt)
+
     def _classify_wait_gap(
         self,
         task: NormalizedTask,
@@ -558,16 +587,23 @@ class BlameChainAnalyzer:
         gap_end: int,
     ) -> Tuple[List[Tuple[AttributionCategory, int, int]], Optional[dict]]:
         """Split a task's post-ready wait gap [gap_start, gap_end) into
-        DEPENDENCY_WAIT/RESOURCE_WAIT/SCHEDULER_WAIT sub-segments (Part 7:
-        "the interval is classified according to what happened during that
-        gap" - not automatically all DEPENDENCY_WAIT).
+        DEPENDENCY_WAIT/RESOURCE_WAIT/SCHEDULER_WAIT/RETRY_WAIT sub-segments
+        (Part 7: "the interval is classified according to what happened
+        during that gap" - not automatically all DEPENDENCY_WAIT).
 
         Split order: resource-wait first (using classify_resource_wait's
         holder-weighted overlap, P1-01), then scheduler-wait for any
         remainder (classify_scheduler_wait, P1-02), then whatever's left
-        defaults to DEPENDENCY_WAIT - the one category the spec doesn't
+        defaults to RETRY_WAIT if `task` is itself a retry attempt with an
+        identifiable prior attempt (`_retry_predecessor`, P1-30) - the
+        caller is expected to have already extended `gap_start` to cover
+        the prior attempt's finish (build_blame_chain/compute_task_attribution
+        both do), so every remaining microsecond in the window is
+        necessarily at-or-after that prior attempt finished, making retry
+        sequencing a genuine, evidenced cause throughout it - or
+        DEPENDENCY_WAIT otherwise, the one category the spec doesn't
         require "sufficient evidence" for, so it's the safe fallback when
-        neither more specific classifier confirms an explanation.
+        no more specific classifier confirms an explanation.
 
         `gap_start` may be later than `task.ready_us` (e.g. when an
         intra-element phase predecessor pushed the effective ready time
@@ -577,6 +613,20 @@ class BlameChainAnalyzer:
         approximation for the (rare) case where resource contention and
         intra-element sequencing overlap in complex ways; see P1-20's task
         file for the honest accounting of this simplification.
+
+        A related, known limitation for retries specifically (P1-30):
+        `classify_resource_wait` early-returns `(False, None)` whenever
+        `task.start_us <= task.ready_us` - true by construction for a
+        retry attempt with no *other* real predecessor, since Part 7's "no
+        predecessor" fallback sets `task.ready_us == task.start_us`
+        (see build_blame_chain/compute_task_attribution's callers). In that
+        case resource/scheduler-wait can never carve out a sub-portion of
+        a retry gap even if genuine contention explains part of it - the
+        whole gap defaults to RETRY_WAIT. Still strictly more correct than
+        the prior behavior (IDLE for the entire gap, unconditionally), but
+        not as precise as the ordinary (non-retry) case where a real
+        predecessor already gives classify_resource_wait a non-degenerate
+        window to check.
 
         Returns (segments, resource_wait_holder_info) - segments cover
         [gap_start, gap_end) exactly, contiguously, no overlap;
@@ -609,7 +659,10 @@ class BlameChainAnalyzer:
                 cursor = gap_end
 
         if cursor < gap_end:
-            segments.append((AttributionCategory.DEPENDENCY_WAIT, cursor, gap_end))
+            if self._retry_predecessor(task) is not None:
+                segments.append((AttributionCategory.RETRY_WAIT, cursor, gap_end))
+            else:
+                segments.append((AttributionCategory.DEPENDENCY_WAIT, cursor, gap_end))
 
         return segments, resource_wait_holder_info
 
@@ -702,6 +755,33 @@ class BlameChainAnalyzer:
                 preds.append(str(intra_pred.task_key))
                 ready_time = max(ready_time, intra_pred.finish_us)
 
+            # Same-attempt-sequence predecessor (P1-30): a retry attempt
+            # cannot have started before the prior attempt of the same
+            # element/task_kind/phase finished, but graph.json's
+            # element-level dependency edges have no way to express this -
+            # without it the walk has no candidate to continue into for a
+            # retried task, silently dropping the discarded attempt's own
+            # execution time from the chain and misclassifying the wait
+            # since it finished as unexplained IDLE/DEPENDENCY_WAIT.
+            #
+            # `ready_time` here may already equal `task.start_us` exactly
+            # - Part 7's "no predecessor -> ready as soon as it could have
+            # started" fallback, which `max()` can never lift past (it's
+            # already the ceiling). That fallback is factually wrong for a
+            # retry attempt: it could not actually have started before the
+            # prior attempt finished. Only trust the existing `ready_time`
+            # as a real floor to `max()` against when it already reflects
+            # a genuine wait (< start_us, from a cross-element or
+            # intra-element predecessor); otherwise use retry_pred's
+            # finish directly rather than let the fallback swallow it.
+            retry_pred = self._retry_predecessor(task)
+            if retry_pred is not None:
+                preds.append(str(retry_pred.task_key))
+                if ready_time < task.start_us:
+                    ready_time = max(ready_time, retry_pred.finish_us)
+                else:
+                    ready_time = retry_pred.finish_us
+
             if ready_time < task.start_us:
                 node.dependency_wait_start = ready_time
                 node.wait_breakdown, node.resource_wait_info = self._classify_wait_gap(
@@ -786,14 +866,25 @@ class BlameChainAnalyzer:
         )
         
         # Wait gap [ready_time, start_us), classified into DEPENDENCY_WAIT/
-        # RESOURCE_WAIT/SCHEDULER_WAIT via the same _classify_wait_gap
-        # build_blame_chain uses (P1-20) - previously this method
-        # independently recomputed dependency_wait_us as the *full* gap and
-        # then *also* added resource_wait_us for essentially the same
-        # interval, double-counting the same wall-clock time across two
-        # fields on the same TaskAttribution. Sharing one classification
-        # implementation also avoids two call sites silently diverging.
+        # RESOURCE_WAIT/SCHEDULER_WAIT/RETRY_WAIT via the same
+        # _classify_wait_gap build_blame_chain uses (P1-20/P1-30) -
+        # previously this method independently recomputed dependency_wait_us
+        # as the *full* gap and then *also* added resource_wait_us for
+        # essentially the same interval, double-counting the same
+        # wall-clock time across two fields on the same TaskAttribution.
+        # Sharing one classification implementation also avoids two call
+        # sites silently diverging.
         ready_time = task.ready_us
+        retry_pred = self._retry_predecessor(task)
+        if retry_pred is not None:
+            # See build_blame_chain's identical guard: ready_time already
+            # equal to task.start_us is Part 7's "no predecessor" fallback,
+            # not real evidence - only trust it as a max() floor when it
+            # already reflects a genuine wait.
+            if ready_time < task.start_us:
+                ready_time = max(ready_time, retry_pred.finish_us)
+            else:
+                ready_time = retry_pred.finish_us
         if task.start_us > ready_time:
             segments, _holder_info = self._classify_wait_gap(task, ready_time, task.start_us)
             for category, seg_start, seg_end in segments:
@@ -802,6 +893,8 @@ class BlameChainAnalyzer:
                     attribution.resource_wait_us += duration
                 elif category == AttributionCategory.SCHEDULER_WAIT:
                     attribution.scheduler_wait_us += duration
+                elif category == AttributionCategory.RETRY_WAIT:
+                    attribution.retry_wait_us += duration
                 else:
                     attribution.dependency_wait_us += duration
 

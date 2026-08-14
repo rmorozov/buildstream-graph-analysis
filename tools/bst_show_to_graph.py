@@ -44,6 +44,16 @@ reasoning behind each):
   build`'s own log lines - confirmed empirically, so no special-casing
   is needed here for tools/bst_log_to_chrome_trace.py's element names
   to line up with this tool's graph.json uids.
+- Each element's BuildStream plugin kind (%{kind}, Since: 2.6 - present
+  in the real 2.7.0 install this was verified against) is captured as
+  `element_kind` (e.g. "import", "manual", "junction", "autotools") -
+  not part of graph/v9's spec-mandated minimal schema (Part 32.2's JSON
+  example is illustrative, not exhaustive; `dependency_type` is an
+  existing precedent for the same kind of additive extension). No
+  analysis consumer reads it yet - see docs/tasks/P4-12 for planned
+  kind-based heuristics (a junction or import element's own build work
+  is structurally different from an autotools/cmake element's, a real
+  signal worth exploring once there's a task scoping exactly how).
 
 Out of scope here (see docs/ingestion-pipeline.md / P4-08's follow-on
 tasks): run-context.json production (resource capacities, wall clock -
@@ -60,7 +70,9 @@ from typing import List, Sequence
 RECORD_SEP = "\x1e"  # ASCII Record Separator - between elements
 FIELD_SEP = "\x1f"  # ASCII Unit Separator - between fields of one element
 
-_FORMAT = FIELD_SEP.join(["%{name}", "%{key}", "%{build-deps}", "%{runtime-deps}"]) + RECORD_SEP
+_FORMAT = FIELD_SEP.join(
+    ["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}"]
+) + RECORD_SEP
 
 
 def _parse_dep_list(raw: str) -> List[str]:
@@ -110,14 +122,14 @@ def build_graph(stdout: str, targets: Sequence[str]) -> dict:
         if not record.strip():
             continue
         fields = record.split(FIELD_SEP)
-        if len(fields) != 4:
+        if len(fields) != 5:
             # Defensive: a malformed/unexpected record (e.g. a future
             # bst version changing --format's output shape) should be
             # visible, not silently dropped or crash the whole run.
             print(f"warning: skipping malformed bst show record: {fields!r}", file=sys.stderr)
             continue
 
-        name, key, build_deps_raw, runtime_deps_raw = (f.strip() for f in fields)
+        name, key, kind, build_deps_raw, runtime_deps_raw = (f.strip() for f in fields)
         if not name or name in seen_uids:
             continue
         seen_uids.add(name)
@@ -126,6 +138,14 @@ def build_graph(stdout: str, targets: Sequence[str]) -> dict:
             "uid": name,
             "cache_key": key or None,
             "requested_target": name in requested,
+            # BuildStream's own plugin kind (%{kind}, Since: 2.6 - confirmed
+            # against a real BuildStream 2.7.0 install: e.g. "import",
+            # "manual", "junction", "autotools"). Not part of graph/v9's
+            # spec-mandated minimal schema (Part 32.2's JSON example is
+            # illustrative, not exhaustive - dependency_type is an existing
+            # precedent for the same kind of additive extension) - bga
+            # doesn't act on it yet, see P4-12 for planned heuristics.
+            "element_kind": kind or None,
         })
 
         build_deps = set(_parse_dep_list(build_deps_raw))

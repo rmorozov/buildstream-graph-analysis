@@ -84,3 +84,33 @@ def test_missing_input_file_exits_one(tmp_path):
 def test_nonexistent_directory_exits_one(tmp_path):
     result = _run_bga(["analyze", str(tmp_path / "does-not-exist")])
     assert result.returncode == 1, result.stderr
+
+
+def test_graph_present_trace_missing_hints_at_extraction_tools(tmp_path):
+    """P4-10: a partially-populated run directory (e.g. graph.json
+    produced via tools/bst_show_to_graph.py but trace.json not yet
+    generated) should get an actionable hint pointing at the real
+    extraction tools, not just a bare FileNotFoundError message."""
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "graph.json").write_text(json.dumps({"elements": [], "dependencies": []}))
+
+    result = _run_bga(["analyze", str(run_dir)])
+
+    assert result.returncode == 1, result.stderr
+    assert "tools/bst_log_to_chrome_trace.py" in result.stderr
+    assert "tools/bst_run_context.py" in result.stderr
+    assert "tools/bst_extract_run.py" in result.stderr
+
+
+def test_empty_directory_gets_no_buildstream_specific_hint(tmp_path):
+    """A genuinely empty/unrelated directory (test_missing_input_file_exits_one's
+    scenario) shouldn't get a hint implying it's a partial BuildStream run -
+    the hint only fires when at least one real input file is already present."""
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    result = _run_bga(["analyze", str(run_dir)])
+
+    assert result.returncode == 1, result.stderr
+    assert "tools/bst_show_to_graph.py" not in result.stderr

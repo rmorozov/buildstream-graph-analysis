@@ -1,6 +1,6 @@
 # P1-39: `_classify_wait_gap` can never classify SCHEDULER_WAIT for the remainder after a RESOURCE_WAIT prefix
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** `P1-31`, `P1-32` (both classifiers are individually correct now - this is a bug in how `_classify_wait_gap` composes them, exposed only once each classifier's own internal logic became trustworthy)
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** `P1-31`, `P1-32` (both classifiers are individually correct now - this is a bug in how `_classify_wait_gap` composes them, exposed only once each classifier's own internal logic became trustworthy)
 
 ## Spec Reference
 Part 7: "the interval is classified according to what happened during that gap" (`docs/specification.md`, already cited by `_classify_wait_gap`'s own docstring). Part 8.1/Part 9: `RESOURCE_WAIT` and `SCHEDULER_WAIT` are meant to partition a wait interval by what was actually true at each sub-portion of it, not by a single stale point-in-time snapshot taken before any partitioning happened.
@@ -50,4 +50,15 @@ This is a distinct bug from anything `P1-31`/`P1-32` touched: both of those fixe
 5. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`classify_scheduler_wait` (`bga/attribution/blame_chain.py`) gained an optional `window_start` parameter (default `task.ready_us`, unchanged for direct/isolated callers) so its concurrency sweep can be scoped to a sub-window rather than always the whole `[ready_us, start_us)` gap. `_classify_wait_gap` now calls `_resource_available_at(task, cursor)` (the point right after any `RESOURCE_WAIT` prefix ends) instead of `_resource_available_at(task, task.ready_us)`, and passes `window_start=cursor` into `classify_scheduler_wait` - so the remainder's scheduler-wait check uses real evidence about the actually-unclaimed portion of the gap, not a stale point anchored before the prefix was even carved out.
+
+New tests (`tests/unit/test_blame_chain.py`, 2 new, exercising `_classify_wait_gap` end-to-end): `test_wait_gap_remainder_becomes_scheduler_wait_when_slot_genuinely_free` - the real regression case (resource saturated then genuinely frees, scheduler genuinely has a spare slot for the remainder) - confirmed this fails against the pre-fix code (`DEPENDENCY_WAIT` instead of the correct `SCHEDULER_WAIT`) via `git stash` before applying the fix; `test_wait_gap_remainder_stays_dependency_wait_when_scheduler_genuinely_full` - same resource-wait shape but the scheduler is genuinely still full for the remainder too, confirming the fix doesn't just unconditionally flip the remainder to `SCHEDULER_WAIT`.
+
+```
+$ python3 -m pytest tests/unit/test_blame_chain.py -v
+19 passed
+$ python3 -m pytest -q   # full suite
+420 passed, 11 skipped
+$ make lint
+All checks passed!
+```

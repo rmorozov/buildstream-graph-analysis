@@ -31,14 +31,17 @@ silent substitution. Unwrap explicitly (.value) only where a plain
 value is genuinely needed.
 """
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 
 @dataclass(frozen=True)
 class Certified:
     """A value proven un-improvable given the input trace (Parts 14-16)
-    - e.g. LB, T-infinity,observed, certified_headroom, T_C, model_slack."""
-    value: int
+    - e.g. LB, T-infinity,observed, certified_headroom, T_C, model_slack
+    (int microseconds), or a derived ratio of certified quantities, e.g.
+    efficiency_score = lb / total_duration_us (UX-02, a float 0.0-1.0) -
+    still "proven, not guessed" even though it's not itself a duration."""
+    value: Union[int, float]
 
 
 @dataclass(frozen=True)

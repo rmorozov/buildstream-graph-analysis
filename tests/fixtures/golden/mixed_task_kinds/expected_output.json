@@ -11,7 +11,8 @@
         "lb": 14000,
         "certified_headroom": 0,
         "t_c": 14000,
-        "model_slack": 0
+        "model_slack": 0,
+        "efficiency_score": 1.0
     },
     "attribution": {
         "execution_on_chain_us": 14000,

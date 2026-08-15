@@ -34,3 +34,36 @@ jobs:
 
       - name: Test
         run: make test
+
+  bst-smoke:
+    # Real `bst build` needs a sandbox (bubblewrap) - whether unprivileged
+    # user namespaces work on GitHub's ubuntu-latest runners is unverified
+    # until this actually runs there (Ubuntu can restrict this via AppArmor
+    # by default). This job is a minimal, fast check of exactly that, using
+    # the existing tests/fixtures/bst_show_project fixture's manual.bst
+    # (kind: manual, real install-commands - the one existing element kind
+    # that genuinely exercises the sandbox, not just an import). It exists
+    # to de-risk before investing in a fuller real-build CI job/example
+    # projects: if this doesn't work, that job needs a different design.
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bubblewrap
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+
+      - name: Install bga with bst extra
+        run: pip install -e ".[bst]"
+
+      - name: bst --version
+        run: bst --version
+
+      - name: Real sandboxed build (manual.bst)
+        working-directory: tests/fixtures/bst_show_project
+        run: bst build manual.bst

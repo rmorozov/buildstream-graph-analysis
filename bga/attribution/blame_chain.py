@@ -329,32 +329,72 @@ class BlameChainAnalyzer:
         """
         Classify resource wait intervals (Part 8).
 
-        Holder identification is derived directly from the observed
-        [start_us, finish_us) intervals of every other task requiring at
-        least one of the same resources, time-weighted against the wait
-        window [ready_us, start_us) - not from a capacity-threshold sweep.
-        This sidesteps needing to trust `resource_capacity` numbers (a
-        separate concern, e.g. invariant I6) for identifying *who* was
-        actually occupying the resource: if another task's interval
-        overlaps the wait window and requires the same resource, it's a
-        real, measured holder for that overlap, independent of whether
-        declared capacity data agrees. `resource_capacity` is accepted for
-        interface stability but not used by this method.
+        Only classifies (a prefix of) the wait interval as RESOURCE_WAIT
+        where at least one required resource was genuinely saturated
+        (occupancy >= capacity) at that instant (P1-31) - not merely
+        "some other task with the same resource type overlaps in time",
+        which would also classify a task as resource-blocked even when
+        real spare capacity existed (the correct category for that case
+        is SCHEDULER_WAIT, Part 9 - see _classify_wait_gap, which tries
+        this classifier first and falls through to scheduler-wait/
+        dependency-wait for whatever this doesn't explain).
+
+        Capacity data is a real, load-bearing input here (unlike the
+        previous implementation, which accepted it only for interface
+        stability). When a required resource has no known capacity
+        (missing from `resource_capacity`), it is never treated as
+        saturated - "absence of capacity data is not evidence of
+        unavailability", the same discipline `_resource_available_at`
+        already uses.
+
+        Because `_classify_wait_gap` always consumes RESOURCE_WAIT as a
+        *prefix* of the wait gap (then hands the remainder to scheduler-
+        wait, then dependency-wait/retry-wait), this method reports the
+        length of the maximal *saturated prefix* of [ready_us, start_us) -
+        the longest run of continuously-saturated time starting at
+        ready_us - not a scan for saturated time anywhere in the window.
+        A task genuinely blocked by resource contention that later frees
+        up (capacity=2, one holder, then a second arrives and saturates
+        it) would report 0 explained time here under this deliberate
+        prefix-only scope; only "saturated (possibly ending), never
+        saturated again after freeing" wait shapes are covered - matching
+        what the rest of the wait-gap classification architecture can
+        actually consume. See docs/tasks/P1-31 for the acceptance
+        scenarios this covers.
+
+        Holder attribution within the saturated prefix is restricted, per
+        sub-interval, to tasks holding whichever specific resource(s)
+        were actually saturated *at that sub-interval* - a task
+        overlapping the window but holding only a non-saturated resource
+        is not attributed as a holder for that portion (Part 8.2's
+        holder identification is about who was actually blocking the
+        wait, not merely who happened to be running).
 
         Args:
             task: The task to analyze
             active_tasks_at_time: Map of timestamps to sets of active tasks
-                (unused - see docstring; kept for interface stability)
-            resource_capacity: Available capacity per resource type
-                (unused - see docstring; kept for interface stability)
+                (unused - occupancy is derived directly from other tasks'
+                own [start_us, finish_us) intervals; kept for interface
+                stability)
+            resource_capacity: Available capacity per resource type -
+                load-bearing (see docstring above)
 
         Returns:
-            Tuple of (is_resource_wait, holder_info). holder_info['blocking_tasks']
-            is either a dict of {task_key: time-weighted share} (Part 8.2)
-            or the literal string "UNKNOWN" if no holder could be
-            identified for any part of the wait, with 'ambiguous' set
-            True whenever any portion of the wait isn't explained by an
-            identified holder - never fabricating a holder to fill the gap.
+            Tuple of (is_resource_wait, holder_info). is_resource_wait is
+            False (holder_info None) whenever no required resource was
+            ever saturated at the start of the wait - including when
+            capacity for every required resource is unknown, or when
+            other tasks overlap but never reach capacity. holder_info
+            (when present)['blocking_tasks'] is a dict of {task_key:
+            time-weighted share of the saturated prefix} (Part 8.2).
+            'ambiguous' is kept for interface stability (read by
+            bga/validation/invariants.py's confidence scoring) but is
+            now structurally always False: every saturated microsecond
+            this method reports is, by construction, backed by at least
+            one identified real holder (occupancy >= capacity >= 1
+            implies a real overlapping task contributed to that count) -
+            unlike the old time-overlap-only model, there is no longer a
+            "saturated but unexplained" state to report.
         """
         if not task.resources:
             return False, None
@@ -365,48 +405,84 @@ class BlameChainAnalyzer:
 
         wait_start = task.ready_us
         wait_end = task.start_us
-        wait_duration = wait_end - wait_start
 
-        required = set(task.resources)
+        # Only resources with known capacity can ever be judged saturated.
+        required_with_capacity = {
+            r: resource_capacity[r] for r in task.resources if r in resource_capacity
+        }
+        if not required_with_capacity:
+            return False, None
+
+        # Every other task that could possibly affect occupancy of one of
+        # this task's required (capacity-known) resources.
+        relevant_others = [
+            other for other in self.tasks
+            if other.task_key != task.task_key
+            and (set(required_with_capacity) & set(other.resources))
+        ]
+
+        # Critical points: wait_start/wait_end plus every other relevant
+        # task's start/finish that falls strictly inside the window -
+        # occupancy for a required resource can only change at one of
+        # these points, so they define the maximal constant-occupancy
+        # sub-intervals.
+        boundaries = {wait_start, wait_end}
+        for other in relevant_others:
+            if wait_start < other.start_us < wait_end:
+                boundaries.add(other.start_us)
+            if wait_start < other.finish_us < wait_end:
+                boundaries.add(other.finish_us)
+        points = sorted(boundaries)
+
         holder_time_us: Dict[str, int] = defaultdict(int)
+        saturated_until = wait_start
 
-        for other in self.tasks:
-            if other.task_key == task.task_key:
-                continue
-            if not (required & set(other.resources)):
-                continue
-            overlap_start = max(wait_start, other.start_us)
-            overlap_end = min(wait_end, other.finish_us)
-            if overlap_start < overlap_end:
-                holder_time_us[str(other.task_key)] += overlap_end - overlap_start
+        for t1, t2 in zip(points, points[1:]):
+            saturated_resources = {
+                resource for resource, capacity in required_with_capacity.items()
+                if sum(
+                    1 for other in relevant_others
+                    if resource in other.resources
+                    and other.start_us <= t1 and other.finish_us >= t2
+                ) >= capacity
+            }
+            if not saturated_resources:
+                break
+            saturated_until = t2
+            for other in relevant_others:
+                if not (set(other.resources) & saturated_resources):
+                    continue
+                overlap_start = max(t1, other.start_us)
+                overlap_end = min(t2, other.finish_us)
+                if overlap_start < overlap_end:
+                    holder_time_us[str(other.task_key)] += overlap_end - overlap_start
+
+        explained_us = saturated_until - wait_start
+        if explained_us <= 0:
+            return False, None
 
         holder_info = {
             'wait_start_us': wait_start,
             'wait_end_us': wait_end,
             'required_resources': [str(r) for r in task.resources],
+            # Raw integer microseconds explained (the saturated prefix
+            # length) - kept alongside the normalized (float)
+            # 'blocking_tasks' weights so callers needing exact
+            # arithmetic (e.g. build_blame_chain's gap classification)
+            # don't have to reverse a float multiplication against
+            # invariant-sensitive durations (Part 3.1: no floating point
+            # in timeline accounting).
+            'explained_us': explained_us,
+            # Sorted by task key ascending (Part 35 determinism, same
+            # tie-break pattern used elsewhere in this file, e.g.
+            # select_dependency_blame).
+            'blocking_tasks': {
+                key: holder_time_us[key] / explained_us
+                for key in sorted(holder_time_us.keys())
+            },
+            # See docstring: structurally always False now.
+            'ambiguous': False,
         }
-
-        if not holder_time_us:
-            holder_info['blocking_tasks'] = 'UNKNOWN'
-            holder_info['ambiguous'] = True
-            holder_info['explained_us'] = 0
-            return True, holder_info
-
-        # Sorted by task key ascending (Part 35 determinism, same tie-break
-        # pattern used elsewhere in this file, e.g. select_dependency_blame).
-        holder_info['blocking_tasks'] = {
-            key: holder_time_us[key] / wait_duration
-            for key in sorted(holder_time_us.keys())
-        }
-        explained_us = sum(holder_time_us.values())
-        holder_info['ambiguous'] = explained_us < wait_duration
-        # Raw integer microseconds explained by identified holders - kept
-        # alongside the normalized (float) 'blocking_tasks' weights so
-        # callers needing exact arithmetic (e.g. P1-20's gap classification
-        # in build_blame_chain) don't have to reverse a float multiplication
-        # against invariant-sensitive durations (Part 3.1: no floating point
-        # in timeline accounting).
-        holder_info['explained_us'] = explained_us
         return True, holder_info
     
     def _resource_available_at(self, task: NormalizedTask, ts: int) -> bool:

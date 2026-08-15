@@ -118,16 +118,20 @@ def test_resource_available_at_true_for_task_with_no_resources():
     assert analyzer._resource_available_at(waiting, 100) is True
 
 
-# --- P1-01: classify_resource_wait (real holder tracking) ---------------
+# --- P1-01 (P1-31: made capacity-aware): classify_resource_wait (real
+# holder tracking, gated by real saturation - not just time-overlap) ---
+# Deeper capacity-aware coverage (spare-capacity, mid-wait saturation
+# changes, unknown-capacity fallthrough, multi-resource) lives in
+# tests/unit/test_resource_wait.py; these are basic smoke coverage.
 
 def test_resource_wait_single_holder():
     """Wait window [100, 200), one other task occupying PROCESS for the
-    entire window - the only possible holder, weight 1.0."""
+    entire window, capacity=1 - the only possible holder, weight 1.0."""
     waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[Resource.PROCESS])
     holder = _task("elem-b", ready_us=0, start_us=50, finish_us=250, resources=[Resource.PROCESS])
     analyzer = _analyzer([waiting, holder])
 
-    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1})
     assert is_wait is True
     assert info["blocking_tasks"] == {"elem-b|BUILD|BUILD|0": 1.0}
     assert info["ambiguous"] is False
@@ -135,13 +139,15 @@ def test_resource_wait_single_holder():
 
 def test_resource_wait_two_holders_split_70_30():
     """Wait window [0, 100): holder A occupies [0, 70), holder B occupies
-    [70, 100) - time-weighted shares 0.7 / 0.3."""
+    [70, 100), capacity=1 - each alone saturates PROCESS during its own
+    span, so both sub-portions are resource-wait, time-weighted shares
+    0.7 / 0.3."""
     waiting = _task("elem-a", ready_us=0, start_us=100, finish_us=200, resources=[Resource.PROCESS])
     holder_a = _task("elem-b", ready_us=0, start_us=0, finish_us=70, resources=[Resource.PROCESS])
     holder_b = _task("elem-c", ready_us=0, start_us=70, finish_us=200, resources=[Resource.PROCESS])
     analyzer = _analyzer([waiting, holder_a, holder_b])
 
-    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1})
     assert is_wait is True
     blocking = info["blocking_tasks"]
     assert blocking["elem-b|BUILD|BUILD|0"] == pytest.approx(0.7)
@@ -149,52 +155,57 @@ def test_resource_wait_two_holders_split_70_30():
     assert info["ambiguous"] is False
 
 
-def test_resource_wait_no_identifiable_holder():
-    """No other task overlaps the wait window at all - blocking_tasks must
-    be the literal string "UNKNOWN", never a fabricated holder."""
+def test_resource_wait_no_identifiable_holder_falls_through():
+    """No other task overlaps the wait window at all - no saturation
+    possible, falls through (is_resource_wait=False) rather than
+    fabricating a holder (P1-31: previously returned True/UNKNOWN even
+    with zero overlap)."""
     waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[Resource.PROCESS])
     analyzer = _analyzer([waiting])
 
-    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
-    assert is_wait is True
-    assert info["blocking_tasks"] == "UNKNOWN"
-    assert info["ambiguous"] is True
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1})
+    assert is_wait is False
+    assert info is None
 
 
-def test_resource_wait_partial_holder_is_ambiguous():
-    """Holder only covers part of the wait window ([0, 50) of a [0, 100)
-    wait) - the identified portion is reported with its real weight, but
-    ambiguous is True since the rest of the wait is unexplained."""
+def test_resource_wait_partial_holder_explains_only_the_saturated_prefix():
+    """Holder covers [0, 50) of a [0, 100) wait, capacity=1 - saturated
+    (and fully explained) for exactly that prefix; the remaining [50,
+    100) has zero occupancy (not saturated), so only the saturated
+    prefix (50us) is reported, fully attributed - not ambiguous (P1-31:
+    previously the *whole* window was claimed with the unexplained
+    remainder marked ambiguous)."""
     waiting = _task("elem-a", ready_us=0, start_us=100, finish_us=200, resources=[Resource.PROCESS])
     holder = _task("elem-b", ready_us=0, start_us=0, finish_us=50, resources=[Resource.PROCESS])
     analyzer = _analyzer([waiting, holder])
 
-    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1})
     assert is_wait is True
-    assert info["blocking_tasks"] == {"elem-b|BUILD|BUILD|0": pytest.approx(0.5)}
-    assert info["ambiguous"] is True
+    assert info["explained_us"] == 50
+    assert info["blocking_tasks"] == {"elem-b|BUILD|BUILD|0": 1.0}
+    assert info["ambiguous"] is False
 
 
 def test_resource_wait_ignores_different_resource():
     """A task overlapping the wait window but requiring a different
-    resource must not be counted as a holder."""
+    resource must not be counted as a holder, and can't saturate the
+    resource `waiting` actually needs - falls through."""
     waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[Resource.PROCESS])
     other = _task("elem-b", ready_us=0, start_us=100, finish_us=200, resources=[Resource.DOWNLOAD])
     analyzer = _analyzer([waiting, other])
 
-    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {})
-    assert is_wait is True
-    assert info["blocking_tasks"] == "UNKNOWN"
-    assert info["ambiguous"] is True
+    is_wait, info = analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1})
+    assert is_wait is False
+    assert info is None
 
 
 def test_resource_wait_false_when_no_resources_needed():
     waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[])
     analyzer = _analyzer([waiting])
-    assert analyzer.classify_resource_wait(waiting, {}, {}) == (False, None)
+    assert analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1}) == (False, None)
 
 
 def test_resource_wait_false_when_not_actually_waiting():
     waiting = _task("elem-a", ready_us=100, start_us=100, finish_us=200, resources=[Resource.PROCESS])
     analyzer = _analyzer([waiting])
-    assert analyzer.classify_resource_wait(waiting, {}, {}) == (False, None)
+    assert analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1}) == (False, None)

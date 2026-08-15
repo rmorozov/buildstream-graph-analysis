@@ -32,7 +32,7 @@ def test_large_mode_produces_a_real_report_and_exits_zero():
     # The large fixture has real, nonzero duration (unlike the tiny
     # golden fixture) - confirms it's actually using the bigger dataset,
     # not silently falling back to the small one.
-    assert "Total Duration: 142.0s" in proc.stdout
+    assert "Total Duration: 143.0s" in proc.stdout
 
 
 def test_runs_correctly_regardless_of_invocation_cwd():

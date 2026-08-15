@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 _SIGNIFICANCE_PCT = 1
 
 # Floor fields compared, in display order. 'total_duration_us' isn't a
-# floors-dict key (it's AnalysisResult's own field, the task horizon) -
+# floors-dict key (it's AnalysisResult's own field - the run's real
+# wall-clock duration per Part 4.3, falling back to the tracked-task
+# horizon only when wall-clock bounds aren't available - see UX-10) -
 # included here as the primary, most user-meaningful "did the build get
 # faster" number; the rest are the certified/advisory floors themselves.
 _FLOOR_KEYS = (

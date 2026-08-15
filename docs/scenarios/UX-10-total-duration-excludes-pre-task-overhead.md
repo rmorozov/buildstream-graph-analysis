@@ -1,6 +1,6 @@
 # UX-10: `Total Duration`/`bga compare` can miss real wall-clock time entirely
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** none
 
 ## Motivation
 
@@ -26,18 +26,21 @@ In both real runs above, roughly **2.4-3.6 real seconds** - BuildStream's own st
 
 **Consequence for `bga compare`**: comparing these two real runs (`bga compare run-b4j4 run-b8j8`) reports `Verdict: NO SIGNIFICANT CHANGE (total duration +0.00s, +0.0%, 4.00s -> 4.00s)` - because both runs' *tracked-span* horizon happened to be identical (4.0s each), even though their real, run-context-reported wall-clock times differed by over a second (7.607s vs 6.449s). A real regression or improvement concentrated in pre-task overhead (sandbox staging cost, cache-query time, scheduler startup) is currently **structurally invisible** to `bga compare`'s primary verdict - not just imprecise, but literally excluded from the number the verdict is based on.
 
-## Required Fix (deferred - a real design decision, not a one-line patch)
+## Fix Implemented
 
-Two real options, both non-trivial:
-1. Make `Total Duration` (and everything derived from it - `efficiency_score`, `bga compare`'s verdict) use `run_context.wall_clock` as the denominator instead of `horizon_us`, with the gap between wall-clock and the tracked-task horizon surfaced as an explicit new attribution-adjacent category (distinct from the existing `Untracked Head`/`Untracked Tail`, which are defined relative to the horizon, not wall clock) - a real schema/report change, needs re-checking every existing invariant/gate that currently assumes `Σattribution == Total Duration`.
-2. Keep `Total Duration` as the tracked-span horizon (arguably still a meaningful "how long did the actual work take" number) but add wall-clock and the pre-task gap as clearly-labeled *additional* fields in both the text and JSON report, and factor the gap into `bga compare`'s confidence/caveat logic so a large, changed pre-task gap between baseline and candidate produces an explicit warning rather than silent omission.
+Reading `docs/specification.md` (as this task's own "Required Fix" section said to do before choosing between its two options) settled the question outright rather than leaving it a product decision:
 
-Either option needs real design discussion (which one matches the spec's own intent for `Total Duration` - `docs/specification.md` should be checked for what it actually promises this field means) before implementation; not attempted here.
+- **Part 4.3 ("Wall Clock")** states the *preferred* definition is `run_context.wall_end - run_context.wall_start`; the tracked-task-horizon fallback (`trace_horizon`) is explicitly labeled "reduced provenance" - i.e. option 1 from this task's own list, not option 2.
+- **Part 12.1** states the exact identity `UNTRACKED_HEAD + task-horizon attribution + UNTRACKED_TAIL == wall_clock`. Checking `bga/analyzer.py`'s existing `UNTRACKED_HEAD`/`UNTRACKED_TAIL` computation (`_compute_attribution`, lines ~518-526) found they were **already** computed relative to `run_context.wall_start_us`/`wall_end_us`, not the horizon - only `result.total_duration_us` itself (the value everything else divides by) was wired to the narrower horizon. So the fix was smaller and more surgical than either option anticipated: just change `total_duration_us` to prefer `wall_clock`, and the existing (already-correct) `UNTRACKED_HEAD`/`TAIL` values make Part 12's identity hold exactly.
+- **Part 13** separately confirms `LB`/`T∞`/`efficiency_score`/`certified_headroom` should keep using the task horizon H, not wall_clock ("H >= LB is the meaningful hard check... wall_clock >= H is a provenance/containment relationship, and should not be confused with the lower-bound invariant") - so the Certified Floors section is deliberately unchanged by this fix.
+
+Changes (`bga/analyzer.py`, `analyze()`): `total_duration_us` now uses `run_context.wall_end_us - run_context.wall_start_us` when both are available, falling back to the tracked-task horizon otherwise (matching Part 4.3's own fallback rule). Also added a new `wall_clock_containment` violation (Part 13: "wall_clock >= H... should not be confused with the lower-bound invariant" implies violating it is a real data-quality signal) for the case `wall_clock < horizon` - exactly the symptom `UX-06`'s corrupted-timestamp bug produces, so a future regression there won't go unnoticed.
+
+Real re-verification against this task's own cited evidence (`examples/05-cmake-cpp-toolchain`'s `run-b4j4`): `Total Duration` now reports `7.6s` (matches `run-context.json`'s real `wall_clock`, was `4.0s`); `bga compare run-b4j4 run-b8j8` now reports `Verdict: IMPROVED (total duration -1.16s, -15.2%, 7.61s -> 6.45s)` (was `NO SIGNIFICANT CHANGE, 4.00s -> 4.00s`); Attribution Breakdown percentages now sum to exactly `100.0%` (previously summed to >100% due to the denominator mismatch between horizon-based `total_duration_us` and wall-clock-based `UNTRACKED_HEAD`/`TAIL`).
 
 ## Out of Scope
 
-- Deciding which of the two fix options is correct - a real product/spec question, not decided here.
-- Auditing every other `bga` metric for the same class of "assumes wall-clock ≈ tracked-task-horizon" gap - this task only confirms the one directly observed.
+- Auditing every other `bga` metric for the same class of "assumes wall-clock ≈ tracked-task-horizon" gap - this task only confirms/fixes the one directly observed.
 
 ## Acceptance Test
 
@@ -47,4 +50,4 @@ Either option needs real design discussion (which one matches the spec's own int
 
 ## Verification Log
 
-Real reproduction evidence gathered 2026-08-15/16 via `examples/05-cmake-cpp-toolchain`'s real builds (see above) - `run-context.json`'s real `wall_clock` field and `bga analyze --format json`'s `total_duration_us` compared directly; root cause confirmed by reading `bga/analyzer.py:612` and its call chain. Not yet fixed - filed as backlog per this session's scope (a real design decision about what `Total Duration` should mean, not a narrow patch).
+Done for real, 2026-08-16. `tests/unit/test_total_duration_wall_clock.py` (5 new tests): `Total Duration` prefers real wall-clock over the horizon when available; falls back to the horizon otherwise; attribution categories sum exactly to `total_duration_us` with wall-clock present; a `wall_clock < horizon` case is flagged as a `wall_clock_containment` violation; `bga compare` produces a real (non-"no significant change") verdict for two runs with identical horizons but different wall-clock times. Re-ran against this task's own real evidence: `bga analyze /tmp/05-runs/run-b4j4` → `Total Duration: 7.6s` (was `4.0s`); `bga compare /tmp/05-runs/run-b4j4 /tmp/05-runs/run-b8j8` → `Verdict: IMPROVED (total duration -1.16s, -15.2%, 7.61s -> 6.45s)` (was `NO SIGNIFICANT CHANGE`); Attribution Breakdown percentages sum to exactly `100.0%`. Golden fixture (`tests/fixtures/golden/mixed_task_kinds`) and `tools/dev_run.sh --large`'s expected output updated to the new, correct values (real wall-clock spans already present in both fixtures, confirmed by direct inspection before editing). Full suite green (`make lint`, `pytest` - 458 passed, same 7 pre-existing environment-only failures as `main`, unrelated to this change).

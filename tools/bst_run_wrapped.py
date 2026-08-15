@@ -49,6 +49,14 @@ def run_wrapped(project_dir: str, cmd: list, out_f) -> int:
     def emit(line: str):
         out_f.write(f"[wrapper][{_now_str()}] INFO: {line}\n")
         out_f.flush()
+        # Also echo live to this process's own stderr - without this, a
+        # real build failure is completely silent to whatever's watching
+        # this process (e.g. a CI job log), since every line otherwise
+        # only ever reaches the log *file* - confirmed via a real CI
+        # failure that showed nothing but a bare "exit code 255", making
+        # the actual underlying bst error impossible to diagnose from the
+        # CI log alone.
+        print(line, file=sys.stderr, flush=True)
 
     emit(f"Executing command: {' '.join(cmd)}")
 

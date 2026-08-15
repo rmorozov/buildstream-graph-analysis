@@ -58,6 +58,19 @@ jobs:
       - name: Install bubblewrap
         run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static
 
+      - name: Allow bwrap to configure loopback in its network namespace
+        # Confirmed via a real run: bwrap's user+mount namespace setup and
+        # file staging both succeed unmodified (the actual open risk this
+        # job exists to check). The build then failed with "bwrap: loopback:
+        # Failed RTM_NEWADDR: Operation not permitted" - a narrower, known
+        # issue where Ubuntu 24.04+'s apparmor_restrict_unprivileged_userns
+        # sysctl (default 1) withholds CAP_NET_ADMIN inside the sandbox's
+        # own network namespace, so it can't bring up its own loopback
+        # interface. Same root cause reported for anthropics/claude-code#14719
+        # and openai/codex under GitHub Actions; the standard fix is this
+        # sysctl override, scoped to this runner only.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Install bga with bst extra
         run: pip install -e ".[bst]"
 

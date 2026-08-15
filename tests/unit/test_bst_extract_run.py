@@ -106,11 +106,19 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     assert any(e["uid"] == "app.bst" and e["requested_target"] for e in graph["elements"])
     assert len(trace["spans"]) > 0
     assert run_context["resource_capacities"]["PROCESS"] > 0
+    # P1-33: cpu_accounting is not fabricated from builders - real CPU
+    # measurement doesn't exist in this ingestion pipeline, so it's
+    # honestly omitted rather than populated with a synthetic number.
+    assert "cpu_accounting" not in run_context
 
     # The whole point: zero manual editing before bga can consume it.
     from bga import analyze_run
     result = analyze_run(out_dir)
     assert result is not None
+    assert result.utilisation["cpu_accounting_available"] is False
+    assert result.utilisation["reconciliation_error_pct"] is None
+    assert result.utilisation["potential_oversubscription"] is False
+    assert result.utilisation["oversubscription_evidence"] == "INSUFFICIENT_EVIDENCE"
 
 
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")

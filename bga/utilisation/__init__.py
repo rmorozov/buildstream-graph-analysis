@@ -63,62 +63,86 @@ class UtilizationResult:
     
     Implements the utilization axis from Part 30.
     """
-    # Capacity metrics
-    effective_cpus: float
+    # Capacity metrics - None when no real CPU-accounting measurement
+    # source is available (P1-33: `effective_cpus` used to fall back to a
+    # fabricated 1.0/builders-derived value; None here means genuinely
+    # unavailable, not "measured as zero/one").
+    effective_cpus: Optional[float]
     wall_clock_us: int
-    capacity_cpu_us: int  # effective_cpus × wall_clock
-    
-    # Bucket totals (in CPU-microseconds)
+    capacity_cpu_us: Optional[int]  # effective_cpus x wall_clock
+
+    # True only when effective_cpus came from a real measurement source
+    # (an explicit cpu_accounting.effective_cpus or cgroup quota/period -
+    # never a scheduling-capacity fallback). Every capacity-derived field
+    # below (capacity_cpu_us, the *_pct properties, reconciliation,
+    # config-based oversubscription) is only meaningful when this is True.
+    cpu_accounting_available: bool = False
+
+    # Bucket totals - real, measured wall-clock task-occupancy time (how
+    # long each task held a job slot, and which portion was useful vs.
+    # wasted on a retry/rebuild), in microseconds. This is real data
+    # regardless of cpu_accounting_available (P1-33: it was never actually
+    # a CPU-time measurement, just labeled as CPU-microseconds - keeping
+    # it under its own honest meaning, not removing it).
     buckets: Dict[CPUBucket, int] = field(default_factory=dict)
-    
-    # Reconciliation
+
+    # Reconciliation (Part 33.3/I9) - only meaningful when
+    # cpu_accounting_available; None/0 otherwise, never computed against
+    # a fabricated capacity.
     total_accounted_us: int = 0
     unaccounted_us: int = 0
-    reconciliation_error_pct: float = 0.0
-    
-    # Oversubscription analysis
+    reconciliation_error_pct: Optional[float] = None
+
+    # Oversubscription analysis (Part 30.3). The *observed* evidence
+    # checks (high utilization, concurrency exceeding effective_cpus) and
+    # the *config* check (builders x max_jobs > effective_cpus) both
+    # require a real effective_cpus - gated by cpu_accounting_available.
     potential_oversubscription: bool = False
     oversubscription_evidence: str = "INSUFFICIENT_EVIDENCE"
     max_observed_concurrency: int = 0
     builders: Optional[int] = None
     max_jobs: Optional[int] = None
-    
+
     # Detailed intervals for timeline reconstruction
     intervals: List[CPUInterval] = field(default_factory=list)
-    
+
     # Diagnostics
     high_utilization_periods: List[Tuple[int, int]] = field(default_factory=list)
     idle_periods: List[Tuple[int, int]] = field(default_factory=list)
-    
+
     @property
-    def useful_pct(self) -> float:
-        """Percentage of CPU capacity used for useful work."""
-        if self.capacity_cpu_us == 0:
-            return 0.0
+    def useful_pct(self) -> Optional[float]:
+        """Percentage of CPU capacity used for useful work - None when
+        cpu_accounting_available is False (no real capacity to divide by)."""
+        if not self.cpu_accounting_available or not self.capacity_cpu_us:
+            return None
         useful = self.buckets.get(CPUBucket.USEFUL, 0)
         return (useful / self.capacity_cpu_us) * 100.0
-    
+
     @property
-    def idle_pct(self) -> float:
-        """Percentage of CPU capacity that was idle."""
-        if self.capacity_cpu_us == 0:
-            return 0.0
+    def idle_pct(self) -> Optional[float]:
+        """Percentage of CPU capacity that was idle - None when
+        cpu_accounting_available is False."""
+        if not self.cpu_accounting_available or not self.capacity_cpu_us:
+            return None
         idle_no_tasks = self.buckets.get(CPUBucket.IDLE_NO_TASKS, 0)
         idle_underparallel = self.buckets.get(CPUBucket.IDLE_UNDERPARALLEL, 0)
         return ((idle_no_tasks + idle_underparallel) / self.capacity_cpu_us) * 100.0
-    
+
     @property
-    def wasted_pct(self) -> float:
-        """Percentage of CPU capacity wasted on retries/rebuilds."""
-        if self.capacity_cpu_us == 0:
-            return 0.0
+    def wasted_pct(self) -> Optional[float]:
+        """Percentage of CPU capacity wasted on retries/rebuilds - None
+        when cpu_accounting_available is False."""
+        if not self.cpu_accounting_available or not self.capacity_cpu_us:
+            return None
         wasted_retry = self.buckets.get(CPUBucket.WASTED_RETRY, 0)
         wasted_rebuild = self.buckets.get(CPUBucket.WASTED_REBUILD, 0)
         return ((wasted_retry + wasted_rebuild) / self.capacity_cpu_us) * 100.0
-    
+
     def to_dict(self) -> dict:
         """Convert to analysis/v9 compatible dictionary."""
         return {
+            "cpu_accounting_available": self.cpu_accounting_available,
             "effective_cpus": self.effective_cpus,
             "wall_clock_us": self.wall_clock_us,
             "capacity_cpu_us": self.capacity_cpu_us,
@@ -167,9 +191,14 @@ class UtilizationAnalyzer:
         self.max_jobs = max_jobs
         self.builders = builders
         
-        # Computed values
+        # Computed values - effective_cpus/capacity_cpu_us are None
+        # (not a fabricated number) when no real CPU-accounting
+        # measurement source is available (P1-33).
         self.effective_cpus = self._compute_effective_cpus()
-        self.capacity_cpu_us = int(self.effective_cpus * wall_clock_us)
+        self.cpu_accounting_available = self.effective_cpus is not None
+        self.capacity_cpu_us = (
+            int(self.effective_cpus * wall_clock_us) if self.cpu_accounting_available else None
+        )
         
         # Analysis state
         self.intervals: List[CPUInterval] = []
@@ -189,26 +218,33 @@ class UtilizationAnalyzer:
         self.potential_oversubscription = False
         self.oversubscription_evidence = "INSUFFICIENT_EVIDENCE"
         
-    def _compute_effective_cpus(self) -> float:
+    def _compute_effective_cpus(self) -> Optional[float]:
         """
-        Compute effective CPU count from accounting data (Part 30.1).
-        
-        Handles cgroup quota if available.
+        Compute effective CPU count from real accounting data (Part 30.1),
+        or None when no real measurement source is available.
+
+        P1-33: this previously fell back to a hardcoded 1.0 when neither
+        a real effective_cpus value nor cgroup quota data was present -
+        a fabricated number, not a measurement, that made every
+        capacity-derived metric downstream (capacity_cpu_us, useful/
+        idle/wasted percentages, I9 reconciliation, Part 30.3's
+        oversubscription check) silently compute against synthetic data
+        while presenting as if it were real. None here means "genuinely
+        unavailable" and must propagate as such, not be replaced by
+        another guess.
         """
         if self.cpu_accounting.effective_cpus is not None:
             return self.cpu_accounting.effective_cpus
-        
+
         # Try to derive from cgroup quota
-        if (self.cpu_accounting.cgroup_quota_us is not None and 
+        if (self.cpu_accounting.cgroup_quota_us is not None and
             self.cpu_accounting.cgroup_period_us is not None):
             quota = self.cpu_accounting.cgroup_quota_us
             period = self.cpu_accounting.cgroup_period_us
             if period > 0:
                 return quota / period
-        
-        # Fall back to system CPUs or default
-        # In real implementation, would query os.cpu_count()
-        return 1.0
+
+        return None
     
     def analyze(
         self,
@@ -290,25 +326,32 @@ class UtilizationAnalyzer:
     def _analyze_idle_periods(self, occupancy_segments: List[dict]) -> None:
         """
         Analyze idle periods from occupancy data.
-        
+
         Identifies periods where CPU capacity was available but unused.
+        Requires real CPU-accounting data (P1-33) - without a real
+        effective_cpus, "utilization" has no real capacity to divide
+        active task count by, so no idle/high-utilization periods are
+        reported (empty, not computed against a fabricated capacity).
         """
         self.idle_periods = []
         self.high_utilization_periods = []
-        
+
+        if not self.cpu_accounting_available:
+            return
+
         for segment in occupancy_segments:
             start_us = segment.get("start_us", 0)
             end_us = segment.get("end_us", 0)
             active_count = len(segment.get("active_tasks", []))
-            
+
             duration_us = end_us - start_us
             if duration_us <= 0:
                 continue
-            
+
             # Calculate utilization for this segment
             if self.effective_cpus > 0:
                 utilization = active_count / self.effective_cpus
-                
+
                 if utilization < 0.1:  # Less than 10% utilization = idle
                     self.idle_periods.append((start_us, end_us))
                 elif utilization >= self.HIGH_UTILIZATION_THRESHOLD:
@@ -333,9 +376,14 @@ class UtilizationAnalyzer:
     def _compute_idle_cpu_time(self) -> int:
         """
         Compute idle CPU time.
-        
-        Idle CPU = capacity - sum(active CPU usage)
+
+        Idle CPU = capacity - sum(active CPU usage). Requires a real
+        capacity to subtract from (P1-33) - genuinely 0 (not computed)
+        when cpu_accounting_available is False, since there is no known
+        capacity for "idle" to be a portion of.
         """
+        if not self.cpu_accounting_available:
+            return 0
         total_active_cpu = sum(
             interval.cpu_usage_us for interval in self.intervals
         )
@@ -345,25 +393,38 @@ class UtilizationAnalyzer:
     def _analyze_oversubscription(self) -> None:
         """
         Analyze potential CPU oversubscription (Part 30.3).
-        
+
         Checks for evidence of oversubscription:
-        1. Configuration: builders × max_jobs > effective_cpus
+        1. Configuration: builders x max_jobs > effective_cpus
         2. Observed: high CPU utilization
         3. Duration degradation with concurrency
+
+        All of these compare against effective_cpus - without a real
+        measurement (P1-33), there is nothing to compare against, so
+        this reports INSUFFICIENT_EVIDENCE unconditionally rather than
+        evaluating any check against a fabricated capacity. Before this
+        fix, `builders x max_jobs > effective_cpus` with
+        effective_cpus fabricated *from* builders degenerated into
+        `builders x max_jobs > builders`, near-tautologically true for
+        any max_jobs > 1 - defeating the check's purpose regardless of
+        the real CPU core count.
         """
         self.potential_oversubscription = False
         self.oversubscription_evidence = "INSUFFICIENT_EVIDENCE"
-        
+
+        if not self.cpu_accounting_available:
+            return
+
         # Check configuration-based oversubscription
         config_oversubscription = False
         if self.builders is not None and self.max_jobs is not None:
             if self.builders * self.max_jobs > self.effective_cpus:
                 config_oversubscription = True
                 self.potential_oversubscription = True
-        
+
         # Check observed evidence
         observed_evidence = False
-        
+
         # Evidence 1: High observed CPU utilization
         if self.capacity_cpu_us > 0:
             useful_cpu = self.buckets.get(CPUBucket.USEFUL, 0)
@@ -372,13 +433,13 @@ class UtilizationAnalyzer:
                 observed_evidence = True
                 self.oversubscription_evidence = "HIGH_CPU_UTILIZATION"
                 self.potential_oversubscription = True
-        
+
         # Evidence 2: Max concurrency exceeds effective CPUs
         if self.max_observed_concurrency > self.effective_cpus:
             observed_evidence = True
             self.oversubscription_evidence = "CONCURRENT_TASKS_EXCEED_CPUS"
             self.potential_oversubscription = True
-        
+
         # If only configuration suggests oversubscription but no observed evidence
         if config_oversubscription and not observed_evidence:
             self.oversubscription_evidence = "LOW"
@@ -396,10 +457,20 @@ class UtilizationAnalyzer:
         whether it's reported at all. (P1-25: previously unaccounted_us
         was left at 0 whenever the residual was under tolerance, hiding
         a real - just not violation-worthy - discrepancy.)
+
+        Requires real CPU-accounting data (P1-33): reconciliation_error_pct
+        is None (genuinely not computed, not "computed as zero") when
+        cpu_accounting_available is False - distinct from the
+        wall_clock_us == 0 case (accounting *is* available, but there is
+        no time to reconcile against), which keeps reporting 0.0, its
+        pre-existing, still-correct behavior.
         """
         self.total_accounted_us = sum(self.buckets.values())
 
-        if self.capacity_cpu_us > 0:
+        if not self.cpu_accounting_available:
+            self.reconciliation_error_pct = None
+            self.unaccounted_us = 0
+        elif self.capacity_cpu_us > 0:
             diff = abs(self.total_accounted_us - self.capacity_cpu_us)
             self.reconciliation_error_pct = (diff / self.capacity_cpu_us) * 100.0
             self.unaccounted_us = int(diff)
@@ -422,6 +493,7 @@ class UtilizationAnalyzer:
             effective_cpus=self.effective_cpus,
             wall_clock_us=self.wall_clock_us,
             capacity_cpu_us=self.capacity_cpu_us,
+            cpu_accounting_available=self.cpu_accounting_available,
             buckets=dict(self.buckets),
             total_accounted_us=self.total_accounted_us,
             unaccounted_us=self.unaccounted_us,

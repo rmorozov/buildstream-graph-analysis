@@ -258,6 +258,7 @@
         "consolidation_candidates": []
     },
     "utilisation": {
+        "cpu_accounting_available": true,
         "effective_cpus": 2,
         "wall_clock_us": 16000,
         "capacity_cpu_us": 32000,

@@ -119,3 +119,58 @@ def test_no_config_signal_and_no_observed_evidence_is_insufficient():
     )
     assert result.potential_oversubscription is False
     assert result.oversubscription_evidence == "INSUFFICIENT_EVIDENCE"
+
+
+# --- P1-33: no real CPU-accounting source -> reports unavailable, never
+# fabricated from scheduling capacity (builders/max_jobs) ---
+
+def test_no_cpu_accounting_reports_unavailable_not_a_fabricated_number():
+    """cpu_accounting=None (the honest state for every real run today -
+    no CPU-measurement source exists in this ingestion pipeline) must
+    never fall back to a fabricated effective_cpus (the old hardcoded
+    1.0, or a builders-derived value)."""
+    result = analyze_utilization(
+        cpu_accounting=None, wall_clock_us=100000,
+        max_jobs=4, builders=4,
+        task_intervals=[_interval("a.bst", 50000)],
+        occupancy_segments=[],
+    )
+    assert result.cpu_accounting_available is False
+    assert result.effective_cpus is None
+    assert result.capacity_cpu_us is None
+    assert result.useful_pct is None
+    assert result.idle_pct is None
+    assert result.wasted_pct is None
+
+
+def test_no_cpu_accounting_skips_reconciliation_and_oversubscription():
+    """I9 reconciliation and Part 30.3's oversubscription check must be
+    skipped (reported unavailable), never run against a fabricated
+    capacity - even with builders x max_jobs deliberately set to a
+    combination that would trip the (fabricated-capacity) config check
+    if effective_cpus were still derived from builders."""
+    result = analyze_utilization(
+        cpu_accounting=None, wall_clock_us=100000,
+        max_jobs=8, builders=8,  # would make effective_cpus=8, 8*8=64 > 8
+        task_intervals=[_interval("a.bst", 100000)],
+        occupancy_segments=[],
+    )
+    assert result.reconciliation_error_pct is None
+    assert result.potential_oversubscription is False
+    assert result.oversubscription_evidence == "INSUFFICIENT_EVIDENCE"
+
+
+def test_builders_derived_effective_cpus_never_evaluated():
+    """Direct regression guard for the exact bug this task fixes: with
+    no real cpu_accounting, `builders x max_jobs > effective_cpus` must
+    never be evaluated using a builders-derived effective_cpus - it was
+    previously near-tautologically true for any max_jobs > 1 once
+    effective_cpus := builders, defeating the check's purpose regardless
+    of the real CPU core count."""
+    result = analyze_utilization(
+        cpu_accounting=None, wall_clock_us=100000,
+        max_jobs=16, builders=16,
+        task_intervals=[_interval("a.bst", 100000)],
+        occupancy_segments=[],
+    )
+    assert result.potential_oversubscription is False

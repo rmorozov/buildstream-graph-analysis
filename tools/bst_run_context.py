@@ -26,12 +26,18 @@ log instead:
       derives, whether the source log is wrapped (a real "Executing
       command:" line) or raw (a synthesized invocation span covering the
       whole log, see bst_log_to_chrome_trace.WrapperTraceConverter).
-  cpu_accounting.effective_cpus - set from the same builders count as
-      resource_capacities.PROCESS. Without this, bga's CPU reconciliation
-      (Part 33.3) falls back to a default of 1.0, producing spurious
-      reconciliation-error warnings on any genuinely concurrent build -
-      the same class of gap already fixed for this repo's own fixtures
-      (P1-27, P3-01, P3-08).
+  cpu_accounting - deliberately omitted (P1-33). `builders` is
+      BuildStream's own job-slot scheduling parameter, not a measured CPU
+      core/thread count; populating cpu_accounting.effective_cpus from it
+      (this file's own previous behavior) made bga's CPU reconciliation
+      (Part 33.3) and Part 30.3's oversubscription check run against
+      synthetic data tautologically derived from the same job-slot count
+      on both sides, not a genuine independent measurement - bga now
+      reports CPU accounting as honestly unavailable rather than compute
+      against a fabricated capacity. No real CPU-measurement source
+      (cgroup accounting, /proc sampling) exists in this ingestion
+      pipeline yet. See
+      docs/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
 """
 import argparse
 import json
@@ -81,7 +87,7 @@ def build_run_context(
             "UPLOAD": scheduler["pushers"],
         },
         "max_jobs": scheduler["builders"],
-        "cpu_accounting": {"effective_cpus": scheduler["builders"]},
+        # cpu_accounting deliberately omitted - see module docstring (P1-33).
     }
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}

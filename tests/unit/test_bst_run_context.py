@@ -22,7 +22,9 @@ def test_build_run_context_reads_scheduler_config_from_header(tmp_path):
 
     assert run_context["resource_capacities"] == {"PROCESS": 3, "DOWNLOAD": 7, "UPLOAD": 2}
     assert run_context["max_jobs"] == 3
-    assert run_context["cpu_accounting"]["effective_cpus"] == 3
+    # cpu_accounting is deliberately omitted (P1-33): `builders` is a
+    # job-slot scheduling parameter, not a measured CPU count.
+    assert "cpu_accounting" not in run_context
 
 
 def test_build_run_context_derives_wall_clock_from_invocation_span(tmp_path):
@@ -109,4 +111,4 @@ def test_output_loads_cleanly_into_bgas_own_loader(tmp_path):
     loaded = load_run_context(out_path)
     assert loaded.max_jobs == 3
     assert loaded.resource_capacities["PROCESS"] == 3
-    assert loaded.cpu_accounting["effective_cpus"] == 3
+    assert not loaded.cpu_accounting

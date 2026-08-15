@@ -292,6 +292,29 @@ several wrong assumptions turned out to hide behind:
     See `tools/bst_checkout_cost.py` and
     `docs/tasks/P4-15-stack-consolidation-heuristic.md` for what this
     per-element checkout data is used for.
+13. **Run identity (I8, `P1-37`) proves extraction-time consistency, not
+    build-time correctness - a real, named limitation, not an
+    unfalsifiable guarantee.** `tools/bst_extract_run.py` embeds one
+    `manifest_hash` (targets + scheduler config + project git commit +
+    `project.refs` content hash, all real inputs available *at
+    extraction time*) into all three of `run-context.json`/`graph.json`/
+    `trace.json`, and `bga`'s own loader cross-checks they agree. This
+    closes the practical gap the identity invariant exists for - a
+    `trace.json` accidentally copied in from an unrelated run is now
+    caught - but it cannot detect a determined mismatch between what
+    actually ran and what's on disk *right now*: the analyzed build
+    already happened, potentially much earlier, and this pipeline only
+    ever reads an already-produced log plus the project directory's
+    *current* state. If the project's git commit or `project.refs`
+    changed between the real `bst build` and this extraction, the
+    manifest would reflect the *current* state consistently across all
+    three files - internally consistent, but not proof that state
+    matches what the build actually saw. Closing that gap for real would
+    require instrumenting the `bst build` invocation itself to record
+    its own identity at the moment it runs, not just what a later
+    extraction observes - a materially larger scope change (P4-13's
+    `--strict` project.refs check has the same fundamental boundary, for
+    the same reason). See `docs/tasks/P1-37-run-identity-not-captured-or-enforced.md`.
 
 ## Why a second, separate trace/v9 adapter
 

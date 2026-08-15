@@ -53,6 +53,7 @@ def load_run_context(path: Path) -> RunContext:
         cpu_accounting=data.get('cpu_accounting'),
         exclusive_resources=data.get('exclusive_resources', []),
         pipeline_overhead=data.get('pipeline_overhead', []),
+        run_identity=data.get('run_identity'),
     )
 
 
@@ -234,7 +235,7 @@ def load_trace(path: Path) -> Trace:
                 ))
     
     logger.info("Loaded trace from %s: %d spans, %d phases", path, len(spans), len(phases))
-    return Trace(spans=spans, phases=phases)
+    return Trace(spans=spans, phases=phases, run_identity_hash=data.get('run_identity_hash'))
 
 
 def load_graph(path: Path) -> Graph:
@@ -288,7 +289,7 @@ def load_graph(path: Path) -> Graph:
         "Loaded graph from %s: %d elements, %d dependencies",
         path, len(elements), len(dependencies),
     )
-    return Graph(elements=elements, dependencies=dependencies)
+    return Graph(elements=elements, dependencies=dependencies, run_identity_hash=data.get('run_identity_hash'))
 
 
 def load_chrome_trace(path: Path) -> Trace:

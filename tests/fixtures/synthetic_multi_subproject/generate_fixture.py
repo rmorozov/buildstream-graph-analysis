@@ -70,9 +70,13 @@ def build_fixture():
         # tests/fixtures/topologies.py (P3-01) and
         # tests/fixtures/golden/mixed_task_kinds/ (P3-08).
         "cpu_accounting": {"effective_cpus": build_model.CAPACITIES["PROCESS"]},
+        # Consistent run_identity across all three files (P1-37) - full
+        # provenance, matching a real extraction's identity guarantee.
+        "run_identity": {"manifest_hash": "synthetic-multi-subproject-manifest-hash"},
     }
     graph = build_model.build_graph_dict()
-    trace = {"spans": spans, "phases": []}
+    graph["run_identity_hash"] = "synthetic-multi-subproject-manifest-hash"
+    trace = {"spans": spans, "phases": [], "run_identity_hash": "synthetic-multi-subproject-manifest-hash"}
 
     return wrapper_log_text, chrome_events, run_context, graph, trace, dropped_names
 

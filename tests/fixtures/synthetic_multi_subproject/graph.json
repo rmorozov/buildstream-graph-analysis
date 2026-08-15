@@ -107,5 +107,6 @@
       "successor": "ui-toolkit.bst:libwidgets.bst",
       "dependency_type": "build"
     }
-  ]
+  ],
+  "run_identity_hash": "synthetic-multi-subproject-manifest-hash"
 }

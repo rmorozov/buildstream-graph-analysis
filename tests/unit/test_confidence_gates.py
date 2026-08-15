@@ -9,18 +9,25 @@ from bga.graph.edg import analyze_graph
 
 
 def _write_run_dir(tmp_path, elements, dependencies, spans, wall_end_us=200000):
+    # Consistent run_identity across all three files (P1-37) - full
+    # provenance by default, so these tests keep testing what they were
+    # written to test (ordering/coverage/attribution gates) rather than
+    # incidentally exercising the separate "reduced provenance" path.
+    run_identity_hash = "test-fixture-manifest-hash"
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
         "trace_epsilon_us": 1000,
         "wall_clock": {"start_us": 0, "end_us": wall_end_us},
         "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "run_identity": {"manifest_hash": run_identity_hash},
     }
     graph = {
         "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
         "dependencies": [{"predecessor": p, "successor": s} for p, s in dependencies],
+        "run_identity_hash": run_identity_hash,
     }
-    trace = {"spans": spans, "phases": []}
+    trace = {"spans": spans, "phases": [], "run_identity_hash": run_identity_hash}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
     (run_dir / "graph.json").write_text(json.dumps(graph))
     (run_dir / "trace.json").write_text(json.dumps(trace))

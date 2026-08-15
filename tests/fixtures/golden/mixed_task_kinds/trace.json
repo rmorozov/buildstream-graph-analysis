@@ -11,5 +11,6 @@
   ],
   "phases": [
     {"name": "cache_cleanup", "ts_us": 8000, "dur_us": 2000}
-  ]
+  ],
+  "run_identity_hash": "golden-fixture-manifest-hash-v1"
 }

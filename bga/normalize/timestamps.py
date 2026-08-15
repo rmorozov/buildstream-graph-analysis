@@ -235,22 +235,33 @@ def clamp_task_starts(
     normalized_spans: List[Tuple[TaskSpan, int, int]],
     ready_times: Dict[str, int],
     graph: Graph,
-) -> List[NormalizedTask]:
+) -> Tuple[List[NormalizedTask], List[dict]]:
     """
     Clamp task starts to their ready times (Part 3.4).
-    
+
     When start < ready after normalization:
         start' = ready
         finish' = finish (immutable)
         duration' = finish' - start'
-    
+
+    A genuine ordering violation (ready_us pushed past the span's own raw
+    finish, not merely quantization noise - Part 3.3's own carve-out)
+    would otherwise make this clamp produce clamped_start > clamped_finish,
+    a structurally invalid negative-duration task (P1-36). That case is
+    detected here and the task is excluded from the returned list -
+    surfaced as a violation instead, never silently constructed - per
+    Part 3.3's "no hidden runtime correction" and this codebase's general
+    "no silent correction" discipline elsewhere (e.g. classify_resource_wait
+    reporting UNKNOWN/ambiguous rather than fabricating a holder).
+
     Args:
         normalized_spans: Output from normalize_timestamps
         ready_times: Ready times from compute_ready_times
         graph: Dependency graph
-        
+
     Returns:
-        List of NormalizedTask objects
+        Tuple of (NormalizedTask objects, violation records for tasks
+        excluded because clamping would have produced negative duration)
     """
     # Map element_uid -> its own BUILD task key (Part 32.2 - a `depends:`
     # edge means the downstream element's work needs the upstream
@@ -274,6 +285,7 @@ def clamp_task_starts(
             build_task_by_element[span.task_key.element_uid] = str(span.task_key)
 
     result = []
+    violations = []
 
     for span, q_start, q_finish in normalized_spans:
         task_key_str = str(span.task_key)
@@ -289,6 +301,24 @@ def clamp_task_starts(
 
         # Finish time is immutable
         clamped_finish = q_finish
+
+        if clamped_start > clamped_finish:
+            logger.error(
+                "Excluding %s: clamping start to ready time (%d) would produce "
+                "a negative-duration task (raw span %d..%d, ready %d) - a genuine "
+                "ordering violation, not quantization noise. See violations list.",
+                task_key_str, clamped_start, q_start, q_finish, ready_us,
+            )
+            violations.append({
+                'type': 'clamp_negative_duration',
+                'task_key': task_key_str,
+                'ready_us': ready_us,
+                'raw_start_us': q_start,
+                'raw_finish_us': q_finish,
+                'clamped_start_us': clamped_start,
+                'clamped_finish_us': clamped_finish,
+            })
+            continue
 
         # Get build-gating dependencies for this task from the graph
         deps = []
@@ -309,8 +339,8 @@ def clamp_task_starts(
             resources=span.resources,
             primary_resource=span.primary_resource,
         ))
-    
-    return result
+
+    return result, violations
 
 
 def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000) -> Tuple[List[NormalizedTask], List[dict]]:
@@ -338,7 +368,8 @@ def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000) -> Tupl
     violations = validate_ordering(normalized_spans, graph.dependencies, ready_times)
     
     # Step 4: Clamp starts to ready times
-    normalized_tasks = clamp_task_starts(normalized_spans, ready_times, graph)
+    normalized_tasks, clamp_violations = clamp_task_starts(normalized_spans, ready_times, graph)
+    violations = violations + clamp_violations
 
     logger.info(
         "Normalized %d tasks (%d ordering violations)",

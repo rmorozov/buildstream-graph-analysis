@@ -224,7 +224,23 @@ class NormalizedTask:
     dependencies: List[str] = field(default_factory=list)  # Predecessor task keys
     resources: List[Resource] = field(default_factory=list)
     primary_resource: Optional[Resource] = None
-    
+
+    def __post_init__(self):
+        """A negative-duration NormalizedTask is never valid (P1-36) -
+        finish is immutable (Part 3.4) and start is clamped forward, not
+        backward, so start' <= finish' must hold for every real task by
+        construction. Enforced here, not just in
+        bga/normalize/timestamps.py::clamp_task_starts (the one call site
+        that produces these today), so any *future* caller gets the same
+        guarantee structurally rather than by convention."""
+        if self.finish_us < self.start_us:
+            raise ValueError(
+                f"NormalizedTask {self.task_key} has finish_us ({self.finish_us}) "
+                f"< start_us ({self.start_us}) - negative duration. This must be caught "
+                "and reported as a violation before construction, not constructed and "
+                "discovered later (see bga/normalize/timestamps.py::clamp_task_starts)."
+            )
+
     @property
     def dur_us(self) -> int:
         """Duration in microseconds (may differ from original due to clamping)."""

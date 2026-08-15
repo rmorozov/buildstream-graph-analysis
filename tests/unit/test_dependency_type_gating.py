@@ -94,14 +94,19 @@ def test_runtime_only_edge_not_included_in_normalized_task_dependencies():
         dependencies=deps,
     )
 
-    tasks = clamp_task_starts(normalized, ready_times, graph)
+    tasks, _clamp_violations = clamp_task_starts(normalized, ready_times, graph)
     b_task = next(t for t in tasks if t.task_key.element_uid == "b.bst")
     assert b_task.dependencies == []
     assert b_task.start_us == 0  # not clamped forward to a.bst's finish
 
 
 def test_build_type_edge_still_included_in_normalized_task_dependencies():
-    spans = [_span("a.bst", 100000, 100000), _span("b.bst", 0, 50000)]
+    # b.bst's raw span (0..250000) extends past a.bst's finish (200000) -
+    # unlike test_runtime_only_edge_not_included_in_normalized_task_dependencies's
+    # fixture, this is a realistic build-type-gated scenario, not a
+    # genuine ordering violation (P1-36): clamping start forward to
+    # 200000 still leaves a real, positive remaining duration (50000).
+    spans = [_span("a.bst", 100000, 100000), _span("b.bst", 0, 250000)]
     normalized = normalize_timestamps(spans, epsilon_us=1000)
     deps = [DependencyEdge("a.bst", "b.bst", dependency_type="build")]
     ready_times = compute_ready_times(normalized, deps)
@@ -110,10 +115,13 @@ def test_build_type_edge_still_included_in_normalized_task_dependencies():
         dependencies=deps,
     )
 
-    tasks = clamp_task_starts(normalized, ready_times, graph)
+    tasks, clamp_violations = clamp_task_starts(normalized, ready_times, graph)
+    assert clamp_violations == []
     b_task = next(t for t in tasks if t.task_key.element_uid == "b.bst")
     assert b_task.dependencies == ["a.bst|BUILD|BUILD|0"]
     assert b_task.start_us == 200000  # clamped forward to a.bst's finish
+    assert b_task.finish_us == 250000
+    assert b_task.dur_us == 50000
 
 
 # --- Structural analysis stays unfiltered (Part 24/25) --------------------

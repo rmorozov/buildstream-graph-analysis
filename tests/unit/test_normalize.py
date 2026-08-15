@@ -99,6 +99,73 @@ def test_large_negative_gap_is_a_genuine_ordering_violation():
     assert v["gap_us"] == 20000 - 100000  # negative: -80000
 
 
+# --- P1-36: clamp_task_starts must not silently construct a negative-
+# duration task on a genuine ordering violation (distinct from P1-27,
+# and from validate_ordering's own detection above - this is about the
+# clamp step's own missing invariant check, independent of how ready_us
+# was derived) ---
+
+def test_genuine_ordering_violation_excludes_task_instead_of_negative_duration():
+    """Same fixture as test_large_negative_gap_is_a_genuine_ordering_violation:
+    b.bst's ready time (100000, gated by a.bst's BUILD finish) lands
+    after b.bst's own raw finish (30000) - a genuine violation, not
+    quantization noise. clamp_task_starts must not construct a
+    NormalizedTask with start=100000/finish=30000 (negative duration);
+    it must exclude the task and report it as a violation instead."""
+    spans = [_span("a.bst", 0, 100000), _span("b.bst", 20000, 10000)]
+    normalized = normalize_timestamps(spans, epsilon_us=1000)
+    deps = [DependencyEdge("a.bst", "b.bst")]
+    ready_times = compute_ready_times(normalized, deps)
+    graph = Graph(elements=[], dependencies=deps)
+
+    tasks, clamp_violations = clamp_task_starts(normalized, ready_times, graph)
+
+    assert all(t.task_key.element_uid != "b.bst" for t in tasks)
+    assert all(t.dur_us >= 0 for t in tasks)
+    assert len(clamp_violations) == 1
+    v = clamp_violations[0]
+    assert v["type"] == "clamp_negative_duration"
+    assert v["task_key"] == "b.bst|BUILD|BUILD|0"
+    assert v["ready_us"] == 100000
+    assert v["clamped_start_us"] == 100000
+    assert v["clamped_finish_us"] == 30000
+
+
+def test_normalize_trace_surfaces_clamp_violation_and_excludes_task():
+    """Same scenario through the full normalize_trace pipeline (both
+    validate_ordering's ordering_violation and clamp_task_starts's new
+    clamp_negative_duration violation fire for the same underlying
+    cause, from two different checks - both are reported)."""
+    from bga.normalize.timestamps import normalize_trace
+    from bga.ingest.models import Trace
+
+    spans = [_span("a.bst", 0, 100000), _span("b.bst", 20000, 10000)]
+    trace = Trace(spans=spans)
+    deps = [DependencyEdge("a.bst", "b.bst")]
+    graph = Graph(elements=[], dependencies=deps)
+
+    normalized_tasks, violations = normalize_trace(trace, graph, epsilon_us=1000)
+
+    assert all(t.task_key.element_uid != "b.bst" for t in normalized_tasks)
+    types = {v["type"] for v in violations}
+    assert "ordering_violation" in types
+    assert "clamp_negative_duration" in types
+
+
+def test_normalized_task_rejects_negative_duration_at_construction():
+    """Structural guard (P1-36 item 3): NormalizedTask itself must
+    refuse to be constructed with finish_us < start_us, regardless of
+    caller - not just within clamp_task_starts."""
+    import pytest
+    from bga.ingest.models import NormalizedTask
+
+    with pytest.raises(ValueError):
+        NormalizedTask(
+            task_key=TaskKey("a.bst", TaskKind.BUILD, "BUILD", 0),
+            ready_us=100000, start_us=100000, finish_us=30000,
+        )
+
+
 # --- Start-clamp preserves finish (Part 3.4) ---
 
 def test_clamp_moves_start_to_ready_time_finish_unchanged():
@@ -112,7 +179,7 @@ def test_clamp_moves_start_to_ready_time_finish_unchanged():
     ready_times = compute_ready_times(normalized, deps)
     graph = Graph(elements=[], dependencies=deps)
 
-    tasks = clamp_task_starts(normalized, ready_times, graph)
+    tasks, _clamp_violations = clamp_task_starts(normalized, ready_times, graph)
     b_task = next(t for t in tasks if t.task_key.element_uid == "b.bst")
 
     assert b_task.start_us == 10000  # clamped up to ready time
@@ -127,7 +194,7 @@ def test_start_at_or_after_ready_is_not_clamped():
     ready_times = compute_ready_times(normalized, deps)
     graph = Graph(elements=[], dependencies=deps)
 
-    tasks = clamp_task_starts(normalized, ready_times, graph)
+    tasks, _clamp_violations = clamp_task_starts(normalized, ready_times, graph)
     b_task = next(t for t in tasks if t.task_key.element_uid == "b.bst")
     assert b_task.start_us == 15000
     assert b_task.finish_us == 20000
@@ -148,7 +215,7 @@ def test_dependencies_field_maps_to_predecessors_own_build_task():
     ready_times = compute_ready_times(normalized, deps)
     graph = Graph(elements=[], dependencies=deps)
 
-    tasks = clamp_task_starts(normalized, ready_times, graph)
+    tasks, _clamp_violations = clamp_task_starts(normalized, ready_times, graph)
     b_track = next(t for t in tasks if t.task_key.element_uid == "b.bst")
     assert b_track.dependencies == ["a.bst|BUILD|BUILD|0"]
 
@@ -206,7 +273,7 @@ def test_multi_task_kind_element_never_produces_negative_duration_after_clamp():
     ready_times = compute_ready_times(normalized, deps)
     graph = Graph(elements=[], dependencies=deps)
 
-    tasks = clamp_task_starts(normalized, ready_times, graph)
+    tasks, _clamp_violations = clamp_task_starts(normalized, ready_times, graph)
     for task in tasks:
         assert task.dur_us >= 0, f"{task.task_key} has negative duration {task.dur_us}"
     b_track = next(t for t in tasks if t.task_key.element_uid == "b.bst" and t.task_key.task_kind == TaskKind.TRACK)

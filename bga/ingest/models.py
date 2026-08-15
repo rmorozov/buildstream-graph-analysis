@@ -82,6 +82,20 @@ class RunContext:
     # environment supports querying it (host_cpu_count).
     native_max_jobs: Optional[int] = None
     host_cpu_count: Optional[int] = None
+    # Operator-declared CPU budget (UX-15) - the number of cores this
+    # build is *intended* to use, as opposed to `host_cpu_count`'s
+    # detected value. Not redundant with host_cpu_count: cgroup CFS
+    # bandwidth control (cpu.max / cpu.cfs_quota_us+cpu.cfs_period_us -
+    # what `docker run --cpus=N`/Kubernetes `resources.limits.cpu`
+    # actually use) throttles CPU *time*, not core *identity*, so
+    # `os.sched_getaffinity()` (host_cpu_count's own detection method)
+    # cannot see it - a container with a 2.5-CPU quota still reports
+    # full host affinity. A user may also simply want to reserve
+    # headroom on a shared machine, independent of any cgroup at all.
+    # When present, this is what `bga`'s own capacity-aware checks
+    # (_check_process_oversubscription) treat as the governing ceiling,
+    # not host_cpu_count - operator intent over raw hardware detection.
+    cpu_budget: Optional[int] = None
     exclusive_resources: List[str] = field(default_factory=list)  # Part 31.3
     # BuildStream's own top-level, non-element-scoped pipeline phases
     # (e.g. "Query cache", "Resolving elements") - not part of run-context/v9's

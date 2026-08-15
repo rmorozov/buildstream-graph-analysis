@@ -142,6 +142,30 @@ def test_sweep_text_first_row_is_not_nan(tmp_path):
     assert "nan" not in result.stdout.lower()
 
 
+def test_sweep_text_includes_the_capacity_model_caveat(tmp_path):
+    """UX-14: a capacity sweep replays each task's fixed, already-
+    observed duration - it cannot represent real CPU contention as
+    concurrent PROCESS usage rises (UX-09's own real evidence this
+    causes an actual slowdown, not just a plateau). Before this fix,
+    that caveat existed only in the spec document, not the CLI output a
+    user actually sees."""
+    run_dir = _write_fixture(tmp_path)
+    result = _run_bga(["sweep", str(run_dir), "--min-capacity", "1", "--max-capacity", "2"])
+    assert result.returncode == 0, result.stderr
+    assert "does not model real CPU contention" in result.stdout
+    assert "shape, not an exact runtime prediction" in result.stdout
+
+
+def test_sweep_json_includes_the_capacity_model_caveat(tmp_path):
+    run_dir = _write_fixture(tmp_path)
+    result = _run_bga([
+        "sweep", str(run_dir), "--min-capacity", "1", "--max-capacity", "2", "--format", "json",
+    ])
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert "does not model real CPU contention" in data["capacity_model_caveat"]
+
+
 def test_new_subcommands_exit_one_on_missing_directory(tmp_path):
     for subcommand in ("graph", "floors", "replay", "sweep", "utilisation", "diagnostics"):
         result = _run_bga([subcommand, str(tmp_path / "does-not-exist")])

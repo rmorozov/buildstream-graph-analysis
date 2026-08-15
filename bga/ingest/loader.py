@@ -53,6 +53,7 @@ def load_run_context(path: Path) -> RunContext:
         cpu_accounting=data.get('cpu_accounting'),
         native_max_jobs=data.get('native_max_jobs'),
         host_cpu_count=data.get('host_cpu_count'),
+        cpu_budget=data.get('cpu_budget'),
         exclusive_resources=data.get('exclusive_resources', []),
         pipeline_overhead=data.get('pipeline_overhead', []),
         run_identity=data.get('run_identity'),

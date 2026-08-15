@@ -91,12 +91,17 @@ def test_converter_does_not_emit_main_activity_as_a_trace_event():
 def test_converter_computes_correct_nonzero_elapsed():
     """Synthetic (not real-captured) - checks the arithmetic specifically,
     independent of whether a real short build happens to round to zero at
-    1-second elapsed precision (see docs/ingestion-pipeline.md fact 10)."""
+    1-second elapsed precision (see docs/ingestion-pipeline.md fact 10).
+
+    START lines show "--:--:--" (real BuildStream behavior - elapsed
+    isn't known yet when an activity starts; see UX-06) - only the
+    terminal line's own elapsed is real and used, applied on top of the
+    watermark in effect when this specific activity's START was seen."""
     log = (
         "[--:--:--][        ][    main:core activity   ] START   Build\n"
-        "[00:00:01][        ][    main:core activity   ] START   Query cache\n"
-        "[00:00:03][        ][    main:core activity   ] SUCCESS Query cache\n"
-        "[00:00:03][        ][    main:core activity   ] SUCCESS Build\n"
+        "[--:--:--][        ][    main:core activity   ] START   Query cache\n"
+        "[00:00:02][        ][    main:core activity   ] SUCCESS Query cache\n"
+        "[00:00:02][        ][    main:core activity   ] SUCCESS Build\n"
     )
     converter = WrapperTraceConverter(raw_start_time_us=0)
     _feed_raw(converter, log)

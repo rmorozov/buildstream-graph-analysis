@@ -225,13 +225,37 @@ def test_parse_elapsed_to_seconds_rejects_garbage():
     assert parse_elapsed_to_seconds("not-a-time") is None
 
 
-def test_raw_mode_converts_elapsed_to_absolute_microseconds():
+def test_raw_mode_anchors_a_tasks_first_start_to_the_current_watermark():
+    """UX-06: a START event always anchors to "now" (the running
+    watermark) - never to its own elapsed value. Real BuildStream START
+    lines always show "--:--:--" anyway (elapsed isn't known yet); this
+    synthetic line's own nonzero elapsed [00:00:05] is deliberately
+    ignored, matching real semantics (see _process_raw_line's docstring
+    and docs/scenarios/UX-06-raw-log-timestamp-corruption.md)."""
     converter = WrapperTraceConverter(raw_start_time_us=1_700_000_000_000_000)
     converter.process_line_raw(
         "[00:00:05][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log"
     )
     begin = _builder_events(converter)[0]
-    assert begin["ts"] == 1_700_000_000_000_000 + 5_000_000
+    assert begin["ts"] == 1_700_000_000_000_000
+
+
+def test_raw_mode_applies_a_terminals_own_elapsed_to_its_tasks_anchor():
+    """The closing (terminal) line of a task's outer bracket applies its
+    own real elapsed on top of that task's own START anchor - this is
+    the one raw-mode timestamp that must reflect the line's elapsed
+    value, since it's what makes the task's real measured duration
+    survive into the reconstructed timeline."""
+    converter = WrapperTraceConverter(raw_start_time_us=1_700_000_000_000_000)
+    converter.process_line_raw(
+        "[--:--:--][4a9059d4][   build:base.bst] START   Running commands"
+    )
+    converter.process_line_raw(
+        "[00:00:05][4a9059d4][   build:base.bst] SUCCESS base/4a9059d4-build.log"
+    )
+    end = _builder_events(converter)[-1]
+    assert end["ph"] == "E"
+    assert end["ts"] == 1_700_000_000_000_000 + 5_000_000
 
 
 def test_raw_mode_requires_start_time():
@@ -275,3 +299,104 @@ def test_targets_captured_during_wrapped_processing():
         "[wrapper][2026-08-14 11:00:00,000] INFO: Targets:       base.bst, base2.bst"
     )
     assert converter.targets == "base.bst, base2.bst"
+
+
+# --- UX-06: raw-log cross-task timestamp reconstruction ------------------
+#
+# A third real bug, found while building examples/04-critical-path-
+# optimization for a later, real optimization walkthrough (see
+# docs/scenarios/UX-06-raw-log-timestamp-corruption.md): BuildStream's own
+# `[HH:MM:SS]` elapsed prefix resets to zero at the start of *every*
+# individual timed activity (confirmed against the real installed
+# BuildStream 2.7.0 source, buildstream/_messenger.py's `timed_activity`)
+# - not once per session. `_process_raw_line` previously anchored every
+# line to the *same* single session-start timestamp, so any task starting
+# after the first one collapsed toward the start of the file regardless
+# of when it really ran - real evidence: a downstream task depending on a
+# 4-second upstream task showed the *same* `[00:00:00]` elapsed its
+# upstream showed at its own start, despite starting a real 4 seconds
+# later.
+
+# core.bst takes 4 real seconds (three sub-phases, "Running commands" is
+# the slow one); lib.bst depends on core.bst and only starts once core.bst
+# genuinely finishes - real shape captured from examples/04-critical-path-
+# optimization's own build (see docs/scenarios/UX-06's Motivation section).
+_UPSTREAM_THEN_DOWNSTREAM_LINES = [
+    "[--:--:--][aaaaaaaa][   build:core.bst                      ] START   proj/core/aaaaaaaa-build.log",
+    "[--:--:--][aaaaaaaa][   build:core.bst                      ] START   Staging dependencies at: /",
+    "[00:00:00][aaaaaaaa][   build:core.bst                      ] SUCCESS Staging dependencies at: /",
+    "[--:--:--][aaaaaaaa][   build:core.bst                      ] START   Running commands",
+    "[00:00:04][aaaaaaaa][   build:core.bst                      ] SUCCESS Running commands",
+    "[--:--:--][aaaaaaaa][   build:core.bst                      ] START   Caching artifact",
+    "[00:00:00][aaaaaaaa][   build:core.bst                      ] SUCCESS Caching artifact",
+    "[00:00:04][aaaaaaaa][   build:core.bst                      ] SUCCESS proj/core/aaaaaaaa-build.log",
+    # lib.bst's own elapsed bracket resets to [00:00:00] here too - the
+    # exact real symptom this bug produces - even though it really starts
+    # a full 4 real seconds after core.bst began.
+    "[--:--:--][bbbbbbbb][   build:lib.bst                       ] START   proj/lib/bbbbbbbb-build.log",
+    "[--:--:--][bbbbbbbb][   build:lib.bst                       ] START   Staging dependencies at: /",
+    "[00:00:00][bbbbbbbb][   build:lib.bst                       ] SUCCESS Staging dependencies at: /",
+    "[--:--:--][bbbbbbbb][   build:lib.bst                       ] START   Running commands",
+    "[00:00:02][bbbbbbbb][   build:lib.bst                       ] SUCCESS Running commands",
+    "[--:--:--][bbbbbbbb][   build:lib.bst                       ] START   Caching artifact",
+    "[00:00:00][bbbbbbbb][   build:lib.bst                       ] SUCCESS Caching artifact",
+    "[00:00:02][bbbbbbbb][   build:lib.bst                       ] SUCCESS proj/lib/bbbbbbbb-build.log",
+]
+
+
+def _spans_by_hash(converter):
+    begins = {e["tid"]: e for e in _builder_events(converter) if e["ph"] == "B"}
+    ends = {e["tid"]: e for e in _builder_events(converter) if e["ph"] == "E"}
+    return {
+        tid: (begins[tid]["ts"], ends[tid]["ts"])
+        for tid in begins
+        if tid in ends
+    }
+
+
+def test_downstream_task_does_not_collapse_to_upstreams_own_start():
+    """The core regression: lib.bst's reconstructed start must be at or
+    after core.bst's real finish (4s in), never collapsed back to
+    core.bst's own start just because its own elapsed bracket also read
+    [00:00:00]."""
+    converter = WrapperTraceConverter(raw_start_time_us=0)
+    for line in _UPSTREAM_THEN_DOWNSTREAM_LINES:
+        converter.process_line_raw(line)
+
+    spans = _spans_by_hash(converter)
+    assert len(spans) == 2
+    (core_start, core_end), (lib_start, lib_end) = spans.values()
+
+    assert lib_start >= core_end
+
+
+def test_each_tasks_own_real_duration_is_preserved():
+    """Cross-task anchoring must not distort each task's own,
+    independently-correct, real measured duration (core.bst: 4s total
+    across its 3 sub-phases; lib.bst: 2s)."""
+    converter = WrapperTraceConverter(raw_start_time_us=0)
+    for line in _UPSTREAM_THEN_DOWNSTREAM_LINES:
+        converter.process_line_raw(line)
+
+    spans = list(_spans_by_hash(converter).values())
+    core_span, lib_span = spans
+    assert core_span[1] - core_span[0] == 4_000_000
+    assert lib_span[1] - lib_span[0] == 2_000_000
+
+
+def test_nested_subphases_own_elapsed_does_not_corrupt_the_outer_span():
+    """Regression for a real bug found while implementing this fix: the
+    task-level closing line's message is a real artifact log path and its
+    elapsed is relative to the *task's* own start - not the immediately
+    preceding sub-phase's start. An earlier, naive "anchor = last START
+    seen for this hash" implementation corrupted this badly (errors of
+    several real seconds on examples/04's own real captured log) by
+    re-anchoring on each nested sub-phase's own START."""
+    converter = WrapperTraceConverter(raw_start_time_us=1_000_000)
+    for line in _UPSTREAM_THEN_DOWNSTREAM_LINES:
+        converter.process_line_raw(line)
+
+    spans = list(_spans_by_hash(converter).values())
+    core_span, _ = spans
+    assert core_span[0] == 1_000_000
+    assert core_span[1] == 1_000_000 + 4_000_000

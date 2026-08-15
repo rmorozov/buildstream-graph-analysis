@@ -500,3 +500,91 @@ def format_sweep_text(resource: str, sweep_result) -> str:
             lines.append(f"  {violation}")
     lines.append("=" * 60)
     return "\n".join(lines)
+
+
+def _fmt_us(value_us: Optional[float]) -> str:
+    return f"{value_us / 1e6:.2f}s" if value_us is not None else "n/a"
+
+
+def _fmt_signed_us(delta_us: Optional[float], pct: Optional[float] = None) -> str:
+    if delta_us is None:
+        return "n/a"
+    sign = "+" if delta_us >= 0 else ""
+    text = f"{sign}{delta_us / 1e6:.2f}s"
+    if pct is not None:
+        text += f", {sign}{pct:.1f}%"
+    return text
+
+
+def format_compare_text(comparison) -> str:
+    """Format a ComparisonResult (UX-01) as human-readable text. Takes
+    the dataclass directly (not AnalysisResult) - this is a genuinely
+    different report shape (two runs, deltas, a verdict), not a slice of
+    one AnalysisResult like every other format_* function here."""
+    b = comparison.baseline_metrics
+    c = comparison.candidate_metrics
+    d = comparison.deltas
+
+    lines = ["=" * 60, "Run Comparison", "=" * 60]
+    lines.append(f"Baseline:  {comparison.baseline_run_id or '(no run identity)'}")
+    lines.append(f"Candidate: {comparison.candidate_run_id or '(no run identity)'}")
+    lines.append("")
+
+    baseline_total = b.get('total_duration_us')
+    delta_total = d.get('total_duration_us')
+    pct = (delta_total / baseline_total * 100) if (baseline_total and delta_total is not None) else None
+    verdict_line = f"Verdict: {comparison.verdict.upper()}"
+    if pct is not None:
+        verdict_line += f"  (total duration {_fmt_signed_us(delta_total, pct)}, {_fmt_us(baseline_total)} -> {_fmt_us(c.get('total_duration_us'))})"
+    lines.append(verdict_line)
+    if comparison.low_confidence:
+        lines.append("  Caveat: at least one run's confidence is below the 'high' band - treat this comparison with caution.")
+    if comparison.comparability_warning:
+        lines.append(f"  Warning: {comparison.comparability_warning}")
+    lines.append("")
+
+    lines.append("Certified Floors:")
+    floor_labels = [
+        ('total_duration_us', 'Total Duration'),
+        ('t_infinity_observed', 'T∞ (observed)'),
+        ('lb', 'LB'),
+        ('certified_headroom', 'Certified Headroom'),
+        ('t_c', 'T_C (replay)'),
+    ]
+    for key, label in floor_labels:
+        if b.get(key) is None and c.get(key) is None:
+            continue
+        lines.append(f"  {label:20s} {_fmt_us(b.get(key)):>10s} -> {_fmt_us(c.get(key)):>10s}   ({_fmt_signed_us(d.get(key))})")
+    if b.get('efficiency_score') is not None or c.get('efficiency_score') is not None:
+        be = b.get('efficiency_score')
+        ce = c.get('efficiency_score')
+        de = d.get('efficiency_score')
+        be_s = f"{be:.2f}" if be is not None else "n/a"
+        ce_s = f"{ce:.2f}" if ce is not None else "n/a"
+        de_s = f"{'+' if de is not None and de >= 0 else ''}{de:.2f}" if de is not None else "n/a"
+        lines.append(f"  {'Efficiency Score':20s} {be_s:>10s} -> {ce_s:>10s}   ({de_s})")
+    lines.append("")
+
+    lines.append("Confidence:")
+    bc = comparison.baseline_confidence
+    cc = comparison.candidate_confidence
+    lines.append(f"  Baseline:  {f'{bc:.2f} ({_confidence_band(bc)})' if bc is not None else 'n/a'}")
+    lines.append(f"  Candidate: {f'{cc:.2f} ({_confidence_band(cc)})' if cc is not None else 'n/a'}")
+    lines.append("")
+
+    if comparison.attribution_deltas:
+        lines.append("Attribution Deltas:")
+        for category, entry in comparison.attribution_deltas.items():
+            label = category.replace('_', ' ').title()
+            b_pct = f"{entry['baseline_pct']:.1f}%" if entry['baseline_pct'] is not None else "n/a"
+            c_pct = f"{entry['candidate_pct']:.1f}%" if entry['candidate_pct'] is not None else "n/a"
+            delta_pp = entry['delta_pct_points']
+            delta_pp_s = f"{'+' if delta_pp is not None and delta_pp >= 0 else ''}{delta_pp:.1f}pp" if delta_pp is not None else "n/a"
+            lines.append(
+                f"  {label:25s} {_fmt_us(entry['baseline_us']):>8s} ({b_pct:>6s}) -> "
+                f"{_fmt_us(entry['candidate_us']):>8s} ({c_pct:>6s})   {_fmt_signed_us(entry['delta_us'])} ({delta_pp_s})"
+            )
+        lines.append("")
+
+    lines.append("=" * 60)
+    return "\n".join(lines)

@@ -2,7 +2,7 @@
 
 from ._shared import GRAPH_SIGNAL_KEYS, SECTIONS
 from .json import format_json
-from .text import format_csv, format_sweep_text, format_text
+from .text import format_compare_text, format_csv, format_sweep_text, format_text
 
 __all__ = [
     "SECTIONS",
@@ -11,4 +11,5 @@ __all__ = [
     "format_json",
     "format_csv",
     "format_sweep_text",
+    "format_compare_text",
 ]

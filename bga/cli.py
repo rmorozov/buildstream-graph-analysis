@@ -26,10 +26,11 @@ from typing import Optional
 
 from . import __version__
 from .analyzer import BuildEfficiencyAnalyzer
+from .compare import compare_runs
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
-from .report import format_csv, format_json, format_sweep_text, format_text
+from .report import format_compare_text, format_csv, format_json, format_sweep_text, format_text
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,20 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
             'monotonicity_violations': sweep_result.monotonicity_violations,
         }, indent=2, default=str)
     return format_sweep_text(args.resource, sweep_result)
+
+
+def _produce_compare_output(args: argparse.Namespace) -> str:
+    """Run bga compare BASELINE CANDIDATE (UX-01) - two independent
+    single-run analyses (bga/analyzer.py, unchanged) plus a comparison/
+    verdict layer (bga/compare.py). --capacity, if given, applies to
+    both runs symmetrically."""
+    comparison = compare_runs(
+        Path(args.baseline), Path(args.candidate),
+        capacity=args.capacity, verbose=args.verbose,
+    )
+    if args.format == 'json':
+        return json.dumps(comparison.to_dict(), indent=2, default=str)
+    return format_compare_text(comparison)
 
 
 def _print_missing_input_hint(run_dir: Path) -> None:
@@ -215,6 +230,71 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
         if not args.verbose:
             print(f"Error: {e}", file=sys.stderr)
         return 2
+
+
+def _execute_compare_and_write(args: argparse.Namespace) -> int:
+    """Directory validation, logging setup, output writing, and
+    exception-to-exit-code mapping for `bga compare` - a separate
+    function from _execute_and_write because compare validates *two*
+    directories (baseline/candidate), not the single `args.directory`
+    every other subcommand has; the exception-handling shape is
+    otherwise identical (same exit-code contract, docs/cli.md)."""
+    configure_logging(verbose=args.verbose, quiet=args.quiet, log_file=args.log_file)
+
+    for label, raw_dir in (("baseline", args.baseline), ("candidate", args.candidate)):
+        run_dir = Path(raw_dir)
+        if not run_dir.exists():
+            print(f"Error: {label} directory does not exist: {run_dir}", file=sys.stderr)
+            return 1
+        if not run_dir.is_dir():
+            print(f"Error: {label} path is not a directory: {run_dir}", file=sys.stderr)
+            return 1
+
+    try:
+        output = _produce_compare_output(args)
+
+        if args.output:
+            output_path = Path(args.output)
+            output_path.write_text(output)
+            if args.verbose:
+                print(f"Report written to: {output_path}", file=sys.stderr)
+        else:
+            print(output)
+
+        return 0
+
+    except FileNotFoundError as e:
+        logger.error("Required input file not found: %s", e)
+        print(f"Error: Required input file not found - {e}", file=sys.stderr)
+        return 1
+    except AnalysisError as e:
+        logger.error("Analysis failed: %s", e)
+        print(f"Error: {e}", file=sys.stderr)
+        return 3
+    except (IngestionError, json.JSONDecodeError) as e:
+        logger.error("Ingestion failed: %s", e)
+        print(f"Error: Malformed input - {e}", file=sys.stderr)
+        return 2
+    except ValueError as e:
+        logger.error("Error: %s", e)
+        print(f"Error: {e}", file=sys.stderr)
+        return 2
+    except Exception as e:
+        logger.exception("Unexpected error")
+        if not args.verbose:
+            print(f"Error: {e}", file=sys.stderr)
+        return 2
+
+
+def cmd_compare(args: argparse.Namespace) -> int:
+    """Execute `bga compare BASELINE CANDIDATE` (UX-01) - compares two
+    independently-analyzed runs and reports signed deltas plus a
+    verdict (improved/regressed/no significant change), gated on
+    confidence and graph comparability. Always exits 0 on a successful
+    comparison regardless of verdict - comparing is not itself a
+    failure condition (a CI regression gate is a separate concern,
+    docs/scenarios/UX-03)."""
+    return _execute_compare_and_write(args)
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
@@ -511,6 +591,30 @@ def create_parser() -> argparse.ArgumentParser:
     )
     _add_common_arguments(diagnostics_parser)
     diagnostics_parser.set_defaults(func=cmd_diagnostics)
+
+    # compare - run-to-run comparison (UX-01, non-spec additive command)
+    compare_parser = subparsers.add_parser(
+        'compare',
+        help='Compare two runs (baseline vs. candidate) and report deltas plus a verdict',
+        description='Compare a baseline run against a candidate run: signed deltas in certified floors, '
+                    'efficiency score, and attribution, plus an improved/regressed/no-significant-change '
+                    'verdict gated on confidence and graph comparability (docs/scenarios/UX-01 - not spec-mandated).',
+    )
+    compare_parser.add_argument('baseline', type=str, help='Path to the baseline (before) run directory')
+    compare_parser.add_argument('candidate', type=str, help='Path to the candidate (after) run directory')
+    compare_parser.add_argument(
+        '-f', '--format', type=str, choices=['text', 'json'], default='text',
+        help='Output format: text (human-readable), json (machine-readable). Default: text'
+    )
+    compare_parser.add_argument('-o', '--output', type=str, help='Write output to file instead of stdout')
+    compare_parser.add_argument(
+        '-c', '--capacity', type=int, default=None, metavar='N',
+        help='Override system resource capacity for both runs (applied symmetrically). Default: auto-detect per run'
+    )
+    compare_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose (DEBUG-level) logging for debugging')
+    compare_parser.add_argument('-q', '--quiet', action='store_true', help='Suppress all log output except errors')
+    compare_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write log output to PATH, independent of console verbosity')
+    compare_parser.set_defaults(func=cmd_compare)
 
     return parser
 

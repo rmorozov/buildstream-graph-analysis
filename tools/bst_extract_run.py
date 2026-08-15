@@ -273,6 +273,7 @@ def extract_run(
     bst_bin: str = "bst",
     strict: bool = False,
     native_max_jobs: int = None,
+    cpu_budget: int = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -374,6 +375,14 @@ def extract_run(
     host_cpu_count = _host_cpu_count()
     if host_cpu_count is not None:
         run_context["host_cpu_count"] = host_cpu_count
+    # cpu_budget (UX-15): the operator's *declared* CPU envelope for this
+    # build, as opposed to host_cpu_count's detected value - see
+    # bga/ingest/models.py's RunContext.cpu_budget docstring for why
+    # these are genuinely different things (cgroup CFS quota is
+    # invisible to os.sched_getaffinity; a user may also just want to
+    # reserve headroom). Purely operator-supplied - no detection path.
+    if cpu_budget is not None:
+        run_context["cpu_budget"] = cpu_budget
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:
@@ -461,6 +470,16 @@ def main() -> int:
         "--builders/this tool's own resource_capacities.PROCESS). Not visible in a "
         "BuildStream log itself, so has to be told to us; omit if unknown (UX-12).",
     )
+    parser.add_argument(
+        "--cpu-budget", type=int, default=None,
+        help="The number of CPU cores this build is *intended* to use - the operator's "
+        "declared envelope, as opposed to the environment's real detected core count "
+        "(host_cpu_count). Use this when the detected count doesn't reflect your real "
+        "constraint: a cgroup CFS CPU quota (docker --cpus/Kubernetes cpu limits throttle "
+        "CPU time, not core affinity, so os.sched_getaffinity can't see it), or simply "
+        "wanting to reserve headroom on a shared machine. When set, bga's oversubscription "
+        "check treats this as the governing ceiling instead of host_cpu_count (UX-15).",
+    )
     args = parser.parse_args()
 
     try:
@@ -469,6 +488,7 @@ def main() -> int:
             log_format=args.format, start_time=args.start_time,
             trace_epsilon_us=args.trace_epsilon_us, bst_bin=args.bst_bin,
             strict=args.strict, native_max_jobs=args.native_max_jobs,
+            cpu_budget=args.cpu_budget,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

@@ -577,18 +577,32 @@ class BuildEfficiencyAnalyzer:
         timing evidence in docs/scenarios/UX-09-builders-max-jobs-joint-
         optimization.md (examples/05-cmake-cpp-toolchain: 8 builders x 8
         max-jobs on a real 4-core host measured ~11% slower than
-        BuildStream's own 4x4 defaults on that same host). Both new
-        fields are best-effort/optional (UX-12) - this check only runs
-        when both, plus `host_cpu_count`, are actually present.
+        BuildStream's own 4x4 defaults on that same host).
+
+        UX-15: the *governing* ceiling for this check is the operator's
+        declared `cpu_budget` when present, not the raw detected
+        `host_cpu_count` - a cgroup CFS CPU quota (what `docker run
+        --cpus=N`/Kubernetes CPU limits actually use) throttles CPU time,
+        not core affinity, so `os.sched_getaffinity` (host_cpu_count's own
+        detection method) cannot see it; an operator may also simply
+        intend to reserve headroom. Both values, when known, are kept and
+        surfaced separately (never silently discarding the detected
+        value) - if the declared budget itself exceeds what the
+        environment can actually provide, that is its own real signal
+        (`cpu_budget_exceeds_host_capacity`), not something to paper over.
+
+        All of `builders`, `native_max_jobs`, and a governing core count
+        (`cpu_budget` or `host_cpu_count`) are best-effort/optional - this
+        check only runs when they're actually present.
 
         Threshold: compares this run's real declared concurrency demand
         (`builders * native_max_jobs`) against what BuildStream's own
-        real defaults would produce on this host (`builders=4` -
-        confirmed in `buildstream/data/userconfig.yaml`; `max_jobs =
-        min(host_cores, 8)` - confirmed in `buildstream/_context.py`'s
+        real defaults would produce given the governing core count
+        (`builders=4` - confirmed in `buildstream/data/userconfig.yaml`;
+        `max_jobs = min(cores, 8)` - confirmed in `buildstream/_context.py`'s
         `effective_build_max_jobs`) - i.e. "did this run ask for
         meaningfully more concurrent process slots than BuildStream would
-        have used unconfigured on this host", which is the exact
+        have used unconfigured against this ceiling", the exact
         real-world comparison UX-09's own 4x4-vs-8x8 evidence supports,
         rather than an arbitrary constant. This is a coarse, config-level
         signal (declared capacity, not measured achieved concurrency) -
@@ -599,41 +613,65 @@ class BuildEfficiencyAnalyzer:
         builders = self.run_context.resource_capacities.get('PROCESS')
         native_max_jobs = self.run_context.native_max_jobs
         host_cpu_count = self.run_context.host_cpu_count
-        if not builders or not native_max_jobs or not host_cpu_count:
+        cpu_budget = self.run_context.cpu_budget
+
+        if cpu_budget is not None and host_cpu_count is not None and cpu_budget > host_cpu_count:
+            logger.warning(
+                "declared cpu_budget=%d exceeds this environment's detected "
+                "host_cpu_count=%d - the declared budget itself may be "
+                "unrealistic here (see UX-15)",
+                cpu_budget, host_cpu_count,
+            )
+            self.violations.append({
+                'type': 'cpu_budget_exceeds_host_capacity',
+                'cpu_budget': cpu_budget,
+                'host_cpu_count': host_cpu_count,
+            })
+
+        governing_cores = cpu_budget if cpu_budget is not None else host_cpu_count
+        capacity_source = 'declared_cpu_budget' if cpu_budget is not None else 'detected_host_cpu_count'
+        if not builders or not native_max_jobs or not governing_cores:
             return
 
         actual_demand = builders * native_max_jobs
-        default_demand = 4 * min(host_cpu_count, 8)
+        default_demand = 4 * min(governing_cores, 8)
 
         if actual_demand > default_demand:
             logger.warning(
                 "builders=%d x native max-jobs=%d = %d potential concurrent "
-                "processes on a %d-core host - exceeds BuildStream's own "
-                "defaults for this host (%d) and may cause real CPU "
-                "contention (see UX-09)",
-                builders, native_max_jobs, actual_demand, host_cpu_count, default_demand,
+                "processes vs a governing ceiling of %d cores (%s) - exceeds "
+                "BuildStream's own defaults for that ceiling (%d) and may "
+                "cause real CPU contention (see UX-09)",
+                builders, native_max_jobs, actual_demand, governing_cores,
+                capacity_source, default_demand,
             )
             self.violations.append({
                 'type': 'resource_oversubscription',
                 'builders': builders,
                 'native_max_jobs': native_max_jobs,
                 'actual_demand': actual_demand,
+                'governing_cores': governing_cores,
+                'capacity_source': capacity_source,
                 'host_cpu_count': host_cpu_count,
+                'cpu_budget': cpu_budget,
                 'default_demand': default_demand,
             })
-        elif actual_demand < host_cpu_count:
+        elif actual_demand < governing_cores:
             logger.info(
                 "builders=%d x native max-jobs=%d = %d potential concurrent "
-                "processes on a %d-core host - fewer than one process per "
-                "core, may be leaving cores idle",
-                builders, native_max_jobs, actual_demand, host_cpu_count,
+                "processes vs a governing ceiling of %d cores (%s) - fewer "
+                "than one process per core, may be leaving cores idle",
+                builders, native_max_jobs, actual_demand, governing_cores, capacity_source,
             )
             self.violations.append({
                 'type': 'resource_undersubscription',
                 'builders': builders,
                 'native_max_jobs': native_max_jobs,
                 'actual_demand': actual_demand,
+                'governing_cores': governing_cores,
+                'capacity_source': capacity_source,
                 'host_cpu_count': host_cpu_count,
+                'cpu_budget': cpu_budget,
             })
 
     def _build_capacity_model_note(self) -> str:
@@ -656,19 +694,23 @@ class BuildEfficiencyAnalyzer:
             (v for v in self.violations if v.get('type') == 'resource_oversubscription'), None,
         )
         if oversub:
+            if oversub.get('capacity_source') == 'declared_cpu_budget':
+                ceiling_desc = f"your declared CPU budget of {oversub.get('governing_cores')} cores"
+            else:
+                ceiling_desc = f"a {oversub.get('governing_cores')}-core host"
             return (
                 f"This run shows real resource oversubscription (builders="
                 f"{oversub.get('builders')} x native max-jobs={oversub.get('native_max_jobs')} "
-                f"= {oversub.get('actual_demand')} processes on a "
-                f"{oversub.get('host_cpu_count')}-core host) - LB/Efficiency Score certify "
-                f"against recorded resource capacities, not real host CPU cores, so "
-                f"Efficiency Score may overstate real efficiency here (see UX-09)."
+                f"= {oversub.get('actual_demand')} processes vs {ceiling_desc}) - LB/Efficiency "
+                f"Score certify against recorded resource capacities, not real host CPU cores "
+                f"(or your declared budget), so Efficiency Score may overstate real efficiency "
+                f"here (see UX-09/UX-15)."
             )
         return (
             "LB/Efficiency Score certify against this run's recorded resource "
-            "capacities (builders/fetchers/pushers), not real host CPU cores - native "
-            "build-system parallelism (--max-jobs) is a separate, currently unmodeled "
-            "axis (see UX-09)."
+            "capacities (builders/fetchers/pushers), not real host CPU cores or any "
+            "declared CPU budget - native build-system parallelism (--max-jobs) is a "
+            "separate, currently unmodeled axis (see UX-09/UX-15)."
         )
 
     def analyze(self, run_dir: Optional[Path] = None) -> AnalysisResult:

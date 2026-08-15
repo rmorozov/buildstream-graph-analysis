@@ -2,7 +2,7 @@
 from typing import List, Optional
 
 from ..ingest.models import AnalysisResult
-from ._shared import GRAPH_SIGNAL_KEYS
+from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
 # Confidence-band labels for the Key Findings headline (P4-02) - a
 # presentation-only heuristic, not a spec-defined threshold (Part 33
@@ -68,8 +68,8 @@ def _format_violation_summary(violation: dict) -> str:
             f"oversubscription: builders={violation.get('builders')} x "
             f"native max-jobs={violation.get('native_max_jobs')} = "
             f"{violation.get('actual_demand')} potential concurrent processes "
-            f"on a {violation.get('host_cpu_count')}-core host (BuildStream's own "
-            f"defaults for this host: {violation.get('default_demand')}) - real CPU "
+            f"vs {_ceiling_desc(violation)} (BuildStream's own defaults for "
+            f"that ceiling: {violation.get('default_demand')}) - real CPU "
             f"contention may be slowing individual tasks down, see UX-09"
         )
     if vtype == 'resource_undersubscription':
@@ -77,10 +77,29 @@ def _format_violation_summary(violation: dict) -> str:
             f"undersubscription: builders={violation.get('builders')} x "
             f"native max-jobs={violation.get('native_max_jobs')} = "
             f"{violation.get('actual_demand')} potential concurrent processes "
-            f"on a {violation.get('host_cpu_count')}-core host - fewer than one "
-            f"process per core, may be leaving cores idle"
+            f"vs {_ceiling_desc(violation)} - fewer than one process per core, "
+            f"may be leaving cores idle"
+        )
+    if vtype == 'cpu_budget_exceeds_host_capacity':
+        return (
+            f"declared cpu_budget={violation.get('cpu_budget')} exceeds this "
+            f"environment's detected host_cpu_count={violation.get('host_cpu_count')} "
+            f"- the declared budget itself may be unrealistic here, see UX-15"
         )
     return f"{vtype}: {violation}"
+
+
+def _ceiling_desc(violation: dict) -> str:
+    """UX-15: the governing capacity ceiling a resource_(over|under)
+    subscription violation was checked against - either the operator's
+    declared cpu_budget or the environment's detected host_cpu_count,
+    named accurately rather than always saying "host" (which would be
+    wrong when a declared budget, not real hardware, is what governed
+    the check)."""
+    governing_cores = violation.get('governing_cores')
+    if violation.get('capacity_source') == 'declared_cpu_budget':
+        return f"a declared CPU budget of {governing_cores} cores"
+    return f"a {governing_cores}-core host"
 
 
 def _format_capacity_model_note(result: AnalysisResult) -> str:
@@ -525,6 +544,8 @@ def format_sweep_text(resource: str, sweep_result) -> str:
         lines.append("Monotonicity violations:")
         for violation in sweep_result.monotonicity_violations:
             lines.append(f"  {violation}")
+    lines.append("")
+    lines.append(f"Note: {SWEEP_CAPACITY_MODEL_CAVEAT}")
     lines.append("=" * 60)
     return "\n".join(lines)
 

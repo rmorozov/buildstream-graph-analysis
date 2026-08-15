@@ -30,7 +30,14 @@ from .compare import compare_runs
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
-from .report import format_compare_text, format_csv, format_json, format_sweep_text, format_text
+from .report import (
+    SWEEP_CAPACITY_MODEL_CAVEAT,
+    format_compare_text,
+    format_csv,
+    format_json,
+    format_sweep_text,
+    format_text,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +115,7 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
             'sweeps': sweep_result.sweeps,
             'knee_points': sweep_result.knee_points,
             'monotonicity_violations': sweep_result.monotonicity_violations,
+            'capacity_model_caveat': SWEEP_CAPACITY_MODEL_CAVEAT,
         }, indent=2, default=str)
     return format_sweep_text(args.resource, sweep_result)
 

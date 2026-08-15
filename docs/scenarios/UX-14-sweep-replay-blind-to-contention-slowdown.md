@@ -1,6 +1,6 @@
 # UX-14: `bga sweep`/`bga replay` can't represent the real slowdown `UX-09` measured
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** `UX-09`
+**Priority:** High | **Status:** 🟡 In Progress (tier 1 done) | **Depends on:** `UX-09`
 
 ## Motivation
 
@@ -19,10 +19,17 @@ Two tiers, same "don't force a quick patch on real design work" discipline as `U
 1. **Minimum (cheap, should definitely be done):** add the spec's own "shape, not an exact prediction" caveat - plus an explicit sentence that the model assumes task durations are invariant to the resource being swept, which is not true when that resource is `PROCESS` and the underlying work is CPU-bound with its own internal parallelism (cross-reference `UX-09`) - to `format_sweep_text`'s actual output and its JSON equivalent, not just the spec doc.
 2. **Deeper (real design work, not attempted here):** a contention-aware duration model - e.g. scale each task's own CPU-bound portion by a real measured or estimated slowdown curve as concurrent `PROCESS` usage increases during the swept simulation. Explicitly hard: needs real per-project calibration data (a constant guessed slowdown factor would just be a different kind of overclaim), and likely has no honest grounding until `UX-11`'s intra-element visibility exists to supply real per-task CPU-vs-wall-clock data. Not a prerequisite for tier 1.
 
+## Fix Implemented (tier 1 only)
+
+`bga/report/_shared.py`'s new `SWEEP_CAPACITY_MODEL_CAVEAT` constant (spec Part 19's own "shape, not exact runtime prediction" language, plus an explicit sentence naming the fixed-duration/no-contention-modeling assumption and cross-referencing `UX-09`'s real evidence) is now the single source both `bga/report/text.py`'s `format_sweep_text` (appended as a `Note:` line after any monotonicity violations) and `bga/cli.py`'s JSON sweep output (`capacity_model_caveat` key) actually render - previously this text existed only in the spec document, never in anything the CLI prints.
+
+Tier 2 (a real contention-aware duration model) remains not attempted, per this task's own original scoping - still real, hard design work likely gated on `UX-11`'s intra-element visibility.
+
 ## Out of Scope
 
 - Attempting the tier-2 contention-aware model in this task - filed as a real, hard, separate follow-on, likely blocked on `UX-11` in practice even though not formally declared a hard dependency.
 - Changing `monotonicity_violations`' existing (correct, real) heuristic-tie-break check - it stays, it's just not sufficient on its own.
+- `UX-15` (a declared `cpu_budget` overriding raw host detection) was folded into this round's work but is its own, separately-filed scenario - it changes `UX-12`'s oversubscription check, not anything in this file's own scope (`bga sweep`/`replay`'s duration-modeling blind spot).
 
 ## Acceptance Test
 
@@ -32,4 +39,6 @@ Two tiers, same "don't force a quick patch on real design work" discipline as `U
 
 ## Verification Log
 
-Not started. Filed 2026-08-15 after re-reading `bga/replay/scheduler.py`'s `capacity_sweep`/`is_monotonic` in full and confirming `duration_us` is never recomputed as a function of swept capacity, and after grepping `bga/report/text.py`'s `format_sweep_text` and confirming zero caveat text is actually emitted to a user despite the spec's own "shape, not exact" language.
+Filed 2026-08-15 after re-reading `bga/replay/scheduler.py`'s `capacity_sweep`/`is_monotonic` in full and confirming `duration_us` is never recomputed as a function of swept capacity, and after grepping `bga/report/text.py`'s `format_sweep_text` and confirming zero caveat text is actually emitted to a user despite the spec's own "shape, not exact" language.
+
+Tier 1 done for real, 2026-08-15. New tests: `tests/unit/test_cli_subcommands.py` (+2 tests - the caveat appears in both `bga sweep`'s text and `--format json` output, verified via a real subprocess CLI invocation, not just direct function calls). Full suite green (`make lint`, `pytest` - 490 passed, same 7 pre-existing environment-only failures as `main`). Real re-verification: `bga sweep tests/fixtures/synthetic_multi_subproject --resource PROCESS --min-capacity 1 --max-capacity 4` now prints `"Note: This sweep replays each task's fixed, already-observed duration - it does not model real CPU contention as concurrent PROCESS usage rises (see UX-09's real evidence this can cause an actual slowdown, not just a plateau, past some capacity). Treat this curve as a shape, not an exact runtime prediction (Part 19)."` directly under its knee-point line.

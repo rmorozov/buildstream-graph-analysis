@@ -148,3 +148,11 @@ examples/**/files/runtime/bin/*
 examples/*/.generated-remote/
 examples/03-project-refs-identity/elements/libbar.bst
 !examples/**/files/runtime/bin/.gitkeep
+
+# examples/05-cmake-cpp-toolchain/files/toolchain/: a full real gcc/g++/
+# cmake/make/binutils sysroot staged from the HOST's own installed
+# packages (examples/stage_cpp_toolchain.sh) - ~270MB, host-specific
+# (absolute paths/binary content tied to the exact host distro/package
+# versions), regenerated at build time, never committed - same reasoning
+# as the busybox runtime staging above, scaled up. See examples/README.md.
+examples/05-cmake-cpp-toolchain/files/toolchain/

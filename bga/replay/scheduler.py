@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple, Set
 from collections import defaultdict, deque
 import heapq
 
+from ..floors.capacity import compute_default_capacities
 from ..ingest.models import RunContext
 from ..normalize.timestamps import NormalizedTask
 
@@ -109,12 +110,16 @@ class ReplayScheduler:
                 self._predecessors[task_key].add(dep_key)
                 self._successors[dep_key].add(task_key)
         
-        # Default capacities from run context or sensible defaults
-        self._default_capacities = {
-            'PROCESS': getattr(run_context, 'builders', 4) if run_context else 4,
-            'DOWNLOAD': getattr(run_context, 'fetchers', 2) if run_context else 2,
-            'UPLOAD': getattr(run_context, 'pushers', 2) if run_context else 2,
-        }
+        # Default capacities from run context or sensible defaults (P2-09:
+        # previously read nonexistent run_context.builders/fetchers/pushers
+        # attributes - RunContext has never defined those, only the real
+        # `resource_capacities` field, so this always silently fell back to
+        # the hardcoded 4/2/2 regardless of the run's actual capacities.
+        # compute_default_capacities is the same shared helper the LB
+        # computation (bga/floors/capacity.py) already uses - one real
+        # implementation instead of two independently-maintained copies of
+        # "run_context.resource_capacities, or these hardcoded defaults").
+        self._default_capacities = compute_default_capacities(run_context)
 
         # Longest *remaining* path (in task hops) from each task to any
         # sink - real Part 18 `depth` priority rule support (P1-34:

@@ -4,7 +4,7 @@ Deterministic replay scheduler basic correctness and capacity-sweep
 monotonicity (Part 18/19), on small hand-built NormalizedTask lists -
 no run-dir/JSON fixture needed.
 """
-from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind
+from bga.ingest.models import NormalizedTask, Resource, RunContext, TaskKey, TaskKind
 from bga.replay.scheduler import ReplayScheduler
 
 
@@ -54,6 +54,36 @@ def test_independent_tasks_parallelize_under_sufficient_capacity():
 
     result = scheduler.replay(capacities={"PROCESS": 3})
     assert result.makespan_us == 1000
+
+
+def test_default_capacities_use_real_run_context_resource_capacities():
+    """P2-09: ReplayScheduler's own default-capacity fallback previously
+    read nonexistent run_context.builders/fetchers/pushers attributes
+    (RunContext has never defined them - only the real resource_capacities
+    field), always silently falling back to the hardcoded 4/2/2 regardless
+    of the run's actual capacities. 5 independent 1000us tasks, a real
+    run_context declaring resource_capacities={"PROCESS": 5}, no explicit
+    capacities passed to .replay() - must use the real capacity 5 (full
+    parallelism, makespan == 1000), not the stale hardcoded default of 4
+    (which would force the 5th task to wait, makespan == 2000)."""
+    tasks = [_task(f"t{i}.bst", 1000) for i in range(5)]
+    run_context = RunContext(resource_capacities={"PROCESS": 5})
+    scheduler = ReplayScheduler(tasks, run_context)
+
+    result = scheduler.replay()
+
+    assert result.makespan_us == 1000
+
+
+def test_default_capacities_fall_back_to_hardcoded_defaults_without_run_context():
+    """Regression: no run_context at all - unaffected, still falls back
+    to the hardcoded default (PROCESS capacity 4), same as before P2-09."""
+    tasks = [_task(f"t{i}.bst", 1000) for i in range(5)]
+    scheduler = ReplayScheduler(tasks, run_context=None)
+
+    result = scheduler.replay()
+
+    assert result.makespan_us == 2000
 
 
 def test_capacity_sweep_is_monotonic_and_hits_expected_endpoints():

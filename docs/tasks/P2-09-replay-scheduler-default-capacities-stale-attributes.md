@@ -1,6 +1,6 @@
 # P2-09: `ReplayScheduler`'s own default-capacity fallback reads nonexistent `RunContext` attributes
 
-**Priority:** P2 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P2 | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 Part 18 (Replay): replay heuristics operate against real scheduling capacity. No spec-level requirement is violated by this bug on its own (the real `analyze` path is unaffected, see Background) - this is a "just works" API-correctness gap, not a spec-compliance gap.
@@ -40,4 +40,15 @@ It **does** affect any other caller that constructs `ReplayScheduler(tasks, run_
 4. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`ReplayScheduler.__init__`'s `_default_capacities` construction (`bga/replay/scheduler.py`) now calls the shared `compute_default_capacities(run_context)` helper (`bga/floors/capacity.py`) - the same one `bga/analyzer.py`'s LB computation already uses - instead of the independent `getattr(run_context, 'builders'/'fetchers'/'pushers', ...)` lookups, which always evaluated to the hardcoded defaults since `RunContext` has never defined those attributes. Notably, `compute_default_capacities`'s own docstring already documented this exact bug shape ("replay's previous separate getattr(...) lookups were dead code") - the helper existed and was correct, it just wasn't wired into `ReplayScheduler` itself.
+
+New tests (`tests/unit/test_replay.py`, 2 new): `test_default_capacities_use_real_run_context_resource_capacities` - 5 independent tasks, `run_context.resource_capacities={"PROCESS": 5}`, no explicit `capacities` passed to `.replay()` - must fully parallelize (makespan 1000us), not silently cap at the stale hardcoded default of 4 (which would force makespan to 2000us); confirmed this fails against the pre-fix code via `git stash` (asserts `2000 == 1000`, i.e. reproduces the bug exactly). `test_default_capacities_fall_back_to_hardcoded_defaults_without_run_context` - regression guard, `run_context=None` still uses the hardcoded default unaffected.
+
+```
+$ python3 -m pytest tests/unit/test_replay.py -v
+12 passed
+$ python3 -m pytest -q   # full suite
+422 passed, 11 skipped
+$ make lint
+All checks passed!
+```

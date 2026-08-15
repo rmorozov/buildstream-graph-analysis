@@ -176,11 +176,17 @@ done
 cp -a --parents /usr/include "$DEST"
 
 # cmake's own data files (Modules/, Templates/) - located relative to the
-# cmake binary's real install prefix, required at runtime.
+# cmake binary's real install prefix, required at runtime. `-L` (dereference
+# symlinks) rather than plain `-a`: a real CI run on a different host found
+# this directory copied "successfully" (no error) but with the Modules/
+# subtree unusable ("CMake Error: Could not find CMAKE_ROOT !!! ... Modules
+# directory not found") - that host's cmake package apparently has this
+# tree nested behind a symlink `-a` preserves as a shell rather than
+# following, unlike this dev host's own real, non-symlinked layout.
 CMAKE_DATADIR="$(cmake --system-information 2>/dev/null | grep -oP '(?<=CMAKE_ROOT ")[^"]+' | head -1)"
 rm -rf "$HERE/__cmake_systeminformation"
 if [ -n "${CMAKE_DATADIR:-}" ] && [ -d "$CMAKE_DATADIR" ]; then
-  cp -a --parents "$CMAKE_DATADIR" "$DEST"
+  cp -aL --parents "$CMAKE_DATADIR" "$DEST"
 fi
 
 # `make`'s own recipe shell is hardcoded to /bin/sh (confirmed via a real
@@ -189,5 +195,22 @@ fi
 # exactly what's in this tree, so the alias has to be real staged content,
 # not something supplied by a bwrap flag at smoke-test time.
 ln -sfn usr/bin "$DEST/bin"
+
+# Loud, early verification rather than a silent, "succeeded" staging step
+# that turns out unusable three layers deep into a real build (exactly
+# what happened above with cmake's Modules/ dir on a different host) -
+# fail *here*, with a clear list of what's missing, not inside a cryptic
+# cmake/gcc error during the real bst build this is staged for.
+MISSING=()
+for f in "$DEST/usr/bin/gcc" "$DEST/usr/bin/g++" "$DEST/usr/bin/cmake" "$DEST/usr/bin/make" \
+         "$DEST/usr/bin/ld" "$DEST$CMAKE_DATADIR/Modules/CMakeCXXInformation.cmake" \
+         "$DEST/usr/include/c++"; do
+  [ -e "$f" ] || MISSING+=("$f")
+done
+if [ "${#MISSING[@]}" -gt 0 ]; then
+  echo "stage_cpp_toolchain.sh: staged toolchain is missing expected files:" >&2
+  printf '  %s\n' "${MISSING[@]}" >&2
+  exit 1
+fi
 
 echo "Staged toolchain to $DEST ($(du -sh "$DEST" | cut -f1))"

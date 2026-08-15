@@ -1,6 +1,6 @@
 # UX-05: No worked "iteratively optimize a real project" tutorial
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** `UX-01`, `UX-02` (the walkthrough should demonstrate the real comparison/efficiency-score tooling, not manual eyeballing - see Sequencing note below)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-01`, `UX-02` (the walkthrough should demonstrate the real comparison/efficiency-score tooling, not manual eyeballing - see Sequencing note below)
 
 ## Motivation
 
@@ -34,4 +34,13 @@ This task's *content* depends on `UX-01`/`UX-02` existing (the walkthrough shoul
 4. Linked from `README.md`.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+
+Done for real, 2026-08-15. A new example project (`examples/04-critical-path-optimization`, plus an `optimized/` variant - both real BuildStream 2.7.0 projects, not fixtures) was built with two deliberate, independently discoverable problems, then actually optimized in two iterations using `bga`'s own output to pick each change:
+
+- Iteration 1 (scheduling): `bga analyze` on the baseline (`--builders 2`) named `RESOURCE_WAIT` as `Biggest Opportunity` and `efficiency_score: 0.81`. Rebuilt with `--builders 4` (no project change) - `bga compare` confirmed `RESOURCE_WAIT` 2.00s -> 0.00s, `efficiency_score` 0.81 -> 1.00.
+- Iteration 2 (structural): with scheduling maxed out, blast-radius ranking pointed at `base-config.bst`/`core.bst`. Built `optimized/` (merged `base-config`+`base-generate`, cut `core.bst`'s work) - `bga compare` confirmed `T∞` (observed critical path) dropped by exactly the predicted 3.10s.
+- Combined: `bga compare run-baseline-b2 run-optimized-b4` → `Verdict: IMPROVED (total duration -5.10s, -48.1%, 10.60s -> 5.50s)`.
+
+Full transcript with every real command and its actual output: [`docs/optimization-walkthrough.md`](../optimization-walkthrough.md). Linked from `README.md`'s Documentation section.
+
+Two real bugs were found along the way (both deferred to backlog per this work session's scope, not fixed here - see `docs/scenarios/UX-06-raw-log-timestamp-corruption.md` and `docs/scenarios/UX-07-run-identity-collides-across-sibling-projects.md`): `--format raw`'s timestamp reconstruction corrupts cross-task ordering on real saved logs (worked around here via a new `tools/bst_run_wrapped.py` live-capture tool instead), and `run_identity.manifest_hash` collides for two different projects under the same git commit.

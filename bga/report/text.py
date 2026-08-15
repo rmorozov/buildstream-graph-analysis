@@ -22,6 +22,25 @@ def _confidence_band(score: float) -> str:
     return "low"
 
 
+# efficiency_score bands (UX-02) - presentation-only, same status as the
+# confidence bands above (a labeling heuristic, not a spec threshold).
+# Deliberately distinct cut points from confidence's: 0.9/0.7 rather than
+# 0.8/0.5, chosen so "very efficient" only applies once remaining
+# scheduling headroom is genuinely small (under 10% of total duration),
+# and "worth checking Certified Headroom" starts well before that (30%+
+# headroom is real, actionable room, not noise).
+_EFFICIENCY_HIGH = 0.9
+_EFFICIENCY_MEDIUM = 0.7
+
+
+def _efficiency_band(score: float) -> str:
+    if score >= _EFFICIENCY_HIGH:
+        return "very efficient - remaining gains are mostly in reducing Critical Path's own work, not scheduling"
+    if score >= _EFFICIENCY_MEDIUM:
+        return "worth checking Certified Headroom for real scheduling gains"
+    return "meaningful scheduling headroom available"
+
+
 def _format_violation_summary(violation: dict) -> str:
     """One-line, human-readable summary for a single violation dict -
     every `type` currently produced anywhere in bga/ (P4-02's own
@@ -141,6 +160,23 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
         lines.append(
             f"  Certified Headroom: up to {headroom / 1e6:.2f}s available "
             f"(T∞={t_inf / 1e6:.2f}s, LB={lb_val / 1e6:.2f}s)"
+        )
+
+    # Efficiency score (UX-02): scheduling efficiency of the observed
+    # work only - never presented alone without the "not work-minimality"
+    # caveat, so a high score can't be misread as "nothing more to do"
+    # (Critical Path is where that remaining opportunity would show up).
+    # Gated on confidence per the same discipline as the comparison
+    # verdict this score feeds elsewhere - low-confidence input gets an
+    # explicit caveat rather than false precision.
+    efficiency_score = floors.get('efficiency_score')
+    if efficiency_score is not None:
+        band = _efficiency_band(efficiency_score)
+        caveat = ""
+        if primary is not None and primary < _CONFIDENCE_HIGH:
+            caveat = " - low-confidence data, treat with caution"
+        lines.append(
+            f"  Efficiency Score: {efficiency_score:.2f} ({band}){caveat}"
         )
 
     lines.append("")
@@ -270,6 +306,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         t_replay = floors.get('t_c') or floors.get('t_replay_us')
         if t_replay is not None:
             lines.append(f"  T_C (replay makespan):       {t_replay / 1e6:.2f}s")
+        efficiency_score = floors.get('efficiency_score')
+        if efficiency_score is not None:
+            lines.append(f"  Efficiency Score:            {efficiency_score:.2f} ({_efficiency_band(efficiency_score)})")
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
             lines.append(f"  T∞,cold (advisory):          {floors['t_infinity_cold'] / 1e6:.2f}s{partial_note}")

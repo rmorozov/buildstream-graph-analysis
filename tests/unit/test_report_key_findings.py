@@ -5,12 +5,15 @@ plus a confidence/violations block that was previously entirely missing
 from text output (only reachable via --format json).
 """
 import json
+from pathlib import Path
 
 import pytest
 
 from bga import BuildEfficiencyAnalyzer
 from bga.report.text import format_text, format_csv
 from bga.report.json import format_json
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _write_run_dir(tmp_path, run_context, elements, dependencies, spans):
@@ -110,6 +113,69 @@ def test_key_findings_shows_certified_headroom_in_plain_language(analyzed_result
     key_findings_section = output.split("Certified Floors:")[0]
     assert "Certified Headroom" in key_findings_section
     assert "available" in key_findings_section
+
+
+# --- UX-02: efficiency_score --------------------------------------------
+
+def test_efficiency_score_matches_lb_over_horizon(analyzed_result):
+    """This fixture has a real DEPENDENCY_WAIT gap, so LB < horizon -
+    exact formula check against independently-recomputed floors."""
+    floors = analyzed_result.floors
+    assert floors["efficiency_score"] == pytest.approx(floors["lb"] / analyzed_result.total_duration_us)
+
+
+def test_low_confidence_efficiency_score_carries_a_caveat(analyzed_result):
+    """This fixture's confidence is 0.50 (medium, below the 0.8 'high'
+    band) - the efficiency score must say so explicitly rather than
+    reading as confident, precise data."""
+    assert analyzed_result.confidence["primary"] < 0.8
+    output = format_text(analyzed_result)
+    key_findings_section = output.split("Certified Floors:")[0]
+    assert "Efficiency Score:" in key_findings_section
+    assert "low-confidence data" in key_findings_section
+
+
+def test_efficiency_score_appears_in_certified_floors_section_too(analyzed_result):
+    output = format_text(analyzed_result)
+    floors_section = output.split("Certified Floors:")[1].split("Attribution Breakdown:")[0]
+    assert "Efficiency Score:" in floors_section
+
+
+def test_fully_packed_high_confidence_run_scores_high_with_no_caveat():
+    """The checked-in golden fixture has no wait gaps at all (LB ==
+    horizon, efficiency_score == 1.0) and real, high confidence (0.88+,
+    not hand-tuned to trigger the low-confidence caveat) - the report
+    must show the 'very efficient' band with no low-confidence caveat."""
+    run_dir = REPO_ROOT / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
+    analyzer = BuildEfficiencyAnalyzer(run_dir, run_diagnostics=True)
+    analyzer.load()
+    result = analyzer.analyze()
+
+    assert result.floors["efficiency_score"] == 1.0
+    assert result.confidence["primary"] >= 0.8
+    output = format_text(result)
+    key_findings_section = output.split("Certified Floors:")[0]
+    assert "Efficiency Score: 1.00 (very efficient" in key_findings_section
+    assert "low-confidence" not in key_findings_section
+
+
+def test_efficiency_score_is_none_when_no_normalized_tasks(tmp_path):
+    """No spans at all - no normalized tasks, floors['lb'] is None -
+    efficiency_score must also be None, never a fabricated value or a
+    ZeroDivisionError."""
+    run_dir = _write_run_dir(
+        tmp_path,
+        run_context={"trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 0},
+        elements=[],
+        dependencies=[],
+        spans=[],
+    )
+    analyzer = BuildEfficiencyAnalyzer(run_dir)
+    analyzer.load()
+    result = analyzer.analyze()
+
+    assert result.floors["lb"] is None
+    assert result.floors["efficiency_score"] is None
 
 
 def test_confidence_and_violations_block_present_in_default_text_output(analyzed_result):

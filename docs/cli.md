@@ -24,7 +24,7 @@ To produce a real run directory in this shape from an actual BuildStream project
 **Output:**
 By default, `bga` prints a human-readable summary to stdout, leading with a synthesized **Key Findings** block (confidence headline, the single largest wait-category opportunity, the top elements by blast radius/criticality probability when `--diagnostics` ran, and certified headroom in plain language) before the detailed sections:
 - **Confidence & Violations**: Overall confidence score, any failed hard gates, and a one-line summary per violation - previously only visible via `--format json`.
-- **Certified Floors**: $T_\infty$, Lower Bound ($LB$), and Certified Headroom.
+- **Certified Floors**: $T_\infty$, Lower Bound ($LB$), Certified Headroom, and an Efficiency Score ($LB$ / total duration, 0.0-1.0) - measures scheduling efficiency of the observed work, not whether that work itself is minimal; see Critical Path for the latter.
 - **Efficiency Metrics**: Parallelism, Utilization, and Attribution breakdown.
 - **Critical Path**: The sequence of tasks determining the minimum build time.
 - **Bottlenecks**: Elements with high blast radius or criticality probability.

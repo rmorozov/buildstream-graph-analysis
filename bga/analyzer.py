@@ -265,6 +265,9 @@ class BuildEfficiencyAnalyzer:
             - certified_headroom: H - LB
             - t_c: Replay makespan (Part 18)
             - model_slack: T_C - LB
+            - efficiency_score: LB / horizon_us (UX-02) - scheduling
+              efficiency of the observed work, not work-minimality; None
+              when horizon_us is 0
         """
         if not self.normalized_tasks:
             return {
@@ -278,6 +281,7 @@ class BuildEfficiencyAnalyzer:
                 'certified_headroom': None,
                 't_c': None,
                 'model_slack': None,
+                'efficiency_score': None,
             }
 
         # Get task horizon
@@ -300,6 +304,21 @@ class BuildEfficiencyAnalyzer:
         lb = max(t_infinity_observed, capacity_lb, serialization_lb)
 
         certified_headroom = max(0, horizon_us - lb)
+
+        # UX-02: efficiency_score = LB / total_duration - the fraction of
+        # wall-clock time already at the certified floor (equivalently
+        # 1 - certified_headroom/horizon_us). Chosen over other candidate
+        # ratios (e.g. t_c/horizon_us, which would measure the replay
+        # model's own scheduling rather than a proven bound) specifically
+        # because LB is a certified, proven-un-improvable quantity - this
+        # score inherits that same certainty, not a model-dependent
+        # estimate. None when horizon_us is 0 (nothing to divide by) -
+        # never fabricated. This measures *scheduling* efficiency of the
+        # observed work, not whether that work itself is minimal - a
+        # slow-but-perfectly-scheduled critical path still scores near
+        # 1.0; Critical Path is what surfaces the "reduce the work
+        # itself" opportunity efficiency_score deliberately doesn't.
+        efficiency_score = (lb / horizon_us) if horizon_us > 0 else None
 
         # Compute replay makespan T_C (Part 18)
         t_c = None
@@ -335,6 +354,7 @@ class BuildEfficiencyAnalyzer:
                 'certified_headroom': Certified(certified_headroom),
                 't_c': Certified(t_c) if t_c is not None else None,
                 'model_slack': Certified(model_slack) if model_slack is not None else None,
+                'efficiency_score': Certified(efficiency_score) if efficiency_score is not None else None,
             },
             advisory={
                 't_infinity_cold': Advisory(cold_floor['t_infinity_cold']),

@@ -50,20 +50,41 @@ def _element_build_finish(normalized_spans: List[Tuple[TaskSpan, int, int]]) -> 
 def quantize_timestamp(ts_us: int, epsilon_us: int) -> int:
     """
     Quantize a timestamp to the epsilon grid (Part 3.2).
-    
-    Uses deterministic rounding: round to nearest multiple of epsilon.
-    Ties round toward zero (standard Python round behavior for integers).
-    
+
+    Rounds to the nearest multiple of epsilon using pure integer
+    arithmetic (P2-07) - the previous implementation did
+    `round(ts_us / epsilon_us) * epsilon_us`, a real (if practically
+    harmless for realistic microsecond-range timestamps) floating-point
+    division ahead of `round()`, in a code path Part 3.1 explicitly says
+    must have none ("No floating-point arithmetic is used for timeline
+    accounting").
+
+    Documented deterministic tie rule (Part 3.2's own requirement -
+    "the implementation must use a documented deterministic rounding
+    rule", not merely the conceptual round(ts/epsilon)*epsilon formula):
+    exact ties (`ts_us` precisely halfway between two grid points) round
+    up (away from zero for the non-negative timestamps this codebase
+    always operates on). This is a deliberate choice, not an implicit
+    inheritance of Python float `round()`'s default behavior (round-
+    half-to-even / "banker's rounding", which the previous docstring
+    here incorrectly described as "round toward zero" - it does neither
+    consistently). No currently-tested case in this codebase depends on
+    exact-tie behavior; this only changes what an exact tie resolves to,
+    not any already-tested boundary.
+
+    Derivation: round-half-up of ts_us/epsilon_us is
+    floor(ts_us/epsilon_us + 1/2) = floor((2*ts_us + epsilon_us) /
+    (2*epsilon_us)) - exact integer floor division, no float involved,
+    correct for any epsilon_us (odd or even).
+
     Args:
         ts_us: Timestamp in microseconds
         epsilon_us: Quantization epsilon in microseconds
-        
+
     Returns:
         Quantized timestamp in microseconds
     """
-    # Round to nearest epsilon multiple
-    # This ensures transitive equality: if A ~ B and B ~ C, then A ~ C
-    return round(ts_us / epsilon_us) * epsilon_us
+    return ((2 * ts_us + epsilon_us) // (2 * epsilon_us)) * epsilon_us
 
 
 def normalize_timestamps(

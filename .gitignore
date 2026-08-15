@@ -146,4 +146,5 @@ Thumbs.db
 # not committed - see examples/README.md.
 examples/*/files/runtime/bin/*
 examples/*/.generated-remote/
+examples/03-project-refs-identity/elements/libbar.bst
 !examples/*/files/runtime/bin/.gitkeep

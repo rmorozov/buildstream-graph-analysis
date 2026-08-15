@@ -1,6 +1,6 @@
 # P2-07: Timestamp quantization uses floating-point division instead of integer arithmetic
 
-**Priority:** P2 (low practical risk for realistic BuildStream timestamps - int64 microseconds stay well within float64's exact-integer range - but an avoidable, spec-adjacent precision hygiene issue) | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P2 (low practical risk for realistic BuildStream timestamps - int64 microseconds stay well within float64's exact-integer range - but an avoidable, spec-adjacent precision hygiene issue) | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 Part 3.1: "All internal timestamps and durations use int64 microseconds... No floating-point arithmetic is used for timeline accounting" (`docs/specification.md:193-215`). Part 3.2: quantization is defined conceptually as `round(ts / epsilon) * epsilon`, but "the implementation must use a documented deterministic rounding rule" (`docs/specification.md:219-245`) - the conceptual formula is not itself a license to use real floating-point division.
@@ -30,4 +30,15 @@ return round(ts_us / epsilon_us) * epsilon_us
 4. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`quantize_timestamp` (`bga/normalize/timestamps.py`) now uses `((2 * ts_us + epsilon_us) // (2 * epsilon_us)) * epsilon_us` - pure integer floor division, no float arithmetic anywhere in the path. Documented tie policy: round-half-up (exact ties round to the higher grid point) - a deliberate choice, replacing the previous docstring's inaccurate claim that Python's `round()` "rounds toward zero" (it actually performs round-half-to-even/banker's rounding, which the fix removes entirely).
+
+New tests (`tests/unit/test_normalize.py`, 3 new): an exact-tie case (125000, exactly halfway between 100000/150000 at epsilon=50000) resolves to the documented round-up behavior, not banker's rounding; a bytecode-level check (via `dis`) that the compiled function contains a `//` operator and no `/` operator, immune to docstring-prose false positives a source-grep would hit; a cross-check against an independent reference round-half-up implementation across a wide range of timestamps/epsilons. Confirmed no existing test relied on exact-tie behavior (none used a value exactly at an epsilon/2 boundary), so this is a behavior-preserving change for every previously-tested case.
+
+```
+$ python3 -m pytest tests/unit/test_normalize.py -v
+22 passed
+$ python3 -m pytest -q   # full suite
+430 passed, 11 skipped
+$ make lint
+All checks passed!
+```

@@ -47,6 +47,53 @@ def test_timestamp_past_half_epsilon_rounds_to_next_grid_point():
     assert quantize_timestamp(125001, 50000) == 150000
 
 
+# --- P2-07: integer-only quantization, documented tie policy ---
+
+def test_exact_tie_rounds_up_not_bankers_rounding():
+    """125000 is exactly halfway between grid points 100000 and 150000
+    (epsilon=50000) - the documented tie policy (round-half-up) must
+    resolve to the higher grid point, not Python float round()'s
+    round-half-to-even ("banker's rounding") default, which would have
+    rounded 125000/50000=2.5 down to 2 (100000, the *even* neighbor)."""
+    assert quantize_timestamp(125000, 50000) == 150000
+
+
+def test_quantize_uses_no_float_division():
+    """A simple, verifiable bytecode check (P2-07's own acceptance test
+    #3) that quantize_timestamp's compiled body contains no true
+    (float-producing) division operator - only integer floor division
+    ('//'). Checking bytecode (via each instruction's resolved operator
+    text) rather than grepping source avoids false positives from the
+    docstring's own prose describing the old, replaced floating-point
+    formula for explanatory purposes."""
+    import dis
+    operators = {
+        instr.argrepr for instr in dis.get_instructions(quantize_timestamp)
+        if instr.opname == "BINARY_OP"
+    }
+    assert "//" in operators
+    assert "/" not in operators
+
+
+def test_quantize_matches_round_half_up_reference_across_a_range():
+    """Cross-check the integer formula against an independent reference
+    implementation (Python's own round-half-up, via // and % on floats
+    only in the *test*, not the code under test) across a wide range of
+    values and epsilons, including exact ties and near-ties on both
+    sides, to catch any off-by-one in the integer derivation."""
+    def reference_round_half_up(ts_us, epsilon_us):
+        quotient, remainder = divmod(ts_us, epsilon_us)
+        if 2 * remainder >= epsilon_us:
+            quotient += 1
+        return quotient * epsilon_us
+
+    for epsilon_us in (1, 2, 3, 1000, 50000):
+        for ts_us in range(0, 10 * epsilon_us + 1, max(1, epsilon_us // 7)):
+            assert quantize_timestamp(ts_us, epsilon_us) == reference_round_half_up(ts_us, epsilon_us), (
+                f"ts_us={ts_us}, epsilon_us={epsilon_us}"
+            )
+
+
 # --- Ready times (Part 7) ---
 
 def test_ready_time_is_max_finish_of_predecessors():

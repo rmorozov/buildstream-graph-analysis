@@ -273,6 +273,15 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
             lines.append(f"  T∞,cold (advisory):          {floors['t_infinity_cold'] / 1e6:.2f}s{partial_note}")
+        # P2-06: per-tier duration-source breakdown for the cold critical
+        # path specifically - shown whenever cold analysis was attempted
+        # at all (including the "unavailable" case, where it's the
+        # diagnostic for *why*), not gated on t_infinity_cold being
+        # published.
+        cp_sources = floors.get('cold_critical_path_duration_sources')
+        if cp_sources:
+            parts = ", ".join(f"{count} {tier.replace('_', ' ').lower()}" for tier, count in sorted(cp_sources.items()))
+            lines.append(f"  Cold critical path sources:  {parts}")
         lines.append("")
 
     # Attribution (Part 11-12) - full report only; `--format csv` already

@@ -176,17 +176,49 @@ done
 cp -a --parents /usr/include "$DEST"
 
 # cmake's own data files (Modules/, Templates/) - located relative to the
-# cmake binary's real install prefix, required at runtime. `-L` (dereference
-# symlinks) rather than plain `-a`: a real CI run on a different host found
-# this directory copied "successfully" (no error) but with the Modules/
-# subtree unusable ("CMake Error: Could not find CMAKE_ROOT !!! ... Modules
-# directory not found") - that host's cmake package apparently has this
-# tree nested behind a symlink `-a` preserves as a shell rather than
-# following, unlike this dev host's own real, non-symlinked layout.
-CMAKE_DATADIR="$(cmake --system-information 2>/dev/null | grep -oP '(?<=CMAKE_ROOT ")[^"]+' | head -1)"
-rm -rf "$HERE/__cmake_systeminformation"
-if [ -n "${CMAKE_DATADIR:-}" ] && [ -d "$CMAKE_DATADIR" ]; then
-  cp -aL --parents "$CMAKE_DATADIR" "$DEST"
+# cmake binary's real install prefix, required at runtime.
+#
+# Two real, failed attempts before this one, both against `cmake
+# --system-information`'s own reported CMAKE_ROOT (parsed via regex):
+#   1. Plain `cp -a --parents "$CMAKE_ROOT"` - a real CI run on a
+#      different host copied "successfully" (no error) but the Modules/
+#      subtree was unusable at build time ("CMake Error: Could not find
+#      CMAKE_ROOT !!! ... Modules directory not found").
+#   2. `cp -aL` (dereference symlinks) instead, on the theory the tree
+#      was nested behind a symlink `-a` preserved as a dangling shell -
+#      identical failure on a re-run, so that theory was wrong.
+# Root cause, from actually reading `dpkg -L cmake-data` on this host:
+# cmake-data is a real, dpkg-authoritative package that owns this exact
+# directory - using it directly sidesteps needing `--system-information`
+# to work correctly (it launches cmake and does a real trial compile,
+# more moving parts than a plain dpkg query) or its text output to be
+# regex-parseable in the exact expected shape on every host.
+CMAKE_VER_DIR=""
+if command -v dpkg >/dev/null 2>&1 && dpkg -s cmake-data >/dev/null 2>&1; then
+  # `pipefail` + `grep -m1` is a real footgun here: grep exiting after its
+  # first match closes the pipe early, so `dpkg` gets SIGPIPE and exits
+  # 141 - under `pipefail` that's the pipeline's reported status even
+  # though grep itself succeeded, which `set -e` then treats as this
+  # whole command failing (confirmed via a real silent-abort right after
+  # this line). Disable pipefail for just this one command instead of
+  # restructuring around `-m1`.
+  set +o pipefail
+  CMAKE_VER_DIR="$(dpkg -L cmake-data 2>/dev/null | grep -m1 -P '^/usr/share/cmake-[0-9][0-9.]*$' || true)"
+  set -o pipefail
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    copy_file_only "$f"
+  done < <(dpkg -L cmake-data 2>/dev/null | grep '^/usr/share/cmake-')
+fi
+# Fallback for non-dpkg hosts (or if the package query above found
+# nothing) - the original detection approach, kept only as a last resort.
+if [ -z "$CMAKE_VER_DIR" ]; then
+  CMAKE_DATADIR="$(cmake --system-information 2>/dev/null | grep -oP '(?<=CMAKE_ROOT ")[^"]+' | head -1)"
+  rm -rf "$HERE/__cmake_systeminformation"
+  if [ -n "${CMAKE_DATADIR:-}" ] && [ -d "$CMAKE_DATADIR" ]; then
+    cp -aL --parents "$CMAKE_DATADIR" "$DEST"
+    CMAKE_VER_DIR="$CMAKE_DATADIR"
+  fi
 fi
 
 # `make`'s own recipe shell is hardcoded to /bin/sh (confirmed via a real
@@ -203,7 +235,7 @@ ln -sfn usr/bin "$DEST/bin"
 # cmake/gcc error during the real bst build this is staged for.
 MISSING=()
 for f in "$DEST/usr/bin/gcc" "$DEST/usr/bin/g++" "$DEST/usr/bin/cmake" "$DEST/usr/bin/make" \
-         "$DEST/usr/bin/ld" "$DEST$CMAKE_DATADIR/Modules/CMakeCXXInformation.cmake" \
+         "$DEST/usr/bin/ld" "$DEST$CMAKE_VER_DIR/Modules/CMakeCXXInformation.cmake" \
          "$DEST/usr/include/c++"; do
   [ -e "$f" ] || MISSING+=("$f")
 done

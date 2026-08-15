@@ -214,3 +214,35 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path, **analyzer_kwargs) -> 
         baseline_result, candidate_result,
         baseline_analyzer.graph.elements, candidate_analyzer.graph.elements,
     )
+
+
+def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Optional[float] = None) -> bool:
+    """UX-03: the single, primary CI-gating question `bga compare
+    --fail-on-regression` exists to answer - "did the candidate run's
+    real total_duration_us (Part 4.3, UX-10) regress beyond
+    threshold_pct% of the baseline's". Kept here (not cli.py) since it's
+    comparison semantics, not command-line wiring - the CLI is only
+    responsible for deciding what to *do* with the answer (exit code,
+    the low-confidence fail-open rule).
+
+    total_duration_us is chosen as the one primary metric (rather than
+    an ambiguous multi-metric AND/OR) because it's the same real
+    wall-clock number `compare_runs`'s own `verdict` field already
+    gates on - "did the build get slower" is the natural top-level
+    question a CI regression gate exists to answer, and reusing the
+    exact same metric/formula the report already shows as `REGRESSED`
+    means `--fail-on-regression` (with no threshold override) fails
+    exactly when a human reading the report would call it a regression,
+    never a second, silently-different definition.
+
+    threshold_pct defaults to the same _SIGNIFICANCE_PCT `verdict`
+    itself uses - an explicit override lets a CI pipeline set its own,
+    stricter or looser, bar without changing what the report's own
+    verdict text calls "regressed".
+    """
+    baseline_total = comparison.baseline_metrics.get('total_duration_us')
+    delta_total = comparison.deltas.get('total_duration_us')
+    if baseline_total is None or baseline_total <= 0 or delta_total is None:
+        return False
+    pct = _SIGNIFICANCE_PCT if threshold_pct is None else threshold_pct
+    return delta_total > 0 and abs(delta_total) * 100 >= baseline_total * pct

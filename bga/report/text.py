@@ -83,6 +83,15 @@ def _format_violation_summary(violation: dict) -> str:
     return f"{vtype}: {violation}"
 
 
+def _format_capacity_model_note(result: AnalysisResult) -> str:
+    """UX-13: renders `AnalysisResult.floors['capacity_model_note']`
+    (computed once in `BuildEfficiencyAnalyzer._build_capacity_model_note`
+    - a single source of truth shared with `--format json`) as a report
+    line. Always present - see that method's own docstring for why."""
+    note = (result.floors or {}).get('capacity_model_note') or ""
+    return f"  Note: {note}"
+
+
 def _structural_kind_tag(entry: dict) -> str:
     """P4-12 Direction 2 / P4-15 Direction 2 (linked): a short, only-
     shown-when-relevant caveat for report listings ranking elements by a
@@ -338,6 +347,7 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         if cp_sources:
             parts = ", ".join(f"{count} {tier.replace('_', ' ').lower()}" for tier, count in sorted(cp_sources.items()))
             lines.append(f"  Cold critical path sources:  {parts}")
+        lines.append(_format_capacity_model_note(result))
         lines.append("")
 
     # Attribution (Part 11-12) - full report only; `--format csv` already

@@ -1,123 +1,86 @@
 # BuildStream Build Efficiency Analyzer (bga)
 
-A comprehensive tool for analyzing BuildStream build efficiency based on the v9 specification. This tool implements certified floors, dependency attribution, replay scheduling, and advanced diagnostics to help optimize build pipelines.
+`bga` reads a BuildStream build trace and tells you three things: **how much faster this build could possibly be** (a proven lower bound, not a guess), **exactly where the time actually went** (per-element attribution, not aggregate stats), and **what to fix first** (ranked by how many other elements depend on it).
 
-## Features
-
-- **Certified Floors**: Computes $T_\infty$ (critical path), Lower Bound ($LB$), and Certified Headroom
-- **Dependency Attribution**: Blame chain analysis showing exactly where time is spent
-- **Replay Scheduler**: Deterministic simulation of optimal scheduling under resource constraints
-- **CPU Utilization**: Multi-resource utilization tracking (CPU, IO, network)
-- **Advanced Diagnostics**: Blast radius, criticality probability, and wall-clock shares
-- **Cold Structural Analysis**: Historical trend detection and bottleneck identification
-
-## Installation
+## Install
 
 ```bash
 pip install -e .
 ```
 
-## Testing
-
-The project uses pytest for testing. Run all tests using the Makefile:
+## Quick Start (30 seconds, no BuildStream needed)
 
 ```bash
-make test          # Run all tests with verbose output
-make test-e2e      # Run end-to-end tests only
-```
-
-Or run pytest directly:
-
-```bash
-pytest             # Run all tests
-pytest -v          # Verbose output
-pytest --cov=bga   # With coverage report
-```
-
-Clean build artifacts and temporary files:
-
-```bash
-make clean         # Remove __pycache__, *.pyc, *.egg-info, and other temp files
-```
-
-## Quick Start
-
-`bga` reads a directory containing `run-context.json`/`graph.json`/`trace.json` (the run-context/v9, graph/v9, and trace/v9 schemas, Part 32) - it does **not** read a raw BuildStream cache/artifacts path directly. The fastest way to see a real report, with zero BuildStream install needed:
-
-```bash
-pip install -e .
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics
 ```
 
-(`make dev-run` does the same thing, plus `make dev-run ARGS=--large` for a bigger, more realistic sample.)
+Or `make dev-run` (same thing) / `make dev-run ARGS=--large` for a bigger, more realistic sample. That larger sample looks like this (trimmed):
 
-To analyze a real BuildStream project, produce a run directory in the shape `bga` expects from your own project + build log in one step:
+```
+Key Findings:
+  Confidence: 0.99 (high)
+  Biggest Opportunity: 5.6% of wall-clock time is IDLE (8.00s)
+  Elements Most Worth Optimizing First (by blast radius):
+    1. core-utils.bst:libcore.bst (7 downstream elements)
+    2. ui-toolkit.bst:libwidgets.bst (2 downstream elements)
+    3. data-format.bst:libjson.bst (2 downstream elements)
+  Certified Headroom: up to 24.00s available (T∞=118.00s, LB=118.00s)
+
+Certified Floors:
+  T∞ (observed critical path): 118.00s
+  LB (resource lower bound):   118.00s
+  Certified Headroom:          24.00s
+  T_C (replay makespan):       118.00s
+
+Attribution Breakdown:
+  Execution On Chain Us       134.00s ( 94.4%)
+  Idle Us                       8.00s (  5.6%)
+  ...
+
+Critical Path Length: 4 elements
+  Path: core-utils.bst:libcore.bst → ui-toolkit.bst:libwidgets.bst → ui-toolkit.bst:libui.bst → app.bst
+```
+
+## Reading the report
+
+- **Confidence** — how much to trust the numbers below (data completeness/quality of this specific trace). Below "high"? Fix the underlying trace before acting on anything else.
+- **Certified Headroom** — a *proven* lower bound, not a guess: given the work this build actually did, the build cannot possibly finish faster than `T∞`/`LB` (whichever is larger) without changing that work. Headroom above zero means there's real room to improve scheduling/parallelism *without touching any element's own build steps*.
+- **Critical Path** — the one chain of elements that determines total build time. Speeding up anything *not* on this path doesn't shorten the build at all — this is always where to look first for reducing the work itself, not just rescheduling it.
+- **Biggest Opportunity / Attribution Breakdown** — where wall-clock time actually went, by category (execution, waiting on a dependency, waiting on a resource, waiting on the scheduler, idle, retries). Every category sums to exactly the total build time — nothing is hidden or double-counted.
+- **Elements Most Worth Optimizing First** — ranked by blast radius (how many other elements depend on it): fixing a slow element near the root of your graph helps every downstream element too.
+
+## Use it on your real project
 
 ```bash
 pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/ingestion-pipeline.md
 bst -C /path/to/your/project build <targets> > build.log 2>&1
-PYTHONPATH=. python tools/bst_extract_run.py /path/to/your/project build.log /tmp/my-run   # run from the repo root
+PYTHONPATH=. python tools/bst_extract_run.py /path/to/your/project build.log /tmp/my-run   # from the repo root
 bga analyze /tmp/my-run --diagnostics
 ```
 
-Generate a JSON report, or simulate different hardware capacities:
+Then iterate: make a change, rebuild, extract a new run, and re-run `bga analyze` — compare the new Certified Headroom, Attribution Breakdown, and Critical Path against the previous run to see whether it actually helped. (There's no built-in run-comparison command yet - see `docs/scenarios/` if that's a gap you want to help close.)
+
+Other useful commands:
 
 ```bash
-bga analyze /tmp/my-run --format json > report.json
-bga analyze /tmp/my-run --capacity 16 --replay
+bga analyze /tmp/my-run --format json > report.json      # machine-readable, for CI/tracking over time
+bga sweep /tmp/my-run --resource PROCESS --min-capacity 1 --max-capacity 16  # "how many builders is enough?"
+bga replay /tmp/my-run --capacity 16                      # simulate a hardware upgrade
 ```
 
 ## Documentation
 
-- [CLI Reference](docs/cli.md) - Complete command-line interface documentation
-- [Ingestion Pipeline](docs/ingestion-pipeline.md) - How `tools/bst_extract_run.py` and friends turn a real BuildStream project + log into `bga` input
-- [v9 Specification](docs/specification.md) - The underlying analysis specification
+- [CLI Reference](docs/cli.md) — every command and flag
+- [Ingestion Pipeline](docs/ingestion-pipeline.md) — how `tools/bst_extract_run.py` turns a real BuildStream project + log into `bga` input, and its known limitations
+- [v9 Specification](docs/specification.md) — the underlying analysis specification (ground truth for what every number means)
+- [`docs/scenarios/`](docs/scenarios/README.md) — active backlog of usability/workflow gaps, including the run-comparison command mentioned above
 
-## Example Output
+## Development
 
-Real output (trimmed) from `bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics`:
-
-```
-============================================================
-Build Efficiency Report
-============================================================
-Total Duration: 0.0s
-
-Key Findings:
-  Confidence: 0.88 (high)
-  Biggest Opportunity: 14.3% of wall-clock time is UNTRACKED TAIL (0.00s)
-  Elements Most Worth Optimizing First (by blast radius):
-    1. base.bst (2 downstream elements)
-    2. lib.bst (1 downstream elements)
-    3. app.bst (0 downstream elements)
-
-Certified Floors:
-  T∞ (observed critical path): 0.01s
-  LB (resource lower bound):   0.01s
-  Certified Headroom:          0.00s
-
-Attribution Breakdown:
-  Execution On Chain Us         0.01s (100.0%)
-  Dependency Wait Us            0.00s (  0.0%)
-  ...
-
-Critical Path Length: 3 elements
-  Path: base.bst → lib.bst → app.bst
-```
-
-## Project Structure
-
-```
-bga/
-├── ingest/          # Data loaders for v9 schemas
-├── normalize/       # Timestamp quantization and ordering
-├── occupancy/       # Sweep-line occupancy engine
-├── graph/           # Dependency graph analysis
-├── attribution/     # Blame chain computation
-├── replay/          # Deterministic replay scheduler
-├── diagnostics/     # Advanced signals and metrics
-├── structural/      # Cold structural analysis
-└── analyzer.py      # Main orchestration
+```bash
+make test     # run the full suite
+make lint     # ruff
+make dev-run  # sample report, fast smoke check
 ```
 
 ## License

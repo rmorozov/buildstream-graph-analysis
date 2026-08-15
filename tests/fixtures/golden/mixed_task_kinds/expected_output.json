@@ -12,7 +12,8 @@
         "certified_headroom": 0,
         "t_c": 14000,
         "model_slack": 0,
-        "efficiency_score": 1.0
+        "efficiency_score": 1.0,
+        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09)."
     },
     "attribution": {
         "execution_on_chain_us": 14000,

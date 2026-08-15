@@ -636,6 +636,41 @@ class BuildEfficiencyAnalyzer:
                 'host_cpu_count': host_cpu_count,
             })
 
+    def _build_capacity_model_note(self) -> str:
+        """UX-13: `LB`/`Efficiency Score` are correctly computed per spec
+        Part 16, but only ever certify against this run's *recorded*
+        resource capacities (`builders`/`fetchers`/`pushers`) - not real
+        host CPU cores. Native build-system parallelism (`--max-jobs`) is
+        a separate axis LB's own math does not model (see UX-09's real
+        evidence this can matter, and UX-14 for why `bga sweep`/`replay`
+        share the same blind spot). Always returns a note - even when
+        UX-12's `native_max_jobs`/`host_cpu_count` aren't available, a
+        reader still shouldn't assume a high Efficiency Score means no
+        further gains exist on this host. Enriched with this run's own
+        real numbers when UX-12's `resource_oversubscription` violation
+        fired for it, computed here (not in the report formatter) so
+        `--format json` and `--format text` both see the same value from
+        a single source of truth.
+        """
+        oversub = next(
+            (v for v in self.violations if v.get('type') == 'resource_oversubscription'), None,
+        )
+        if oversub:
+            return (
+                f"This run shows real resource oversubscription (builders="
+                f"{oversub.get('builders')} x native max-jobs={oversub.get('native_max_jobs')} "
+                f"= {oversub.get('actual_demand')} processes on a "
+                f"{oversub.get('host_cpu_count')}-core host) - LB/Efficiency Score certify "
+                f"against recorded resource capacities, not real host CPU cores, so "
+                f"Efficiency Score may overstate real efficiency here (see UX-09)."
+            )
+        return (
+            "LB/Efficiency Score certify against this run's recorded resource "
+            "capacities (builders/fetchers/pushers), not real host CPU cores - native "
+            "build-system parallelism (--max-jobs) is a separate, currently unmodeled "
+            "axis (see UX-09)."
+        )
+
     def analyze(self, run_dir: Optional[Path] = None) -> AnalysisResult:
         """
         Perform complete analysis.
@@ -767,6 +802,7 @@ class BuildEfficiencyAnalyzer:
 
         # Floors (M3)
         result.floors = self._compute_floors(graph_analysis)
+        result.floors['capacity_model_note'] = self._build_capacity_model_note()
 
         # Attribution (M2)
         result.attribution = self._compute_attribution(graph_analysis)

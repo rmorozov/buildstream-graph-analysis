@@ -39,7 +39,10 @@ def _write_run_dir(tmp_path, name, elements, dependencies, spans, phases, max_jo
     run_dir.mkdir()
     run_context = {
         "trace_epsilon_us": 1000, "wall_clock": {"start_us": 0, "end_us": 200000},
-        "max_jobs": max_jobs, "resource_capacities": resource_capacities or {"PROCESS": max_jobs},
+        "max_jobs": max_jobs,
+        "resource_capacities": (
+            {"PROCESS": max_jobs} if resource_capacities is None else resource_capacities
+        ),
     }
     graph = {
         "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
@@ -74,6 +77,14 @@ def test_phase_overlapping_execution_keeps_category_and_gets_tagged(tmp_path):
 
 
 def test_phase_overlapping_dependency_wait_keeps_category_and_gets_tagged(tmp_path):
+    # max_jobs=None/resource_capacities={} (P1-31/P1-32: both now real,
+    # evidence-based checks) - a.bst genuinely finishes at 20000 with
+    # nothing else running, so with real capacity evidence this gap
+    # would correctly be SCHEDULER_WAIT (0 concurrent jobs, real spare
+    # capacity, Part 9) rather than DEPENDENCY_WAIT. This test is about
+    # phase-tagging (Part 10), not wait-category classification itself -
+    # no capacity evidence at all is the honest scenario that actually
+    # falls through to DEPENDENCY_WAIT's "no evidence" default.
     run_dir = _write_run_dir(
         tmp_path, "depwait",
         elements=[("a.bst", False), ("b.bst", True)], dependencies=[("a.bst", "b.bst")],
@@ -84,6 +95,7 @@ def test_phase_overlapping_dependency_wait_keeps_category_and_gets_tagged(tmp_pa
              "resources": ["PROCESS"], "primary_resource": "PROCESS"},
         ],
         phases=[{"name": "cache_cleanup", "ts_us": 20000, "dur_us": 30000}],
+        max_jobs=None, resource_capacities={},
     )
     segments = _segments_for(run_dir)
     dep_segs = [s for s in segments if s.category == AttributionCategory.DEPENDENCY_WAIT]

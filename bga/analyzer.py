@@ -166,15 +166,20 @@ class BuildEfficiencyAnalyzer:
         # Initialize blame chain analyzer with normalized tasks
         phase_spans = self.trace.phases if self.trace else []
         
-        # Build active_tasks_at_time and concurrent_jobs_at_time for classification
+        # Build active_tasks_at_time for classification (kept for
+        # BlameChainAnalyzer's interface stability - unused internally as
+        # of P1-31, which derives real occupancy from the task list
+        # itself rather than from precomputed per-timestamp snapshots).
+        # concurrent_jobs_at_time (a per-start-timestamp task count) was
+        # removed here entirely (P1-32) - it measured "how many tasks
+        # started at exactly this instant", not true concurrency, and
+        # classify_scheduler_wait now computes real concurrency directly
+        # from the task list instead.
         active_tasks_at_time: Dict[int, Set[str]] = defaultdict(set)
-        concurrent_jobs_at_time: Dict[int, int] = defaultdict(int)
-        
+
         for task in self.normalized_tasks:
             # Mark task as active during its execution [start_us, finish_us)
             active_tasks_at_time[task.start_us].add(str(task.task_key))
-            # Track concurrent jobs at start time
-            concurrent_jobs_at_time[task.start_us] += 1
         
         # Resource capacity from run context (run-context/v9's own
         # resource_capacities field, e.g. {"PROCESS": 4} - Part 32.1).
@@ -209,7 +214,6 @@ class BuildEfficiencyAnalyzer:
             active_tasks_at_time=active_tasks_at_time,
             resource_capacity=resource_capacity,
             max_jobs=max_jobs,
-            concurrent_jobs_at_time=concurrent_jobs_at_time,
         )
         
         # Initialize replay scheduler

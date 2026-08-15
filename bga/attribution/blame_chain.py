@@ -187,11 +187,10 @@ class BlameChainAnalyzer:
         active_tasks_at_time: Optional[Dict[int, Set[str]]] = None,
         resource_capacity: Optional[Dict[Resource, int]] = None,
         max_jobs: Optional[int] = None,
-        concurrent_jobs_at_time: Optional[Dict[int, int]] = None,
     ):
         """
         Initialize the blame chain analyzer.
-        
+
         Args:
             normalized_tasks: List of normalized tasks with ready times
             run_context: Run context with wall clock info
@@ -199,17 +198,15 @@ class BlameChainAnalyzer:
             active_tasks_at_time: Map of timestamps to sets of active tasks
             resource_capacity: Available capacity per resource type
             max_jobs: Maximum concurrent jobs allowed
-            concurrent_jobs_at_time: Map of timestamps to concurrent job count
         """
         self.tasks = normalized_tasks
         self.run_context = run_context
         self.phase_spans = phase_spans or []
-        
+
         # Resource/scheduler tracking for classification
         self.active_tasks_at_time = active_tasks_at_time or {}
         self.resource_capacity = resource_capacity or {}
         self.max_jobs = max_jobs
-        self.concurrent_jobs_at_time = concurrent_jobs_at_time or {}
         
         # Build task lookup
         self.task_by_key: Dict[str, NormalizedTask] = {
@@ -521,22 +518,33 @@ class BlameChainAnalyzer:
         task: NormalizedTask,
         resource_available: bool,
         max_jobs: Optional[int],
-        concurrent_jobs_at_time: Dict[int, int],
     ) -> bool:
         """
         Classify scheduler wait (Part 9).
-        
+
         A task is in scheduler wait if:
         - It is dependency-ready
         - Resources are available
         - But it's not running
-        
+        - "Sufficient evidence" (Part 9) exists to establish that: at some
+          point during [ready_us, start_us), true concurrency (count of
+          tasks with an overlapping [start_us, finish_us) interval, not
+          "tasks that happen to start exactly then") was strictly below
+          max_jobs.
+
+        This is a real interval sweep over self.tasks (P1-32), not a
+        lookup against precomputed per-start-timestamp snapshots
+        (concurrent_jobs_at_time, removed - it counted "how many tasks
+        started at exactly this instant", which is a fundamentally
+        different, and usually much lower, quantity than true
+        concurrency - and structurally could never see a slot freeing up
+        when an *earlier* task finished rather than a new one starting).
+
         Args:
             task: The task to analyze
             resource_available: Whether required resources are available
             max_jobs: Maximum concurrent jobs allowed
-            concurrent_jobs_at_time: Map of timestamps to concurrent job count
-            
+
         Returns:
             True if task experienced scheduler wait
         """
@@ -551,12 +559,30 @@ class BlameChainAnalyzer:
             # not infer scheduler failure merely because a task did not run.
             return False
 
-        # Evidence-based check: did any recorded concurrency snapshot within
-        # [ready_us, start_us) show spare job capacity while this task,
-        # already dependency-ready and resource-available, still wasn't
-        # dispatched?
-        for ts, concurrency in concurrent_jobs_at_time.items():
-            if task.ready_us <= ts < task.start_us and concurrency < max_jobs:
+        wait_start = task.ready_us
+        wait_end = task.start_us
+
+        others = [other for other in self.tasks if other.task_key != task.task_key]
+
+        # Critical points: wait_start/wait_end plus every other task's own
+        # start/finish that falls strictly inside the window - true
+        # concurrency can only change at one of these points (a start OR
+        # a finish, unlike the old start-only evidence), so they define
+        # the maximal constant-concurrency sub-intervals.
+        boundaries = {wait_start, wait_end}
+        for other in others:
+            if wait_start < other.start_us < wait_end:
+                boundaries.add(other.start_us)
+            if wait_start < other.finish_us < wait_end:
+                boundaries.add(other.finish_us)
+        points = sorted(boundaries)
+
+        for t1, t2 in zip(points, points[1:]):
+            concurrency = sum(
+                1 for other in others
+                if other.start_us <= t1 and other.finish_us >= t2
+            )
+            if concurrency < max_jobs:
                 return True
 
         return False
@@ -727,7 +753,7 @@ class BlameChainAnalyzer:
         if cursor < gap_end:
             resource_available = self._resource_available_at(task, task.ready_us)
             is_scheduler_wait = self.classify_scheduler_wait(
-                task, resource_available, self.max_jobs, self.concurrent_jobs_at_time,
+                task, resource_available, self.max_jobs,
             )
             if is_scheduler_wait:
                 segments.append((AttributionCategory.SCHEDULER_WAIT, cursor, gap_end))

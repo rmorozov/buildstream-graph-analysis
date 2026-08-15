@@ -23,75 +23,84 @@ def _analyzer(tasks=None):
     return BlameChainAnalyzer(normalized_tasks=tasks or [])
 
 
-# --- P1-02: classify_scheduler_wait -----------------------------------
+# --- P1-02 (P1-32: made a real interval sweep, not per-start-timestamp
+# snapshots) : classify_scheduler_wait -----------------------------------
 
 def test_scheduler_wait_detected_when_capacity_was_free():
-    """Dependency-ready and resource-available at t=100, max_jobs=2, but
-    only 1 concurrent job at t=150 - the scheduler had room and simply
-    didn't dispatch. Task doesn't start until t=200.
-    """
+    """Dependency-ready at t=100, max_jobs=2, but only one other task is
+    active (during [100, 150)) and none at all during [150, 200) - real
+    spare capacity throughout the wait window. Task doesn't start until
+    t=200 - the scheduler had room and simply didn't dispatch."""
     task = _task("elem-a", ready_us=100, start_us=200, finish_us=300)
-    analyzer = _analyzer()
+    other = _task("elem-b", ready_us=0, start_us=100, finish_us=150)
+    analyzer = _analyzer([task, other])
 
-    result = analyzer.classify_scheduler_wait(
-        task,
-        resource_available=True,
-        max_jobs=2,
-        concurrent_jobs_at_time={150: 1},
-    )
+    result = analyzer.classify_scheduler_wait(task, resource_available=True, max_jobs=2)
     assert result is True
 
 
 def test_scheduler_wait_not_detected_when_capacity_saturated():
-    """Same wait window, but every recorded snapshot shows max_jobs
-    capacity fully used - no scheduler-wait evidence."""
+    """Same wait window, but two other real tasks cover [100, 200)
+    entirely (concurrency 2, at max_jobs) throughout - no spare capacity
+    anywhere in the window, so no scheduler-wait evidence."""
     task = _task("elem-a", ready_us=100, start_us=200, finish_us=300)
-    analyzer = _analyzer()
+    other_a = _task("elem-b", ready_us=0, start_us=50, finish_us=250)
+    other_b = _task("elem-c", ready_us=0, start_us=80, finish_us=220)
+    analyzer = _analyzer([task, other_a, other_b])
 
-    result = analyzer.classify_scheduler_wait(
-        task,
-        resource_available=True,
-        max_jobs=2,
-        concurrent_jobs_at_time={120: 2, 160: 2, 190: 2},
-    )
+    result = analyzer.classify_scheduler_wait(task, resource_available=True, max_jobs=2)
     assert result is False
 
 
 def test_scheduler_wait_false_when_not_actually_waiting():
     task = _task("elem-a", ready_us=100, start_us=100, finish_us=200)
-    analyzer = _analyzer()
-    assert analyzer.classify_scheduler_wait(
-        task, resource_available=True, max_jobs=2, concurrent_jobs_at_time={50: 0}
-    ) is False
+    analyzer = _analyzer([task])
+    assert analyzer.classify_scheduler_wait(task, resource_available=True, max_jobs=2) is False
 
 
 def test_scheduler_wait_false_when_resource_unavailable():
     task = _task("elem-a", ready_us=100, start_us=200, finish_us=300)
-    analyzer = _analyzer()
-    assert analyzer.classify_scheduler_wait(
-        task, resource_available=False, max_jobs=2, concurrent_jobs_at_time={150: 1}
-    ) is False
+    analyzer = _analyzer([task])
+    assert analyzer.classify_scheduler_wait(task, resource_available=False, max_jobs=2) is False
 
 
 def test_scheduler_wait_false_when_no_capacity_evidence():
     """max_jobs=None means no capacity evidence is available - per Part 9
     the analyzer must not infer scheduler failure without evidence."""
     task = _task("elem-a", ready_us=100, start_us=200, finish_us=300)
-    analyzer = _analyzer()
-    assert analyzer.classify_scheduler_wait(
-        task, resource_available=True, max_jobs=None, concurrent_jobs_at_time={150: 1}
-    ) is False
+    analyzer = _analyzer([task])
+    assert analyzer.classify_scheduler_wait(task, resource_available=True, max_jobs=None) is False
 
 
-def test_scheduler_wait_ignores_snapshots_outside_wait_window():
-    """A free-capacity snapshot before ready_us or at/after start_us must
-    not count as evidence for this task's wait."""
+def test_scheduler_wait_ignores_concurrency_outside_wait_window():
+    """Two other tasks saturate [100, 200) (the actual wait window)
+    throughout, at max_jobs=2 - but a third, unrelated task is active
+    only well before ready_us ([0, 50)), where concurrency is genuinely
+    low. That low concurrency must not leak into the evaluation of a
+    window it falls entirely outside of."""
     task = _task("elem-a", ready_us=100, start_us=200, finish_us=300)
-    analyzer = _analyzer()
-    assert analyzer.classify_scheduler_wait(
-        task, resource_available=True, max_jobs=2,
-        concurrent_jobs_at_time={50: 0, 200: 0, 250: 0},
-    ) is False
+    other_a = _task("elem-b", ready_us=0, start_us=50, finish_us=250)
+    other_b = _task("elem-c", ready_us=0, start_us=80, finish_us=220)
+    unrelated = _task("elem-d", ready_us=0, start_us=0, finish_us=50)
+    analyzer = _analyzer([task, other_a, other_b, unrelated])
+
+    result = analyzer.classify_scheduler_wait(task, resource_available=True, max_jobs=2)
+    assert result is False
+
+
+def test_scheduler_wait_detects_slot_freed_by_an_earlier_finish_not_a_new_start():
+    """The real P1-32 bug: a slot frees up when an *earlier* task
+    finishes (not when some new task starts) - the old start-timestamp-
+    only evidence could never see this. max_jobs=1, one holder occupies
+    [50, 150) only (finishing well inside the wait window, with no other
+    task's *start* anywhere in [100, 200) to have served as old-style
+    evidence) - genuine spare capacity exists during [150, 200)."""
+    task = _task("elem-a", ready_us=100, start_us=200, finish_us=300)
+    holder = _task("elem-b", ready_us=0, start_us=50, finish_us=150)
+    analyzer = _analyzer([task, holder])
+
+    result = analyzer.classify_scheduler_wait(task, resource_available=True, max_jobs=1)
+    assert result is True
 
 
 # --- _resource_available_at (call-site fix backing classify_scheduler_wait) --

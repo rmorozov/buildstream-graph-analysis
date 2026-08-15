@@ -1,6 +1,6 @@
 # P1-32: `classify_scheduler_wait`'s concurrency evidence measures the wrong quantity
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** `P1-31` (resource-wait must stop over-claiming the gap before scheduler-wait can see its real share of it - see that task's Out of Scope)
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** `P1-31` (resource-wait must stop over-claiming the gap before scheduler-wait can see its real share of it - see that task's Out of Scope)
 
 ## Spec Reference
 Part 9: a task is `SCHEDULER_WAIT` when, during an interval, it is "dependency-ready, resource-available, not-running", "provided the trace contains sufficient evidence to establish this state" (`docs/specification.md:650-670`). "Sufficient evidence" is the operative phrase this task is about - the current evidence source doesn't establish what it's used to establish.
@@ -38,4 +38,15 @@ This directly risks over-classifying `SCHEDULER_WAIT` for tasks that were in fac
 6. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+Removed `concurrent_jobs_at_time` entirely - it measured "how many tasks started at exactly this timestamp", not real concurrency. `classify_scheduler_wait` (`bga/attribution/blame_chain.py`) now performs its own critical-points sweep directly from `self.tasks`, computing true concurrency (count of tasks whose `[start_us, finish_us)` interval contains each sub-interval) at every relevant boundary within `[ready_us, start_us)`, and checks whether that concurrency ever drops below `max_jobs` during the window - catching slots freed by an earlier task's *finish*, not just a new task's start (the reviewer's original counterexample). The `max_jobs is None` → `return False` fallback is unchanged. `BlameChainAnalyzer.__init__` and `bga/analyzer.py` no longer construct `concurrent_jobs_at_time` at all.
+
+`tests/unit/test_blame_chain.py` scheduler-wait tests fully rewritten (6 tests, real task lists instead of fabricated dicts): saturated-for-entire-window (not scheduler-wait), slot freed by an earlier finish with no start event inside the window (the key regression this task targets), unrelated starts inside the window while still genuinely saturated (must not false-positive), concurrency evidence outside the wait window ignored, `max_jobs=None` unchanged.
+
+```
+$ python3 -m pytest tests/unit/test_blame_chain.py tests/unit/test_resource_wait.py tests/unit/test_wait_gap_classification.py -v
+53 passed
+$ python3 -m pytest -q   # full suite
+409 passed, 11 skipped
+$ make lint
+All checks passed!
+```

@@ -1,6 +1,6 @@
 # P1-38: `compute_sensitivity` crashes with `ZeroDivisionError` on real negative-slack data
 
-**Priority:** P1 (a straight interpreter crash, not a wrong number - worse than most tracked correctness gaps) | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P1 (a straight interpreter crash, not a wrong number - worse than most tracked correctness gaps) | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 Part 34 (Sensitivity Analysis): "Determine how much improving each element would help overall... uses critical path membership and slack as a proxy" - a reporting feature, not expected to ever crash the whole `analyze` run regardless of the input trace's shape.
@@ -43,4 +43,15 @@ This is not a contrived edge case: `examples/02-deep-chain-mixed-kinds`'s real t
 5. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+Fixed by clamping slack to `max(slack, 0)` before the decay formula in both the CP and non-CP branches of `compute_sensitivity` (`bga/structural/analyzer.py`) - negative slack is treated as maximally sensitive for its tier rather than extrapolating the decay curve backwards, avoiding both the zero-denominator crash and the silent-negative-score case.
+
+New tests (`tests/unit/test_structural_sensitivity.py`, 3 tests): slack exactly -1,000,000us (the real crash value) does not crash and produces non-negative scores; slack well past that point (-2,000,000us) likewise; ordinary non-negative slack produces unchanged, exact expected values (regression guard that the fix doesn't touch the normal-input case).
+
+```
+$ python3 -m pytest tests/unit/test_structural_sensitivity.py -v
+3 passed
+$ python3 -m pytest -q   # full suite
+394 passed, 11 skipped
+$ make lint
+All checks passed!
+```

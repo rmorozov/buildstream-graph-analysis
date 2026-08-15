@@ -1,6 +1,6 @@
 # P1-36: `clamp_task_starts` can silently produce a negative-duration task on a genuine ordering violation
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none (a distinct root cause from `P1-27`'s already-fixed ready-time task-kind mismatch - see Background)
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** none (a distinct root cause from `P1-27`'s already-fixed ready-time task-kind mismatch - see Background)
 
 ## Spec Reference
 Part 3.3 (Ordering Validation): "If a genuine negative ordering remains after normalization... the trace contains an ordering violation. No hidden runtime correction is performed" (`docs/specification.md:259-286`). Part 3.4 (Immutable Finish Time): when a start is clamped to ready time, finish stays immutable, so `duration' = finish - start'` (`docs/specification.md:289-303`). Neither section states what must happen when combining these two rules on a genuine ordering violation produces `start' > finish` - a structurally invalid interval - which is exactly the gap this task closes.
@@ -30,4 +30,15 @@ This is a **different** root cause from `P1-27` (already fixed - "ready-time tas
 4. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`clamp_task_starts` (`bga/normalize/timestamps.py`) now detects `clamped_start > clamped_finish` before constructing a `NormalizedTask`, excludes that task, and appends a new `clamp_negative_duration` violation (returned alongside the task list, threaded through `normalize_trace` into the existing `violations` list). `NormalizedTask.__post_init__` (`bga/ingest/models.py`) additionally rejects `finish_us < start_us` at construction unconditionally - a structural guard independent of this one call site.
+
+Found and fixed a real, pre-existing bug this exposed: `tests/unit/test_dependency_type_gating.py`'s own `test_build_type_edge_still_included_in_normalized_task_dependencies` fixture had a successor whose raw span finished *before* its build-gated ready time - i.e. it was already, silently, constructing a negative-duration task and never checking `dur_us` at all. Fixed the fixture to a realistic (non-violation) scenario and added an explicit `dur_us >= 0` assertion.
+
+```
+$ python3 -m pytest tests/unit/test_normalize.py tests/unit/test_dependency_type_gating.py -v
+19 + 10 passed
+$ python3 -m pytest -q   # full suite
+394 passed, 11 skipped
+$ make lint
+All checks passed!
+```

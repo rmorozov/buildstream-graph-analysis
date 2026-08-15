@@ -1,6 +1,6 @@
 # P1-37: Run identity (I8) has no schema field and isn't enforced by `bga`'s own analyzer
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** `P4-13` (done - `tools/bst_extract_run.py --strict`/`project_refs_provenance` is real, useful prior art this task extends, not duplicates)
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** `P4-13` (done - `tools/bst_extract_run.py --strict`/`project_refs_provenance` is real, useful prior art this task extends, not duplicates)
 
 ## Spec Reference
 I8 - Run Identity: "All analysis inputs must belong to the same run identity" (`docs/specification.md:1795-1797`). Confirmed via grep: the spec states this invariant but defines no concrete field or mechanism for it anywhere in run-context/v9 (Part 32.1), graph/v9 (Part 32.2), or trace/v9 (Part 32.3)'s own schemas - `docs/specification.md` has zero matches for `run_id` at all. The only `run_id` in the codebase is `AnalysisResult.run_id` (`bga/ingest/models.py:269`), populated in `bga/analyzer.py` via `getattr(self.run_context, 'run_id', '') or getattr(self.run_context, 'uuid', '')` - but `RunContext`'s own dataclass has no `run_id`/`uuid` field defined, so this `getattr` always falls through to `''` in practice today.
@@ -29,4 +29,19 @@ Raised by an external review; independently verified against the current code be
 4. Full suite green; no change to any existing invariant-bearing numeric result for inputs that already have consistent (or absent) identity.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+Added a real run-identity mechanism: `tools/bst_extract_run.py::_compute_run_identity` builds a manifest (`targets` sorted, `scheduler` config, `project_git_commit`, `project_refs_sha256`) and hashes it (`manifest_hash`, sha256 of sorted-key JSON), embedding `run_identity` in `run-context.json` and `run_identity_hash` in both `graph.json` and `trace.json`. New optional fields: `RunContext.run_identity`, `Graph.run_identity_hash`, `Trace.run_identity_hash` (`bga/ingest/models.py`), read by `bga/ingest/loader.py`.
+
+`bga/validation/invariants.py::compute_confidence` validates identity across all three inputs: all-present-and-matching → no penalty; all-absent or partially-present → backward-compatible, `provenance_score` capped at 0.75 (reduced-provenance note, not a failure); present-but-conflicting → `provenance_score = 0.0`, a `run_identity_mismatch` violation, and a new `run_identity_consistent` hard gate failure. `AnalysisResult.run_id` now reads the real `run_identity.manifest_hash` instead of a dead `getattr` fallback that always produced `''`.
+
+Documented the real remaining limitation (build-time vs. extraction-time TOCTOU gap - this proves extraction-time consistency across the three files, not that the analyzed build actually ran against the current project state) in `docs/ingestion-pipeline.md`.
+
+`tests/unit/test_run_identity.py` (5 new tests): matching identity → no penalty; missing entirely → backward compatible; partially present → reduced provenance, not a conflict; conflicting → violation + hard gate failure; analysis still proceeds despite the conflict (not a hard crash). Golden/synthetic fixtures updated with consistent `run_identity` so they continue to demonstrate full confidence.
+
+```
+$ python3 -m pytest tests/unit/test_run_identity.py tests/unit/test_bst_extract_run.py tests/unit/test_confidence_gates.py tests/test_golden.py tests/test_synthetic_multi_subproject.py -v
+33 passed
+$ python3 -m pytest -q   # full suite
+418 passed, 11 skipped
+$ make lint
+All checks passed!
+```

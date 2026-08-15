@@ -97,7 +97,9 @@ jobs:
     # traces, full bga run directories, and reports) for later tool
     # development - not correctness-gating (a failure here doesn't mean
     # bga itself is broken), so it's useful even before every corner
-    # case it targets (P1-31, P1-32, P4-12, P4-13, P1-37) is fixed. See
+    # case it targets (P1-31, P1-32, P4-12, P4-13, P1-37) is fixed - and
+    # useful even when it turns up something unplanned (P1-38, a real
+    # ZeroDivisionError crash this job's first real run found). See
     # examples/README.md for what each project covers and why.
     runs-on: ubuntu-latest
     needs: [test, bst-smoke]
@@ -130,8 +132,16 @@ jobs:
           (cd examples/01-resource-contention && bst --builders 2 build all.bst) 2>&1 | tee "$OUT/build.log"
           python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build.log" "$OUT/chrome-trace.json"
           python3 -m tools.bst_extract_run --format raw --start-time "$START" examples/01-resource-contention "$OUT/build.log" "$OUT/run"
-          bga analyze -f json -o "$OUT/report.json" -d -r "$OUT/run"
-          bga analyze -f text -o "$OUT/report.txt" -d -r "$OUT/run"
+          # bga analyze failures are real corner-case data in their own
+          # right (this whole job exists to surface exactly this kind of
+          # thing against real builds - see P1-38, found this way) - record
+          # and continue rather than losing the rest of this job's output.
+          if ! bga analyze -f json -o "$OUT/report.json" -d -r "$OUT/run" 2> "$OUT/report.json.stderr"; then
+            echo "bga analyze -f json FAILED (see report.json.stderr)" | tee "$OUT/report.json.FAILED"
+          fi
+          if ! bga analyze -f text -o "$OUT/report.txt" -d -r "$OUT/run" 2> "$OUT/report.txt.stderr"; then
+            echo "bga analyze -f text FAILED (see report.txt.stderr)" | tee "$OUT/report.txt.FAILED"
+          fi
 
       - name: Build + extract + analyze 02-deep-chain-mixed-kinds
         run: |
@@ -142,8 +152,14 @@ jobs:
           (cd examples/02-deep-chain-mixed-kinds && bst build all.bst) 2>&1 | tee "$OUT/build.log"
           python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build.log" "$OUT/chrome-trace.json"
           python3 -m tools.bst_extract_run --format raw --start-time "$START" examples/02-deep-chain-mixed-kinds "$OUT/build.log" "$OUT/run"
-          bga analyze -f json -o "$OUT/report.json" -d -r "$OUT/run"
-          bga analyze -f text -o "$OUT/report.txt" -d -r "$OUT/run"
+          # See the 01-resource-contention step's comment: record and
+          # continue rather than losing the rest of this job's output.
+          if ! bga analyze -f json -o "$OUT/report.json" -d -r "$OUT/run" 2> "$OUT/report.json.stderr"; then
+            echo "bga analyze -f json FAILED (see report.json.stderr)" | tee "$OUT/report.json.FAILED"
+          fi
+          if ! bga analyze -f text -o "$OUT/report.txt" -d -r "$OUT/run" 2> "$OUT/report.txt.stderr"; then
+            echo "bga analyze -f text FAILED (see report.txt.stderr)" | tee "$OUT/report.txt.FAILED"
+          fi
 
       - name: Build + extract + analyze 03-project-refs-identity (v1)
         run: |
@@ -164,7 +180,9 @@ jobs:
           (cd "$PROJ" && bst --option remote_path "$REMOTE" build all.bst) 2>&1 | tee "$OUT/build-v1.log"
           python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build-v1.log" "$OUT/chrome-trace-v1.json"
           python3 -m tools.bst_extract_run --format raw --start-time "$START" "$PROJ" "$OUT/build-v1.log" "$OUT/run-v1"
-          bga analyze -f json -o "$OUT/report-v1.json" -d -r "$OUT/run-v1"
+          if ! bga analyze -f json -o "$OUT/report-v1.json" -d -r "$OUT/run-v1" 2> "$OUT/report-v1.json.stderr"; then
+            echo "bga analyze -f json FAILED (see report-v1.json.stderr)" | tee "$OUT/report-v1.json.FAILED"
+          fi
 
           echo "--- --strict against a clean, committed project.refs (expect PASS) ---" | tee -a "$OUT/strict-check.txt"
           python3 -m tools.bst_extract_run --strict --format raw --start-time "$START" "$PROJ" "$OUT/build-v1.log" "$OUT/run-v1-strict" 2>&1 \
@@ -199,7 +217,9 @@ jobs:
           (cd "$PROJ" && bst --option remote_path "$REMOTE" build all.bst) 2>&1 | tee "$OUT/build-v2.log"
           python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build-v2.log" "$OUT/chrome-trace-v2.json"
           python3 -m tools.bst_extract_run --format raw --start-time "$START" "$PROJ" "$OUT/build-v2.log" "$OUT/run-v2"
-          bga analyze -f json -o "$OUT/report-v2.json" -d -r "$OUT/run-v2"
+          if ! bga analyze -f json -o "$OUT/report-v2.json" -d -r "$OUT/run-v2" 2> "$OUT/report-v2.json.stderr"; then
+            echo "bga analyze -f json FAILED (see report-v2.json.stderr)" | tee "$OUT/report-v2.json.FAILED"
+          fi
 
           echo "--- --strict against a clean, re-committed project.refs (expect PASS) ---" | tee -a "$OUT/strict-check.txt"
           python3 -m tools.bst_extract_run --strict --format raw --start-time "$START" "$PROJ" "$OUT/build-v2.log" "$OUT/run-v2-strict" 2>&1 \

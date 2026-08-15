@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.10)
+project(core CXX)
+set(CMAKE_CXX_STANDARD 17)
+file(GLOB SOURCES "*.cpp")
+add_library(core STATIC ${SOURCES})
+target_include_directories(core PUBLIC $<INSTALL_INTERFACE:include>)
+install(TARGETS core ARCHIVE DESTINATION lib)
+install(FILES core.hpp DESTINATION include)

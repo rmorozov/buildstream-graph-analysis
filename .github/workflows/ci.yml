@@ -56,13 +56,24 @@ jobs:
           python-version: "3.12"
 
       - name: Install bubblewrap
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static
 
       - name: Install bga with bst extra
         run: pip install -e ".[bst]"
 
       - name: bst --version
         run: bst --version
+
+      - name: Stage a shell into the sandbox root (fixture has none by default)
+        # manual.bst's only dependency (base.bst) is a bare `import` element
+        # with no shell binary, so `install-commands` has nothing to exec
+        # against. Staging a static busybox as /bin/sh gives the sandbox a
+        # real shell without committing a binary to the repo or touching the
+        # fixture other bst-gated tests rely on (this only exists in this
+        # job's own ephemeral checkout).
+        run: |
+          mkdir -p tests/fixtures/bst_show_project/files/base/bin
+          cp "$(command -v busybox)" tests/fixtures/bst_show_project/files/base/bin/sh
 
       - name: Real sandboxed build (manual.bst)
         working-directory: tests/fixtures/bst_show_project

@@ -19,7 +19,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict, deque
 import random
 
-from bga.ingest.models import TaskKind
+from bga.ingest.models import NormalizedTask, TaskKind
 from bga.graph.edg import build_element_graph, compute_in_out_degree
 
 logger = logging.getLogger(__name__)
@@ -323,6 +323,31 @@ class DiagnosticsAnalyzer:
         # single largest hotspot found while profiling P1-16).
         self._sorted_ready_times = sorted(t.ready_us for t in self.tasks)
         self._sorted_start_times = sorted(t.start_us for t in self.tasks)
+
+        # P2-10: tasks sorted by ready_us (paired with the task object,
+        # not just the timestamp) so the resource-aware path in
+        # _estimate_ready_count can enumerate the actual ready-but-not-
+        # started candidates at a given instant, not just their count.
+        self._tasks_sorted_by_ready: List[NormalizedTask] = sorted(
+            self.tasks, key=lambda t: t.ready_us,
+        )
+
+        # Per-resource occupancy arrays (P2-10): sorted start_us/finish_us
+        # for every task requiring each resource, so "how many tasks were
+        # occupying resource R at time t" is two bisects (O(log N)), not a
+        # rescan of every task holding R - the same event-boundary idea
+        # _resource_available_at (bga/attribution/blame_chain.py) uses for
+        # a single point check, adapted here for repeated queries.
+        self._resource_starts: Dict[str, List[int]] = defaultdict(list)
+        self._resource_finishes: Dict[str, List[int]] = defaultdict(list)
+        for t in self.tasks:
+            for resource in (t.resources or []):
+                key = resource.value if hasattr(resource, 'value') else str(resource)
+                self._resource_starts[key].append(t.start_us)
+                self._resource_finishes[key].append(t.finish_us)
+        for key in self._resource_starts:
+            self._resource_starts[key].sort()
+            self._resource_finishes[key].sort()
     
     def compute_wall_clock_shares(self) -> List[WallClockShare]:
         """
@@ -426,7 +451,7 @@ class DiagnosticsAnalyzer:
             
             # Estimate ready queue: tasks whose deps are done but not yet started
             # This is a simplified heuristic
-            ready_count = self._estimate_ready_count(start_us, active_tasks)
+            ready_count = self._estimate_ready_count(start_us, active_tasks, resource_capacities)
             
             timeline.append((start_us, end_us, ready_count))
             total_weighted_depth += ready_count * duration
@@ -446,33 +471,100 @@ class DiagnosticsAnalyzer:
             queue_depth_timeline=timeline,
         )
     
-    def _estimate_ready_count(self, time_us: int, active_tasks: Set[str]) -> int:
+    def _estimate_ready_count(
+        self,
+        time_us: int,
+        active_tasks: Set[str],
+        resource_capacities: Optional[Dict[str, int]] = None,
+    ) -> int:
         """
         Estimate number of ready but not executing tasks at given time:
-        tasks with ready_us <= time_us < start_us.
+        tasks with ready_us <= time_us < start_us, additionally filtered
+        by resource-readiness when `resource_capacities` is provided
+        (P2-10) - Part 21 defines ready_queue_depth(t) as "dependency-
+        ready AND resource-ready AND not currently executing", not
+        dependency-readiness alone.
 
-        Simplified heuristic based on graph structure.
-
-        Answered via binary search over self._sorted_ready_times/
+        Fast path (no resource_capacities, the pre-P2-10 behavior):
+        answered via binary search over self._sorted_ready_times/
         _sorted_start_times (O(log N), P1-21) instead of an O(N) scan of
         self.tasks per call - this was the single largest hotspot found
         while profiling P1-16's fix, called once per occupancy segment
-        (O(N*segments) overall).
+        (O(N*segments) overall). Unchanged when no capacity data is
+        supplied, matching this codebase's "absence of capacity data is
+        not evidence of unavailability" discipline.
+
+        Resource-aware path: the same ready-vs-started bisect narrows the
+        candidates down to `self._tasks_sorted_by_ready[:ready_so_far]`
+        (tasks that have become ready by `time_us`) - each is then
+        individually checked against the current per-resource occupancy
+        (O(log N) each, via _resource_occupancy_at) rather than a full
+        O(N) rescan of every task in the run. This is not the same O(log
+        N) bound as the fast path (proportional to how many tasks have
+        become ready by `time_us`, not just to N), but avoids resurfacing
+        the O(N*segments) hotspot P1-21 fixed: only tasks already known to
+        satisfy the (cheap) ready-time bound are ever resource-checked.
 
         active_tasks and finish_us were checked by the original O(N)
-        version but are provably redundant for this condition: a task
-        satisfying ready_us <= time_us < start_us cannot simultaneously
-        be "active" (which requires start_us <= time_us < finish_us -
-        contradicts start_us > time_us), and start_us > time_us already
-        guarantees finish_us >= start_us > time_us (a task can't finish
-        before it starts), so the "not yet finished" check can never
-        exclude anything the ready-vs-started counts don't already rule
-        out. active_tasks is kept as a parameter for interface stability
-        (the caller still passes it) but is no longer consulted.
+        version but are provably redundant for the fast-path condition: a
+        task satisfying ready_us <= time_us < start_us cannot
+        simultaneously be "active" (which requires start_us <= time_us <
+        finish_us - contradicts start_us > time_us), and start_us >
+        time_us already guarantees finish_us >= start_us > time_us (a
+        task can't finish before it starts), so the "not yet finished"
+        check can never exclude anything the ready-vs-started counts
+        don't already rule out. active_tasks is kept as a parameter for
+        interface stability (the caller still passes it) but is not
+        consulted by either path.
         """
         ready_so_far = bisect.bisect_right(self._sorted_ready_times, time_us)
-        started_so_far = bisect.bisect_right(self._sorted_start_times, time_us)
-        return max(0, ready_so_far - started_so_far)
+
+        if not resource_capacities:
+            started_so_far = bisect.bisect_right(self._sorted_start_times, time_us)
+            return max(0, ready_so_far - started_so_far)
+
+        count = 0
+        for task in self._tasks_sorted_by_ready[:ready_so_far]:
+            if task.start_us <= time_us:
+                continue
+            if self._task_is_resource_ready(task, time_us, resource_capacities):
+                count += 1
+        return count
+
+    def _resource_occupancy_at(self, resource_name: str, time_us: int) -> int:
+        """Count of tasks occupying `resource_name` at `time_us` (start_us
+        <= time_us < finish_us), via two bisects over the sorted
+        start_us/finish_us arrays precomputed in __init__ (P2-10) - O(log
+        N) regardless of how many tasks require this resource."""
+        starts = self._resource_starts.get(resource_name)
+        if not starts:
+            return 0
+        finishes = self._resource_finishes[resource_name]
+        started_by_now = bisect.bisect_right(starts, time_us)
+        finished_by_now = bisect.bisect_right(finishes, time_us)
+        return started_by_now - finished_by_now
+
+    def _task_is_resource_ready(
+        self,
+        task: NormalizedTask,
+        time_us: int,
+        resource_capacities: Dict[str, int],
+    ) -> bool:
+        """True if every resource `task` requires has a free capacity slot
+        at `time_us` (P2-10). Vacuously True for a task with no resources.
+        A resource with no known capacity is never treated as saturated -
+        "absence of capacity data is not evidence of unavailability", the
+        same discipline `_resource_available_at`
+        (bga/attribution/blame_chain.py) already uses for the same
+        question elsewhere."""
+        for resource in (task.resources or []):
+            key = resource.value if hasattr(resource, 'value') else str(resource)
+            capacity = resource_capacities.get(key)
+            if capacity is None:
+                continue
+            if self._resource_occupancy_at(key, time_us) >= capacity:
+                return False
+        return True
     
     def compute_blast_radius(self) -> List[BlastRadiusResult]:
         """

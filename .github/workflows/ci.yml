@@ -91,3 +91,124 @@ jobs:
       - name: Real sandboxed build (manual.bst)
         working-directory: tests/fixtures/bst_show_project
         run: bst build manual.bst
+
+  bst-examples:
+    # Real builds of examples/*, gathering corner-case data (chrome
+    # traces, full bga run directories, and reports) for later tool
+    # development - not correctness-gating (a failure here doesn't mean
+    # bga itself is broken), so it's useful even before every corner
+    # case it targets (P1-31, P1-32, P4-12, P4-13, P1-37) is fixed. See
+    # examples/README.md for what each project covers and why.
+    runs-on: ubuntu-latest
+    needs: [test, bst-smoke]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bubblewrap
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static
+
+      - name: Allow bwrap to configure loopback in its network namespace
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Install bga with bst extra
+        run: pip install -e ".[bst]"
+
+      - name: Stage runtime shells for manual/compose elements
+        run: examples/stage_runtimes.sh
+
+      - name: Build + extract + analyze 01-resource-contention
+        run: |
+          set -euo pipefail
+          OUT=artifacts/01-resource-contention
+          mkdir -p "$OUT"
+          START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          (cd examples/01-resource-contention && bst --builders 2 build all.bst) 2>&1 | tee "$OUT/build.log"
+          python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build.log" "$OUT/chrome-trace.json"
+          python3 -m tools.bst_extract_run --format raw --start-time "$START" examples/01-resource-contention "$OUT/build.log" "$OUT/run"
+          bga analyze -f json -o "$OUT/report.json" -d -r "$OUT/run"
+          bga analyze -f text -o "$OUT/report.txt" -d -r "$OUT/run"
+
+      - name: Build + extract + analyze 02-deep-chain-mixed-kinds
+        run: |
+          set -euo pipefail
+          OUT=artifacts/02-deep-chain-mixed-kinds
+          mkdir -p "$OUT"
+          START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          (cd examples/02-deep-chain-mixed-kinds && bst build all.bst) 2>&1 | tee "$OUT/build.log"
+          python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build.log" "$OUT/chrome-trace.json"
+          python3 -m tools.bst_extract_run --format raw --start-time "$START" examples/02-deep-chain-mixed-kinds "$OUT/build.log" "$OUT/run"
+          bga analyze -f json -o "$OUT/report.json" -d -r "$OUT/run"
+          bga analyze -f text -o "$OUT/report.txt" -d -r "$OUT/run"
+
+      - name: Build + extract + analyze 03-project-refs-identity (v1)
+        run: |
+          set -euo pipefail
+          PROJ=examples/03-project-refs-identity
+          OUT=artifacts/03-project-refs-identity
+          mkdir -p "$OUT"
+          examples/stage_project3_remote.sh
+          REMOTE="$(pwd)/$PROJ/.generated-remote"
+
+          (cd "$PROJ" && bst --option remote_path "$REMOTE" source track libbar.bst)
+          git -c user.name=bga-ci -c user.email=bga-ci@example.invalid \
+            add "$PROJ/project.refs"
+          git -c user.name=bga-ci -c user.email=bga-ci@example.invalid \
+            commit -q -m "ci: track examples/03-project-refs-identity project.refs (v1, local only, never pushed)"
+
+          START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          (cd "$PROJ" && bst --option remote_path "$REMOTE" build all.bst) 2>&1 | tee "$OUT/build-v1.log"
+          python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build-v1.log" "$OUT/chrome-trace-v1.json"
+          python3 -m tools.bst_extract_run --format raw --start-time "$START" "$PROJ" "$OUT/build-v1.log" "$OUT/run-v1"
+          bga analyze -f json -o "$OUT/report-v1.json" -d -r "$OUT/run-v1"
+
+          echo "--- --strict against a clean, committed project.refs (expect PASS) ---" | tee -a "$OUT/strict-check.txt"
+          python3 -m tools.bst_extract_run --strict --format raw --start-time "$START" "$PROJ" "$OUT/build-v1.log" "$OUT/run-v1-strict" 2>&1 \
+            | tee -a "$OUT/strict-check.txt"
+
+      - name: Touch, retrack, and rebuild 03-project-refs-identity (v2)
+        # Real retry/rebuild + a real negative --strict case (P1-37):
+        # after this, project.refs differs from the local v1 commit made
+        # in the previous step but hasn't been re-committed yet.
+        run: |
+          set -euo pipefail
+          PROJ=examples/03-project-refs-identity
+          OUT=artifacts/03-project-refs-identity
+          examples/stage_project3_remote.sh --update
+          REMOTE="$(pwd)/$PROJ/.generated-remote"
+
+          (cd "$PROJ" && bst --option remote_path "$REMOTE" source track libbar.bst)
+
+          echo "--- --strict against a dirty (uncommitted) project.refs (expect FAIL) ---" | tee -a "$OUT/strict-check.txt"
+          if python3 -m tools.bst_extract_run --strict --format raw --start-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PROJ" "$OUT/build-v1.log" "$OUT/run-dirty-strict" 2>&1 \
+            | tee -a "$OUT/strict-check.txt"; then
+            echo "UNEXPECTED: --strict passed against a dirty project.refs" >&2
+            exit 1
+          fi
+
+          git -c user.name=bga-ci -c user.email=bga-ci@example.invalid \
+            add "$PROJ/project.refs"
+          git -c user.name=bga-ci -c user.email=bga-ci@example.invalid \
+            commit -q -m "ci: track examples/03-project-refs-identity project.refs (v2, local only, never pushed)"
+
+          START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          (cd "$PROJ" && bst --option remote_path "$REMOTE" build all.bst) 2>&1 | tee "$OUT/build-v2.log"
+          python3 -m tools.bst_log_to_chrome_trace --format raw --start-time "$START" "$OUT/build-v2.log" "$OUT/chrome-trace-v2.json"
+          python3 -m tools.bst_extract_run --format raw --start-time "$START" "$PROJ" "$OUT/build-v2.log" "$OUT/run-v2"
+          bga analyze -f json -o "$OUT/report-v2.json" -d -r "$OUT/run-v2"
+
+          echo "--- --strict against a clean, re-committed project.refs (expect PASS) ---" | tee -a "$OUT/strict-check.txt"
+          python3 -m tools.bst_extract_run --strict --format raw --start-time "$START" "$PROJ" "$OUT/build-v2.log" "$OUT/run-v2-strict" 2>&1 \
+            | tee -a "$OUT/strict-check.txt"
+
+      - name: Upload real-build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bst-examples-run-data
+          path: artifacts/
+          retention-days: 30

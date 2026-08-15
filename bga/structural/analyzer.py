@@ -252,16 +252,30 @@ class StructuralAnalyzer:
         slacks = self._compute_all_slacks()
         
         # Sensitivity score: higher for CP elements with low slack
+        #
+        # The decay formula below (`base / (1.0 + slack_s)`) is only
+        # well-defined for slack >= 0 - it divides by zero at
+        # slack == -1_000_000us and goes negative below that (P1-38: a
+        # real ZeroDivisionError crash, found via real build data, not a
+        # hand-built fixture). Negative slack is possible in practice
+        # (e.g. a task whose measured window runs behind where the
+        # schedule expected it - the same "already behind" condition
+        # P1-36 hardens elsewhere). Documented choice: negative slack is
+        # clamped to 0 before the decay formula, i.e. treated as
+        # maximally sensitive for its tier (CP vs non-CP) rather than
+        # extrapolating the decay curve backwards - "already behind
+        # schedule" is at least as sensitive as "exactly on schedule",
+        # never less.
         sensitivity_scores = {}
         for key in self.tasks.keys():
             if key in cp_nodes:
                 # CP elements have high sensitivity
-                slack = slacks.get(key, 0)
+                slack = max(slacks.get(key, 0), 0)
                 # Inverse relationship: lower slack = higher sensitivity
                 sensitivity_scores[key] = 1.0 / (1.0 + slack / 1000000.0)  # Normalize by 1s
             else:
                 # Non-CP elements have lower sensitivity based on slack
-                slack = slacks.get(key, float('inf'))
+                slack = max(slacks.get(key, float('inf')), 0)
                 sensitivity_scores[key] = 0.1 / (1.0 + slack / 1000000.0)
         
         # Top opportunities

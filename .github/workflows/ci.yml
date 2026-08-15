@@ -112,7 +112,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install bubblewrap
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static build-essential cmake
 
       - name: Allow bwrap to configure loopback in its network namespace
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
@@ -120,14 +120,22 @@ jobs:
       - name: Install bga with bst extra
         run: pip install -e ".[bst]"
 
-      - name: Install buildstream-plugins (needed for 03's real git source)
-        # The `git` source kind isn't in the base buildstream package as
-        # of 2.x (docs/ingestion-pipeline.md #7) - confirmed via a real
-        # CI failure ("No source plugin registered for kind 'git'").
+      - name: Install buildstream-plugins (needed for 03's git source and 05's cmake element)
+        # The `git` source kind and `cmake` element kind aren't in the base
+        # buildstream package as of 2.x (docs/ingestion-pipeline.md #7) -
+        # confirmed via a real CI failure ("No source plugin registered for
+        # kind 'git'" / "No element plugin registered for kind 'cmake'").
         run: pip install buildstream-plugins
 
       - name: Stage runtime shells for manual/compose elements
         run: examples/stage_runtimes.sh
+
+      - name: Stage real gcc/cmake/make toolchain for 05-cmake-cpp-toolchain
+        # A full real sysroot staged from THIS runner's own installed
+        # build-essential/cmake packages - see examples/stage_cpp_toolchain.sh
+        # for why (BuildStream's sandbox binds in nothing from the host
+        # except staged dependencies) and the real trial-and-error it took.
+        run: examples/stage_cpp_toolchain.sh
 
       - name: Build + extract + analyze 01-resource-contention
         run: |
@@ -269,6 +277,32 @@ jobs:
           bga compare "$OUT/run-baseline-b2" "$OUT/run-baseline-b4" | tee "$OUT/compare-scheduling.txt"
           bga compare "$OUT/run-baseline-b4" "$OUT/run-optimized-b4" | tee "$OUT/compare-structural.txt"
           bga compare "$OUT/run-baseline-b2" "$OUT/run-optimized-b4" | tee "$OUT/compare-combined.txt"
+
+      - name: Build + extract + analyze + compare 05-cmake-cpp-toolchain
+        # Real CMake/C/C++ builds (docs/scenarios/UX-09) - exercises the
+        # same builders/max-jobs joint-optimization question as
+        # docs/scenarios/UX-09-builders-max-jobs-joint-optimization.md, on
+        # whatever real core count this runner happens to have (not
+        # gated/asserted - runner CPU counts vary, this just records real
+        # numbers for that specific run, same "real corner-case data, not
+        # correctness-gating" posture as the rest of this job).
+        run: |
+          set -euo pipefail
+          PROJ=examples/05-cmake-cpp-toolchain
+          OUT=artifacts/05-cmake-cpp-toolchain
+          mkdir -p "$OUT"
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          python3 -m tools.bst_run_wrapped "$PROJ" "$OUT/build-b1j1.log" -- bst --builders 1 --max-jobs 1 build all.bst
+          python3 -m tools.bst_extract_run --format wrapped "$PROJ" "$OUT/build-b1j1.log" "$OUT/run-b1j1"
+          bga analyze -f text -o "$OUT/report-b1j1.txt" -d -r "$OUT/run-b1j1"
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          python3 -m tools.bst_run_wrapped "$PROJ" "$OUT/build-b4j4.log" -- bst --builders 4 --max-jobs 4 build all.bst
+          python3 -m tools.bst_extract_run --format wrapped "$PROJ" "$OUT/build-b4j4.log" "$OUT/run-b4j4"
+          bga analyze -f text -o "$OUT/report-b4j4.txt" -d -r "$OUT/run-b4j4"
+
+          bga compare "$OUT/run-b1j1" "$OUT/run-b4j4" | tee "$OUT/compare-b1j1-vs-b4j4.txt"
 
       - name: Upload real-build artifacts
         if: always()

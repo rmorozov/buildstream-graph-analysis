@@ -1,11 +1,11 @@
 # Real BuildStream example projects
 
-Four real BuildStream projects, each targeting a different corner case
+Five real BuildStream projects, each targeting a different corner case
 this tool cares about, built for real (not just `bst show`) in CI
 (`.github/workflows/ci.yml`'s `bst-examples` job) to generate real traces,
 `bga` run directories, and reports for later analysis. See
 `docs/tasks/` for the specific backlog items 01-03 map to, and
-`docs/scenarios/` for 04's.
+`docs/scenarios/` for 04-05's.
 
 All sources are `kind: local` or a throwaway `kind: git` remote generated
 at build time - no network access needed, nothing sensitive committed.
@@ -87,6 +87,44 @@ python3 -m tools.bst_run_wrapped 04-critical-path-optimization build.log -- bst 
 python3 -m tools.bst_extract_run --format wrapped 04-critical-path-optimization build.log run/
 ```
 (run from `examples/`)
+
+## 05-cmake-cpp-toolchain
+
+Real C/C++ code (5 modules: `core.bst` + a 4-way `lib-a..d.bst` fan-out +
+`app.bst`), compiled through CMake generating real Makefiles and built
+with real GNU Make - not a `sleep N` proxy like 01/04. Built specifically
+to test whether BuildStream's `--builders` and each element's own native
+`max-jobs` (real intra-element parallelism, e.g. `make -jN`) compete for
+the same CPU cores - they do; see
+`docs/scenarios/UX-09-builders-max-jobs-joint-optimization.md` for the
+real evidence (both source-code citations and a real 6-configuration
+timing table) and `docs/scenarios/UX-10-total-duration-excludes-pre-task-overhead.md`/
+`UX-11-native-build-system-profiler-tool.md` for what it surfaced beyond
+that.
+
+**Needs a real toolchain staged into the sandbox** (BuildStream's sandbox
+binds in nothing from the host, and a real C/C++ build needs a real
+gcc/g++/cmake/make/binutils sysroot, not just a shell) - see
+`../stage_cpp_toolchain.sh`, which stages one from *this host's own*
+installed packages (no docker/debootstrap/network pull needed - see that
+script's own header for the real trial-and-error this took to get
+working: symlink chains through `/etc/alternatives`, this host's usrmerge
+layout, GNU ld linker scripts with embedded `AS_NEEDED` paths, and
+liblto_plugin.so's two real install locations all had to be handled).
+
+```
+sudo apt-get install -y build-essential cmake
+../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)
+bst --builders 4 --max-jobs 4 build all.bst   # BuildStream's own defaults - real fastest config found
+```
+
+To regenerate the real (committed) generated C++ source itself (only
+needed if you're changing the workload, not for a normal build):
+`python3 generate_sources.py` (run from inside
+`05-cmake-cpp-toolchain/`).
+
+Same wrapped-log capture note as `04-critical-path-optimization` applies
+here (`--format wrapped`, not `--format raw` - see `UX-06`).
 
 ## Shared setup
 

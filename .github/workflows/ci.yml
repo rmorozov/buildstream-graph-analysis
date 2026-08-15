@@ -120,6 +120,12 @@ jobs:
       - name: Install bga with bst extra
         run: pip install -e ".[bst]"
 
+      - name: Install buildstream-plugins (needed for 03's real git source)
+        # The `git` source kind isn't in the base buildstream package as
+        # of 2.x (docs/ingestion-pipeline.md #7) - confirmed via a real
+        # CI failure ("No source plugin registered for kind 'git'").
+        run: pip install buildstream-plugins
+
       - name: Stage runtime shells for manual/compose elements
         run: examples/stage_runtimes.sh
 

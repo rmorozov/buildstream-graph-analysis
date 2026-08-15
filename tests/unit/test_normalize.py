@@ -62,17 +62,31 @@ def test_quantize_uses_no_float_division():
     """A simple, verifiable bytecode check (P2-07's own acceptance test
     #3) that quantize_timestamp's compiled body contains no true
     (float-producing) division operator - only integer floor division
-    ('//'). Checking bytecode (via each instruction's resolved operator
-    text) rather than grepping source avoids false positives from the
+    ('//'). Checking bytecode (via each instruction's resolved operator)
+    rather than grepping source avoids false positives from the
     docstring's own prose describing the old, replaced floating-point
-    formula for explanatory purposes."""
+    formula for explanatory purposes.
+
+    Cross-version: Python 3.11+ compiles all binary operators to a
+    single generic BINARY_OP opcode (distinguished by argrepr, e.g.
+    '//' vs '/'); Python 3.9/3.10 instead emit distinct opcodes per
+    operator (BINARY_FLOOR_DIVIDE / BINARY_TRUE_DIVIDE) with no
+    BINARY_OP at all - checking only one family silently finds nothing
+    on the other (confirmed by a real CI failure on 3.9/3.10: an empty
+    `operators` set, not a false pass)."""
     import dis
-    operators = {
-        instr.argrepr for instr in dis.get_instructions(quantize_timestamp)
-        if instr.opname == "BINARY_OP"
-    }
-    assert "//" in operators
-    assert "/" not in operators
+    opnames = set()
+    binary_op_args = set()
+    for instr in dis.get_instructions(quantize_timestamp):
+        opnames.add(instr.opname)
+        if instr.opname == "BINARY_OP":
+            binary_op_args.add(instr.argrepr)
+
+    has_floor_div = "BINARY_FLOOR_DIVIDE" in opnames or "//" in binary_op_args
+    has_true_div = "BINARY_TRUE_DIVIDE" in opnames or "/" in binary_op_args
+
+    assert has_floor_div
+    assert not has_true_div
 
 
 def test_quantize_matches_round_half_up_reference_across_a_range():

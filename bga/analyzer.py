@@ -609,7 +609,51 @@ class BuildEfficiencyAnalyzer:
         
         # Compute horizon for total duration
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)
-        result.total_duration_us = occupancy_stats.get('horizon_us', 0)
+        horizon_us = occupancy_stats.get('horizon_us', 0)
+
+        # Total Duration (Part 4.3): the spec's own preferred definition
+        # is the run's real wall-clock window (run_context.wall_start/
+        # wall_end); the tracked-task horizon is explicitly marked
+        # "reduced provenance" - a fallback for when wall-clock bounds
+        # aren't available, not the primary definition. Using the horizon
+        # unconditionally (as before) understated real wall-clock time
+        # whenever meaningful pre-task overhead exists (BuildStream's own
+        # startup, large sandbox-staging cost) - confirmed via a real run
+        # where the reported Total Duration was 4.0s against a real 7.6s
+        # wall clock (docs/scenarios/UX-10-total-duration-excludes-pre-
+        # task-overhead.md). UNTRACKED_HEAD/UNTRACKED_TAIL (computed
+        # above in _compute_attribution) are already wall-clock-relative,
+        # so this also makes the Attribution Breakdown's percentages
+        # (each category / total_duration_us) sum to 100% again, per Part
+        # 12's exact identity (UNTRACKED_HEAD + task-horizon attribution
+        # + UNTRACKED_TAIL == wall_clock).
+        if (
+            self.run_context
+            and self.run_context.wall_start_us is not None
+            and self.run_context.wall_end_us is not None
+        ):
+            wall_clock_us = self.run_context.wall_end_us - self.run_context.wall_start_us
+            result.total_duration_us = wall_clock_us
+            # Part 13: "wall_clock >= H is a provenance/containment
+            # relationship" - a real violation of this (not just an
+            # unlikely edge case) is exactly the symptom a corrupted
+            # timestamp reconstruction produces (see UX-06's raw-log
+            # elapsed-time bug), so it's reported, not silently ignored.
+            if wall_clock_us < horizon_us:
+                logger.warning(
+                    "Wall clock (%dus) is less than task horizon (%dus) - "
+                    "this violates Part 13's containment relationship and "
+                    "usually indicates corrupted timestamp reconstruction",
+                    wall_clock_us, horizon_us,
+                )
+                self.violations.append({
+                    'type': 'wall_clock_containment',
+                    'invariant': 'Part 13',
+                    'wall_clock_us': wall_clock_us,
+                    'horizon_us': horizon_us,
+                })
+        else:
+            result.total_duration_us = horizon_us
 
         # Pipeline overhead (P4-14, non-spec additive signal) - see
         # docs/tasks/P4-14-cache-query-overhead-visibility.md

@@ -6,7 +6,7 @@ holder tracking).
 import pytest
 
 from bga.attribution.blame_chain import BlameChainAnalyzer
-from bga.ingest.models import NormalizedTask, TaskKey, TaskKind, Resource
+from bga.ingest.models import AttributionCategory, NormalizedTask, TaskKey, TaskKind, Resource
 
 
 def _task(uid, ready_us, start_us, finish_us, resources=None):
@@ -218,3 +218,69 @@ def test_resource_wait_false_when_not_actually_waiting():
     waiting = _task("elem-a", ready_us=100, start_us=100, finish_us=200, resources=[Resource.PROCESS])
     analyzer = _analyzer([waiting])
     assert analyzer.classify_resource_wait(waiting, {}, {Resource.PROCESS: 1}) == (False, None)
+
+
+# --- P1-39: _classify_wait_gap composition of RESOURCE_WAIT then
+# SCHEDULER_WAIT for the remainder ---------------------------------------
+#
+# Both tests share the same resource-wait shape: capacity=2, two holders
+# saturate PROCESS during [0, 100), then both finish, leaving PROCESS
+# genuinely free for [100, 200) - the maximal saturated prefix
+# classify_resource_wait reports is exactly [0, 100).
+
+def test_wait_gap_remainder_becomes_scheduler_wait_when_slot_genuinely_free():
+    """The real P1-39 bug, demonstrated end-to-end: after the RESOURCE_WAIT
+    prefix [0, 100), the scheduler genuinely has a free slot throughout
+    the remainder [100, 200) (no other task is active there at all,
+    max_jobs=2) - the remainder must be classified SCHEDULER_WAIT.
+
+    Before the fix, the scheduler-wait check used
+    `_resource_available_at(task, task.ready_us)` - evaluated at t=0,
+    where PROCESS *was* saturated by construction (that's why a
+    RESOURCE_WAIT prefix exists at all) - so `resource_available` was
+    always False there, `classify_scheduler_wait` bailed immediately, and
+    the remainder fell through to DEPENDENCY_WAIT regardless of the real,
+    genuine spare capacity at t=100 onward.
+    """
+    waiting = _task("elem-a", ready_us=0, start_us=200, finish_us=300, resources=[Resource.PROCESS])
+    holder_a = _task("elem-b", ready_us=0, start_us=0, finish_us=100, resources=[Resource.PROCESS])
+    holder_b = _task("elem-c", ready_us=0, start_us=0, finish_us=100, resources=[Resource.PROCESS])
+    analyzer = BlameChainAnalyzer(
+        normalized_tasks=[waiting, holder_a, holder_b],
+        resource_capacity={Resource.PROCESS: 2},
+        max_jobs=2,
+    )
+
+    segments, holder_info = analyzer._classify_wait_gap(waiting, 0, 200)
+
+    assert segments == [
+        (AttributionCategory.RESOURCE_WAIT, 0, 100),
+        (AttributionCategory.SCHEDULER_WAIT, 100, 200),
+    ]
+    assert holder_info["explained_us"] == 100
+
+
+def test_wait_gap_remainder_stays_dependency_wait_when_scheduler_genuinely_full():
+    """Same RESOURCE_WAIT-prefix shape as above, but this time the
+    scheduler is genuinely still full throughout the remainder [100, 200)
+    too (an unrelated filler task occupies the only job slot, max_jobs=1)
+    - confirms the fix doesn't just unconditionally flip the remainder to
+    SCHEDULER_WAIT; it must fall through to DEPENDENCY_WAIT here since
+    neither resource contention nor scheduler evidence explains it."""
+    waiting = _task("elem-a", ready_us=0, start_us=200, finish_us=300, resources=[Resource.PROCESS])
+    holder_a = _task("elem-b", ready_us=0, start_us=0, finish_us=100, resources=[Resource.PROCESS])
+    holder_b = _task("elem-c", ready_us=0, start_us=0, finish_us=100, resources=[Resource.PROCESS])
+    filler = _task("elem-d", ready_us=0, start_us=100, finish_us=200, resources=[])
+    analyzer = BlameChainAnalyzer(
+        normalized_tasks=[waiting, holder_a, holder_b, filler],
+        resource_capacity={Resource.PROCESS: 2},
+        max_jobs=1,
+    )
+
+    segments, holder_info = analyzer._classify_wait_gap(waiting, 0, 200)
+
+    assert segments == [
+        (AttributionCategory.RESOURCE_WAIT, 0, 100),
+        (AttributionCategory.DEPENDENCY_WAIT, 100, 200),
+    ]
+    assert holder_info["explained_us"] == 100

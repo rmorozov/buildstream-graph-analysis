@@ -518,6 +518,7 @@ class BlameChainAnalyzer:
         task: NormalizedTask,
         resource_available: bool,
         max_jobs: Optional[int],
+        window_start: Optional[int] = None,
     ) -> bool:
         """
         Classify scheduler wait (Part 9).
@@ -527,7 +528,7 @@ class BlameChainAnalyzer:
         - Resources are available
         - But it's not running
         - "Sufficient evidence" (Part 9) exists to establish that: at some
-          point during [ready_us, start_us), true concurrency (count of
+          point during [window_start, start_us), true concurrency (count of
           tasks with an overlapping [start_us, finish_us) interval, not
           "tasks that happen to start exactly then") was strictly below
           max_jobs.
@@ -543,7 +544,19 @@ class BlameChainAnalyzer:
         Args:
             task: The task to analyze
             resource_available: Whether required resources are available
+                (P1-39: the caller is responsible for evaluating this at
+                `window_start`, not `task.ready_us`, when the two differ -
+                see _classify_wait_gap)
             max_jobs: Maximum concurrent jobs allowed
+            window_start: Start of the sub-window to sweep for concurrency
+                evidence (P1-39). Defaults to `task.ready_us` - the whole
+                wait gap - for backward compatibility with callers that
+                have no reason to narrow it (e.g. calling this in
+                isolation). `_classify_wait_gap` passes the cursor left
+                after any `RESOURCE_WAIT` prefix has already been
+                consumed, so this only sweeps the genuinely-unclaimed
+                remainder rather than re-examining time already explained
+                by resource contention.
 
         Returns:
             True if task experienced scheduler wait
@@ -559,7 +572,7 @@ class BlameChainAnalyzer:
             # not infer scheduler failure merely because a task did not run.
             return False
 
-        wait_start = task.ready_us
+        wait_start = window_start if window_start is not None else task.ready_us
         wait_end = task.start_us
 
         others = [other for other in self.tasks if other.task_key != task.task_key]
@@ -715,6 +728,22 @@ class BlameChainAnalyzer:
         intra-element sequencing overlap in complex ways; see P1-20's task
         file for the honest accounting of this simplification.
 
+        P1-39: the scheduler-wait check below evaluates resource
+        availability and sweeps concurrency starting at `cursor` (the
+        point after any RESOURCE_WAIT prefix has already been consumed),
+        not at `task.ready_us`. Evaluating either at the original
+        `ready_us` would be stale by construction once a RESOURCE_WAIT
+        prefix exists: `classify_resource_wait` only ever assigns a
+        prefix because the resource *was* saturated at `ready_us`, so a
+        point check still anchored there would always report "resource
+        unavailable" and scheduler-wait could never explain the remainder,
+        even when the resource had genuinely freed up and the scheduler
+        was genuinely full afterward. This is still a point check (at
+        `cursor`) plus a sweep of the remainder only - not a check for
+        re-saturation later within the remainder - a deliberately scoped
+        fix; see P1-39's Out of Scope for why a fuller unified interval
+        sweep wasn't pursued here.
+
         A related, known limitation for retries specifically (P1-30):
         `classify_resource_wait` early-returns `(False, None)` whenever
         `task.start_us <= task.ready_us` - true by construction for a
@@ -751,9 +780,9 @@ class BlameChainAnalyzer:
                     cursor += explained_us
 
         if cursor < gap_end:
-            resource_available = self._resource_available_at(task, task.ready_us)
+            resource_available = self._resource_available_at(task, cursor)
             is_scheduler_wait = self.classify_scheduler_wait(
-                task, resource_available, self.max_jobs,
+                task, resource_available, self.max_jobs, window_start=cursor,
             )
             if is_scheduler_wait:
                 segments.append((AttributionCategory.SCHEDULER_WAIT, cursor, gap_end))

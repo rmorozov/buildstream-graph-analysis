@@ -10,7 +10,7 @@ to answer "what-if" questions about resource allocation.
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Set
-from collections import defaultdict
+from collections import defaultdict, deque
 import heapq
 
 from ..ingest.models import RunContext
@@ -115,6 +115,45 @@ class ReplayScheduler:
             'DOWNLOAD': getattr(run_context, 'fetchers', 2) if run_context else 2,
             'UPLOAD': getattr(run_context, 'pushers', 2) if run_context else 2,
         }
+
+        # Longest *remaining* path (in task hops) from each task to any
+        # sink - real Part 18 `depth` priority rule support (P1-34:
+        # previously byte-identical to `lpt`, not depth at all).
+        # Computed once here, not per-call.
+        self._task_depths: Dict[str, int] = self._compute_task_depths()
+
+    def _compute_task_depths(self) -> Dict[str, int]:
+        """Longest remaining path (in task hops) from each task to any
+        sink (a task nothing depends on) - not depth *from* a root, which
+        would tie at 0 for every task that's ready at the very start
+        (the common case) and so couldn't discriminate between them at
+        all. This is the same rationale `lpt` uses for duration: schedule
+        the task with the most/longest downstream work riding on it
+        first. Computed via Kahn's algorithm over the *reversed* graph
+        (starting from sinks, walking back through predecessors)."""
+        depths: Dict[str, int] = {}
+        out_degree = {key: len(self._successors[key]) for key in self._task_map}
+        queue = deque(key for key, deg in out_degree.items() if deg == 0)
+        for key in queue:
+            depths[key] = 0
+        while queue:
+            key = queue.popleft()
+            for pred in self._predecessors[key]:
+                if pred not in out_degree:
+                    # A dependency reference to a task that isn't part of
+                    # this scheduler's own task set (e.g. excluded
+                    # upstream by P1-36's negative-duration guard, or a
+                    # cyclic-graph input that hasn't hit cycle detection
+                    # yet) - nothing to update, not a real predecessor
+                    # for depth purposes.
+                    continue
+                candidate = depths[key] + 1
+                if candidate > depths.get(pred, -1):
+                    depths[pred] = candidate
+                out_degree[pred] -= 1
+                if out_degree[pred] == 0:
+                    queue.append(pred)
+        return depths
     
     def _get_task_resources(self, task_key: str) -> Dict[str, int]:
         """
@@ -304,12 +343,26 @@ class ReplayScheduler:
     def _compute_priority(self, task: NormalizedTask, rule: str) -> int:
         """
         Compute priority value for task selection.
-        
-        Lower values = higher priority (for min-heap).
-        We negate for rules where we want max-first behavior.
+
+        Lower values = higher priority (for min-heap). We negate for
+        rules where we want max-first behavior. Every ready_queue entry
+        is a (priority, task_key) tuple (Part 35/I11's determinism
+        contract) - heapq compares tuples element-wise, so any tie in
+        the returned priority is *already* broken deterministically by
+        task_key's own lexicographic order, not heap-implementation-
+        dependent insertion order. `fifo` relies on this directly: a
+        constant priority for every task means the tuple comparison
+        falls through entirely to task_key - genuine lexicographic
+        order, not a hash-based proxy for it (P1-34: `hash()` is
+        per-process-randomized in Python by default, so a hash-derived
+        priority could silently reorder tasks - and therefore change
+        the replay makespan T_C - across separate runs of the same
+        input, a real determinism-contract violation. Confirmed
+        empirically: `hash('abc')` differs across separate `python3`
+        invocations in this environment).
         """
         duration = task.dur_us  # Use property instead of attribute
-        
+
         if rule == 'lpt':
             # Longest Processing Time first (negate for max-heap)
             return -duration
@@ -317,13 +370,14 @@ class ReplayScheduler:
             # Shortest Processing Time first
             return duration
         elif rule == 'fifo':
-            # Lexicographic order by task key
-            # Use hash as proxy
-            return hash(str(task.task_key)) % (2**31)
+            # Constant priority - tuple comparison falls through to
+            # task_key, i.e. real lexicographic order (see docstring).
+            return 0
         elif rule == 'depth':
-            # Greatest depth first (need to compute depth)
-            # For now, use negative duration as proxy
-            return -duration
+            # Greatest dependency depth first (negate for max-heap) -
+            # real longest-path depth (self._task_depths, computed once
+            # in __init__), not a duplicate of `lpt`.
+            return -self._task_depths.get(str(task.task_key), 0)
         else:
             # Default to LPT
             return -duration

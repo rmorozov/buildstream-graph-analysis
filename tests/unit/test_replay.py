@@ -85,3 +85,117 @@ def test_capacity_sweep_first_sample_normalized_improvement_is_not_nan():
     first = sweep.sweeps[0]["normalized_improvement"]
     assert first == 0
     assert first == first  # NaN != NaN; this fails if it were ever NaN again
+
+
+# --- P1-34: `fifo` priority must be genuinely deterministic (not a
+# per-process-randomized hash), and `depth` must be real, not an LPT
+# duplicate ---
+
+def test_fifo_tie_break_is_lexicographic_by_task_key():
+    """Several independent same-duration tasks, capacity 1 (forces
+    strict one-at-a-time ordering) - fifo must schedule them in
+    task_key's own lexicographic order, regardless of construction/push
+    order (pushed here in reverse - c, b, a)."""
+    tasks = [_task(uid, 1000) for uid in ("c.bst", "b.bst", "a.bst")]
+    scheduler = ReplayScheduler(tasks)
+
+    result = scheduler.replay(capacities={"PROCESS": 1}, priority_rule="fifo")
+    order = [t.task_key for t in sorted(result.scheduled_tasks, key=lambda t: t.start_us)]
+
+    assert order == sorted(order)
+    assert order[0].startswith("a.bst")
+    assert order[1].startswith("b.bst")
+    assert order[2].startswith("c.bst")
+
+
+def test_fifo_is_deterministic_across_separate_processes():
+    """The real bug (P1-34): a hash-derived priority is stable within
+    one process (hash seed fixed per-process) but can differ across
+    separate process invocations - exactly what a single-process-repeat
+    determinism check (P1-35) cannot catch. Run the same fifo replay in
+    two genuinely separate Python processes and compare."""
+    import json
+    import os
+    import subprocess
+    import sys
+
+    script = (
+        "from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind\n"
+        "from bga.replay.scheduler import ReplayScheduler\n"
+        "import json\n"
+        "def _task(uid, dur_us):\n"
+        "    return NormalizedTask(\n"
+        "        task_key=TaskKey(uid, TaskKind.BUILD, 'BUILD', 0),\n"
+        "        ready_us=0, start_us=0, finish_us=dur_us,\n"
+        "        resources=[Resource.PROCESS],\n"
+        "    )\n"
+        "tasks = [_task(f't{i}.bst', 1000) for i in range(8)]\n"
+        "scheduler = ReplayScheduler(tasks)\n"
+        "result = scheduler.replay(capacities={'PROCESS': 1}, priority_rule='fifo')\n"
+        "order = [t.task_key for t in sorted(result.scheduled_tasks, key=lambda t: t.start_us)]\n"
+        "print(json.dumps({'makespan_us': result.makespan_us, 'order': order}))\n"
+    )
+
+    runs = []
+    for seed in ("1", "2"):
+        proc = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True, text=True, check=True,
+            env={**os.environ, "PYTHONHASHSEED": seed},
+        )
+        runs.append(json.loads(proc.stdout))
+
+    assert runs[0] == runs[1]
+
+
+def test_depth_rule_prioritizes_longer_remaining_chain_not_duration():
+    """Two independent roots ready at t=0, same duration (so lpt/spt
+    can't tell them apart) - one heads a 3-deep chain, the other a
+    single task. Capacity 1 forces a strict choice: `depth` must pick
+    the root of the longer chain first (real longest-remaining-path
+    behavior), proving it's not silently identical to `lpt` (the
+    original bug - both branches returned `-duration`)."""
+    deep_root = _task("deep-root.bst", 1000)
+    deep_mid = _task("deep-mid.bst", 1000, dependencies=[str(deep_root.task_key)])
+    deep_leaf = _task("deep-leaf.bst", 1000, dependencies=[str(deep_mid.task_key)])
+    shallow_root = _task("shallow-root.bst", 1000)
+
+    scheduler = ReplayScheduler([deep_root, deep_mid, deep_leaf, shallow_root])
+    result = scheduler.replay(capacities={"PROCESS": 1}, priority_rule="depth")
+
+    first_scheduled = min(result.scheduled_tasks, key=lambda t: t.start_us)
+    assert first_scheduled.task_key.startswith("deep-root.bst")
+
+
+def test_depth_computation_tolerates_dependency_on_excluded_task():
+    """Regression guard: a task's `dependencies` list can reference a
+    task_key that isn't part of this scheduler's own task set at all
+    (e.g. excluded upstream by P1-36's negative-duration guard, or a
+    cyclic-graph input mid-way through cycle detection) - found via a
+    real interaction with P1-36 that crashed
+    tests/unit/test_cli_exit_codes.py::test_cyclic_graph_exits_three
+    with an uncaught KeyError in the initial version of this fix.
+    ReplayScheduler construction itself must never crash over this."""
+    only_task = _task("b.bst", 1000, dependencies=["a.bst|BUILD|BUILD|0"])
+    scheduler = ReplayScheduler([only_task])  # "a.bst" is not in the task list
+    assert scheduler._task_depths.get(str(only_task.task_key)) == 0
+
+
+def test_hash_is_never_called_in_replay_scheduler():
+    """Structural regression guard (P1-34's own acceptance test): parse
+    the module's AST and confirm no call to the builtin hash() exists
+    anywhere in it - a hash-derived priority is the exact bug this task
+    fixes, so this must stay true, not just true today."""
+    import ast
+    import inspect
+
+    import bga.replay.scheduler as scheduler_module
+
+    tree = ast.parse(inspect.getsource(scheduler_module))
+    hash_calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "hash"
+    ]
+    assert hash_calls == []

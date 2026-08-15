@@ -119,6 +119,17 @@ bga diagnostics /path/to/run    # blast radius, criticality probability, wall-cl
 
 `floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph /path/to/run --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
+## `bga compare` — Run-to-Run Comparison
+
+Not a spec-mandated command (`docs/scenarios/UX-01`) - compares a baseline run against a candidate run and reports signed deltas in certified floors, efficiency score, and attribution, plus a verdict:
+
+```bash
+bga compare /path/to/before-run /path/to/after-run
+bga compare /path/to/before-run /path/to/after-run --format json | jq '.verdict'
+```
+
+The verdict is one of `improved`/`regressed`/`no significant change` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a warning when the two runs' graphs share fewer than half their element UIDs (they may not even be the same project). Exit code is always 0 for a successful comparison regardless of verdict - comparing is not itself a failure condition (a CI gate that fails the pipeline on regression is a separate, not-yet-built concern, `docs/scenarios/UX-03`). `--capacity`, if given, applies symmetrically to both runs.
+
 ## Example Workflows
 
 ### 1. Quick Efficiency Check

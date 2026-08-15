@@ -1,6 +1,6 @@
 # UX-01: No built-in way to compare two runs (baseline vs. after-a-change)
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** none
 
 ## Motivation
 
@@ -34,4 +34,20 @@ Confirmed directly against `bga/cli.py` (grep for `add_parser`): the only subcom
 6. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+New module `bga/compare.py`: `compare_runs(baseline_dir, candidate_dir, **analyzer_kwargs)` loads and analyzes each run independently via its own `BuildEfficiencyAnalyzer` (no shared state), then computes signed deltas for `total_duration_us`/`t_infinity_observed`/`lb`/`certified_headroom`/`t_c`/`efficiency_score` (UX-02) and every attribution category (absolute + percentage-point). Verdict (`improved`/`regressed`/`no significant change`) is driven by `total_duration_us`'s delta against a 1%-of-baseline significance threshold, computed via exact integer comparison (`abs(delta_us) * 100 >= baseline_total * 1`), not float division. `low_confidence` flags when either run's `confidence.primary` is below `_CONFIDENCE_HIGH` (reused from `bga/report/text.py`). `comparability_warning` flags when the two runs' `graph.elements` share fewer than half their UIDs.
+
+New `bga compare BASELINE CANDIDATE` subcommand (`bga/cli.py`), `--format text|json`, `--capacity` (applied symmetrically to both runs), same `-o`/`-v`/`-q`/`--log-file` flags as every other subcommand. Always exits 0 on a successful comparison regardless of verdict (1 for a missing directory, 2/3 for ingestion/analysis failures, matching the existing exit-code contract). New `format_compare_text` in `bga/report/text.py`; `--format json` serializes `ComparisonResult.to_dict()` directly. Documented in `docs/cli.md` with both example commands verified to actually run.
+
+New test file (`tests/unit/test_compare.py`, 9 tests, matching all 6 acceptance-test items): a shortened candidate reports the correct signed delta and "improved"; the reverse reports "regressed"; byte-identical run dirs report "no significant change" with an exact zero delta; a low-confidence run (no `run_identity`, P1-37's reduced-provenance path) flags `low_confidence=True`; mismatched topologies (few shared element UIDs) trigger the comparability warning; attribution deltas cover every category present in either run; 3 CLI-level subprocess tests confirm exit code 0 regardless of verdict, exit code 1 on a missing directory, and `--format json` round-trips through a real `jq` subprocess for both `.verdict` and `.deltas.total_duration_us`.
+
+```
+$ python3 -m pytest tests/unit/test_compare.py -v
+9 passed
+$ python3 -m pytest -q   # full suite
+454 passed, 11 skipped
+$ make lint
+All checks passed!
+$ bga compare tests/fixtures/golden/mixed_task_kinds tests/fixtures/synthetic_multi_subproject
+Verdict: REGRESSED  (total duration +141.99s, +1014185.7%, 0.01s -> 142.00s)
+  Warning: baseline has 4 element(s), candidate has 9 - only 1 shared element UID(s) (less than half) - these runs may not be the same project; treat any comparison below with real skepticism
+```

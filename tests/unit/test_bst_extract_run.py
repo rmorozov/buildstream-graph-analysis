@@ -17,7 +17,13 @@ from pathlib import Path
 
 import pytest
 
-from tools.bst_extract_run import _compute_run_identity, _git_consistency_note, _parse_targets, extract_run
+from tools.bst_extract_run import (
+    _compute_run_identity,
+    _git_consistency_note,
+    _host_cpu_count,
+    _parse_targets,
+    extract_run,
+)
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 
@@ -82,6 +88,34 @@ def test_run_identity_changes_with_project_refs_provenance(tmp_path):
         str(tmp_path), ["app.bst"], scheduler, {"path": "project.refs", "sha256": "deadbeef"},
     )
     assert a["manifest_hash"] != b["manifest_hash"]
+
+
+def test_run_identity_changes_with_native_max_jobs(tmp_path):
+    """UX-12: native_max_jobs affects real observed concurrency/scheduling
+    the same way builders/fetchers/pushers already do - same precedent as
+    test_run_identity_changes_with_scheduler_config above."""
+    scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
+    a = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None, native_max_jobs=4)
+    b = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None, native_max_jobs=8)
+    assert a["manifest_hash"] != b["manifest_hash"]
+
+
+def test_run_identity_native_max_jobs_defaults_to_none(tmp_path):
+    """Omitting native_max_jobs (the common case today - most captures
+    won't have it) must not raise and must be reflected in the manifest
+    as an explicit None, not silently absent."""
+    scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
+    identity = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None)
+    assert identity["scheduler"]["native_max_jobs"] is None
+
+
+def test_host_cpu_count_returns_a_positive_int():
+    """Real, best-effort host CPU core count (UX-12) - this test host
+    genuinely has at least one core, so this is a real, not synthetic,
+    assertion."""
+    count = _host_cpu_count()
+    assert isinstance(count, int)
+    assert count >= 1
 
 
 def test_git_consistency_note_none_for_clean_repo(tmp_path):

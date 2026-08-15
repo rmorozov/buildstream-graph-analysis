@@ -25,6 +25,7 @@ from the exact same log removes that whole class of mismatch.
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -87,7 +88,24 @@ def _git_commit(project_dir: str):
     return result.stdout.strip()
 
 
-def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_refs_provenance):
+def _host_cpu_count():
+    """The real number of CPU cores available to this process (UX-12) -
+    `os.sched_getaffinity` where available (Linux only, but correct under
+    a cgroup/container CPU-share limit, exactly the kind of environment
+    `bga`'s own CI runs in - a plain `os.cpu_count()` would report the
+    host's full core count even when this process is actually confined to
+    fewer), falling back to `os.cpu_count()` elsewhere. Returns None if
+    neither is available (unlikely, but honest rather than fabricating a
+    number)."""
+    if hasattr(os, "sched_getaffinity"):
+        try:
+            return len(os.sched_getaffinity(0))
+        except OSError:
+            pass
+    return os.cpu_count()
+
+
+def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_refs_provenance, native_max_jobs=None):
     """Real run-identity manifest (P1-37 - I8's own invariant, "all
     analysis inputs must belong to the same run identity", names no
     concrete field or mechanism anywhere in the spec).
@@ -95,9 +113,10 @@ def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_re
     A stable hash over the real inputs that determine graph.json's and
     trace.json's content at extraction time: the target list (what was
     requested), the scheduler configuration (affects real observed
-    concurrency/scheduling), the project's git commit (if available),
-    and project.refs' own content hash (if the project uses
-    ref-storage: project.refs - P4-13's existing, real provenance
+    concurrency/scheduling - native_max_jobs included here for the same
+    reason as builders/fetchers/pushers, UX-12), the project's git commit
+    (if available), and project.refs' own content hash (if the project
+    uses ref-storage: project.refs - P4-13's existing, real provenance
     input, reused here rather than duplicated). Embedded identically
     into run-context.json, graph.json, and trace.json (as
     run_identity/run_identity_hash) so bga's own loader (P1-37) can
@@ -117,6 +136,7 @@ def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_re
             "builders": scheduler.get("builders"),
             "fetchers": scheduler.get("fetchers"),
             "pushers": scheduler.get("pushers"),
+            "native_max_jobs": native_max_jobs,
         },
         "project_git_commit": _git_commit(project_dir),
         "project_refs_sha256": project_refs_provenance["sha256"] if project_refs_provenance else None,
@@ -252,6 +272,7 @@ def extract_run(
     trace_epsilon_us: int = 50000,
     bst_bin: str = "bst",
     strict: bool = False,
+    native_max_jobs: int = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -339,6 +360,20 @@ def extract_run(
         # "unavailable" rather than fabricating a number. See
         # docs/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
     }
+    # native_max_jobs/host_cpu_count (UX-12): the real per-element
+    # internal build-system parallelism (`--max-jobs`, e.g. `make -jN`)
+    # and the real host CPU core count at capture time - distinct from
+    # `max_jobs` above (run-context/v9's own field, which actually means
+    # `builders` - see tools/bst_log_to_chrome_trace.py's
+    # get_scheduler_config docstring). Neither is visible in a
+    # BuildStream log itself: native_max_jobs has to be told to us (the
+    # caller already knows what they passed to `bst --max-jobs N build`);
+    # host_cpu_count is queried directly from the extraction environment.
+    if native_max_jobs is not None:
+        run_context["native_max_jobs"] = native_max_jobs
+    host_cpu_count = _host_cpu_count()
+    if host_cpu_count is not None:
+        run_context["host_cpu_count"] = host_cpu_count
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:
@@ -357,7 +392,7 @@ def extract_run(
 
     # Run identity (P1-37): embedded identically into all three files so
     # bga's own loader can cross-check they belong to the same extraction.
-    run_identity = _compute_run_identity(project_dir, targets, scheduler, project_refs_provenance)
+    run_identity = _compute_run_identity(project_dir, targets, scheduler, project_refs_provenance, native_max_jobs=native_max_jobs)
     run_context["run_identity"] = run_identity
     graph["run_identity_hash"] = run_identity["manifest_hash"]
     trace["run_identity_hash"] = run_identity["manifest_hash"]
@@ -419,6 +454,13 @@ def main() -> int:
         "(P4-13). Only usable for projects with ref-storage: project.refs and at least one "
         "trackable-ref source - see docs/tasks/P4-13-strict-mode-project-refs-consistency.md.",
     )
+    parser.add_argument(
+        "--native-max-jobs", type=int, default=None,
+        help="The real --max-jobs value the build was invoked with (per-element internal "
+        "build-system parallelism, e.g. `make -jN` - a different, unrelated concept from "
+        "--builders/this tool's own resource_capacities.PROCESS). Not visible in a "
+        "BuildStream log itself, so has to be told to us; omit if unknown (UX-12).",
+    )
     args = parser.parse_args()
 
     try:
@@ -426,7 +468,7 @@ def main() -> int:
             args.project_dir, args.log_path, args.output_dir,
             log_format=args.format, start_time=args.start_time,
             trace_epsilon_us=args.trace_epsilon_us, bst_bin=args.bst_bin,
-            strict=args.strict,
+            strict=args.strict, native_max_jobs=args.native_max_jobs,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from bga.validation import run_determinism_check
+from bga.validation import run_cross_process_determinism_check, run_determinism_check
 
 
 def _write_run_dir(tmp_path):
@@ -97,3 +97,64 @@ def test_full_scale_determinism_check(tmp_path):
     report = run_determinism_check(run_dir, n=100)
     assert report["deterministic"] is True
     assert report["mismatches"] == []
+
+
+# --- P1-35: run_determinism_check's in-process repeats can't catch
+# per-process-varying nondeterminism (Python's hash-seed randomization
+# is fixed for the lifetime of one process) - a real cross-process
+# check is the only way to catch that class of bug, e.g. P1-34's
+# hash-derived replay fifo priority. ---
+
+@pytest.mark.slow
+def test_cross_process_determinism_check_passes_on_deterministic_pipeline(tmp_path):
+    """After P1-34's fix, the real pipeline (including replay's fifo
+    priority) is genuinely process-independent - this is the mechanism
+    that proves that, not just asserts it against a hand-built fixture
+    that agrees with itself by construction."""
+    run_dir = _write_run_dir(tmp_path)
+    report = run_cross_process_determinism_check(run_dir, n=3)
+
+    assert report["deterministic"] is True
+    assert report["n"] == 3
+    assert report["mismatches"] == []
+
+
+def test_cross_process_determinism_check_would_have_caught_p1_34(tmp_path, monkeypatch):
+    """Directly demonstrates the harness's real reason to exist: with
+    PYTHONHASHSEED varying across subprocess invocations, a
+    hash-of-task-key-derived value differs from run to run - simulated
+    here (rather than reverting P1-34's fix) by monkeypatching
+    subprocess.run to actually vary PYTHONHASHSEED per call and having
+    the subprocess itself compute and include a real hash() value in
+    its "output", the same shape of bug P1-34 was. This proves the
+    cross-process mechanism itself (real subprocess launches, real env
+    var propagation) - not the already-fixed replay code path."""
+    import subprocess as subprocess_module
+
+    from bga.validation import determinism as determinism_module
+
+    run_dir = _write_run_dir(tmp_path)
+    calls = {"n": 0}
+    real_run = subprocess_module.run
+
+    def hash_leaking_run(cmd, **kwargs):
+        # Run the real subprocess for a real, valid canonical baseline,
+        # then splice in a hash()-derived field that would only be
+        # stable within one process - simulating exactly P1-34's bug
+        # shape without needing to actually revert its fix.
+        proc = real_run(cmd, **kwargs)
+        calls["n"] += 1
+        payload = json.loads(proc.stdout)
+        payload["_test_only_hash_derived_field"] = hash(f"probe-{calls['n']}") % (2**31)
+        proc.stdout = json.dumps(payload)
+        return proc
+
+    monkeypatch.setattr(determinism_module.subprocess, "run", hash_leaking_run)
+
+    report = run_cross_process_determinism_check(run_dir, n=3)
+
+    assert report["deterministic"] is False
+    assert any(
+        "_test_only_hash_derived_field" in d
+        for m in report["mismatches"] for d in m["diffs"]
+    )

@@ -1,0 +1,19 @@
+# Template for libbar.bst, rendered by examples/stage_project3_remote.sh
+# by substituting @REMOTE_PATH@ - not a BuildStream project option
+# (real constraint, confirmed via a real CI failure: BuildStream project
+# options only support type: bool/enum/flags/element-mask/arch/os, no
+# free-form string type to hold an arbitrary filesystem path), so this
+# is templated the same way examples/stage_runtimes.sh and
+# stage_project3_remote.sh already generate non-source content at build
+# time rather than committing it.
+#
+# No `ref:` key deliberately - with ref-storage: project.refs, the
+# resolved ref lives in project.refs, not in the element itself. `bst
+# source track libbar.bst` (run by stage_project3_remote.sh's caller,
+# see examples/README.md) resolves the real commit SHA from the
+# generated remote and writes it there.
+kind: import
+sources:
+- kind: git
+  url: "file://@REMOTE_PATH@"
+  track: main

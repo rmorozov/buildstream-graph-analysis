@@ -39,4 +39,11 @@ if [ "${1:-}" = "--update" ]; then
         git -C "$REMOTE_DIR" commit -q -m "update v2"
 fi
 
+# libbar.bst.in -> libbar.bst: BuildStream project options have no
+# free-form string type (confirmed via a real CI failure), so the
+# per-checkout absolute remote path is substituted directly into the
+# element file instead - gitignored, regenerated here every time.
+sed "s|@REMOTE_PATH@|$REMOTE_DIR|g" \
+    "$PROJECT_DIR/elements/libbar.bst.in" > "$PROJECT_DIR/elements/libbar.bst"
+
 echo "Generated remote at $REMOTE_DIR (HEAD $(git -C "$REMOTE_DIR" rev-parse HEAD))"

@@ -40,11 +40,17 @@ generating real "touch and rebuild" retry/rebuild data (P1-37). The git
 source's upstream is a throwaway repo generated deterministically by
 `../stage_project3_remote.sh` (fixed committer identity/dates, so the
 resulting commit SHA is reproducible from committed seed content alone).
+The same script also renders `elements/libbar.bst` from
+`elements/libbar.bst.in`, substituting the real (per-checkout) absolute
+path to that remote - BuildStream project options have no free-form
+string type to hold an arbitrary path (only
+`bool`/`enum`/`flags`/`element-mask`/`arch`/`os`), confirmed via a real
+CI failure, so this is templated rather than passed as a `--option`.
 
 ```
 ../stage_project3_remote.sh
-bst --option remote_path "$(pwd)/.generated-remote" source track libbar.bst
-bst --option remote_path "$(pwd)/.generated-remote" build all.bst
+bst source track libbar.bst
+bst build all.bst
 ```
 (run from inside `03-project-refs-identity/`)
 

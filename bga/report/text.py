@@ -63,6 +63,23 @@ def _format_violation_summary(violation: dict) -> str:
         )
     if vtype == 'hard_gate_failed':
         return f"hard gate failed: {violation.get('gate')} = {violation.get('value')}"
+    if vtype == 'resource_oversubscription':
+        return (
+            f"oversubscription: builders={violation.get('builders')} x "
+            f"native max-jobs={violation.get('native_max_jobs')} = "
+            f"{violation.get('actual_demand')} potential concurrent processes "
+            f"on a {violation.get('host_cpu_count')}-core host (BuildStream's own "
+            f"defaults for this host: {violation.get('default_demand')}) - real CPU "
+            f"contention may be slowing individual tasks down, see UX-09"
+        )
+    if vtype == 'resource_undersubscription':
+        return (
+            f"undersubscription: builders={violation.get('builders')} x "
+            f"native max-jobs={violation.get('native_max_jobs')} = "
+            f"{violation.get('actual_demand')} potential concurrent processes "
+            f"on a {violation.get('host_cpu_count')}-core host - fewer than one "
+            f"process per core, may be leaving cores idle"
+        )
     return f"{vtype}: {violation}"
 
 

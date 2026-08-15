@@ -70,6 +70,18 @@ class RunContext:
     resource_capacities: Dict[str, int] = field(default_factory=dict)
     max_jobs: Optional[int] = None
     cpu_accounting: Optional[dict] = None
+    # Real native `--max-jobs` (per-element internal build-system
+    # parallelism, e.g. `make -jN`) and the real host CPU core count at
+    # capture time - UX-12. Deliberately separate from `max_jobs` above,
+    # which is run-context/v9's own spec-defined field and actually means
+    # `builders` (BuildStream's element-dispatch concurrency, a different,
+    # unrelated concept - see tools/bst_log_to_chrome_trace.py's
+    # get_scheduler_config docstring). Both optional/best-effort: neither
+    # is visible in a BuildStream log itself, so extraction tooling can
+    # only populate them when told (native_max_jobs) or when the capture
+    # environment supports querying it (host_cpu_count).
+    native_max_jobs: Optional[int] = None
+    host_cpu_count: Optional[int] = None
     exclusive_resources: List[str] = field(default_factory=list)  # Part 31.3
     # BuildStream's own top-level, non-element-scoped pipeline phases
     # (e.g. "Query cache", "Resolving elements") - not part of run-context/v9's

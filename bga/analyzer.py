@@ -568,7 +568,74 @@ class BuildEfficiencyAnalyzer:
         self._attribution_segments = segments
 
         return result
-    
+
+    def _check_process_oversubscription(self) -> None:
+        """UX-12: `--builders` (this run's `resource_capacities.PROCESS`)
+        and native `--max-jobs` (each element's own internal `make -jN`/
+        `ninja` parallelism, `run_context.native_max_jobs`) both consume
+        the same physical CPU cores, uncoordinated - confirmed with real
+        timing evidence in docs/scenarios/UX-09-builders-max-jobs-joint-
+        optimization.md (examples/05-cmake-cpp-toolchain: 8 builders x 8
+        max-jobs on a real 4-core host measured ~11% slower than
+        BuildStream's own 4x4 defaults on that same host). Both new
+        fields are best-effort/optional (UX-12) - this check only runs
+        when both, plus `host_cpu_count`, are actually present.
+
+        Threshold: compares this run's real declared concurrency demand
+        (`builders * native_max_jobs`) against what BuildStream's own
+        real defaults would produce on this host (`builders=4` -
+        confirmed in `buildstream/data/userconfig.yaml`; `max_jobs =
+        min(host_cores, 8)` - confirmed in `buildstream/_context.py`'s
+        `effective_build_max_jobs`) - i.e. "did this run ask for
+        meaningfully more concurrent process slots than BuildStream would
+        have used unconfigured on this host", which is the exact
+        real-world comparison UX-09's own 4x4-vs-8x8 evidence supports,
+        rather than an arbitrary constant. This is a coarse, config-level
+        signal (declared capacity, not measured achieved concurrency) -
+        see UX-14 for why it can't fully replace real per-task profiling.
+        """
+        if not self.run_context:
+            return
+        builders = self.run_context.resource_capacities.get('PROCESS')
+        native_max_jobs = self.run_context.native_max_jobs
+        host_cpu_count = self.run_context.host_cpu_count
+        if not builders or not native_max_jobs or not host_cpu_count:
+            return
+
+        actual_demand = builders * native_max_jobs
+        default_demand = 4 * min(host_cpu_count, 8)
+
+        if actual_demand > default_demand:
+            logger.warning(
+                "builders=%d x native max-jobs=%d = %d potential concurrent "
+                "processes on a %d-core host - exceeds BuildStream's own "
+                "defaults for this host (%d) and may cause real CPU "
+                "contention (see UX-09)",
+                builders, native_max_jobs, actual_demand, host_cpu_count, default_demand,
+            )
+            self.violations.append({
+                'type': 'resource_oversubscription',
+                'builders': builders,
+                'native_max_jobs': native_max_jobs,
+                'actual_demand': actual_demand,
+                'host_cpu_count': host_cpu_count,
+                'default_demand': default_demand,
+            })
+        elif actual_demand < host_cpu_count:
+            logger.info(
+                "builders=%d x native max-jobs=%d = %d potential concurrent "
+                "processes on a %d-core host - fewer than one process per "
+                "core, may be leaving cores idle",
+                builders, native_max_jobs, actual_demand, host_cpu_count,
+            )
+            self.violations.append({
+                'type': 'resource_undersubscription',
+                'builders': builders,
+                'native_max_jobs': native_max_jobs,
+                'actual_demand': actual_demand,
+                'host_cpu_count': host_cpu_count,
+            })
+
     def analyze(self, run_dir: Optional[Path] = None) -> AnalysisResult:
         """
         Perform complete analysis.
@@ -654,6 +721,8 @@ class BuildEfficiencyAnalyzer:
                 })
         else:
             result.total_duration_us = horizon_us
+
+        self._check_process_oversubscription()
 
         # Pipeline overhead (P4-14, non-spec additive signal) - see
         # docs/tasks/P4-14-cache-query-overhead-visibility.md

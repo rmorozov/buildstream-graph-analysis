@@ -1,6 +1,6 @@
 # P2-10: Ready queue depth (Part 21) only checks dependency-readiness, never resource-readiness
 
-**Priority:** P2 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P2 | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 Part 21 (Ready Queue Depth): `ready_queue_depth(t)` is defined as the count of tasks that are, at instant `t`, all three of: "dependency-ready", "resource-ready", "not currently executing" (`docs/specification.md:1102-1122`). The section explicitly motivates this as distinguishing "nothing was ready" from "work was ready but not dispatched" - a distinction that specifically requires the resource-ready condition, since a dependency-ready-but-resource-starved task is not evidence of a scheduler problem.
@@ -38,3 +38,17 @@ This counts tasks satisfying `ready_us <= time_us < start_us` only - dependency-
 1. A fixture with `capacity=1` where task B is dependency-ready at `t0` but task A (same resource) occupies the only slot until `t1 > t0` - `ready_queue_depth` at any instant in `[t0, t1)` must **not** count B (it's dependency-ready but not resource-ready); it should count B starting at `t1` if B still hasn't started by then.
 2. The existing "no resource capacity data at all" case (today's behavior) is unchanged - falls back to dependency-readiness only, per the "absence is not evidence" discipline.
 3. Full suite green; confirm no performance regression on the existing profiling fixture used for `P1-21`/`P1-16` (`docs/tasks/P1-21-additional-performance-hotspots.md`'s 1500-element fixture, or equivalent).
+
+## Verification Log
+`_estimate_ready_count` (`bga/diagnostics/analyzer.py`) now takes an optional `resource_capacities` parameter. Fast path (no capacity data, the pre-fix behavior) is byte-for-byte unchanged - still the O(log N) bisect-count. When capacity data is supplied, it narrows to the same ready-so-far candidate window via the existing bisect, then filters each candidate individually via a new `_task_is_resource_ready` check against per-resource occupancy - itself O(log N) per resource via new precomputed sorted `start_us`/`finish_us` arrays per resource (`_resource_occupancy_at`), avoiding a full O(N) rescan of every task in the run. `compute_ready_queue_metrics` now actually threads its own `resource_capacities` parameter through to `_estimate_ready_count` (previously accepted but silently dropped). Confirmed real end-to-end wiring: `bga/analyzer.py:880` already passes real `run_context.resource_capacities` into this same call chain.
+
+New test file (`tests/unit/test_ready_queue_resource_readiness.py`, 5 tests): a resource-starved-but-dependency-ready task is excluded until the slot frees (the acceptance scenario, confirmed to raise `TypeError` against the pre-fix signature - proof the parameter genuinely wasn't consultable before); no-capacity-data fallback unchanged; unknown-resource capacity falls through rather than fabricated as unavailable; a no-resources task is unaffected; multiple ready tasks are filtered independently by their own required resource.
+
+```
+$ python3 -m pytest tests/unit/test_ready_queue_resource_readiness.py tests/unit/test_diagnostics_performance.py -v
+9 passed
+$ python3 -m pytest -q   # full suite
+427 passed, 11 skipped
+$ make lint
+All checks passed!
+```

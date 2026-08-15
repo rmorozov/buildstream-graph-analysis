@@ -217,5 +217,6 @@
       "primary_resource": "PROCESS"
     }
   ],
-  "phases": []
+  "phases": [],
+  "run_identity_hash": "synthetic-multi-subproject-manifest-hash"
 }

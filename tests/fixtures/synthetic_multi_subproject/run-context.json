@@ -12,5 +12,8 @@
   "max_jobs": 4,
   "cpu_accounting": {
     "effective_cpus": 4
+  },
+  "run_identity": {
+    "manifest_hash": "synthetic-multi-subproject-manifest-hash"
   }
 }

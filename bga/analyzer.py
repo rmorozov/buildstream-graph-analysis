@@ -560,9 +560,12 @@ class BuildEfficiencyAnalyzer:
         
         result = AnalysisResult()
         
-        # Set run_id and total_duration from context/trace
-        if self.run_context:
-            result.run_id = getattr(self.run_context, 'run_id', '') or getattr(self.run_context, 'uuid', '')
+        # Set run_id and total_duration from context/trace. Previously
+        # read a `run_id`/`uuid` attribute RunContext has never actually
+        # defined (always '' in practice) - now the real run-identity
+        # manifest_hash (P1-37), when available.
+        if self.run_context and self.run_context.run_identity:
+            result.run_id = self.run_context.run_identity.get('manifest_hash', '') or ''
         
         # Compute horizon for total duration
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)

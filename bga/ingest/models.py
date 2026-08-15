@@ -77,7 +77,17 @@ class RunContext:
     # `tools/bst_extract_run.py` populates from the real log. Each entry:
     # {"phase": str, "elapsed_us": int}. See docs/tasks/P4-14-cache-query-overhead-visibility.md.
     pipeline_overhead: List[dict] = field(default_factory=list)
-    
+    # Run-identity manifest (I8, P1-37) - not part of run-context/v9's
+    # spec-mandated schema (the spec states I8's invariant but defines no
+    # concrete field/mechanism for it anywhere), an additive extension
+    # `tools/bst_extract_run.py` populates: {"manifest_hash": str,
+    # "targets": [...], "scheduler": {...}, "project_git_commit":
+    # Optional[str], "project_refs_sha256": Optional[str]}. The same
+    # manifest_hash is embedded as Graph.run_identity_hash and
+    # Trace.run_identity_hash - see bga/ingest/loader.py::load_all's
+    # cross-check. See docs/tasks/P1-37-run-identity-not-captured-or-enforced.md.
+    run_identity: Optional[dict] = None
+
     @property
     def wall_clock_us(self) -> Optional[int]:
         """Wall clock duration in microseconds."""
@@ -191,23 +201,29 @@ class Graph:
     """
     elements: List[Element] = field(default_factory=list)
     dependencies: List[DependencyEdge] = field(default_factory=list)
-    
+
     # Derived metrics (computed during analysis)
     in_degree: Dict[str, int] = field(default_factory=dict)
     out_degree: Dict[str, int] = field(default_factory=dict)
     unweighted_depth: Dict[str, int] = field(default_factory=dict)
     reachable_downstream_count: Dict[str, int] = field(default_factory=dict)
+    # Run-identity manifest hash (I8, P1-37) - see
+    # RunContext.run_identity's docstring for what it covers. None for
+    # older/hand-built run directories without one.
+    run_identity_hash: Optional[str] = None
 
 
 @dataclass
 class Trace:
     """
     trace/v9 schema from Part 32.3.
-    
+
     Contains task spans and phase spans.
     """
     spans: List[TaskSpan] = field(default_factory=list)
     phases: List[PhaseSpan] = field(default_factory=list)
+    # Run-identity manifest hash (I8, P1-37) - see RunContext.run_identity.
+    run_identity_hash: Optional[str] = None
 
 
 @dataclass

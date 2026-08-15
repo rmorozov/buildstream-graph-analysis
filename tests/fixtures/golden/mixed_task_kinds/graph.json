@@ -8,5 +8,6 @@
   "dependencies": [
     {"predecessor": "base.bst", "successor": "lib.bst", "dependency_type": "build"},
     {"predecessor": "lib.bst", "successor": "app.bst", "dependency_type": "build"}
-  ]
+  ],
+  "run_identity_hash": "golden-fixture-manifest-hash-v1"
 }

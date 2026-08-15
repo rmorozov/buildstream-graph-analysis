@@ -69,6 +69,64 @@ def _git_consistency_note(project_dir: str):
     return None
 
 
+def _git_commit(project_dir: str):
+    """The project directory's current git HEAD commit, or None if it
+    isn't a git repository. Real, best-effort provenance input for
+    run-identity (P1-37) - same subprocess pattern as
+    _git_consistency_note, a separate call since that one only needs
+    dirty/clean, not the actual commit."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", project_dir, "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_refs_provenance):
+    """Real run-identity manifest (P1-37 - I8's own invariant, "all
+    analysis inputs must belong to the same run identity", names no
+    concrete field or mechanism anywhere in the spec).
+
+    A stable hash over the real inputs that determine graph.json's and
+    trace.json's content at extraction time: the target list (what was
+    requested), the scheduler configuration (affects real observed
+    concurrency/scheduling), the project's git commit (if available),
+    and project.refs' own content hash (if the project uses
+    ref-storage: project.refs - P4-13's existing, real provenance
+    input, reused here rather than duplicated). Embedded identically
+    into run-context.json, graph.json, and trace.json (as
+    run_identity/run_identity_hash) so bga's own loader (P1-37) can
+    cross-check that all three inputs of a given `bga analyze` actually
+    came from the same extraction, not e.g. a trace.json accidentally
+    copied in from an unrelated run.
+
+    This proves inputs are mutually consistent *at extraction time* - it
+    does not, and cannot, prove the analyzed build (which already
+    happened, potentially much earlier) itself ran against this exact
+    state; see this task's own docs/tasks/P1-37 file for that honestly-
+    named limitation.
+    """
+    manifest = {
+        "targets": sorted(targets),
+        "scheduler": {
+            "builders": scheduler.get("builders"),
+            "fetchers": scheduler.get("fetchers"),
+            "pushers": scheduler.get("pushers"),
+        },
+        "project_git_commit": _git_commit(project_dir),
+        "project_refs_sha256": project_refs_provenance["sha256"] if project_refs_provenance else None,
+    }
+    manifest_hash = hashlib.sha256(
+        json.dumps(manifest, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    return {"manifest_hash": manifest_hash, **manifest}
+
+
 def _read_ref_storage(project_dir: str):
     """Reads `project.conf`'s top-level `ref-storage` key directly
     (`inline` when absent - BuildStream's own default). Deliberately a
@@ -296,6 +354,13 @@ def extract_run(
     # spec-mandated schema (Part 32.1).
     if project_refs_provenance:
         run_context["project_refs_provenance"] = project_refs_provenance
+
+    # Run identity (P1-37): embedded identically into all three files so
+    # bga's own loader can cross-check they belong to the same extraction.
+    run_identity = _compute_run_identity(project_dir, targets, scheduler, project_refs_provenance)
+    run_context["run_identity"] = run_identity
+    graph["run_identity_hash"] = run_identity["manifest_hash"]
+    trace["run_identity_hash"] = run_identity["manifest_hash"]
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

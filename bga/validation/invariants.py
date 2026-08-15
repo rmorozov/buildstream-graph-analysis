@@ -101,12 +101,38 @@ def compute_confidence(
         accounted_duration_us / declared_duration_us if declared_duration_us > 0 else 1.0
     )
 
+    # --- Run identity (I8, P1-37) ---
+    # The spec states I8's invariant ("all analysis inputs must belong to
+    # the same run identity") but defines no concrete field/mechanism for
+    # it - tools/bst_extract_run.py's real, additive extension embeds the
+    # same manifest_hash into run-context.json (run_identity.manifest_hash),
+    # graph.json, and trace.json (both run_identity_hash) at extraction
+    # time. Cross-checked here: matching -> no penalty; any missing (e.g.
+    # an older/hand-built run directory with no identity fields at all) ->
+    # backward-compatible, not a hard failure, but a real, visible
+    # provenance-score reduction (see below); present but conflicting
+    # (e.g. a trace.json swapped in from an unrelated extraction) -> a
+    # genuine hard-gate failure and violation, since analysis would
+    # otherwise silently proceed over mismatched inputs.
+    run_context_identity_hash = (
+        (run_context.run_identity or {}).get('manifest_hash')
+        if run_context and run_context.run_identity else None
+    )
+    graph_identity_hash = graph.run_identity_hash if graph else None
+    trace_identity_hash = trace.run_identity_hash if trace else None
+    identity_hashes = (run_context_identity_hash, graph_identity_hash, trace_identity_hash)
+    run_identity_all_present = all(h is not None for h in identity_hashes)
+    run_identity_consistent = (
+        len(set(identity_hashes)) == 1 if run_identity_all_present else True
+    )
+
     # --- Hard gates (33.1) ---
     hard_gates = {
         'ordering_violations_zero': ordering_violations == 0,
         'critical_path_coverage_full': critical_path_coverage >= 1.0,
         'dominator_coverage_full': dominator_coverage >= 1.0,
         'blame_chain_coverage_full': blame_chain_coverage >= 1.0,
+        'run_identity_consistent': run_identity_consistent,
     }
     # Only critical_path_coverage/dominator_coverage failures need a new
     # violation entry - ordering violations are already individually
@@ -124,6 +150,13 @@ def compute_confidence(
         new_violations.append({
             'type': 'hard_gate_failed', 'gate': 'dominator_coverage',
             'value': dominator_coverage,
+        })
+    if not hard_gates['run_identity_consistent']:
+        new_violations.append({
+            'type': 'run_identity_mismatch',
+            'run_context_hash': run_context_identity_hash,
+            'graph_hash': graph_identity_hash,
+            'trace_hash': trace_identity_hash,
         })
     for gate_name, passed in hard_gates.items():
         if not passed:
@@ -147,10 +180,25 @@ def compute_confidence(
     # provenance_score: the spec's only other use of "provenance" (Part
     # 4.3) is wall_clock's preferred run_context source vs the reduced-
     # provenance trace_horizon fallback - mirrored here directly.
+    #
+    # Run identity (P1-37) folds into the same score: no identity data at
+    # all (older/hand-built run directories - backward compatible, not a
+    # hard failure) reduces provenance_score to at most 0.75, a real,
+    # visible "reduced provenance" signal distinct from a clean run -
+    # min()'d against the wall_clock check so an already-reduced score
+    # from missing wall_clock isn't overridden upward. A genuine mismatch
+    # (inputs present but disagree) is far more serious than merely
+    # missing data - collapses provenance_score to 0.0, since that's
+    # exactly the "inputs may not belong to the same run" case I8 exists
+    # to catch, not just an absence of provenance metadata.
     if run_context and run_context.wall_start_us is not None and run_context.wall_end_us is not None:
         provenance_score = 1.0
     else:
         provenance_score = 0.5
+    if not run_identity_consistent:
+        provenance_score = 0.0
+    elif not run_identity_all_present:
+        provenance_score = min(provenance_score, 0.75)
 
     coverage_score = min(
         critical_path_coverage, dominator_coverage, blame_chain_coverage,
@@ -210,5 +258,6 @@ def compute_confidence(
         'hard_gates': hard_gates,
         'ordering_violations': ordering_violations,
         'task_count': total_tasks,
+        'run_identity_available': run_identity_all_present,
     }
     return confidence_dict, new_violations

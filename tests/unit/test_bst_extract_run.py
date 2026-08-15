@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.bst_extract_run import _git_consistency_note, _parse_targets, extract_run
+from tools.bst_extract_run import _compute_run_identity, _git_consistency_note, _parse_targets, extract_run
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 
@@ -37,6 +37,51 @@ def test_parse_targets_multiple_comma_separated():
 
 def test_git_consistency_note_none_for_non_git_directory(tmp_path):
     assert _git_consistency_note(str(tmp_path)) is None
+
+
+# --- _compute_run_identity (P1-37) ---------------------------------------
+
+def test_run_identity_is_deterministic_for_identical_inputs(tmp_path):
+    scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
+    a = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None)
+    b = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None)
+    assert a["manifest_hash"] == b["manifest_hash"]
+
+
+def test_run_identity_changes_with_targets(tmp_path):
+    scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
+    a = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None)
+    b = _compute_run_identity(str(tmp_path), ["other.bst"], scheduler, None)
+    assert a["manifest_hash"] != b["manifest_hash"]
+
+
+def test_run_identity_target_order_does_not_matter(tmp_path):
+    """Same real target set, different list order (e.g. a different `bst
+    build` invocation order) - the manifest is about *what* was
+    requested, not the order it appeared in the log."""
+    scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
+    a = _compute_run_identity(str(tmp_path), ["app.bst", "base.bst"], scheduler, None)
+    b = _compute_run_identity(str(tmp_path), ["base.bst", "app.bst"], scheduler, None)
+    assert a["manifest_hash"] == b["manifest_hash"]
+
+
+def test_run_identity_changes_with_scheduler_config(tmp_path):
+    a = _compute_run_identity(
+        str(tmp_path), ["app.bst"], {"builders": 4, "fetchers": 10, "pushers": 4}, None,
+    )
+    b = _compute_run_identity(
+        str(tmp_path), ["app.bst"], {"builders": 2, "fetchers": 10, "pushers": 4}, None,
+    )
+    assert a["manifest_hash"] != b["manifest_hash"]
+
+
+def test_run_identity_changes_with_project_refs_provenance(tmp_path):
+    scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
+    a = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None)
+    b = _compute_run_identity(
+        str(tmp_path), ["app.bst"], scheduler, {"path": "project.refs", "sha256": "deadbeef"},
+    )
+    assert a["manifest_hash"] != b["manifest_hash"]
 
 
 def test_git_consistency_note_none_for_clean_repo(tmp_path):
@@ -111,10 +156,21 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     # honestly omitted rather than populated with a synthetic number.
     assert "cpu_accounting" not in run_context
 
+    # P1-37: the same real run-identity manifest hash is embedded in all
+    # three files, produced by one real extraction.
+    manifest_hash = run_context["run_identity"]["manifest_hash"]
+    assert manifest_hash
+    assert graph["run_identity_hash"] == manifest_hash
+    assert trace["run_identity_hash"] == manifest_hash
+
     # The whole point: zero manual editing before bga can consume it.
     from bga import analyze_run
     result = analyze_run(out_dir)
     assert result is not None
+    assert result.run_id == manifest_hash
+    assert result.confidence["hard_gates"]["run_identity_consistent"] is True
+    assert result.confidence["run_identity_available"] is True
+    assert not any(v.get("type") == "run_identity_mismatch" for v in result.violations)
     assert result.utilisation["cpu_accounting_available"] is False
     assert result.utilisation["reconciliation_error_pct"] is None
     assert result.utilisation["potential_oversubscription"] is False

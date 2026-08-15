@@ -738,16 +738,25 @@ class BuildEfficiencyAnalyzer:
         if not self.utilization_analyzer or not self.run_context:
             return {}
         
-        # Build task intervals with CPU usage
-        # For now, assume each task uses 100% of one CPU during execution
-        # In a full implementation, this would come from actual CPU accounting
+        # Build task intervals from real, measured wall-clock job-slot
+        # occupancy (task.dur_us - how long each task actually held a job
+        # slot, real data). This is NOT a CPU-time measurement (P1-33) -
+        # UtilizationAnalyzer's bucket totals (useful/wasted-retry/
+        # wasted-rebuild) stay meaningful under this honest wall-clock-
+        # occupancy interpretation regardless of whether real CPU
+        # accounting is available; the capacity-derived metrics that
+        # *would* require a genuine CPU measurement (capacity_cpu_us,
+        # the *_pct properties, I9 reconciliation, Part 30.3's
+        # oversubscription check) are gated on
+        # UtilizationResult.cpu_accounting_available instead of
+        # computed against this occupancy data as if it were CPU time.
         task_intervals = []
         for task in self.normalized_tasks:
             interval = {
                 'task_key': str(task.task_key),
                 'start_us': task.start_us,
                 'end_us': task.finish_us,
-                'cpu_usage_us': task.dur_us,  # Assume 100% CPU usage
+                'cpu_usage_us': task.dur_us,
                 'concurrent_tasks': [str(task.task_key)],
             }
             task_intervals.append(interval)

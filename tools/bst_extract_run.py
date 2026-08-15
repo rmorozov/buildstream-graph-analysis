@@ -269,7 +269,17 @@ def extract_run(
             "UPLOAD": scheduler["pushers"],
         },
         "max_jobs": scheduler["builders"],
-        "cpu_accounting": {"effective_cpus": scheduler["builders"]},
+        # cpu_accounting deliberately omitted (P1-33): `builders` is
+        # BuildStream's own job-slot scheduling parameter, not a measured
+        # CPU core/thread count - populating cpu_accounting.effective_cpus
+        # from it made bga's CPU reconciliation (I9) and Part 30.3's
+        # oversubscription check run against synthetic data that was
+        # tautologically derived from the same job-slot count on both
+        # sides, not a genuine independent measurement. No real CPU-
+        # measurement source (cgroup accounting, /proc sampling) exists in
+        # this ingestion pipeline yet - omitting the field is the honest
+        # "unavailable" rather than fabricating a number. See
+        # docs/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
     }
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}

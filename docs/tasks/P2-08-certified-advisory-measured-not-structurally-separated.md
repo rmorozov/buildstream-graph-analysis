@@ -1,6 +1,6 @@
 # P2-08: "Measured / Certified / Advisory" is a naming/discipline convention, not a structural type distinction
 
-**Priority:** P2 (architectural hardening - the current discipline has held up correctly through extensive testing, so this is about making future contamination *harder*, not fixing an observed bug) | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P2 (architectural hardening - the current discipline has held up correctly through extensive testing, so this is about making future contamination *harder*, not fixing an observed bug) | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 The specification's own governing principle: "Measure what happened. Certify what cannot be improved. Label what is estimated. Never mix the three." This is a design philosophy stated once, enforced throughout the codebase by convention and caller discipline rather than by any type-level mechanism.
@@ -25,4 +25,17 @@ Raised by an external review; independently verified against the current code be
 3. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+New module `bga/validation/provenance.py`: three frozen dataclass wrapper types (`Certified`/`Advisory`/`Measured`), deliberately implementing no arithmetic or implicit int-conversion dunders, so mixing them (or a bare int) raises `TypeError` immediately. A new `assemble_floors(certified: dict, advisory: dict) -> dict` function is the actual checkpoint: it type-checks every value against the wrapper type its slot expects and unwraps into the same plain dict shape the rest of the codebase has always used - the wire format (JSON/text report) is unchanged, only the assembly step is now guarded.
+
+Wired into the one real risk boundary: `bga/analyzer.py::_compute_floors`'s final assembly of the `floors` dict from its certified computations (`t_infinity_observed`/`lb`/`certified_headroom`/`t_c`/`model_slack`) and `compute_cold_floor`'s advisory output (`t_infinity_cold`) now goes through `assemble_floors` instead of a bare dict literal - a future edit that accidentally substitutes `cold_floor['t_infinity_cold']` for `lb` (or vice versa) is a `TypeError` at that call site, not a silently wrong certified number. All upstream arithmetic (`lb = max(t_infinity_observed, capacity_lb, serialization_lb)`, etc.) is untouched - deliberately scoped to the assembly boundary only, not a rewrite of `_compute_floors`'s internals.
+
+New test file (`tests/unit/test_provenance.py`, 7 tests): the assembled dict is byte-identical in shape to the pre-fix plain dict; `None` is still accepted for not-yet-computed certified floors (t_c/model_slack before replay); the real acceptance scenario - an `Advisory` value passed where `Certified` is expected (and the reverse) - raises `TypeError`; a bare unwrapped int is rejected in either slot; `Certified`/`Advisory` can't be mixed in arithmetic; `Measured` is a distinct, equally-incompatible type. Full existing suite (440 tests, including every `--format json` test) passed unchanged, confirming the wire format is genuinely byte-identical.
+
+```
+$ python3 -m pytest tests/unit/test_provenance.py -v
+7 passed
+$ python3 -m pytest -q   # full suite
+440 passed, 11 skipped
+$ make lint
+All checks passed!
+```

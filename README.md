@@ -77,6 +77,7 @@ bga replay /tmp/my-run --capacity 16                      # simulate a hardware 
 ## Documentation
 
 - [CLI Reference](docs/cli.md) — every command and flag
+- [Optimization Walkthrough](docs/optimization-walkthrough.md) — a real, worked example of iteratively finding and fixing build-efficiency problems with `bga`
 - [Ingestion Pipeline](docs/ingestion-pipeline.md) — how `tools/bst_extract_run.py` turns a real BuildStream project + log into `bga` input, and its known limitations
 - [v9 Specification](docs/specification.md) — the underlying analysis specification (ground truth for what every number means)
 - [`docs/scenarios/`](docs/scenarios/README.md) — active backlog of usability/workflow gaps

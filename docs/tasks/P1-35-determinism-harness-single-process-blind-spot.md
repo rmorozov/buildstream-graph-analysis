@@ -1,6 +1,6 @@
 # P1-35: The determinism harness runs N times in one process, so it can't catch per-process nondeterminism
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** `P1-34` (the harness's blind spot is best demonstrated/regression-tested against that real bug)
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** `P1-34` (the harness's blind spot is best demonstrated/regression-tested against that real bug)
 
 ## Spec Reference
 Part 35 (Determinism Contract) / I11 - "the spec explicitly requires ≥100 canonical-output comparisons" (already the harness's own stated design point, `bga/validation/determinism.py:5-10`, `docs/tasks/P1-12-determinism-harness.md`).
@@ -28,4 +28,15 @@ Confirmed empirically: `python3 -c "print(hash('abc'))"` run twice as separate p
 4. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+Added `run_cross_process_determinism_check` (`bga/validation/determinism.py`): each repeat is a genuinely separate `python -m bga.cli analyze -f json` subprocess (default n=5), sharing the existing comparison/diagnosis logic (`_compare_canonical_runs`) with the in-process check.
+
+New tests (`tests/unit/test_determinism.py`, 2 new): the real (post-P1-34) pipeline is genuinely process-independent across 3 separate subprocess invocations; a direct demonstration of the mechanism itself via a monkeypatched `subprocess.run` that splices in a real `hash()`-derived field (the exact P1-34 bug shape) without needing to revert that fix, proving the harness would have caught it.
+
+```
+$ python3 -m pytest tests/unit/test_determinism.py -v
+5 passed
+$ python3 -m pytest -q   # full suite
+401 passed, 11 skipped
+$ make lint
+All checks passed!
+```

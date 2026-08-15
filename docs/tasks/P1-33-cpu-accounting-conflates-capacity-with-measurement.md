@@ -1,6 +1,6 @@
 # P1-33: `cpu_accounting.effective_cpus` is BuildStream's builder count, not measured CPU capacity
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 Part 30.1: `capacity_cpu_s = effective_cpus × wall_clock`, "when CPU accounting is available" (`docs/specification.md:1421-1433`) - conditional phrasing implies `effective_cpus` is real, independently-measured CPU capacity, not always present. Part 30.3's own oversubscription check is `builders × max_jobs > effective_cpus` (`docs/specification.md:1449-1455`) - `builders`/`max_jobs` and `effective_cpus` are treated as **two distinct quantities being compared**, not the same number under two names. I9 (CPU Reconciliation, `docs/specification.md:1801-1821`): `abs(sum(cpu_buckets) - capacity_cpu_s) <= 0.02 * capacity_cpu_s`, "when CPU accounting is available" - again conditional, implying a real "unavailable" state must exist.
@@ -33,4 +33,15 @@ This also breaks Part 30.3's oversubscription check in a concrete way: `builders
 5. Full suite green; update/verify `tests/unit/test_utilisation.py`'s existing CPU-reconciliation tests (`P3-06`) still hold under the corrected semantics.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`tools/bst_extract_run.py`/`tools/bst_run_context.py` no longer populate `cpu_accounting.effective_cpus` from `scheduler["builders"]` - `cpu_accounting` is simply omitted (the honest state, since no real CPU measurement source exists in the pipeline), with a comment explaining why. `bga/utilisation/__init__.py`'s `_compute_effective_cpus` returns `None` instead of falling back to `1.0`. Added `UtilizationResult.cpu_accounting_available: bool`; `capacity_cpu_us`/`useful_pct`/`idle_pct`/`wasted_pct` are now `Optional` and gated on it. Idle-period analysis, oversubscription detection (Part 30.3), and I9 reconciliation all early-exit with `cpu_accounting_available=False` (distinct from the pre-existing wall_clock=0 case, which still yields `reconciliation_error_pct=0.0`) instead of silently running against synthetic `task.dur_us`-derived data. `to_dict()` surfaces `cpu_accounting_available`.
+
+`tests/unit/test_utilisation.py`: 3 new tests confirming no-cpu-accounting reports unavailable (not a fabricated number), skips reconciliation/oversubscription, and that the removed `builders`-derived `effective_cpus` path is never evaluated. `tests/unit/test_bst_run_context.py`/`test_bst_extract_run.py` updated to assert `cpu_accounting` is absent from extracted output.
+
+```
+$ python3 -m pytest tests/unit/test_utilisation.py tests/unit/test_cpu_reconciliation.py tests/unit/test_bst_run_context.py tests/unit/test_bst_extract_run.py -v
+62 passed, 1 skipped
+$ python3 -m pytest -q   # full suite
+409 passed, 11 skipped
+$ make lint
+All checks passed!
+```

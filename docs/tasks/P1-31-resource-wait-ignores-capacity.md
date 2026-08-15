@@ -1,6 +1,6 @@
 # P1-31: `classify_resource_wait` never checks whether the resource was actually saturated
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none (hardens `P1-01`'s existing holder-tracking implementation)
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** none (hardens `P1-01`'s existing holder-tracking implementation)
 
 ## Spec Reference
 Part 8.1: "If a task is dependency-ready but cannot start because a resource is **unavailable**: `category = RESOURCE_WAIT`" (`docs/specification.md:586-598`). Part 9 defines the complement: "dependency-ready, resource-available, not-running" → `SCHEDULER_WAIT` (`docs/specification.md:650-670`). The two categories are only meaningful as a genuine partition if "resource unavailable" is actually checked against capacity - otherwise every waiting, resourced task with any temporal neighbor collapses into `RESOURCE_WAIT` by construction, and `SCHEDULER_WAIT` becomes unreachable for exactly the cases it exists to catch.
@@ -37,4 +37,17 @@ Confirmed via `tests/unit/test_resource_wait.py`: every test passes `resource_ca
 8. Full suite green, including the existing `tests/unit/test_resource_wait.py` cases (updated to pass real, non-empty `resource_capacity` where the scenario calls for it).
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`classify_resource_wait` (`bga/attribution/blame_chain.py`) rewritten to be genuinely capacity-aware: computes `required_with_capacity` (resources with known capacity only), sweeps critical points (other tasks' start/finish boundaries strictly inside the wait window) to find the maximal *saturated prefix* from `wait_start`, and attributes holders only for the specific resource(s) actually saturated at each sub-interval. Returns `(False, None)` when nothing is saturated (`explained_us <= 0`) instead of unconditionally claiming the gap. `'ambiguous'` is now always `False` (structurally guaranteed by construction, documented in code). Unknown-capacity resources fall through rather than being fabricated as saturated or available.
+
+Also fixed a real wiring bug found while testing this: `bga/analyzer.py` built `resource_capacity` by checking `hasattr(self.run_context, 'builders')` - a field `RunContext` never defines - so `resource_capacity` was silently `{}` on every real run regardless of this fix's correctness. Now reads the real `run_context.resource_capacities` field, converting string keys to the `Resource` enum.
+
+`tests/unit/test_resource_wait.py` fully rewritten (10 tests, real non-empty capacities): single holder at capacity=1 (regression), one holder under capacity=2 (not resource-wait), two simultaneous holders at capacity=2 (resource-wait, both attributed), saturation changing mid-wait (interval split), multi-resource with only one saturated, unknown capacity falls through.
+
+```
+$ python3 -m pytest tests/unit/test_resource_wait.py tests/unit/test_blame_chain.py tests/unit/test_wait_gap_classification.py tests/unit/test_phase_and_occupancy.py -v
+59 passed
+$ python3 -m pytest -q   # full suite
+409 passed, 11 skipped
+$ make lint
+All checks passed!
+```

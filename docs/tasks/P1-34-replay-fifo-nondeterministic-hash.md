@@ -1,6 +1,6 @@
 # P1-34: Replay's `fifo` priority uses Python's randomized string hash; `depth` priority isn't depth
 
-**Priority:** P1 | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P1 | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 Part 35 (Determinism Contract) / I11: "No Python hash iteration order, dictionary order, filesystem order, or concurrency-dependent ordering may influence results" (`bga/validation/determinism.py:5-6`, paraphrasing the spec's own determinism-contract language already relied on elsewhere in this codebase).
@@ -42,4 +42,18 @@ elif rule == 'depth':
 4. Full suite green, including a new regression test asserting `hash()` is never called anywhere in `bga/replay/scheduler.py`.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`fifo` now returns a constant priority (0) so the existing `(priority, task_key)` heap tuple's comparison falls through entirely to `task_key`'s own lexicographic order - real FIFO-by-key, no `hash()` anywhere. `depth` now computes real longest-*remaining*-path depth (via Kahn's algorithm over the reversed task graph, computed once in `__init__`), not a duplicate of `lpt` - depth-from-root was considered and rejected (it ties at 0 for every initially-ready task).
+
+New tests (`tests/unit/test_replay.py`, 6 new): lexicographic tie-break for same-duration tasks pushed in reverse order; genuine cross-process determinism (two real separate `python3` subprocesses with different `PYTHONHASHSEED`, comparing scheduled order/makespan byte-for-byte); `depth` prioritizes the root of a longer remaining chain over an equal-duration shallow root; a direct AST-based structural guard that `hash()` is never called anywhere in the module.
+
+Found and fixed a real interaction bug the new eager depth computation exposed: a surviving task's `dependencies` can reference a task_key excluded upstream (P1-36's negative-duration guard, or mid-cycle-detection) - `_compute_task_depths` now tolerates this instead of a raw `KeyError` (caught by `tests/unit/test_cli_exit_codes.py::test_cyclic_graph_exits_three` regressing).
+
+```
+$ python3 -m pytest tests/unit/test_replay.py -v
+10 passed
+$ python3 -m pytest -q   # full suite
+397 passed, 11 skipped
+$ grep -n "hash(" bga/replay/scheduler.py   # only in comments/docstrings
+$ make lint
+All checks passed!
+```

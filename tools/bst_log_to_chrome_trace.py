@@ -195,6 +195,15 @@ class WrapperTraceConverter:
         self.pipeline_overhead = []
         self._main_activity_stack = []
 
+        # Raw-mode timestamp reconstruction state (UX-06) - see
+        # _process_raw_line's own docstring for the real bug this fixes
+        # and docs/scenarios/UX-06-raw-log-timestamp-corruption.md for
+        # the full evidence.
+        self._raw_watermark_us = None
+        self._raw_task_depth = {}       # hash -> current nesting depth
+        self._raw_task_anchor_us = {}   # hash -> that task's OUTER start ts
+        self._raw_main_anchor_stack = []  # parallel to _main_activity_stack
+
     def get_scheduler_config(self):
         """Real (or defaulted) scheduler concurrency limits as observed in
         the log - see DEFAULT_* module constants for the fallback values
@@ -478,9 +487,42 @@ class WrapperTraceConverter:
         """No wrapper prefix at all - try BST_LOG_RE directly against the
         raw line. The whole raw log is treated as one continuous bst
         invocation (there's no wrapper "Executing command:" line to
-        trigger is_bst - see _open_bst_invocation). BuildStream's own
-        elapsed-time prefix is the only time source, converted to
-        absolute microseconds via self.raw_start_time_us.
+        trigger is_bst - see _open_bst_invocation).
+
+        BuildStream's own `[HH:MM:SS]` elapsed prefix is NOT a session-
+        wide clock (confirmed against the real installed BuildStream
+        2.7.0 source, buildstream/_messenger.py's `timed_activity`): it
+        resets to zero at the start of every individual timed activity -
+        both each per-element sub-phase (Staging dependencies,
+        Integrating sandbox, Running commands, ...) and, separately, the
+        outer per-task bracket that wraps all of them (whose own closing
+        line's elapsed is the *task's* total, relative to the task's own
+        start - not the immediately preceding sub-phase's). Naively
+        anchoring every line to a single global session-start timestamp
+        collapses concurrent/later tasks toward the start of the file -
+        see docs/scenarios/UX-06-raw-log-timestamp-corruption.md for the
+        real reproduction.
+
+        Fix: reconstruct absolute timestamps from two real signals the
+        log *does* provide - (1) each activity's own real, correctly-
+        measured elapsed *duration*, and (2) the file's own line order,
+        which is a genuine (if coarse) proxy for real chronological
+        order, since BuildStream's scheduler serializes all workers'
+        status messages into one output stream in the order it actually
+        received them. Concretely: a monotonically-advancing watermark
+        anchors every *new* task/activity's start to "now" (the latest
+        real time established so far); each task's own real elapsed
+        duration is then applied on top of that anchor. This only needs
+        to get the *outer* bracket right for per-element tasks -
+        handle_bst_event already only uses the first START's and the
+        final closing terminal's timestamps for span boundaries (nested
+        sub-phase timestamps are computed here for a sane last_known_ts
+        but never drive span boundaries or the watermark itself, since
+        their own elapsed is relative to a different, inner anchor).
+        `main:core activity` phases (Loading elements, Resolving
+        elements, ...) don't nest this way - each is tracked via
+        _handle_main_activity's own real LIFO stack, so every frame's
+        timestamp matters and is anchored/popped the same way.
         """
         self._check_header_lines(line)
 
@@ -496,7 +538,50 @@ class WrapperTraceConverter:
             raise ValueError(
                 "raw_start_time_us is required to process raw-format lines"
             )
-        ts = self.raw_start_time_us + int(elapsed_s * 1_000_000)
+        if self._raw_watermark_us is None:
+            self._raw_watermark_us = self.raw_start_time_us
+
+        elapsed_us = int(elapsed_s * 1_000_000)
+
+        if action == "main" and not h.strip():
+            # Main-activity phases are a genuine LIFO stack (see
+            # _handle_main_activity) - every START pushes a new anchor,
+            # every terminal pops and closes against it, no depth-
+            # collapsing (these are sequential siblings under "Build",
+            # not repeated START/terminal pairs of the same activity).
+            if status == "START":
+                ts = self._raw_watermark_us
+                self._raw_main_anchor_stack.append(ts)
+            else:
+                anchor = (
+                    self._raw_main_anchor_stack.pop()
+                    if self._raw_main_anchor_stack
+                    else self._raw_watermark_us
+                )
+                ts = anchor + elapsed_us
+                self._raw_watermark_us = max(self._raw_watermark_us, ts)
+        else:
+            # Per-element task - outer/nested depth-collapsing, mirroring
+            # handle_bst_event's own (hash_val in self.active_tasks)
+            # check exactly, so this stays in lockstep with which START/
+            # terminal it will actually treat as the outer bracket.
+            depth = self._raw_task_depth.get(h, 0)
+            if status == "START":
+                if depth == 0:
+                    ts = self._raw_watermark_us
+                    self._raw_task_anchor_us[h] = ts
+                else:
+                    ts = self._raw_task_anchor_us.get(h, self._raw_watermark_us) + elapsed_us
+                self._raw_task_depth[h] = depth + 1
+            else:
+                depth = max(0, depth - 1)
+                self._raw_task_depth[h] = depth
+                anchor = self._raw_task_anchor_us.get(h, self._raw_watermark_us)
+                ts = anchor + elapsed_us
+                if depth == 0:
+                    self._raw_watermark_us = max(self._raw_watermark_us, ts)
+                    self._raw_task_anchor_us.pop(h, None)
+
         self.last_known_ts = ts
 
         if not self.is_bst:

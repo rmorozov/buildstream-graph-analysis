@@ -34,38 +34,43 @@ BST_AVAILABLE = shutil.which("bst") is not None
 # costs) - each pays its own "Loading elements"/"Query cache" pipeline
 # overhead (1s + 1s = 2s) plus its own two-phase checkout cost (1s + 1s
 # = 2s) - 4s each, 8s combined.
+# START lines show "--:--:--" (real BuildStream behavior - elapsed isn't
+# known yet when an activity starts, and resets per-activity, not
+# globally; see UX-06/docs/scenarios/UX-06-raw-log-timestamp-corruption.md)
+# - only each terminal line's own elapsed is real, applied on top of the
+# time in effect when *that* activity's own START was seen.
 LOG_A = """\
-[00:00:00][        ][    main:core activity   ] START   Loading elements
+[--:--:--][        ][    main:core activity   ] START   Loading elements
 [00:00:01][        ][    main:core activity   ] SUCCESS Loading elements
-[00:00:01][        ][    main:core activity   ] START   Query cache
-[00:00:02][        ][    main:core activity   ] SUCCESS Query cache
-[00:00:02][aaaa1111][    main:elemA.bst        ] START   Staging dependencies
-[00:00:03][aaaa1111][    main:elemA.bst        ] SUCCESS Staging dependencies
-[00:00:03][aaaa1111][    main:elemA.bst        ] START   Checking out files in '/outA'
-[00:00:04][aaaa1111][    main:elemA.bst        ] SUCCESS Checking out files in '/outA'
+[--:--:--][        ][    main:core activity   ] START   Query cache
+[00:00:01][        ][    main:core activity   ] SUCCESS Query cache
+[--:--:--][aaaa1111][    main:elemA.bst        ] START   Staging dependencies
+[00:00:01][aaaa1111][    main:elemA.bst        ] SUCCESS Staging dependencies
+[--:--:--][aaaa1111][    main:elemA.bst        ] START   Checking out files in '/outA'
+[00:00:01][aaaa1111][    main:elemA.bst        ] SUCCESS Checking out files in '/outA'
 """
 LOG_B = """\
-[00:00:00][        ][    main:core activity   ] START   Loading elements
+[--:--:--][        ][    main:core activity   ] START   Loading elements
 [00:00:01][        ][    main:core activity   ] SUCCESS Loading elements
-[00:00:01][        ][    main:core activity   ] START   Query cache
-[00:00:02][        ][    main:core activity   ] SUCCESS Query cache
-[00:00:02][bbbb2222][    main:elemB.bst        ] START   Staging dependencies
-[00:00:03][bbbb2222][    main:elemB.bst        ] SUCCESS Staging dependencies
-[00:00:03][bbbb2222][    main:elemB.bst        ] START   Checking out files in '/outB'
-[00:00:04][bbbb2222][    main:elemB.bst        ] SUCCESS Checking out files in '/outB'
+[--:--:--][        ][    main:core activity   ] START   Query cache
+[00:00:01][        ][    main:core activity   ] SUCCESS Query cache
+[--:--:--][bbbb2222][    main:elemB.bst        ] START   Staging dependencies
+[00:00:01][bbbb2222][    main:elemB.bst        ] SUCCESS Staging dependencies
+[--:--:--][bbbb2222][    main:elemB.bst        ] START   Checking out files in '/outB'
+[00:00:01][bbbb2222][    main:elemB.bst        ] SUCCESS Checking out files in '/outB'
 """
 # One stack checkout covering both A and B - pipeline overhead paid
 # once (2s), plus the stack's own two-phase checkout cost (2s) - 4s
 # total vs. the 8s the two individual checkouts paid combined.
 LOG_STACK = """\
-[00:00:00][        ][    main:core activity   ] START   Loading elements
+[--:--:--][        ][    main:core activity   ] START   Loading elements
 [00:00:01][        ][    main:core activity   ] SUCCESS Loading elements
-[00:00:01][        ][    main:core activity   ] START   Query cache
-[00:00:02][        ][    main:core activity   ] SUCCESS Query cache
-[00:00:02][cccc3333][    main:stack.bst        ] START   Staging dependencies
-[00:00:03][cccc3333][    main:stack.bst        ] SUCCESS Staging dependencies
-[00:00:03][cccc3333][    main:stack.bst        ] START   Checking out files in '/outStack'
-[00:00:04][cccc3333][    main:stack.bst        ] SUCCESS Checking out files in '/outStack'
+[--:--:--][        ][    main:core activity   ] START   Query cache
+[00:00:01][        ][    main:core activity   ] SUCCESS Query cache
+[--:--:--][cccc3333][    main:stack.bst        ] START   Staging dependencies
+[00:00:01][cccc3333][    main:stack.bst        ] SUCCESS Staging dependencies
+[--:--:--][cccc3333][    main:stack.bst        ] START   Checking out files in '/outStack'
+[00:00:01][cccc3333][    main:stack.bst        ] SUCCESS Checking out files in '/outStack'
 """
 
 
@@ -114,12 +119,12 @@ def test_compare_reports_negative_savings_honestly(tmp_path):
     # 2s element = 4s total) - a stand-in for "the stack pulls in a much
     # bigger closure than what was actually needed."
     expensive_consolidated = """\
-[00:00:00][        ][    main:core activity   ] START   Loading elements
+[--:--:--][        ][    main:core activity   ] START   Loading elements
 [00:00:04][        ][    main:core activity   ] SUCCESS Loading elements
-[00:00:04][        ][    main:core activity   ] START   Query cache
-[00:00:10][        ][    main:core activity   ] SUCCESS Query cache
-[00:00:10][dddd4444][    main:big.bst          ] START   Checking out files in '/outBig'
-[00:00:10][dddd4444][    main:big.bst          ] SUCCESS Checking out files in '/outBig'
+[--:--:--][        ][    main:core activity   ] START   Query cache
+[00:00:06][        ][    main:core activity   ] SUCCESS Query cache
+[--:--:--][dddd4444][    main:big.bst          ] START   Checking out files in '/outBig'
+[00:00:00][dddd4444][    main:big.bst          ] SUCCESS Checking out files in '/outBig'
 """
     log_big = _write_log(tmp_path, "big.log", expensive_consolidated)
 

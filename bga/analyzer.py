@@ -176,12 +176,29 @@ class BuildEfficiencyAnalyzer:
             # Track concurrent jobs at start time
             concurrent_jobs_at_time[task.start_us] += 1
         
-        # Resource capacity from run context
+        # Resource capacity from run context (run-context/v9's own
+        # resource_capacities field, e.g. {"PROCESS": 4} - Part 32.1).
+        # P1-31: this previously checked a `run_context.builders`
+        # attribute that RunContext has never actually defined (always
+        # absent, so hasattr() was always False) - resource_capacity was
+        # silently empty `{}` for every real run, structurally disabling
+        # classify_resource_wait's capacity check regardless of how
+        # correct that check itself was. An unrecognized resource name
+        # (outside the Resource enum) is skipped with a warning rather
+        # than raising - a run-context.json from a newer schema version
+        # naming a resource this build doesn't know about yet shouldn't
+        # break analysis of the resources it does recognize.
         resource_capacity = {}
-        if self.run_context:
-            if hasattr(self.run_context, 'builders') and self.run_context.builders:
-                from .ingest.models import Resource
-                resource_capacity[Resource.PROCESS] = self.run_context.builders
+        if self.run_context and self.run_context.resource_capacities:
+            from .ingest.models import Resource
+            for name, capacity in self.run_context.resource_capacities.items():
+                try:
+                    resource_capacity[Resource(name)] = capacity
+                except ValueError:
+                    logger.warning(
+                        "Ignoring unrecognized resource %r in run_context.resource_capacities",
+                        name,
+                    )
         
         max_jobs = self.run_context.max_jobs if self.run_context else None
         

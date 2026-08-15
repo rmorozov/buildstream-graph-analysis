@@ -144,7 +144,7 @@ Thumbs.db
 # examples/: real BuildStream projects whose sandbox-shell binaries and
 # throwaway git remote are generated at build time (examples/stage_*.sh),
 # not committed - see examples/README.md.
-examples/*/files/runtime/bin/*
+examples/**/files/runtime/bin/*
 examples/*/.generated-remote/
 examples/03-project-refs-identity/elements/libbar.bst
-!examples/*/files/runtime/bin/.gitkeep
+!examples/**/files/runtime/bin/.gitkeep

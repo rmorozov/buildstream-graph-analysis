@@ -2,7 +2,7 @@
 from typing import List, Optional
 
 from ..ingest.models import AnalysisResult
-from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
+from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
 # Confidence-band labels for the Key Findings headline (P4-02) - a
 # presentation-only heuristic, not a spec-defined threshold (Part 33
@@ -167,6 +167,13 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
                 f"  Biggest Opportunity: {pct:.1f}% of wall-clock time is "
                 f"{label} ({top_duration_us / 1e6:.2f}s)"
             )
+            # UX-04: explain what this category means and what to do
+            # about it - previously a reader had no way to know from the
+            # report itself that IDLE/RESOURCE_WAIT/SCHEDULER_WAIT are
+            # three different problems with three different fixes.
+            hint = ATTRIBUTION_CATEGORY_HINTS_BY_KEY.get(top_category)
+            if hint:
+                lines.append(f"    -> {hint}")
 
     # Top elements by blast radius / criticality probability, when
     # diagnostics were actually run (Part 25/26) - already computed by

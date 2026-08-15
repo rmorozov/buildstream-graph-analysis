@@ -3,7 +3,7 @@ import json as _json
 from typing import Optional
 
 from ..ingest.models import AnalysisResult
-from ._shared import GRAPH_SIGNAL_KEYS
+from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS
 
 
 def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
@@ -34,6 +34,14 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
 
     if section is None and hasattr(result, 'attribution') and result.attribution:
         data['attribution'] = result.attribution
+        # UX-04: additive sibling key, same category_us keys as
+        # `attribution` itself - existing consumers of `attribution`'s
+        # field names/values see no change.
+        data['attribution_hints'] = {
+            key: ATTRIBUTION_CATEGORY_HINTS_BY_KEY[key]
+            for key in result.attribution
+            if key in ATTRIBUTION_CATEGORY_HINTS_BY_KEY
+        }
 
     # occupancy field - check both occupancy (AnalysisResult field) and occupancy_stats (legacy name)
     if section is None:

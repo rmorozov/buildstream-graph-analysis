@@ -3,16 +3,16 @@
     "total_duration_us": 16000,
     "floors": {
         "t_infinity_observed": 14000,
-        "t_infinity_cold": null,
-        "cold_partial": false,
-        "cold_confidence": null,
-        "cold_duration_sources": {},
-        "cold_critical_path_duration_sources": {},
         "lb": 14000,
         "certified_headroom": 0,
         "t_c": 14000,
         "model_slack": 0,
         "efficiency_score": 1.0,
+        "t_infinity_cold": null,
+        "cold_partial": false,
+        "cold_confidence": null,
+        "cold_duration_sources": {},
+        "cold_critical_path_duration_sources": {},
         "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09/UX-15)."
     },
     "attribution": {
@@ -24,6 +24,16 @@
         "retry_wait_us": 0,
         "untracked_head_us": 0,
         "untracked_tail_us": 2000
+    },
+    "attribution_hints": {
+        "execution_on_chain_us": "real work on the critical path - the only way to reduce this is to reduce the work itself",
+        "dependency_wait_us": "waiting on an upstream element to finish - shorten or parallelize that dependency chain",
+        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a higher N, or `bga sweep` to find the real knee point",
+        "scheduler_wait_us": "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`",
+        "idle_us": "nothing was dependency-ready at all - likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
+        "retry_wait_us": "this element needed a retry - investigate why the first attempt failed/was discarded",
+        "untracked_head_us": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue",
+        "untracked_tail_us": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
     },
     "occupancy": {
         "average_concurrency": 1.2857142857142858,

@@ -58,7 +58,13 @@ PYTHONPATH=. python tools/bst_extract_run.py /path/to/your/project build.log /tm
 bga analyze /tmp/my-run --diagnostics
 ```
 
-Then iterate: make a change, rebuild, extract a new run, and re-run `bga analyze` — compare the new Certified Headroom, Attribution Breakdown, and Critical Path against the previous run to see whether it actually helped. (There's no built-in run-comparison command yet - see `docs/scenarios/` if that's a gap you want to help close.)
+Then iterate: make a change, rebuild, extract a new run, and compare it against the baseline:
+
+```bash
+bga compare /tmp/my-run-before /tmp/my-run-after
+```
+
+This reports a signed delta for every certified floor, the efficiency score, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) - gated on confidence, with a warning if the two runs don't look like the same project.
 
 Other useful commands:
 
@@ -73,7 +79,7 @@ bga replay /tmp/my-run --capacity 16                      # simulate a hardware 
 - [CLI Reference](docs/cli.md) — every command and flag
 - [Ingestion Pipeline](docs/ingestion-pipeline.md) — how `tools/bst_extract_run.py` turns a real BuildStream project + log into `bga` input, and its known limitations
 - [v9 Specification](docs/specification.md) — the underlying analysis specification (ground truth for what every number means)
-- [`docs/scenarios/`](docs/scenarios/README.md) — active backlog of usability/workflow gaps, including the run-comparison command mentioned above
+- [`docs/scenarios/`](docs/scenarios/README.md) — active backlog of usability/workflow gaps
 
 ## Development
 

@@ -246,14 +246,22 @@ jobs:
           OUT=artifacts/04-critical-path-optimization
           mkdir -p "$OUT"
 
+          # Each of the three builds below must be a genuine full rebuild -
+          # without clearing BuildStream's cache between them, the 2nd/3rd
+          # builds are near-total cache hits (nothing to time), producing a
+          # ~0s "run" and a nonsensical bga compare verdict (confirmed via
+          # a real CI run - see docs/scenarios/UX-06's sibling finding).
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
           python3 -m tools.bst_run_wrapped "$PROJ" "$OUT/build-baseline-b2.log" -- bst --builders 2 build all.bst
           python3 -m tools.bst_extract_run --format wrapped "$PROJ" "$OUT/build-baseline-b2.log" "$OUT/run-baseline-b2"
           bga analyze -f text -o "$OUT/report-baseline-b2.txt" -d -r "$OUT/run-baseline-b2"
 
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
           python3 -m tools.bst_run_wrapped "$PROJ" "$OUT/build-baseline-b4.log" -- bst --builders 4 build all.bst
           python3 -m tools.bst_extract_run --format wrapped "$PROJ" "$OUT/build-baseline-b4.log" "$OUT/run-baseline-b4"
           bga analyze -f text -o "$OUT/report-baseline-b4.txt" -d -r "$OUT/run-baseline-b4"
 
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
           python3 -m tools.bst_run_wrapped "$PROJ/optimized" "$OUT/build-optimized-b4.log" -- bst --builders 4 build all.bst
           python3 -m tools.bst_extract_run --format wrapped "$PROJ/optimized" "$OUT/build-optimized-b4.log" "$OUT/run-optimized-b4"
           bga analyze -f text -o "$OUT/report-optimized-b4.txt" -d -r "$OUT/run-optimized-b4"

@@ -229,6 +229,39 @@ jobs:
           python3 -m tools.bst_extract_run --strict --format raw --start-time "$START" "$PROJ" "$OUT/build-v2.log" "$OUT/run-v2-strict" 2>&1 \
             | tee -a "$OUT/strict-check.txt"
 
+      - name: Build + extract + analyze + compare 04-critical-path-optimization
+        # Uses tools/bst_run_wrapped.py (live UTC-timestamped capture) and
+        # --format wrapped throughout, not --format raw like 01-03 above -
+        # --format raw was found, while building this example, to corrupt
+        # cross-task ordering on a saved multi-task log (BuildStream's own
+        # elapsed prefix is per-activity, not session-wide - see
+        # docs/scenarios/UX-06-raw-log-timestamp-corruption.md). This step
+        # exercises the real optimization-walkthrough scenario
+        # (docs/optimization-walkthrough.md, UX-05) end to end: a baseline
+        # build, a builders=4 rebuild, an optimized/ project variant, and
+        # `bga compare` across all of them.
+        run: |
+          set -euo pipefail
+          PROJ=examples/04-critical-path-optimization
+          OUT=artifacts/04-critical-path-optimization
+          mkdir -p "$OUT"
+
+          python3 -m tools.bst_run_wrapped "$PROJ" "$OUT/build-baseline-b2.log" -- bst --builders 2 build all.bst
+          python3 -m tools.bst_extract_run --format wrapped "$PROJ" "$OUT/build-baseline-b2.log" "$OUT/run-baseline-b2"
+          bga analyze -f text -o "$OUT/report-baseline-b2.txt" -d -r "$OUT/run-baseline-b2"
+
+          python3 -m tools.bst_run_wrapped "$PROJ" "$OUT/build-baseline-b4.log" -- bst --builders 4 build all.bst
+          python3 -m tools.bst_extract_run --format wrapped "$PROJ" "$OUT/build-baseline-b4.log" "$OUT/run-baseline-b4"
+          bga analyze -f text -o "$OUT/report-baseline-b4.txt" -d -r "$OUT/run-baseline-b4"
+
+          python3 -m tools.bst_run_wrapped "$PROJ/optimized" "$OUT/build-optimized-b4.log" -- bst --builders 4 build all.bst
+          python3 -m tools.bst_extract_run --format wrapped "$PROJ/optimized" "$OUT/build-optimized-b4.log" "$OUT/run-optimized-b4"
+          bga analyze -f text -o "$OUT/report-optimized-b4.txt" -d -r "$OUT/run-optimized-b4"
+
+          bga compare "$OUT/run-baseline-b2" "$OUT/run-baseline-b4" | tee "$OUT/compare-scheduling.txt"
+          bga compare "$OUT/run-baseline-b4" "$OUT/run-optimized-b4" | tee "$OUT/compare-structural.txt"
+          bga compare "$OUT/run-baseline-b2" "$OUT/run-optimized-b4" | tee "$OUT/compare-combined.txt"
+
       - name: Upload real-build artifacts
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,10 +1,11 @@
 # Real BuildStream example projects
 
-Three real BuildStream projects, each targeting a different corner case
+Four real BuildStream projects, each targeting a different corner case
 this tool cares about, built for real (not just `bst show`) in CI
 (`.github/workflows/ci.yml`'s `bst-examples` job) to generate real traces,
 `bga` run directories, and reports for later analysis. See
-`docs/tasks/` for the specific backlog items each maps to.
+`docs/tasks/` for the specific backlog items 01-03 map to, and
+`docs/scenarios/` for 04's.
 
 All sources are `kind: local` or a throwaway `kind: git` remote generated
 at build time - no network access needed, nothing sensitive committed.
@@ -54,9 +55,43 @@ bst build all.bst
 ```
 (run from inside `03-project-refs-identity/`)
 
+## 04-critical-path-optimization
+
+Ten elements with two deliberate, independently discoverable optimization
+opportunities: a scheduling bottleneck (a 4-way fan-out constrained by
+`--builders`) and a structural one (an unnecessary serial split plus one
+oversized step on the critical path). `optimized/` is a second, complete
+BuildStream project - the same shape with both fixes applied - so the pair
+can be run through `bga compare` as a real before/after. See
+`docs/optimization-walkthrough.md` for the full worked walkthrough (every
+command and its real output) and `docs/scenarios/UX-05-optimization-walkthrough-tutorial.md`
+for the task this was built for.
+
+```
+bst --builders 2 build all.bst   # baseline, from inside 04-critical-path-optimization/
+bst --builders 4 build all.bst   # scheduling fix - no project change needed
+(cd optimized && bst --builders 4 build all.bst)   # structural fix
+```
+
+**Capture note**: unlike 01-03 above, this project's CI step captures each
+build with `tools/bst_run_wrapped.py` and extracts with `--format wrapped`,
+not `--format raw` - `--format raw` was found, while building this example,
+to corrupt cross-task ordering on a real saved multi-task log (BuildStream's
+own `[HH:MM:SS]` elapsed prefix resets per-task, not per-invocation; see
+`docs/scenarios/UX-06-raw-log-timestamp-corruption.md`). If you're capturing
+this project's build yourself rather than reading CI's artifacts, do the
+same:
+
+```
+python3 -m tools.bst_run_wrapped 04-critical-path-optimization build.log -- bst --builders 4 build all.bst
+python3 -m tools.bst_extract_run --format wrapped 04-critical-path-optimization build.log run/
+```
+(run from `examples/`)
+
 ## Shared setup
 
-Both `01-resource-contention` and `02-deep-chain-mixed-kinds`'s
+`01-resource-contention`, `02-deep-chain-mixed-kinds`, and
+`04-critical-path-optimization` (including its `optimized/` variant)'s
 `manual.bst`/`compose` elements need a real shell in the sandbox, which
 BuildStream doesn't provide on its own (the sandbox is assembled purely
 from staged dependencies). Run once before building any project:

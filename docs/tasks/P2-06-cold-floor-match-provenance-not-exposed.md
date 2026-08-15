@@ -1,6 +1,6 @@
 # P2-06: Cold-floor duration sources don't expose which match tier was used, per task
 
-**Priority:** P2 (not a correctness blocker - the priority hierarchy itself is already correctly implemented and gated) | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** P2 (not a correctness blocker - the priority hierarchy itself is already correctly implemented and gated) | **Status:** 🟢 Done | **Depends on:** none
 
 ## Spec Reference
 Part 15.2/15.3 (cold-floor duration source hierarchy and publication gate) - already correctly implemented (`bga/floors/cold.py`, see Background). Not a new spec requirement; this is a transparency/usefulness improvement on top of an already-compliant computation.
@@ -27,4 +27,15 @@ What it does **not** do is retain, per task, *which* tier actually resolved its 
 3. Full suite green.
 
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+`compute_cold_floor` (`bga/floors/cold.py`) now tracks, per task resolved in its main loop, which tier (`EXACT_CACHE_KEY`/`ELEMENT_KIND_PHASE`/`COHORT`/`UNAVAILABLE`) actually supplied its duration - the element-level tier is the tier of whichever task produced the element's own max duration (deterministic tie-break via `max()`'s first-match behavior). Return value extended with `cold_duration_sources: {element_uid: tier}` (every graph element) and `cold_critical_path_duration_sources: {tier: count}` (scoped to the cold critical path specifically, computed regardless of the publication gate so it's useful as a diagnostic for *why* the floor is unavailable too). `t_infinity_cold`/`cold_partial`/`cold_confidence`'s existing values and computation are untouched. Wired through `bga/analyzer.py::_compute_floors` into `AnalysisResult.floors`, and surfaced in the text report as a new "Cold critical path sources:" line (JSON gets it for free since `floors` is serialized wholesale; CSV format only ever served attribution data, unaffected).
+
+New tests (`tests/unit/test_cold_floor.py`, 3 new): a linear 3-element chain with a deliberate mix of all three reachable tiers across the cold critical path, asserting both the per-element map and the tier-count summary match the real mix exactly; no-cold-analysis reports empty (not missing) provenance dicts; a genuinely unmatched element (a task_kind/phase never seen anywhere in history, so even cohort has nothing to fall back to) reports `UNAVAILABLE` rather than being silently omitted. Updated one existing test (`test_cold_floor_isolated_from_observed_values`) to include the two new keys in its "cold-prefixed keys are allowed to differ" exclusion set - they're new cold-prefixed keys, exactly the ones that isolation test already carves out. Updated the golden snapshot fixture (`tests/fixtures/golden/mixed_task_kinds/expected_output.json`) with the two new (empty, since that fixture has no historical_runs) keys.
+
+```
+$ python3 -m pytest tests/unit/test_cold_floor.py -v
+8 passed
+$ python3 -m pytest -q   # full suite
+433 passed, 11 skipped
+$ make lint
+All checks passed!
+```

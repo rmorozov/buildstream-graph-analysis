@@ -184,7 +184,10 @@ def test_cold_floor_isolated_from_observed_values(tmp_path):
     analyzer_with_history.load()
     result_with_history = analyzer_with_history.analyze()
 
-    cold_keys = {"t_infinity_cold", "cold_partial", "cold_confidence"}
+    cold_keys = {
+        "t_infinity_cold", "cold_partial", "cold_confidence",
+        "cold_duration_sources", "cold_critical_path_duration_sources",
+    }
     for key in result_no_history.floors:
         if key in cold_keys:
             continue
@@ -195,3 +198,111 @@ def test_cold_floor_isolated_from_observed_values(tmp_path):
     # The two runs' cold floors genuinely differ - proves the isolation
     # check above isn't trivially passing because nothing changed at all.
     assert result_no_history.floors["t_infinity_cold"] != result_with_history.floors["t_infinity_cold"]
+
+
+# --- P2-06: per-task/tier duration-source provenance -----------------------
+
+def test_duration_source_breakdown_reflects_a_real_mix_of_tiers(tmp_path):
+    """A linear chain a -> b -> c (the whole chain is the cold critical
+    path) with a deliberate mix of match tiers: a.bst matches by exact
+    cache key, b.bst's cache key changed so it falls back to
+    element/kind/phase, c.bst is a brand-new element (never seen
+    historically at all, by cache key or by element_uid) so it falls all
+    the way back to the cohort median - contributed by a.bst/b.bst/d.bst's
+    historical BUILD durations (d.bst exists only in history, purely to
+    seed the cohort pool)."""
+    hist_dir = _write_run_dir(
+        tmp_path / "hist1",
+        _RUN_CONTEXT,
+        elements=[("a.bst", "ka"), ("b.bst", "kb1"), ("d.bst", "kd")],
+        spans=[
+            _span("a.bst", 0, 10000),
+            _span("b.bst", 20000, 20000),
+            _span("d.bst", 50000, 5000),
+        ],
+    )
+    current_dir = _write_run_dir(
+        tmp_path / "current",
+        _RUN_CONTEXT,
+        elements=[("a.bst", "ka"), ("b.bst", "kb2"), ("c.bst", "kc")],
+        spans=[
+            _span("a.bst", 0, 1000),
+            _span("b.bst", 1000, 1000),
+            _span("c.bst", 2000, 1000),
+        ],
+        dependencies=[
+            {"predecessor": "a.bst", "successor": "b.bst"},
+            {"predecessor": "b.bst", "successor": "c.bst"},
+        ],
+    )
+    historical_runs = load_historical_runs([hist_dir])
+
+    analyzer = BuildEfficiencyAnalyzer(current_dir, cold=True, historical_runs=historical_runs)
+    analyzer.load()
+    result = analyzer.analyze()
+
+    assert result.floors["cold_duration_sources"] == {
+        "a.bst": "EXACT_CACHE_KEY",
+        "b.bst": "ELEMENT_KIND_PHASE",
+        "c.bst": "COHORT",
+    }
+    assert result.floors["cold_critical_path_duration_sources"] == {
+        "EXACT_CACHE_KEY": 1,
+        "ELEMENT_KIND_PHASE": 1,
+        "COHORT": 1,
+    }
+    # Cohort pool is [a=10000, b=20000, d=5000] -> median 10000; total
+    # cold critical path length = 10000 (a) + 20000 (b) + 10000 (c).
+    assert result.floors["t_infinity_cold"] == 40000
+    assert result.floors["cold_confidence"] == "high"
+
+
+def test_no_cold_analysis_reports_empty_duration_sources(tmp_path):
+    """cold=False (or no historical data) - the new provenance fields
+    must be present but empty, not missing or fabricated."""
+    current_dir = _write_run_dir(
+        tmp_path / "current",
+        _RUN_CONTEXT,
+        elements=[("a.bst", "k1")],
+        spans=[_span("a.bst", 0, 10000)],
+    )
+    analyzer = BuildEfficiencyAnalyzer(current_dir, cold=False)
+    analyzer.load()
+    result = analyzer.analyze()
+
+    assert result.floors["cold_duration_sources"] == {}
+    assert result.floors["cold_critical_path_duration_sources"] == {}
+
+
+def test_unavailable_element_reported_with_unavailable_tier(tmp_path):
+    """An element with no historical match at any tier (and
+    allow_partial_cold set, so the floor still publishes) is reported as
+    UNAVAILABLE in the breakdown, not silently omitted or misattributed
+    to a tier it didn't actually match. b.bst's task uses a task_kind
+    (FETCH) that never appears anywhere in history at all, so even the
+    cohort fallback has nothing to match against - genuinely unavailable,
+    not merely a cache-key/element mismatch that cohort would still cover."""
+    hist_dir = _write_run_dir(
+        tmp_path / "hist1",
+        _RUN_CONTEXT,
+        elements=[("a.bst", "ka")],
+        spans=[_span("a.bst", 0, 10000)],
+    )
+    current_dir = _write_run_dir(
+        tmp_path / "current",
+        _RUN_CONTEXT,
+        elements=[("a.bst", "ka"), ("b.bst", "kb")],
+        spans=[_span("a.bst", 0, 1000), _span("b.bst", 1000, 1000, kind="FETCH", phase="FETCH")],
+        dependencies=[{"predecessor": "a.bst", "successor": "b.bst"}],
+    )
+    historical_runs = load_historical_runs([hist_dir])
+
+    analyzer = BuildEfficiencyAnalyzer(
+        current_dir, cold=True, historical_runs=historical_runs, allow_partial_cold=True,
+    )
+    analyzer.load()
+    result = analyzer.analyze()
+
+    assert result.floors["cold_duration_sources"]["b.bst"] == "UNAVAILABLE"
+    assert result.floors["cold_critical_path_duration_sources"]["UNAVAILABLE"] == 1
+    assert result.floors["cold_partial"] is True

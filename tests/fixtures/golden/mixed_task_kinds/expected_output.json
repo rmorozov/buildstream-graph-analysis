@@ -6,6 +6,8 @@
         "t_infinity_cold": null,
         "cold_partial": false,
         "cold_confidence": null,
+        "cold_duration_sources": {},
+        "cold_critical_path_duration_sources": {},
         "lb": 14000,
         "certified_headroom": 0,
         "t_c": 14000,

@@ -32,6 +32,7 @@ from .utilisation import (
 from .diagnostics import analyze_diagnostics
 from .structural import StructuralAnalyzer
 from .validation import compute_confidence
+from .validation.provenance import Advisory, Certified, assemble_floors
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +270,10 @@ class BuildEfficiencyAnalyzer:
             return {
                 't_infinity_observed': None,
                 't_infinity_cold': None,
+                'cold_partial': False,
+                'cold_confidence': None,
+                'cold_duration_sources': {},
+                'cold_critical_path_duration_sources': {},
                 'lb': None,
                 'certified_headroom': None,
                 't_c': None,
@@ -317,16 +322,31 @@ class BuildEfficiencyAnalyzer:
             self.cold, self.allow_partial_cold,
         )
 
-        return {
-            't_infinity_observed': t_infinity_observed,
-            't_infinity_cold': cold_floor['t_infinity_cold'],
-            'cold_partial': cold_floor['cold_partial'],
-            'cold_confidence': cold_floor['cold_confidence'],
-            'lb': lb,
-            'certified_headroom': certified_headroom,
-            't_c': t_c,
-            'model_slack': model_slack,
-        }
+        # P2-08: assemble the final plain floors dict (the existing wire
+        # format, unchanged) through a structural certified/advisory
+        # checkpoint - wrapping each value in its provenance type right
+        # here makes an accidental swap (e.g. a future edit passing
+        # cold_floor['t_infinity_cold'] for 'lb') a TypeError at this
+        # call site instead of a silently wrong certified number.
+        floors = assemble_floors(
+            certified={
+                't_infinity_observed': Certified(t_infinity_observed),
+                'lb': Certified(lb),
+                'certified_headroom': Certified(certified_headroom),
+                't_c': Certified(t_c) if t_c is not None else None,
+                'model_slack': Certified(model_slack) if model_slack is not None else None,
+            },
+            advisory={
+                't_infinity_cold': Advisory(cold_floor['t_infinity_cold']),
+            },
+        )
+        floors['cold_partial'] = cold_floor['cold_partial']
+        floors['cold_confidence'] = cold_floor['cold_confidence']
+        # P2-06: per-tier duration-source provenance, additive - doesn't
+        # change any of the values above.
+        floors['cold_duration_sources'] = cold_floor['cold_duration_sources']
+        floors['cold_critical_path_duration_sources'] = cold_floor['cold_critical_path_duration_sources']
+        return floors
 
     def _compute_attribution(self, graph_analysis: Optional[dict] = None) -> dict:
         """

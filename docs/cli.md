@@ -128,7 +128,34 @@ bga compare /path/to/before-run /path/to/after-run
 bga compare /path/to/before-run /path/to/after-run --format json | jq '.verdict'
 ```
 
-The verdict is one of `improved`/`regressed`/`no significant change` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a warning when the two runs' graphs share fewer than half their element UIDs (they may not even be the same project). Exit code is always 0 for a successful comparison regardless of verdict - comparing is not itself a failure condition (a CI gate that fails the pipeline on regression is a separate, not-yet-built concern, `docs/scenarios/UX-03`). `--capacity`, if given, applies symmetrically to both runs.
+The verdict is one of `improved`/`regressed`/`no significant change` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a warning when the two runs' graphs share fewer than half their element UIDs (they may not even be the same project). Exit code is 0 for a successful comparison regardless of verdict by default - comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
+
+### CI Regression Gate (`--fail-on-regression`)
+
+Not spec-mandated (`docs/scenarios/UX-03`) - opt-in gating mode for a CI pipeline that wants to actually *fail* on a genuine regression, not just report it:
+
+```bash
+bga compare /path/to/baseline-run /path/to/candidate-run --fail-on-regression
+```
+
+Exits `4` (a distinct code from 1/2/3, which all mean "`bga` itself failed" - see Exit Codes below) when the candidate run's real total duration (Part 4.3) regressed beyond the threshold - by default, the same >=1% significance band the verdict already uses, i.e. it fails exactly when the report's own verdict says `REGRESSED`, not a second, silently-different definition. Override the threshold with `--regression-threshold PCT` (e.g. `--regression-threshold 5` to only fail on a regression of 5% or more). `total_duration_us` is the one primary gating metric - deliberately not an ambiguous multi-metric combination.
+
+A low-confidence comparison (either run's confidence below the "high" band) **fails open**: exits `0` with a warning printed to stderr, rather than blocking a pipeline on a possibly-noisy signal. The comparison report itself is always printed to stdout/`--output` regardless of the gate outcome, so a failing pipeline still shows *why*.
+
+Worked GitHub Actions example - extract two runs and gate on the comparison:
+
+```yaml
+- name: Extract baseline and candidate runs
+  run: |
+    python3 -m tools.bst_extract_run "$PROJ" baseline-build.log runs/baseline
+    python3 -m tools.bst_extract_run "$PROJ" candidate-build.log runs/candidate
+
+- name: Fail if the candidate build regressed
+  run: |
+    bga compare runs/baseline runs/candidate --fail-on-regression
+```
+
+The job fails (exit `4`) only on a real, high-confidence regression; a genuine improvement, a change within tolerance, or a low-confidence comparison all let the job continue.
 
 ## Example Workflows
 
@@ -173,6 +200,7 @@ bga analyze /path/to/run-directory --diagnostics --format json | \
 - `1`: General error (e.g., invalid arguments, missing files).
 - `2`: Data ingestion failure (e.g., malformed v9 artifacts).
 - `3`: Analysis failure (e.g., graph cycles detected).
+- `4`: `bga compare --fail-on-regression` only - the analyzed build itself regressed beyond the threshold. Distinct from 1/2/3, which all mean `bga` itself failed to run - this means `bga` ran successfully and is reporting a real regression (`docs/scenarios/UX-03`).
 
 ## See Also
 

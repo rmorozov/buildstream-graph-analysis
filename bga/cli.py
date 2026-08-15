@@ -26,7 +26,7 @@ from typing import Optional
 
 from . import __version__
 from .analyzer import BuildEfficiencyAnalyzer
-from .compare import compare_runs
+from .compare import compare_runs, regression_exceeds_threshold
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
@@ -120,18 +120,23 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
     return format_sweep_text(args.resource, sweep_result)
 
 
-def _produce_compare_output(args: argparse.Namespace) -> str:
+def _produce_compare_output(args: argparse.Namespace):
     """Run bga compare BASELINE CANDIDATE (UX-01) - two independent
     single-run analyses (bga/analyzer.py, unchanged) plus a comparison/
     verdict layer (bga/compare.py). --capacity, if given, applies to
-    both runs symmetrically."""
+    both runs symmetrically. Returns (output_str, comparison) - the
+    ComparisonResult itself is returned alongside the formatted string
+    so _execute_compare_and_write's regression gate (UX-03) can inspect
+    it without re-running the whole comparison a second time."""
     comparison = compare_runs(
         Path(args.baseline), Path(args.candidate),
         capacity=args.capacity, verbose=args.verbose,
     )
     if args.format == 'json':
-        return json.dumps(comparison.to_dict(), indent=2, default=str)
-    return format_compare_text(comparison)
+        output = json.dumps(comparison.to_dict(), indent=2, default=str)
+    else:
+        output = format_compare_text(comparison)
+    return output, comparison
 
 
 def _print_missing_input_hint(run_dir: Path) -> None:
@@ -240,6 +245,51 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
         return 2
 
 
+# Distinct from exit codes 1 (general error)/2 (ingestion failure)/3
+# (analysis failure), all of which mean "bga itself broke" - this one
+# means the opposite: bga ran successfully and is reporting that the
+# *analyzed build* regressed (UX-03). A CI system needs to tell these
+# apart to decide whether to re-run/investigate bga itself vs. block a
+# PR for a real regression.
+EXIT_CODE_REGRESSION = 4
+
+
+def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
+    """UX-03's CI regression gate: only active when --fail-on-regression
+    is passed (bga compare's default behavior - matching UX-01's own
+    design note - stays "always exit 0 regardless of verdict", since
+    comparing is not itself a failure condition). A low-confidence
+    comparison fails open (exits 0 with a visible warning) rather than
+    block a pipeline on a possibly-noisy signal - the same reasoning
+    _CONFIDENCE_HIGH already gates comparison.low_confidence on."""
+    if not getattr(args, 'fail_on_regression', False):
+        return 0
+
+    if comparison.low_confidence:
+        print(
+            "Warning: --fail-on-regression not applied - at least one run's "
+            "confidence is below the 'high' band, so this comparison is not "
+            "reliable enough to gate a pipeline on (failing open, exit 0). "
+            "See docs/scenarios/UX-03-ci-regression-gate.md.",
+            file=sys.stderr,
+        )
+        return 0
+
+    if regression_exceeds_threshold(comparison, args.regression_threshold):
+        threshold_desc = (
+            f"{args.regression_threshold}%" if args.regression_threshold is not None
+            else "the default significance threshold"
+        )
+        print(
+            f"Regression gate FAILED: candidate run's total duration regressed "
+            f"beyond {threshold_desc} (verdict: {comparison.verdict}).",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_REGRESSION
+
+    return 0
+
+
 def _execute_compare_and_write(args: argparse.Namespace) -> int:
     """Directory validation, logging setup, output writing, and
     exception-to-exit-code mapping for `bga compare` - a separate
@@ -259,7 +309,7 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
             return 1
 
     try:
-        output = _produce_compare_output(args)
+        output, comparison = _produce_compare_output(args)
 
         if args.output:
             output_path = Path(args.output)
@@ -269,7 +319,7 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
         else:
             print(output)
 
-        return 0
+        return _compare_exit_code(args, comparison)
 
     except FileNotFoundError as e:
         logger.error("Required input file not found: %s", e)
@@ -298,10 +348,11 @@ def cmd_compare(args: argparse.Namespace) -> int:
     """Execute `bga compare BASELINE CANDIDATE` (UX-01) - compares two
     independently-analyzed runs and reports signed deltas plus a
     verdict (improved/regressed/no significant change), gated on
-    confidence and graph comparability. Always exits 0 on a successful
-    comparison regardless of verdict - comparing is not itself a
-    failure condition (a CI regression gate is a separate concern,
-    docs/scenarios/UX-03)."""
+    confidence and graph comparability. By default exits 0 on a
+    successful comparison regardless of verdict - comparing is not
+    itself a failure condition. `--fail-on-regression` opts into a
+    distinct exit code when the candidate genuinely regressed (UX-03's
+    CI gate) - see _compare_exit_code."""
     return _execute_compare_and_write(args)
 
 
@@ -622,6 +673,20 @@ def create_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose (DEBUG-level) logging for debugging')
     compare_parser.add_argument('-q', '--quiet', action='store_true', help='Suppress all log output except errors')
     compare_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write log output to PATH, independent of console verbosity')
+    compare_parser.add_argument(
+        '--fail-on-regression', action='store_true',
+        help=f'CI gate (UX-03): exit {EXIT_CODE_REGRESSION} (distinct from 1/2/3, which mean bga itself '
+        'failed) if the candidate run regressed in total duration beyond the threshold (see '
+        '--regression-threshold). A low-confidence comparison fails open (exit 0 with a warning) '
+        'rather than block a pipeline on a possibly-noisy signal. Default: off (bga compare always '
+        'exits 0 regardless of verdict).'
+    )
+    compare_parser.add_argument(
+        '--regression-threshold', type=float, default=None, metavar='PCT',
+        help='Percentage-point threshold for --fail-on-regression (default: the same significance '
+        'band bga compare\'s own verdict already uses - i.e. gate on exactly what the report calls '
+        'REGRESSED). Only relevant together with --fail-on-regression.'
+    )
     compare_parser.set_defaults(func=cmd_compare)
 
     return parser

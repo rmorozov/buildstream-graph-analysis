@@ -269,6 +269,7 @@ def load_graph(path: Path) -> Graph:
             cache_key=elem_data.get('cache_key'),
             requested_target=elem_data.get('requested_target', False),
             element_kind=elem_data.get('element_kind'),
+            max_jobs=elem_data.get('max_jobs'),
         ))
     
     # Support both explicit dependencies list and inline dependencies

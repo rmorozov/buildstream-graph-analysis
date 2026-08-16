@@ -356,6 +356,26 @@ several wrong assumptions turned out to hide behind:
     `memory_budget_mb`, reported as its own `memory_oversubscription`
     violation - independent of, and never conflated with,
     `_check_process_oversubscription`'s own CPU-core check.
+17. **A real per-element `--max-jobs`-equivalent override is not what
+    two plausible-looking mechanisms would suggest** (`UX-22`, confirmed
+    against a real BuildStream 2.7.0 install): a `variables: max-jobs:`
+    block inside an element's own body is rejected outright by BuildStream
+    itself ("invalid redefinition of protected variable") - not a valid
+    override mechanism at all, despite `max-jobs` genuinely being a
+    resolvable project variable in other contexts. `bst show`'s
+    `%{vars}` format symbol, which dumps every resolved variable for an
+    element as one YAML block, reports `max-jobs` there too - but always
+    the *project-wide default*, identical for every element regardless
+    of any per-element override, confirmed by comparing an overridden
+    and a non-overridden element side by side. There is also no
+    standalone `%{max-jobs}` format symbol at all - it isn't substituted,
+    prints back as the literal text `%{max-jobs}`. The real mechanism is
+    `public: bst: max-jobs:` (BuildStream's own per-element build-
+    metadata block) - visible via `bst show`'s `%{public}` symbol, and
+    genuinely absent (not defaulted to any value) for an element that
+    doesn't override it. `tools/bst_show_to_graph.py` now captures this
+    as `Element.max_jobs`; `tests/fixtures/bst_show_project/elements/manual.bst`
+    carries a real override for end-to-end test coverage.
 
 ## Why a second, separate trace/v9 adapter
 

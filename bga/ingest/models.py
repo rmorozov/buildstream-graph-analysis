@@ -157,6 +157,15 @@ class Element:
     # populates from real `bst show`'s `%{kind}` symbol. Not yet read by
     # any analysis consumer - see docs/tasks/P4-12 for planned heuristics.
     element_kind: Optional[str] = None
+    # Real per-element `--max-jobs`-equivalent override (UX-22) - a real
+    # BuildStream possibility (`public: bst: max-jobs:`, distinct from
+    # `RunContext.native_max_jobs`'s single global value, UX-12) that
+    # `tools/bst_show_to_graph.py` captures from `bst show`'s `%{public}`
+    # symbol. None (not defaulted) when the element doesn't override it -
+    # meaning "use the global native_max_jobs", not "explicitly set to
+    # some default". See `bga/structural/serialization_points.py`'s
+    # large-serialization-point detection for the one real consumer.
+    max_jobs: Optional[int] = None
 
 
 @dataclass(frozen=True)

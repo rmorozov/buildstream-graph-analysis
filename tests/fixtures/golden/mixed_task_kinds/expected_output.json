@@ -283,6 +283,7 @@
                 ]
             ]
         },
+        "serialization_point_risks": [],
         "deferrability": {
             "deferrable_leaves": [
                 "app.bst",

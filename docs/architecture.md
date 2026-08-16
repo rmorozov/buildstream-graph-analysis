@@ -32,7 +32,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga sweep RUN --resource R` | Capacity sweep for one resource — predicted `T_C` curve, knee point | 19 |
 | `bga utilisation RUN` | CPU utilisation accounting | 30, M4 |
 | `bga diagnostics RUN` | Blast radius, criticality probability, wall-clock shares | 20–29, M5 |
-| `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict — **not spec-mandated**, `UX-01` | — |
+| `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5). **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39` | — |
 
 ## Real package structure (Plane 1)
 
@@ -59,7 +59,79 @@ report/       -> text/JSON rendering
 
 `tools/bst_native_build_tracer.py` wraps a real `bst build` invocation: a `bwrap` shim placed ahead of the real binary in `$PATH` injects an `LD_PRELOAD` hook (`tools/native_trace/hook.c`) into every dynamically-linked process the sandbox execs, recording real `CLOCK_MONOTONIC` start/end timestamps. Validated end-to-end against a real `cmake`+`make`+`gcc` build (98 real traced processes, reproduced real `-j4` compile concurrency across independent runs). Known, honestly-reported limitation: statically-linked processes are invisible to this mechanism and there is no way to detect that gap from outside — every report carries a fixed disclaimer rather than a false completeness claim. Full design history (five brainstormed options, an external design contribution, a risk-reduction spike, a second external review that was checked and refuted, and the final validated mechanism) is in `docs/scenarios/UX-11-native-build-system-profiler-tool.md` — read that only if you need the *why*; this doc is the *what, today*.
 
-Every traced process is tagged with its real owning BuildStream element (`UX-23`, parsed from BuildStream's own `--dir` bwrap option), enabling `detect_redundant_operations` (same file) to flag real operations repeated independently across multiple elements' own sandboxes. `tools/native_trace_to_chrome_trace.py` (`UX-24`) exports Plane 2 traces as Chrome Trace JSON, standalone or combined with Plane 1's own real export for the same run — `bst_native_build_tracer.py run --wrapped-log PATH` captures both planes from one single real `bst build` invocation.
+Every traced process is tagged with its real owning BuildStream element (`UX-23`, parsed from BuildStream's own `--dir` bwrap option). Two analyses build on that. `compute_per_element_parallelism` (`UX-32`) reports, per element, the parallelism its native build system *actually achieved* against the `-jN` it asked for - splitting real work processes (compilers, assemblers, linkers) from orchestration that spends its life waiting on children, and emitting two findings: `pinned_to_one_job` (this element asked for `-j1` while its siblings asked for more - the `notparallel` case, invisible to any achieved-vs-requested ratio, since a pinned element gets exactly what it asked for) and `underachieved_requested_jobs`. `detect_redundant_operations` (`UX-23`, rescored by `UX-37`) flags real operations repeated independently across multiple elements' own sandboxes, ranked by *recoverable wall-clock* rather than by process time summed across elements that ran concurrently, and excluding each element's own build driver (identical across elements by construction, entirely different work in each). `tools/native_trace_to_chrome_trace.py` (`UX-24`) exports Plane 2 traces as Chrome Trace JSON, standalone or combined with Plane 1's own real export for the same run — `bst_native_build_tracer.py run --wrapped-log PATH` captures both planes from one single real `bst build` invocation.
+
+## What the 2026-08-16 audit round changed structurally
+
+`UX-27`..`UX-40` were mostly small fixes, but three of them changed the
+*shape* of what the tool asserts, and those are worth knowing before
+reading anything else in this doc.
+
+### 1. Efficiency is now two numbers, not one
+
+`efficiency_score` (`UX-02`) is `LB / horizon`, and every input to `LB`
+is derived from the graph the run actually had. That makes it a correct
+answer to *"did the scheduler pack this graph well?"* and a structurally
+impossible answer to *"was this graph worth packing?"* - a build whose
+independent elements were accidentally chained has a critical path equal
+to its own total work, so `LB == T∞ == T_C` identically and the score is
+1.00.
+
+Measured, not argued: on `examples/06-macro-micro-optimization`, three
+one-line fixes made a real build **30.5% faster** while
+`efficiency_score` moved **1.00 → 0.83** and `certified_headroom` moved
+**0.00s → 4.05s**. Both backwards.
+
+`floors.occupancy_ratio` (`UX-27`) is the second signal - `Σ task
+slot-occupancy / (horizon × builders)` - and it never consults the graph,
+so serializing work that could have run concurrently pushes it down. On
+the same pair: **27.8% → 63.0%**. Neither number is redundant and neither
+replaces the other; the report prints them adjacently, and a high score
+beside a low occupancy is the specific reading that means *"the scheduler
+did fine, your graph is the problem"*.
+
+Known weakness, stated in the source rather than hidden: the numerator is
+slot occupancy, not CPU time (P1-33/`UX-36`), so it inflates under
+contention. It is an honest directional signal, not a precise one.
+
+### 2. Capacity has a single verdict, and everything conditions on it
+
+Before this round the capacity guards (`UX-12`/`15`/`16`/`17`/`21`) were
+inert on every run the documented pipeline produced, because
+`native_max_jobs` was operator-only (`UX-29`), and the bar they compared
+against was BuildStream's own default rather than the real core count
+(`UX-28`). Both are fixed, and the resulting verdict is now published
+once as `AnalysisResult.capacity_verdict`:
+
+```
+{"oversubscribed": bool, "undersubscribed": bool,
+ "checks_ran": bool, "skipped_inputs": [...]}
+```
+
+Consumers condition on that dict rather than re-deriving capacity
+arithmetic - `UX-35`'s next-step hints are the first, and the rule is
+`UX-17`'s own: two independently-derived formulas comparing the same real
+inputs will eventually disagree about the same real condition.
+`checks_ran` is load-bearing and deliberately separate from
+`oversubscribed: false` - "we checked and it is fine" and "we could not
+check" are different claims, and the report says which one it is making.
+
+### 3. The CI posture is two gates, not one threshold
+
+`--fail-on-regression` (`UX-03`) answers "did the build get slower".
+`--fail-on-efficiency-regression`/`--min-efficiency` (`UX-39`) answer
+"was the work this build does being done efficiently", on `occupancy_ratio`,
+with their own exit code `5`. The separation exists because on a growing
+project those verdicts diverge, and measurably do: two well-parallelized
+elements added to a real project took wall-clock **+2.5%** (failing the
+duration gate) while occupancy **rose 13.8pp** (passing the efficiency
+one).
+
+The efficiency gate's default tolerance is derived from three repeat
+captures of an unchanged project on one real runner (1.0pp of observed
+occupancy noise, against 7.4% of wall-clock noise - which is itself the
+measured evidence that the duration gate's own 1% default sits below the
+noise floor).
 
 ## Core invariants still load-bearing (Plane 1)
 
@@ -110,11 +182,11 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-32 | Plane 2 per-element achieved parallelism, with work-vs-orchestration classification and two real findings (`pinned_to_one_job`, `underachieved_requested_jobs`) | 🟢 Done |
 | UX-33 | Critical path always printed (per-element duration/share when long); choke points named | 🟢 Done |
 | UX-34 | Structural kinds filtered out of the what-to-fix-first ranking, named in `omitted_structural_opportunities` | 🟢 Done |
-| UX-35 | Attribution hints are capacity-blind (`RESOURCE WAIT` tells an oversubscribed run to raise capacity) | 🔴 Open - depends on UX-28/UX-29, both now done |
+| UX-35 | `RESOURCE WAIT`'s hint conditioned on a real `capacity_verdict` (consumed from `UX-28`'s check, never re-derived), with a distinct branch for "the checks could not run" | 🟢 Done |
 | UX-36 | Dispatch-occupancy block titled for what it measures; capacity shown with provenance; buckets labelled as occupancy | 🟢 Done |
 | UX-37 | Redundant-operation findings scored and ranked in recoverable wall-clock, filtered, elided readably, element build drivers excluded | 🟢 Done |
 | UX-38 | Tracer `report` detects and re-renders a saved JSON report; wrong input is an error, not a zero-process result | 🟢 Done |
-| UX-39 | CI gate cannot express "new work is fine, new inefficiency is not" | 🔴 Open - depends on UX-27/UX-40, both now done |
+| UX-39 | Independent CI efficiency gate (`--fail-on-efficiency-regression`, `--min-efficiency`, exit code 5) on `occupancy_ratio`, with a default derived from measured run-to-run noise | 🟢 Done |
 | UX-40 | Measured pipeline overhead no longer penalizes confidence (real capture 0.694 -> 0.869, CI gate live), plus `--fail-on-low-confidence` | 🟢 Done |
 
 (`UX-08` was never filed — not a missing/lost file.)

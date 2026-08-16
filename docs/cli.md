@@ -159,6 +159,38 @@ Worked GitHub Actions example - extract two runs and gate on the comparison:
 
 The job fails (exit `4`) only on a real, high-confidence regression; a genuine improvement, a change within tolerance, or a low-confidence comparison all let the job continue.
 
+Pass `--fail-on-low-confidence` (`docs/scenarios/UX-40`) to treat "this comparison was too low-confidence to gate on" as a failure rather than failing open - a gate that silently stops gating still reports green, and some pipelines would rather see that.
+
+### CI Efficiency Gate (`--fail-on-efficiency-regression`, `--min-efficiency`)
+
+Not spec-mandated (`docs/scenarios/UX-39`). The duration gate above answers *"did the build get slower"*. That is the wrong question when a project is legitimately growing: adding three new elements makes the build slower, and a duration gate cannot tell that apart from a real regression. The question a build owner actually wants gated is **"adding work is allowed; adding work *inefficiently* is not."**
+
+```bash
+# fail if the build became meaningfully less efficient than the baseline
+bga compare runs/baseline runs/candidate --fail-on-efficiency-regression
+
+# ...or state an absolute floor, with no baseline needed at all
+bga compare runs/baseline runs/candidate --min-efficiency 0.45
+```
+
+Exits `5` - a code distinct from `4`, so a pipeline can warn on "slower" and fail on "less efficient", or vice versa. Gates on **Dispatch Occupancy** (`floors.occupancy_ratio`, `docs/scenarios/UX-27`), which is invariant to how much work the build does: adding well-parallelized elements barely moves it, adding serialized ones moves it sharply.
+
+Real, measured illustration on one project (`examples/06-macro-micro-optimization`), same runner:
+
+| change | wall-clock | duration gate | Dispatch Occupancy | efficiency gate |
+|---|---|---|---|---|
+| two more fan-out libraries added | 25.98s → 26.64s (+2.5%) | **fails** (exit 4) | 60.0% → 73.8% | passes |
+| graph serialized + one element pinned to `-j1` | 27.50s → 39.57s | fails | 63.0% → 27.8% | **fails** (exit 5) |
+| `--builders 8 --max-jobs 8` on a 4-core host | 27.50s → 32.66s | fails | 63.0% → 48.6% | **fails** (exit 5) |
+| nothing changed (repeat capture) | 25.98s → 24.07s | fires on ±1% noise | 60.0% → 59.0% | passes |
+
+Two knobs:
+
+- `--max-efficiency-drop PP` - how many **percentage points** of occupancy may be lost before failing. Default `5.0`, derived rather than guessed: three repeat captures of an unchanged project on one real runner spread **1.0pp** of occupancy (and 7.4% of wall-clock, which is why the duration gate's own 1% default fires on noise). Re-derive it the same way on your own runner rather than trusting the default.
+- `--min-efficiency RATIO` - an absolute floor (`0.0`-`1.0`) on the candidate run's own occupancy, consulting no baseline. This is what makes *"we accept 55%, we do not accept 30%"* expressible on a first run, and what stops a slow drift that no single delta ever trips. No default: what counts as acceptable is a statement about your project, not a universal constant.
+
+The efficiency gate inherits the same low-confidence fail-open rule as the duration gate, and the same `--fail-on-low-confidence` opt-out.
+
 ## Example Workflows
 
 ### 1. Quick Efficiency Check
@@ -203,6 +235,7 @@ bga analyze /path/to/run-directory --diagnostics --format json | \
 - `2`: Data ingestion failure (e.g., malformed v9 artifacts).
 - `3`: Analysis failure (e.g., graph cycles detected).
 - `4`: `bga compare --fail-on-regression` only - the analyzed build itself regressed beyond the threshold. Distinct from 1/2/3, which all mean `bga` itself failed to run - this means `bga` ran successfully and is reporting a real regression (`docs/scenarios/UX-03`).
+- `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/scenarios/UX-39`).
 
 ## See Also
 

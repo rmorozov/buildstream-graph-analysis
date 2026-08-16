@@ -26,7 +26,10 @@ from typing import List, Optional
 
 from . import __version__
 from .analyzer import BuildEfficiencyAnalyzer
-from .compare import compare_runs, regression_exceeds_threshold
+from .compare import (
+    _EFFICIENCY_DROP_PP, compare_runs, efficiency_below_floor,
+    efficiency_regression_exceeds_threshold, regression_exceeds_threshold,
+)
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
@@ -267,6 +270,12 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
 # apart to decide whether to re-run/investigate bga itself vs. block a
 # PR for a real regression.
 EXIT_CODE_REGRESSION = 4
+# UX-39: deliberately distinct from EXIT_CODE_REGRESSION. "The build got
+# slower" and "the build got less efficient" are different verdicts and
+# often different teams' problems - a pipeline must be able to warn on
+# the first and fail on the second, which one shared exit code makes
+# impossible.
+EXIT_CODE_EFFICIENCY_REGRESSION = 5
 
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
@@ -277,7 +286,11 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     comparison fails open (exits 0 with a visible warning) rather than
     block a pipeline on a possibly-noisy signal - the same reasoning
     _CONFIDENCE_HIGH already gates comparison.low_confidence on."""
-    if not getattr(args, 'fail_on_regression', False):
+    efficiency_gate_on = (
+        getattr(args, 'fail_on_efficiency_regression', False)
+        or getattr(args, 'min_efficiency', None) is not None
+    )
+    if not getattr(args, 'fail_on_regression', False) and not efficiency_gate_on:
         return 0
 
     if comparison.low_confidence:
@@ -294,14 +307,63 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 file=sys.stderr,
             )
             return EXIT_CODE_REGRESSION
+        # UX-39: name the gates that were actually requested - the
+        # efficiency gate inherits this same fail-open rule, and a
+        # message hardcoding "--fail-on-regression" would be wrong for a
+        # pipeline that only asked for the efficiency one.
+        requested = [
+            flag for flag, on in (
+                ('--fail-on-regression', getattr(args, 'fail_on_regression', False)),
+                ('--fail-on-efficiency-regression',
+                 getattr(args, 'fail_on_efficiency_regression', False)),
+                ('--min-efficiency', getattr(args, 'min_efficiency', None) is not None),
+            ) if on
+        ]
         print(
-            "Warning: --fail-on-regression not applied - at least one run's "
+            f"Warning: {'/'.join(requested)} not applied - at least one run's "
             "confidence is below the 'high' band, so this comparison is not "
             "reliable enough to gate a pipeline on (failing open, exit 0). "
             "Pass --fail-on-low-confidence to treat this as a failure instead. "
             "See docs/scenarios/UX-03-ci-regression-gate.md.",
             file=sys.stderr,
         )
+        return 0
+
+    # UX-39: the efficiency gate is checked first and reported on its own
+    # exit code. Order matters only for which code a pipeline sees when
+    # both fire, and "less efficient" is the more actionable of the two -
+    # a build that got slower *and* less efficient should be triaged as
+    # the second.
+    if efficiency_gate_on:
+        if efficiency_below_floor(comparison, getattr(args, 'min_efficiency', None)):
+            candidate = comparison.candidate_metrics.get('occupancy_ratio')
+            print(
+                f"Efficiency gate FAILED: dispatch occupancy {candidate * 100:.1f}% is below "
+                f"the declared floor of {args.min_efficiency * 100:.1f}% "
+                f"(--min-efficiency). This is a property of the candidate run alone - "
+                f"no baseline comparison was needed.",
+                file=sys.stderr,
+            )
+            return EXIT_CODE_EFFICIENCY_REGRESSION
+        if getattr(args, 'fail_on_efficiency_regression', False) and \
+                efficiency_regression_exceeds_threshold(comparison, args.max_efficiency_drop):
+            baseline = comparison.baseline_metrics.get('occupancy_ratio')
+            candidate = comparison.candidate_metrics.get('occupancy_ratio')
+            threshold_desc = (
+                f"{args.max_efficiency_drop}pp" if args.max_efficiency_drop is not None
+                else f"the default {_EFFICIENCY_DROP_PP}pp"
+            )
+            print(
+                f"Efficiency gate FAILED: dispatch occupancy fell "
+                f"{(baseline - candidate) * 100:.1f}pp ({baseline * 100:.1f}% -> "
+                f"{candidate * 100:.1f}%), beyond {threshold_desc}. The build may or may "
+                f"not be slower - this gate is about whether the work it does is being "
+                f"done efficiently (see UX-39).",
+                file=sys.stderr,
+            )
+            return EXIT_CODE_EFFICIENCY_REGRESSION
+
+    if not getattr(args, 'fail_on_regression', False):
         return 0
 
     if regression_exceeds_threshold(comparison, args.regression_threshold):
@@ -717,6 +779,31 @@ def create_parser() -> argparse.ArgumentParser:
         '--regression-threshold). A low-confidence comparison fails open (exit 0 with a warning) '
         'rather than block a pipeline on a possibly-noisy signal (see --fail-on-low-confidence). '
         'Default: off (bga compare always exits 0 regardless of verdict).'
+    )
+    compare_parser.add_argument(
+        '--fail-on-efficiency-regression', action='store_true',
+        help=f'CI gate (UX-39): exit {EXIT_CODE_EFFICIENCY_REGRESSION} (distinct from '
+        f'{EXIT_CODE_REGRESSION}, "the build got slower") if the candidate run\'s dispatch '
+        'occupancy fell more than --max-efficiency-drop percentage points below the '
+        'baseline\'s. Occupancy is invariant to how much work the build does, so this '
+        'answers "was new work added efficiently", which wall-clock cannot: adding '
+        'well-parallelized elements barely moves it, adding serialized ones moves it '
+        'sharply. Default: off.'
+    )
+    compare_parser.add_argument(
+        '--max-efficiency-drop', type=float, default=None, metavar='PP',
+        help=f'With --fail-on-efficiency-regression: how many percentage points of dispatch '
+        f'occupancy may be lost before failing. Default: {_EFFICIENCY_DROP_PP}pp, derived from '
+        'three repeat captures of an unchanged project on one real runner (1.0pp of observed '
+        'noise) - re-derive it the same way on your own runner rather than trusting it.'
+    )
+    compare_parser.add_argument(
+        '--min-efficiency', type=float, default=None, metavar='RATIO',
+        help=f'CI gate (UX-39): exit {EXIT_CODE_EFFICIENCY_REGRESSION} if the candidate run\'s '
+        'dispatch occupancy is below this absolute floor (0.0-1.0, e.g. 0.45). Independent of '
+        'any baseline - which makes it usable on a first run, and stops a slow drift that no '
+        'single delta ever trips. No default: what counts as acceptable is a statement about '
+        'your project, not a universal constant.'
     )
     compare_parser.add_argument(
         '--fail-on-low-confidence', action='store_true',

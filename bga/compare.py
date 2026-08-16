@@ -252,3 +252,85 @@ def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Op
         return False
     pct = _SIGNIFICANCE_PCT if threshold_pct is None else threshold_pct
     return delta_total > 0 and abs(delta_total) * 100 >= baseline_total * pct
+
+
+# UX-39: how far `occupancy_ratio` (UX-27) may fall, in percentage
+# points, before `--fail-on-efficiency-regression` fails a pipeline.
+#
+# Derived, not guessed. Three repeat captures of an *unchanged* project
+# on one real runner (examples/06-macro-micro-optimization/optimized,
+# `bst --builders 4 --max-jobs 4`, cache cleared between each):
+#
+#   run 1: wall 25.98s   occupancy 60.0%
+#   run 2: wall 25.94s   occupancy 59.9%
+#   run 3: wall 24.07s   occupancy 59.0%
+#
+# Occupancy spread across three identical builds: 1.0 percentage point.
+# Wall-clock spread over the same three: 7.4% - i.e. more than seven
+# times `_SIGNIFICANCE_PCT`, which is direct evidence that the existing
+# duration gate's own default sits below this runner's noise floor.
+#
+# 5pp gives roughly 5x headroom over the measured noise while staying
+# far below both real signals available: the macro+micro optimization
+# moved occupancy 27.8% -> 63.0% (35.2pp), and running the same project
+# oversubscribed at 8x8 on 4 cores moved it 63.0% -> 48.6% (14.4pp).
+#
+# This is one project on one runner and is documented as a starting
+# point, not a universal constant - a CI owner should re-derive it the
+# same way on their own runner, which is why `--max-efficiency-drop`
+# exists.
+_EFFICIENCY_DROP_PP = 5.0
+
+
+def efficiency_regression_exceeds_threshold(
+    comparison: ComparisonResult, max_drop_pp: Optional[float] = None,
+) -> bool:
+    """UX-39: "did this change make the build *less efficient*", as
+    distinct from "did it make the build slower".
+
+    Gates on `occupancy_ratio` (UX-27) because that is the one published
+    metric invariant to how much work the build does: adding three
+    well-parallelized elements barely moves it, adding three serialized
+    ones moves it sharply. Wall-clock cannot express that - it moves for
+    both - which is why the existing `--fail-on-regression` cannot say
+    "new work is fine, new inefficiency is not".
+
+    Expressed in percentage points rather than as a relative percentage:
+    a 5% relative drop means something very different at 60% occupancy
+    than at 10%, and the measured noise floor this is calibrated against
+    is itself an absolute spread.
+
+    Returns False when either run lacks the metric - never fabricates a
+    verdict from missing data.
+    """
+    baseline = comparison.baseline_metrics.get('occupancy_ratio')
+    candidate = comparison.candidate_metrics.get('occupancy_ratio')
+    if baseline is None or candidate is None:
+        return False
+    drop_pp = (baseline - candidate) * 100
+    threshold = _EFFICIENCY_DROP_PP if max_drop_pp is None else max_drop_pp
+    return drop_pp >= threshold
+
+
+def efficiency_below_floor(
+    comparison: ComparisonResult, min_efficiency: Optional[float] = None,
+) -> bool:
+    """UX-39: an absolute floor on the candidate run's own
+    `occupancy_ratio`, independent of any baseline.
+
+    The delta gate alone ratchets - a slow drift of 2pp per change never
+    trips it, and after twenty changes the build is unrecognisable. The
+    floor is also what makes "we accept 55%, we do not accept 30%"
+    expressible when there is no trustworthy baseline to compare against
+    at all, which in CI is the normal case for a first run on a new
+    branch.
+
+    No default: a floor is a statement about what *this* project's owner
+    considers acceptable, and there is no defensible universal value.
+    """
+    if min_efficiency is None:
+        return False
+    candidate = comparison.candidate_metrics.get('occupancy_ratio')
+    if candidate is None:
+        return False
+    return candidate < min_efficiency

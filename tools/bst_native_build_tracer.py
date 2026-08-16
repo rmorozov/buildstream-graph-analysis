@@ -435,10 +435,54 @@ def summarize(records: List[dict]) -> dict:
     }
 
 
+# UX-38: the keys `summarize` always emits. Used to recognize a
+# previously-saved JSON *report* being handed to `report`, which
+# otherwise parses as zero trace lines and prints a confident, wrong
+# "Processes traced: 0" with exit 0.
+_REPORT_MARKER_KEYS = frozenset({"process_count", "matched_count", "by_binary", "processes"})
+
+
+class EmptyTraceError(TraceError):
+    """A trace log that yielded no parseable events at all.
+
+    Distinct from a genuinely empty trace: an empty *log* (nothing ran,
+    or the hook never loaded) is a legitimate zero-process result, but a
+    file whose every line failed to parse is a wrong-input error, and the
+    two used to render identically.
+    """
+
+
+def load_saved_report(path: str) -> Optional[dict]:
+    """UX-38: return a previously-saved JSON report if `path` is one,
+    else None. `run` writes its report to a JSON file, so that file - not
+    the raw log, which `run` discards unless --raw-log is passed - is the
+    artifact most sessions actually keep, and re-rendering it was
+    impossible.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+        return None
+    if isinstance(data, dict) and _REPORT_MARKER_KEYS.issubset(data.keys()):
+        return data
+    return None
+
+
 def load_and_summarize(raw_log_path: str) -> dict:
     with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as f:
         text = f.read()
     events = parse_trace_log(text)
+    if not events and text.strip():
+        # UX-38: non-empty file, nothing parseable in it. Almost always
+        # the wrong file (this tool's own JSON report is the usual
+        # culprit); never something to report as "0 processes traced".
+        raise EmptyTraceError(
+            f"{raw_log_path}: no trace events could be parsed from this file. "
+            "`report` expects a raw trace log (as written by `run --raw-log`). "
+            "If this is a JSON report written by `run`, it is now rendered "
+            "directly - this error means the file is neither."
+        )
     records = pair_events(events)
     return summarize(records)
 
@@ -493,8 +537,15 @@ def main() -> int:
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
-    report_parser = subparsers.add_parser("report", help="Summarize a previously captured raw trace log")
-    report_parser.add_argument("raw_log", help="Path to a raw trace log (as written by `run --raw-log`)")
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Summarize a previously captured raw trace log, or re-render a JSON report written by `run`",
+    )
+    report_parser.add_argument(
+        "path",
+        help="A raw trace log (as written by `run --raw-log`) or a JSON report (as written by `run`) - "
+             "the kind is detected, not declared (UX-38)",
+    )
     report_parser.add_argument("--json", action="store_true", help="Emit JSON instead of a human-readable summary")
 
     args = parser.parse_args()
@@ -505,6 +556,17 @@ def main() -> int:
             cmd = cmd[1:]
         if not cmd:
             parser.error("no command given (pass it after --, e.g. -- bst build core.bst)")
+        # UX-38: `cmd` is argparse.REMAINDER, so any option written after
+        # the positionals is silently swallowed into the wrapped command
+        # and surfaces as a bare FileNotFoundError from subprocess.run
+        # ("No such file or directory: '--wrapped-log'"). Say what
+        # actually happened.
+        if cmd[0].startswith("-"):
+            parser.error(
+                f"'{cmd[0]}' was taken as the start of the wrapped command, not as an option - "
+                "options must come before the positional arguments, e.g. "
+                "`run --wrapped-log PATH PROJECT_DIR OUTPUT -- bst build target.bst`"
+            )
 
         raw_log_path = args.raw_log or os.path.join(tempfile.mkdtemp(prefix="bst-native-trace-log-"), "trace.log")
         try:
@@ -525,9 +587,17 @@ def main() -> int:
         return returncode
 
     # report
+    # UX-38: `run` writes a JSON report and discards the raw log unless
+    # --raw-log is passed, so the report is the artifact most sessions
+    # keep - and handing it to `report` used to print "Processes traced: 0"
+    # with exit 0. Detect and re-render it instead.
+    saved = load_saved_report(args.path)
+    if saved is not None:
+        print(json.dumps(saved, indent=2) if args.json else _format_text(saved))
+        return 0
     try:
-        report = load_and_summarize(args.raw_log)
-    except FileNotFoundError as e:
+        report = load_and_summarize(args.path)
+    except (FileNotFoundError, TraceError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     print(json.dumps(report, indent=2) if args.json else _format_text(report))

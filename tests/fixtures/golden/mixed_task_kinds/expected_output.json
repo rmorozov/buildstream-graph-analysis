@@ -274,6 +274,7 @@
     "utilisation": {
         "cpu_accounting_available": true,
         "effective_cpus": 2,
+        "effective_cpus_source": "measured",
         "wall_clock_us": 16000,
         "capacity_cpu_us": 32000,
         "buckets": {

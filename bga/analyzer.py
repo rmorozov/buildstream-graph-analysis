@@ -235,13 +235,19 @@ class BuildEfficiencyAnalyzer:
                 )
             
             wall_clock_us = self.run_context.wall_clock_us or 0
-            max_jobs = self.run_context.max_jobs
-            # builders would come from run_context if available
-            
+
+            # host_cpu_count/cpu_budget (UX-12/UX-15), not max_jobs -
+            # UX-17: max_jobs here would be RunContext.max_jobs, which
+            # per run-context/v9's own schema means `builders` (see
+            # _check_process_oversubscription's own docstring), and
+            # UtilizationAnalyzer no longer computes its own competing
+            # config-oversubscription evidence from it anyway - see
+            # UtilizationAnalyzer.__init__'s own docstring.
             self.utilization_analyzer = UtilizationAnalyzer(
                 cpu_accounting=cpu_accounting,
                 wall_clock_us=wall_clock_us,
-                max_jobs=max_jobs,
+                host_cpu_count=self.run_context.host_cpu_count,
+                cpu_budget=self.run_context.cpu_budget,
             )
     
     def _compute_floors(self, graph_analysis: Optional[dict] = None) -> dict:
@@ -1034,7 +1040,15 @@ class BuildEfficiencyAnalyzer:
                     'active_tasks': list(active_tasks),
                 })
         
-        # Run utilization analysis
+        # Run utilization analysis. UX-17: evidence source 1 (Part 30.3's
+        # config-based oversubscription check) delegates to
+        # _check_process_oversubscription's (UX-12) own already-computed
+        # verdict - self.violations is already populated by the time this
+        # runs (_check_process_oversubscription is called early in
+        # analyze(), well before _compute_utilization).
+        oversubscription_violation = next(
+            (v for v in self.violations if v.get('type') == 'resource_oversubscription'), None,
+        )
         util_result = self.utilization_analyzer.analyze(
             task_intervals=task_intervals,
             occupancy_segments=occupancy_segments,
@@ -1042,6 +1056,7 @@ class BuildEfficiencyAnalyzer:
             rebuild_tasks=compute_rebuild_tasks(
                 self.graph, self.normalized_tasks, self.historical_runs,
             ),
+            oversubscription_violation=oversubscription_violation,
         )
         
         # Store result for later access

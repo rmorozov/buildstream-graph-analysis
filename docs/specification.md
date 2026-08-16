@@ -2,6 +2,8 @@
 
 ## Specification and Implementation Plan — Version 9
 
+> **For "what does `bga` do today," start at [`docs/architecture.md`](architecture.md) instead.** This document remains authoritative for the original design intent and full-length invariant/data-contract text, but it predates every real extension built since (the second intra-element analysis plane, `bga compare`, the capacity/CPU-budget work, and more) - `architecture.md` names each one and points back here for whatever hasn't changed.
+
 ---
 
 # Part 0 — Executive Summary

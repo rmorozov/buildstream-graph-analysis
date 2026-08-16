@@ -62,8 +62,9 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
+from tools.bst_run_wrapped import run_wrapped
 from tools.native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
@@ -118,11 +119,22 @@ def install_bwrap_shim(shim_dir: str) -> str:
     return real_bwrap
 
 
-def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str) -> int:
+def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
-    never change whether the wrapped build itself succeeds or fails."""
+    never change whether the wrapped build itself succeeds or fails.
+
+    `wrapped_log_path` (UX-24): when given, also captures a real
+    Plane-1-compatible wrapped-format log of this *same* `bst`
+    invocation (`tools/bst_run_wrapped.run_wrapped`, reused directly -
+    it gained an `env` param specifically for this), so one single real
+    build produces both a Plane 1 log (`tools/bst_log_to_chrome_trace.py`-
+    ready) and a Plane 2 native trace, correlatable via
+    `tools/native_trace_to_chrome_trace.py`'s combined mode. `None` (the
+    default) reproduces this function's own prior plain-`subprocess.run`
+    behavior exactly, unchanged.
+    """
     open(raw_log_path, "w").close()  # truncate/create up front - the hook only ever appends
 
     with tempfile.TemporaryDirectory(prefix="bst-native-trace-") as tmp:
@@ -142,12 +154,16 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str) -> int
         env["BST_TRACE_PRELOAD_SO"] = "/tmp/.bst-native-trace/hook.so"
         env["BST_TRACE_LOG_DST"] = "/tmp/.bst-native-trace/trace.log"
 
-        proc = subprocess.run(cmd, cwd=project_dir, env=env)
+        if wrapped_log_path is not None:
+            with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
+                returncode = run_wrapped(project_dir, cmd, out_f, env=env)
+        else:
+            returncode = subprocess.run(cmd, cwd=project_dir, env=env).returncode
 
         captured_log = os.path.join(bind_dir, "trace.log")
         if os.path.exists(captured_log):
             shutil.copyfile(captured_log, raw_log_path)
-        return proc.returncode
+        return returncode
 
 
 def parse_trace_log(text: str) -> List[dict]:
@@ -468,6 +484,12 @@ def main() -> int:
     run_parser.add_argument("project_dir", help="cwd for the wrapped command (the BuildStream project directory)")
     run_parser.add_argument("output", help="Path to write the JSON report to")
     run_parser.add_argument("--raw-log", help="Also keep the raw trace log at this path (default: discarded after parsing)")
+    run_parser.add_argument(
+        "--wrapped-log",
+        help="UX-24: also capture a real Plane-1-compatible wrapped-format log of this same bst "
+             "invocation (tools/bst_log_to_chrome_trace.py-ready) - lets one real build feed both "
+             "planes for tools/native_trace_to_chrome_trace.py's combined mode.",
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -486,7 +508,7 @@ def main() -> int:
 
         raw_log_path = args.raw_log or os.path.join(tempfile.mkdtemp(prefix="bst-native-trace-log-"), "trace.log")
         try:
-            returncode = run_traced_build(args.project_dir, cmd, raw_log_path)
+            returncode = run_traced_build(args.project_dir, cmd, raw_log_path, wrapped_log_path=args.wrapped_log)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1

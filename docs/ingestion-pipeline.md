@@ -315,6 +315,17 @@ several wrong assumptions turned out to hide behind:
     extraction observes - a materially larger scope change (P4-13's
     `--strict` project.refs check has the same fundamental boundary, for
     the same reason). See `docs/tasks/P1-37-run-identity-not-captured-or-enforced.md`.
+14. **The two documented run-context producer paths (`tools/bst_run_context.py`
+    directly, and `tools/bst_extract_run.py`'s coordinated flow) had
+    silently diverged**: `native_max_jobs`/`host_cpu_count` (`UX-12`) and
+    `cpu_budget` (`UX-15`) were added only to `bst_extract_run.py`'s
+    inline run-context assembly, never to `bst_run_context.py`'s -
+    despite this doc presenting both as equally valid ways to produce
+    `run-context.json`. Fixed (`UX-18`) by extracting the shared piece
+    into `tools/_run_context_common.py` (`host_cpu_count()` +
+    `add_cpu_capacity_fields()`), which both tools now call - a future
+    addition to one automatically reaches the other. `bst_run_context.py`
+    gained matching `--native-max-jobs`/`--cpu-budget` CLI flags.
 
 ## Why a second, separate trace/v9 adapter
 

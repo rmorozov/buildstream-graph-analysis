@@ -38,6 +38,13 @@ log instead:
       (cgroup accounting, /proc sampling) exists in this ingestion
       pipeline yet. See
       docs/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
+  native_max_jobs / host_cpu_count / cpu_budget - UX-12/UX-15 fields,
+      shared with tools/bst_extract_run.py via
+      tools/_run_context_common.py (UX-18, so this standalone producer
+      path doesn't silently diverge from that one again): host_cpu_count
+      is always auto-detected; native_max_jobs/cpu_budget are purely
+      operator-supplied via --native-max-jobs/--cpu-budget, since
+      neither is visible in a BuildStream log itself.
 """
 import argparse
 import json
@@ -48,6 +55,7 @@ from tools.bst_log_to_chrome_trace import (
     _resolve_start_time_us,
 )
 from tools.chrome_trace_to_bga_trace import invocation_wall_clock
+from tools._run_context_common import add_cpu_capacity_fields
 
 
 def build_run_context(
@@ -56,6 +64,8 @@ def build_run_context(
     start_time: str = None,
     trace_epsilon_us: int = 50000,
     host: str = None,
+    native_max_jobs: int = None,
+    cpu_budget: int = None,
 ) -> dict:
     """Run the real log converter against `log_path` and derive a
     run-context/v9 dict from its output - the same converter
@@ -93,6 +103,11 @@ def build_run_context(
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     if host:
         run_context["host"] = host
+    # native_max_jobs/host_cpu_count (UX-12), cpu_budget (UX-15) - see
+    # tools/_run_context_common.py; UX-18 brought this standalone
+    # producer path up to parity with tools/bst_extract_run.py's own,
+    # which had these fields already.
+    add_cpu_capacity_fields(run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget)
 
     return run_context
 
@@ -118,6 +133,23 @@ def main() -> int:
         help="Quantization epsilon in microseconds (Part 3.2 default: 50000)",
     )
     parser.add_argument("--host", default=None, help="Optional host identifier to record")
+    parser.add_argument(
+        "--native-max-jobs", type=int, default=None,
+        help="The real --max-jobs value the build was invoked with (per-element internal "
+        "build-system parallelism, e.g. `make -jN` - a different, unrelated concept from "
+        "--builders/this tool's own resource_capacities.PROCESS). Not visible in a "
+        "BuildStream log itself, so has to be told to us; omit if unknown (UX-12).",
+    )
+    parser.add_argument(
+        "--cpu-budget", type=int, default=None,
+        help="The number of CPU cores this build is *intended* to use - the operator's "
+        "declared envelope, as opposed to the environment's real detected core count "
+        "(host_cpu_count). Use this when the detected count doesn't reflect your real "
+        "constraint: a cgroup CFS CPU quota (docker --cpus/Kubernetes cpu limits throttle "
+        "CPU time, not core affinity, so os.sched_getaffinity can't see it), or simply "
+        "wanting to reserve headroom on a shared machine. When set, bga's oversubscription "
+        "check treats this as the governing ceiling instead of host_cpu_count (UX-15).",
+    )
     args = parser.parse_args()
 
     try:
@@ -127,6 +159,8 @@ def main() -> int:
             start_time=args.start_time,
             trace_epsilon_us=args.trace_epsilon_us,
             host=args.host,
+            native_max_jobs=args.native_max_jobs,
+            cpu_budget=args.cpu_budget,
         )
     except FileNotFoundError:
         print(f"Error: Could not find input file '{args.input_log}'", file=sys.stderr)

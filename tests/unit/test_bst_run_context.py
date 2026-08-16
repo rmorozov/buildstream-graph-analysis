@@ -96,6 +96,49 @@ def test_host_and_trace_epsilon_passed_through(tmp_path):
     assert run_context["host"] == "ci-runner-1"
 
 
+def test_native_max_jobs_and_cpu_budget_are_captured(tmp_path):
+    """UX-18: this standalone producer path had silently diverged from
+    tools/bst_extract_run.py, which gained native_max_jobs (UX-12) and
+    cpu_budget (UX-15) but this tool never did. Both are purely
+    operator-supplied - neither is visible in a BuildStream log."""
+    log = tmp_path / "raw.log"
+    log.write_text(RAW_LOG)
+
+    run_context = build_run_context(
+        str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00",
+        native_max_jobs=4, cpu_budget=6,
+    )
+
+    assert run_context["native_max_jobs"] == 4
+    assert run_context["cpu_budget"] == 6
+
+
+def test_host_cpu_count_is_always_captured(tmp_path):
+    """UX-18: host_cpu_count (UX-12) is always auto-detected, unlike
+    native_max_jobs/cpu_budget which require the caller to supply them -
+    same behavior tools/bst_extract_run.py already had."""
+    log = tmp_path / "raw.log"
+    log.write_text(RAW_LOG)
+
+    run_context = build_run_context(str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00")
+
+    assert isinstance(run_context["host_cpu_count"], int)
+    assert run_context["host_cpu_count"] > 0
+
+
+def test_native_max_jobs_and_cpu_budget_omitted_when_not_given(tmp_path):
+    """Confirms these are genuinely optional (omitted, not defaulted to
+    a guessed value) when the caller doesn't supply them - the common
+    case for most existing invocations of this tool."""
+    log = tmp_path / "raw.log"
+    log.write_text(RAW_LOG)
+
+    run_context = build_run_context(str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00")
+
+    assert "native_max_jobs" not in run_context
+    assert "cpu_budget" not in run_context
+
+
 def test_output_loads_cleanly_into_bgas_own_loader(tmp_path):
     """End-to-end: the produced JSON must load via bga's real
     load_run_context, not just be valid JSON."""
@@ -112,3 +155,26 @@ def test_output_loads_cleanly_into_bgas_own_loader(tmp_path):
     assert loaded.max_jobs == 3
     assert loaded.resource_capacities["PROCESS"] == 3
     assert not loaded.cpu_accounting
+
+
+def test_native_max_jobs_and_cpu_budget_round_trip_through_bgas_loader(tmp_path):
+    """UX-18: the new fields must not just be present in the JSON, but
+    actually reach bga's own RunContext model unchanged - the same
+    contract tools/bst_extract_run.py's own UX-12/UX-15 output already
+    satisfies."""
+    from bga.ingest.loader import load_run_context
+
+    log = tmp_path / "raw.log"
+    log.write_text(RAW_LOG)
+    run_context = build_run_context(
+        str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00",
+        native_max_jobs=4, cpu_budget=6,
+    )
+
+    out_path = tmp_path / "run-context.json"
+    out_path.write_text(json.dumps(run_context))
+
+    loaded = load_run_context(out_path)
+    assert loaded.native_max_jobs == 4
+    assert loaded.cpu_budget == 6
+    assert loaded.host_cpu_count == run_context["host_cpu_count"]

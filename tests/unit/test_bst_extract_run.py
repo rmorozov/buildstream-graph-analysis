@@ -20,10 +20,10 @@ import pytest
 from tools.bst_extract_run import (
     _compute_run_identity,
     _git_consistency_note,
-    _host_cpu_count,
     _parse_targets,
     extract_run,
 )
+from tools._run_context_common import host_cpu_count as _host_cpu_count
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 

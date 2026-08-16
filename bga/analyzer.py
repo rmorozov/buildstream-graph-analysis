@@ -947,6 +947,9 @@ class BuildEfficiencyAnalyzer:
             result.signals = {
                 'critical_path': graph_analysis['critical_path'],
                 'critical_path_length': graph_analysis['critical_path_length'],
+                'critical_path_detail': self._build_critical_path_detail(
+                    graph_analysis['critical_path']
+                ),
                 'downstream_count': graph_analysis['downstream_count'],
                 'slack': graph_analysis['slack'],
                 'unweighted_depth': graph_analysis['unweighted_depth'],
@@ -1011,6 +1014,49 @@ class BuildEfficiencyAnalyzer:
                 'these as pipeline-level operations, not per-element tasks.'
             ),
         }
+
+    def _build_critical_path_detail(self, critical_path: List[str]) -> List[dict]:
+        """UX-33: per-element detail for every critical-path element, so
+        the text report can name the whole chain instead of printing a
+        bare length.
+
+        The path itself (`signals['critical_path']`) was always
+        computed and always correct; `bga/report/text.py` simply refused
+        to print it above 5 elements - i.e. exactly when a reader cannot
+        reconstruct it from memory. Naming what was already computed is
+        the same fix `UX-25` applied to coverage-gate violations, and
+        this carries the same two facts that fix found useful: the real
+        measured duration (so a reader can see *which link* dominates)
+        and whether the element is structural (`STRUCTURAL_ELEMENT_KINDS`,
+        P4-12 - a `stack`/`import` on the path is real graph structure
+        but has no build commands to speed up).
+
+        `share_of_path` is each element's fraction of the summed
+        critical-path durations, not of total build time - the path's
+        own internal weighting is the question this answers ("where on
+        the chain is the time?"). Elements with no measured task
+        (structural ones typically) report `duration_us: 0` rather than
+        being omitted, so the printed chain is the real chain.
+        """
+        if not critical_path:
+            return []
+        duration_by_uid: Dict[str, int] = defaultdict(int)
+        for task in self.normalized_tasks:
+            duration_by_uid[task.task_key.element_uid] += task.dur_us
+        kind_by_uid = self._element_kind_lookup()
+        path_total_us = sum(duration_by_uid.get(uid, 0) for uid in critical_path)
+        return [
+            {
+                'element_uid': uid,
+                'element_kind': kind_by_uid.get(uid, 'unknown'),
+                'is_structural_kind': kind_by_uid.get(uid) in STRUCTURAL_ELEMENT_KINDS,
+                'duration_us': duration_by_uid.get(uid, 0),
+                'share_of_path': (
+                    duration_by_uid.get(uid, 0) / path_total_us if path_total_us else None
+                ),
+            }
+            for uid in critical_path
+        ]
 
     def _element_kind_lookup(self) -> Dict[str, str]:
         """uid -> element_kind, defaulting to the explicit "unknown"

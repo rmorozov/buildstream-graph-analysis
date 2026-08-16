@@ -1,6 +1,6 @@
 # UX-33: the text report hides the critical path when it is longer than 5 elements, and never names choke points at all
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** —
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** —
 
 ## Motivation
 
@@ -62,6 +62,41 @@ Both of these are the same failure as `UX-25` (coverage violations reporting a b
 2. The same run names `lib-a.bst`..`lib-e.bst` as its choke points.
 3. Short-path runs render at least as well as they do today. Full suite green.
 
+## Fix Implemented
+
+Both halves are rendering-only; nothing in the analysis changed.
+
+**Critical path.** `bga/analyzer.py` gained `_build_critical_path_detail`, which turns the already-computed `signals['critical_path']` into a per-element list carrying each element's real measured duration, its share of the summed path durations, and its `element_kind`/`is_structural_kind` (reusing the existing `_element_kind_lookup` and `STRUCTURAL_ELEMENT_KINDS`, exactly as `UX-25` does). It is published as an additive `signals['critical_path_detail']` - the existing `critical_path`/`critical_path_length` keys are untouched, so no consumer breaks - and added to `GRAPH_SIGNAL_KEYS` so it groups with the other graph signals rather than leaking into the diagnostics section.
+
+`bga/report/text.py` now always prints the chain. At or below `_CRITICAL_PATH_INLINE_MAX` (5, the old cutoff, now a *rendering* choice rather than a suppression threshold) it keeps the familiar one-line `a → b → c` form; above it, one element per line with duration and share of path, which is what answers "which link do I attack first". Structural elements stay on the printed chain - they are real graph structure - but are tagged `[structural: stack, no build commands to speed up]`. A result with no `critical_path_detail` (an older run directory) falls back to the arrow form at any length rather than to a bare count.
+
+**Choke points.** `Bottlenecks Identified: N` now names them, capped at `_CHOKE_POINTS_SHOWN_MAX` (8) with an explicit `(+K more, see --format json)` overflow line rather than a silent truncation.
+
+Tests: 7 new (`tests/unit/test_critical_path_and_choke_point_naming.py`), hermetic against `format_text` directly - long path printed rather than withheld, per-element duration and share shown, structural elements tagged, short path keeping the arrow form, the no-detail fallback, choke points named, and the overflow line. The `mixed_task_kinds` golden snapshot gained the additive `critical_path_detail` key and was regenerated deliberately; that was the only diff.
+
 ## Verification Log
 
-Filed 2026-08-16. Text output and JSON are from one real `bga analyze` / `bga analyze -f json` pair against a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/06-macro-micro-optimization` (BuildStream 2.7.0, 4-core host). The `len(critical_path) <= 5` condition was read directly from `bga/report/text.py`.
+Filed 2026-08-16. Implemented the same day. Text output and JSON are from one real `bga analyze` / `bga analyze -f json` pair against a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/06-macro-micro-optimization` (BuildStream 2.7.0, 4-core host). The `len(critical_path) <= 5` condition was read directly from `bga/report/text.py`.
+
+Real end-to-end re-verification against the exact case in this doc's Motivation - a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/06-macro-micro-optimization`:
+
+```
+Critical Path Length: 10 elements
+  Path (chain order, with each element's real measured duration):
+    toolchain.bst                               0.00s (  0.0% of path) [structural: import, no build commands to speed up]
+    core.bst                                   14.00s ( 38.6% of path)
+    lib-a.bst                                   3.00s (  8.3% of path)
+    lib-b.bst                                   3.00s (  8.3% of path)
+    lib-c.bst                                   3.00s (  8.3% of path)
+    lib-d.bst                                   3.00s (  8.3% of path)
+    lib-e.bst                                   3.05s (  8.4% of path)
+    lib-f.bst                                   3.00s (  8.3% of path)
+    app.bst                                     4.20s ( 11.6% of path)
+    all.bst                                     0.00s (  0.0% of path) [structural: stack, no build commands to speed up]
+
+Structural Analysis:
+  Elements: 11, Edges: 34, Max Depth: 9
+  Bottlenecks Identified: 5 - lib-a.bst, lib-b.bst, lib-c.bst, lib-d.bst, lib-e.bst
+```
+
+Both Acceptance Test items 1 and 2 confirmed with real data: the ten-element chain is printed in full, `core.bst`'s 38.6% share names the heaviest link outright (it is the `notparallel: True` element - see `UX-31`), and the five chained libraries are named rather than counted. Item 3 confirmed against the same session's real `examples/05-cmake-cpp-toolchain` capture, whose 5-element path still renders as `Path: toolchain.bst → core.bst → lib-a.bst → app.bst → all.bst`. Full suite green (658 passed, up from 651), `make lint` clean.

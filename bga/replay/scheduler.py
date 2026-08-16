@@ -14,10 +14,74 @@ from collections import defaultdict, deque
 import heapq
 
 from ..floors.capacity import compute_default_capacities
-from ..ingest.models import RunContext
+from ..ingest.models import Graph, RunContext, Trace
 from ..normalize.timestamps import NormalizedTask
 
 logger = logging.getLogger(__name__)
+
+# UX-14 tier 2: a task's real calibration identity - (element_uid,
+# task_kind, phase), i.e. TaskKey minus attempt, the same identity
+# bga/floors/cold.py already uses for its own historical-run matching.
+CalibrationKey = Tuple[str, str, str]
+
+
+def build_contention_calibration(
+    calibration_runs: List[Tuple[RunContext, Graph, Trace]],
+    resource: str,
+) -> Dict[CalibrationKey, List[Tuple[int, int]]]:
+    """
+    UX-14 tier 2: real `(capacity, dur_us)` calibration points per task,
+    built from 2+ real captured runs of the same project at different
+    real `resource` capacities - the same `historical_runs` shape
+    `bga/floors/cold.py`'s cold-floor analysis already consumes, reused
+    directly rather than reinvented (see docs/scenarios/UX-14's own
+    "Tier 2 Design Proposal", PR #58).
+
+    A calibration run whose own `RunContext.resource_capacities` doesn't
+    carry a value for `resource` can't supply a real capacity for any of
+    its spans and is skipped entirely for this resource - never silently
+    treated as capacity 0.
+    """
+    calibration: Dict[CalibrationKey, List[Tuple[int, int]]] = defaultdict(list)
+    for hist_context, _hist_graph, hist_trace in calibration_runs:
+        cap = (hist_context.resource_capacities or {}).get(resource)
+        if cap is None:
+            continue
+        for span in hist_trace.spans:
+            key = (span.task_key.element_uid, span.task_key.task_kind.value, span.task_key.phase)
+            calibration[key].append((cap, span.dur_us))
+    return dict(calibration)
+
+
+def _interpolate_calibrated_duration(points: List[Tuple[int, int]], cap: int) -> Tuple[int, bool]:
+    """Linear interpolation between the two real calibrated
+    `(capacity, duration)` points bracketing `cap` - never extrapolates
+    past the real calibrated min/max (UX-14 tier 2's own explicit "never
+    extrapolate" requirement): a `cap` outside the calibrated range keeps
+    the nearest real endpoint's duration and is flagged `extrapolated`,
+    not silently projected forward with an invented slope. Multiple real
+    points at the same capacity (e.g. a retried task within one
+    calibration run - this key deliberately excludes `attempt`) are
+    collapsed by averaging before interpolating, sorted ascending by
+    capacity.
+    """
+    by_cap: Dict[int, List[int]] = defaultdict(list)
+    for cap_point, dur in points:
+        by_cap[cap_point].append(dur)
+    sorted_points = sorted((c, sum(ds) // len(ds)) for c, ds in by_cap.items())
+
+    if cap <= sorted_points[0][0]:
+        return sorted_points[0][1], cap < sorted_points[0][0]
+    if cap >= sorted_points[-1][0]:
+        return sorted_points[-1][1], cap > sorted_points[-1][0]
+
+    for (c0, d0), (c1, d1) in zip(sorted_points, sorted_points[1:]):
+        if c0 <= cap <= c1:
+            if c0 == c1:
+                return d0, False
+            frac = (cap - c0) / (c1 - c0)
+            return round(d0 + frac * (d1 - d0)), False
+    return sorted_points[-1][1], False  # unreachable given the bounds checks above
 
 
 @dataclass
@@ -410,40 +474,72 @@ class ReplayScheduler:
         max_capacity: Optional[int] = None,
         step: int = 1,
         other_capacities: Optional[Dict[str, int]] = None,
+        contention_calibration: Optional[Dict[CalibrationKey, List[Tuple[int, int]]]] = None,
     ) -> CapacitySweepResult:
         """
         Sweep capacity for a single resource (Part 19).
-        
+
         Args:
             resource: Resource to sweep (e.g., 'PROCESS', 'DOWNLOAD')
             min_capacity: Minimum capacity to test
             max_capacity: Maximum capacity (defaults to number of tasks)
             step: Increment between tests
             other_capacities: Fixed capacities for other resources
-        
+            contention_calibration: UX-14 tier 2 - real per-task
+                `(capacity, dur_us)` points from `build_contention_calibration`,
+                keyed by `(element_uid, task_kind, phase)`. When given, any
+                task with real points at 2+ *distinct* capacities gets its
+                duration linearly interpolated (never extrapolated) at each
+                swept `cap` instead of using its fixed observed duration -
+                every other task is untouched, still using tier 1's fixed
+                duration. `None` (the default) reproduces tier 1's own
+                existing behavior exactly, unchanged.
+
         Returns:
             CapacitySweepResult with sweep data and knee points
-        
+
         The result shows how makespan changes with capacity, allowing
         identification of the "knee" where additional capacity yields
         diminishing returns.
         """
         if max_capacity is None:
             max_capacity = len(self.tasks)
-        
+
         base_capacities = other_capacities or self._default_capacities.copy()
-        
+
         sweeps = []
         prev_makespan = float('inf')
         knee_point = None
         monotonicity_violations = []
-        
+
         for cap in range(min_capacity, max_capacity + 1, step):
             capacities = base_capacities.copy()
             capacities[resource] = cap
-            
-            result = self.replay(capacities)
-            
+
+            duration_overrides = None
+            contention_model = None
+            if contention_calibration:
+                duration_overrides = {}
+                calibrated_count = 0
+                extrapolated_count = 0
+                for task in self.tasks:
+                    cal_key = (task.task_key.element_uid, task.task_key.task_kind.value, task.task_key.phase)
+                    points = contention_calibration.get(cal_key)
+                    if not points or len({c for c, _ in points}) < 2:
+                        continue  # no real cross-capacity data - keep tier 1's fixed duration
+                    duration_us, extrapolated = _interpolate_calibrated_duration(points, cap)
+                    duration_overrides[str(task.task_key)] = duration_us
+                    calibrated_count += 1
+                    if extrapolated:
+                        extrapolated_count += 1
+                contention_model = {
+                    'calibrated_task_count': calibrated_count,
+                    'total_task_count': len(self.tasks),
+                    'extrapolated_task_count': extrapolated_count,
+                }
+
+            result = self.replay(capacities, duration_overrides=duration_overrides)
+
             # prev_makespan starts at +inf (no prior sample yet) - guard on
             # finiteness, not just positivity, so the first sample doesn't
             # compute (inf - x) / inf = NaN (previously always shown for
@@ -459,6 +555,8 @@ class ReplayScheduler:
                     if has_prior_sample and prev_makespan > 0 else 0
                 ),
             }
+            if contention_model is not None:
+                sweep_entry['contention_model'] = contention_model
             sweeps.append(sweep_entry)
 
             # Detect knee point (where improvement drops below threshold)

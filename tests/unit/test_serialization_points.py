@@ -1,7 +1,16 @@
-"""Tests for UX-22: "large serialization point" detection -
-`bga/structural/serialization_points.py`. Real, hand-built fixtures (no
-run-dir/JSON needed), matching `tests/unit/test_batch_opportunities.py`'s
-own pattern.
+"""Tests for `bga/structural/serialization_points.py`.
+
+Filed as `UX-22` (flag several near-full-core elements dispatching
+concurrently) and re-pointed by `UX-31`, which found that premise
+unreachable: BuildStream 2.7.0 has no way to give an element *more*
+native parallelism than the project default (`max-jobs` is a protected,
+project-wide variable), and the `public: bst: max-jobs:` key `UX-22`
+captured is never read by BuildStream at all. The expressible - and
+common - condition is the opposite one: an element pinned *below* the
+rest of the build by `variables: notparallel: True`.
+
+Real, hand-built fixtures (no run-dir/JSON needed), matching
+`tests/unit/test_batch_opportunities.py`'s own pattern.
 """
 from bga.ingest.models import Element, Graph, DependencyEdge, NormalizedTask, Resource, TaskKey, TaskKind
 from bga.structural.serialization_points import detect_large_serialization_points
@@ -34,18 +43,16 @@ def _with_filler(*extra_elements_and_tasks):
     return elements, tasks
 
 
-def test_two_independent_near_full_core_long_elements_are_flagged():
-    """Two independent (no ancestor/descendant relationship) elements,
-    each with max_jobs near the 4-core governing ceiling and a long
-    duration relative to the rest of the graph - the real LLVM-style
-    scenario this task is about."""
-    llvm1 = _task("llvm1.bst", 10000)
-    llvm2 = _task("llvm2.bst", 10000)
+def test_a_pinned_expensive_depended_on_element_is_flagged():
+    """The real case, reproduced from a real traced build: one element
+    carrying `notparallel: True` runs `make -j1` while every sibling runs
+    `make -j4`, it is the longest task in the build, and other elements
+    wait on it."""
     elements, tasks = _with_filler(
-        (Element(uid="llvm1.bst", max_jobs=4), llvm1),
-        (Element(uid="llvm2.bst", max_jobs=4), llvm2),
+        (Element(uid="core.bst", max_jobs=1, notparallel=True), _task("core.bst", 14_000_000)),
+        (Element(uid="lib-a.bst", max_jobs=4), _task("lib-a.bst", 3_000_000)),
     )
-    graph = _graph(elements, [])
+    graph = _graph(elements, [("core.bst", "lib-a.bst")])
 
     result = detect_large_serialization_points(
         elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
@@ -53,9 +60,53 @@ def test_two_independent_near_full_core_long_elements_are_flagged():
 
     assert len(result.risks) == 1
     risk = result.risks[0]
-    assert set(risk.elements) == {"llvm1.bst", "llvm2.bst"}
-    assert "llvm1.bst" in risk.hint and "llvm2.bst" in risk.hint
-    assert "builders=4" in risk.hint
+    assert risk.elements == ["core.bst"]
+    assert risk.notparallel is True
+    assert risk.typical_max_jobs == 4
+    assert risk.downstream_count == 1
+    assert "core.bst" in risk.hint
+    assert "notparallel" in risk.hint
+
+
+def test_a_uniformly_single_job_project_is_not_flagged():
+    """Everything runs at one job - that is the project's own choice,
+    not an outlier, and flagging it would be noise on every element."""
+    elements, tasks = _with_filler(
+        (Element(uid="a.bst", max_jobs=1), _task("a.bst", 14_000_000)),
+        (Element(uid="b.bst", max_jobs=1), _task("b.bst", 3_000_000)),
+    )
+    graph = _graph(elements, [("a.bst", "b.bst")])
+    result = detect_large_serialization_points(
+        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+    )
+    assert result.risks == []
+
+
+def test_a_pinned_but_cheap_element_is_not_flagged():
+    """Pinned and fast is not worth a report line."""
+    elements, tasks = _with_filler(
+        (Element(uid="tiny.bst", max_jobs=1, notparallel=True), _task("tiny.bst", 120)),
+        (Element(uid="lib-a.bst", max_jobs=4), _task("lib-a.bst", 3_000_000)),
+    )
+    graph = _graph(elements, [("tiny.bst", "lib-a.bst")])
+    result = detect_large_serialization_points(
+        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+    )
+    assert result.risks == []
+
+
+def test_a_pinned_leaf_with_nothing_waiting_on_it_is_not_flagged():
+    """Nothing downstream, so its serialization costs the build only its
+    own slot - not a synchronization point."""
+    elements, tasks = _with_filler(
+        (Element(uid="leaf.bst", max_jobs=1, notparallel=True), _task("leaf.bst", 14_000_000)),
+        (Element(uid="lib-a.bst", max_jobs=4), _task("lib-a.bst", 3_000_000)),
+    )
+    graph = _graph(elements, [])
+    result = detect_large_serialization_points(
+        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+    )
+    assert result.risks == []
 
 
 def test_only_one_qualifying_element_is_not_flagged():

@@ -1,4 +1,4 @@
-"""UX-22 Acceptance Test #1/#2: real end-to-end large-serialization-point
+"""UX-22/UX-31 Acceptance Test: real end-to-end parallelism-pinning
 detection driven through the real `bga/analyzer.py` call site (not just
 direct `detect_large_serialization_points` calls - see
 `tests/unit/test_serialization_points.py` for those), confirming
@@ -30,14 +30,25 @@ def _write_run_dir(tmp_path, name, builders, host_cpu_count, element_max_jobs):
          "resources": ["PROCESS"], "primary_resource": "PROCESS"}
         for i in range(4)
     ]
-    for uid, max_jobs in element_max_jobs.items():
-        elements.append({"uid": uid, "requested_target": True, "max_jobs": max_jobs})
+    for uid, spec in element_max_jobs.items():
+        max_jobs, notparallel = spec if isinstance(spec, tuple) else (spec, None)
+        elements.append({
+            "uid": uid, "requested_target": True,
+            "max_jobs": max_jobs, "notparallel": notparallel,
+        })
         spans.append({
             "task_key": f"{uid}|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
             "resources": ["PROCESS"], "primary_resource": "PROCESS",
         })
 
-    graph = {"elements": elements, "dependencies": []}
+    graph = {
+        "elements": elements,
+        # UX-31: a pinned element only matters if something waits behind
+        # it, so every candidate gets one real downstream dependent.
+        "dependencies": [
+            {"predecessor": uid, "successor": "filler_0.bst"} for uid in element_max_jobs
+        ],
+    }
     trace = {"spans": spans, "phases": []}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
     (run_dir / "graph.json").write_text(json.dumps(graph))
@@ -52,23 +63,26 @@ def _analyze(tmp_path, name, builders, host_cpu_count, element_max_jobs):
     return analyzer.analyze()
 
 
-def test_real_llvm_style_scenario_fires_through_the_real_call_site(tmp_path):
-    """Two independent, real per-element max-jobs=4 overrides (near the
-    real host_cpu_count=4 ceiling), both with a real long measured
-    duration, under a real builders=4 (so >=2 can genuinely dispatch
-    concurrently) - the exact scenario UX-22's own Motivation describes."""
+def test_a_pinned_element_fires_through_the_real_call_site(tmp_path):
+    """UX-31's real scenario, end to end: one element pinned to a single
+    job by `notparallel` while the rest of the build runs at 4, with a
+    real long measured duration and real downstream dependents.
+    Confirms `Element.max_jobs`/`Element.notparallel` are threaded from
+    graph.json through the analyzer into both JSON and text output."""
     result = _analyze(
         tmp_path, "run", builders=4, host_cpu_count=4,
-        element_max_jobs={"llvm1.bst": 4, "llvm2.bst": 4},
+        element_max_jobs={"core.bst": (1, True), "lib-a.bst": (4, None)},
     )
 
     risks = result.structural["serialization_point_risks"]
     assert len(risks) == 1
-    assert set(risks[0]["elements"]) == {"llvm1.bst", "llvm2.bst"}
+    assert risks[0]["elements"] == ["core.bst"]
+    assert risks[0]["notparallel"] is True
+    assert risks[0]["typical_max_jobs"] == 4
 
     output = format_text(result)
-    assert "Large Serialization Point Risk" in output
-    assert "llvm1.bst" in output and "llvm2.bst" in output
+    assert "Parallelism-Pinned Elements" in output
+    assert "core.bst" in output
 
 
 def test_builders_one_real_run_produces_no_risk(tmp_path):

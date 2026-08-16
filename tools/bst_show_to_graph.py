@@ -71,7 +71,7 @@ RECORD_SEP = "\x1e"  # ASCII Record Separator - between elements
 FIELD_SEP = "\x1f"  # ASCII Unit Separator - between fields of one element
 
 _FORMAT = FIELD_SEP.join(
-    ["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}", "%{public}"]
+    ["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}", "%{public}", "%{vars}"]
 ) + RECORD_SEP
 
 
@@ -92,6 +92,86 @@ def _parse_dep_list(raw: str) -> List[str]:
     return deps
 
 
+def _parse_yaml_mapping(raw: str) -> dict:
+    """Parse one of `bst show`'s YAML-mapping format symbols
+    (`%{vars}`, `%{public}`). Returns {} for anything unparseable rather
+    than raising - a future bst version changing the shape must degrade
+    to "unknown", not crash the extraction."""
+    try:
+        import yaml
+    except ImportError as e:
+        raise RuntimeError(
+            "per-element max-jobs capture requires PyYAML "
+            "(pip install -e '.[bst]', which now includes pyyaml)"
+        ) from e
+    try:
+        data = yaml.safe_load(raw) or {}
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _parse_notparallel(vars_raw: str) -> Optional[bool]:
+    """UX-31: BuildStream's real per-element parallelism control, read
+    from `%{vars}`.
+
+    `variables: notparallel: True` on an element is what BuildStream and
+    `buildstream-plugins` actually document for this ("Set this if the
+    sources cannot handle parallelization", commented out in
+    cmake.yaml/make.yaml/meson.yaml/autotools.yaml), and it is the only
+    per-element parallelism control BuildStream 2.7.0 has - `max-jobs`
+    itself is a protected, project-wide base variable that an element may
+    not redefine.
+
+    None (not False) when the element doesn't set it: "didn't say" and
+    "said no" are different, and only the former should be silent.
+    """
+    value = _parse_yaml_mapping(vars_raw).get("notparallel")
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    # BuildStream renders variables as strings; anything non-empty and
+    # not an explicit false-ish word counts as set, matching
+    # `Element.get_variable("notparallel")`'s own truthiness use.
+    return str(value).strip().lower() not in ("", "false", "0", "no")
+
+
+def _parse_effective_max_jobs(vars_raw: str, public_raw: str) -> Optional[int]:
+    """UX-31: the real, resolved `max-jobs` this element's own native
+    build system was given, read from `%{vars}` - which is what
+    `%{max-jobs}` expands to in the plugins' own
+    `environment: JOBS: -j%{max-jobs}`, i.e. the number that really
+    reaches `make`.
+
+    This corrects `UX-22`'s capture route. That task concluded `%{vars}`
+    "always reports the project-wide default, never a per-element
+    override" and settled on `public: bst: max-jobs:` instead. Re-checked
+    against a real BuildStream 2.7.0 build of
+    `examples/06-macro-micro-optimization`, that is not so: an element
+    carrying `notparallel: True` reports `max-jobs: 1` in its own
+    `%{vars}` while every sibling reports `max-jobs: 4`, and the traced
+    sandbox really did run `make -j1` for it and `make -j4` for them.
+    (`UX-22`'s conclusion holds for what it actually tested - writing
+    `variables: max-jobs:` directly on an element, which BuildStream
+    rejects as a protected-variable redefinition. The `notparallel` path
+    is a different one and it does reach `%{vars}`.)
+
+    `public: bst: max-jobs:` is kept only as a fallback for run
+    directories captured before this change: BuildStream itself never
+    reads that key, so it cannot describe what a build really did, but
+    dropping it outright would silently change what an existing
+    `graph.json` means.
+    """
+    value = _parse_yaml_mapping(vars_raw).get("max-jobs")
+    if value is not None:
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            pass
+    return _parse_max_jobs(public_raw)
+
+
 def _parse_max_jobs(public_raw: str) -> Optional[int]:
     """Parse a %{public} value for a real per-element `max-jobs` override
     (UX-22 - a real BuildStream possibility: an element can be given
@@ -99,17 +179,17 @@ def _parse_max_jobs(public_raw: str) -> Optional[int]:
     e.g. a large single-synchronization-point element like an LLVM build
     given the full host core count).
 
-    Confirmed empirically against a real BuildStream 2.7.0 install which
-    mechanism this actually is - two real, plausible-looking candidates
-    turned out to be wrong: `variables: max-jobs:` in an element's own
-    body is rejected outright ("invalid redefinition of protected
-    variable"), and `%{vars}`'s own `max-jobs` entry always reports the
-    *project-wide default*, never a per-element override. The real
-    mechanism is `public: bst: max-jobs:` (BuildStream's own per-element
-    build-metadata block, `%{public}` in `bst show`'s format symbols) -
-    absent entirely (not defaulted to any value) when an element doesn't
-    override it, which correctly round-trips here as `None` ("use the
-    global native_max_jobs", not "explicitly set to 0/some default").
+    **Superseded by `_parse_effective_max_jobs` (UX-31) - kept only as
+    its fallback for run directories captured before that change.**
+    BuildStream never reads a `max-jobs` key out of `public:`, so this
+    value cannot describe what a build actually did; `%{vars}` can, and
+    now does. `variables: max-jobs:` on an element really is rejected as
+    a protected-variable redefinition (UX-22 confirmed that, and it still
+    holds), but UX-22's other conclusion - that `%{vars}` only ever shows
+    the project-wide default - was re-checked against a real
+    BuildStream 2.7.0 build and found not to hold for the `notparallel`
+    path. See `_parse_effective_max_jobs`'s docstring for the real
+    evidence.
     """
     try:
         import yaml
@@ -166,14 +246,16 @@ def build_graph(stdout: str, targets: Sequence[str]) -> dict:
         if not record.strip():
             continue
         fields = record.split(FIELD_SEP)
-        if len(fields) != 6:
+        if len(fields) != 7:
             # Defensive: a malformed/unexpected record (e.g. a future
             # bst version changing --format's output shape) should be
             # visible, not silently dropped or crash the whole run.
             print(f"warning: skipping malformed bst show record: {fields!r}", file=sys.stderr)
             continue
 
-        name, key, kind, build_deps_raw, runtime_deps_raw, public_raw = (f.strip() for f in fields)
+        name, key, kind, build_deps_raw, runtime_deps_raw, public_raw, vars_raw = (
+            f.strip() for f in fields
+        )
         if not name or name in seen_uids:
             continue
         seen_uids.add(name)
@@ -182,12 +264,17 @@ def build_graph(stdout: str, targets: Sequence[str]) -> dict:
             "uid": name,
             "cache_key": key or None,
             "requested_target": name in requested,
-            # Real per-element `--max-jobs`-equivalent override (UX-22) -
-            # None (not defaulted to anything) when the element doesn't
-            # override it. See _parse_max_jobs's own docstring for the
-            # real mechanism (`public: bst: max-jobs:`) and the two
-            # plausible-looking wrong ones it isn't.
-            "max_jobs": _parse_max_jobs(public_raw),
+            # Real, *resolved* per-element `max-jobs` (UX-31, correcting
+            # UX-22's own capture route) - what this element's native
+            # build system was actually given, read from `%{vars}`. See
+            # _parse_effective_max_jobs.
+            "max_jobs": _parse_effective_max_jobs(vars_raw, public_raw),
+            # UX-31: BuildStream's real per-element parallelism control.
+            # True/False/None (absent) - carried separately from the
+            # resolved number because it is the *cause*, and "pinned to
+            # one job on purpose" is a different fact from "the project
+            # default happens to be 1".
+            "notparallel": _parse_notparallel(vars_raw),
             # BuildStream's own plugin kind (%{kind}, Since: 2.6 - confirmed
             # against a real BuildStream 2.7.0 install: e.g. "import",
             # "manual", "junction", "autotools"). Not part of graph/v9's

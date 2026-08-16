@@ -1592,6 +1592,10 @@ class BuildEfficiencyAnalyzer:
                     'element_duration_us': risk.element_duration_us,
                     'builders': risk.builders,
                     'governing_cores': risk.governing_cores,
+                    # UX-31
+                    'notparallel': risk.notparallel,
+                    'typical_max_jobs': risk.typical_max_jobs,
+                    'downstream_count': risk.downstream_count,
                     'hint': risk.hint,
                 }
                 for risk in serialization_analysis.risks

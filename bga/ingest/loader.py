@@ -271,6 +271,7 @@ def load_graph(path: Path) -> Graph:
             requested_target=elem_data.get('requested_target', False),
             element_kind=elem_data.get('element_kind'),
             max_jobs=elem_data.get('max_jobs'),
+            notparallel=elem_data.get('notparallel'),
         ))
     
     # Support both explicit dependencies list and inline dependencies

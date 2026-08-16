@@ -97,7 +97,7 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-19 | Wait-gap re-saturation + retry-gap contention decomposition | 🟢 Done |
 | UX-20 | `sensitivity.top_opportunities` in text report + batch/map-reduce simulation | 🟢 Done |
 | UX-21 | Memory/swap oversubscription guard (independent of CPU) | 🟢 Done |
-| UX-22 | Per-element `max-jobs` capture + serialization-point risk detection | 🟢 Done |
+| UX-22 | Per-element `max-jobs` capture + serialization-point risk detection (**capture route and premise both corrected by `UX-31`** - `%{vars}`, not `%{public}`; pinned-below, not raised-above) | 🟢 Done |
 | UX-23 | Element-tag Plane 2 traces + detect redundant cross-element operations (real evidence: `examples/05`'s CMake ABI probe reran 6x independently; real run found 37 redundant-operation findings) | 🟢 Done |
 | UX-24 | Chrome Trace export for Plane 2 + combined two-plane `perfetto.dev` view, real dual-plane single-invocation capture | 🟢 Done |
 | UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🟢 Done |

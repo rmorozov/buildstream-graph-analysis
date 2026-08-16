@@ -1,6 +1,6 @@
 # UX-32: Plane 2 reports a global process count and one inflated global concurrency number, not per-element achieved parallelism
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-11, UX-23 (both done - the data this needs is already captured and already element-tagged)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11, UX-23 (both done - the data this needs is already captured and already element-tagged)
 
 ## Motivation
 
@@ -59,3 +59,24 @@ Add a per-element parallelism section to `tools/bst_native_build_tracer.py`'s re
 ## Verification Log
 
 Filed 2026-08-16 from a real session (`docs/optimization-walkthrough-06.md`). Both traces are real `tools/bst_native_build_tracer.py run` captures of real `bst --builders 4 --max-jobs 4 build all.bst` invocations (BuildStream 2.7.0, real `bwrap` sandbox, real `gcc 13`/`cmake 3.28`, 4-core host); the per-element table was computed from those runs' own emitted `processes[]` arrays, which is the point - no new capture was needed to produce it.
+
+Real end-to-end re-verification against the two real traces from this doc's Motivation (`examples/06-macro-micro-optimization`, baseline and `optimized/`, 822 traced processes each):
+
+```
+### BASELINE
+Per-element native parallelism (real compiler/assembler/linker processes only):
+  element                  peak  req  achieved     span work
+  core.bst                    2    1      200%   14.22s   32  <- pinned to -j1 while the rest of this build ran higher
+  codegen.bst                 4    4      100%    3.28s   24
+  app.bst                     3    4       75%    2.84s   22
+  lib-d.bst                   3    4       75%    2.66s   22
+  ... (every other lib-*.bst likewise)
+
+### OPTIMIZED
+  lib-a.bst                   3    4       75%    7.17s   22
+  core.bst                    4    4      100%    7.07s   32
+  codegen.bst                 4    4      100%    4.79s   24
+  ...
+```
+
+Acceptance Test items 1-4 all confirmed with real data: `core.bst` is named on the baseline and unflagged on the optimized variant, no sibling is flagged in either, the global concurrency line says what it counts, and no unclassified binaries appeared in this toolchain (the line stays absent rather than empty). The `achieved` column reading 200% for the pinned element is exactly why the finding is not that ratio - see the design correction above. Full suite green (712 passed, up from 700), `make lint` clean.

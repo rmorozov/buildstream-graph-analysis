@@ -16,15 +16,17 @@ from pathlib import Path
 
 import pytest
 
-from tools.bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_dep_list, build_graph, extract_graph
+from tools.bst_show_to_graph import (
+    FIELD_SEP, RECORD_SEP, _parse_dep_list, _parse_max_jobs, build_graph, extract_graph,
+)
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 
 BST_AVAILABLE = shutil.which("bst") is not None
 
 
-def _record(name, key, build_deps, runtime_deps, kind="import"):
-    return FIELD_SEP.join([name, key, kind, build_deps, runtime_deps])
+def _record(name, key, build_deps, runtime_deps, kind="import", public=""):
+    return FIELD_SEP.join([name, key, kind, build_deps, runtime_deps, public])
 
 
 # --- Pure parser tests ------------------------------------------------
@@ -50,7 +52,8 @@ def test_build_graph_marks_requested_target():
     stdout = _record("app.bst", "abc123", "[]", "[]", kind="manual") + RECORD_SEP
     graph = build_graph(stdout, targets=["app.bst"])
     assert graph["elements"] == [{
-        "uid": "app.bst", "cache_key": "abc123", "requested_target": True, "element_kind": "manual",
+        "uid": "app.bst", "cache_key": "abc123", "requested_target": True,
+        "max_jobs": None, "element_kind": "manual",
     }]
 
 
@@ -126,20 +129,47 @@ def test_build_graph_skips_malformed_record():
 
 
 def test_build_graph_skips_record_with_wrong_field_count():
-    """A record with 4 fields (the pre-element_kind shape) is exactly the
-    "malformed" case now - a future/different bst version changing
-    --format's output shape must be visible, not silently misparsed."""
-    four_field_record = FIELD_SEP.join(["old.bst", "k1", "[]", "[]"]) + RECORD_SEP
-    stdout = four_field_record + _record("app.bst", "k1", "[]", "[]") + RECORD_SEP
+    """A record with 5 fields (the pre-UX-22, pre-%{public} shape) is
+    exactly the "malformed" case now - a future/different bst version
+    changing --format's output shape must be visible, not silently
+    misparsed."""
+    five_field_record = FIELD_SEP.join(["old.bst", "k1", "import", "[]", "[]"]) + RECORD_SEP
+    stdout = five_field_record + _record("app.bst", "k1", "[]", "[]") + RECORD_SEP
     graph = build_graph(stdout, targets=[])
     assert [e["uid"] for e in graph["elements"]] == ["app.bst"]
+
+
+# --- Per-element max-jobs capture (UX-22) ------------------------------
+
+def test_parse_max_jobs_absent_is_none():
+    """The element doesn't override max-jobs - the real, common case.
+    `bst.split-rules`-only content, no `max-jobs` key at all."""
+    assert _parse_max_jobs("bst:\n  split-rules:\n    devel:\n    - /usr/include\n") is None
+
+
+def test_parse_max_jobs_present_is_captured():
+    assert _parse_max_jobs("bst:\n  max-jobs: 16\n  split-rules: {}\n") == 16
+
+
+def test_parse_max_jobs_empty_public_is_none():
+    assert _parse_max_jobs("") is None
+    assert _parse_max_jobs("{}") is None
+
+
+def test_build_graph_captures_max_jobs():
+    stdout = (
+        _record("normal.bst", "k1", "[]", "[]", public="bst:\n  split-rules: {}\n") + RECORD_SEP
+        + _record("override.bst", "k2", "[]", "[]", public="bst:\n  max-jobs: 16\n") + RECORD_SEP
+    )
+    graph = build_graph(stdout, targets=[])
+    max_jobs = {e["uid"]: e["max_jobs"] for e in graph["elements"]}
+    assert max_jobs == {"normal.bst": None, "override.bst": 16}
 
 
 # --- Real end-to-end test against a live `bst` binary ------------------
 
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_bst_show_against_fixture_project(tmp_path):
-    output_json = tmp_path / "graph.json"
     graph = extract_graph(str(FIXTURE_PROJECT), targets=["app.bst"])
 
     uids = {e["uid"] for e in graph["elements"]}
@@ -167,7 +197,24 @@ def test_real_bst_show_against_fixture_project(tmp_path):
         "subproj-junction.bst:libfoo.bst": "import", "app.bst": "import",
     }
 
-    output_json.write_text(json.dumps(graph))
+    # None of app.bst's own dependency set overrides max-jobs (see
+    # test_real_bst_show_captures_per_element_max_jobs_override below
+    # for the real override case, elements/manual.bst).
+    assert all(e["max_jobs"] is None for e in graph["elements"])
+
+
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+def test_real_bst_show_captures_per_element_max_jobs_override(tmp_path):
+    """UX-22: elements/manual.bst declares a real `public: bst:
+    max-jobs: 16` override; base.bst (its own dependency) does not -
+    confirms the real capture mechanism (%{public}, NOT %{vars} or a
+    `variables:` block - see _parse_max_jobs's own docstring for why
+    those two plausible-looking alternatives are wrong) against a real
+    bst show invocation, not just the hand-built stdout blobs above."""
+    graph = extract_graph(str(FIXTURE_PROJECT), targets=["manual.bst"])
+    max_jobs = {e["uid"]: e["max_jobs"] for e in graph["elements"]}
+    assert max_jobs["manual.bst"] == 16
+    assert max_jobs["base.bst"] is None
 
 
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")

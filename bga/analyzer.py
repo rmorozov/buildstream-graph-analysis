@@ -1389,6 +1389,38 @@ class BuildEfficiencyAnalyzer:
                 'serialized_pairs': batch_result.serialized_pairs,
             }
 
+        # Large serialization point detection (UX-22, non-spec additive
+        # signal): elements combining a real per-element `max_jobs`
+        # override near the full governing core count with a genuinely
+        # long measured duration, where the graph shape and `builders`
+        # value actually allow more than one such element to dispatch
+        # concurrently - a real oversubscription risk
+        # _check_process_oversubscription's own single-aggregate-demand
+        # check can't see. See bga/structural/serialization_points.py's
+        # own module docstring.
+        serialization_point_risks = []
+        if self.run_context:
+            from bga.structural.serialization_points import detect_large_serialization_points
+            builders = self.run_context.resource_capacities.get('PROCESS')
+            cpu_budget = self.run_context.cpu_budget
+            host_cpu_count = self.run_context.host_cpu_count
+            governing_cores = cpu_budget if cpu_budget is not None else host_cpu_count
+            serialization_analysis = detect_large_serialization_points(
+                elements=self.graph.elements, tasks=tasks_dict, graph=self.graph,
+                builders=builders, governing_cores=governing_cores,
+            )
+            serialization_point_risks = [
+                {
+                    'elements': risk.elements,
+                    'element_max_jobs': risk.element_max_jobs,
+                    'element_duration_us': risk.element_duration_us,
+                    'builders': risk.builders,
+                    'governing_cores': risk.governing_cores,
+                    'hint': risk.hint,
+                }
+                for risk in serialization_analysis.risks
+            ]
+
         # Convert to serializable dict format
         return {
             'metrics': {
@@ -1427,6 +1459,7 @@ class BuildEfficiencyAnalyzer:
                 'best_case_speedup': result.sensitivity.best_case_speedup,
             },
             'batch_opportunities': batch_opportunities,
+            'serialization_point_risks': serialization_point_risks,
             'deferrability': {
                 'deferrable_leaves': result.deferrability.deferrable_leaves,
                 'non_deferrable_leaves': result.deferrability.non_deferrable_leaves,

@@ -561,6 +561,18 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                     "  Serialized (same dependency chain, not independently batchable): "
                     + "; ".join(f"{a} -> {b}" for a, b in serialized_pairs[:5])
                 )
+            # UX-22: real per-element `max-jobs` overrides that combine
+            # a long measured duration with a near-full-core setting AND
+            # genuine concurrent-dispatch potential under this run's real
+            # `builders` value - see
+            # bga/structural/serialization_points.py's own module
+            # docstring for why this is a distinct risk from
+            # _check_process_oversubscription's single-aggregate check.
+            serialization_point_risks = sm.get('serialization_point_risks') or []
+            if serialization_point_risks:
+                lines.append("  Large Serialization Point Risk (per-element max-jobs, real concurrent-dispatch risk):")
+                for risk in serialization_point_risks:
+                    lines.append(f"    - {risk['hint']}")
             lines.append("")
 
     if section in (None, 'graph') and by_kind:

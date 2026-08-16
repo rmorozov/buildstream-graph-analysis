@@ -65,13 +65,13 @@ import argparse
 import json
 import subprocess
 import sys
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 RECORD_SEP = "\x1e"  # ASCII Record Separator - between elements
 FIELD_SEP = "\x1f"  # ASCII Unit Separator - between fields of one element
 
 _FORMAT = FIELD_SEP.join(
-    ["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}"]
+    ["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}", "%{public}"]
 ) + RECORD_SEP
 
 
@@ -90,6 +90,50 @@ def _parse_dep_list(raw: str) -> List[str]:
         if line.startswith("- "):
             deps.append(line[2:].strip())
     return deps
+
+
+def _parse_max_jobs(public_raw: str) -> Optional[int]:
+    """Parse a %{public} value for a real per-element `max-jobs` override
+    (UX-22 - a real BuildStream possibility: an element can be given
+    more/less native build-system parallelism than the project default,
+    e.g. a large single-synchronization-point element like an LLVM build
+    given the full host core count).
+
+    Confirmed empirically against a real BuildStream 2.7.0 install which
+    mechanism this actually is - two real, plausible-looking candidates
+    turned out to be wrong: `variables: max-jobs:` in an element's own
+    body is rejected outright ("invalid redefinition of protected
+    variable"), and `%{vars}`'s own `max-jobs` entry always reports the
+    *project-wide default*, never a per-element override. The real
+    mechanism is `public: bst: max-jobs:` (BuildStream's own per-element
+    build-metadata block, `%{public}` in `bst show`'s format symbols) -
+    absent entirely (not defaulted to any value) when an element doesn't
+    override it, which correctly round-trips here as `None` ("use the
+    global native_max_jobs", not "explicitly set to 0/some default").
+    """
+    try:
+        import yaml
+    except ImportError as e:
+        raise RuntimeError(
+            "per-element max-jobs capture requires PyYAML "
+            "(pip install -e '.[bst]', which now includes pyyaml)"
+        ) from e
+    try:
+        data = yaml.safe_load(public_raw) or {}
+    except yaml.YAMLError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    bst_block = data.get("bst")
+    if not isinstance(bst_block, dict):
+        return None
+    value = bst_block.get("max-jobs")
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def run_bst_show(
@@ -122,14 +166,14 @@ def build_graph(stdout: str, targets: Sequence[str]) -> dict:
         if not record.strip():
             continue
         fields = record.split(FIELD_SEP)
-        if len(fields) != 5:
+        if len(fields) != 6:
             # Defensive: a malformed/unexpected record (e.g. a future
             # bst version changing --format's output shape) should be
             # visible, not silently dropped or crash the whole run.
             print(f"warning: skipping malformed bst show record: {fields!r}", file=sys.stderr)
             continue
 
-        name, key, kind, build_deps_raw, runtime_deps_raw = (f.strip() for f in fields)
+        name, key, kind, build_deps_raw, runtime_deps_raw, public_raw = (f.strip() for f in fields)
         if not name or name in seen_uids:
             continue
         seen_uids.add(name)
@@ -138,6 +182,12 @@ def build_graph(stdout: str, targets: Sequence[str]) -> dict:
             "uid": name,
             "cache_key": key or None,
             "requested_target": name in requested,
+            # Real per-element `--max-jobs`-equivalent override (UX-22) -
+            # None (not defaulted to anything) when the element doesn't
+            # override it. See _parse_max_jobs's own docstring for the
+            # real mechanism (`public: bst: max-jobs:`) and the two
+            # plausible-looking wrong ones it isn't.
+            "max_jobs": _parse_max_jobs(public_raw),
             # BuildStream's own plugin kind (%{kind}, Since: 2.6 - confirmed
             # against a real BuildStream 2.7.0 install: e.g. "import",
             # "manual", "junction", "autotools"). Not part of graph/v9's

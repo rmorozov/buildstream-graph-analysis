@@ -145,7 +145,12 @@ def test_fully_packed_high_confidence_run_scores_high_with_no_caveat():
     """The checked-in golden fixture has no wait gaps at all (LB ==
     horizon, efficiency_score == 1.0) and real, high confidence (0.88+,
     not hand-tuned to trigger the low-confidence caveat) - the report
-    must show the 'very efficient' band with no low-confidence caveat."""
+    must show the top efficiency band with no low-confidence caveat.
+
+    UX-27 rewrote that band's text: a perfectly-scheduled but badly
+    *shaped* graph also scores 1.00, so it no longer reads as an
+    unqualified "very efficient" and now names what the score does and
+    does not cover."""
     run_dir = REPO_ROOT / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
     analyzer = BuildEfficiencyAnalyzer(run_dir, run_diagnostics=True)
     analyzer.load()
@@ -155,7 +160,10 @@ def test_fully_packed_high_confidence_run_scores_high_with_no_caveat():
     assert result.confidence["primary"] >= 0.8
     output = format_text(result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Efficiency Score: 1.00 (very efficient" in key_findings_section
+    assert (
+        "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph"
+        in key_findings_section
+    )
     assert "low-confidence" not in key_findings_section
 
 

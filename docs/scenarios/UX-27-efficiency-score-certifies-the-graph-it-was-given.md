@@ -1,6 +1,6 @@
 # UX-27: `efficiency_score` and `certified_headroom` certify the graph the run was given, so a badly-shaped build scores perfectly
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — (UX-02 defines the score this changes; UX-39 is the CI-facing consequence)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (UX-02 defines the score this changes; UX-39 is the CI-facing consequence)
 
 ## Motivation
 
@@ -64,3 +64,23 @@ Whatever is chosen, `efficiency_score`'s own banding text must stop saying *"ver
 ## Verification Log
 
 Filed 2026-08-16 from a real hands-on optimization walkthrough (`docs/optimization-walkthrough-06.md`), on a real BuildStream 2.7.0 + `bwrap` + real `gcc 13`/`cmake 3.28` sandbox, 4-core host. Every number above is pasted from that session. `examples/06-macro-micro-optimization` was built as part of this filing specifically so the case is reproducible rather than argued.
+
+Real end-to-end re-verification against the exact pair in this doc's Motivation (`examples/06-macro-micro-optimization`, baseline vs `optimized/`, real captures):
+
+```
+$ bga compare /tmp/run-06-baseline /tmp/run-06-optimized
+Verdict: IMPROVED  (total duration -12.07s, -30.5%, 39.57s -> 27.50s)
+
+Certified Floors:
+  Total Duration           39.57s ->     27.50s   (-12.07s)
+  T∞ (observed)            36.25s ->     20.35s   (-15.90s)
+  LB                       36.25s ->     20.35s   (-15.90s)
+  Certified Headroom        0.00s ->      4.05s   (+4.05s)
+  T_C (replay)             36.25s ->     24.40s   (-11.85s)
+  Efficiency Score           1.00 ->       0.83   (-0.17)
+  Dispatch Occupancy        27.8% ->      63.0%   (+35.2pp)
+```
+
+Acceptance Test items 1-4 all confirmed. Item 1 is the row that matters: across a real 30.5% improvement, every pre-existing efficiency metric stayed flat or moved backwards, and the new one moved **+35.2 percentage points** in the same direction as the wall clock. Item 2 is confirmed by the banding text above. Item 3 is confirmed by the hermetic fan-out fixture scoring 1.0 - a well-shaped, well-packed run still scores well, so this is not simply "everything is bad". Full suite green (738 passed, up from 731), `make lint` clean.
+
+Note what remains open, deliberately: `efficiency_score` and `certified_headroom` still move backwards on this pair. They are correct by their own spec-mandated definitions (Parts 14-18) and this task did not redefine them - it added the missing layer above them and made their own text stop overclaiming. Whether the CI gate should key on the new signal is `UX-39`.

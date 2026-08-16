@@ -1,6 +1,6 @@
 # UX-11: a tool to observe native-build-system behavior *inside* a single element
 
-**Priority:** Medium | **Status:** 🟢 Interception mechanism validated end-to-end (real prototype, real trace data) - full implementation not started, ready to greenlight (see Deep Experiment Findings) | **Depends on:** `UX-09` (the joint-optimization finding this directly follows from)
+**Priority:** Medium | **Status:** 🟢 Done - real `tools/bst_native_build_tracer.py`, real `LD_PRELOAD` + `bwrap` shim, real CLI verified against `examples/05-cmake-cpp-toolchain` (see Implementation) | **Depends on:** `UX-09` (the joint-optimization finding this directly follows from)
 
 ## Motivation
 
@@ -85,6 +85,59 @@ Built and ran a real, complete prototype against this environment's own live Bui
 
 **Net**: the one open item from the prior spike round - "a fully successful, end-to-end... demonstration is still outstanding" - is now closed, with real data, not just plausibility. The single-layer top-level `$PATH`-shadow mechanism (this doc's own original option 5, not the external review's unnecessary nested-proxy elaboration) is confirmed to work against BuildStream 2.7's real `buildbox-casd`/`buildbox-run` architecture, survives its real user-namespace sandbox hardening, and produces genuinely useful per-process lifecycle data for a real C/C++ toolchain build. The two remaining named risks from the original design brainstorm - static-binary coverage gap (confirmed real, Risk 2 above; needs the review's own honest-heuristic-warning treatment) and libc/PID-namespace-grouping variance (not exercised by this glibc/single-nesting-level experiment, still open but lower-priority) - are the only items left before this is a fully de-risked design, and neither blocks a first real implementation targeting the dynamically-linked/glibc common case.
 
+## Implementation
+
+Built as a real, standalone tool - `tools/bst_native_build_tracer.py` + `tools/native_trace/{hook.c,bwrap_shim.py}` - directly implementing the mechanism validated in the Deep Experiment above, not a rewrite of it:
+
+- **`tools/native_trace/hook.c`**: the checked-in `LD_PRELOAD` constructor/destructor hook. Fixes the exact hardcoded-path bug the Deep Experiment's ad-hoc prototype hit (the trace log path is read from a `BST_TRACE_LOG` env var, never hardcoded). Records real `CLOCK_MONOTONIC` START/END timestamps per process.
+- **`tools/native_trace/bwrap_shim.py`**: `split_bwrap_args`/`build_shim_argv` - the real argv-splitting/injection logic from the Deep Experiment, now a tested, importable Python function (not an inline bash script). Writing real unit tests against a real captured BuildStream bwrap argv (`tests/unit/test_bwrap_shim.py`) immediately caught a real transcription bug: `--proc`/`--dev`/`--tmpfs` were miscategorized as zero-argument flags (they each take one, the mount destination) - the exact same *class* of arity mistake the Deep Experiment's own `--dir` bug was, reintroduced independently while porting the validated bash logic to Python, and caught by the tests before it ever ran against a real build.
+- **`tools/bst_native_build_tracer.py`**: orchestrates a real traced `bst` invocation - compiles the hook fresh per run (no caching, for the same reason as above), installs the shim, runs the given command, parses the resulting raw trace log, and reports `by_binary` counts, `max_concurrency`, and wall span. Always carries `STATIC_BINARY_DISCLAIMER` in its output (Risk 2, confirmed real) - adopted directly from the second external review's Section 3 idea (explicit, honest disclosure of the coverage gap rather than a false claim of completeness).
+
+**A second real bug found only by actually running the finished tool against `examples/05-cmake-cpp-toolchain` end-to-end** (not by unit tests alone - matching this whole engagement's "run it for real" discipline): the environment variable carrying the trace-log path never reached the sandboxed process. BuildStream's own generated `bwrap` argv already `--unsetenv`s essentially everything and reconstructs the sandboxed environment from a small curated `--setenv` list - a var set only in the *shim's own* process environment (as the first version of this tool did) never propagates in, since bwrap builds the child's environment entirely from its own argv, not by inheriting the shim's. Fixed by injecting `--setenv BST_TRACE_LOG <path>` as a third argument alongside the `LD_PRELOAD` injection, landing after BuildStream's own root-bind for the same reason the original injection does.
+
+**A third, more interesting real finding**, also only visible once the finished tool ran for real: of 98 real traced processes from one `core.bst` build, 19 (all `sh -c '<command>'` wrappers) never produced a matching END line. Investigated rather than dismissed as noise: each one forks a real child to run the actual command (confirmed via ppid chains in the raw log) and then exits via `_exit()` once that child completes - `_exit()` bypasses libc's normal exit path, so `__attribute__((destructor))` never fires for the wrapper itself, even though it exited quickly and completely normally. An earlier version of `compute_max_concurrency` treated these "open" (no observed exit) records as running all the way to the trace's last timestamp, which inflated a real `-j4` build's reported concurrency to a physically implausible 24. Fixed by excluding open records from the concurrency computation entirely (real, honest lower bound) while still reporting their count and cause (`open_records_note`) rather than silently dropping them from the report.
+
+Tests: 28 new (`tests/unit/test_bwrap_shim.py` - 9 pure-logic tests against a real captured argv fixture; `tests/unit/test_native_build_tracer.py` - 18 pure-logic parse/pair/concurrency/summarize tests plus 1 real, environment-gated end-to-end test that actually runs `run_traced_build` against `examples/05-cmake-cpp-toolchain`, skipped when `bst`/`bwrap`/`cc` aren't all present, matching every other real-sandbox-dependent test in this suite).
+
 ## Verification Log
 
-Design brainstorm filed 2026-08-15/16 following `UX-09`'s real, evidenced finding that `bga` currently has zero visibility inside a single element's native build system. Risk-reduction spike run for real 2026-08-16 against this environment's own real BuildStream 2.7.0 + bubblewrap 0.9.0 + gcc 13.3.0 install (not simulated) - see Spike Findings above for the real commands/evidence. A second external review's "Russian Doll" nested-proxy proposal was checked against the real environment and found to target a nonexistent binary (see above) - not adopted. A follow-up deep experiment, run for real the same day against `examples/05-cmake-cpp-toolchain`'s real `cmake`+`make`+`gcc` build, achieved a full end-to-end demonstration of the original (simpler) single-layer interception mechanism, producing 119 real per-process trace lines including real evidence of `-j4` compile concurrency - see Deep Experiment Findings above. All scratch scripts/binaries/logs used (`/tmp/fake_bwrap_dir`, `/tmp/bst_trace_host`, `/tmp/bwrap_shim.log`, `/tmp/trace`) were created and deleted entirely within `/tmp`; the one real build artifact produced (`core.bst`) was deleted from the local BuildStream cache afterward via `bst artifact delete`; `git status --short` confirmed clean throughout. No `bga`/`tools` code was implemented - this remains a design-and-risk-assessment task, per its own Out of Scope; a real implementation is the natural next step but was not started this round.
+Design brainstorm filed 2026-08-15/16 following `UX-09`'s real, evidenced finding that `bga` currently has zero visibility inside a single element's native build system. Risk-reduction spike run for real 2026-08-16 against this environment's own real BuildStream 2.7.0 + bubblewrap 0.9.0 + gcc 13.3.0 install (not simulated) - see Spike Findings above for the real commands/evidence. A second external review's "Russian Doll" nested-proxy proposal was checked against the real environment and found to target a nonexistent binary (see above) - not adopted. A follow-up deep experiment, run for real the same day against `examples/05-cmake-cpp-toolchain`'s real `cmake`+`make`+`gcc` build, achieved a full end-to-end demonstration of the original (simpler) single-layer interception mechanism, producing 119 real per-process trace lines including real evidence of `-j4` compile concurrency - see Deep Experiment Findings above. All scratch scripts/binaries/logs used for the Deep Experiment (`/tmp/fake_bwrap_dir`, `/tmp/bst_trace_host`, `/tmp/bwrap_shim.log`, `/tmp/trace`) were created and deleted entirely within `/tmp`; each real build artifact produced along the way was deleted from the local BuildStream cache afterward via `bst artifact delete`; `git status --short` confirmed clean throughout.
+
+**Full implementation done for real, 2026-08-16** - `tools/bst_native_build_tracer.py` + `tools/native_trace/{hook.c,bwrap_shim.py}` (see Implementation above). 28 new tests (`test_bwrap_shim.py`, `test_native_build_tracer.py`), full suite green: 596 passed, same 7 pre-existing environment-only failures as `main` (`test_bst_extract_run.py`/`test_bst_extract_run_strict.py`/`test_bst_checkout_cost.py`'s real-sandbox tests). `make lint` clean.
+
+Real CLI end-to-end run against `examples/05-cmake-cpp-toolchain`'s `core.bst` (`bst artifact delete core.bst` first, to force a genuine non-cached rebuild):
+
+```
+$ python3 -m tools.bst_native_build_tracer run --raw-log ux11_raw.log \
+    examples/05-cmake-cpp-toolchain ux11_report.json -- bst --no-colors build core.bst
+...
+Processes traced: 98 (79 matched, 19 no observed exit)
+Max observed concurrency: 13 (matched processes only - see open_records_note)
+  (Processes with no observed exit are excluded from max_concurrency, not assumed to run
+  indefinitely. Real cause, confirmed against this tool's own prototype run: a `sh -c
+  '<command>'` wrapper that forks a child for the real command and then exits via `_exit()`
+  once it completes - `_exit()` bypasses the normal exit path, so this hook's destructor
+  never fires for the wrapper itself, even though it exited quickly and normally.)
+Wall span: 2.676s
+By binary:
+  cmake                29
+  sh                   18
+  c++                  11
+  make                 11
+  cc1plus              7
+  as                   7
+  ld                   6
+  collect2             4
+  uname                2
+  ar                   1
+  ranlib               1
+  env                  1
+
+NOTE: LD_PRELOAD only affects dynamically-linked executables. [...]
+
+Wrapped command exit code: 0
+```
+
+Re-ran a second time independently to confirm the `-j4` concurrency signature reproduces (not a one-off artifact of the first run): the same 4 `cc1plus` compiles (`entry.cpp`/`generated_0.cpp`/`generated_1.cpp`/`generated_2.cpp`) started within ~8ms of each other both times.
+
+Two real bugs were found and fixed only by running the *finished* tool end-to-end, beyond what the 28 unit tests alone caught - see Implementation above for both (the `BST_TRACE_LOG` env-propagation bug, and the `_exit()`-skips-destructor discovery that was inflating `max_concurrency` to a physically implausible 24). Both are now covered by regression tests.

@@ -25,7 +25,6 @@ from the exact same log removes that whole class of mismatch.
 import argparse
 import hashlib
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -33,6 +32,7 @@ from pathlib import Path
 from tools.bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
 from tools.chrome_trace_to_bga_trace import chrome_events_to_bga_spans, invocation_wall_clock
 from tools.bst_show_to_graph import extract_graph
+from tools._run_context_common import add_cpu_capacity_fields
 
 
 def _parse_targets(targets_str: str):
@@ -86,23 +86,6 @@ def _git_commit(project_dir: str):
     if result.returncode != 0:
         return None
     return result.stdout.strip()
-
-
-def _host_cpu_count():
-    """The real number of CPU cores available to this process (UX-12) -
-    `os.sched_getaffinity` where available (Linux only, but correct under
-    a cgroup/container CPU-share limit, exactly the kind of environment
-    `bga`'s own CI runs in - a plain `os.cpu_count()` would report the
-    host's full core count even when this process is actually confined to
-    fewer), falling back to `os.cpu_count()` elsewhere. Returns None if
-    neither is available (unlikely, but honest rather than fabricating a
-    number)."""
-    if hasattr(os, "sched_getaffinity"):
-        try:
-            return len(os.sched_getaffinity(0))
-        except OSError:
-            pass
-    return os.cpu_count()
 
 
 def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_refs_provenance, native_max_jobs=None):
@@ -361,28 +344,11 @@ def extract_run(
         # "unavailable" rather than fabricating a number. See
         # docs/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
     }
-    # native_max_jobs/host_cpu_count (UX-12): the real per-element
-    # internal build-system parallelism (`--max-jobs`, e.g. `make -jN`)
-    # and the real host CPU core count at capture time - distinct from
-    # `max_jobs` above (run-context/v9's own field, which actually means
-    # `builders` - see tools/bst_log_to_chrome_trace.py's
-    # get_scheduler_config docstring). Neither is visible in a
-    # BuildStream log itself: native_max_jobs has to be told to us (the
-    # caller already knows what they passed to `bst --max-jobs N build`);
-    # host_cpu_count is queried directly from the extraction environment.
-    if native_max_jobs is not None:
-        run_context["native_max_jobs"] = native_max_jobs
-    host_cpu_count = _host_cpu_count()
-    if host_cpu_count is not None:
-        run_context["host_cpu_count"] = host_cpu_count
-    # cpu_budget (UX-15): the operator's *declared* CPU envelope for this
-    # build, as opposed to host_cpu_count's detected value - see
-    # bga/ingest/models.py's RunContext.cpu_budget docstring for why
-    # these are genuinely different things (cgroup CFS quota is
-    # invisible to os.sched_getaffinity; a user may also just want to
-    # reserve headroom). Purely operator-supplied - no detection path.
-    if cpu_budget is not None:
-        run_context["cpu_budget"] = cpu_budget
+    # native_max_jobs/host_cpu_count (UX-12), cpu_budget (UX-15) - see
+    # tools/_run_context_common.py (UX-18: shared with
+    # tools/bst_run_context.py, the other producer path, so the two
+    # don't silently diverge again).
+    add_cpu_capacity_fields(run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget)
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:

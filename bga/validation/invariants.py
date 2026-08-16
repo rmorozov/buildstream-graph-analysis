@@ -258,7 +258,34 @@ def compute_confidence(
     )
     violation_us += sum(abs(v.get('residual_us', 0)) for v in reconciliation_violations)
 
-    penalized_us = untracked_us + ambiguous_wait_us + violation_us
+    # UX-40: untracked time that is *explained* by BuildStream's own
+    # measured pipeline phases (Loading/Resolving elements, Query cache,
+    # Initializing remote caches - P4-14, already parsed into
+    # run_context.pipeline_overhead and already shown as its own report
+    # section) is accounted-for time, not ambiguous time. Part 33.4
+    # penalizes untracked/ambiguous/violation time; startup that the
+    # tool can name and price is none of those.
+    #
+    # This matters because UX-10 deliberately made total_duration_us
+    # prefer real wall-clock so that startup would stop being invisible,
+    # and the side effect was that measuring it dragged every real
+    # capture's confidence down - the smaller the build, the larger
+    # BuildStream's fixed startup as a fraction of it, the lower the
+    # score. Real captures landed at ~0.69 ("medium"), below the 0.8 bar
+    # `bga compare --fail-on-regression` fails open on, so the CI gate
+    # was silently off on exactly the small, fast projects most likely
+    # to run it.
+    #
+    # Genuinely unexplained head/tail still counts, in full: this only
+    # ever subtracts as much as the pipeline phases actually account for.
+    explained_untracked_us = 0
+    if run_context is not None and getattr(run_context, 'pipeline_overhead', None):
+        explained_untracked_us = min(
+            untracked_us,
+            sum(entry.get('elapsed_us', 0) for entry in run_context.pipeline_overhead),
+        )
+
+    penalized_us = (untracked_us - explained_untracked_us) + ambiguous_wait_us + violation_us
     # untracked_us lives outside the task horizon by definition (Part 11),
     # while ambiguous_wait_us/violation_us live inside it - the correct
     # normalizer for their sum is the full wall-clock horizon (task
@@ -276,6 +303,11 @@ def compute_confidence(
         'coverage_score': coverage_score,
         'model_score': model_score,
         'attribution_score': attribution_score,
+        # UX-40: how much of the untracked head/tail was explained by
+        # measured pipeline overhead and therefore not penalized -
+        # published so the number above is auditable rather than just
+        # higher than it used to be.
+        'explained_untracked_us': explained_untracked_us,
         'critical_path_coverage': critical_path_coverage,
         'dominator_coverage': dominator_coverage,
         'blame_chain_coverage': blame_chain_coverage,

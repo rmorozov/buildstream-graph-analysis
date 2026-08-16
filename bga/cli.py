@@ -281,10 +281,24 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         return 0
 
     if comparison.low_confidence:
+        # UX-40: failing open is the right default (do not block a
+        # pipeline on a signal you do not trust), but a gate that
+        # silently stops gating reports green while checking nothing, so
+        # a pipeline must be able to opt out of it.
+        if getattr(args, 'fail_on_low_confidence', False):
+            print(
+                "Confidence gate FAILED: at least one run's confidence is below "
+                "the 'high' band and --fail-on-low-confidence was requested, so "
+                "this comparison is treated as a failure rather than failing open. "
+                "See docs/scenarios/UX-40-real-runs-systematically-fail-the-confidence-gate.md.",
+                file=sys.stderr,
+            )
+            return EXIT_CODE_REGRESSION
         print(
             "Warning: --fail-on-regression not applied - at least one run's "
             "confidence is below the 'high' band, so this comparison is not "
             "reliable enough to gate a pipeline on (failing open, exit 0). "
+            "Pass --fail-on-low-confidence to treat this as a failure instead. "
             "See docs/scenarios/UX-03-ci-regression-gate.md.",
             file=sys.stderr,
         )
@@ -701,8 +715,15 @@ def create_parser() -> argparse.ArgumentParser:
         help=f'CI gate (UX-03): exit {EXIT_CODE_REGRESSION} (distinct from 1/2/3, which mean bga itself '
         'failed) if the candidate run regressed in total duration beyond the threshold (see '
         '--regression-threshold). A low-confidence comparison fails open (exit 0 with a warning) '
-        'rather than block a pipeline on a possibly-noisy signal. Default: off (bga compare always '
-        'exits 0 regardless of verdict).'
+        'rather than block a pipeline on a possibly-noisy signal (see --fail-on-low-confidence). '
+        'Default: off (bga compare always exits 0 regardless of verdict).'
+    )
+    compare_parser.add_argument(
+        '--fail-on-low-confidence', action='store_true',
+        help=f'CI gate (UX-40): with --fail-on-regression, exit {EXIT_CODE_REGRESSION} when a run\'s '
+        'confidence is too low to gate on, instead of failing open. A gate that silently stops '
+        'gating reports green while checking nothing; this makes that state a failure a pipeline '
+        'can see. Default: off (fail open, with a warning on stderr).'
     )
     compare_parser.add_argument(
         '--regression-threshold', type=float, default=None, metavar='PCT',

@@ -358,6 +358,7 @@
         "coverage_score": 1.0,
         "model_score": 1.0,
         "attribution_score": 0.875,
+        "explained_untracked_us": 0,
         "critical_path_coverage": 1.0,
         "dominator_coverage": 1.0,
         "blame_chain_coverage": 1.0,

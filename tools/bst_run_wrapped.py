@@ -42,7 +42,16 @@ def _now_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
 
 
-def run_wrapped(project_dir: str, cmd: list, out_f) -> int:
+def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:
+    """`env`: UX-24 - when given, replaces the subprocess's own
+    environment entirely (matching `subprocess.Popen`'s own semantics),
+    instead of always inheriting this process's environment unmodified.
+    Needed so `tools/bst_native_build_tracer.py` can capture a real
+    wrapped-format Plane 1 log *and* a real Plane 2 native trace from one
+    single real `bst build` invocation, at once - the tracer's own PATH-
+    shadowing/LD_PRELOAD env vars have to reach the same subprocess this
+    function spawns, not a second, separate one. `None` (the default)
+    reproduces this function's own prior behavior exactly, unchanged."""
     if not cmd or not (cmd[0] == "bst" or cmd[0].endswith("/bst")):
         raise ValueError(f"command must start with 'bst', got: {cmd!r}")
 
@@ -67,6 +76,7 @@ def run_wrapped(project_dir: str, cmd: list, out_f) -> int:
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
+        env=env,
     )
     for line in proc.stdout:
         emit(line.rstrip("\n"))

@@ -1,6 +1,6 @@
 # UX-30: `bga sweep`'s knee point stops at the first flat step, so it recommends a capacity its own table shows is 35% too small
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** —
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** —
 
 ## Motivation
 
@@ -44,7 +44,7 @@ Find the knee over the whole curve rather than at the first flat step. Options, 
 
 Whichever is chosen, the printed line should be defensible against the table printed immediately above it: if the reported knee is `k`, no capacity `> k` in the same table may show an improvement above the threshold.
 
-Also worth fixing in the same pass: the `monotonicity_violations` list is computed and, on the text path, never shown. A sweep whose makespan goes *up* with capacity is a real and interesting result (`UX-14`'s whole contention argument), and it is currently silent.
+~~Also worth fixing in the same pass: the `monotonicity_violations` list is computed and, on the text path, never shown.~~ **Checked while implementing and found false** - `bga/report/text.py` already renders a `Monotonicity violations:` block right below the knee-point line. Left visible rather than deleted, since a filed claim that turns out to be wrong is worth recording; a regression test now pins the behaviour.
 
 ## Out of Scope
 
@@ -56,8 +56,33 @@ Also worth fixing in the same pass: the `monotonicity_violations` list is comput
 1. Re-running the exact sweep above reports a knee of 4, not 2.
 2. A genuinely smooth diminishing-returns curve still reports the same knee it does today.
 3. A curve with no flat steps at all is unaffected.
-4. A sweep with a real monotonicity violation surfaces it in the text report. Full suite green.
+4. ~~A sweep with a real monotonicity violation surfaces it in the text report.~~ Already true - see Required Fix. Full suite green.
+
+## Fix Implemented
+
+Went with **last-significant-gain** (option 1): the knee is the largest swept capacity whose own marginal improvement still cleared the threshold - the last capacity that bought something. Computed after the sweep, over the whole curve, rather than inline first-match-wins.
+
+The threshold itself is unchanged in value (`_KNEE_IMPROVEMENT_THRESHOLD = 0.05`, now a named module constant carrying its own rationale). What changed is which side of it decides: previously the *first* capacity to miss it ended the search permanently (`and knee_point is None`); now the *last* capacity to clear it is reported.
+
+That gives the property this doc asked for, and it is asserted directly as a test rather than left implied: **no capacity above the reported knee can still show an improvement at or above the threshold**, by construction. Option 2 (total-remaining-gain) and option 3 (maximum-curvature) were both left unimplemented - option 1 is defensible against the table printed beside it, which is the actual complaint, and neither of the others is worth the extra explanation in a one-line report field.
+
+Tests: 5 new (`tests/unit/test_sweep_knee_point.py`) over a real staircase curve (four independent equal-cost tasks - makespan drops at capacity 2, is flat at 3, drops again at 4): the knee is not the first flat step, the defensible-against-the-table property holds for every capacity above the knee, a wholly flat curve reports *no* knee rather than inventing one, a smooth curve still reports its last real gain, and monotonicity-violation collection is pinned.
 
 ## Verification Log
 
-Filed 2026-08-16. The sweep output is pasted verbatim from a real `bga sweep` against a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/05-cmake-cpp-toolchain` (BuildStream 2.7.0, real `bwrap` sandbox, 4-core host). The first-match-wins condition was read directly from `bga/replay/scheduler.py`, not inferred from the output.
+Filed 2026-08-16. Implemented the same day. The sweep output is pasted verbatim from a real `bga sweep` against a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/05-cmake-cpp-toolchain` (BuildStream 2.7.0, real `bwrap` sandbox, 4-core host). The first-match-wins condition was read directly from `bga/replay/scheduler.py`, not inferred from the output.
+
+Real end-to-end re-verification against the exact sweep in this doc's Motivation (the same real `examples/05-cmake-cpp-toolchain` capture):
+
+```
+  Capacity      T_C (s)    Improvement
+         1        19.65           0.0%
+         2        11.55          41.2%
+         3        11.55           0.0%
+         4         7.50          35.1%
+         5         7.50           0.0%
+         ...
+Knee point (PROCESS): capacity 4 (diminishing returns beyond this)
+```
+
+Acceptance Test items 1-3 confirmed (item 1 with real data; 2 and 3 by unit test). Item 4 needed no change - the claim behind it was wrong, and re-checking it before implementing is why. Full suite green (692 passed, up from 687), `make lint` clean.

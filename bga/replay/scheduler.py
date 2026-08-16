@@ -19,6 +19,12 @@ from ..normalize.timestamps import NormalizedTask
 
 logger = logging.getLogger(__name__)
 
+# UX-30: a swept capacity counts as having bought something if its own
+# marginal improvement over the previous sample clears this. Unchanged in
+# value from the original inline check - what changed is that the knee is
+# now the *last* capacity to clear it rather than the first to miss it.
+_KNEE_IMPROVEMENT_THRESHOLD = 0.05
+
 # UX-14 tier 2: a task's real calibration identity - (element_uid,
 # task_kind, phase), i.e. TaskKey minus attempt, the same identity
 # bga/floors/cold.py already uses for its own historical-run matching.
@@ -509,7 +515,6 @@ class ReplayScheduler:
 
         sweeps = []
         prev_makespan = float('inf')
-        knee_point = None
         monotonicity_violations = []
 
         for cap in range(min_capacity, max_capacity + 1, step):
@@ -559,11 +564,16 @@ class ReplayScheduler:
                 sweep_entry['contention_model'] = contention_model
             sweeps.append(sweep_entry)
 
-            # Detect knee point (where improvement drops below threshold)
-            if has_prior_sample and prev_makespan > 0:
-                improvement = (prev_makespan - result.makespan_us) / prev_makespan
-                if improvement < 0.05 and knee_point is None:  # 5% threshold
-                    knee_point = cap - step if cap > min_capacity else cap
+            # UX-30: the knee is computed after the sweep, over the whole
+            # curve - see below. It used to be detected inline, first-
+            # match-wins (`if improvement < 0.05 and knee_point is None`),
+            # which is wrong for the shape these curves actually have.
+            # Makespan-vs-capacity is a staircase, not a smooth decay:
+            # it only drops when capacity crosses a real width in the
+            # graph, so a flat step *between* two useful levels is normal,
+            # not the end of the curve. On a real run that reported
+            # `Knee point: capacity 2` while its own printed table showed
+            # capacity 4 to be a further 35.1% faster.
             
             # Check monotonicity
             if result.makespan_us > prev_makespan and prev_makespan < float('inf'):
@@ -571,6 +581,18 @@ class ReplayScheduler:
             
             prev_makespan = result.makespan_us
         
+        # UX-30: last-significant-gain. The knee is the largest swept
+        # capacity whose own marginal improvement still cleared the
+        # threshold - i.e. the last capacity that bought something.
+        # Defensible against the table printed beside it, which
+        # first-match-wins was not: no capacity above the reported knee
+        # can show an improvement at or above the threshold, by
+        # construction.
+        knee_point = None
+        for entry in sweeps:
+            if entry['normalized_improvement'] >= _KNEE_IMPROVEMENT_THRESHOLD:
+                knee_point = entry['capacity'][resource]
+
         # Build result
         knee_points = {resource: knee_point} if knee_point else {}
         

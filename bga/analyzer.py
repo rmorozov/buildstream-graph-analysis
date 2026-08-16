@@ -630,25 +630,43 @@ class BuildEfficiencyAnalyzer:
 
         governing_cores = cpu_budget if cpu_budget is not None else host_cpu_count
         capacity_source = 'declared_cpu_budget' if cpu_budget is not None else 'detected_host_cpu_count'
-        if not builders or not native_max_jobs or not governing_cores:
+        # UX-16: explicit `is None` checks, not truthiness - `builders`/
+        # `native_max_jobs`/`governing_cores` of 0 are real, present data
+        # (BuildStream's own documented `--max-jobs 0` sentinel, resolved
+        # just below), not "missing." `not 0` is True in Python, so a
+        # truthiness check here would silently skip this entire function
+        # for exactly the runs most worth checking.
+        if builders is None or native_max_jobs is None or governing_cores is None:
             return
 
-        actual_demand = builders * native_max_jobs
+        # BuildStream's own real, documented meaning of `--max-jobs 0`:
+        # "let BuildStream choose - up to the available host threads,
+        # capped at 8" - the same resolution `default_demand` already
+        # applies for BuildStream's own unconfigured behavior below, so
+        # `max-jobs: 0` is BuildStream choosing that same behavior, not a
+        # different one. Resolved once, explicitly, rather than treating
+        # a literal 0 as "zero parallelism" anywhere in the demand math.
+        resolved_native_max_jobs = min(governing_cores, 8) if native_max_jobs == 0 else native_max_jobs
+        native_max_jobs_was_auto = native_max_jobs == 0
+
+        actual_demand = builders * resolved_native_max_jobs
         default_demand = 4 * min(governing_cores, 8)
 
         if actual_demand > default_demand:
             logger.warning(
-                "builders=%d x native max-jobs=%d = %d potential concurrent "
+                "builders=%d x native max-jobs=%d%s = %d potential concurrent "
                 "processes vs a governing ceiling of %d cores (%s) - exceeds "
                 "BuildStream's own defaults for that ceiling (%d) and may "
                 "cause real CPU contention (see UX-09)",
-                builders, native_max_jobs, actual_demand, governing_cores,
-                capacity_source, default_demand,
+                builders, resolved_native_max_jobs,
+                " (resolved from BuildStream's own max-jobs=0 auto sentinel)" if native_max_jobs_was_auto else "",
+                actual_demand, governing_cores, capacity_source, default_demand,
             )
             self.violations.append({
                 'type': 'resource_oversubscription',
                 'builders': builders,
-                'native_max_jobs': native_max_jobs,
+                'native_max_jobs': resolved_native_max_jobs,
+                'native_max_jobs_was_auto': native_max_jobs_was_auto,
                 'actual_demand': actual_demand,
                 'governing_cores': governing_cores,
                 'capacity_source': capacity_source,
@@ -658,15 +676,18 @@ class BuildEfficiencyAnalyzer:
             })
         elif actual_demand < governing_cores:
             logger.info(
-                "builders=%d x native max-jobs=%d = %d potential concurrent "
+                "builders=%d x native max-jobs=%d%s = %d potential concurrent "
                 "processes vs a governing ceiling of %d cores (%s) - fewer "
                 "than one process per core, may be leaving cores idle",
-                builders, native_max_jobs, actual_demand, governing_cores, capacity_source,
+                builders, resolved_native_max_jobs,
+                " (resolved from BuildStream's own max-jobs=0 auto sentinel)" if native_max_jobs_was_auto else "",
+                actual_demand, governing_cores, capacity_source,
             )
             self.violations.append({
                 'type': 'resource_undersubscription',
                 'builders': builders,
-                'native_max_jobs': native_max_jobs,
+                'native_max_jobs': resolved_native_max_jobs,
+                'native_max_jobs_was_auto': native_max_jobs_was_auto,
                 'actual_demand': actual_demand,
                 'governing_cores': governing_cores,
                 'capacity_source': capacity_source,

@@ -66,7 +66,7 @@ def _format_violation_summary(violation: dict) -> str:
     if vtype == 'resource_oversubscription':
         return (
             f"oversubscription: builders={violation.get('builders')} x "
-            f"native max-jobs={violation.get('native_max_jobs')} = "
+            f"native max-jobs={violation.get('native_max_jobs')}{_auto_note(violation)} = "
             f"{violation.get('actual_demand')} potential concurrent processes "
             f"vs {_ceiling_desc(violation)} (BuildStream's own defaults for "
             f"that ceiling: {violation.get('default_demand')}) - real CPU "
@@ -75,7 +75,7 @@ def _format_violation_summary(violation: dict) -> str:
     if vtype == 'resource_undersubscription':
         return (
             f"undersubscription: builders={violation.get('builders')} x "
-            f"native max-jobs={violation.get('native_max_jobs')} = "
+            f"native max-jobs={violation.get('native_max_jobs')}{_auto_note(violation)} = "
             f"{violation.get('actual_demand')} potential concurrent processes "
             f"vs {_ceiling_desc(violation)} - fewer than one process per core, "
             f"may be leaving cores idle"
@@ -87,6 +87,17 @@ def _format_violation_summary(violation: dict) -> str:
             f"- the declared budget itself may be unrealistic here, see UX-15"
         )
     return f"{vtype}: {violation}"
+
+
+def _auto_note(violation: dict) -> str:
+    """UX-16: a `resource_(over|under)subscription` violation's
+    `native_max_jobs` field always holds the *resolved* value used in
+    the demand math - when the operator actually declared BuildStream's
+    own `--max-jobs 0` auto sentinel, say so, so the reader doesn't read
+    "native max-jobs=4" as a literal `--max-jobs 4` the operator typed."""
+    if violation.get('native_max_jobs_was_auto'):
+        return " (resolved from --max-jobs=0's own auto sentinel)"
+    return ""
 
 
 def _ceiling_desc(violation: dict) -> str:

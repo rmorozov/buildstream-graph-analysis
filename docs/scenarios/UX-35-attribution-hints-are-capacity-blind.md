@@ -1,6 +1,6 @@
 # UX-35: the `RESOURCE WAIT` next-step hint tells an already-oversubscribed run to raise its capacity
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-04 (done - this is a correctness fix to the hints it added), UX-12/UX-29 (the capacity facts the hint should consult)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-04 (done - this is a correctness fix to the hints it added), UX-12/UX-29 (the capacity facts the hint should consult)
 
 ## Motivation
 
@@ -39,6 +39,57 @@ Worth reviewing the other seven category hints in the same pass for the same cla
 2. On a genuinely under-provisioned run (capacity well below the governing core count) it still does.
 3. With no capacity data at all, the hint says so instead of picking a direction. Full suite green.
 
+## Fix Implemented
+
+Exactly the three-branch conditioning this doc specified, and only for `RESOURCE_WAIT`.
+
+`BuildEfficiencyAnalyzer._build_capacity_verdict` publishes `AnalysisResult.capacity_verdict` - `{oversubscribed, undersubscribed, checks_ran, skipped_inputs}` - derived from the verdict `_check_process_oversubscription` (as re-based by `UX-28`) and `UX-29`'s skipped-inputs record already reached. `checks_ran` is the load-bearing field: "the checks ran and found nothing" and "the checks could not run" look identical from `violations` alone, and that is exactly the state every run was in before `UX-29`.
+
+`bga/report/_shared.py::resolve_attribution_hint(key, capacity_verdict)` is the single resolution point both `format_text` and `format_json` now call:
+
+- oversubscribed → *"...but this run is already oversubscribed (see Violations), so raising capacity will make it worse, not better: the levers here are less native parallelism per element, fewer builders, or less work"*
+- checks did not run, or no verdict at all → *"...whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way"*
+- checks ran, not oversubscribed → the original hint, unchanged.
+
+The verdict is **consumed, never re-derived** - two independently-derived capacity formulas comparing the same real inputs is the divergence `UX-17` was resolved to avoid, and this task would have reintroduced it if the report layer had done its own arithmetic.
+
+`capacity_verdict` is also published in `--format json`, so a consumer can see *why* a hint said what it said, and so `checks_ran: false` is legible rather than indistinguishable from a clean bill of health.
+
+The other seven hints were re-read in the same pass, as this doc asked. None of them advises a direction that capacity could invert, so none is conditioned - and a test asserts that they resolve to their unchanged static strings under every verdict.
+
+Tests: 9 new (`tests/unit/test_capacity_aware_hints.py`) - all three RESOURCE_WAIT branches, `None`/`{}` treated as unknown rather than fine, every other category unchanged under every verdict, P4-02's every-category-has-a-hint guard re-asserted through the resolver, and three verdict-construction cases driven through the real check (`UX-09`'s measured-slower 8x8, its measured-fastest 4x4, and a run whose checks could not run).
+
 ## Verification Log
 
-Filed 2026-08-16. The hint text is pasted from a real `bga analyze -d` against a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/06-macro-micro-optimization/optimized` (BuildStream 2.7.0, real `bwrap` sandbox, 4-core host). The 11.05s vs 20.00s contention figures come from two real Plane 2 traces of the same project.
+Filed 2026-08-16. Implemented the same day. The hint text is pasted from a real `bga analyze -d` against a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/06-macro-micro-optimization/optimized` (BuildStream 2.7.0, real `bwrap` sandbox, 4-core host). The 11.05s vs 20.00s contention figures come from two real Plane 2 traces of the same project.
+
+Real end-to-end re-verification. A genuinely oversubscribed real capture was made for this - `examples/06-macro-micro-optimization/optimized` built at `--builders 8 --max-jobs 8` on the same real 4-core host, i.e. `UX-09`'s own measured-slower configuration:
+
+```
+$ bga analyze -f json -d /tmp/run-06-opt-b8j8 | jq '.capacity_verdict, .attribution_hints.resource_wait_us'
+{"oversubscribed": true, "undersubscribed": false, "checks_ran": true, "skipped_inputs": []}
+
+"a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - but this run is already oversubscribed
+ (see Violations), so raising capacity will make it worse, not better: the levers here are less
+ native parallelism per element, fewer builders, or less work"
+```
+
+and the same run's Violations block confirms the verdict is the real check's, not a second one:
+
+```
+Violations (2):
+  - oversubscription: builders=8 x native max-jobs=8 = 64 potential concurrent processes vs a
+    4-core host (16.0x the cores) - past the ratio UX-09 measured as genuinely slower...
+  - dispatch oversubscription: builders=8 vs a 4-core host - ...
+```
+
+The third branch is confirmed on the original capture from this doc's Motivation, which predates `UX-29` and therefore genuinely has no capacity verdict:
+
+```
+  Biggest Opportunity: 32.7% of wall-clock time is RESOURCE WAIT (9.00s)
+    -> a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity would help
+       depends on how loaded this host already is, and this run's capacity checks could not run
+       (see the Certified Floors note), so this hint is unconditioned; ...
+```
+
+Acceptance Test items 1-3 all confirmed with real data. Full suite green (747 passed, up from 738), `make lint` clean.

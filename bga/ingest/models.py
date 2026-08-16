@@ -380,3 +380,10 @@ class AnalysisResult:
     # "avg_duration_us": float}}. Elements with no element_kind are
     # bucketed under the explicit "unknown" key, never silently dropped.
     element_kind_summary: dict = field(default_factory=dict)
+    # UX-35: this run's capacity verdict, as a small dict the report
+    # layer can condition on without re-deriving any capacity arithmetic
+    # of its own (the exact divergence UX-17 was resolved to avoid).
+    # Shape: {"oversubscribed": bool, "undersubscribed": bool,
+    # "checks_ran": bool, "skipped_inputs": [str, ...]}. Populated from
+    # _check_process_oversubscription's own already-computed verdict.
+    capacity_verdict: dict = field(default_factory=dict)

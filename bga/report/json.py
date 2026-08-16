@@ -3,7 +3,7 @@ import json as _json
 from typing import Optional
 
 from ..ingest.models import AnalysisResult
-from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS
+from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
 
 
 def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
@@ -32,13 +32,25 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section in (None, 'floors', 'replay'):
         data['floors'] = result.floors
 
+    # UX-35: the already-decided capacity verdict the hints above are
+    # conditioned on - published so a consumer can see *why* a hint
+    # said what it said, and so `checks_ran: false` is legible rather
+    # than indistinguishable from a clean bill of health.
+    if section is None and getattr(result, 'capacity_verdict', None):
+        data['capacity_verdict'] = result.capacity_verdict
+
     if section is None and hasattr(result, 'attribution') and result.attribution:
         data['attribution'] = result.attribution
         # UX-04: additive sibling key, same category_us keys as
         # `attribution` itself - existing consumers of `attribution`'s
         # field names/values see no change.
+        # UX-35: RESOURCE_WAIT's hint is conditioned on this run's own
+        # capacity verdict - the static string tells a saturated host to
+        # raise capacity, which is the opposite of the fix. Every other
+        # category resolves to its unchanged static hint.
+        capacity_verdict = getattr(result, 'capacity_verdict', None)
         data['attribution_hints'] = {
-            key: ATTRIBUTION_CATEGORY_HINTS_BY_KEY[key]
+            key: resolve_attribution_hint(key, capacity_verdict)
             for key in result.attribution
             if key in ATTRIBUTION_CATEGORY_HINTS_BY_KEY
         }

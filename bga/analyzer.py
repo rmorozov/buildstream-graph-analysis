@@ -920,6 +920,27 @@ class BuildEfficiencyAnalyzer:
         occupied_us = sum(task.dur_us for task in self.normalized_tasks)
         return occupied_us / (horizon_us * builders)
 
+    def _build_capacity_verdict(self) -> dict:
+        """UX-35: a small, already-decided summary of this run's capacity
+        situation, for consumers that must not re-derive it.
+
+        `checks_ran` is the load-bearing field: "the checks ran and found
+        no oversubscription" and "the checks could not run at all" look
+        identical from `violations` alone, and advice conditioned on the
+        second as if it were the first is exactly the failure this task
+        exists to fix.
+        """
+        types = {v.get('type') for v in self.violations}
+        skipped = list(getattr(self, 'capacity_check_skipped_inputs', []) or [])
+        return {
+            'oversubscribed': bool(
+                types & {'resource_oversubscription', 'dispatch_oversubscription'}
+            ),
+            'undersubscribed': 'resource_undersubscription' in types,
+            'checks_ran': not skipped,
+            'skipped_inputs': skipped,
+        }
+
     def _build_capacity_model_note(self) -> str:
         """UX-13: `LB`/`Efficiency Score` are correctly computed per spec
         Part 16, but only ever certify against this run's *recorded*
@@ -1125,6 +1146,12 @@ class BuildEfficiencyAnalyzer:
         
         # Violations
         result.violations = self.violations
+
+        # UX-35: publish the capacity verdict the checks above already
+        # reached, so the report layer can condition its next-step hints
+        # on it instead of deriving a second, independent capacity
+        # formula (UX-17's own resolved rule).
+        result.capacity_verdict = self._build_capacity_verdict()
         
         # Confidence (Part 33)
         result.confidence = self._compute_confidence(graph_analysis, result.attribution, result.floors)

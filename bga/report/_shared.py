@@ -1,5 +1,7 @@
 """Constants shared between bga/report/text.py and bga/report/json.py."""
 
+from typing import Optional
+
 from ..ingest.models import AttributionCategory
 
 # Section names understood by format_text/format_json's `section`
@@ -99,3 +101,50 @@ ATTRIBUTION_CATEGORY_HINTS = {
 ATTRIBUTION_CATEGORY_HINTS_BY_KEY = {
     _attribution_key(category): hint for category, hint in ATTRIBUTION_CATEGORY_HINTS.items()
 }
+
+# UX-35: `RESOURCE_WAIT`'s static hint says "try --capacity N with a
+# higher N". That is right on an under-provisioned host and actively
+# wrong on a saturated one - and a real run of
+# examples/06-macro-micro-optimization/optimized printed it while already
+# dispatching up to `builders x max-jobs` = 16 potential concurrent
+# processes on 4 cores. The hints were constant strings, chosen by
+# attribution category alone, consulting none of the capacity facts the
+# tool has.
+#
+# Only RESOURCE_WAIT is conditioned: it is the one hint whose *direction*
+# depends on capacity. The other seven were re-read in the same pass and
+# none of them advises a direction that capacity could invert.
+_RESOURCE_WAIT_KEY = _attribution_key(AttributionCategory.RESOURCE_WAIT)
+
+_RESOURCE_WAIT_HINT_OVERSUBSCRIBED = (
+    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - but this run is already "
+    "oversubscribed (see Violations), so raising capacity will make it worse, not "
+    "better: the levers here are less native parallelism per element, fewer "
+    "builders, or less work"
+)
+_RESOURCE_WAIT_HINT_UNKNOWN_CAPACITY = (
+    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity "
+    "would help depends on how loaded this host already is, and this run's capacity "
+    "checks could not run (see the Certified Floors note), so this hint is "
+    "unconditioned; `bga sweep` shows the shape of the curve either way"
+)
+
+
+def resolve_attribution_hint(key: str, capacity_verdict: Optional[dict] = None) -> Optional[str]:
+    """UX-35: the next-step hint for one attribution category, given this
+    run's own already-decided capacity verdict
+    (`AnalysisResult.capacity_verdict`).
+
+    Deliberately consumes that verdict rather than re-deriving one: two
+    independently-derived capacity formulas comparing the same real
+    inputs is precisely the divergence `UX-17` was resolved to avoid.
+    `None`/empty verdict is treated as "unknown", not as "fine".
+    """
+    if key != _RESOURCE_WAIT_KEY:
+        return ATTRIBUTION_CATEGORY_HINTS_BY_KEY.get(key)
+    verdict = capacity_verdict or {}
+    if verdict.get('oversubscribed'):
+        return _RESOURCE_WAIT_HINT_OVERSUBSCRIBED
+    if not verdict.get('checks_ran'):
+        return _RESOURCE_WAIT_HINT_UNKNOWN_CAPACITY
+    return ATTRIBUTION_CATEGORY_HINTS_BY_KEY.get(key)

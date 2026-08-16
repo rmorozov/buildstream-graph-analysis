@@ -29,7 +29,7 @@ UX-11's own prototype run).
 """
 import os
 import sys
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 # bwrap flags, keyed by how many trailing positional args each consumes -
 # from `bwrap --help` (bubblewrap 0.9.0, the version this was validated
@@ -82,6 +82,22 @@ def split_bwrap_args(args: List[str]) -> Tuple[List[str], List[str]]:
     return opts, list(args[i:])
 
 
+def extract_element_name(opts: List[str]) -> Optional[str]:
+    """UX-23: BuildStream's own generated bwrap argv always includes a
+    real `--dir buildstream/<project-name>/<element>.bst` option (the
+    sandbox's own working directory, confirmed present in every real
+    captured invocation this whole `UX-11`/`UX-23` arc has examined) -
+    the element name is its own path's last segment. Returns `None` if
+    no `--dir` option is present (defensive - a future BuildStream
+    version could drop or rename it; element tagging is additive, never
+    load-bearing for the interception mechanism itself).
+    """
+    for i, opt in enumerate(opts):
+        if opt == "--dir" and i + 1 < len(opts):
+            return opts[i + 1].rstrip("/").rsplit("/", 1)[-1]
+    return None
+
+
 def build_shim_argv(
     real_bwrap: str,
     bst_args: List[str],
@@ -111,13 +127,15 @@ def build_shim_argv(
     requested but the env var didn't arrive" without this fix.
     """
     opts, cmd = split_bwrap_args(bst_args)
-    return [
-        real_bwrap, *opts,
+    injected = [
         "--bind", bind_src, bind_dst,
         "--setenv", "LD_PRELOAD", preload_so,
         "--setenv", "BST_TRACE_LOG", trace_log,
-        *cmd,
     ]
+    element = extract_element_name(opts)
+    if element is not None:
+        injected += ["--setenv", "BST_TRACE_ELEMENT", element]
+    return [real_bwrap, *opts, *injected, *cmd]
 
 
 def main() -> int:

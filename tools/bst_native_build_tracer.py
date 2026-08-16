@@ -55,12 +55,14 @@ Usage:
 import argparse
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
-from typing import Dict, List
+from collections import defaultdict
+from typing import Dict, List, Tuple
 
 from tools.native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
@@ -149,12 +151,16 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str) -> int
 
 
 def parse_trace_log(text: str) -> List[dict]:
-    """Parse raw `START pid=.. ppid=.. ts=.. cmd=..` / `END pid=.. ppid=.. ts=..
-    cmd=..` lines from hook.c into structured events. Malformed lines
-    (truncated by a killed process mid-write, or unrelated stderr noise
-    that ended up in the same file) are skipped, not fatal - a partial
-    trace is still useful and this tool must never crash on a real,
-    imperfect log."""
+    """Parse raw `START pid=.. ppid=.. ts=.. element=.. cmd=..` / `END
+    ...` lines from hook.c into structured events. `element=` (UX-23) is
+    optional for backward compatibility with a raw log captured before
+    element-tagging existed, or one hook.c was preloaded into without
+    `BST_TRACE_ELEMENT` set (UX-11's own original single-element mode) -
+    missing/absent defaults to `"unknown"`, never a hard parse failure.
+    Malformed lines (truncated by a killed process mid-write, or
+    unrelated stderr noise that ended up in the same file) are skipped,
+    not fatal - a partial trace is still useful and this tool must never
+    crash on a real, imperfect log."""
     events = []
     for line in text.splitlines():
         line = line.rstrip("\n")
@@ -178,6 +184,14 @@ def parse_trace_log(text: str) -> List[dict]:
             remaining = remaining[next_space + 1:]
         if not fields:
             continue
+        element = "unknown"
+        if remaining.startswith("element="):
+            remaining = remaining[len("element="):]
+            next_space = remaining.find(" ")
+            if next_space == -1:
+                continue  # element= present but no cmd= after it - malformed, skip
+            element = remaining[:next_space]
+            remaining = remaining[next_space + 1:]
         cmd = remaining[4:] if remaining.startswith("cmd=") else ""
         try:
             events.append({
@@ -185,6 +199,7 @@ def parse_trace_log(text: str) -> List[dict]:
                 "pid": int(fields["pid"]),
                 "ppid": int(fields["ppid"]),
                 "ts": float(fields["ts"]),
+                "element": element,
                 "cmd": cmd,
             })
         except (KeyError, ValueError):
@@ -193,37 +208,54 @@ def parse_trace_log(text: str) -> List[dict]:
 
 
 def pair_events(events: List[dict]) -> List[dict]:
-    """Pair each START with its own process's END by pid, FIFO per pid -
-    correct as long as one pid's own lifetime doesn't overlap a later
-    reused instance of the same pid (true for bwrap's own `--unshare-pid`
-    namespace: a pid is only reused after its holder has actually
-    exited). A START with no matching END (killed by a signal, or still
-    running when the trace was captured) is reported "open" with
+    """Pair each START with its own process's END, FIFO per `(element,
+    pid)` - correct as long as one pid's own lifetime doesn't overlap a
+    later reused instance of the same pid *within the same element's own
+    sandbox* (true for bwrap's own `--unshare-pid` namespace: a pid is
+    only reused after its holder has actually exited).
+
+    Keying on pid alone (UX-11's original single-element design) is
+    unsound once a trace spans multiple elements (UX-23): each element
+    gets its own independent `--unshare-pid` namespace, so the *same*
+    small pid number (e.g. 2, 24, 27 - the low numbers a fresh PID
+    namespace always starts from) recurs across every element's own
+    sandbox and refers to a *different* real process each time. Pairing
+    by pid alone would silently cross-pair a START in one element with
+    an END from a different one whenever their real lifetimes overlap -
+    a real correctness bug that stayed latent in UX-11's own
+    single-element-focused testing and only became visible once
+    multi-element traces needed to be trusted per-element (this task).
+
+    A START with no matching END (killed by a signal, or still running
+    when the trace was captured) is reported "open" with
     duration_us=None rather than a fabricated duration."""
-    open_by_pid: Dict[int, List[dict]] = {}
+    open_by_key: Dict[Tuple[str, int], List[dict]] = {}
     records: List[dict] = []
     for ev in sorted(events, key=lambda e: e["ts"]):
+        key = (ev["element"], ev["pid"])
         if ev["event"] == "START":
-            open_by_pid.setdefault(ev["pid"], []).append(ev)
+            open_by_key.setdefault(key, []).append(ev)
         elif ev["event"] == "END":
-            pending = open_by_pid.get(ev["pid"])
+            pending = open_by_key.get(key)
             if not pending:
                 continue
             start_ev = pending.pop(0)
             records.append({
                 "pid": ev["pid"],
                 "ppid": start_ev["ppid"],
+                "element": start_ev["element"],
                 "cmd": start_ev["cmd"],
                 "start_ts": start_ev["ts"],
                 "end_ts": ev["ts"],
                 "duration_s": ev["ts"] - start_ev["ts"],
                 "open": False,
             })
-    for pending in open_by_pid.values():
+    for pending in open_by_key.values():
         for start_ev in pending:
             records.append({
                 "pid": start_ev["pid"],
                 "ppid": start_ev["ppid"],
+                "element": start_ev["element"],
                 "cmd": start_ev["cmd"],
                 "start_ts": start_ev["ts"],
                 "end_ts": None,
@@ -236,6 +268,90 @@ def pair_events(events: List[dict]) -> List[dict]:
 def _binary_name(cmd: str) -> str:
     first = cmd.split(" ", 1)[0] if cmd else ""
     return os.path.basename(first) if first else "(unknown)"
+
+
+# UX-23: real, confirmed sources of spurious per-element/per-invocation
+# uniqueness in an otherwise-identical logical operation - each pattern
+# below was found by directly inspecting a real trace, not guessed.
+_NORMALIZE_PATTERNS = [
+    # A per-element absolute build path - element-specific by
+    # construction (every element gets its own sandbox/builddir), and
+    # the single largest source of spurious "uniqueness" for what is
+    # otherwise the exact same real operation.
+    (re.compile(r"/buildstream/[^/\s]+/[^/\s]+\.bst/"), "<element-root>/"),
+    # gcc/binutils own temp files (assembly/object intermediates) - a
+    # fresh random name every single invocation, even for the exact
+    # same logical compile.
+    (re.compile(r"/tmp/cc[A-Za-z0-9]+\.\w+"), "/tmp/<tmp>"),
+    # CMake's own randomly-suffixed try-compile scratch directory
+    # (CMakeFiles/cmTC_xxxxx.dir/...) - a fresh random suffix every
+    # single try-compile probe, even for the exact same logical check.
+    (re.compile(r"cmTC_[0-9a-fA-F]+"), "cmTC_<id>"),
+    # CMake's own scratch try-compile top-level directory name
+    # (TryCompile-XXXXXX) - same rationale.
+    (re.compile(r"TryCompile-[A-Za-z0-9]+"), "TryCompile-<id>"),
+]
+
+
+def normalize_cmd_signature(cmd: str) -> str:
+    """UX-23: a best-effort, heuristic normalization of a real traced
+    command line into a stable "logical operation" signature, so the
+    *same* real operation run independently inside different elements'
+    own sandboxes is recognized as the same signature rather than
+    treated as unrelated because of incidental path/tmpfile differences.
+
+    Deliberately not a general/robust solution (UX-23's own doc names
+    this explicit Out-of-Scope boundary: real flag-order-insensitivity
+    and fully general path/tmpfile stripping "needs its own design
+    pass") - covers only the specific, real patterns this design has
+    directly confirmed cause spurious mismatches (see docs/scenarios/
+    UX-23's own real `CMakeCXXCompilerABI.cpp` evidence: 6 independent
+    per-element runs of the exact same compiler-capability probe). A
+    command line with some other, unhandled source of incidental
+    uniqueness simply won't be recognized as redundant - a false
+    negative, not a false positive; this detector is intentionally
+    conservative rather than over-eager.
+    """
+    normalized = cmd
+    for pattern, replacement in _NORMALIZE_PATTERNS:
+        normalized = pattern.sub(replacement, normalized)
+    return normalized
+
+
+def detect_redundant_operations(records: List[dict]) -> List[dict]:
+    """UX-23: group matched (start+end known), element-attributed traced
+    processes by their normalized command signature - any signature
+    occurring under 2+ *distinct* real elements is a real, concrete
+    redundant-operation candidate. Processes tagged `element="unknown"`
+    (a raw log captured without element-tagging, or hook.c loaded
+    without `BST_TRACE_ELEMENT` set) are excluded entirely - never claim
+    cross-element redundancy for a process this tool couldn't actually
+    attribute to a real element. Sorted by real total duration spent on
+    each redundant signature, most costly first, so a user can
+    immediately see which finding is actually worth investigating (a
+    100ms probe repeated 6 times is very different from a 30s codegen
+    step repeated 6 times - same principle as this tool's own
+    static-binary disclaimer: report real numbers, let the user judge).
+    """
+    by_signature: Dict[str, List[dict]] = defaultdict(list)
+    for r in records:
+        if r["open"] or r["element"] == "unknown":
+            continue
+        by_signature[normalize_cmd_signature(r["cmd"])].append(r)
+
+    findings = []
+    for signature, occurrences in by_signature.items():
+        elements = sorted({r["element"] for r in occurrences})
+        if len(elements) < 2:
+            continue
+        findings.append({
+            "signature": signature,
+            "elements": elements,
+            "occurrence_count": len(occurrences),
+            "total_duration_s": sum(r["duration_s"] for r in occurrences),
+            "example_cmd": occurrences[0]["cmd"],
+        })
+    return sorted(findings, key=lambda f: -f["total_duration_s"])
 
 
 def compute_max_concurrency(records: List[dict]) -> int:
@@ -276,6 +392,9 @@ def summarize(records: List[dict]) -> dict:
     for r in records:
         name = _binary_name(r["cmd"])
         by_binary[name] = by_binary.get(name, 0) + 1
+    by_element: Dict[str, int] = {}
+    for r in records:
+        by_element[r["element"]] = by_element.get(r["element"], 0) + 1
     wall_start = min((r["start_ts"] for r in records), default=None)
     wall_end = max((r["end_ts"] if r["end_ts"] is not None else r["start_ts"] for r in records), default=None)
     return {
@@ -291,8 +410,10 @@ def summarize(records: List[dict]) -> dict:
             "the wrapper itself, even though it exited quickly and normally."
         ) if open_records else None,
         "by_binary": dict(sorted(by_binary.items(), key=lambda kv: -kv[1])),
+        "by_element": dict(sorted(by_element.items(), key=lambda kv: -kv[1])),
         "max_concurrency": compute_max_concurrency(records),
         "wall_span_s": (wall_end - wall_start) if wall_start is not None and wall_end is not None else None,
+        "redundant_operations": detect_redundant_operations(records),
         "processes": records,
         "static_binary_disclaimer": STATIC_BINARY_DISCLAIMER,
     }
@@ -319,6 +440,21 @@ def _format_text(report: dict) -> str:
     lines.append("By binary:")
     for name, count in report["by_binary"].items():
         lines.append(f"  {name:20s} {count}")
+    by_element = report.get("by_element", {})
+    if len(by_element) > 1 or (len(by_element) == 1 and "unknown" not in by_element):
+        lines.append("By element:")
+        for name, count in by_element.items():
+            lines.append(f"  {name:30s} {count}")
+    redundant = report.get("redundant_operations") or []
+    if redundant:
+        lines.append("")
+        lines.append(f"Redundant cross-element operations ({len(redundant)} found):")
+        for finding in redundant:
+            lines.append(
+                f"  {finding['occurrence_count']}x across {len(finding['elements'])} elements "
+                f"({finding['elements']}), {finding['total_duration_s']:.3f}s total:"
+            )
+            lines.append(f"    {finding['example_cmd'][:100]}")
     lines.append("")
     lines.append(f"NOTE: {report['static_binary_disclaimer']}")
     return "\n".join(lines)

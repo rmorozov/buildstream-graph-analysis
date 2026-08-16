@@ -38,6 +38,15 @@
  * opened, no crash) - matches the "never break the wrapped build" design
  * requirement: a build must succeed identically whether or not tracing
  * is active.
+ *
+ * UX-23: each line also carries `element=<name>` - the owning
+ * BuildStream element, injected by tools/native_trace/bwrap_shim.py's
+ * own `extract_element_name` (parsed from BuildStream's own real
+ * `--dir` bwrap option) as the BST_TRACE_ELEMENT env var, one level
+ * removed from this hook itself. Falls back to the literal string
+ * "unknown" (never an empty field) when unset - this hook is also used
+ * standalone without element tagging (UX-11's own original single-
+ * element mode), and every trace line must stay parseable either way.
  */
 #define _GNU_SOURCE
 #include <fcntl.h>
@@ -48,6 +57,7 @@
 
 static pid_t g_pid = 0;
 static const char *g_trace_log = NULL;
+static const char *g_element = NULL;
 
 static double monotonic_seconds(void) {
     struct timespec ts;
@@ -79,12 +89,14 @@ static void write_trace_line(const char *event, double ts) {
             }
         }
     }
-    dprintf(fd, "%s pid=%d ppid=%d ts=%.9f cmd=%s\n", event, (int)g_pid, (int)getppid(), ts, cmdline);
+    dprintf(fd, "%s pid=%d ppid=%d ts=%.9f element=%s cmd=%s\n",
+            event, (int)g_pid, (int)getppid(), ts, g_element ? g_element : "unknown", cmdline);
     close(fd);
 }
 
 __attribute__((constructor)) static void bst_trace_start(void) {
     g_trace_log = getenv("BST_TRACE_LOG");
+    g_element = getenv("BST_TRACE_ELEMENT");
     g_pid = getpid();
     write_trace_line("START", monotonic_seconds());
 }

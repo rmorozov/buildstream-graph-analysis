@@ -109,6 +109,59 @@ def test_run_identity_native_max_jobs_defaults_to_none(tmp_path):
     assert identity["scheduler"]["native_max_jobs"] is None
 
 
+def test_run_identity_changes_with_project_identity_across_sibling_projects(tmp_path):
+    """UX-07 regression guard, real reproduction case: two different
+    BuildStream projects living as sibling directories under the *same*
+    git commit, with the same target name and scheduler config (e.g. a
+    baseline project and its `optimized/` variant), must not collide -
+    project_git_commit alone can't distinguish them, since it's identical
+    for both. Confirmed real before this fix: manifest_hash was identical
+    for examples/04-critical-path-optimization vs. its own optimized/
+    subdirectory."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=str(repo_root), check=True)
+    project_a = repo_root / "baseline"
+    project_b = repo_root / "baseline" / "optimized"
+    project_a.mkdir()
+    project_b.mkdir()
+
+    scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
+    a = _compute_run_identity(str(project_a), ["all.bst"], scheduler, None)
+    b = _compute_run_identity(str(project_b), ["all.bst"], scheduler, None)
+
+    assert a["manifest_hash"] != b["manifest_hash"]
+    assert a["project_git_commit"] == b["project_git_commit"]  # same commit - the real collision cause
+    assert a["project_identity"] != b["project_identity"]
+
+
+def test_project_identity_is_relative_to_git_repo_root(tmp_path):
+    """Portable across clones: two different checkouts of the same repo
+    at the same relative project path must report the same
+    project_identity, not an absolute-path value that would differ
+    per-checkout for no real reason."""
+    from tools.bst_extract_run import _project_identity
+
+    repo_root = tmp_path / "repo"
+    project_dir = repo_root / "sub" / "project"
+    project_dir.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=str(repo_root), check=True)
+
+    assert _project_identity(str(project_dir)) == "sub/project"
+
+
+def test_project_identity_falls_back_to_absolute_path_outside_a_git_repo(tmp_path):
+    """No git repo at all - _git_commit already returns None for this
+    case; project_identity must still produce *something* real and
+    distinguishing, not crash or silently return an empty value."""
+    from tools.bst_extract_run import _project_identity
+
+    project_dir = tmp_path / "no_git_here"
+    project_dir.mkdir()
+
+    assert _project_identity(str(project_dir)) == str(project_dir.resolve())
+
+
 def test_host_cpu_count_returns_a_positive_int():
     """Real, best-effort host CPU core count (UX-12) - this test host
     genuinely has at least one core, so this is a real, not synthetic,

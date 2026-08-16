@@ -95,13 +95,21 @@ class UtilizationResult:
 
     # Oversubscription analysis (Part 30.3). The *observed* evidence
     # checks (high utilization, concurrency exceeding effective_cpus) and
-    # the *config* check (builders x max_jobs > effective_cpus) both
-    # require a real effective_cpus - gated by cpu_accounting_available.
+    # the *config* evidence (delegated to bga/analyzer.py's own
+    # _check_process_oversubscription, UX-12/UX-17 - see
+    # _analyze_oversubscription's docstring) both require a real
+    # effective_cpus - gated by cpu_accounting_available.
     potential_oversubscription: bool = False
     oversubscription_evidence: str = "INSUFFICIENT_EVIDENCE"
     max_observed_concurrency: int = 0
-    builders: Optional[int] = None
-    max_jobs: Optional[int] = None
+
+    # Where effective_cpus came from (UX-17): "measured" (a real
+    # cpu_accounting.effective_cpus or cgroup quota/period - the
+    # strictly-preferred source when present), "declared_cpu_budget" or
+    # "detected_host_cpu_count" (UX-12/UX-15's own real, non-tautological
+    # inputs - deliberately NOT `builders`, which P1-33 banned as a
+    # capacity source), or None when no source was available at all.
+    effective_cpus_source: Optional[str] = None
 
     # Detailed intervals for timeline reconstruction
     intervals: List[CPUInterval] = field(default_factory=list)
@@ -144,6 +152,7 @@ class UtilizationResult:
         return {
             "cpu_accounting_available": self.cpu_accounting_available,
             "effective_cpus": self.effective_cpus,
+            "effective_cpus_source": self.effective_cpus_source,
             "wall_clock_us": self.wall_clock_us,
             "capacity_cpu_us": self.capacity_cpu_us,
             "buckets": {b.value: v for b, v in self.buckets.items()},
@@ -174,27 +183,58 @@ class UtilizationAnalyzer:
         self,
         cpu_accounting: Optional[CPUAccounting] = None,
         wall_clock_us: int = 0,
-        max_jobs: Optional[int] = None,
-        builders: Optional[int] = None,
+        host_cpu_count: Optional[int] = None,
+        cpu_budget: Optional[int] = None,
     ):
         """
         Initialize the utilization analyzer.
-        
+
         Args:
             cpu_accounting: CPU accounting configuration
             wall_clock_us: Total wall clock time in microseconds
-            max_jobs: Maximum parallel jobs from configuration
-            builders: Number of builders from configuration
+            host_cpu_count: Detected real host CPU core count (UX-12) -
+                a fallback capacity source when no real cpu_accounting
+                measurement is present (UX-17).
+            cpu_budget: Operator-declared CPU envelope (UX-15) - governs
+                over host_cpu_count as a capacity source when present,
+                same precedent as bga/analyzer.py's own
+                _check_process_oversubscription.
+
+        UX-17: this used to also accept `max_jobs`/`builders` for its own
+        independently-computed config-oversubscription evidence
+        (`builders x max_jobs > effective_cpus`) - removed. `max_jobs`
+        was `RunContext.max_jobs`, which per run-context/v9's own schema
+        actually means `builders` (see UX-12's docstring citations), so
+        that formula was really computing `builders x builders`, never
+        wired from a real call site in the first place (`builders` was
+        never passed from bga/analyzer.py), and used a different,
+        un-BuildStream-aware threshold than bga/analyzer.py's own
+        `_check_process_oversubscription` (UX-12) - three independent
+        bugs compounding into permanently-dead, and when naively "fixed",
+        nonsensical, code. Evidence source 1 now delegates to that
+        already-correct, already-tested check's own verdict instead (see
+        `_analyze_oversubscription`'s `oversubscription_violation` param).
         """
         self.cpu_accounting = cpu_accounting or CPUAccounting()
         self.wall_clock_us = wall_clock_us
-        self.max_jobs = max_jobs
-        self.builders = builders
-        
+        self.host_cpu_count = host_cpu_count
+        self.cpu_budget = cpu_budget
+
         # Computed values - effective_cpus/capacity_cpu_us are None
-        # (not a fabricated number) when no real CPU-accounting
-        # measurement source is available (P1-33).
-        self.effective_cpus = self._compute_effective_cpus()
+        # (not a fabricated number) when no real capacity source
+        # (measured CPU accounting, or a declared/detected core count)
+        # is available at all (P1-33/UX-17).
+        self.effective_cpus, self.effective_cpus_source = self._compute_effective_cpus()
+        # UX-17: this flag's name predates host_cpu_count/cpu_budget
+        # becoming valid effective_cpus sources - it now really means
+        # "a real capacity value is available" (see effective_cpus_source
+        # for which tier it came from), not literally "cpu_accounting was
+        # present." Kept as-is (not renamed) since every capacity-derived
+        # field below (capacity_cpu_us, the *_pct properties, I9
+        # reconciliation, oversubscription evidence sources 2/3) is
+        # correctly gated by it regardless of which real source populated
+        # effective_cpus - a scheduling parameter (builders) is still
+        # never a valid source (P1-33's own rule, unchanged).
         self.cpu_accounting_available = self.effective_cpus is not None
         self.capacity_cpu_us = (
             int(self.effective_cpus * wall_clock_us) if self.cpu_accounting_available else None
@@ -218,10 +258,11 @@ class UtilizationAnalyzer:
         self.potential_oversubscription = False
         self.oversubscription_evidence = "INSUFFICIENT_EVIDENCE"
         
-    def _compute_effective_cpus(self) -> Optional[float]:
+    def _compute_effective_cpus(self) -> Tuple[Optional[float], Optional[str]]:
         """
-        Compute effective CPU count from real accounting data (Part 30.1),
-        or None when no real measurement source is available.
+        Compute effective CPU count (Part 30.1) and which real source it
+        came from - `(None, None)` when no real capacity source is
+        available at all.
 
         P1-33: this previously fell back to a hardcoded 1.0 when neither
         a real effective_cpus value nor cgroup quota data was present -
@@ -229,12 +270,26 @@ class UtilizationAnalyzer:
         capacity-derived metric downstream (capacity_cpu_us, useful/
         idle/wasted percentages, I9 reconciliation, Part 30.3's
         oversubscription check) silently compute against synthetic data
-        while presenting as if it were real. None here means "genuinely
-        unavailable" and must propagate as such, not be replaced by
-        another guess.
+        while presenting as if it were real.
+
+        UX-17: added a third tier - `host_cpu_count`/`cpu_budget`
+        (UX-12/UX-15's own real, independently-measured/-declared
+        inputs) - below the two real-measurement tiers, used only when
+        neither is present (the common case: `tools/bst_extract_run.py`/
+        `tools/bst_run_context.py` deliberately never populate
+        `cpu_accounting` at all, per P1-33). This is *not* the fallback
+        P1-33 banned: that was deriving `effective_cpus` from `builders`
+        (a scheduling parameter, tautological against oversubscription
+        checks that also use `builders`), whereas `host_cpu_count`/
+        `cpu_budget` are genuine, independent capacity inputs - the same
+        legitimate category as `builders`/`fetchers` themselves, not
+        derived from them. `cpu_budget` is preferred over `host_cpu_count`
+        when both are present, matching `UX-15`'s own governing-ceiling
+        precedent (a cgroup CFS CPU quota is invisible to
+        `host_cpu_count`'s own `os.sched_getaffinity`-based detection).
         """
         if self.cpu_accounting.effective_cpus is not None:
-            return self.cpu_accounting.effective_cpus
+            return self.cpu_accounting.effective_cpus, "measured"
 
         # Try to derive from cgroup quota
         if (self.cpu_accounting.cgroup_quota_us is not None and
@@ -242,9 +297,14 @@ class UtilizationAnalyzer:
             quota = self.cpu_accounting.cgroup_quota_us
             period = self.cpu_accounting.cgroup_period_us
             if period > 0:
-                return quota / period
+                return quota / period, "measured"
 
-        return None
+        if self.cpu_budget is not None:
+            return float(self.cpu_budget), "declared_cpu_budget"
+        if self.host_cpu_count is not None:
+            return float(self.host_cpu_count), "detected_host_cpu_count"
+
+        return None, None
     
     def analyze(
         self,
@@ -252,33 +312,40 @@ class UtilizationAnalyzer:
         occupancy_segments: List[dict],
         retry_tasks: Optional[set] = None,
         rebuild_tasks: Optional[set] = None,
+        oversubscription_violation: Optional[dict] = None,
     ) -> UtilizationResult:
         """
         Perform complete CPU utilization analysis.
-        
+
         Args:
             task_intervals: List of task execution intervals with cpu_usage_us
             occupancy_segments: Occupancy step function segments
             retry_tasks: Set of task keys that are retries
             rebuild_tasks: Set of task keys that are rebuilds
-            
+            oversubscription_violation: the already-computed
+                `resource_oversubscription` violation dict from
+                bga/analyzer.py's own `_check_process_oversubscription`
+                (UX-12), or None if it didn't fire for this run - evidence
+                source 1 (Part 30.3) delegates to this verdict rather than
+                recomputing a second, potentially-divergent one (UX-17).
+
         Returns:
             UtilizationResult with complete analysis
         """
         retry_tasks = retry_tasks or set()
         rebuild_tasks = rebuild_tasks or set()
-        
+
         # Build CPU intervals from task intervals
         self._build_cpu_intervals(task_intervals, retry_tasks, rebuild_tasks)
-        
+
         # Analyze idle periods from occupancy
         self._analyze_idle_periods(occupancy_segments)
-        
+
         # Compute bucket totals
         self._compute_bucket_totals()
         
         # Check for oversubscription (Part 30.3)
-        self._analyze_oversubscription()
+        self._analyze_oversubscription(oversubscription_violation)
         
         # Reconcile totals (Part 33.3)
         self._reconcile()
@@ -390,24 +457,43 @@ class UtilizationAnalyzer:
         idle_cpu_us = max(0, self.capacity_cpu_us - total_active_cpu)
         return idle_cpu_us
     
-    def _analyze_oversubscription(self) -> None:
+    def _analyze_oversubscription(self, oversubscription_violation: Optional[dict] = None) -> None:
         """
         Analyze potential CPU oversubscription (Part 30.3).
 
         Checks for evidence of oversubscription:
-        1. Configuration: builders x max_jobs > effective_cpus
+        1. Configuration: delegated to bga/analyzer.py's own
+           `_check_process_oversubscription` (UX-12) - see
+           `oversubscription_violation` below.
         2. Observed: high CPU utilization
         3. Duration degradation with concurrency
 
-        All of these compare against effective_cpus - without a real
-        measurement (P1-33), there is nothing to compare against, so
-        this reports INSUFFICIENT_EVIDENCE unconditionally rather than
-        evaluating any check against a fabricated capacity. Before this
-        fix, `builders x max_jobs > effective_cpus` with
-        effective_cpus fabricated *from* builders degenerated into
-        `builders x max_jobs > builders`, near-tautologically true for
-        any max_jobs > 1 - defeating the check's purpose regardless of
-        the real CPU core count.
+        Evidence sources 2/3 compare against effective_cpus - without a
+        real capacity value (P1-33/UX-17), there is nothing to compare
+        against, so this reports INSUFFICIENT_EVIDENCE unconditionally
+        rather than evaluating any check against a fabricated capacity.
+
+        UX-17: evidence source 1 used to independently recompute
+        `builders x max_jobs > effective_cpus` here - three compounding
+        bugs made this permanently dead in real usage (`builders` was
+        never actually wired in from the real call site; `max_jobs` here
+        is `RunContext.max_jobs`, which per run-context/v9's own schema
+        means `builders` again, not the native `--max-jobs` concept
+        `_check_process_oversubscription` correctly uses; and even both
+        fixed, this class's own `cpu_accounting_available` gate was
+        permanently False for real runs before UX-17's `effective_cpus`
+        widening). Now delegates entirely to the already-computed,
+        already-correct, already-tested verdict passed in as
+        `oversubscription_violation` (the real `resource_oversubscription`
+        violation dict for this run, or None) - not a second,
+        independently-derived threshold that could disagree with it for
+        the same real run.
+
+        Args:
+            oversubscription_violation: the `resource_oversubscription`
+                violation dict from `_check_process_oversubscription`, or
+                None if it didn't fire (including when the inputs it
+                needs, e.g. `native_max_jobs`, simply weren't captured).
         """
         self.potential_oversubscription = False
         self.oversubscription_evidence = "INSUFFICIENT_EVIDENCE"
@@ -415,12 +501,9 @@ class UtilizationAnalyzer:
         if not self.cpu_accounting_available:
             return
 
-        # Check configuration-based oversubscription
-        config_oversubscription = False
-        if self.builders is not None and self.max_jobs is not None:
-            if self.builders * self.max_jobs > self.effective_cpus:
-                config_oversubscription = True
-                self.potential_oversubscription = True
+        config_oversubscription = oversubscription_violation is not None
+        if config_oversubscription:
+            self.potential_oversubscription = True
 
         # Check observed evidence
         observed_evidence = False
@@ -501,8 +584,7 @@ class UtilizationAnalyzer:
             potential_oversubscription=self.potential_oversubscription,
             oversubscription_evidence=self.oversubscription_evidence,
             max_observed_concurrency=self.max_observed_concurrency,
-            builders=self.builders,
-            max_jobs=self.max_jobs,
+            effective_cpus_source=self.effective_cpus_source,
             intervals=list(self.intervals),
             high_utilization_periods=list(self.high_utilization_periods),
             idle_periods=list(self.idle_periods),
@@ -512,26 +594,30 @@ class UtilizationAnalyzer:
 def analyze_utilization(
     cpu_accounting: Optional[dict] = None,
     wall_clock_us: int = 0,
-    max_jobs: Optional[int] = None,
-    builders: Optional[int] = None,
+    host_cpu_count: Optional[int] = None,
+    cpu_budget: Optional[int] = None,
     task_intervals: Optional[List[dict]] = None,
     occupancy_segments: Optional[List[dict]] = None,
     retry_tasks: Optional[set] = None,
     rebuild_tasks: Optional[set] = None,
+    oversubscription_violation: Optional[dict] = None,
 ) -> UtilizationResult:
     """
     Convenience function for CPU utilization analysis.
-    
+
     Args:
         cpu_accounting: CPU accounting config from run-context
         wall_clock_us: Total wall clock time
-        max_jobs: Max parallel jobs
-        builders: Number of builders
+        host_cpu_count: Detected real host CPU core count (UX-12/UX-17)
+        cpu_budget: Operator-declared CPU envelope (UX-15/UX-17)
         task_intervals: Task execution intervals with CPU usage
         occupancy_segments: Occupancy step function segments
         retry_tasks: Set of retry task keys
         rebuild_tasks: Set of rebuild task keys
-        
+        oversubscription_violation: the already-computed
+            `resource_oversubscription` violation dict (UX-12), or None -
+            see `UtilizationAnalyzer.analyze`'s own docstring (UX-17)
+
     Returns:
         UtilizationResult with complete analysis
     """
@@ -544,17 +630,18 @@ def analyze_utilization(
             cgroup_period_us=cpu_accounting.get("cgroup_period_us"),
             accounting_method=cpu_accounting.get("accounting_method"),
         )
-    
+
     analyzer = UtilizationAnalyzer(
         cpu_accounting=accounting,
         wall_clock_us=wall_clock_us,
-        max_jobs=max_jobs,
-        builders=builders,
+        host_cpu_count=host_cpu_count,
+        cpu_budget=cpu_budget,
     )
-    
+
     return analyzer.analyze(
         task_intervals=task_intervals or [],
         occupancy_segments=occupancy_segments or [],
         retry_tasks=retry_tasks or set(),
         rebuild_tasks=rebuild_tasks or set(),
+        oversubscription_violation=oversubscription_violation,
     )

@@ -1,6 +1,6 @@
 # UX-17: `UtilizationAnalyzer`'s own oversubscription check (Part 30.3) is dead code, and would use the wrong field if fixed naively
 
-**Priority:** High | **Status:** 🔴 Not Started - scope decided | **Depends on:** `UX-12`, `UX-15`
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15`
 
 ## Motivation
 
@@ -68,5 +68,33 @@ Rationale: `host_cpu_count` (`UX-12`, a real, independently-*measured* value via
 3. A test drives `UtilizationAnalyzer` through the real `bga/analyzer.py` call site (not just direct instantiation) and confirms the real fields are threaded through - a guard against this exact class of "parameter silently never populated" regression recurring.
 4. Full suite green.
 
+## Fix Implemented
+
+Took the resolved decision as designed. `bga/utilisation/__init__.py`:
+
+- `UtilizationAnalyzer.__init__` dropped the misleading `max_jobs`/`builders` params entirely (Required Fix item 4) - gained `host_cpu_count`/`cpu_budget` (UX-12/UX-15) instead.
+- `_compute_effective_cpus` gained a third tier below the two real-measurement ones (`cpu_accounting.effective_cpus`, cgroup quota/period): `cpu_budget` then `host_cpu_count` - real, independent capacity inputs, not derived from `builders` (the specific thing `P1-33` banned), so this respects that rule rather than reopening it. Now returns `(value, source)` - `source` ("measured" / "declared_cpu_budget" / "detected_host_cpu_count" / `None`) is surfaced as `UtilizationResult.effective_cpus_source`, so a reader can tell a real measurement apart from a declared/detected substitute. `cpu_accounting_available` keeps its existing name (matching this doc's own Required Fix wording) but now means "a real effective_cpus is available" more broadly - documented explicitly at its assignment site.
+- `_analyze_oversubscription` no longer recomputes evidence source 1 at all - it now takes `oversubscription_violation: Optional[dict]` (the real `resource_oversubscription` violation dict from `_check_process_oversubscription`, or `None`) and reads that verdict directly. Evidence sources 2/3 (observed high utilization, concurrency exceeding effective_cpus) are unchanged and now actually reachable for real runs, since `cpu_accounting_available` is no longer permanently `False`.
+- `UtilizationAnalyzer.analyze()`/`analyze_utilization()` both gained the `oversubscription_violation` passthrough param.
+
+`bga/analyzer.py`'s `_initialize_engines` now passes `host_cpu_count=self.run_context.host_cpu_count, cpu_budget=self.run_context.cpu_budget` (the real fields, UX-12/UX-15) instead of the stale `max_jobs=self.run_context.max_jobs` and its own `# builders would come from run_context if available` unfinished comment - both removed. `_compute_utilization` now looks up the real `resource_oversubscription` violation from `self.violations` (already populated - `_check_process_oversubscription` runs earlier in `analyze()`) and passes it into `UtilizationAnalyzer.analyze()`.
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+
+Done for real, 2026-08-16. `tests/unit/test_utilisation.py` rewritten for the new interface: config-oversubscription-alone-is-LOW now uses a real delegated violation dict instead of recomputing `builders x max_jobs`; a new regression guard (`test_config_oversubscription_delegates_not_recomputes`) confirms an extreme demand that *would* have tripped the old formula produces no evidence when nothing was delegated in; new tests cover `host_cpu_count`/`cpu_budget` as valid `effective_cpus` fallback sources (and that a real measurement still wins when both are present); a `builders`-is-never-a-source regression guard (there's no `builders` param left to even be tempted by); delegated evidence combined with real observed corroboration correctly surfaces the stronger label, not `LOW`. New `tests/unit/test_utilization_delegation.py` (4 tests) drives the *real* `bga/analyzer.py` call site end-to-end (Acceptance Test #3): the real UX-09 reproduction (`builders=8, native_max_jobs=8, host_cpu_count=4`) fires `resource_oversubscription` and `UtilizationAnalyzer` agrees (`potential_oversubscription: true`); BuildStream's own real defaults (4x4) produce no evidence from either check; `cpu_budget` is confirmed threaded through the real call site (not just direct instantiation); no capacity data anywhere stays honestly unavailable through the real call site.
+
+`tests/fixtures/golden/mixed_task_kinds/expected_output.json` regenerated per this file's own documented procedure - diffed to confirm the *only* change was the new `effective_cpus_source: "measured"` field, nothing else shifted.
+
+Full suite green: 526 passed (up from 517 - 9 new tests), same 7 pre-existing environment-only failures as `main`. `make lint` clean.
+
+Real end-to-end re-verification against `examples/04-critical-path-optimization/optimized`, re-extracted with `tools/bst_extract_run.py --native-max-jobs 8` (builders=4, host_cpu_count=4 - real demand 4x8=32 vs BuildStream's own 4x4=16 default for that ceiling):
+
+```
+effective_cpus: 4.0 source: detected_host_cpu_count
+potential_oversubscription: True
+oversubscription_evidence: LOW
+resource_oversubscription violation: {'builders': 4, 'native_max_jobs': 8, 'actual_demand': 32,
+  'governing_cores': 4, 'capacity_source': 'detected_host_cpu_count', 'default_demand': 16, ...}
+```
+
+Both checks agree - `resource_oversubscription` fired and `UtilizationAnalyzer.potential_oversubscription` is `true` for the same run. Re-extracted without `--native-max-jobs` (BuildStream's own real defaults): both checks agree on no oversubscription (`potential_oversubscription: False`, `oversubscription_evidence: "INSUFFICIENT_EVIDENCE"`, no `resource_oversubscription` violation).

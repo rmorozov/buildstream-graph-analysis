@@ -100,7 +100,7 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-22 | Per-element `max-jobs` capture + serialization-point risk detection | 🟢 Done |
 | UX-23 | Element-tag Plane 2 traces + detect redundant cross-element operations (real evidence: `examples/05`'s CMake ABI probe reran 6x independently; real run found 37 redundant-operation findings) | 🟢 Done |
 | UX-24 | Chrome Trace export for Plane 2 + combined two-plane `perfetto.dev` view, real dual-plane single-invocation capture | 🟢 Done |
-| UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🔴 Not Started |
+| UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🟢 Done |
 | UX-26 | Batch/map-reduce report stops surfacing zero-savings groups | 🔴 Not Started |
 
 (`UX-08` was never filed — not a missing/lost file.)

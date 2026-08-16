@@ -600,6 +600,19 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                     lines.append(
                         f"    - {key}: sensitivity {score:.2f} ({impact_pct:.1f}% impact)"
                     )
+            # UX-34: say which candidates were filtered and why, rather
+            # than silently shortening the ranking (same discipline as
+            # UX-26's omitted-groups line).
+            omitted_structural = sensitivity.get('omitted_structural_opportunities') or []
+            if omitted_structural:
+                lines.append(
+                    "  ({} structural element(s) omitted - no build commands to speed up: {})".format(
+                        len(omitted_structural),
+                        ", ".join(
+                            f"{o['element']} [{o['element_kind']}]" for o in omitted_structural[:5]
+                        ),
+                    )
+                )
             # UX-20 (map-reduce tier): the real, simulated combined
             # effect of fixing several independent high-sensitivity
             # elements together in one batch, vs. serially discovering

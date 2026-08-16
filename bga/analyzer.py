@@ -1409,10 +1409,44 @@ class BuildEfficiencyAnalyzer:
         # each group at once - distinct from sensitivity's own
         # per-element proxy scores, which never simulate a combined
         # effect. See bga/structural/batching.py's own module docstring.
+        # UX-34: a `stack` or `import` element has no build commands, so
+        # ranking it in a list titled "what to fix first" is not an
+        # action a reader can take - and on real projects those two
+        # kinds took the top two slots on every run tested, at
+        # sensitivity 1.00, because a structural element sitting on the
+        # critical path genuinely does have sensitivity 1.00 by the
+        # metric's own definition. Key Findings already tags them
+        # (`STRUCTURAL_ELEMENT_KINDS`, P4-12; the same tagging `UX-25`
+        # applies to coverage violations); this applies it here, in the
+        # one list explicitly about what to go and edit.
+        #
+        # Filtered, not dropped: the omitted entries move to their own
+        # key rather than vanishing (`UX-26`'s house pattern), and
+        # because `compute_sensitivity` returns ten candidates while
+        # only five are published, filtering surfaces the next *real*
+        # candidate instead of shortening the list.
+        kind_by_uid = self._element_kind_lookup()
+        actionable_opportunities = []
+        omitted_structural_opportunities = []
+        for entry in result.sensitivity.top_opportunities:
+            uid = entry[0]
+            if kind_by_uid.get(uid) in STRUCTURAL_ELEMENT_KINDS:
+                omitted_structural_opportunities.append(
+                    {'element': uid, 'element_kind': kind_by_uid.get(uid, 'unknown')}
+                )
+            elif len(actionable_opportunities) < 5:
+                actionable_opportunities.append(entry)
+
         batch_opportunities = {'groups': [], 'omitted_zero_savings_groups': [], 'serialized_pairs': []}
         if self.replay_scheduler is not None:
             from bga.structural.batching import compute_batch_opportunities, serialize_batch_opportunities
-            candidates = [key for key, _, _ in result.sensitivity.top_opportunities[:5]]
+            # Same UX-34 reasoning applies transitively to batching and
+            # to its `serialized_pairs` byproduct, both of which are
+            # derived purely from this candidate list: "fixing" a
+            # structural element means eliminating a zero-duration task,
+            # which by construction can never change the replayed
+            # makespan.
+            candidates = [key for key, _, _ in actionable_opportunities]
             element_to_task_key = {
                 t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks
             }
@@ -1488,7 +1522,11 @@ class BuildEfficiencyAnalyzer:
                 'parallelism_efficiency': result.parallelism.parallelism_efficiency,
             },
             'sensitivity': {
-                'top_opportunities': result.sensitivity.top_opportunities[:5],
+                # UX-34: structural-kind elements filtered out (see
+                # above) and listed separately rather than silently
+                # dropped.
+                'top_opportunities': actionable_opportunities,
+                'omitted_structural_opportunities': omitted_structural_opportunities,
                 'total_improvable_time_us': result.sensitivity.total_improvable_time_us,
                 'best_case_speedup': result.sensitivity.best_case_speedup,
             },

@@ -272,6 +272,7 @@
                     9.980039920159681
                 ]
             ],
+            "omitted_structural_opportunities": [],
             "total_improvable_time_us": 2000,
             "best_case_speedup": 1.125
         },

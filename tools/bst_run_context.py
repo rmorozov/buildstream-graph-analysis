@@ -45,6 +45,10 @@ log instead:
       is always auto-detected; native_max_jobs/cpu_budget are purely
       operator-supplied via --native-max-jobs/--cpu-budget, since
       neither is visible in a BuildStream log itself.
+  memory_budget_mb / estimated_job_memory_mb - UX-21 fields, same shared
+      module: both purely operator-supplied via --memory-budget-mb/
+      --estimated-job-memory-mb, no auto-detection tier (no real
+      per-task memory measurement source exists in this pipeline).
 """
 import argparse
 import json
@@ -55,7 +59,7 @@ from tools.bst_log_to_chrome_trace import (
     _resolve_start_time_us,
 )
 from tools.chrome_trace_to_bga_trace import invocation_wall_clock
-from tools._run_context_common import add_cpu_capacity_fields
+from tools._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
 
 
 def build_run_context(
@@ -66,6 +70,8 @@ def build_run_context(
     host: str = None,
     native_max_jobs: int = None,
     cpu_budget: int = None,
+    memory_budget_mb: int = None,
+    estimated_job_memory_mb: int = None,
 ) -> dict:
     """Run the real log converter against `log_path` and derive a
     run-context/v9 dict from its output - the same converter
@@ -108,6 +114,11 @@ def build_run_context(
     # producer path up to parity with tools/bst_extract_run.py's own,
     # which had these fields already.
     add_cpu_capacity_fields(run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget)
+    # memory_budget_mb/estimated_job_memory_mb (UX-21) - same shared-
+    # helper pattern.
+    add_memory_capacity_fields(
+        run_context, memory_budget_mb=memory_budget_mb, estimated_job_memory_mb=estimated_job_memory_mb,
+    )
 
     return run_context
 
@@ -150,6 +161,20 @@ def main() -> int:
         "wanting to reserve headroom on a shared machine. When set, bga's oversubscription "
         "check treats this as the governing ceiling instead of host_cpu_count (UX-15).",
     )
+    parser.add_argument(
+        "--memory-budget-mb", type=int, default=None,
+        help="The amount of memory (MB) this build is *intended* to use - the operator's "
+        "declared envelope. No auto-detection - purely operator-supplied. When set together "
+        "with --estimated-job-memory-mb, bga's memory oversubscription check (UX-21) compares "
+        "builders x native-max-jobs x --estimated-job-memory-mb against this budget.",
+    )
+    parser.add_argument(
+        "--estimated-job-memory-mb", type=int, default=None,
+        help="A rough, operator-supplied estimate of one concurrent build job's memory "
+        "footprint (MB) - a single configurable constant, not a real per-task measurement "
+        "(no such measurement source exists in this pipeline, see UX-21). Only meaningful "
+        "together with --memory-budget-mb.",
+    )
     args = parser.parse_args()
 
     try:
@@ -161,6 +186,8 @@ def main() -> int:
             host=args.host,
             native_max_jobs=args.native_max_jobs,
             cpu_budget=args.cpu_budget,
+            memory_budget_mb=args.memory_budget_mb,
+            estimated_job_memory_mb=args.estimated_job_memory_mb,
         )
     except FileNotFoundError:
         print(f"Error: Could not find input file '{args.input_log}'", file=sys.stderr)

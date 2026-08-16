@@ -86,6 +86,15 @@ def _format_violation_summary(violation: dict) -> str:
             f"environment's detected host_cpu_count={violation.get('host_cpu_count')} "
             f"- the declared budget itself may be unrealistic here, see UX-15"
         )
+    if vtype == 'memory_oversubscription':
+        return (
+            f"estimated memory oversubscription: builders={violation.get('builders')} x "
+            f"native max-jobs={violation.get('native_max_jobs')}{_auto_note(violation)} x "
+            f"~{violation.get('estimated_job_memory_mb')}MB/job (config-driven estimate, "
+            f"not a real measurement) = ~{violation.get('estimated_demand_mb')}MB vs a "
+            f"declared memory budget of {violation.get('memory_budget_mb')}MB - risk of "
+            f"swap, a qualitatively worse failure mode than CPU contention, see UX-21"
+        )
     return f"{vtype}: {violation}"
 
 

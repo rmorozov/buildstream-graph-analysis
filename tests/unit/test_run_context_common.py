@@ -2,9 +2,10 @@
 tools/bst_run_context.py and tools/bst_extract_run.py both call, so the
 two producer paths documented in docs/ingestion-pipeline.md can't
 silently diverge in their native_max_jobs/host_cpu_count/cpu_budget
-support again the way they did before this fix.
+(and, UX-21, memory_budget_mb/estimated_job_memory_mb) support again
+the way they did before this fix.
 """
-from tools._run_context_common import add_cpu_capacity_fields, host_cpu_count
+from tools._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields, host_cpu_count
 
 
 def test_host_cpu_count_returns_a_positive_int():
@@ -43,3 +44,29 @@ def test_add_cpu_capacity_fields_distinguishes_zero_from_absent():
 
     assert run_context["native_max_jobs"] == 0
     assert run_context["cpu_budget"] == 0
+
+
+def test_add_memory_capacity_fields_adds_both_when_given():
+    run_context = {}
+    add_memory_capacity_fields(run_context, memory_budget_mb=8000, estimated_job_memory_mb=1000)
+
+    assert run_context["memory_budget_mb"] == 8000
+    assert run_context["estimated_job_memory_mb"] == 1000
+
+
+def test_add_memory_capacity_fields_omits_both_when_not_given():
+    """Unlike host_cpu_count, there is no auto-detection tier here at
+    all (UX-21) - both fields must be fully absent, not defaulted."""
+    run_context = {}
+    add_memory_capacity_fields(run_context)
+
+    assert "memory_budget_mb" not in run_context
+    assert "estimated_job_memory_mb" not in run_context
+
+
+def test_add_memory_capacity_fields_distinguishes_zero_from_absent():
+    run_context = {}
+    add_memory_capacity_fields(run_context, memory_budget_mb=0, estimated_job_memory_mb=0)
+
+    assert run_context["memory_budget_mb"] == 0
+    assert run_context["estimated_job_memory_mb"] == 0

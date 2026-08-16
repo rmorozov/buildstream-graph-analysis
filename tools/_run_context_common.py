@@ -50,3 +50,21 @@ def add_cpu_capacity_fields(run_context: dict, native_max_jobs: int = None, cpu_
         run_context["host_cpu_count"] = detected_host_cpu_count
     if cpu_budget is not None:
         run_context["cpu_budget"] = cpu_budget
+
+
+def add_memory_capacity_fields(
+    run_context: dict, memory_budget_mb: int = None, estimated_job_memory_mb: int = None,
+) -> None:
+    """Mutates `run_context` in place, adding `memory_budget_mb`/
+    `estimated_job_memory_mb` (UX-21) - both purely operator-supplied,
+    same pattern as `native_max_jobs`/`cpu_budget` above: omitted when
+    not given, never defaulted to a guessed value. Unlike `host_cpu_count`,
+    there is no auto-detection tier here at all (UX-21's own doc scopes
+    that out deliberately) - real per-task memory measurement has no
+    source in this ingestion pipeline, so both fields stay a purely
+    config-driven, explicitly-labeled estimate.
+    """
+    if memory_budget_mb is not None:
+        run_context["memory_budget_mb"] = memory_budget_mb
+    if estimated_job_memory_mb is not None:
+        run_context["estimated_job_memory_mb"] = estimated_job_memory_mb

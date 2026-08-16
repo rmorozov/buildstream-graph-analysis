@@ -701,6 +701,88 @@ class BuildEfficiencyAnalyzer:
                 'cpu_budget': cpu_budget,
             })
 
+    def _check_memory_oversubscription(self) -> None:
+        """UX-21: every concurrently-running build subprocess also
+        consumes real memory (compilers, especially C++ ones doing heavy
+        template instantiation or LTO, can each use gigabytes) -
+        pushing the build host into swap is a qualitatively worse
+        failure mode than CPU oversubscription (the whole machine
+        thrashes, every process, not just the build slowing down).
+        Independent of `_check_process_oversubscription`'s own CPU-core
+        check - a config can be memory-oversubscribed while CPU-fine, or
+        vice versa - so this is its own, distinct violation type rather
+        than folded into `resource_oversubscription`.
+
+        No real per-task memory measurement source exists in this
+        ingestion pipeline (mirrors `UX-12`/`UX-15`'s own CPU-side
+        honesty, and `P1-33`'s "never fabricate a measurement" rule) -
+        this is a coarse, explicitly-labeled *estimate*: `builders x
+        native_max_jobs x estimated_job_memory_mb` (both purely
+        operator-declared - `RunContext.memory_budget_mb`/
+        `estimated_job_memory_mb`) compared against the operator's
+        declared memory envelope. All four inputs are best-effort/
+        optional - this check only runs when they're all actually
+        present.
+        """
+        if not self.run_context:
+            return
+        builders = self.run_context.resource_capacities.get('PROCESS')
+        native_max_jobs = self.run_context.native_max_jobs
+        memory_budget_mb = self.run_context.memory_budget_mb
+        estimated_job_memory_mb = self.run_context.estimated_job_memory_mb
+
+        # UX-16: explicit `is None` checks, not truthiness - see
+        # _check_process_oversubscription's own comment on this.
+        if (
+            builders is None or native_max_jobs is None
+            or memory_budget_mb is None or estimated_job_memory_mb is None
+        ):
+            return
+
+        if native_max_jobs == 0:
+            # BuildStream's own real "auto" sentinel (UX-16) - resolving
+            # it needs a governing CPU-core count, same as
+            # _check_process_oversubscription's own resolution (this is
+            # BuildStream's own CPU-core-based behavior, not something
+            # specific to the memory dimension). If neither is known,
+            # skip rather than silently treat the literal 0 as "no
+            # parallelism" - that would understate real memory demand,
+            # the exact class of bug UX-16 fixed for the CPU check.
+            governing_cores = (
+                self.run_context.cpu_budget
+                if self.run_context.cpu_budget is not None
+                else self.run_context.host_cpu_count
+            )
+            if governing_cores is None:
+                return
+            resolved_native_max_jobs = min(governing_cores, 8)
+            native_max_jobs_was_auto = True
+        else:
+            resolved_native_max_jobs = native_max_jobs
+            native_max_jobs_was_auto = False
+
+        estimated_demand_mb = builders * resolved_native_max_jobs * estimated_job_memory_mb
+
+        if estimated_demand_mb > memory_budget_mb:
+            logger.warning(
+                "estimated memory demand: builders=%d x native max-jobs=%d%s x "
+                "~%dMB/job = ~%dMB vs a declared memory budget of %dMB - risk of "
+                "swap (see UX-21); this is a config-driven estimate, not a "
+                "real per-task memory measurement",
+                builders, resolved_native_max_jobs,
+                " (resolved from BuildStream's own max-jobs=0 auto sentinel)" if native_max_jobs_was_auto else "",
+                estimated_job_memory_mb, estimated_demand_mb, memory_budget_mb,
+            )
+            self.violations.append({
+                'type': 'memory_oversubscription',
+                'builders': builders,
+                'native_max_jobs': resolved_native_max_jobs,
+                'native_max_jobs_was_auto': native_max_jobs_was_auto,
+                'estimated_job_memory_mb': estimated_job_memory_mb,
+                'estimated_demand_mb': estimated_demand_mb,
+                'memory_budget_mb': memory_budget_mb,
+            })
+
     def _build_capacity_model_note(self) -> str:
         """UX-13: `LB`/`Efficiency Score` are correctly computed per spec
         Part 16, but only ever certify against this run's *recorded*
@@ -827,6 +909,7 @@ class BuildEfficiencyAnalyzer:
             result.total_duration_us = horizon_us
 
         self._check_process_oversubscription()
+        self._check_memory_oversubscription()
 
         # Pipeline overhead (P4-14, non-spec additive signal) - see
         # docs/tasks/P4-14-cache-query-overhead-visibility.md

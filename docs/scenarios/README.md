@@ -56,6 +56,64 @@ Same verification discipline as the closed backlog (see `docs/fixing-guide.md`):
 | UX-38 | `bst_native_build_tracer report` accepts the JSON report `run` just wrote and prints `Processes traced: 0` with exit 0; there is also no way to re-render a saved report, and a misplaced flag yields a raw traceback | Low | UX-11 (done) | 🟢 Done — `report` detects and re-renders a saved JSON report (closing the no-way-to-re-render gap too), an unparseable file is an error rather than a zero-process result, and a misplaced option is a usage error rather than a traceback | [UX-38](UX-38-tracer-report-accepts-the-wrong-artifact-silently.md) |
 | UX-39 | `--fail-on-regression` gates on wall-clock alone at a 1% threshold: it fires on a +4.3% capacity experiment, cannot express "new work is fine but new inefficiency is not", and the tool's own efficiency numbers point the wrong way to gate on instead | High | UX-01, UX-02, UX-03 (done), UX-27, UX-40 | 🟢 Done — independent efficiency gate on `occupancy_ratio` with its own exit code 5, a relative `--max-efficiency-drop` (default 5.0pp, derived from 1.0pp of measured run-to-run noise) and an absolute `--min-efficiency` floor. Real evidence: two well-parallelized elements added fail the duration gate and pass the efficiency gate | [UX-39](UX-39-ci-gate-cannot-express-inefficiency-regression.md) |
 | UX-40 | Real captures land at ~0.69 confidence because BuildStream's own measured startup counts against `attribution_score` - and `--fail-on-regression` fails *open* below 0.8, silently, so the CI gate is off on exactly the small/fast projects most likely to use it | High | UX-03, UX-10 (both done) | 🟢 Done — untracked head explained by measured pipeline overhead no longer penalizes `attribution_score` (real capture: 0.694 -> 0.869, gate now live), plus a new `--fail-on-low-confidence` so a pipeline can refuse a gate that did not run | [UX-40](UX-40-real-runs-systematically-fail-the-confidence-gate.md) |
+| UX-41 | The parallelism profile decomposes levels by BFS *shortest* path from a root, so every element under a common base collapses into one level - a 1202-element, 14-level graph reports 3 levels of width `[1, 1200, 1]`, contradicting `max_depth: 13` in the same block | High | — | 🔴 Not Started | [UX-41](UX-41-level-decomposition-uses-shortest-not-longest-path.md) |
+| UX-42 | Attribution re-derives the whole run's resource-saturation timeline from scratch once per wait gap, so a 1202-element build takes 68s to analyze - 98% of it in one `O(gaps x tasks x boundaries)` function performing 112M enum hashes | High | — | 🔴 Not Started | [UX-42](UX-42-attribution-is-quadratic-per-gap-at-scale.md) |
+| UX-43 | "Choke point" is the placeholder `fan-in >= 2 and fan-out >= 2`, so 520 of 1202 elements (43.3%) are reported as bottlenecks; the code's own comment names the dominator-based definition that was never implemented | Medium | UX-33 (done - which made the names visible and the breakage legible) | 🔴 Not Started | [UX-43](UX-43-choke-point-detection-degenerates-at-scale.md) |
+| UX-44 | "Slack" is never computed - it is the placeholder `duration x 0.5` - so the improvement ranking is strictly *inverted* by duration (it omits the 14s element and names five 3s ones), and `best_case_speedup` is a near-constant ~2.0x carrying no information | High | UX-34 (done) | 🔴 Not Started | [UX-44](UX-44-sensitivity-ranks-improvement-opportunities-backwards.md) |
+| UX-45 | The Plane 2 hook already runs at every traced process's exit but never calls `getrusage`, so `bga` has no CPU-time measurement anywhere - which is why I9 reconciliation is disabled on every real run and three separate "this is occupancy, not CPU" caveats have to be carried | High | UX-11, UX-23, UX-36 (done), UX-27 | 🔴 Not Started | [UX-45](UX-45-capture-real-cpu-time-per-traced-process.md) |
+| UX-46 | No signal finds a declared-but-unused build dependency - the last macro-level gap in `examples/06` - and the cheap cmdline-matching shortcut is refuted by real trace data: BuildStream stages every dep into one shared sandroot, so paths carry no element identity | High | UX-11, UX-23 (both done) | 🔴 Not Started | [UX-46](UX-46-detect-declared-but-unused-build-dependencies.md) |
+| UX-47 | Every section subcommand is a thin alias over the full pipeline, so `bga graph` spends 67s computing attribution it never renders - the same cost as `bga analyze` - while the README tells users to reach for the narrow subcommands instead | Medium | UX-42 (independent; either fix helps alone) | 🔴 Not Started | [UX-47](UX-47-narrow-subcommands-pay-for-the-full-analysis.md) |
+| UX-48 | `IDLE_UNDERPARALLEL` is never assigned, so all idle capacity books to `IDLE_NO_TASKS`: a deliberately builder-starved run with four tasks ready and unscheduled reports 72.30s of "nothing was ready to run" and sends the user to restructure an already-optimal graph | High | UX-36 (done) | 🔴 Not Started | [UX-48](UX-48-idle-underparallel-bucket-is-always-zero.md) |
+
+## UX-41..UX-48: the second audit round (2026-08-16)
+
+Filed from a round that did exactly what the first round's own
+[`docs/design-directions.md`](../design-directions.md) told it to: it took
+the three "what the next audit round should probe" items that were
+actionable in one session - **scale**, **a real CPU measurement**, and
+**declared-vs-used dependencies** - and probed them against real data
+instead of re-reading the code.
+
+**Scale was the productive one.** Every finding in the first round came
+from projects of 8-13 elements. A 1202-element run - a toolchain import
+everything depends on, twelve layers of 100 modules with real fan-out and
+fan-in between adjacent layers, and a stack on top, scheduled onto 16
+builders by a real dependency-respecting greedy pass - broke four things
+at once (`UX-41`..`UX-44`), and `UX-47` fell out of timing the same run.
+
+Three of those four are the **same failure mode**: a placeholder that was
+plausible at 11 elements and is obviously wrong at 1200. `_compute_all_slacks`
+returns `duration * 0.5` with the comment *"In full implementation, would
+use forward/backward pass"*; the choke-point test is `in_degree >= 2 and
+out_degree >= 2` under a comment naming the dominator approach; the level
+decomposition is a BFS whose first-visit-wins semantics were never the
+intended ones. Each is a few lines, each ships under a name that promises
+a real computation, and none of them announces itself as provisional in
+any output a user sees. That pattern - **not the individual bugs** - is
+this round's main finding.
+
+So the round then grepped for the rest of the pattern rather than leaving
+it to the next scale probe, and `UX-48` is what that sweep found outside
+`bga/structural/`: `IDLE_UNDERPARALLEL` is declared, read, and never
+assigned, so the bucket meaning "raise `--builders`" reads 0.00s on every
+run and its time is booked to the bucket meaning "restructure your
+graph". That one needs no scale at all - it is wrong on an eleven-element
+project, and it sends a user to the wrong half of the optimization cycle.
+
+`UX-44` is the one to fix first. It is the tool's answer to the only
+question a user actually arrives with - *what should I optimize?* - and
+on a real capture of `examples/06` it omits the element that is 35% of the
+build and names five interchangeable ones instead.
+
+The other two probes produced one filing each and were both worth doing
+for what they *settled*: `UX-45` confirmed by reading the real hook that
+per-process CPU time is two `getrusage` calls away, and `UX-46` **refuted**
+the cheap approach to declared-vs-used detection with real trace data -
+the hypothesis was formed from reading the hook and killed by measuring
+the output, which is recorded in that doc so the next attempt does not
+re-derive it. Recording the refutation is the point; had it been filed as
+"match staged paths against traced cmdlines", it would have been an
+implementable-looking task that could not work.
 
 ## UX-27..UX-40: the 2026-08-16 audit round
 

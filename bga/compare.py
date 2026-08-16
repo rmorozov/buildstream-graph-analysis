@@ -38,6 +38,12 @@ _SIGNIFICANCE_PCT = 1
 _FLOOR_KEYS = (
     'total_duration_us', 't_infinity_observed', 'lb', 'certified_headroom',
     't_c', 'efficiency_score',
+    # UX-27: the graph-shape-aware signal. Included here specifically
+    # because the iterative-optimization workflow `bga compare` exists
+    # for is where the gap shows: on a real 30.5% improvement every other
+    # metric in this list either stayed flat or moved backwards, and this
+    # one moved 25% -> 63%.
+    'occupancy_ratio',
 )
 
 

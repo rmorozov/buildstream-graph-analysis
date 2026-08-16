@@ -396,6 +396,32 @@ class BuildEfficiencyAnalyzer:
                 't_infinity_cold': Advisory(cold_floor['t_infinity_cold']),
             },
         )
+        # UX-27: a second, graph-shape-aware efficiency signal, because
+        # `efficiency_score` above structurally cannot be one.
+        #
+        # Every certified floor is derived from the run's *own observed
+        # graph*. A build whose independent elements have been
+        # accidentally chained one behind another has a critical path
+        # equal to its own total work, so LB == T-infinity == T_C
+        # identically, headroom is zero, and efficiency_score is 1.00.
+        # Measured on `examples/06-macro-micro-optimization`: three
+        # one-line fixes made a real build 30.5% faster while
+        # efficiency_score moved 1.00 -> 0.83 and certified headroom
+        # 0.00s -> 4.05s. Both moved backwards, correctly, by their own
+        # definitions - which is exactly the problem.
+        #
+        # occupancy_ratio does not consult the graph at all: it asks how
+        # much of the available dispatch-slot-time the run actually used.
+        # Chaining work that could have run concurrently lowers it;
+        # unchaining raises it. On that same real pair: 25.4% -> 55.9%.
+        #
+        # Known weakness, stated rather than hidden: the numerator is
+        # slot *occupancy*, not CPU time (P1-33/UX-36), so it inflates
+        # under contention - the same work costs more occupancy when
+        # elements overlap. That makes this an honest directional signal,
+        # not a precise one, and is why UX-39's CI gate needs a stated
+        # tolerance rather than a hair-trigger threshold.
+        floors['occupancy_ratio'] = self._compute_occupancy_ratio(horizon_us)
         floors['cold_partial'] = cold_floor['cold_partial']
         floors['cold_confidence'] = cold_floor['cold_confidence']
         # P2-06: per-tier duration-source provenance, additive - doesn't
@@ -875,6 +901,24 @@ class BuildEfficiencyAnalyzer:
                 'estimated_demand_mb': estimated_demand_mb,
                 'memory_budget_mb': memory_budget_mb,
             })
+
+    def _compute_occupancy_ratio(self, horizon_us: int) -> Optional[float]:
+        """UX-27: sum of real task slot-occupancy over the dispatch
+        capacity that was available for the whole run.
+
+        Denominator is `builders` (dispatch slots), not a CPU core count:
+        the numerator is slot-time, so this is dimensionally a slot
+        utilisation, and `builders` is the one capacity `bga` genuinely
+        knows for every run. None - never fabricated - when either input
+        is missing.
+        """
+        if not self.run_context or horizon_us <= 0:
+            return None
+        builders = self.run_context.resource_capacities.get('PROCESS')
+        if not builders or builders <= 0:
+            return None
+        occupied_us = sum(task.dur_us for task in self.normalized_tasks)
+        return occupied_us / (horizon_us * builders)
 
     def _build_capacity_model_note(self) -> str:
         """UX-13: `LB`/`Efficiency Score` are correctly computed per spec

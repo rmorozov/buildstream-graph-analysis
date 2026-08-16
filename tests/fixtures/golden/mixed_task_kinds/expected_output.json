@@ -9,6 +9,7 @@
         "model_slack": 0,
         "efficiency_score": 1.0,
         "t_infinity_cold": null,
+        "occupancy_ratio": 0.6428571428571429,
         "cold_partial": false,
         "cold_confidence": null,
         "cold_duration_sources": {},

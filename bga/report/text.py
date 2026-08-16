@@ -45,8 +45,19 @@ _EFFICIENCY_MEDIUM = 0.7
 
 
 def _efficiency_band(score: float) -> str:
+    """UX-27: the band text now names what this score does and does not
+    cover. It measures how well the scheduler packed *the graph this run
+    actually had*; it cannot see whether that graph was worth packing,
+    because every input to it is derived from the observed graph. A build
+    whose independent elements were accidentally chained scores 1.00 -
+    correctly, by this definition, and uselessly. `Dispatch Occupancy`
+    below is the signal that moves the other way."""
     if score >= _EFFICIENCY_HIGH:
-        return "very efficient - remaining gains are mostly in reducing Critical Path's own work, not scheduling"
+        return (
+            "scheduling is near the certified floor for this graph - further gains "
+            "need the graph or the work itself to change, not the scheduler "
+            "(see Dispatch Occupancy and Critical Path)"
+        )
     if score >= _EFFICIENCY_MEDIUM:
         return "worth checking Certified Headroom for real scheduling gains"
     return "meaningful scheduling headroom available"
@@ -420,6 +431,14 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         efficiency_score = floors.get('efficiency_score')
         if efficiency_score is not None:
             lines.append(f"  Efficiency Score:            {efficiency_score:.2f} ({_efficiency_band(efficiency_score)})")
+        # UX-27: the graph-shape-aware companion to the score above.
+        occupancy_ratio = floors.get('occupancy_ratio')
+        if occupancy_ratio is not None:
+            lines.append(
+                f"  Dispatch Occupancy:          {occupancy_ratio * 100:.1f}% of available "
+                f"slot-time used (unlike Efficiency Score, this falls when independent "
+                f"work is serialized - see UX-27)"
+            )
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
             lines.append(f"  T∞,cold (advisory):          {floors['t_infinity_cold'] / 1e6:.2f}s{partial_note}")
@@ -864,6 +883,21 @@ def format_compare_text(comparison) -> str:
         ce_s = f"{ce:.2f}" if ce is not None else "n/a"
         de_s = f"{'+' if de is not None and de >= 0 else ''}{de:.2f}" if de is not None else "n/a"
         lines.append(f"  {'Efficiency Score':20s} {be_s:>10s} -> {ce_s:>10s}   ({de_s})")
+    # UX-27: shown as a percentage, and shown right below Efficiency
+    # Score deliberately - on a real optimization the two move in
+    # opposite directions, and seeing that side by side is the whole
+    # point of publishing a second signal.
+    if b.get('occupancy_ratio') is not None or c.get('occupancy_ratio') is not None:
+        bo = b.get('occupancy_ratio')
+        co = c.get('occupancy_ratio')
+        do = d.get('occupancy_ratio')
+        bo_s = f"{bo * 100:.1f}%" if bo is not None else "n/a"
+        co_s = f"{co * 100:.1f}%" if co is not None else "n/a"
+        do_s = (
+            f"{'+' if do is not None and do >= 0 else ''}{do * 100:.1f}pp"
+            if do is not None else "n/a"
+        )
+        lines.append(f"  {'Dispatch Occupancy':20s} {bo_s:>10s} -> {co_s:>10s}   ({do_s})")
     lines.append("")
 
     lines.append("Confidence:")

@@ -21,7 +21,11 @@ Two tiers, matching this session's own "cheap win first, harder design work sepa
 ## Out of Scope
 
 - Automatically deciding *which* elements are "worth" batching (a threshold/heuristic question) - report the independent-group structure and let the user choose which groups to act on.
-- Any change to how sensitivity itself is scored (Part 34's own formula) - this is about grouping/batching and simulating combined effect, not re-deriving per-element scores.
+- Any change to how sensitivity itself is scored (its own existing formula) - this is about grouping/batching and simulating combined effect, not re-deriving per-element scores.
+
+## Housekeeping note found while scoping this task
+
+`bga/structural/analyzer.py::compute_sensitivity`'s own docstring cites "Part 34" of the specification. Checked directly: `docs/specification.md` Part 34 is "Core Invariants" (I1-I13) - unrelated to sensitivity/optimization-opportunity ranking. Grepping the whole spec for "sensitivity" finds exactly one match (Part 20's wall-clock-share, a real but different, already-implemented mechanism). `compute_sensitivity`/`SensitivityResult` is therefore not actually a precisely spec-defined M6 mechanism - it's a `bga`-specific additive heuristic (same category as `element_kind`, `P4-12`'s own precedent), just mislabeled with a stale/wrong citation. Worth fixing the docstring (a one-line change) while this task is touching the same function - not itself a reason to delay or block this task, and confirms `UX-20` has real design freedom here without contradicting a real spec invariant.
 
 ## Acceptance Test
 

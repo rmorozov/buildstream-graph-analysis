@@ -17,7 +17,8 @@ from pathlib import Path
 import pytest
 
 from tools.bst_show_to_graph import (
-    FIELD_SEP, RECORD_SEP, _parse_dep_list, _parse_max_jobs, build_graph, extract_graph,
+    FIELD_SEP, RECORD_SEP, _parse_dep_list, _parse_max_jobs, _parse_notparallel,
+    build_graph, extract_graph,
 )
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
@@ -25,8 +26,10 @@ FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_p
 BST_AVAILABLE = shutil.which("bst") is not None
 
 
-def _record(name, key, build_deps, runtime_deps, kind="import", public=""):
-    return FIELD_SEP.join([name, key, kind, build_deps, runtime_deps, public])
+def _record(name, key, build_deps, runtime_deps, kind="import", public="", variables=""):
+    # UX-31 added a 7th field (`%{vars}`), the real source of per-element
+    # resolved max-jobs and `notparallel`.
+    return FIELD_SEP.join([name, key, kind, build_deps, runtime_deps, public, variables])
 
 
 # --- Pure parser tests ------------------------------------------------
@@ -53,7 +56,8 @@ def test_build_graph_marks_requested_target():
     graph = build_graph(stdout, targets=["app.bst"])
     assert graph["elements"] == [{
         "uid": "app.bst", "cache_key": "abc123", "requested_target": True,
-        "max_jobs": None, "element_kind": "manual",
+        # UX-31 added `notparallel` alongside the existing max_jobs.
+        "max_jobs": None, "notparallel": None, "element_kind": "manual",
     }]
 
 
@@ -156,14 +160,43 @@ def test_parse_max_jobs_empty_public_is_none():
     assert _parse_max_jobs("{}") is None
 
 
-def test_build_graph_captures_max_jobs():
+def test_build_graph_captures_resolved_max_jobs_from_vars():
+    """UX-31: `%{vars}` carries the *resolved* per-element value - what
+    really reaches `make -jN` - which is what the report needs. Confirmed
+    against a real BuildStream 2.7.0 build: an element with
+    `notparallel: True` reports `max-jobs: 1` while its siblings report
+    the project default."""
     stdout = (
-        _record("normal.bst", "k1", "[]", "[]", public="bst:\n  split-rules: {}\n") + RECORD_SEP
-        + _record("override.bst", "k2", "[]", "[]", public="bst:\n  max-jobs: 16\n") + RECORD_SEP
+        _record("normal.bst", "k1", "[]", "[]", variables="max-jobs: 4\n") + RECORD_SEP
+        + _record(
+            "pinned.bst", "k2", "[]", "[]",
+            variables="max-jobs: 1\nnotparallel: True\n",
+        ) + RECORD_SEP
     )
     graph = build_graph(stdout, targets=[])
-    max_jobs = {e["uid"]: e["max_jobs"] for e in graph["elements"]}
-    assert max_jobs == {"normal.bst": None, "override.bst": 16}
+    by_uid = {e["uid"]: e for e in graph["elements"]}
+    assert by_uid["normal.bst"]["max_jobs"] == 4
+    assert by_uid["normal.bst"]["notparallel"] is None
+    assert by_uid["pinned.bst"]["max_jobs"] == 1
+    assert by_uid["pinned.bst"]["notparallel"] is True
+
+
+def test_build_graph_falls_back_to_public_max_jobs_when_vars_absent():
+    """UX-31 keeps UX-22's `public: bst: max-jobs:` read as a fallback so
+    an older captured graph.json keeps meaning what it meant - BuildStream
+    itself never reads that key, so it cannot describe a real build, but
+    silently changing what an existing capture means would be worse."""
+    stdout = _record(
+        "legacy.bst", "k1", "[]", "[]", public="bst:\n  max-jobs: 16\n",
+    ) + RECORD_SEP
+    graph = build_graph(stdout, targets=[])
+    assert graph["elements"][0]["max_jobs"] == 16
+
+
+def test_parse_notparallel_distinguishes_unset_from_false():
+    assert _parse_notparallel("notparallel: True\n") is True
+    assert _parse_notparallel("notparallel: False\n") is False
+    assert _parse_notparallel("max-jobs: 4\n") is None
 
 
 # --- Real end-to-end test against a live `bst` binary ------------------

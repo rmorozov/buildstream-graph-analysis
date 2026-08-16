@@ -174,6 +174,12 @@ class Element:
     # some default". See `bga/structural/serialization_points.py`'s
     # large-serialization-point detection for the one real consumer.
     max_jobs: Optional[int] = None
+    # UX-31: BuildStream's real per-element parallelism control
+    # (`variables: notparallel: True`), captured from `bst show`'s
+    # `%{vars}`. True/False/None (not set) - the cause behind a pinned
+    # `max_jobs`, kept separate because "pinned on purpose" and "the
+    # project default happens to be low" are different facts.
+    notparallel: Optional[bool] = None
 
 
 @dataclass(frozen=True)

@@ -710,7 +710,10 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             # _check_process_oversubscription's single-aggregate check.
             serialization_point_risks = sm.get('serialization_point_risks') or []
             if serialization_point_risks:
-                lines.append("  Large Serialization Point Risk (per-element max-jobs, real concurrent-dispatch risk):")
+                lines.append(
+                    "  Parallelism-Pinned Elements (UX-31 - running fewer native build "
+                    "jobs than the rest of this build, and expensive enough for it to matter):"
+                )
                 for risk in serialization_point_risks:
                     lines.append(f"    - {risk['hint']}")
             lines.append("")

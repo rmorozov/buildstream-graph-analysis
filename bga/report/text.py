@@ -494,13 +494,56 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
 
     # CPU Utilisation (Part 30, M4)
     if section in (None, 'utilisation') and hasattr(result, 'utilisation') and result.utilisation:
-        lines.append("CPU Utilisation:")
         util = result.utilisation
+        # UX-36: the bucket totals are task-*occupancy* seconds (how long
+        # each task held a dispatch slot), not CPU time. P1-33 established
+        # that internally - "it was never actually a CPU-time
+        # measurement, just labeled as CPU-microseconds" - and
+        # `cpu_accounting_available` correctly gates every genuinely
+        # CPU-derived field, but the report kept rendering the section
+        # under a CPU heading with an `Effective CPUs` line. Read as CPU
+        # time, a real optimization looked like it burned 53% more CPU
+        # for identical work; it had simply overlapped tasks that used to
+        # run one after another. Same report-honesty fix UX-13 applied to
+        # the Certified Floors block: keep the numbers, name them
+        # correctly.
+        # `cpu_accounting_available` does NOT mean real CPU accounting
+        # was present: UX-17 deliberately kept that name while widening
+        # it to "some real capacity value is available", including a
+        # merely *detected* host core count. `effective_cpus_source ==
+        # "measured"` is the real discriminator (a genuine
+        # cpu_accounting.effective_cpus or a cgroup quota/period).
+        measured_cpu = util.get('effective_cpus_source') == 'measured'
+        if measured_cpu:
+            lines.append("CPU Utilisation:")
+        else:
+            lines.append("Dispatch Occupancy (no real CPU accounting in this run):")
         if util.get('effective_cpus') is not None:
-            lines.append(f"  Effective CPUs: {util['effective_cpus']}")
-        if util.get('reconciliation_error_pct') is not None:
+            source = util.get('effective_cpus_source')
+            # UX-36: `4.0` measured and `4.0` inferred from a detected
+            # host core count are different claims and used to render
+            # identically. UX-17 already computes the provenance.
+            source_text = f" (source: {source})" if source else " (source: unknown)"
+            label = "Effective CPUs" if measured_cpu else "Capacity"
+            lines.append(f"  {label}: {util['effective_cpus']}{source_text}")
+        if measured_cpu and util.get('reconciliation_error_pct') is not None:
             lines.append(f"  Reconciliation Error: {util['reconciliation_error_pct']:.2f}%")
+        elif not measured_cpu:
+            # Previously rendered as `Reconciliation Error: 0.00%`, which
+            # implies something was reconciled. Nothing was: I9
+            # reconciliation needs a real CPU measurement.
+            lines.append("  Reconciliation: not performed (I9 needs real CPU accounting, absent here)")
         buckets = util.get('buckets') or {}
+        if buckets:
+            # True in every case, measured or not (P1-33): the buckets
+            # are built from each task's real job-slot occupancy
+            # (task.dur_us), never from a CPU-time measurement. Stated
+            # here rather than left to the section heading, because a
+            # reader who takes them for CPU seconds draws the opposite
+            # conclusion from a real optimization - overlapping tasks
+            # that used to run serially raises total occupancy while
+            # doing identical work.
+            lines.append("  Buckets below are task slot-time (occupancy), not CPU time:")
         for bucket_name, bucket_us in buckets.items():
             lines.append(f"  {str(bucket_name).replace('_', ' ').title():20s} {bucket_us / 1e6:8.2f}s")
         lines.append("")

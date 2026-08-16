@@ -104,7 +104,13 @@ def test_utilisation_subcommand_shows_buckets(tmp_path):
     run_dir = _write_fixture(tmp_path)
     result = _run_bga(["utilisation", str(run_dir)])
     assert result.returncode == 0, result.stderr
-    assert "CPU Utilisation" in result.stdout
+    # UX-36: this fixture carries no real CPU accounting (no
+    # cpu_accounting block, no cgroup quota), so the section is titled
+    # for what its buckets actually are - task slot-occupancy, not CPU
+    # time. A fixture with a real measured source still renders as
+    # "CPU Utilisation" (tests/unit/test_occupancy_block_honesty.py).
+    assert "Dispatch Occupancy" in result.stdout
+    assert "Useful" in result.stdout
 
 
 def test_diagnostics_subcommand_forces_diagnostics_on(tmp_path):

@@ -1,6 +1,6 @@
 # UX-36: the report's `CPU Utilisation` block prints task-occupancy seconds under a CPU label - the code says so, the report does not
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** P1-33 (which established the honest internal meaning), UX-13 (the same report-honesty fix, already applied to the floors block)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** P1-33 (which established the honest internal meaning), UX-13 (the same report-honesty fix, already applied to the floors block)
 
 ## Motivation
 
@@ -46,6 +46,35 @@ This matters beyond wording. The `Useful`/`Idle No Tasks` ratio is, on these two
 3. A run with real `cpu_accounting` renders as it does today.
 4. `tests/fixtures/golden/` snapshots updated deliberately, not incidentally. Full suite green.
 
+## Fix Implemented
+
+Rendering-only, in `bga/report/text.py`; no computation changed.
+
+One correction to this doc's own framing, found while implementing it: `cpu_accounting_available` is **not** the right gate. `UX-17` deliberately widened that flag to mean "some real capacity value is available", including a merely *detected* host core count, and kept the old name (its own comment says so). It is therefore `True` on every run produced by the documented pipeline, which is exactly why the CPU labels kept rendering. The real discriminator is `effective_cpus_source == "measured"` - a genuine `cpu_accounting.effective_cpus` or a cgroup quota/period.
+
+With that gate:
+
+- **Heading.** `CPU Utilisation:` when the source is `measured`; otherwise `Dispatch Occupancy (no real CPU accounting in this run):`.
+- **Capacity line.** Always carries its provenance (`UX-17`'s `effective_cpus_source`), and is labelled `Effective CPUs` only when measured - `Capacity: 4.0 (source: detected_host_cpu_count)` otherwise.
+- **Reconciliation.** `Reconciliation Error: 0.00%` implied something had been reconciled; nothing had. Replaced, when unmeasured, by `Reconciliation: not performed (I9 needs real CPU accounting, absent here)`.
+- **Buckets.** Labelled `Buckets below are task slot-time (occupancy), not CPU time:` in **both** cases, not only the unmeasured one. That is the one part of item 4 this implementation deliberately goes beyond: P1-33's finding applies to the buckets unconditionally - they are built from `task.dur_us` regardless of whether real CPU accounting exists - so keeping "today's labels" for a measured run would have left the buckets ambiguous in exactly the way that produced this task. Real CPU accounting changes what `capacity_cpu_us` and the reconciliation mean; it does not change what the buckets are.
+
+Tests: 5 new (`tests/unit/test_occupancy_block_honesty.py`) covering both source tiers - unmeasured run not titled `CPU Utilisation`, capacity shown with provenance, the vacuous reconciliation line replaced, buckets labelled as occupancy under *both* tiers, and a measured run keeping its CPU labels and real reconciliation figure. One existing assertion in `tests/unit/test_cli_subcommands.py` asserted the literal string `CPU Utilisation` against a fixture that has no CPU accounting at all - updated to assert the honest heading, with a comment pointing at the measured-tier coverage.
+
 ## Verification Log
 
-Filed 2026-08-16. Both report blocks are pasted from real `bga analyze -d` runs against real `bst --builders 4 --max-jobs 4 build all.bst` captures of `examples/06-macro-micro-optimization` and its `optimized/` variant (BuildStream 2.7.0, real `bwrap` sandbox, 4-core host). The P1-33 comment is quoted verbatim from `bga/utilisation/__init__.py`.
+Filed 2026-08-16. Implemented the same day. Both report blocks are pasted from real `bga analyze -d` runs against real `bst --builders 4 --max-jobs 4 build all.bst` captures of `examples/06-macro-micro-optimization` and its `optimized/` variant (BuildStream 2.7.0, real `bwrap` sandbox, 4-core host). The P1-33 comment is quoted verbatim from `bga/utilisation/__init__.py`.
+
+Real end-to-end re-verification against the exact pair in this doc's Motivation (`examples/06-macro-micro-optimization`, baseline and `optimized/`, real captures):
+
+```
+Dispatch Occupancy (no real CPU accounting in this run):
+  Capacity: 4.0 (source: detected_host_cpu_count)
+  Reconciliation: not performed (I9 needs real CPU accounting, absent here)
+  Buckets below are task slot-time (occupancy), not CPU time:
+  Useful                  61.45s
+  Idle No Tasks           48.55s
+  ...
+```
+
+Acceptance Test items 1, 2 and 3 confirmed with real data; item 4 confirmed by unit test at the measured tier (no real cgroup-quota capture was available in this session, so that tier is covered by test rather than by a live run - stated rather than claimed as end-to-end). The `Useful 40.25s → 61.45s` pair that motivated this task now reads unambiguously as occupancy rising because tasks overlap, not as CPU being burned. Full suite green (668 passed, up from 663), `make lint` clean.

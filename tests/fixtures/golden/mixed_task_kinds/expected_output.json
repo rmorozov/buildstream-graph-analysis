@@ -252,6 +252,37 @@
             "total_improvable_time_us": 2000,
             "best_case_speedup": 1.125
         },
+        "batch_opportunities": {
+            "groups": [
+                {
+                    "elements": [
+                        "app.bst",
+                        "extra.bst"
+                    ],
+                    "baseline_makespan_us": 14000,
+                    "combined_makespan_us": 11000,
+                    "combined_savings_us": 3000,
+                    "individual_savings_us": {
+                        "app.bst": 3000,
+                        "extra.bst": 0
+                    }
+                }
+            ],
+            "serialized_pairs": [
+                [
+                    "app.bst",
+                    "lib.bst"
+                ],
+                [
+                    "app.bst",
+                    "base.bst"
+                ],
+                [
+                    "lib.bst",
+                    "base.bst"
+                ]
+            ]
+        },
         "deferrability": {
             "deferrable_leaves": [
                 "app.bst",

@@ -4,7 +4,8 @@ Implements Parts 31-39:
 - Structural metrics computation (Part 31)
 - Bottleneck detection (Part 32)
 - Parallelism profiling (Part 33)
-- Sensitivity analysis (Part 34)
+- Sensitivity analysis (a `bga`-specific additive heuristic, not
+  actually Part 34 - see `compute_sensitivity`'s own docstring, UX-20)
 - Deferrability analysis (Part 35)
 - Historical trend analysis (Part 36)
 - Cold vs warm comparison (Part 37)
@@ -241,8 +242,11 @@ class StructuralAnalyzer:
         )
     
     def compute_sensitivity(self) -> SensitivityResult:
-        """Compute sensitivity analysis (Part 34).
-        
+        """Compute sensitivity analysis - a `bga`-specific additive
+        heuristic, not a precisely spec-defined mechanism (UX-20
+        housekeeping; see `SensitivityResult`'s own docstring for the
+        stale "Part 34" citation this corrects).
+
         Determines how much improving each element would help overall.
         Uses critical path membership and slack as proxies.
         """

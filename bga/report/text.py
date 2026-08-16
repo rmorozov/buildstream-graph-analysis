@@ -517,6 +517,50 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                 )
                 for candidate in consolidation_candidates[:5]:
                     lines.append(f"    - {', '.join(candidate['elements'])}")
+            # UX-20: sensitivity.top_opportunities was already computed
+            # (Part 34's own docstring citation was stale - see
+            # compute_sensitivity's docstring - this is a bga-specific
+            # additive heuristic) but never rendered anywhere outside
+            # --format json's structural.sensitivity key, making it
+            # effectively invisible to a user reading the text report.
+            sensitivity = sm.get('sensitivity') or {}
+            top_opportunities = sensitivity.get('top_opportunities') or []
+            if top_opportunities:
+                lines.append(
+                    f"  Top Improvement Opportunities (best-case speedup "
+                    f"{sensitivity.get('best_case_speedup', 1.0):.2f}x if all "
+                    f"{sensitivity.get('total_improvable_time_us', 0) / 1e6:.2f}s of "
+                    f"improvable time were eliminated):"
+                )
+                for key, score, impact_pct in top_opportunities[:5]:
+                    lines.append(
+                        f"    - {key}: sensitivity {score:.2f} ({impact_pct:.1f}% impact)"
+                    )
+            # UX-20 (map-reduce tier): the real, simulated combined
+            # effect of fixing several independent high-sensitivity
+            # elements together in one batch, vs. serially discovering
+            # and fixing them one bga-analyze iteration at a time - see
+            # bga/structural/batching.py's own module docstring for the
+            # "fixing = eliminate duration" definition this shares with
+            # the sensitivity best-case-speedup figure above.
+            batch_opportunities = sm.get('batch_opportunities') or {}
+            batch_groups = batch_opportunities.get('groups') or []
+            if batch_groups:
+                lines.append("  Batch Opportunities (independent elements, simulated combined effect):")
+                for group in batch_groups:
+                    lines.append(
+                        f"    - {', '.join(group['elements'])}: fixing all together -> "
+                        f"makespan {group['baseline_makespan_us'] / 1e6:.2f}s -> "
+                        f"{group['combined_makespan_us'] / 1e6:.2f}s "
+                        f"(saves {group['combined_savings_us'] / 1e6:.2f}s combined, "
+                        f"vs. {', '.join(f'{k}={v / 1e6:.2f}s' for k, v in group['individual_savings_us'].items())} fixed alone)"
+                    )
+            serialized_pairs = batch_opportunities.get('serialized_pairs') or []
+            if serialized_pairs:
+                lines.append(
+                    "  Serialized (same dependency chain, not independently batchable): "
+                    + "; ".join(f"{a} -> {b}" for a, b in serialized_pairs[:5])
+                )
             lines.append("")
 
     if section in (None, 'graph') and by_kind:

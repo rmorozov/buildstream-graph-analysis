@@ -13,7 +13,8 @@ SECTIONS = (None, 'graph', 'floors', 'replay', 'utilisation', 'diagnostics')
 # diagnostics (Part 20-29, M5) - result.signals mixes both in one flat
 # dict, so section filtering needs to know which is which.
 GRAPH_SIGNAL_KEYS = frozenset({
-    'critical_path', 'critical_path_length', 'downstream_count', 'slack', 'unweighted_depth',
+    'critical_path', 'critical_path_length', 'critical_path_detail',
+    'downstream_count', 'slack', 'unweighted_depth',
 })
 
 # UX-14: a capacity sweep (Part 19) replays every task with its fixed,

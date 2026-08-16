@@ -13,6 +13,17 @@ from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, SWEEP
 _CONFIDENCE_HIGH = 0.8
 _CONFIDENCE_MEDIUM = 0.5
 
+# UX-33: rendering thresholds, not analysis thresholds. A path at or
+# below this length reads fine as a single `a → b → c` line; above it,
+# the per-element form (duration + share of path) is what a reader
+# actually needs. Either way the full chain is printed - the previous
+# behavior withheld it entirely above 5 elements.
+_CRITICAL_PATH_INLINE_MAX = 5
+# Choke points are named, not counted. Capped only to keep one report
+# line readable; the overflow is stated explicitly rather than silently
+# dropped (this codebase's "no silent gaps" discipline).
+_CHOKE_POINTS_SHOWN_MAX = 8
+
 
 def _confidence_band(score: float) -> str:
     if score >= _CONFIDENCE_HIGH:
@@ -442,7 +453,35 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section in (None, 'graph') and hasattr(result, 'signals') and result.signals.get('critical_path'):
         critical_path = result.signals['critical_path']
         lines.append(f"Critical Path Length: {len(critical_path)} elements")
-        if len(critical_path) <= 5:
+        # UX-33: the path is always printed now. It used to be withheld
+        # above 5 elements, which suppressed it exactly when a reader
+        # cannot hold it in their head - on a real 10-element chain the
+        # report said "Critical Path Length: 10 elements" and nothing
+        # else, while the chain itself (the entire finding) sat in the
+        # JSON. Short paths keep the one-line arrow form; longer ones
+        # get one element per line with its real measured duration and
+        # share of the path, which is what answers "which link do I
+        # attack first".
+        detail = result.signals.get('critical_path_detail') or []
+        if len(critical_path) <= _CRITICAL_PATH_INLINE_MAX:
+            lines.append(f"  Path: {' → '.join(critical_path)}")
+        elif detail:
+            lines.append("  Path (chain order, with each element's real measured duration):")
+            for entry in detail:
+                share = entry.get('share_of_path')
+                share_text = f"{share * 100:5.1f}% of path" if share is not None else "  n/a"
+                structural = (
+                    " [structural: {}, no build commands to speed up]".format(entry['element_kind'])
+                    if entry.get('is_structural_kind') else ""
+                )
+                lines.append(
+                    f"    {entry['element_uid']:<40s} {entry['duration_us'] / 1e6:7.2f}s "
+                    f"({share_text}){structural}"
+                )
+        else:
+            # No per-element detail available (an older run directory, or
+            # a result built without normalized tasks) - print the chain
+            # anyway rather than falling back to the bare length.
             lines.append(f"  Path: {' → '.join(critical_path)}")
         lines.append("")
 
@@ -515,7 +554,18 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                 )
             choke_points = bottleneck.get('choke_points') or []
             if choke_points:
-                lines.append(f"  Bottlenecks Identified: {len(choke_points)}")
+                # UX-33: name them. `Bottlenecks Identified: 5` with the
+                # names only in the JSON was, on a real mis-shaped
+                # project, the single most actionable output the tool
+                # produced - reduced to an integer.
+                shown = choke_points[:_CHOKE_POINTS_SHOWN_MAX]
+                lines.append(
+                    f"  Bottlenecks Identified: {len(choke_points)} - {', '.join(shown)}"
+                    + (
+                        f" (+{len(choke_points) - len(shown)} more, see --format json)"
+                        if len(choke_points) > len(shown) else ""
+                    )
+                )
             if parallelism:
                 lines.append(
                     f"  Parallelism Profile: min={parallelism.get('min_width', 0):.1f}x, "

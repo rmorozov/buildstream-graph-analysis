@@ -84,8 +84,15 @@ class ParallelismProfile:
 @dataclass(frozen=True)
 class SensitivityResult:
     """Sensitivity analysis results.
-    
-    Part 34: How much would improving an element help overall?
+
+    How much would improving an element help overall? Despite the
+    "Part 34" docstring this carried previously, this is NOT a precisely
+    spec-defined mechanism (UX-20 housekeeping, confirmed directly:
+    `docs/specification.md` Part 34 is "Core Invariants" (I1-I13),
+    unrelated; the spec's only real "sensitivity" reference is Part 20's
+    wall-clock-share, a different, already-implemented mechanism) - this
+    is a `bga`-specific additive heuristic, same category as
+    `element_kind` (`P4-12`'s own precedent).
     """
     # Per-element sensitivity
     sensitivity_scores: Dict[str, float]  # element_key -> improvement_potential

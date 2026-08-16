@@ -179,10 +179,11 @@ class ReplayScheduler:
         self,
         capacities: Optional[Dict[str, int]] = None,
         priority_rule: str = 'lpt',
+        duration_overrides: Optional[Dict[str, int]] = None,
     ) -> ReplayResult:
         """
         Run deterministic replay with specified capacities.
-        
+
         Args:
             capacities: Resource capacities (uses defaults if not provided)
             priority_rule: Task selection rule when multiple ready:
@@ -190,10 +191,21 @@ class ReplayScheduler:
                 - 'spt': Shortest Processing Time first
                 - 'fifo': First In First Out (by task key)
                 - 'depth': Greatest dependency depth first
-        
+            duration_overrides: {task_key: duration_us} - use this
+                duration instead of the task's own observed `dur_us`
+                (UX-20: the "reduce" half of the map-reduce batch-
+                opportunity simulation - `bga/structural/batching.py`
+                is the caller, testing "what if these specific tasks'
+                durations were reduced/eliminated". A task_key absent
+                from this dict keeps its real observed duration.
+                Structural, not a claim about real achievability -
+                exactly the same "if all slack eliminated" framing
+                `compute_sensitivity`'s own `best_case_speedup` already
+                uses).
+
         Returns:
             ReplayResult with scheduled tasks and timeline
-        
+
         Algorithm:
         1. Initialize available capacity for each resource
         2. Find all tasks with no predecessors (ready tasks)
@@ -205,7 +217,8 @@ class ReplayScheduler:
         5. Continue until all tasks scheduled
         """
         capacities = capacities or self._default_capacities.copy()
-        
+        duration_overrides = duration_overrides or {}
+
         # Track remaining predecessor count for each task
         remaining_preds: Dict[str, int] = {
             str(t.task_key): len(self._predecessors[str(t.task_key)])
@@ -223,7 +236,7 @@ class ReplayScheduler:
         for task in self.tasks:
             task_key = str(task.task_key)
             if remaining_preds[task_key] == 0:
-                priority = self._compute_priority(task, priority_rule)
+                priority = self._compute_priority(task, priority_rule, duration_overrides)
                 heapq.heappush(ready_queue, (priority, task_key))
         
         # Current time and active tasks
@@ -268,8 +281,9 @@ class ReplayScheduler:
                 )
                 start_time = max(current_time, pred_finish)
                 
-                # Use observed duration
-                duration = task.dur_us
+                # Use observed duration, unless a duration_override
+                # applies to this task_key (UX-20).
+                duration = duration_overrides.get(task_key, task.dur_us)
                 finish_time = start_time + duration
                 
                 # Create scheduled task
@@ -325,7 +339,7 @@ class ReplayScheduler:
                     remaining_preds[succ_key] -= 1
                     if remaining_preds[succ_key] == 0:
                         succ_task = self._task_map[succ_key]
-                        priority = self._compute_priority(succ_task, priority_rule)
+                        priority = self._compute_priority(succ_task, priority_rule, duration_overrides)
                         heapq.heappush(ready_queue, (priority, succ_key))
         
         # Sort timeline by time
@@ -345,7 +359,7 @@ class ReplayScheduler:
             timeline=timeline,
         )
     
-    def _compute_priority(self, task: NormalizedTask, rule: str) -> int:
+    def _compute_priority(self, task: NormalizedTask, rule: str, duration_overrides: Optional[Dict[str, int]] = None) -> int:
         """
         Compute priority value for task selection.
 
@@ -366,7 +380,9 @@ class ReplayScheduler:
         empirically: `hash('abc')` differs across separate `python3`
         invocations in this environment).
         """
-        duration = task.dur_us  # Use property instead of attribute
+        # Use property instead of attribute, unless a duration_override
+        # applies to this task_key (UX-20).
+        duration = (duration_overrides or {}).get(str(task.task_key), task.dur_us)
 
         if rule == 'lpt':
             # Longest Processing Time first (negate for max-heap)

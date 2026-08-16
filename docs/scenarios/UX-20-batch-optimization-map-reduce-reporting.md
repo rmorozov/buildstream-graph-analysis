@@ -1,6 +1,6 @@
 # UX-20: single-critical-path framing forces many small iterations on large graphs
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** none
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none
 
 ## Motivation
 
@@ -34,5 +34,38 @@ Two tiers, matching this session's own "cheap win first, harder design work sepa
 3. Given a fixture where two near-critical elements *are* on the same chain, they are correctly reported as serialized (not independently batchable).
 4. Full suite green.
 
+## Fix Implemented
+
+**Housekeeping first**: fixed the stale "Part 34" citation on `SensitivityResult`/`compute_sensitivity` (`bga/structural/models.py`, `bga/structural/analyzer.py`) - now documents plainly that this is a `bga`-specific additive heuristic (same category as `element_kind`, `P4-12`'s own precedent), not a spec-defined mechanism.
+
+**Tier 1 (minimum)**: `bga/report/text.py`'s "Structural Analysis" section now renders `sensitivity.top_opportunities`/`best_case_speedup`/`total_improvable_time_us` as a "Top Improvement Opportunities" block - previously reachable only via `--format json`.
+
+**Tier 2 (map-reduce)**: new `bga/structural/batching.py` module:
+- `_partition_into_independent_groups`: a greedy antichain partition over candidate elements (using `bga/graph/edg.py`'s existing `compute_reachability` - no new reachability logic duplicated) - each candidate joins the first group it has no ancestor/descendant relationship with every current member of, else starts a new group. Also records every genuinely serialized pair among the candidates (informational, so a reader can see *why* two elements weren't grouped).
+- `compute_batch_opportunities`: for each group with >=2 real, resolvable tasks, simulates the *combined* effect of eliminating every member's duration at once via `ReplayScheduler`'s new `duration_overrides` param (added to `bga/replay/scheduler.py`'s `replay()`/`_compute_priority()` - `{task_key: duration_us}` overrides, used by both the scheduling-order priority and the actual finish-time math), and separately simulates each member fixed *alone* for comparison - "fixing" defined as eliminating duration entirely, the same "if all slack/improvable time were eliminated" framing `best_case_speedup` already uses.
+- Wired into `bga/analyzer.py::_compute_structural_analysis` as a new `batch_opportunities` key (candidates = sensitivity's own top-5 `top_opportunities`, reusing the already-constructed `self.replay_scheduler`) and surfaced in both `--format json` (`structural.batch_opportunities.{groups,serialized_pairs}`) and the text report ("Batch Opportunities"/"Serialized" lines).
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+
+Done for real, 2026-08-16. New `tests/unit/test_batch_opportunities.py` (4 tests) drives `bga/structural/batching.py` directly on small hand-built fixtures (same pattern `tests/unit/test_replay.py` already uses): two independent branches are grouped and the combined simulation shows a real, distinct improvement (5200us -> 200us) neither branch achieves alone (Acceptance Test #2); a real dependency chain (`a.bst -> b.bst`) is correctly reported as a serialized pair, never grouped (Acceptance Test #3); a lone candidate produces no groups; three mutually-independent elements form one group. New `tests/unit/test_report_sensitivity.py` additions (5 tests total in that file) cover the text-report surfacing for both tiers (Acceptance Test #1) plus JSON shape stability.
+
+`tests/fixtures/golden/mixed_task_kinds/expected_output.json` regenerated per its own documented procedure - diffed to confirm the *only* change was the new `batch_opportunities` key with real, non-empty `groups`/`serialized_pairs` data for that fixture.
+
+Full suite green: 547 passed (up from 538 - 9 new tests), same 7 pre-existing environment-only failures as `main`. `make lint` clean.
+
+Real CLI re-verification against `tests/fixtures/golden/mixed_task_kinds` (`bga analyze ... --format text`):
+
+```
+Structural Analysis:
+  ...
+  Top Improvement Opportunities (best-case speedup 1.12x if all 0.00s of improvable time were eliminated):
+    - app.bst: sensitivity 1.00 (99.9% impact)
+    - lib.bst: sensitivity 1.00 (99.8% impact)
+    - base.bst: sensitivity 1.00 (99.7% impact)
+    - extra.bst: sensitivity 0.10 (10.0% impact)
+  Batch Opportunities (independent elements, simulated combined effect):
+    - app.bst, extra.bst: fixing all together -> makespan 0.01s -> 0.01s (saves 0.00s combined, vs. app.bst=0.00s, extra.bst=0.00s fixed alone)
+  Serialized (same dependency chain, not independently batchable): app.bst -> lib.bst; app.bst -> base.bst; lib.bst -> base.bst
+```
+
+Confirms all three acceptance-test behaviors on a real analyzed run: top opportunities visible in text (was JSON-only before), `app.bst`/`extra.bst` (no ancestor/descendant relationship in this fixture's graph) grouped and combined-simulated, and `app.bst`/`lib.bst`/`base.bst` (a real dependency chain in this fixture) correctly reported as serialized pairs rather than batched together.

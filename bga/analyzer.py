@@ -1355,7 +1355,40 @@ class BuildEfficiencyAnalyzer:
         # changed. See docs/tasks/P4-15-stack-consolidation-heuristic.md.
         from bga.structural.consolidation import find_consolidation_candidates
         consolidation_candidates = find_consolidation_candidates(self.graph)
-        
+
+        # Batch-opportunity map-reduce simulation (UX-20, non-spec
+        # additive signal): partitions sensitivity's own top candidates
+        # into independently-fixable groups (no ancestor/descendant
+        # relationship) and simulates the *combined* effect of fixing
+        # each group at once - distinct from sensitivity's own
+        # per-element proxy scores, which never simulate a combined
+        # effect. See bga/structural/batching.py's own module docstring.
+        batch_opportunities = {'groups': [], 'serialized_pairs': []}
+        if self.replay_scheduler is not None:
+            from bga.structural.batching import compute_batch_opportunities
+            candidates = [key for key, _, _ in result.sensitivity.top_opportunities[:5]]
+            element_to_task_key = {
+                t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks
+            }
+            batch_result = compute_batch_opportunities(
+                candidates=candidates, graph=self.graph,
+                replay_scheduler=self.replay_scheduler,
+                element_to_task_key=element_to_task_key,
+            )
+            batch_opportunities = {
+                'groups': [
+                    {
+                        'elements': group.elements,
+                        'baseline_makespan_us': group.baseline_makespan_us,
+                        'combined_makespan_us': group.combined_makespan_us,
+                        'combined_savings_us': group.combined_savings_us,
+                        'individual_savings_us': group.individual_savings_us,
+                    }
+                    for group in batch_result.groups
+                ],
+                'serialized_pairs': batch_result.serialized_pairs,
+            }
+
         # Convert to serializable dict format
         return {
             'metrics': {
@@ -1393,6 +1426,7 @@ class BuildEfficiencyAnalyzer:
                 'total_improvable_time_us': result.sensitivity.total_improvable_time_us,
                 'best_case_speedup': result.sensitivity.best_case_speedup,
             },
+            'batch_opportunities': batch_opportunities,
             'deferrability': {
                 'deferrable_leaves': result.deferrability.deferrable_leaves,
                 'non_deferrable_leaves': result.deferrability.non_deferrable_leaves,

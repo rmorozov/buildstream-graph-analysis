@@ -26,7 +26,7 @@ estimate, not a claim about what any real optimization would actually
 achieve.
 """
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from ..graph.edg import compute_reachability
 from ..ingest.models import Graph
@@ -156,3 +156,32 @@ def compute_batch_opportunities(
         ))
 
     return BatchOpportunities(groups=groups, serialized_pairs=serialized_pairs)
+
+
+def serialize_batch_opportunities(batch_result: BatchOpportunities) -> Dict[str, Any]:
+    """Report-shape serialization of `compute_batch_opportunities`'s
+    result (UX-20). A group with zero real `combined_savings_us` -
+    fixing all its members together doesn't move the makespan at all -
+    is a real, simulated fact, not a genuine opportunity worth mixing
+    into `groups`; it's moved to `omitted_zero_savings_groups` instead
+    (UX-26) so it stays visible (this codebase's "no silent gaps"
+    discipline - see `docs/scenarios/UX-26-...md`) without cluttering
+    the list a user actually wants to read.
+    """
+    all_groups = [
+        {
+            'elements': group.elements,
+            'baseline_makespan_us': group.baseline_makespan_us,
+            'combined_makespan_us': group.combined_makespan_us,
+            'combined_savings_us': group.combined_savings_us,
+            'individual_savings_us': group.individual_savings_us,
+        }
+        for group in batch_result.groups
+    ]
+    return {
+        'groups': [g for g in all_groups if g['combined_savings_us'] > 0],
+        'omitted_zero_savings_groups': [
+            {'elements': g['elements']} for g in all_groups if g['combined_savings_us'] == 0
+        ],
+        'serialized_pairs': batch_result.serialized_pairs,
+    }

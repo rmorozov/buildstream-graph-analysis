@@ -295,9 +295,10 @@ several wrong assumptions turned out to hide behind:
 13. **Run identity (I8, `P1-37`) proves extraction-time consistency, not
     build-time correctness - a real, named limitation, not an
     unfalsifiable guarantee.** `tools/bst_extract_run.py` embeds one
-    `manifest_hash` (targets + scheduler config + project git commit +
-    `project.refs` content hash, all real inputs available *at
-    extraction time*) into all three of `run-context.json`/`graph.json`/
+    `manifest_hash` (project identity + targets + scheduler config +
+    project git commit + `project.refs` content hash, all real inputs
+    available *at extraction time* - `project_identity` added by `UX-07`,
+    see fact 15 below) into all three of `run-context.json`/`graph.json`/
     `trace.json`, and `bga`'s own loader cross-checks they agree. This
     closes the practical gap the identity invariant exists for - a
     `trace.json` accidentally copied in from an unrelated run is now
@@ -326,6 +327,19 @@ several wrong assumptions turned out to hide behind:
     `add_cpu_capacity_fields()`), which both tools now call - a future
     addition to one automatically reaches the other. `bst_run_context.py`
     gained matching `--native-max-jobs`/`--cpu-budget` CLI flags.
+15. **`run_identity.manifest_hash` collided for two different real
+    BuildStream projects living as sibling directories under the same
+    git commit** - confirmed against `examples/04-critical-path-optimization`
+    (baseline) vs. its own `optimized/` subdirectory, both real, both
+    built for real, both hashing identically since the manifest only
+    ever recorded `project_git_commit` (identical for both - same repo,
+    same commit) and `targets` (identical too - both use the same
+    `all.bst` umbrella-target convention). Fixed (`UX-07`) by adding
+    `project_identity` to the manifest: the project directory's path
+    relative to its own git repository root (portable across clones),
+    falling back to its resolved absolute path outside a git repository
+    entirely. See `docs/scenarios/UX-07-run-identity-collides-across-sibling-projects.md`
+    for the real before/after hash values.
 
 ## Why a second, separate trace/v9 adapter
 

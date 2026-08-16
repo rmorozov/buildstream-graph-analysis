@@ -88,13 +88,48 @@ def _git_commit(project_dir: str):
     return result.stdout.strip()
 
 
+def _project_identity(project_dir: str) -> str:
+    """A stable identifier for *which project* a run-identity manifest is
+    about (UX-07). `project_git_commit` alone conflates two different
+    BuildStream projects that happen to live under the same git commit -
+    a monorepo with multiple projects, or (the real case that surfaced
+    this) a baseline project and an `optimized/` variant living side by
+    side as sibling directories - since neither the commit nor (often)
+    the target name differs between them.
+
+    Prefers `project_dir`'s path relative to its git repository's own
+    root (stable across different clones/checkouts of the same repo,
+    unlike an absolute filesystem path); falls back to the resolved
+    absolute path when `project_dir` isn't inside a git repository at
+    all (matches `_git_commit`'s own None-for-non-repo behavior - still
+    distinguishes different projects on this machine, just not
+    clone-portable).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", project_dir, "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        result = None
+    if result is not None and result.returncode == 0:
+        repo_root = Path(result.stdout.strip()).resolve()
+        try:
+            return str(Path(project_dir).resolve().relative_to(repo_root))
+        except ValueError:
+            pass  # project_dir isn't actually under its own reported toplevel - fall through
+    return str(Path(project_dir).resolve())
+
+
 def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_refs_provenance, native_max_jobs=None):
     """Real run-identity manifest (P1-37 - I8's own invariant, "all
     analysis inputs must belong to the same run identity", names no
     concrete field or mechanism anywhere in the spec).
 
     A stable hash over the real inputs that determine graph.json's and
-    trace.json's content at extraction time: the target list (what was
+    trace.json's content at extraction time: which project was built
+    (UX-07 - the project's path relative to its git repo root, or its
+    resolved absolute path outside a repo), the target list (what was
     requested), the scheduler configuration (affects real observed
     concurrency/scheduling - native_max_jobs included here for the same
     reason as builders/fetchers/pushers, UX-12), the project's git commit
@@ -114,6 +149,7 @@ def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_re
     named limitation.
     """
     manifest = {
+        "project_identity": _project_identity(project_dir),
         "targets": sorted(targets),
         "scheduler": {
             "builders": scheduler.get("builders"),

@@ -53,6 +53,13 @@ BST_LOG_RE = re.compile(
     r"\[([^\]]*)\]\[([^\]]+)\]\[\s*(\w+):([^\]]+)\]\s+"
     r"(START|SUCCESS|FAILURE|FAIL|CACHED|SKIPPED|SKIP)\s+(.*)"
 )
+# UX-29: BuildStream's own summary header reports the resolved
+# `--builders`/`--fetchers`/`--pushers` values, but never `--max-jobs`
+# (native, intra-element build-system parallelism - `make -jN`). The one
+# place it is recorded is the wrapper's own `Executing command:` line,
+# which wrapped-mode logs always carry as their very first line. Both
+# spellings are real click syntax (`--max-jobs 4` and `--max-jobs=4`).
+NATIVE_MAX_JOBS_RE = re.compile(r"--max-jobs(?:[=\s]+)(\d+)")
 BST_MAX_BUILD_RE = re.compile(r"Maximum Build Tasks:\s+(\d+)")
 BST_MAX_FETCH_RE = re.compile(r"Maximum Fetch Tasks:\s+(\d+)")
 BST_MAX_PUSH_RE = re.compile(r"Maximum Push Tasks:\s+(\d+)")
@@ -131,6 +138,12 @@ class WrapperTraceConverter:
         self.bst_builders = DEFAULT_BUILDERS
         self.bst_fetchers = DEFAULT_FETCHERS
         self.bst_pushers = DEFAULT_PUSHERS
+        # UX-29: real native `--max-jobs`, recovered from the wrapper's
+        # own `Executing command:` line when there is one. Stays None in
+        # raw mode (no wrapper line exists there) and when the invocation
+        # simply didn't pass the flag - "not recorded", never a fabricated
+        # default. See get_scheduler_config's docstring.
+        self.bst_native_max_jobs = None
         self.targets = None  # from "Targets:" header, comma-separated string as seen
         self.hash_to_tid = {}  # Maps BST task hash (e.g. a59d6897) to a stable thread ID
         self.next_tid = 100
@@ -221,6 +234,12 @@ class WrapperTraceConverter:
             "builders": self.bst_builders,
             "fetchers": self.bst_fetchers,
             "pushers": self.bst_pushers,
+            # UX-29: `--max-jobs`, the *other* real concurrency input,
+            # parsed from the wrapper's recorded invocation. None when
+            # this log has no wrapper line (raw mode) or the invocation
+            # didn't pass the flag - the consumer must treat that as "not
+            # recorded", not as a value.
+            "native_max_jobs": self.bst_native_max_jobs,
         }
 
     def parse_timestamp(self, ts_str):
@@ -452,6 +471,14 @@ class WrapperTraceConverter:
 
             self.current_cmd = exec_match.group(1)
             self.current_cmd_start_ts = ts
+
+            # UX-29: the whole capacity-guard chain (UX-12/15/16/17/21)
+            # keys off native_max_jobs and used to require the operator
+            # to re-declare by hand a value that is right here, in the
+            # line this parser already matches.
+            native_max_jobs_match = NATIVE_MAX_JOBS_RE.search(self.current_cmd)
+            if native_max_jobs_match:
+                self.bst_native_max_jobs = int(native_max_jobs_match.group(1))
 
             self.is_bst = " bst " in self.current_cmd or self.current_cmd.startswith(
                 "bst "

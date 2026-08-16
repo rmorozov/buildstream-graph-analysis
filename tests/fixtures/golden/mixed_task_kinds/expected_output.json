@@ -13,7 +13,7 @@
         "cold_confidence": null,
         "cold_duration_sources": {},
         "cold_critical_path_duration_sources": {},
-        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09/UX-15)."
+        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09/UX-15). Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs, governing core count (host_cpu_count/cpu_budget). They are inert here, not passing; a wrapped log records --max-jobs on its own first line (UX-29), or declare the missing value explicitly at extraction time."
     },
     "attribution": {
         "execution_on_chain_us": 14000,

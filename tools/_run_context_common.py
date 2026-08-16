@@ -30,21 +30,54 @@ def host_cpu_count():
     return os.cpu_count()
 
 
-def add_cpu_capacity_fields(run_context: dict, native_max_jobs: int = None, cpu_budget: int = None) -> None:
+# UX-29 provenance values for `native_max_jobs_source`. `bga`'s own
+# capacity guards certify against this number, so where it came from is
+# part of the claim - the same reasoning behind UX-17's
+# `effective_cpus_source`.
+NATIVE_MAX_JOBS_OPERATOR_DECLARED = "operator_declared"
+NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION = "parsed_from_invocation"
+
+
+def add_cpu_capacity_fields(
+    run_context: dict,
+    native_max_jobs: int = None,
+    cpu_budget: int = None,
+    parsed_native_max_jobs: int = None,
+) -> None:
     """Mutates `run_context` in place, adding `native_max_jobs` (UX-12),
-    `host_cpu_count` (UX-12, always auto-detected), and `cpu_budget`
-    (UX-15) - all optional fields distinct from run-context/v9's own
-    spec-mandated `max_jobs` (which actually means `builders`, see
+    `native_max_jobs_source` (UX-29), `host_cpu_count` (UX-12, always
+    auto-detected), and `cpu_budget` (UX-15) - all optional fields
+    distinct from run-context/v9's own spec-mandated `max_jobs` (which
+    actually means `builders`, see
     tools/bst_log_to_chrome_trace.py's get_scheduler_config docstring).
 
-    `native_max_jobs`/`cpu_budget` are purely operator-supplied (neither
-    is visible in a BuildStream log itself) - omitted when not given,
-    never defaulted to a guessed value. `host_cpu_count` is always
-    queried directly from the extraction environment; omitted only if
-    detection itself is unavailable.
+    `native_max_jobs` was originally documented as purely operator-
+    supplied, on the grounds that it is not visible in a BuildStream log.
+    That is true of BuildStream's own output but not of a *wrapped* log,
+    whose very first line records the real invocation
+    (`Executing command: bst --builders 4 --max-jobs 4 build all.bst`) -
+    UX-29, filed after finding that the entire UX-12/15/16/17/21 capacity-
+    guard chain sat inert on every run the documented pipeline produced,
+    because nobody passes a flag to re-declare a value the tool already
+    had. `parsed_native_max_jobs` carries that recovered value.
+
+    An explicit operator-supplied `native_max_jobs` always wins over the
+    parsed one (an operator overriding what the command line said is
+    making a deliberate statement, e.g. correcting for a wrapper script
+    that rewrites flags), and the winner is recorded in
+    `native_max_jobs_source` so a consumer can tell the two apart.
+    Neither present -> both fields omitted, never a guessed default.
+
+    `cpu_budget` stays purely operator-supplied. `host_cpu_count` is
+    always queried directly from the extraction environment; omitted only
+    if detection itself is unavailable.
     """
     if native_max_jobs is not None:
         run_context["native_max_jobs"] = native_max_jobs
+        run_context["native_max_jobs_source"] = NATIVE_MAX_JOBS_OPERATOR_DECLARED
+    elif parsed_native_max_jobs is not None:
+        run_context["native_max_jobs"] = parsed_native_max_jobs
+        run_context["native_max_jobs_source"] = NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION
     detected_host_cpu_count = host_cpu_count()
     if detected_host_cpu_count is not None:
         run_context["host_cpu_count"] = detected_host_cpu_count

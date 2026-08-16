@@ -42,9 +42,13 @@ log instead:
       shared with tools/bst_extract_run.py via
       tools/_run_context_common.py (UX-18, so this standalone producer
       path doesn't silently diverge from that one again): host_cpu_count
-      is always auto-detected; native_max_jobs/cpu_budget are purely
-      operator-supplied via --native-max-jobs/--cpu-budget, since
-      neither is visible in a BuildStream log itself.
+      is always auto-detected; cpu_budget is purely operator-supplied
+      via --cpu-budget, since it is not visible in a BuildStream log at
+      all. `native_max_jobs` is recovered
+      automatically from a wrapped log's own recorded invocation
+      (UX-29 - BuildStream's output never reports --max-jobs, but the
+      wrapper's first line does); --native-max-jobs overrides it, and
+      `native_max_jobs_source` records which of the two won.
   memory_budget_mb / estimated_job_memory_mb - UX-21 fields, same shared
       module: both purely operator-supplied via --memory-budget-mb/
       --estimated-job-memory-mb, no auto-detection tier (no real
@@ -113,7 +117,13 @@ def build_run_context(
     # tools/_run_context_common.py; UX-18 brought this standalone
     # producer path up to parity with tools/bst_extract_run.py's own,
     # which had these fields already.
-    add_cpu_capacity_fields(run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget)
+    add_cpu_capacity_fields(
+        run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget,
+        # UX-29: same auto-recovery as bst_extract_run.py - kept at
+        # parity deliberately, since UX-18 exists precisely because these
+        # two producers had silently diverged once already.
+        parsed_native_max_jobs=scheduler.get("native_max_jobs"),
+    )
     # memory_budget_mb/estimated_job_memory_mb (UX-21) - same shared-
     # helper pattern.
     add_memory_capacity_fields(
@@ -146,10 +156,12 @@ def main() -> int:
     parser.add_argument("--host", default=None, help="Optional host identifier to record")
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,
-        help="The real --max-jobs value the build was invoked with (per-element internal "
-        "build-system parallelism, e.g. `make -jN` - a different, unrelated concept from "
-        "--builders/this tool's own resource_capacities.PROCESS). Not visible in a "
-        "BuildStream log itself, so has to be told to us; omit if unknown (UX-12).",
+        help="Override the real --max-jobs value the build was invoked with (per-element "
+        "internal build-system parallelism, e.g. `make -jN` - a different, unrelated "
+        "concept from --builders/this tool's own resource_capacities.PROCESS). Usually "
+        "unnecessary: a wrapped log records the real invocation on its own first line and "
+        "this value is recovered from it automatically (UX-29). Pass it only to override "
+        "that, or for a raw log, which has no invocation line (UX-12).",
     )
     parser.add_argument(
         "--cpu-budget", type=int, default=None,

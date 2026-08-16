@@ -135,7 +135,13 @@ def test_scheduler_config_parsed_from_maximum_tasks_header_lines():
         converter.process_line_raw(line)
 
     config = converter.get_scheduler_config()
-    assert config == {"builders": 3, "fetchers": 7, "pushers": 2}
+    assert config == {
+        "builders": 3, "fetchers": 7, "pushers": 2,
+        # UX-29: BuildStream's own header never reports --max-jobs, and a
+        # raw log has no wrapper invocation line to recover it from -
+        # "not recorded", never a fabricated default.
+        "native_max_jobs": None,
+    }
 
 
 def test_scheduler_config_parsed_in_wrapped_mode_too():
@@ -153,7 +159,12 @@ def test_scheduler_config_defaults_match_buildstream_bundled_defaults():
     bundled userconfig.yaml defaults (confirmed against a real install:
     fetchers=10, builders=4, pushers=4), not an invented guess."""
     converter = WrapperTraceConverter(raw_start_time_us=0)
-    assert converter.get_scheduler_config() == {"builders": 4, "fetchers": 10, "pushers": 4}
+    assert converter.get_scheduler_config() == {
+        "builders": 4, "fetchers": 10, "pushers": 4,
+        # UX-29: no invocation line parsed, so "not recorded" - never a
+        # fabricated default.
+        "native_max_jobs": None,
+    }
 
 
 # --- Wrapped-mode regression (must be entirely unaffected) --------------

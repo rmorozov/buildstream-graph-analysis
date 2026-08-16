@@ -101,6 +101,12 @@ class BuildEfficiencyAnalyzer:
         self.trace: Optional[Trace] = None
         self.normalized_tasks = []
         self.violations = []
+        # UX-29: which capacity-check inputs were missing, when the
+        # over/under-subscription and memory guards declined to run.
+        # Empty list = they ran. Surfaced in the capacity-model note,
+        # not in `violations` - nothing about the build is wrong, the
+        # tool simply could not check.
+        self.capacity_check_skipped_inputs = []
         self.analysis_result: Optional[AnalysisResult] = None
         self.blame_chain_analyzer: Optional[BlameChainAnalyzer] = None
         self.replay_scheduler: Optional[ReplayScheduler] = None
@@ -643,6 +649,25 @@ class BuildEfficiencyAnalyzer:
         # truthiness check here would silently skip this entire function
         # for exactly the runs most worth checking.
         if builders is None or native_max_jobs is None or governing_cores is None:
+            # UX-29: a check that silently declines to run is
+            # indistinguishable, in the report, from a check that ran and
+            # found nothing. Every capacity guard built across
+            # UX-12/15/16/17/21 keys off these three inputs, so say which
+            # one was missing rather than returning in silence.
+            missing = [
+                name for name, value in (
+                    ('builders', builders),
+                    ('native_max_jobs', native_max_jobs),
+                    ('governing core count (host_cpu_count/cpu_budget)', governing_cores),
+                ) if value is None
+            ]
+            logger.info("capacity checks not run - missing: %s", ", ".join(missing))
+            # Recorded on the analyzer, not appended to `violations`:
+            # nothing about this build is wrong, the tool simply could not
+            # check. It surfaces in the capacity-model note (UX-13), which
+            # is always printed and is already the place that states what
+            # LB/Efficiency Score do and do not certify against.
+            self.capacity_check_skipped_inputs = missing
             return
 
         # BuildStream's own real, documented meaning of `--max-jobs 0`:
@@ -815,12 +840,27 @@ class BuildEfficiencyAnalyzer:
                 f"(or your declared budget), so Efficiency Score may overstate real efficiency "
                 f"here (see UX-09/UX-15)."
             )
-        return (
+        note = (
             "LB/Efficiency Score certify against this run's recorded resource "
             "capacities (builders/fetchers/pushers), not real host CPU cores or any "
             "declared CPU budget - native build-system parallelism (--max-jobs) is a "
             "separate, currently unmodeled axis (see UX-09/UX-15)."
         )
+        # UX-29: a capacity guard that declined to run is indistinguishable,
+        # in the report, from one that ran and found nothing - and until
+        # UX-29 auto-recovered `native_max_jobs` from the wrapped log's own
+        # recorded invocation, that was the state of every run the
+        # documented pipeline produced. Say it, in the one note that is
+        # always printed.
+        if getattr(self, 'capacity_check_skipped_inputs', None):
+            note += (
+                " Capacity checks (over/under-subscription, memory) did not run for "
+                "this run - missing: " + ", ".join(self.capacity_check_skipped_inputs)
+                + ". They are inert here, not passing; a wrapped log records "
+                "--max-jobs on its own first line (UX-29), or declare the missing "
+                "value explicitly at extraction time."
+            )
+        return note
 
     def analyze(self, run_dir: Optional[Path] = None) -> AnalysisResult:
         """

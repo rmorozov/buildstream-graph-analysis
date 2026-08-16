@@ -327,6 +327,16 @@ several wrong assumptions turned out to hide behind:
     `add_cpu_capacity_fields()`), which both tools now call - a future
     addition to one automatically reaches the other. `bst_run_context.py`
     gained matching `--native-max-jobs`/`--cpu-budget` CLI flags.
+    `UX-29` later made `native_max_jobs` **auto-extracted** in both
+    producers rather than operator-only: a wrapped log's own first
+    line records the real invocation
+    (`Executing command: bst --builders 4 --max-jobs 4 build all.bst`),
+    which is where `--max-jobs` actually lives - BuildStream's own
+    `Maximum ... Tasks:` header never reports it. An explicit
+    `--native-max-jobs` still overrides, and the new
+    `native_max_jobs_source` field records which of the two the
+    published value came from. Raw logs have no invocation line, so
+    they still need the flag.
 15. **`run_identity.manifest_hash` collided for two different real
     BuildStream projects living as sibling directories under the same
     git commit** - confirmed against `examples/04-critical-path-optimization`

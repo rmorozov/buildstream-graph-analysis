@@ -302,6 +302,29 @@ The first two lines need `UX-27` and `UX-39`. The element table needs
 data, which is the most speculative item here and the one worth doing
 last.
 
+## Implementation status (updated 2026-08-16, after the first phase)
+
+Twelve of the fourteen items argued for below have shipped - every one
+whose dependencies were already closed when the round was filed. The two
+that remain are the two that were blocked on items in this same round:
+
+- **`UX-35`** (capacity-blind hints) waited on `UX-28`/`UX-29` so it can
+  consume their verdict rather than grow a second, independently-derived
+  capacity formula - the divergence `UX-17` was resolved to avoid.
+- **`UX-39`** (the inefficiency-ratio CI gate) waited on `UX-27` for a
+  metric worth gating on and `UX-40` for a gate that actually runs. Both
+  are now in place: `floors.occupancy_ratio` moved +35.2pp across the
+  real optimization pair where every pre-existing metric was flat or
+  backwards, and real captures now clear the confidence bar instead of
+  silently failing open.
+
+Two of the round's own filings were corrected during implementation
+rather than implemented as written, and both corrections are recorded in
+the tasks themselves: `UX-28`'s original evidence did not support its
+claim (the real defect turned out to be different and provable), and
+`UX-32`'s proposed headline metric would have scored the pinned element
+at 200% of what it asked for - being pinned *was* the problem.
+
 ## Suggested order
 
 Grouped by what unblocks what, not by size.

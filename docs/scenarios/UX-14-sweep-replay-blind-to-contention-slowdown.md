@@ -1,6 +1,6 @@
 # UX-14: `bga sweep`/`bga replay` can't represent the real slowdown `UX-09` measured
 
-**Priority:** High | **Status:** 🟡 In Progress (tier 1 done) | **Depends on:** `UX-09`
+**Priority:** High | **Status:** 🟢 Done (tier 1 + tier 2 both implemented) | **Depends on:** `UX-09`
 
 ## Motivation
 
@@ -41,6 +41,16 @@ Tier 2 (a real contention-aware duration model) remains not attempted, per this 
 
 **Acceptance test** (supersedes this file's own placeholder Acceptance Test #2): capture `examples/05-cmake-cpp-toolchain` for real at `--builders 4` and `--builders 8` (`UX-09`'s own real configurations - need re-capturing, not currently kept as committed fixtures), feed both as `--calibration-dir`, and confirm `bga sweep --resource PROCESS` predicts real degradation for the calibrated tasks past capacity 4 (matching `UX-09`'s own measured 6.5s to 7.2s slowdown), not a flat plateau - and confirm the sweep's `contention_model` block honestly reports how many of the project's tasks were actually calibrated (expected: a minority - only the CPU-bound compile tasks, not every task in the graph).
 
+## Fix Implemented (tier 2)
+
+Implemented exactly as approved in the Tier 2 Design Proposal above (PR #58) - no design changes during implementation:
+
+- `bga/replay/scheduler.py` gained `build_contention_calibration(calibration_runs, resource)` (real `(capacity, dur_us)` points per `(element_uid, task_kind, phase)`, built from the same `historical_runs` shape `bga/floors/cold.py` already consumes) and `_interpolate_calibrated_duration(points, cap)` (linear interpolation between the two real points bracketing `cap`; a `cap` outside the calibrated range keeps the nearest real endpoint's duration and reports `extrapolated=True`, never a fabricated slope; duplicate real points at the same capacity - e.g. a retried task within one calibration run, since the key deliberately excludes `attempt` - are averaged first).
+- `ReplayScheduler.capacity_sweep` gained an optional `contention_calibration` param: for every task with real points at **2+ distinct** capacities, its swept-capacity duration is computed via interpolation and passed through the *existing* `duration_overrides` mechanism (`UX-20`'s own hook - no scheduler changes needed, exactly as designed). Every other task keeps tier 1's fixed duration untouched. Each sweep row gains a `contention_model: {calibrated_task_count, total_task_count, extrapolated_task_count}` block when calibration is active; `None` (the default) reproduces tier 1's exact prior behavior with zero observable difference.
+- CLI: `bga sweep --calibration-dir PATH` (repeatable, mirrors `--history-dir`'s own pattern) loads calibration runs via the existing `load_historical_runs`. JSON output gains a top-level `calibration_capacities` list (the real, distinct capacities calibration data came from) plus each sweep entry's own `contention_model`. Text output gains a `Calibrated` column (`N/M`, with an `extrap.` suffix when applicable) and a second, distinct `Note:` line naming the real calibrated capacities - only printed when `--calibration-dir` was actually given; tier 1's own unconditional caveat is completely unchanged.
+
+**A real capture-methodology bug found only by trying to reproduce `UX-09`'s own result for real** (not by unit tests, which all passed throughout): a first re-capture of `examples/05-cmake-cpp-toolchain` at `--builders 4` (no explicit `--max-jobs`) vs `--builders 8 --max-jobs 8` showed **no real slowdown** - each library's own real duration stayed ~4.0s in both captures. Investigated rather than accepted: `--builders 4`'s capture let `max-jobs` fall back to BuildStream's own auto-default (this environment's real host-core count, 4) instead of holding it at the same explicit `8` `UX-09`'s own methodology actually used ("raising builders from 4 to 8, holding max-jobs=8 fixed"). Re-captured `--builders 4 --max-jobs 8` (max-jobs genuinely held fixed this time) and the real contention reappeared exactly as expected - see Verification Log.
+
 ## Out of Scope
 
 - Attempting the tier-2 contention-aware model in this task - filed as a real, hard, separate follow-on, likely blocked on `UX-11` in practice even though not formally declared a hard dependency.
@@ -50,7 +60,7 @@ Tier 2 (a real contention-aware duration model) remains not attempted, per this 
 ## Acceptance Test
 
 1. `bga sweep`'s text and JSON output for `--resource PROCESS` includes an explicit, real caveat sentence about the fixed-duration/no-contention-modeling assumption.
-2. (If tier 2 is ever attempted) re-running `bga sweep --resource PROCESS` against `--format wrapped` captures of `examples/05`'s real `4×4`/`8×8` runs produces a predicted curve meaningfully closer to the real measured shape (a visible degradation past 4×4, not a flat plateau) - not attempted/required for this task's own initial acceptance.
+2. `bga sweep --resource PROCESS --calibration-dir ... --calibration-dir ...` against real `4×4`/`8×8` captures of `examples/05` produces a predicted curve showing real degradation past capacity 4 (matching `UX-09`'s own measured shape), not a flat plateau.
 3. Full suite green.
 
 ## Verification Log
@@ -58,3 +68,23 @@ Tier 2 (a real contention-aware duration model) remains not attempted, per this 
 Filed 2026-08-15 after re-reading `bga/replay/scheduler.py`'s `capacity_sweep`/`is_monotonic` in full and confirming `duration_us` is never recomputed as a function of swept capacity, and after grepping `bga/report/text.py`'s `format_sweep_text` and confirming zero caveat text is actually emitted to a user despite the spec's own "shape, not exact" language.
 
 Tier 1 done for real, 2026-08-15. New tests: `tests/unit/test_cli_subcommands.py` (+2 tests - the caveat appears in both `bga sweep`'s text and `--format json` output, verified via a real subprocess CLI invocation, not just direct function calls). Full suite green (`make lint`, `pytest` - 490 passed, same 7 pre-existing environment-only failures as `main`). Real re-verification: `bga sweep tests/fixtures/synthetic_multi_subproject --resource PROCESS --min-capacity 1 --max-capacity 4` now prints `"Note: This sweep replays each task's fixed, already-observed duration - it does not model real CPU contention as concurrent PROCESS usage rises (see UX-09's real evidence this can cause an actual slowdown, not just a plateau, past some capacity). Treat this curve as a shape, not an exact runtime prediction (Part 19)."` directly under its knee-point line.
+
+Tier 2 done for real, 2026-08-16, per PR #58's approved design with no changes needed during implementation. 15 new tests: `tests/unit/test_contention_calibration.py` (12 - `build_contention_calibration`/`_interpolate_calibrated_duration` pure-logic tests, plus direct `capacity_sweep(contention_calibration=...)` tests including the exact "real degradation, not a plateau" shape) and `tests/unit/test_cli_subcommands.py` (+3 - real subprocess CLI invocations covering `--calibration-dir`'s JSON/text output and confirming zero effect when omitted). Full suite green: 611 passed (up from 596), same 7 pre-existing environment-only failures as `main`. `make lint` clean.
+
+Real end-to-end re-verification against `examples/05-cmake-cpp-toolchain` (not synthetic fixtures): captured two fresh, fully-cleared (`bst artifact delete` on every element first) real runs, `--builders 4 --max-jobs 8` and `--builders 8 --max-jobs 8` (`max-jobs` genuinely held fixed, matching `UX-09`'s own real methodology - a first attempt that let `max-jobs` fall back to its own host-core auto-default at `--builders 4` showed no real slowdown at all, a real capture-methodology bug caught and fixed before treating the result as evidence of anything). Real per-element durations directly confirmed the contention: `lib-a.bst`/`lib-b.bst`/`lib-c.bst`/`lib-d.bst` each went from `3.02s` (capacity 4) to `4.01s` (capacity 8) - genuine ~33% real slowdown, matching `UX-09`'s own original finding's shape. Feeding both real captures as `--calibration-dir`:
+
+```
+$ python3 -m bga.cli sweep run_b4 --resource PROCESS --min-capacity 4 --max-capacity 8 --step 4 \
+    --calibration-dir run_b4 --calibration-dir run_b8
+
+  Capacity      T_C (s)    Improvement   Calibrated
+         4         6.21           0.0%          7/7
+         8         6.82          -9.8%          7/7
+
+Knee point (PROCESS): capacity 4 (diminishing returns beyond this)
+
+Monotonicity violations:
+  Capacity 8: makespan increased
+```
+
+Real degradation (6.21s → 6.82s, -9.8%), a correctly-flagged monotonicity violation, and a knee point correctly placed at capacity 4 - exactly the shape this task's own Acceptance Test #2 required, not a flat plateau. All 7 real tasks in the swept run were fully calibrated (`7/7`, `0` extrapolated - both swept capacities fell within the real calibrated range).

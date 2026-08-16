@@ -87,7 +87,7 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-11 | **Plane 2** — intra-element native-build-system tracer | 🟢 Done |
 | UX-12 | Capture real native `--max-jobs` + host CPU core count | 🟢 Done |
 | UX-13 | `LB`/certified-headroom report caveat: dispatch capacity ≠ CPU cores | 🟢 Done |
-| UX-14 | Sweep/replay fixed-duration caveat (tier 1); contention-aware duration model (tier 2, design approved — PR #58 — not yet implemented) | 🟡 In Progress |
+| UX-14 | Sweep/replay fixed-duration caveat (tier 1) + real, calibration-driven contention-aware duration model (tier 2, `--calibration-dir`) | 🟢 Done |
 | UX-15 | `--cpu-budget` overrides raw host core detection (cgroup-aware) | 🟢 Done |
 | UX-16 | Fixed `max-jobs=0` sentinel silently treated as "missing" | 🟢 Done |
 | UX-17 | `UtilizationAnalyzer` oversubscription dead code delegated to `UX-12` | 🟢 Done |

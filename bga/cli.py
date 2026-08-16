@@ -22,7 +22,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from . import __version__
 from .analyzer import BuildEfficiencyAnalyzer
@@ -30,6 +30,7 @@ from .compare import compare_runs, regression_exceeds_threshold
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
+from .replay.scheduler import build_contention_calibration
 from .report import (
     SWEEP_CAPACITY_MODEL_CAVEAT,
     format_compare_text,
@@ -102,11 +103,24 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
     analyzer.load(run_dir)
     analyzer.normalize()
 
+    contention_calibration = None
+    calibration_capacities: List[int] = []
+    if getattr(args, 'calibration_dir', None):
+        calibration_runs = load_historical_runs([Path(p) for p in args.calibration_dir])
+        logger.info("Loaded %d calibration run(s) for UX-14 tier 2 contention modeling", len(calibration_runs))
+        contention_calibration = build_contention_calibration(calibration_runs, args.resource)
+        raw_capacities = [
+            (hist_context.resource_capacities or {}).get(args.resource)
+            for hist_context, _g, _t in calibration_runs
+        ]
+        calibration_capacities = sorted({cap for cap in raw_capacities if cap is not None})
+
     sweep_result = analyzer.replay_scheduler.capacity_sweep(
         resource=args.resource,
         min_capacity=args.min_capacity,
         max_capacity=args.max_capacity,
         step=args.step,
+        contention_calibration=contention_calibration,
     )
 
     if args.format == 'json':
@@ -116,8 +130,9 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
             'knee_points': sweep_result.knee_points,
             'monotonicity_violations': sweep_result.monotonicity_violations,
             'capacity_model_caveat': SWEEP_CAPACITY_MODEL_CAVEAT,
+            'calibration_capacities': calibration_capacities,
         }, indent=2, default=str)
-    return format_sweep_text(args.resource, sweep_result)
+    return format_sweep_text(args.resource, sweep_result, calibration_capacities=calibration_capacities)
 
 
 def _produce_compare_output(args: argparse.Namespace):
@@ -618,6 +633,14 @@ def create_parser() -> argparse.ArgumentParser:
     sweep_parser.add_argument(
         '--step', type=int, default=1, metavar='N',
         help='Increment between tested capacities. Default: 1'
+    )
+    sweep_parser.add_argument(
+        '--calibration-dir', action='append', default=[], metavar='PATH',
+        help='UX-14 tier 2: path to a real run directory, captured at a real, different value of the '
+             'swept --resource, to use as contention-aware duration calibration. Repeatable - give 2+ '
+             'for any interpolation to be possible. Real per-task durations are interpolated (never '
+             'extrapolated) between calibrated capacities; tasks with fewer than 2 calibration points '
+             'keep their own fixed, tier-1 duration unchanged.'
     )
     sweep_parser.add_argument(
         '-f', '--format', type=str, choices=['text', 'json'], default='text',

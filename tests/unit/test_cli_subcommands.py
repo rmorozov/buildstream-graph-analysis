@@ -166,6 +166,97 @@ def test_sweep_json_includes_the_capacity_model_caveat(tmp_path):
     assert "does not model real CPU contention" in data["capacity_model_caveat"]
 
 
+def _write_calibration_run(tmp_path, name, capacity, core_dur_us):
+    """A minimal real run directory captured at one real PROCESS
+    capacity - UX-14 tier 2's own calibration input shape (the same
+    run-context/graph/trace triple bga ingests for anything else)."""
+    run_dir = tmp_path / name
+    run_dir.mkdir()
+    run_context = {
+        "trace_epsilon_us": 1000,
+        "wall_clock": {"start_us": 0, "end_us": core_dur_us},
+        "resource_capacities": {"PROCESS": capacity},
+    }
+    graph = {"elements": [{"uid": "core.bst", "requested_target": True}], "dependencies": []}
+    trace = {
+        "spans": [
+            {"task_key": "core.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": core_dur_us,
+             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+        ],
+        "phases": [],
+    }
+    (run_dir / "run-context.json").write_text(json.dumps(run_context))
+    (run_dir / "graph.json").write_text(json.dumps(graph))
+    (run_dir / "trace.json").write_text(json.dumps(trace))
+    return run_dir
+
+
+def test_sweep_calibration_dir_shows_real_degradation_not_flat_plateau(tmp_path):
+    """UX-14 tier 2's own end-to-end acceptance shape (PR #58's approved
+    design): --calibration-dir given 2 real captured runs of the *same*
+    element at two real, different PROCESS capacities where the real
+    measured duration got *worse* at the higher capacity (UX-09's own
+    real evidence pattern - more concurrent PROCESS usage genuinely
+    contending for the same CPU cores) - the swept prediction must show
+    that real degradation for the calibrated task, not tier 1's
+    structurally-incapable flat-or-improving curve. The run being swept
+    shares core.bst's own real calibration identity (element_uid|
+    task_kind|phase) so the calibration actually applies to it."""
+    swept_run = _write_calibration_run(tmp_path, "swept", capacity=4, core_dur_us=100000)
+    calib_4 = _write_calibration_run(tmp_path, "calib_4", capacity=4, core_dur_us=100000)
+    calib_8 = _write_calibration_run(tmp_path, "calib_8", capacity=8, core_dur_us=150000)
+
+    result = _run_bga([
+        "sweep", str(swept_run), "--resource", "PROCESS",
+        "--min-capacity", "4", "--max-capacity", "8", "--step", "4",
+        "--calibration-dir", str(calib_4), "--calibration-dir", str(calib_8),
+        "--format", "json",
+    ])
+
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert data["calibration_capacities"] == [4, 8]
+    by_cap = {entry["capacity"]["PROCESS"]: entry for entry in data["sweeps"]}
+    assert by_cap[4]["contention_model"]["calibrated_task_count"] == 1
+    assert by_cap[4]["makespan_us"] == 100000
+    assert by_cap[8]["makespan_us"] == 150000
+    assert by_cap[8]["makespan_us"] > by_cap[4]["makespan_us"]  # real degradation, not a plateau
+
+
+def test_sweep_calibration_dir_text_output_names_real_capacities(tmp_path):
+    run_dir = _write_fixture(tmp_path)
+    calib_4 = _write_calibration_run(tmp_path, "calib_4", capacity=4, core_dur_us=100000)
+    calib_8 = _write_calibration_run(tmp_path, "calib_8", capacity=8, core_dur_us=150000)
+
+    result = _run_bga([
+        "sweep", str(run_dir), "--resource", "PROCESS",
+        "--min-capacity", "4", "--max-capacity", "8", "--step", "4",
+        "--calibration-dir", str(calib_4), "--calibration-dir", str(calib_8),
+    ])
+
+    assert result.returncode == 0, result.stderr
+    assert "Contention-aware duration model active" in result.stdout
+    assert "[4, 8]" in result.stdout
+
+
+def test_sweep_without_calibration_dir_omits_contention_model(tmp_path):
+    """No --calibration-dir given - tier 1's own existing output must be
+    completely unaffected (no contention_model key anywhere, no new
+    caveat text)."""
+    run_dir = _write_fixture(tmp_path)
+    result = _run_bga([
+        "sweep", str(run_dir), "--min-capacity", "1", "--max-capacity", "2", "--format", "json",
+    ])
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert data["calibration_capacities"] == []
+    for entry in data["sweeps"]:
+        assert "contention_model" not in entry
+
+    text_result = _run_bga(["sweep", str(run_dir), "--min-capacity", "1", "--max-capacity", "2"])
+    assert "Contention-aware duration model" not in text_result.stdout
+
+
 def test_new_subcommands_exit_one_on_missing_directory(tmp_path):
     for subcommand in ("graph", "floors", "replay", "sweep", "utilisation", "diagnostics"):
         result = _run_bga([subcommand, str(tmp_path / "does-not-exist")])

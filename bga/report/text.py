@@ -606,18 +606,36 @@ def format_csv(result: AnalysisResult) -> str:
     return "\n".join(lines)
 
 
-def format_sweep_text(resource: str, sweep_result) -> str:
-    """Format a capacity_sweep result (Part 19) as human-readable text."""
+def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[List[int]] = None) -> str:
+    """Format a capacity_sweep result (Part 19) as human-readable text.
+
+    `calibration_capacities` (UX-14 tier 2, PR #58's approved design):
+    the real, distinct capacities the caller's `--calibration-dir` runs
+    were captured at, if any were supplied - `None`/empty reproduces
+    tier 1's own existing output exactly, unchanged.
+    """
+    has_contention_model = any('contention_model' in entry for entry in sweep_result.sweeps)
     lines = []
     lines.append("=" * 60)
     lines.append(f"Capacity Sweep: {resource}")
     lines.append("=" * 60)
-    lines.append(f"{'Capacity':>10} {'T_C (s)':>12} {'Improvement':>14}")
+    if has_contention_model:
+        lines.append(f"{'Capacity':>10} {'T_C (s)':>12} {'Improvement':>14} {'Calibrated':>12}")
+    else:
+        lines.append(f"{'Capacity':>10} {'T_C (s)':>12} {'Improvement':>14}")
     for entry in sweep_result.sweeps:
         cap = entry['capacity'].get(resource, '?')
         makespan_s = entry['makespan_us'] / 1e6
         improvement_pct = entry['normalized_improvement'] * 100
-        lines.append(f"{cap:>10} {makespan_s:>12.2f} {improvement_pct:>13.1f}%")
+        row = f"{cap:>10} {makespan_s:>12.2f} {improvement_pct:>13.1f}%"
+        if has_contention_model:
+            cm = entry.get('contention_model', {})
+            calibrated = cm.get('calibrated_task_count', 0)
+            total = cm.get('total_task_count', 0)
+            extrapolated = cm.get('extrapolated_task_count', 0)
+            suffix = f" ({extrapolated} extrap.)" if extrapolated else ""
+            row += f" {f'{calibrated}/{total}':>12}{suffix}"
+        lines.append(row)
     if sweep_result.knee_points:
         lines.append("")
         for res, knee in sweep_result.knee_points.items():
@@ -629,6 +647,15 @@ def format_sweep_text(resource: str, sweep_result) -> str:
             lines.append(f"  {violation}")
     lines.append("")
     lines.append(f"Note: {SWEEP_CAPACITY_MODEL_CAVEAT}")
+    if calibration_capacities:
+        lines.append(
+            f"Note: Contention-aware duration model active (UX-14 tier 2) - calibrated from real "
+            f"captured runs at {resource} capacities {calibration_capacities}. The \"Calibrated\" "
+            f"column above shows how many of the run's tasks actually got a real, interpolated "
+            f"duration at each swept capacity vs. still using tier 1's fixed, uncalibrated one; "
+            f"\"extrap.\" marks capacities outside the calibrated range, where the nearest real "
+            f"endpoint's duration was kept rather than projected forward."
+        )
     lines.append("=" * 60)
     return "\n".join(lines)
 

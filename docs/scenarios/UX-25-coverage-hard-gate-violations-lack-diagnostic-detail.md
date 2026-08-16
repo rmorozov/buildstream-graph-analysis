@@ -1,6 +1,6 @@
 # UX-25: `critical_path_coverage`/`dominator_coverage` hard-gate failures report a bare ratio, no diagnostic detail
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — (independent)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (independent)
 
 ## Motivation
 
@@ -28,6 +28,10 @@ Real, scoped: attach a `detail` field to each `hard_gate_failed` violation namin
 - Changing the hard-gate pass/fail threshold or semantics themselves - this is a reporting-detail fix only, not a behavior change.
 - Reproducing/confirming the `dominator_coverage` case with real evidence - flagged as likely-same-shape but not independently verified in this filing.
 
+## Fix Implemented
+
+Built exactly as designed: `bga/validation/invariants.py`'s `compute_confidence` now builds a `kind_by_uid` lookup from `graph.elements` (mirrors `BuildEfficiencyAnalyzer._element_kind_lookup`'s own existing pattern) and attaches a `detail` list to both `critical_path_coverage`/`dominator_coverage` `hard_gate_failed` violations - one entry per missing element (`element_uid`, `element_kind`, `is_structural_kind` via the existing `STRUCTURAL_ELEMENT_KINDS`, P4-12). `bga/report/text.py`'s `_format_violation_summary` renders it: a structural element gets its real kind and "may not have a real compute task"; a non-structural one gets "genuine coverage gap, worth investigating" - never a false structural claim just because *some* element on the path is missing. No `detail` key (e.g. an older violation dict) falls back to the exact prior bare-ratio text, unchanged.
+
 ## Acceptance Test
 
 1. A real run reproducing this doc's own `all.bst`/`critical_path_coverage=0.8` case reports a `hard_gate_failed` violation whose detail names `all.bst` and its structural-stack reason, without the user needing to cross-reference the critical-path list manually.
@@ -36,4 +40,6 @@ Real, scoped: attach a `detail` field to each `hard_gate_failed` violation namin
 
 ## Verification Log
 
-Filed 2026-08-16, from a real `bga analyze` run against a freshly captured `examples/05-cmake-cpp-toolchain` build (`--builders 4 build all.bst`) - not implemented.
+Filed 2026-08-16, from a real `bga analyze` run against a freshly captured `examples/05-cmake-cpp-toolchain` build. Implemented for real the same day. 8 new tests (`tests/unit/test_hard_gate_violation_detail.py`), full suite green (652 passed, up from 644, same 7 pre-existing environment-only failures as `main`), `make lint` clean.
+
+Real end-to-end re-verification against a fresh `examples/05-cmake-cpp-toolchain` capture (`--builders 4 build all.bst`, fully cleared first): real output now reads `hard gate failed: critical_path_coverage = 0.8 - missing: toolchain.bst (kind: import, structural - may not have a real compute task)` - this run's own real critical path happened to surface `toolchain.bst` (a `kind: import` element) rather than the original `all.bst`/`stack` case from this doc's own Motivation, which is itself good evidence the fix generalizes correctly rather than being special-cased to one element.

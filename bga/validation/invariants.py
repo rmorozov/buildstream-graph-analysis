@@ -20,7 +20,7 @@ bga.floors.cold.compute_cold_floor - never read or written here).
 import logging
 from typing import List, Optional, Tuple
 
-from ..ingest.models import Graph, NormalizedTask, RunContext, Trace
+from ..ingest.models import STRUCTURAL_ELEMENT_KINDS, Graph, NormalizedTask, RunContext, Trace
 from ..occupancy.sweep import compute_task_horizon
 
 logger = logging.getLogger(__name__)
@@ -140,16 +140,42 @@ def compute_confidence(
     # exactly the condition P1-05's attribution_reconciliation violation
     # already reports. Adding another entry for either would just
     # duplicate an existing, more specific one.
+    #
+    # UX-25: a bare `value` ratio (e.g. 0.8) gives no indication of
+    # *which* element is missing or *why* - real friction found via a
+    # real bga analyze run (docs/scenarios/UX-25's own Motivation): the
+    # report's own critical-path ranking already knows and displays a
+    # `kind: stack` element's own structural caveat elsewhere in the
+    # same output, this gate just never connected the two. `detail`
+    # names the specific missing element(s) and, where the existing
+    # STRUCTURAL_ELEMENT_KINDS heuristic (P4-12) already explains it,
+    # the real reason - never a generic re-statement of the ratio.
+    kind_by_uid = {e.uid: (e.element_kind or 'unknown') for e in graph.elements} if graph else {}
+
+    def _missing_element_detail(uids: List[str]) -> List[dict]:
+        return [
+            {
+                'element_uid': uid,
+                'element_kind': kind_by_uid.get(uid, 'unknown'),
+                'is_structural_kind': kind_by_uid.get(uid) in STRUCTURAL_ELEMENT_KINDS,
+            }
+            for uid in uids
+        ]
+
     new_violations: List[dict] = []
     if not hard_gates['critical_path_coverage_full']:
+        missing_critical_path_uids = [uid for uid in critical_path if uid not in elements_with_tasks]
         new_violations.append({
             'type': 'hard_gate_failed', 'gate': 'critical_path_coverage',
             'value': critical_path_coverage,
+            'detail': _missing_element_detail(missing_critical_path_uids),
         })
     if not hard_gates['dominator_coverage_full']:
+        missing_dominator_uids = [e.uid for e in graph.elements if e.uid not in dominators] if graph else []
         new_violations.append({
             'type': 'hard_gate_failed', 'gate': 'dominator_coverage',
             'value': dominator_coverage,
+            'detail': _missing_element_detail(missing_dominator_uids),
         })
     if not hard_gates['run_identity_consistent']:
         new_violations.append({

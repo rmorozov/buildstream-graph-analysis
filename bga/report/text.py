@@ -62,7 +62,21 @@ def _format_violation_summary(violation: dict) -> str:
             f"horizon {violation.get('horizon_us', 0) / 1e6:.3f}s)"
         )
     if vtype == 'hard_gate_failed':
-        return f"hard gate failed: {violation.get('gate')} = {violation.get('value')}"
+        base = f"hard gate failed: {violation.get('gate')} = {violation.get('value')}"
+        detail = violation.get('detail')
+        if detail:
+            # UX-25: name the specific missing element(s), and the real
+            # reason where the existing structural-kind heuristic
+            # already explains it (P4-12) - never just the bare ratio.
+            parts = []
+            for d in detail:
+                if d.get('is_structural_kind'):
+                    reason = f"kind: {d.get('element_kind')}, structural - may not have a real compute task"
+                else:
+                    reason = "no matching task found - genuine coverage gap, worth investigating"
+                parts.append(f"{d.get('element_uid')} ({reason})")
+            base += " - missing: " + "; ".join(parts)
+        return base
     if vtype == 'resource_oversubscription':
         return (
             f"oversubscription: builders={violation.get('builders')} x "

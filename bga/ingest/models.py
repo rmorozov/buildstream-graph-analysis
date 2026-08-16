@@ -96,6 +96,25 @@ class RunContext:
     # (_check_process_oversubscription) treat as the governing ceiling,
     # not host_cpu_count - operator intent over raw hardware detection.
     cpu_budget: Optional[int] = None
+    # Memory oversubscription guard (UX-21) - both purely operator-
+    # declared, mirroring cpu_budget's own pattern: no real per-task
+    # memory measurement source exists in this ingestion pipeline
+    # (analogous to P1-33's own CPU-accounting honesty), so this is a
+    # coarse, explicitly-labeled *estimate*, not a measurement.
+    # memory_budget_mb: the operator's declared memory envelope for this
+    # build (analogous to cpu_budget, but memory has no host-detection
+    # counterpart here - deliberately scoped out, see UX-21's own
+    # doc). estimated_job_memory_mb: a rough, operator-supplied estimate
+    # of one concurrent build job's memory footprint (a single constant
+    # today, not a per-element_kind heuristic - see UX-21's Required Fix
+    # item 1 for why). `_check_memory_oversubscription`
+    # (bga/analyzer.py) compares `builders x native_max_jobs x
+    # estimated_job_memory_mb` against `memory_budget_mb` - the same
+    # shape as `_check_process_oversubscription`'s own CPU check, a
+    # genuinely independent resource dimension (a config can be
+    # memory-oversubscribed while CPU-fine, or vice versa).
+    memory_budget_mb: Optional[int] = None
+    estimated_job_memory_mb: Optional[int] = None
     exclusive_resources: List[str] = field(default_factory=list)  # Part 31.3
     # BuildStream's own top-level, non-element-scoped pipeline phases
     # (e.g. "Query cache", "Resolving elements") - not part of run-context/v9's

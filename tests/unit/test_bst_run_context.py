@@ -113,6 +113,21 @@ def test_native_max_jobs_and_cpu_budget_are_captured(tmp_path):
     assert run_context["cpu_budget"] == 6
 
 
+def test_memory_budget_and_estimated_job_memory_are_captured(tmp_path):
+    """UX-21: same shared-helper pattern as UX-18's native_max_jobs/
+    cpu_budget - both purely operator-supplied."""
+    log = tmp_path / "raw.log"
+    log.write_text(RAW_LOG)
+
+    run_context = build_run_context(
+        str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00",
+        memory_budget_mb=8000, estimated_job_memory_mb=1000,
+    )
+
+    assert run_context["memory_budget_mb"] == 8000
+    assert run_context["estimated_job_memory_mb"] == 1000
+
+
 def test_host_cpu_count_is_always_captured(tmp_path):
     """UX-18: host_cpu_count (UX-12) is always auto-detected, unlike
     native_max_jobs/cpu_budget which require the caller to supply them -

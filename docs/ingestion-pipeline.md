@@ -340,6 +340,22 @@ several wrong assumptions turned out to hide behind:
     falling back to its resolved absolute path outside a git repository
     entirely. See `docs/scenarios/UX-07-run-identity-collides-across-sibling-projects.md`
     for the real before/after hash values.
+16. **The oversubscription guard covered CPU only - no memory/swap
+    dimension existed anywhere in `bga`** (`UX-21`) - a real, independent
+    failure mode from CPU contention (pushing a build host into swap
+    thrashes the whole machine, not just the build). Added
+    `memory_budget_mb`/`estimated_job_memory_mb` to run-context/v9 as an
+    additive extension, same shared-helper pattern `UX-18` established
+    (`tools/_run_context_common.py`'s `add_memory_capacity_fields()`, now
+    called by both producer tools) - both purely operator-declared, no
+    auto-detection tier at all (unlike `host_cpu_count`'s CPU-side
+    counterpart), since no real per-task memory measurement source
+    exists in this pipeline. `bga/analyzer.py`'s new
+    `_check_memory_oversubscription` compares `builders x
+    native_max_jobs x estimated_job_memory_mb` against
+    `memory_budget_mb`, reported as its own `memory_oversubscription`
+    violation - independent of, and never conflated with,
+    `_check_process_oversubscription`'s own CPU-core check.
 
 ## Why a second, separate trace/v9 adapter
 

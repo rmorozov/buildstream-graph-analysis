@@ -32,7 +32,7 @@ from pathlib import Path
 from tools.bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
 from tools.chrome_trace_to_bga_trace import chrome_events_to_bga_spans, invocation_wall_clock
 from tools.bst_show_to_graph import extract_graph
-from tools._run_context_common import add_cpu_capacity_fields
+from tools._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
 
 
 def _parse_targets(targets_str: str):
@@ -293,6 +293,8 @@ def extract_run(
     strict: bool = False,
     native_max_jobs: int = None,
     cpu_budget: int = None,
+    memory_budget_mb: int = None,
+    estimated_job_memory_mb: int = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -385,6 +387,11 @@ def extract_run(
     # tools/bst_run_context.py, the other producer path, so the two
     # don't silently diverge again).
     add_cpu_capacity_fields(run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget)
+    # memory_budget_mb/estimated_job_memory_mb (UX-21) - same shared-
+    # helper pattern, purely operator-declared, no auto-detection tier.
+    add_memory_capacity_fields(
+        run_context, memory_budget_mb=memory_budget_mb, estimated_job_memory_mb=estimated_job_memory_mb,
+    )
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:
@@ -482,6 +489,21 @@ def main() -> int:
         "wanting to reserve headroom on a shared machine. When set, bga's oversubscription "
         "check treats this as the governing ceiling instead of host_cpu_count (UX-15).",
     )
+    parser.add_argument(
+        "--memory-budget-mb", type=int, default=None,
+        help="The amount of memory (MB) this build is *intended* to use - the operator's "
+        "declared envelope. No auto-detection (unlike --cpu-budget's host_cpu_count "
+        "counterpart) - purely operator-supplied. When set together with "
+        "--estimated-job-memory-mb, bga's memory oversubscription check (UX-21) compares "
+        "builders x native-max-jobs x --estimated-job-memory-mb against this budget.",
+    )
+    parser.add_argument(
+        "--estimated-job-memory-mb", type=int, default=None,
+        help="A rough, operator-supplied estimate of one concurrent build job's memory "
+        "footprint (MB) - a single configurable constant, not a real per-task measurement "
+        "(no such measurement source exists in this pipeline, see UX-21). Only meaningful "
+        "together with --memory-budget-mb.",
+    )
     args = parser.parse_args()
 
     try:
@@ -491,6 +513,8 @@ def main() -> int:
             trace_epsilon_us=args.trace_epsilon_us, bst_bin=args.bst_bin,
             strict=args.strict, native_max_jobs=args.native_max_jobs,
             cpu_budget=args.cpu_budget,
+            memory_budget_mb=args.memory_budget_mb,
+            estimated_job_memory_mb=args.estimated_job_memory_mb,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

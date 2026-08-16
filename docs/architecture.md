@@ -102,7 +102,20 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-24 | Chrome Trace export for Plane 2 + combined two-plane `perfetto.dev` view, real dual-plane single-invocation capture | 🟢 Done |
 | UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🟢 Done |
 | UX-26 | Batch/map-reduce report stops surfacing zero-savings groups | 🟢 Done |
-| UX-27..UX-40 | **Open backlog round (2026-08-16 audit).** Filed together from a real claims-vs-reality audit plus a full macro-then-micro walkthrough of the new `examples/06-macro-micro-optimization`. Anchor finding: every certified floor is derived from the run's *own observed graph*, so a deliberately-serialized build scores `efficiency_score` 1.00 with 0.00s headroom, and a real 30.5% optimization moves both numbers backwards. See `docs/design-directions.md`. | 🔴 Open |
+| UX-27 | `floors.occupancy_ratio` - a graph-shape-aware efficiency signal beside `efficiency_score`, which structurally cannot be one (real pair: +35.2pp where every other metric was flat or backwards) | 🟢 Done |
+| UX-28 | Oversubscription bar re-based onto the real governing core count (was BuildStream's own defaults, whose ratio-to-cores collapsed as the host grew), plus a new `dispatch_oversubscription` check on `builders` alone | 🟢 Done |
+| UX-29 | `native_max_jobs` recovered from the wrapped log's own recorded invocation, with a `native_max_jobs_source` provenance field - the whole capacity-guard chain was inert on runs made by the documented pipeline | 🟢 Done |
+| UX-30 | Sweep knee point is the last capacity that bought a real gain, computed over the whole curve | 🟢 Done |
+| UX-31 | `%{vars}` capture of the *resolved* per-element `max-jobs` + `notparallel` (correcting `UX-22`'s route and premise); detector re-pointed at parallelism-pinned elements | 🟢 Done |
+| UX-32 | Plane 2 per-element achieved parallelism, with work-vs-orchestration classification and two real findings (`pinned_to_one_job`, `underachieved_requested_jobs`) | 🟢 Done |
+| UX-33 | Critical path always printed (per-element duration/share when long); choke points named | 🟢 Done |
+| UX-34 | Structural kinds filtered out of the what-to-fix-first ranking, named in `omitted_structural_opportunities` | 🟢 Done |
+| UX-35 | Attribution hints are capacity-blind (`RESOURCE WAIT` tells an oversubscribed run to raise capacity) | 🔴 Open - depends on UX-28/UX-29, both now done |
+| UX-36 | Dispatch-occupancy block titled for what it measures; capacity shown with provenance; buckets labelled as occupancy | 🟢 Done |
+| UX-37 | Redundant-operation findings scored and ranked in recoverable wall-clock, filtered, elided readably, element build drivers excluded | 🟢 Done |
+| UX-38 | Tracer `report` detects and re-renders a saved JSON report; wrong input is an error, not a zero-process result | 🟢 Done |
+| UX-39 | CI gate cannot express "new work is fine, new inefficiency is not" | 🔴 Open - depends on UX-27/UX-40, both now done |
+| UX-40 | Measured pipeline overhead no longer penalizes confidence (real capture 0.694 -> 0.869, CI gate live), plus `--fail-on-low-confidence` | 🟢 Done |
 
 (`UX-08` was never filed — not a missing/lost file.)
 

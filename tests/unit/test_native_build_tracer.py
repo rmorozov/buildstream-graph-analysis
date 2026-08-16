@@ -314,9 +314,15 @@ def test_normalize_does_not_conflate_genuinely_different_operations():
 
 def test_detect_redundant_flags_signature_repeated_across_elements():
     records = [
-        _record(1, "cmake --build CMakeFiles/cmTC_aaaaa.dir/CMakeCXXCompilerABI.cpp.o", 0.0, 0.1, element="core.bst"),
-        _record(2, "cmake --build CMakeFiles/cmTC_bbbbb.dir/CMakeCXXCompilerABI.cpp.o", 1.0, 1.1, element="lib-a.bst"),
-        _record(3, "cmake --build CMakeFiles/cmTC_ccccc.dir/CMakeCXXCompilerABI.cpp.o", 2.0, 2.1, element="lib-b.bst"),
+        # UX-37: the real shape of CMake's own ABI probe, taken from a
+        # real trace. (This fixture previously used a synthetic
+        # `cmake --build ...` command, which UX-37's build-driver filter
+        # now correctly excludes - an element's own build driver is
+        # identical across elements by construction and is not
+        # redundancy. The probe itself, which this test is about, is.)
+        _record(1, "/usr/bin/c++ -o CMakeFiles/cmTC_aaaaa.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 0.0, 0.1, element="core.bst"),
+        _record(2, "/usr/bin/c++ -o CMakeFiles/cmTC_bbbbb.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 1.0, 1.1, element="lib-a.bst"),
+        _record(3, "/usr/bin/c++ -o CMakeFiles/cmTC_ccccc.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 2.0, 2.1, element="lib-b.bst"),
     ]
     findings = detect_redundant_operations(records)
 

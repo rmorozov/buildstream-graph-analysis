@@ -2,7 +2,9 @@
 from typing import List, Optional
 
 from ..ingest.models import AnalysisResult
-from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
+from ._shared import (
+    GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT, resolve_attribution_hint,
+)
 
 # Confidence-band labels for the Key Findings headline (P4-02) - a
 # presentation-only heuristic, not a spec-defined threshold (Part 33
@@ -241,7 +243,10 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
             # about it - previously a reader had no way to know from the
             # report itself that IDLE/RESOURCE_WAIT/SCHEDULER_WAIT are
             # three different problems with three different fixes.
-            hint = ATTRIBUTION_CATEGORY_HINTS_BY_KEY.get(top_category)
+            # UX-35: conditioned on this run's own capacity verdict.
+            hint = resolve_attribution_hint(
+                top_category, getattr(result, 'capacity_verdict', None),
+            )
             if hint:
                 lines.append(f"    -> {hint}")
 

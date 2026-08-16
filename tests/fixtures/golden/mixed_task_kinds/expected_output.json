@@ -16,6 +16,15 @@
         "cold_critical_path_duration_sources": {},
         "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09/UX-15). Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs, governing core count (host_cpu_count/cpu_budget). They are inert here, not passing; a wrapped log records --max-jobs on its own first line (UX-29), or declare the missing value explicitly at extraction time."
     },
+    "capacity_verdict": {
+        "oversubscribed": false,
+        "undersubscribed": false,
+        "checks_ran": false,
+        "skipped_inputs": [
+            "native_max_jobs",
+            "governing core count (host_cpu_count/cpu_budget)"
+        ]
+    },
     "attribution": {
         "execution_on_chain_us": 14000,
         "dependency_wait_us": 0,
@@ -29,7 +38,7 @@
     "attribution_hints": {
         "execution_on_chain_us": "real work on the critical path - the only way to reduce this is to reduce the work itself",
         "dependency_wait_us": "waiting on an upstream element to finish - shorten or parallelize that dependency chain",
-        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a higher N, or `bga sweep` to find the real knee point",
+        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
         "scheduler_wait_us": "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`",
         "idle_us": "nothing was dependency-ready at all - likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
         "retry_wait_us": "this element needed a retry - investigate why the first attempt failed/was discarded",

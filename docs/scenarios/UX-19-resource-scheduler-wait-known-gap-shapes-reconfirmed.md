@@ -1,6 +1,6 @@
 # UX-19: resource/scheduler/retry-wait attribution's known, already-documented gap shapes - independently reconfirmed
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** `P1-31`, `P1-39`, `P1-30` (all already done - this task is about their own documented residual limitations)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `P1-31`, `P1-39`, `P1-30` (all already done - this task is about their own documented residual limitations)
 
 ## Motivation
 
@@ -41,5 +41,29 @@ Real design work, not attempted here, per this session's own "don't force a quic
 3. Every existing `P1-30`/`P1-31`/`P1-32`/`P1-39` test continues to pass unchanged.
 4. Full suite green.
 
+## Fix Implemented
+
+Both gap shapes turned out to share the same underlying root cause: `classify_resource_wait`/`classify_scheduler_wait` internally hardcoded `task.ready_us`/`task.start_us` as their window bounds regardless of what real window a caller actually wanted classified - `_classify_wait_gap` already extended `gap_start` correctly for both the intra-element-phase-predecessor case (`P1-19`) and the retry case (`P1-30`), but that extension never actually reached these two classifiers' own internal window computation. One fix closes both:
+
+1. Extracted `classify_resource_wait`'s own boundary-sweep logic into a new `_resource_saturation_intervals(task, window_start, window_end, resource_capacity)` - returns *every* maximal constant-saturation sub-interval of the window (not just the leading prefix), each tagged saturated/not, with raw integer holder microseconds (Part 3.1: no floating point in timeline accounting until a caller finishes accumulating). `classify_resource_wait` itself became a thin wrapper: merges the leading run of saturated intervals into its own existing public contract (unchanged return shape), now accepting optional `window_start`/`window_end` params (mirroring `classify_scheduler_wait`'s own existing pattern) defaulting to `task.ready_us`/`task.start_us` for full backward compatibility.
+2. `classify_scheduler_wait` gained a `window_end` param (previously only `window_start` existed) and its degenerate-window guard now checks the *effective* window (`window_end <= window_start`) instead of `task.start_us <= task.ready_us` directly - the exact line that silently discarded a genuinely non-degenerate retry window before this fix.
+3. `_classify_wait_gap` now runs a real multi-cycle loop: each cycle checks resource-wait first at the current cursor via `_resource_saturation_intervals` (a real window check, not a `task.ready_us`-anchored prefix), then - if nothing explains the cursor - checks scheduler-wait bounded to the *next* real re-saturation point (if any) rather than always running to `gap_end`, so a later re-saturation can never be absorbed into an earlier SCHEDULER_WAIT segment. The loop stops when the gap is exhausted or neither classifier explains anything further; whatever's left still falls to RETRY_WAIT/DEPENDENCY_WAIT exactly as before. Degenerates to the prior single-pass behavior whenever there's only one saturation cycle - confirmed by a direct regression test reproducing `P1-39`'s own exact single-cycle shape.
+
+Out of Scope's own boundary held: no "unified interval-state engine" rewrite - the fix is entirely within `_classify_wait_gap`'s existing composition architecture, reusing (not replacing) `classify_resource_wait`/`classify_scheduler_wait`'s own public contracts.
+
 ## Verification Log
-_(append real command + output here once run, before marking 🟢)_
+
+Done for real, 2026-08-16. New `tests/unit/test_wait_gap_resaturation.py` (6 tests): a direct `_classify_wait_gap` unit test reproduces the exact two-saturation-cycle shape (RESOURCE_WAIT, SCHEDULER_WAIT, RESOURCE_WAIT in order - Acceptance Test #1) and a regression guard reproducing `P1-39`'s own single-cycle shape unchanged (Acceptance Test #3, direct-level); a direct retry-gap test confirms real resource contention during a retry's sequencing gap is now detected (RESOURCE_WAIT + RETRY_WAIT, not RETRY_WAIT alone - Acceptance Test #2) plus a regression guard confirming a genuinely uncontended retry gap still falls back to RETRY_WAIT entirely, unchanged; two full-pipeline (`analyze_run`) end-to-end tests for both scenarios confirm real attribution totals and that I4 (`Sigma attribution == H`) holds exactly, not just the direct-level segment lists.
+
+Every existing `P1-30`/`P1-31`/`P1-32`/`P1-39` test (`test_blame_chain.py`, `test_resource_wait.py`, `test_retry_wait_classification.py`) passes unchanged - confirmed by running them directly before the full suite.
+
+Full suite green: 568 passed (up from 562 - 6 new tests), same 7 pre-existing environment-only failures as `main`. `make lint` clean. The golden fixture (`tests/fixtures/golden/mixed_task_kinds`) needed **no** regeneration - confirming this fix is purely additive in behavior (only changes output when a genuine re-saturation/contended-retry-gap scenario exists, which that fixture doesn't have).
+
+Real CLI re-verification (`bga analyze ... --format json`) against a hand-built run matching the re-saturation scenario (`holder_a` saturates PROCESS `[0,100)`, genuinely free `[100,200)`, `holder_b` saturates again `[200,300)`, capacity=1, max_jobs=2):
+
+```
+attribution: {'execution_on_chain_us': 100, 'dependency_wait_us': 0, 'resource_wait_us': 200,
+              'scheduler_wait_us': 100, 'retry_wait_us': 0}
+```
+
+`resource_wait_us: 200` (both real saturation cycles, 100us each) and `scheduler_wait_us: 100` (the genuinely-free middle window) - was `resource_wait_us: 100, scheduler_wait_us: 200` before this fix (the re-saturation silently absorbed into the scheduler-wait remainder).

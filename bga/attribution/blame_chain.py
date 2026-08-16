@@ -322,6 +322,8 @@ class BlameChainAnalyzer:
         task: NormalizedTask,
         active_tasks_at_time: Dict[int, Set[str]],
         resource_capacity: Dict[Resource, int],
+        window_start: Optional[int] = None,
+        window_end: Optional[int] = None,
     ) -> Tuple[bool, Optional[dict]]:
         """
         Classify resource wait intervals (Part 8).
@@ -375,6 +377,22 @@ class BlameChainAnalyzer:
                 stability)
             resource_capacity: Available capacity per resource type -
                 load-bearing (see docstring above)
+            window_start: Start of the window to check for saturation.
+                Defaults to `task.ready_us` - the whole wait gap - for
+                backward compatibility with callers that have no reason
+                to narrow it. UX-19: `_classify_wait_gap`'s multi-cycle
+                sweep passes its own cursor here, both to re-check for
+                *re*-saturation later within a gap (the original
+                prefix-only check, anchored at `task.ready_us`, could
+                never see this) and to give a retry attempt's genuinely
+                non-degenerate window (`retry_pred.finish_us` through
+                `task.start_us`) something real to check, instead of
+                this method's own `task.start_us <= task.ready_us`
+                early-return firing on the Part 7 "no predecessor"
+                fallback's degenerate `ready_us == start_us` regardless
+                of what real window the caller actually wants classified.
+            window_end: End of the window to check for saturation.
+                Defaults to `task.start_us`.
 
         Returns:
             Tuple of (is_resource_wait, holder_info). is_resource_wait is
@@ -396,19 +414,64 @@ class BlameChainAnalyzer:
         if not task.resources:
             return False, None
 
-        # Check if task had to wait after becoming ready
-        if task.start_us <= task.ready_us:
+        wait_start = window_start if window_start is not None else task.ready_us
+        wait_end = window_end if window_end is not None else task.start_us
+        if wait_end <= wait_start:
             return False, None
 
-        wait_start = task.ready_us
-        wait_end = task.start_us
+        intervals = self._resource_saturation_intervals(task, wait_start, wait_end, resource_capacity)
+        if not intervals or not intervals[0][0]:
+            return False, None
 
-        # Only resources with known capacity can ever be judged saturated.
+        # The maximal saturated *prefix* (this method's own contract) -
+        # merge the leading run of saturated intervals. Multiple
+        # consecutive saturated intervals can occur when the specific
+        # holding task changes mid-saturation without the resource ever
+        # actually freeing up.
+        saturated_until = wait_start
+        holder_time_us: Dict[str, int] = defaultdict(int)
+        for is_saturated, t1, t2, interval_holder_time_us in intervals:
+            if not is_saturated:
+                break
+            saturated_until = t2
+            for key, us in interval_holder_time_us.items():
+                holder_time_us[key] += us
+
+        explained_us = saturated_until - wait_start
+        if explained_us <= 0:
+            return False, None
+
+        return True, self._build_holder_info(task, wait_start, wait_end, holder_time_us, explained_us)
+
+    def _resource_saturation_intervals(
+        self,
+        task: NormalizedTask,
+        window_start: int,
+        window_end: int,
+        resource_capacity: Dict[Resource, int],
+    ) -> List[Tuple[bool, int, int, Dict[str, int]]]:
+        """All maximal constant-saturation sub-intervals of
+        [window_start, window_end) for `task`'s required resources - not
+        just the leading saturated prefix `classify_resource_wait` itself
+        reports (UX-19: the remainder after an initial RESOURCE_WAIT
+        prefix can genuinely re-saturate *later* within the same gap,
+        something a prefix-only check structurally cannot see).
+
+        Returns a list of (is_saturated, t1, t2, holder_time_us) tuples
+        covering [window_start, window_end) exactly, contiguously, in
+        order. `holder_time_us` is raw integer microseconds per blocking
+        task_key (Part 3.1: no floating point in timeline accounting -
+        normalizing to a float share is deferred to whichever caller
+        finishes accumulating across however many intervals it merges,
+        via `_build_holder_info`), non-empty only when `is_saturated`.
+        """
+        if window_end <= window_start:
+            return []
         required_with_capacity = {
             r: resource_capacity[r] for r in task.resources if r in resource_capacity
         }
         if not required_with_capacity:
-            return False, None
+            return [(False, window_start, window_end, {})]
 
         # Every other task that could possibly affect occupancy of one of
         # this task's required (capacity-known) resources.
@@ -418,22 +481,20 @@ class BlameChainAnalyzer:
             and (set(required_with_capacity) & set(other.resources))
         ]
 
-        # Critical points: wait_start/wait_end plus every other relevant
-        # task's start/finish that falls strictly inside the window -
-        # occupancy for a required resource can only change at one of
-        # these points, so they define the maximal constant-occupancy
-        # sub-intervals.
-        boundaries = {wait_start, wait_end}
+        # Critical points: window_start/window_end plus every other
+        # relevant task's start/finish that falls strictly inside the
+        # window - occupancy for a required resource can only change at
+        # one of these points, so they define the maximal constant-
+        # occupancy sub-intervals.
+        boundaries = {window_start, window_end}
         for other in relevant_others:
-            if wait_start < other.start_us < wait_end:
+            if window_start < other.start_us < window_end:
                 boundaries.add(other.start_us)
-            if wait_start < other.finish_us < wait_end:
+            if window_start < other.finish_us < window_end:
                 boundaries.add(other.finish_us)
         points = sorted(boundaries)
 
-        holder_time_us: Dict[str, int] = defaultdict(int)
-        saturated_until = wait_start
-
+        intervals: List[Tuple[bool, int, int, Dict[str, int]]] = []
         for t1, t2 in zip(points, points[1:]):
             saturated_resources = {
                 resource for resource, capacity in required_with_capacity.items()
@@ -444,8 +505,9 @@ class BlameChainAnalyzer:
                 ) >= capacity
             }
             if not saturated_resources:
-                break
-            saturated_until = t2
+                intervals.append((False, t1, t2, {}))
+                continue
+            holder_time_us: Dict[str, int] = defaultdict(int)
             for other in relevant_others:
                 if not (set(other.resources) & saturated_resources):
                     continue
@@ -453,12 +515,25 @@ class BlameChainAnalyzer:
                 overlap_end = min(t2, other.finish_us)
                 if overlap_start < overlap_end:
                     holder_time_us[str(other.task_key)] += overlap_end - overlap_start
+            intervals.append((True, t1, t2, dict(holder_time_us)))
 
-        explained_us = saturated_until - wait_start
-        if explained_us <= 0:
-            return False, None
+        return intervals
 
-        holder_info = {
+    def _build_holder_info(
+        self,
+        task: NormalizedTask,
+        wait_start: int,
+        wait_end: int,
+        holder_time_us: Dict[str, int],
+        explained_us: int,
+    ) -> dict:
+        """Builds `classify_resource_wait`'s own public holder_info
+        shape from already-accumulated raw integer holder microseconds -
+        shared by `classify_resource_wait` itself (merging a leading
+        saturated run) and `_classify_wait_gap`'s multi-cycle sweep
+        (UX-19, one call per real saturated segment found, including a
+        re-saturation later in the gap)."""
+        return {
             'wait_start_us': wait_start,
             'wait_end_us': wait_end,
             'required_resources': [str(r) for r in task.resources],
@@ -477,11 +552,11 @@ class BlameChainAnalyzer:
                 key: holder_time_us[key] / explained_us
                 for key in sorted(holder_time_us.keys())
             },
-            # See docstring: structurally always False now.
+            # See classify_resource_wait's own docstring: structurally
+            # always False now.
             'ambiguous': False,
         }
-        return True, holder_info
-    
+
     def _resource_available_at(self, task: NormalizedTask, ts: int) -> bool:
         """True if every resource `task` requires had at least one free
         capacity slot at timestamp `ts`, based on which other tasks were
@@ -519,6 +594,7 @@ class BlameChainAnalyzer:
         resource_available: bool,
         max_jobs: Optional[int],
         window_start: Optional[int] = None,
+        window_end: Optional[int] = None,
     ) -> bool:
         """
         Classify scheduler wait (Part 9).
@@ -557,11 +633,29 @@ class BlameChainAnalyzer:
                 consumed, so this only sweeps the genuinely-unclaimed
                 remainder rather than re-examining time already explained
                 by resource contention.
+            window_end: End of the sub-window to sweep for concurrency
+                evidence (UX-19). Defaults to `task.start_us`.
+                `_classify_wait_gap`'s multi-cycle sweep bounds this to
+                the *next* real resource re-saturation point (if any)
+                rather than always letting it run to `task.start_us` -
+                without that bound, this method's own "evidence exists
+                *somewhere* in this window" semantic would swallow a
+                later genuine re-saturation as if the whole remainder
+                were scheduler-wait.
 
         Returns:
             True if task experienced scheduler wait
         """
-        if task.start_us <= task.ready_us:
+        wait_start = window_start if window_start is not None else task.ready_us
+        wait_end = window_end if window_end is not None else task.start_us
+        # UX-19: checks the *effective* window, not task.ready_us/
+        # start_us directly - a retry attempt with no other real
+        # predecessor has task.ready_us == task.start_us (Part 7's "no
+        # predecessor" fallback) by construction, but `_classify_wait_gap`
+        # may still pass a genuinely non-degenerate window derived from
+        # the retry predecessor's own finish time. Checking the raw
+        # task fields here would incorrectly reject that real window.
+        if wait_end <= wait_start:
             return False
 
         if not resource_available:
@@ -571,9 +665,6 @@ class BlameChainAnalyzer:
             # No capacity evidence available - per Part 9, the analyzer must
             # not infer scheduler failure merely because a task did not run.
             return False
-
-        wait_start = window_start if window_start is not None else task.ready_us
-        wait_end = task.start_us
 
         others = [other for other in self.tasks if other.task_key != task.task_key]
 
@@ -705,10 +796,14 @@ class BlameChainAnalyzer:
         (Part 7: "the interval is classified according to what happened
         during that gap" - not automatically all DEPENDENCY_WAIT).
 
-        Split order: resource-wait first (using classify_resource_wait's
-        holder-weighted overlap, P1-01), then scheduler-wait for any
-        remainder (classify_scheduler_wait, P1-02), then whatever's left
-        defaults to RETRY_WAIT if `task` is itself a retry attempt with an
+        Split order: a real multi-cycle sweep (UX-19) alternating
+        resource-wait (`_resource_saturation_intervals`, generalizing
+        P1-01's holder-weighted overlap to an arbitrary window rather
+        than only `[task.ready_us, task.start_us)`) and scheduler-wait
+        (`classify_scheduler_wait`, P1-02/P1-39) over the remainder,
+        repeating until the gap is exhausted or neither classifier
+        explains anything further - then whatever's left defaults to
+        RETRY_WAIT if `task` is itself a retry attempt with an
         identifiable prior attempt (`_retry_predecessor`, P1-30) - the
         caller is expected to have already extended `gap_start` to cover
         the prior attempt's finish (build_blame_chain/compute_task_attribution
@@ -719,74 +814,114 @@ class BlameChainAnalyzer:
         require "sufficient evidence" for, so it's the safe fallback when
         no more specific classifier confirms an explanation.
 
-        `gap_start` may be later than `task.ready_us` (e.g. when an
-        intra-element phase predecessor pushed the effective ready time
-        forward, P1-19) - classify_resource_wait's own internal wait
-        window always starts at `task.ready_us`, so its 'explained_us' is
-        clamped to fit within [gap_start, gap_end) here. This is a known
-        approximation for the (rare) case where resource contention and
-        intra-element sequencing overlap in complex ways; see P1-20's task
-        file for the honest accounting of this simplification.
+        UX-19 fixed two real, previously-documented gap shapes here:
 
-        P1-39: the scheduler-wait check below evaluates resource
-        availability and sweeps concurrency starting at `cursor` (the
-        point after any RESOURCE_WAIT prefix has already been consumed),
-        not at `task.ready_us`. Evaluating either at the original
-        `ready_us` would be stale by construction once a RESOURCE_WAIT
-        prefix exists: `classify_resource_wait` only ever assigns a
-        prefix because the resource *was* saturated at `ready_us`, so a
-        point check still anchored there would always report "resource
-        unavailable" and scheduler-wait could never explain the remainder,
-        even when the resource had genuinely freed up and the scheduler
-        was genuinely full afterward. This is still a point check (at
-        `cursor`) plus a sweep of the remainder only - not a check for
-        re-saturation later within the remainder - a deliberately scoped
-        fix; see P1-39's Out of Scope for why a fuller unified interval
-        sweep wasn't pursued here.
+        1. **Re-saturation within the remainder.** Before this fix, a
+           RESOURCE_WAIT prefix was only ever checked once (anchored at
+           `task.ready_us`), then the entire remainder was handed to a
+           single `classify_scheduler_wait` call - whose own "sufficient
+           evidence" semantic ("at some point in this window, true
+           concurrency was below max_jobs") is all-or-nothing over
+           whatever window it's given. If the resource genuinely freed
+           up (explaining a real SCHEDULER_WAIT moment) and then
+           saturated *again* later in the same remainder, that later
+           re-saturation was silently swallowed into the single
+           SCHEDULER_WAIT segment instead of being reported as its own
+           RESOURCE_WAIT. Fixed by looping: each cycle checks
+           resource-wait first at the current cursor (now a real window
+           check via `_resource_saturation_intervals`, not just a
+           `task.ready_us`-anchored prefix), and bounds
+           `classify_scheduler_wait`'s own sweep to stop at the *next*
+           real re-saturation point (if any) rather than always running
+           to `gap_end` - so a later re-saturation can never be absorbed
+           into an earlier SCHEDULER_WAIT segment.
+        2. **Retry gaps with no other real predecessor.** Before this
+           fix, `classify_resource_wait`/`classify_scheduler_wait` both
+           unconditionally checked `task.start_us <= task.ready_us` -
+           true by construction for a retry attempt whose only
+           predecessor is the prior attempt (Part 7's "no predecessor"
+           fallback sets `task.ready_us == task.start_us`), even though
+           `gap_start` here may already be a real, non-degenerate value
+           (`retry_pred.finish_us`, extended by build_blame_chain before
+           calling this method) - the whole gap defaulted to RETRY_WAIT
+           regardless of whether real contention explained part of it.
+           Fixed by having both classifiers check the *effective* window
+           they were actually given (`window_start`/`window_end`, now
+           accepted by both) instead of `task.ready_us`/`task.start_us`
+           directly - the same underlying fix as (1) above, since both
+           gap shapes come down to "give these classifiers the real
+           window to check, not a hardcoded, possibly-stale one."
 
-        A related, known limitation for retries specifically (P1-30):
-        `classify_resource_wait` early-returns `(False, None)` whenever
-        `task.start_us <= task.ready_us` - true by construction for a
-        retry attempt with no *other* real predecessor, since Part 7's "no
-        predecessor" fallback sets `task.ready_us == task.start_us`
-        (see build_blame_chain/compute_task_attribution's callers). In that
-        case resource/scheduler-wait can never carve out a sub-portion of
-        a retry gap even if genuine contention explains part of it - the
-        whole gap defaults to RETRY_WAIT. Still strictly more correct than
-        the prior behavior (IDLE for the entire gap, unconditionally), but
-        not as precise as the ordinary (non-retry) case where a real
-        predecessor already gives classify_resource_wait a non-degenerate
-        window to check.
+        Both changes preserve `Sigma attribution == H` (I4) exactly:
+        segments still cover [gap_start, gap_end) contiguously with no
+        overlap, this method's own return contract is unchanged, and no
+        existing P1-30/P1-31/P1-32/P1-39 test's own (single-saturation-
+        cycle, or non-retry) scenario changes behavior - the loop
+        degenerates to the prior single-pass behavior whenever there is
+        only one saturation cycle to find, which is the common case.
 
         Returns (segments, resource_wait_holder_info) - segments cover
         [gap_start, gap_end) exactly, contiguously, no overlap;
-        holder_info is classify_resource_wait's raw return, for callers
-        that want to record it (e.g. on the BlameChainNode), or None if
-        resource-wait wasn't applicable.
+        holder_info is the *first* RESOURCE_WAIT segment's holder info
+        (classify_resource_wait's own return shape), for callers that
+        want to record it (e.g. on the BlameChainNode) - kept singular
+        for interface stability even though a re-saturation cycle can
+        now produce more than one RESOURCE_WAIT segment; every segment
+        is still present in `segments` regardless. None if resource-wait
+        never applied at all.
         """
         segments: List[Tuple[AttributionCategory, int, int]] = []
         cursor = gap_start
         resource_wait_holder_info: Optional[dict] = None
 
-        if task.resources:
-            is_resource_wait, holder_info = self.classify_resource_wait(
-                task, self.active_tasks_at_time, self.resource_capacity,
-            )
-            if is_resource_wait and holder_info:
-                resource_wait_holder_info = holder_info
-                explained_us = min(holder_info.get('explained_us', 0), gap_end - cursor)
-                if explained_us > 0:
-                    segments.append((AttributionCategory.RESOURCE_WAIT, cursor, cursor + explained_us))
-                    cursor += explained_us
+        while cursor < gap_end:
+            progressed = False
+            saturation_intervals: List[Tuple[bool, int, int, Dict[str, int]]] = []
+            if task.resources:
+                saturation_intervals = self._resource_saturation_intervals(
+                    task, cursor, gap_end, self.resource_capacity,
+                )
 
-        if cursor < gap_end:
-            resource_available = self._resource_available_at(task, cursor)
-            is_scheduler_wait = self.classify_scheduler_wait(
-                task, resource_available, self.max_jobs, window_start=cursor,
-            )
-            if is_scheduler_wait:
-                segments.append((AttributionCategory.SCHEDULER_WAIT, cursor, gap_end))
-                cursor = gap_end
+            if saturation_intervals and saturation_intervals[0][0]:
+                seg_end = cursor
+                holder_time_us: Dict[str, int] = defaultdict(int)
+                for is_saturated, t1, t2, interval_holder_time_us in saturation_intervals:
+                    if not is_saturated:
+                        break
+                    seg_end = t2
+                    for key, us in interval_holder_time_us.items():
+                        holder_time_us[key] += us
+                explained_us = seg_end - cursor
+                if explained_us > 0:
+                    holder_info = self._build_holder_info(task, cursor, seg_end, holder_time_us, explained_us)
+                    if resource_wait_holder_info is None:
+                        resource_wait_holder_info = holder_info
+                    segments.append((AttributionCategory.RESOURCE_WAIT, cursor, seg_end))
+                    cursor = seg_end
+                    progressed = True
+
+            if not progressed and cursor < gap_end:
+                # Bound scheduler-wait's own sweep to the next real
+                # re-saturation point (if any), not gap_end - see this
+                # method's own docstring, fix (1).
+                next_saturation_us = next(
+                    (t1 for is_saturated, t1, _t2, _h in saturation_intervals if is_saturated),
+                    None,
+                )
+                scheduler_window_end = next_saturation_us if next_saturation_us is not None else gap_end
+
+                resource_available = self._resource_available_at(task, cursor)
+                is_scheduler_wait = self.classify_scheduler_wait(
+                    task, resource_available, self.max_jobs,
+                    window_start=cursor, window_end=scheduler_window_end,
+                )
+                if is_scheduler_wait:
+                    segments.append((AttributionCategory.SCHEDULER_WAIT, cursor, scheduler_window_end))
+                    cursor = scheduler_window_end
+                    progressed = True
+
+            if not progressed:
+                break
 
         if cursor < gap_end:
             if self._retry_predecessor(task) is not None:

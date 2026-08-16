@@ -1,6 +1,6 @@
 # UX-29: `native_max_jobs` is never auto-extracted, so the whole capacity-guard chain is inert on runs produced by the documented pipeline
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-12, UX-18 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-12, UX-18 (both done)
 
 ## Motivation
 
@@ -57,3 +57,27 @@ and `tools/bst_log_to_chrome_trace.py` already has an `EXEC_CMD_RE = re.compile(
 ## Verification Log
 
 Filed 2026-08-16 from a real session. The `run-context.json` excerpt is a real file produced by the exact command sequence in `README.md`, against a real `bst --builders 4 --max-jobs 4` build of `examples/05-cmake-cpp-toolchain` on a 4-core host; the wrapper log line is quoted verbatim from that run's own log. `EXEC_CMD_RE`'s existence was confirmed by reading `tools/bst_log_to_chrome_trace.py` directly.
+
+Real end-to-end re-verification, re-extracting the exact real capture from this doc's Motivation with **no new flags** (`python3 -m tools.bst_extract_run --format wrapped ...`, against a real `bst --builders 4 --max-jobs 4 build all.bst` log):
+
+```
+native_max_jobs = 4
+native_max_jobs_source = parsed_from_invocation
+host_cpu_count = 4
+scheduler = {'builders': 4, 'fetchers': 10, 'pushers': 4, 'native_max_jobs': 4}
+```
+
+and the two sides of item 4, from real `bga analyze -d` runs on the new and the old extraction of the same build:
+
+```
+# newly extracted - guards ran, note stays clean
+  Note: LB/Efficiency Score certify against this run's recorded resource capacities ... (see UX-09/UX-15).
+
+# previously extracted, native_max_jobs null - guards inert, and it now says so
+  Note: ... (see UX-09/UX-15). Capacity checks (over/under-subscription, memory) did not run
+  for this run - missing: native_max_jobs. They are inert here, not passing; a wrapped log
+  records --max-jobs on its own first line (UX-29), or declare the missing value explicitly
+  at extraction time.
+```
+
+Acceptance Test items 1-4 all confirmed with real data. Note what this fix does **not** do, deliberately: the guards now *run* on this real 4-builders x 4-max-jobs run on a 4-core host and still report no violation, because the threshold compares against BuildStream's own already-oversubscribed defaults - that is `UX-28`, filed separately for exactly this reason. Full suite green (678 passed, up from 668), `make lint` clean.

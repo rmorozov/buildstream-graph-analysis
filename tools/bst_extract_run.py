@@ -386,7 +386,14 @@ def extract_run(
     # tools/_run_context_common.py (UX-18: shared with
     # tools/bst_run_context.py, the other producer path, so the two
     # don't silently diverge again).
-    add_cpu_capacity_fields(run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget)
+    add_cpu_capacity_fields(
+        run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget,
+        # UX-29: recovered from the wrapper's own recorded invocation
+        # when this log has one - see get_scheduler_config. An explicit
+        # --native-max-jobs still wins; `native_max_jobs_source` records
+        # which of the two the published value came from.
+        parsed_native_max_jobs=scheduler.get("native_max_jobs"),
+    )
     # memory_budget_mb/estimated_job_memory_mb (UX-21) - same shared-
     # helper pattern, purely operator-declared, no auto-detection tier.
     add_memory_capacity_fields(
@@ -410,7 +417,13 @@ def extract_run(
 
     # Run identity (P1-37): embedded identically into all three files so
     # bga's own loader can cross-check they belong to the same extraction.
-    run_identity = _compute_run_identity(project_dir, targets, scheduler, project_refs_provenance, native_max_jobs=native_max_jobs)
+    # UX-29: run identity records the real resolved value (whichever
+    # source won above), not just an operator-typed one - two runs that
+    # genuinely differed in native parallelism must not hash identically.
+    run_identity = _compute_run_identity(
+        project_dir, targets, scheduler, project_refs_provenance,
+        native_max_jobs=run_context.get("native_max_jobs"),
+    )
     run_context["run_identity"] = run_identity
     graph["run_identity_hash"] = run_identity["manifest_hash"]
     trace["run_identity_hash"] = run_identity["manifest_hash"]
@@ -474,10 +487,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,
-        help="The real --max-jobs value the build was invoked with (per-element internal "
-        "build-system parallelism, e.g. `make -jN` - a different, unrelated concept from "
-        "--builders/this tool's own resource_capacities.PROCESS). Not visible in a "
-        "BuildStream log itself, so has to be told to us; omit if unknown (UX-12).",
+        help="Override the real --max-jobs value the build was invoked with (per-element "
+        "internal build-system parallelism, e.g. `make -jN` - a different, unrelated "
+        "concept from --builders/this tool's own resource_capacities.PROCESS). Usually "
+        "unnecessary: a wrapped log records the real invocation on its own first line and "
+        "this value is recovered from it automatically (UX-29). Pass it only to override "
+        "that, or for a raw log, which has no invocation line (UX-12).",
     )
     parser.add_argument(
         "--cpu-budget", type=int, default=None,

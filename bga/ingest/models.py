@@ -81,6 +81,14 @@ class RunContext:
     # only populate them when told (native_max_jobs) or when the capture
     # environment supports querying it (host_cpu_count).
     native_max_jobs: Optional[int] = None
+    # UX-29: where `native_max_jobs` came from -
+    # "parsed_from_invocation" (recovered from the wrapper's own
+    # `Executing command:` line, the common case now) or
+    # "operator_declared" (an explicit --native-max-jobs, which wins).
+    # None when `native_max_jobs` itself is absent. Same role as UX-17's
+    # `effective_cpus_source`: the capacity guards certify against this
+    # number, so where it came from is part of the claim.
+    native_max_jobs_source: Optional[str] = None
     host_cpu_count: Optional[int] = None
     # Operator-declared CPU budget (UX-15) - the number of cores this
     # build is *intended* to use, as opposed to `host_cpu_count`'s

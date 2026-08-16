@@ -156,3 +156,10 @@ examples/03-project-refs-identity/elements/libbar.bst
 # versions), regenerated at build time, never committed - same reasoning
 # as the busybox runtime staging above, scaled up. See examples/README.md.
 examples/05-cmake-cpp-toolchain/files/toolchain/
+
+# examples/06-macro-micro-optimization stages the identical sysroot (a
+# hardlink clone of 05's - see examples/stage_cpp_toolchain.sh) into its
+# own project and into its optimized/ variant. Same reasoning: host-
+# specific, ~270MB, regenerated at build time, never committed.
+examples/06-macro-micro-optimization/files/toolchain/
+examples/06-macro-micro-optimization/optimized/files/toolchain/

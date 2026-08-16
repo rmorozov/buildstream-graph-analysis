@@ -569,6 +569,12 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                         f"(saves {group['combined_savings_us'] / 1e6:.2f}s combined, "
                         f"vs. {', '.join(f'{k}={v / 1e6:.2f}s' for k, v in group['individual_savings_us'].items())} fixed alone)"
                     )
+            omitted_zero_savings_groups = batch_opportunities.get('omitted_zero_savings_groups') or []
+            if omitted_zero_savings_groups:
+                lines.append(
+                    f"  ({len(omitted_zero_savings_groups)} further group(s) had no "
+                    f"measurable combined effect, omitted)"
+                )
             serialized_pairs = batch_opportunities.get('serialized_pairs') or []
             if serialized_pairs:
                 lines.append(

@@ -1363,9 +1363,9 @@ class BuildEfficiencyAnalyzer:
         # each group at once - distinct from sensitivity's own
         # per-element proxy scores, which never simulate a combined
         # effect. See bga/structural/batching.py's own module docstring.
-        batch_opportunities = {'groups': [], 'serialized_pairs': []}
+        batch_opportunities = {'groups': [], 'omitted_zero_savings_groups': [], 'serialized_pairs': []}
         if self.replay_scheduler is not None:
-            from bga.structural.batching import compute_batch_opportunities
+            from bga.structural.batching import compute_batch_opportunities, serialize_batch_opportunities
             candidates = [key for key, _, _ in result.sensitivity.top_opportunities[:5]]
             element_to_task_key = {
                 t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks
@@ -1375,19 +1375,7 @@ class BuildEfficiencyAnalyzer:
                 replay_scheduler=self.replay_scheduler,
                 element_to_task_key=element_to_task_key,
             )
-            batch_opportunities = {
-                'groups': [
-                    {
-                        'elements': group.elements,
-                        'baseline_makespan_us': group.baseline_makespan_us,
-                        'combined_makespan_us': group.combined_makespan_us,
-                        'combined_savings_us': group.combined_savings_us,
-                        'individual_savings_us': group.individual_savings_us,
-                    }
-                    for group in batch_result.groups
-                ],
-                'serialized_pairs': batch_result.serialized_pairs,
-            }
+            batch_opportunities = serialize_batch_opportunities(batch_result)
 
         # Large serialization point detection (UX-22, non-spec additive
         # signal): elements combining a real per-element `max_jobs`

@@ -125,26 +125,38 @@ which `architecture.md` argues against for good reasons.
 
 ### The fourth direction: the capacity axis should stop being decorative
 
-The walkthrough's third iteration is the honest low point. On a 4-core
-host running `--builders 4 --max-jobs 4` — 16 potential concurrent
-compilers, with the contention measured directly at process level (the
-same eight translation units cost 11.05s of process lifetime alone and
-20.00s alongside siblings, +81%) — `bga` reported `violations: []`. Two
-independent reasons, either sufficient on its own:
+The walkthrough's third iteration is the honest low point, and also the
+place where the audit's own first answer turned out to be wrong. On a
+4-core host running `--builders 4 --max-jobs 4`, `bga` reported
+`violations: []` — because `native_max_jobs` was `null`, recorded only
+when the operator passed a flag, even though line 1 of the log the
+extractor just parsed reads `Executing command: bst --builders 4
+--max-jobs 4 build all.bst` (`UX-29`).
 
-- `native_max_jobs` is `null` because it is only recorded when the
-  operator passes a flag, even though line 1 of the log the extractor just
-  parsed reads `Executing command: bst --builders 4 --max-jobs 4 build
-  all.bst` (`UX-29`).
-- Supplied by hand, the check still does not fire, because its threshold
-  is `builders × max_jobs > 4 × min(cores, 8)` — a comparison against
-  BuildStream's *own defaults*, which are themselves 4× the cores on a
-  small host. Nothing between 4 and 16 concurrent processes on a 4-core
-  machine can ever be reported (`UX-28`).
+Supplied by hand, the check still did not fire. The audit initially read
+that as a second defect, citing the +81% per-element contention Plane 2
+measured. That reading does not hold: `UX-09`'s own real timing table
+measured 4×4 on this exact host as the *fastest* of six configurations,
+and the run in question was 30.5% faster overall. Higher per-element cost
+under concurrency is what beneficial parallelism costs, not evidence of
+harm.
+
+The defect that survived re-verification is different and sharper: the
+bar was BuildStream's own unconfigured default (`4 × min(cores, 8)`),
+which stops growing at 8 cores while the host does not. The ratio at
+which the check fired was therefore 4× the cores on a 4-core host and
+0.5× on a 64-core one, and above 8 cores it flagged configurations
+sitting *below* one process per core — reported as oversubscribed by one
+branch while meeting the next branch's own definition of idle capacity
+(`UX-28`).
 
 Five shipped features (`UX-12`/`UX-15`/`UX-16`/`UX-17`/`UX-21`) hang off
-that field and that threshold. Fixing both is cheap and turns a dormant
-subsystem on.
+that field and that threshold. Both are now fixed, which turns a dormant
+subsystem on — and the episode is the clearest argument in this document
+for the general point: a config-level check reasoning about *potential*
+demand cannot settle these questions, because potential demand overstates
+real demand whenever an element has less parallel work than it has job
+slots. `UX-32`'s measured per-element concurrency is what would.
 
 ### What a good local session should look like
 

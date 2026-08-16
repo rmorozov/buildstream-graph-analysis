@@ -89,13 +89,27 @@ def _format_violation_summary(violation: dict) -> str:
             base += " - missing: " + "; ".join(parts)
         return base
     if vtype == 'resource_oversubscription':
+        ratio = violation.get('demand_ratio')
+        ratio_text = f" ({ratio:.1f}x the cores)" if ratio else ""
         return (
             f"oversubscription: builders={violation.get('builders')} x "
             f"native max-jobs={violation.get('native_max_jobs')}{_auto_note(violation)} = "
             f"{violation.get('actual_demand')} potential concurrent processes "
-            f"vs {_ceiling_desc(violation)} (BuildStream's own defaults for "
-            f"that ceiling: {violation.get('default_demand')}) - real CPU "
-            f"contention may be slowing individual tasks down, see UX-09"
+            f"vs {_ceiling_desc(violation)}{ratio_text} - past the ratio UX-09 "
+            f"measured as genuinely slower on a real host; real CPU contention "
+            f"may be slowing individual tasks down (BuildStream's own "
+            f"unconfigured default here would be {violation.get('default_demand')})"
+        )
+    if vtype == 'dispatch_oversubscription':
+        # UX-28: distinct from the product check above, and sharper -
+        # `builders` really are dispatched concurrently, whereas
+        # `max-jobs` slots may never be claimed if an element has too
+        # little parallel work to claim them.
+        return (
+            f"dispatch oversubscription: builders={violation.get('builders')} vs "
+            f"{_ceiling_desc(violation)} - BuildStream dispatches that many "
+            f"elements at once and each runs at least one process, so the host "
+            f"is oversubscribed even at --max-jobs 1, see UX-09/UX-28"
         )
     if vtype == 'resource_undersubscription':
         return (

@@ -6,6 +6,12 @@ BuildStream choose - up to the available host threads, capped at 8")
 went completely undetected, and the whole oversubscription/
 undersubscription check was silently skipped for exactly the runs most
 worth checking.
+
+UX-28 later re-based the oversubscription threshold from BuildStream's
+own unconfigured default onto a real multiple of the governing core
+count. Several fixtures below were re-pointed at configurations that
+still exceed the new bar - the sentinel-resolution behaviour they test
+is unchanged, only the demand numbers needed to trip a violation are.
 """
 import json
 
@@ -53,14 +59,15 @@ def _violation_types(result):
 def test_native_max_jobs_zero_is_resolved_not_treated_as_missing(tmp_path):
     """The real BuildStream sentinel: --max-jobs 0 means "auto, capped
     at min(host_cores, 8)" - resolves to min(4, 8) = 4 here, so real
-    demand is builders(8) x 4 = 32 vs governing_cores=4, well past the
-    default_demand=16 threshold. Before the fix: zero violations."""
-    result = _analyze(tmp_path, "run", builders=8, native_max_jobs=0, host_cpu_count=4)
+    demand is builders(16) x 4 = 64 on a 4-core host, 16x the cores and
+    past UX-28's bar. Before the UX-16 fix: zero violations."""
+    result = _analyze(tmp_path, "run", builders=16, native_max_jobs=0, host_cpu_count=4)
     assert "resource_oversubscription" in _violation_types(result)
     violation = next(v for v in result.violations if v["type"] == "resource_oversubscription")
     assert violation["native_max_jobs"] == 4  # resolved, not the literal 0
     assert violation["native_max_jobs_was_auto"] is True
-    assert violation["actual_demand"] == 32
+    assert violation["actual_demand"] == 64
+    # Still reported, but as context now, not as the bar (UX-28).
     assert violation["default_demand"] == 16
 
 
@@ -70,7 +77,7 @@ def test_native_max_jobs_zero_resolution_uses_governing_cores_not_raw_host(tmp_p
     host_cpu_count - consistent with UX-15's own "declared budget
     governs" precedent."""
     result = _analyze(
-        tmp_path, "run", builders=8, native_max_jobs=0, host_cpu_count=32, cpu_budget=4,
+        tmp_path, "run", builders=16, native_max_jobs=0, host_cpu_count=32, cpu_budget=4,
     )
     violation = next(v for v in result.violations if v["type"] == "resource_oversubscription")
     assert violation["native_max_jobs"] == 4  # min(cpu_budget=4, 8), not min(32, 8)
@@ -79,8 +86,10 @@ def test_native_max_jobs_zero_resolution_uses_governing_cores_not_raw_host(tmp_p
 
 def test_native_max_jobs_zero_resolved_above_eight_stays_capped(tmp_path):
     """A big governing ceiling still caps the auto-resolved value at 8 -
-    BuildStream's own real documented cap, not just min(cores, cores)."""
-    result = _analyze(tmp_path, "run", builders=8, native_max_jobs=0, host_cpu_count=64)
+    BuildStream's own real documented cap, not just min(cores, cores).
+    builders=128 on 64 cores puts potential demand at 1024 = 16x the
+    cores, past UX-28's bar, so there is a violation to inspect."""
+    result = _analyze(tmp_path, "run", builders=128, native_max_jobs=0, host_cpu_count=64)
     violation = next(v for v in result.violations if v["type"] == "resource_oversubscription")
     assert violation["native_max_jobs"] == 8  # min(64, 8) = 8, not 64
 
@@ -108,7 +117,7 @@ def test_absent_native_max_jobs_is_still_correctly_skipped(tmp_path):
 def test_report_text_names_the_auto_resolution(tmp_path):
     from bga.report.text import format_text
 
-    result = _analyze(tmp_path, "run", builders=8, native_max_jobs=0, host_cpu_count=4)
+    result = _analyze(tmp_path, "run", builders=16, native_max_jobs=0, host_cpu_count=4)
     output = format_text(result)
     assert "native max-jobs=4" in output
     assert "resolved from --max-jobs=0's own auto sentinel" in output

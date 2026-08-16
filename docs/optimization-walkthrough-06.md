@@ -188,22 +188,35 @@ directly: `core.bst`'s eight translation units cost 11.05s of process
 lifetime when they had the machine to themselves and 20.00s once five
 siblings compiled alongside them — same source, same compiler, +81%.
 
-`bga` has a check for exactly this (`UX-12`/`UX-16`) and it does not fire,
-for two independent reasons, either of which alone is sufficient:
+`bga` has a check for exactly this (`UX-12`/`UX-16`) and it reported
+`violations: []`, because `native_max_jobs` was `null` in the extracted
+run context: `bst_extract_run` only recorded it if the operator passed
+`--native-max-jobs` by hand, even though line 1 of the wrapped log it
+just parsed reads
+`Executing command: bst --builders 4 --max-jobs 4 build all.bst`
+([`UX-29`](scenarios/UX-29-native-max-jobs-is-never-auto-extracted.md),
+since fixed — the value is now recovered automatically).
 
-1. `native_max_jobs` is `null` in the extracted run context, because
-   `bst_extract_run` only records it if the operator passes
-   `--native-max-jobs` by hand — even though line 1 of the wrapped log it
-   just parsed reads
-   `Executing command: bst --builders 4 --max-jobs 4 build all.bst`
-   ([`UX-29`](scenarios/UX-29-native-max-jobs-is-never-auto-extracted.md)).
-2. Re-extracting with `--native-max-jobs 4` supplied by hand still yields
-   `violations: []`, because the threshold is
-   `builders × max_jobs > 4 × min(cores, 8)` — a comparison against
-   BuildStream's *own defaults*, which are themselves 4× the core count on
-   a 4-core host. Nothing in `[cores, 4 × min(cores,8)]` — i.e. nothing
-   between 4 and 16 concurrent processes on this machine — can ever be
-   reported ([`UX-28`](scenarios/UX-28-oversubscription-threshold-is-self-referential.md)).
+Supplying it by hand and re-extracting also produced no violation, and
+chasing *that* down turned out to be the more interesting result. It is
+**not** evidence that 4×4 on 4 cores is harmful — `UX-09`'s own real
+6-configuration table measured exactly that configuration as the
+*fastest* of the six on this same host, and the run above is 30.5%
+faster than the serialized one despite the higher per-element cost. The
++81% is what beneficial parallelism costs per element, not a defect.
+
+The real defect the chase surfaced is in the threshold's *shape* rather
+than its silence here: the bar was BuildStream's own unconfigured default
+(`4 × min(cores, 8)`), which stops growing at 8 cores while the host does
+not — so the ratio at which the check fired was 4× the cores on this
+machine and 0.5× on a 64-core one, and above 8 cores it flagged
+configurations sitting *below* one process per core
+([`UX-28`](scenarios/UX-28-oversubscription-threshold-is-self-referential.md),
+since fixed and re-based onto the real core count, plus a sharper
+`builders > cores` dispatch check). Worth recording as a process note:
+the first framing of this finding was wrong, and it only came apart when
+the fix was checked against `UX-09`'s existing measurements instead of
+against the intuition that produced it.
 
 Meanwhile the report's own next-step hint for this run says:
 

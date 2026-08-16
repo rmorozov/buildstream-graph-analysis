@@ -36,6 +36,30 @@ from .validation.provenance import Advisory, Certified, assemble_floors
 
 logger = logging.getLogger(__name__)
 
+# UX-28: how far past the governing core count a run's *potential*
+# concurrent-process demand (`builders x native max-jobs`) may go before
+# it is reported as oversubscription. Expressed as a multiple of the real
+# governing ceiling, deliberately - the previous bar was BuildStream's
+# own unconfigured default (`4 * min(cores, 8)`), which is 4x the cores
+# on a 4-core host but only 0.5x on a 64-core one, so the sensitivity of
+# the whole check depended on host size rather than on anything physical.
+#
+# The value is calibrated against UX-09's own real 6-configuration timing
+# table on a real 4-core host, which is the only measured evidence this
+# repo has:
+#
+#   4 builders x 4 max-jobs  = 16 procs =  4x cores -> 6.5s, the BEST config
+#   4 builders x 16 max-jobs = 64 procs = 16x cores -> 6.4s, ~flat
+#   8 builders x 8 max-jobs  = 64 procs = 16x cores -> 7.2s, ~11% SLOWER
+#
+# So a bar at or below 4x would flag the measured-optimal configuration,
+# and the measured harm appears by 16x. 8x sits strictly between the two
+# and is host-size-independent. It is an honest interpolation between two
+# real data points, not a derived constant - and note the two 16x rows
+# disagree with each other, which is exactly why the far sharper
+# `builders > cores` dispatch check below exists alongside this one.
+_OVERSUBSCRIPTION_DEMAND_RATIO = 8.0
+
 
 class BuildEfficiencyAnalyzer:
     """
@@ -681,17 +705,28 @@ class BuildEfficiencyAnalyzer:
         native_max_jobs_was_auto = native_max_jobs == 0
 
         actual_demand = builders * resolved_native_max_jobs
+        # Kept only as *context* in the message now, never as the bar
+        # (UX-28): "what BuildStream would do unconfigured" is a moving
+        # target that says nothing about this host. `4 * min(cores, 8)`
+        # is 4x the cores on a 4-core host but only 0.5x on a 64-core
+        # one, so the ratio at which the old check fired collapsed as the
+        # host grew - on anything above 8 cores it flagged configurations
+        # that were *below* one process per core, while the undersubscription
+        # branch just below considers exactly that condition idle capacity.
         default_demand = 4 * min(governing_cores, 8)
+        oversubscription_ceiling = governing_cores * _OVERSUBSCRIPTION_DEMAND_RATIO
 
-        if actual_demand > default_demand:
+        if actual_demand > oversubscription_ceiling:
             logger.warning(
                 "builders=%d x native max-jobs=%d%s = %d potential concurrent "
-                "processes vs a governing ceiling of %d cores (%s) - exceeds "
-                "BuildStream's own defaults for that ceiling (%d) and may "
-                "cause real CPU contention (see UX-09)",
+                "processes vs a governing ceiling of %d cores (%s) - more than "
+                "%gx the cores, past the ratio UX-09 measured as genuinely "
+                "slower on a real host (BuildStream's own unconfigured default "
+                "here would be %d)",
                 builders, resolved_native_max_jobs,
                 " (resolved from BuildStream's own max-jobs=0 auto sentinel)" if native_max_jobs_was_auto else "",
-                actual_demand, governing_cores, capacity_source, default_demand,
+                actual_demand, governing_cores, capacity_source,
+                _OVERSUBSCRIPTION_DEMAND_RATIO, default_demand,
             )
             self.violations.append({
                 'type': 'resource_oversubscription',
@@ -704,6 +739,8 @@ class BuildEfficiencyAnalyzer:
                 'host_cpu_count': host_cpu_count,
                 'cpu_budget': cpu_budget,
                 'default_demand': default_demand,
+                'oversubscription_ceiling': oversubscription_ceiling,
+                'demand_ratio': actual_demand / governing_cores if governing_cores else None,
             })
         elif actual_demand < governing_cores:
             logger.info(
@@ -720,6 +757,37 @@ class BuildEfficiencyAnalyzer:
                 'native_max_jobs': resolved_native_max_jobs,
                 'native_max_jobs_was_auto': native_max_jobs_was_auto,
                 'actual_demand': actual_demand,
+                'governing_cores': governing_cores,
+                'capacity_source': capacity_source,
+                'host_cpu_count': host_cpu_count,
+                'cpu_budget': cpu_budget,
+            })
+
+        # UX-28: a second, independent and much sharper signal. The
+        # product check above is over *potential* demand, which UX-09
+        # showed can overstate reality badly - its own 4x16 configuration
+        # reached the same 64 potential processes as the 8x8 one and cost
+        # nothing, because each element only had two source files, so the
+        # extra `make -j` slots were never claimed. `builders` has no
+        # such escape hatch: BuildStream really does dispatch that many
+        # elements at once, and each one runs at least one process. More
+        # concurrently-dispatched elements than cores means the host is
+        # oversubscribed even at `--max-jobs 1`.
+        #
+        # This is also what actually separates UX-09's two same-product
+        # configurations: 8x8 (8 builders on 4 cores) measured ~11%
+        # slower than the best config; 4x16 (4 builders) did not.
+        if builders > governing_cores:
+            logger.warning(
+                "builders=%d exceeds the governing ceiling of %d cores (%s) - "
+                "BuildStream dispatches that many elements concurrently and each "
+                "runs at least one process, so the host is oversubscribed even at "
+                "--max-jobs 1 (see UX-09/UX-28)",
+                builders, governing_cores, capacity_source,
+            )
+            self.violations.append({
+                'type': 'dispatch_oversubscription',
+                'builders': builders,
                 'governing_cores': governing_cores,
                 'capacity_source': capacity_source,
                 'host_cpu_count': host_cpu_count,

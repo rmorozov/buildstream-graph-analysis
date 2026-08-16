@@ -42,6 +42,60 @@ Same verification discipline as the closed backlog (see `docs/fixing-guide.md`):
 | UX-24 | Plane 2 has no Chrome Trace export (Plane 1 already does, and it's the user's own real `perfetto.dev` workflow) - no standalone or combined two-plane visualization exists | Medium | UX-11, UX-23 (combined mode only) | 🟢 Done — real single-invocation dual-plane capture (`--wrapped-log`), standalone + combined Chrome Trace export, real correlation confirmed (Plane 2's earliest ts landed exactly on Plane 1's real build-start ts) | [UX-24](UX-24-cross-plane-chrome-trace-visualization.md) |
 | UX-25 | `critical_path_coverage`/`dominator_coverage` hard-gate violations report a bare ratio with no diagnostic detail, even though the tool already computes and displays the explaining fact elsewhere in the same report (real repro: `examples/05`'s `all.bst` stack element) | Medium | — | 🟢 Done — violations now carry a `detail` list naming each missing element, tagged structural (`STRUCTURAL_ELEMENT_KINDS`, P4-12) vs. genuine gap (real evidence: `examples/05` run reports `toolchain.bst (kind: import, structural - may not have a real compute task)`) | [UX-25](UX-25-coverage-hard-gate-violations-lack-diagnostic-detail.md) |
 | UX-26 | `bga`'s batch/map-reduce opportunity report (`UX-20`) includes groups with zero real predicted savings, adding noise instead of only surfacing genuinely worthwhile combos (real repro: `examples/05`'s `lib-a.bst`/`lib-b.bst`) | Low | — | 🟢 Done — zero-savings groups moved to a new `omitted_zero_savings_groups` JSON list and out of the default text report, replaced by a one-line "(N further group(s) had no measurable combined effect, omitted)" summary (real evidence: the doc's own `lib-a.bst`/`lib-b.bst` case, replayed against a fresh `examples/05` capture, now reports `{'groups': [], 'omitted_zero_savings_groups': [{'elements': ['lib-a.bst', 'lib-b.bst']}]}`) | [UX-26](UX-26-batch-opportunities-report-zero-savings-groups.md) |
+| UX-27 | `efficiency_score`/`certified_headroom` certify the graph the run was given, so a deliberately-serialized build scores 1.00 "very efficient" with 0.00s headroom - and a real 30.5% optimization moves both numbers the wrong way | High | — (UX-02 defines the score; UX-39 is the CI consequence) | 🔴 Not Started | [UX-27](UX-27-efficiency-score-certifies-the-graph-it-was-given.md) |
+| UX-28 | The oversubscription check compares `builders x max-jobs` against BuildStream's *own defaults* (`4 x min(cores,8)`), which are themselves 4x the cores on a small host - leaving a dead zone in which no real contention can ever be reported (real repro: 16 processes on 4 cores, `violations: []`, +81% measured contention) | High | UX-12, UX-15, UX-16 (all done) | 🔴 Not Started | [UX-28](UX-28-oversubscription-threshold-is-self-referential.md) |
+| UX-29 | `native_max_jobs` is never auto-extracted, though line 1 of the wrapped log the extractor already parses reads `Executing command: bst --builders 4 --max-jobs 4 ...` - so the whole UX-12/15/16/17/21 capacity-guard chain is inert on runs made by the documented pipeline | High | UX-12, UX-18 (both done) | 🔴 Not Started | [UX-29](UX-29-native-max-jobs-is-never-auto-extracted.md) |
+| UX-30 | `bga sweep`'s knee point is first-match-wins on a staircase curve, so it recommends capacity 2 while its own printed table shows capacity 4 is a further 35.1% faster | High | — | 🔴 Not Started | [UX-30](UX-30-sweep-knee-point-stops-at-the-first-flat-step.md) |
+| UX-31 | `UX-22` captures `public: bst: max-jobs`, which BuildStream 2.7.0 never consults when computing `-jN`; the real per-element control is `variables: notparallel: True` (real repro: `core.bst` ran `make -j1`, `serialization_point_risks: []`) | High | UX-22 (done) | 🔴 Not Started | [UX-31](UX-31-notparallel-is-the-real-per-element-parallelism-control.md) |
+| UX-32 | Plane 2 reports counts and one inflated global concurrency number, never per-element achieved parallelism - the question it exists to answer (real repro: `core.bst` peak 1 vs siblings' 3-4, computable from the JSON it already writes) | High | UX-11, UX-23 (both done) | 🔴 Not Started | [UX-32](UX-32-plane-2-has-no-per-element-achieved-parallelism.md) |
+| UX-33 | The text report suppresses the critical path above 5 elements and prints `Bottlenecks Identified: 5` without naming them - both are in the JSON, and on a 10-element artificial chain they are the entire answer | Medium | — | 🔴 Not Started | [UX-33](UX-33-text-report-withholds-critical-path-and-choke-point-names.md) |
+| UX-34 | `Top Improvement Opportunities` ranks `stack`/`import` elements at sensitivity 1.00 above every element that does real work, despite `STRUCTURAL_ELEMENT_KINDS`/`UX-25`'s tagging already existing | Medium | UX-20, UX-25, P4-12 (all done) | 🔴 Not Started | [UX-34](UX-34-structural-elements-dominate-improvement-opportunities.md) |
+| UX-35 | `UX-04`'s `RESOURCE WAIT` hint tells an already-4x-oversubscribed run to raise `--capacity`, because the hints are constant strings that consult none of the capacity facts the tool has | Medium | UX-04 (done), UX-28/UX-29 (the verdict it should consume) | 🔴 Not Started | [UX-35](UX-35-attribution-hints-are-capacity-blind.md) |
+| UX-36 | The `CPU Utilisation` block prints task-occupancy seconds under a CPU heading - `P1-33` established the honest meaning internally and it never reached the report (real repro: `Useful` grew 40.25s->61.45s across an optimization that did identical work) | Medium | P1-33, UX-13 (both done) | 🔴 Not Started | [UX-36](UX-36-cpu-utilisation-block-reports-occupancy-not-cpu.md) |
+| UX-37 | Plane 2's redundant-operation findings sum process time across elements that ran *concurrently* and rank by it, unfiltered down to `uname -r` at 0.001s - the same category error `UX-26` fixed on Plane 1 | Medium | UX-23, UX-26 (both done) | 🔴 Not Started | [UX-37](UX-37-plane-2-redundancy-savings-are-summed-cpu-time.md) |
+| UX-38 | `bst_native_build_tracer report` accepts the JSON report `run` just wrote and prints `Processes traced: 0` with exit 0; there is also no way to re-render a saved report, and a misplaced flag yields a raw traceback | Low | UX-11 (done) | 🔴 Not Started | [UX-38](UX-38-tracer-report-accepts-the-wrong-artifact-silently.md) |
+| UX-39 | `--fail-on-regression` gates on wall-clock alone at a 1% threshold: it fires on a +4.3% capacity experiment, cannot express "new work is fine but new inefficiency is not", and the tool's own efficiency numbers point the wrong way to gate on instead | High | UX-01, UX-02, UX-03 (done), UX-27, UX-40 | 🔴 Not Started | [UX-39](UX-39-ci-gate-cannot-express-inefficiency-regression.md) |
+| UX-40 | Real captures land at ~0.69 confidence because BuildStream's own measured startup counts against `attribution_score` - and `--fail-on-regression` fails *open* below 0.8, silently, so the CI gate is off on exactly the small/fast projects most likely to use it | High | UX-03, UX-10 (both done) | 🔴 Not Started | [UX-40](UX-40-real-runs-systematically-fail-the-confidence-gate.md) |
+
+## UX-27..UX-40: the 2026-08-16 audit round
+
+Filed together from one real, hands-on session that did two things the
+earlier rounds had not: it **audited what the tool claims against what it
+does**, and it **walked a genuinely mis-optimized real project through a
+full macro-then-micro optimization cycle** rather than a `sleep N` proxy.
+`examples/06-macro-micro-optimization` was built for that walkthrough and
+is part of this round - eleven real CMake/C++ elements, deliberately
+broken in three independent, one-line ways (a six-deep chain that should
+be a fan-out, an over-declared build dep, and `notparallel: True` on the
+heaviest element), with an `optimized/` sibling that fixes exactly those
+three and nothing else.
+
+The full transcript with every real command and output is
+[`docs/optimization-walkthrough-06.md`](../optimization-walkthrough-06.md);
+the argument about which of these items are load-bearing and which are
+polish, for each of the tool's two real usage scenarios, is
+[`docs/design-directions.md`](../design-directions.md).
+
+The headline result, and the reason `UX-27` is the anchor of this round:
+fixing all three problems made the build **30.5% faster** (39.57s ->
+27.50s) while `bga`'s own `efficiency_score` moved **1.00 -> 0.83** and
+its `certified_headroom` moved **0.00s -> 4.05s**. Both moved backwards
+because every certified floor is derived from the run's own observed
+graph - a chain-shaped graph has a critical path equal to its own total
+work, so the scheduler is tautologically perfect. Nothing in `bga` asks
+whether the graph was worth packing.
+
+Two of these items revise earlier decisions, both with new evidence rather
+than on re-argument. `UX-29` reopens the "`native_max_jobs` isn't
+auto-extracted" claim that an earlier review round triaged as not worth a
+task: that triage was about `bst show` (where it genuinely is not
+exposed), and the wrapped log's own first line does carry it, with five
+shipped features inert on the documented happy path as the consequence.
+`UX-31` corrects `UX-22`'s identification of BuildStream's per-element
+parallelism mechanism - `public: bst: max-jobs` is inert metadata in
+2.7.0; `notparallel` is the real control, confirmed by a real trace
+showing `core.bst` running `make -j1` while every sibling ran `make -j4`.
+
 
 `UX-08` was never used - no scenario was ever filed under that number, it isn't a lost/missing file. Numbering otherwise continues sequentially from whatever the next unused ID is at filing time.
 

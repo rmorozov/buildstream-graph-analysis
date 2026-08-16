@@ -94,6 +94,8 @@ This also detects real operations repeated independently across *multiple* eleme
 - [`docs/architecture.md`](docs/architecture.md) — **start here** to orient in this codebase: what `bga` does today as one coherent system (both planes), with a full table of every extension beyond the original spec
 - [CLI Reference](docs/cli.md) — every `bga` command and flag
 - [Optimization Walkthrough](docs/optimization-walkthrough.md) — a real, worked example of iteratively finding and fixing build-efficiency problems with `bga`
+- [Optimization Walkthrough (macro → micro)](docs/optimization-walkthrough-06.md) — the harder companion walkthrough: a real project with a badly-shaped graph *and* a badly-parallelized element, and an honest account of which of those `bga` helps you find today
+- [Design Directions](docs/design-directions.md) — where the tool is going, argued separately for the two real ways it gets used: a local optimization helper, and a CI analytics/regression gate
 - [Ingestion Pipeline](docs/ingestion-pipeline.md) — how `tools/bst_extract_run.py` turns a real BuildStream project + log into `bga` input, and its known limitations
 - [v9 Specification](docs/specification.md) — the underlying analysis specification (ground truth for what every number means)
 - [`docs/scenarios/`](docs/scenarios/README.md) — full backlog (done + active) of usability/workflow extensions, each with real before/after evidence

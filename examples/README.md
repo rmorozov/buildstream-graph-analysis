@@ -1,11 +1,11 @@
 # Real BuildStream example projects
 
-Five real BuildStream projects, each targeting a different corner case
+Six real BuildStream projects, each targeting a different corner case
 this tool cares about, built for real (not just `bst show`) in CI
 (`.github/workflows/ci.yml`'s `bst-examples` job) to generate real traces,
 `bga` run directories, and reports for later analysis. See
 `docs/tasks/` for the specific backlog items 01-03 map to, and
-`docs/scenarios/` for 04-05's.
+`docs/scenarios/` for 04-06's.
 
 All sources are `kind: local` or a throwaway `kind: git` remote generated
 at build time - no network access needed, nothing sensitive committed.
@@ -125,6 +125,56 @@ needed if you're changing the workload, not for a normal build):
 
 Same wrapped-log capture note as `04-critical-path-optimization` applies
 here (`--format wrapped`, not `--format raw` - see `UX-06`).
+
+## 06-macro-micro-optimization
+
+Eleven real elements (a `toolchain` import, nine real CMake/C++ modules,
+an `all` stack) built to be walked through a **full macro-then-micro
+optimization cycle** with `bga` - the project behind
+`docs/optimization-walkthrough-06.md` and the `UX-27`..`UX-40` backlog
+round.
+
+Where `05-cmake-cpp-toolchain` exists to answer one measurement question,
+this one is *deliberately mis-optimized in three independent,
+one-line-fixable ways*, one per level of the cycle:
+
+1. **Macro / graph shape** - `lib-a..lib-f` are declared as a six-deep
+   dependency chain, not a six-wide fan-out off `core.bst`.
+2. **Macro / over-declared dependency** - every `lib-*.bst` build-depends
+   on `codegen.bst`; only `lib-f.bst` consumes it.
+3. **Micro / inside one element** - `core.bst` carries
+   `variables: notparallel: True`, BuildStream's real per-element
+   parallelism control, so its eight ~1s translation units compile
+   strictly one at a time (confirmed by a real Plane 2 trace:
+   `core.bst -> make -j1`, every other element `-j4`). Invisible in
+   BuildStream's own element-level log, and therefore invisible to
+   `bga`'s Plane 1 - it takes `tools/bst_native_build_tracer.py` to see.
+
+`optimized/` fixes exactly those three and nothing else. Every source
+file is generated into *both* variants by the same `generate_sources.py`,
+so a `bga compare` across the pair isolates the three changes. Measured
+on a real 4-core host: **39.57s -> 27.50s (-30.5%)**.
+
+Every translation unit is calibrated to cost about a second of real
+`g++` time (see `generate_sources.py`'s `WEIGHT`), deliberately - with
+sub-100ms compiles the whole signal drowns in BuildStream's own
+per-element sandbox staging.
+
+Same toolchain requirement as `05-cmake-cpp-toolchain`, and the same
+script stages it (it hardlink-clones the one staged sysroot into this
+project and its `optimized/` variant, so this costs no extra disk):
+
+```
+sudo apt-get install -y build-essential cmake
+../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)
+bst --builders 4 --max-jobs 4 build all.bst              # the mis-optimized baseline
+(cd optimized && bst --builders 4 --max-jobs 4 build all.bst)
+```
+
+Same wrapped-log capture note as `04`/`05` (`--format wrapped`, see
+`UX-06`), and the same full-rebuild caveat: clear
+`~/.cache/buildstream ~/.local/share/buildstream` between the two builds
+or the second one is a near-total cache hit with nothing to time.
 
 ## Shared setup
 

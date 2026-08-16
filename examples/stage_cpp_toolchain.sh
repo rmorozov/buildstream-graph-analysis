@@ -13,9 +13,16 @@
 # host (gcc's internal search paths are compiled in, not relocatable), so
 # this stages a full mini sysroot preserving absolute paths.
 #
-# See docs/scenarios/UX-08-cmake-cpp-toolchain-example.md for the real
-# trial-and-error this required and examples/05-cmake-cpp-toolchain/README.md
-# for how to use the result.
+# See examples/README.md's own `05-cmake-cpp-toolchain` section for how
+# to use the result (an earlier revision of this header pointed at a
+# `docs/scenarios/UX-08-...md` and a per-example README.md, neither of
+# which was ever written - UX-08 was never filed, see
+# docs/scenarios/README.md).
+#
+# examples/06-macro-micro-optimization needs the same sysroot in two
+# more places (its own files/toolchain and its optimized/ variant's), so
+# this script stages once and hardlink-clones into each of them - real
+# copies as far as BuildStream is concerned, ~0 extra disk.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -246,3 +253,16 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
 fi
 
 echo "Staged toolchain to $DEST ($(du -sh "$DEST" | cut -f1))"
+
+# Every other example project that needs the identical sysroot. Hardlink
+# clones (`cp -al`), not copies: BuildStream stages them as ordinary
+# files, and the content is byte-identical by construction, so paying for
+# a second and third ~270MB of real disk buys nothing.
+for clone in \
+    "$HERE/06-macro-micro-optimization/files/toolchain" \
+    "$HERE/06-macro-micro-optimization/optimized/files/toolchain"; do
+  rm -rf "$clone"
+  mkdir -p "$(dirname "$clone")"
+  cp -al "$DEST" "$clone"
+  echo "Cloned toolchain to $clone"
+done

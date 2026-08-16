@@ -304,6 +304,48 @@ jobs:
 
           bga compare "$OUT/run-b1j1" "$OUT/run-b4j4" | tee "$OUT/compare-b1j1-vs-b4j4.txt"
 
+      - name: Build + extract + analyze + compare 06-macro-micro-optimization
+        # The macro-then-micro walkthrough project (docs/optimization-
+        # walkthrough-06.md, the UX-27..UX-40 backlog round): a baseline
+        # that is deliberately mis-optimized in three independent ways
+        # and an optimized/ variant that fixes exactly those three. Same
+        # "real corner-case data, not correctness-gating" posture as the
+        # rest of this job - the point is to keep producing real captures
+        # of a build whose *right answer is known*, which is what makes it
+        # useful for evaluating any future efficiency metric (UX-27) or
+        # CI gate (UX-39) against something other than an opinion.
+        #
+        # Plane 2 is captured for the baseline too: core.bst's real
+        # `make -j1` (UX-31) and its peak-1 compiler concurrency (UX-32)
+        # only exist in the native trace, not in BuildStream's own log.
+        run: |
+          set -euo pipefail
+          PROJ=examples/06-macro-micro-optimization
+          OUT=artifacts/06-macro-micro-optimization
+          mkdir -p "$OUT"
+
+          # Full rebuilds only - see 04's own comment for why clearing the
+          # cache between runs is load-bearing here.
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          python3 -m tools.bst_run_wrapped "$PROJ" "$OUT/build-baseline.log" -- bst --builders 4 --max-jobs 4 build all.bst
+          python3 -m tools.bst_extract_run --format wrapped "$PROJ" "$OUT/build-baseline.log" "$OUT/run-baseline"
+          bga analyze -f text -o "$OUT/report-baseline.txt" -d -r "$OUT/run-baseline"
+          bga analyze -f json -o "$OUT/report-baseline.json" -d -r "$OUT/run-baseline"
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          python3 -m tools.bst_run_wrapped "$PROJ/optimized" "$OUT/build-optimized.log" -- bst --builders 4 --max-jobs 4 build all.bst
+          python3 -m tools.bst_extract_run --format wrapped "$PROJ/optimized" "$OUT/build-optimized.log" "$OUT/run-optimized"
+          bga analyze -f text -o "$OUT/report-optimized.txt" -d -r "$OUT/run-optimized"
+          bga analyze -f json -o "$OUT/report-optimized.json" -d -r "$OUT/run-optimized"
+
+          bga compare "$OUT/run-baseline" "$OUT/run-optimized" | tee "$OUT/compare-baseline-vs-optimized.txt"
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          python3 -m tools.bst_native_build_tracer run \
+            --raw-log "$OUT/native-baseline.rawlog" \
+            "$PROJ" "$OUT/native-baseline.json" \
+            -- bst --builders 4 --max-jobs 4 build all.bst > "$OUT/native-baseline.txt" 2>&1
+
       - name: Upload real-build artifacts
         if: always()
         uses: actions/upload-artifact@v4

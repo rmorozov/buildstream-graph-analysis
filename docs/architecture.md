@@ -102,6 +102,7 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-24 | Chrome Trace export for Plane 2 + combined two-plane `perfetto.dev` view, real dual-plane single-invocation capture | 🟢 Done |
 | UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🟢 Done |
 | UX-26 | Batch/map-reduce report stops surfacing zero-savings groups | 🟢 Done |
+| UX-27..UX-40 | **Open backlog round (2026-08-16 audit).** Filed together from a real claims-vs-reality audit plus a full macro-then-micro walkthrough of the new `examples/06-macro-micro-optimization`. Anchor finding: every certified floor is derived from the run's *own observed graph*, so a deliberately-serialized build scores `efficiency_score` 1.00 with 0.00s headroom, and a real 30.5% optimization moves both numbers backwards. See `docs/design-directions.md`. | 🔴 Open |
 
 (`UX-08` was never filed — not a missing/lost file.)
 
@@ -112,6 +113,8 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 - **`docs/tasks/`** + `docs/fix-progress-tracker.md` — **closed** historical spec-compliance backlog (P0-P4). Read only for archaeology.
 - **`docs/ingestion-pipeline.md`** — real data flow from a `bst` invocation to `bga`-ingestible input.
 - **`docs/optimization-walkthrough.md`** — a full worked example using the tool for real.
+- **`docs/optimization-walkthrough-06.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
+- **`docs/design-directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough-06.md` (what that felt like) → `design-directions.md` (what to do about it).
 - **`docs/fixing-guide.md`** — mandatory session-start discipline (verification rules) for either backlog.
 - **`docs/cli.md`** — CLI reference/usage examples.
 

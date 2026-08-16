@@ -1,6 +1,6 @@
 # UX-23: tag native-build traces with their owning element, and detect redundant cross-element operations
 
-**Priority:** Medium | **Status:** 🔴 Not Started (design brainstorm only) | **Depends on:** `UX-11` (done - supplies the real per-process trace this builds on)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (done - supplies the real per-process trace this builds on)
 
 ## Motivation
 
@@ -20,6 +20,17 @@ Grepping the raw trace for CMake's own compiler-ABI-detection probe (`CMakeCXXCo
 1. **Element attribution.** The raw trace currently records `pid`/`ppid`/`ts`/`cmd` only - no notion of which BuildStream element a given process ran inside. This is a real, concrete, small addition: `tools/native_trace/bwrap_shim.py`'s `split_bwrap_args` already sees the element's own real path in BuildStream's generated argv (`--dir buildstream/<project-name>/<element>.bst`, confirmed present in every real captured invocation this whole `UX-11` arc has examined) - parsing the element name out of that and injecting it as one more `--setenv BST_TRACE_ELEMENT <name>` (the same injection pattern `BST_TRACE_LOG`/`LD_PRELOAD` already use) gives `hook.c` everything it needs to tag every trace line with its real owning element.
 2. **Redundant-operation detection.** Once traces are element-tagged, group all traced processes across every element by a *normalized* command signature (strip absolute build-dir-specific paths/temp filenames - e.g. `/tmp/ccXXXXXX.s`, `_builddir`-relative paths - down to the real invocation shape: binary + stable flags + logical source file class) and flag any signature appearing under 2+ *different* elements as a real, concrete redundant-operation candidate, with real per-occurrence timing so the user can judge whether it's worth caring about (a 100ms probe repeated 6 times is very different from a 30s codegen step repeated 6 times).
 
+## Fix Implemented
+
+Both pieces built exactly as designed above, plus one real correctness bug found only by implementing element-tagging for real:
+
+1. **Element attribution**: `tools/native_trace/bwrap_shim.py`'s new `extract_element_name(opts)` parses the real `--dir buildstream/<project>/<element>.bst` option BuildStream's own generated bwrap argv always includes, and `build_shim_argv` injects it as one more `--setenv BST_TRACE_ELEMENT <name>` alongside the existing `LD_PRELOAD`/`BST_TRACE_LOG` injections. `hook.c` reads it at load time and appends `element=<name>` (or the literal `unknown` when unset, for backward compatibility with a pre-`UX-23` capture or standalone single-element use) to every trace line, between `ts=` and `cmd=`.
+2. **A real correctness bug found while wiring this up, not by unit tests alone**: `pair_events` (UX-11's own original design) paired START/END events by pid alone - correct for a *single* element's own `--unshare-pid` namespace, but **unsound once a trace spans multiple elements**, since every element gets its own independent PID namespace and the same small pid number (the low numbers a fresh namespace always starts from) recurs across every element's own sandbox, referring to a *different* real process each time. Fixed by re-keying the whole FIFO-pairing algorithm on `(element, pid)` instead of `pid` alone - a real fix, not just an addition, and one that stayed latent in `UX-11`'s own testing precisely because it only ever traced one element at a time.
+3. **Redundant-operation detection**: `normalize_cmd_signature` (a deliberately narrow, heuristic normalization - strips the real, confirmed sources of spurious per-element uniqueness this design actually observed: per-element absolute build paths, gcc/binutils temp filenames, CMake's own randomly-suffixed try-compile scratch directories) plus `detect_redundant_operations`, which groups matched, element-attributed records by normalized signature and flags any signature spanning 2+ *distinct* real elements, sorted by real total duration (most costly first). `unknown`-element and still-`open` records are excluded entirely - never claim cross-element redundancy for a process this tool couldn't actually attribute.
+4. Both `summarize()`'s report (`by_element`, `redundant_operations`) and `_format_text`'s human-readable output were extended to surface both new pieces.
+
+Tests: 15 new (`tests/unit/test_bwrap_shim.py` +5 for `extract_element_name`/its injection; `tests/unit/test_native_build_tracer.py` +10 for element-tagged parsing, the cross-element pairing correctness fix, `normalize_cmd_signature`, and `detect_redundant_operations`).
+
 ## Out of Scope
 
 - Any implementation - this is a design brainstorm, filed per this task's own scope.
@@ -34,4 +45,15 @@ Grepping the raw trace for CMake's own compiler-ABI-detection probe (`CMakeCXXCo
 
 ## Verification Log
 
-Filed 2026-08-16. Not implemented - the redundant-operation finding above is real (a real, fresh, fully-cleared `bst build all.bst` capture against `examples/05-cmake-cpp-toolchain`, not a hypothetical), but the element-tagging/detection mechanism itself is design-only.
+Filed 2026-08-16 as a design brainstorm - the redundant-operation finding was real from the start (a real, fresh, fully-cleared `bst build all.bst` capture against `examples/05-cmake-cpp-toolchain`), but the mechanism itself was design-only.
+
+Implemented for real the same day. 15 new tests, full suite green: 628 passed (up from 611), same 7 pre-existing environment-only failures as `main`. `make lint` clean.
+
+Real end-to-end re-verification against `examples/05-cmake-cpp-toolchain`'s `all.bst` (all 6 elements, `bst artifact delete` on every element first for a fully fresh capture):
+
+```
+$ python3 -m tools.bst_native_build_tracer run --raw-log ux23_raw.log \
+    examples/05-cmake-cpp-toolchain ux23_report.json -- bst --no-colors build all.bst
+```
+
+`process_count: 528`, correctly attributed by element (`by_element: {'core.bst': 98, 'lib-d.bst': 88, 'lib-a.bst': 88, 'lib-c.bst': 88, 'lib-b.bst': 88, 'app.bst': 78}`) - the real, known 6-element topology, exactly. **37 redundant-operation findings, every single one correctly spanning all 6 real elements** (`['app.bst', 'core.bst', 'lib-a.bst', 'lib-b.bst', 'lib-c.bst', 'lib-d.bst']`), including the exact `CMakeCXXCompilerABI.cpp` probe family this task's own Motivation first found manually - now detected automatically, with real per-finding timing (e.g. `12x across 6 elements, 0.030s total` for `cmake -E cmake_progress_start`). Both Acceptance Test items satisfied with real evidence, not synthetic fixtures alone.

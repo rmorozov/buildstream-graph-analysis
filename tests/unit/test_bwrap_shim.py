@@ -11,7 +11,7 @@ REAL_BWRAP_ARGV below is a trimmed-but-real shape captured from a real
 `bst build core.bst` invocation against examples/05-cmake-cpp-toolchain
 during that Deep Experiment - real option ordering/arity, not invented.
 """
-from tools.native_trace.bwrap_shim import build_shim_argv, split_bwrap_args
+from tools.native_trace.bwrap_shim import build_shim_argv, extract_element_name, split_bwrap_args
 
 REAL_BWRAP_ARGV = [
     "--unshare-pid", "--die-with-parent",
@@ -147,3 +147,60 @@ def test_build_shim_argv_preserves_trailing_command_unmodified():
     )
 
     assert argv[-4:] == ["sh", "-c", "-e", "cmake -B_builddir -H. -G Unix_Makefiles"]
+
+
+# --- extract_element_name (UX-23) -----------------------------------------
+
+def test_extract_element_name_from_real_dir_option():
+    opts, _cmd = split_bwrap_args(REAL_BWRAP_ARGV)
+
+    assert extract_element_name(opts) == "core.bst"
+
+
+def test_extract_element_name_handles_different_real_elements():
+    argv = list(REAL_BWRAP_ARGV)
+    dir_idx = argv.index("--dir")
+    argv[dir_idx + 1] = "buildstream/cmake-cpp-toolchain-example/lib-a.bst"
+
+    opts, _cmd = split_bwrap_args(argv)
+
+    assert extract_element_name(opts) == "lib-a.bst"
+
+
+def test_extract_element_name_returns_none_when_dir_absent():
+    opts, _cmd = split_bwrap_args(["--unshare-pid", "--die-with-parent"])
+
+    assert extract_element_name(opts) is None
+
+
+def test_build_shim_argv_injects_bst_trace_element_after_the_real_dir():
+    argv = build_shim_argv(
+        real_bwrap="/usr/bin/bwrap",
+        bst_args=REAL_BWRAP_ARGV,
+        bind_src="/tmp/host-trace-dir",
+        bind_dst="/tmp/.bst-native-trace",
+        preload_so="/tmp/.bst-native-trace/hook.so",
+        trace_log="/tmp/.bst-native-trace/trace.log",
+    )
+
+    setenv_element_idx = next(
+        i for i, tok in enumerate(argv) if tok == "--setenv" and argv[i + 1] == "BST_TRACE_ELEMENT"
+    )
+    assert argv[setenv_element_idx:setenv_element_idx + 3] == ["--setenv", "BST_TRACE_ELEMENT", "core.bst"]
+    assert argv[setenv_element_idx + 3] == "sh"  # lands right before the trailing command, like the others
+
+
+def test_build_shim_argv_omits_bst_trace_element_when_no_real_dir_present():
+    """Element tagging is additive, never load-bearing - a bwrap
+    invocation with no --dir option (defensive, forward-compatibility
+    case) must still work, just without element attribution."""
+    argv = build_shim_argv(
+        real_bwrap="/usr/bin/bwrap",
+        bst_args=["--unshare-pid", "sh", "-c", "true"],
+        bind_src="/tmp/host-trace-dir",
+        bind_dst="/tmp/.bst-native-trace",
+        preload_so="/tmp/.bst-native-trace/hook.so",
+        trace_log="/tmp/.bst-native-trace/trace.log",
+    )
+
+    assert "BST_TRACE_ELEMENT" not in argv

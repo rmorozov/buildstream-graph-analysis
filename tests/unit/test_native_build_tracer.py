@@ -17,6 +17,8 @@ import pytest
 from tools.bst_native_build_tracer import (
     STATIC_BINARY_DISCLAIMER,
     compute_max_concurrency,
+    detect_redundant_operations,
+    normalize_cmd_signature,
     pair_events,
     parse_trace_log,
     summarize,
@@ -25,6 +27,10 @@ from tools.bst_native_build_tracer import (
 BST_AVAILABLE = shutil.which("bst") is not None
 BWRAP_AVAILABLE = shutil.which("bwrap") is not None
 CC_AVAILABLE = shutil.which("cc") is not None or shutil.which("gcc") is not None
+
+
+def _event(event, pid, ppid, ts, cmd, element="unknown"):
+    return {"event": event, "pid": pid, "ppid": ppid, "ts": ts, "element": element, "cmd": cmd}
 
 
 # --- parse_trace_log -----------------------------------------------------
@@ -37,7 +43,9 @@ def test_parse_matches_start_and_end_lines():
     events = parse_trace_log(text)
 
     assert len(events) == 2
-    assert events[0] == {"event": "START", "pid": 100, "ppid": 1, "ts": 10.0, "cmd": "cmake --build ."}
+    assert events[0] == {
+        "event": "START", "pid": 100, "ppid": 1, "ts": 10.0, "element": "unknown", "cmd": "cmake --build .",
+    }
     assert events[1]["event"] == "END"
 
 
@@ -69,8 +77,8 @@ def test_parse_empty_text():
 
 def test_pair_events_matches_start_and_end_by_pid():
     events = [
-        {"event": "START", "pid": 1, "ppid": 0, "ts": 0.0, "cmd": "sh"},
-        {"event": "END", "pid": 1, "ppid": 0, "ts": 5.0, "cmd": "sh"},
+        _event("START", 1, 0, 0.0, "sh"),
+        _event("END", 1, 0, 5.0, "sh"),
     ]
     records = pair_events(events)
 
@@ -83,7 +91,7 @@ def test_pair_events_reports_unmatched_start_as_open():
     """A process killed by a signal, or still running when the trace was
     captured - no destructor fires, so no END line exists. Must be
     reported honestly (open=True, duration_s=None), not fabricated."""
-    events = [{"event": "START", "pid": 7, "ppid": 0, "ts": 0.0, "cmd": "gcc"}]
+    events = [_event("START", 7, 0, 0.0, "gcc")]
     records = pair_events(events)
 
     assert len(records) == 1
@@ -97,10 +105,10 @@ def test_pair_events_handles_pid_reuse_via_fifo_ordering():
     process exits - two separate, non-overlapping processes with the
     same pid must each get their own correctly-paired record."""
     events = [
-        {"event": "START", "pid": 3, "ppid": 1, "ts": 0.0, "cmd": "first"},
-        {"event": "END", "pid": 3, "ppid": 1, "ts": 1.0, "cmd": "first"},
-        {"event": "START", "pid": 3, "ppid": 1, "ts": 2.0, "cmd": "second"},
-        {"event": "END", "pid": 3, "ppid": 1, "ts": 3.0, "cmd": "second"},
+        _event("START", 3, 1, 0.0, "first"),
+        _event("END", 3, 1, 1.0, "first"),
+        _event("START", 3, 1, 2.0, "second"),
+        _event("END", 3, 1, 3.0, "second"),
     ]
     records = pair_events(events)
 
@@ -115,20 +123,43 @@ def test_pair_events_handles_pid_reuse_via_fifo_ordering():
 def test_pair_events_ignores_end_with_no_matching_start():
     """A truncated log (e.g. this tool started capturing mid-build) -
     an orphan END must not crash or fabricate a record."""
-    events = [{"event": "END", "pid": 99, "ppid": 1, "ts": 1.0, "cmd": "x"}]
+    events = [_event("END", 99, 1, 1.0, "x")]
     assert pair_events(events) == []
 
 
 def test_pair_events_sorted_by_start_ts():
     events = [
-        {"event": "START", "pid": 2, "ppid": 1, "ts": 5.0, "cmd": "b"},
-        {"event": "END", "pid": 2, "ppid": 1, "ts": 6.0, "cmd": "b"},
-        {"event": "START", "pid": 1, "ppid": 1, "ts": 1.0, "cmd": "a"},
-        {"event": "END", "pid": 1, "ppid": 1, "ts": 2.0, "cmd": "a"},
+        _event("START", 2, 1, 5.0, "b"),
+        _event("END", 2, 1, 6.0, "b"),
+        _event("START", 1, 1, 1.0, "a"),
+        _event("END", 1, 1, 2.0, "a"),
     ]
     records = pair_events(events)
 
     assert [r["cmd"] for r in records] == ["a", "b"]
+
+
+def test_pair_events_does_not_cross_pair_same_pid_across_different_elements():
+    """UX-23 regression: each element gets its own independent
+    --unshare-pid namespace, so the same small pid number (e.g. 2) is
+    reused across every element's own sandbox and refers to a different
+    real process each time. A START in core.bst's own sandbox must never
+    pair with an END from lib-a.bst's sandbox just because they share a
+    pid and happen to overlap in time - keying on pid alone (UX-11's
+    original single-element design) would get this wrong."""
+    events = [
+        _event("START", 2, 1, 0.0, "cmake", element="core.bst"),
+        _event("START", 2, 1, 0.5, "cmake", element="lib-a.bst"),  # same pid, different element
+        _event("END", 2, 1, 10.0, "cmake", element="lib-a.bst"),  # lib-a's own process exits first
+        _event("END", 2, 1, 20.0, "cmake", element="core.bst"),
+    ]
+    records = pair_events(events)
+
+    assert len(records) == 2
+    core_record = next(r for r in records if r["element"] == "core.bst")
+    lib_a_record = next(r for r in records if r["element"] == "lib-a.bst")
+    assert core_record["start_ts"] == 0.0 and core_record["end_ts"] == 20.0
+    assert lib_a_record["start_ts"] == 0.5 and lib_a_record["end_ts"] == 10.0
 
 
 # --- compute_max_concurrency ------------------------------------------------
@@ -188,11 +219,20 @@ def test_max_concurrency_touching_intervals_do_not_overlap():
 
 # --- summarize ---------------------------------------------------------
 
+def _record(pid, cmd, start_ts, end_ts, open_=False, element="unknown"):
+    return {
+        "pid": pid, "ppid": 1, "element": element, "cmd": cmd,
+        "start_ts": start_ts, "end_ts": end_ts,
+        "duration_s": (end_ts - start_ts) if end_ts is not None else None,
+        "open": open_,
+    }
+
+
 def test_summarize_counts_by_binary_from_full_cmd():
     records = [
-        {"pid": 1, "cmd": "/usr/bin/cc1plus -quiet a.cpp", "start_ts": 0.0, "end_ts": 1.0, "open": False},
-        {"pid": 2, "cmd": "/usr/bin/cc1plus -quiet b.cpp", "start_ts": 0.0, "end_ts": 1.0, "open": False},
-        {"pid": 3, "cmd": "make -j4", "start_ts": 0.0, "end_ts": 1.0, "open": False},
+        _record(1, "/usr/bin/cc1plus -quiet a.cpp", 0.0, 1.0),
+        _record(2, "/usr/bin/cc1plus -quiet b.cpp", 0.0, 1.0),
+        _record(3, "make -j4", 0.0, 1.0),
     ]
     report = summarize(records)
 
@@ -200,6 +240,17 @@ def test_summarize_counts_by_binary_from_full_cmd():
     assert report["process_count"] == 3
     assert report["matched_count"] == 3
     assert report["open_count"] == 0
+
+
+def test_summarize_counts_by_element():
+    records = [
+        _record(1, "cc1plus a.cpp", 0.0, 1.0, element="core.bst"),
+        _record(2, "cc1plus b.cpp", 0.0, 1.0, element="core.bst"),
+        _record(3, "cc1plus c.cpp", 0.0, 1.0, element="lib-a.bst"),
+    ]
+    report = summarize(records)
+
+    assert report["by_element"] == {"core.bst": 2, "lib-a.bst": 1}
 
 
 def test_summarize_always_includes_static_binary_disclaimer():
@@ -222,12 +273,113 @@ def test_summarize_empty_records():
 
 def test_summarize_wall_span_covers_open_records():
     records = [
-        {"pid": 1, "cmd": "a", "start_ts": 0.0, "end_ts": 5.0, "open": False},
-        {"pid": 2, "cmd": "b", "start_ts": 3.0, "end_ts": None, "open": True},
+        _record(1, "a", 0.0, 5.0),
+        _record(2, "b", 3.0, None, open_=True),
     ]
     report = summarize(records)
 
     assert report["wall_span_s"] == 5.0  # max(end_ts=5.0, start_ts=3.0 for the open one)
+
+
+# --- normalize_cmd_signature ---------------------------------------------
+
+def test_normalize_strips_per_element_build_root():
+    """The real, largest source of spurious per-element uniqueness for
+    an otherwise identical operation - each element's own absolute
+    sandbox path."""
+    cmd_core = "/buildstream/cmake-cpp-toolchain-example/core.bst/_builddir/x.o"
+    cmd_lib_a = "/buildstream/cmake-cpp-toolchain-example/lib-a.bst/_builddir/x.o"
+
+    assert normalize_cmd_signature(cmd_core) == normalize_cmd_signature(cmd_lib_a)
+
+
+def test_normalize_strips_gcc_temp_filenames():
+    assert normalize_cmd_signature("gcc -o /tmp/ccAbC123.s") == normalize_cmd_signature("gcc -o /tmp/ccXyZ789.s")
+
+
+def test_normalize_strips_cmake_try_compile_scratch_dir():
+    """The real, confirmed pattern behind UX-23's own CMakeCXXCompilerABI
+    finding: CMake's own randomly-suffixed try-compile directory name."""
+    cmd_1 = "cmake --build CMakeFiles/cmTC_9f1fb.dir/CMakeCXXCompilerABI.cpp.o"
+    cmd_2 = "cmake --build CMakeFiles/cmTC_ca49d.dir/CMakeCXXCompilerABI.cpp.o"
+
+    assert normalize_cmd_signature(cmd_1) == normalize_cmd_signature(cmd_2)
+
+
+def test_normalize_does_not_conflate_genuinely_different_operations():
+    assert normalize_cmd_signature("cc1plus a.cpp") != normalize_cmd_signature("cc1plus b.cpp")
+
+
+# --- detect_redundant_operations ------------------------------------------
+
+def test_detect_redundant_flags_signature_repeated_across_elements():
+    records = [
+        _record(1, "cmake --build CMakeFiles/cmTC_aaaaa.dir/CMakeCXXCompilerABI.cpp.o", 0.0, 0.1, element="core.bst"),
+        _record(2, "cmake --build CMakeFiles/cmTC_bbbbb.dir/CMakeCXXCompilerABI.cpp.o", 1.0, 1.1, element="lib-a.bst"),
+        _record(3, "cmake --build CMakeFiles/cmTC_ccccc.dir/CMakeCXXCompilerABI.cpp.o", 2.0, 2.1, element="lib-b.bst"),
+    ]
+    findings = detect_redundant_operations(records)
+
+    assert len(findings) == 1
+    assert findings[0]["elements"] == ["core.bst", "lib-a.bst", "lib-b.bst"]
+    assert findings[0]["occurrence_count"] == 3
+    assert findings[0]["total_duration_s"] == pytest.approx(0.3)
+
+
+def test_detect_redundant_requires_two_distinct_elements_not_just_occurrences():
+    """Two occurrences of the same normalized signature *within the same
+    element* (e.g. a real, legitimate repeated invocation) is not
+    cross-element redundancy - must not be flagged."""
+    records = [
+        _record(1, "cc1plus a.cpp", 0.0, 0.1, element="core.bst"),
+        _record(2, "cc1plus a.cpp", 1.0, 1.1, element="core.bst"),
+    ]
+    assert detect_redundant_operations(records) == []
+
+
+def test_detect_redundant_excludes_unknown_element():
+    """A trace with no real element attribution (a raw log captured
+    before element-tagging existed, or a standalone single-element
+    capture) must never claim cross-element redundancy it can't
+    actually attribute."""
+    records = [
+        _record(1, "cc1plus a.cpp", 0.0, 0.1, element="unknown"),
+        _record(2, "cc1plus a.cpp", 1.0, 1.1, element="unknown"),
+    ]
+    assert detect_redundant_operations(records) == []
+
+
+def test_detect_redundant_excludes_open_records():
+    records = [
+        _record(1, "cc1plus a.cpp", 0.0, None, open_=True, element="core.bst"),
+        _record(2, "cc1plus a.cpp", 1.0, None, open_=True, element="lib-a.bst"),
+    ]
+    assert detect_redundant_operations(records) == []
+
+
+def test_detect_redundant_sorted_by_total_duration_most_costly_first():
+    records = [
+        _record(1, "cheap_probe", 0.0, 0.1, element="core.bst"),
+        _record(2, "cheap_probe", 1.0, 1.1, element="lib-a.bst"),
+        _record(3, "expensive_codegen", 2.0, 32.0, element="core.bst"),
+        _record(4, "expensive_codegen", 33.0, 63.0, element="lib-a.bst"),
+    ]
+    findings = detect_redundant_operations(records)
+
+    assert len(findings) == 2
+    assert findings[0]["example_cmd"] == "expensive_codegen"
+    assert findings[1]["example_cmd"] == "cheap_probe"
+
+
+def test_summarize_includes_redundant_operations():
+    records = [
+        _record(1, "cc1plus a.cpp", 0.0, 1.0, element="core.bst"),
+        _record(2, "cc1plus a.cpp", 1.0, 2.0, element="lib-a.bst"),
+    ]
+    report = summarize(records)
+
+    assert len(report["redundant_operations"]) == 1
+    assert report["redundant_operations"][0]["elements"] == ["core.bst", "lib-a.bst"]
 
 
 # --- Real end-to-end: run_traced_build against a real bst build ------------

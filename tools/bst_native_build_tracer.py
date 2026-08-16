@@ -281,6 +281,53 @@ def pair_events(events: List[dict]) -> List[dict]:
     return sorted(records, key=lambda r: r["start_ts"])
 
 
+# UX-37: findings below this much recoverable wall-clock are omitted
+# from the text report (kept in the JSON). A real capture produced 37
+# findings ranked down to `uname -r` at 0.001s - true, and noise.
+_REDUNDANCY_MIN_SECONDS = 0.05
+
+# UX-37: how much of a command line to show. Truncating at 100 characters
+# cut every `cc1plus`/`ld` invocation off before anything distinguishing,
+# so two structurally different findings rendered identically.
+_CMD_HEAD_CHARS = 90
+_CMD_TAIL_CHARS = 60
+
+
+def _elide_cmd(cmd: str) -> str:
+    """Keep the binary and the leading arguments, plus the tail (where
+    the actual input file usually is), eliding the middle - rather than
+    truncating at a fixed prefix, which for a real compiler invocation is
+    all boilerplate."""
+    if len(cmd) <= _CMD_HEAD_CHARS + _CMD_TAIL_CHARS + 5:
+        return cmd
+    return f"{cmd[:_CMD_HEAD_CHARS]} ... {cmd[-_CMD_TAIL_CHARS:]}"
+
+
+# UX-37: an element's own native build-driver invocation. Identical
+# across every element of a project by construction, and doing entirely
+# different work in each.
+_BUILD_DRIVER_BINARIES = frozenset({"make", "gmake", "ninja"})
+
+
+def _is_element_build_driver(cmd: str) -> bool:
+    """True if this command *is* an element's own build/install driver -
+    including through the wrappers real cmake projects use
+    (`cmake -E env VERBOSE=1 /usr/bin/make ...`,
+    `env DESTDIR=... cmake --build ... --target install`), which is why
+    this looks at every token rather than only the leading binary.
+
+    `cmake -B... -H...` (configure) deliberately does *not* match: that
+    genuinely repeats the same work in every element, and is exactly the
+    class of finding UX-23 was built for.
+    """
+    if "--build" in cmd:
+        return True
+    for token in cmd.split():
+        if os.path.basename(token) in _BUILD_DRIVER_BINARIES:
+            return True
+    return False
+
+
 def _binary_name(cmd: str) -> str:
     first = cmd.split(" ", 1)[0] if cmd else ""
     return os.path.basename(first) if first else "(unknown)"
@@ -353,6 +400,19 @@ def detect_redundant_operations(records: List[dict]) -> List[dict]:
     for r in records:
         if r["open"] or r["element"] == "unknown":
             continue
+        if _is_element_build_driver(r["cmd"]):
+            # UX-37: every element runs `make -f Makefile -jN` and
+            # `cmake --build ...`, so those signatures are identical
+            # across elements by construction while doing entirely
+            # different work - each compiles that element's own sources.
+            # They are not redundancy, and once findings are ranked by
+            # recoverable wall-clock (below) they would otherwise take
+            # every top slot, since their duration is the element's whole
+            # compile phase. The element's *configure* step and the
+            # compiler-probe invocations are deliberately kept: those
+            # really do repeat the same work per element, and are what
+            # UX-23 was built to find.
+            continue
         by_signature[normalize_cmd_signature(r["cmd"])].append(r)
 
     findings = []
@@ -360,14 +420,34 @@ def detect_redundant_operations(records: List[dict]) -> List[dict]:
         elements = sorted({r["element"] for r in occurrences})
         if len(elements) < 2:
             continue
+        # UX-37: `total_duration_s` sums process time across elements
+        # BuildStream dispatched *concurrently*, so it is not time the
+        # build would get back. Eliminating all but one occurrence still
+        # leaves the one that has to run somewhere, and the elements ran
+        # side by side - so the wall-clock-relevant figure is what the
+        # single worst-affected element paid, not the sum. Both are
+        # reported, each labelled for what it is; the sum stays because
+        # it is the honest "total machine time spent on this" number.
+        per_element_duration: Dict[str, float] = defaultdict(float)
+        for r in occurrences:
+            per_element_duration[r["element"]] += r["duration_s"]
+        worst_element = max(per_element_duration, key=lambda e: per_element_duration[e])
         findings.append({
             "signature": signature,
             "elements": elements,
             "occurrence_count": len(occurrences),
             "total_duration_s": sum(r["duration_s"] for r in occurrences),
+            # UX-37: an upper bound on recoverable wall-clock, not a
+            # promise - sharing this work would still cost whatever the
+            # shared version costs, and these elements overlapped.
+            "max_element_duration_s": per_element_duration[worst_element],
+            "worst_element": worst_element,
             "example_cmd": occurrences[0]["cmd"],
         })
-    return sorted(findings, key=lambda f: -f["total_duration_s"])
+    # Ranked by the wall-clock-relevant figure, not by the sum: a
+    # 6x-repeated 50ms probe across six concurrent elements is not a
+    # bigger finding than a 2x-repeated 5s codegen step.
+    return sorted(findings, key=lambda f: -f["max_element_duration_s"])
 
 
 # UX-32: which traced binaries are doing the real work, and which are
@@ -720,13 +800,38 @@ def _format_text(report: dict) -> str:
     redundant = report.get("redundant_operations") or []
     if redundant:
         lines.append("")
-        lines.append(f"Redundant cross-element operations ({len(redundant)} found):")
-        for finding in redundant:
+        # UX-37: rank and filter on the wall-clock-relevant figure. A
+        # finding worth a millisecond is noise however it is measured,
+        # and the previous unfiltered list ran 37 entries deep down to
+        # `uname -r` at 0.001s.
+        shown = [
+            f for f in redundant
+            if f.get("max_element_duration_s", f["total_duration_s"]) >= _REDUNDANCY_MIN_SECONDS
+        ]
+        omitted = len(redundant) - len(shown)
+        lines.append(
+            f"Redundant cross-element operations ({len(redundant)} found, "
+            f"{len(shown)} above {_REDUNDANCY_MIN_SECONDS:.2f}s):"
+        )
+        for finding in shown:
+            worst = finding.get("worst_element")
+            worst_s = finding.get("max_element_duration_s")
+            wall_text = (
+                f"up to {worst_s:.3f}s recoverable wall-clock (worst element: {worst})"
+                if worst_s is not None else "wall-clock impact unknown"
+            )
             lines.append(
                 f"  {finding['occurrence_count']}x across {len(finding['elements'])} elements "
-                f"({finding['elements']}), {finding['total_duration_s']:.3f}s total:"
+                f"({', '.join(finding['elements'])}) - {wall_text}; "
+                f"{finding['total_duration_s']:.3f}s total machine time"
             )
-            lines.append(f"    {finding['example_cmd'][:100]}")
+            lines.append(f"    {_elide_cmd(finding['example_cmd'])}")
+        if omitted:
+            # No silent truncation (UX-26's own pattern).
+            lines.append(
+                f"  ({omitted} further finding(s) below {_REDUNDANCY_MIN_SECONDS:.2f}s "
+                f"recoverable wall-clock, omitted - see --json for all of them)"
+            )
     lines.append("")
     lines.append(f"NOTE: {report['static_binary_disclaimer']}")
     return "\n".join(lines)

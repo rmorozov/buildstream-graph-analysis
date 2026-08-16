@@ -15,7 +15,9 @@ Neither plane subsumes the other, and that's intentional: Plane 1 operates purel
 
 ### Where the two planes connect — a real, not-yet-built opportunity
 
-Plane 1 already tells you *which* elements are expensive or on the critical path (`UX-20`'s `sensitivity.top_opportunities`, `UX-22`'s serialization-point detection). Plane 2 can now tell you, for any *one* of those elements, exactly what its own native build system spent its time on. Running Plane 2 across **multiple** elements of the same project opens a genuinely new class of question neither plane can answer alone: are several elements each independently, redundantly doing the *same* real sub-work inside their own sandboxes — the same expensive `configure` step, the same codegen invocation, the same dependency-resolution pass — that could be shared or cached once instead of paid for by every element separately? This is a real, concrete optimization class (cross-element repeated-operation detection) that this architecture now makes *observable* for the first time, but it is **not implemented** — closest existing relatives are `UX-20` (batch/map-reduce simulation, but over already-observed element durations, not intra-element operation identity) and `UX-14`'s tier-2 design (PR #58, cross-run calibration, a different but related use of multi-capture comparison). Flagging this here as the natural next brainstorm once someone wants to extend Plane 2 beyond single-element profiling — not scoped or estimated yet.
+Plane 1 already tells you *which* elements are expensive or on the critical path (`UX-20`'s `sensitivity.top_opportunities`, `UX-22`'s serialization-point detection). Plane 2 can now tell you, for any *one* of those elements, exactly what its own native build system spent its time on. Running Plane 2 across **multiple** elements of the same project opens a genuinely new class of question neither plane can answer alone: are several elements each independently, redundantly doing the *same* real sub-work inside their own sandboxes — the same expensive `configure` step, the same codegen invocation, the same dependency-resolution pass — that could be shared or cached once instead of paid for by every element separately?
+
+**Confirmed real, not hypothetical** (`UX-23`, filed 2026-08-16): a real, fully-fresh `bst build all.bst` capture of `examples/05-cmake-cpp-toolchain` (6 cmake elements) traced under Plane 2 showed CMake's own compiler-ABI-detection probe running as **6 fully independent repetitions**, one per element, exactly matching the project's real topology (solo → 4-way fan-out → solo). `UX-23` designs the missing piece (element-tagging in the raw trace) and a redundant-operation detector on top of it — filed, not implemented. `UX-24` (Chrome Trace export for Plane 2, and a combined two-plane `perfetto.dev` view once `UX-23`'s element tagging exists) is the natural companion — also filed, not implemented. Closest existing relatives: `UX-20` (batch/map-reduce simulation, but over already-observed element durations, not intra-element operation identity) and `UX-14`'s tier-2 design (PR #58, cross-run calibration, a different but related use of multi-capture comparison).
 
 ## Real current CLI surface (Plane 1)
 
@@ -94,6 +96,10 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-20 | `sensitivity.top_opportunities` in text report + batch/map-reduce simulation | 🟢 Done |
 | UX-21 | Memory/swap oversubscription guard (independent of CPU) | 🟢 Done |
 | UX-22 | Per-element `max-jobs` capture + serialization-point risk detection | 🟢 Done |
+| UX-23 | Element-tag Plane 2 traces + detect redundant cross-element operations (real evidence: `examples/05`'s CMake ABI probe reran 6x independently) | 🔴 Not Started (design only) |
+| UX-24 | Chrome Trace export for Plane 2 + combined two-plane `perfetto.dev` view | 🔴 Not Started (design only) |
+| UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🔴 Not Started |
+| UX-26 | Batch/map-reduce report stops surfacing zero-savings groups | 🔴 Not Started |
 
 (`UX-08` was never filed — not a missing/lost file.)
 

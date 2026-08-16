@@ -82,6 +82,12 @@ acted on.** `UX-25` established the pattern (name the elements, tag the
 structural ones); `UX-33`/`UX-34`/`UX-35` apply it to the three places it
 was not applied.
 
+> **Done.** All three shipped. The critical path is printed in full with
+> per-link durations, choke points are named, structural elements are
+> filtered out of the what-to-fix ranking, and the `RESOURCE WAIT` hint
+> is conditioned on a real capacity verdict. The paragraphs above
+> describe the state that motivated them, not the current output.
+
 ### The second direction: make the micro level a first-class answer
 
 Plane 2 is the tool's most distinctive asset and its report is a census —
@@ -101,6 +107,14 @@ Achieved-vs-requested parallelism per element (`UX-32`) is the single
 highest-value addition to Plane 2, and it needs no new instrumentation —
 the element's own `make -j1` appears verbatim in the captured `cmd`
 strings.
+
+> **Done, with one correction.** Achieved-vs-requested turned out to be
+> the wrong headline: a `-j1`-pinned element achieves 100% (200% in the
+> real trace, since a gcc driver pipelines `cc1plus` into `as`) of what
+> it asked for, and being pinned is the problem. The shipped report emits
+> `pinned_to_one_job` and `underachieved_requested_jobs` instead. The
+> same finding is now *also* available from Plane 1 alone, from a plain
+> `bst show` (`UX-31`).
 
 ### The third direction: close the macro→micro loop
 
@@ -285,6 +299,17 @@ Around that metric, three properties matter more than the exact formula:
    fragile, and multi-run baselining is the real fix, deliberately scoped
    out of `UX-39` so it does not silently become that task.
 
+> **Done.** `--fail-on-efficiency-regression`/`--min-efficiency` ship on
+> `occupancy_ratio` with their own exit code `5` (`UX-39`), and the
+> confidence interaction that kept the gate from running is fixed
+> (`UX-40`). All three properties below were implemented as argued; the
+> default tolerance was derived from three repeat captures of an
+> unchanged project (1.0pp of measured occupancy noise, against 7.4% of
+> wall-clock noise on the same three - which is now measured evidence,
+> not assertion, that the duration gate's 1% default sits below the noise
+> floor). Multi-run baselining remains deliberately out of scope and is
+> the most likely thing to force itself next.
+
 ### What a good CI comment should look like
 
 ```
@@ -297,37 +322,96 @@ New elements this change:
                     sandbox read lib-g.bst's output)
 ```
 
-The first two lines need `UX-27` and `UX-39`. The element table needs
-2b's per-element diff. The parenthetical needs Plane 2's sandbox-read
-data, which is the most speculative item here and the one worth doing
-last.
+The first two lines need `UX-27` and `UX-39` - **both now shipped**, so
+that half is buildable today. The element table needs 2b's per-element
+diff, which is still open. The parenthetical needs Plane 2's sandbox-read
+data - the declared-vs-used detection now named as candidate (1) for the
+next round.
 
-## Implementation status (updated 2026-08-16, after the first phase)
+## Implementation status (updated 2026-08-16, round complete)
 
-Twelve of the fourteen items argued for below have shipped - every one
-whose dependencies were already closed when the round was filed. The two
-that remain are the two that were blocked on items in this same round:
+**All fourteen items of the `UX-27`..`UX-40` round are done.** What
+follows below is the argument that produced them, kept because the
+reasoning is still the reasoning - but several of its complaints are now
+historical, and are marked where they are.
 
-- **`UX-35`** (capacity-blind hints) waited on `UX-28`/`UX-29` so it can
-  consume their verdict rather than grow a second, independently-derived
-  capacity formula - the divergence `UX-17` was resolved to avoid.
-- **`UX-39`** (the inefficiency-ratio CI gate) waited on `UX-27` for a
-  metric worth gating on and `UX-40` for a gate that actually runs. Both
-  are now in place: `floors.occupancy_ratio` moved +35.2pp across the
-  real optimization pair where every pre-existing metric was flat or
-  backwards, and real captures now clear the confidence bar instead of
-  silently failing open.
+Four of the round's own filings were corrected during implementation
+rather than implemented as written. That is worth more than the fixes
+themselves as a signal about how the next round should be run:
 
-Two of the round's own filings were corrected during implementation
-rather than implemented as written, and both corrections are recorded in
-the tasks themselves: `UX-28`'s original evidence did not support its
-claim (the real defect turned out to be different and provable), and
-`UX-32`'s proposed headline metric would have scored the pinned element
-at 200% of what it asked for - being pinned *was* the problem.
+- **`UX-28`'s evidence did not support its claim.** It cited an 81%
+  per-element contention increase as proof the oversubscription check
+  could not fire. The two runs were not comparable and the costlier one
+  was 30.5% *faster* overall - beneficial parallelism, not harm. The real
+  defect (a bar whose ratio-to-cores collapses as the host grows) was
+  different, provable, and only found by checking the fix against
+  `UX-09`'s existing measurements instead of against the intuition that
+  produced the filing.
+- **`UX-32`'s proposed headline metric was backwards.** Achieved-vs-requested
+  scores a `-j1`-pinned element at 200% of what it asked for; being pinned
+  *is* the problem.
+- **`UX-30` and `UX-40` each carried a secondary claim that was already
+  implemented** (monotonicity violations are shown; the fail-open does
+  warn). Both were pinned by tests rather than "fixed".
 
-## Suggested order
+The rate is roughly one filing in four. A round of audit findings written
+from a single hands-on session should be treated as *hypotheses with
+evidence attached*, not as a work list - and the cheapest way to catch
+the bad ones is to re-check each against measurements the repo already
+has before writing any code.
 
-Grouped by what unblocks what, not by size.
+## What the next audit round should probe
+
+The last round audited **what the tool says**. The obvious next targets
+are the two things it still cannot say, and the two places its own claims
+have never been tested:
+
+1. **Declared-vs-used dependencies.** The over-declared `codegen.bst`
+   build-dep in `examples/06` was the one problem in that project that no
+   `bga` signal found - it was found by knowing the project. Plane 2
+   already traces every process inside a `--dir`-tagged sandbox, so
+   "which of this element's declared build deps did its sandbox never
+   read?" is answerable in principle and would close the last macro-level
+   gap. `UX-27`'s sketch 3, deliberately deferred.
+2. **A real CPU measurement.** Every efficiency number in the tool is
+   built on slot *occupancy*, and the honest caveat attached to
+   `occupancy_ratio`, to the `UX-36` bucket labels, and to `UX-37`'s
+   scoring is the same one: occupancy is not CPU time, and inflates under
+   contention. `getrusage` in Plane 2's hook destructor would give real
+   per-process CPU time and collapse three separate caveats into one
+   measurement.
+3. **Scale.** Every finding in the last round came from projects of 8-13
+   elements on one 4-core host. `docs/tasks/P1-16`/`P1-21` did real
+   performance work on large graphs, but no audit has walked a
+   *thousand*-element project end to end and asked whether the report is
+   still readable, whether the critical-path rendering `UX-33` added is
+   still the right shape at that size, or whether `bga sweep`'s knee is
+   still meaningful. Nor has anything been captured on a many-core host,
+   where `UX-28`'s re-based threshold makes materially different calls
+   than the old one did.
+4. **Remote execution.** `UX-09` noted it and nothing has revisited it:
+   with a remote-execution sandbox the compute happens on a worker pool
+   whose size and scheduling are invisible to the local client, so
+   `builders` - the denominator of `occupancy_ratio` and the basis of
+   `LB` - stops meaning what the tool assumes. Whether `bga` should
+   detect that mode and refuse to certify, or model it, is an open
+   product question, not a bug.
+5. **The CI story end to end.** `UX-39` shipped the gate; nobody has run
+   a real pipeline against it for a week and found out what it feels like
+   to own. The two things most likely to be wrong are the derived 5.0pp
+   default (one project, one runner) and the absence of multi-run
+   baselining, which `UX-39` scoped out explicitly and which a single
+   noisy runner will eventually force.
+
+A good next round would pick (1) or (2) as its centre - both are real
+capability, not polish - and use a project a full order of magnitude
+larger than `examples/06` as the vehicle, which would incidentally
+exercise (3).
+
+## Suggested order (historical - all of these shipped)
+
+Grouped by what unblocks what, not by size. Kept as written, because the
+sequencing reasoning is reusable; every item named below is now done.
 
 **First — turn on what already exists.** `UX-33` (name the critical path
 and the choke points), `UX-34` (drop structural noise from the

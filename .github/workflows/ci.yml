@@ -340,6 +340,21 @@ jobs:
 
           bga compare "$OUT/run-baseline" "$OUT/run-optimized" | tee "$OUT/compare-baseline-vs-optimized.txt"
 
+          # UX-39: exercise both CI gates for real, in the direction that
+          # must FAIL - the optimized build reverted to the mis-optimized
+          # one. Recorded rather than gating this job (same "real
+          # corner-case data, not correctness-gating" posture as the rest
+          # of it), but a wrong exit code here is a real regression in
+          # the gate and will be visible in the artifact.
+          set +e
+          bga compare "$OUT/run-optimized" "$OUT/run-baseline" --fail-on-efficiency-regression \
+            > "$OUT/gate-efficiency-regressing.txt" 2>&1
+          echo "exit=$? (expected 5)" | tee -a "$OUT/gate-efficiency-regressing.txt"
+          bga compare "$OUT/run-baseline" "$OUT/run-optimized" --fail-on-efficiency-regression \
+            > "$OUT/gate-efficiency-improving.txt" 2>&1
+          echo "exit=$? (expected 0)" | tee -a "$OUT/gate-efficiency-improving.txt"
+          set -e
+
           rm -rf ~/.cache/buildstream ~/.local/share/buildstream
           python3 -m tools.bst_native_build_tracer run \
             --raw-log "$OUT/native-baseline.rawlog" \

@@ -27,12 +27,15 @@ Key Findings:
     2. ui-toolkit.bst:libwidgets.bst (2 downstream elements)
     3. data-format.bst:libjson.bst (2 downstream elements)
   Certified Headroom: up to 24.00s available (T∞=118.00s, LB=118.00s)
+  Efficiency Score: 0.83 (worth checking Certified Headroom for real scheduling gains)
 
 Certified Floors:
   T∞ (observed critical path): 118.00s
   LB (resource lower bound):   118.00s
   Certified Headroom:          24.00s
   T_C (replay makespan):       118.00s
+  Efficiency Score:            0.83 (worth checking Certified Headroom for real scheduling gains)
+  Dispatch Occupancy:          45.1% of available slot-time used
 
 Attribution Breakdown:
   Execution On Chain Us       134.00s ( 94.4%)
@@ -47,7 +50,8 @@ Critical Path Length: 4 elements
 
 - **Confidence** — how much to trust the numbers below (data completeness/quality of this specific trace). Below "high"? Fix the underlying trace before acting on anything else.
 - **Certified Headroom** — a *proven* lower bound, not a guess: given the work this build actually did, the build cannot possibly finish faster than `T∞`/`LB` (whichever is larger) without changing that work. Headroom above zero means there's real room to improve scheduling/parallelism *without touching any element's own build steps*.
-- **Critical Path** — the one chain of elements that determines total build time. Speeding up anything *not* on this path doesn't shorten the build at all — this is always where to look first for reducing the work itself, not just rescheduling it.
+- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`docs/scenarios/UX-27`](docs/scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md).)
+- **Critical Path** — the one chain of elements that determines total build time. Speeding up anything *not* on this path doesn't shorten the build at all — this is always where to look first for reducing the work itself, not just rescheduling it. The full chain is printed, with each link's real duration and share of the path, so the longest link is visible without cross-referencing anything.
 - **Biggest Opportunity / Attribution Breakdown** — where wall-clock time actually went, by category (execution, waiting on a dependency, waiting on a resource, waiting on the scheduler, idle, retries). Every category sums to exactly the total build time — nothing is hidden or double-counted.
 - **Elements Most Worth Optimizing First** — ranked by blast radius (how many other elements depend on it): fixing a slow element near the root of your graph helps every downstream element too.
 - If a hard gate fails (e.g. `critical_path_coverage`), the violation now names the specific missing element(s) and, where known, whether it's a structural element (`stack`/`import`/...) that never had a real compute task or a genuine gap worth investigating — no need to cross-reference the critical-path list by hand.
@@ -56,8 +60,11 @@ Critical Path Length: 4 elements
 
 ```bash
 pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/ingestion-pipeline.md
-bst -C /path/to/your/project build <targets> > build.log 2>&1
-python3 -m tools.bst_extract_run /path/to/your/project build.log /tmp/my-run   # from the repo root
+# Capture through the wrapper: it records the real invocation on its own first
+# line, which is where `--max-jobs` lives - without it bga's capacity checks
+# have nothing to check against and say so.
+python3 -m tools.bst_run_wrapped /path/to/your/project /tmp/build.log -- bst build <targets>
+python3 -m tools.bst_extract_run --format wrapped /path/to/your/project /tmp/build.log /tmp/my-run
 bga analyze /tmp/my-run --diagnostics
 ```
 
@@ -67,7 +74,28 @@ Then iterate: make a change, rebuild, extract a new run, and compare it against 
 bga compare /tmp/my-run-before /tmp/my-run-after
 ```
 
-This reports a signed delta for every certified floor, the efficiency score, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) - gated on confidence, with a warning if the two runs don't look like the same project. `bga compare --fail-on-regression` turns this into a CI gate (exit code 4 on a real regression) — see `docs/cli.md`.
+This reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) - gated on confidence, with a warning if the two runs don't look like the same project.
+
+## Gating a CI pipeline
+
+Two independent gates, because "the build got slower" and "the build got less efficient" are different verdicts:
+
+```bash
+bga compare runs/baseline runs/candidate --fail-on-regression              # exit 4: slower
+bga compare runs/baseline runs/candidate --fail-on-efficiency-regression   # exit 5: less efficient
+bga compare runs/baseline runs/candidate --min-efficiency 0.45             # exit 5: below an absolute floor
+```
+
+The second is the one worth reaching for on a growing project. Adding three new elements makes the build slower, and a wall-clock gate cannot tell that apart from a real regression — so the only remedy is raising the threshold, which blinds it to everything else. The efficiency gate asks the question a build owner actually has: **adding work is allowed; adding work *inefficiently* is not.** Measured on one real project:
+
+| change | wall-clock | duration gate | Dispatch Occupancy | efficiency gate |
+|---|---|---|---|---|
+| two more well-parallelized elements | +2.5% | **fails** | 60.0% → 73.8% | passes |
+| graph serialized, one element pinned to `-j1` | +44% | fails | 63.0% → 27.8% | **fails** |
+| oversubscribed (`8×8` on 4 cores) | +19% | fails | 63.0% → 48.6% | **fails** |
+| nothing changed (repeat capture) | −7.4% noise | fires on ±1% noise | 60.0% → 59.0% | passes |
+
+Full flags, thresholds and how the default was derived: [`docs/cli.md`](docs/cli.md#ci-efficiency-gate---fail-on-efficiency-regression---min-efficiency).
 
 Other useful commands:
 
@@ -87,7 +115,16 @@ Everything above answers *"across the whole build, where did the time go and wha
 python3 -m tools.bst_native_build_tracer run /path/to/your/project report.json -- bst build <target>
 ```
 
-This also detects real operations repeated independently across *multiple* elements' sandboxes (e.g. the same compiler-ABI probe re-run once per element) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view above into one file. Full picture, real evidence, and every command: [`docs/architecture.md`](docs/architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
+It reports, per element, the parallelism its native build system **actually achieved** against the `-jN` it asked for — the one number that separates "this element is legitimately 13 seconds of work" from "this element is 4 seconds of work stretched to 13 by a one-line `notparallel: True`":
+
+```
+Per-element native parallelism (real compiler/assembler/linker processes only):
+  element                  peak  req  achieved     span work
+  core.bst                    2    1      200%   14.22s   32  <- pinned to -j1 while the rest of this build ran higher
+  lib-a.bst                   3    4       75%    2.46s   22
+```
+
+It also detects real operations repeated independently across *multiple* elements' sandboxes (e.g. the same compiler-ABI probe re-run once per element, scored in recoverable wall-clock rather than summed process time) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view above into one file. Full picture, real evidence, and every command: [`docs/architecture.md`](docs/architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
 
 ## Documentation
 

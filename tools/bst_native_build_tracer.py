@@ -370,6 +370,169 @@ def detect_redundant_operations(records: List[dict]) -> List[dict]:
     return sorted(findings, key=lambda f: -f["total_duration_s"])
 
 
+# UX-32: which traced binaries are doing the real work, and which are
+# orchestration that spends its life waiting on children. A concurrency
+# number over *all* processes is not interpretable - `core.bst` in a real
+# capture showed 99.65s of total process lifetime inside a 14.91s span
+# (an apparent 6.68 average concurrency) while its actual compiler
+# concurrency never exceeded 1, because `make`/`sh`/`cmake` wrappers were
+# alive the whole time and doing nothing.
+#
+# Deliberately a small, explicit list of real compiler/assembler/linker/
+# archiver binaries rather than a "not a wrapper" rule: an unrecognized
+# binary is reported as unclassified (see `unclassified_binaries`), never
+# silently bucketed either way.
+# UX-32: below this fraction of the `-jN` an element actually asked for,
+# the report calls it out. Set well below 1.0 deliberately - a build with
+# genuinely too few translation units to fill its job slots is common and
+# not a defect (UX-09 measured exactly that), so this flags the
+# unambiguous case: an element that asked for real parallelism and got
+# essentially none.
+_UNDERPARALLEL_RATIO = 0.5
+
+WORK_BINARIES = frozenset({
+    "cc1", "cc1plus", "cc1obj", "cc1objplus",  # gcc's real compiler
+    "clang", "clang++", "clang-cpp",
+    "as", "ld", "ld.bfd", "ld.gold", "ld.lld", "collect2", "lto1",
+    "ar", "ranlib", "strip", "objcopy",
+    "rustc", "go", "javac",
+})
+ORCHESTRATION_BINARIES = frozenset({
+    "sh", "bash", "dash", "env", "make", "gmake", "ninja", "cmake",
+    "meson", "python", "python3", "uname", "sed", "grep", "cat", "sort",
+    "gcc", "g++", "cc", "c++", "clang-wrapper",  # compiler *drivers* - they exec cc1/as/ld
+})
+
+# UX-32: the real `-jN` an element's own native build system was asked
+# for. It is in the trace verbatim (`/usr/bin/make -f Makefile -j1`), so
+# achieved-vs-requested needs no new capture.
+_REQUESTED_JOBS_RE = re.compile(r"(?:^|\s)-j\s*(\d+)(?:\s|$)")
+
+
+def classify_binary(name: str) -> str:
+    """"work" | "orchestration" | "unclassified" - see WORK_BINARIES."""
+    if name in WORK_BINARIES:
+        return "work"
+    if name in ORCHESTRATION_BINARIES:
+        return "orchestration"
+    return "unclassified"
+
+
+def _concurrency_profile(intervals: List[Tuple[float, float]]) -> dict:
+    """Peak and time-weighted mean concurrency over a set of
+    [start, end] process intervals, plus their span and total lifetime."""
+    if not intervals:
+        return {"peak": 0, "mean": 0.0, "span_s": 0.0, "total_lifetime_s": 0.0}
+    points = []
+    for start, end in intervals:
+        points.append((start, 1))
+        points.append((end, -1))
+    points.sort(key=lambda p: (p[0], p[1]))
+    current = peak = 0
+    area = 0.0
+    last_ts = points[0][0]
+    for ts, delta in points:
+        area += current * (ts - last_ts)
+        last_ts = ts
+        current += delta
+        peak = max(peak, current)
+    span = max(e for _, e in intervals) - min(s for s, _ in intervals)
+    return {
+        "peak": peak,
+        "mean": (area / span) if span > 0 else 0.0,
+        "span_s": span,
+        "total_lifetime_s": sum(e - s for s, e in intervals),
+    }
+
+
+def compute_per_element_parallelism(records: List[dict]) -> List[dict]:
+    """UX-32: for each BuildStream element, how much parallelism its own
+    native build system actually achieved - the question Plane 2 exists
+    to answer, and the one its report did not have a number for.
+
+    Every input is already captured (`UX-11`'s timestamps, `UX-23`'s
+    element tags, and the element's own `-jN` sitting verbatim in a
+    recorded `cmd`); this only computes over them.
+
+    Only matched records (real start *and* end observed) participate, for
+    the same reason `compute_max_concurrency` excludes open ones.
+    """
+    by_element: Dict[str, List[dict]] = defaultdict(list)
+    for r in records:
+        if r["open"] or r["end_ts"] is None:
+            continue
+        by_element[r["element"]].append(r)
+
+    profiles = []
+    for element, element_records in by_element.items():
+        work_intervals = []
+        unclassified: Dict[str, int] = {}
+        requested_jobs = None
+        for r in element_records:
+            name = _binary_name(r["cmd"])
+            kind = classify_binary(name)
+            if kind == "work":
+                work_intervals.append((r["start_ts"], r["end_ts"]))
+            elif kind == "unclassified":
+                unclassified[name] = unclassified.get(name, 0) + 1
+            if name in ("make", "gmake", "ninja"):
+                match = _REQUESTED_JOBS_RE.search(r["cmd"])
+                if match:
+                    # Highest wins: an element can run several `make`
+                    # invocations (configure probes, install), and the
+                    # real build one is the one that asked for the most.
+                    value = int(match.group(1))
+                    requested_jobs = value if requested_jobs is None else max(requested_jobs, value)
+        profile = _concurrency_profile(work_intervals)
+        profiles.append({
+            "element": element,
+            "work_process_count": len(work_intervals),
+            "peak_work_concurrency": profile["peak"],
+            "mean_work_concurrency": profile["mean"],
+            "work_span_s": profile["span_s"],
+            "work_process_lifetime_s": profile["total_lifetime_s"],
+            "requested_jobs": requested_jobs,
+            # Deliberately None rather than a guess when either half is
+            # unknown. Note this is NOT on its own the finding: an
+            # element pinned to `-j1` achieves 100% (or more, since a
+            # gcc driver pipelines cc1plus into as) of what it asked for
+            # while being exactly the problem. See `findings` below.
+            "achieved_vs_requested": (
+                profile["peak"] / requested_jobs
+                if requested_jobs else None
+            ),
+            "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
+        })
+    # Two distinct real findings, decided across the whole trace rather
+    # than per element in isolation:
+    #
+    #  - `pinned_to_one_job`: this element asked for `-j1` while other
+    #    elements in the same build asked for more. That is the
+    #    `notparallel: True` case (UX-31), and it is invisible to any
+    #    achieved-vs-requested ratio, because an element pinned to one
+    #    job gets exactly what it asked for.
+    #  - `underachieved_requested_jobs`: this element asked for real
+    #    parallelism and got essentially none - a serializing Makefile, a
+    #    dependency chain inside the element, or contention.
+    peak_requested = max(
+        (p["requested_jobs"] for p in profiles if p["requested_jobs"] is not None),
+        default=None,
+    )
+    for profile in profiles:
+        requested = profile["requested_jobs"]
+        findings = []
+        if requested == 1 and peak_requested is not None and peak_requested > 1:
+            findings.append("pinned_to_one_job")
+        elif (
+            requested is not None and requested > 1
+            and profile["peak_work_concurrency"] < requested * _UNDERPARALLEL_RATIO
+        ):
+            findings.append("underachieved_requested_jobs")
+        profile["findings"] = findings
+    profiles.sort(key=lambda p: -p["work_span_s"])
+    return profiles
+
+
 def compute_max_concurrency(records: List[dict]) -> int:
     """A real sweep over process intervals - matched (start+end known)
     records only. Open (unmatched) records are deliberately excluded,
@@ -428,6 +591,9 @@ def summarize(records: List[dict]) -> dict:
         "by_binary": dict(sorted(by_binary.items(), key=lambda kv: -kv[1])),
         "by_element": dict(sorted(by_element.items(), key=lambda kv: -kv[1])),
         "max_concurrency": compute_max_concurrency(records),
+        # UX-32: per-element achieved parallelism - the question this
+        # plane exists to answer. See compute_per_element_parallelism.
+        "per_element_parallelism": compute_per_element_parallelism(records),
         "wall_span_s": (wall_end - wall_start) if wall_start is not None and wall_end is not None else None,
         "redundant_operations": detect_redundant_operations(records),
         "processes": records,
@@ -491,7 +657,13 @@ def _format_text(report: dict) -> str:
     lines = [
         f"Processes traced: {report['process_count']} "
         f"({report['matched_count']} matched, {report['open_count']} no observed exit)",
-        f"Max observed concurrency: {report['max_concurrency']} (matched processes only - see open_records_note)",
+        # UX-32: this counts every traced process, including `make`/`sh`
+        # wrappers that spend their lives waiting on children, so it
+        # routinely exceeds the host's real core count and must not be
+        # read as host load. The per-element block below is the
+        # interpretable number.
+        f"Max observed concurrency (all traced processes, incl. idle wrappers): "
+        f"{report['max_concurrency']} (matched processes only - see open_records_note)",
     ]
     if report.get("open_records_note"):
         lines.append(f"  ({report['open_records_note']})")
@@ -505,6 +677,46 @@ def _format_text(report: dict) -> str:
         lines.append("By element:")
         for name, count in by_element.items():
             lines.append(f"  {name:30s} {count}")
+    # UX-32: per-element achieved parallelism.
+    per_element = report.get("per_element_parallelism") or []
+    if per_element:
+        lines.append("")
+        lines.append(
+            "Per-element native parallelism (real compiler/assembler/linker processes only):"
+        )
+        lines.append(
+            f"  {'element':<24} {'peak':>4} {'req':>4} {'achieved':>9} "
+            f"{'span':>8} {'work':>4}"
+        )
+        for profile in per_element:
+            requested = profile["requested_jobs"]
+            achieved = profile["achieved_vs_requested"]
+            requested_text = str(requested) if requested is not None else "?"
+            achieved_text = f"{achieved * 100:6.0f}%" if achieved is not None else "     ?"
+            findings = profile.get("findings") or []
+            if "pinned_to_one_job" in findings:
+                flag = "  <- pinned to -j1 while the rest of this build ran higher"
+            elif "underachieved_requested_jobs" in findings:
+                flag = "  <- asked for real parallelism and did not get it"
+            else:
+                flag = ""
+            lines.append(
+                f"  {profile['element']:<24} {profile['peak_work_concurrency']:>4} "
+                f"{requested_text:>4} {achieved_text:>9} "
+                f"{profile['work_span_s']:>7.2f}s {profile['work_process_count']:>4}{flag}"
+            )
+        unclassified = {}
+        for profile in per_element:
+            for name, count in profile["unclassified_binaries"].items():
+                unclassified[name] = unclassified.get(name, 0) + count
+        if unclassified:
+            # No silent bucketing: a binary this tool doesn't recognize is
+            # neither counted as work nor quietly dropped.
+            lines.append(
+                "  (unclassified binaries, counted as neither work nor orchestration: "
+                + ", ".join(f"{n} x{c}" for n, c in sorted(unclassified.items(), key=lambda kv: -kv[1])[:6])
+                + ")"
+            )
     redundant = report.get("redundant_operations") or []
     if redundant:
         lines.append("")

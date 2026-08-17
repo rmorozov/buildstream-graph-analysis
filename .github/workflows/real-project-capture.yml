@@ -177,14 +177,23 @@ jobs:
 
       # Phase 1: pull the world. Not timed, not captured - this only
       # populates the local CAS so the capture phase has a cached base.
+      #
+      # `bst build` is the wrong verb here, and the first run of this
+      # workflow proved it: it finished in 7 seconds. `bst build` pulls
+      # only what it actually needs, and when the target's own artifact is
+      # already in the remote there is nothing to build and therefore
+      # nothing to pull - the 101 dependencies stayed uncached, which
+      # would have left the capture phase (remotes ignored) building the
+      # entire compiler bootstrap from source. `artifact pull --deps all`
+      # asks for the whole closure explicitly, which is what "warm" means.
       - name: Warm the local cache from the project's remote cache
         timeout-minutes: 90
         run: |
           cd fdsdk
-          bst --no-interactive --builders "$BUILDERS" build "$TARGET"
+          bst --no-interactive artifact pull --deps all "$TARGET"
           bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
             > ../capture/state-after-warm.txt
-          tail -5 ../capture/state-after-warm.txt
+          echo "cached after warm: $(grep -c '|cached$' ../capture/state-after-warm.txt) / $(wc -l < ../capture/state-after-warm.txt)"
 
       # Phase 2: cut. Sources are fetched *before* the capture so the
       # timed build is dominated by real build work rather than by
@@ -201,7 +210,42 @@ jobs:
             bst --no-interactive source fetch --deps none
           bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
             > ../capture/state-after-delete.txt
-          grep -c 'buildable' ../capture/state-after-delete.txt || true
+
+      # The capture is only bounded if the set of elements BuildStream
+      # considers un-built is *exactly* the set that was deleted. One
+      # dependency that failed to pull would silently turn a 30-minute
+      # capture into an attempt to build a compiler from source, and the
+      # only symptom would be a job that times out two hours later.
+      - name: Verify the cut is exactly the rebuild set
+        run: |
+          python3 - <<'EOF'
+          from pathlib import Path
+
+          wanted = set(Path("capture/rebuild-set.txt").read_text().split())
+          states = {}
+          for line in Path("capture/state-after-delete.txt").read_text().splitlines():
+              if "|" in line:
+                  name, _, state = line.rpartition("|")
+                  states[name] = state
+
+          # `junction` elements are not artifacts and are never cached.
+          not_built = {n for n, s in states.items() if s not in ("cached", "junction")}
+
+          unexpected = sorted(not_built - wanted)
+          already_cached = sorted(wanted - not_built)
+          print(f"{len(states)} elements, {len(not_built)} not cached, "
+                f"{len(wanted)} in the rebuild set")
+          if already_cached:
+              print("still cached despite being deleted: " + ", ".join(already_cached))
+          if unexpected:
+              print("NOT cached and NOT in the rebuild set:")
+              for name in unexpected:
+                  print(f"  {name} ({states[name]})")
+              raise SystemExit(
+                  f"{len(unexpected)} element(s) would be built beyond the "
+                  "intended cut - the warm phase did not pull the whole closure"
+              )
+          EOF
 
       # Phase 3: the capture. One `bst build` invocation feeds both
       # planes (UX-24): the wrapped log is Plane 1, the LD_PRELOAD trace

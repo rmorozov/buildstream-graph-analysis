@@ -226,7 +226,23 @@ class BuildEfficiencyAnalyzer:
             self.graph,
             epsilon_us,
         )
-        
+
+        # UX-54: a build that failed is still a build `bga` will happily
+        # score, and it scores *well* - a real freedesktop-sdk capture in
+        # which all four attempted elements failed reported an Efficiency
+        # Score of 1.00, because four failed builds are four spans like
+        # any other. The failure is recorded in the log and was being
+        # dropped at extraction; now that the producer carries it, it is
+        # a violation here, so the CI gate this project is meant to
+        # support cannot pass a broken build on scheduling grounds.
+        failed = self.run_context.failed_elements if self.run_context else []
+        if failed:
+            self.violations.append({
+                'type': 'build_failed',
+                'failed_count': len(failed),
+                'failed_elements': failed,
+            })
+
         # Initialize blame chain analyzer with normalized tasks
         phase_spans = self.trace.phases if self.trace else []
         

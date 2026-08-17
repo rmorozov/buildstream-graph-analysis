@@ -209,6 +209,25 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     """
     lines: List[str] = ["Key Findings:"]
 
+    # UX-54: said first, before any efficiency number, because every
+    # number below describes a build that did not finish. A real
+    # freedesktop-sdk capture in which all four attempted elements failed
+    # led with "Efficiency Score: 1.00" and never mentioned the failures
+    # at all.
+    build_failed = next(
+        (v for v in (result.violations or []) if v.get('type') == 'build_failed'),
+        None,
+    )
+    if build_failed is not None:
+        failed = build_failed.get('failed_elements') or []
+        shown = ", ".join(failed[:3]) + (", ..." if len(failed) > 3 else "")
+        lines.append(
+            f"  THIS BUILD FAILED: {build_failed.get('failed_count')} element(s) "
+            f"ended in FAILURE ({shown}) - every figure below describes a build "
+            f"that did not complete, and the elements that failed contributed "
+            f"only the time they ran before failing"
+        )
+
     # Confidence headline
     confidence = result.confidence or {}
     primary = confidence.get('primary')

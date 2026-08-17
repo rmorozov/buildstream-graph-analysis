@@ -10,7 +10,7 @@ verdict, gated on confidence and on whether the two runs' graphs are
 even the same project.
 """
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -60,6 +60,13 @@ class ComparisonResult:
     verdict: str
     low_confidence: bool
     comparability_warning: Optional[str] = None
+    # UX-54: which of the two runs describe a build that did not
+    # complete ("baseline" and/or "candidate"). Kept separate from
+    # `low_confidence`, which is about a signal being noisy: a failed
+    # build is not a noisy signal, it is a definite fact, and the two
+    # therefore get opposite gate behaviour - low confidence fails open,
+    # a failed build fails closed.
+    failed_runs: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -74,6 +81,7 @@ class ComparisonResult:
             'verdict': self.verdict,
             'low_confidence': self.low_confidence,
             'comparability_warning': self.comparability_warning,
+            'failed_runs': self.failed_runs,
         }
 
 
@@ -160,6 +168,13 @@ def _compare_results(
 
     comparability_warning = _check_comparability(baseline_elements, candidate_elements)
 
+    # UX-54: a run whose build failed is not a candidate for a
+    # scheduling verdict at all.
+    failed_runs = [
+        name for name, res in (("baseline", baseline_result), ("candidate", candidate_result))
+        if any(v.get('type') == 'build_failed' for v in (res.violations or []))
+    ]
+
     baseline_total = baseline_metrics['total_duration_us']
     candidate_total = candidate_metrics['total_duration_us']
     delta_total_us = deltas['total_duration_us']
@@ -197,6 +212,7 @@ def _compare_results(
         verdict=verdict,
         low_confidence=low_confidence,
         comparability_warning=comparability_warning,
+        failed_runs=failed_runs,
     )
 
 

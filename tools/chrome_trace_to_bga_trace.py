@@ -118,6 +118,32 @@ def chrome_events_to_bga_spans(events: Sequence[dict]) -> Tuple[List[dict], List
     return spans, dropped
 
 
+def failed_elements(events: Sequence[dict]) -> List[str]:
+    """Elements whose task ended in `FAILURE` (UX-54).
+
+    BuildStream's own log states each task's terminal status, and
+    `bst_log_to_chrome_trace.py` already carries it through as the End
+    event's `args.Status`. Nothing downstream read it, so a build in
+    which every attempted element *failed* reached `bga` as ordinary
+    work and scored 1.00 - measured on a real `freedesktop-sdk` capture
+    whose four BUILD spans were four failed builds.
+
+    Deliberately element names rather than task keys: the question the
+    report has to answer is "did this build succeed", and the per-element
+    detail is what makes the answer actionable. A retried element that
+    fails once and succeeds later still appears here, which is the safe
+    direction - it prompts a look rather than hiding one.
+    """
+    failed = set()
+    for ev in events:
+        if ev.get("cat") != "bst-builder" or ev.get("ph") != "E":
+            continue
+        args = ev.get("args") or {}
+        if args.get("Status") == "FAILURE" and args.get("element"):
+            failed.add(args["element"].strip())
+    return sorted(failed)
+
+
 def invocation_wall_clock(events: Sequence[dict]):
     """Earliest bst-invocation B timestamp and latest bst-invocation E
     timestamp, or (None, None) if no bst-invocation events are present -

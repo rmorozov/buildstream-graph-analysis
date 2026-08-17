@@ -186,7 +186,26 @@ def record_argv(log_path: str, argv: List[str], limit: int) -> bool:
         # nothing rather than record one and then stop.
         if recorded >= limit:
             return False
-        line = json.dumps({"pid": os.getpid(), "argv": argv}, sort_keys=True) + "\n"
+        # UX-56: the argv turned out to carry the element only via the
+        # build root (see UX-58), so the record also captures what the
+        # *invoking* process looks like - BuildStream runs each build job
+        # in its own forked child, and that child is this shim's parent.
+        record = {"pid": os.getpid(), "ppid": os.getppid(), "argv": argv}
+        chain, pid = [], os.getppid()
+        for _ in range(8):
+            try:
+                with open(f"/proc/{pid}/cmdline", "rb") as handle:
+                    cmd = handle.read().decode("utf-8", "replace").replace("\x00", " ").strip()
+                with open(f"/proc/{pid}/stat", "r") as handle:
+                    ppid = int(handle.read().rsplit(")", 1)[1].split()[1])
+            except (OSError, ValueError, IndexError):
+                break
+            chain.append({"pid": pid, "cmdline": cmd[:400]})
+            if ppid <= 1:
+                break
+            pid = ppid
+        record["parent_chain"] = chain
+        line = json.dumps(record, sort_keys=True) + "\n"
         # One write() of one line, appended - the same atomicity argument
         # the trace hook's own single-write rule rests on.
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)

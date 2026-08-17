@@ -2,6 +2,86 @@
 
 **Priority:** High | **Status:** 🟢 Guard implemented, real fix open | **Depends on:** `UX-23` (which introduced the tag), `UX-51` (which made it a join key)
 
+
+## Investigation, 2026-08-17: what the argv and the process tree rule out
+
+`UX-58` shipped the argv capture this task said it needed, and the answer
+is not the one this task assumed. Both candidate sources were checked
+against a **local reproduction** rather than another 50-minute capture.
+
+### Reproducing the real failure in seconds
+
+`freedesktop-sdk`'s collapse is caused by one project-wide variable.
+Adding it to `examples/07-declared-vs-used-dependencies/project.conf`:
+
+```yaml
+variables:
+  build-root: /buildstream-build
+```
+
+reproduces the real capture's shape exactly:
+
+| | real `freedesktop-sdk` | local repro |
+|---|---|---|
+| processes in one bucket | 126,890 / 127,630 (99.4%) | **234 / 234 (100%)** |
+| bucket name | `buildstream-build` | `buildstream-build` |
+| `element_attribution.reliable` | false | false |
+| `declared_vs_used` | entirely empty | entirely empty |
+
+Restoring `project.conf` restores correct attribution (`base.bst`,
+`user.bst`, `unrelated.bst`) and `declared_vs_used`'s 1 unused / 4 used
+verdict. **This is the harness for the fix**, and it costs about forty
+seconds.
+
+### The argv does not carry the element
+
+In a real 349-token argv the element appears three times — `--dir`,
+`--chdir`, and `--setenv PWD` — and all three are the *same*
+build-root-relative path. They are one source printed three times, not
+three independent sources, so a project overriding `build-root` loses all
+three together. Nothing else in the argv identifies the element: the CAS
+staging bind is randomly named (`cas-tmpdir2wnYto`).
+
+### Neither does the process tree
+
+Walking the shim's full ancestry on a real build:
+
+```
+bwrap-shim
+  └─ buildbox-run --remote=unix:… --action=/tmp/tmp5bfa04hs --action-result=…
+      └─ …/venv/bin/python3 …/bst  (the main BuildStream process)
+          └─ the tracer
+```
+
+There is no per-element job process to read a title or command line from,
+and `buildbox-run`'s only per-invocation argument is an opaque temporary
+action file. The element name is nowhere in the chain.
+
+### What this means for the fix
+
+The three ranked candidates in "The information is available" are all
+variants of *find a better field*, and the measurement says no such field
+exists at shim time. The fix has to be a **correlation**, not a lookup:
+
+- Each bwrap invocation is exactly one element's build, and every traced
+  process descends from one such invocation.
+- Plane 1 already knows each element's BUILD span in wall-clock time, and
+  `UX-51`'s `bga correlate` already joins the planes.
+- So an invocation whose window is contained in exactly **one** element's
+  BUILD span can be attributed with certainty.
+
+The honest part is the rest: under `--builders N` several BUILD spans
+overlap, so some invocations will be contained in more than one. Those
+must be reported as ambiguous and left unattributed rather than assigned
+to the most likely candidate — `UX-46` already refuses to judge a
+truncated read set, and a mis-attributed one is worse than a missing one.
+
+This also needs the shim to record a per-invocation timestamp (the
+`--argv-log` sidecar `UX-58` added is the natural place) and the hook's
+`CLOCK_MONOTONIC` stamps anchored to wall-clock once at capture start.
+
+## Original filing
+
 ## Motivation
 
 Found in round 6, on the first **successful** real dual-plane capture:

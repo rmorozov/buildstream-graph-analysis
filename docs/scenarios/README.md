@@ -116,6 +116,33 @@ re-derive it. Recording the refutation is the point; had it been filed as
 "match staged paths against traced cmdlines", it would have been an
 implementable-looking task that could not work.
 
+### All of the above are now implemented (2026-08-17)
+
+Every item in this round shipped, each verified against a real capture
+rather than a fixture. Three results are worth knowing without reading
+eight docs:
+
+- **`UX-44` was the highest-value fix**, as predicted. "Slack" was never
+  computed - it was `duration × 0.5` - so the improvement ranking was a
+  strictly *inverted* duration sort. It now names `core.bst` first at up
+  to 10.00s off the finish, independently reproducing the ~10s `UX-09`
+  had measured by hand.
+- **`UX-42` was 30x** (95.5s → 3.2s on the 1202-element fixture), and
+  `UX-47` took `bga graph` from 117s to 0.99s across both fixes.
+- **`UX-46` proved `examples/06`'s own documentation wrong.** The
+  detector found 24 unused declared edges and confirmed `toolchain.bst`
+  as the only dependency any element actually reads - so the project's
+  comment that "only `lib-f` consumes `codegen.bst`" was false, and its
+  *entire* cross-element dependency structure is decorative. The element
+  files now say what was measured.
+
+Two method notes carried forward into `docs/design-directions.md`:
+byte-identical output on real fixtures did not establish `UX-42`'s
+correctness (an oracle test found two bugs it had hidden), and five filed
+acceptance criteria across the two rounds turned out to be wrong with the
+measurement right - each corrected in place in its own doc rather than
+quietly dropped.
+
 ## UX-27..UX-40: the 2026-08-16 audit round
 
 Filed together from one real, hands-on session that did two things the

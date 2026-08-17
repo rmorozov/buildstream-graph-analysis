@@ -410,11 +410,11 @@ exercise (3).
 
 ## What the second round found (2026-08-16)
 
-> **Status: the six analysis-side findings below all shipped.** `UX-41`,
-> `UX-43`, `UX-44` and `UX-48` (the four placeholders), plus `UX-42` and
-> `UX-47` (the two performance defects). `UX-45` and `UX-46` remain open -
-> both need the Plane 2 `LD_PRELOAD` hook and a real wrapped build rather
-> than analysis-side work.
+> **Status: everything below shipped, and the backlog is now empty except
+> `UX-49`.** `UX-41`, `UX-43`, `UX-44` and `UX-48` (the four
+> placeholders), `UX-42` and `UX-47` (the two performance defects), then
+> `UX-45` and `UX-46` (the two Plane 2 capabilities, each verified
+> against a real wrapped build).
 >
 > Two things are worth carrying forward from doing them, both about
 > *verification* rather than about the defects:
@@ -569,6 +569,61 @@ the fixture was synthesized rather than built. Adding to them:
    `certified_headroom` vs. `total_improvable_time_us` - is the version
    of this sweep that would have found `UX-41` without a 1200-element
    graph, and it is still un-run.
+
+## Ready for the third round (2026-08-17)
+
+The backlog is empty except `UX-49`. Everything filed across two audit
+rounds is implemented and verified against real captures, so the next
+round starts from a clean board rather than from a work queue. What that
+round should probe, in the order I would pick:
+
+1. **The seam between the two planes.** This is now the biggest thing the
+   tool cannot do, and it got *sharper* rather than smaller as Plane 2
+   improved. `UX-45` measures real CPU time per element; `UX-27`'s
+   `occupancy_ratio`, `UX-36`'s buckets and `I9` reconciliation all still
+   say "this is slot occupancy, not CPU" - correctly, because the two
+   planes cover different scopes of different runs. A user optimizing a
+   real project still runs two tools over two captures and joins the
+   answers by hand, which is exactly what `docs/optimization-walkthrough-06.md`
+   records and what its closing note still says is open. Whether these
+   should become one capture, or stay two with an explicit join, is a
+   real product question and the most valuable one left.
+2. **A real capture at scale** (item 6 above, unchanged). Now more
+   pointed: `UX-46`'s open-interception runs on a hot path and has only
+   been exercised on an 822-process build. Its per-process path budget is
+   a fixed 8192 slots / 256 KiB, chosen without evidence, and a large
+   real build is what would say whether that is generous or naive - the
+   `dropped` counter exists precisely so this can be answered rather than
+   guessed.
+3. **A project whose elements genuinely consume each other.** `UX-46`'s
+   true-negative evidence currently rests on `toolchain.bst` alone,
+   because every cross-element dependency in `examples/06` turned out to
+   be decorative. A fixture where element B really does `#include` A's
+   staged header would let the unused-dependency detector be tested in
+   both directions, and would incidentally make the macro walkthrough
+   more representative of a real project.
+4. **`UX-49`**, the one open backlog item: `parallelism_efficiency`
+   measures width uniformity rather than parallelism. Small, and the
+   decision (rename vs. redefine) is the whole task.
+5. **Remote execution** and **the CI story end to end** (items 4 and 5
+   from the previous round) remain untouched and remain real.
+
+### What two rounds of doing this taught, as method
+
+Worth carrying into the third round, because both cost real time to
+learn and neither is about any particular defect:
+
+- **Byte-identical output is not proof of correctness.** `UX-42`'s
+  rewrite matched all five real fixtures exactly, and an oracle test
+  against a naive transcription of the original then found two genuine
+  bugs. Where a change claims to preserve semantics, write the oracle.
+- **A filed acceptance criterion is a hypothesis, not a specification.**
+  Five of mine were wrong across the two rounds - `UX-48`'s "majority of
+  idle", two of `UX-43`'s predicted choke points, and two of `UX-46`'s
+  expectations about which dependencies `examples/06` really uses. In
+  every case the measurement was right and the criterion was written
+  before the measurement existed. Each is corrected in place in its own
+  doc, with the reasoning, rather than quietly dropped.
 
 ## Suggested order (historical - all of these shipped)
 

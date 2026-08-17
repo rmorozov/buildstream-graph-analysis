@@ -124,7 +124,22 @@ Per-element native parallelism (real compiler/assembler/linker processes only):
   lib-a.bst                   3    4       75%    2.46s   22
 ```
 
-It also detects real operations repeated independently across *multiple* elements' sandboxes (e.g. the same compiler-ABI probe re-run once per element, scored in recoverable wall-clock rather than summed process time) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view above into one file. Full picture, real evidence, and every command: [`docs/architecture.md`](docs/architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
+It also reports **real CPU time per element** (`getrusage`, measured in-process — the only genuine CPU measurement anywhere in `bga`), which answers the question timing alone cannot: *was this element compute-bound, or waiting?*
+
+```
+Real CPU time (getrusage): 45.56s across 663 of 822 traced processes (159 exited abnormally and are unmeasured)
+  core.bst        10.70s CPU over  12.35s wall =  0.87 cores busy   <- waiting, not compute-bound
+  lib-a.bst        4.56s CPU over   2.68s wall =  1.70 cores busy
+```
+
+And with `--trace-opens` it answers the last macro-level question — **which declared build dependencies did an element never actually read?** — by recording the files each sandbox opened and matching them against each dependency's own artifact contents:
+
+```
+Declared build dependencies never read: 24 candidate(s) across 7 element(s); 9 edge(s) confirmed used
+  lib-b.bst    never read: codegen.bst, core.bst, lib-a.bst
+```
+
+These are candidates with evidence, not verdicts: an element whose processes the hook could not see is reported as *uncovered* rather than as having unused dependencies. It also detects real operations repeated independently across *multiple* elements' sandboxes (e.g. the same compiler-ABI probe re-run once per element, scored in recoverable wall-clock rather than summed process time) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view above into one file. Full picture, real evidence, and every command: [`docs/architecture.md`](docs/architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
 
 ## Documentation
 

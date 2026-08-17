@@ -254,11 +254,22 @@ jobs:
       # Phase 3: the capture. One `bst build` invocation feeds both
       # planes (UX-24): the wrapped log is Plane 1, the LD_PRELOAD trace
       # is Plane 2.
+      #
+      # If the traced build fails, the build is retried *without* the
+      # tracer. That is not a workaround - it is the measurement. Run 3
+      # died with `bwrap: loopback: Failed RTM_NEWADDR: Operation not
+      # permitted` on all four elements it attempted, and nothing in the
+      # log says whether the Plane 2 PATH shim caused it or whether plain
+      # `bst build` fails the same way on a GitHub-hosted runner. The
+      # retry answers exactly that, and either answer is useful: if it
+      # succeeds, the shim is implicated and Plane 1 is still captured;
+      # if it fails identically, the sandbox is the environment's.
       - name: Capture the build (both planes)
-        timeout-minutes: 150
+        timeout-minutes: 250
         run: |
           OPENS=""
           if [ "$TRACE_OPENS" = "true" ]; then OPENS="--trace-opens"; fi
+          set +e
           python3 -m tools.bst_native_build_tracer run \
             --wrapped-log capture/build.log \
             --raw-log capture/native-trace.log \
@@ -267,10 +278,38 @@ jobs:
             -- bst --no-interactive --builders "$BUILDERS" --max-jobs "$MAX_JOBS" \
                  build --ignore-project-artifact-remotes \
                        --ignore-project-source-remotes "$TARGET"
+          traced_rc=$?
+          echo "traced build exit: $traced_rc"
+          echo "traced_build_exit=$traced_rc" > capture/capture-outcome.txt
+          final_rc=$traced_rc
+          if [ "$traced_rc" -ne 0 ]; then
+            mv capture/build.log capture/build-traced.log
+            # A failed build leaves a *failed* artifact cached, so the
+            # retry needs --retry-failed or BuildStream skips straight
+            # past the elements that just failed.
+            python3 -m tools.bst_run_wrapped fdsdk capture/build.log \
+              -- bst --no-interactive --builders "$BUILDERS" --max-jobs "$MAX_JOBS" \
+                   build --retry-failed \
+                         --ignore-project-artifact-remotes \
+                         --ignore-project-source-remotes "$TARGET"
+            plain_rc=$?
+            echo "plain build exit: $plain_rc"
+            echo "plain_build_exit=$plain_rc" >> capture/capture-outcome.txt
+            final_rc=$plain_rc
+          fi
+          set -e
+          # Only a build that failed *both* ways stops the job; a Plane 1
+          # capture on its own is still a usable result.
+          exit "$final_rc"
         env:
           PYTHONPATH: ${{ github.workspace }}
 
+      # Best-effort on purpose: even a log from a build that failed
+      # part-way parses into a run directory, and that is worth having
+      # rather than losing the whole round to one failed element.
       - name: Extract the bga run directory
+        if: always()
+        continue-on-error: true
         run: |
           python3 -m tools.bst_extract_run fdsdk capture/build.log capture/run \
             --format wrapped --native-max-jobs "$MAX_JOBS"
@@ -282,6 +321,7 @@ jobs:
       # runner - it does not - but so a run that fails a hard gate says so
       # in the job log instead of only in an artifact nobody downloads.
       - name: Analyze
+        if: always()
         continue-on-error: true
         run: |
           # -d is --diagnostics (blast radius, criticality probability);

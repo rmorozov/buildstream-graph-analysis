@@ -410,6 +410,34 @@ exercise (3).
 
 ## What the second round found (2026-08-16)
 
+> **Status: the six analysis-side findings below all shipped.** `UX-41`,
+> `UX-43`, `UX-44` and `UX-48` (the four placeholders), plus `UX-42` and
+> `UX-47` (the two performance defects). `UX-45` and `UX-46` remain open -
+> both need the Plane 2 `LD_PRELOAD` hook and a real wrapped build rather
+> than analysis-side work.
+>
+> Two things are worth carrying forward from doing them, both about
+> *verification* rather than about the defects:
+>
+> - **Byte-identical output on real fixtures did not establish
+>   correctness.** `UX-42`'s rewrite produced identical output on all
+>   five real captures, and an oracle test against a naive transcription
+>   of the original algorithm then found two real bugs in it. Both
+>   changed how gaps were *segmented*, which a downstream merge step
+>   hides. Where a change claims to preserve semantics exactly, an oracle
+>   beats a snapshot.
+> - **Three of my own filed acceptance criteria were wrong**, and the
+>   measurement was right each time: `UX-48` asked for "the majority" of
+>   a starved run's idle to be underparallel (the true answer is 25%, and
+>   the rest is genuinely unusable capacity), and two `UX-43` test
+>   assertions predicted choke points the correct implementation rightly
+>   excluded. Criteria written before implementing are hypotheses too.
+>   Each is corrected in place in its own doc rather than quietly dropped.
+>
+> One new item was filed from this work rather than folded in silently:
+> `UX-49`, `parallelism_efficiency` measuring width uniformity rather
+> than parallelism, which `UX-41` made visible.
+
 The round above was run. It used a 1202-element project as the vehicle,
 exactly as suggested, and the vehicle turned out to be the finding rather
 than the setting: **items (1) and (2) produced one filing each, and scale

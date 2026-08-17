@@ -21,7 +21,12 @@ mis-optimized in three independent, one-line ways - see its own
 1. **Macro / graph shape** — `lib-a..lib-f` are declared as a six-deep
    dependency *chain* rather than a six-wide fan-out off `core.bst`.
 2. **Macro / over-declared dependency** — every `lib-*.bst` build-depends
-   on `codegen.bst`; only `lib-f.bst` consumes it.
+   on `codegen.bst`, and nothing consumes it. (This walkthrough
+   originally said "only `lib-f.bst` consumes it", repeating the example
+   project's own comment. `UX-46` later *measured* it: `lib-f` opens none
+   of `codegen.bst`'s staged files either, and in fact every cross-element
+   build dependency in this project is decorative. The comment was wrong
+   and has been corrected in the element files too.)
 3. **Micro / inside one element** — `core.bst` carries
    `variables: notparallel: True`, so its eight ~1s translation units
    compile strictly one at a time.
@@ -255,6 +260,36 @@ that led to a fix came out of a JSON field or an ad-hoc script rather than
 out of the report. The backlog items above are what would close that gap;
 [`docs/design-directions.md`](design-directions.md) is the argument for
 which of them are load-bearing and which are polish.
+
+## What has closed since this was written
+
+This walkthrough is kept as it was recorded - it is a transcript, and
+rewriting it would destroy its value as evidence of what the tool felt
+like at the time. Four of the gaps it complains about have since been
+fixed, and reading it today the differences are:
+
+- **"reading `choke_points` out of the JSON, and knowing the project"** —
+  `UX-43` redefined a choke point as an element nothing can overlap with,
+  so the baseline now names the whole `lib-a`..`lib-f` chain in the text
+  report and `optimized/` names none of it. The old degree heuristic
+  reported the same count for both.
+- **"an ad-hoc script over Plane 2's JSON"** for `core.bst`'s
+  parallelism — `UX-45` added real per-process CPU time, so the tracer
+  itself now prints `core.bst  0.87 cores busy` beside its siblings'
+  ~1.7. The question "is this element compute-bound or waiting?" no
+  longer needs a script.
+- **The over-declared dependency, which nothing found** — `UX-46` makes
+  it a reported finding, and in doing so proved the project's own
+  description of it wrong (see item 2 above).
+- **`sensitivity.top_opportunities` pointing at the wrong elements** —
+  `UX-44` found that "slack" was the placeholder `duration × 0.5`, which
+  made the ranking a strictly *inverted* duration sort. The report now
+  names `core.bst` first, at up to 10.00s off the finish, which
+  independently reproduces the ~10s this walkthrough measured by hand.
+
+What is *not* closed: `bga analyze` still cannot see inside an element,
+so the macro and micro halves remain two tools and two captures. That
+seam is the honest subject of the next round.
 
 ## Verification Log
 

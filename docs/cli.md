@@ -191,6 +191,41 @@ Two knobs:
 
 The efficiency gate inherits the same low-confidence fail-open rule as the duration gate, and the same `--fail-on-low-confidence` opt-out.
 
+## `bga correlate` — Join the Two Planes
+
+```bash
+bga correlate RUN_DIRECTORY NATIVE_REPORT.json [-f text|json]
+```
+
+Joins this run's whole-project analysis (Plane 1) with a native trace report of the *same build* (Plane 2, from `tools/bst_native_build_tracer.py run`) on **element UID** — the only contract between the planes.
+
+It answers what neither plane can alone. Plane 1 knows an element dominates the critical path; Plane 2 knows what happened inside it; only the join says what to do:
+
+```
+What to do next (ranked by Plane 1 impact):
+  core.bst:
+    - holds 25% of the critical path but runs at only 0.85 cores busy - it is waiting,
+      not computing, and its native build asked for -j1: remove `notparallel` / raise
+      its job count before touching its sources
+    (81% of this element's processes were measured)
+```
+
+Capture both artifacts from one build:
+
+```bash
+python3 -m tools.bst_native_build_tracer run --wrapped-log /tmp/plane1.log \
+    /path/to/project /tmp/plane2.json -- bst build <target>
+python3 -m tools.bst_extract_run --format wrapped /path/to/project /tmp/plane1.log /tmp/run
+bga correlate /tmp/run /tmp/plane2.json
+```
+
+Notes on reading it:
+
+- **Ranking is Plane 1's.** Plane 2 explains the top of that list and never reorders it — the question "what should I optimize" is answered by whole-project impact.
+- **A negative result is a result.** "Already compute-bound — nothing to gain from its parallelism" tells you to stop looking inside that element.
+- **Coverage is carried through.** A recommendation built on 81% of an element's processes says so (`UX-45`), and elements Plane 1 ranks that Plane 2 never traced are named rather than passed over.
+- The two planes' timelines are **not** merged and cannot be — see [`docs/architecture.md`](architecture.md). This is a join, and is deliberately named as one.
+
 ## Example Workflows
 
 ### 1. Quick Efficiency Check

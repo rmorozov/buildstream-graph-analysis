@@ -139,7 +139,30 @@ Declared build dependencies never read: 24 candidate(s) across 7 element(s); 9 e
   lib-b.bst    never read: codegen.bst, core.bst, lib-a.bst
 ```
 
-These are candidates with evidence, not verdicts: an element whose processes the hook could not see is reported as *uncovered* rather than as having unused dependencies. It also detects real operations repeated independently across *multiple* elements' sandboxes (e.g. the same compiler-ABI probe re-run once per element, scored in recoverable wall-clock rather than summed process time) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view above into one file. Full picture, real evidence, and every command: [`docs/architecture.md`](docs/architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
+These are candidates with evidence, not verdicts: an element whose processes the hook could not see is reported as *uncovered* rather than as having unused dependencies.
+
+### Joining the two planes
+
+Capture both from one build, then join them on element UID — the only contract between the planes:
+
+```bash
+python3 -m tools.bst_native_build_tracer run --wrapped-log /tmp/plane1.log \
+    /path/to/project /tmp/plane2.json -- bst build <target>
+python3 -m tools.bst_extract_run --format wrapped /path/to/project /tmp/plane1.log /tmp/run
+bga correlate /tmp/run /tmp/plane2.json
+```
+
+This answers what neither plane can alone — not *"`core.bst` is 25% of your critical path"* and not *"`core.bst` runs at 0.85 cores busy"*, but what to do about it:
+
+```
+What to do next (ranked by Plane 1 impact):
+  core.bst:
+    - holds 25% of the critical path but runs at only 0.85 cores busy - it is waiting,
+      not computing, and its native build asked for -j1: remove `notparallel` / raise
+      its job count before touching its sources
+```
+
+The negative result matters too: an element reported as *already compute-bound* is one to stop looking inside. It also detects real operations repeated independently across *multiple* elements' sandboxes (e.g. the same compiler-ABI probe re-run once per element, scored in recoverable wall-clock rather than summed process time) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view above into one file. Full picture, real evidence, and every command: [`docs/architecture.md`](docs/architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
 
 ## Documentation
 

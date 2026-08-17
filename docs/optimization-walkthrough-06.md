@@ -287,9 +287,22 @@ fixed, and reading it today the differences are:
   names `core.bst` first, at up to 10.00s off the finish, which
   independently reproduces the ~10s this walkthrough measured by hand.
 
-What is *not* closed: `bga analyze` still cannot see inside an element,
-so the macro and micro halves remain two tools and two captures. That
-seam is the honest subject of the next round.
+And the seam itself is closed: `UX-51` added `bga correlate`, which joins
+the two planes on element UID. Run against a real dual capture of this
+same project it produces, in one line, the finding this walkthrough needed
+three artifacts and an ad-hoc script to reach:
+
+```
+  core.bst:
+    - holds 25% of the critical path but runs at only 0.85 cores busy - it is waiting,
+      not computing, and its native build asked for -j1: remove `notparallel` / raise
+      its job count before touching its sources
+```
+
+What is still true is that this remains two *captures* joined explicitly,
+not one merged pipeline - deliberately, since the two horizons cannot be
+reconciled (see `docs/architecture.md`) and one `bst build` already emits
+both artifacts.
 
 ## Verification Log
 

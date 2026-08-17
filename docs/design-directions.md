@@ -137,6 +137,17 @@ accepts Plane 1's element ranking and reports the top N elements' internal
 parallelism first. This is deliberately not a merge of the two horizons,
 which `architecture.md` argues against for good reasons.
 
+> **Done, and it landed closer to this section's own sketch than
+> expected.** `UX-51`'s `bga correlate` joins the planes on element UID,
+> and the sketch above was right that the missing piece was mechanical:
+> the join key already existed on both sides and matched 9 of 9 elements
+> with zero mismatches. What the sketch under-sold is the *negative*
+> result - an element reported as already compute-bound tells a reader to
+> stop looking inside it, which is as useful as being sent there. The
+> real output on this project's own `core.bst` is one line:
+> *"holds 25% of the critical path but runs at only 0.85 cores busy - it
+> is waiting, not computing, and its native build asked for -j1"*.
+
 ### The fourth direction: the capacity axis should stop being decorative
 
 The walkthrough's third iteration is the honest low point, and also the
@@ -639,17 +650,17 @@ rounds is implemented and verified against real captures, so the next
 round starts from a clean board rather than from a work queue. What that
 round should probe, in the order I would pick:
 
-1. **The seam between the two planes.** Still the biggest thing the
-   tool cannot do, and it got *sharper* rather than smaller as Plane 2
-   improved. `UX-45` measures real CPU time per element; `UX-27`'s
-   `occupancy_ratio`, `UX-36`'s buckets and `I9` reconciliation all still
-   say "this is slot occupancy, not CPU" - correctly, because the two
-   planes cover different scopes of different runs. A user optimizing a
-   real project still runs two tools over two captures and joins the
-   answers by hand, which is exactly what `docs/optimization-walkthrough-06.md`
-   records and what its closing note still says is open. Whether these
-   should become one capture, or stay two with an explicit join, is a
-   real product question and the most valuable one left.
+1. ~~**The seam between the two planes.**~~ **Settled and built** as
+   `UX-51`: `bga correlate` joins the planes on element UID. The product
+   question - one merged capture, or two with an explicit join - was
+   decided by measuring three things rather than arguing them: one
+   capture already yields both artifacts (`UX-24`), the join key matched
+   9 of 9 elements with zero mismatches on a real dual capture, and the
+   horizons provably cannot be merged. So the contract between the planes
+   is one string, and each stays independently replaceable. The caveats
+   that made this look intractable were never in the way: `UX-27`'s
+   `occupancy_ratio` and `UX-36`'s buckets still correctly say "slot
+   occupancy, not CPU", because a join does not need them reconciled.
 2. **A real capture at scale** (item 6 above, unchanged). Now more
    pointed: `UX-46`'s open-interception runs on a hot path and has only
    been exercised on an 822-process build. Its per-process path budget is

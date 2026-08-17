@@ -450,6 +450,51 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return _execute_compare_and_write(args)
 
 
+def cmd_correlate(args: argparse.Namespace) -> int:
+    """Execute `bga correlate RUN NATIVE_REPORT` (UX-51) - joins a Plane
+    1 analysis with a Plane 2 native trace report on element UID, the
+    only contract between the two planes, and reports what neither can
+    say alone: whether the elements that dominate the critical path are
+    compute-bound or merely badly built.
+
+    Deliberately a separate command rather than a section of `analyze`:
+    the join reads two finished artifacts and neither plane knows about
+    it, so both stay independently replaceable. See bga/correlate.py for
+    the evidence behind that choice."""
+    from bga.correlate import correlate, format_correlation
+
+    try:
+        with open(args.native_report, 'r', encoding='utf-8') as f:
+            native_report = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: native report not found: {args.native_report}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"Error: {args.native_report} is not valid JSON - {e}", file=sys.stderr)
+        return 2
+
+    if not isinstance(native_report, dict) or 'by_element' not in native_report:
+        print(
+            f"Error: {args.native_report} does not look like a "
+            "`bst_native_build_tracer.py run` report (no `by_element` key). "
+            "Pass the JSON report that `run` writes, not a raw trace log.",
+            file=sys.stderr,
+        )
+        return 2
+
+    def produce() -> str:
+        analyzer = _make_analyzer(args)
+        result = analyzer.analyze(Path(args.directory))
+        from bga.report.json import format_json
+        analysis = json.loads(format_json(result))
+        joined = correlate(analysis, native_report)
+        if args.format == 'json':
+            return json.dumps(joined, indent=2)
+        return format_correlation(joined)
+
+    return _execute_and_write(args, produce)
+
+
 def cmd_analyze(args: argparse.Namespace) -> int:
     """
     Execute the analyze command - the full report (Parts 1-39), every
@@ -754,6 +799,24 @@ def create_parser() -> argparse.ArgumentParser:
     diagnostics_parser.set_defaults(func=cmd_diagnostics)
 
     # compare - run-to-run comparison (UX-01, non-spec additive command)
+    correlate_parser = subparsers.add_parser(
+        'correlate',
+        help="Join a Plane 1 run with a Plane 2 native trace report and say what to fix",
+        description='Join this run\'s whole-project analysis with a native (Plane 2) trace report '
+                    'of the same build, on element UID. Answers what neither plane can alone: '
+                    'whether the elements dominating the critical path are genuinely compute-bound '
+                    'or just badly parallelized (docs/scenarios/UX-51 - not spec-mandated).',
+    )
+    # `directory` (Plane 1) comes from _add_common_arguments; only the
+    # Plane 2 artifact is specific to this command.
+    _add_common_arguments(correlate_parser)
+    correlate_parser.add_argument(
+        'native_report', type=str,
+        help='Path to the JSON report written by `tools/bst_native_build_tracer.py run` (Plane 2). '
+             'Capture both from one build with `run --wrapped-log`.',
+    )
+    correlate_parser.set_defaults(func=cmd_correlate)
+
     compare_parser = subparsers.add_parser(
         'compare',
         help='Compare two runs (baseline vs. candidate) and report deltas plus a verdict',

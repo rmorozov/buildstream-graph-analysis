@@ -712,6 +712,65 @@ def compute_per_element_parallelism(records: List[dict]) -> List[dict]:
     return profiles
 
 
+def assess_element_attribution(by_element: Dict[str, int]) -> dict:
+    """UX-56: is the per-element split real, or did every process land in
+    one bucket that is not an element?
+
+    Plane 2 tags each traced process with an element name taken from
+    bwrap's `--dir` option, whose last path segment is the element in
+    BuildStream's *default* build-root layout - which is what every
+    project in `examples/` uses. A real project may set its own
+    `build-root`, and `freedesktop-sdk` does: `/buildstream-build`. On a
+    real 127,630-process capture of it, **126,871 processes (99.4%) were
+    tagged `buildstream-build`**, one bucket that is not an element, and
+    every per-element number in this report was therefore a whole-build
+    number wearing an element's name - `peak_work_concurrency` 1019
+    against 4 requested jobs, `achieved_vs_requested` 254.75, and 44,145
+    seconds of "recoverable" time inside a 2,796-second build.
+
+    The test is deliberately narrow and syntactic: a BuildStream element
+    name ends in `.bst`. Nothing else in this report can tell a real
+    element name from a directory that happens to be named after one, and
+    a heuristic that tried would fail in the direction that matters -
+    publishing per-element figures nobody can act on.
+
+    Returns a dict; `reliable` false means every consumer should refuse
+    the per-element view rather than render it (this repository's
+    established posture since `UX-46`: refuse rather than guess).
+    """
+    total = sum(by_element.values())
+    recognized = {k: v for k, v in by_element.items() if k.endswith(".bst")}
+    recognized_processes = sum(recognized.values())
+    largest = max(by_element.items(), key=lambda kv: kv[1], default=(None, 0))
+
+    reliable = bool(by_element) and recognized_processes == total
+    note = None
+    if not by_element:
+        note = "no process carried an element tag at all"
+    elif not reliable:
+        share = recognized_processes / total if total else 0.0
+        note = (
+            f"only {recognized_processes} of {total} traced processes "
+            f"({share:.1%}) carry a name that looks like a BuildStream "
+            f"element (ending in '.bst'); the largest bucket is "
+            f"{largest[0]!r} with {largest[1]} processes. The element tag "
+            "comes from bwrap's --dir, which is the element only under "
+            "BuildStream's default build-root layout - a project that "
+            "sets its own build-root collapses every element into one "
+            "bucket. Per-element figures in this report are not per-"
+            "element and must not be read as such (UX-56)."
+        )
+    return {
+        "reliable": reliable,
+        "tagged_processes": total,
+        "recognized_processes": recognized_processes,
+        "recognized_elements": sorted(recognized),
+        "largest_bucket": largest[0],
+        "largest_bucket_processes": largest[1],
+        "note": note,
+    }
+
+
 def compute_max_concurrency(records: List[dict]) -> int:
     """A real sweep over process intervals - matched (start+end known)
     records only. Open (unmatched) records are deliberately excluded,
@@ -1037,6 +1096,8 @@ def summarize(records: List[dict]) -> dict:
         ) if open_records else None,
         "by_binary": dict(sorted(by_binary.items(), key=lambda kv: -kv[1])),
         "by_element": dict(sorted(by_element.items(), key=lambda kv: -kv[1])),
+        # UX-56: whether those element names are element names at all.
+        "element_attribution": assess_element_attribution(by_element),
         "max_concurrency": compute_max_concurrency(records),
         # UX-45: real, kernel-measured CPU time per element.
         "cpu_time": compute_cpu_time(records),
@@ -1225,6 +1286,12 @@ def _format_text(report: dict) -> str:
         lines.append("By element:")
         for name, count in by_element.items():
             lines.append(f"  {name:30s} {count}")
+    # UX-56: said immediately after the split it invalidates, and before
+    # every section derived from it.
+    attribution = report.get("element_attribution") or {}
+    if attribution.get("note"):
+        lines.append("")
+        lines.append(f"ELEMENT ATTRIBUTION UNRELIABLE: {attribution['note']}")
     lines.extend(_format_cpu_time(report.get("cpu_time") or {}))
     lines.extend(_format_declared_vs_used(report.get("declared_vs_used") or {}))
     # UX-32: per-element achieved parallelism.

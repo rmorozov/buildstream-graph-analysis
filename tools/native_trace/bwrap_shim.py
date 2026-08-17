@@ -27,6 +27,7 @@ reintroduce by hand and easy to miss without a fixture-driven test
 (tests/unit/test_bwrap_shim.py exercises real captured bwrap argv from
 UX-11's own prototype run).
 """
+import json
 import os
 import sys
 from typing import List, Optional, Tuple
@@ -145,12 +146,75 @@ def build_shim_argv(
     return [real_bwrap, *opts, *injected, *cmd]
 
 
+# UX-58: how many invocations are recorded when argv capture is on. A
+# real build spawns one bwrap per element task and thousands of them on a
+# large project; a handful is enough to identify which option carries the
+# element, which is the only question this exists to answer.
+DEFAULT_ARGV_RECORD_LIMIT = 32
+
+
+def record_argv(log_path: str, argv: List[str], limit: int) -> bool:
+    """UX-58: append one bwrap argv, as BuildStream generated it, to
+    `log_path`. Returns whether a record was written.
+
+    This shim has received BuildStream's complete bwrap command line on
+    every capture this project has ever taken, rewritten it, and exec'd
+    it without recording it anywhere - so the argv needed to settle
+    `UX-56`'s element-identity question has never existed in any
+    artifact, and `UX-56` mis-attributed that absence to the capture
+    workflow's tarball size limit.
+
+    Bounded by re-reading the file rather than by an in-process counter,
+    because each bwrap invocation is a *fresh* shim process with no
+    memory of the last. Two concurrent invocations can therefore both
+    see room and both write, overshooting `limit` slightly; that is
+    accepted deliberately - the alternative is locking on a hot path to
+    protect a diagnostic whose only requirement is "a few".
+
+    Never raises. A diagnostic that can fail a real build is worse than
+    no diagnostic, so every error path here ends in "record nothing and
+    let the build proceed".
+    """
+    try:
+        recorded = 0
+        try:
+            with open(log_path, "r", encoding="utf-8") as handle:
+                recorded = sum(1 for _ in handle)
+        except FileNotFoundError:
+            pass
+        # Checked against a missing file too: a limit of 0 must record
+        # nothing rather than record one and then stop.
+        if recorded >= limit:
+            return False
+        line = json.dumps({"pid": os.getpid(), "argv": argv}, sort_keys=True) + "\n"
+        # One write() of one line, appended - the same atomicity argument
+        # the trace hook's own single-write rule rests on.
+        fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line.encode("utf-8"))
+        finally:
+            os.close(fd)
+        return True
+    except Exception:
+        return False
+
+
 def main() -> int:
     real_bwrap = os.environ.get("BST_TRACE_REAL_BWRAP", "/usr/bin/bwrap")
     bind_src = os.environ["BST_TRACE_BIND_SRC"]
     bind_dst = os.environ["BST_TRACE_BIND_DST"]
     preload_so = os.environ["BST_TRACE_PRELOAD_SO"]
     trace_log = os.environ["BST_TRACE_LOG_DST"]
+    # UX-58: opt-in, like --trace-opens, and recorded *before* the
+    # rewrite so the file holds what BuildStream actually generated
+    # rather than what this shim turned it into.
+    argv_log = os.environ.get("BST_TRACE_ARGV_LOG")
+    if argv_log:
+        try:
+            limit = int(os.environ.get("BST_TRACE_ARGV_MAX", DEFAULT_ARGV_RECORD_LIMIT))
+        except ValueError:
+            limit = DEFAULT_ARGV_RECORD_LIMIT
+        record_argv(argv_log, list(sys.argv[1:]), limit)
     argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst, preload_so, trace_log)
     os.execv(real_bwrap, argv)
     return 1  # unreachable if execv succeeds

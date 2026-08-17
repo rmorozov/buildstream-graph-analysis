@@ -27,7 +27,8 @@ from typing import List, Optional
 from . import __version__
 from .analyzer import BuildEfficiencyAnalyzer
 from .compare import (
-    _EFFICIENCY_DROP_PP, compare_runs, efficiency_below_floor,
+    _EFFICIENCY_DROP_PP, DEFAULT_BAND_K, MIN_BASELINE_RUNS, compare_runs,
+    efficiency_below_floor,
     efficiency_regression_exceeds_threshold, regression_exceeds_threshold,
 )
 from .exceptions import AnalysisError, IngestionError
@@ -151,6 +152,8 @@ def _produce_compare_output(args: argparse.Namespace):
     it without re-running the whole comparison a second time."""
     comparison = compare_runs(
         Path(args.baseline), Path(args.candidate),
+        baseline_runs=[Path(p) for p in (getattr(args, 'baseline_run', None) or [])],
+        band_k=getattr(args, 'band_k', None) or DEFAULT_BAND_K,
         capacity=args.capacity, verbose=args.verbose,
     )
     if args.format == 'json':
@@ -889,6 +892,20 @@ def create_parser() -> argparse.ArgumentParser:
         'any baseline - which makes it usable on a first run, and stops a slow drift that no '
         'single delta ever trips. No default: what counts as acceptable is a statement about '
         'your project, not a universal constant.'
+    )
+    compare_parser.add_argument(
+        '--baseline-run', action='append', metavar='PATH',
+        help='UX-59: an additional run directory forming the baseline *set*. '
+             'Repeatable. With at least {} of them, the no-significant-change '
+             'band is derived from their measured spread (median +- k*1.4826*MAD) '
+             'instead of a fixed percentage. Seven repeated builds of one '
+             'unchanged commit put 4 of 7 outside the fixed 1%% rule. All runs '
+             'must share the candidate run_mode (UX-55).'.format(MIN_BASELINE_RUNS),
+    )
+    compare_parser.add_argument(
+        '--band-k', type=float, default=DEFAULT_BAND_K, metavar='K',
+        help='Width of the --baseline-run noise band in scaled-MAD units '
+             '(default: {}).'.format(DEFAULT_BAND_K),
     )
     compare_parser.add_argument(
         '--fail-on-low-confidence', action='store_true',

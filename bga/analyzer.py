@@ -13,7 +13,7 @@ from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind, S
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
-from .graph.edg import analyze_graph
+from .graph.edg import analyze_graph, compute_element_durations
 from .attribution.blame_chain import BlameChainAnalyzer
 from .floors import (
     compute_capacity_lower_bound,
@@ -1645,19 +1645,26 @@ class BuildEfficiencyAnalyzer:
         # and not others, purely on task ordering.
         #
         # The dict itself is kept (it is the element *set*, and carries
-        # `resource_profile` for bottleneck analysis), but durations now
-        # come from an explicit per-element sum passed alongside it, so
-        # no path computation depends on which task happened to win.
+        # `resource_profile` for bottleneck analysis), but durations come
+        # from an explicit per-element map passed alongside it, so no path
+        # computation depends on which task happened to win.
+        #
+        # UX-53: that map is `compute_element_durations`, the same one
+        # `analyze_graph` feeds to `compute_critical_path`. UX-50 built a
+        # second one here by *summing* an element's tasks, which made
+        # `structural.sensitivity.critical_path_us` and
+        # `floors.t_infinity_observed` two different numbers for the same
+        # quantity - 22% apart on this repository's oldest fixture, and on
+        # any real capture, where every element has a FETCH as well as a
+        # BUILD.
         tasks_dict = {t.task_key.element_uid: t for t in self.normalized_tasks}
-        element_durations: Dict[str, int] = defaultdict(int)
-        for task in self.normalized_tasks:
-            element_durations[task.task_key.element_uid] += task.dur_us
-        
+        element_durations = compute_element_durations(self.normalized_tasks)
+
         # Initialize structural analyzer
         from bga.structural.analyzer import build_edg
         edg = build_edg(self.graph)
         structural_analyzer = StructuralAnalyzer(
-            edg, tasks_dict, element_durations=dict(element_durations)
+            edg, tasks_dict, element_durations=element_durations
         )
 
         # Run full structural analysis

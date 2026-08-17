@@ -95,10 +95,19 @@ def test_zeroed_element_is_excluded_from_the_ranking():
     assert ranked and ranked[0] == "core"
 
 
-def test_durations_are_summed_across_an_elements_tasks():
+def test_the_supplied_duration_map_wins_over_the_task_table():
+    """The analyzer reads durations from the map it is handed, never
+    from whichever task happened to land in `tasks_by_uid` - which is
+    the whole of UX-50's fix.
+
+    UX-53 later changed *how that map is built* (see
+    `tests/unit/test_shared_element_durations.py`); this stays a test of
+    the plumbing, and is deliberately given a value the task table alone
+    could not produce.
+    """
     nodes, edges = ["only"], []
     tasks = {"only": _task("only", TaskKind.BUILD, 3_000_000)}
-    durations = {"only": 3_000_000 + 500_000}  # BUILD + FETCH
+    durations = {"only": 3_500_000}
 
     analyzer = _analyzer(nodes, edges, tasks, element_durations=durations)
 

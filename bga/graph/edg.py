@@ -613,6 +613,39 @@ def compute_slack(
     return slack
 
 
+def compute_element_durations(tasks: List[NormalizedTask]) -> Dict[str, int]:
+    """The single per-element duration definition: the **longest** task
+    the element ran.
+
+    Every path computation in `bga` - `compute_critical_path`
+    (`T∞,observed`, Part 14.1), `compute_slack`, `compute_weighted_depth`,
+    and the whole structural plane - collapses an element's several tasks
+    into one number, and they must all collapse it the *same* way or two
+    quantities the report presents as the same thing disagree. `UX-53`
+    is what happens when they do not.
+
+    Why the longest task rather than their sum: `T∞,observed` is a
+    *certified* claim - "no schedule with unlimited relevant capacity can
+    complete faster than this value" - so it must never overstate. An
+    element genuinely occupies at least its longest task, whatever the
+    scheduler does, which makes the maximum safe. The sum is not: under
+    unlimited capacity BuildStream's fetch queue runs an element's FETCH
+    concurrently with other elements' builds, so `FETCH + BUILD` is not
+    forced to be sequential on the chain, and charging both to the path
+    can claim a floor a real schedule beats.
+
+    Note what this deliberately does *not* settle: whether a long FETCH
+    should contribute to a *build* chain's floor at all. That is a
+    modelling question about Part 14.1, recorded in
+    `docs/scenarios/UX-53-*.md`, not something to decide silently here.
+    """
+    durations: Dict[str, int] = {}
+    for task in tasks:
+        elem_uid = task.task_key.element_uid
+        durations[elem_uid] = max(durations.get(elem_uid, 0), task.dur_us)
+    return durations
+
+
 def analyze_graph(
     graph: Graph,
     tasks: List[NormalizedTask],
@@ -627,15 +660,8 @@ def analyze_graph(
     Returns:
         Dict containing all graph metrics
     """
-    # Build task duration map
-    task_durations: Dict[str, int] = {}
-    for task in tasks:
-        elem_uid = task.task_key.element_uid
-        if elem_uid not in task_durations:
-            task_durations[elem_uid] = task.dur_us
-        else:
-            task_durations[elem_uid] = max(task_durations[elem_uid], task.dur_us)
-    
+    task_durations = compute_element_durations(tasks)
+
     # Compute all metrics
     in_degree, out_degree = compute_in_out_degree(graph)
     unweighted_depth = compute_unweighted_depth(graph)

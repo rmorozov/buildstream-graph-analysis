@@ -34,7 +34,11 @@ pytestmark = pytest.mark.skipif(
     reason="no C compiler available to build the hook",
 )
 
-HEADER_RE = re.compile(r"^OPENS pid=(\d+) element=(\S+) unique=(\d+) dropped=(\d+) part=(\d+)$")
+# UX-56 added `inv=` between the element and the counts; optional here
+# so this reads a pre-UX-56 header too.
+HEADER_RE = re.compile(
+    r"^OPENS pid=(\d+) element=(\S+)(?: inv=\S+)? unique=(\d+) dropped=(\d+) part=(\d+)$"
+)
 
 
 def _build_hook(tmp_path, slots, arena_bytes):

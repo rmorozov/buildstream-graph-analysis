@@ -82,6 +82,11 @@
 static pid_t g_pid = 0;
 static const char *g_trace_log = NULL;
 static const char *g_element = NULL;
+/* UX-56: which sandbox this process belongs to. Unlike the element
+ * name above it does not depend on the project's build-root layout,
+ * so a correlation can relabel a whole sandbox's processes at once
+ * when the name collapsed. */
+static const char *g_invocation = NULL;
 
 /* ---- UX-46: opened-path recording ------------------------------------
  *
@@ -430,9 +435,10 @@ static void write_trace_line(const char *event, double ts, int with_rusage) {
      * after it would be unparseable. */
     char line[8192];
     int len = snprintf(line, sizeof(line),
-                       "%s pid=%d ppid=%d ts=%.9f element=%s%s cmd=%s\n",
+                       "%s pid=%d ppid=%d ts=%.9f element=%s inv=%s%s cmd=%s\n",
                        event, (int)g_pid, (int)getppid(), ts,
-                       g_element ? g_element : "unknown", rusage, cmdline);
+                       g_element ? g_element : "unknown",
+                       g_invocation ? g_invocation : "none", rusage, cmdline);
     if (len > 0) {
         /* Truncated by snprintf (an over-long cmdline) still ends in a
          * newline, so a partial record can never swallow the next one. */
@@ -470,8 +476,9 @@ static void write_open_record(void) {
      * than inserted so a reader of older logs, where it is absent, keeps
      * working. */
     int n = snprintf(header, sizeof(header),
-                     "OPENS pid=%d element=%s unique=%u dropped=%u part=%u\n",
+                     "OPENS pid=%d element=%s inv=%s unique=%u dropped=%u part=%u\n",
                      (int)g_pid, g_element ? g_element : "unknown",
+                     g_invocation ? g_invocation : "none",
                      g_open_unique, g_open_dropped, g_open_part);
     if (n > 0 && (size_t)n < sizeof(header)) {
         ssize_t w = write(fd, header, (size_t)n);
@@ -488,6 +495,7 @@ static void write_open_record(void) {
 __attribute__((constructor)) static void bst_trace_start(void) {
     g_trace_log = getenv("BST_TRACE_LOG");
     g_element = getenv("BST_TRACE_ELEMENT");
+    g_invocation = getenv("BST_TRACE_INVOCATION");
     /* Non-empty, not merely set: `BST_TRACE_OPENS=` in an env block is
      * how a caller turns a feature *off*, and getenv returns "" for it. */
     const char *opens = getenv("BST_TRACE_OPENS");

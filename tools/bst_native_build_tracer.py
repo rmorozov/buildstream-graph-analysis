@@ -124,7 +124,7 @@ def install_bwrap_shim(shim_dir: str) -> str:
     return real_bwrap
 
 
-def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None) -> int:
+def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -166,6 +166,11 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         # UX-58: the shim writes into the same temporary directory it
         # already owns, on the *host* side - it runs outside the sandbox,
         # so no bind path is involved.
+        # UX-56: always on when tracing - one line per sandbox, so a
+        # 126-element project writes 126 lines, and without it a capture
+        # whose element names collapsed cannot be corrected at all.
+        captured_invocations = os.path.join(bind_dir, "invocations.jsonl")
+        env["BST_TRACE_INVOCATION_LOG"] = captured_invocations
         captured_argv = os.path.join(bind_dir, "bwrap-argv.jsonl")
         if argv_log_path is not None:
             env["BST_TRACE_ARGV_LOG"] = captured_argv
@@ -183,6 +188,8 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
             shutil.copyfile(captured_log, raw_log_path)
         if argv_log_path is not None and os.path.exists(captured_argv):
             shutil.copyfile(captured_argv, argv_log_path)
+        if invocation_log_path is not None and os.path.exists(captured_invocations):
+            shutil.copyfile(captured_invocations, invocation_log_path)
         return returncode
 
 
@@ -195,11 +202,12 @@ _RUSAGE_INT_KEYS = frozenset({"maxrss_kb", "cmaxrss_kb"})
 # per process, and absent in logs written before that existed - optional
 # so one parser reads both.
 _OPENS_HEADER_RE = re.compile(
-    r"^OPENS pid=(\d+) element=(\S+) unique=(\d+) dropped=(\d+)(?: part=(\d+))?$"
+    r"^OPENS pid=(\d+) element=(\S+)(?: inv=(\S+))? unique=(\d+) dropped=(\d+)"
+    r"(?: part=(\d+))?$"
 )
 
 
-def parse_open_records(text: str) -> Dict[str, dict]:
+def parse_open_records(text: str, open_element_overrides: Optional[Dict[str, str]] = None) -> Dict[str, dict]:
     """Parse UX-46's `OPENS` blocks into `{element: {...}}`.
 
     Each block is a header line followed by exactly `unique` absolute
@@ -214,6 +222,7 @@ def parse_open_records(text: str) -> Dict[str, dict]:
     into a false "unused" - so any drop makes this element's verdict
     unsafe and is reported as such rather than quietly rounded away.
     """
+    open_element_overrides = open_element_overrides or {}
     per_element: Dict[str, dict] = {}
     lines = text.splitlines()
     index = 0
@@ -222,7 +231,14 @@ def parse_open_records(text: str) -> Dict[str, dict]:
         if match is None:
             index += 1
             continue
-        pid, element, unique, dropped, _part = match.groups()
+        pid, element, invocation, unique, dropped, _part = match.groups()
+        # UX-56: when the element name collapsed, the sandbox id is
+        # what lets the correlation relabel this block too - without
+        # it declared-vs-used stays keyed on a name that is not an
+        # element, which is exactly how it came back empty on the
+        # real freedesktop-sdk capture.
+        if invocation and invocation != 'none':
+            element = open_element_overrides.get(invocation, element)
         entry = per_element.setdefault(
             element,
             {"paths": set(), "dropped": 0, "processes": 0, "dropped_by_pid": {}, "windows": 0},
@@ -298,6 +314,17 @@ def parse_trace_log(text: str) -> List[dict]:
                 continue  # element= present but no cmd= after it - malformed, skip
             element = remaining[:next_space]
             remaining = remaining[next_space + 1:]
+        # UX-56: optional sandbox id, emitted by a hook built after that
+        # task. Absent in every earlier capture, so it is parsed only if
+        # present and never fabricated - a trace without it simply cannot
+        # be corrected when its element names collapsed.
+        invocation = None
+        if remaining.startswith("inv="):
+            next_space = remaining.find(" ")
+            if next_space != -1:
+                raw = remaining[len("inv="):next_space]
+                invocation = None if raw == "none" else raw
+                remaining = remaining[next_space + 1:]
         # UX-45: optional real CPU-time fields, emitted on END lines only
         # by a hook built after that task. Parsed as "zero or more known
         # key=value pairs before cmd=", so a trace captured with the
@@ -327,6 +354,7 @@ def parse_trace_log(text: str) -> List[dict]:
                 "ppid": int(fields["ppid"]),
                 "ts": float(fields["ts"]),
                 "element": element,
+                "invocation": invocation,
                 "cmd": cmd,
             }
         except (KeyError, ValueError):
@@ -388,6 +416,9 @@ def pair_events(events: List[dict]) -> List[dict]:
                 "pid": ev["pid"],
                 "ppid": start_ev["ppid"],
                 "element": start_ev["element"],
+                # UX-56: the sandbox this process ran in, so a correlation
+                # can relabel a whole sandbox at once.
+                "invocation": start_ev.get("invocation"),
                 "cmd": start_ev["cmd"],
                 "start_ts": start_ev["ts"],
                 "end_ts": ev["ts"],
@@ -414,6 +445,7 @@ def pair_events(events: List[dict]) -> List[dict]:
                 "pid": start_ev["pid"],
                 "ppid": start_ev["ppid"],
                 "element": start_ev["element"],
+                "invocation": start_ev.get("invocation"),
                 "cmd": start_ev["cmd"],
                 "start_ts": start_ev["ts"],
                 "end_ts": None,
@@ -1031,6 +1063,171 @@ def compute_declared_vs_used(
     }
 
 
+def build_spans_from_wrapped_log(path: str) -> List[dict]:
+    """UX-56: per-element BUILD spans in wall-clock seconds, from a
+    wrapped BuildStream log.
+
+    Wrapped specifically, and not raw: a raw log carries BuildStream's
+    own *elapsed* prefix with no absolute anchor (`UX-06`), while the
+    shim's invocation timestamps are real wall-clock. Correlating the two
+    would need an anchor a raw log does not have, so this refuses rather
+    than inventing one.
+
+    Read straight from BuildStream's own `[hash][ build:element] START` /
+    `SUCCESS` lines paired with the wrapper's UTC timestamp, rather than
+    through the Chrome-trace event model - the question here is only
+    "when was this element building", and going through the richer
+    representation would couple this to its event shape for nothing.
+    """
+    try:
+        from .bst_log_to_chrome_trace import BST_LOG_RE, PREFIX_RE, WrapperTraceConverter
+    except ImportError:  # invoked as a script rather than as a package module
+        from bst_log_to_chrome_trace import BST_LOG_RE, PREFIX_RE, WrapperTraceConverter
+
+    converter = WrapperTraceConverter()
+    open_starts: Dict[str, float] = {}
+    spans: Dict[str, dict] = {}
+    with open(path, "r", errors="replace") as handle:
+        for line in handle:
+            prefix = PREFIX_RE.match(line.strip())
+            if not prefix:
+                continue
+            ts = converter.parse_timestamp(prefix.group(1))
+            match = BST_LOG_RE.search(prefix.group(2))
+            if ts is None or not match:
+                continue
+            _elapsed, _hash, action, element, status, _msg = match.groups()
+            if action.strip() != "build":
+                continue
+            element = element.strip()
+            seconds = ts / 1e6
+            if status == "START":
+                open_starts[element] = seconds
+            elif element in open_starts:
+                start = open_starts.pop(element)
+                existing = spans.get(element)
+                if existing is None:
+                    spans[element] = {"element": element, "start": start, "end": seconds}
+                else:
+                    existing["start"] = min(existing["start"], start)
+                    existing["end"] = max(existing["end"], seconds)
+    return sorted(spans.values(), key=lambda s: s["start"])
+
+
+def correlate_invocations(
+    invocations: List[dict], build_spans: List[dict]
+) -> dict:
+    """UX-56: recover each sandbox's real element by matching it against
+    Plane 1's BUILD spans, when the name Plane 2 captured collapsed.
+
+    Plane 2's element tag comes from bwrap's `--dir`, i.e. the build
+    root. Under BuildStream's default per-element layout that *is* the
+    element; under a project-wide override - `freedesktop-sdk` uses
+    `build-root: /buildstream-build` - every element collapses into one
+    bucket. Measured: 126,890 of 127,630 real processes (99.4%), and a
+    local reproduction of the same override collapses 234 of 234.
+
+    Two earlier candidate sources were ruled out by measurement rather
+    than by argument (see the task): the bwrap argv carries the element
+    only through the build root, three times over, so an overriding
+    project loses all three at once; and the shim's ancestry is
+    `buildbox-run` -> the `bst` main process, with no per-element job to
+    read a name from.
+
+    What remains is a correlation. Each sandbox is exactly one element's
+    build, and Plane 1 already knows every element's BUILD span in
+    wall-clock time, so a sandbox whose start falls inside exactly one
+    span is that element's, with certainty.
+
+    Under `--builders N` several spans overlap and a start time alone is
+    ambiguous. Rather than pick the most likely candidate, this resolves
+    only what is *forced*: an element can host at most one sandbox, so an
+    invocation with a single candidate claims it, which removes that
+    element from every other candidate set, which may force the next.
+    Iterating to a fixed point is ordinary constraint propagation - it
+    makes deductions, never guesses. Whatever is still ambiguous is
+    returned as such and left unattributed, because `UX-46` already
+    refuses to judge a truncated read set and a *mis*-attributed one is
+    worse than a missing one.
+
+    Args:
+        invocations: `{invocation_id, started_at}` records from the shim.
+        build_spans: `{element, start, end}` in the same wall-clock base.
+
+    Returns:
+        `{"resolved": {invocation_id: element}, "ambiguous": [...],
+          "unmatched": [...], "certain": int, "deduced": int}` -
+        `certain` counts invocations that had exactly one candidate from
+        the start; `deduced` counts those resolved only by elimination.
+    """
+    candidates: Dict[str, set] = {}
+    unmatched: List[str] = []
+    for invocation in invocations:
+        started = invocation.get("started_at")
+        key = str(invocation.get("invocation_id"))
+        if started is None:
+            unmatched.append(key)
+            continue
+        matching = {
+            span["element"] for span in build_spans
+            if span["start"] <= started <= span["end"]
+        }
+        if not matching:
+            # A sandbox belonging to no BUILD span at all - a FETCH, or a
+            # capture whose two planes do not cover the same window.
+            unmatched.append(key)
+            continue
+        candidates[key] = matching
+
+    certain_keys = {key for key, m in candidates.items() if len(m) == 1}
+    resolved: Dict[str, str] = {}
+    progress = True
+    while progress:
+        progress = False
+        for key, matching in list(candidates.items()):
+            if len(matching) != 1:
+                continue
+            element = next(iter(matching))
+            resolved[key] = element
+            del candidates[key]
+            for other in candidates.values():
+                other.discard(element)
+            progress = True
+
+    # An empty candidate set after elimination is not ambiguity - it is a
+    # contradiction: two sandboxes both had to be the same element, so the
+    # one-sandbox-per-element premise did not hold for this capture.
+    # Reported separately because it invalidates the *method* here, while
+    # ambiguity only limits its reach.
+    conflicting = sorted(k for k, m in candidates.items() if not m)
+    ambiguous = sorted(k for k, m in candidates.items() if m)
+    return {
+        "resolved": resolved,
+        "ambiguous": ambiguous,
+        "conflicting": conflicting,
+        "unmatched": sorted(unmatched),
+        "certain": len(certain_keys & resolved.keys()),
+        "deduced": len(resolved.keys() - certain_keys),
+    }
+
+
+def apply_correlation(records: List[dict], resolved: Dict[str, str]) -> int:
+    """Relabel every traced process whose sandbox was resolved. Returns
+    how many records were relabelled.
+
+    Applied to the *whole* sandbox at once, which is the property that
+    makes this worth doing: one correlated invocation fixes every process
+    that ran inside it, however many thousands.
+    """
+    relabelled = 0
+    for record in records:
+        element = resolved.get(str(record.get("invocation")))
+        if element and record.get("element") != element:
+            record["element"] = element
+            relabelled += 1
+    return relabelled
+
+
 def compute_peak_memory(records: List[dict]) -> dict:
     """UX-63: peak resident set size per element, from the same
     `getrusage` call `UX-45` already makes at exit.
@@ -1168,7 +1365,7 @@ def compute_cpu_time(records: List[dict]) -> dict:
     }
 
 
-def summarize(records: List[dict]) -> dict:
+def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
     matched = [r for r in records if not r["open"]]
     open_records = [r for r in records if r["open"]]
     by_binary: Dict[str, int] = {}
@@ -1196,6 +1393,9 @@ def summarize(records: List[dict]) -> dict:
         "by_element": dict(sorted(by_element.items(), key=lambda kv: -kv[1])),
         # UX-56: whether those element names are element names at all.
         "element_attribution": assess_element_attribution(by_element),
+        # UX-56: how the names above were arrived at, when a
+        # correlation ran. Absent when it did not.
+        "invocation_correlation": correlation,
         "max_concurrency": compute_max_concurrency(records),
         # UX-45: real, kernel-measured CPU time per element.
         "cpu_time": compute_cpu_time(records),
@@ -1244,7 +1444,9 @@ def load_saved_report(path: str) -> Optional[dict]:
     return None
 
 
-def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None) -> dict:
+def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
+                       invocation_log_path: Optional[str] = None,
+                       plane1_log_path: Optional[str] = None) -> dict:
     """Parse a raw trace log into a report.
 
     `project_dir` (UX-46) enables the declared-vs-used dependency
@@ -1266,12 +1468,30 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None) -> 
             "directly - this error means the file is neither."
         )
     records = pair_events(events)
-    report = summarize(records)
+
+    # UX-56: correct collapsed element names before anything is computed
+    # from them - every downstream signal (declared-vs-used, per-element
+    # parallelism, CPU time, peak memory) is keyed on this name, so a
+    # correction applied later would leave them all disagreeing.
+    correlation = None
+    if invocation_log_path and plane1_log_path:
+        invocations = [
+            json.loads(line) for line in open(invocation_log_path, errors="replace")
+            if line.strip()
+        ]
+        spans = build_spans_from_wrapped_log(plane1_log_path)
+        correlation = correlate_invocations(invocations, spans)
+        correlation["relabelled_processes"] = apply_correlation(
+            records, correlation["resolved"]
+        )
+        correlation["elements_in_plane1"] = len(spans)
+    report = summarize(records, correlation=correlation)
 
     # UX-46: only attempted when a project directory is available, since
     # it needs `bst artifact list-contents` and the project's own
     # declared dependency edges.
-    opens_by_element = parse_open_records(text)
+    opens_by_element = parse_open_records(
+        text, open_element_overrides=(correlation or {}).get('resolved'))
     if project_dir and opens_by_element:
         declared = read_declared_build_deps(project_dir, sorted(opens_by_element))
         needed = {dep for deps in declared.values() for dep in deps}
@@ -1512,6 +1732,13 @@ def main() -> int:
     run_parser.add_argument("output", help="Path to write the JSON report to")
     run_parser.add_argument("--raw-log", help="Also keep the raw trace log at this path (default: discarded after parsing)")
     run_parser.add_argument(
+        "--invocation-log", metavar="PATH",
+        help="UX-56: where to write the per-sandbox invocation record used to "
+             "recover element names when the project overrides build-root. "
+             "Correlation also needs --wrapped-log, whose wall-clock timestamps "
+             "are what the invocations are matched against.",
+    )
+    run_parser.add_argument(
         "--argv-log", metavar="PATH",
         help="UX-58: record the first few bwrap command lines BuildStream "
              "generates, before this tool rewrites them, as JSON lines. The "
@@ -1576,12 +1803,15 @@ def main() -> int:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=args.wrapped_log,
                                           trace_opens=args.trace_opens,
-                                          argv_log_path=args.argv_log)
+                                          argv_log_path=args.argv_log,
+                                          invocation_log_path=args.invocation_log)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
-        report = load_and_summarize(raw_log_path, project_dir=args.project_dir)
+        report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
+                                    invocation_log_path=args.invocation_log,
+                                    plane1_log_path=args.wrapped_log)
         report["wrapped_command_exit_code"] = returncode
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)

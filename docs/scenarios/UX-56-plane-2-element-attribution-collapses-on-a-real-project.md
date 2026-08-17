@@ -1,6 +1,6 @@
 # UX-56: Plane 2's element tag is a path convention a real project overrides, so 99.4% of a real build's processes land in one bucket that is not an element
 
-**Priority:** High | **Status:** 🟢 Guard implemented, real fix open | **Depends on:** `UX-23` (which introduced the tag), `UX-51` (which made it a join key)
+**Priority:** High | **Status:** 🟢 Done (guard + correlation) | **Depends on:** `UX-23` (which introduced the tag), `UX-51` (which made it a join key)
 
 
 ## Investigation, 2026-08-17: what the argv and the process tree rule out
@@ -79,6 +79,65 @@ truncated read set, and a mis-attributed one is worse than a missing one.
 This also needs the shim to record a per-invocation timestamp (the
 `--argv-log` sidecar `UX-58` added is the natural place) and the hook's
 `CLOCK_MONOTONIC` stamps anchored to wall-clock once at capture start.
+
+## Fix Implemented
+
+A **correlation**, since the investigation above ruled out every lookup.
+
+1. **A layout-independent sandbox id.** The shim injects
+   `BST_TRACE_INVOCATION` (its own pid — unique among concurrently-live
+   host processes, which is the only scope that matters) alongside the
+   collapsible element tag, and the hook emits it on every `START`/`END`
+   and `OPENS` line. Traced processes now group exactly per element
+   *build* even when their name is wrong, which is what makes a whole
+   sandbox relabellable at once.
+2. **A per-sandbox record** (`invocations.jsonl`, one line per bwrap
+   invocation) carrying `CLOCK_REALTIME` at exec — deliberately not the
+   hook's `CLOCK_MONOTONIC`, since the thing it must be matched against
+   is Plane 1's wall clock.
+3. **Constraint propagation, not matching.** An invocation whose start
+   falls inside exactly one BUILD span is that element's, with certainty.
+   An element hosts at most one sandbox, so resolving one removes it from
+   every other candidate set, which may force the next; iterating to a
+   fixed point makes deductions only. What is left over is returned as
+   `ambiguous` (several consistent assignments), `conflicting` (two
+   sandboxes forced onto one element — which invalidates the premise, not
+   just the reach, so it is reported separately), or `unmatched`.
+
+Nothing is guessed. `UX-46` already refuses to judge a truncated read
+set; a *mis*-attributed one is worse than a missing one.
+
+### Verified against the reproduction
+
+`examples/06` with `build-root: /buildstream-build`, a real traced build:
+
+| | before | after |
+|---|---|---|
+| processes with a real element name | **0 / 822** | **616 / 822** |
+| distinct elements in `opens_captured` | 1 (`buildstream-build`) | **8** |
+| invocations resolved | — | 7 certain, 0 ambiguous, 0 conflicting |
+
+### The resolution limit, stated rather than hidden
+
+On `examples/07` — the *same* override, but a 1.4-second build — the
+correlation resolves almost nothing, and the reason is worth recording:
+Plane 1's timestamps are stamped when the **wrapper reads** a line from
+`bst`'s stdout, while an invocation is stamped when the **shim execs**.
+The skew between those is small in absolute terms and irrelevant when
+elements run for seconds or minutes, but on a build whose whole critical
+path is 1.4s it moves invocations outside their element's span entirely —
+they come back `unmatched`, which is the honest outcome rather than a
+wrong one.
+
+So this method's precondition is that element BUILD spans are long
+compared to log-read latency. A real project satisfies that by a wide
+margin (`freedesktop-sdk`'s heaviest element runs 1,226 seconds); a toy
+project may not. The two unmatched invocations in the `examples/06` run
+above are the same effect at its margin.
+
+Tests: 12 new (`tests/unit/test_invocation_correlation.py`), covering
+each outcome including the three ways the correlation must *decline* to
+answer. Suite: 997 → 1009.
 
 ## Original filing
 

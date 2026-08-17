@@ -178,8 +178,11 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
 
 _RUSAGE_KEYS = frozenset({"utime", "stime", "cutime", "cstime"})
 
+# UX-57: `part=` is appended by hooks that flush more than one window
+# per process, and absent in logs written before that existed - optional
+# so one parser reads both.
 _OPENS_HEADER_RE = re.compile(
-    r"^OPENS pid=(\d+) element=(\S+) unique=(\d+) dropped=(\d+)$"
+    r"^OPENS pid=(\d+) element=(\S+) unique=(\d+) dropped=(\d+)(?: part=(\d+))?$"
 )
 
 
@@ -206,12 +209,25 @@ def parse_open_records(text: str) -> Dict[str, dict]:
         if match is None:
             index += 1
             continue
-        _pid, element, unique, dropped = match.groups()
+        pid, element, unique, dropped, _part = match.groups()
         entry = per_element.setdefault(
-            element, {"paths": set(), "dropped": 0, "processes": 0}
+            element,
+            {"paths": set(), "dropped": 0, "processes": 0, "dropped_by_pid": {}, "windows": 0},
         )
-        entry["processes"] += 1
-        entry["dropped"] += int(dropped)
+        # UX-57: one process may now write several windows, so counting
+        # blocks would overstate the process count. `dropped` is a
+        # running total the process re-reports each time, so the last
+        # window's value is the total rather than their sum.
+        entry["windows"] += 1
+        # `dropped` is a running per-process total that the process
+        # re-reports in every window it writes, so the largest value seen
+        # for a pid is that pid's total; the element's total is their sum
+        # across pids. Summing every block instead would multiply one
+        # process's drops by how many windows it happened to flush.
+        by_pid = entry["dropped_by_pid"]
+        by_pid[pid] = max(by_pid.get(pid, 0), int(dropped))
+        entry["processes"] = len(by_pid)
+        entry["dropped"] = sum(by_pid.values())
         index += 1
         for _ in range(int(unique)):
             if index >= len(lines):
@@ -1189,7 +1205,11 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None) -> 
         }
     report["opens_captured"] = {
         element: {"paths": len(entry["paths"]), "dropped": entry["dropped"],
-                  "processes": entry["processes"]}
+                  "processes": entry["processes"],
+                  # UX-57: how many times a process filled its window and
+                  # flushed rather than dropping. Zero on any build small
+                  # enough never to fill one, which is most of them.
+                  "windows": entry["windows"]}
         for element, entry in sorted(opens_by_element.items())
     }
     return report

@@ -147,6 +147,14 @@ def _format_violation_summary(violation: dict) -> str:
             f"declared memory budget of {violation.get('memory_budget_mb')}MB - risk of "
             f"swap, a qualitatively worse failure mode than CPU contention, see UX-21"
         )
+    if vtype == 'floor_below_longest_task':
+        return (
+            f"I3 violated: T-infinity,observed "
+            f"{violation.get('t_infinity_observed_us', 0) / 1e6:.3f}s is shorter "
+            f"than the longest single observed task "
+            f"({violation.get('longest_task_us', 0) / 1e6:.3f}s) - "
+            f"{violation.get('detail')}"
+        )
     return f"{vtype}: {violation}"
 
 
@@ -237,6 +245,20 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     # caches off measures the whole project; a pre-commit run measures
     # the handful of elements that rebuilt on top of a cached base, and
     # every floor below certifies only that work.
+    # UX-62: how much of the measured chain was work that was thrown
+    # away. Attribution still counts it as EXECUTION_ON_CHAIN - moving it
+    # would change `I4`'s identity, which is a decision with a proof
+    # obligation rather than a re-bucketing - so this reports the waste
+    # instead of silently reclassifying it.
+    failed_us = confidence.get('failed_task_us') or 0
+    if failed_us:
+        failed_count = confidence.get('failed_task_count') or 0
+        lines.append(
+            f"  {failed_count} failed task attempt(s) contributed "
+            f"{failed_us / 1e6:.2f}s of EXECUTION_ON_CHAIN - real time the build "
+            "spent producing nothing. Counted as execution, not as waste, because "
+            "reclassifying it would move the attribution identity (I4)"
+        )
     if confidence.get('run_mode') == 'incremental':
         cached = confidence.get('critical_path_cached') or []
         detail = (

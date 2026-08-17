@@ -359,6 +359,7 @@ def clamp_task_starts(
             dependencies=deps,
             resources=span.resources,
             primary_resource=span.primary_resource,
+            status=span.status,  # UX-62
         ))
 
     return result, violations

@@ -404,7 +404,17 @@ def pair_events(events: List[dict]) -> List[dict]:
     open_by_key: Dict[Tuple[str, int], List[dict]] = {}
     records: List[dict] = []
     for ev in sorted(events, key=lambda e: e["ts"]):
-        key = (ev["element"], ev["pid"])
+        # UX-61: the sandbox id, when the capture has one, is the correct
+        # disambiguator - not the element name. Pids are namespaced *per
+        # sandbox*, so they collide freely across sandboxes, and keying on
+        # the element only separates them while the element name is
+        # per-element. Under a build-root override every process shares
+        # one name (UX-56), so a START in one sandbox pairs with an END in
+        # another: on a real collapsed capture, 822 records over 113
+        # distinct pids, "durations" of 23s inside a 30s build, and a
+        # max_concurrency of 34 on a 4-core `--builders 4` run. The real
+        # freedesktop-sdk capture reported 5,268.
+        key = (ev.get("invocation") or ev["element"], ev["pid"])
         if ev["event"] == "START":
             open_by_key.setdefault(key, []).append(ev)
         elif ev["event"] == "END":
@@ -1620,7 +1630,11 @@ def _format_text(report: dict) -> str:
         # read as host load. The per-element block below is the
         # interpretable number.
         f"Max observed concurrency (all traced processes, incl. idle wrappers): "
-        f"{report['max_concurrency']} (matched processes only - see open_records_note)",
+        f"{report['max_concurrency']} live processes (matched only - see "
+        f"open_records_note). UX-61: a count of processes alive at once, "
+        f"NOT of cores in use - most are blocked wrappers (sh, make, the "
+        f"gcc driver), so a figure above the host's core count is expected "
+        f"and is not oversubscription evidence on its own.",
     ]
     if report.get("open_records_note"):
         lines.append(f"  ({report['open_records_note']})")

@@ -353,6 +353,8 @@
         "explained_untracked_us": 0,
         "critical_path_coverage": 1.0,
         "run_mode": "unknown",
+        "failed_task_count": 0,
+        "failed_task_us": 0,
         "critical_path_cached": [],
         "dominator_coverage": 1.0,
         "blame_chain_coverage": 1.0,

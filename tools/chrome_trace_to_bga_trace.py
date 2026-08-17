@@ -106,13 +106,26 @@ def chrome_events_to_bga_spans(events: Sequence[dict]) -> Tuple[List[dict], List
         end_ts = end_ev["ts"]
         resource = KIND_TO_RESOURCE[kind]
 
-        spans.append({
+        span = {
             "task_key": f"{element}|{kind}|{kind}|{attempt}",
             "ts_us": int(start_ts),
             "dur_us": int(end_ts) - int(start_ts),
             "resources": [resource],
             "primary_resource": resource,
-        })
+        }
+        # UX-62: the task's own terminal status, which BuildStream states
+        # and which every capture until now discarded at the span level.
+        # `UX-54` recorded failure at the *run* level, which was the right
+        # scope for the hazard it fixed (a broken build passing a CI
+        # gate) but leaves two things unanswerable: which of an element's
+        # attempts failed, and whether a span's duration was useful work
+        # or work thrown away. Additive and optional - omitted rather
+        # than defaulted when the log did not say, since "not recorded"
+        # and "SUCCESS" are different claims.
+        status = end_ev.get("args", {}).get("Status")
+        if status:
+            span["status"] = status
+        spans.append(span)
 
     spans.sort(key=lambda s: (s["ts_us"], s["task_key"]))
     return spans, dropped

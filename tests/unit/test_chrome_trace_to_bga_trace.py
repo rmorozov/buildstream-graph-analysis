@@ -51,6 +51,10 @@ def test_single_build_task_converts_to_one_span():
         "dur_us": 4000,
         "resources": ["PROCESS"],
         "primary_resource": "PROCESS",
+        # UX-62: BuildStream's own terminal status for this attempt,
+        # carried onto the span. Additive and omitted when the log did
+        # not say - "not recorded" and "SUCCESS" are different claims.
+        "status": "SUCCESS",
     }]
 
 

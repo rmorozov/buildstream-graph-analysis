@@ -1,6 +1,6 @@
 # UX-46: no signal finds a declared-but-unused build dependency, and the cheap way of finding one does not work
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-11 (the Plane 2 hook), UX-23 (element tagging, which is what makes a per-element answer possible at all)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the Plane 2 hook), UX-23 (element tagging, which is what makes a per-element answer possible at all)
 
 ## Motivation
 
@@ -61,6 +61,51 @@ Detect which files an element's sandbox actually **opened**, then map those file
 2. The same run does not report `core.bst` or `toolchain.bst` as unused by anything, since every element genuinely compiles against them.
 3. `examples/06-macro-micro-optimization/optimized`, which has the redundant edges already removed, reports no unused dependencies.
 4. An element whose processes are all invisible to the hook is reported as *uncovered*, not as having all dependencies unused. Full suite green.
+
+## Fix Implemented
+
+Both halves, plus the conservatism the task asked for.
+
+**1. File-open interception.** `hook.c` interposes `open`/`open64`/`openat`/`openat64` and records unique absolute paths, flushed as one `OPENS` record per process at exit. It is **opt-in** (`--trace-opens` / `BST_TRACE_OPENS`) because, unlike the lifecycle hooks, it runs on a genuinely hot path. Every failure path degrades to "record nothing" and lets the real call through: `dlsym` is resolved lazily and a `NULL` means pass-through, a thread-local guard keeps the hook's own bookkeeping writes out of the record, and paths are deduplicated in a fixed hash set with a bounded arena so memory cannot grow with the build.
+
+**2. The staged-path → element map, which turned out to already exist.** The task called this "the half that does not exist yet"; `bst artifact list-contents` supplies it directly, from BuildStream's own artifact metadata, with no re-staging and no per-element rebuild. That removes the expensive fallback this doc worried about.
+
+**3 & 4. Refusal over guessing.** An element with no observed opens is reported `uncovered`, not "used nothing" - an element built entirely by statically-linked processes looks identical, and reporting all its dependencies as unused would be catastrophic. An element whose hook dropped paths is likewise `uncovered`, since a truncated read set is exactly what turns a used dependency into a false unused. Dependencies whose artifact contents cannot be read are `skipped` with a reason.
+
+### The real result
+
+A real `--trace-opens` build of `examples/06-macro-micro-optimization` (BuildStream 2.7.0, real `bwrap`, 822 processes, 114 `OPENS` records, **zero** dropped paths):
+
+```
+Declared build dependencies never read: 24 candidate(s) across 7 element(s); 9 edge(s) confirmed used
+  app.bst      never read: core.bst, lib-a.bst, lib-b.bst, lib-c.bst, lib-d.bst, lib-e.bst, lib-f.bst
+  lib-a.bst    never read: codegen.bst, core.bst
+  lib-b.bst    never read: codegen.bst, core.bst, lib-a.bst
+  ...
+  lib-f.bst    never read: codegen.bst, core.bst, lib-e.bst
+```
+
+**`toolchain.bst` is the only dependency any element actually reads** - 51 of its 8369 staged files, and 68 for `app.bst`. That it comes back *used*, on every element, is the control that shows the detector is not simply reporting everything as unused.
+
+### Two of this doc's own acceptance criteria were wrong
+
+Criterion 1 expected `codegen.bst` to be unused by `lib-a`..`lib-e` but **used** by `lib-f`, and criterion 2 expected `core.bst` never to be reported unused. Both came from the example project's own comments. The measurement contradicts both, and the measurement is right:
+
+- `lib-f`'s sources `#include` only `lib-f.hpp`, `<array>`, `<cstddef>` and `<utility>`. Nothing in the project includes `codegen.hpp`.
+- Every lib includes its own header **from its own source directory** (`#include "lib-a.hpp"`), not from the staged `/usr/include`. `core.hpp` is referenced only inside `core` itself.
+- `app`'s `CMakeLists.txt` is `add_executable(app ${SOURCES})` with no `target_link_libraries`, so it links none of the libraries it declares.
+
+So in `examples/06`, the **entire** cross-element build-dependency structure is decorative - which is what that project always claimed about two specific edges ("removing them changes no source file and no build command") and is now measured to be true of all 24. The element comments have been corrected: they asserted that `lib-f` consumed `codegen.bst`, which it never did.
+
+Criterion 3 (the `optimized/` variant reporting no unused dependencies) is wrong for the same reason and for the same project: its remaining edges are decorative too.
+
+**What this costs, and what it does not.** The example cannot demonstrate the "declared, and genuinely used, between two project elements" case, so the true-negative evidence rests on `toolchain.bst` - a real cross-element dependency that is correctly reported as used by all nine elements. That is genuine discrimination, but a project whose elements actually consume each other's headers would be a stronger fixture, and is the recommended follow-up rather than something quietly assumed here.
+
+### A design error caught by real data
+
+The first implementation derived "direct" dependencies by subtracting transitive closures out of `bst show --deps build`. On real data it dropped three of `lib-b.bst`'s four declared dependencies: `codegen` and `core` are *also* inside `lib-a`'s closure, so subtraction classified them as indirect. **The dependency being redundant is precisely the thing being detected**, so inferring directness from the closure hides the finding. Declared dependencies are now read from the element files themselves, which is also what "declared" has to mean if a recommendation is going to be acted on by editing one.
+
+Tests: 11 new (`tests/unit/test_declared_vs_used.py`), concentrated on the dangerous failure modes - an uncovered element must not have all its dependencies reported unused, a truncated read set must refuse, an unreadable artifact must be skipped, and a truncated `OPENS` block must not swallow the next element's record. Full suite 863 passed, `make lint` clean.
 
 ## Verification Log
 

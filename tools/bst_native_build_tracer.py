@@ -62,7 +62,9 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
+
+import yaml
 
 from tools.bst_run_wrapped import run_wrapped
 from tools.native_trace.bwrap_shim import __file__ as _bwrap_shim_source
@@ -97,7 +99,10 @@ def compile_hook(build_dir: str) -> str:
     if cc is None:
         raise TraceError("no C compiler (cc/gcc) found on PATH - required to build the LD_PRELOAD hook")
     result = subprocess.run(
-        [cc, "-shared", "-fPIC", "-O2", "-o", hook_so, _HOOK_C],
+        # -ldl for UX-46's dlsym(RTLD_NEXT, ...) interposition. Harmless
+        # on glibc >= 2.34 where libdl is folded into libc, and required
+        # on older ones.
+        [cc, "-shared", "-fPIC", "-O2", "-o", hook_so, _HOOK_C, "-ldl"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -119,7 +124,7 @@ def install_bwrap_shim(shim_dir: str) -> str:
     return real_bwrap
 
 
-def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None) -> int:
+def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -153,6 +158,11 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         env["BST_TRACE_BIND_DST"] = "/tmp/.bst-native-trace"
         env["BST_TRACE_PRELOAD_SO"] = "/tmp/.bst-native-trace/hook.so"
         env["BST_TRACE_LOG_DST"] = "/tmp/.bst-native-trace/trace.log"
+        # UX-46: opt-in, and propagated into the sandbox by the shim.
+        if trace_opens:
+            env["BST_TRACE_OPENS"] = "1"
+        else:
+            env.pop("BST_TRACE_OPENS", None)
 
         if wrapped_log_path is not None:
             with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
@@ -167,6 +177,54 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
 
 
 _RUSAGE_KEYS = frozenset({"utime", "stime", "cutime", "cstime"})
+
+_OPENS_HEADER_RE = re.compile(
+    r"^OPENS pid=(\d+) element=(\S+) unique=(\d+) dropped=(\d+)$"
+)
+
+
+def parse_open_records(text: str) -> Dict[str, dict]:
+    """Parse UX-46's `OPENS` blocks into `{element: {...}}`.
+
+    Each block is a header line followed by exactly `unique` absolute
+    paths, one per line, written by one process at exit. Blocks from
+    every process of an element are unioned: the question being answered
+    is "did *this element's build* read anything this dependency staged",
+    and which of its processes did the reading does not matter.
+
+    `dropped` is carried through rather than discarded. A process that
+    hit the hook's fixed path budget recorded a subset of what it read,
+    and a subset is exactly the input that would turn a used dependency
+    into a false "unused" - so any drop makes this element's verdict
+    unsafe and is reported as such rather than quietly rounded away.
+    """
+    per_element: Dict[str, dict] = {}
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        match = _OPENS_HEADER_RE.match(lines[index])
+        if match is None:
+            index += 1
+            continue
+        _pid, element, unique, dropped = match.groups()
+        entry = per_element.setdefault(
+            element, {"paths": set(), "dropped": 0, "processes": 0}
+        )
+        entry["processes"] += 1
+        entry["dropped"] += int(dropped)
+        index += 1
+        for _ in range(int(unique)):
+            if index >= len(lines):
+                break  # truncated block (killed mid-write) - keep what we have
+            path = lines[index]
+            index += 1
+            # A following header means the block was short; don't consume it.
+            if _OPENS_HEADER_RE.match(path) or path.startswith(("START ", "END ")):
+                index -= 1
+                break
+            if path.startswith("/"):
+                entry["paths"].add(path)
+    return per_element
 
 
 def parse_trace_log(text: str) -> List[dict]:
@@ -685,6 +743,192 @@ def compute_max_concurrency(records: List[dict]) -> int:
     return peak
 
 
+def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str, List[str]]:
+    """`{element: [directly declared build dependencies]}`, read from the
+    element files themselves.
+
+    "Declared" here has to mean *what the user wrote in the `.bst` file*,
+    because that is what a removal recommendation would edit. An earlier
+    version derived the direct set by subtracting transitive closures out
+    of `bst show --deps build`, and it was wrong on real data: `lib-b.bst`
+    declares `lib-a`, `core`, `codegen` and `toolchain` outright, but
+    `codegen` and `core` are also inside `lib-a`'s own closure, so
+    subtraction classified them as indirect and dropped three of the four
+    declarations. The dependency being redundant is precisely the thing
+    being detected - inferring directness from the closure hides it.
+
+    Only `build`-type edges are returned. A `runtime` dependency is by
+    definition not read during the build, so this analysis says nothing
+    about one and must not propose removing it.
+    """
+    elements_dir = os.path.join(project_dir, "elements")
+    declared: Dict[str, List[str]] = {}
+    for element in elements:
+        path = os.path.join(elements_dir, element)
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except (OSError, yaml.YAMLError):
+            continue
+        deps: List[str] = []
+        for entry in data.get("depends") or []:
+            if isinstance(entry, str):
+                # Shorthand `- foo.bst` defaults to a build+runtime dep.
+                deps.append(entry)
+            elif isinstance(entry, dict):
+                if entry.get("type") == "runtime":
+                    continue
+                name = entry.get("filename")
+                if name:
+                    deps.append(name)
+        declared[element] = deps
+    return declared
+
+
+def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, Set[str]]:
+    """`{element: {absolute staged paths}}` via `bst artifact list-contents`.
+
+    This is the half UX-46 called "the half that does not exist yet".
+    BuildStream stages every build dependency into one shared sandbox
+    root, so by the time a compiler runs, a dependency's headers are
+    indistinguishable from the base sysroot - a path carries no element
+    identity. `bst artifact list-contents` supplies the inverse mapping
+    directly, from BuildStream's own artifact metadata, with no
+    re-staging and no per-element rebuild.
+
+    Contents are reported relative to the artifact root (`usr/include/x.hpp`),
+    and staged at the sandbox root, so each is prefixed with `/`.
+
+    An element whose artifact cannot be read (never built, or pulled
+    without contents) maps to an empty set, and the caller must treat
+    that as "unknown", never as "staged nothing" - the latter would make
+    every dependency look unused.
+    """
+    contents: Dict[str, Set[str]] = {}
+    for element in elements:
+        result = subprocess.run(
+            ["bst", "artifact", "list-contents", element],
+            cwd=project_dir, capture_output=True, text=True,
+        )
+        paths: Set[str] = set()
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                stripped = line.strip()
+                # Skip the `<element>:` heading and blank lines.
+                if not stripped or stripped.endswith(":"):
+                    continue
+                paths.add("/" + stripped.lstrip("/"))
+        contents[element] = paths
+    return contents
+
+
+def compute_declared_vs_used(
+    opens_by_element: Dict[str, dict],
+    declared_deps: Dict[str, List[str]],
+    artifact_contents: Dict[str, Set[str]],
+) -> dict:
+    """Which declared build dependencies did each element never read?
+
+    A dependency is a *candidate* for removal when the element's own
+    sandbox opened none of the files that dependency staged. Deliberately
+    not a verdict: a dependency can be needed at runtime, needed only by
+    a configure-time probe whose result got cached, or needed for the
+    mere existence of a directory. The output names the evidence and
+    leaves the decision to the user, following the same posture UX-26 and
+    UX-34 take toward omitted candidates.
+
+    Safety rules, all of which make the analysis *refuse* rather than
+    guess - the dangerous failure here is a confident false "unused" that
+    gets a real dependency deleted:
+
+    - an element with no observed opens at all is `uncovered`, not
+      "used nothing". An element built entirely by statically-linked
+      processes looks exactly like this (UX-11 Risk 2), and reporting
+      every one of its dependencies as unused would be catastrophic.
+    - an element whose hook dropped paths is `uncovered` too: a partial
+      read set is precisely what turns a used dependency into a false
+      unused.
+    - a dependency whose artifact contents could not be read is skipped
+      with a reason, never counted as unused.
+    """
+    unused: List[dict] = []
+    used: List[dict] = []
+    uncovered: List[dict] = []
+    skipped: List[dict] = []
+
+    for element, deps in sorted(declared_deps.items()):
+        observed = opens_by_element.get(element)
+        if not observed or not observed["paths"]:
+            uncovered.append({
+                "element": element,
+                "reason": "no file opens observed for this element - it may be "
+                          "built entirely by statically-linked processes, which "
+                          "LD_PRELOAD cannot see",
+            })
+            continue
+        if observed["dropped"]:
+            uncovered.append({
+                "element": element,
+                "reason": f"{observed['dropped']} path(s) exceeded the hook's "
+                          f"per-process budget, so this element's read set is "
+                          f"incomplete and a dependency could look unused when "
+                          f"it is not",
+            })
+            continue
+
+        opened = observed["paths"]
+        for dep in sorted(deps):
+            staged = artifact_contents.get(dep)
+            if staged is None:
+                skipped.append({
+                    "element": element, "dependency": dep,
+                    "reason": "artifact contents unavailable (not built, or "
+                              "pulled without contents)",
+                })
+                continue
+            if not staged:
+                skipped.append({
+                    "element": element, "dependency": dep,
+                    "reason": "dependency staged no files - nothing to detect a "
+                              "read of",
+                })
+                continue
+            touched = opened & staged
+            record = {
+                "element": element,
+                "dependency": dep,
+                "staged_files": len(staged),
+                "opened_files": len(touched),
+            }
+            if touched:
+                used.append(record)
+            else:
+                record["evidence"] = (
+                    f"0 of {len(staged)} files staged by {dep} were opened "
+                    f"during {element}'s build"
+                )
+                unused.append(record)
+
+    return {
+        "available": bool(opens_by_element),
+        "unused_candidates": unused,
+        "used": used,
+        "uncovered_elements": uncovered,
+        "skipped": skipped,
+        "note": (
+            "A candidate is an element/dependency pair where none of the "
+            "dependency's staged files were opened. This is evidence, not a "
+            "verdict: runtime-only dependencies, cached configure probes, and "
+            "dependencies needed only for a directory's existence all look the "
+            "same from here. Elements with no observed opens, or with a "
+            "truncated read set, are reported as uncovered rather than as "
+            "having unused dependencies."
+        ),
+    }
+
+
 def compute_cpu_time(records: List[dict]) -> dict:
     """Real CPU time per element, from each process's own `getrusage`
     at exit (UX-45).
@@ -840,7 +1084,14 @@ def load_saved_report(path: str) -> Optional[dict]:
     return None
 
 
-def load_and_summarize(raw_log_path: str) -> dict:
+def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None) -> dict:
+    """Parse a raw trace log into a report.
+
+    `project_dir` (UX-46) enables the declared-vs-used dependency
+    analysis, which needs to ask BuildStream what each element's artifact
+    staged. Omitted - the default, and what `report` does without a
+    project - the rest of the report is exactly as before.
+    """
     with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as f:
         text = f.read()
     events = parse_trace_log(text)
@@ -855,7 +1106,32 @@ def load_and_summarize(raw_log_path: str) -> dict:
             "directly - this error means the file is neither."
         )
     records = pair_events(events)
-    return summarize(records)
+    report = summarize(records)
+
+    # UX-46: only attempted when a project directory is available, since
+    # it needs `bst artifact list-contents` and the project's own
+    # declared dependency edges.
+    opens_by_element = parse_open_records(text)
+    if project_dir and opens_by_element:
+        declared = read_declared_build_deps(project_dir, sorted(opens_by_element))
+        needed = {dep for deps in declared.values() for dep in deps}
+        contents = read_artifact_contents(project_dir, sorted(needed))
+        report["declared_vs_used"] = compute_declared_vs_used(
+            opens_by_element, declared, contents
+        )
+    elif opens_by_element:
+        report["declared_vs_used"] = {
+            "available": False,
+            "note": "opened-path data was captured, but the declared-vs-used "
+                    "analysis needs the BuildStream project directory to read "
+                    "each dependency's artifact contents - pass --project-dir.",
+        }
+    report["opens_captured"] = {
+        element: {"paths": len(entry["paths"]), "dropped": entry["dropped"],
+                  "processes": entry["processes"]}
+        for element, entry in sorted(opens_by_element.items())
+    }
+    return report
 
 
 def _format_cpu_time(cpu_time: dict) -> List[str]:
@@ -892,6 +1168,39 @@ def _format_cpu_time(cpu_time: dict) -> List[str]:
     return lines
 
 
+def _format_declared_vs_used(analysis: dict) -> List[str]:
+    """Render UX-46's declared-vs-used block as *candidates with
+    evidence*, never as a verdict - a confident false "unused" is the
+    dangerous failure here, since acting on it deletes a real edge."""
+    if not analysis:
+        return []
+    if not analysis.get("available"):
+        return [f"Declared-vs-used: not available - {analysis.get('note', '')}"]
+
+    unused = analysis.get("unused_candidates") or []
+    used = analysis.get("used") or []
+    lines = [
+        f"Declared build dependencies never read: {len(unused)} candidate(s) "
+        f"across {len({u['element'] for u in unused})} element(s); "
+        f"{len(used)} dependency edge(s) confirmed used"
+    ]
+    by_element: Dict[str, List[dict]] = {}
+    for entry in unused:
+        by_element.setdefault(entry["element"], []).append(entry)
+    for element, entries in sorted(by_element.items()):
+        names = ", ".join(e["dependency"] for e in entries)
+        staged = sum(e["staged_files"] for e in entries)
+        lines.append(f"  {element:26s} never read: {names}  ({staged} staged file(s))")
+    for entry in analysis.get("uncovered_elements") or []:
+        lines.append(f"  {entry['element']:26s} UNCOVERED - {entry['reason']}")
+    for entry in analysis.get("skipped") or []:
+        lines.append(
+            f"  {entry['element']:26s} skipped {entry['dependency']} - {entry['reason']}"
+        )
+    lines.append(f"  ({analysis['note']})")
+    return lines
+
+
 def _format_text(report: dict) -> str:
     lines = [
         f"Processes traced: {report['process_count']} "
@@ -917,6 +1226,7 @@ def _format_text(report: dict) -> str:
         for name, count in by_element.items():
             lines.append(f"  {name:30s} {count}")
     lines.extend(_format_cpu_time(report.get("cpu_time") or {}))
+    lines.extend(_format_declared_vs_used(report.get("declared_vs_used") or {}))
     # UX-32: per-element achieved parallelism.
     per_element = report.get("per_element_parallelism") or []
     if per_element:
@@ -1006,6 +1316,12 @@ def main() -> int:
     run_parser.add_argument("output", help="Path to write the JSON report to")
     run_parser.add_argument("--raw-log", help="Also keep the raw trace log at this path (default: discarded after parsing)")
     run_parser.add_argument(
+        "--trace-opens", action="store_true",
+        help="UX-46: also record which files each element's sandbox opened, and "
+             "report declared build dependencies it never read. Opt-in: unlike the "
+             "lifecycle hooks this interposes open()/openat() on a hot path.",
+    )
+    run_parser.add_argument(
         "--wrapped-log",
         help="UX-24: also capture a real Plane-1-compatible wrapped-format log of this same bst "
              "invocation (tools/bst_log_to_chrome_trace.py-ready) - lets one real build feed both "
@@ -1024,6 +1340,12 @@ def main() -> int:
              "the kind is detected, not declared (UX-38)",
     )
     report_parser.add_argument("--json", action="store_true", help="Emit JSON instead of a human-readable summary")
+    report_parser.add_argument(
+        "--project-dir",
+        help="UX-46: the BuildStream project this trace came from. Required for the "
+             "declared-vs-used dependency analysis, which reads each dependency's "
+             "artifact contents via `bst artifact list-contents`.",
+    )
 
     args = parser.parse_args()
 
@@ -1047,12 +1369,14 @@ def main() -> int:
 
         raw_log_path = args.raw_log or os.path.join(tempfile.mkdtemp(prefix="bst-native-trace-log-"), "trace.log")
         try:
-            returncode = run_traced_build(args.project_dir, cmd, raw_log_path, wrapped_log_path=args.wrapped_log)
+            returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
+                                          wrapped_log_path=args.wrapped_log,
+                                          trace_opens=args.trace_opens)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
-        report = load_and_summarize(raw_log_path)
+        report = load_and_summarize(raw_log_path, project_dir=args.project_dir)
         report["wrapped_command_exit_code"] = returncode
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
@@ -1073,7 +1397,7 @@ def main() -> int:
         print(json.dumps(saved, indent=2) if args.json else _format_text(saved))
         return 0
     try:
-        report = load_and_summarize(args.path)
+        report = load_and_summarize(args.path, project_dir=args.project_dir)
     except (FileNotFoundError, TraceError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1

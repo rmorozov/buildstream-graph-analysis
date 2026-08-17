@@ -410,8 +410,8 @@ exercise (3).
 
 ## What the second round found (2026-08-16)
 
-> **Status: everything below shipped, and the backlog is now empty except
-> `UX-49`.** `UX-41`, `UX-43`, `UX-44` and `UX-48` (the four
+> **Status: everything below shipped, and the backlog is now empty.**
+> `UX-41`, `UX-43`, `UX-44` and `UX-48` (the four
 > placeholders), `UX-42` and `UX-47` (the two performance defects), then
 > `UX-45` and `UX-46` (the two Plane 2 capabilities, each verified
 > against a real wrapped build).
@@ -436,7 +436,8 @@ exercise (3).
 >
 > One new item was filed from this work rather than folded in silently:
 > `UX-49`, `parallelism_efficiency` measuring width uniformity rather
-> than parallelism, which `UX-41` made visible.
+> than parallelism, which `UX-41` made visible - since renamed to
+> `width_uniformity`, and closed.
 
 The round above was run. It used a 1202-element project as the vehicle,
 exactly as suggested, and the vehicle turned out to be the finding rather
@@ -572,7 +573,7 @@ the fixture was synthesized rather than built. Adding to them:
 
 ## Ready for the third round (2026-08-17)
 
-The backlog is empty except `UX-49`. Everything filed across two audit
+The backlog is empty. Everything filed across two audit
 rounds is implemented and verified against real captures, so the next
 round starts from a clean board rather than from a work queue. What that
 round should probe, in the order I would pick:
@@ -602,10 +603,7 @@ round should probe, in the order I would pick:
    staged header would let the unused-dependency detector be tested in
    both directions, and would incidentally make the macro walkthrough
    more representative of a real project.
-4. **`UX-49`**, the one open backlog item: `parallelism_efficiency`
-   measures width uniformity rather than parallelism. Small, and the
-   decision (rename vs. redefine) is the whole task.
-5. **Remote execution** and **the CI story end to end** (items 4 and 5
+4. **Remote execution** and **the CI story end to end** (items 4 and 5
    from the previous round) remain untouched and remain real.
 
 ### What two rounds of doing this taught, as method

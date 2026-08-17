@@ -1,6 +1,6 @@
 # UX-41: the parallelism profile decomposes levels by *shortest* path from a root, so every element under a common base collapses into one level
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** —
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** —
 
 ## Motivation
 
@@ -59,6 +59,26 @@ Worth checking in the same pass whether `parallelism_efficiency`'s own formula s
 2. `examples/06-macro-micro-optimization` reports 10 levels with `max_width == 2`.
 3. `metrics.max_depth` and `len(parallelism.levels) - 1` agree on every fixture in `tests/fixtures/topologies.py`.
 4. A graph with no common base element (e.g. `independent_branches`) is unchanged, since BFS and longest-path agree there. Full suite green.
+
+## Fix Implemented
+
+`_compute_level_decomposition` is now a topological longest-path pass, deliberately using the *same* recurrence `compute_structural_metrics` already used for `max_depth` - `level[v] = max(level[u] + 1 for u in preds(v))`, 0 for roots. The two numbers now agree by construction rather than by coincidence, which is the property the acceptance test pins. Still O(V+E).
+
+The fix is four lines. What is worth recording is that `compute_structural_metrics`'s own comment, twenty lines above, already spelled out why longest-path is the correct measure and explicitly warned that a shortest-path routine "silently underestimates depth whenever a node is reachable via both a short path and a longer one" - and the level decomposition then did exactly that. The reasoning was written down and not applied.
+
+Real results, all three from real `bga graph -f json` runs:
+
+| run | before | after |
+|---|---|---|
+| 1202-element scale fixture | 3 levels, `[1, 1200, 1]`, `max_width 1200` | **14 levels**, `[1, 100 × 12, 1]`, `max_width 100` |
+| `examples/06` baseline | 3 levels, `[1, 9, 1]`, `max=9.0x` | **10 levels**, `max=2.0x` |
+| `examples/06` optimized | 3 levels, `max=9.0x` | **5 levels**, `max=6.0x` |
+
+The last row is the one that matters for the tool's purpose. Baseline and `optimized/` differ by exactly the macro optimization this project exists to demonstrate - a six-deep chain replaced by a six-wide fan-out - and the metric previously reported **the same `max=9.0x` for both**, because it was reporting the element count. It now reports 2.0x and 6.0x, so the optimization is visible in the number for the first time.
+
+Tests: 8 new (`tests/unit/test_level_decomposition.py`). Four target the defect and were confirmed to fail against the old implementation with the exact reported symptom (`width_at_level=[1, 12]`, `max_width=12`); four pin the shapes BFS already got right - chain, fan-out, diamond - so a future rewrite cannot fix the common-base case by breaking those. Full suite 774 passed (up from 766), `make lint` clean.
+
+**Found while verifying, filed rather than folded in:** `parallelism_efficiency` is `mean_width / max_width`, which measures how *uniform* the level widths are, not how parallel the build is - a pure serial chain scores 1.000 and a fan-out scores 0.667. This doc's Required Fix asked to check whether that formula "still means what its name says once the widths are right"; it does not, and it did not before either. Correcting the widths makes it more visible (`examples/06` optimized now scores 0.367 against the baseline's 0.550 - the better graph scoring worse), but redefining a published metric belongs in its own task rather than inside this one. Filed as `UX-49`.
 
 ## Verification Log
 

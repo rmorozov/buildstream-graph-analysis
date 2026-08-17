@@ -1,0 +1,270 @@
+# Capture a real, dual-plane `bga` run directory from a real, third-party
+# BuildStream project (`freedesktop-sdk`) and publish it as a workflow
+# artifact.
+#
+# Why this workflow exists
+# ------------------------
+# Every capture `bga` has ever been measured against was produced by a
+# build this repository wrote itself. Round 5 pointed the *structural*
+# plane at a real project's graph for the first time and immediately found
+# `UX-52`, because a real project mixes `runtime` and `build` dependencies
+# and no fixture here had ever contained a single runtime edge. That left
+# the obvious next question: everything downstream of the graph -
+# attribution, floors, occupancy, both efficiency signals and all of
+# Plane 2 - has still only ever seen builds written by the same people who
+# wrote the analyzer.
+#
+# Answering it locally is not possible in the development container this
+# repository is worked on from: `freedesktop-sdk` bootstraps from a 238MB
+# OCI binary seed served by `cdn.registry.gitlab-static.net`, which the
+# environment's egress proxy refuses (`403` to `CONNECT`), and its remote
+# artifact/source cache at `cache.freedesktop-sdk.io:11001` resets the TLS
+# handshake through the same proxy. Both are recorded with their real
+# error text in `docs/scenarios/UX-53-*.md`. A GitHub-hosted runner has
+# unrestricted egress, so the capture happens here and the analysis
+# happens against the artifact this uploads.
+#
+# The shape of the capture
+# ------------------------
+# Building `freedesktop-sdk` from source is a full compiler bootstrap and
+# takes many hours; building it with its own artifact cache enabled
+# produces a timeline in which nothing was built at all, only pulled.
+# Neither is a usable capture. So this does both, in order:
+#
+#   1. **Warm** - `bst build` the target with the project's own remote
+#      cache enabled. Everything is pulled; nothing is timed.
+#   2. **Cut** - delete the artifacts of a bounded, upward-closed
+#      subgraph (`tools/bst_rebuild_set.py`, which explains why the set
+#      has to be upward-closed).
+#   3. **Capture** - rebuild with `--ignore-project-artifact-remotes`, so
+#      exactly that subgraph builds from source, on top of a cached base,
+#      with its real dependencies, real parallelism and real durations.
+#
+# The default cut set is 25 elements over 9 levels spanning six element
+# kinds (autotools, cmake, meson, pyproject, manual, stack) - chosen to be
+# deep rather than merely numerous, because depth is what the structural
+# plane actually reads.
+#
+# How to run it
+# -------------
+# `workflow_dispatch` once this file is on the default branch. Before
+# then, it also runs on a push that touches this file or the capture
+# tooling it drives - which is how the round-6 captures were produced, and
+# is deliberate: this job costs a runner-hour or more and should not fire
+# on unrelated pushes.
+name: Real-project capture
+
+on:
+  workflow_dispatch:
+    inputs:
+      fdsdk_ref:
+        description: freedesktop-sdk commit to capture
+        default: 953683fb96b82cdf6d7941c4ba9859378942f22b
+      target:
+        description: Element whose closure is warmed and then partially rebuilt
+        default: components/libxml2.bst
+      builders:
+        description: bst --builders
+        default: "4"
+      max_jobs:
+        description: bst --max-jobs
+        default: "4"
+      trace_opens:
+        description: Also interpose open()/openat() (UX-46). Slower.
+        type: boolean
+        default: true
+  push:
+    # Branch-scoped on purpose: a merge to `main` that touches the capture
+    # tooling should not silently spend a runner-hour. On `main` this job
+    # is dispatch-only.
+    branches:
+      - 'claude/**'
+    paths:
+      - .github/workflows/real-project-capture.yml
+      - tools/bst_rebuild_set.py
+      - tools/bst_native_build_tracer.py
+      - tools/native_trace/**
+
+concurrency:
+  group: real-project-capture-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FDSDK_REF: ${{ github.event.inputs.fdsdk_ref || '953683fb96b82cdf6d7941c4ba9859378942f22b' }}
+  TARGET: ${{ github.event.inputs.target || 'components/libxml2.bst' }}
+  BUILDERS: ${{ github.event.inputs.builders || '4' }}
+  MAX_JOBS: ${{ github.event.inputs.max_jobs || '4' }}
+  TRACE_OPENS: ${{ github.event.inputs.trace_opens || 'true' }}
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    # The warm phase pulls a multi-GB SDK and the capture phase compiles
+    # CPython, OpenSSL, ICU and Doxygen. Generous, but well under the
+    # 6h job ceiling; individual steps carry their own tighter limits so
+    # one hung phase still leaves the artifacts from the phases before it.
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # BuildStream's CAS plus a freedesktop-sdk base is larger than a
+      # stock runner's free space. These four directories are the usual
+      # ~25GB of preinstalled toolchains this job never touches.
+      - name: Reclaim runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      - name: Install host prerequisites
+        run: |
+          sudo apt-get update
+          # bubblewrap: BuildStream's sandbox, and what the Plane 2 shim
+          # shadows on PATH. lzip: needed to unpack some freedesktop-sdk
+          # tarball sources.
+          sudo apt-get install -y bubblewrap lzip
+
+      - name: Install BuildStream and bga
+        run: |
+          pip install -e ".[dev]"
+          # Pinned: the version every capture in this repository was taken
+          # with, and the one docs/architecture.md's claims are checked
+          # against. dulwich/requests are freedesktop-sdk's own plugin
+          # dependencies (git and docker sources).
+          pip install 'BuildStream==2.7.0' 'buildstream-plugins==2.7.0' dulwich requests
+          bst --version
+
+      - name: Clone freedesktop-sdk
+        run: |
+          mkdir -p fdsdk
+          git -C fdsdk init -q
+          git -C fdsdk remote add origin https://gitlab.com/freedesktop-sdk/freedesktop-sdk.git
+          git -C fdsdk fetch -q --depth 1 origin "$FDSDK_REF"
+          git -C fdsdk checkout -q FETCH_HEAD
+          git -C fdsdk rev-parse HEAD
+
+      # Recorded before anything is built: if a later phase times out, the
+      # graph alone still supports the structural half of the audit, which
+      # is what round 5 ran on.
+      - name: Extract the declared graph
+        run: |
+          mkdir -p capture
+          python3 -m tools.bst_show_to_graph fdsdk "$TARGET" capture/graph-declared.json
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Compute the rebuild set
+        run: |
+          python3 -m tools.bst_rebuild_set capture/graph-declared.json \
+            --cut components/_private/python3-flit-core.bst \
+            --cut components/openssl.bst \
+            --cut components/expat.bst \
+            --cut components/bison.bst \
+            --cut components/icu.bst \
+            --cut components/doxygen.bst \
+            --cut components/which.bst \
+            --cut components/ninja.bst \
+            --cut "$TARGET" \
+            | tee capture/rebuild-set.txt
+          wc -l < capture/rebuild-set.txt
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      # Phase 1: pull the world. Not timed, not captured - this only
+      # populates the local CAS so the capture phase has a cached base.
+      - name: Warm the local cache from the project's remote cache
+        timeout-minutes: 90
+        run: |
+          cd fdsdk
+          bst --no-interactive --builders "$BUILDERS" build "$TARGET"
+          bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
+            > ../capture/state-after-warm.txt
+          tail -5 ../capture/state-after-warm.txt
+
+      # Phase 2: cut. Sources are fetched *before* the capture so the
+      # timed build is dominated by real build work rather than by
+      # downloads, which is the timeline the analysis is about.
+      - name: Delete the rebuild set and pre-fetch its sources
+        timeout-minutes: 45
+        run: |
+          cd fdsdk
+          xargs -a ../capture/rebuild-set.txt \
+            bst --no-interactive artifact delete
+          # Only the deleted elements need sources: everything else is
+          # still cached and will never be built.
+          xargs -a ../capture/rebuild-set.txt \
+            bst --no-interactive source fetch --deps none
+          bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
+            > ../capture/state-after-delete.txt
+          grep -c 'buildable' ../capture/state-after-delete.txt || true
+
+      # Phase 3: the capture. One `bst build` invocation feeds both
+      # planes (UX-24): the wrapped log is Plane 1, the LD_PRELOAD trace
+      # is Plane 2.
+      - name: Capture the build (both planes)
+        timeout-minutes: 150
+        run: |
+          OPENS=""
+          if [ "$TRACE_OPENS" = "true" ]; then OPENS="--trace-opens"; fi
+          python3 -m tools.bst_native_build_tracer run \
+            --wrapped-log capture/build.log \
+            --raw-log capture/native-trace.log \
+            $OPENS \
+            fdsdk capture/native-report.json \
+            -- bst --no-interactive --builders "$BUILDERS" --max-jobs "$MAX_JOBS" \
+                 build --ignore-project-artifact-remotes \
+                       --ignore-project-source-remotes "$TARGET"
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Extract the bga run directory
+        run: |
+          python3 -m tools.bst_extract_run fdsdk capture/build.log capture/run \
+            --format wrapped --native-max-jobs "$MAX_JOBS"
+          ls -la capture/run
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      # Run the analysis here too. Not because the audit happens on the
+      # runner - it does not - but so a run that fails a hard gate says so
+      # in the job log instead of only in an artifact nobody downloads.
+      - name: Analyze
+        continue-on-error: true
+        run: |
+          # -d is --diagnostics (blast radius, criticality probability);
+          # the run directory is positional.
+          bga analyze -d capture/run | tee capture/analyze.txt
+          bga analyze -d capture/run -f json > capture/analyze.json
+          bga correlate capture/run capture/native-report.json \
+            > capture/correlate.txt 2>&1 || true
+
+      - name: Record the environment the capture was taken in
+        if: always()
+        run: |
+          {
+            echo "fdsdk_ref=$(git -C fdsdk rev-parse HEAD 2>/dev/null || echo unknown)"
+            echo "bga_ref=${{ github.sha }}"
+            echo "bst_version=$(bst --version 2>/dev/null || echo unknown)"
+            echo "runner_os=$(uname -a)"
+            echo "nproc=$(nproc)"
+            echo "builders=$BUILDERS"
+            echo "max_jobs=$MAX_JOBS"
+            echo "trace_opens=$TRACE_OPENS"
+            echo "mem_total_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)"
+          } > capture/capture-context.txt
+          df -h / >> capture/capture-context.txt
+          cat capture/capture-context.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fdsdk-capture
+          path: capture/
+          # The native trace of a real build is large and compresses well;
+          # the run directory is what the audit actually reads.
+          retention-days: 14

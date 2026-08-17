@@ -245,6 +245,17 @@ def correlate(analysis: dict, native_report: dict) -> dict:
     attribution_unreliable = (
         attribution.get("note") if attribution.get("reliable") is False else None
     )
+    # UX-66: a partial attribution is not an unreliable one. When the
+    # names present are real but do not cover every process, the join is
+    # correct for the elements it names and silent about the rest - so it
+    # is rendered with its coverage stated, the way `UX-45` publishes
+    # measured CPU time and `UX-63` measured memory. Refusing here is
+    # reserved for the case where the names themselves are fiction.
+    attribution_partial = (
+        attribution.get("note")
+        if attribution.get("reliable") and attribution.get("unattributed_processes")
+        else None
+    )
 
     return {
         "elements": [vars(e) for e in joined],
@@ -253,6 +264,7 @@ def correlate(analysis: dict, native_report: dict) -> dict:
             else [vars(e) for e in joined if e.recommendations]
         ),
         "attribution_unreliable": attribution_unreliable,
+        "attribution_partial": attribution_partial,
         "coverage": {
             "joined_elements": len(covered),
             "plane1_elements": len(plane1),
@@ -285,6 +297,12 @@ def format_correlation(result: dict) -> str:
         )
         lines.append("=" * 60)
         return "\n".join(lines)
+    # UX-66: stated before the rows, because it scopes them.
+    if result.get("attribution_partial"):
+        lines.append("PARTIAL ATTRIBUTION - the rows below are correct for the")
+        lines.append("elements they name, and say nothing about the rest:")
+        lines.append(f"  {result['attribution_partial']}")
+        lines.append("")
     coverage = result["coverage"]
     lines.append(
         f"Joined {coverage['joined_elements']} element(s) on element UID "

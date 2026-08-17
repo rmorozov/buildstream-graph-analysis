@@ -20,6 +20,8 @@ in `.bst`) - so this is not the mechanism failing, it is the mechanism
 resting on a convention a real project is free to override.
 """
 from bga.correlate import correlate, format_correlation
+import pytest
+
 from tools.bst_native_build_tracer import assess_element_attribution
 
 
@@ -44,13 +46,45 @@ def test_the_real_freedesktop_sdk_collapse_is_caught():
     assert "buildstream-build" in result["note"]
 
 
-def test_a_partial_collapse_is_also_unreliable():
-    """Not a threshold: one un-element-like bucket means some processes
-    are attributed to something that is not an element, and there is no
-    way to tell which of the rest are affected."""
+def test_a_partial_attribution_is_usable_and_reports_its_coverage():
+    """Deliberately replaces the original all-or-nothing rule (UX-66).
+
+    That rule read: one un-element-like bucket means some processes are
+    attributed to something that is not an element, and *there is no way
+    to tell which of the rest are affected*. The second half was true
+    before `UX-64` and is false after it: the residue is not mislabelled,
+    it sits in a named unresolved bucket precisely because its sandbox
+    could not be matched to exactly one element.
+
+    Round 8 is what forced the change. 86.1% of a real build's processes
+    were correctly named, every resolved name valid against the declared
+    graph, and the report still refused - citing `components/bison.bst`,
+    which is an element, as evidence that attribution had failed.
+    """
     result = assess_element_attribution({"core.bst": 100, "buildstream-build": 1})
 
+    assert result["reliable"] is True
+    assert result["attributed_share"] == pytest.approx(100 / 101)
+    assert result["unattributed_processes"] == 1
+    assert result["unresolved_bucket"] == "buildstream-build"
+    assert "cover the attributed share only" in result["note"]
+
+
+def test_names_that_are_all_fiction_are_still_refused():
+    """The case the original rule was written for, unchanged: when no
+    bucket is an element name, every per-element figure is fiction."""
+    result = assess_element_attribution({"buildstream-build": 1000})
+
     assert result["reliable"] is False
+    assert "none of 1000 traced processes" in result["note"]
+
+
+def test_a_fully_attributed_run_reports_no_shortfall():
+    result = assess_element_attribution({"core.bst": 100, "app.bst": 50})
+
+    assert result["reliable"] is True
+    assert result["unattributed_processes"] == 0
+    assert result["note"] is None
 
 
 def test_no_tags_at_all_is_unreliable_and_says_so():

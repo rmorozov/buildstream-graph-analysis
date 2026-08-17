@@ -208,6 +208,63 @@ def _structural_kind_tag(entry: dict) -> str:
     return f" [structural: {kind}, may not reflect real compute work]"
 
 
+# UX-65: a "biggest opportunity" below this share of wall-clock is not an
+# opportunity, it is rounding. On a real freedesktop-sdk build the largest
+# non-execution category was UNTRACKED_HEAD at 0.1% - 3.47 seconds out of
+# 3587.6 - and that was the report's headline while four elements sat at
+# 94% of the critical path further down.
+_OPPORTUNITY_FLOOR_PCT = 1.0
+
+# When the critical path is this share of total duration, the *chain* is
+# the constraint, not the scheduler. Blast radius answers "who depends on
+# me", which matters when the graph is the problem; here what matters is
+# "how long do I take".
+_CHAIN_BOUND_RATIO = 0.9
+
+
+def _heaviest_on_path(result) -> List[dict]:
+    """Critical-path elements with real measured work, heaviest first.
+
+    Structural elements are excluded rather than ranked: a `stack` or
+    `import` on the path is genuine graph structure with no build
+    commands to speed up, and `UX-34` already established that ranking
+    them as "worth optimizing" wastes the reader's first glance.
+    """
+    detail = (result.signals or {}).get('critical_path_detail') or []
+    real = [d for d in detail if d.get('duration_us') and not d.get('is_structural_kind')]
+    return sorted(real, key=lambda d: -d['duration_us'])
+
+
+def _format_time_concentration(result) -> List[str]:
+    """UX-65: name where the time actually is.
+
+    The tool already computes every number in this block; it simply never
+    put them where a reader looks first. Same fix as `UX-25`/`UX-33` -
+    say what is already known.
+    """
+    heavy = _heaviest_on_path(result)
+    if not heavy:
+        return []
+    path_us = sum(
+        d.get('duration_us', 0)
+        for d in ((result.signals or {}).get('critical_path_detail') or [])
+    )
+    if path_us <= 0:
+        return []
+    top = heavy[:4]
+    share = sum(d['duration_us'] for d in top) / path_us * 100
+    lines = [
+        f"  Where the time is: {len(top)} element(s) are {share:.1f}% of the "
+        f"{path_us / 1e6:.1f}s critical path"
+    ]
+    for d in top:
+        lines.append(
+            f"    {d['element_uid']}  {d['duration_us'] / 1e6:.1f}s "
+            f"({d['duration_us'] / path_us * 100:.1f}% of path)"
+        )
+    return lines
+
+
 def _format_key_findings(result: AnalysisResult) -> List[str]:
     """Synthesized "what to look at first" summary (P4-02) - presentation
     only, reads already-computed fields (result.confidence/.attribution/
@@ -291,8 +348,25 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     }
     if non_execution and total > 0:
         top_category, top_duration_us = max(non_execution.items(), key=lambda kv: kv[1])
-        if top_duration_us > 0:
-            pct = top_duration_us / total * 100
+        pct = top_duration_us / total * 100 if top_duration_us > 0 else 0.0
+        # UX-65: when nothing meaningful went anywhere other than useful
+        # work, "the largest of the remaining 0.1%" is not the answer.
+        # Say the build is execution-bound - which is a real finding -
+        # and point at where the execution actually is.
+        if pct < _OPPORTUNITY_FLOOR_PCT:
+            concentration = _format_time_concentration(result)
+            if concentration:
+                lines.append(
+                    f"  Biggest Opportunity: this build is execution-bound - "
+                    f"no wait category exceeds {_OPPORTUNITY_FLOOR_PCT:.0f}% of "
+                    f"wall-clock time, so there is no scheduling gap to close"
+                )
+                lines.extend(concentration)
+                lines.append(
+                    "    -> these elements must get faster, or come off the "
+                    "chain; the scheduler has no room left to give"
+                )
+        elif top_duration_us > 0:
             label = top_category.replace('_us', '').replace('_', ' ').upper()
             lines.append(
                 f"  Biggest Opportunity: {pct:.1f}% of wall-clock time is "
@@ -309,12 +383,32 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
             if hint:
                 lines.append(f"    -> {hint}")
 
+
     # Top elements by blast radius / criticality probability, when
     # diagnostics were actually run (Part 25/26) - already computed by
     # BuildEfficiencyAnalyzer._compute_diagnostics, just surfaced here.
     signals = result.signals or {}
     top_blast_radius = signals.get('top_blast_radius') or []
-    if top_blast_radius:
+    # UX-65: blast radius answers "who depends on me", which is the right
+    # question when the *graph* constrains the build. When the chain does -
+    # T-infinity is nearly the whole wall clock - what matters is "how long
+    # do I take", and ranking by blast radius put two structural elements
+    # at the top of a real build's what-to-fix list while the element
+    # holding 43.5% of the path went unmentioned.
+    floors = result.floors or {}
+    t_infinity = floors.get('t_infinity_observed') or 0
+    chain_bound = bool(total) and t_infinity / total >= _CHAIN_BOUND_RATIO
+    if chain_bound and _heaviest_on_path(result):
+        lines.append(
+            "  Elements Most Worth Optimizing First (by share of the critical "
+            "path - this build is chain-bound, not scheduler-bound):"
+        )
+        for i, d in enumerate(_heaviest_on_path(result)[:3], start=1):
+            lines.append(
+                f"    {i}. {d['element_uid']} ({d['duration_us'] / 1e6:.1f}s, "
+                f"{d.get('share_of_path', 0) * 100:.1f}% of the critical path)"
+            )
+    elif top_blast_radius:
         lines.append("  Elements Most Worth Optimizing First (by blast radius):")
         blast_radius = signals.get('blast_radius') or {}
         for i, elem_uid in enumerate(top_blast_radius[:3], start=1):

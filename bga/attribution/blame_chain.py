@@ -14,6 +14,7 @@ Implements Parts 6-12:
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 
 from ..ingest.models import (
@@ -168,6 +169,46 @@ class TaskAttribution:
         }
 
 
+@dataclass(frozen=True)
+class _ResourceTimeline:
+    """Precomputed occupancy of one resource across the whole run (UX-42).
+
+    `points` are the sorted change points; `active[i]` is the tuple of
+    tasks holding the resource throughout `[points[i], points[i+1])`.
+    Because occupancy only changes at a start or a finish, every instant
+    inside a slice has the same holders - which is exactly the property
+    `_resource_saturation_intervals` relies on.
+    """
+    # Holders are carried as `(key_str, task)` pairs rather than bare
+    # tasks: the inner loops compare and emit task-key *strings*
+    # millions of times, and both `TaskKey.__eq__` (a dataclass
+    # comparison) and `str(task_key)` are far more expensive than a
+    # string identity test against a value computed once per run.
+    points: List[int]
+    active: List[Tuple[Tuple[str, NormalizedTask], ...]]
+    # How many tasks contribute a boundary at each point (a task adds one
+    # for its start and one for its finish, so a zero-duration task adds
+    # two at the same instant). Needed to reproduce the original's
+    # exclusion of the *waiting* task's own boundaries: a point that only
+    # that task contributes is not a boundary for its own gap.
+    boundary_refs: Dict[int, int]
+
+    def holders_at(self, timestamp: int) -> Tuple[Tuple[str, NormalizedTask], ...]:
+        """Tasks holding the resource at `timestamp`. O(log N)."""
+        if not self.active:
+            return ()
+        index = bisect_right(self.points, timestamp) - 1
+        if index < 0 or index >= len(self.active):
+            return ()
+        return self.active[index]
+
+    def change_points_within(self, start: int, end: int) -> List[int]:
+        """Change points strictly inside `(start, end)`. O(log N + k)."""
+        left = bisect_right(self.points, start)
+        right = bisect_left(self.points, end)
+        return self.points[left:right]
+
+
 class BlameChainAnalyzer:
     """
     Implements the dependency blame chain model (M2, Parts 6-12).
@@ -222,6 +263,81 @@ class BlameChainAnalyzer:
         # Cache for blame chain computation
         self._blame_chain_cache: Dict[str, BlameChainNode] = {}
         self._attribution_cache: Dict[str, TaskAttribution] = {}
+
+        # UX-42: per-resource occupancy timeline, built once per run.
+        # See _build_resource_timelines.
+        self._resource_timelines: Optional[Dict[Resource, _ResourceTimeline]] = None
+
+    def _resource_timeline(self, resource: Resource) -> Optional['_ResourceTimeline']:
+        """Occupancy timeline for one resource, built lazily and once.
+
+        UX-42: `_resource_saturation_intervals` used to re-derive this
+        per *wait gap* - scanning every task to build a `relevant_others`
+        list (two set constructions each, which is where 112 million
+        `Resource.__hash__` calls came from), then rescanning that list
+        once per boundary sub-interval to count occupancy and again to
+        find holders. That is O(gaps x tasks x boundaries); on a
+        1202-element run it was 98% of a 115-second analysis.
+
+        The occupancy of a resource over time is a property of the whole
+        run and does not change between gaps, so it is computed once
+        here and sliced per gap by binary search.
+        """
+        if self._resource_timelines is None:
+            self._build_resource_timelines()
+        return self._resource_timelines.get(resource)
+
+    def _build_resource_timelines(self) -> None:
+        """Build, per resource, the sorted change points and the tuple of
+        tasks active in each resulting slice.
+
+        Memory is O(sum of concurrency over change points) - for the
+        1202-task scale fixture at ~16-way concurrency that is tens of
+        thousands of references, not a task-by-task matrix.
+        """
+        by_resource: Dict[Resource, List[NormalizedTask]] = defaultdict(list)
+        for task in self.tasks:
+            for resource in task.resources:
+                by_resource[resource].append(task)
+
+        timelines: Dict[Resource, _ResourceTimeline] = {}
+        for resource, tasks in by_resource.items():
+            # Zero-duration tasks can never cover a sub-interval (which
+            # is always non-empty), so they are excluded here exactly as
+            # the original `start <= t1 and finish >= t2` test excluded
+            # them.
+            # Boundaries come from *every* task using the resource,
+            # including zero-duration ones: a structural element with
+            # start == finish contributes a split point even though it
+            # can never hold the resource across a non-empty interval.
+            # The original built its boundary set the same way.
+            boundary_refs: Dict[int, int] = defaultdict(int)
+            for entry in tasks:
+                boundary_refs[entry.start_us] += 1
+                boundary_refs[entry.finish_us] += 1
+            points = sorted(boundary_refs)
+
+            # Holders, by contrast, are only tasks that actually span an
+            # interval - `start <= t1 and finish >= t2` excluded
+            # zero-duration tasks by construction.
+            spans = [t for t in tasks if t.finish_us > t.start_us]
+            active: List[Tuple[Tuple[str, NormalizedTask], ...]] = []
+            if points:
+                # Sweep once: tasks sorted by start, released by finish.
+                ordered = sorted(spans, key=lambda t: t.start_us)
+                cursor = 0
+                live: List[Tuple[str, NormalizedTask]] = []
+                for point in points[:-1]:
+                    while cursor < len(ordered) and ordered[cursor].start_us <= point:
+                        entry = ordered[cursor]
+                        live.append((str(entry.task_key), entry))
+                        cursor += 1
+                    live = [pair for pair in live if pair[1].finish_us > point]
+                    active.append(tuple(live))
+            timelines[resource] = _ResourceTimeline(
+                points=points, active=active, boundary_refs=dict(boundary_refs)
+            )
+        self._resource_timelines = timelines
     
     def _build_dependency_graph(self) -> None:
         """
@@ -473,49 +589,85 @@ class BlameChainAnalyzer:
         if not required_with_capacity:
             return [(False, window_start, window_end, {})]
 
-        # Every other task that could possibly affect occupancy of one of
-        # this task's required (capacity-known) resources.
-        relevant_others = [
-            other for other in self.tasks
-            if other.task_key != task.task_key
-            and (set(required_with_capacity) & set(other.resources))
-        ]
+        # UX-42: the per-resource occupancy timeline is a property of the
+        # whole run, so it is built once (see `_resource_timeline`) and
+        # sliced here rather than re-derived per gap.
+        timelines = {
+            resource: self._resource_timeline(resource)
+            for resource in required_with_capacity
+        }
 
-        # Critical points: window_start/window_end plus every other
-        # relevant task's start/finish that falls strictly inside the
-        # window - occupancy for a required resource can only change at
-        # one of these points, so they define the maximal constant-
-        # occupancy sub-intervals.
+        # Critical points: window_start/window_end plus every change
+        # point of a required resource that falls strictly inside the
+        # window - occupancy can only change at one of those, so they
+        # define the maximal constant-occupancy sub-intervals. Binary
+        # search into the precomputed points, rather than a scan of
+        # every task in the run.
         boundaries = {window_start, window_end}
-        for other in relevant_others:
-            if window_start < other.start_us < window_end:
-                boundaries.add(other.start_us)
-            if window_start < other.finish_us < window_end:
-                boundaries.add(other.finish_us)
+        for timeline in timelines.values():
+            if timeline is not None:
+                boundaries.update(timeline.change_points_within(window_start, window_end))
+
+        # The precomputed timelines include the waiting task's own
+        # start/finish; the original boundary set did not, because it
+        # skipped `other.task_key == task.task_key`. Drop any interior
+        # point that no *other* relevant task also contributes - at most
+        # two points to check, so this stays O(1).
+        for own_point in (task.start_us, task.finish_us):
+            if not (window_start < own_point < window_end) or own_point not in boundaries:
+                continue
+            own_refs = (task.start_us == own_point) + (task.finish_us == own_point)
+            contributed_by_other = False
+            for resource, timeline in timelines.items():
+                if timeline is None:
+                    continue
+                refs = timeline.boundary_refs.get(own_point, 0)
+                if resource in task.resources:
+                    refs -= own_refs
+                if refs > 0:
+                    contributed_by_other = True
+                    break
+            if not contributed_by_other:
+                boundaries.discard(own_point)
+
         points = sorted(boundaries)
 
+        self_key = str(task.task_key)
         intervals: List[Tuple[bool, int, int, Dict[str, int]]] = []
         for t1, t2 in zip(points, points[1:]):
-            saturated_resources = {
-                resource for resource, capacity in required_with_capacity.items()
-                if sum(
-                    1 for other in relevant_others
-                    if resource in other.resources
-                    and other.start_us <= t1 and other.finish_us >= t2
-                ) >= capacity
-            }
+            # Within a sub-interval every relevant task either covers it
+            # entirely or does not overlap it at all - that is what makes
+            # the boundary set correct - so "holders throughout" and
+            # "holders at t1" are the same set, and occupancy is a
+            # single indexed lookup instead of a rescan.
+            holders_by_resource = {}
+            saturated_resources = set()
+            for resource, capacity in required_with_capacity.items():
+                timeline = timelines.get(resource)
+                if timeline is None:
+                    continue
+                holders = timeline.holders_at(t1)
+                # The task doing the waiting is excluded from its own
+                # saturation count, as before.
+                occupancy = sum(1 for key_str, _ in holders if key_str != self_key)
+                if occupancy >= capacity:
+                    saturated_resources.add(resource)
+                    holders_by_resource[resource] = holders
+
             if not saturated_resources:
                 intervals.append((False, t1, t2, {}))
                 continue
-            holder_time_us: Dict[str, int] = defaultdict(int)
-            for other in relevant_others:
-                if not (set(other.resources) & saturated_resources):
-                    continue
-                overlap_start = max(t1, other.start_us)
-                overlap_end = min(t2, other.finish_us)
-                if overlap_start < overlap_end:
-                    holder_time_us[str(other.task_key)] += overlap_end - overlap_start
-            intervals.append((True, t1, t2, dict(holder_time_us)))
+
+            # A task holding two saturated resources is one holder, not
+            # two - the original accumulated overlap per task, not per
+            # (task, resource) pair.
+            holder_time_us: Dict[str, int] = {}
+            width = t2 - t1
+            for holders in holders_by_resource.values():
+                for key_str, _ in holders:
+                    if key_str != self_key:
+                        holder_time_us[key_str] = width
+            intervals.append((True, t1, t2, holder_time_us))
 
         return intervals
 

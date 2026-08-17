@@ -1,6 +1,6 @@
 # UX-42: attribution re-derives resource saturation from scratch per wait gap, so a 1200-element build takes 68s to analyze
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — (P1-16/P1-21 did earlier performance work on different functions)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (P1-16/P1-21 did earlier performance work on different functions)
 
 ## Motivation
 
@@ -69,6 +69,39 @@ Two cheap, independent wins worth taking in the same pass even if the restructur
 2. The 1202-element scale fixture analyzes in a small fraction of the current 68s (a target worth committing to when the approach is chosen - an order of magnitude is the reasonable ask given the complexity change).
 3. The determinism harness (`I11`) still passes N-run byte-identical.
 4. A profile of the same run no longer shows `_resource_saturation_intervals` as the dominant cost. Full suite green.
+
+## Fix Implemented
+
+A per-resource occupancy timeline (`_ResourceTimeline`) is built **once per run** and sliced per gap by binary search, replacing the per-gap rebuild.
+
+The correctness argument that makes the slicing exact: because the boundary set already contains every relevant start and finish inside the window, within any sub-interval each task either *fully covers* it or does not overlap it at all. So the original's `other.start_us <= t1 and other.finish_us >= t2` test is simply "is this task holding the resource at `t1`" - an indexed lookup rather than a rescan. Holder time is then `t2 - t1` for every holder, with no per-task overlap arithmetic.
+
+Per gap this is `O(log N + k)` for `k` intervals actually inside the window, against the previous `O(tasks x boundaries)`.
+
+Two cheap wins the doc also asked for came from the follow-up profile rather than from guessing: holders are stored as `(key_str, task)` pairs so the inner loops never call `TaskKey.__eq__` (8.5M calls) or `str(task_key)` (2.5M) again.
+
+### Results
+
+```
+$ time bga analyze -f json /tmp/run-scale-1200
+before   1m35.531s
+after    0m03.164s          <- 30x
+```
+
+`_resource_saturation_intervals` fell from **101s self / 193s cumulative** to **0.8s self / 2.1s cumulative** under the profiler, and is no longer the dominant cost - acceptance test 4. `bga analyze` on `examples/06` is unchanged at ~0.3s; this was never a small-graph problem.
+
+### Byte-identity, and the two bugs the oracle caught
+
+Output is byte-identical before and after on all five fixtures - `examples/06` baseline, `optimized/`, the `--builders 2` capture, the `mixed_task_kinds` golden fixture, and the 1202-element scale run - and the determinism harness reports the same hash across three consecutive scale runs.
+
+**Byte-identity on real fixtures was not sufficient to establish correctness**, which is worth recording. A dedicated oracle test (`tests/unit/test_resource_saturation_timeline.py`) transcribes the original algorithm naively and compares against it across generated shapes, and it caught two real segmentation defects that all five real fixtures had missed:
+
+1. **Zero-duration tasks contribute boundaries.** A structural element with `start == finish` can never *hold* a resource across a non-empty interval, but the original still added its timestamp to the boundary set. The first version of the timeline dropped such tasks entirely, merging two sub-intervals into one.
+2. **A task's own boundaries are not boundaries of its own gap.** The original skipped `other.task_key == task.task_key` when building the boundary set; the shared timeline naturally includes every task, so the waiting task's own start/finish produced spurious splits. Fixed by tracking how many tasks contribute a boundary at each point, so a point contributed *only* by the waiting task can be dropped - two points to check per gap, so it stays `O(1)`.
+
+Neither changed a saturation verdict or a holder set; both changed how the gap was *segmented*, which `_build_holder_info` merges over - which is exactly why the real fixtures did not catch them, and why "the output is identical" would have been a false negative for this class of bug.
+
+Tests: 9 new, all oracle comparisons plus one asserting the per-run structure is built once and reused. Full suite 812 passed (up from 803), `make lint` clean.
 
 ## Verification Log
 

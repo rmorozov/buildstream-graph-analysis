@@ -297,6 +297,8 @@ jobs:
           python3 -m tools.bst_native_build_tracer run \
             --wrapped-log capture/build.log \
             --raw-log capture/native-trace.log \
+            --invocation-log capture/invocations.jsonl \
+            --argv-log capture/bwrap-argv.jsonl \
             $OPENS \
             fdsdk capture/native-report.json \
             -- bst --no-interactive --builders "$BUILDERS" --max-jobs "$MAX_JOBS" \
@@ -401,7 +403,14 @@ jobs:
             trace_bytes=$(stat -c %s capture/native-trace.log)
             echo "native-trace.log: $trace_bytes bytes"
             if [ "$trace_bytes" -gt 40000000 ]; then
-              echo "dropped from the tarball: $trace_bytes bytes" \
+              # UX-57/UX-58: keep a bounded head instead of dropping the
+              # whole thing. All-or-nothing is what produced a capture
+              # with no raw trace in it at all, and a few thousand lines
+              # is enough to check the record format by eye.
+              head -c 4000000 capture/native-trace.log \
+                > capture/native-trace.head.log || true
+              echo "full log dropped from the tarball: $trace_bytes bytes;" \
+                   "first 4 MB kept as native-trace.head.log" \
                 > capture/native-trace.log.omitted
               rm capture/native-trace.log
             fi

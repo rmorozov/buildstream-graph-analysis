@@ -133,6 +133,30 @@ jobs:
           # tarball sources.
           sudo apt-get install -y bubblewrap lzip
 
+      # Runs 3 and 4 both died at the first sandboxed element with
+      #
+      #     bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted
+      #
+      # and run 4 established it is the runner, not this repository's
+      # tooling: the traced build and a plain `bst build` of the same
+      # elements failed identically (exit 255 both ways, same message).
+      # Ubuntu 24.04 - which `ubuntu-latest` now is - ships
+      # `kernel.apparmor_restrict_unprivileged_userns=1`, which leaves
+      # bwrap without CAP_NET_ADMIN inside the network namespace it just
+      # created, so it cannot bring up `lo`. BuildStream passes
+      # `--unshare-net` for every element that does not declare network
+      # access, which is nearly all of them.
+      #
+      # Checked here rather than discovered forty minutes later: a
+      # sandbox that cannot start makes every phase after this one
+      # pointless.
+      - name: Make the sandbox usable, and prove it before spending an hour
+        run: |
+          sysctl kernel.apparmor_restrict_unprivileged_userns || true
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          bwrap --unshare-net --unshare-pid --ro-bind / / --dev /dev /bin/true
+          echo "bwrap --unshare-net works"
+
       - name: Install BuildStream and bga
         run: |
           pip install -e ".[dev]"

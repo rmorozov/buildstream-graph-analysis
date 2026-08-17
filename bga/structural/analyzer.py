@@ -147,20 +147,46 @@ class StructuralAnalyzer:
         """
         G = self._graph
         
-        # Find choke points (articulation points in undirected version)
-        # For DAGs, use dominator-based approach
+        # UX-43: a choke point is an element that *nothing else can
+        # overlap with* - every other element in the build is either
+        # strictly upstream of it or strictly downstream of it, so when
+        # it runs, it runs alone. Equivalently `|ancestors| +
+        # |descendants| == N - 1`.
+        #
+        # This replaces `in_degree >= 2 and out_degree >= 2`, a
+        # placeholder that flagged 606 of 1202 elements (50.4%) on a
+        # realistically-shaped graph - "has two parents and two
+        # children" is simply the common case in any layered build.
+        #
+        # The comment that used to sit here proposed a dominator-based
+        # definition. That was measured and rejected on real data:
+        # dominance asks "does every *path* to B pass through A", which
+        # is the right question for a control-flow graph where one path
+        # is taken. BuildStream dependencies are conjunctive - every
+        # predecessor must finish - so on the 1202-element fixture,
+        # where each module depends directly on `toolchain.bst`, 1201 of
+        # 1202 nodes have the virtual root as their immediate dominator
+        # and the signal is vacuous. Overlap is the property that
+        # actually matters for a build, and it is exact rather than
+        # heuristic.
+        #
+        # O(V*(V+E)) worst case via the two reachability sweeps; 0.2s
+        # for all 1202 nodes of the scale fixture in practice.
         choke_points = []
         choke_impact = {}
-        
-        # Simple heuristic: high fan-in + high fan-out elements
+
+        n_nodes = G.number_of_nodes()
         for node in G.nodes():
-            fanin = G.in_degree(node)
-            fanout = G.out_degree(node)
-            if fanin >= 2 and fanout >= 2:
+            downstream = nx.descendants(G, node)
+            upstream = nx.ancestors(G, node)
+            if len(downstream) + len(upstream) == n_nodes - 1:
                 choke_points.append(node)
-                # Count downstream elements
-                downstream = nx.descendants(G, node)
                 choke_impact[node] = len(downstream)
+
+        # Ranked by how much waits on them, so the report's own cap
+        # shows the ones worth reading first rather than an arbitrary
+        # graph-iteration order.
+        choke_points.sort(key=lambda node: (-choke_impact[node], node))
         
         # Resource contention (structural - same resource type used by many elements)
         resource_usage = defaultdict(list)

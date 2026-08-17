@@ -176,6 +176,30 @@ Same wrapped-log capture note as `04`/`05` (`--format wrapped`, see
 `~/.cache/buildstream ~/.local/share/buildstream` between the two builds
 or the second one is a near-total cache hit with nothing to time.
 
+## 07-declared-vs-used-dependencies
+
+A deliberately minimal project that exercises `UX-46`'s declared-vs-used
+dependency detection in **both directions** — the one thing
+`06-macro-micro-optimization` cannot do, because `UX-46` measured that
+project and found *every* cross-element build dependency in it to be
+decorative.
+
+`user.bst` and `unrelated.bst` declare identical dependencies
+(`base.bst` + `toolchain.bst`) and differ only in whether their source
+actually includes `base.hpp`:
+
+```
+Declared build dependencies never read: 1 candidate(s) across 1 element(s); 4 edge(s) confirmed used
+  unrelated.bst              never read: base.bst  (5 staged file(s))
+
+  user.bst      -> base.bst   1/5 staged files opened   <- correctly NOT flagged
+  unrelated.bst -> base.bst   0 of 5 files opened       <- correctly flagged
+```
+
+An over-eager detector flags both; an inert one flags neither. Full
+detail in that project's own
+[`README.md`](07-declared-vs-used-dependencies/README.md).
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

@@ -172,7 +172,28 @@ and `codegen.bst` both start at t=0 and its end falls inside both spans.
 Tests: 16 (`tests/unit/test_invocation_correlation.py`), including both
 measured corrections above as named cases. Suite: 1024 → 1028.
 
-**Not yet validated at real scale.** Round 7's published capture dropped
+### Validated at real scale (round 8)
+
+Run `32055047259`, `bga_ref` `835e3d9`, the same `freedesktop-sdk`
+capture shape as round 7:
+
+| | round 7 (start instant) | round 8 (end edge) |
+|---|---|---|
+| sandboxes resolved | 6 of 25, one unsound | **9 of 25**, all sound |
+| ambiguous / conflicting / unmatched | 18 / 1 / 0 | **16 / — / 0** |
+| processes correctly named | 19,024 (**14.9%**) | **109,873 (86.1%)** |
+| resolved names valid in the declared graph | — | **8 of 8** |
+
+`unmatched: 0` held, which was the risk: the end-edge rule could have
+pushed sandboxes out of every span at scale, and did not. Only 9 of 25
+sandboxes resolved but they carry 86.1% of the processes, because the
+resolved ones are the *heavy* elements; the 16 still ambiguous are short
+ones at the build's start where four spans open together.
+
+What now blocks the join is the reliability guard, not the correlation —
+see `UX-66`.
+
+**Superseded note.** Round 7's published capture dropped
 its full native trace above 40 MB, and the 4 MB head that survived covers
 **17 seconds of a 3584-second build**, so every sandbox duration derived
 from it is truncated and proves nothing. Round 8 is the real test.

@@ -101,8 +101,27 @@ class SensitivityResult:
     top_opportunities: List[tuple]  # [(key, score, impact), ...]
     
     # Aggregate metrics
+    #
+    # UX-44: `total_improvable_time_us` used to be the sum of a
+    # placeholder slack (`duration * 0.5`) over non-critical-path
+    # elements - a quantity that summed the time whose elimination
+    # provably buys nothing, and read as wall-clock while being a sum
+    # over work. It is now the makespan reduction available if every
+    # zero-slack element were free, computed by re-running the
+    # longest-path pass with those nodes zeroed rather than by summing
+    # per-element savings (which would double-count - the savings are
+    # not independent).
+    #
+    # This is a *structural* ceiling: it knows the graph and the
+    # measured durations, and nothing about resource capacity. It is not
+    # `certified_headroom`, which certifies against this run's measured
+    # resource floors, and the report says so where both appear.
     total_improvable_time_us: int
-    best_case_speedup: float  # Theoretical max speedup if all improvable time eliminated
+    # Ceiling if all of the above were realized. `None` when every
+    # element is on the critical path, since the ratio is then unbounded
+    # and reporting a finite 1.0 would say the opposite of the truth.
+    best_case_speedup: Optional[float]
+    critical_path_us: int  # Weighted longest path - what the two above are relative to
     
     # Critical path sensitivity
     cp_sensitivity: Dict[str, float]  # How much CP changes per unit duration change

@@ -671,16 +671,43 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             sensitivity = sm.get('sensitivity') or {}
             top_opportunities = sensitivity.get('top_opportunities') or []
             if top_opportunities:
+                # UX-44: the numbers here used to be derived from a
+                # placeholder slack of `duration * 0.5`, which made the
+                # ranking an inverted duration sort and rendered a sum
+                # over *work* (2828s) as though it were wall-clock on a
+                # 362s build, three orders of magnitude away from the
+                # `Certified Headroom` line above it. Both quantities
+                # are now real, and both are named for what they are:
+                # per-element savings in seconds off the finish, and a
+                # structural ceiling that is explicitly not the
+                # certified one.
+                critical_path_us = sensitivity.get('critical_path_us') or 0
+                improvable_us = sensitivity.get('total_improvable_time_us', 0)
+                speedup = sensitivity.get('best_case_speedup')
+                # None means every element is on the critical path, so
+                # the ceiling is unbounded rather than 1.0 - see
+                # SensitivityResult.best_case_speedup.
+                ceiling = (
+                    f"{speedup:.2f}x" if speedup is not None
+                    else "unbounded (every element is on the critical path)"
+                )
                 lines.append(
-                    f"  Top Improvement Opportunities (best-case speedup "
-                    f"{sensitivity.get('best_case_speedup', 1.0):.2f}x if all "
-                    f"{sensitivity.get('total_improvable_time_us', 0) / 1e6:.2f}s of "
-                    f"improvable time were eliminated):"
+                    f"  Top Improvement Opportunities (critical path "
+                    f"{critical_path_us / 1e6:.2f}s; structural ceiling "
+                    f"{ceiling}, i.e. up to {improvable_us / 1e6:.2f}s off it "
+                    f"if every critical-path element were free):"
                 )
                 for key, score, impact_pct in top_opportunities[:5]:
                     lines.append(
-                        f"    - {key}: sensitivity {score:.2f} ({impact_pct:.1f}% impact)"
+                        f"    - {key}: up to {score * critical_path_us / 1e6:.2f}s "
+                        f"off the finish ({impact_pct:.1f}%)"
                     )
+                lines.append(
+                    "    (graph-only upper bound, not a target: each saving is capped "
+                    "where the next path becomes critical, and the savings are not "
+                    "additive. `Certified Headroom` above is the measured, certified "
+                    "figure - these two answer different questions.)"
+                )
             # UX-34: say which candidates were filtered and why, rather
             # than silently shortening the ranking (same discipline as
             # UX-26's omitted-groups line).

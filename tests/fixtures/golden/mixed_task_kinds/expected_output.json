@@ -262,59 +262,41 @@
         "sensitivity": {
             "top_opportunities": [
                 [
-                    "app.bst",
-                    0.9985022466300548,
-                    99.85022466300548
+                    "base.bst",
+                    0.42857142857142855,
+                    42.857142857142854
                 ],
                 [
                     "lib.bst",
-                    0.9975062344139651,
-                    99.75062344139651
+                    0.35714285714285715,
+                    35.714285714285715
                 ],
                 [
-                    "base.bst",
-                    0.9970089730807579,
-                    99.70089730807578
-                ],
-                [
-                    "extra.bst",
-                    0.0998003992015968,
-                    9.980039920159681
+                    "app.bst",
+                    0.21428571428571427,
+                    21.428571428571427
                 ]
             ],
             "omitted_structural_opportunities": [],
-            "total_improvable_time_us": 2000,
-            "best_case_speedup": 1.125
+            "total_improvable_time_us": 10000,
+            "best_case_speedup": 3.5,
+            "critical_path_us": 14000
         },
         "batch_opportunities": {
-            "groups": [
-                {
-                    "elements": [
-                        "app.bst",
-                        "extra.bst"
-                    ],
-                    "baseline_makespan_us": 14000,
-                    "combined_makespan_us": 11000,
-                    "combined_savings_us": 3000,
-                    "individual_savings_us": {
-                        "app.bst": 3000,
-                        "extra.bst": 0
-                    }
-                }
-            ],
+            "groups": [],
             "omitted_zero_savings_groups": [],
             "serialized_pairs": [
                 [
-                    "app.bst",
+                    "base.bst",
                     "lib.bst"
                 ],
                 [
-                    "app.bst",
-                    "base.bst"
+                    "base.bst",
+                    "app.bst"
                 ],
                 [
                     "lib.bst",
-                    "base.bst"
+                    "app.bst"
                 ]
             ]
         },
@@ -334,7 +316,7 @@
             "max_parallelism": 2,
             "bottleneck_count": 0,
             "deferrable_leaves": 2,
-            "best_case_speedup": 1.125
+            "best_case_speedup": 3.5
         },
         "consolidation_candidates": []
     },

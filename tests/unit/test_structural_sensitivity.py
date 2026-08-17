@@ -68,8 +68,16 @@ def test_compute_sensitivity_more_negative_slack_does_not_crash(monkeypatch):
 
 
 def test_compute_sensitivity_nonnegative_slack_unaffected():
-    # Real, ordinary positive-duration tasks - behavior must be unchanged
-    # by the P1-38 fix (clamping only kicks in for slack < 0).
+    """Real, ordinary positive-duration tasks on a two-element chain.
+
+    UX-44 replaced the scored quantity, so this no longer pins the old
+    `1 / (1 + slack_s)` decay formula - that formula's only input was the
+    `duration * 0.5` placeholder, and pinning it would pin the defect.
+    What it pins now is the property the formula was reaching for and
+    got backwards: both elements are on the critical path of a pure
+    chain, so each one's saving is its entire duration, and the score is
+    that saving as a fraction of the finish.
+    """
     tasks = {
         "a": _make_task("a", start_us=0, finish_us=1_000_000),
         "b": _make_task("b", start_us=1_000_000, finish_us=2_000_000),
@@ -79,5 +87,7 @@ def test_compute_sensitivity_nonnegative_slack_unaffected():
     result = analyzer.compute_sensitivity()
 
     scores = {key: score for key, score, _ in result.top_opportunities}
-    assert scores["a"] == 1.0 / (1.0 + (1_000_000 * 0.5) / 1_000_000.0)
-    assert scores["b"] == 1.0 / (1.0 + (1_000_000 * 0.5) / 1_000_000.0)
+    # 1s each on a 2s chain: halving either halves the build.
+    assert scores["a"] == 0.5
+    assert scores["b"] == 0.5
+    assert result.critical_path_us == 2_000_000

@@ -643,9 +643,62 @@ fields claim to be the same number. The eight pairs swept here are now
 pinned as tests, and the sweep itself is worth re-running whenever a new
 derived quantity is published.
 
-## Ready for the fourth round
+## What the fourth round found (2026-08-17)
 
-The backlog is empty. Everything filed across three audit
+The round's centre was the **plane seam**, the previous round's own item
+1, and it produced a design decision rather than a defect - which is what
+that item was: an open product question, not a bug.
+
+### The seam: settled by measurement, built as `UX-51`
+
+The question was whether the planes should become one capture or stay two
+with an explicit join. Three measurements decided it before any code was
+written:
+
+| question | measured answer |
+|---|---|
+| would a merged capture add anything? | **no** - `UX-24`'s `run --wrapped-log` already emits both artifacts from one `bst build` |
+| does a join key exist, and is it exact? | **yes** - 9 of 9 Plane 2 elements matched Plane 1 UIDs, zero mismatches; the two that did not join run no build commands |
+| can the horizons be merged at all? | **no** - `architecture.md`'s standing argument; a "merge" would be a join with a misleading name |
+
+So the contract between the planes is one string, and `bga correlate` is
+a third consumer neither plane knows about. The caveats that made this
+look intractable - `UX-27`'s `occupancy_ratio`, `UX-36`'s buckets, `I9` -
+were never in the way, because a join does not need them reconciled.
+
+The thing worth carrying forward is *why the answer was cheap*: every
+piece had been built for another reason (`UX-23` tagged processes to fix
+a pid-collision bug; `UX-24` added dual capture for a Chrome Trace view),
+and the seam turned out to be one join away rather than one architecture
+away. **Before designing across a seam, measure what already crosses it.**
+
+### `examples/07`, and closing an evidence gap I had flagged myself
+
+`UX-46` shipped in round 2 with a caveat in its own doc: every
+cross-element dependency in `examples/06` is decorative, so the only
+true-negative evidence was `toolchain.bst`, and a detector that flagged
+*everything* would have looked identical. Round 4's item 3 was to fix
+that, and `examples/07-declared-vs-used-dependencies` does: two elements
+with identical declared dependencies, differing only in whether their
+source includes the header, correctly separated (`1/5` files opened
+versus `0 of 5`).
+
+Worth noting as method: this gap was found by the task's own author, in
+the task's own doc, and would have stayed a footnote if the doc had not
+been written to say what the evidence *could not* show. A caveat you
+write about your own work is only useful if something later reads it.
+
+### The cross-check sweep, re-run
+
+Round 3's sweep is now a standing check. Across five runs - three real
+captures, the new dual capture, and the synthetic scale fixture - **40 of
+40 quantity pairs agree**, up from 22 of 24 when the sweep first ran. It
+costs seconds and it has already caught one serious defect (`UX-50`), so
+it is worth re-running whenever a derived quantity is added.
+
+## Ready for the fifth round
+
+The backlog is empty. Everything filed across four audit
 rounds is implemented and verified against real captures, so the next
 round starts from a clean board rather than from a work queue. What that
 round should probe, in the order I would pick:
@@ -668,32 +721,48 @@ round should probe, in the order I would pick:
    real build is what would say whether that is generous or naive - the
    `dropped` counter exists precisely so this can be answered rather than
    guessed.
-3. **A project whose elements genuinely consume each other.** `UX-46`'s
-   true-negative evidence currently rests on `toolchain.bst` alone,
-   because every cross-element dependency in `examples/06` turned out to
-   be decorative. A fixture where element B really does `#include` A's
-   staged header would let the unused-dependency detector be tested in
-   both directions, and would incidentally make the macro walkthrough
-   more representative of a real project.
+3. ~~**A project whose elements genuinely consume each other.**~~
+   **Done** as `examples/07-declared-vs-used-dependencies`: `user.bst`
+   and `unrelated.bst` declare identical dependencies and differ only in
+   whether their source includes the header, and `UX-46` separates them
+   correctly (1 of 5 staged files opened, versus 0 of 5). The
+   true-negative evidence no longer rests on `toolchain.bst` alone.
 4. **Remote execution** and **the CI story end to end** (items 4 and 5
    from the previous round) remain untouched and remain real.
 
-### What two rounds of doing this taught, as method
+### What four rounds of doing this taught, as method
 
-Worth carrying into the third round, because both cost real time to
-learn and neither is about any particular defect:
+None of these is about a particular defect, and each cost real time to
+learn:
 
 - **Byte-identical output is not proof of correctness.** `UX-42`'s
   rewrite matched all five real fixtures exactly, and an oracle test
   against a naive transcription of the original then found two genuine
   bugs. Where a change claims to preserve semantics, write the oracle.
 - **A filed acceptance criterion is a hypothesis, not a specification.**
-  Five of mine were wrong across the two rounds - `UX-48`'s "majority of
-  idle", two of `UX-43`'s predicted choke points, and two of `UX-46`'s
-  expectations about which dependencies `examples/06` really uses. In
-  every case the measurement was right and the criterion was written
-  before the measurement existed. Each is corrected in place in its own
-  doc, with the reasoning, rather than quietly dropped.
+  Five of mine were wrong across the first two rounds - `UX-48`'s
+  "majority of idle", two of `UX-43`'s predicted choke points, and two of
+  `UX-46`'s expectations about which dependencies `examples/06` really
+  uses. In every case the measurement was right and the criterion was
+  written before the measurement existed. Each is corrected in place in
+  its own doc, with the reasoning, rather than quietly dropped.
+- **A quantity computed twice is a free test** (round 3). `UX-50` needed
+  no large graph, no long build and no hypothesis about where to look -
+  only the observation that two published fields claim to be the same
+  number. The sweep is now standing, and runs 40/40 across five runs.
+- **Fixture shape matters as much as fixture size** (round 3). The
+  synthetic 1202-element fixture *structurally could not* exhibit
+  `UX-50`, because it emits one task per element while a real capture has
+  two. Round 2's lesson was that small projects hide defects; round 3's
+  is the converse, and both fixtures are needed.
+- **Before designing across a seam, measure what already crosses it**
+  (round 4). The plane join looked like an architecture question and was
+  one join away: the key already existed, the dual capture already
+  existed, and both had been built for unrelated reasons.
+- **A caveat you write about your own work is only useful if something
+  later reads it** (round 4). `UX-46` recorded that its own true-negative
+  evidence was thin; `examples/07` exists because that sentence was read
+  two rounds later.
 
 ## Suggested order (historical - all of these shipped)
 

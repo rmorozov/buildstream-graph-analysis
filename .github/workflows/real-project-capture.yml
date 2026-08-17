@@ -104,6 +104,10 @@ jobs:
     # 6h job ceiling; individual steps carry their own tighter limits so
     # one hung phase still leaves the artifacts from the phases before it.
     timeout-minutes: 330
+    # Needed by the "Publish" step below, which pushes the capture to a
+    # branch. See that step for why the uploaded artifact is not enough.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -312,3 +316,42 @@ jobs:
           # The native trace of a real build is large and compresses well;
           # the run directory is what the audit actually reads.
           retention-days: 14
+
+      # The uploaded artifact is for humans. It is not reachable from the
+      # development container this repository is worked on from: workflow
+      # artifacts are served from `*.blob.core.windows.net`, which the same
+      # egress policy that blocks the freedesktop-sdk CDN also refuses
+      # (`403` to `CONNECT`). So the capture is *also* published to a
+      # branch, which is reachable, and which has the side benefit of
+      # making each capture a versioned, fetchable object rather than
+      # something that expires in 14 days.
+      - name: Publish the capture to a branch
+        if: always()
+        run: |
+          mkdir -p publish
+          # The raw LD_PRELOAD trace of a real build is the only file here
+          # that can reach tens of MB. Keep it when it fits comfortably
+          # inside GitHub's file-size warning, drop it with a note when it
+          # does not - the parsed report is what the analysis reads.
+          if [ -f capture/native-trace.log ]; then
+            trace_bytes=$(stat -c %s capture/native-trace.log)
+            echo "native-trace.log: $trace_bytes bytes"
+            if [ "$trace_bytes" -gt 40000000 ]; then
+              echo "dropped from the tarball: $trace_bytes bytes" \
+                > capture/native-trace.log.omitted
+              rm capture/native-trace.log
+            fi
+          fi
+          tar -czf publish/capture.tar.gz -C capture .
+          ls -la publish
+          cp capture/capture-context.txt publish/ 2>/dev/null || true
+          cd publish
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "capture: freedesktop-sdk run ${{ github.run_id }}"
+          git push -q --force \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
+            HEAD:refs/heads/captures/fdsdk-latest
+          echo "Published to branch captures/fdsdk-latest"

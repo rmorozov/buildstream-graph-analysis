@@ -270,42 +270,88 @@ class StructuralAnalyzer:
         # extrapolating the decay curve backwards - "already behind
         # schedule" is at least as sensitive as "exactly on schedule",
         # never less.
-        sensitivity_scores = {}
+        durations = self._durations()
+        makespan = self._longest_path_us()
+
+        # An element with positive slack cannot move the finish at all -
+        # that is what slack *means* - so its potential saving is 0, not
+        # a small positive score. The old formula gave every non-CP
+        # element a nonzero score and thereby ranked genuinely useless
+        # work above genuinely useful work whenever the useless element
+        # happened to be shorter.
+        #
+        # For a zero-slack (critical path) element, shortening it moves
+        # the finish one-for-one only until some other path becomes
+        # critical. The smallest positive slack in the graph is exactly
+        # how much room there is before that happens, so it bounds the
+        # saving from *any* single element - a global O(V) quantity
+        # rather than a per-element second-longest-path search.
+        positive_slacks = [s for s in slacks.values() if s > 0]
+        next_binding_gap = min(positive_slacks) if positive_slacks else float('inf')
+
+        potential_saving = {}
         for key in self.tasks.keys():
-            if key in cp_nodes:
-                # CP elements have high sensitivity
-                slack = max(slacks.get(key, 0), 0)
-                # Inverse relationship: lower slack = higher sensitivity
-                sensitivity_scores[key] = 1.0 / (1.0 + slack / 1000000.0)  # Normalize by 1s
+            slack = max(slacks.get(key, 0), 0)
+            if slack > 0:
+                potential_saving[key] = 0.0
             else:
-                # Non-CP elements have lower sensitivity based on slack
-                slack = max(slacks.get(key, float('inf')), 0)
-                sensitivity_scores[key] = 0.1 / (1.0 + slack / 1000000.0)
-        
-        # Top opportunities
-        sorted_scores = sorted(sensitivity_scores.items(), key=lambda x: x[1], reverse=True)
+                potential_saving[key] = min(float(durations.get(key, 0)), next_binding_gap)
+
+        # Score is the fraction of the finish this element could remove -
+        # a real 0..1 quantity, and directly comparable across runs.
+        sensitivity_scores = {
+            key: (saving / makespan if makespan > 0 else 0.0)
+            for key, saving in potential_saving.items()
+        }
+
+        # Rank by saving, breaking ties on duration: when many critical
+        # path elements are capped by the same `next_binding_gap`, the
+        # longer one is the better place to start, since it has more room
+        # to give once the first bound is relieved.
+        ranked = sorted(
+            sensitivity_scores.items(),
+            key=lambda item: (item[1], durations.get(item[0], 0)),
+            reverse=True,
+        )
         top_opportunities = [
             (key, score, score * 100)  # (key, score, impact_percentage)
-            for key, score in sorted_scores[:10]
+            for key, score in ranked[:10]
+            if score > 0
         ]
-        
-        # Total improvable time (sum of slacks for non-CP elements)
-        total_improvable = sum(
-            slacks.get(key, 0) for key in self.tasks.keys() if key not in cp_nodes
-        )
-        
-        # Best case speedup (if all slack eliminated)
-        total_duration = sum(t.dur_us for t in self.tasks.values())
-        best_case = total_duration / (total_duration - total_improvable) if total_duration > total_improvable else 1.0
-        
+
+        # How much the finish could drop if every critical path element
+        # were free. Computed by re-running the longest-path pass with
+        # those nodes zeroed rather than by summing per-element savings,
+        # which would double-count: the savings are not independent, and
+        # removing one element exposes the next binding path.
+        #
+        # This is a *structural* bound - it knows only the graph and the
+        # measured durations. It is not `certified_headroom`, which
+        # certifies against this run's measured resource floors; the two
+        # answer different questions and the report says so.
+        zero_slack_nodes = {
+            node for node, slack in slacks.items() if max(slack, 0) <= 0
+        }
+        residual = self._longest_path_us(zeroed=zero_slack_nodes)
+        total_improvable = max(0, makespan - residual)
+        # `residual == 0` means every element is on the critical path
+        # (a pure chain, and every graph with a single path), so there is
+        # no structural floor and the ratio is unbounded. Reporting 1.0
+        # there - "no speedup available" - would state the opposite of
+        # the truth, so it is reported as unknown instead, the same way
+        # `t_infinity_cold`/`cold_confidence` already represent
+        # genuinely-absent values.
+        best_case = makespan / residual if residual > 0 else None
+
         # CP sensitivity (how much CP changes per unit duration change)
         cp_sensitivity = {node: 1.0 for node in cp_nodes}  # Simplified: 1:1 for CP elements
-        
+
         return SensitivityResult(
             sensitivity_scores=sensitivity_scores,
             top_opportunities=top_opportunities,
             total_improvable_time_us=int(total_improvable),
             best_case_speedup=best_case,
+            critical_path_us=int(makespan),
             cp_sensitivity=cp_sensitivity,
         )
     
@@ -582,15 +628,81 @@ class StructuralAnalyzer:
         
         return chain
     
+    def _durations(self) -> Dict[str, int]:
+        """Duration in microseconds for every *graph* node.
+
+        The graph and the task table need not agree: a node with no
+        recorded task (or a structural element that ran no build
+        command) contributes 0, which is the correct identity for every
+        path computation below.
+        """
+        return {
+            node: getattr(self.tasks.get(node), 'dur_us', 0) or 0
+            for node in self._graph.nodes()
+        }
+
+    def _longest_path_us(self, zeroed: Optional[Set[str]] = None) -> int:
+        """Longest weighted path through the graph, in microseconds.
+
+        `zeroed` treats the named nodes as instantaneous, which is how
+        `compute_sensitivity` asks "what would the finish be if this
+        work were free?" without mutating anything. O(V+E).
+        """
+        zeroed = zeroed or set()
+        durations = self._durations()
+        finish: Dict[str, int] = {}
+        longest = 0
+        for node in nx.topological_sort(self._graph):
+            duration = 0 if node in zeroed else durations[node]
+            start = max((finish[p] for p in self._graph.predecessors(node)), default=0)
+            finish[node] = start + duration
+            longest = max(longest, finish[node])
+        return longest
+
     def _compute_all_slacks(self) -> Dict[str, float]:
-        """Compute slack for all elements."""
-        # Simplified: use difference between earliest and latest start
-        # In full implementation, would use forward/backward pass
-        slacks = {}
-        for key, task in self.tasks.items():
-            # Placeholder: estimate slack based on non-CP status
-            slacks[key] = task.dur_us * 0.5  # Rough estimate
-        return slacks
+        """Total slack per element, from a real CPM forward/backward pass.
+
+        UX-44: this used to be `task.dur_us * 0.5` for every element -
+        a placeholder, under a docstring saying the full implementation
+        "would use forward/backward pass". Because it was the sole input
+        to `compute_sensitivity`, every quantity that function published
+        was a function of duration alone: the improvement ranking came
+        out strictly *inverted* by duration, and `best_case_speedup` was
+        a near-constant ~2.0x for any graph.
+
+        Slack here is the standard total float: how long an element
+        could be delayed without pushing the project finish. Critical
+        path elements get exactly 0 by construction, which is what makes
+        the CP/non-CP distinction in `compute_sensitivity` derivable
+        rather than something to be looked up separately.
+
+        O(V+E). Keyed by graph node, and every task key is a graph node.
+        """
+        G = self._graph
+        durations = self._durations()
+        order = list(nx.topological_sort(G))
+
+        earliest_start: Dict[str, int] = {}
+        for node in order:
+            earliest_start[node] = max(
+                (earliest_start[p] + durations[p] for p in G.predecessors(node)),
+                default=0,
+            )
+        makespan = max(
+            (earliest_start[node] + durations[node] for node in order), default=0
+        )
+
+        latest_finish: Dict[str, int] = {}
+        for node in reversed(order):
+            latest_finish[node] = min(
+                (latest_finish[s] - durations[s] for s in G.successors(node)),
+                default=makespan,
+            )
+
+        return {
+            node: float(latest_finish[node] - durations[node] - earliest_start[node])
+            for node in order
+        }
     
     def _compute_slope(self, x: List[float], y: List[float]) -> float:
         """Compute linear regression slope."""

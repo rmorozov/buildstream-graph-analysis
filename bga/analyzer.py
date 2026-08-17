@@ -1712,6 +1712,7 @@ class BuildEfficiencyAnalyzer:
                 'omitted_structural_opportunities': omitted_structural_opportunities,
                 'total_improvable_time_us': result.sensitivity.total_improvable_time_us,
                 'best_case_speedup': result.sensitivity.best_case_speedup,
+                'critical_path_us': result.sensitivity.critical_path_us,
             },
             'batch_opportunities': batch_opportunities,
             'serialization_point_risks': serialization_point_risks,

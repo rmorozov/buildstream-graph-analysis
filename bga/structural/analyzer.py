@@ -30,30 +30,63 @@ class ElementDependencyGraph:
     in bga.graph.edg module.
     """
     
-    def __init__(self, G=None, predecessors=None, successors=None):
+    def __init__(self, G=None, predecessors=None, successors=None, G_full=None):
+        # UX-52: `G` is the *gating* graph - `runtime`-only edges removed,
+        # because they do not constrain build scheduling. `G_full` keeps
+        # every edge, for the reachability questions that must count a
+        # runtime edge just as much as a build one. See build_edg.
         self.G = G
         self.predecessors = predecessors or {}
         self.successors = successors or {}
+        self.G_full = G_full if G_full is not None else G
 
 
 def build_edg(graph):
-    """Build ElementDependencyGraph from a Graph object."""
+    """Build ElementDependencyGraph from a Graph object.
+
+    UX-52: builds **two** graphs, because this class's consumers want
+    different ones and `build_element_graph`'s own docstring already says
+    so:
+
+    - the *gating* graph excludes `runtime`-only edges, since a runtime
+      dependency's product "is not available to the element at build
+      time" and therefore does not constrain build scheduling. Everything
+      that models scheduling - critical path, depth, level decomposition,
+      choke points, slack, the improvement ranking - must use it.
+    - the *full* graph keeps every edge, for reachability questions
+      (leaf/deferrability, Part 24/25) which must count a runtime edge.
+
+    This previously built one unfiltered graph and used it for both. On a
+    real project (`freedesktop-sdk`, 27 runtime edges among 502) that
+    inflated the structural critical path from 28 elements to 32 - 14% -
+    and skewed every graph-shape signal derived from it. It was invisible
+    to every fixture in this repository, none of which contains a single
+    runtime edge.
+    """
     from bga.graph.edg import build_element_graph
     import networkx as nx
-    
-    # Build adjacency lists
-    predecessors, successors = build_element_graph(graph)
-    
-    # Build NetworkX graph - use element UIDs (graph.elements is a list of Element objects)
-    G = nx.DiGraph()
-    for elem in graph.elements:
-        elem_id = elem.uid if hasattr(elem, 'uid') else elem
-        G.add_node(elem_id)
-    for pred, succs in successors.items():
-        for succ in succs:
-            G.add_edge(pred, succ)
-    
-    return ElementDependencyGraph(G=G, predecessors=predecessors, successors=successors)
+
+    def _nx_graph(successors_map):
+        G = nx.DiGraph()
+        for elem in graph.elements:
+            elem_id = elem.uid if hasattr(elem, 'uid') else elem
+            G.add_node(elem_id)
+        for pred, succs in successors_map.items():
+            for succ in succs:
+                G.add_edge(pred, succ)
+        return G
+
+    predecessors, successors = build_element_graph(
+        graph, exclude_dependency_types={"runtime"}
+    )
+    _, successors_full = build_element_graph(graph)
+
+    return ElementDependencyGraph(
+        G=_nx_graph(successors),
+        predecessors=predecessors,
+        successors=successors,
+        G_full=_nx_graph(successors_full),
+    )
 
 
 from bga.structural.models import (
@@ -421,8 +454,14 @@ class StructuralAnalyzer:
         """Analyze deferrability of leaf elements (Part 35).
         
         Determines which leaf elements could be deferred without blocking others.
+
+        UX-52: uses the *full* graph. "Is anything downstream of this
+        element" is a reachability question, and an element that only a
+        `runtime` dependency points at is still depended upon - treating
+        it as a leaf because the edge does not gate scheduling would be
+        the wrong answer to a different question.
         """
-        G = self._graph
+        G = self.edg.G_full
         
         # Find leaf nodes (no successors)
         leaves = [n for n in G.nodes() if G.out_degree(n) == 0]

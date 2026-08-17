@@ -351,17 +351,27 @@ static int format_rusage(char *buf, size_t size) {
         return 0;
     }
     if (getrusage(RUSAGE_CHILDREN, &children) != 0) {
-        int n = snprintf(buf, size, " utime=%.6f stime=%.6f",
+        int n = snprintf(buf, size, " utime=%.6f stime=%.6f maxrss_kb=%ld",
                          timeval_seconds(&self.ru_utime),
-                         timeval_seconds(&self.ru_stime));
+                         timeval_seconds(&self.ru_stime),
+                         (long)self.ru_maxrss);
         return (n < 0 || (size_t)n >= size) ? 0 : n;
     }
+    /* UX-63: ru_maxrss from the same struct already being read. Two
+     * traps the consumer has to respect and this function cannot:
+     * it is *kilobytes* on Linux (bytes on macOS), and it is a per-
+     * process *peak*, not a sample - so summing it across processes
+     * overstates any concurrent total, which is the mistake that would
+     * make it look like a memory measurement it is not. Emitted in KiB
+     * verbatim; the reader converts and refuses to sum. */
     int n = snprintf(buf, size,
-                     " utime=%.6f stime=%.6f cutime=%.6f cstime=%.6f",
+                     " utime=%.6f stime=%.6f cutime=%.6f cstime=%.6f"
+                     " maxrss_kb=%ld cmaxrss_kb=%ld",
                      timeval_seconds(&self.ru_utime),
                      timeval_seconds(&self.ru_stime),
                      timeval_seconds(&children.ru_utime),
-                     timeval_seconds(&children.ru_stime));
+                     timeval_seconds(&children.ru_stime),
+                     (long)self.ru_maxrss, (long)children.ru_maxrss);
     return (n < 0 || (size_t)n >= size) ? 0 : n;
 }
 

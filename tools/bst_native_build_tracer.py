@@ -187,6 +187,9 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
 
 
 _RUSAGE_KEYS = frozenset({"utime", "stime", "cutime", "cstime"})
+# UX-63: peak RSS from the same struct rusage. Integers in KiB (Linux),
+# not the float seconds the keys above carry, hence a separate set.
+_RUSAGE_INT_KEYS = frozenset({"maxrss_kb", "cmaxrss_kb"})
 
 # UX-57: `part=` is appended by hooks that flush more than one window
 # per process, and absent in logs written before that existed - optional
@@ -308,10 +311,10 @@ def parse_trace_log(text: str) -> List[dict]:
                 break
             token, candidate = remaining[:next_space], remaining[next_space + 1:]
             key, _, value = token.partition("=")
-            if key not in _RUSAGE_KEYS:
+            if key not in _RUSAGE_KEYS and key not in _RUSAGE_INT_KEYS:
                 break
             try:
-                rusage[key] = float(value)
+                rusage[key] = int(value) if key in _RUSAGE_INT_KEYS else float(value)
             except ValueError:
                 break
             remaining = candidate
@@ -332,6 +335,14 @@ def parse_trace_log(text: str) -> List[dict]:
         # set would be reported as if complete.
         if {"utime", "stime"} <= rusage.keys():
             record["cpu_us"] = int(round((rusage["utime"] + rusage["stime"]) * 1e6))
+        # UX-63: a *peak*, carried through unchanged. Deliberately not
+        # summed anywhere: two processes each peaking at 500 MB at
+        # different moments never used 1 GB together, and adding them
+        # would manufacture a concurrent total nothing measured.
+        if "maxrss_kb" in rusage:
+            record["max_rss_kb"] = rusage["maxrss_kb"]
+        if "cmaxrss_kb" in rusage:
+            record["children_max_rss_kb"] = rusage["cmaxrss_kb"]
         if {"cutime", "cstime"} <= rusage.keys():
             record["children_cpu_us"] = int(
                 round((rusage["cutime"] + rusage["cstime"]) * 1e6)
@@ -390,6 +401,12 @@ def pair_events(events: List[dict]) -> List[dict]:
                 record["cpu_us"] = ev["cpu_us"]
             if "children_cpu_us" in ev:
                 record["children_cpu_us"] = ev["children_cpu_us"]
+            # UX-63: peak RSS, from the same END event's getrusage. Same
+            # rule - omitted rather than zeroed when the hook predates it.
+            if "max_rss_kb" in ev:
+                record["max_rss_kb"] = ev["max_rss_kb"]
+            if "children_max_rss_kb" in ev:
+                record["children_max_rss_kb"] = ev["children_max_rss_kb"]
             records.append(record)
     for pending in open_by_key.values():
         for start_ev in pending:
@@ -1014,6 +1031,61 @@ def compute_declared_vs_used(
     }
 
 
+def compute_peak_memory(records: List[dict]) -> dict:
+    """UX-63: peak resident set size per element, from the same
+    `getrusage` call `UX-45` already makes at exit.
+
+    `UX-21` added a memory dimension to the oversubscription guard and
+    had to run it entirely on two operator-*declared* numbers, because
+    measurement "would need the same kind of intra-sandbox visibility"
+    that was then hypothetical. It is not hypothetical now.
+
+    Reported as a **maximum**, never a sum, and the distinction is the
+    whole point. `ru_maxrss` is a per-process peak over that process's
+    whole lifetime; two processes that each peaked at 500 MB at
+    different moments never held 1 GB between them. Summing peaks would
+    manufacture a concurrent total that nothing measured - the same
+    class of error as reading occupancy as CPU (`UX-36`) or summing
+    per-element redundancy savings (`UX-37`). What this *can* say is
+    "no single process in this element exceeded X", which is exactly the
+    input `UX-21`'s guard needs for its per-job estimate.
+
+    Coverage is reported rather than assumed, matching `compute_cpu_time`:
+    a process killed by a signal or replaced by `exec` runs no destructor
+    and contributes nothing.
+    """
+    per_element: Dict[str, dict] = {}
+    for record in records:
+        entry = per_element.setdefault(
+            record["element"],
+            {"peak_rss_kb": None, "measured": 0, "unmeasured": 0},
+        )
+        if "max_rss_kb" in record:
+            entry["measured"] += 1
+            current = entry["peak_rss_kb"]
+            entry["peak_rss_kb"] = max(current or 0, record["max_rss_kb"])
+        else:
+            entry["unmeasured"] += 1
+    measured_total = sum(e["measured"] for e in per_element.values())
+    if measured_total == 0:
+        return {
+            "available": False,
+            "note": "no process reported a peak RSS - either the hook predates "
+                    "UX-63 or every traced process was killed before its "
+                    "destructor ran",
+        }
+    return {
+        "available": True,
+        "per_element": {k: per_element[k] for k in sorted(per_element)},
+        "note": "Peak resident set size of the single largest process in each "
+                "element (getrusage ru_maxrss at exit, KiB). A per-process "
+                "peak, deliberately NOT summed across processes: two "
+                "processes peaking at different moments never held the sum "
+                "between them. Use it as 'no single process here exceeded "
+                "this', which is what UX-21's per-job memory estimate wants.",
+    }
+
+
 def compute_cpu_time(records: List[dict]) -> dict:
     """Real CPU time per element, from each process's own `getrusage`
     at exit (UX-45).
@@ -1127,6 +1199,7 @@ def summarize(records: List[dict]) -> dict:
         "max_concurrency": compute_max_concurrency(records),
         # UX-45: real, kernel-measured CPU time per element.
         "cpu_time": compute_cpu_time(records),
+        "peak_memory": compute_peak_memory(records),
         # UX-32: per-element achieved parallelism - the question this
         # plane exists to answer. See compute_per_element_parallelism.
         "per_element_parallelism": compute_per_element_parallelism(records),
@@ -1259,6 +1332,31 @@ def _format_cpu_time(cpu_time: dict) -> List[str]:
     return lines
 
 
+def _format_peak_memory(peak_memory: dict) -> List[str]:
+    """UX-63's per-element block. States that the figure is a per-process
+    peak and not a total, because a bare "Peak memory" heading beside a
+    per-element list reads as exactly the concurrent total it is not."""
+    if not peak_memory:
+        return []
+    if not peak_memory.get("available"):
+        return ["Peak memory: unavailable - " + peak_memory.get("note", ""), ""]
+    lines = ["Peak Memory (largest single process per element):"]
+    for element, entry in peak_memory["per_element"].items():
+        peak_kb = entry["peak_rss_kb"]
+        if peak_kb is None:
+            lines.append(f"  {element:40s} not measured")
+            continue
+        coverage = ""
+        if entry["unmeasured"]:
+            coverage = (f"  ({entry['measured']} of "
+                        f"{entry['measured'] + entry['unmeasured']} processes measured)")
+        lines.append(f"  {element:40s} {peak_kb / 1024:8.1f} MB{coverage}")
+    lines.append("  NOTE: a per-process peak, not a concurrent total - these are "
+                 "maxima and must not be summed.")
+    lines.append("")
+    return lines
+
+
 def _format_declared_vs_used(analysis: dict) -> List[str]:
     """Render UX-46's declared-vs-used block as *candidates with
     evidence*, never as a verdict - a confident false "unused" is the
@@ -1323,6 +1421,7 @@ def _format_text(report: dict) -> str:
         lines.append("")
         lines.append(f"ELEMENT ATTRIBUTION UNRELIABLE: {attribution['note']}")
     lines.extend(_format_cpu_time(report.get("cpu_time") or {}))
+    lines.extend(_format_peak_memory(report.get("peak_memory") or {}))
     lines.extend(_format_declared_vs_used(report.get("declared_vs_used") or {}))
     # UX-32: per-element achieved parallelism.
     per_element = report.get("per_element_parallelism") or []

@@ -1634,12 +1634,31 @@ class BuildEfficiencyAnalyzer:
             return {}
         
         # Create task dictionary keyed by element UID (extract from task_key)
+        #
+        # UX-50: this comprehension keeps one task per element, and a real
+        # BuildStream element has at least two (FETCH and BUILD) - so
+        # whichever arrived last won, and when that was the FETCH the
+        # structural analyzer saw a zero-duration element. On a real
+        # capture the build's two heaviest elements were both read as
+        # 0.00s, which dropped them from the improvement ranking and
+        # understated the critical path by 9 seconds. It struck some runs
+        # and not others, purely on task ordering.
+        #
+        # The dict itself is kept (it is the element *set*, and carries
+        # `resource_profile` for bottleneck analysis), but durations now
+        # come from an explicit per-element sum passed alongside it, so
+        # no path computation depends on which task happened to win.
         tasks_dict = {t.task_key.element_uid: t for t in self.normalized_tasks}
+        element_durations: Dict[str, int] = defaultdict(int)
+        for task in self.normalized_tasks:
+            element_durations[task.task_key.element_uid] += task.dur_us
         
         # Initialize structural analyzer
         from bga.structural.analyzer import build_edg
         edg = build_edg(self.graph)
-        structural_analyzer = StructuralAnalyzer(edg, tasks_dict)
+        structural_analyzer = StructuralAnalyzer(
+            edg, tasks_dict, element_durations=dict(element_durations)
+        )
 
         # Run full structural analysis
         result = structural_analyzer.run_full_analysis(historical_runs=None)

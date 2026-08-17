@@ -75,9 +75,40 @@ class StructuralAnalyzer:
     detailed timing information.
     """
     
-    def __init__(self, edg: ElementDependencyGraph, tasks: Dict[str, NormalizedTask]):
+    def __init__(
+        self,
+        edg: ElementDependencyGraph,
+        tasks: Dict[str, NormalizedTask],
+        element_durations: Optional[Dict[str, int]] = None,
+    ):
+        """
+        `element_durations` (UX-50) is the authoritative per-element
+        duration in microseconds, summed across *all* of that element's
+        tasks by the caller.
+
+        It exists because `tasks` is keyed by element UID while a real
+        BuildStream element has more than one task - at minimum a FETCH
+        and a BUILD - so the caller's `{t.task_key.element_uid: t}`
+        comprehension silently kept whichever arrived last. When that was
+        the FETCH, this analyzer saw a zero-duration element: on one real
+        capture the two *heaviest* elements in the build (`core.bst` at
+        9.0s and `codegen.bst` at 6.0s) were both read as 0.00s, which
+        dropped them from the improvement ranking entirely and understated
+        the critical path by 9 seconds. It was data-order dependent, and
+        so struck some real runs and not others.
+
+        Summing across an element's tasks - rather than picking the BUILD
+        - is deliberate: it is the total work attributable to the
+        element, it stays correct if BuildStream grows another task kind,
+        and it coincides with the BUILD duration whenever the other tasks
+        are zero (which they are in every capture examined).
+
+        `None` falls back to the old per-task lookup, which keeps this
+        class usable from tests that construct one task per element.
+        """
         self.edg = edg
         self.tasks = tasks
+        self.element_durations = element_durations
         self._graph = edg.G  # NetworkX DiGraph
         
     def compute_structural_metrics(self) -> StructuralMetrics:
@@ -584,11 +615,10 @@ class StructuralAnalyzer:
         try:
             from bga.graph.edg import compute_critical_path as graph_compute_critical_path
             
-            # Get task durations from tasks dict
-            task_durations = {}
-            for elem_uid, task in self.tasks.items():
-                if hasattr(task, 'dur_us'):
-                    task_durations[elem_uid] = task.dur_us
+            # UX-50: the same per-element durations every other path
+            # computation in this class uses - not `self.tasks`, which
+            # holds one arbitrary task per element.
+            task_durations = dict(self._durations())
             
             # Build a Graph object from our NetworkX graph for the function
             from bga.ingest.models import Graph, Element, DependencyEdge
@@ -666,7 +696,16 @@ class StructuralAnalyzer:
         recorded task (or a structural element that ran no build
         command) contributes 0, which is the correct identity for every
         path computation below.
+
+        UX-50: prefers the caller's summed per-element durations, which
+        are the only source that accounts for an element having more
+        than one task. See `__init__`.
         """
+        if self.element_durations is not None:
+            return {
+                node: self.element_durations.get(node, 0) or 0
+                for node in self._graph.nodes()
+            }
         return {
             node: getattr(self.tasks.get(node), 'dur_us', 0) or 0
             for node in self._graph.nodes()

@@ -13,7 +13,7 @@ What's changed since: the tool now has a **second, complementary plane** — rea
 
 Neither plane subsumes the other, and that's intentional: Plane 1 operates purely on BuildStream's own element-level log (one START/SUCCESS pair per element, no visibility below that) and needs no live BuildStream install to analyze a captured run; Plane 2 requires a real, live `bwrap`+`LD_PRELOAD`-capable sandbox to capture from, and produces a different kind of artifact (a raw per-process trace) with no shared timeline contract with Plane 1's `trace/v9`.
 
-### Where the two planes connect — a real, not-yet-built opportunity
+### Where the two planes connect
 
 Plane 1 already tells you *which* elements are expensive or on the critical path (`UX-20`'s `sensitivity.top_opportunities`, `UX-22`'s serialization-point detection). Plane 2 can now tell you, for any *one* of those elements, exactly what its own native build system spent its time on. Running Plane 2 across **multiple** elements of the same project opens a genuinely new class of question neither plane can answer alone: are several elements each independently, redundantly doing the *same* real sub-work inside their own sandboxes — the same expensive `configure` step, the same codegen invocation, the same dependency-resolution pass — that could be shared or cached once instead of paid for by every element separately?
 
@@ -32,6 +32,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga sweep RUN --resource R` | Capacity sweep for one resource — predicted `T_C` curve, knee point | 19 |
 | `bga utilisation RUN` | CPU utilisation accounting | 30, M4 |
 | `bga diagnostics RUN` | Blast radius, criticality probability, wall-clock shares | 20–29, M5 |
+| `bga correlate RUN NATIVE_REPORT` | Joins this run with a Plane 2 native trace of the same build on element UID, and says what to fix. **Not spec-mandated**, `UX-51` | — |
 | `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5). **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39` | — |
 
 ## Real package structure (Plane 1)
@@ -68,6 +69,16 @@ The hook records three things per process, and the second and third arrived in t
 3. **Opened file paths** (`UX-46`, opt-in via `--trace-opens`) — `open`/`openat` interposition, deduplicated in-process and flushed once at exit. Opt-in because unlike the other two it runs on a genuinely hot path. Matched against `bst artifact list-contents`, this answers *"which of this element's declared build dependencies did its sandbox never read?"* — the last macro-level gap, and the one problem in `examples/06` that no Plane 1 signal could find. It **refuses rather than guesses**: an element with no observed opens (a statically-linked build looks identical to one that used nothing) or with a truncated read set is reported `uncovered`, never as having unused dependencies.
 
 Every traced process is tagged with its real owning BuildStream element (`UX-23`, parsed from BuildStream's own `--dir` bwrap option). Two further analyses build on that. `compute_per_element_parallelism` (`UX-32`) reports, per element, the parallelism its native build system *actually achieved* against the `-jN` it asked for - splitting real work processes (compilers, assemblers, linkers) from orchestration that spends its life waiting on children, and emitting two findings: `pinned_to_one_job` (this element asked for `-j1` while its siblings asked for more - the `notparallel` case, invisible to any achieved-vs-requested ratio, since a pinned element gets exactly what it asked for) and `underachieved_requested_jobs`. `detect_redundant_operations` (`UX-23`, rescored by `UX-37`) flags real operations repeated independently across multiple elements' own sandboxes, ranked by *recoverable wall-clock* rather than by process time summed across elements that ran concurrently, and excluding each element's own build driver (identical across elements by construction, entirely different work in each). `tools/native_trace_to_chrome_trace.py` (`UX-24`) exports Plane 2 traces as Chrome Trace JSON, standalone or combined with Plane 1's own real export for the same run — `bst_native_build_tracer.py run --wrapped-log PATH` captures both planes from one single real `bst build` invocation.
+
+## Joining the planes (`UX-51`)
+
+The two planes are joined by `bga correlate RUN_DIR NATIVE_REPORT.json`, and the contract between them is **one string**: the element UID. That choice was made by measuring rather than arguing, and the measurements are worth keeping because they also say why the alternative is closed:
+
+- **A merged capture would buy nothing.** `UX-24`'s `run --wrapped-log` already produces both artifacts from one real `bst build`.
+- **The join key is exact.** On a real dual capture of `examples/06`, 9 of 9 Plane 2 elements matched Plane 1 UIDs with zero mismatches; the only Plane 1 elements absent were a `stack` and an `import`, which run no build commands, so their absence is correct.
+- **The horizons cannot be merged**, per this doc's own argument above — Plane 2 measures inside one element's sandbox and shares no horizon with an element-level trace. Anything called a merge would be a join with a misleading name.
+
+So `bga/correlate.py` is a third consumer that reads two finished artifacts and neither plane knows about, leaving both independently replaceable. It produces the sentence neither can alone — *"`core.bst` holds 25% of the critical path but runs at only 0.85 cores busy and asked for `-j1`"* — ranks by Plane 1 impact (Plane 2 explains that ranking, never reorders it), carries `UX-45`'s measurement coverage through so a partial result says so, and names elements Plane 1 ranks that Plane 2 never traced rather than passing over them in silence.
 
 ## What the 2026-08-16 audit round changed structurally
 

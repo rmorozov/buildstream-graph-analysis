@@ -139,6 +139,27 @@ the contrast verdict the fixed rule produces on the same input.
 
 Suite: 977 → 991.
 
+## Measured on real data (round 9)
+
+Two real `freedesktop-sdk` captures of the **same commit** now exist, and
+the gate was run against them:
+
+```
+$ bga compare round8/run round9/run
+Verdict: REGRESSED  (total duration +101.22s, +2.9%, 3513.01s -> 3614.22s)
+```
+
+Same commit, same `run_mode`, nothing changed, both at confidence ~1.00
+so `UX-40`'s fail-open does not save it. **Real run-to-run noise on this
+build is 2.9% against a fixed 1% rule** — worse than the 1.8% this task
+measured locally, as expected for a longer build on shared runners.
+
+The band built here is not reached, because `MIN_BASELINE_RUNS` is 3 and
+only two real captures exist. That floor is right — a "band" over two
+points restates them — which means the **default** path is the one that
+is wrong on real data, and the default is what a first user gets. A third
+capture of the same commit would settle whether the band absorbs this.
+
 ## Verification Log
 
 Filed and implemented 2026-08-17. `_SIGNIFICANCE_PCT` and the two-run signature were read

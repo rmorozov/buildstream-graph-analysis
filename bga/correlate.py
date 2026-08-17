@@ -234,9 +234,25 @@ def correlate(analysis: dict, native_report: dict) -> dict:
         e.element for e in joined if e.cores_busy is None and e.potential_saving_us > 0
     ]
 
+    # UX-56: Plane 2 tags processes with an element name derived from
+    # bwrap's `--dir`, which is the element only under BuildStream's
+    # default build-root layout. On a real `freedesktop-sdk` capture,
+    # 99.4% of 127,630 processes landed in one bucket named
+    # `buildstream-build`, so the join key on this side was not an
+    # element UID at all and every "joined" row was meaningless. The
+    # producer now says so; refuse the join rather than render it.
+    attribution = native_report.get("element_attribution") or {}
+    attribution_unreliable = (
+        attribution.get("note") if attribution.get("reliable") is False else None
+    )
+
     return {
         "elements": [vars(e) for e in joined],
-        "actionable": [vars(e) for e in joined if e.recommendations],
+        "actionable": (
+            [] if attribution_unreliable
+            else [vars(e) for e in joined if e.recommendations]
+        ),
+        "attribution_unreliable": attribution_unreliable,
         "coverage": {
             "joined_elements": len(covered),
             "plane1_elements": len(plane1),
@@ -257,6 +273,18 @@ def correlate(analysis: dict, native_report: dict) -> dict:
 def format_correlation(result: dict) -> str:
     """Human-readable join, leading with what to do next."""
     lines = ["=" * 60, "Two-Plane Correlation", "=" * 60]
+    # UX-56: said before the join, because it invalidates it.
+    if result.get("attribution_unreliable"):
+        lines.append("NO USABLE JOIN: Plane 2's element attribution is unreliable.")
+        lines.append(f"  {result['attribution_unreliable']}")
+        lines.append("")
+        lines.append(
+            "  The join key on the Plane 2 side is not an element UID, so no row "
+            "below would mean anything. Nothing is recommended from this pair of "
+            "artifacts."
+        )
+        lines.append("=" * 60)
+        return "\n".join(lines)
     coverage = result["coverage"]
     lines.append(
         f"Joined {coverage['joined_elements']} element(s) on element UID "

@@ -101,6 +101,22 @@ Criterion 3 (the `optimized/` variant reporting no unused dependencies) is wrong
 
 **What this costs, and what it does not.** The example cannot demonstrate the "declared, and genuinely used, between two project elements" case, so the true-negative evidence rests on `toolchain.bst` - a real cross-element dependency that is correctly reported as used by all nine elements. That is genuine discrimination, but a project whose elements actually consume each other's headers would be a stronger fixture, and is the recommended follow-up rather than something quietly assumed here.
 
+### Follow-up done: both directions now tested (2026-08-17)
+
+`examples/07-declared-vs-used-dependencies` was built for exactly the gap named above. `user.bst` and `unrelated.bst` declare **identical** dependencies (`base.bst` + `toolchain.bst`) and differ in one respect only: `user.cpp` does `#include <base.hpp>`, resolving to `base.bst`'s staged header, and `unrelated.cpp` includes nothing from it.
+
+Real `--trace-opens` build of that project:
+
+```
+Declared build dependencies never read: 1 candidate(s) across 1 element(s); 4 edge(s) confirmed used
+  unrelated.bst              never read: base.bst  (5 staged file(s))
+
+  user.bst      -> base.bst   1/5 staged files opened   <- correctly NOT flagged
+  unrelated.bst -> base.bst   0 of 5 files opened       <- correctly flagged
+```
+
+`user.bst` opens exactly one of `base.bst`'s five staged files - `/usr/include/base.hpp`, the one it includes. An over-eager detector would flag both elements; an inert one would flag neither. This is the discrimination the `examples/06` evidence could not show, and it closes the caveat above.
+
 ### A design error caught by real data
 
 The first implementation derived "direct" dependencies by subtracting transitive closures out of `bst show --deps build`. On real data it dropped three of `lib-b.bst`'s four declared dependencies: `codegen` and `core` are *also* inside `lib-a`'s closure, so subtraction classified them as indirect. **The dependency being redundant is precisely the thing being detected**, so inferring directness from the closure hides the finding. Declared dependencies are now read from the element files themselves, which is also what "declared" has to mean if a recommendation is going to be acted on by editing one.

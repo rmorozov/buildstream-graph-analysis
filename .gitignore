@@ -163,3 +163,7 @@ examples/05-cmake-cpp-toolchain/files/toolchain/
 # specific, ~270MB, regenerated at build time, never committed.
 examples/06-macro-micro-optimization/files/toolchain/
 examples/06-macro-micro-optimization/optimized/files/toolchain/
+
+# examples/07-declared-vs-used-dependencies stages the identical sysroot
+# (another hardlink clone). Same reasoning as 05 and 06.
+examples/07-declared-vs-used-dependencies/files/toolchain/

@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+project(base CXX)
+add_library(base STATIC base.cpp)
+install(TARGETS base ARCHIVE DESTINATION lib)
+install(FILES base.hpp DESTINATION include)

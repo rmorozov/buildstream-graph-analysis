@@ -682,6 +682,11 @@ def _add_common_arguments(
     )
 
 
+def _tool_help() -> str:
+    from .tools_dispatch import format_tool_help
+    return format_tool_help()
+
+
 def create_parser() -> argparse.ArgumentParser:
     """
     Create the argument parser with full inline documentation.
@@ -699,7 +704,13 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='bga',
         description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
-        epilog='See docs/cli.md for detailed usage examples and workflows.',
+        epilog=(
+            # UX-67: the aliases are listed here rather than registered as
+            # argparse subcommands, because registering them would import
+            # every tool to build the parser - on every `bga analyze`.
+            _tool_help() + "\n\n"
+            "See docs/cli.md for detailed usage examples and workflows."
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -935,6 +946,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     Returns:
         Exit code
     """
+    # UX-67: one entry point for the whole workflow. Checked before
+    # argparse, because a tool's own arguments are its business - `bga
+    # extract . build.log run/ --format wrapped` must reach
+    # `bst_extract_run` untouched, and letting this parser see them first
+    # would mean teaching it every tool's flags.
+    from .tools_dispatch import dispatch
+    tool_exit = dispatch(list(sys.argv[1:] if argv is None else argv))
+    if tool_exit is not None:
+        return tool_exit
+
     parser = create_parser()
     args = parser.parse_args(argv)
     

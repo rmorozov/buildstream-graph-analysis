@@ -113,10 +113,10 @@ runtime-only edge does not make its dependent need the dependency at
 build time, so it cannot propagate a rebuild.
 
 ```
-$ python3 -m tools.bst_show_to_graph fdsdk components/libxml2.bst graph.json
+$ bga graph-from-show fdsdk components/libxml2.bst graph.json
 Wrote graph.json with 126 elements, 699 dependencies
 
-$ python3 -m tools.bst_rebuild_set graph.json \
+$ bga rebuild-set graph.json \
     --cut components/_private/python3-flit-core.bst \
     --cut components/openssl.bst --cut components/expat.bst \
     --cut components/bison.bst --cut components/icu.bst \

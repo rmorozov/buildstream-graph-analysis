@@ -4,6 +4,52 @@ The `bga` command-line interface provides access to the BuildStream Build Effici
 
 This covers the `bga` command itself — the whole-project analysis plane. For real per-process tracing *inside* one element's own sandbox (a separate tool, `tools/bst_native_build_tracer.py`, with its own Chrome Trace export), see [`docs/architecture.md`](architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
 
+## One entry point (`UX-67`)
+
+`bga` dispatches to the producer programs in `tools/` as well as running
+its own analysis subcommands, so a session reads as one tool:
+
+```bash
+bga wrap    PROJECT build.log -- bst build TARGET   # capture a log bga can read
+bga extract PROJECT build.log run/                  # log + project -> run directory
+bga analyze run/                                    # the analysis
+bga capture run PROJECT native.json -- bst build T  # Plane 2, inside the sandboxes
+bga correlate run/ native.json                      # join the two planes
+```
+
+Before this, the same workflow alternated between `bga <cmd>` and
+`python3 -m tools.<module>` at nearly every step — 74 occurrences across
+the docs and CI.
+
+**The tools are still separate programs**, and deliberately so: the
+analyzer is a library with a stable contract, and each tool in `tools/`
+is independently useful and independently testable. Every one of them
+remains runnable directly, unchanged:
+
+```bash
+python3 -m tools.bst_extract_run PROJECT build.log run/   # still works
+```
+
+`bga --help` lists each alias with the module it wraps, so a script that
+wants the underlying program can find it. Dispatch is lazy — only the
+module actually invoked is imported, so `bga analyze` does not pay to
+import the native tracer and the trace converters on every run.
+
+| alias | wraps |
+|---|---|
+| `bga wrap` | `tools.bst_run_wrapped` |
+| `bga extract` | `tools.bst_extract_run` |
+| `bga capture` | `tools.bst_native_build_tracer` |
+| `bga rebuild-set` | `tools.bst_rebuild_set` |
+| `bga checkout-cost` | `tools.bst_checkout_cost` |
+| `bga run-context` | `tools.bst_run_context` |
+| `bga graph-from-show` | `tools.bst_show_to_graph` |
+| `bga log-to-chrome` | `tools.bst_log_to_chrome_trace` |
+| `bga chrome-to-trace` | `tools.chrome_trace_to_bga_trace` |
+| `bga native-to-chrome` | `tools.native_trace_to_chrome_trace` |
+| `bga cross-check` | `tools.bga_cross_check` |
+| `bga gen-synthetic` | `tools.gen_synthetic_scale_run` |
+
 ## Installation
 
 Ensure the package is installed in your environment:
@@ -149,8 +195,8 @@ Worked GitHub Actions example - extract two runs and gate on the comparison:
 ```yaml
 - name: Extract baseline and candidate runs
   run: |
-    python3 -m tools.bst_extract_run "$PROJ" baseline-build.log runs/baseline
-    python3 -m tools.bst_extract_run "$PROJ" candidate-build.log runs/candidate
+    bga extract "$PROJ" baseline-build.log runs/baseline
+    bga extract "$PROJ" candidate-build.log runs/candidate
 
 - name: Fail if the candidate build regressed
   run: |
@@ -213,9 +259,9 @@ What to do next (ranked by Plane 1 impact):
 Capture both artifacts from one build:
 
 ```bash
-python3 -m tools.bst_native_build_tracer run --wrapped-log /tmp/plane1.log \
+bga capture run --wrapped-log /tmp/plane1.log \
     /path/to/project /tmp/plane2.json -- bst build <target>
-python3 -m tools.bst_extract_run --format wrapped /path/to/project /tmp/plane1.log /tmp/run
+bga extract --format wrapped /path/to/project /tmp/plane1.log /tmp/run
 bga correlate /tmp/run /tmp/plane2.json
 ```
 

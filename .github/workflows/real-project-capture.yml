@@ -322,6 +322,17 @@ jobs:
             echo "plain build exit: $plain_rc"
             echo "plain_build_exit=$plain_rc" >> capture/capture-outcome.txt
             final_rc=$plain_rc
+            # UX-66: from here the two planes describe DIFFERENT builds -
+            # `run/` will be extracted from this plain build's log, while
+            # native-report.json came from the traced one. `bga correlate`
+            # joins Plane 2 sandboxes against Plane 1 BUILD spans, so
+            # leaving both in place would silently match one build's
+            # sandboxes to another build's timeline. Keep the Plane 2
+            # report under a name nothing joins on, and say so.
+            if [ -f capture/native-report.json ]; then
+              mv capture/native-report.json capture/native-report-traced-only.json
+            fi
+            echo "planes_describe_different_builds=1" >> capture/capture-outcome.txt
           fi
           set -e
           # Only a build that failed *both* ways stops the job; a Plane 1
@@ -391,9 +402,23 @@ jobs:
       # branch, which is reachable, and which has the side benefit of
       # making each capture a versioned, fetchable object rather than
       # something that expires in 14 days.
+      # UX-66: NOT `if: always()`. A cancelled run's publish overwrote a
+      # good capture with a 36 KB partial (0-byte native-trace.log, no
+      # native-report.json) and the next round's audit nearly analysed
+      # it. `always()` is right for the *extraction* steps above - a
+      # build that failed part-way still yields a usable Plane 1 log -
+      # and wrong here, because this is what everything downstream reads.
+      # `!cancelled()` still publishes a genuinely failed build's
+      # capture, which is a real result worth having.
       - name: Publish the capture to a branch
-        if: always()
+        if: ${{ !cancelled() }}
         run: |
+          # A capture with no analysis in it is worse than no capture at
+          # all: it replaces a good one and looks current.
+          if [ ! -f capture/analyze.json ]; then
+            echo "no analyze.json - refusing to publish over the previous capture"
+            exit 0
+          fi
           mkdir -p publish
           # The raw LD_PRELOAD trace of a real build is the only file here
           # that can reach tens of MB. Keep it when it fits comfortably

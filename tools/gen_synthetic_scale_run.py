@@ -43,9 +43,12 @@ Usage
     tools/gen_synthetic_scale_run.py /tmp/run-scale-1200
     bga analyze /tmp/run-scale-1200
 
-Defaults reproduce the exact fixture the round-2 findings were filed
-against: 1202 elements, 3206 dependencies, 14 real levels, 16 builders,
-a ~362s horizon.
+Defaults reproduce the fixture the round-2 findings were filed against:
+1202 elements, 14 real levels, 16 builders, a ~362s horizon. Round 5
+added a realistic minority of `runtime` dependencies (see
+RUNTIME_EDGE_EVERY), which changes the dependency count and the exact
+per-element numbers quoted in UX-41..UX-44 slightly - those docs record
+the figures from the fixture as it stood when they were filed.
 """
 
 import argparse
@@ -73,6 +76,17 @@ MAX_DURATION_S = 9.0
 # enough to give the graph real fan-in without making it dense - the
 # resulting `avg_fanout` of ~2.7 is close to what real projects show.
 DEPS_PER_MODULE = 2
+
+# UX-52: one in this many layer-to-layer edges is a `runtime` dependency
+# rather than a `build` one. Real projects mix them as a matter of course
+# - a `freedesktop-sdk` subgraph measured 27 runtime edges among 502,
+# ~5% - and this generator previously emitted `build` unconditionally.
+# That is precisely why a 1202-element scale probe could not find UX-52,
+# where runtime edges were being counted as gating: the fixture had none.
+# A fixture written alongside the analyzer tends to contain only the
+# cases the analyzer already handles, so this ratio is deliberately
+# copied from a real project rather than chosen.
+RUNTIME_EDGE_EVERY = 20
 
 
 def build_graph(layers, width, rng):
@@ -122,11 +136,17 @@ def build_graph(layers, width, rng):
             # Deterministic given the seed: rng is consumed in a fixed
             # order across the whole nested loop.
             for pred_index in rng.sample(range(width), DEPS_PER_MODULE):
+                # UX-52: a deterministic minority of layer-to-layer edges
+                # are `runtime`, which do not gate build scheduling.
+                edge_ordinal = layer * width + index + pred_index
+                dependency_type = (
+                    "runtime" if edge_ordinal % RUNTIME_EDGE_EVERY == 0 else "build"
+                )
                 dependencies.append(
                     {
                         "predecessor": mod(layer - 1, pred_index),
                         "successor": uid,
-                        "dependency_type": "build",
+                        "dependency_type": dependency_type,
                     }
                 )
 

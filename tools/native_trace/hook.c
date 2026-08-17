@@ -47,8 +47,31 @@
  * "unknown" (never an empty field) when unset - this hook is also used
  * standalone without element tagging (UX-11's own original single-
  * element mode), and every trace line must stay parseable either way.
+ *
+ * UX-45: the END line also carries real, kernel-measured CPU time for
+ * the process (getrusage utime/stime, plus cutime/cstime for children it
+ * reaped). See append_rusage.
+ *
+ * UX-46: when BST_TRACE_OPENS is set, this hook additionally interposes
+ * open/openat and records the absolute paths a process read, emitting
+ * them as OPEN lines at exit. That is what makes "which of this
+ * element's declared build dependencies did its sandbox never touch?"
+ * answerable - BuildStream stages every dependency into one shared
+ * sandbox root, so a command line cannot tell you which element a path
+ * came from, but the *set of files opened* can be matched against each
+ * artifact's own contents.
+ *
+ * The interposition is opt-in precisely because it is the invasive part:
+ * unlike the lifecycle hooks it runs on a genuinely hot path (a single
+ * cmake configure opens thousands of files). It is written to fail
+ * silently into "no tracing" rather than to ever break the wrapped
+ * build, per this file's own standing requirement.
  */
 #define _GNU_SOURCE
+#include <dlfcn.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <string.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,6 +82,177 @@
 static pid_t g_pid = 0;
 static const char *g_trace_log = NULL;
 static const char *g_element = NULL;
+
+/* ---- UX-46: opened-path recording ------------------------------------
+ *
+ * Design constraints, in priority order:
+ *   1. Never break the wrapped build. Every failure path here degrades
+ *      to "record nothing" and lets the real call through.
+ *   2. Never recurse. Our own trace writes call open(); a guard flag
+ *      keeps them out of the record.
+ *   3. Bounded memory and bounded work per call. A cmake configure opens
+ *      thousands of files, most of them repeatedly.
+ *
+ * Paths are deduplicated in-process by a fixed open-addressing hash set
+ * and stored in a bump arena, then written once in the destructor -
+ * a per-open write() would dominate the traced build's own runtime.
+ */
+#define OPEN_SLOTS 8192          /* power of two; ~50% max load */
+#define OPEN_ARENA_BYTES 262144  /* 256 KiB of path text per process */
+
+static int g_record_opens = 0;
+static __thread int g_in_hook = 0;
+static unsigned long g_open_hashes[OPEN_SLOTS];
+static char g_open_arena[OPEN_ARENA_BYTES];
+static size_t g_open_arena_used = 0;
+static unsigned g_open_unique = 0;
+static unsigned g_open_dropped = 0;
+
+typedef int (*open_fn)(const char *, int, ...);
+typedef int (*openat_fn)(int, const char *, int, ...);
+static open_fn g_real_open = NULL;
+static open_fn g_real_open64 = NULL;
+static openat_fn g_real_openat = NULL;
+static openat_fn g_real_openat64 = NULL;
+
+static unsigned long path_hash(const char *s) {
+    /* FNV-1a. Never returns 0 - 0 marks an empty slot. */
+    unsigned long h = 1469598103934665603UL;
+    for (; *s; s++) {
+        h ^= (unsigned char)*s;
+        h *= 1099511628211UL;
+    }
+    return h ? h : 1;
+}
+
+static void record_open(const char *path) {
+    if (!g_record_opens || path == NULL || path[0] != '/') {
+        /* Relative paths are recorded by their opener's own cwd, which
+         * we do not know and which differs per process; only absolute
+         * paths can be matched against an artifact's contents. */
+        return;
+    }
+    unsigned long h = path_hash(path);
+    size_t slot = (size_t)(h & (OPEN_SLOTS - 1));
+    for (size_t probe = 0; probe < OPEN_SLOTS; probe++) {
+        size_t i = (slot + probe) & (OPEN_SLOTS - 1);
+        if (g_open_hashes[i] == h) {
+            return;  /* already recorded */
+        }
+        if (g_open_hashes[i] == 0) {
+            size_t len = strlen(path);
+            if (g_open_arena_used + len + 1 > OPEN_ARENA_BYTES) {
+                g_open_dropped++;   /* arena full: counted, not silent */
+                return;
+            }
+            g_open_hashes[i] = h;
+            memcpy(g_open_arena + g_open_arena_used, path, len);
+            g_open_arena_used += len;
+            g_open_arena[g_open_arena_used++] = '\n';
+            g_open_unique++;
+            return;
+        }
+    }
+    g_open_dropped++;  /* table full */
+}
+
+/* Resolved lazily rather than in the constructor: the constructor may
+ * itself run before the loader is ready to serve dlsym on some paths,
+ * and a NULL here must mean "pass through", never "crash". */
+static void *resolve(const char *name) {
+    void *fn = dlsym(RTLD_NEXT, name);
+    return fn;
+}
+
+int open(const char *path, int flags, ...) {
+    mode_t mode = 0;
+    if (flags & (O_CREAT | O_TMPFILE)) {
+        va_list ap;
+        va_start(ap, flags);
+        mode = (mode_t)va_arg(ap, int);
+        va_end(ap);
+    }
+    if (g_real_open == NULL) {
+        g_real_open = (open_fn)resolve("open");
+        if (g_real_open == NULL) {
+            errno = ENOSYS;
+            return -1;
+        }
+    }
+    if (!g_in_hook) {
+        g_in_hook = 1;
+        record_open(path);
+        g_in_hook = 0;
+    }
+    return g_real_open(path, flags, mode);
+}
+
+int open64(const char *path, int flags, ...) {
+    mode_t mode = 0;
+    if (flags & (O_CREAT | O_TMPFILE)) {
+        va_list ap;
+        va_start(ap, flags);
+        mode = (mode_t)va_arg(ap, int);
+        va_end(ap);
+    }
+    if (g_real_open64 == NULL) {
+        g_real_open64 = (open_fn)resolve("open64");
+        if (g_real_open64 == NULL) {
+            return open(path, flags, mode);
+        }
+    }
+    if (!g_in_hook) {
+        g_in_hook = 1;
+        record_open(path);
+        g_in_hook = 0;
+    }
+    return g_real_open64(path, flags, mode);
+}
+
+int openat(int dirfd, const char *path, int flags, ...) {
+    mode_t mode = 0;
+    if (flags & (O_CREAT | O_TMPFILE)) {
+        va_list ap;
+        va_start(ap, flags);
+        mode = (mode_t)va_arg(ap, int);
+        va_end(ap);
+    }
+    if (g_real_openat == NULL) {
+        g_real_openat = (openat_fn)resolve("openat");
+        if (g_real_openat == NULL) {
+            errno = ENOSYS;
+            return -1;
+        }
+    }
+    if (!g_in_hook) {
+        g_in_hook = 1;
+        record_open(path);  /* absolute paths only; dirfd-relative skipped */
+        g_in_hook = 0;
+    }
+    return g_real_openat(dirfd, path, flags, mode);
+}
+
+int openat64(int dirfd, const char *path, int flags, ...) {
+    mode_t mode = 0;
+    if (flags & (O_CREAT | O_TMPFILE)) {
+        va_list ap;
+        va_start(ap, flags);
+        mode = (mode_t)va_arg(ap, int);
+        va_end(ap);
+    }
+    if (g_real_openat64 == NULL) {
+        g_real_openat64 = (openat_fn)resolve("openat64");
+        if (g_real_openat64 == NULL) {
+            return openat(dirfd, path, flags, mode);
+        }
+    }
+    if (!g_in_hook) {
+        g_in_hook = 1;
+        record_open(path);
+        g_in_hook = 0;
+    }
+    return g_real_openat64(dirfd, path, flags, mode);
+}
 
 static double monotonic_seconds(void) {
     struct timespec ts;
@@ -115,8 +309,16 @@ static void write_trace_line(const char *event, double ts, int with_rusage) {
     if (g_trace_log == NULL) {
         return;
     }
+    /* UX-46: this function opens the trace log and /proc/self/cmdline
+     * through our own interposed open(). Without the guard the hook
+     * records its own bookkeeping as though the traced process had read
+     * those files, which would then be matched against artifact
+     * contents like any other read. */
+    int outer = g_in_hook;
+    g_in_hook = 1;
     int fd = open(g_trace_log, O_WRONLY | O_APPEND | O_CREAT, 0644);
     if (fd < 0) {
+        g_in_hook = outer;
         return;
     }
     char cmdline[4096];
@@ -172,11 +374,50 @@ static void write_trace_line(const char *event, double ts, int with_rusage) {
         (void)written;
     }
     close(fd);
+    g_in_hook = outer;
+}
+
+/* UX-46: one OPEN record per process, listing the unique absolute paths
+ * it opened. Written in the destructor as a single write() for the same
+ * atomicity reason as write_trace_line, and only when something was
+ * recorded - a process that opened nothing emits no record rather than
+ * an empty one that would read as "opened nothing" when it may simply
+ * have been killed. */
+static void write_open_record(void) {
+    if (!g_record_opens || g_trace_log == NULL || g_open_unique == 0) {
+        return;
+    }
+    int outer = g_in_hook;
+    g_in_hook = 1;
+    int fd = open(g_trace_log, O_WRONLY | O_APPEND | O_CREAT, 0644);
+    g_in_hook = outer;
+    if (fd < 0) {
+        return;
+    }
+    char header[256];
+    int n = snprintf(header, sizeof(header),
+                     "OPENS pid=%d element=%s unique=%u dropped=%u\n",
+                     (int)g_pid, g_element ? g_element : "unknown",
+                     g_open_unique, g_open_dropped);
+    if (n > 0 && (size_t)n < sizeof(header)) {
+        ssize_t w = write(fd, header, (size_t)n);
+        (void)w;
+        /* The arena is already newline-separated, so the paths go out
+         * as one contiguous block. Each is prefixed by nothing: the
+         * parser reads `unique` lines following the header. */
+        w = write(fd, g_open_arena, g_open_arena_used);
+        (void)w;
+    }
+    close(fd);
 }
 
 __attribute__((constructor)) static void bst_trace_start(void) {
     g_trace_log = getenv("BST_TRACE_LOG");
     g_element = getenv("BST_TRACE_ELEMENT");
+    /* Non-empty, not merely set: `BST_TRACE_OPENS=` in an env block is
+     * how a caller turns a feature *off*, and getenv returns "" for it. */
+    const char *opens = getenv("BST_TRACE_OPENS");
+    g_record_opens = (opens != NULL && opens[0] != '\0');
     g_pid = getpid();
     /* No rusage on START: a process that has just been exec'd has
      * consumed no CPU worth recording, and emitting a near-zero value
@@ -186,4 +427,5 @@ __attribute__((constructor)) static void bst_trace_start(void) {
 
 __attribute__((destructor)) static void bst_trace_end(void) {
     write_trace_line("END", monotonic_seconds(), 1);
+    write_open_record();
 }

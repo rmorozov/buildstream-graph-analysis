@@ -135,6 +135,13 @@ def build_shim_argv(
     element = extract_element_name(opts)
     if element is not None:
         injected += ["--setenv", "BST_TRACE_ELEMENT", element]
+    # UX-46: opened-path recording is opt-in and must be propagated into
+    # the sandbox the same way BST_TRACE_LOG is - the hook reads its own
+    # environment inside bwrap, where the outer process's env does not
+    # reach (the same failure UX-11's own dead-end hit with a hardcoded
+    # log path).
+    if os.environ.get("BST_TRACE_OPENS"):
+        injected += ["--setenv", "BST_TRACE_OPENS", "1"]
     return [real_bwrap, *opts, *injected, *cmd]
 
 

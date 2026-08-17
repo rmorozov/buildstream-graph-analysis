@@ -124,7 +124,7 @@ def install_bwrap_shim(shim_dir: str) -> str:
     return real_bwrap
 
 
-def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False) -> int:
+def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -163,6 +163,14 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
             env["BST_TRACE_OPENS"] = "1"
         else:
             env.pop("BST_TRACE_OPENS", None)
+        # UX-58: the shim writes into the same temporary directory it
+        # already owns, on the *host* side - it runs outside the sandbox,
+        # so no bind path is involved.
+        captured_argv = os.path.join(bind_dir, "bwrap-argv.jsonl")
+        if argv_log_path is not None:
+            env["BST_TRACE_ARGV_LOG"] = captured_argv
+        else:
+            env.pop("BST_TRACE_ARGV_LOG", None)
 
         if wrapped_log_path is not None:
             with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
@@ -173,6 +181,8 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         captured_log = os.path.join(bind_dir, "trace.log")
         if os.path.exists(captured_log):
             shutil.copyfile(captured_log, raw_log_path)
+        if argv_log_path is not None and os.path.exists(captured_argv):
+            shutil.copyfile(captured_argv, argv_log_path)
         return returncode
 
 
@@ -1403,6 +1413,14 @@ def main() -> int:
     run_parser.add_argument("output", help="Path to write the JSON report to")
     run_parser.add_argument("--raw-log", help="Also keep the raw trace log at this path (default: discarded after parsing)")
     run_parser.add_argument(
+        "--argv-log", metavar="PATH",
+        help="UX-58: record the first few bwrap command lines BuildStream "
+             "generates, before this tool rewrites them, as JSON lines. The "
+             "artifact UX-56 needs to identify an authoritative element name; "
+             "bounded (BST_TRACE_ARGV_MAX, default 32) because a real build "
+             "spawns thousands and a handful answers the question.",
+    )
+    run_parser.add_argument(
         "--trace-opens", action="store_true",
         help="UX-46: also record which files each element's sandbox opened, and "
              "report declared build dependencies it never read. Opt-in: unlike the "
@@ -1458,7 +1476,8 @@ def main() -> int:
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=args.wrapped_log,
-                                          trace_opens=args.trace_opens)
+                                          trace_opens=args.trace_opens,
+                                          argv_log_path=args.argv_log)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1

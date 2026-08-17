@@ -952,6 +952,18 @@ def format_compare_text(comparison) -> str:
     if pct is not None:
         verdict_line += f"  (total duration {_fmt_signed_us(delta_total, pct)}, {_fmt_us(baseline_total)} -> {_fmt_us(c.get('total_duration_us'))})"
     lines.append(verdict_line)
+    # UX-59: a gate that fires must state the band it fired against, or
+    # it cannot be argued with.
+    band = comparison.baseline_band
+    if band:
+        width = "widened to the fixed 1% rule" if band.get('widened_to_fixed_pct') else (
+            f"median {_fmt_us(band['median_us'])} +/- "
+            f"{band['k']:g}x{_fmt_us(band['scaled_mad_us'])} (scaled MAD)"
+        )
+        lines.append(
+            f"  Judged against a noise band from {band['n']} baseline run(s): "
+            f"{_fmt_us(band['low_us'])} .. {_fmt_us(band['high_us'])} - {width}"
+        )
     if comparison.low_confidence:
         lines.append("  Caveat: at least one run's confidence is below the 'high' band - treat this comparison with caution.")
     if comparison.comparability_warning:

@@ -1,6 +1,6 @@
 # UX-58: the Plane 2 shim rewrites a bwrap argv it never records, so the one artifact needed to fix `UX-56` does not exist in any capture
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** — (blocks `UX-56`'s real fix)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocks `UX-56`'s real fix)
 
 ## Motivation
 
@@ -66,9 +66,54 @@ the tag, so `UX-56` gates it, and `UX-58` gates `UX-56`.
 3. The sample survives the capture workflow's size rule and arrives in
    the published tarball.
 
+## Fix Implemented
+
+`record_argv` in `tools/native_trace/bwrap_shim.py`, active only when
+`BST_TRACE_ARGV_LOG` is set, bounded by `BST_TRACE_ARGV_MAX` (default
+32). Recorded **before** the rewrite, so the file holds what BuildStream
+generated rather than what the shim turned it into. Surfaced as
+`--argv-log PATH` on `bst_native_build_tracer run`.
+
+Two design points worth keeping:
+
+- The bound is enforced by re-reading the file, not by a counter, because
+  each bwrap invocation is a *fresh* shim process with no memory of the
+  last. Two concurrent invocations can therefore both see room and
+  overshoot slightly - accepted deliberately, since the alternative is
+  locking on a hot path to protect a diagnostic whose only requirement is
+  "a few".
+- It never raises. A diagnostic that can fail a real build is worse than
+  no diagnostic, so every error path ends in "record nothing and let the
+  build proceed" - pinned as a test against an unwritable path.
+
+### What the first real capture immediately showed
+
+A real traced build of `examples/07` (BuildStream 2.7.0, real `bwrap`
+sandbox) captured three argvs of **349 tokens** each. The element name
+appears three times:
+
+```
+[ 11] --dir     buildstream/dep-usage-example/base.bst
+[ 13] --chdir   buildstream/dep-usage-example/base.bst
+[338] PWD      /buildstream/dep-usage-example/base.bst
+```
+
+All three are the **same build-root-relative path**. That is a result
+`UX-56` needs and did not have: they are not three independent sources
+that a project overriding `build-root` would lose one of - they are one
+source appearing three times, and `freedesktop-sdk` loses all three at
+once. Nothing else in the argv carries element identity (the CAS staging
+bind is `cas-tmpdir2wnYto`, randomly named).
+
+So the next step for `UX-56` is more likely to be a mechanism *outside*
+the argv than a better field within it. This is pinned as a test so the
+next attempt starts from it rather than re-deriving it, and the decisive
+version - the same capture against a project that overrides `build-root`
+- is now one workflow run away.
+
 ## Verification Log
 
-Filed 2026-08-17 (round 6 follow-up). The empty `declared_vs_used` block
+Filed and implemented 2026-08-17 (round 6 follow-up). The empty `declared_vs_used` block
 is from the real `native-report.json` published to
 `captures/fdsdk-latest`. The absence of any argv recording was read
 directly from `tools/native_trace/bwrap_shim.py`, whose `main()` resolves

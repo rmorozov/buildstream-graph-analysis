@@ -10,6 +10,7 @@ verdict, gated on confidence and on whether the two runs' graphs are
 even the same project.
 """
 import logging
+import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -47,6 +48,60 @@ _FLOOR_KEYS = (
 )
 
 
+# UX-59: the fewest baseline runs a band may be derived from. Below this
+# a "band" is a restatement of one or two numbers, and the fixed
+# percentage is the more honest rule.
+MIN_BASELINE_RUNS = 3
+
+# Default width, in scaled-MAD units. 3 is the conventional outlier
+# distance and, measured on seven real repeated builds of one unchanged
+# commit, contains all seven while still catching a +15% regression.
+DEFAULT_BAND_K = 3.0
+
+
+def compute_band(durations_us: List[float], k: float = DEFAULT_BAND_K) -> Optional[dict]:
+    """Robust noise band for a set of baseline runs: median ± k·(1.4826·MAD).
+
+    Why a band at all: `_SIGNIFICANCE_PCT` is a single constant applied to
+    runs of wildly different size. Seven real repeated builds of one
+    unchanged `examples/06` commit measured 26.30s … 27.72s — a standard
+    deviation of **1.8% of the mean** — so the fixed 1% rule places
+    **4 of those 7 identical runs outside the band** and would call them
+    regressions or improvements. On a small incremental build the rule is
+    at its most trigger-happy exactly where the signal is weakest.
+
+    Why the median and MAD rather than the mean and standard deviation:
+    not skew. At n=7 the same data is very nearly symmetric
+    ((mean−median)/sd = −0.15), and both bands contain all seven runs.
+    The difference is robustness to a *single* contaminated baseline run,
+    which in CI means one runner that got a noisy neighbour. Replacing
+    the slowest of those seven with a 45s outlier widens the mean±3σ band
+    from 3.00s to **40.64s**, at which point it misses a real +15%
+    regression outright; the median±3·MAD band is unchanged at 3.29s and
+    still catches it.
+
+    Returns None below `MIN_BASELINE_RUNS`. A zero MAD — every baseline
+    run identical to the microsecond — would collapse the band to a
+    point and make any delta significant, so the caller widens it to the
+    fixed percentage rather than this function inventing a floor it has
+    no basis for.
+    """
+    if len(durations_us) < MIN_BASELINE_RUNS:
+        return None
+    ordered = sorted(durations_us)
+    median = statistics.median(ordered)
+    mad = statistics.median([abs(x - median) for x in ordered])
+    scaled = 1.4826 * mad
+    return {
+        "n": len(ordered),
+        "median_us": median,
+        "scaled_mad_us": scaled,
+        "k": k,
+        "low_us": median - k * scaled,
+        "high_us": median + k * scaled,
+    }
+
+
 @dataclass
 class ComparisonResult:
     baseline_run_id: str
@@ -67,6 +122,11 @@ class ComparisonResult:
     # therefore get opposite gate behaviour - low confidence fails open,
     # a failed build fails closed.
     failed_runs: List[str] = field(default_factory=list)
+    # UX-59: the noise band the verdict was judged against, when
+    # enough baseline runs were supplied to derive one. None means
+    # the fixed-percentage rule was used, which is what every
+    # comparison did before this existed.
+    baseline_band: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {
@@ -82,6 +142,7 @@ class ComparisonResult:
             'low_confidence': self.low_confidence,
             'comparability_warning': self.comparability_warning,
             'failed_runs': self.failed_runs,
+            'baseline_band': self.baseline_band,
         }
 
 
@@ -180,6 +241,7 @@ def _compare_results(
     candidate_result: AnalysisResult,
     baseline_elements: List[Element],
     candidate_elements: List[Element],
+    baseline_band: Optional[dict] = None,
 ) -> ComparisonResult:
     baseline_metrics = _numeric_metrics(baseline_result)
     candidate_metrics = _numeric_metrics(candidate_result)
@@ -227,7 +289,23 @@ def _compare_results(
         # needed for the classification decision itself (Part 3.1's
         # discipline, applied here even though this isn't itself
         # timeline-accounting code, since it's driving a real decision).
-        significant = abs(delta_total_us) * 100 >= baseline_total * _SIGNIFICANCE_PCT
+        # UX-59: when enough baseline runs were supplied, judge against
+        # their measured noise band instead of the fixed percentage. The
+        # band is widened to the fixed rule when it is narrower - a set
+        # of near-identical baseline runs yields a near-zero MAD, and a
+        # band tighter than quantization noise would fire on everything.
+        if baseline_band is not None:
+            fixed_half_width = baseline_total * _SIGNIFICANCE_PCT / 100
+            half_width = max(
+                baseline_band['k'] * baseline_band['scaled_mad_us'], fixed_half_width
+            )
+            low = baseline_band['median_us'] - half_width
+            high = baseline_band['median_us'] + half_width
+            baseline_band = dict(baseline_band, low_us=low, high_us=high,
+                                 widened_to_fixed_pct=half_width == fixed_half_width)
+            significant = not (low <= candidate_total <= high)
+        else:
+            significant = abs(delta_total_us) * 100 >= baseline_total * _SIGNIFICANCE_PCT
         if not significant:
             verdict = "no significant change"
         elif delta_total_us < 0:
@@ -253,10 +331,14 @@ def _compare_results(
         low_confidence=low_confidence,
         comparability_warning=comparability_warning,
         failed_runs=failed_runs,
+        baseline_band=baseline_band,
     )
 
 
-def compare_runs(baseline_dir: Path, candidate_dir: Path, **analyzer_kwargs) -> ComparisonResult:
+def compare_runs(baseline_dir: Path, candidate_dir: Path,
+                 baseline_runs: Optional[List[Path]] = None,
+                 band_k: float = DEFAULT_BAND_K,
+                 **analyzer_kwargs) -> ComparisonResult:
     """Load, analyze, and compare two run directories independently -
     each gets its own BuildEfficiencyAnalyzer instance (no shared state),
     matching how any two separate `bga analyze` invocations would behave.
@@ -272,9 +354,35 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path, **analyzer_kwargs) -> 
     candidate_analyzer.load(candidate_dir)
     candidate_result = candidate_analyzer.analyze()
 
+    # UX-59: a baseline is a *set* when one is supplied. Each run is
+    # analyzed the same way the two principals are, and one that does not
+    # share the candidate's run_mode is refused rather than averaged in -
+    # UX-55 already established that a nightly and a pre-commit run are
+    # not comparable, and a band mixing them is that mistake with extra
+    # arithmetic.
+    band = None
+    if baseline_runs:
+        candidate_mode = (candidate_result.confidence or {}).get('run_mode')
+        durations = []
+        for run_dir in baseline_runs:
+            analyzer = BuildEfficiencyAnalyzer(**analyzer_kwargs)
+            analyzer.load(run_dir)
+            result = analyzer.analyze()
+            mode = (result.confidence or {}).get('run_mode')
+            if candidate_mode not in (None, 'unknown') and mode not in (None, 'unknown') \
+                    and mode != candidate_mode:
+                raise ValueError(
+                    f"baseline run {run_dir} is a {mode} run but the candidate is "
+                    f"{candidate_mode} - a noise band may only be built from runs of "
+                    "the same kind (UX-55)"
+                )
+            durations.append(result.total_duration_us)
+        band = compute_band(durations, k=band_k)
+
     return _compare_results(
         baseline_result, candidate_result,
         baseline_analyzer.graph.elements, candidate_analyzer.graph.elements,
+        baseline_band=band,
     )
 
 

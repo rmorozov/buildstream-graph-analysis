@@ -119,13 +119,21 @@ def test_key_findings_tags_structural_top_element_but_not_real_work_one(analyzed
     output = format_text(analyzed_result)
     key_findings = output.split("Certified Floors:")[0]
 
-    assert "1. root.bst (2 downstream elements) [structural: import" in key_findings
-    # manual.bst never appears in blast-radius top-3 here (0 downstream,
-    # same as a.bst) - assert on criticality instead, where both root.bst
-    # (on the critical path) and manual.bst (not) could plausibly appear;
-    # the concrete guarantee this test needs is just: no structural tag
-    # is ever attached to a manual.bst line, wherever it shows up.
-    assert "manual.bst" not in key_findings or "manual.bst [structural" not in key_findings
+    # UX-65 changed which ranking this fixture gets. It is chain-bound
+    # (T-infinity is essentially the whole wall clock), so "worth
+    # optimizing first" now ranks by share of the critical path, and that
+    # ranking *excludes* structural elements outright rather than listing
+    # them with a caveat.
+    #
+    # The guarantee this test exists for is unchanged and now stronger:
+    # a structural element is never presented as a thing to go and make
+    # faster. Previously that was satisfied by tagging `root.bst`; now it
+    # is satisfied by not ranking it at all.
+    assert "Elements Most Worth Optimizing First (by share of the critical path" in key_findings
+    assert "root.bst (2 downstream elements)" not in key_findings
+    # Wherever any line does mention these elements, a structural tag
+    # must never be attached to the one that does real work.
+    assert "manual.bst [structural" not in key_findings
 
 
 def test_leaf_analysis_detail_carries_kind_and_structural_flag(analyzed_result):

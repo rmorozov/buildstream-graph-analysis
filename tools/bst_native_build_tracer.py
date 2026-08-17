@@ -827,17 +827,36 @@ def assess_element_attribution(by_element: Dict[str, int]) -> dict:
     recognized = {k: v for k, v in by_element.items() if k.endswith(".bst")}
     recognized_processes = sum(recognized.values())
     largest = max(by_element.items(), key=lambda kv: kv[1], default=(None, 0))
+    unrecognized = {k: v for k, v in by_element.items() if not k.endswith(".bst")}
+    largest_unrecognized = max(
+        unrecognized.items(), key=lambda kv: kv[1], default=(None, 0)
+    )
 
-    reliable = bool(by_element) and recognized_processes == total
+    # UX-66: validity and coverage are different properties, and the
+    # original rule (`recognized_processes == total`) conflated them.
+    #
+    # That was right when the measured answer was 0.6% and every
+    # per-element figure was fiction. After `UX-64` it is wrong: round 8
+    # measured 86.1% of processes correctly named, every resolved name
+    # valid against the declared graph, and the residue sitting in an
+    # explicitly *unresolved* bucket - and the report still refused,
+    # citing `components/bison.bst`, which is an element, as evidence
+    # that attribution had failed.
+    #
+    # So the question a consumer needs answered is "are the names I have
+    # real?", not "do I have all of them". Coverage is reported
+    # separately, the way `UX-45` reports measured CPU time and `UX-63`
+    # measured memory: a partial measurement is published with its
+    # coverage, not withheld.
+    usable = bool(recognized) and recognized_processes > 0
+    share = recognized_processes / total if total else 0.0
     note = None
     if not by_element:
         note = "no process carried an element tag at all"
-    elif not reliable:
-        share = recognized_processes / total if total else 0.0
+    elif not usable:
         note = (
-            f"only {recognized_processes} of {total} traced processes "
-            f"({share:.1%}) carry a name that looks like a BuildStream "
-            f"element (ending in '.bst'); the largest bucket is "
+            f"none of {total} traced processes carry a name that looks like a "
+            f"BuildStream element (ending in '.bst'); the largest bucket is "
             f"{largest[0]!r} with {largest[1]} processes. The element tag "
             "comes from bwrap's --dir, which is the element only under "
             "BuildStream's default build-root layout - a project that "
@@ -845,10 +864,26 @@ def assess_element_attribution(by_element: Dict[str, int]) -> dict:
             "bucket. Per-element figures in this report are not per-"
             "element and must not be read as such (UX-56)."
         )
+    elif recognized_processes < total:
+        note = (
+            f"{recognized_processes} of {total} traced processes ({share:.1%}) "
+            f"are attributed to a named element; the remaining "
+            f"{total - recognized_processes} are in the unresolved bucket "
+            f"{largest_unrecognized[0]!r}, whose sandbox could not be matched "
+            "to exactly one element (UX-56/UX-64). Per-element figures below "
+            "cover the attributed share only - they are correct for the "
+            "elements named, and silent about the rest."
+        )
     return {
-        "reliable": reliable,
+        # Whether the names present are real element names. False means
+        # refuse the per-element view entirely.
+        "reliable": usable,
         "tagged_processes": total,
         "recognized_processes": recognized_processes,
+        # UX-66: coverage, published rather than folded into `reliable`.
+        "attributed_share": share,
+        "unattributed_processes": total - recognized_processes,
+        "unresolved_bucket": largest_unrecognized[0],
         "recognized_elements": sorted(recognized),
         "largest_bucket": largest[0],
         "largest_bucket_processes": largest[1],

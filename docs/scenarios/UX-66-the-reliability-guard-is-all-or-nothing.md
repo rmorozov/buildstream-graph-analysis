@@ -88,6 +88,38 @@ is wrong for the publish, which is what everything downstream reads.
 `native-report.json`, or gate the publish on the capture step's outcome.
 A cancelled or empty capture should leave the previous one in place.
 
+## A third defect: the plain-build fallback now crosses two builds
+
+Raised by the user asking why the capture step appears to build twice.
+It does not — the second build is conditional on the traced one failing
+(`traced_build_exit=0` in both rounds 7 and 8, with no `plain_build_exit`
+line, so neither ran it), and even when it fires it resumes rather than
+restarts, because successful elements stay cached and `--retry-failed`
+only redoes the failed ones. The fallback exists so that a build broken
+*by tracing* still yields a Plane 1 capture, which is what saved round 6.
+
+But it has acquired a hazard since it was written. When it fires:
+
+```bash
+mv capture/build.log capture/build-traced.log   # traced build's log
+bst build --retry-failed ...                    # writes a NEW capture/build.log
+```
+
+`run/` is then extracted from the **plain** build's log, while
+`native-report.json` came from the **traced** build. Before `UX-56` that
+was untidy. Now `bga correlate` joins Plane 2 sandboxes against Plane 1
+BUILD spans, so it would silently correlate one build's sandboxes against
+a different build's timeline — and the sandbox ids would not even be
+wrong in a detectable way, they would simply match the wrong spans.
+
+It has not bitten, because the fallback has not fired since `UX-56`
+landed. It would, silently, on the next traced failure.
+
+**Fix:** when the fallback runs, the capture is a Plane 1 capture only.
+Drop or clearly mark `native-report.json` so nothing downstream joins
+across the two, and record in `capture-outcome.txt` that the two planes
+describe different builds.
+
 ## Out of Scope
 
 - The correlation itself (`UX-64`), which is working. The 16 ambiguous

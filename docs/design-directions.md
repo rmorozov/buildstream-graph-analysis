@@ -931,6 +931,57 @@ the entire point of BuildStream — the less `bga` gates. That is the CI
 story's real blocker, and no fixture could contain it: every fixture here
 is a full build in which nothing is cached.
 
+## What blocks another real-sample round: nothing, and one habit
+
+Asked directly before round 7 was planned, and worth recording because
+the answer is not "get a capture" any more:
+
+- **The capture is on demand.** `.github/workflows/real-project-capture.yml`
+  warms, cuts and captures a real `freedesktop-sdk` build and publishes
+  it to `captures/fdsdk-latest`, which is fetchable from here. The
+  workflow-artifact route is not (the egress policy refuses
+  `*.blob.core.windows.net`), which is why the branch exists.
+- **One artifact is missing, and it is not a budget problem.** `UX-56`
+  guessed that the raw trace being dropped above 40MB is why round 6 had
+  no bwrap argv to settle the element-tag question with. It is not: the
+  shim never records the argv at all (`UX-58`). That is a few lines, and
+  it unblocks `UX-56`, which in turn unblocks declared-vs-used on real
+  projects - which returned entirely empty on the real capture for the
+  same reason.
+
+The habit is the more useful finding. Round 6 spent **two CI iterations**
+rediscovering that Ubuntu 24.04's
+`kernel.apparmor_restrict_unprivileged_userns` stops bwrap bringing up
+loopback - a failure this repository's own `.github/workflows/ci.yml`
+already carried a named step for, with the root cause, the upstream
+issue references and the exact `sysctl` fix in a comment. The capture
+workflow was written from scratch beside a file that had solved its
+hardest environmental problem months earlier.
+
+That is the same shape as `UX-53` (the fixture with the right shape was
+already checked in) and `UX-41`/`UX-52` (the rule was already written
+down in the code that ignored it). Three rounds running, the scarce
+resource has not been evidence. **Before building capture
+infrastructure, read what the repository already runs.**
+
+### Six deferrals that were never filed
+
+A sweep of every `## Out of Scope` section across 121 task docs, checking
+each against the backlog, found six items that were deferred with a
+reason and then never became scope: `UX-58` (argv), `UX-59` (no noise
+model for the pre-commit scenario, deferred verbatim by `UX-39` as
+"probably necessary"), `UX-60` (FETCH in efficiency signals, deferred
+identically by `UX-50` and `UX-53`), `UX-61` (`max_concurrency` of 5,268
+on four cores), `UX-62` (per-span terminal status), and `UX-63` (measured
+per-task memory, whose stated blocker shipped two rounds ago).
+
+The process mostly works - `UX-12`'s per-element `max-jobs` deferral
+became `UX-22` and `UX-31`, `UX-36`'s CPU-accounting deferral became
+`UX-45`, and `UX-03`'s "wire the gate into this repo's own CI" is live in
+`ci.yml`. What the six have in common is that each was deferred by a task
+that *shipped successfully*: nothing failed afterwards to make anyone
+look again. A deferral inside a green task is invisible.
+
 ## Ready for the seventh round
 
 The backlog is **not** empty for the first time in three rounds, and

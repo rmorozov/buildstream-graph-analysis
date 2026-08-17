@@ -428,6 +428,14 @@ def extract_run(
         "failed_elements": failed,
         "failed_count": len(failed),
     }
+    # UX-55: BuildStream's own closing Pipeline Summary. This is what
+    # separates the two CI scenarios `bga` has to serve - a nightly with
+    # caches off, where every element runs and every signal is about the
+    # whole project, from a pre-commit run where most elements are cached
+    # and the analysis is only about the few that rebuilt. Nothing else
+    # in the capture says which one happened.
+    if converter.queue_summary:
+        run_context["queue_summary"] = converter.queue_summary
     if failed:
         warnings.append(
             f"{len(failed)} element(s) FAILED in this build "

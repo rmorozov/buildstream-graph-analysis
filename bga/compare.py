@@ -149,6 +149,32 @@ def _check_comparability(baseline_elements: List[Element], candidate_elements: L
     return None
 
 
+def _check_run_modes(
+    baseline_result: AnalysisResult, candidate_result: AnalysisResult
+) -> Optional[str]:
+    """UX-55: flag (don't block) a comparison between a caches-off run
+    and an incremental one.
+
+    Returns None when both runs are the same mode, or when either does
+    not say - `unknown` must not be guessed into either bucket, and a
+    warning on every pre-UX-55 capture would train the reader to ignore
+    the field.
+    """
+    modes = tuple(
+        (result.confidence or {}).get('run_mode') for result in
+        (baseline_result, candidate_result)
+    )
+    if 'unknown' in modes or None in modes or modes[0] == modes[1]:
+        return None
+    return (
+        f"baseline is a {modes[0]} run and candidate is a {modes[1]} run - "
+        "their durations and floors differ by however much the cache "
+        "happened to hold, which says nothing about whether the build got "
+        "worse; compare a nightly against a nightly and a pre-commit run "
+        "against a pre-commit run"
+    )
+
+
 def _compare_results(
     baseline_result: AnalysisResult,
     candidate_result: AnalysisResult,
@@ -167,6 +193,20 @@ def _compare_results(
     )
 
     comparability_warning = _check_comparability(baseline_elements, candidate_elements)
+
+    # UX-55: the two CI scenarios are not comparable to each other. A
+    # caches-off nightly builds everything; a pre-commit run builds
+    # whatever the change invalidated. Their total durations, floors and
+    # occupancy differ by however much the cache happened to hold, which
+    # has nothing to do with whether the build got worse. Flagged with
+    # the same weight as "these may not be the same project", because it
+    # is the same kind of mistake.
+    mode_warning = _check_run_modes(baseline_result, candidate_result)
+    if mode_warning:
+        comparability_warning = (
+            f"{comparability_warning}; {mode_warning}" if comparability_warning
+            else mode_warning
+        )
 
     # UX-54: a run whose build failed is not a candidate for a
     # scheduling verdict at all.

@@ -72,6 +72,13 @@ BST_MAX_PUSH_RE = re.compile(r"Maximum Push Tasks:\s+(\d+)")
 # exists in wrapped logs and requires shell-quoting-aware parsing; see
 # tools/bst_extract_run.py (P4-10), which uses this.
 TARGETS_RE = re.compile(r"^\s*Targets:\s+(.*)$")
+# UX-55: BuildStream's closing Pipeline Summary, e.g.
+#     Build Queue: processed 25, skipped 65, failed 0
+# The trailing whitespace and the variable run of spaces after the
+# comma are both real - copied from a real freedesktop-sdk log.
+QUEUE_SUMMARY_RE = re.compile(
+    r"^\s*(\w+) Queue:\s+processed\s+(\d+),\s+skipped\s+(\d+),\s+failed\s+(\d+)"
+)
 
 # BuildStream's own elapsed-time prefix: HH:MM:SS optionally followed by
 # .ffffff (only shown with --verbose's microsecond mode), or the literal
@@ -144,7 +151,13 @@ class WrapperTraceConverter:
         # simply didn't pass the flag - "not recorded", never a fabricated
         # default. See get_scheduler_config's docstring.
         self.bst_native_max_jobs = None
+        self.queue_summary = {}
         self.targets = None  # from "Targets:" header, comma-separated string as seen
+        # UX-55: {"build": {"processed": int, "skipped": int,
+        # "failed": int}, "fetch": {...}} from the closing Pipeline
+        # Summary. Empty when the log has none (a truncated capture,
+        # or a bst subcommand that prints no summary) - absent must
+        # stay distinguishable from "nothing was skipped".
         self.hash_to_tid = {}  # Maps BST task hash (e.g. a59d6897) to a stable thread ID
         self.next_tid = 100
         # task_hash -> {"tid": int, "element": str, "phase": str, "action": str, "depth": int}
@@ -340,6 +353,20 @@ class WrapperTraceConverter:
         targets_match = TARGETS_RE.search(text)
         if targets_match:
             self.targets = targets_match.group(1).strip()
+        # UX-55: BuildStream's own closing Pipeline Summary, which states
+        # how many elements each queue actually processed versus skipped
+        # as already cached. This is the only place in the log that says
+        # a run was incremental, and it is also a checksum: `processed`
+        # must equal the number of elements that produced a task, or
+        # extraction lost something. Same standalone-line shape as the
+        # header lines above, hence the same hook.
+        queue_match = QUEUE_SUMMARY_RE.search(text)
+        if queue_match:
+            self.queue_summary[queue_match.group(1).lower()] = {
+                "processed": int(queue_match.group(2)),
+                "skipped": int(queue_match.group(3)),
+                "failed": int(queue_match.group(4)),
+            }
 
     def handle_bst_event(self, ts, hash_val, action, element, status, msg):
         # Clean up any accidental trailing whitespace from regex extraction

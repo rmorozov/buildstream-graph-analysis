@@ -231,6 +231,24 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     # Confidence headline
     confidence = result.confidence or {}
     primary = confidence.get('primary')
+
+    # UX-55: which of the two CI scenarios this run is, said before the
+    # numbers, because it changes what they are *about*. A nightly with
+    # caches off measures the whole project; a pre-commit run measures
+    # the handful of elements that rebuilt on top of a cached base, and
+    # every floor below certifies only that work.
+    if confidence.get('run_mode') == 'incremental':
+        cached = confidence.get('critical_path_cached') or []
+        detail = (
+            f", {len(cached)} of them on the critical path" if cached else ""
+        )
+        lines.append(
+            "  Incremental run (caches on): BuildStream skipped elements it "
+            f"had already built{detail}. Coverage and the floors below "
+            "describe the work this run actually did, not the whole project - "
+            "compare against another incremental run, not against a "
+            "caches-off nightly"
+        )
     violations = result.violations or []
     if primary is not None:
         band = _confidence_band(primary)

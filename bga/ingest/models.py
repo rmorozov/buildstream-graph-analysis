@@ -149,6 +149,56 @@ class RunContext:
     # every capture taken before this field existed omits it, and none of
     # them may be presented as a known-good run on that basis.
     build_outcome: Optional[dict] = None
+    # UX-55: BuildStream's own closing Pipeline Summary, keyed by queue -
+    # `{"build": {"processed": int, "skipped": int, "failed": int}, ...}`.
+    # Another additive run-context/v9 extension. `skipped` is the count
+    # of elements that were already cached, and it is the only thing in a
+    # capture that distinguishes the two CI scenarios this tool serves: a
+    # nightly with caches off (nothing skipped, every signal is about the
+    # whole project) from a pre-commit run (most elements skipped, the
+    # analysis is only about the few that rebuilt).
+    queue_summary: Optional[dict] = None
+
+    @property
+    def build_queue(self) -> dict:
+        """The build queue's counts, or `{}` when not recorded."""
+        return (self.queue_summary or {}).get("build") or {}
+
+    @property
+    def cached_element_count(self) -> Optional[int]:
+        """Elements BuildStream skipped because they were already
+        cached, or `None` when the capture does not say."""
+        skipped = self.build_queue.get("skipped")
+        return skipped if isinstance(skipped, int) else None
+
+    @property
+    def built_element_count(self) -> Optional[int]:
+        """Elements BuildStream actually built, or `None` when the
+        capture does not say. This is the checksum for coverage: it must
+        equal the number of elements that produced a BUILD task, or the
+        extraction lost something real."""
+        processed = self.build_queue.get("processed")
+        return processed if isinstance(processed, int) else None
+
+    @property
+    def run_mode(self) -> str:
+        """`'full'`, `'incremental'`, or `'unknown'`.
+
+        The two CI scenarios differ in what the numbers are *about*, not
+        in how they are computed. A nightly with caches off builds every
+        element, so coverage should be total and every floor certifies
+        the whole project. A pre-commit run rebuilds a handful of
+        elements on top of a cached base, so most of the graph has no
+        task at all - which is correct and expected, and which `bga`
+        used to report as lost measurements (`UX-55`).
+
+        `'unknown'` when the capture predates this field or the log had
+        no Pipeline Summary; it must not be silently treated as either.
+        """
+        cached = self.cached_element_count
+        if cached is None:
+            return "unknown"
+        return "incremental" if cached > 0 else "full"
 
     @property
     def failed_elements(self) -> List[str]:

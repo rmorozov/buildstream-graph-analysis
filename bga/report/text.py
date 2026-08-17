@@ -666,8 +666,16 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                     )
                 )
             if parallelism:
+                # UX-49: `mean_width` is the number that actually answers
+                # "how parallel is this graph" - it is average
+                # parallelism, work over depth - and it was the one the
+                # line did not show. On the real examples/06 pair it
+                # reads 1.1x for the chained baseline against 2.2x for
+                # the fan-out, which is exactly the macro improvement
+                # that project exists to demonstrate.
                 lines.append(
                     f"  Parallelism Profile: min={parallelism.get('min_width', 0):.1f}x, "
+                    f"avg={parallelism.get('mean_width', 0):.1f}x, "
                     f"max={parallelism.get('max_width', 0):.1f}x"
                 )
             consolidation_candidates = sm.get('consolidation_candidates') or []

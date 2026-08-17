@@ -78,7 +78,29 @@ class ParallelismProfile:
     
     # Cumulative
     cumulative_work: List[int]  # Total elements up to each level
-    parallelism_efficiency: float  # How well parallelism is utilized
+
+    # UX-49: `mean_width / max_width` - how *uniform* the level widths
+    # are, which is not how parallel the build is and never was. Under
+    # the old name `parallelism_efficiency` a pure serial chain scored a
+    # perfect 1.000 (every level is exactly as wide as the widest) while
+    # a fan-out scored 0.667, and `examples/06`'s optimized variant
+    # scored 0.367 against the chained baseline's 0.550 - the better
+    # graph scoring worse, the same failure mode UX-27 found in
+    # `efficiency_score`.
+    #
+    # Renamed rather than redefined, deliberately. The obvious
+    # alternative was to make this field mean "how parallel is this
+    # build", but that question already has a published answer in
+    # `mean_width` (equivalently `StructuralMetrics.avg_parallelism`),
+    # which discriminates correctly on the real pair: 1.1 for the
+    # chained baseline against 2.2 for the fan-out. Redefining would
+    # have produced two names for one number; the formula here computes
+    # a real, distinct shape signal and only its name was wrong.
+    #
+    # Read it as: low means the graph has a narrow waist somewhere -
+    # some levels are far thinner than the widest - so peak parallelism
+    # is not sustained across the build's depth.
+    width_uniformity: float
 
 
 @dataclass(frozen=True)

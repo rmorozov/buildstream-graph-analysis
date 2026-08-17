@@ -1771,7 +1771,10 @@ class BuildEfficiencyAnalyzer:
                 'max_width': result.parallelism.max_width,
                 'min_width': result.parallelism.min_width,
                 'mean_width': result.parallelism.mean_width,
-                'parallelism_efficiency': result.parallelism.parallelism_efficiency,
+                # UX-49: renamed from `parallelism_efficiency`, which is
+                # not what this ratio measures - see
+                # ParallelismProfile.width_uniformity.
+                'width_uniformity': result.parallelism.width_uniformity,
             },
             'sensitivity': {
                 # UX-34: structural-kind elements filtered out (see

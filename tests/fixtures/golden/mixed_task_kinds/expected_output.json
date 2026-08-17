@@ -257,7 +257,7 @@
             "max_width": 2,
             "min_width": 1,
             "mean_width": 1.3333333333333333,
-            "parallelism_efficiency": 0.6666666666666666
+            "width_uniformity": 0.6666666666666666
         },
         "sensitivity": {
             "top_opportunities": [

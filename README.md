@@ -63,8 +63,8 @@ pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/inge
 # Capture through the wrapper: it records the real invocation on its own first
 # line, which is where `--max-jobs` lives - without it bga's capacity checks
 # have nothing to check against and say so.
-python3 -m tools.bst_run_wrapped /path/to/your/project /tmp/build.log -- bst build <targets>
-python3 -m tools.bst_extract_run --format wrapped /path/to/your/project /tmp/build.log /tmp/my-run
+bga wrap /path/to/your/project /tmp/build.log -- bst build <targets>
+bga extract --format wrapped /path/to/your/project /tmp/build.log /tmp/my-run
 bga analyze /tmp/my-run --diagnostics
 ```
 
@@ -112,7 +112,7 @@ The `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` subcommands ar
 Everything above answers *"across the whole build, where did the time go and what's the ceiling on making it faster?"* — that's as deep as a BuildStream log itself goes: one start/end timestamp per element, nothing about what happened *inside* its sandbox. A second, separate tool answers *"inside this one element, is its own native build system (`make -jN`, `cmake --build`, ...) actually parallelizing well, or silently serializing / doing redundant work?"* — real per-process tracing via an `LD_PRELOAD` hook inside the sandbox, not a guess from timing alone:
 
 ```bash
-python3 -m tools.bst_native_build_tracer run /path/to/your/project report.json -- bst build <target>
+bga capture run /path/to/your/project report.json -- bst build <target>
 ```
 
 It reports, per element, the parallelism its native build system **actually achieved** against the `-jN` it asked for — the one number that separates "this element is legitimately 13 seconds of work" from "this element is 4 seconds of work stretched to 13 by a one-line `notparallel: True`":
@@ -146,9 +146,9 @@ These are candidates with evidence, not verdicts: an element whose processes the
 Capture both from one build, then join them on element UID — the only contract between the planes:
 
 ```bash
-python3 -m tools.bst_native_build_tracer run --wrapped-log /tmp/plane1.log \
+bga capture run --wrapped-log /tmp/plane1.log \
     /path/to/project /tmp/plane2.json -- bst build <target>
-python3 -m tools.bst_extract_run --format wrapped /path/to/project /tmp/plane1.log /tmp/run
+bga extract --format wrapped /path/to/project /tmp/plane1.log /tmp/run
 bga correlate /tmp/run /tmp/plane2.json
 ```
 

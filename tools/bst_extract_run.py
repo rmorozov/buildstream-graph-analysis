@@ -30,7 +30,11 @@ import sys
 from pathlib import Path
 
 from tools.bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
-from tools.chrome_trace_to_bga_trace import chrome_events_to_bga_spans, invocation_wall_clock
+from tools.chrome_trace_to_bga_trace import (
+    chrome_events_to_bga_spans,
+    failed_elements,
+    invocation_wall_clock,
+)
 from tools.bst_show_to_graph import extract_graph
 from tools._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
 
@@ -414,6 +418,22 @@ def extract_run(
     # spec-mandated schema (Part 32.1).
     if project_refs_provenance:
         run_context["project_refs_provenance"] = project_refs_provenance
+
+    # UX-54: whether the build succeeded. Always written, even when
+    # nothing failed - an absent field has to keep meaning "this producer
+    # did not record it", so that captures taken before this existed are
+    # never mistaken for known-good runs.
+    failed = failed_elements(converter.trace_events)
+    run_context["build_outcome"] = {
+        "failed_elements": failed,
+        "failed_count": len(failed),
+    }
+    if failed:
+        warnings.append(
+            f"{len(failed)} element(s) FAILED in this build "
+            f"({', '.join(failed[:5])}{', ...' if len(failed) > 5 else ''}) - "
+            "the analysis below describes a build that did not succeed"
+        )
 
     # Run identity (P1-37): embedded identically into all three files so
     # bga's own loader can cross-check they belong to the same extraction.

@@ -296,6 +296,25 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     if not getattr(args, 'fail_on_regression', False) and not efficiency_gate_on:
         return 0
 
+    # UX-54: checked before the low-confidence fail-open, and failing
+    # *closed*. Failing open exists so a noisy signal cannot block a
+    # pipeline; a build that did not complete is not a noisy signal, and
+    # a gate that waves it through on scheduling grounds is exactly the
+    # hazard this project's CI story is meant to remove. Measured: a real
+    # freedesktop-sdk capture in which all four attempted elements failed
+    # scored an Efficiency Score of 1.00 at confidence 0.14, so the old
+    # order would have failed open and reported green.
+    if comparison.failed_runs:
+        print(
+            f"Build failure gate FAILED: the {' and '.join(comparison.failed_runs)} "
+            "run describes a build that did not complete (one or more elements "
+            "ended in FAILURE). No scheduling verdict is meaningful for it, so "
+            "this is a failure rather than a fail-open. "
+            "See docs/scenarios/UX-54-a-failed-build-scores-perfectly.md.",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_REGRESSION
+
     if comparison.low_confidence:
         # UX-40: failing open is the right default (do not block a
         # pipeline on a signal you do not trust), but a gate that

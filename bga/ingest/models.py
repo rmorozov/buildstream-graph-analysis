@@ -140,6 +140,24 @@ class RunContext:
     # Trace.run_identity_hash - see bga/ingest/loader.py::load_all's
     # cross-check. See docs/tasks/P1-37-run-identity-not-captured-or-enforced.md.
     run_identity: Optional[dict] = None
+    # UX-54: whether the build this run describes actually succeeded -
+    # not part of run-context/v9's spec-mandated schema (the spec has no
+    # concept of a failed run at all), an additive extension
+    # `tools/bst_extract_run.py` populates from the log's own per-element
+    # terminal statuses: {"failed_elements": [str], "failed_count": int}.
+    # Absent means "not recorded" and is *not* the same as "succeeded":
+    # every capture taken before this field existed omits it, and none of
+    # them may be presented as a known-good run on that basis.
+    build_outcome: Optional[dict] = None
+
+    @property
+    def failed_elements(self) -> List[str]:
+        """Elements whose task ended in FAILURE, or `[]` when the
+        producer recorded no outcome at all. Use `build_outcome is None`
+        to distinguish "no failures" from "unknown"."""
+        if not self.build_outcome:
+            return []
+        return list(self.build_outcome.get("failed_elements", []))
 
     @property
     def wall_clock_us(self) -> Optional[int]:

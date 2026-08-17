@@ -1124,100 +1124,134 @@ def build_spans_from_wrapped_log(path: str) -> List[dict]:
     return sorted(spans.values(), key=lambda s: s["start"])
 
 
+def sandbox_durations(records: List[dict]) -> Dict[str, float]:
+    """UX-64: how long each sandbox was alive, in seconds, from its own
+    processes' `CLOCK_MONOTONIC` stamps.
+
+    The shim `execv`s and so cannot record an end, but it does not have
+    to: every traced process carries `inv=` (`UX-56`), so a sandbox's
+    length is `max(end_ts) - min(start_ts)` over the processes that ran
+    inside it. Combined with the shim's wall-clock start this yields a
+    real interval without needing any clock anchor at all - the monotonic
+    stamps supply only the *delta*, which is unit-comparable across
+    clocks, and the wall-clock start supplies the origin.
+
+    The interval is very slightly *shorter* than the sandbox's true one:
+    bwrap starts before its first traced process and exits after its
+    last. That is milliseconds against BUILD spans of seconds to minutes,
+    but it errs toward accepting a containment, so it is stated rather
+    than assumed away.
+    """
+    first: Dict[str, float] = {}
+    last: Dict[str, float] = {}
+    for record in records:
+        key = record.get("invocation")
+        if key is None:
+            continue
+        key = str(key)
+        start_ts = record.get("start_ts")
+        if start_ts is not None:
+            first[key] = min(first.get(key, start_ts), start_ts)
+        end_ts = record.get("end_ts")
+        if end_ts is not None:
+            last[key] = max(last.get(key, end_ts), end_ts)
+    return {
+        key: last[key] - first[key]
+        for key in first.keys() & last.keys()
+        if last[key] >= first[key]
+    }
+
+
 def correlate_invocations(
-    invocations: List[dict], build_spans: List[dict]
+    invocations: List[dict], build_spans: List[dict],
+    durations: Optional[Dict[str, float]] = None,
 ) -> dict:
-    """UX-56: recover each sandbox's real element by matching it against
-    Plane 1's BUILD spans, when the name Plane 2 captured collapsed.
+    """UX-56/UX-64: recover each sandbox's real element by matching it
+    against Plane 1's BUILD spans, when the name Plane 2 captured
+    collapsed.
 
     Plane 2's element tag comes from bwrap's `--dir`, i.e. the build
     root. Under BuildStream's default per-element layout that *is* the
     element; under a project-wide override - `freedesktop-sdk` uses
-    `build-root: /buildstream-build` - every element collapses into one
-    bucket. Measured: 126,890 of 127,630 real processes (99.4%), and a
-    local reproduction of the same override collapses 234 of 234.
+    `build-root: /buildstream-build` - it is not. Round 7 measured what
+    the tag actually contains across 25 real sandboxes: `buildstream-build`
+    21 times, absent twice, and twice a *source subdirectory* name
+    (`flit_core`, which is no element at all, and `expat`, which merely
+    resembles one). A tag that is occasionally right by coincidence is
+    worse than one uniformly wrong, because it survives a spot check.
 
-    Two earlier candidate sources were ruled out by measurement rather
-    than by argument (see the task): the bwrap argv carries the element
-    only through the build root, three times over, so an overriding
-    project loses all three at once; and the shim's ancestry is
-    `buildbox-run` -> the `bst` main process, with no per-element job to
-    read a name from.
+    Matching is by **containment**: a sandbox whose whole interval lies
+    inside exactly one element's BUILD span is that element's. With
+    `durations` supplied the interval is real; without them only the
+    start instant is known, which under `--builders 4` sits inside four
+    overlapping spans and resolves almost nothing (round 7: 6 of 25).
 
-    What remains is a correlation. Each sandbox is exactly one element's
-    build, and Plane 1 already knows every element's BUILD span in
-    wall-clock time, so a sandbox whose start falls inside exactly one
-    span is that element's, with certainty.
-
-    Under `--builders N` several spans overlap and a start time alone is
-    ambiguous. Rather than pick the most likely candidate, this resolves
-    only what is *forced*: an element can host at most one sandbox, so an
-    invocation with a single candidate claims it, which removes that
-    element from every other candidate set, which may force the next.
-    Iterating to a fixed point is ordinary constraint propagation - it
-    makes deductions, never guesses. Whatever is still ambiguous is
-    returned as such and left unattributed, because `UX-46` already
-    refuses to judge a truncated read set and a *mis*-attributed one is
-    worse than a missing one.
-
-    Args:
-        invocations: `{invocation_id, started_at}` records from the shim.
-        build_spans: `{element, start, end}` in the same wall-clock base.
+    **No elimination.** An earlier version resolved further by assuming
+    an element hosts at most one sandbox, so a resolved element could be
+    struck from other candidate sets. Round 7 disproved the premise on
+    real data: `components/bison.bst` hosted two sandboxes 4.1 seconds
+    apart, and in the build's first 54 seconds 15 sandboxes ran against
+    at most 10 concurrently-building elements. That assumption does not
+    merely under-resolve, it can attribute a sandbox to the wrong
+    element, so it is gone. What cannot be deduced is reported.
 
     Returns:
         `{"resolved": {invocation_id: element}, "ambiguous": [...],
-          "unmatched": [...], "certain": int, "deduced": int}` -
-        `certain` counts invocations that had exactly one candidate from
-        the start; `deduced` counts those resolved only by elimination.
+          "unmatched": [...], "certain": int,
+          "intervals_used": bool}`.
     """
-    candidates: Dict[str, set] = {}
+    durations = durations or {}
+    resolved: Dict[str, str] = {}
+    ambiguous: List[str] = []
     unmatched: List[str] = []
+
     for invocation in invocations:
-        started = invocation.get("started_at")
         key = str(invocation.get("invocation_id"))
+        started = invocation.get("started_at")
         if started is None:
             unmatched.append(key)
             continue
-        matching = {
+        finished = started + durations.get(key, 0.0)
+        # Matched on the sandbox's **end**, not its start or its whole
+        # interval, and that is a measured choice rather than a tidy one.
+        #
+        # Plane 1 timestamps a line when the *wrapper reads* it, which
+        # lags the event. Measured on a real traced build: every one of 9
+        # sandboxes began BEFORE its element's logged BUILD START, by
+        # 0.18s to 0.46s, so requiring the start inside the span rejects
+        # nearly everything (7 of 9 came back unmatched). The same lag
+        # makes the span systematically *shorter* than the sandbox, so
+        # "sandbox no longer than its span" fails too - `app.bst`'s
+        # sandbox ran 2.03s against a 1.62s span.
+        #
+        # The end is the reliable edge: BuildStream cannot log an
+        # element's terminal status until its sandbox has finished, so a
+        # sandbox's last process must exit before its span ends. Using it
+        # alone resolved 8 of those 9 sandboxes, against 2 for whole-
+        # interval containment.
+        matching = [
             span["element"] for span in build_spans
-            if span["start"] <= started <= span["end"]
-        }
+            if span["start"] <= finished <= span["end"]
+        ]
         if not matching:
-            # A sandbox belonging to no BUILD span at all - a FETCH, or a
-            # capture whose two planes do not cover the same window.
+            # No span contains the whole interval. Either the sandbox
+            # belongs to no BUILD at all, or it outlived every candidate -
+            # both are "cannot say", never a nearest-match.
             unmatched.append(key)
-            continue
-        candidates[key] = matching
+        elif len(matching) == 1:
+            resolved[key] = matching[0]
+        else:
+            ambiguous.append(key)
 
-    certain_keys = {key for key, m in candidates.items() if len(m) == 1}
-    resolved: Dict[str, str] = {}
-    progress = True
-    while progress:
-        progress = False
-        for key, matching in list(candidates.items()):
-            if len(matching) != 1:
-                continue
-            element = next(iter(matching))
-            resolved[key] = element
-            del candidates[key]
-            for other in candidates.values():
-                other.discard(element)
-            progress = True
-
-    # An empty candidate set after elimination is not ambiguity - it is a
-    # contradiction: two sandboxes both had to be the same element, so the
-    # one-sandbox-per-element premise did not hold for this capture.
-    # Reported separately because it invalidates the *method* here, while
-    # ambiguity only limits its reach.
-    conflicting = sorted(k for k, m in candidates.items() if not m)
-    ambiguous = sorted(k for k, m in candidates.items() if m)
     return {
         "resolved": resolved,
-        "ambiguous": ambiguous,
-        "conflicting": conflicting,
+        "ambiguous": sorted(ambiguous),
         "unmatched": sorted(unmatched),
-        "certain": len(certain_keys & resolved.keys()),
-        "deduced": len(resolved.keys() - certain_keys),
+        "certain": len(resolved),
+        # Whether the match used real intervals or only start instants -
+        # the difference between a strong constraint and a weak one, and
+        # a reader should not have to infer which they got.
+        "intervals_used": bool(durations),
     }
 
 
@@ -1490,7 +1524,12 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
             if line.strip()
         ]
         spans = build_spans_from_wrapped_log(plane1_log_path)
-        correlation = correlate_invocations(invocations, spans)
+        # UX-64: give the correlation real intervals rather than start
+        # instants. Under `--builders 4` an instant sits inside four
+        # overlapping spans and resolves almost nothing.
+        correlation = correlate_invocations(
+            invocations, spans, durations=sandbox_durations(records)
+        )
         correlation["relabelled_processes"] = apply_correlation(
             records, correlation["resolved"]
         )

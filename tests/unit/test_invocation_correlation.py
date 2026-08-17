@@ -16,10 +16,10 @@ overriding project loses all three together; and the shim's ancestry is
 a name from.
 
 What remains is correlation, and the discipline it needs is *not
-guessing*. Under `--builders N` several BUILD spans overlap, so this
-resolves only what is forced — an element hosts at most one sandbox, so a
-single-candidate invocation claims it and thereby constrains the others —
-and reports the rest rather than picking a likely answer.
+guessing*. `UX-64` then measured two things that reshaped it: a sandbox
+must be matched on its **end**, because Plane 1's timestamps lag the
+events they describe, and an element may host **several** sandboxes, so
+resolving one must not strike its element from the others.
 """
 from tools.bst_native_build_tracer import (
     apply_correlation,
@@ -29,12 +29,6 @@ from tools.bst_native_build_tracer import (
     parse_trace_log,
 )
 
-SPANS = [
-    {"element": "a.bst", "start": 0.0, "end": 10.0},
-    {"element": "b.bst", "start": 5.0, "end": 20.0},
-]
-
-
 def _inv(*pairs):
     return [{"invocation_id": i, "started_at": t} for i, t in pairs]
 
@@ -42,60 +36,82 @@ def _inv(*pairs):
 # --- resolving -----------------------------------------------------------
 
 
-def test_a_uniquely_contained_sandbox_is_certain():
-    result = correlate_invocations(_inv((1, 2.0)), SPANS)
+def test_a_sandbox_is_matched_on_its_end_not_its_start():
+    """Measured, not chosen for tidiness. Plane 1 timestamps a line when
+    the *wrapper reads* it, which lags the event: on a real traced build
+    all 9 sandboxes began 0.18-0.46s BEFORE their element's logged BUILD
+    START. Requiring the start inside the span left 7 of 9 unmatched.
+    The end is the reliable edge - BuildStream cannot log a terminal
+    status until the sandbox has finished."""
+    spans = [{"element": "a.bst", "start": 10.0, "end": 20.0}]
+    # Starts 0.5s before the span, as real sandboxes do.
+    result = correlate_invocations(_inv((1, 9.5)), spans, durations={"1": 5.0})
 
     assert result["resolved"] == {"1": "a.bst"}
-    assert result["certain"] == 1
-    assert result["deduced"] == 0
 
 
-def test_an_overlapping_sandbox_is_resolved_by_elimination():
-    """The invocation at t=7 sits inside both spans. It is not guessed:
-    the one at t=2 can only be `a.bst`, which removes `a.bst` from the
-    other's candidates and forces `b.bst`."""
-    result = correlate_invocations(_inv((1, 2.0), (2, 7.0)), SPANS)
+def test_a_sandbox_longer_than_its_span_still_matches():
+    """The same lag makes the span systematically shorter than the
+    sandbox, so 'no longer than its span' is not a safe test either:
+    `app.bst`'s real sandbox ran 2.03s against a 1.62s span."""
+    spans = [{"element": "app.bst", "start": 30.04, "end": 31.65}]
 
-    assert result["resolved"] == {"1": "a.bst", "2": "b.bst"}
-    assert result["certain"] == 1
-    assert result["deduced"] == 1
+    result = correlate_invocations(_inv((1, 29.53)), spans, durations={"1": 2.03})
+
+    assert result["resolved"] == {"1": "app.bst"}
+
+
+def test_the_interval_discriminates_where_the_start_alone_cannot():
+    """Two spans opening together, one short and one long. A start
+    instant is inside both; the end separates them."""
+    spans = [{"element": "short.bst", "start": 0.0, "end": 10.0},
+             {"element": "long.bst", "start": 0.0, "end": 600.0}]
+
+    assert correlate_invocations(_inv((1, 1.0)), spans)["ambiguous"] == ["1"]
+    assert correlate_invocations(
+        _inv((1, 1.0)), spans, durations={"1": 500.0}
+    )["resolved"] == {"1": "long.bst"}
 
 
 def test_what_cannot_be_deduced_is_reported_not_guessed():
-    """Two sandboxes, both inside both spans. Either assignment is
-    consistent, so neither is made - UX-46 already refuses to judge a
-    truncated read set, and a mis-attributed one is worse than a missing
-    one."""
-    result = correlate_invocations(_inv((1, 7.0), (2, 8.0)), SPANS)
+    spans = [{"element": "a.bst", "start": 0.0, "end": 20.0},
+             {"element": "b.bst", "start": 0.0, "end": 20.0}]
+
+    result = correlate_invocations(_inv((1, 1.0)), spans, durations={"1": 5.0})
 
     assert result["resolved"] == {}
-    assert result["ambiguous"] == ["1", "2"]
+    assert result["ambiguous"] == ["1"]
 
 
-def test_a_contradiction_is_reported_separately_from_ambiguity():
-    """Two sandboxes that both had to be `a.bst` means the
-    one-sandbox-per-element premise failed for this capture - which
-    invalidates the method here, where ambiguity only limits its reach.
-    Conflating them would hide that."""
-    result = correlate_invocations(_inv((1, 2.0), (2, 3.0)), SPANS)
+def test_one_element_may_host_several_sandboxes():
+    """The premise an earlier version leaned on, disproved on real data:
+    `components/bison.bst` hosted two sandboxes 4.1s apart, and in one
+    real build's first 54 seconds 15 sandboxes ran against at most 10
+    concurrently-building elements. Resolving one sandbox must therefore
+    NOT strike its element from the others - that does not merely
+    under-resolve, it attributes to the wrong element."""
+    spans = [{"element": "bison.bst", "start": 0.0, "end": 100.0}]
 
-    assert result["conflicting"] == ["2"]
-    assert result["ambiguous"] == []
+    result = correlate_invocations(
+        _inv((1, 10.0), (2, 50.0)), spans, durations={"1": 5.0, "2": 5.0}
+    )
+
+    assert result["resolved"] == {"1": "bison.bst", "2": "bison.bst"}
 
 
 def test_a_sandbox_outside_every_span_is_unmatched():
-    """A sandbox that belongs to no BUILD span at all - a fetch, or two
-    planes that do not cover the same window."""
-    result = correlate_invocations(_inv((1, 99.0)), SPANS)
+    spans = [{"element": "a.bst", "start": 0.0, "end": 10.0}]
+
+    result = correlate_invocations(_inv((1, 90.0)), spans, durations={"1": 5.0})
 
     assert result["unmatched"] == ["1"]
     assert result["resolved"] == {}
 
 
 def test_an_invocation_without_a_timestamp_is_unmatched_not_dropped():
-    result = correlate_invocations([{"invocation_id": 1}], SPANS)
+    spans = [{"element": "a.bst", "start": 0.0, "end": 10.0}]
 
-    assert result["unmatched"] == ["1"]
+    assert correlate_invocations([{"invocation_id": 1}], spans)["unmatched"] == ["1"]
 
 
 def test_no_spans_at_all_resolves_nothing():
@@ -105,6 +121,38 @@ def test_no_spans_at_all_resolves_nothing():
 
     assert result["resolved"] == {}
     assert result["unmatched"] == ["1"]
+
+
+def test_whether_intervals_were_available_is_reported():
+    """A reader should not have to infer whether they got a strong
+    constraint or a weak one."""
+    spans = [{"element": "a.bst", "start": 0.0, "end": 10.0}]
+
+    assert correlate_invocations(_inv((1, 1.0)), spans)["intervals_used"] is False
+    assert correlate_invocations(
+        _inv((1, 1.0)), spans, durations={"1": 1.0}
+    )["intervals_used"] is True
+
+
+# --- sandbox durations ---------------------------------------------------
+
+
+def test_a_sandbox_spans_all_of_its_own_processes():
+    from tools.bst_native_build_tracer import sandbox_durations
+
+    records = [
+        {"invocation": "7", "start_ts": 10.0, "end_ts": 12.0},
+        {"invocation": "7", "start_ts": 11.0, "end_ts": 18.0},
+        {"invocation": "8", "start_ts": 20.0, "end_ts": 21.0},
+    ]
+
+    assert sandbox_durations(records) == {"7": 8.0, "8": 1.0}
+
+
+def test_a_pre_ux56_record_contributes_no_duration():
+    from tools.bst_native_build_tracer import sandbox_durations
+
+    assert sandbox_durations([{"start_ts": 1.0, "end_ts": 2.0}]) == {}
 
 
 # --- applying ------------------------------------------------------------

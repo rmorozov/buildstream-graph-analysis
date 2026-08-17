@@ -1,6 +1,6 @@
 # UX-64: the sandbox correlation matches on a start *instant*, so 18 of 25 real sandboxes are ambiguous when four builders overlap
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** `UX-56` (done — which built the correlation this sharpens)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-56` (done — which built the correlation this sharpens)
 
 ## Motivation
 
@@ -100,9 +100,86 @@ safe to lean on harder than it already is — so this must be settled
 4. `bga correlate` produces a real join, and `declared_vs_used` reports
    per-element rather than against one bucket.
 
+## Fix Implemented — and two measured corrections to this task as filed
+
+### 1. The elimination was unsound, not merely weak
+
+This task called the one-sandbox-per-element premise something to
+"settle first". Round 7's own data settles it: **false**.
+
+- `components/bison.bst` hosted **two** sandboxes, 4.1 seconds apart —
+  which is what the `conflicting` result was reporting.
+- In the build's first 54 seconds, **15 sandboxes ran against at most 10
+  concurrently-building elements**.
+
+That is not a limitation of reach. `UX-56`'s elimination struck a
+resolved element from every other candidate set, so on a real project it
+could attribute a sandbox to the **wrong** element. It is removed. What
+remains — a sandbox contained in exactly one span is that element's — is
+sound, and the two `bison` sandboxes now both resolve to `bison.bst`
+correctly, where before one was reported as a contradiction.
+
+### 2. The interval must be matched on its **end**, not its start
+
+The obvious reading of this task was "require the whole interval inside
+the span". Measured on a real traced build, that is *worse* than what it
+replaced — 2 of 9 sandboxes resolved, 7 unmatched.
+
+The reason is a real skew. Plane 1 timestamps a line when the **wrapper
+reads** it, which lags the event, so **every one of 9 sandboxes began
+before its element's logged BUILD START**, by 0.18s to 0.46s. The same
+lag makes the span systematically *shorter* than the sandbox it
+contains, so "no longer than its span" fails too — `app.bst`'s sandbox
+ran 2.03s against a 1.62s span.
+
+The **end** is the reliable edge: BuildStream cannot log an element's
+terminal status until its sandbox has finished, so a sandbox's last
+process must exit before its span ends.
+
+| matching rule | resolved | unmatched |
+|---|---|---|
+| start instant (`UX-56`, with unsound elimination) | 7 | 0 |
+| whole interval inside the span | **2** | **7** |
+| **end inside the span** | **8** | **0** |
+
+### The sandbox's end needed no new capture field
+
+`sandbox_durations` derives it from data already recorded: every process
+carries `inv=` (`UX-56`), so a sandbox's length is
+`max(end_ts) - min(start_ts)` over its own processes. The monotonic
+stamps supply only the *delta*, the shim's wall-clock start supplies the
+origin, and no clock anchor is needed at all.
+
+The computed interval is very slightly shorter than the true one — bwrap
+starts before its first traced process and exits after its last — which
+is milliseconds against spans of seconds to minutes, and is stated in
+the code rather than assumed away.
+
+### Result on the local reproduction
+
+`examples/06` with `build-root: /buildstream-build`, a real traced build:
+
+| | `UX-56` (start instant) | `UX-64` (end edge) |
+|---|---|---|
+| sandboxes resolved | 7 of 9, one via unsound elimination | **8 of 9**, all sound |
+| processes correctly named | 616 / 822 (75%) | **729 / 822 (88.7%)** |
+| distinct real elements | 6 | **8** |
+| `declared_vs_used` | — | **24 unused, 8 used** |
+
+The one remaining ambiguous sandbox is genuinely ambiguous: `core.bst`
+and `codegen.bst` both start at t=0 and its end falls inside both spans.
+
+Tests: 16 (`tests/unit/test_invocation_correlation.py`), including both
+measured corrections above as named cases. Suite: 1024 → 1028.
+
+**Not yet validated at real scale.** Round 7's published capture dropped
+its full native trace above 40 MB, and the 4 MB head that survived covers
+**17 seconds of a 3584-second build**, so every sandbox duration derived
+from it is truncated and proves nothing. Round 8 is the real test.
+
 ## Verification Log
 
-Filed 2026-08-17 (round 7). Every figure is from the real capture
+Filed and implemented 2026-08-17 (round 7). Every figure is from the real capture
 published to `captures/fdsdk-latest` as `df20544`, produced by run
 `32044281643`: the correlation counts and `relabelled_processes` are from
 its `native-report.json`, the 14.9% figure and the refused join are from

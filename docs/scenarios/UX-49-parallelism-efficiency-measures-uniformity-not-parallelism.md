@@ -1,6 +1,6 @@
 # UX-49: `parallelism_efficiency` is `mean_width / max_width`, so a perfectly serial build scores 1.000
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-41 (done - which made the widths correct, and this visible)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-41 (done - which made the widths correct, and this visible)
 
 ## Motivation
 
@@ -54,6 +54,41 @@ Option 1 is the better fit for a build-optimization tool and is what the name pr
 2. `examples/06-macro-micro-optimization`'s `optimized/` variant scores **better** than its baseline, not worse - the two differ by one deliberate macro improvement and the metric must be able to see it.
 3. The 1202-element scale fixture, which is genuinely wide and genuinely deep, scores between those two extremes rather than at either.
 4. Whatever ships, the field name, the adjacent comment, and the formula all say the same thing. Full suite green.
+
+## Fix Implemented
+
+**Option 2 - renamed, not redefined.** `parallelism_efficiency` is now `width_uniformity`, with the formula unchanged.
+
+This doc's Required Fix said *"Option 1 is the better fit for a build-optimization tool and is what the name promises today"*, and that recommendation is overturned here, with a reason found by measuring rather than by re-arguing: **the parallelism question already has a published answer.** `mean_width` - equivalently `StructuralMetrics.avg_parallelism`, the classic work-over-depth average parallelism - discriminates correctly on the very pair this doc used as its evidence:
+
+| run | `mean_width` (parallelism) | `width_uniformity` |
+|---|---|---|
+| `examples/06` baseline (six-deep chain) | **1.1** | 0.550 |
+| `examples/06` optimized (six-wide fan-out) | **2.2** | 0.367 |
+
+Redefining `parallelism_efficiency` to mean parallelism would have produced two published names for one number. The formula that was there computes a real, distinct shape signal - *how much of the peak width is sustained across the build's depth* - and only its name was wrong. Renaming keeps a useful signal and removes a misleading one, which is strictly better than replacing a useful signal with a duplicate.
+
+Read `width_uniformity` as: low means the graph has a narrow waist somewhere, so peak parallelism is not sustained. A wide-then-single-choke-point-then-wide graph scores below 0.7 while a chain scores 1.000, and both are correct statements about uniformity.
+
+**One thing the rename alone would have left broken.** The text report's `Parallelism Profile` line printed only `min` and `max`, so the one number that separates the two graphs was invisible to anyone reading the report rather than the JSON. It now reads:
+
+```
+run-06-baseline    Parallelism Profile: min=1.0x, avg=1.1x, max=2.0x
+run-06-optimized   Parallelism Profile: min=1.0x, avg=2.2x, max=6.0x
+```
+
+That is the macro optimization `examples/06` exists to demonstrate, visible in the report for the first time.
+
+### Acceptance tests, and the one that does not apply
+
+1. ✅ A pure serial chain no longer scores 1.000 *under a parallelism name* - it scores 1.000 under a uniformity name, which is the explicitly-sanctioned alternative in this doc's own criterion 1, and is documented as correct in both the field's docstring and its tests.
+2. **Does not apply as written.** It asked for `optimized/` to score better than baseline *on this field*; under the rename the field is not a quality score, and the requirement it was really expressing - that some published number moves the right way across the macro fix - is met by `mean_width` (1.1 → 2.2) and now shown in the report.
+3. ✅ The 1202-element scale fixture sits between the extremes at 0.859, being genuinely wide but not perfectly uniform.
+4. ✅ Field name, docstring, adjacent comment and formula all say uniformity.
+
+Blast radius was as this doc predicted - one `--format json` key, one dataclass field, one serialization site - so the golden snapshot's diff is exactly the rename with the value unchanged.
+
+Tests: 8 new (`tests/unit/test_width_uniformity.py`), pinning both halves of the decision: that the renamed field keeps uniformity semantics, and that `mean_width`/`avg_parallelism` really do answer the parallelism question and agree with each other. Full suite 871 passed, `make lint` clean.
 
 ## Verification Log
 

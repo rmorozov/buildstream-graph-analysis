@@ -239,7 +239,7 @@ class StructuralAnalyzer:
                 min_width=0,
                 mean_width=0.0,
                 cumulative_work=[],
-                parallelism_efficiency=0.0,
+                width_uniformity=0.0,
             )
         
         level_nums = sorted(levels.keys())
@@ -252,10 +252,15 @@ class StructuralAnalyzer:
             total += w
             cumulative.append(total)
         
-        # Parallelism efficiency (how close to max_parallelism we get on average)
+        # UX-49: this ratio is level-width *uniformity*, and is named
+        # for that now. It was called `parallelism_efficiency`, under
+        # which a pure serial chain scored a perfect 1.000. See
+        # ParallelismProfile.width_uniformity for why it was renamed
+        # rather than redefined - `mean_width` right above already
+        # answers "how parallel is this build".
         max_width = max(widths) if widths else 0
         mean_width = statistics.mean(widths) if widths else 0.0
-        efficiency = mean_width / max_width if max_width > 0 else 0.0
+        uniformity = mean_width / max_width if max_width > 0 else 0.0
         
         return ParallelismProfile(
             levels=level_nums,
@@ -264,7 +269,7 @@ class StructuralAnalyzer:
             min_width=min(widths) if widths else 0,
             mean_width=mean_width,
             cumulative_work=cumulative,
-            parallelism_efficiency=efficiency,
+            width_uniformity=uniformity,
         )
     
     def compute_sensitivity(self) -> SensitivityResult:

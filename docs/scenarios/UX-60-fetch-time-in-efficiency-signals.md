@@ -1,6 +1,6 @@
 # UX-60: whether `FETCH` time belongs in any efficiency signal has been deferred by two separate tasks and never decided
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** `UX-53` (done — which made the duration definition single, and made this the remaining question)
+**Priority:** Medium | **Status:** 🟡 `I3` implemented; the floor definition decided but not yet applied | **Depends on:** `UX-53` (done — which made the duration definition single, and made this the remaining question)
 
 ## Motivation
 
@@ -72,6 +72,65 @@ check that would catch a bad choice.
 2. `I3` is implemented and green on every fixture.
 3. `sensitivity.critical_path_us == t_infinity_observed` still holds
    everywhere, including on the real capture.
+
+## `I3` Implemented
+
+`T∞,observed >= max(observed task duration)` is now checked, emitting a
+`floor_below_longest_task` violation. It holds trivially under the
+current definition — the per-element duration *is* the longest task, and
+the chain contains that element — and that is exactly why it was worth
+implementing: it is the guard that would catch a future definition which
+stops holding, which is precisely what `UX-53` changed with nothing
+watching. Filed as a violation rather than a hard gate so a capture with
+no tasks cannot fail an invariant about its own measurements.
+
+Tests: 10 new, shared with `UX-62` (`tests/unit/test_i3_and_span_status.py`).
+
+## The decision, derived — and why it is not yet applied
+
+Running the spec's own sentence — *"no schedule with unlimited relevant
+capacity can complete faster than this value"* — against the three
+candidates gives an answer none of them is.
+
+Under **unlimited relevant capacity**, a BuildStream fetch depends on
+nothing: sources are fetched independently of any dependency's build. So
+every FETCH starts at t=0. But an element cannot build before its *own*
+sources are fetched. Therefore:
+
+```
+build_start(E) = max( fetch_duration(E), max over deps D of finish(D) )
+finish(E)      = build_start(E) + build_duration(E)
+```
+
+This is a genuine lower bound — E's build cannot begin before its own
+fetch completes, nor before its dependencies are ready, and the second
+term is recursively a lower bound — and it is *faithful* rather than
+merely safe:
+
+- when a fetch is shorter than the dependency chain's arrival time (the
+  normal case) it contributes **nothing**, because it really did overlap;
+- when an element has a long fetch and no dependencies, the chain really
+  is fetch-then-build;
+- `I3` holds either way: if the longest observed task is a FETCH, that
+  element's own chain is at least `fetch + build >= fetch`.
+
+Against the three candidates this task listed: `max` is safe but charges
+a long fetch to a build chain it did not delay; `sum` overstates and is
+invalid for a certified floor; `BUILD`-only understates and can violate
+`I3`. The two-stage model is the one the spec's sentence actually
+implies.
+
+**Why it is not implemented here.** It cannot be expressed as one number
+per element, which is the shape `compute_element_durations` — and every
+consumer of it, both planes and the cold floor — is built around. It
+needs per-element durations split by task kind and a change inside
+`compute_critical_path`, and it moves a *certified* floor in both
+directions: down where a fetch overlapped, up where a head element really
+did fetch then build. That is a change that deserves its own verification
+pass against real captures, not a tail-end edit to a commit about
+something else.
+
+`I3` is now in place, which is the check that makes attempting it safe.
 
 ## Verification Log
 

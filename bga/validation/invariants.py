@@ -195,6 +195,30 @@ def compute_confidence(
         ]
 
     new_violations: List[dict] = []
+
+    # UX-60: I3 - `T∞,observed >= max(observed task duration)`. The spec
+    # states it and nothing implemented it, which is why `UX-53` could
+    # change the per-element duration definition without any check
+    # noticing. It holds trivially under the current definition (the
+    # per-element duration *is* the maximum task, and the chain includes
+    # that element), and that is exactly the point: it is the guard that
+    # would catch a future definition - `BUILD`-only, say - that stops
+    # holding. Filed as a violation rather than a hard gate, since a
+    # capture with no tasks at all must not fail it.
+    t_infinity = floors.get('t_infinity_observed')
+    longest_task_us = max((t.dur_us for t in normalized_tasks), default=0)
+    if t_infinity is not None and longest_task_us > t_infinity:
+        new_violations.append({
+            'type': 'floor_below_longest_task',
+            'invariant': 'I3',
+            't_infinity_observed_us': t_infinity,
+            'longest_task_us': longest_task_us,
+            'detail': (
+                'the structural floor is shorter than a single observed task, '
+                'so it claims a schedule that cannot exist - no amount of '
+                'capacity makes one task finish sooner than it did'
+            ),
+        })
     if not hard_gates['critical_path_coverage_full']:
         missing_critical_path_uids = [
             uid for uid in measured_critical_path if uid not in elements_with_tasks
@@ -347,6 +371,18 @@ def compute_confidence(
         # incremental run it excludes elements BuildStream skipped as
         # cached, and a reader needs to know that without inferring it.
         'run_mode': run_context.run_mode if run_context is not None else 'unknown',
+        # UX-62: how much measured execution was work the build threw
+        # away. Attribution still counts it as EXECUTION_ON_CHAIN -
+        # moving it would change `I4`'s identity, a decision with a proof
+        # obligation rather than a re-bucketing - so it is published
+        # beside the numbers instead of silently reclassified. Both zero
+        # on a capture with no recorded statuses, which is not the same
+        # as a run with no failures and is why `run_mode`-style
+        # "unrecorded" handling applies to the *span* field, not here.
+        'failed_task_count': sum(1 for t in normalized_tasks if t.failed),
+        'failed_task_us': sum(
+            t.finish_us - t.start_us for t in normalized_tasks if t.failed
+        ),
         'critical_path_cached': cached_on_critical_path,
         'dominator_coverage': dominator_coverage,
         'blame_chain_coverage': blame_chain_coverage,

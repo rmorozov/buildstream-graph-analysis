@@ -292,7 +292,20 @@ class TaskSpan:
     dur_us: int  # Duration in microseconds
     resources: List[Resource] = field(default_factory=list)
     primary_resource: Optional[Resource] = None
-    
+    # UX-62: BuildStream's own terminal status for this task attempt
+    # ("SUCCESS", "FAILURE", ...). None means the capture did not record
+    # it - every capture before UX-62, and any log line whose status the
+    # converter could not read. Never defaulted to "SUCCESS": a task that
+    # was not observed to succeed and one that did are different claims,
+    # which is the same rule `UX-45` applies to unmeasured CPU time.
+    status: Optional[str] = None
+
+    @property
+    def failed(self) -> bool:
+        """Whether this attempt is *known* to have failed. False for an
+        unrecorded status, so an old capture keeps today's behaviour."""
+        return self.status == "FAILURE"
+
     @property
     def finish_us(self) -> int:
         """Finish timestamp in microseconds."""
@@ -376,6 +389,17 @@ class NormalizedTask:
     dependencies: List[str] = field(default_factory=list)  # Predecessor task keys
     resources: List[Resource] = field(default_factory=list)
     primary_resource: Optional[Resource] = None
+    # UX-62: carried through from the span, same None-means-unrecorded
+    # rule. Attribution deliberately still counts a failed attempt's
+    # duration as EXECUTION_ON_CHAIN - changing that moves `I4`'s
+    # identity and is a decision with a proof obligation, not a
+    # re-bucketing - but the report can now *say* how much of the chain
+    # was work that was thrown away.
+    status: Optional[str] = None
+
+    @property
+    def failed(self) -> bool:
+        return self.status == "FAILURE"
 
     def __post_init__(self):
         """A negative-duration NormalizedTask is never valid (P1-36) -

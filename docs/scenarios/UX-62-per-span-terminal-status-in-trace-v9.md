@@ -1,6 +1,6 @@
 # UX-62: a task's terminal status is known at extraction and discarded, so attribution cannot tell work that succeeded from work that was thrown away
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** `UX-54` (done — which recorded the failure at run level)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which recorded the failure at run level)
 
 ## Motivation
 
@@ -61,6 +61,37 @@ would make it a fact.
    than implied, and `I4` still reconciles.
 3. Retry classification uses the recorded status where present, and falls
    back to today's ordinal inference where absent.
+
+## Fix Implemented
+
+`TaskSpan.status` and `NormalizedTask.status` carry BuildStream's own
+terminal status from the End event through the converter, the loader and
+normalization. Additive and **omitted rather than defaulted** when the
+log did not say: "not recorded" and "SUCCESS" are different claims, the
+same rule `UX-45` applies to unmeasured CPU time. `.failed` is therefore
+False for an unrecorded status, so every pre-`UX-62` capture keeps
+today's behaviour exactly.
+
+On the attribution question this task raised, the answer is deliberately
+**not** to re-bucket. A failed attempt's duration still counts as
+`EXECUTION_ON_CHAIN`, because moving it changes `I4`'s identity — that is
+a decision carrying a proof obligation, not a re-labelling, and doing it
+silently as part of a schema change would be exactly the kind of quiet
+semantic drift `UX-53` was about. What changed is that the report can now
+**say** it:
+
+```
+  1 failed task attempt(s) contributed 5.30s of EXECUTION_ON_CHAIN -
+  real time the build spent producing nothing. Counted as execution, not
+  as waste, because reclassifying it would move the attribution identity (I4)
+```
+
+`failed_task_count` and `failed_task_us` are published in `confidence`
+so a CI consumer can act on the waste without the floors changing
+underneath it.
+
+Tests: 10 new, shared with `UX-60` (`tests/unit/test_i3_and_span_status.py`).
+Golden snapshot regenerated for the two additive keys.
 
 ## Verification Log
 

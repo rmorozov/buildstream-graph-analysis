@@ -120,6 +120,9 @@ def load_trace(path: Path) -> Trace:
                 dur_us=span_data['dur_us'],
                 resources=resources,
                 primary_resource=primary_resource,
+                # UX-62: absent in every pre-UX-62 capture, and left None
+                # rather than assumed successful.
+                status=span_data.get('status'),
             ))
         
         for phase_data in data.get('phases', []):

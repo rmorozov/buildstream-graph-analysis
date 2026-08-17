@@ -1,6 +1,6 @@
 # UX-61: `max_concurrency` reports 5,268 concurrent processes on a 4-core runner, because a process with no observed exit is excluded from the metric but not from the timeline
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** `UX-11` (which introduced the metric)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (which introduced the metric)
 
 ## Motivation
 
@@ -71,6 +71,41 @@ That cannot happen while the measurement is this far off.
 2. On the `examples/06` capture it is unchanged.
 3. The number of processes whose end had to be inferred is reported
    alongside it.
+
+## Fix Implemented — and the cause was not what this task assumed
+
+This task assumed the exclusion of unterminated processes was failing.
+It was not: `compute_max_concurrency` applies it correctly, and it was
+never the cause.
+
+The cause was `pair_events` keying START/END on `(element, pid)`. Pids
+inside a bwrap sandbox are **namespaced**, so they collide freely across
+sandboxes — the element name was doing all the disambiguating work. Under
+a project-wide `build-root` override every process shares one name
+(`UX-56`), so a START in one sandbox pairs with an END in another, and
+the resulting intervals stretch across unrelated processes.
+
+Measured on a real collapsed capture of `examples/06`:
+
+| | keyed on `(element, pid)` | keyed on `(sandbox, pid)` |
+|---|---|---|
+| longest paired "duration" | **23.48s** (in a ~30s build) | **8.63s** (the real `core.bst`) |
+| `max_concurrency` | **34** on a 4-core `--builders 4` run | **20** |
+
+20 is believable — 4 builders x 4 jobs plus their `sh`, `make` and gcc
+driver wrappers, most of them blocked rather than running. 34 and 5,268
+were not.
+
+So this was a **symptom of `UX-56`**, and `UX-56`'s sandbox id is what
+fixes it. A pre-`UX-56` capture has no sandbox id and falls back to the
+element name, which is what this always did and is still correct whenever
+the element name is real.
+
+The report line also now says what the number counts: processes alive at
+once, **not** cores in use, so a figure above the host's core count is
+expected and is not oversubscription evidence on its own.
+
+Tests: 5 new (`tests/unit/test_concurrency_pairing_key.py`).
 
 ## Verification Log
 

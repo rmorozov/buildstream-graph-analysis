@@ -882,12 +882,79 @@ was the only one that could show it. Every example project here is
 written to build cleanly, which means the entire failure axis of the tool
 was untested by construction.
 
-## Ready for the sixth round
+### The capture that finally worked
 
-The backlog is empty. Everything filed across five audit
-rounds is implemented and verified against real captures, so the next
-round starts from a clean board rather than from a work queue. What that
-round should probe, in the order I would pick:
+With the sandbox knob cleared, the run went through: **2,801.9 seconds
+(46.7 minutes)**, 25 elements rebuilt from source on top of a 101-element
+cached base, 12 element kinds, 36 runtime edges, **127,630 traced
+processes** in Plane 2 — 155× the largest capture it had ever seen.
+
+What held up, on real data, is worth stating as plainly as what did not:
+
+- **Every cross-check agrees, 8 of 8.** `UX-52`'s runtime-edge gating and
+  `UX-53`'s single duration definition both hold on a real project:
+  `sensitivity.critical_path_us == t_infinity_observed == 2,796.85s`, and
+  an independent longest-weighted-path pass over the raw trace reproduces
+  it exactly.
+- **`UX-27`'s two-signal design is vindicated by a real build.**
+  `Efficiency Score 1.00` alongside `Dispatch Occupancy 33.6%` is not a
+  contradiction, it is the point: `T∞` is 2,796.85s of a 2,801.9s
+  makespan, so the build genuinely *is* a serial chain
+  (`openssl` 487s → `cmake-stage1` **1,226s** → `python3` 496s →
+  `bison` → `doxygen` 389s → `libxml2`) and the scheduler has nothing
+  left to give. One number says "the scheduler is done", the other says
+  "the graph is the problem", and only having both makes that legible.
+- **Plane 2 survived the scale.** 127,630 processes, `getrusage` CPU time
+  for 119,590 of them (93.7% coverage), no crash, no corruption.
+
+And two things it measured about itself:
+
+- **The hook's fixed per-process path budget is naive at this scale.**
+  Round 5 recorded it as "8192 slots / 256 KiB, chosen without evidence"
+  and said a large real build was what would settle it. Settled:
+  **149,053 dropped paths against 65,101 recorded**, a 70% drop rate. The
+  `dropped` counter existing is what let this be answered rather than
+  guessed, which is the design working as intended.
+- **`UX-56`**: 99.4% of those processes were tagged with
+  `buildstream-build`, `freedesktop-sdk`'s build root, because the
+  element tag comes from bwrap's `--dir` — the element only under
+  BuildStream's *default* build-root layout. Every per-element Plane 2
+  figure became a whole-build figure wearing an element's name, and
+  `bga correlate`'s join key was not an element UID at all.
+
+And one that only a real *cache* could show — **`UX-55`**: 101 of the 126
+elements were cached, and `bga` reports a cached critical-path element as
+"no matching task found - genuine coverage gap, worth investigating",
+failing a hard gate. That drives confidence down, which makes
+`UX-03`/`UX-39`'s regression gate fail open. The better the cache works —
+the entire point of BuildStream — the less `bga` gates. That is the CI
+story's real blocker, and no fixture could contain it: every fixture here
+is a full build in which nothing is cached.
+
+## Ready for the seventh round
+
+The backlog is **not** empty for the first time in three rounds, and
+that is the honest state: round 6 filed `UX-55` (open) and left `UX-56`'s
+real fix open behind a guard. Both need another real capture to settle,
+not more thinking. The order I would pick:
+
+0. **`UX-55` first, before anything else.** It is the one finding that
+   blocks the product's stated purpose rather than a number's accuracy:
+   on an incremental build — which is every CI build — a cached element
+   reads as a lost measurement, the coverage hard gate fails, confidence
+   drops, and the regression gate fails open. Everything else in this
+   list is improvement; this one is the difference between the CI story
+   working and not.
+0b. **`UX-56`'s real fix**, which needs one thing round 6 could not
+   keep: a real captured bwrap argv. The raw trace exceeded the tarball
+   budget and was dropped, so the next capture should keep a *sample* of
+   it (the first N invocations) rather than all or nothing.
+0c. **The hook's path budget**, now measured at a **70% drop rate** on a
+   real build. No longer a design question, just a number to raise — and
+   worth raising before the next Plane 2 measurement, since a truncated
+   read set is exactly what `UX-46` refuses to draw conclusions from.
+
+Then, from the previous round's list:
 
 1. ~~**The seam between the two planes.**~~ **Settled and built** as
    `UX-51`: `bga correlate` joins the planes on element UID. The product
@@ -900,19 +967,20 @@ round should probe, in the order I would pick:
    that made this look intractable were never in the way: `UX-27`'s
    `occupancy_ratio` and `UX-36`'s buckets still correctly say "slot
    occupancy, not CPU", because a join does not need them reconciled.
-2. **A real capture at scale**, now the single most valuable item.
-   Round 5 established that a real project's *graph* already breaks
-   assumptions no fixture contained; its *timeline* is entirely untested.
-   Everything timing-derived - attribution, floors, occupancy, both
-   efficiency signals, Plane 2 - has only ever seen builds this project
-   wrote itself. A real capture needs an environment where a real project
-   can actually build, which this one cannot (see round 5). Also still
-   open: `UX-46`'s open-interception has only been exercised on an
-   822-process build. Its per-process path budget is
-   a fixed 8192 slots / 256 KiB, chosen without evidence, and a large
-   real build is what would say whether that is generous or naive - the
-   `dropped` counter exists precisely so this can be answered rather than
-   guessed.
+2. ~~**A real capture at scale.**~~ **Done** in round 6, and it paid for
+   itself three times over. `.github/workflows/real-project-capture.yml`
+   produces one on demand — 2,801.9s of real `freedesktop-sdk` build,
+   127,630 traced processes — and publishes it to a branch, so a capture
+   is now a fetchable object rather than a thing that has to be arranged.
+   The open question it *answered*: the hook's fixed 8192-slot / 256 KiB
+   per-process path budget, which round 5 called "chosen without
+   evidence", drops **70% of observed opens** at this scale. The `dropped`
+   counter existing is what made that a measurement rather than a guess.
+   What remains is not "get a real capture" but **use it as a regression
+   fixture**: the run directory is small (5.6 KB of trace over a
+   126-element graph) and is the only artifact here containing a
+   partially-cached build, several element kinds and runtime edges at
+   once.
 3. ~~**A project whose elements genuinely consume each other.**~~
    **Done** as `examples/07-declared-vs-used-dependencies`: `user.bst`
    and `unrelated.bst` declare identical dependencies and differ only in

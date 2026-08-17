@@ -111,6 +111,31 @@ next attempt starts from it rather than re-deriving it, and the decisive
 version - the same capture against a project that overrides `build-root`
 - is now one workflow run away.
 
+## Settled on the real project (round 7)
+
+The decisive capture — `freedesktop-sdk`, which really does override
+`build-root` — confirms the argv carries **no** element identity, and
+adds a hazard nobody predicted.
+
+Across all 25 sandboxes the `--dir` last segment is:
+
+| value | count | is it an element? |
+|---|---|---|
+| `buildstream-build` | 21 | no |
+| `flit_core` | 1 | **no** — no such element exists in the graph |
+| `expat` | 1 | no — coincidentally resembles `components/expat.bst` |
+| *(absent)* | 2 | no |
+
+The two non-collapsed values are **source subdirectory names**. Checked
+against `graph-declared.json`: `flit_core` matches no declared element at
+all, and `expat` merely looks like one.
+
+That is worse than uniform collapse, and worth stating plainly: a tag
+that is *sometimes coincidentally right* survives a spot check. Round 6's
+report listed `expat` and `flit_core` among its "recognized elements" and
+they were never elements. `UX-64`'s acceptance test now checks every
+correlated name against the declared graph for exactly this reason.
+
 ## Verification Log
 
 Filed and implemented 2026-08-17 (round 6 follow-up). The empty `declared_vs_used` block

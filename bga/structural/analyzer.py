@@ -14,7 +14,7 @@ Implements Parts 31-39:
 """
 
 import logging
-from collections import defaultdict, deque
+from collections import defaultdict
 from typing import Dict, List, Set, Optional, Any
 import statistics
 
@@ -533,30 +533,38 @@ class StructuralAnalyzer:
             return []
     
     def _compute_level_decomposition(self) -> Dict[int, Set[str]]:
-        """Decompose graph into levels by depth from roots."""
+        """Decompose the graph into levels by *longest* path from a root.
+
+        UX-41: this was a BFS with first-visit-wins, which assigns each
+        node its *shortest* distance from a root - exactly what
+        `compute_structural_metrics`'s own comment above already warns
+        against for `max_depth`, and for the same reason. A base element
+        that every other element depends on (`toolchain.bst`, and the
+        normal shape of a real BuildStream project) puts all 1200 of its
+        dependents at BFS distance 1, collapsing a 14-level graph into
+        `[1, 1200, 1]` regardless of the dependencies between them. The
+        two numbers then openly contradicted each other in one report
+        block: `max_depth: 13` beside `levels: [0, 1, 2]`.
+
+        The recurrence below is deliberately the same one
+        `compute_structural_metrics` uses for `max_depth`, so the two
+        agree by construction rather than by coincidence - a level
+        decomposition and a longest-path depth are the same computation
+        keyed two ways, and having them disagree was the bug.
+
+        O(V+E), the same order as the BFS it replaces.
+        """
         G = self._graph
         levels = defaultdict(set)
-        
-        # Find roots (no predecessors)
-        roots = [n for n in G.nodes() if G.in_degree(n) == 0]
-        if not roots:
+        if G.number_of_nodes() == 0:
             return dict(levels)
-        
-        # BFS to assign levels
-        visited = set()
-        queue = deque([(r, 0) for r in roots])
-        
-        while queue:
-            node, level = queue.popleft()
-            if node in visited:
-                continue
-            visited.add(node)
-            levels[level].add(node)
-            
-            for successor in G.successors(node):
-                if successor not in visited:
-                    queue.append((successor, level + 1))
-        
+
+        depths: Dict[str, int] = {}
+        for node in nx.topological_sort(G):
+            preds = list(G.predecessors(node))
+            depths[node] = 0 if not preds else 1 + max(depths[p] for p in preds)
+            levels[depths[node]].add(node)
+
         return dict(levels)
     
     def _find_longest_serial_chain_from(self, start: str) -> List[str]:

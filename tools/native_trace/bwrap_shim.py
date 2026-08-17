@@ -30,6 +30,7 @@ UX-11's own prototype run).
 import json
 import os
 import sys
+import time
 from typing import List, Optional, Tuple
 
 # bwrap flags, keyed by how many trailing positional args each consumes -
@@ -106,6 +107,7 @@ def build_shim_argv(
     bind_dst: str,
     preload_so: str,
     trace_log: str,
+    invocation_id: Optional[int] = None,
 ) -> List[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -136,6 +138,17 @@ def build_shim_argv(
     element = extract_element_name(opts)
     if element is not None:
         injected += ["--setenv", "BST_TRACE_ELEMENT", element]
+    # UX-56: the element tag above is derived from `--dir`, which is the
+    # build root - correct under BuildStream's default per-element layout
+    # and useless under a project-wide override like freedesktop-sdk's
+    # `build-root: /buildstream-build`, where every element collapses to
+    # one bucket. This id does not depend on the layout: it is unique per
+    # sandbox, so traced processes group exactly per element *build* even
+    # when their name is wrong, and a later correlation can relabel the
+    # whole group at once. Injected unconditionally, since it costs one
+    # setenv and is what makes the group recoverable at all.
+    if invocation_id is not None:
+        injected += ["--setenv", "BST_TRACE_INVOCATION", str(invocation_id)]
     # UX-46: opened-path recording is opt-in and must be propagated into
     # the sandbox the same way BST_TRACE_LOG is - the hook reads its own
     # environment inside bwrap, where the outer process's env does not
@@ -218,6 +231,41 @@ def record_argv(log_path: str, argv: List[str], limit: int) -> bool:
         return False
 
 
+def record_invocation(log_path: Optional[str], invocation_id: int,
+                      dir_tag: Optional[str]) -> bool:
+    """UX-56: one line per sandbox - `{id, started_at, dir_tag}`.
+
+    `started_at` is `CLOCK_REALTIME` on the host, deliberately not the
+    hook's `CLOCK_MONOTONIC`: this record exists to be matched against
+    Plane 1's BUILD spans, which are wall-clock, and anchoring here
+    avoids needing a monotonic-to-realtime offset at all.
+
+    `dir_tag` is kept even though it is the value that collapses - a
+    capture where it happens to be correct is then self-checking, since
+    the correlation's answer can be compared against it.
+
+    Unbounded, unlike `record_argv`: there is one bwrap invocation per
+    element build, so a 126-element project writes 126 lines. Never
+    raises, for the same reason `record_argv` never does.
+    """
+    if not log_path:
+        return False
+    try:
+        line = json.dumps({
+            "invocation_id": invocation_id,
+            "started_at": time.time(),
+            "dir_tag": dir_tag,
+        }, sort_keys=True) + "\n"
+        fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line.encode("utf-8"))
+        finally:
+            os.close(fd)
+        return True
+    except Exception:
+        return False
+
+
 def main() -> int:
     real_bwrap = os.environ.get("BST_TRACE_REAL_BWRAP", "/usr/bin/bwrap")
     bind_src = os.environ["BST_TRACE_BIND_SRC"]
@@ -234,7 +282,18 @@ def main() -> int:
         except ValueError:
             limit = DEFAULT_ARGV_RECORD_LIMIT
         record_argv(argv_log, list(sys.argv[1:]), limit)
-    argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst, preload_so, trace_log)
+    # UX-56: the shim's own pid is unique among concurrently-live host
+    # processes, which is exactly the scope that matters - it only has to
+    # distinguish sandboxes within one build. Recorded with a wall-clock
+    # start so the correlation has something to match Plane 1's BUILD
+    # spans against; the shim cannot record an *end*, since it execv's.
+    invocation_id = os.getpid()
+    record_invocation(
+        os.environ.get("BST_TRACE_INVOCATION_LOG"), invocation_id,
+        extract_element_name(sys.argv[1:]),
+    )
+    argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst, preload_so,
+                           trace_log, invocation_id=invocation_id)
     os.execv(real_bwrap, argv)
     return 1  # unreachable if execv succeeds
 

@@ -44,7 +44,12 @@ def test_parse_matches_start_and_end_lines():
 
     assert len(events) == 2
     assert events[0] == {
-        "event": "START", "pid": 100, "ppid": 1, "ts": 10.0, "element": "unknown", "cmd": "cmake --build .",
+        "event": "START", "pid": 100, "ppid": 1, "ts": 10.0, "element": "unknown",
+        # UX-56: additive, and None here on purpose - a line with no
+        # `inv=` predates the sandbox id and must not be given a
+        # fabricated one.
+        "invocation": None,
+        "cmd": "cmake --build .",
     }
     assert events[1]["event"] == "END"
 

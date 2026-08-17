@@ -61,6 +61,39 @@ logger = logging.getLogger(__name__)
 _OVERSUBSCRIPTION_DEMAND_RATIO = 8.0
 
 
+# UX-47: which pipeline stages each report section actually renders.
+#
+# `P1-14` deliberately made the section subcommands thin aliases over one
+# shared pipeline rather than re-deriving shared stages per subcommand,
+# and that resolution stands - this does not split the pipeline, it only
+# stops an alias paying for stages it discards. At eleven elements the
+# difference was unmeasurable; at 1202 `bga graph` cost the same as the
+# full `bga analyze` while rendering no attribution at all.
+#
+# Derived by reading what each section renders in *both* formatters
+# (`bga/report/text.py` and `bga/report/json.py`), which agree:
+#   - graph        -> structural, plus the GRAPH_SIGNAL_KEYS that are
+#                     set inline from graph_analysis (not a stage).
+#   - floors/replay-> floors (replay's makespan `t_c` is computed there).
+#   - utilisation  -> utilisation.
+#   - diagnostics  -> the non-graph signals.
+#   - confidence and violations are gated on `section is None` in both
+#     formatters, and confidence consumes attribution and floors, so a
+#     narrow section must not compute it either.
+#
+# A section absent from this map (including None) runs everything.
+_ALL_STAGES = frozenset(
+    {'floors', 'attribution', 'utilisation', 'diagnostics', 'structural', 'confidence'}
+)
+_SECTION_STAGES = {
+    'graph': frozenset({'structural'}),
+    'floors': frozenset({'floors'}),
+    'replay': frozenset({'floors'}),
+    'utilisation': frozenset({'utilisation'}),
+    'diagnostics': frozenset({'diagnostics'}),
+}
+
+
 class BuildEfficiencyAnalyzer:
     """
     Main analyzer class implementing the bga v9 specification.
@@ -995,10 +1028,18 @@ class BuildEfficiencyAnalyzer:
             )
         return note
 
-    def analyze(self, run_dir: Optional[Path] = None) -> AnalysisResult:
+    def analyze(
+        self, run_dir: Optional[Path] = None, section: Optional[str] = None
+    ) -> AnalysisResult:
         """
         Perform complete analysis.
-        
+
+        `section` (UX-47) names the report section the caller is going to
+        render, letting the pipeline skip stages that section does not
+        consume. Omitting it - the default, and what every programmatic
+        caller does - runs every stage, so `analyze`'s own output is
+        byte-for-byte what it always was. See `_SECTION_STAGES`.
+
         Executes the full pipeline:
         1. Trace normalization (M0)
         2. Occupancy analysis (M0)
@@ -1128,22 +1169,35 @@ class BuildEfficiencyAnalyzer:
                 'unweighted_depth': graph_analysis['unweighted_depth'],
             }
 
+        # UX-47: which of the stages below this report section actually
+        # renders. `section=None` (the `analyze` command, and every
+        # programmatic caller) runs all of them, so the full report is
+        # unaffected; a narrow subcommand no longer pays for stages it
+        # discards. `bga graph` was spending the entire cost of
+        # attribution to render a dependency graph.
+        stages = _SECTION_STAGES.get(section, _ALL_STAGES)
+
         # Floors (M3)
-        result.floors = self._compute_floors(graph_analysis)
-        result.floors['capacity_model_note'] = self._build_capacity_model_note()
+        if 'floors' in stages:
+            result.floors = self._compute_floors(graph_analysis)
+            result.floors['capacity_model_note'] = self._build_capacity_model_note()
 
         # Attribution (M2)
-        result.attribution = self._compute_attribution(graph_analysis)
-        
+        if 'attribution' in stages:
+            result.attribution = self._compute_attribution(graph_analysis)
+
         # CPU Utilization (M4)
-        result.utilisation = self._compute_utilization(occupancy_stats)
-        
+        if 'utilisation' in stages:
+            result.utilisation = self._compute_utilization(occupancy_stats)
+
         # Advanced Diagnostics (M5)
-        result.signals.update(self._compute_diagnostics(occupancy_stats, graph_analysis))
-        
+        if 'diagnostics' in stages:
+            result.signals.update(self._compute_diagnostics(occupancy_stats, graph_analysis))
+
         # Structural Analysis (M6)
-        result.structural = self._compute_structural_analysis()
-        
+        if 'structural' in stages:
+            result.structural = self._compute_structural_analysis()
+
         # Violations
         result.violations = self.violations
 
@@ -1153,8 +1207,14 @@ class BuildEfficiencyAnalyzer:
         # formula (UX-17's own resolved rule).
         result.capacity_verdict = self._build_capacity_verdict()
         
-        # Confidence (Part 33)
-        result.confidence = self._compute_confidence(graph_analysis, result.attribution, result.floors)
+        # Confidence (Part 33) - rendered by the full report only (both
+        # formatters gate it on `section is None`), and it consumes
+        # attribution and floors, so computing it for a narrow section
+        # would reintroduce exactly the cost this gating removes.
+        if 'confidence' in stages:
+            result.confidence = self._compute_confidence(
+                graph_analysis, result.attribution, result.floors
+            )
 
         self.analysis_result = result
         return result

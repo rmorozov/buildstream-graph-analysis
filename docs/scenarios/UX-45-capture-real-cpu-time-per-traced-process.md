@@ -1,6 +1,6 @@
 # UX-45: the Plane 2 hook is two `clock_gettime` calls away from real per-process CPU time, which would retire three standing "this is not CPU" caveats
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-11 (the hook), UX-23 (element tagging), UX-36 (which established the caveats this would let us retire), UX-27 (`occupancy_ratio`, the metric that most wants a CPU denominator)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the hook), UX-23 (element tagging), UX-36 (which established the caveats this would let us retire), UX-27 (`occupancy_ratio`, the metric that most wants a CPU denominator)
 
 ## Motivation
 
@@ -47,6 +47,50 @@ The genuinely new capability this unlocks, independent of the caveats, is a Plan
 2. The tracer reports per-element CPU time **and** the covered fraction, and the two are consistent with the START/END counts.
 3. A trace captured with the *previous* hook still parses, reporting CPU time as unavailable rather than as zero.
 4. A build wrapped with the new hook produces a byte-identical artifact to one built without it - the "never break the wrapped build" requirement from `UX-11` is unchanged. Full suite green.
+
+## Fix Implemented
+
+All four points. `bst_trace_end` now calls `getrusage(RUSAGE_SELF)` and `getrusage(RUSAGE_CHILDREN)` and emits `utime`/`stime`/`cutime`/`cstime` on the END line; the tracer parses them, aggregates per element, and reports coverage.
+
+### The result, from a real wrapped build
+
+`bst --builders 4 --max-jobs 4 build all.bst` over `examples/06-macro-micro-optimization`, BuildStream 2.7.0, real `bwrap` sandbox, 4-core host, 822 traced processes:
+
+```
+Real CPU time (getrusage): 45.56s across 663 of 822 traced processes (159 exited abnormally and are unmeasured)
+  core.bst        10.70s CPU over  12.35s wall =  0.87 cores busy  [81% of processes measured]
+  codegen.bst      5.90s CPU over   3.36s wall =  1.76 cores busy  [81% of processes measured]
+  lib-a.bst        4.56s CPU over   2.68s wall =  1.70 cores busy  [81% of processes measured]
+  lib-c.bst        4.36s CPU over   2.61s wall =  1.67 cores busy  [81% of processes measured]
+  ...
+  app.bst          3.13s CPU over   2.34s wall =  1.34 cores busy  [81% of processes measured]
+```
+
+**This is the capability the task was really for.** `core.bst` - the element pinned with `notparallel: True` - runs at **0.87 cores busy** while every sibling runs at ~1.7. The micro-optimization half of `docs/optimization-walkthrough-06.md` could establish that `core.bst` was slow and that it asked for `-j1`; it could not say whether it was CPU-bound or waiting. It was waiting, and now the report says so in measured core-seconds. That needs no cross-plane plumbing at all, which is why it is the part that shipped.
+
+### A real bug this introduced, found by real data
+
+The first working version emitted the line as three `dprintf` calls (header, rusage, command). A real 822-process capture came back with **three corrupted records**, where two processes had interleaved mid-line and produced nonsense element names:
+
+```
+element=lib-c.bstSTART
+element=lib-e.bstSTART
+element=lib-f.bstEND
+```
+
+The trace log is opened `O_APPEND` and written concurrently by every traced process in the build, and `O_APPEND` only guarantees atomicity **per `write()`**. The original single-`dprintf` line was atomic by accident of being one call; splitting it broke that silently. The whole record is now composed into one buffer and written once, and the re-run capture has zero corrupted lines. The comment in `hook.c` says why, because the next person to add a field will be tempted to append a second call.
+
+### What was deliberately not done
+
+Point 4 of the Required Fix, as filed: **the three standing caveats are not weakened.** Plane 2 traces elements under a wrapped build while Plane 1 covers the whole run, and `I9` reconciliation needs both for the same run; 19% of processes here are unmeasured. Wiring this into Plane 1's utilisation buckets is a separate task, and `bga`'s `Dispatch Occupancy` block still says exactly what it said before. The `cpu_time` block carries that statement itself rather than leaving it implicit.
+
+`children_cpu_us` is published but **not** summed into the element total: a parent's `RUSAGE_CHILDREN` already includes CPU its reaped children reported for themselves, so adding both would double-count. Self time is the additive quantity; children time is what makes `make`/`sh` wrappers interpretable.
+
+### Coverage, and why 19% is unmeasured
+
+159 of 822 processes ran no destructor. Two real causes, both already documented in `hook.c`: a process killed by a signal, and - the common one here - `sh -c '<command>'` wrappers that `_exit()` or are replaced by `exec`, bypassing the normal exit path. Those are reported as *unmeasured*, never as zero, and the per-element coverage percentage is printed beside every total.
+
+Tests: 10 new (`tests/unit/test_native_cpu_time.py`), including the two failure modes that would quietly produce wrong numbers - a partial rusage pair (a truncated write leaving `utime=` without `stime=`) must not publish half a measurement, and a pre-`UX-45` trace must report *unavailable* rather than a confident 0.00s. Backward compatibility was checked against a real 822-process capture taken with the previous hook: it parses, keeps its commands intact, and reports CPU as unavailable. Full suite 852 passed, `make lint` clean.
 
 ## Verification Log
 

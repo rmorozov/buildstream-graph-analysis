@@ -166,6 +166,9 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         return returncode
 
 
+_RUSAGE_KEYS = frozenset({"utime", "stime", "cutime", "cstime"})
+
+
 def parse_trace_log(text: str) -> List[dict]:
     """Parse raw `START pid=.. ppid=.. ts=.. element=.. cmd=..` / `END
     ...` lines from hook.c into structured events. `element=` (UX-23) is
@@ -208,18 +211,48 @@ def parse_trace_log(text: str) -> List[dict]:
                 continue  # element= present but no cmd= after it - malformed, skip
             element = remaining[:next_space]
             remaining = remaining[next_space + 1:]
+        # UX-45: optional real CPU-time fields, emitted on END lines only
+        # by a hook built after that task. Parsed as "zero or more known
+        # key=value pairs before cmd=", so a trace captured with the
+        # previous hook still parses and simply reports CPU time as
+        # unavailable rather than as zero - an unmeasured CPU time and a
+        # genuinely-zero one are different claims.
+        rusage: Dict[str, float] = {}
+        while not remaining.startswith("cmd="):
+            next_space = remaining.find(" ")
+            if next_space == -1:
+                break
+            token, candidate = remaining[:next_space], remaining[next_space + 1:]
+            key, _, value = token.partition("=")
+            if key not in _RUSAGE_KEYS:
+                break
+            try:
+                rusage[key] = float(value)
+            except ValueError:
+                break
+            remaining = candidate
+
         cmd = remaining[4:] if remaining.startswith("cmd=") else ""
         try:
-            events.append({
+            record = {
                 "event": event,
                 "pid": int(fields["pid"]),
                 "ppid": int(fields["ppid"]),
                 "ts": float(fields["ts"]),
                 "element": element,
                 "cmd": cmd,
-            })
+            }
         except (KeyError, ValueError):
             continue
+        # Only attach when every field of a pair is present: a partial
+        # set would be reported as if complete.
+        if {"utime", "stime"} <= rusage.keys():
+            record["cpu_us"] = int(round((rusage["utime"] + rusage["stime"]) * 1e6))
+        if {"cutime", "cstime"} <= rusage.keys():
+            record["children_cpu_us"] = int(
+                round((rusage["cutime"] + rusage["cstime"]) * 1e6)
+            )
+        events.append(record)
     return events
 
 
@@ -256,7 +289,7 @@ def pair_events(events: List[dict]) -> List[dict]:
             if not pending:
                 continue
             start_ev = pending.pop(0)
-            records.append({
+            record = {
                 "pid": ev["pid"],
                 "ppid": start_ev["ppid"],
                 "element": start_ev["element"],
@@ -265,7 +298,15 @@ def pair_events(events: List[dict]) -> List[dict]:
                 "end_ts": ev["ts"],
                 "duration_s": ev["ts"] - start_ev["ts"],
                 "open": False,
-            })
+            }
+            # UX-45: real CPU time, from the END event's own getrusage.
+            # Absent for a trace captured with a pre-UX-45 hook, and the
+            # key is then omitted rather than set to 0.
+            if "cpu_us" in ev:
+                record["cpu_us"] = ev["cpu_us"]
+            if "children_cpu_us" in ev:
+                record["children_cpu_us"] = ev["children_cpu_us"]
+            records.append(record)
     for pending in open_by_key.values():
         for start_ev in pending:
             records.append({
@@ -644,6 +685,88 @@ def compute_max_concurrency(records: List[dict]) -> int:
     return peak
 
 
+def compute_cpu_time(records: List[dict]) -> dict:
+    """Real CPU time per element, from each process's own `getrusage`
+    at exit (UX-45).
+
+    Before this, `bga` had no CPU-time measurement anywhere - which is
+    why I9 reconciliation is disabled on every real run and why three
+    separate report caveats have to say "this is occupancy, not CPU".
+    This is the measurement; wiring it into Plane 1's utilisation
+    buckets is deliberately *not* done here (Plane 2 traces one element
+    under a wrapped build, Plane 1 covers the whole run, and I9 needs
+    both for the same run).
+
+    Coverage is reported, never assumed. A process killed by a signal,
+    or one whose image was replaced by `exec`, runs no destructor and
+    contributes no CPU time - so a per-element total is a sum over the
+    processes we could see, and saying how many that was is the
+    difference between a measurement and a guess.
+
+    `children_cpu_us` is summed separately rather than added in: a
+    parent's `RUSAGE_CHILDREN` already includes CPU that its reaped
+    children also reported for themselves, so adding both would
+    double-count. Self time is the additive quantity; children time is
+    published for the wrappers (`make`, `sh`) whose own self time is
+    near zero and whose subtree cost is the interesting figure.
+    """
+    per_element: Dict[str, dict] = {}
+    for record in records:
+        entry = per_element.setdefault(
+            record["element"],
+            {"cpu_us": 0, "children_cpu_us": 0, "measured": 0, "unmeasured": 0,
+             "wall_span_s": None},
+        )
+        if "cpu_us" in record:
+            entry["cpu_us"] += record["cpu_us"]
+            entry["children_cpu_us"] += record.get("children_cpu_us", 0)
+            entry["measured"] += 1
+        else:
+            entry["unmeasured"] += 1
+
+    for element, entry in per_element.items():
+        spans = [
+            r for r in records
+            if r["element"] == element and r["end_ts"] is not None
+        ]
+        if spans:
+            entry["wall_span_s"] = max(r["end_ts"] for r in spans) - min(
+                r["start_ts"] for r in spans
+            )
+        total = entry["measured"] + entry["unmeasured"]
+        entry["coverage"] = entry["measured"] / total if total else 0.0
+        # The question the micro-optimization half of the walkthrough
+        # could not answer: was this element's build CPU-bound, or was
+        # it waiting? Only meaningful where something was measured.
+        if entry["wall_span_s"] and entry["measured"]:
+            entry["cpu_per_wall_second"] = (entry["cpu_us"] / 1e6) / entry["wall_span_s"]
+        else:
+            entry["cpu_per_wall_second"] = None
+
+    measured_total = sum(e["measured"] for e in per_element.values())
+    unmeasured_total = sum(e["unmeasured"] for e in per_element.values())
+    return {
+        "available": measured_total > 0,
+        "measured_processes": measured_total,
+        "unmeasured_processes": unmeasured_total,
+        "total_cpu_us": sum(e["cpu_us"] for e in per_element.values()),
+        "per_element": dict(
+            sorted(per_element.items(), key=lambda kv: -kv[1]["cpu_us"])
+        ),
+        "note": (
+            "Real CPU time (getrusage utime+stime) for processes that exited "
+            "normally. Processes killed by a signal or replaced by exec run no "
+            "destructor and are counted as unmeasured, never as zero. This is "
+            "Plane 2 only - it is not wired into Plane 1's utilisation buckets, "
+            "which remain slot occupancy (UX-36)."
+        ) if measured_total else (
+            "No CPU time in this trace - captured with a hook built before UX-45, "
+            "or every process exited abnormally. Reported as unavailable rather "
+            "than as zero."
+        ),
+    }
+
+
 def summarize(records: List[dict]) -> dict:
     matched = [r for r in records if not r["open"]]
     open_records = [r for r in records if r["open"]]
@@ -671,6 +794,8 @@ def summarize(records: List[dict]) -> dict:
         "by_binary": dict(sorted(by_binary.items(), key=lambda kv: -kv[1])),
         "by_element": dict(sorted(by_element.items(), key=lambda kv: -kv[1])),
         "max_concurrency": compute_max_concurrency(records),
+        # UX-45: real, kernel-measured CPU time per element.
+        "cpu_time": compute_cpu_time(records),
         # UX-32: per-element achieved parallelism - the question this
         # plane exists to answer. See compute_per_element_parallelism.
         "per_element_parallelism": compute_per_element_parallelism(records),
@@ -733,6 +858,40 @@ def load_and_summarize(raw_log_path: str) -> dict:
     return summarize(records)
 
 
+def _format_cpu_time(cpu_time: dict) -> List[str]:
+    """Render UX-45's per-element CPU block, or say plainly that no CPU
+    time was captured. Never renders a zero as if it were a measurement."""
+    if not cpu_time:
+        return []
+    if not cpu_time.get("available"):
+        return [f"CPU time: unavailable - {cpu_time.get('note', '')}"]
+
+    measured = cpu_time["measured_processes"]
+    unmeasured = cpu_time["unmeasured_processes"]
+    lines = [
+        f"Real CPU time (getrusage): {cpu_time['total_cpu_us'] / 1e6:.2f}s across "
+        f"{measured} of {measured + unmeasured} traced processes"
+        + (f" ({unmeasured} exited abnormally and are unmeasured)" if unmeasured else ""),
+    ]
+    for element, entry in cpu_time["per_element"].items():
+        if not entry["measured"]:
+            lines.append(f"  {element:30s} unmeasured ({entry['unmeasured']} processes)")
+            continue
+        detail = f"  {element:30s} {entry['cpu_us'] / 1e6:7.2f}s CPU"
+        if entry["wall_span_s"]:
+            detail += f" over {entry['wall_span_s']:6.2f}s wall"
+        if entry["cpu_per_wall_second"] is not None:
+            # The micro-optimization question: is this element CPU-bound
+            # or waiting? Above ~1.0 means it really used more than one
+            # core; well below means it spent its time blocked.
+            detail += f" = {entry['cpu_per_wall_second']:5.2f} cores busy"
+        if entry["coverage"] < 1.0:
+            detail += f"  [{entry['coverage'] * 100:.0f}% of processes measured]"
+        lines.append(detail)
+    lines.append(f"  ({cpu_time['note']})")
+    return lines
+
+
 def _format_text(report: dict) -> str:
     lines = [
         f"Processes traced: {report['process_count']} "
@@ -757,6 +916,7 @@ def _format_text(report: dict) -> str:
         lines.append("By element:")
         for name, count in by_element.items():
             lines.append(f"  {name:30s} {count}")
+    lines.extend(_format_cpu_time(report.get("cpu_time") or {}))
     # UX-32: per-element achieved parallelism.
     per_element = report.get("per_element_parallelism") or []
     if per_element:

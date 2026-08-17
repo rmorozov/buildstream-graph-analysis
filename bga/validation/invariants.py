@@ -76,10 +76,42 @@ def compute_confidence(
     # --- Coverage metrics ---
     critical_path = graph_analysis.get('critical_path', [])
     elements_with_tasks = {t.task_key.element_uid for t in normalized_tasks}
-    if critical_path:
-        resolved = sum(1 for uid in critical_path if uid in elements_with_tasks)
-        critical_path_coverage = resolved / len(critical_path)
+
+    # UX-55: on an incremental run - a pre-commit build with caches on,
+    # which is the majority of what CI actually runs - most of the graph
+    # legitimately has no task, because BuildStream skipped it as already
+    # cached. Counting those as missing measurements failed a hard gate,
+    # which dropped confidence, which made UX-03/UX-39's regression gate
+    # fail open: the better the cache worked, the less bga gated.
+    #
+    # Three conditions, all required, because "absent" is only safe to
+    # read as "cached" when the capture proves it:
+    #   - BuildStream itself reported skipped elements (run_mode), so the
+    #     claim rests on the log rather than on absence;
+    #   - the build succeeded, since a failed build's missing tasks may
+    #     genuinely be lost;
+    #   - the element count BuildStream says it *processed* equals the
+    #     number that produced tasks - the checksum that proves nothing
+    #     was dropped in extraction.
+    # If any fails, this behaves exactly as it did before.
+    cached_on_critical_path: List[str] = []
+    if run_context is not None and run_context.run_mode == 'incremental':
+        built = run_context.built_element_count
+        if not run_context.failed_elements and built == len(elements_with_tasks):
+            cached_on_critical_path = [
+                uid for uid in critical_path if uid not in elements_with_tasks
+            ]
+
+    measured_critical_path = [
+        uid for uid in critical_path if uid not in set(cached_on_critical_path)
+    ]
+    if measured_critical_path:
+        resolved = sum(1 for uid in measured_critical_path if uid in elements_with_tasks)
+        critical_path_coverage = resolved / len(measured_critical_path)
     else:
+        # Either there is no critical path, or every element on it was
+        # cached. Both mean there is nothing on the chain this run failed
+        # to measure - the report says which, rather than this number.
         critical_path_coverage = 1.0
 
     dominators = graph_analysis.get('dominators', {})
@@ -164,7 +196,9 @@ def compute_confidence(
 
     new_violations: List[dict] = []
     if not hard_gates['critical_path_coverage_full']:
-        missing_critical_path_uids = [uid for uid in critical_path if uid not in elements_with_tasks]
+        missing_critical_path_uids = [
+            uid for uid in measured_critical_path if uid not in elements_with_tasks
+        ]
         new_violations.append({
             'type': 'hard_gate_failed', 'gate': 'critical_path_coverage',
             'value': critical_path_coverage,
@@ -309,6 +343,11 @@ def compute_confidence(
         # higher than it used to be.
         'explained_untracked_us': explained_untracked_us,
         'critical_path_coverage': critical_path_coverage,
+        # UX-55: what the coverage figure above is a fraction *of*. On an
+        # incremental run it excludes elements BuildStream skipped as
+        # cached, and a reader needs to know that without inferring it.
+        'run_mode': run_context.run_mode if run_context is not None else 'unknown',
+        'critical_path_cached': cached_on_critical_path,
         'dominator_coverage': dominator_coverage,
         'blame_chain_coverage': blame_chain_coverage,
         'task_coverage': task_coverage,

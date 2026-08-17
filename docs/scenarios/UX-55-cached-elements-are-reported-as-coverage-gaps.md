@@ -1,6 +1,6 @@
 # UX-55: an element that was **cached** is reported as a "genuine coverage gap, worth investigating" and fails a hard gate — so every incremental build, which is what CI actually runs, is judged unreliable
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** `UX-54` (done — which gave `bga` the build-outcome signal this fix needs)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which gave `bga` the build-outcome signal this fix needs)
 
 ## Motivation
 
@@ -106,9 +106,65 @@ BuildStream — the less `bga` will gate.
 4. Every existing fixture's output is unchanged (all of them are full
    builds where nothing is cached). Full suite green.
 
+## Fix Implemented
+
+The two CI scenarios are now a first-class distinction rather than
+something a reader has to infer.
+
+**The producer** parses BuildStream's own closing Pipeline Summary
+(`QUEUE_SUMMARY_RE`) and writes `queue_summary` into run-context. This is
+the only place in a capture that says a run was incremental, and it is
+also the checksum.
+
+**The model** derives `RunContext.run_mode` — `full` (a caches-off
+nightly: nothing skipped), `incremental` (a pre-commit run: something
+skipped), or `unknown`. `unknown` is never guessed into either bucket:
+guessing `full` would re-introduce this defect on every pre-`UX-55`
+capture, and guessing `incremental` would weaken the gate for real full
+builds.
+
+**The gate** treats a task-less element as *cached* rather than missing,
+but only when all three of these hold, because "absent" is safe to read
+as "cached" only when the capture proves it:
+
+- BuildStream itself reported skipped elements, so the claim rests on the
+  log rather than on absence;
+- the build succeeded (`UX-54`'s signal) — a failed build's missing tasks
+  may genuinely be lost;
+- `processed` equals the number of elements that produced tasks — the
+  checksum that proves extraction dropped nothing.
+
+**The report** says which scenario it is, before the numbers, because
+that changes what they are *about*.
+
+**`bga compare`** flags a nightly-versus-pre-commit comparison with the
+same weight as "these may not be the same project", because it is the
+same kind of mistake: their durations and floors differ by however much
+the cache happened to hold, which says nothing about whether the build
+got worse.
+
+### Results on the real capture
+
+| | before | after |
+|---|---|---|
+| `critical_path_coverage` | 0.818 | **1.00** |
+| `critical_path_coverage_full` | **failed** | passes |
+| confidence | 0.82 | **1.00** |
+| violations | 1 | **0** |
+| leading line | *(none)* | `Incremental run (caches on): BuildStream skipped elements it had already built, 2 of them on the critical path...` |
+
+Tests: 14 new (`tests/unit/test_run_mode_and_cached_coverage.py`),
+covering both scenarios and, deliberately, all three ways the benefit of
+the doubt must be *refused* — a failed build, a `processed`-vs-tasks
+mismatch, and a capture that does not say. The golden snapshot was
+regenerated deliberately for the two additive confidence keys
+(`run_mode`, `critical_path_cached`), and that diff is the entire change.
+
+Suite: 948 → 962.
+
 ## Verification Log
 
-Filed 2026-08-17 (round 6), not yet implemented. Every quantity above is
+Filed and implemented 2026-08-17 (round 6). Every quantity above is
 from a real capture published to the `captures/fdsdk-latest` branch by
 `.github/workflows/real-project-capture.yml`: the violation text is
 verbatim from its `analyze.txt`, the `cached` states are from the same

@@ -404,9 +404,13 @@ jobs:
             echo "native-trace.log: $trace_bytes bytes"
             if [ "$trace_bytes" -gt 40000000 ]; then
               # UX-57/UX-58: keep a bounded head instead of dropping the
-              # whole thing. All-or-nothing is what produced a capture
-              # with no raw trace in it at all, and a few thousand lines
-              # is enough to check the record format by eye.
+              # whole thing. Enough to check the record format by eye -
+              # and deliberately NOT enough for anything time-based:
+              # round 7 measured this head covering 17 seconds of a
+              # 3584-second build, so sandbox durations derived from it
+              # are truncated. The figures that need the whole trace are
+              # computed in-job and land in native-report.json, which is
+              # published in full.
               head -c 4000000 capture/native-trace.log \
                 > capture/native-trace.head.log || true
               echo "full log dropped from the tarball: $trace_bytes bytes;" \

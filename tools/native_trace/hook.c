@@ -97,8 +97,24 @@ static const char *g_element = NULL;
  * and stored in a bump arena, then written once in the destructor -
  * a per-open write() would dominate the traced build's own runtime.
  */
-#define OPEN_SLOTS 8192          /* power of two; ~50% max load */
-#define OPEN_ARENA_BYTES 262144  /* 256 KiB of path text per process */
+/* UX-57: both were raised ~4x and, more importantly, stopped being a
+ * ceiling at all (see flush_open_record). The raise is close to free:
+ * both live in .bss, so their pages are anonymous zero pages that are
+ * only faulted in when actually written - a process that records 30
+ * paths pays for 30 paths no matter how large these are declared. A
+ * real examples/06 capture averages 32 unique paths and 1.4 KiB of
+ * arena per process (max 149 / 7 KiB), so the common case never comes
+ * near either number; the point of raising them is to make a flush
+ * rare on the processes that do. */
+/* Overridable at compile time so the window-flush path can be
+ * exercised for real by a test, rather than only on a build large
+ * enough to fill a megabyte of paths. */
+#ifndef OPEN_SLOTS
+#define OPEN_SLOTS 32768          /* power of two; ~50% max load */
+#endif
+#ifndef OPEN_ARENA_BYTES
+#define OPEN_ARENA_BYTES 1048576  /* 1 MiB of path text per process */
+#endif
 
 static int g_record_opens = 0;
 static __thread int g_in_hook = 0;
@@ -107,6 +123,7 @@ static char g_open_arena[OPEN_ARENA_BYTES];
 static size_t g_open_arena_used = 0;
 static unsigned g_open_unique = 0;
 static unsigned g_open_dropped = 0;
+static unsigned g_open_part = 0;
 
 typedef int (*open_fn)(const char *, int, ...);
 typedef int (*openat_fn)(int, const char *, int, ...);
@@ -114,6 +131,29 @@ static open_fn g_real_open = NULL;
 static open_fn g_real_open64 = NULL;
 static openat_fn g_real_openat = NULL;
 static openat_fn g_real_openat64 = NULL;
+
+static void write_open_record(void);
+
+/* UX-57: flush what has been recorded so far and start a new window.
+ * The measured alternative was compression: front-coding the arena
+ * against the previous path - the only kind available to a streaming
+ * hook - buys **1.41x** on a real path set (2.88x if the paths were
+ * sorted, which they cannot be here). That moves the ceiling from
+ * ~6,000 paths to ~8,500, which is below OPEN_SLOTS anyway, in
+ * exchange for a format change and a decoder. Flushing removes the
+ * ceiling entirely for the cost of an occasional write(), which is
+ * why compression was measured and then not taken.
+ *
+ * Paths repeated across windows are re-recorded, which is harmless:
+ * the parser unions them per element, so the final read set is exact
+ * either way. */
+static void flush_open_window(void) {
+    write_open_record();
+    memset(g_open_hashes, 0, sizeof(g_open_hashes));
+    g_open_arena_used = 0;
+    g_open_unique = 0;
+    g_open_part++;
+}
 
 static unsigned long path_hash(const char *s) {
     /* FNV-1a. Never returns 0 - 0 marks an empty slot. */
@@ -132,28 +172,48 @@ static void record_open(const char *path) {
          * paths can be matched against an artifact's contents. */
         return;
     }
-    unsigned long h = path_hash(path);
-    size_t slot = (size_t)(h & (OPEN_SLOTS - 1));
-    for (size_t probe = 0; probe < OPEN_SLOTS; probe++) {
-        size_t i = (slot + probe) & (OPEN_SLOTS - 1);
-        if (g_open_hashes[i] == h) {
-            return;  /* already recorded */
-        }
-        if (g_open_hashes[i] == 0) {
-            size_t len = strlen(path);
-            if (g_open_arena_used + len + 1 > OPEN_ARENA_BYTES) {
-                g_open_dropped++;   /* arena full: counted, not silent */
+    size_t len = strlen(path);
+    if (len + 1 > OPEN_ARENA_BYTES) {
+        /* A single path longer than a whole window. Cannot be recorded
+         * by any windowing scheme, so it is counted rather than looped
+         * on forever. PATH_MAX is 4096; this is unreachable in practice
+         * and exists so the retry below is provably terminating. */
+        g_open_dropped++;
+        return;
+    }
+    /* Two attempts at most: the second runs against an empty window, in
+     * which the path provably fits and a free slot provably exists. */
+    for (int attempt = 0; attempt < 2; attempt++) {
+        unsigned long h = path_hash(path);
+        size_t slot = (size_t)(h & (OPEN_SLOTS - 1));
+        for (size_t probe = 0; probe < OPEN_SLOTS; probe++) {
+            size_t i = (slot + probe) & (OPEN_SLOTS - 1);
+            if (g_open_hashes[i] == h) {
+                return;  /* already recorded in this window */
+            }
+            if (g_open_hashes[i] == 0) {
+                if (g_open_arena_used + len + 1 > OPEN_ARENA_BYTES) {
+                    break;  /* arena full - flush and retry */
+                }
+                g_open_hashes[i] = h;
+                memcpy(g_open_arena + g_open_arena_used, path, len);
+                g_open_arena_used += len;
+                g_open_arena[g_open_arena_used++] = '\n';
+                g_open_unique++;
                 return;
             }
-            g_open_hashes[i] = h;
-            memcpy(g_open_arena + g_open_arena_used, path, len);
-            g_open_arena_used += len;
-            g_open_arena[g_open_arena_used++] = '\n';
-            g_open_unique++;
-            return;
+        }
+        /* Arena or table full. UX-57: a real freedesktop-sdk build
+         * dropped 149,053 opens against 65,101 recorded here - a 70%
+         * loss, and UX-46 refuses to draw any conclusion from a
+         * truncated read set, so every heavy element was excluded from
+         * declared-vs-used analysis. Write the window out and continue
+         * instead of dropping. */
+        if (attempt == 0) {
+            flush_open_window();
         }
     }
-    g_open_dropped++;  /* table full */
+    g_open_dropped++;  /* unreachable: kept so a future edit cannot silently lose paths */
 }
 
 /* Resolved lazily rather than in the constructor: the constructor may
@@ -395,10 +455,14 @@ static void write_open_record(void) {
         return;
     }
     char header[256];
+    /* UX-57: `part` distinguishes several windows written by one process
+     * (see flush_open_window) from several processes. Appended rather
+     * than inserted so a reader of older logs, where it is absent, keeps
+     * working. */
     int n = snprintf(header, sizeof(header),
-                     "OPENS pid=%d element=%s unique=%u dropped=%u\n",
+                     "OPENS pid=%d element=%s unique=%u dropped=%u part=%u\n",
                      (int)g_pid, g_element ? g_element : "unknown",
-                     g_open_unique, g_open_dropped);
+                     g_open_unique, g_open_dropped, g_open_part);
     if (n > 0 && (size_t)n < sizeof(header)) {
         ssize_t w = write(fd, header, (size_t)n);
         (void)w;

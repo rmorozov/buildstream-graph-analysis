@@ -1,6 +1,6 @@
 # UX-47: `bga graph` computes attribution it never renders, so every narrow subcommand costs the same 67s as `analyze`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-42 (independent, but fixing either alone already helps - see below)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-42 (independent, but fixing either alone already helps - see below)
 
 ## Motivation
 
@@ -51,6 +51,43 @@ Note this interacts with `UX-42` but neither subsumes the other. `UX-42` makes a
 2. `bga analyze` output is byte-identical before and after, on every fixture in `tests/fixtures/topologies.py` and on the `mixed_task_kinds` golden snapshot.
 3. Every section subcommand's output is byte-identical before and after - lazily computing a stage must not change what a section renders.
 4. A test asserts the stage-skipping actually happens (e.g. that `bga graph` never enters `_compute_attribution`), so the property cannot silently regress into "it's fast for some other reason". Full suite green.
+
+## Fix Implemented
+
+`analyze()` takes an optional `section`, and a `_SECTION_STAGES` map names which stages each section actually renders. Omitting `section` - the default, and what every programmatic caller does - runs everything, so `bga analyze` is untouched.
+
+**`P1-14`'s resolution is not reopened.** The pipeline is still one pipeline shared by every alias; it simply stops an alias paying for stages it discards. That was the right call when the difference was unmeasurable, and it remains the right structure now that it isn't.
+
+The map was derived by reading what each section renders in **both** formatters, which agree:
+
+| section | stages | notes |
+|---|---|---|
+| `graph` | `structural` | `GRAPH_SIGNAL_KEYS` are set inline from `graph_analysis`, not by a stage |
+| `floors`, `replay` | `floors` | replay's makespan `t_c` is computed inside floors |
+| `utilisation` | `utilisation` | |
+| `diagnostics` | `diagnostics` | the non-graph signals |
+| `None` | all | plus `confidence`, which both formatters gate on `section is None` and which consumes attribution and floors - computing it for a narrow section would have reintroduced the whole cost |
+
+### Results, on the 1202-element scale fixture
+
+```
+                before UX-42/47     after UX-42     after UX-47
+bga graph          1m 57s              3.15s          0.99s
+bga floors         1m 08s              3.10s          0.66s
+bga utilisation    1m 08s              3.10s          0.74s
+bga diagnostics    1m 09s              3.10s          1.18s
+bga analyze        1m 55s              3.15s          3.26s   <- unchanged, as intended
+```
+
+`bga graph` end to end across both fixes: **117s -> 0.99s**. And the prediction in this doc's own Required Fix held - `UX-42` shrank both numbers without changing the relationship, leaving `graph` still paying exactly what `analyze` paid until this landed.
+
+### Verification
+
+Every section's output is byte-identical before and after - 20 combinations (5 sections x 2 formats x 2 fixtures, one of them a real `examples/06` capture), checked by capturing baselines from the stashed tree and diffing.
+
+Tests: 30 new (`tests/unit/test_section_stage_gating.py`). They assert both halves, because either alone is insufficient: that the stage really is skipped (acceptance test 4 - otherwise a fast result could come from something else entirely), *and* that each section still renders exactly what a fully-analyzed result renders for that section, across four topologies and both formatters. The second is compared against a full analysis rather than a stored snapshot, so it cannot drift alongside the code it checks.
+
+One documentation fix fell out: `README.md` told users to reach for the narrow subcommands, which was advice they did not previously benefit from. It now says what they cost.
 
 ## Verification Log
 

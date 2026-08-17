@@ -105,7 +105,7 @@ bga sweep /tmp/my-run --resource PROCESS --min-capacity 1 --max-capacity 16  # "
 bga replay /tmp/my-run --capacity 16                      # simulate a hardware upgrade
 ```
 
-The `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` subcommands are thin, narrower slices of the same full `analyze` report — reach for one of them instead of grepping `analyze`'s output for a single question. Full reference: [`docs/cli.md`](docs/cli.md).
+The `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` subcommands are narrower slices of the same `analyze` report — reach for one of them instead of grepping `analyze`'s output for a single question. They are also genuinely cheaper: each runs only the pipeline stages its own section renders (`UX-47`), so on a 1200-element run `bga graph` costs ~1s against `analyze`'s ~3s. Full reference: [`docs/cli.md`](docs/cli.md).
 
 ## Advanced: looking inside one element (Plane 2)
 

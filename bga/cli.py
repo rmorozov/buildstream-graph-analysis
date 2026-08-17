@@ -83,7 +83,10 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
         logger.warning("--allow-partial-cold has no effect without --cold; ignoring")
 
     analyzer = _make_analyzer(args)
-    result = analyzer.analyze(run_dir)
+    # UX-47: tell the pipeline which section is going to be rendered so
+    # it can skip stages this section does not consume. `analyze` passes
+    # None and is unaffected.
+    result = analyzer.analyze(run_dir, section=section)
     by_kind = getattr(args, 'by_kind', False)
 
     if args.format == 'json':

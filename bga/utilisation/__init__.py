@@ -242,6 +242,7 @@ class UtilizationAnalyzer:
         
         # Analysis state
         self.intervals: List[CPUInterval] = []
+        self._task_intervals: List[dict] = []
         self.buckets: Dict[CPUBucket, int] = {bucket: 0 for bucket in CPUBucket}
         self.max_observed_concurrency = 0
         
@@ -360,7 +361,11 @@ class UtilizationAnalyzer:
     ) -> None:
         """Build CPU intervals from task execution data."""
         self.intervals = []
-        
+        # Kept for UX-48's idle split, which needs each task's
+        # `ready_us` - CPUInterval itself models a *running* window and
+        # has no field for when the task became ready.
+        self._task_intervals = list(task_intervals)
+
         for interval in task_intervals:
             task_key = interval.get("task_key", "")
             start_us = interval.get("start_us", 0)
@@ -433,12 +438,90 @@ class UtilizationAnalyzer:
         
         # Add idle CPU time
         idle_cpu_us = self._compute_idle_cpu_time()
-        
-        # Split idle between NO_TASKS and UNDERPARALLEL
-        # Simplified heuristic: if no tasks ready, it's NO_TASKS
-        # If tasks were ready but not scheduled, it's UNDERPARALLEL
-        # For now, assign all to IDLE_NO_TASKS
-        self.buckets[CPUBucket.IDLE_NO_TASKS] = idle_cpu_us
+
+        # UX-48: split idle capacity by whether any work was actually
+        # waiting to be dispatched. The two buckets recommend opposite
+        # fixes - IDLE_NO_TASKS means the graph is too narrow (go
+        # restructure dependencies), IDLE_UNDERPARALLEL means work was
+        # ready and nothing ran it (raise `--builders`) - and until now
+        # every run booked its whole idle to the first one, because
+        # IDLE_UNDERPARALLEL was declared, read by `idle_pct`, and never
+        # assigned anywhere. A deliberately builder-starved capture with
+        # four tasks ready and unscheduled reported 72.30s of "nothing
+        # was ready to run".
+        #
+        # `underparallel` is derived from a real timeline; `no_tasks` is
+        # then the remainder rather than a second independent sum, so
+        # the two always add back to exactly `idle_cpu_us` and I9
+        # reconciliation is unaffected by rounding.
+        underparallel_us = self._compute_underparallel_idle_us(idle_cpu_us)
+        self.buckets[CPUBucket.IDLE_UNDERPARALLEL] = underparallel_us
+        self.buckets[CPUBucket.IDLE_NO_TASKS] = idle_cpu_us - underparallel_us
+
+    def _compute_underparallel_idle_us(self, idle_cpu_us: int) -> int:
+        """Portion of idle capacity during which work was ready to run.
+
+        A task is *pending* over `[ready_us, start_us)` - dependency-
+        ready but not yet dispatched. Idle capacity in any slice where
+        at least one task is pending is capacity that more builders
+        could have used; idle capacity with nothing pending could not
+        have been used by any scheduler.
+
+        Returns 0 when there is no capacity to divide (the same
+        condition under which `_compute_idle_cpu_time` returns 0) or
+        when the run carries no `ready_us` data at all - an absent
+        signal must not be reported as a confident "nothing was ready".
+        """
+        if not self.cpu_accounting_available or idle_cpu_us <= 0:
+            return 0
+        if not self.effective_cpus:
+            return 0
+
+        # Boundaries where either the running count or the pending count
+        # can change.
+        pending_windows = []
+        for interval in self._task_intervals:
+            ready_us = interval.get('ready_us')
+            start_us = interval.get('start_us', 0)
+            if ready_us is None or ready_us >= start_us:
+                continue
+            pending_windows.append((ready_us, start_us))
+        if not pending_windows:
+            return 0
+
+        running_windows = [
+            (i.start_us, i.end_us) for i in self.intervals if i.end_us > i.start_us
+        ]
+
+        # Boundaries come from the data, not from `[0, wall_clock_us]`:
+        # task timestamps are absolute (real captures carry epoch
+        # microseconds) while `wall_clock_us` is a duration, so clamping
+        # to that range would discard every real boundary.
+        boundaries = set()
+        for start_us, end_us in pending_windows + running_windows:
+            boundaries.add(start_us)
+            boundaries.add(end_us)
+        ordered = sorted(boundaries)
+
+        underparallel_us = 0.0
+        for slice_start, slice_end in zip(ordered, ordered[1:]):
+            width = slice_end - slice_start
+            if width <= 0:
+                continue
+            if not any(s <= slice_start < e for s, e in pending_windows):
+                continue
+            running = sum(1 for s, e in running_windows if s <= slice_start < e)
+            free_slots = self.effective_cpus - running
+            if free_slots > 0:
+                underparallel_us += free_slots * width
+
+        # The slice sweep and `_compute_idle_cpu_time` measure the same
+        # quantity two ways (free capacity integrated over time, versus
+        # total capacity minus consumed). They agree on well-formed
+        # runs, but clamping and quantization elsewhere can leave the
+        # sweep marginally larger; capping keeps the bucket from
+        # exceeding the idle it is a portion of.
+        return int(min(underparallel_us, idle_cpu_us))
     
     def _compute_idle_cpu_time(self) -> int:
         """

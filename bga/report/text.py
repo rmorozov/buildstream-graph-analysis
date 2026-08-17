@@ -584,6 +584,24 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             lines.append("  Buckets below are task slot-time (occupancy), not CPU time:")
         for bucket_name, bucket_us in buckets.items():
             lines.append(f"  {str(bucket_name).replace('_', ' ').title():20s} {bucket_us / 1e6:8.2f}s")
+        # UX-48: the two idle buckets recommend opposite fixes, so
+        # whichever one dominates is the actionable part of this block.
+        # Naming that here rather than leaving a reader to infer it from
+        # two similar-looking numbers.
+        underparallel_us = buckets.get('idle_underparallel', 0)
+        no_tasks_us = buckets.get('idle_no_tasks', 0)
+        if underparallel_us > 0:
+            lines.append(
+                f"  -> {underparallel_us / 1e6:.2f}s of that idle capacity had work "
+                f"ready and waiting for a builder: raising build concurrency is the "
+                f"lever here (`bga sweep` estimates the payoff)."
+            )
+        if no_tasks_us > underparallel_us and no_tasks_us > 0:
+            lines.append(
+                f"  -> {no_tasks_us / 1e6:.2f}s had nothing ready to run at all - no "
+                f"amount of extra concurrency helps that; it is a dependency-graph "
+                f"shape problem."
+            )
         lines.append("")
 
     # Diagnostics (Part 20-29, M5)

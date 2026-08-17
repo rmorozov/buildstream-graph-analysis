@@ -1327,6 +1327,15 @@ class BuildEfficiencyAnalyzer:
                 'end_us': task.finish_us,
                 'cpu_usage_us': task.dur_us,
                 'concurrent_tasks': [str(task.task_key)],
+                # UX-48: `[ready_us, start_us)` is the window in which
+                # this task was dependency-ready but had not been
+                # dispatched - the evidence that distinguishes idle
+                # capacity meaning "nothing could run" from idle
+                # capacity meaning "nothing was scheduled". `ready_us`
+                # is a real `max(finish(predecessors))` from
+                # bga/normalize/timestamps.py, so no new capture or
+                # graph plumbing is needed for the split.
+                'ready_us': task.ready_us,
             }
             task_intervals.append(interval)
         

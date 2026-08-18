@@ -142,9 +142,18 @@ OpenSSL, ICU, Doxygen) are each minutes, not hours.
 ## Reproducing
 
 The workflow runs **weekly** (Sunday 03:00 UTC) and on
-`workflow_dispatch`. It also runs on a push to a `claude/**` branch that
-touches the workflow or the capture tooling it drives — deliberately
-narrow, because the job costs a runner-hour or more.
+`workflow_dispatch`, and on nothing else.
+
+It used to also run on a push touching the capture tooling, and that
+trigger cancelled **17 of this workflow's first 24 runs** (`UX-90`):
+each new push to a working branch killed the in-flight ~65-minute
+capture through the concurrency group, several after 25–57
+runner-minutes. The `paths` filter could not prevent it, because it is
+evaluated across the whole pushed commit range — a docs-only push at
+HEAD still fired a capture. The need it served, exercising
+capture-tooling changes, is already met by CI's `bst-examples` job,
+which traces a real sandboxed build of `examples/06` on every push, and
+by `tests/unit/test_rebuild_set.py`.
 
 `capture_mode` selects which of the two CI scenarios is captured
 (`UX-86`). The default, `incremental`, is the warm-then-cut capture

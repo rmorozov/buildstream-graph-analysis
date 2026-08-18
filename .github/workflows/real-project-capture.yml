@@ -57,11 +57,13 @@
 #
 # How to run it
 # -------------
-# `workflow_dispatch` once this file is on the default branch. Before
-# then, it also runs on a push that touches this file or the capture
-# tooling it drives - which is how the round-6 captures were produced, and
-# is deliberate: this job costs a runner-hour or more and should not fire
-# on unrelated pushes.
+# Weekly (`schedule`, UX-81) and on `workflow_dispatch`. It deliberately
+# does *not* run on push any more: that trigger cancelled 17 of this
+# workflow's first 24 runs through the concurrency group, several after
+# 25-57 runner-minutes of a ~65-minute job (UX-90). Capture-tooling
+# changes are exercised by CI's `bst-examples` job instead, which traces a
+# real sandboxed build of `examples/06` on every push for a fraction of
+# the cost.
 name: Real-project capture
 
 on:
@@ -103,20 +105,30 @@ on:
   # week's slack before the next one if a run wedges.
   schedule:
     - cron: "0 3 * * 0"
-  push:
-    # Branch-scoped on purpose: a merge to `main` that touches the capture
-    # tooling should not silently spend a runner-hour. On `main` this job
-    # is dispatch-only.
-    branches:
-      - 'claude/**'
-    paths:
-      - .github/workflows/real-project-capture.yml
-      - tools/bst_rebuild_set.py
-      - tools/bst_native_build_tracer.py
-      - tools/native_trace/**
+  # UX-90: there is deliberately no `push` trigger. Of the first 24 runs
+  # of this workflow, **17 were cancelled** - each new push to a working
+  # branch killed the in-flight ~65-minute capture through the
+  # concurrency group below, several after 25-57 runner-minutes, and on
+  # one day five push-triggered runs were cancelled and none published.
+  # The path filter could not prevent it either: it is evaluated across
+  # the whole pushed commit range, so a docs-only push at HEAD still
+  # fired a capture.
+  #
+  # The need that trigger served - "capture-tooling changes should be
+  # exercised" - is real and is already met, cheaply, by CI's own
+  # `bst-examples` job, which runs `bst_native_build_tracer run` against
+  # a real sandboxed build of `examples/06` on every push and pull
+  # request, and by `tests/unit/test_rebuild_set.py` for the cut
+  # computation. Neither costs a runner-hour.
+  #
+  # `UX-81` made `schedule:` + `workflow_dispatch` the data-producing
+  # paths, which is what left this one with nothing to do.
 
 concurrency:
   group: real-project-capture-${{ github.ref }}
+  # Kept for dispatch: two dispatches of the same ref should not race for
+  # the same publish refs. With the push trigger gone, this can no longer
+  # cancel a capture that a push happened to overlap.
   cancel-in-progress: true
 
 env:

@@ -524,3 +524,126 @@ def test_a_configure_share_below_the_bar_is_not_a_finding(tmp_path):
         "[00:01:00] SUCCESS [abc12345] big.bst: Build\n"
     )
     assert build_report(scan_log_tree(str(tmp_path / "logs")))["findings"] == []
+
+
+# --- UX-101: the longitudinal ranking ------------------------------------
+
+def _tax_tree(tmp_path, builds):
+    """`builds` is a list of (element, key, seconds, stamp) tuples."""
+    root = tmp_path / "logs"
+    for element, key, seconds, stamp in builds:
+        directory = root / "p" / element.removesuffix(".bst")
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / f"{key}-build.{stamp}.log").write_text(
+            f"BuildStream 2.7.0 - Tuesday, 18-08-2026 at "
+            f"{stamp[9:11]}:{stamp[11:13]}:{stamp[13:15]}\n"
+            f"[--:--:--] START   [{key}] {element}: Build\n"
+            f"[--:--:--] START   {element}: Running commands\n"
+            f"[00:00:{seconds:02d}] SUCCESS {element}: Running commands\n"
+            f"[00:00:{seconds:02d}] SUCCESS [{key}] {element}: Build\n"
+        )
+    return root
+
+
+def test_the_ranking_is_by_total_seconds_across_the_tree(tmp_path):
+    """The point of the task: an element fourth on today's critical path
+    but rebuilding in most builds taxes the team more than today's
+    first, which rebuilds monthly. Total is what says so."""
+    from tools.bst_cache_logs import developer_tax
+
+    root = _tax_tree(tmp_path, [
+        ("heavy.bst", "aaaa0001", 30, "20260818-160000"),   # once, 30s
+        ("frequent.bst", "eeee0001", 20, "20260818-160100"),
+        ("frequent.bst", "eeee0002", 20, "20260818-160200"),
+        ("frequent.bst", "eeee0003", 20, "20260818-160300"),
+    ])
+    ranking = developer_tax(scan_log_tree(str(root)))['ranking']
+    assert [row['element'] for row in ranking] == ["frequent.bst", "heavy.bst"]
+    assert ranking[0]['total_us'] == 60_000_000
+    assert ranking[0]['mean_us'] == 20_000_000
+
+
+def test_an_unchanged_key_rebuild_keeps_ux93s_label(tmp_path):
+    """A rebuild with the same key is a retention question, not a
+    project one, and the tax breakdown must not blur that back."""
+    from tools.bst_cache_logs import developer_tax
+
+    root = _tax_tree(tmp_path, [
+        ("a.bst", "aaaa0001", 5, "20260818-160000"),
+        ("a.bst", "aaaa0001", 5, "20260818-160100"),
+    ])
+    causes = developer_tax(scan_log_tree(str(root)))['ranking'][0]['causes']
+    assert causes == {'unchanged_key': 1, 'own_key_changed': 0, 'rooted_upstream': 0}
+
+
+def test_without_a_graph_an_upstream_cause_is_not_invented(tmp_path):
+    """These logs carry no dependency edges. Reporting `rooted_upstream`
+    without them would be a claim the data cannot support, so the
+    category is absent from `causes_available` and the rebuild counts as
+    the element's own change - stated in the output rather than folded
+    in silently."""
+    from tools.bst_cache_logs import developer_tax
+
+    root = _tax_tree(tmp_path, [
+        ("dep.bst", "dddd0001", 5, "20260818-160000"),
+        ("dep.bst", "dddd0002", 5, "20260818-160100"),
+        ("app.bst", "eeee0001", 5, "20260818-160010"),
+        ("app.bst", "eeee0002", 5, "20260818-160110"),
+    ])
+    tax = developer_tax(scan_log_tree(str(root)))
+    assert 'rooted_upstream' not in tax['causes_available']
+    app = next(row for row in tax['ranking'] if row['element'] == 'app.bst')
+    assert app['causes']['own_key_changed'] == 1
+
+
+def test_with_a_graph_the_upstream_root_is_named(tmp_path):
+    """The headline the task exists for: one volatile key near the root
+    *is* the top developer tax, and naming it is the number that proves
+    it."""
+    from tools.bst_cache_logs import developer_tax
+
+    root = _tax_tree(tmp_path, [
+        ("dep.bst", "dddd0001", 5, "20260818-160000"),
+        ("dep.bst", "dddd0002", 5, "20260818-160100"),
+        ("app.bst", "eeee0001", 5, "20260818-160010"),
+        ("app.bst", "eeee0002", 7, "20260818-160110"),
+    ])
+    tax = developer_tax(
+        scan_log_tree(str(root)),
+        dependencies=[{"predecessor": "dep.bst", "successor": "app.bst"}],
+    )
+    assert 'rooted_upstream' in tax['causes_available']
+    app = next(row for row in tax['ranking'] if row['element'] == 'app.bst')
+    assert app['causes'] == {'unchanged_key': 0, 'own_key_changed': 0, 'rooted_upstream': 1}
+    assert app['upstream_roots'] == [{'element': 'dep.bst', 'downstream_us': 7_000_000}]
+
+
+def test_the_build_count_is_a_lower_bound_and_says_so(tmp_path):
+    """Measured, not assumed: a log's header timestamp equals its own
+    filename stamp, so it is the *task's* start and nothing in the tree
+    says which logs belonged to one `bst build`. The largest per-element
+    count is a lower bound on the number of builds, and calling it a
+    count would be a number this data cannot produce."""
+    from tools.bst_cache_logs import developer_tax
+
+    root = _tax_tree(tmp_path, [
+        ("a.bst", "aaaa0001", 5, "20260818-160000"),
+        ("a.bst", "aaaa0002", 5, "20260818-160100"),
+        ("b.bst", "bbbb0001", 5, "20260818-160010"),
+    ])
+    tax = developer_tax(scan_log_tree(str(root)))
+    assert tax['builds_lower_bound'] == 2
+    assert tax['build_logs'] == 3
+    assert 'lower bound' in tax['caveat']
+
+
+def test_a_short_window_is_declared_weak_rather_than_withheld(tmp_path):
+    """A three-build tree is what most developers have, and it does say
+    something - so it is printed with the count and labelled, not
+    suppressed."""
+    from tools.bst_cache_logs import developer_tax
+
+    root = _tax_tree(tmp_path, [
+        ("a.bst", f"aaaa000{i}", 5, f"20260818-1600{i:02d}") for i in range(3)
+    ])
+    assert developer_tax(scan_log_tree(str(root)))['weak_window'] is True

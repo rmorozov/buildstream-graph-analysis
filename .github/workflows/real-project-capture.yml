@@ -572,7 +572,7 @@ jobs:
           # so the set is discoverable with one `git ls-remote` and no
           # index file to keep consistent:
           #
-          #   git ls-remote origin 'refs/heads/captures/fdsdk/<ref>-b4j4-*'
+          #   git ls-remote origin 'refs/heads/captures/fdsdk/<ref>-<mode>-b4j4-*'
           # UX-86: the mode is part of the shape. A cold capture and an
           # incremental one measure different builds of the same commit -
           # `bga compare` refuses to compare them (UX-78) - so they must

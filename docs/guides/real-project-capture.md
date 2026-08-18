@@ -216,7 +216,7 @@ git checkout -q FETCH_HEAD -- run
 bga analyze run
 
 # Every capture of one shape - the baseline set
-git ls-remote origin 'refs/heads/captures/fdsdk/953683fb-b4j4-*'
+git ls-remote origin 'refs/heads/captures/fdsdk/953683fb-incremental-b4j4-*'
 ```
 
 Assembling a baseline set from three of those refs is then the documented

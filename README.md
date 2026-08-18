@@ -332,9 +332,10 @@ make lint                 # ruff
 make dev-run              # sample report, fast smoke check
 ```
 
-Fourteen tests are gated on a real BuildStream being present and are skipped without one. To run
+Some tests are gated on a real BuildStream being present and are skipped without one. To run
 them, add the `bst` extra and `buildstream-plugins`, then `pytest -m bst` (CI's `bst-tests` job
-does exactly this and fails if any of the fourteen is skipped).
+does exactly this, and fails if *any* of them is skipped — a skipped tier would otherwise
+read as a pass).
 
 ## License
 

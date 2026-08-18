@@ -201,7 +201,7 @@ concurrent capture. It was this bug both times.
 
 ### 4. The CI gap, closed
 
-The 14 bst-gated tests now carry a `bst` marker (registered in
+The bst-gated tests now carry a `bst` marker (registered in
 `pyproject.toml`) alongside their existing `skipif`, and a new
 `bst-tests` CI job installs `.[dev,bst]` + `buildstream-plugins` +
 bubblewrap + a C toolchain and runs them.
@@ -216,7 +216,10 @@ unmarked test only when a real bst produced the input.
 ### Acceptance
 
 - `pytest` against bst 2.7.0 in a clean venv: **1169 passed, 0 failed**.
-- `pytest -m bst`: **14 passed, 1155 deselected** — zero skipped.
+- `pytest -m bst` at the time of this round: **14 passed, 1155 deselected** — zero
+  skipped. (`UX-91` later added a fifteenth and moved CI's pin with it; the pin is
+  now the only hand-written copy of that number and a test checks it against the
+  marked tests — see `UX-97`.)
 - `pytest -m "not bst"`: 1155 passed, 14 deselected (the marker
   partitions the suite exactly).
 - The max-jobs test asserts the `notparallel` discrimination against a

@@ -13,7 +13,9 @@ from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind, S
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
-from .graph.edg import analyze_graph, compute_element_durations
+from .graph.edg import (
+    analyze_graph, compute_element_durations, compute_realizable_savings,
+)
 from .attribution.blame_chain import BlameChainAnalyzer
 from .floors import (
     compute_capacity_lower_bound,
@@ -1182,6 +1184,17 @@ class BuildEfficiencyAnalyzer:
                 ),
                 'downstream_count': graph_analysis['downstream_count'],
                 'slack': graph_analysis['slack'],
+                # UX-70: is this build a chain or a mesh? The share of
+                # elements with zero slack decides whether "optimize the
+                # top element" is even meaningful advice - on a real
+                # freedesktop-sdk capture it is 77%, and the third-ranked
+                # element was worth 3.2% of the build rather than its
+                # 17.7% share of the path.
+                'zero_slack_share': (
+                    sum(1 for v in graph_analysis['slack'].values() if v == 0)
+                    / len(graph_analysis['slack'])
+                    if graph_analysis['slack'] else None
+                ),
                 'unweighted_depth': graph_analysis['unweighted_depth'],
             }
 
@@ -1300,6 +1313,25 @@ class BuildEfficiencyAnalyzer:
             duration_by_uid[task.task_key.element_uid] += task.dur_us
         kind_by_uid = self._element_kind_lookup()
         path_total_us = sum(duration_by_uid.get(uid, 0) for uid in critical_path)
+        # UX-70: share of the path says what the chain is made of; it does
+        # not say what changing an element is worth, because it holds the
+        # rest of the graph fixed. On a real capture where 77% of elements
+        # have zero slack, that assumption fails badly - `python3.bst`
+        # holds 17.7% of the path and is worth 3.2% of the build.
+        # Evaluated for the heaviest non-structural candidates only, since
+        # each costs one longest-path recomputation.
+        savings: Dict[str, int] = {}
+        if self.graph:
+            candidates = [
+                uid for uid in sorted(
+                    critical_path, key=lambda u: -duration_by_uid.get(u, 0)
+                )
+                if duration_by_uid.get(uid)
+                and kind_by_uid.get(uid) not in STRUCTURAL_ELEMENT_KINDS
+            ]
+            savings = compute_realizable_savings(
+                self.graph, dict(duration_by_uid), candidates
+            )
         return [
             {
                 'element_uid': uid,
@@ -1309,6 +1341,9 @@ class BuildEfficiencyAnalyzer:
                 'share_of_path': (
                     duration_by_uid.get(uid, 0) / path_total_us if path_total_us else None
                 ),
+                # None means "not evaluated" (structural, zero-duration, or
+                # outside the evaluated candidates), never "no saving".
+                'realizable_saving_us': savings.get(uid),
             }
             for uid in critical_path
         ]

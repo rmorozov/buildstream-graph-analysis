@@ -1,6 +1,6 @@
 # UX-70: the report ranks by share of the critical path, but 82% of one element's share is not realizable — a user optimizing it would get 3% back, not 18%
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** `UX-65` (which introduced the ranking this corrects)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-65` (which introduced the ranking this corrects)
 
 ## Motivation
 
@@ -82,9 +82,49 @@ answer a question the user is not asking.
    of path agree, and the ranking is unchanged.
 4. The recomputation cost is bounded and stated for large graphs.
 
+## Fix Implemented
+
+`compute_realizable_savings(graph, durations, candidates)` recomputes the
+longest path with each candidate's duration zeroed. Zeroing rather than
+halving is deliberate: it is the **upper bound** on what optimizing an
+element can ever be worth, which is the number that stops a wasted week.
+
+Bounded to `REALIZABLE_SAVING_CANDIDATES = 8` — each costs one
+longest-path recomputation — and evaluated only for non-structural
+elements with real measured duration.
+
+On the real capture:
+
+```
+Elements Most Worth Optimizing First (by what optimizing them would
+  actually save - this build is chain-bound, not scheduler-bound):
+  1. components/_private/cmake-stage1.bst (1569.8s, 43.5% of the critical path)
+       - making it instant would save 1569.8s (43.4% of the build)
+  2. components/openssl.bst (672.1s, 18.6% of the critical path)
+       - making it instant would save 522.5s (14.5% of the build)
+  3. components/doxygen.bst (513.5s, 14.2% of the critical path)
+       - making it instant would save 513.5s (14.2% of the build)
+  Note: 77% of elements have zero slack - this graph is a mesh of
+  near-equal chains, so savings on one element are often capped by the
+  next chain rather than by its own duration
+```
+
+**`python3.bst` is gone from the top three**, displaced by `doxygen.bst`
+— shorter in duration, worth 4.5x more.
+
+`signals.zero_slack_share` publishes the density, stated in the report
+above 50% so a reader knows chain from mesh *before* acting on any
+ranking. The section heading changed with the ranking, since it said "by
+share of the critical path" and would otherwise describe something the
+report no longer does.
+
+Tests: 8 (`tests/unit/test_realizable_saving.py`), including the near-tie
+case in miniature and the `None`-means-not-evaluated fallback. Golden
+regenerated for the additive `realizable_saving_us` key.
+
 ## Verification Log
 
-Filed 2026-08-17. Slack distribution from `analyze.json`'s
+Filed and implemented 2026-08-17. Slack distribution from `analyze.json`'s
 `signals.slack` in the capture published as `5eda28a`; realizable savings
 computed by recomputing the longest path over that capture's
 `graph-declared.json` build edges with measured per-element durations from

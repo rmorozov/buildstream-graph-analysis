@@ -788,10 +788,24 @@ def cmd_correlate(args: argparse.Namespace) -> int:
         # observed run with never-read gating edges removed, instead of
         # only reporting each edge separately and leaving the reader to
         # invent the restructuring themselves.
+        # UX-100: Plane 3's toll, when a report for the same project is
+        # supplied. Without it the merge half of the granularity findings
+        # has no input and is silent, which is correct - the toll is the
+        # whole basis for calling an element too small.
+        cache_logs = None
+        if getattr(args, 'cache_logs', None):
+            try:
+                with open(args.cache_logs, 'r', encoding='utf-8') as handle:
+                    cache_logs = json.load(handle)
+            except (OSError, json.JSONDecodeError) as exc:
+                print(f"Warning: --cache-logs {args.cache_logs} could not be read "
+                      f"({exc}); continuing without it", file=sys.stderr)
         joined = correlate(
             analysis, native_report,
             tasks=getattr(analyzer, 'normalized_tasks', None),
             run_context=getattr(analyzer, 'run_context', None),
+            cache_logs=cache_logs,
+            dependencies=getattr(getattr(analyzer, 'graph', None), 'dependencies', None),
         )
         if args.format == 'json':
             return json.dumps(joined, indent=2)
@@ -1160,6 +1174,12 @@ def create_parser() -> argparse.ArgumentParser:
                 'Output format: text (human-readable), json (machine-readable). '
                 'Default: text. No csv - the join has no tabular form.'
             )
+    correlate_parser.add_argument(
+        '--cache-logs', default=None, metavar='PATH',
+        help="A Plane 3 report (`bga cache-logs --format json`) for the same "
+             "project. Supplies the per-element sandbox toll, which is what the "
+             "merge half of the granularity findings is computed from (UX-100).",
+    )
     correlate_parser.add_argument(
         'native_report', type=str,
         help='Path to the JSON report written by `tools/bst_native_build_tracer.py run` (Plane 2). '

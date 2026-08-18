@@ -142,6 +142,9 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `redundant-operation` | medium | it pays for an operation other elements also run |
 | `declared-not-used` | info | opened no file staged by a declared build dependency — evidence, not a verdict |
 | `unread-gating-chain` | high | a *group* of never-read edges chains elements along the critical path (`UX-82`) |
+| `merge-candidate` | medium | sibling elements spending at least half their time on sandbox toll rather than building — needs `--cache-logs` (`UX-100`) |
+| `merge-not-indicated` | info | no element pays more toll than it builds, and how far the worst one is from the line |
+| `split-candidate` | info | an element holding a material share of the critical path with real internal parallelism — evidence, never a projection (`UX-100`) |
 
 `bga cache-logs --format json` → `.findings[].id` (1), built in `tools/bst_cache_logs.py` rather than `bga/findings.py` because it reads BuildStream's own logs and, optionally, a Plane 2 report — neither of which the run-directory analyzer has:
 
@@ -355,6 +358,7 @@ Documented here because they exist and nothing user-facing said so:
 
 - `bga sweep --calibration-dir DIR` (`UX-14` tier 2) — replaces the sweep's fixed-duration model with a contention-aware one calibrated from real runs in `DIR`. Without it the sweep's own caveat applies: the predicted curve is a shape, not a runtime prediction, because the replay model does not know about CPU.
 - `bga capture run --invocation-log PATH` / `--argv-log PATH` / `--raw-log PATH` — where Plane 2 writes its own capture logs. `--invocation-log` defaults to a path beside the report (`UX-80`); `--no-invocation-log` turns it off.
+- `bga correlate --cache-logs PLANE3.json` — adds the per-element sandbox toll from a Plane 3 report, which is what the merge half of the granularity findings is computed from (`UX-100`). Without it the split half still runs; the merge half is silent, because the toll is the whole basis for calling an element too small.
 - `bga compare --baseline-plane2 A.json --candidate-plane2 B.json` — notes when the candidate's measured memory envelope grew (`UX-104`). Two flags, because reusing one report for both runs would compare a run against itself. A note, never a gate: peak RSS has no measured noise band.
 - `bga cache-trend RUN...` — a series, oldest first: per-run hit ratio, transfer seconds and seconds per artifact, churn against the predecessor (with `UX-93`'s labels), and a finding when the newest run leaves the band its trailing window describes (`UX-103`). The noise model is `bga compare`'s, widened to the fixed rule when the measured band is narrower. Four runs minimum — three trailing plus the one being judged — and it says so rather than trending fewer.
 - `bga baseline --glob 'captures/<project>/<commit>-<mode>-b<N>j<M>-*' -n 3 --candidate RUN` — assembles a baseline set from published capture refs and band-compares against it in one command (`UX-96`). Fetches the newest N, untars the refs that predate the uncompressed `run/`, refuses a set whose captures are not comparable (exit 6), and warns when the set was produced by more than one `bga` revision. Every member supplies the band, the newest is also the positional baseline — with three refs that is exactly the `MIN_BASELINE_RUNS` the band needs.

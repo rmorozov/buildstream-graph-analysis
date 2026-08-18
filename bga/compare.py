@@ -143,6 +143,15 @@ class ComparisonResult:
     # an average and dilutes with project size; these two are marginal.
     element_diff: Optional[dict] = None
     marginal_efficiency: Optional[dict] = None
+    # UX-87: whether a requested efficiency gate actually ran. Set by the
+    # CLI, because whether a gate was *requested* is a flag question this
+    # module never sees. Three states, and the distinction is the point:
+    # None = no efficiency gate was asked for; True = asked for and
+    # evaluated; False = asked for and could not run, because a run had
+    # no `occupancy_ratio`. A CI consumer keying on `false` learns
+    # "nothing was checked", which a `0` exit code alone cannot say.
+    efficiency_gate_evaluated: Optional[bool] = None
+    efficiency_gate_signal: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {
@@ -163,6 +172,8 @@ class ComparisonResult:
             'marginal_efficiency': self.marginal_efficiency,
             'failed_runs': self.failed_runs,
             'baseline_band': self.baseline_band,
+            'efficiency_gate_evaluated': self.efficiency_gate_evaluated,
+            'efficiency_gate_signal': self.efficiency_gate_signal,
         }
 
 
@@ -610,6 +621,51 @@ def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Op
 # same way on their own runner, which is why `--max-efficiency-drop`
 # exists.
 _EFFICIENCY_DROP_PP = 5.0
+
+
+def efficiency_signal_status(
+    comparison: "ComparisonResult", drop_gate_on: bool, floor_gate_on: bool,
+) -> dict:
+    """UX-87: whether the requested efficiency gate(s) could actually be
+    evaluated, and which run withheld the signal if not.
+
+    Both gates read `occupancy_ratio`, and both return False - pass -
+    when it is absent. That is a legitimate fail-open policy; a *silent*
+    one is not, and this is the identical failure mode `UX-40` was filed
+    to eliminate for the confidence interaction, one field over. A
+    pipeline that believes it is gating on efficiency and is not should
+    be able to see that from stderr and from the JSON.
+
+    The two gates need different things and are reported separately:
+    `--min-efficiency` is a statement about the candidate run alone, so a
+    baseline with no occupancy does not stop it; only
+    `--fail-on-efficiency-regression` needs both.
+
+    Returns `evaluated: None` when neither gate was requested - "not
+    asked for" and "asked for and could not run" are different, and only
+    the second is a problem.
+    """
+    baseline = comparison.baseline_metrics.get('occupancy_ratio')
+    candidate = comparison.candidate_metrics.get('occupancy_ratio')
+    missing = [
+        label for label, value in (('baseline', baseline), ('candidate', candidate))
+        if value is None
+    ]
+    not_applied = []
+    if floor_gate_on and candidate is None:
+        not_applied.append('--min-efficiency')
+    if drop_gate_on and (baseline is None or candidate is None):
+        not_applied.append('--fail-on-efficiency-regression')
+
+    if not (drop_gate_on or floor_gate_on):
+        evaluated = None
+    else:
+        evaluated = not not_applied
+    return {
+        'evaluated': evaluated,
+        'missing_occupancy_in': missing,
+        'gates_not_applied': not_applied,
+    }
 
 
 def efficiency_regression_exceeds_threshold(

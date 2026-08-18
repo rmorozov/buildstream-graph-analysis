@@ -343,6 +343,32 @@ Two deliberate limits:
 - **A change that adds no elements is an empty check, and says so** rather than reporting green. The whole-build gate is what catches an *existing* element that got worse.
 - **The per-element diff is published either way**, in `element_diff` (`new`/`removed`/`moved_onto_critical_path`) and `marginal_efficiency`, so a CI comment can render "New this change: … 8.0s added, 8.0s of it on the critical path" without running any gate at all.
 
+### When the efficiency gates cannot run
+
+Both efficiency gates read `occupancy_ratio`, which needs a
+`resource_capacities.PROCESS` in `run-context.json`. Any legacy or
+hand-built run directory may have none, and both gates then pass —
+correctly, since a verdict must not be fabricated from missing data, but
+for a long time silently. A pipeline that believed it was gating on
+efficiency saw exit `0`, an empty stderr, and JSON indistinguishable
+from a run that had really passed.
+
+Fail-open is still the default. It is no longer silent (`UX-87`):
+
+- stderr carries `Efficiency gate NOT APPLIED: … the baseline run has no
+  \`occupancy_ratio\` signal …`, naming the gate and the run.
+- `--format json` publishes `efficiency_gate_evaluated` — `true` (asked
+  for and evaluated), `false` (asked for, could not run), or `null`
+  (no efficiency gate was requested), plus `efficiency_gate_signal` with
+  `missing_occupancy_in` and `gates_not_applied`.
+- `--require-efficiency-signal` turns it into a failure, exit `7`, for
+  pipelines that would rather break than not gate.
+
+The two gates are reported separately because they need different
+things: `--min-efficiency` is a statement about the candidate run alone,
+so a baseline with no occupancy does not stop it; only
+`--fail-on-efficiency-regression` needs both.
+
 ### 1. Quick Efficiency Check
 Get a quick overview of build efficiency:
 ```bash
@@ -387,6 +413,7 @@ bga analyze /path/to/run-directory --diagnostics --format json | \
 - `4`: `bga compare --fail-on-regression` only - the analyzed build itself regressed beyond the threshold. Distinct from 1/2/3, which all mean `bga` itself failed to run - this means `bga` ran successfully and is reporting a real regression (`docs/scenarios/UX-03`).
 - `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/scenarios/UX-39`).
 - `6`: `bga compare` refused - the two runs are not comparable (they share fewer than half their element UIDs, or one is a caches-off run and the other incremental). Not a verdict about the build at all, which is why it does not share a code with one (`docs/scenarios/UX-78`). `--allow-mismatch` overrides.
+- `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_ratio`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`docs/scenarios/UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
 
 ## See Also
 

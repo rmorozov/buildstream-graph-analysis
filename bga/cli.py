@@ -29,7 +29,8 @@ from .analyzer import BuildEfficiencyAnalyzer
 from .compare import (
     _EFFICIENCY_DROP_PP, DEFAULT_BAND_K, MIN_BASELINE_RUNS, compare_runs,
     efficiency_below_floor,
-    efficiency_regression_exceeds_threshold, regression_exceeds_threshold,
+    efficiency_regression_exceeds_threshold, efficiency_signal_status,
+    regression_exceeds_threshold,
 )
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
@@ -202,6 +203,17 @@ def _produce_compare_output(args: argparse.Namespace):
         band_k=getattr(args, 'band_k', None) or DEFAULT_BAND_K,
         capacity=args.capacity, verbose=args.verbose,
     )
+    # UX-87: stamped before serialization so `--format json` carries it -
+    # a CI consumer must be able to tell "the efficiency gate passed"
+    # from "the efficiency gate did not run".
+    signal = efficiency_signal_status(
+        comparison,
+        drop_gate_on=getattr(args, 'fail_on_efficiency_regression', False),
+        floor_gate_on=getattr(args, 'min_efficiency', None) is not None,
+    )
+    comparison.efficiency_gate_evaluated = signal['evaluated']
+    comparison.efficiency_gate_signal = signal
+
     if args.format == 'json':
         output = json.dumps(comparison.to_dict(), indent=2, default=str)
     else:
@@ -336,6 +348,17 @@ EXIT_CODE_EFFICIENCY_REGRESSION = 5
 # CI reads as "your build got slower" when the truth is "your job is
 # comparing the wrong things".
 EXIT_CODE_MISMATCHED_RUNS = 6
+# UX-87: "the gate you asked for could not run" is not a verdict about
+# the build either. Reusing 4 would put it in the same bucket as "your
+# build got slower", which is the mis-triage `UX-88` already records
+# against that code; reusing 5 would assert the build is less efficient,
+# which is precisely what could not be determined. Only reachable with
+# `--require-efficiency-signal`, which is opt-in: without it the gate
+# still fails open, it just says so now.
+#
+# `--fail-on-low-confidence` (UX-40) keeps returning 4 despite being the
+# same shape of flag - it shipped that way and a pipeline may key on it.
+EXIT_CODE_SIGNAL_UNAVAILABLE = 7
 
 # UX-79: the share of newly-added work that may land on the critical path
 # before the marginal gate fires. Measured on fixtures at two scales: a
@@ -455,6 +478,34 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     # a build that got slower *and* less efficient should be triaged as
     # the second.
     if efficiency_gate_on:
+        # UX-87: a gate that stops gating must say so. Both efficiency
+        # gates read `occupancy_ratio` and both return False - pass -
+        # when a run lacks it, so a pipeline that asked for the gate
+        # would see exit 0 and nothing on stderr while nothing was
+        # checked. Fail-open stays the default (UX-40's precedent: do not
+        # block a pipeline on a signal you do not have); it just stops
+        # being silent, and `--require-efficiency-signal` turns it into a
+        # failure for pipelines that would rather break than not gate.
+        signal = getattr(comparison, 'efficiency_gate_signal', None) or efficiency_signal_status(
+            comparison,
+            drop_gate_on=getattr(args, 'fail_on_efficiency_regression', False),
+            floor_gate_on=getattr(args, 'min_efficiency', None) is not None,
+        )
+        if signal['gates_not_applied']:
+            runs = " and ".join(signal['missing_occupancy_in'])
+            print(
+                f"Efficiency gate NOT APPLIED: {'/'.join(signal['gates_not_applied'])} "
+                f"was requested, but the {runs} run has no `occupancy_ratio` signal, "
+                f"so there is nothing to gate on. This is not a pass - it is an "
+                f"unevaluated check (`efficiency_gate_evaluated: false` in --format "
+                f"json). Pass --require-efficiency-signal to treat this as a failure "
+                f"instead. See docs/scenarios/"
+                f"UX-87-efficiency-gates-silently-no-op-when-occupancy-is-missing.md.",
+                file=sys.stderr,
+            )
+            if getattr(args, 'require_efficiency_signal', False):
+                return EXIT_CODE_SIGNAL_UNAVAILABLE
+
         if efficiency_below_floor(comparison, getattr(args, 'min_efficiency', None)):
             candidate = comparison.candidate_metrics.get('occupancy_ratio')
             print(
@@ -1075,6 +1126,14 @@ def create_parser() -> argparse.ArgumentParser:
         'any baseline - which makes it usable on a first run, and stops a slow drift that no '
         'single delta ever trips. No default: what counts as acceptable is a statement about '
         'your project, not a universal constant.'
+    )
+    compare_parser.add_argument(
+        '--require-efficiency-signal', action='store_true',
+        help=f'UX-87: with either efficiency gate, exit {EXIT_CODE_SIGNAL_UNAVAILABLE} if a run '
+        'has no `occupancy_ratio` and the gate therefore could not be evaluated. Without this, '
+        'the gate fails open (exit 0) but says so on stderr and publishes '
+        '`efficiency_gate_evaluated: false` in --format json. For pipelines that would rather '
+        'break than silently stop gating.'
     )
     compare_parser.add_argument(
         '--baseline-run', action='append', metavar='PATH',

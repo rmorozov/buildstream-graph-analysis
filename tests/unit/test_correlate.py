@@ -355,3 +355,114 @@ def test_analyze_and_correlate_name_the_same_element_first():
 
     assert analyze_first == correlate_first == "components/_private/cmake-stage1.bst"
 
+
+# --- UX-72: the join reads all of Plane 2, ranked by evidence ----------
+#
+# Round 9's own numbers for `cmake-stage1.bst`, which is 43.4% of the
+# build and whose entire row used to be the hedged declared-vs-used
+# sentence.
+
+CMAKE = "components/_private/cmake-stage1.bst"
+
+
+def _rich_native(**overrides):
+    report = _real_native()
+    report["binary_cost"] = {
+        CMAKE: {
+            "available": True,
+            "measured_cpu_us": 5_351_136_759,
+            "by_cpu": [
+                {"binary": "cc1plus", "count": 885, "cpu_us": 4_352_550_957,
+                 "wall_s": 5525.6, "cpu_share": 0.8134},
+                {"binary": "as", "count": 1918, "cpu_us": 397_515_477,
+                 "wall_s": 5929.8, "cpu_share": 0.0743},
+            ],
+            "by_count": [],
+            "single_process_costs": [
+                {"binary": "dwz", "cpu_us": 137_043_490, "wall_s": 138.55},
+            ],
+        },
+    }
+    report["peak_memory"] = {
+        "available": True,
+        "per_element": {CMAKE: {"peak_rss_kb": 1_947_536, "measured": 10057}},
+    }
+    report["declared_vs_used"] = {
+        "unused_candidates": [
+            {"element": CMAKE, "dependency": "public-stacks/runtime-minimal.bst"},
+        ],
+    }
+    report.update(overrides)
+    return report
+
+
+def _steps(result, element):
+    return {e["element"]: e["recommendations"] for e in result["actionable"]}[element]
+
+
+def test_the_dominant_binary_reaches_the_join():
+    """`UX-69` measured that 81.3% of this element's CPU is `cc1plus`
+    three rounds ago. The command the workflow ends on never said so."""
+    steps = _steps(correlate(_real_analysis(), _rich_native()), CMAKE)
+
+    assert any("cc1plus" in step and "81%" in step for step in steps)
+
+
+def test_a_single_process_serialization_point_reaches_the_join():
+    steps = _steps(correlate(_real_analysis(), _rich_native()), CMAKE)
+
+    assert any("dwz" in step and "SINGLE process" in step for step in steps)
+
+
+def test_peak_memory_reaches_the_join():
+    steps = _steps(correlate(_real_analysis(), _rich_native()), CMAKE)
+
+    assert any("1902 MB" in step for step in steps)
+
+
+def test_measured_findings_outrank_the_hedged_one():
+    """`UX-72`: a measured 81%-of-CPU binary and an explicitly hedged
+    dependency candidate must not print as two equal bullets."""
+    steps = _steps(correlate(_real_analysis(), _rich_native()), CMAKE)
+    hedged = next(i for i, s in enumerate(steps) if "evidence, not a verdict" in s)
+
+    assert hedged == len(steps) - 1
+    assert hedged > 0
+
+
+def test_a_redundancy_worth_less_than_a_percent_of_the_element_is_not_a_step():
+    """`cmake-stage1` paying 2.2s for a shared `rm -rf` against 1569.8s
+    of realizable saving is true, and is noise in that row."""
+    small = _rich_native(redundant_operations=[{
+        "signature": "rm -rf -- /buildstream-build", "elements": [CMAKE, "components/x.bst"],
+        "occurrence_count": 8, "total_duration_s": 8.0,
+        "max_element_duration_s": 2.2, "worst_element": CMAKE,
+    }])
+    steps = _steps(correlate(_real_analysis(), small), CMAKE)
+    assert not any("also run" in step for step in steps)
+
+    big = _rich_native(redundant_operations=[{
+        "signature": "/usr/bin/m4 -P", "elements": [CMAKE, "components/x.bst"],
+        "occurrence_count": 30, "total_duration_s": 40.0,
+        "max_element_duration_s": 20.4, "worst_element": CMAKE,
+    }])
+    steps = _steps(correlate(_real_analysis(), big), CMAKE)
+    assert any("also run" in step and "20.4s" in step for step in steps)
+
+
+def test_aggregating_dependencies_are_counted_and_stated():
+    """`UX-68` set these aside three rounds ago and nothing has read them
+    since - no renderer, no consumer."""
+    report = _rich_native()
+    report["declared_vs_used"] = {
+        "unused_candidates": [],
+        "aggregating_dependencies": [
+            {"element": CMAKE, "dependency": "public-stacks/runtime-minimal.bst"},
+            {"element": "components/openssl.bst", "dependency": "public-stacks/runtime-minimal.bst"},
+        ],
+    }
+    result = correlate(_real_analysis(), report)
+
+    assert result["coverage"]["aggregating_dependency_pairs"] == 2
+    assert "set aside as aggregating" in format_correlation(result)
+

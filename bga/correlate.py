@@ -62,6 +62,39 @@ _COMPUTE_BOUND_CORES = 1.25
 # this element became instant.
 _REALIZABLE_SAVING_SHARE = 0.05
 
+# UX-72: one binary holding more than half an element's measured CPU is
+# a majority, not a tuned threshold - it says "this element is a <binary>
+# problem" and points at a different day's work from every other finding
+# the join makes.
+_DOMINANT_BINARY_SHARE = 0.5
+
+# UX-72: a single process peaking above this much resident memory is
+# where concurrent builders start to matter on an ordinary CI runner -
+# round 9's host had 16 GB across 4 builders, so 4 GB each.
+_PEAK_RSS_NOTABLE_MB = 1024
+
+# UX-72: a redundant operation is worth naming in an element's row only
+# when it is a real fraction of what fixing that element is worth at all.
+# On the real capture `cmake-stage1` pays 2.2s for a shared `rm -rf`
+# against 1569.8s of realizable saving - true, and noise in that row,
+# while `doxygen` paying 20.4s of its 513.5s for a shared `m4` is not.
+# The 1% floor is `UX-65`'s own "below this is rounding" bar.
+_REDUNDANCY_NOTABLE_SHARE = 0.01
+# Backstop for an element whose saving was never evaluated: a finding
+# worth under a second is not a next action however it is measured.
+_REDUNDANCY_NOTABLE_S = 1.0
+
+# UX-72: evidence classes, strongest first. A measured 81%-of-CPU binary
+# and an explicitly hedged dependency candidate must not print as two
+# identically-weighted bullets - round 9's join printed eight rows that
+# were all the second kind.
+_EVIDENCE_PARALLELISM = 1
+_EVIDENCE_CPU_CONCENTRATION = 2
+_EVIDENCE_SERIALIZATION = 3
+_EVIDENCE_MEMORY = 4
+_EVIDENCE_REDUNDANCY = 5
+_EVIDENCE_DECLARED_VS_USED = 6
+
 # A finding below the gate above still earns a line when Plane 2 says the
 # fix is cheap and specific - an element running at ~1 core busy is a job
 # count, not a rewrite. `UX-65`'s own floor: below 1% of wall clock is
@@ -94,6 +127,15 @@ class ElementJoin:
     requested_jobs: Optional[int] = None
     native_findings: List[str] = field(default_factory=list)
     unused_dependencies: List[str] = field(default_factory=list)
+    # UX-72: the measurements the join used to read past. Each is
+    # produced per element and was published to JSON for rounds without
+    # ever reaching the command the workflow ends on.
+    dominant_binary: Optional[dict] = None
+    serial_binary: Optional[dict] = None
+    peak_rss_kb: Optional[int] = None
+    worst_redundancy: Optional[dict] = None
+    redundancy_count: int = 0
+    aggregating_dependencies: List[str] = field(default_factory=list)
     # Synthesis
     recommendations: List[str] = field(default_factory=list)
 
@@ -189,6 +231,50 @@ def _plane2_view(native_report: dict) -> Dict[str, dict]:
         view.setdefault(entry["element"], {}).setdefault(
             "unused_dependencies", []
         ).append(entry["dependency"])
+    # UX-72: `UX-68` filtered these out of the candidate list three
+    # rounds ago and nothing has read them since - no renderer, no
+    # consumer. Carried here so the join can say how much it set aside,
+    # rather than leaving the filtered population visible only to someone
+    # reading the raw JSON.
+    for entry in declared.get("aggregating_dependencies") or []:
+        view.setdefault(entry["element"], {}).setdefault(
+            "aggregating_dependencies", []
+        ).append(entry["dependency"])
+
+    # UX-69: where an element's CPU actually went, and whether any of it
+    # sat in a single unparallelisable process.
+    for element, entry in (native_report.get("binary_cost") or {}).items():
+        if not entry.get("available"):
+            continue
+        record = view.setdefault(element, {})
+        by_cpu = entry.get("by_cpu") or []
+        if by_cpu:
+            record["dominant_binary"] = by_cpu[0]
+        serial = [s for s in (entry.get("single_process_costs") or []) if s.get("wall_s")]
+        if serial:
+            record["serial_binary"] = max(serial, key=lambda s: s["wall_s"])
+
+    # UX-63: the largest single process's resident memory.
+    for element, entry in ((native_report.get("peak_memory") or {}).get(
+        "per_element"
+    ) or {}).items():
+        if entry.get("peak_rss_kb"):
+            view.setdefault(element, {})["peak_rss_kb"] = entry["peak_rss_kb"]
+
+    # UX-23/UX-73: cross-element repeats, attributed to the element that
+    # paid the most for them. Only the worst one per element is carried:
+    # the join names a next action, not a catalogue.
+    for finding in native_report.get("redundant_operations") or []:
+        worst = finding.get("worst_element")
+        if not worst:
+            continue
+        record = view.setdefault(worst, {})
+        record["redundancy_count"] = record.get("redundancy_count", 0) + 1
+        current = record.get("worst_redundancy")
+        if current is None or (finding.get("max_element_duration_s") or 0) > (
+            current.get("max_element_duration_s") or 0
+        ):
+            record["worst_redundancy"] = finding
 
     return view
 
@@ -201,7 +287,9 @@ def _recommend(joined: ElementJoin) -> List[str]:
     true but is not what to do next, and saying so anyway is how a report
     becomes noise (the lesson of `UX-34` and `UX-37`).
     """
-    steps: List[str] = []
+    # (evidence rank, text) - sorted at the end so the strongest
+    # measured finding leads and the hedged one never displaces it.
+    ranked: List[tuple] = []
     share = joined.critical_path_share
     worth = joined.saving_share
 
@@ -246,26 +334,63 @@ def _recommend(joined: ElementJoin) -> List[str]:
                 f"busy - it is waiting, not computing"
             )
             if "pinned_to_one_job" in joined.native_findings:
-                steps.append(
+                ranked.append((_EVIDENCE_PARALLELISM,
                     f"{detail}, and its native build asked for -j1: remove "
-                    f"`notparallel` / raise its job count before touching its sources"
-                )
+                    f"`notparallel` / raise its job count before touching its sources"))
             elif joined.requested_jobs and joined.requested_jobs > 1:
-                steps.append(
+                ranked.append((_EVIDENCE_PARALLELISM,
                     f"{detail}, despite asking for -j{joined.requested_jobs}: its "
-                    f"native build is not achieving the parallelism it requested"
-                )
+                    f"native build is not achieving the parallelism it requested"))
             else:
-                steps.append(f"{detail}: look at how it is built before what it builds")
+                ranked.append((_EVIDENCE_PARALLELISM,
+                    f"{detail}: look at how it is built before what it builds"))
         else:
             # Deliberately phrased as a *negative* result. Its value is
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
-            steps.append(
+            ranked.append((_EVIDENCE_PARALLELISM,
                 f"{_impact()} - already compute-bound at "
                 f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
-                f"from its parallelism; shortening it means less work"
-            )
+                f"from its parallelism; shortening it means less work"))
+
+    # UX-72: the measurements the join used to read past. Gated on the
+    # same "is this what to do next" question as the block above - a
+    # per-element CPU breakdown for an element worth 0.1% of the build is
+    # true and is not a next step.
+    if matters or cheap_win:
+        dominant = joined.dominant_binary
+        if dominant and (dominant.get("cpu_share") or 0) >= _DOMINANT_BINARY_SHARE:
+            ranked.append((_EVIDENCE_CPU_CONCENTRATION,
+                f"{dominant['cpu_share']:.0%} of its measured CPU is one binary, "
+                f"`{dominant['binary']}` ({dominant['count']} process(es), "
+                f"{dominant['cpu_us'] / 1e6:.0f} CPU s) - this element is a "
+                f"`{dominant['binary']}` problem, so look there before anywhere else"))
+
+        serial = joined.serial_binary
+        if serial:
+            ranked.append((_EVIDENCE_SERIALIZATION,
+                f"`{serial['binary']}` is a SINGLE process holding "
+                f"{serial['wall_s']:.1f}s of wall time - a serialization point no "
+                f"job count can help; it has to get faster or go away"))
+
+        if joined.peak_rss_kb and joined.peak_rss_kb / 1024 >= _PEAK_RSS_NOTABLE_MB:
+            ranked.append((_EVIDENCE_MEMORY,
+                f"its largest single process peaked at "
+                f"{joined.peak_rss_kb / 1024:.0f} MB resident - multiply by however "
+                f"many elements build concurrently before raising `builders`"))
+
+        redundancy = joined.worst_redundancy
+        redundancy_s = (redundancy or {}).get("max_element_duration_s") or 0
+        floor_s = max(
+            _REDUNDANCY_NOTABLE_S,
+            joined.potential_saving_us / 1e6 * _REDUNDANCY_NOTABLE_SHARE,
+        )
+        if redundancy and redundancy_s >= floor_s:
+            others = [e for e in redundancy.get("elements", []) if e != joined.element]
+            ranked.append((_EVIDENCE_REDUNDANCY,
+                f"it pays {redundancy_s:.1f}s for an operation {len(others)} other "
+                f"element(s) also run ({redundancy['occurrence_count']}x in total): "
+                f"{redundancy.get('signature', '').strip()[:60]}"))
 
     if joined.unused_dependencies:
         count = len(joined.unused_dependencies)
@@ -277,14 +402,13 @@ def _recommend(joined: ElementJoin) -> List[str]:
         # from here. Rendering that as "removing the edge is free" turned
         # a measurement into a claim the measurement does not support,
         # and on a real capture it did so for 8 of 10 findings.
-        steps.append(
+        ranked.append((_EVIDENCE_DECLARED_VS_USED,
             f"opened no file staged by {count} declared build {plural} "
             f"({names}) - worth checking whether the edge is needed at "
             f"build time, or only at runtime; this is evidence, not a "
-            f"verdict (a runtime-only dependency looks identical here)"
-        )
+            f"verdict (a runtime-only dependency looks identical here)"))
 
-    return steps
+    return [text for _rank, text in sorted(ranked, key=lambda item: item[0])]
 
 
 def correlate(analysis: dict, native_report: dict) -> dict:
@@ -313,6 +437,12 @@ def correlate(analysis: dict, native_report: dict) -> dict:
             requested_jobs=p2.get("requested_jobs"),
             native_findings=p2.get("native_findings", []),
             unused_dependencies=p2.get("unused_dependencies", []),
+            dominant_binary=p2.get("dominant_binary"),
+            serial_binary=p2.get("serial_binary"),
+            peak_rss_kb=p2.get("peak_rss_kb"),
+            worst_redundancy=p2.get("worst_redundancy"),
+            redundancy_count=p2.get("redundancy_count", 0),
+            aggregating_dependencies=p2.get("aggregating_dependencies", []),
         )
         entry.recommendations = _recommend(entry)
         joined.append(entry)
@@ -380,6 +510,12 @@ def correlate(analysis: dict, native_report: dict) -> dict:
             "plane1_elements": len(plane1),
             "plane2_elements": len(plane2),
             "plane1_only_with_impact": plane1_only,
+            # UX-72: `UX-68` set these aside as unprovable and nothing
+            # has looked at them since. Counted here so the filtered
+            # population is visible rather than merely absent.
+            "aggregating_dependency_pairs": sum(
+                len(e.aggregating_dependencies) for e in joined
+            ),
         },
         "note": (
             "Joined on element UID - the only contract between the two planes. "
@@ -423,6 +559,17 @@ def format_correlation(result: dict) -> str:
         lines.append(
             "  Not traced, but Plane 1 says they matter: "
             + ", ".join(coverage["plane1_only_with_impact"])
+        )
+    # UX-72: `UX-68` filtered these out for good reason - a dependency
+    # that stages almost nothing of its own cannot be shown unused by
+    # nobody reading it - but a filtered population that is never
+    # mentioned is indistinguishable from one that does not exist.
+    if coverage.get("aggregating_dependency_pairs"):
+        lines.append(
+            f"  {coverage['aggregating_dependency_pairs']} further dependency "
+            f"pair(s) set aside as aggregating - they stage almost nothing of "
+            f"their own, so 'nobody opened it' says nothing about them (UX-68); "
+            f"see --format json for the list"
         )
     lines.append("")
 

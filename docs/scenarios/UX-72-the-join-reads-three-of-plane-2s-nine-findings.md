@@ -1,6 +1,6 @@
 # UX-72: the join reads three of Plane 2's findings and drops the rest, so "what to do next" is eight copies of the weakest one
 
-**Priority:** High | **Depends on:** `UX-63`, `UX-68`, `UX-69` (all done — all three produce findings nothing consumes)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-63`, `UX-68`, `UX-69` (all done — all three produce findings nothing consumes), `UX-73` (done first, so the join does not inherit its false positives)
 
 ## Motivation
 
@@ -109,6 +109,81 @@ shipped, the full report did not.
    sentence when a stronger measured finding exists for it.
 4. The count of dependency pairs excluded as aggregating appears
    somewhere a human reads, not only in the JSON.
+
+## Fix Implemented
+
+`_plane2_view` now carries `binary_cost`, `peak_memory` and
+`redundant_operations` alongside what it already read, and `_recommend`
+orders its output by evidence class rather than by the order the code
+happens to append in. `components/_private/cmake-stage1.bst` on round 9's
+capture — the element that is 43.4% of the build, whose entire row used
+to be the hedged sentence:
+
+```
+components/_private/cmake-stage1.bst:
+  - holds 43% of the critical path and fixing it is worth 1569.8s (43.4% of the
+    build) - already compute-bound at 3.41 cores busy, so there is nothing to gain
+    from its parallelism; shortening it means less work
+  - 81% of its measured CPU is one binary, `cc1plus` (885 process(es), 4353 CPU s)
+    - this element is a `cc1plus` problem, so look there before anywhere else
+  - `dwz` is a SINGLE process holding 138.6s of wall time - a serialization point no
+    job count can help; it has to get faster or go away
+  - its largest single process peaked at 1902 MB resident - multiply by however many
+    elements build concurrently before raising `builders`
+  - opened no file staged by 1 declared build dependency (...) - this is evidence,
+    not a verdict (a runtime-only dependency looks identical here)
+  (84% of this element's processes were measured)
+```
+
+Five findings from four different measurements, each pointing at
+different work, with the hedged one last. `doxygen.bst` gains its own
+`cc1plus` concentration (87%), its own `dwz` (13.1s) and a shared `m4`
+costing it 20.4s; `bison.bst` gains the autoconf `conftest` probe it
+shares, costing it 10.3s.
+
+### The thresholds, and why they are not tuned
+
+- **CPU concentration** fires at a *majority* — more than half an
+  element's measured CPU in one binary. Not a tuned number: it is the
+  point at which "this element is a `<binary>` problem" is literally
+  true.
+- **Serialization points** reuse `UX-69`'s own `single_process_costs`,
+  which the producer already computes. The join adds no threshold of its
+  own.
+- **Peak memory** fires at 1 GB in a single process, which is where
+  concurrent builders start to matter on an ordinary runner — round 9's
+  host had 16 GB across 4 builders. The line deliberately does *not*
+  multiply by a builder count: `builders` is not in the analysis JSON,
+  and inventing the multiplication would be a claim the artifact does not
+  support. It states the measured peak and names the multiplication the
+  reader has to do.
+- **Redundancy** is *relative*, which is one correction to this task as
+  filed. A flat floor put `cmake-stage1` paying 2.2s for a shared
+  `rm -rf` in the same row as its 1569.8s of realizable saving. The bar
+  is 1% of what fixing that element is worth — `UX-65`'s own "below this
+  is rounding" floor — which drops the `rm -rf` line and keeps
+  `doxygen`'s 20.4s `m4`.
+
+### `aggregating_dependencies` has a home
+
+Counted in the join's coverage and stated in the text report:
+
+```
+  N further dependency pair(s) set aside as aggregating - they stage almost nothing
+  of their own, so 'nobody opened it' says nothing about them (UX-68); see
+  --format json for the list
+```
+
+Not mixed into the findings, because `UX-68`'s reason for filtering them
+is unchanged; but a filtered population that is never mentioned is
+indistinguishable from one that does not exist.
+
+### What this deliberately did not do
+
+No fourth ranking was added — the new evidence classes fold into the
+existing per-element rows, per this task's own Required Fix item 5.
+
+Tests: 6 new in `tests/unit/test_correlate.py`. Suite: 1081 → 1087.
 
 ## Verification Log
 

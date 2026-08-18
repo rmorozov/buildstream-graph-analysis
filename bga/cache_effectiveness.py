@@ -161,9 +161,52 @@ def compute_cache_accounting(
     return accounting
 
 
+def _churn_precondition(
+    candidate_run_mode: Optional[str],
+    baseline_run_mode: Optional[str],
+    baseline_built: Optional[Set[str]],
+) -> Optional[dict]:
+    """The reason churn cannot be judged for this pair, or None.
+
+    Split out rather than inlined because each of these is a *finding*
+    in its own right - a reader who gets no churn block is owed which of
+    the three it was.
+    """
+    if candidate_run_mode == 'full':
+        return {
+            'reason': 'candidate_run_is_full',
+            'explanation': (
+                'the candidate is a caches-off run, so every element rebuilt by '
+                'instruction - an unchanged cache key there is the intended '
+                'behaviour, not waste'
+            ),
+        }
+    if baseline_run_mode == 'full':
+        return {
+            'reason': 'baseline_run_is_full',
+            'explanation': (
+                'the baseline is a caches-off run, so it rebuilt everything and '
+                'cannot say which artifacts a warm cache would have served'
+            ),
+        }
+    if baseline_built is None:
+        return {
+            'reason': 'baseline_built_set_not_measured',
+            'explanation': (
+                "the baseline run does not publish per-element durations, so an "
+                "element it also rebuilt cannot be told from one it had cached - "
+                "and those are different findings"
+            ),
+        }
+    return None
+
+
 def compute_cache_churn(
     baseline_elements, candidate_elements, dependencies,
     candidate_built: Set[str], candidate_durations: Dict[str, int],
+    baseline_built: Optional[Set[str]] = None,
+    candidate_run_mode: Optional[str] = None,
+    baseline_run_mode: Optional[str] = None,
 ) -> dict:
     """UX-92 stage 2: which rebuilds in the candidate were not earned.
 
@@ -188,6 +231,45 @@ def compute_cache_churn(
 
     Elements absent from either side are skipped rather than guessed at:
     an element the baseline never had cannot have churned.
+
+    **UX-93: "bought nothing" is a claim about an artifact that was
+    there to be served, and three conditions have to hold before it can
+    be made.** Round 11 shipped this without them and produced two
+    standing false accusations, both against builds behaving exactly as
+    designed:
+
+    - *The candidate must be an incremental run.* A caches-off nightly
+      rebuilds everything by instruction; comparing two of them reported
+      "10 element(s) rebuilt with an unchanged cache key, costing 36.5s
+      … that time bought nothing". It bought the entire build. This is
+      the same defect UX-86 fixed one module over in the hit-ratio
+      finding, and this path did not get the same treatment.
+    - *The baseline must be an incremental run too.* A cold baseline
+      built everything, so every unchanged-key rebuild in the candidate
+      also appears in the baseline, and the retention wording below
+      would be as wrong as the churn wording.
+    - *The baseline's built set must be known.* Without it, an element
+      the baseline also rebuilt is indistinguishable from one the
+      baseline had cached - and those are different findings. Not
+      measured is not "measured as none", the same rule that already
+      governs the candidate side of this call in `compare`.
+
+    Where they hold, an unchanged-key rebuild splits into two findings
+    the data really can tell apart:
+
+    - the baseline **skipped** it and the candidate rebuilt it: waste,
+      today's wording, unchanged;
+    - **both runs rebuilt it** with the same key: the artifact is not
+      surviving between runs. That is a cache-retention question -
+      deliberate cut, eviction, a remote that stopped serving - and it
+      is about the cache, not the project. The fdsdk capture workflow
+      deletes its 25-element rebuild set on purpose, so every scheduled
+      comparison carried a permanent 4604-second accusation about the
+      mechanism producing the data.
+
+    When a precondition fails the block is `applicable: False` with the
+    reason, rather than absent: "we did not check" and "we checked and
+    found nothing" must not look the same to a reader or to a gate.
     """
     baseline_keys = {e.uid: e.cache_key for e in baseline_elements if e.cache_key}
     candidate_keys = {e.uid: e.cache_key for e in candidate_elements if e.cache_key}
@@ -198,7 +280,20 @@ def compute_cache_churn(
     unchanged = {uid for uid in comparable if baseline_keys[uid] == candidate_keys[uid]}
     changed = comparable - unchanged
 
-    churned = sorted(unchanged & candidate_built)
+    accounting = {
+        'comparable_elements': len(comparable),
+        'unchanged_keys': len(unchanged),
+        'changed_keys': len(changed),
+    }
+    not_applicable = _churn_precondition(
+        candidate_run_mode, baseline_run_mode, baseline_built,
+    )
+    if not_applicable:
+        return {**accounting, 'applicable': False, **not_applicable}
+
+    rebuilt_unchanged = unchanged & candidate_built
+    rebuilt_in_both = sorted(rebuilt_unchanged & set(baseline_built or ()))
+    churned = sorted(rebuilt_unchanged - set(rebuilt_in_both))
     wasted_us = sum(candidate_durations.get(uid, 0) for uid in churned)
 
     predecessors: Dict[str, List[str]] = {}
@@ -239,9 +334,16 @@ def compute_cache_churn(
         })
 
     return {
-        'comparable_elements': len(comparable),
-        'unchanged_keys': len(unchanged),
-        'changed_keys': len(changed),
+        **accounting,
+        'applicable': True,
+        # Rebuilt in both runs with the same key: the artifact is not
+        # being retained, which is a fact about the cache rather than
+        # about the project. Kept separate from `churned_elements` all
+        # the way out to JSON, so a gate cannot fail a build for its
+        # own CI's retention policy.
+        'rebuilt_in_both_elements': rebuilt_in_both,
+        'rebuilt_in_both_count': len(rebuilt_in_both),
+        'rebuilt_in_both_us': sum(candidate_durations.get(uid, 0) for uid in rebuilt_in_both),
         'churned_elements': churned,
         'churned_count': len(churned),
         'wasted_rebuild_us': wasted_us,

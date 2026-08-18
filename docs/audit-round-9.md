@@ -104,6 +104,15 @@ runtime-only case the producer's own note says is indistinguishable from
 here. The tool's most-repeated recommendation is most likely a false
 positive, presented as free.
 
+**Correction (`UX-68`, investigated after this was written).** It is
+worse and simpler than "most likely": every `stack` stages exactly **1**
+marker file, so a stack dependency scores 0-of-1 by construction. 9 of
+the 10 candidates were stacks — including `components/zstd.bst`, which
+this document originally suggested was a genuine finding and a better
+first recommendation. It is not; it is `kind: stack` staging 1 file.
+`components/m4.bst` (321 files staged, none opened) was the only true
+candidate of the ten.
+
 ## What is still missing, honestly
 
 **The caches-off nightly has never been captured.** Every real capture —

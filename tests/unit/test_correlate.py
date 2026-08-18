@@ -103,7 +103,11 @@ def test_unused_dependencies_are_reported_as_a_macro_fix():
     )
 
     step = result["actionable"][0]["recommendations"][0]
-    assert "1 build dependency it never read" in step
+    assert "1 declared build dependency" in step
+    # UX-68: never a verdict - the producer cannot distinguish a
+    # runtime-only dependency from an unused one.
+    assert "free" not in step
+    assert "evidence, not a verdict" in step
     assert "codegen.bst" in step
 
 
@@ -179,7 +183,7 @@ def test_empty_inputs_are_safe():
     assert "No element has a finding in both planes" in format_correlation(result)
 
 
-@pytest.mark.parametrize("count,expected", [(1, "1 build dependency it"), (3, "3 build dependencies it")])
+@pytest.mark.parametrize("count,expected", [(1, "1 declared build dependency"), (3, "3 declared build dependencies")])
 def test_dependency_pluralisation(count, expected):
     unused = [{"element": "x.bst", "dependency": f"d{i}.bst"} for i in range(count)]
 

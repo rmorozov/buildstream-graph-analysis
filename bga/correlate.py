@@ -187,9 +187,17 @@ def _recommend(joined: ElementJoin) -> List[str]:
         count = len(joined.unused_dependencies)
         names = ", ".join(sorted(joined.unused_dependencies))
         plural = "dependency" if count == 1 else "dependencies"
+        # UX-68: the producer says "this is evidence, not a verdict" -
+        # runtime-only dependencies, cached configure probes and
+        # directory-existence dependencies are all indistinguishable
+        # from here. Rendering that as "removing the edge is free" turned
+        # a measurement into a claim the measurement does not support,
+        # and on a real capture it did so for 8 of 10 findings.
         steps.append(
-            f"declares {count} build {plural} it never read ({names}) - removing "
-            f"the edge is free and widens the graph"
+            f"opened no file staged by {count} declared build {plural} "
+            f"({names}) - worth checking whether the edge is needed at "
+            f"build time, or only at runtime; this is evidence, not a "
+            f"verdict (a runtime-only dependency looks identical here)"
         )
 
     return steps

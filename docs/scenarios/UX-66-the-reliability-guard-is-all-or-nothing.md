@@ -1,6 +1,6 @@
 # UX-66: the attribution guard demands 100% or nothing, so an 86.1%-correct join is refused — and a cancelled capture can overwrite a good one
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** `UX-64` (done — which raised real attribution to 86.1% and made this the blocker)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64` (done — which raised real attribution to 86.1% and made this the blocker)
 
 ## Motivation
 
@@ -139,6 +139,52 @@ describe different builds.
    even if it ends in `.bst`.
 4. A cancelled capture run does not overwrite the previously published
    capture, and a published capture always contains `native-report.json`.
+
+## Fix Implemented — and one acceptance test that was never met
+
+The guard and both workflow defects were fixed in `b1c379d` / `4a35674`
+and verified on round 9's capture. Re-checking the acceptance tests one
+by one found the third had been missed:
+
+1. ✅ The join renders over the resolved 86.1% and states the excluded
+   share (`PARTIAL ATTRIBUTION - the rows below are correct for the
+   elements they name, and say nothing about the rest`).
+2. ✅ The refusal is kept for the round 6/7 shape, where the largest
+   bucket is not an element.
+3. ❌ **"A bucket name that is not a declared element uid never enters a
+   join, even if it ends in `.bst`."** Not implemented, and demonstrably
+   reachable: a Plane 2 bucket called `flit_core.bst` produced a "what to
+   do next" row while the build's only real element was relegated to
+   "not traced". Fixed now.
+4. ✅ The publish is gated on `!cancelled()` and on `native-report.json`
+   existing, and the plain-build fallback renames its report to
+   `native-report-traced-only.json` so nothing joins across two builds.
+
+### The fix for (3)
+
+Plane 2's own test is syntactic — `assess_element_attribution` asks
+whether a name ends in `.bst`, which is all Plane 2 can do alone. The
+*declared graph* is a Plane 1 fact, so the join is the only place the
+stronger check exists, and `_declared_elements` now makes it there.
+
+Built from the per-element signals (`slack`, `downstream_count`,
+`blast_radius`, `criticality_probability`, the critical path) rather than
+from the critical path alone, because a real element that is off the path
+and has no blast radius still belongs to the graph — over-refusing it
+would be a worse error than the one being fixed. Tested both ways, plus
+the degradation case: an analysis carrying none of those signals yields
+an empty set and the check is skipped rather than rejecting every row.
+
+On round 9's real capture it names exactly the three fictions and keeps
+all eight real rows:
+
+```
+  3 Plane 2 name(s) are not declared elements and are excluded from the rows
+  below: buildstream-build, flit_core, unknown
+```
+
+`flit_core` is the same `--dir` segment round 7 measured and this task
+cited — now caught by the tool rather than by hand.
 
 ## Verification Log
 

@@ -486,3 +486,78 @@ def test_correlate_recommendations_carry_ids_and_severities():
     # And the order still puts the hedged one last.
     assert entry["recommendations"][-1]["id"] == "declared-not-used"
 
+
+# --- UX-66 acceptance test 3, which was never met ----------------------
+
+
+def test_a_name_that_is_not_a_declared_element_never_enters_the_join():
+    """`UX-66` required that "a bucket name that is not a declared
+    element uid never enters a join, even if it ends in `.bst`", because
+    round 7 measured `flit_core` and `expat` arriving as bwrap `--dir`
+    segments where neither is an element.
+
+    Plane 2's own check is syntactic - a name ends in `.bst` - which is
+    all it can do alone. Before this, a bucket called `flit_core.bst`
+    passed that test, produced a "what to do next" row, and pushed the
+    build's only real element into "not traced".
+    """
+    analysis = {
+        "total_duration_us": 100_000_000,
+        "signals": {
+            "critical_path": ["real.bst"],
+            "critical_path_detail": [{
+                "element_uid": "real.bst", "duration_us": 50_000_000,
+                "share_of_path": 1.0, "is_structural_kind": False,
+                "realizable_saving_us": 50_000_000,
+            }],
+            "slack": {"real.bst": 0},
+            "blast_radius": {},
+        },
+        "structural": {"sensitivity": {"top_opportunities": [],
+                                       "critical_path_us": 50_000_000}},
+    }
+    native = _native(unused=[{"element": "flit_core.bst", "dependency": "d.bst"}])
+    native["by_element"]["flit_core.bst"] = 5
+
+    result = correlate(analysis, native)
+
+    assert [e["element"] for e in result["actionable"]] == []
+    assert result["coverage"]["undeclared_plane2_elements"] == ["flit_core.bst"]
+    assert "are not declared elements" in format_correlation(result)
+
+
+def test_an_off_path_element_is_still_declared():
+    """The over-refusal this must not become: a real element that is off
+    the critical path and has no blast radius still belongs to the graph.
+    `slack` carries every element, which is why the check reads it."""
+    analysis = {
+        "total_duration_us": 100_000_000,
+        "signals": {
+            "critical_path": ["a.bst"],
+            "critical_path_detail": [],
+            "slack": {"a.bst": 0, "offpath.bst": 5_000_000},
+            "blast_radius": {},
+        },
+        "structural": {"sensitivity": {"top_opportunities": [],
+                                       "critical_path_us": 50_000_000}},
+    }
+    native = _native(unused=[{"element": "offpath.bst", "dependency": "d.bst"}])
+    native["by_element"]["offpath.bst"] = 5
+
+    result = correlate(analysis, native)
+
+    assert [e["element"] for e in result["actionable"]] == ["offpath.bst"]
+    assert result["coverage"]["undeclared_plane2_elements"] == []
+
+
+def test_an_analysis_with_no_per_element_signals_degrades_rather_than_refusing():
+    """No declared set to check against is not the same as "nothing is
+    declared" - refusing every row there would be a worse failure than
+    the one this check fixes."""
+    result = correlate(
+        _analysis(critical_path=[], opportunities=[]),
+        _native(unused=[{"element": "x.bst", "dependency": "d.bst"}]),
+    )
+
+    assert [e["element"] for e in result["actionable"]] == ["x.bst"]
+

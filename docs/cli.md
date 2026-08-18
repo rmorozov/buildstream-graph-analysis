@@ -254,6 +254,12 @@ What to do next (ranked by Plane 1 impact):
       but runs at only 0.85 cores busy - it is waiting, not computing, and its native
       build asked for -j1: remove `notparallel` / raise its job count before touching
       its sources
+    - 81% of its measured CPU is one binary, `cc1plus` (885 process(es), 4353 CPU s) -
+      this element is a `cc1plus` problem, so look there before anywhere else
+    - `dwz` is a SINGLE process holding 138.6s of wall time - a serialization point no
+      job count can help; it has to get faster or go away
+    - its largest single process peaked at 1902 MB resident - multiply by however many
+      elements build concurrently before raising `builders`
     (81% of this element's processes were measured)
 ```
 
@@ -269,6 +275,7 @@ bga correlate /tmp/run /tmp/plane2.json
 Notes on reading it:
 
 - **Ranking is Plane 1's.** Plane 2 explains the top of that list and never reorders it — the question "what should I optimize" is answered by whole-project impact.
+- **Rows are ordered by evidence strength.** A measured CPU concentration or a single-process serialization point leads; the declared-vs-used candidate, which the producer itself calls "evidence, not a verdict", comes last. Dependency pairs `UX-68` set aside as *aggregating* — a `stack` stages almost nothing of its own, so "nobody opened it" says nothing about it — are counted under the coverage line rather than mixed into the findings.
 - **The ranking metric is `UX-70`'s realizable saving** — what the build would actually lose if the element became instant, which is the same number `bga analyze` ranks on, so the two commands cannot name different elements first. Share of the critical path is reported beside it because they routinely disagree: an element can hold a large share of a mesh graph and be worth very little to fix. If the metric saturates (every candidate carrying the same value), the report says so rather than presenting the alphabetical tiebreak as an impact order.
 - **A negative result is a result.** "Already compute-bound — nothing to gain from its parallelism" tells you to stop looking inside that element.
 - **Coverage is carried through.** A recommendation built on 81% of an element's processes says so (`UX-45`), and elements Plane 1 ranks that Plane 2 never traced are named rather than passed over.

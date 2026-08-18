@@ -210,7 +210,15 @@ jobs:
         # the marked tier, so "14 passed" is a claim about the tier rather
         # than about the suite. A skip inside it would still show as
         # `passed` in the exit code, hence the explicit count check below.
-        run: pytest -m bst -rs -p no:cacheprovider | tee /tmp/bst-tier.txt
+        #
+        # `python -m pytest`, not bare `pytest`, and the difference is
+        # load-bearing: only the former puts the working directory on
+        # `sys.path`, and six test modules do `from tests.fixtures import
+        # topologies` (`tests/` is not a package). Bare `pytest` fails
+        # collection on all six before running anything - which is how
+        # this job first went red. `make test` has always used
+        # `python -m pytest`; this now matches it.
+        run: python -m pytest -m bst -rs -p no:cacheprovider | tee /tmp/bst-tier.txt
 
       - name: No test was skipped for a missing bst
         # The failure this job exists to make impossible: bst silently
@@ -224,7 +232,10 @@ jobs:
             grep "SKIPPED" /tmp/bst-tier.txt >&2
             exit 1
           fi
-          grep -qE "^14 passed" /tmp/bst-tier.txt || {
+          # Not anchored to column 0: pyproject's `addopts = "-v"` makes
+          # the summary line `===== 14 passed, 1187 deselected in ... =====`.
+          # Bounded on both sides so "114 passed" cannot satisfy it.
+          grep -qE "(^|[[:space:]=])14 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
             echo "Expected exactly 14 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1

@@ -69,6 +69,39 @@ def _make_analyzer(args: argparse.Namespace) -> BuildEfficiencyAnalyzer:
     )
 
 
+def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
+    """UX-83: let Plane 1's capacity advice consult Plane 2, when Plane 2
+    is in hand for the same run.
+
+    Measured on one dual-plane capture, `analyze` said *"31.9% of
+    wall-clock is RESOURCE WAIT - try `--capacity N` with a higher N"*
+    while `correlate` on the *same* capture named the real fix: an
+    element pinned to `-j1`, worth -32.4% and costing no extra capacity.
+    Both texts came from one tool reading one build.
+
+    A missing or malformed Plane 2 report is a warning, not a failure:
+    the analysis is complete without it and refusing to print it would
+    be a worse outcome than printing today's hint.
+    """
+    path = getattr(args, 'plane2', None)
+    if not path:
+        return
+    from bga.correlate import summarize_plane2_capacity
+
+    try:
+        with open(path, 'r', encoding='utf-8') as handle:
+            native_report = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"Warning: --plane2 {path} could not be read ({exc}); "
+              "continuing without it", file=sys.stderr)
+        return
+    context = getattr(analyzer, 'run_context', None)
+    host_cpu_count = getattr(context, 'host_cpu_count', None) or getattr(
+        context, 'cpu_budget', None
+    )
+    result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+
+
 def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -> str:
     """Run the full analysis pipeline and format one report section (or
     the full report when section is None). This is the single pipeline
@@ -88,6 +121,7 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
     # it can skip stages this section does not consume. `analyze` passes
     # None and is unaffected.
     result = analyzer.analyze(run_dir, section=section)
+    _attach_plane2_capacity(args, analyzer, result)
     by_kind = getattr(args, 'by_kind', False)
 
     if args.format == 'json':
@@ -139,7 +173,19 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
             'capacity_model_caveat': SWEEP_CAPACITY_MODEL_CAVEAT,
             'calibration_capacities': calibration_capacities,
         }, indent=2, default=str)
-    return format_sweep_text(args.resource, sweep_result, calibration_capacities=calibration_capacities)
+    # UX-83: the sweep is a replay-model answer and the replay model does
+    # not know about CPU. When a Plane 2 report for the same run is
+    # supplied, the knee line says what was actually measured.
+    plane2_capacity = {}
+    if getattr(args, 'plane2', None):
+        holder = type('_R', (), {})()
+        _attach_plane2_capacity(args, analyzer, holder)
+        plane2_capacity = getattr(holder, 'plane2_capacity', {})
+    return format_sweep_text(
+        args.resource, sweep_result,
+        calibration_capacities=calibration_capacities,
+        plane2_capacity=plane2_capacity,
+    )
 
 
 def _produce_compare_output(args: argparse.Namespace):
@@ -577,7 +623,15 @@ def cmd_correlate(args: argparse.Namespace) -> int:
         result = analyzer.analyze(Path(args.directory))
         from bga.report.json import format_json
         analysis = json.loads(format_json(result))
-        joined = correlate(analysis, native_report)
+        # UX-82: the tasks and run context let the join *replay* the
+        # observed run with never-read gating edges removed, instead of
+        # only reporting each edge separately and leaving the reader to
+        # invent the restructuring themselves.
+        joined = correlate(
+            analysis, native_report,
+            tasks=getattr(analyzer, 'normalized_tasks', None),
+            run_context=getattr(analyzer, 'run_context', None),
+        )
         if args.format == 'json':
             return json.dumps(joined, indent=2)
         return format_correlation(joined)
@@ -702,6 +756,18 @@ def _add_common_arguments(
         )
 
     if include_diagnostics:
+        subparser.add_argument(
+            '--plane2',
+            type=str,
+            metavar='NATIVE_REPORT.json',
+            help='UX-83: a Plane 2 native trace report for THIS SAME run. When '
+                 'given, capacity advice is conditioned on what was actually '
+                 'measured inside the sandboxes - a RESOURCE WAIT hint will not '
+                 'recommend more builders on a host Plane 2 measured as already '
+                 'CPU-saturated, and will name an element pinned to -j1 first, '
+                 'since that is capacity you already have. Without it every line '
+                 'is byte-identical to before.'
+        )
         subparser.add_argument(
             '-d', '--diagnostics',
             action='store_true',
@@ -842,6 +908,14 @@ def create_parser() -> argparse.ArgumentParser:
     sweep_parser.add_argument(
         'directory', type=str,
         help='Path to the BuildStream run directory'
+    )
+    sweep_parser.add_argument(
+        '--plane2', type=str, metavar='NATIVE_REPORT.json',
+        help='UX-83: a Plane 2 native trace report for THIS SAME run. The knee '
+             'point is a replay-model answer and the replay model does not know '
+             'about CPU; with this, the knee line says how many cores Plane 2 '
+             'actually measured busy, and names any element pinned to -j1 - which '
+             'is capacity you already have. Without it the output is unchanged.'
     )
     sweep_parser.add_argument(
         '--resource', type=str, default='PROCESS',

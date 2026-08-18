@@ -319,6 +319,46 @@ def _time_concentration_findings(
     return findings
 
 
+def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str]:
+    """Replace the RESOURCE WAIT next step when Plane 2 contradicts it.
+
+    Only for `resource_wait_us`, and only when a Plane 2 report was
+    supplied: every other category, and every run without one, keeps
+    today's text byte for byte.
+    """
+    if category != 'resource_wait_us':
+        return None
+    plane2 = getattr(result, 'plane2_capacity', None) or {}
+    pinned = plane2.get('pinned_elements') or []
+    cores_busy, host = plane2.get('cores_busy'), plane2.get('host_cpu_count')
+    measured = (
+        f"Plane 2 measured {cores_busy:.2f} of {host} cores busy over this run"
+        if cores_busy is not None and host else None
+    )
+    if pinned:
+        # Named first: intra-element parallelism is free capacity that
+        # `--builders` is not, and it costs nothing to reclaim.
+        names = ", ".join(pinned[:3])
+        lead = (
+            f"do NOT raise capacity - {measured}. " if plane2.get('saturated') and measured
+            else ""
+        )
+        return (
+            f"{lead}{names} asked its native build for -j1 while the rest of this "
+            f"build asked for more: remove `notparallel` / raise that element's job "
+            f"count first. That is capacity you already have, and unlike --builders "
+            f"it cannot contend with itself (UX-83)"
+        )
+    if plane2.get('saturated') and measured:
+        return (
+            f"do NOT raise capacity on this host - {measured}, so another builder "
+            f"would contend for CPU rather than add throughput. The wait is real; "
+            f"the remedy is less work or better intra-element parallelism, not more "
+            f"concurrent elements (UX-83)"
+        )
+    return None
+
+
 def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
     attribution = result.attribution or {}
     total = result.total_duration_us
@@ -357,6 +397,14 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> List[dic
     hint = resolve_attribution_hint(
         top_category, getattr(result, 'capacity_verdict', None),
     )
+    # UX-83: and conditioned on Plane 2, when Plane 2 is in hand. The
+    # static RESOURCE WAIT hint says "try --capacity N with a higher N",
+    # which on a measured-saturated host is the opposite of the fix - and
+    # on one real dual-plane capture the tool said exactly that while its
+    # own `correlate` output named a pinned element worth -32.4%.
+    plane2_hint = _plane2_capacity_hint(result, top_category)
+    if plane2_hint:
+        hint = plane2_hint
     return [_finding(
         'wait-category', SEVERITY_HIGH,
         f"Biggest Opportunity: {pct:.1f}% of wall-clock time is "

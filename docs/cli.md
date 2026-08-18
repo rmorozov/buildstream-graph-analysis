@@ -105,6 +105,22 @@ bga analyze /path/to/run --format json \
   | jq -e '[.findings[] | select(.severity == "critical")] | length == 0'
 ```
 
+#### Conditioning capacity advice on Plane 2 (`--plane2`) — `UX-83`
+
+```bash
+bga analyze /path/to/run --plane2 /path/to/native-report.json
+bga sweep   /path/to/run --resource PROCESS --plane2 /path/to/native-report.json
+```
+
+The `RESOURCE WAIT` hint and `sweep`'s knee point are both replay-model answers, and the replay model does not know about CPU (`UX-09`/`UX-14`). Measured once on a real dual-plane capture: `analyze` said *"31.9% of wall-clock is RESOURCE WAIT — try `--capacity N` with a higher N"* and `sweep` put the knee at capacity 5, on a 4-core host — while `correlate` on the **same capture** named the real fix, an element pinned to `-j1`, worth −32.4% and costing no extra capacity.
+
+With `--plane2`, both consult what was actually measured inside the sandboxes:
+
+- a host Plane 2 measured as already CPU-saturated is told **not** to raise capacity, with the measurement quoted;
+- an element pinned to `-j1` is named **first**, because intra-element parallelism is capacity you already have and, unlike `--builders`, it cannot contend with itself.
+
+Without `--plane2` every line is byte-identical to before.
+
 #### Resource Capacity
 Override the detected system capacity (useful for simulating different hardware):
 ```bash
@@ -289,6 +305,7 @@ bga correlate /tmp/run /tmp/plane2.json
 Notes on reading it:
 
 - **Ranking is Plane 1's.** Plane 2 explains the top of that list and never reorders it — the question "what should I optimize" is answered by whole-project impact.
+- **A restructuring finding comes first, when there is one** (`UX-82`). When a *group* of declared build edges was measured never-read *and* those edges chain elements along the critical path, the join names the chain as one finding and replays this run with those edges removed — same durations, same capacity — to say what removing them would be worth. Five per-element rows saying "`lib-b` never read `lib-a`" are five bricks; this is the wall. The hedge is unchanged: it recommends *checking* the edges, and says the projection is a replay, not a re-capture.
 - **Rows are ordered by evidence strength.** A measured CPU concentration or a single-process serialization point leads; the declared-vs-used candidate, which the producer itself calls "evidence, not a verdict", comes last. Dependency pairs `UX-68` set aside as *aggregating* — a `stack` stages almost nothing of its own, so "nobody opened it" says nothing about it — are counted under the coverage line rather than mixed into the findings.
 - **The ranking metric is `UX-70`'s realizable saving** — what the build would actually lose if the element became instant, which is the same number `bga analyze` ranks on, so the two commands cannot name different elements first. Share of the critical path is reported beside it because they routinely disagree: an element can hold a large share of a mesh graph and be worth very little to fix. If the metric saturates (every candidate carrying the same value), the report says so rather than presenting the alphabetical tiebreak as an impact order.
 - **A negative result is a result.** "Already compute-bound — nothing to gain from its parallelism" tells you to stop looking inside that element.

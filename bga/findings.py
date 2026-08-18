@@ -31,6 +31,9 @@ numbers behind the sentence, so a consumer never has to parse `title`.
 """
 from typing import Dict, List, Optional
 
+from .cache_effectiveness import (
+    HEALTHY_HIT_RATIO, POOR_HIT_RATIO, TRANSFER_SHARE_NOTABLE,
+)
 from .ingest.models import AnalysisResult
 
 # Severity is about what it means for the reader, not about size:
@@ -168,6 +171,76 @@ def _finding(
     }
 
 
+def _cache_findings(result: AnalysisResult) -> List[dict]:
+    """UX-92 stage 1: the cache's own numbers, as findings.
+
+    Deliberately not gated on the hit ratio being *bad*. Every other
+    signal in this report describes the work the build did; on an
+    incremental build the cache decides how much work that was, so "the
+    cache worked" is load-bearing context for reading the rest, not a
+    finding that only matters when something is wrong. What the ratio
+    changes is the severity and the sentence, not whether it appears.
+    """
+    cache = (result.signals or {}).get('cache') or {}
+    hit_ratio = cache.get('hit_ratio')
+    if hit_ratio is None:
+        return []
+
+    built = cache.get('built_elements')
+    cached = cache.get('cached_elements')
+    closure = cache.get('target_closure') or {}
+    findings: List[dict] = []
+
+    detail: List[str] = []
+    if closure.get('hit_ratio') is not None and closure.get('targets'):
+        detail.append(
+            f"    -> for {', '.join(closure['targets'])}'s own closure it is "
+            f"{closure['hit_ratio'] * 100:.0f}% "
+            f"({closure['cached']} of {closure['elements']} elements cached)"
+        )
+
+    if hit_ratio < POOR_HIT_RATIO:
+        severity, verdict = SEVERITY_HIGH, (
+            "barely incremental - most of the project rebuilt. Look for a "
+            "volatile cache key near the root before reading any efficiency "
+            "number below: they describe how well this build ran, not how "
+            "much of it should have run at all"
+        )
+    elif hit_ratio < HEALTHY_HIT_RATIO:
+        severity, verdict = SEVERITY_MEDIUM, (
+            "under half the project was reused - worth checking what "
+            "invalidated the rest"
+        )
+    else:
+        severity, verdict = SEVERITY_INFO, "the cache did most of the work"
+
+    findings.append(_finding(
+        'cache-hit-ratio', severity,
+        f"Cache hit ratio: {hit_ratio * 100:.0f}% "
+        f"({cached} cached, {built} rebuilt) - {verdict}",
+        detail=detail,
+        evidence={
+            'hit_ratio': hit_ratio, 'built_elements': built,
+            'cached_elements': cached,
+            'target_closure_hit_ratio': closure.get('hit_ratio'),
+        },
+    ))
+
+    share = cache.get('transfer_share')
+    if share is not None and share >= TRANSFER_SHARE_NOTABLE:
+        transfer = cache.get('transfer_us') or {}
+        parts = ", ".join(
+            f"{name.lower()} {us / 1e6:.1f}s" for name, us in sorted(transfer.items())
+        )
+        findings.append(_finding(
+            'cache-transfer-cost', SEVERITY_MEDIUM,
+            f"{share * 100:.0f}% of wall-clock was artifact transfer ({parts}) - "
+            f"this build spent it moving artifacts rather than making them",
+            evidence={'transfer_share': share, 'transfer_us': transfer},
+        ))
+    return findings
+
+
 def _run_scope_findings(result: AnalysisResult) -> List[dict]:
     findings: List[dict] = []
     # UX-54: said first, before any efficiency number, because every
@@ -223,6 +296,11 @@ def _run_scope_findings(result: AnalysisResult) -> List[dict]:
             elements=list(cached),
             evidence={'run_mode': 'incremental', 'critical_path_cached': len(cached)},
         ))
+
+    # UX-92: what the cache did, said next to the run mode it explains.
+    # An incremental run's whole point is the cache, and until now the
+    # report said "incremental" without ever saying how well that went.
+    findings.extend(_cache_findings(result))
 
     primary = confidence.get('primary')
     if primary is not None:

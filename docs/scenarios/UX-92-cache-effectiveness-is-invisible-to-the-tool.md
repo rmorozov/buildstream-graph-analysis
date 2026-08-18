@@ -1,6 +1,6 @@
 # UX-92: cache effectiveness — hits, misses, churn, trends — is invisible to the tool
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-55 (done), UX-81 (history to trend over)
+**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done | **Depends on:** UX-55 (done), UX-81 (history to trend over)
 
 ## Motivation
 
@@ -64,3 +64,112 @@ key change (e.g. a comment in `core.bst`) and the churn report names
 `core.bst`'s closure and its rebuild cost. (3): over three preserved
 fdsdk captures, the trend row renders with real numbers and the gate
 fires only on a deliberate cache-disabled run.
+
+---
+
+## Fix Implemented — stages 1 and 2
+
+**Status:** 🟡 In Progress — stages 1 and 2 done, stage 3 (trend + gate) not started
+
+### Stage 1: per-run cache accounting
+
+`bga/cache_effectiveness.py`. Nothing is modelled: BuildStream's own
+closing Pipeline Summary says how many elements it built and how many it
+skipped, and the run's own spans say where transfer time went. On the
+published fdsdk capture, exactly the acceptance test's numbers:
+
+```
+Cache hit ratio: 72% (65 cached, 25 rebuilt) - the cache did most of the work
+  -> for components/libxml2.bst's own closure it is 80% (101 of 126 elements cached)
+```
+
+Published as `signals.cache` and as a `cache-hit-ratio` finding with a
+stable id, so both report formats render from one computation
+(`UX-75`'s rule). The target's own closure is accounted separately
+because a project-wide 72% says little when the thing being shipped
+rebuilt entirely; that walk includes `runtime` edges, unlike the
+critical-path walk that correctly excludes them, because shipping a
+target requires them.
+
+**The finding is not gated on the ratio being bad.** Every other signal
+in the report describes the work the build did; on an incremental build
+the cache decides how much work that was, so it is context for reading
+the rest. What a good ratio changes is the sentence and the severity,
+not whether the line appears.
+
+Absent rather than zero-filled when a capture has no Pipeline Summary,
+and `None` rather than `1.0` for an empty queue: a queue that processed
+nothing did not achieve a perfect hit ratio.
+
+### Stage 2: churn and invalidation roots
+
+A cache key is a hash over an element's own definition **and** its
+dependencies' keys, so comparing two runs' keys answers "did anything
+that affects this element change" exactly — no source-ref diff needed,
+and `graph.json` already carries the keys.
+
+Two facts fall out:
+
+- **Churn** — an element the candidate rebuilt whose key is *identical*
+  to the baseline's. Waste by definition rather than by judgement.
+- **Invalidation roots** — among elements whose key *did* change, those
+  all of whose dependencies' keys are unchanged. The change started
+  there. This is the failure mode the task was filed for, and naming the
+  root is the whole value: the list of elements it invalidated is a
+  symptom.
+
+Measured on real `examples/06` builds with bst 2.7.0. Built twice with
+caches on, nothing touched:
+
+```
+comparable_elements = 11   changed_keys = 0   churned_count = 0   invalidation_roots = []
+```
+
+Then **one comment added to one source file** (`files/src/core/unit_0.cpp`):
+
+```
+Build Queue: processed 9, skipped 2
+```
+
+Nine of eleven elements rebuilt — and the report says why in one line:
+
+```
+Invalidated at core.bst: its cache key changed (b7c2e411 -> 84331b67) and
+invalidated 8 element(s) below it, 34.2s of rebuilding in total. Nothing it
+depends on changed, so the change starts here
+```
+
+### Two corrections to this task's own text
+
+**The acceptance test's suggested probe does not work.** It says "force
+a key change (e.g. a comment in `core.bst`)". A YAML comment does not
+change a BuildStream cache key — the key is computed over the *parsed*
+element configuration, not the file bytes. Verified: appending a comment
+to `core.bst` rebuilt nothing (`processed 0, skipped 2`). Adding an
+unused `variables:` entry did not either. Only a change to a real input
+— a source file — moved the key. That is BuildStream behaving correctly,
+and the probe in the acceptance test was wrong.
+
+**A first implementation produced a false positive**, caught before it
+shipped. Churn was derived from `compare.py`'s `_element_durations`,
+whose pre-`UX-79` fallback degrades to the *critical path* — and path
+membership is not a built list. On a run that built nothing it reported
+`toolchain.bst` as churn with a wasted time of 0. It now reads
+`signals.element_durations` directly and produces **no churn block at
+all** when that signal is absent: "not measured" and "nothing rebuilt"
+are different facts and only one of them is an all-clear.
+
+### Not done: stage 3
+
+The trend projection and `--fail-on-cache-regression` gate. Stage 3
+needs a measured noise band for these ratios across a run history, on
+the same derive-the-threshold discipline as `UX-39` — and the three
+preserved fdsdk captures are all the *same* commit, so they measure
+noise in the hit ratio at zero churn rather than the spread a gate would
+have to clear. That is a real input for it, not a substitute.
+
+### Verification
+
+Suite 1215 (+14). `make lint`, `make check-clean` green. The end-to-end
+numbers above are real builds, not fixtures; the fdsdk figures are the
+published capture's own.

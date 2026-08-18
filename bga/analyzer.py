@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
 
+from .cache_effectiveness import compute_cache_accounting
 from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind, STRUCTURAL_ELEMENT_KINDS
 from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
@@ -1232,6 +1233,21 @@ class BuildEfficiencyAnalyzer:
                     result.signals['critical_path_detail'],
                 )
             )
+
+        # UX-92: what the cache did. Outside the graph-analysis block
+        # above because it needs neither a critical path nor
+        # `--diagnostics` - BuildStream's own Pipeline Summary carries
+        # the counts, and on an incremental build (which round 6
+        # established is every real CI build) the cache is the dominant
+        # efficiency mechanism while every other signal here describes
+        # only the work that was not cached. Absent rather than
+        # zero-filled when the capture records no Pipeline Summary.
+        cache_accounting = compute_cache_accounting(
+            self.run_context, self.graph, self.normalized_tasks,
+            result.total_duration_us,
+        )
+        if cache_accounting:
+            result.signals['cache'] = cache_accounting
 
         # UX-47: which of the stages below this report section actually
         # renders. `section=None` (the `analyze` command, and every

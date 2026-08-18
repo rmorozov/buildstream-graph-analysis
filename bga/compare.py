@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .analyzer import BuildEfficiencyAnalyzer
+from .cache_effectiveness import compute_cache_churn
 from .ingest.models import AnalysisResult, Element
 from .report.text import _CONFIDENCE_HIGH
 
@@ -143,6 +144,10 @@ class ComparisonResult:
     # an average and dilutes with project size; these two are marginal.
     element_diff: Optional[dict] = None
     marginal_efficiency: Optional[dict] = None
+    # UX-92: rebuilds the candidate did not earn, and the elements whose
+    # own cache key changed with nothing above them changing - the roots
+    # an invalidation actually started at.
+    cache_churn: Optional[dict] = None
     # UX-87: whether a requested efficiency gate actually ran. Set by the
     # CLI, because whether a gate was *requested* is a flag question this
     # module never sees. Three states, and the distinction is the point:
@@ -170,6 +175,7 @@ class ComparisonResult:
             'baseline_band_shortfall': self.baseline_band_shortfall,
             'element_diff': self.element_diff,
             'marginal_efficiency': self.marginal_efficiency,
+            'cache_churn': self.cache_churn,
             'failed_runs': self.failed_runs,
             'baseline_band': self.baseline_band,
             'efficiency_gate_evaluated': self.efficiency_gate_evaluated,
@@ -389,6 +395,7 @@ def _compare_results(
     candidate_elements: List[Element],
     baseline_band: Optional[dict] = None,
     baseline_band_shortfall: Optional[dict] = None,
+    candidate_dependencies: Optional[List] = None,
 ) -> ComparisonResult:
     baseline_metrics = _numeric_metrics(baseline_result)
     candidate_metrics = _numeric_metrics(candidate_result)
@@ -412,6 +419,28 @@ def _compare_results(
         baseline_result, candidate_result, baseline_elements, candidate_elements,
     )
     marginal_efficiency = compute_marginal_efficiency(element_diff)
+
+    # UX-92 stage 2: which of the candidate's rebuilds were not earned.
+    #
+    # Reads `signals.element_durations` directly rather than through
+    # `_element_durations`, whose pre-UX-79 fallback degrades to the
+    # critical path - and a *path membership* list is not a *built*
+    # list. That fallback silently reported `toolchain.bst` as churn on
+    # a run that built nothing at all, with a wasted time of 0, which is
+    # how it was caught. An analysis that does not publish the signal
+    # gets no churn block rather than a guessed one: "not measured" and
+    # "nothing rebuilt" are different facts and only one of them is an
+    # all-clear.
+    built_durations = (getattr(candidate_result, 'signals', None) or {}).get(
+        'element_durations'
+    )
+    cache_churn = (
+        compute_cache_churn(
+            baseline_elements, candidate_elements, candidate_dependencies,
+            set(built_durations), built_durations,
+        )
+        if isinstance(built_durations, dict) else {}
+    )
 
     mismatches: List[dict] = []
     comparability_warning = _check_comparability(baseline_elements, candidate_elements)
@@ -499,6 +528,7 @@ def _compare_results(
         baseline_band_shortfall=baseline_band_shortfall,
         element_diff=element_diff,
         marginal_efficiency=marginal_efficiency,
+        cache_churn=cache_churn,
     )
 
 
@@ -560,6 +590,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
         baseline_analyzer.graph.elements, candidate_analyzer.graph.elements,
         baseline_band=band,
         baseline_band_shortfall=band_shortfall,
+        candidate_dependencies=candidate_analyzer.graph.dependencies,
     )
 
 

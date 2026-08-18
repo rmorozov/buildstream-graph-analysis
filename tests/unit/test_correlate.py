@@ -1,6 +1,6 @@
 """UX-51: joining the two planes on element UID.
 
-`docs/design-directions.md` named the seam between Plane 1 ("which
+`docs/design/directions.md` named the seam between Plane 1 ("which
 elements matter") and Plane 2 ("what happened inside them") as the
 biggest remaining gap. It is closed as an explicit join rather than a
 merge, and these tests pin the properties that make the join trustworthy

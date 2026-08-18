@@ -9,7 +9,7 @@
 
 It works in two complementary planes: a **whole-project** analysis of one build's element-level log, and an **intra-element** tracer that looks *inside* a single element's sandbox at its native build system's real process tree (`make -jN`, `cmake --build`, …) — see [Advanced: looking inside one element](#advanced-looking-inside-one-element-plane-2).
 
-**New here?** [`docs/real-project-guide.md`](docs/real-project-guide.md) is the full end-to-end walkthrough on a real project, with real output at every step.
+**New here?** [`docs/guides/real-project.md`](docs/guides/real-project.md) is the full end-to-end walkthrough on a real project, with real output at every step.
 
 ## Install
 
@@ -72,7 +72,7 @@ Critical Path Length: 4 elements
 ### At a thousand elements, still no BuildStream needed
 
 ```bash
-python3 -m tools.gen_synthetic_scale_run /tmp/scale --seed 1   # 1202 elements, 14 levels, 16 builders
+bga gen-synthetic /tmp/scale --seed 1   # 1202 elements, 14 levels, 16 builders
 bga analyze /tmp/scale --diagnostics                            # ~3.8s
 ```
 
@@ -143,15 +143,15 @@ What to do next (ranked by Plane 1 impact):
     (84% of this element's processes were measured)
 ```
 
-That is one report telling you: the element that is 43% of your build is a C++ template problem, not a scheduling one; there is a 138-second serialization point inside it that no `-j` value touches; and four concurrent builders of that shape need ~7.6 GB. **Full step-by-step walkthrough, every command and every output: [`docs/real-project-guide.md`](docs/real-project-guide.md).**
+That is one report telling you: the element that is 43% of your build is a C++ template problem, not a scheduling one; there is a 138-second serialization point inside it that no `-j` value touches; and four concurrent builders of that shape need ~7.6 GB. **Full step-by-step walkthrough, every command and every output: [`docs/guides/real-project.md`](docs/guides/real-project.md).**
 
 ## Reading the report
 
 - **Confidence** — how much to trust the numbers below (data completeness/quality of this specific trace). Below "high"? Fix the underlying trace before acting on anything else. A build that *failed* is called out even louder, before any efficiency figure.
 - **Certified Headroom** — a *proven* lower bound, not a guess: given the work this build actually did, it cannot possibly finish faster than `T∞`/`LB` (whichever is larger) without changing that work. Headroom above zero means real room to improve scheduling *without touching any element's build steps*; zero means rescheduling cannot help at all.
-- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`docs/scenarios/UX-27`](docs/scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md).)
+- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`docs/backlog/scenarios/UX-27`](docs/backlog/scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md).)
 - **Where the time is** — on a build the chain constrains, the headline is one table: each heavy element's duration, its share of the critical path, and what fixing it would actually recover. The rows are ordered by duration because that is what "where is the time" means; the fix order is named separately, because on a dense graph the two disagree.
-- **What to do after that** — the next few fixes projected from the same capture: what the build drops to after each, whether the recommended set's savings *add*, and which heavy elements sit off the critical path worth nothing to fix today. Without it, finding the second thing to fix costs another full build. ([`UX-74`](docs/scenarios/UX-74-one-capture-one-finding.md))
+- **What to do after that** — the next few fixes projected from the same capture: what the build drops to after each, whether the recommended set's savings *add*, and which heavy elements sit off the critical path worth nothing to fix today. Without it, finding the second thing to fix costs another full build. ([`UX-74`](docs/backlog/scenarios/UX-74-one-capture-one-finding.md))
 - **Elements Most Worth Optimizing First** — on a build the *graph* constrains rather than the chain, this ranks by blast radius instead: fixing a slow element near the root helps every downstream element too.
 - **Biggest Opportunity / Attribution Breakdown** — where wall-clock time went, by category: execution, dependency wait, resource wait, scheduler wait, idle, retries, plus **untracked head and tail** (real wall-clock before the first task started and after the last one finished, which belongs to no task at all). All eight sum to exactly the total build time — nothing is hidden or double-counted, and the two untracked categories are why: on the quick-start fixture above, untracked tail is 12.5% of the build and is the *largest* non-execution category.
 - **Critical Path** — the chain that determines total build time, printed in full with each link's duration and share.
@@ -183,7 +183,7 @@ graph is a much smaller number than its share suggests.
 ## Use it on your real project
 
 ```bash
-pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/ingestion-pipeline.md
+pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/spec/ingestion-pipeline.md
 # Capture through the wrapper: it records the real invocation on its own first
 # line, which is where `--max-jobs` lives - without it bga's capacity checks
 # have nothing to check against and say so.
@@ -210,7 +210,7 @@ This reports a signed delta for every certified floor, both efficiency signals, 
 >
 > With fewer, `bga` says so — `No noise band: 2 baseline run(s) supplied, 3 required` — and falls back to the fixed 1% rule rather than inventing a band.
 
-The full narrative version of this — capture, read, go inside, join, act, gate — is [`docs/real-project-guide.md`](docs/real-project-guide.md).
+The full narrative version of this — capture, read, go inside, join, act, gate — is [`docs/guides/real-project.md`](docs/guides/real-project.md).
 
 ## Gating a CI pipeline
 
@@ -242,7 +242,7 @@ New this change: g.bst, h.bst - 8.0s of work added, 8.0s of it on the critical p
 (stretch 1.00)
 ```
 
-Full flags, thresholds and how the defaults were derived: [`docs/cli.md`](docs/cli.md#ci-efficiency-gate---fail-on-efficiency-regression---min-efficiency).
+Full flags, thresholds and how the defaults were derived: [`docs/guides/cli.md`](docs/guides/cli.md#ci-efficiency-gate---fail-on-efficiency-regression---min-efficiency).
 
 Other useful commands:
 
@@ -252,7 +252,7 @@ bga sweep /tmp/my-run --resource PROCESS --min-capacity 1 --max-capacity 16  # "
 bga replay /tmp/my-run --capacity 16                      # simulate a hardware upgrade
 ```
 
-The `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` subcommands are narrower slices of the same `analyze` report — reach for one of them instead of grepping `analyze`'s output for a single question. They are also genuinely cheaper: each runs only the pipeline stages its own section renders (`UX-47`), so on a 1200-element run `bga graph` costs ~1.2s against `analyze`'s ~3.7s. Full reference: [`docs/cli.md`](docs/cli.md).
+The `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` subcommands are narrower slices of the same `analyze` report — reach for one of them instead of grepping `analyze`'s output for a single question. They are also genuinely cheaper: each runs only the pipeline stages its own section renders (`UX-47`), so on a 1200-element run `bga graph` costs ~1.2s against `analyze`'s ~3.7s. Full reference: [`docs/guides/cli.md`](docs/guides/cli.md).
 
 ## Advanced: looking inside one element (Plane 2)
 
@@ -314,15 +314,14 @@ It also detects real operations repeated independently across *multiple* element
 
 ## Documentation
 
-- [**Real-project guide**](docs/real-project-guide.md) — **start here to use the tool**: capture → read → go inside → join → act → gate, end to end on a real project with real output at every step
-- [`docs/architecture.md`](docs/architecture.md) — **start here to work on the codebase**: what `bga` does today as one coherent system (both planes), with a table of every extension beyond the original spec
-- [CLI Reference](docs/cli.md) — every `bga` command and flag
-- [Optimization Walkthrough](docs/optimization-walkthrough.md) — a worked example of iteratively finding and fixing build-efficiency problems
-- [Optimization Walkthrough (macro → micro)](docs/optimization-walkthrough-06.md) — the harder companion: a project with a badly-shaped graph *and* a badly-parallelized element, and an honest account of which of those `bga` helps you find
-- [Design Directions](docs/design-directions.md) — where the tool is going, argued separately for its two real usage scenarios
-- [Ingestion Pipeline](docs/ingestion-pipeline.md) — how a real BuildStream project + log becomes `bga` input, and its known limitations
-- [v9 Specification](docs/specification.md) — the underlying analysis specification (ground truth for what every number means)
-- [`docs/scenarios/`](docs/scenarios/README.md) — full backlog (done + active) of usability/workflow extensions, each with real before/after evidence
+[**`docs/`**](docs/README.md) is the index — it says which folder answers
+which kind of question. The three entry points:
+
+| you want to | read |
+|---|---|
+| **use the tool** on a real project | [`docs/guides/real-project.md`](docs/guides/real-project.md) — capture → read → go inside → join → act → gate, with real output at every step |
+| **work on the codebase** | [`docs/design/architecture.md`](docs/design/architecture.md) — both planes as one system, and every extension beyond the spec |
+| **look something up** | [`docs/guides/cli.md`](docs/guides/cli.md) — every command, flag and exit code |
 
 ## Development
 

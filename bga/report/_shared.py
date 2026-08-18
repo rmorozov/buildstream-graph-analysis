@@ -22,7 +22,7 @@ GRAPH_SIGNAL_KEYS = frozenset({
 # UX-14: a capacity sweep (Part 19) replays every task with its fixed,
 # already-observed duration_us regardless of the capacity value being
 # swept - real, physical CPU contention as concurrent PROCESS usage
-# rises (confirmed with real timing evidence in docs/scenarios/UX-09-
+# rises (confirmed with real timing evidence in docs/backlog/scenarios/UX-09-
 # builders-max-jobs-joint-optimization.md: 8 builders x 8 max-jobs
 # measured ~11% *slower* than 4x4 on the same real 4-core host) is
 # structurally invisible to this model - predicted makespan can only

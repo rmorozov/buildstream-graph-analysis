@@ -1,6 +1,6 @@
 """Tests for UX-12: `bga` must be able to flag a run whose declared
 `--builders x native --max-jobs` concurrency demand exceeds real host
-CPU cores - the exact condition docs/scenarios/UX-09-builders-max-jobs-
+CPU cores - the exact condition docs/backlog/scenarios/UX-09-builders-max-jobs-
 joint-optimization.md measured causing real slowdown (8 builders x 8
 max-jobs on a real 4-core host ran ~11% slower than BuildStream's own
 4x4 defaults on that same host).

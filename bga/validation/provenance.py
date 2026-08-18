@@ -19,7 +19,7 @@ final assembly of the plain `floors` dict from its certified
 computations (t_infinity_observed/lb/certified_headroom/t_c/model_slack)
 and bga/floors/cold.py's advisory output (t_infinity_cold). It does not
 rewrite AnalysisResult's dict-based fields into a typed object graph
-(out of scope - see docs/tasks/P2-08) - the wire format (JSON/text
+(out of scope - see docs/backlog/tasks/P2-08) - the wire format (JSON/text
 report output) is unchanged; these wrapper types exist only inside the
 assembly step, unwrapped immediately into the same plain ints/None the
 rest of the codebase has always used.

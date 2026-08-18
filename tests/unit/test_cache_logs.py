@@ -254,7 +254,7 @@ def test_the_text_report_renders(log_tree):
 # --- against real logs this machine actually has ------------------------
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_a_real_buildstream_log_tree_parses(tmp_path):
     """The format is BuildStream's, not ours, and a version bump can
     change it - so this reads logs a real `bst build` just wrote.

@@ -1,6 +1,6 @@
 """Tests for tools/_run_context_common.py (UX-18): the shared piece
 tools/bst_run_context.py and tools/bst_extract_run.py both call, so the
-two producer paths documented in docs/ingestion-pipeline.md can't
+two producer paths documented in docs/spec/ingestion-pipeline.md can't
 silently diverge in their native_max_jobs/host_cpu_count/cpu_budget
 (and, UX-21, memory_budget_mb/estimated_job_memory_mb) support again
 the way they did before this fix.

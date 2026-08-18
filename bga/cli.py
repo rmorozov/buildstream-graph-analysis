@@ -3,7 +3,7 @@
 BuildStream Build Efficiency Analyzer (bga) - Command Line Interface
 
 This module provides the CLI entry point for analyzing BuildStream build traces.
-It implements all commands documented in docs/cli.md.
+It implements all commands documented in docs/guides/cli.md.
 
 Usage:
     bga analyze <run_directory> [options]
@@ -259,7 +259,7 @@ def _print_missing_input_hint(run_dir: Path) -> None:
         print(f"  {filename}: {tool_hint}", file=sys.stderr)
     print(
         "  (or run tools/bst_extract_run.py to produce all three from one "
-        "project + log in a single step - see docs/ingestion-pipeline.md)",
+        "project + log in a single step - see docs/spec/ingestion-pipeline.md)",
         file=sys.stderr,
     )
 
@@ -298,7 +298,7 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
     except FileNotFoundError as e:
         # A required input file (run-context.json/graph.json/trace.json) is
         # missing from an otherwise-existing run directory - this is a
-        # "missing files" precondition problem (docs/cli.md exit code 1),
+        # "missing files" precondition problem (docs/guides/cli.md exit code 1),
         # distinct from malformed *content* in a file that does exist
         # (exit code 2, handled below).
         logger.error("Required input file not found: %s", e)
@@ -307,7 +307,7 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
         return 1
     except AnalysisError as e:
         # Graph cycles and other analysis-pipeline failures - exit code 3
-        # per docs/cli.md. Checked by type, not by string-matching the
+        # per docs/guides/cli.md. Checked by type, not by string-matching the
         # message, since AnalysisError is now raised specifically for this.
         logger.error("Analysis failed: %s", e)
         print(f"Error: {e}", file=sys.stderr)
@@ -399,7 +399,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             "run describes a build that did not complete (one or more elements "
             "ended in FAILURE). No scheduling verdict is meaningful for it, so "
             "this is a failure rather than a fail-open. "
-            "See docs/scenarios/UX-54-a-failed-build-scores-perfectly.md.",
+            "See docs/backlog/scenarios/UX-54-a-failed-build-scores-perfectly.md.",
             file=sys.stderr,
         )
         return EXIT_CODE_REGRESSION
@@ -414,7 +414,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 "Confidence gate FAILED: at least one run's confidence is below "
                 "the 'high' band and --fail-on-low-confidence was requested, so "
                 "this comparison is treated as a failure rather than failing open. "
-                "See docs/scenarios/UX-40-real-runs-systematically-fail-the-confidence-gate.md.",
+                "See docs/backlog/scenarios/UX-40-real-runs-systematically-fail-the-confidence-gate.md.",
                 file=sys.stderr,
             )
             return EXIT_CODE_REGRESSION
@@ -436,7 +436,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             "confidence is below the 'high' band, so this comparison is not "
             "reliable enough to gate a pipeline on (failing open, exit 0). "
             "Pass --fail-on-low-confidence to treat this as a failure instead. "
-            "See docs/scenarios/UX-03-ci-regression-gate.md.",
+            "See docs/backlog/scenarios/UX-03-ci-regression-gate.md.",
             file=sys.stderr,
         )
         return 0
@@ -467,7 +467,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 f"on the path: {on_path}. Adding work is allowed; adding it "
                 f"serialized is what this gate exists to catch, and unlike the "
                 f"whole-build efficiency gate it does not weaken as the project grows. "
-                f"See docs/scenarios/UX-79-efficiency-gate-dilutes-with-project-size.md.",
+                f"See docs/backlog/scenarios/UX-79-efficiency-gate-dilutes-with-project-size.md.",
                 file=sys.stderr,
             )
             return EXIT_CODE_EFFICIENCY_REGRESSION
@@ -499,7 +499,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 f"so there is nothing to gate on. This is not a pass - it is an "
                 f"unevaluated check (`efficiency_gate_evaluated: false` in --format "
                 f"json). Pass --require-efficiency-signal to treat this as a failure "
-                f"instead. See docs/scenarios/"
+                f"instead. See docs/backlog/scenarios/"
                 f"UX-87-efficiency-gates-silently-no-op-when-occupancy-is-missing.md.",
                 file=sys.stderr,
             )
@@ -558,7 +558,7 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
     function from _execute_and_write because compare validates *two*
     directories (baseline/candidate), not the single `args.directory`
     every other subcommand has; the exception-handling shape is
-    otherwise identical (same exit-code contract, docs/cli.md)."""
+    otherwise identical (same exit-code contract, docs/guides/cli.md)."""
     configure_logging(verbose=args.verbose, quiet=args.quiet, log_file=args.log_file)
 
     for label, raw_dir in (("baseline", args.baseline), ("candidate", args.candidate)):
@@ -894,7 +894,7 @@ def create_parser() -> argparse.ArgumentParser:
             # argparse subcommands, because registering them would import
             # every tool to build the parser - on every `bga analyze`.
             _tool_help() + "\n\n"
-            "See docs/cli.md for detailed usage examples and workflows."
+            "See docs/guides/cli.md for detailed usage examples and workflows."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -928,7 +928,7 @@ def create_parser() -> argparse.ArgumentParser:
         '--by-kind',
         action='store_true',
         help='Also show aggregate stats (count, total/avg observed duration) grouped by BuildStream '
-             'element_kind (P4-12, non-spec additive signal - see docs/tasks/P4-12-element-kind-based-heuristics.md)'
+             'element_kind (P4-12, non-spec additive signal - see docs/backlog/tasks/P4-12-element-kind-based-heuristics.md)'
     )
     graph_parser.set_defaults(func=cmd_graph)
 
@@ -1031,7 +1031,7 @@ def create_parser() -> argparse.ArgumentParser:
         description='Join this run\'s whole-project analysis with a native (Plane 2) trace report '
                     'of the same build, on element UID. Answers what neither plane can alone: '
                     'whether the elements dominating the critical path are genuinely compute-bound '
-                    'or just badly parallelized (docs/scenarios/UX-51 - not spec-mandated).',
+                    'or just badly parallelized (docs/backlog/scenarios/UX-51 - not spec-mandated).',
     )
     # `directory` (Plane 1) comes from _add_common_arguments; only the
     # Plane 2 artifact is specific to this command.
@@ -1062,7 +1062,7 @@ def create_parser() -> argparse.ArgumentParser:
         help='Compare two runs (baseline vs. candidate) and report deltas plus a verdict',
         description='Compare a baseline run against a candidate run: signed deltas in certified floors, '
                     'efficiency score, and attribution, plus an improved/regressed/no-significant-change '
-                    'verdict gated on confidence and graph comparability (docs/scenarios/UX-01 - not spec-mandated).',
+                    'verdict gated on confidence and graph comparability (docs/backlog/scenarios/UX-01 - not spec-mandated).',
     )
     compare_parser.add_argument('baseline', type=str, help='Path to the baseline (before) run directory')
     compare_parser.add_argument('candidate', type=str, help='Path to the candidate (after) run directory')

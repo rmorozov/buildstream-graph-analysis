@@ -2,7 +2,7 @@
 stack-consolidation advisory - groups of elements sharing the exact same
 immediate-consumer set, with no existing `kind: stack` element already
 covering them, flagged as candidates worth considering for consolidation.
-See docs/tasks/P4-15-stack-consolidation-heuristic.md.
+See docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md.
 """
 import json
 

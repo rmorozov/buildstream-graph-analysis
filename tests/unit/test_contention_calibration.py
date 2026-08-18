@@ -3,7 +3,7 @@ duration modeling in `bga sweep` (`bga/replay/scheduler.py`'s
 `build_contention_calibration`/`_interpolate_calibrated_duration`, and
 `ReplayScheduler.capacity_sweep`'s new `contention_calibration` param).
 
-Design approved via PR #58 (docs/scenarios/UX-14's own "Tier 2 Design
+Design approved via PR #58 (docs/backlog/scenarios/UX-14's own "Tier 2 Design
 Proposal"): calibrate from 2+ real captured runs at different real
 resource capacities, interpolate (never extrapolate) real measured
 per-task durations at the swept capacity, and leave any task with fewer

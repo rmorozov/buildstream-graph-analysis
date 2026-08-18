@@ -26,7 +26,7 @@ CC_AVAILABLE = shutil.which("cc") is not None or shutil.which("gcc") is not None
 @pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BWRAP_AVAILABLE and CC_AVAILABLE),
-    reason="bst/bwrap/cc not all found on PATH - see docs/ingestion-pipeline.md",
+    reason="bst/bwrap/cc not all found on PATH - see docs/spec/ingestion-pipeline.md",
 )
 def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tmp_path):
     project_dir = os.path.join(

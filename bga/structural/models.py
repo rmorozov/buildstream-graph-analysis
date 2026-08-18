@@ -110,7 +110,7 @@ class SensitivityResult:
     How much would improving an element help overall? Despite the
     "Part 34" docstring this carried previously, this is NOT a precisely
     spec-defined mechanism (UX-20 housekeeping, confirmed directly:
-    `docs/specification.md` Part 34 is "Core Invariants" (I1-I13),
+    `docs/spec/specification.md` Part 34 is "Core Invariants" (I1-I13),
     unrelated; the spec's only real "sensitivity" reference is Part 20's
     wall-clock-share, a different, already-implemented mechanism) - this
     is a `bga`-specific additive heuristic, same category as

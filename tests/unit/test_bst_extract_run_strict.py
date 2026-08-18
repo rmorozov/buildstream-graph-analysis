@@ -2,7 +2,7 @@
 opt-in guarantee that graph.json's cache keys reflect the same project
 state the analyzed build actually ran against, via BuildStream's own
 `project.refs` mechanism. See
-docs/tasks/P4-13-strict-mode-project-refs-consistency.md.
+docs/backlog/tasks/P4-13-strict-mode-project-refs-consistency.md.
 
 Three layers:
 1. Pure unit tests against `_read_ref_storage`/`_check_project_refs_strict` -
@@ -18,7 +18,7 @@ Three layers:
    acceptance scenarios (clean succeeds, dirtied project.refs fails
    loudly). Skipped whenever `buildstream-plugins` isn't importable (a
    separate, heavier optional dependency - see
-   docs/ingestion-pipeline.md fact 7) - this was verified manually
+   docs/spec/ingestion-pipeline.md fact 7) - this was verified manually
    against a real BuildStream 2.7.0 + buildstream-plugins install; see
    the task file's Verification Log for that real run's output.
 """
@@ -145,7 +145,7 @@ def test_strict_ignores_uncommitted_changes_to_other_files(tmp_path):
 # --- Real, bst-gated end-to-end: inline-storage fixture must fail loudly --
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_strict_fails_loudly_for_the_inline_storage_fixture(tmp_path):
 
     log_path = tmp_path / "build.log"
@@ -161,7 +161,7 @@ def test_strict_fails_loudly_for_the_inline_storage_fixture(tmp_path):
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_non_strict_extraction_of_inline_fixture_has_no_provenance_field(tmp_path):
     """Default (non-strict) flow: unchanged behavior, and no
     project_refs_provenance field for a project with no project.refs at
@@ -187,7 +187,7 @@ def test_non_strict_extraction_of_inline_fixture_has_no_provenance_field(tmp_pat
 @pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BUILDSTREAM_PLUGINS_AVAILABLE),
-    reason="bst and/or buildstream-plugins not available - see docs/ingestion-pipeline.md",
+    reason="bst and/or buildstream-plugins not available - see docs/spec/ingestion-pipeline.md",
 )
 def test_real_project_refs_lifecycle_clean_then_dirtied(tmp_path):
     """The full real P4-13 acceptance scenario: a real ref-storage:

@@ -175,7 +175,7 @@ def compute_confidence(
     #
     # UX-25: a bare `value` ratio (e.g. 0.8) gives no indication of
     # *which* element is missing or *why* - real friction found via a
-    # real bga analyze run (docs/scenarios/UX-25's own Motivation): the
+    # real bga analyze run (docs/backlog/scenarios/UX-25's own Motivation): the
     # report's own critical-path ranking already knows and displays a
     # `kind: stack` element's own structural caveat elsewhere in the
     # same output, this gate just never connected the two. `detail`

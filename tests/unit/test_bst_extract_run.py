@@ -212,7 +212,7 @@ def test_extract_run_fails_loudly_without_a_targets_line(tmp_path):
 # --- Real end-to-end test --------------------------------------------------
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     log_path = tmp_path / "real_build.log"
 
@@ -284,7 +284,7 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_different_target_lists_produce_different_requested_targets(tmp_path):
     """Acceptance test (P4-10's own): using a *different* target list on
     two separate real builds produces two different, each-individually-
@@ -316,10 +316,10 @@ def test_different_target_lists_produce_different_requested_targets(tmp_path):
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
     """P4-14: rebuilding an already-built project logs a real "Query
-    cache" pipeline-level activity (see docs/ingestion-pipeline.md fact
+    cache" pipeline-level activity (see docs/spec/ingestion-pipeline.md fact
     11) - confirm it round-trips into run-context.json's
     `pipeline_overhead` field and that bga's own report picks it up, even
     though `bst`'s own per-element FETCH/BUILD queues are entirely empty

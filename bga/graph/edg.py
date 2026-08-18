@@ -833,7 +833,7 @@ def compute_element_durations(tasks: List[NormalizedTask]) -> Dict[str, int]:
     Note what this deliberately does *not* settle: whether a long FETCH
     should contribute to a *build* chain's floor at all. That is a
     modelling question about Part 14.1, recorded in
-    `docs/scenarios/UX-53-*.md`, not something to decide silently here.
+    `docs/backlog/scenarios/UX-53-*.md`, not something to decide silently here.
     """
     durations: Dict[str, int] = {}
     for task in tasks:

@@ -6,7 +6,7 @@ said so - a reader had no way to know from the report itself that a high
 Efficiency Score doesn't rule out real, unmodeled CPU contention (see
 UX-09's own real evidence this can matter).
 
-docs/scenarios/UX-13-lb-report-conflates-scheduling-and-cpu-capacity.md's
+docs/backlog/scenarios/UX-13-lb-report-conflates-scheduling-and-cpu-capacity.md's
 own acceptance test requires this in both `--format text` and
 `--format json` output - `AnalysisResult.floors['capacity_model_note']`
 is the single source of truth both formatters read from.

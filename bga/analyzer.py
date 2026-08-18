@@ -403,7 +403,7 @@ class BuildEfficiencyAnalyzer:
         # `total_duration_us`, which also contains the untracked head and
         # tail: those belong to no task, so a floor certified against the
         # tasks must not be divided by them. UX-88 found this comment and
-        # docs/cli.md both still saying "total duration" - on
+        # docs/guides/cli.md both still saying "total duration" - on
         # tests/fixtures/golden/mixed_task_kinds the two give 1.00 and
         # 0.875. Chosen over other candidate
         # ratios (e.g. t_c/horizon_us, which would measure the replay
@@ -698,7 +698,7 @@ class BuildEfficiencyAnalyzer:
         and native `--max-jobs` (each element's own internal `make -jN`/
         `ninja` parallelism, `run_context.native_max_jobs`) both consume
         the same physical CPU cores, uncoordinated - confirmed with real
-        timing evidence in docs/scenarios/UX-09-builders-max-jobs-joint-
+        timing evidence in docs/backlog/scenarios/UX-09-builders-max-jobs-joint-
         optimization.md (examples/05-cmake-cpp-toolchain: 8 builders x 8
         max-jobs on a real 4-core host measured ~11% slower than
         BuildStream's own 4x4 defaults on that same host).
@@ -1116,7 +1116,7 @@ class BuildEfficiencyAnalyzer:
         # whenever meaningful pre-task overhead exists (BuildStream's own
         # startup, large sandbox-staging cost) - confirmed via a real run
         # where the reported Total Duration was 4.0s against a real 7.6s
-        # wall clock (docs/scenarios/UX-10-total-duration-excludes-pre-
+        # wall clock (docs/backlog/scenarios/UX-10-total-duration-excludes-pre-
         # task-overhead.md). UNTRACKED_HEAD/UNTRACKED_TAIL (computed
         # above in _compute_attribution) are already wall-clock-relative,
         # so this also makes the Attribution Breakdown's percentages
@@ -1155,11 +1155,11 @@ class BuildEfficiencyAnalyzer:
         self._check_memory_oversubscription()
 
         # Pipeline overhead (P4-14, non-spec additive signal) - see
-        # docs/tasks/P4-14-cache-query-overhead-visibility.md
+        # docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md
         result.pipeline_overhead = self._compute_pipeline_overhead(result.total_duration_us)
 
         # Element-kind summary (P4-12 Direction 3, non-spec additive
-        # signal) - see docs/tasks/P4-12-element-kind-based-heuristics.md
+        # signal) - see docs/backlog/tasks/P4-12-element-kind-based-heuristics.md
         result.element_kind_summary = self._compute_element_kind_summary()
         
         # Occupancy analysis (M0)
@@ -1306,7 +1306,7 @@ class BuildEfficiencyAnalyzer:
         cost - confirmed material on a real ~2000-element fully-cached
         rebuild (Query cache + Resolving elements together were ~87% of
         total wall time there - see
-        docs/tasks/P4-14-cache-query-overhead-visibility.md's
+        docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md's
         Verification Log), but they are not attributable to any
         individual element, only to the pipeline as a whole.
         `tools/bst_extract_run.py` extracts them into
@@ -1493,7 +1493,7 @@ class BuildEfficiencyAnalyzer:
         duration, per kind. Purely additive/presentational: reads
         already-computed per-task durations, changes no existing
         computation. See
-        docs/tasks/P4-12-element-kind-based-heuristics.md.
+        docs/backlog/tasks/P4-12-element-kind-based-heuristics.md.
         """
         if not self.graph:
             return {}
@@ -1780,7 +1780,7 @@ class BuildEfficiencyAnalyzer:
                 ],
                 'deferrable_count': len(diag_result.deferrable_leaves),
                 # P4-12 Direction 2 / P4-15 Direction 2 (linked - see
-                # docs/tasks/P4-12-element-kind-based-heuristics.md's
+                # docs/backlog/tasks/P4-12-element-kind-based-heuristics.md's
                 # "Related tasks"): per-leaf element_kind, additive, never
                 # changes is_leaf/is_potentially_deferrable above (which
                 # stay real, directly-observed graph facts) - a `junction`/
@@ -1853,7 +1853,7 @@ class BuildEfficiencyAnalyzer:
 
         # Stack-consolidation advisory (P4-15 Direction 1, non-spec
         # additive signal) - purely structural, no timing data used or
-        # changed. See docs/tasks/P4-15-stack-consolidation-heuristic.md.
+        # changed. See docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md.
         from bga.structural.consolidation import find_consolidation_candidates
         consolidation_candidates = find_consolidation_candidates(self.graph)
 
@@ -2019,7 +2019,7 @@ class BuildEfficiencyAnalyzer:
             'summary': result.summary,
             # P4-15 Direction 1 (non-spec, additive, purely structural -
             # no timing data used) - see
-            # docs/tasks/P4-15-stack-consolidation-heuristic.md. For a
+            # docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md. For a
             # real, measured comparison of a flagged candidate's actual
             # checkout cost, run the separate tools/bst_checkout_cost.py.
             'consolidation_candidates': consolidation_candidates,

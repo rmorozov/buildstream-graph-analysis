@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Convert Chrome Trace Event JSON (as emitted by tools/bst_log_to_chrome_trace.py)
 into trace/v9 JSON (Part 32.3) - the second half of the real ingestion
-pipeline's trace side (see docs/ingestion-pipeline.md).
+pipeline's trace side (see docs/spec/ingestion-pipeline.md).
 
 This is a separate, general-purpose tool - not the same as
 tests/fixtures/synthetic_multi_subproject/adapter.py, which is
@@ -12,7 +12,7 @@ logs look at all. A real BuildStream log's START/SUCCESS message text is
 either a log file path (for the outer per-task bracket) or a short
 internal-progress phrase ("Staging sources") for nested sub-phases -
 never a phase description - confirmed against a real, installed
-BuildStream 2.7.0 build (see docs/ingestion-pipeline.md). This tool
+BuildStream 2.7.0 build (see docs/spec/ingestion-pipeline.md). This tool
 instead reads the `action` field bst_log_to_chrome_trace.py now records
 directly in each bst-builder event's `args` (added specifically to make
 this conversion possible without message-text guessing), which is

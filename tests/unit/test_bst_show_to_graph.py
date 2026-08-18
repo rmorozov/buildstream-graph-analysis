@@ -8,7 +8,7 @@ Two layers:
    `bst` isn't on PATH (BuildStream + bubblewrap are heavy, non-pip-
    only dependencies not assumed to be present in every dev/CI
    environment; see pyproject.toml's `bst` optional extra and
-   docs/ingestion-pipeline.md for how to install them locally).
+   docs/spec/ingestion-pipeline.md for how to install them locally).
 """
 import json
 import os
@@ -203,7 +203,7 @@ def test_parse_notparallel_distinguishes_unset_from_false():
 # --- Real end-to-end test against a live `bst` binary ------------------
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_bst_show_against_fixture_project(tmp_path):
     graph = extract_graph(str(FIXTURE_PROJECT), targets=["app.bst"])
 
@@ -242,7 +242,7 @@ def test_real_bst_show_against_fixture_project(tmp_path):
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_bst_show_captures_per_element_max_jobs_override(tmp_path):
     """UX-31, re-baselined by UX-84: the per-element parallelism control
     BuildStream 2.7 actually honours is `variables: notparallel: True`,
@@ -280,7 +280,7 @@ def test_real_bst_show_captures_per_element_max_jobs_override(tmp_path):
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_graph_output_loads_into_bga(tmp_path):
     """The extracted graph.json must be directly consumable by bga's
     own loader, not just superficially JSON-shaped."""

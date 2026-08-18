@@ -1,6 +1,6 @@
 """Tests for tools/bst_checkout_cost.py - a deliberately standalone tool
 (not part of bga's core analyze pipeline - see its own module docstring
-and docs/tasks/P4-15-stack-consolidation-heuristic.md) that reports real,
+and docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md) that reports real,
 measured cost from `bst source checkout`/`bst artifact checkout` logs,
 individually or compared against a consolidated (e.g. `kind: stack`)
 checkout.
@@ -37,7 +37,7 @@ BST_AVAILABLE = shutil.which("bst") is not None
 # = 2s) - 4s each, 8s combined.
 # START lines show "--:--:--" (real BuildStream behavior - elapsed isn't
 # known yet when an activity starts, and resets per-activity, not
-# globally; see UX-06/docs/scenarios/UX-06-raw-log-timestamp-corruption.md)
+# globally; see UX-06/docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md)
 # - only each terminal line's own elapsed is real, applied on top of the
 # time in effect when *that* activity's own START was seen.
 LOG_A = """\
@@ -150,7 +150,7 @@ def test_compare_json_round_trips(tmp_path):
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_end_to_end_against_a_real_build_and_checkouts(tmp_path):
     """Real `bst build` + two individual `bst artifact checkout`s + one
     `kind: stack` checkout (tests/fixtures/bst_show_project/elements/all.bst,

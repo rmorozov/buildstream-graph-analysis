@@ -15,7 +15,7 @@ from enum import Enum
 # their own (junction: reference to another project; import/filter/compose:
 # no-transform passthroughs; stack: BST_ELEMENT_HAS_ARTIFACT=False,
 # get_unique_key() returns a constant - confirmed via BuildStream 2.7.0
-# source, see docs/tasks/P4-15-stack-consolidation-heuristic.md). Used
+# source, see docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md). Used
 # only to *annotate/flag* diagnostic signal listings (P4-12 Direction 2/
 # P4-15 Direction 2) - never to silently exclude or reweight a directly
 # observed duration (P4-12's own Out of Scope). Deliberately a closed,
@@ -128,7 +128,7 @@ class RunContext:
     # (e.g. "Query cache", "Resolving elements") - not part of run-context/v9's
     # spec-mandated minimal schema (Part 32.1), an additive extension
     # `tools/bst_extract_run.py` populates from the real log. Each entry:
-    # {"phase": str, "elapsed_us": int}. See docs/tasks/P4-14-cache-query-overhead-visibility.md.
+    # {"phase": str, "elapsed_us": int}. See docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md.
     pipeline_overhead: List[dict] = field(default_factory=list)
     # Run-identity manifest (I8, P1-37) - not part of run-context/v9's
     # spec-mandated schema (the spec states I8's invariant but defines no
@@ -138,7 +138,7 @@ class RunContext:
     # Optional[str], "project_refs_sha256": Optional[str]}. The same
     # manifest_hash is embedded as Graph.run_identity_hash and
     # Trace.run_identity_hash - see bga/ingest/loader.py::load_all's
-    # cross-check. See docs/tasks/P1-37-run-identity-not-captured-or-enforced.md.
+    # cross-check. See docs/backlog/tasks/P1-37-run-identity-not-captured-or-enforced.md.
     run_identity: Optional[dict] = None
     # UX-54: whether the build this run describes actually succeeded -
     # not part of run-context/v9's spec-mandated schema (the spec has no
@@ -231,7 +231,7 @@ class Element:
     # "autotools") - not part of graph/v9's spec-mandated minimal schema
     # (Part 32.2), an additive extension `tools/bst_show_to_graph.py`
     # populates from real `bst show`'s `%{kind}` symbol. Not yet read by
-    # any analysis consumer - see docs/tasks/P4-12 for planned heuristics.
+    # any analysis consumer - see docs/backlog/tasks/P4-12 for planned heuristics.
     element_kind: Optional[str] = None
     # Real per-element `--max-jobs`-equivalent override (UX-22) - a real
     # BuildStream possibility (`public: bst: max-jobs:`, distinct from

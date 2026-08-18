@@ -1,9 +1,9 @@
-"""Regression tests for P4-01: README/docs/cli.md examples must actually
+"""Regression tests for P4-01: README/docs/guides/cli.md examples must actually
 work, not just read plausibly. Confirmed broken and fixed for real
-against a live --format json run (see docs/tasks/P4-01):
-- docs/cli.md's jq example used floors.certified_headroom_us (no such
+against a live --format json run (see docs/backlog/tasks/P4-01):
+- docs/guides/cli.md's jq example used floors.certified_headroom_us (no such
   field - the real one is certified_headroom).
-- docs/cli.md's other jq example treated criticality_probability (a JSON
+- docs/guides/cli.md's other jq example treated criticality_probability (a JSON
   object keyed by element UID) as an array.
 """
 import json
@@ -42,7 +42,7 @@ def test_readme_quick_start_command_works():
 
 
 def test_certified_headroom_field_name_matches_docs_cli_md(report_json):
-    """docs/cli.md's jq example reads .floors.certified_headroom - not
+    """docs/guides/cli.md's jq example reads .floors.certified_headroom - not
     certified_headroom_us, which doesn't exist and would silently return
     null."""
     assert "certified_headroom" in report_json["floors"]
@@ -50,7 +50,7 @@ def test_certified_headroom_field_name_matches_docs_cli_md(report_json):
 
 
 def test_criticality_probability_is_an_object_keyed_by_element_uid(report_json):
-    """docs/cli.md's other jq example must use to_entries first - this
+    """docs/guides/cli.md's other jq example must use to_entries first - this
     field is a JSON object, not an array."""
     crit = report_json["signals"]["criticality_probability"]
     assert isinstance(crit, dict)

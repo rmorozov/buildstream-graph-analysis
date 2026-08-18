@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Coordinate a real BuildStream project + a real BuildStream log into
 one complete `bga`-ready run directory (run-context.json + graph.json +
-trace.json) in a single step (P4-10). See docs/ingestion-pipeline.md for
+trace.json) in a single step (P4-10). See docs/spec/ingestion-pipeline.md for
 the full design record.
 
 This does not invoke `bst build` itself - it only coordinates *extraction*
@@ -45,7 +45,7 @@ def _parse_targets(targets_str: str):
 
 def _git_consistency_note(project_dir: str):
     """Best-effort time-of-extraction consistency signal (see
-    docs/ingestion-pipeline.md's "time-of-extraction consistency" note):
+    docs/spec/ingestion-pipeline.md's "time-of-extraction consistency" note):
     graph.json's cache keys reflect the project state *at the moment bst
     show runs*, which may not be the same state the analyzed build
     actually ran against. There's no commit hash embedded in a BuildStream
@@ -149,7 +149,7 @@ def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_re
     This proves inputs are mutually consistent *at extraction time* - it
     does not, and cannot, prove the analyzed build (which already
     happened, potentially much earlier) itself ran against this exact
-    state; see this task's own docs/tasks/P1-37 file for that honestly-
+    state; see this task's own docs/backlog/tasks/P1-37 file for that honestly-
     named limitation.
     """
     manifest = {
@@ -182,7 +182,7 @@ def _read_ref_storage(project_dir: str):
     `ref-storage` via a conditional/variable substitution rather than a
     plain scalar would not be read correctly. Not observed in practice
     (confirmed real BuildStream 2.7.0 projects set it as a plain
-    top-level scalar - see docs/tasks/P4-13-strict-mode-project-refs-consistency.md),
+    top-level scalar - see docs/backlog/tasks/P4-13-strict-mode-project-refs-consistency.md),
     but worth naming plainly rather than silently assuming.
     """
     try:
@@ -210,7 +210,7 @@ def _check_project_refs_strict(project_dir: str):
     (a real, content-addressable fingerprint of every trackable
     element's resolved source ref, confirmed against BuildStream 2.7.0 -
     see this task's own research in
-    docs/tasks/P4-13-strict-mode-project-refs-consistency.md).
+    docs/backlog/tasks/P4-13-strict-mode-project-refs-consistency.md).
 
     Fails loudly (raises RuntimeError, never silently degrades) unless
     all of the following hold:
@@ -237,7 +237,7 @@ def _check_project_refs_strict(project_dir: str):
             f"--strict requires ref-storage: project.refs in {project_dir}/project.conf "
             f"(found: {ref_storage!r}) - a project using the default inline ref-storage "
             "has no single file this mechanism can hash/compare, so --strict cannot "
-            "provide a real guarantee for it. See docs/tasks/P4-13-strict-mode-project-refs-consistency.md."
+            "provide a real guarantee for it. See docs/backlog/tasks/P4-13-strict-mode-project-refs-consistency.md."
         )
 
     project_refs_path = Path(project_dir) / "project.refs"
@@ -384,7 +384,7 @@ def extract_run(
         # measurement source (cgroup accounting, /proc sampling) exists in
         # this ingestion pipeline yet - omitting the field is the honest
         # "unavailable" rather than fabricating a number. See
-        # docs/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
+        # docs/backlog/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
     }
     # native_max_jobs/host_cpu_count (UX-12), cpu_budget (UX-15) - see
     # tools/_run_context_common.py (UX-18: shared with
@@ -511,7 +511,7 @@ def main() -> int:
         help="Fail loudly (instead of the default best-effort warning) unless the project "
         "uses ref-storage: project.refs and project.refs itself has no uncommitted changes "
         "(P4-13). Only usable for projects with ref-storage: project.refs and at least one "
-        "trackable-ref source - see docs/tasks/P4-13-strict-mode-project-refs-consistency.md.",
+        "trackable-ref source - see docs/backlog/tasks/P4-13-strict-mode-project-refs-consistency.md.",
     )
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,

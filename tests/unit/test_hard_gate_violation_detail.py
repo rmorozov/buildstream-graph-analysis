@@ -3,7 +3,7 @@ gate violations gain a real `detail` field naming the specific missing
 element(s) and, where the existing STRUCTURAL_ELEMENT_KINDS heuristic
 (P4-12) already explains it, the real reason - not just a bare ratio.
 
-Reproduces the exact real shape found in docs/scenarios/UX-25's own
+Reproduces the exact real shape found in docs/backlog/scenarios/UX-25's own
 Motivation (a real bga analyze run against examples/05-cmake-cpp-
 toolchain): a `kind: stack` element (`all.bst`) on the critical path
 with no matching task, producing critical_path_coverage < 1.0 - the

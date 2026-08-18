@@ -4,7 +4,7 @@
 Split out because the two tools' capabilities had silently diverged:
 tools/bst_extract_run.py picked up native_max_jobs/host_cpu_count
 (UX-12) and cpu_budget (UX-15), but tools/bst_run_context.py - the other
-of the two producer paths docs/ingestion-pipeline.md documents as
+of the two producer paths docs/spec/ingestion-pipeline.md documents as
 equally valid - never did, even though both build the exact same
 run-context/v9 shape from a real BuildStream log. Centralizing the
 shared piece here means a future addition to one reaches both instead of

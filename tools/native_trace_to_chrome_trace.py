@@ -9,7 +9,7 @@ second, separate converter, not folded into the tracer itself, matching
 this repo's established "small single-purpose tools" discipline. Never
 changes `tools/bst_log_to_chrome_trace.py`'s own real output shape - the
 user's own established `perfetto.dev` workflow for Plane 1 alone must
-keep working exactly as before (see docs/ingestion-pipeline.md).
+keep working exactly as before (see docs/spec/ingestion-pipeline.md).
 
 Output shape: a bare JSON array of trace events (Chrome Trace's own
 "JSON Array Format"), matching `bst_log_to_chrome_trace.py`'s own real,

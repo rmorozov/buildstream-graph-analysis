@@ -15,9 +15,9 @@
 #
 # See examples/README.md's own `05-cmake-cpp-toolchain` section for how
 # to use the result (an earlier revision of this header pointed at a
-# `docs/scenarios/UX-08-...md` and a per-example README.md, neither of
+# `docs/backlog/scenarios/UX-08-...md` and a per-example README.md, neither of
 # which was ever written - UX-08 was never filed, see
-# docs/scenarios/README.md).
+# docs/backlog/scenarios/README.md).
 #
 # examples/06-macro-micro-optimization needs the same sysroot in two
 # more places (its own files/toolchain and its optimized/ variant's), so

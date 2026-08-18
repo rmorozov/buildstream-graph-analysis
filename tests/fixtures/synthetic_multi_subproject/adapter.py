@@ -7,7 +7,7 @@ per BuildStream task, which load_trace currently has no handling for at
 all - they would be silently ignored and the trace would come out empty.
 This is a genuine format mismatch between the two tools, not a hypothetical
 one; this adapter is the bridge until bga's loader grows native B/E
-support (see docs/fix-progress-tracker.md for a tracked follow-up).
+support (see docs/backlog/progress-tracker.md for a tracked follow-up).
 
 The converter's emitted event `name` is "<element> [<phase message>]" -
 the BuildStream task-kind word (track/fetch/build) itself is discarded by

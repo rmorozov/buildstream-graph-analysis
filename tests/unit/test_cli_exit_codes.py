@@ -1,4 +1,4 @@
-"""Regression tests for documented CLI exit codes (docs/cli.md):
+"""Regression tests for documented CLI exit codes (docs/guides/cli.md):
 0 success, 1 bad args/missing files, 2 ingestion failure, 3 analysis
 failure (e.g. graph cycles).
 

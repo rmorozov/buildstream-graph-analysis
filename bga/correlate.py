@@ -2,7 +2,7 @@
 happened inside them".
 
 The two planes have always been separate tools over separate artifacts,
-and `docs/design-directions.md` named the seam between them as the
+and `docs/design/directions.md` named the seam between them as the
 biggest remaining gap. This module closes it as an **explicit join**
 rather than by merging the planes, on evidence measured before the
 design was chosen:
@@ -18,7 +18,7 @@ design was chosen:
   elements absent from Plane 2 were `all.bst` (a `stack`) and
   `toolchain.bst` (an `import`) - elements that run no build commands, so
   their absence is correct rather than a join failure.
-- **The horizons genuinely cannot be merged.** `docs/architecture.md`
+- **The horizons genuinely cannot be merged.** `docs/design/architecture.md`
   argues this at length: Plane 2's timeline is one level down inside a
   single element's sandbox and shares no horizon with an element-level
   trace, so attribution cannot be reconciled across them even in

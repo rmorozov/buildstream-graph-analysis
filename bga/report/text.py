@@ -212,7 +212,7 @@ def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
     top-level "main:core activity" phases (Query cache, Resolving
     elements, etc.) are real work with a real elapsed cost, confirmed
     material on a real large-project rebuild (see
-    docs/tasks/P4-14-cache-query-overhead-visibility.md), but they are
+    docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md), but they are
     not attributable to any individual element - only to the pipeline as
     a whole. This is deliberately a coarse, one-number-per-phase signal,
     never a fabricated per-element breakdown: BuildStream's own log
@@ -240,7 +240,7 @@ def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
 def _format_by_kind_summary(result: AnalysisResult) -> List[str]:
     """`bga graph --by-kind` (P4-12 Direction 3) - aggregate stats
     grouped by BuildStream element_kind. Opt-in, additive, presentation
-    only - see docs/tasks/P4-12-element-kind-based-heuristics.md.
+    only - see docs/backlog/tasks/P4-12-element-kind-based-heuristics.md.
     """
     lines: List[str] = []
     summary = getattr(result, 'element_kind_summary', None) or {}

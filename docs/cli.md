@@ -74,12 +74,12 @@ To produce a real run directory in this shape from an actual BuildStream project
 **Output:**
 By default, `bga` prints a human-readable summary to stdout, leading with a synthesized **Key Findings** block (confidence headline, the single largest wait-category opportunity, the top elements by blast radius/criticality probability when `--diagnostics` ran, and certified headroom in plain language) before the detailed sections:
 - **Confidence & Violations**: Overall confidence score, any failed hard gates, and a one-line summary per violation - previously only visible via `--format json`.
-- **Certified Floors**: $T_\infty$, Lower Bound ($LB$), Certified Headroom, and an Efficiency Score ($LB$ / total duration, 0.0-1.0) - measures scheduling efficiency of the observed work, not whether that work itself is minimal; see Critical Path for the latter. $LB$/Efficiency Score certify against this run's *recorded* resource capacities (`--builders`/`--fetchers`/`--pushers`), not real host CPU cores - a native build system's own internal parallelism (`--max-jobs`, e.g. `make -jN`) is a separate axis `bga` does not model here, and the two can genuinely compete for the same cores (see `docs/scenarios/UX-09-builders-max-jobs-joint-optimization.md`'s real evidence). A one-line note to this effect always accompanies the Certified Floors block, naming this run's own real numbers when a `resource_oversubscription` violation was detected for it (see `docs/scenarios/UX-12-capture-native-max-jobs-and-host-cores.md`). When the run declares its own CPU budget (`--cpu-budget` at extraction time, e.g. because a cgroup CPU quota isn't visible to raw host-core detection), that declared budget - not the detected host core count - governs this check (see `docs/scenarios/UX-15-declared-cpu-budget-overrides-host-detection.md`).
+- **Certified Floors**: $T_\infty$, Lower Bound ($LB$), Certified Headroom, and an Efficiency Score ($LB$ / **horizon**, 0.0-1.0 — the horizon is first-task-start to last-task-finish, *not* total duration, which also contains the untracked head and tail; on `tests/fixtures/golden/mixed_task_kinds` the two give 1.00 and 0.875) - measures scheduling efficiency of the observed work, not whether that work itself is minimal; see Critical Path for the latter. $LB$/Efficiency Score certify against this run's *recorded* resource capacities (`--builders`/`--fetchers`/`--pushers`), not real host CPU cores - a native build system's own internal parallelism (`--max-jobs`, e.g. `make -jN`) is a separate axis `bga` does not model here, and the two can genuinely compete for the same cores (see `docs/scenarios/UX-09-builders-max-jobs-joint-optimization.md`'s real evidence). A one-line note to this effect always accompanies the Certified Floors block, naming this run's own real numbers when a `resource_oversubscription` violation was detected for it (see `docs/scenarios/UX-12-capture-native-max-jobs-and-host-cores.md`). When the run declares its own CPU budget (`--cpu-budget` at extraction time, e.g. because a cgroup CPU quota isn't visible to raw host-core detection), that declared budget - not the detected host core count - governs this check (see `docs/scenarios/UX-15-declared-cpu-budget-overrides-host-detection.md`).
 - **Efficiency Metrics**: Parallelism, Utilization, and Attribution breakdown.
 - **Critical Path**: The sequence of tasks determining the minimum build time.
 - **Bottlenecks**: Elements with high blast radius or criticality probability.
 
-The Key Findings/Confidence blocks are presentation-only, shown for the full `analyze` report - `--format json`/`csv` and the section subcommands (`graph`/`floors`/`replay`/`utilisation`/`diagnostics`) are unaffected.
+The Key Findings/Confidence blocks are shown for the full `analyze` report only - the section subcommands (`graph`/`floors`/`replay`/`utilisation`/`diagnostics`) and `--format csv` do not render them. They are **not** presentation-only: since `UX-75` every conclusion in them is computed once in `bga/findings.py` and published to `--format json` as the `findings` array described below, so the two formats cannot disagree.
 
 ### Options
 
@@ -94,6 +94,47 @@ bga analyze /path/to/run --format json > report.json
 ```
 
 The JSON carries a **`findings` array** — the same conclusions the text report's `Key Findings` block renders, as data. Each entry has a stable `id` (what a CI gate keys on, and what a run-to-run diff joins on — it does not change when the wording does), a `severity` (`critical`/`high`/`medium`/`info`), the `elements` it concerns, and an `evidence` object with the raw numbers behind the sentence. Both formats render from this one list, so they cannot disagree, and a consumer never has to re-derive a threshold from `bga/report/text.py`:
+
+#### The full `findings[].id` set
+
+`id` is the contract — it does not change when the wording does, so a CI gate keys on it. Every id `bga` can emit, and nothing else:
+
+`bga analyze --format json` → `.findings[].id` (15, all defined in `bga/findings.py`):
+
+| id | severity | what it says |
+|---|---|---|
+| `build-failed` | critical | one or more elements ended in FAILURE; every figure below describes an incomplete build |
+| `failed-task-time` | high | how much of the measured chain was work that was thrown away |
+| `confidence` | varies | the confidence headline and any failed hard gates |
+| `run-mode-incremental` | info | this run was incremental, so its durations are not a cold-build baseline |
+| `wait-category` | varies | the single largest non-execution wait category, when it clears the 1% floor |
+| `execution-bound` | info | no wait category clears the floor — the time is in the work itself |
+| `certified-headroom` | varies | proven room to improve scheduling without changing any element |
+| `efficiency-score` | varies | how close the scheduler got to the certified floor |
+| `time-concentration` | varies | which elements the critical path's duration is actually in |
+| `mesh-graph` | info | the critical path is a small share of total duration — the graph, not the chain, is the constraint |
+| `blast-radius-ranking` | varies | elements worth fixing first by downstream reach (needs `--diagnostics`) |
+| `criticality` | varies | elements most likely to be on the critical path under duration variance (needs `--diagnostics`) |
+| `optimization-horizon` | varies | what the build drops to after each of the next few fixes |
+| `joint-saving` | varies | whether the recommended set's savings add up or overlap |
+| `latent-heavies` | info | heavy elements off the critical path, worth nothing to fix today |
+
+`bga correlate --format json` → `.actionable[].recommendations[].id` (9) and `.restructuring[].id` (1):
+
+| id | severity | what it says |
+|---|---|---|
+| `pinned-to-one-job` | high | waiting rather than computing, and its native build asked for `-j1` |
+| `underachieved-requested-jobs` | high | waiting rather than computing despite asking for more jobs |
+| `waiting-not-computing` | high | waiting rather than computing, cause not named by Plane 2 |
+| `already-compute-bound` | high | a negative result: nothing to gain from its parallelism |
+| `cpu-concentration` | high | one binary is most of its measured CPU |
+| `serialization-point` | high | a single process holds a material share of its wall time |
+| `peak-memory` | medium | its largest process's peak RSS, to multiply by concurrency |
+| `redundant-operation` | medium | it pays for an operation other elements also run |
+| `declared-not-used` | info | opened no file staged by a declared build dependency — evidence, not a verdict |
+| `unread-gating-chain` | high | a *group* of never-read edges chains elements along the critical path (`UX-82`) |
+
+A finding not in the run's output simply did not fire; ids are never emitted with an empty or placeholder value.
 
 ```bash
 # Is this build chain-bound, and which elements is its time in?
@@ -164,7 +205,7 @@ Compute the advisory cold structural floor (`T∞,cold`) using prior runs' obser
 ```bash
 bga analyze /path/to/run --cold --history-dir /path/to/prior-run-1 --history-dir /path/to/prior-run-2
 ```
-- `--cold` alone (no `--history-dir`) reports `T∞,cold` as unavailable - there's nothing to estimate from.
+- `--cold` alone (no `--history-dir`) has nothing to estimate from. In `--format json` the cold fields are present and null; the **text report prints no cold line at all** rather than a line saying "unavailable" — absence is the report's way of saying a number was not computed, and it is the same in both formats in the sense that neither fabricates one.
 - By default, if any element on the resolved cold critical path has no resolvable historical duration, `T∞,cold` reports as unavailable rather than a misleading partial number.
 - `--allow-partial-cold` (only meaningful together with `--cold`; a no-op with a warning if passed alone) instead publishes a value with `partial=true`/`confidence=low` in that case.
 
@@ -206,7 +247,7 @@ bga compare /path/to/before-run /path/to/after-run
 bga compare /path/to/before-run /path/to/after-run --format json | jq '.verdict'
 ```
 
-The verdict is one of `improved`/`regressed`/`no significant change` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a **refusal** (`UX-78`) when the two runs are not comparable at all — either their graphs share fewer than half their element UIDs (they may not even be the same project) or one is a caches-off run and the other incremental. A refusal prints the failing check to stderr, prints no comparison, and exits **6** — deliberately not 4 or 5, so a CI job keying on the gates cannot read a wrong-artifact-path bug as a regression. `--allow-mismatch` restores the older behaviour: the warning is printed above the comparison and the exit code is the gates' own. Otherwise the exit code is 0 for a successful comparison regardless of verdict — comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
+The verdict is one of `improved`/`regressed`/`no significant change`/`not comparable (baseline has no measurable duration)` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a **refusal** (`UX-78`) when the two runs are not comparable at all — either their graphs share fewer than half their element UIDs (they may not even be the same project) or one is a caches-off run and the other incremental. A refusal prints the failing check to stderr, prints no comparison, and exits **6** — deliberately not 4 or 5, so a CI job keying on the gates cannot read a wrong-artifact-path bug as a regression. `--allow-mismatch` restores the older behaviour: the warning is printed above the comparison and the exit code is the gates' own. Otherwise the exit code is 0 for a successful comparison regardless of verdict — comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
 
 ### CI Regression Gate (`--fail-on-regression`)
 
@@ -266,6 +307,13 @@ Two knobs:
 - `--min-efficiency RATIO` - an absolute floor (`0.0`-`1.0`) on the candidate run's own occupancy, consulting no baseline. This is what makes *"we accept 55%, we do not accept 30%"* expressible on a first run, and what stops a slow drift that no single delta ever trips. No default: what counts as acceptable is a statement about your project, not a universal constant.
 
 The efficiency gate inherits the same low-confidence fail-open rule as the duration gate, and the same `--fail-on-low-confidence` opt-out.
+
+### Flags reachable only from `--help`
+
+Documented here because they exist and nothing user-facing said so:
+
+- `bga sweep --calibration-dir DIR` (`UX-14` tier 2) — replaces the sweep's fixed-duration model with a contention-aware one calibrated from real runs in `DIR`. Without it the sweep's own caveat applies: the predicted curve is a shape, not a runtime prediction, because the replay model does not know about CPU.
+- `bga capture run --invocation-log PATH` / `--argv-log PATH` / `--raw-log PATH` — where Plane 2 writes its own capture logs. `--invocation-log` defaults to a path beside the report (`UX-80`); `--no-invocation-log` turns it off.
 
 ## `bga correlate` — Join the Two Planes
 
@@ -422,7 +470,12 @@ bga analyze /path/to/run-directory --diagnostics --format json | \
 - `1`: General error (e.g., invalid arguments, missing files).
 - `2`: Data ingestion failure (e.g., malformed v9 artifacts).
 - `3`: Analysis failure (e.g., graph cycles detected).
-- `4`: `bga compare --fail-on-regression` only - the analyzed build itself regressed beyond the threshold. Distinct from 1/2/3, which all mean `bga` itself failed to run - this means `bga` ran successfully and is reporting a real regression (`docs/scenarios/UX-03`).
+- `4`: **not "slower" alone.** `bga compare` returns it for any of three things, and a CI job that triages it as a duration regression will mis-read two of them:
+  - `--fail-on-regression` and the build's total duration really did regress beyond the threshold (`docs/scenarios/UX-03`);
+  - the **build-failure gate** (`UX-54`) - either run describes a build in which an element FAILED, so no scheduling verdict is meaningful. This fires whenever *any* gate was requested, including when only the efficiency gates were;
+  - `--fail-on-low-confidence` and a run's confidence is below the "high" band.
+
+  Read the stderr line, which names which of the three fired. All three are distinct from 1/2/3, which mean `bga` itself failed to run.
 - `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/scenarios/UX-39`).
 - `6`: `bga compare` refused - the two runs are not comparable (they share fewer than half their element UIDs, or one is a caches-off run and the other incremental). Not a verdict about the build at all, which is why it does not share a code with one (`docs/scenarios/UX-78`). `--allow-mismatch` overrides.
 - `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_ratio`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`docs/scenarios/UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.

@@ -102,9 +102,19 @@ commands against a small from-scratch project
    collapses this to a single `dependency_type: "build"` edge (a strict
    superset of what `"runtime"` alone would constrain) rather than
    emitting two edges - `graph/v9`'s schema (Part 32.2) models one type
-   per edge, and nothing downstream (`bga/graph/edg.py`,
-   `bga/normalize/timestamps.py`) reads `dependency_type` as a genuine
-   tri-state today anyway (see the next section).
+   per edge. The parenthetical that used to follow - "nothing
+   downstream reads `dependency_type` as a genuine tri-state today
+   anyway" - was true when written and stopped being true with `P4-11`:
+   `bga/graph/edg.py`'s `compute_critical_path`/`compute_slack`,
+   `bga/normalize/timestamps.py`'s ready-time gating and
+   `bga/analyzer.py`'s `explicit_predecessors` all exclude
+   `runtime`-only edges now, and `P4-11` found a real correctness bug in
+   a certified floor while doing it. See the `dependency_type`'s effect
+   on analysis section below.
+
+   The collapse itself still holds and is still deliberate: `"build"` is
+   a strict superset of what `"runtime"` alone would constrain, so an
+   `all` edge modelled as `build` gates exactly what it should.
 6. **`%{key}` (cache key) is available even before a build runs** (a
    `waiting`-state element already has a real key), but the docs' own
    caveat - "if all sources are consistent" - is real: an element with

@@ -1,6 +1,6 @@
 # UX-71: `bga correlate` ranks and gates on a score that saturates, so the join's headline verdict never fires on a real build
 
-**Priority:** High | **Depends on:** `UX-70` (done — which measured the right number and did not wire it here)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which measured the right number and did not wire it here)
 
 ## Motivation
 
@@ -128,6 +128,72 @@ ranked by anything.
 3. An artifact whose `critical_path_detail` carries no
    `realizable_saving_us` still produces a join, with the old ordering
    and no crash.
+
+## Fix Implemented
+
+`_plane1_view` now reads `signals.critical_path_detail`: the saving from
+`realizable_saving_us`, the share from `share_of_path` — the same field
+`bga analyze` prints, so the two commands cannot describe one element
+with two different numbers. `top_opportunities` remains as a fallback for
+an artifact analysed before `UX-70`, and which metric was used is
+published as `ranking.metric`.
+
+Same capture, same command, before and after:
+
+```
+before                                   after
+1. cmake-stage1  (114.1s, tied)          1. cmake-stage1  1569.8s (43.4% of the build)
+2. bison         (114.1s, tied)          2. openssl        522.5s (14.5%)
+3. doxygen       (114.1s, tied)          3. doxygen        513.5s (14.2%)
+4. openssl       (114.1s, tied)          4. bison          144.2s ( 4.0%)
+5. python3       (114.1s, tied)          5. python3        114.1s ( 3.2%)
+```
+
+And the sentence the join exists for now appears, for the first time on
+real data:
+
+```
+components/_private/cmake-stage1.bst:
+  - holds 43% of the critical path and fixing it is worth 1569.8s (43.4% of the
+    build) - already compute-bound at 3.41 cores busy, so there is nothing to gain
+    from its parallelism; shortening it means less work
+components/bison.bst:
+  - holds 4% of the critical path and fixing it is worth 144.2s (4.0% of the build),
+    but runs at only 0.91 cores busy - it is waiting, not computing: look at how it
+    is built before what it builds
+```
+
+### One correction to this task as filed
+
+The Required Fix said the threshold's job was unchanged and only the
+quantity it read would change. Applied literally, that is wrong: at 5% of
+the build `components/bison.bst` — worth 144.2s, running at **0.91 cores
+busy** — falls *below* the gate and stays silent, which is the finding
+this task was filed to surface.
+
+Worth is only half of "low-hanging fruit". The other half is what the fix
+costs, and ~1 core busy is the one Plane 2 signal that names a cheap fix
+outright: a job count, not a rewrite. So an element below the gate still
+earns a line when Plane 2 says the fix is cheap and its saving clears
+`UX-65`'s existing "below 1% of wall clock is rounding" floor —
+`_CHEAP_WIN_FLOOR`, reusing that floor rather than introducing a tuned
+constant. `python3.bst` (3.2%, 1.86 cores busy) correctly stays silent
+under the same rule: there is no cheap fix there to name.
+
+### Degenerate rankings are declared, not broken by name
+
+Any metric can saturate on some graph. When every ranked element carries
+the same saving the join now says so, instead of presenting the
+alphabetical tiebreak as impact order:
+
+```
+NOTE: every ranked element carries the same Plane 1 impact (114.1s), so the order
+below is alphabetical, not an impact ranking - read the rows, not their positions
+```
+
+Tests: 6 new in `tests/unit/test_correlate.py`, including the real
+five-way tie as a fixture and a standing assertion that `bga analyze` and
+`bga correlate` name the same element first. Suite: 1069 → 1075.
 
 ## Verification Log
 

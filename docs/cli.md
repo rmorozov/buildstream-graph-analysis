@@ -250,9 +250,10 @@ It answers what neither plane can alone. Plane 1 knows an element dominates the 
 ```
 What to do next (ranked by Plane 1 impact):
   core.bst:
-    - holds 25% of the critical path but runs at only 0.85 cores busy - it is waiting,
-      not computing, and its native build asked for -j1: remove `notparallel` / raise
-      its job count before touching its sources
+    - holds 25% of the critical path and fixing it is worth 18.4s (24.1% of the build),
+      but runs at only 0.85 cores busy - it is waiting, not computing, and its native
+      build asked for -j1: remove `notparallel` / raise its job count before touching
+      its sources
     (81% of this element's processes were measured)
 ```
 
@@ -268,6 +269,7 @@ bga correlate /tmp/run /tmp/plane2.json
 Notes on reading it:
 
 - **Ranking is Plane 1's.** Plane 2 explains the top of that list and never reorders it — the question "what should I optimize" is answered by whole-project impact.
+- **The ranking metric is `UX-70`'s realizable saving** — what the build would actually lose if the element became instant, which is the same number `bga analyze` ranks on, so the two commands cannot name different elements first. Share of the critical path is reported beside it because they routinely disagree: an element can hold a large share of a mesh graph and be worth very little to fix. If the metric saturates (every candidate carrying the same value), the report says so rather than presenting the alphabetical tiebreak as an impact order.
 - **A negative result is a result.** "Already compute-bound — nothing to gain from its parallelism" tells you to stop looking inside that element.
 - **Coverage is carried through.** A recommendation built on 81% of an element's processes says so (`UX-45`), and elements Plane 1 ranks that Plane 2 never traced are named rather than passed over.
 - The two planes' timelines are **not** merged and cannot be — see [`docs/architecture.md`](architecture.md). This is a join, and is deliberately named as one.

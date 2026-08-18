@@ -38,7 +38,7 @@ it builds"**.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 # An element is "not compute-bound" below this many cores busy. One core
@@ -48,10 +48,25 @@ from typing import Dict, List, Optional
 # and this sits in it rather than being tuned to either.
 _COMPUTE_BOUND_CORES = 1.25
 
-# How much of the critical path an element must hold before the join
+# How much of the *build* fixing an element must be worth before the join
 # calls it out. Below this, a native-build finding is real but is not
 # what to do next.
-_CRITICAL_PATH_SHARE = 0.05
+#
+# `UX-71`: this used to read `sensitivity.top_opportunities`, whose score
+# is `min(duration, next_binding_gap) / makespan` - a correct upper bound
+# and a useless ranking, because the cap is a constant over exactly the
+# population being ranked. On a real `freedesktop-sdk` capture all five
+# candidates scored an identical 0.0316, so the order was decided by
+# element name and this gate never opened for anything. The quantity is
+# now `UX-70`'s realizable saving: what the build would actually lose if
+# this element became instant.
+_REALIZABLE_SAVING_SHARE = 0.05
+
+# A finding below the gate above still earns a line when Plane 2 says the
+# fix is cheap and specific - an element running at ~1 core busy is a job
+# count, not a rewrite. `UX-65`'s own floor: below 1% of wall clock is
+# rounding, not an opportunity, so that is where this stops too.
+_CHEAP_WIN_FLOOR = 0.01
 
 # How many elements the text report names before overflowing to JSON.
 _SHOWN_MAX = 8
@@ -66,6 +81,12 @@ class ElementJoin:
     on_critical_path: bool = False
     critical_path_share: Optional[float] = None
     potential_saving_us: int = 0
+    # UX-71: `potential_saving_us` as a share of the whole build - the
+    # quantity the recommendations are gated on. Kept beside the path
+    # share rather than replacing it: "what this chain is made of" and
+    # "what changing it is worth" are different facts and the report says
+    # both.
+    saving_share: Optional[float] = None
     blast_radius: Optional[int] = None
     # Plane 2
     cores_busy: Optional[float] = None
@@ -77,25 +98,61 @@ class ElementJoin:
     recommendations: List[str] = field(default_factory=list)
 
 
-def _plane1_view(analysis: dict) -> Dict[str, dict]:
-    """Per-element Plane 1 facts, keyed by element UID."""
+def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
+    """Per-element Plane 1 facts, keyed by element UID.
+
+    Returns the view and the name of the metric its `potential_saving_us`
+    came from, because a reader who is handed a ranking is entitled to
+    know what it was ranked on - and because the two available metrics
+    are not equivalent (`UX-71`).
+    """
     structural = analysis.get("structural") or {}
     signals = analysis.get("signals") or {}
     sensitivity = structural.get("sensitivity") or {}
     critical_path = list(signals.get("critical_path") or [])
     critical_path_us = sensitivity.get("critical_path_us") or 0
+    total_us = analysis.get("total_duration_us") or 0
 
     view: Dict[str, dict] = {}
     for element in critical_path:
         view.setdefault(element, {})["on_critical_path"] = True
 
-    for entry in sensitivity.get("top_opportunities") or []:
-        # (key, score, impact_pct); score is the fraction of the finish
-        # this element could remove (UX-44).
-        element, score = entry[0], entry[1]
+    # UX-70's per-element simulation, published on every critical-path
+    # entry. Share of the path comes from here too: it is the same
+    # quantity `bga analyze` prints, rather than the capped proxy, so the
+    # two commands cannot describe the same element differently.
+    detail = signals.get("critical_path_detail") or []
+    realizable: Dict[str, int] = {}
+    for entry in detail:
+        element = entry.get("element_uid")
+        if not element:
+            continue
         record = view.setdefault(element, {})
-        record["critical_path_share"] = score
-        record["potential_saving_us"] = int(score * critical_path_us)
+        if entry.get("share_of_path") is not None:
+            record["critical_path_share"] = entry["share_of_path"]
+        saving = entry.get("realizable_saving_us")
+        if saving is not None:
+            realizable[element] = int(saving)
+
+    if realizable:
+        metric = "realizable_saving_us"
+        for element, saving in realizable.items():
+            record = view.setdefault(element, {})
+            record["potential_saving_us"] = saving
+            record["saving_share"] = (saving / total_us) if total_us else None
+    else:
+        # An artifact analysed by a `bga` older than UX-70 carries no
+        # simulation. Fall back to the capped proxy rather than refusing
+        # to join - degraded, not broken - and say which one was used.
+        metric = "sensitivity_score"
+        for entry in sensitivity.get("top_opportunities") or []:
+            # (key, score, impact_pct); score is the fraction of the
+            # finish this element could remove (UX-44).
+            element, score = entry[0], entry[1]
+            record = view.setdefault(element, {})
+            record.setdefault("critical_path_share", score)
+            record["potential_saving_us"] = int(score * critical_path_us)
+            record["saving_share"] = score
 
     blast = signals.get("blast_radius") or {}
     for element, value in blast.items():
@@ -103,7 +160,7 @@ def _plane1_view(analysis: dict) -> Dict[str, dict]:
         if count is not None:
             view.setdefault(element, {})["blast_radius"] = count
 
-    return view
+    return view, metric
 
 
 def _plane2_view(native_report: dict) -> Dict[str, dict]:
@@ -146,20 +203,47 @@ def _recommend(joined: ElementJoin) -> List[str]:
     """
     steps: List[str] = []
     share = joined.critical_path_share
+    worth = joined.saving_share
 
-    # A share-based claim needs a real share. An element can sit on the
-    # critical path and still be unable to move the finish - that is what
-    # `UX-44` established, and it is why the gate is the measured saving
-    # rather than mere membership. Rendering "holds 0% of the critical
-    # path and is genuinely compute-bound" for such an element, as an
-    # earlier version did, is a confident statement about nothing.
-    matters = share is not None and share >= _CRITICAL_PATH_SHARE
+    # A claim about impact needs a real measure of impact. An element can
+    # sit on the critical path and still be unable to move the finish -
+    # that is what `UX-44` established and what `UX-70` measured - which
+    # is why the gate is the saving rather than mere membership.
+    # Rendering "holds 0% of the critical path and is genuinely
+    # compute-bound" for such an element, as an earlier version did, is a
+    # confident statement about nothing.
+    matters = worth is not None and worth >= _REALIZABLE_SAVING_SHARE
+    # UX-71: an element the gate excludes is not automatically silent.
+    # Worth is only half of "low-hanging fruit"; the other half is how
+    # cheap the fix is, and ~1 core busy is the one Plane 2 signal that
+    # names a cheap fix outright. On the real capture this is the
+    # difference between reporting `bison.bst` (0.91 cores busy, worth
+    # 4.0% of the build, fixable by a job-count setting) and saying
+    # nothing about it at all.
+    cheap_win = (
+        not matters
+        and worth is not None
+        and worth >= _CHEAP_WIN_FLOOR
+        and joined.cores_busy is not None
+        and joined.cores_busy < _COMPUTE_BOUND_CORES
+    )
 
-    if matters and joined.cores_busy is not None:
+    def _impact() -> str:
+        parts = []
+        if share is not None:
+            parts.append(f"holds {share * 100:.0f}% of the critical path")
+        if worth is not None and joined.potential_saving_us:
+            parts.append(
+                f"fixing it is worth {joined.potential_saving_us / 1e6:.1f}s "
+                f"({worth * 100:.1f}% of the build)"
+            )
+        return " and ".join(parts) if parts else "on the critical path"
+
+    if (matters or cheap_win) and joined.cores_busy is not None:
         if joined.cores_busy < _COMPUTE_BOUND_CORES:
             detail = (
-                f"holds {share * 100:.0f}% of the critical path but runs at only "
-                f"{joined.cores_busy:.2f} cores busy - it is waiting, not computing"
+                f"{_impact()}, but runs at only {joined.cores_busy:.2f} cores "
+                f"busy - it is waiting, not computing"
             )
             if "pinned_to_one_job" in joined.native_findings:
                 steps.append(
@@ -178,9 +262,9 @@ def _recommend(joined: ElementJoin) -> List[str]:
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
             steps.append(
-                f"holds {share * 100:.0f}% of the critical path and is already "
-                f"compute-bound at {joined.cores_busy:.2f} cores busy - nothing to "
-                f"gain from its parallelism; shortening it means less work"
+                f"{_impact()} - already compute-bound at "
+                f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
+                f"from its parallelism; shortening it means less work"
             )
 
     if joined.unused_dependencies:
@@ -210,7 +294,7 @@ def correlate(analysis: dict, native_report: dict) -> dict:
     no IO and knows nothing about how either was produced, which is what
     keeps the two planes independently replaceable.
     """
-    plane1 = _plane1_view(analysis)
+    plane1, ranking_metric = _plane1_view(analysis)
     plane2 = _plane2_view(native_report)
 
     joined: List[ElementJoin] = []
@@ -222,6 +306,7 @@ def correlate(analysis: dict, native_report: dict) -> dict:
             on_critical_path=p1.get("on_critical_path", False),
             critical_path_share=p1.get("critical_path_share"),
             potential_saving_us=p1.get("potential_saving_us", 0),
+            saving_share=p1.get("saving_share"),
             blast_radius=p1.get("blast_radius"),
             cores_busy=p2.get("cores_busy"),
             cpu_coverage=p2.get("cpu_coverage"),
@@ -236,6 +321,16 @@ def correlate(analysis: dict, native_report: dict) -> dict:
     # question the user arrived with; Plane 2 explains the top of that
     # list rather than reordering it.
     joined.sort(key=lambda e: (-e.potential_saving_us, e.element))
+
+    # UX-71: a metric that is constant over the ranked population does
+    # not rank it, and the tie was previously broken by element name and
+    # presented as impact order. Detected rather than assumed away: any
+    # metric can saturate on some graph, and a reader must be told when
+    # theirs did.
+    ranked_savings = {e.potential_saving_us for e in joined if e.potential_saving_us > 0}
+    ranking_degenerate = len(ranked_savings) == 1 and sum(
+        1 for e in joined if e.potential_saving_us > 0
+    ) > 1
 
     covered = [e for e in joined if e.cores_busy is not None]
     plane1_only = [
@@ -273,6 +368,13 @@ def correlate(analysis: dict, native_report: dict) -> dict:
         ),
         "attribution_unreliable": attribution_unreliable,
         "attribution_partial": attribution_partial,
+        "ranking": {
+            "metric": ranking_metric,
+            "degenerate": ranking_degenerate,
+            "tied_saving_us": (
+                next(iter(ranked_savings)) if ranking_degenerate else None
+            ),
+        },
         "coverage": {
             "joined_elements": len(covered),
             "plane1_elements": len(plane1),
@@ -329,6 +431,17 @@ def format_correlation(result: dict) -> str:
         lines.append("No element has a finding in both planes worth acting on.")
     else:
         lines.append("What to do next (ranked by Plane 1 impact):")
+        # UX-71: said before the rows, because it tells the reader
+        # whether the order below means anything.
+        ranking = result.get("ranking") or {}
+        if ranking.get("degenerate"):
+            tied = ranking.get("tied_saving_us")
+            tied_text = f" ({tied / 1e6:.1f}s)" if tied else ""
+            lines.append(
+                f"  NOTE: every ranked element carries the same Plane 1 "
+                f"impact{tied_text}, so the order below is alphabetical, not an "
+                f"impact ranking - read the rows, not their positions"
+            )
         # Capped with an overflow line, the same house pattern UX-33 uses:
         # a real project produces one of these per element, and a list
         # nobody reads to the end is a list that hid its own first item.

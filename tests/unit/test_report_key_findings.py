@@ -92,13 +92,32 @@ def test_key_findings_names_the_correct_worst_blast_radius_element(analyzed_resu
     assert "3 downstream elements" in key_findings_section
 
 
+def test_key_findings_drops_a_degenerate_criticality_list(analyzed_result):
+    """UX-76: root.bst and a.bst both score 100% here, which is the
+    ordinary shape of a deterministic replay - a list of elements that
+    all scored 1.0 ranks nothing and merely names, a third time,
+    elements the block above already named. It is dropped."""
+    output = format_text(analyzed_result)
+    key_findings_section = output.split("Certified Headroom")[0]
+    assert "Highest Criticality Elements:" not in key_findings_section
+
+
 def test_key_findings_criticality_list_excludes_zero_probability_elements(analyzed_result):
     """b.bst/c.bst have 0% criticality probability in this fixture - they
     must not pad out the "Highest Criticality Elements" list just to
-    reach 3 entries (only root.bst/a.bst, both 100%, genuinely qualify)."""
+    reach 3 entries.
+
+    UX-76 drops the list entirely when every qualifying element scores
+    1.0, so the probabilities are spread here to reach the branch that
+    actually renders it - the zero-probability guarantee this test exists
+    for is about the filter, not about the degenerate case.
+    """
+    analyzed_result.signals["criticality_probability"]["a.bst"]["probability"] = 0.4
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Headroom")[0]
     criticality_section = key_findings_section.split("Highest Criticality Elements:")[1]
+    assert "root.bst" in criticality_section
+    assert "a.bst" in criticality_section
     assert "b.bst" not in criticality_section
     assert "c.bst" not in criticality_section
 

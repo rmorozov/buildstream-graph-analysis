@@ -93,7 +93,9 @@ def test_structural_elements_are_excluded_not_merely_tagged():
     """`UX-34` tagged them; here they must not be ranked at all, since a
     `stack` or `import` has no build commands to make faster."""
     text = _key_findings(_result(**CHAIN_BOUND))
-    ranking = text.split("Most Worth Optimizing First")[1]
+    # UX-76: the two headline rankings became one table, so the block to
+    # look inside is the one that names where the time is.
+    ranking = text.split("Where the time is")[1]
 
     assert "symlinks.bst" not in ranking
 
@@ -101,8 +103,81 @@ def test_structural_elements_are_excluded_not_merely_tagged():
 def test_a_chain_bound_build_ranks_by_critical_path_share():
     text = _key_findings(_result(**CHAIN_BOUND))
 
-    assert "by what optimizing them would actually save" in text
+    # UX-76: the verdict moved onto the table's own heading, so it is
+    # stated whichever of the two branches emitted the table - it used to
+    # vanish entirely when the build was execution-bound as well, which
+    # is the ordinary case on a real capture.
     assert "chain-bound, not scheduler-bound" in text
+    # This fixture predates `realizable_saving_us`, which is exactly the
+    # shape of an artifact analysed by an older `bga`: the table renders
+    # duration and share, and claims nothing about what a fix is worth.
+    assert "fixing it saves" not in text
+    assert "work them in this order" not in text
+
+
+# --- UX-76: one table, two orderings -----------------------------------
+
+
+def _with_savings(saving_by_uid):
+    detail = []
+    for entry in CHAIN_BOUND["path_detail"]:
+        entry = dict(entry)
+        entry["realizable_saving_us"] = saving_by_uid.get(entry["element_uid"])
+        detail.append(entry)
+    return dict(CHAIN_BOUND, path_detail=detail)
+
+
+# The real capture's own numbers: `python3.bst` is the third *largest*
+# element on the path and worth the *least* of the four to fix, because a
+# near-tie chain takes over the moment it shrinks (`UX-70`).
+REAL_SAVINGS = {
+    "components/_private/cmake-stage1.bst": 1_558_750_000,
+    "components/openssl.bst": 522_550_000,
+    "components/python3.bst": 114_100_000,
+    "components/doxygen.bst": 503_550_000,
+}
+
+
+def test_where_the_time_is_orders_by_duration_not_by_saving():
+    """The regression `UX-76` was filed for.
+
+    `UX-70` re-sorted the helper both blocks shared, so the block whose
+    heading asks *where the time is* began answering with a saving
+    ranking: on the real capture it reported 80.3% across four elements
+    and omitted `python3.bst` - 17.7% of the path, the third largest - in
+    favour of `bison.bst` at 4.0%.
+    """
+    text = _key_findings(_result(**_with_savings(REAL_SAVINGS)))
+    table = text.split("Where the time is")[1]
+
+    assert "94.0% of the" in text
+    assert "components/python3.bst" in table
+    assert "components/bison.bst" not in table
+    # Ordered by duration: python3 (625.8s) above doxygen (503.6s), even
+    # though doxygen is worth 4.4x more to fix.
+    assert table.index("components/python3.bst") < table.index("components/doxygen.bst")
+
+
+def test_the_fix_order_is_named_when_it_differs_from_the_table_order():
+    text = _key_findings(_result(**_with_savings(REAL_SAVINGS)))
+
+    assert "work them in this order" in text
+    order = text.split("work them in this order")[1].split("\n")[0]
+    assert order.index("cmake-stage1") < order.index("openssl") < order.index("doxygen")
+    # The point of the line: python3 is third in the table and not in the
+    # fix order at all.
+    assert "python3" not in order
+
+
+def test_each_element_is_named_once_in_the_headline():
+    """`UX-76`: three rankings over the same names cost the reader their
+    first glance. One table, one mention each."""
+    text = _key_findings(_result(**_with_savings(REAL_SAVINGS)))
+    table = text.split("Where the time is")[1].split("work them in this order")[0]
+
+    for uid in ("components/_private/cmake-stage1.bst", "components/openssl.bst",
+                "components/python3.bst", "components/doxygen.bst"):
+        assert table.count(uid) == 1
 
 
 # --- the other direction, which must not regress -----------------------

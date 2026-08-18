@@ -246,14 +246,48 @@ def _heaviest_on_path(result) -> List[dict]:
     )
 
 
-def _format_time_concentration(result) -> List[str]:
-    """UX-65: name where the time actually is.
+def _path_elements_by_duration(result) -> List[dict]:
+    """The same population `_heaviest_on_path` ranks, ordered by measured
+    duration (`UX-76`).
+
+    Two orderings of one list, and they are not interchangeable: "where
+    is the time" is a question about duration, "what should I fix" is a
+    question about realizable saving, and on a mesh graph they disagree.
+    `UX-70` re-sorted the shared helper by saving, and the concentration
+    block silently inherited it - on a real capture it began reporting
+    80.3% across four elements and omitting `python3.bst`, the third
+    largest on the path, in favour of one 3.5x smaller. Answering a
+    duration question with a saving ranking understated the
+    concentration by 13.7 points.
+    """
+    detail = (result.signals or {}).get('critical_path_detail') or []
+    real = [d for d in detail if d.get('duration_us') and not d.get('is_structural_kind')]
+    return sorted(real, key=lambda d: -d['duration_us'])
+
+
+_TIME_CONCENTRATION_SHOWN_MAX = 4
+_FIX_ORDER_SHOWN_MAX = 3
+
+
+def _format_time_concentration(
+    result, execution_bound: bool = False, chain_bound: bool = False,
+) -> List[str]:
+    """UX-65: name where the time actually is. UX-76: in one table.
 
     The tool already computes every number in this block; it simply never
     put them where a reader looks first. Same fix as `UX-25`/`UX-33` -
     say what is already known.
+
+    `UX-76`: this used to be one of *three* headline rankings over the
+    same handful of elements ("where the time is", "most worth optimizing
+    first", "highest criticality"), which cost a reader their first
+    glance on reconciling three lists instead of reading one. It is now a
+    single table carrying both quantities, ordered by duration, with the
+    fix order named on its own line - so the interesting disagreement
+    between the two (a big share worth little to fix) is visible in the
+    rows rather than hidden by which list an element fell out of.
     """
-    heavy = _heaviest_on_path(result)
+    heavy = _path_elements_by_duration(result)
     if not heavy:
         return []
     path_us = sum(
@@ -262,16 +296,62 @@ def _format_time_concentration(result) -> List[str]:
     )
     if path_us <= 0:
         return []
-    top = heavy[:4]
+    total = result.total_duration_us or 0
+    top = heavy[:_TIME_CONCENTRATION_SHOWN_MAX]
     share = sum(d['duration_us'] for d in top) / path_us * 100
+    # UX-76: the chain-bound verdict used to live on the heading of the
+    # second ranking, which meant it disappeared entirely once the two
+    # were merged and the table was emitted from the execution-bound
+    # branch instead. It belongs to the table, not to one of its two
+    # entry points.
+    verdict = " - this build is chain-bound, not scheduler-bound" if chain_bound else ""
     lines = [
         f"  Where the time is: {len(top)} element(s) are {share:.1f}% of the "
-        f"{path_us / 1e6:.1f}s critical path"
+        f"{path_us / 1e6:.1f}s critical path{verdict}"
     ]
+    width = max(len(d['element_uid']) for d in top)
     for d in top:
+        saving = d.get('realizable_saving_us')
+        # UX-70: the share is what the chain is made of; the saving is
+        # what changing it is worth. Where they differ the second is the
+        # one that stops a wasted week, so it is stated per row whenever
+        # it was evaluated.
+        worth = ""
+        if saving is not None and total:
+            worth = (
+                f"  -> fixing it saves {saving / 1e6:.1f}s "
+                f"({saving / total * 100:.1f}% of the build)"
+            )
         lines.append(
-            f"    {d['element_uid']}  {d['duration_us'] / 1e6:.1f}s "
-            f"({d['duration_us'] / path_us * 100:.1f}% of path)"
+            f"    {d['element_uid']:<{width}}  {d['duration_us'] / 1e6:8.1f}s "
+            f"({d['duration_us'] / path_us * 100:4.1f}% of path){worth}"
+        )
+    if execution_bound:
+        lines.append(
+            "    -> these elements must get faster, or come off the chain; "
+            "the scheduler has no room left to give"
+        )
+    # UX-76: the rows are ordered by duration because that is what "where
+    # is the time" means. The order to *work* in is the other one, and
+    # saying so costs one line rather than a second list of the same
+    # names.
+    fix_order = [
+        d['element_uid'] for d in _heaviest_on_path(result)[:_FIX_ORDER_SHOWN_MAX]
+        if d.get('realizable_saving_us')
+    ]
+    if fix_order and fix_order != [d['element_uid'] for d in top[:len(fix_order)]]:
+        lines.append(
+            "    -> work them in this order (by what a fix is worth, which is "
+            "not the order above): " + ", ".join(fix_order)
+        )
+    # UX-70: chain or mesh? This decides whether "optimize the top
+    # element" is meaningful advice at all.
+    density = (result.signals or {}).get('zero_slack_share')
+    if density is not None and density >= 0.5:
+        lines.append(
+            f"    Note: {density:.0%} of elements have zero slack - this graph "
+            "is a mesh of near-equal chains, so savings on one element are "
+            "often capped by the next chain rather than by its own duration"
         )
     return lines
 
@@ -352,8 +432,21 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
 
     # Biggest opportunity: largest non-EXECUTION_ON_CHAIN attribution
     # category, phrased as where the time actually went.
-    attribution = result.attribution or {}
+    # UX-76: the where-the-time-is table is emitted at most once, whether
+    # it is reached through the execution-bound branch below or through
+    # the chain-bound one further down. Naming the same elements twice
+    # under two headings is the thing that task removed.
+    concentration_emitted = False
+    # UX-76: needed by the table below, and computed here because both of
+    # its entry points want it. `chain_bound` asks whether the chain or
+    # the scheduler is what binds; `execution_bound` (further down) asks
+    # whether any wait category is large enough to be worth naming. They
+    # are different questions and a real build is routinely both.
+    floors = result.floors or {}
     total = result.total_duration_us
+    t_infinity = floors.get('t_infinity_observed') or 0
+    chain_bound = bool(total) and t_infinity / total >= _CHAIN_BOUND_RATIO
+    attribution = result.attribution or {}
     non_execution = {
         k: v for k, v in attribution.items() if k != 'execution_on_chain_us'
     }
@@ -365,7 +458,9 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
         # Say the build is execution-bound - which is a real finding -
         # and point at where the execution actually is.
         if pct < _OPPORTUNITY_FLOOR_PCT:
-            concentration = _format_time_concentration(result)
+            concentration = _format_time_concentration(
+                result, execution_bound=True, chain_bound=chain_bound,
+            )
             if concentration:
                 lines.append(
                     f"  Biggest Opportunity: this build is execution-bound - "
@@ -373,10 +468,7 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
                     f"wall-clock time, so there is no scheduling gap to close"
                 )
                 lines.extend(concentration)
-                lines.append(
-                    "    -> these elements must get faster, or come off the "
-                    "chain; the scheduler has no room left to give"
-                )
+                concentration_emitted = True
         elif top_duration_us > 0:
             label = top_category.replace('_us', '').replace('_', ' ').upper()
             lines.append(
@@ -406,41 +498,15 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     # do I take", and ranking by blast radius put two structural elements
     # at the top of a real build's what-to-fix list while the element
     # holding 43.5% of the path went unmentioned.
-    floors = result.floors or {}
-    t_infinity = floors.get('t_infinity_observed') or 0
-    chain_bound = bool(total) and t_infinity / total >= _CHAIN_BOUND_RATIO
     if chain_bound and _heaviest_on_path(result):
-        lines.append(
-            "  Elements Most Worth Optimizing First (by what optimizing them "
-            "would actually save - this build is chain-bound, not "
-            "scheduler-bound):"
-        )
-        for i, d in enumerate(_heaviest_on_path(result)[:3], start=1):
-            saving = d.get('realizable_saving_us')
-            # UX-70: the share is what the chain is made of; the saving is
-            # what changing it is worth. Where they differ the second is
-            # the one that stops a wasted week, so it is stated whenever
-            # it was evaluated.
-            worth = ""
-            if saving is not None and total:
-                worth = (
-                    f" - making it instant would save {saving / 1e6:.1f}s "
-                    f"({saving / total * 100:.1f}% of the build)"
-                )
-            lines.append(
-                f"    {i}. {d['element_uid']} ({d['duration_us'] / 1e6:.1f}s, "
-                f"{d.get('share_of_path', 0) * 100:.1f}% of the critical path)"
-                f"{worth}"
-            )
-        # UX-70: chain or mesh? This decides whether "optimize the top
-        # element" is meaningful advice at all.
-        density = (result.signals or {}).get('zero_slack_share')
-        if density is not None and density >= 0.5:
-            lines.append(
-                f"    Note: {density:.0%} of elements have zero slack - this graph "
-                "is a mesh of near-equal chains, so savings on one element are "
-                "often capped by the next chain rather than by its own duration"
-            )
+        # UX-76: one table, not a second ranking of the same names. When
+        # the build was execution-bound the table is already above, under
+        # Biggest Opportunity, where UX-65 put it; when a real wait
+        # category dominates but the chain is still what binds, this is
+        # where it appears.
+        if not concentration_emitted:
+            lines.extend(_format_time_concentration(result, chain_bound=True))
+            concentration_emitted = True
     elif top_blast_radius:
         lines.append("  Elements Most Worth Optimizing First (by blast radius):")
         blast_radius = signals.get('blast_radius') or {}
@@ -451,10 +517,30 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
 
     criticality = signals.get('criticality_probability') or {}
     if criticality:
+        # UX-76: structural elements are excluded rather than annotated
+        # here. UX-34 established that ranking a `stack` as something to
+        # optimize wastes the reader's first glance, and on a real
+        # capture `buildsystem-cmake.bst` held the third slot of this
+        # very block. The annotation stays for the listings further down
+        # the report, which are reference material rather than headline.
         nonzero_critical = sorted(
-            (item for item in criticality.items() if item[1].get('probability', 0) > 0),
+            (
+                item for item in criticality.items()
+                if item[1].get('probability', 0) > 0
+                and not item[1].get('is_structural_kind')
+            ),
             key=lambda kv: kv[1].get('probability', 0), reverse=True,
         )[:3]
+        # UX-76: on a deterministic replay every element on the path
+        # scores 1.0, so a list of them distinguishes nothing and merely
+        # names, a third time, elements the table above already named.
+        # The signal is real on a graph with genuine schedule variance,
+        # which is exactly when this is not degenerate.
+        degenerate = bool(nonzero_critical) and all(
+            data.get('probability', 0) >= 1.0 for _uid, data in nonzero_critical
+        )
+        if degenerate:
+            nonzero_critical = []
         if nonzero_critical:
             lines.append("  Highest Criticality Elements:")
             for i, (elem_uid, data) in enumerate(nonzero_critical, start=1):
@@ -465,7 +551,6 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
                 )
 
     # Certified headroom, in plain language
-    floors = result.floors or {}
     t_inf = floors.get('t_infinity_observed') or floors.get('t_infinity_observed_us', 0)
     lb_val = floors.get('lb') or floors.get('lb_us', 0)
     headroom = floors.get('certified_headroom') or floors.get('certified_headroom_us', 0)

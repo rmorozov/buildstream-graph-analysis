@@ -1,6 +1,6 @@
 # UX-88: a documentation-drift sweep — the docs promise things the code does not do
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-78 (the one behavioral item, filed separately)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-78 (the one behavioral item, filed separately)
 
 ## Motivation
 
@@ -74,3 +74,55 @@ shows what actually happens. For item 5: every id emitted across the
 fixture corpus (`grep`ing real `--format json` output) appears in the
 published list. A re-run of the audit's claim checklist over the edited
 docs finds zero remaining discrepancies.
+
+---
+
+## Resolution (round 11)
+
+**Status:** 🟢 Done
+
+All ten items fixed, each re-verified by running the quoted command
+rather than by reading the edit.
+
+| # | what it said | what is true | fixed by |
+|---|---|---|---|
+| 1 | quick-start block showed `--large`'s output under the small fixture's command | `Total Duration: 0.0s`, confidence 0.88, `UNTRACKED TAIL` 12.5%, 3-element path | both commands now show their own real output |
+| 2 | Efficiency Score = `LB / total duration` | `LB / horizon`; on the golden fixture 1.00 vs 0.875 | `docs/cli.md` **and** the code comment at `bga/analyzer.py` |
+| 3 | exit 4 = `--fail-on-regression` only | also the `UX-54` build-failure gate and `--fail-on-low-confidence` | all three listed, with "read the stderr line" |
+| 4 | "Key Findings … presentation-only … JSON unaffected" | `UX-75` publishes them as `findings[]` | corrected, and the contradiction with `cli.md`'s own later paragraph removed |
+| 5 | no published `findings[].id` list | 15 in `bga/findings.py`, 9 correlate rows + 1 restructuring | two tables in `docs/cli.md`; every id checked present |
+| 6 | band example omitted the positional arguments (exit 2) | `--baseline-run` is *additional* to them | runnable invocation shown; verified exit 0 |
+| 7 | `--calibration-dir` and the capture log flags documented nowhere | they exist | a "flags reachable only from `--help`" section |
+| 8 | six categories "sum to exactly the total build time" | eight — untracked head and tail are categories | corrected, using the README's own fixture (untracked tail 12.5%) as the example |
+| 9 | `--cold` with no history "reported as unavailable" | text prints no cold line at all | says what actually happens, and why absence is the honest form |
+| 10a | verdicts `improved`/`regressed`/`no significant change` | a fourth exists: `not comparable (baseline has no measurable duration)` | added |
+| 10b | "verbatim" evidence snippet omitted `rows` | `rows` is the part a CI comment renders | full object shown |
+| 10c | `correlate -f csv` accepted and silently printed text | no csv renderer exists | flag narrowed to `text`/`json`; verified exit 2 |
+| 10d | `architecture.md` UX-60 🟢 vs backlog 🟡; "all 22 scenario files" | UX-60 is decided-not-applied; there are 92 files | status matched to the backlog; the count dropped rather than re-guessed |
+| 10e | ingestion fact 5: "nothing reads `dependency_type` as a tri-state" | `P4-11` made three consumers read it, and found a certified-floor bug doing so | corrected, keeping the collapse's own still-valid rationale |
+| 10f | dev section implied `make test` works on a base install | it needs `.[dev]` | added, plus how to run the 14 bst-gated tests |
+| 10g | optimized `lib-f.bst`: codegen is consumed by "the one element that actually consumes it" | `UX-46` traced it: `lib-f` opens no file staged by `codegen.bst` | comment corrected; the fix is still right, just not for that reason |
+
+### One item is a behavior change, deliberately
+
+10c narrows `correlate`'s `--format` choices. The task's Out of Scope
+says "behavioral changes (UX-78, UX-80, UX-87)" — those three being
+separately-filed items, not a ban on touching code. Documenting `-f csv`
+as accepted-but-ignored would have been documenting a bug; a rejected
+flag is a better answer than a format that is not the one asked for.
+Recorded here rather than done quietly.
+
+### Acceptance
+
+Every item re-checked by running the command, not by reading the edit:
+
+- Items 1, 2, 6, 9: quoted command run; the doc now shows what happens.
+  Item 6 went from **exit 2** to **exit 0**.
+- Item 5: every id emitted across the fixture corpus and every id
+  declared in `bga/findings.py` (15) and `bga/correlate.py` (10) appears
+  in the published list — checked by script, zero missing.
+- Item 10c: `correlate -f csv` now exits 2 with
+  `invalid choice: 'csv' (choose from 'text', 'json')`.
+- A re-run of the audit's full claim checklist over the edited docs:
+  **zero remaining discrepancies**.
+- Suite 1201 passed; `make lint`, `make check-clean` green.

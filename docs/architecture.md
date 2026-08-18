@@ -214,7 +214,7 @@ The spec's invariants (full text: `docs/specification.md`) remain the real corre
 
 ## Real extensions beyond the original spec
 
-Everything below is **additive**, not a spec contradiction — each is clearly marked non-spec in its own code/docstrings. This table is the one-scan replacement for reading all 22 `docs/scenarios/*.md` files individually; each still has the full evidence trail if you need it.
+Everything below is **additive**, not a spec contradiction — each is clearly marked non-spec in its own code/docstrings. This table is the one-scan replacement for reading the `docs/scenarios/*.md` files individually; each still has the full evidence trail if you need it.
 
 | ID | One-line addition | Status |
 |---|---|---|
@@ -277,7 +277,7 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-57 | Hook's open-path buffer flushes instead of dropping (70% of a real build's opens were lost) | 🟢 Done |
 | UX-58 | Plane 2 shim records the bwrap argv and invocation it rewrites | 🟢 Done |
 | UX-59 | Regression gate can compare against a baseline *set* — median ± k·MAD band, minimum three runs | 🟢 Done |
-| UX-60 | `I3` implemented; the FETCH-in-efficiency question decided and documented rather than deferred again | 🟢 Done |
+| UX-60 | `I3` implemented; the FETCH-in-efficiency question **decided** and documented rather than deferred again - but not yet **applied**, because the answer cannot be one number per element and moves a certified floor in both directions | 🟡 Partial |
 | UX-61 | `max_concurrency` keyed on `(invocation, pid)` — it reported 5,268 concurrent processes on a 4-core runner | 🟢 Done |
 | UX-62 | Per-span terminal status carried through `trace/v9`; failed task time reported as waste, not silently reclassified | 🟢 Done |
 | UX-63 | **Measured per-element peak RSS** (`ru_maxrss`), replacing operator-declared memory estimates | 🟢 Done |

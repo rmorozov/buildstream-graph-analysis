@@ -20,10 +20,30 @@ pip install -e .
 ## Quick start (30 seconds, no BuildStream needed)
 
 ```bash
-bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics
+bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-Or `make dev-run` (same thing) / `make dev-run ARGS=--large` for a bigger, more realistic sample:
+A three-element fixture that runs instantly — small enough to read in full, which is the point:
+
+```
+Key Findings:
+  Confidence: 0.88 (high)
+  Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
+    -> real time after the last tracked task finished - outside per-task tracking,
+       not a scheduling issue
+  Elements Most Worth Optimizing First (by blast radius):
+    1. base.bst (2 downstream elements)
+    2. lib.bst (1 downstream elements)
+    3. app.bst (0 downstream elements)
+  Efficiency Score: 1.00 (scheduling is near the certified floor for this graph -
+    further gains need the graph or the work itself to change, not the scheduler)
+
+Critical Path Length: 3 elements
+  Path: base.bst → lib.bst → app.bst
+```
+
+`make dev-run ARGS=--large` runs a bigger, more realistic sample — 14 elements across four
+subprojects, with real headroom to find:
 
 ```
 Key Findings:
@@ -133,7 +153,7 @@ That is one report telling you: the element that is 43% of your build is a C++ t
 - **Where the time is** — on a build the chain constrains, the headline is one table: each heavy element's duration, its share of the critical path, and what fixing it would actually recover. The rows are ordered by duration because that is what "where is the time" means; the fix order is named separately, because on a dense graph the two disagree.
 - **What to do after that** — the next few fixes projected from the same capture: what the build drops to after each, whether the recommended set's savings *add*, and which heavy elements sit off the critical path worth nothing to fix today. Without it, finding the second thing to fix costs another full build. ([`UX-74`](docs/scenarios/UX-74-one-capture-one-finding.md))
 - **Elements Most Worth Optimizing First** — on a build the *graph* constrains rather than the chain, this ranks by blast radius instead: fixing a slow element near the root helps every downstream element too.
-- **Biggest Opportunity / Attribution Breakdown** — where wall-clock time went, by category (execution, dependency wait, resource wait, scheduler wait, idle, retries). Every category sums to exactly the total build time — nothing is hidden or double-counted.
+- **Biggest Opportunity / Attribution Breakdown** — where wall-clock time went, by category: execution, dependency wait, resource wait, scheduler wait, idle, retries, plus **untracked head and tail** (real wall-clock before the first task started and after the last one finished, which belongs to no task at all). All eight sum to exactly the total build time — nothing is hidden or double-counted, and the two untracked categories are why: on the quick-start fixture above, untracked tail is 12.5% of the build and is the *largest* non-execution category.
 - **Critical Path** — the chain that determines total build time, printed in full with each link's duration and share.
 - If a hard gate fails (e.g. `critical_path_coverage`), the violation names the specific missing element(s) and whether each is a structural element (`stack`/`import`/…) that never had a real compute task or a genuine gap worth investigating.
 
@@ -141,8 +161,24 @@ Everything in that block is also published as **data**, with a stable `id`, a `s
 
 ```bash
 bga analyze /tmp/run --format json | jq '.findings[] | select(.id == "time-concentration") | .evidence'
-# { "path_us": 3610500000, "share_of_path": 0.94035, "chain_bound": true }
 ```
+```json
+{
+  "path_us": 3610500000,
+  "share_of_path": 0.94035,
+  "chain_bound": true,
+  "rows": [
+    { "element_uid": "components/_private/cmake-stage1.bst", "duration_us": 1569800000,
+      "share_of_path": 0.43478, "realizable_saving_us": 1569800000 },
+    { "element_uid": "components/python3.bst", "duration_us": 639800000,
+      "share_of_path": 0.17720, "realizable_saving_us": 114100000 }
+  ]
+}
+```
+
+The `rows` array is the part a CI comment renders: each heavy element's measured duration, its
+share of the chain, and — separately — what fixing it would actually recover, which on a dense
+graph is a much smaller number than its share suggests.
 
 ## Use it on your real project
 
@@ -164,7 +200,14 @@ bga compare /tmp/my-run-before /tmp/my-run-after
 
 This reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence. If the two runs don't look like the same project, or one is a caches-off run and the other incremental, it **refuses** — exit 6, distinct from the gates' 4 and 5, so a CI job cannot mistake a wrong-artifact-path bug for a regression. `--allow-mismatch` compares anyway.
 
-> **One capture is not a baseline.** Measured run-to-run noise on a real project, across two captures of the *same commit*, is **2.9%** against a default significance rule of 1%. For CI, build a baseline *set* and use the band: `--baseline-run A --baseline-run B --band-k 3.0` (minimum three runs).
+> **One capture is not a baseline.** Measured run-to-run noise on a real project, across two captures of the *same commit*, is **2.9%** against a default significance rule of 1%. For CI, build a baseline *set* and use the band — the extra runs are `--baseline-run`, *in addition to* the two positional arguments, not instead of them:
+>
+> ```bash
+> bga compare baseline/ candidate/ \
+>     --baseline-run baseline-2/ --baseline-run baseline-3/ --band-k 3.0
+> ```
+>
+> The band needs a minimum of three baseline runs in total (the positional one plus two).
 
 The full narrative version of this — capture, read, go inside, join, act, gate — is [`docs/real-project-guide.md`](docs/real-project-guide.md).
 
@@ -283,10 +326,15 @@ It also detects real operations repeated independently across *multiple* element
 ## Development
 
 ```bash
-make test     # run the full suite
-make lint     # ruff
-make dev-run  # sample report, fast smoke check
+pip install -e '.[dev]'   # pytest + ruff; `make test`/`make lint` need this, not the base install
+make test                 # run the full suite
+make lint                 # ruff
+make dev-run              # sample report, fast smoke check
 ```
+
+Fourteen tests are gated on a real BuildStream being present and are skipped without one. To run
+them, add the `bst` extra and `buildstream-plugins`, then `pytest -m bst` (CI's `bst-tests` job
+does exactly this and fails if any of the fourteen is skipped).
 
 ## License
 

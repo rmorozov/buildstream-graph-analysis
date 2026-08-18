@@ -395,9 +395,16 @@ class BuildEfficiencyAnalyzer:
 
         certified_headroom = max(0, horizon_us - lb)
 
-        # UX-02: efficiency_score = LB / total_duration - the fraction of
-        # wall-clock time already at the certified floor (equivalently
-        # 1 - certified_headroom/horizon_us). Chosen over other candidate
+        # UX-02: efficiency_score = LB / horizon_us - the fraction of the
+        # measured span already at the certified floor (equivalently
+        # 1 - certified_headroom/horizon_us). `horizon_us` is
+        # first-task-start to last-task-finish, deliberately *not*
+        # `total_duration_us`, which also contains the untracked head and
+        # tail: those belong to no task, so a floor certified against the
+        # tasks must not be divided by them. UX-88 found this comment and
+        # docs/cli.md both still saying "total duration" - on
+        # tests/fixtures/golden/mixed_task_kinds the two give 1.00 and
+        # 0.875. Chosen over other candidate
         # ratios (e.g. t_c/horizon_us, which would measure the replay
         # model's own scheduling rather than a proven bound) specifically
         # because LB is a certified, proven-un-improvable quantity - this

@@ -1036,6 +1036,20 @@ def create_parser() -> argparse.ArgumentParser:
     # `directory` (Plane 1) comes from _add_common_arguments; only the
     # Plane 2 artifact is specific to this command.
     _add_common_arguments(correlate_parser)
+    # UX-88: `correlate` inherits `-f csv` from the shared argument set
+    # and had no csv renderer, so it accepted the flag and silently
+    # printed text. Narrowed to what it can actually produce - a
+    # rejected flag is a better answer than a format that is not the one
+    # asked for. (`analyze`'s csv, which is an attribution table, has no
+    # meaning for a two-plane join.)
+    correlate_parser.set_defaults(format='text')
+    for action in correlate_parser._actions:
+        if action.dest == 'format':
+            action.choices = ['text', 'json']
+            action.help = (
+                'Output format: text (human-readable), json (machine-readable). '
+                'Default: text. No csv - the join has no tabular form.'
+            )
     correlate_parser.add_argument(
         'native_report', type=str,
         help='Path to the JSON report written by `tools/bst_native_build_tracer.py run` (Plane 2). '

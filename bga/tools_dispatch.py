@@ -112,6 +112,30 @@ def format_tool_help() -> str:
     return "\n".join(lines)
 
 
+# UX-94: the same code is importable under two names, and which one
+# depends on how `bga` was installed rather than on anything the caller
+# did.
+#
+# The directory is `tools/` in the repository and is *installed* as
+# `bga._tools`, so the wheel occupies exactly one top-level name instead
+# of squatting the most generic one in Python. A source checkout has no
+# `bga._tools`; an installed wheel has no top-level `tools`. Both are
+# normal, so both are tried - installed name first, because that is the
+# one a user who typed `pip install bga` has.
+_INSTALLED_PREFIX = "bga._"
+
+
+def _import_tool(module_name: str):
+    """Import `tools.<x>` from wherever this installation keeps it."""
+    try:
+        return importlib.import_module(_INSTALLED_PREFIX + module_name)
+    except ImportError:
+        # Not installed under `bga._tools` - a plain source checkout.
+        # Raising from here would report the *installed* name, which is
+        # not the one that is missing, so let the checkout name raise.
+        return importlib.import_module(module_name)
+
+
 def dispatch(argv: List[str]) -> Optional[int]:
     """Run the tool `argv[0]` names, or return None if it names none.
 
@@ -129,7 +153,7 @@ def dispatch(argv: List[str]) -> Optional[int]:
     alias = argv[0]
     module_name, _help = TOOL_ALIASES[alias]
     try:
-        module = importlib.import_module(module_name)
+        module = _import_tool(module_name)
     except ImportError as exc:
         # UX-77: this used to be a raw traceback on the *first* command
         # the real-project docs tell a new user to run, because
@@ -140,7 +164,7 @@ def dispatch(argv: List[str]) -> Optional[int]:
         # with the exit code the rest of the CLI uses for bad input.
         print(
             f"Error: `bga {alias}` could not load {module_name} ({exc}).\n"
-            f"Hint: it lives in the `tools` package, which ships with `bga` - "
+            f"Hint: it ships with `bga` (installed as `bga._{module_name}`) - "
             f"reinstall (`pip install -e .`), or run the tool directly with "
             f"`python3 -m {module_name}` from a checkout.",
             file=sys.stderr,

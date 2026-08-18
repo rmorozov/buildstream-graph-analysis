@@ -29,14 +29,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools.bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
-from tools.chrome_trace_to_bga_trace import (
+from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
+from .chrome_trace_to_bga_trace import (
     chrome_events_to_bga_spans,
     failed_elements,
     invocation_wall_clock,
 )
-from tools.bst_show_to_graph import extract_graph
-from tools._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
+from .bst_show_to_graph import extract_graph
+from ._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
 
 
 def _parse_targets(targets_str: str):

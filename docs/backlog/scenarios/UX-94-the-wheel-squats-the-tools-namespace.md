@@ -1,6 +1,6 @@
 # UX-94: the wheel ships a top-level `tools` package
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-77 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-77 (done)
 
 ## Motivation
 
@@ -44,3 +44,79 @@ empty cwd in a clean venv). In the same venv,
 `pip install <any package>; python -c "import tools"` fails with
 ImportError (nothing squats the name). From a repo checkout,
 `python3 -m tools.bst_extract_run --help` still exits 0.
+
+---
+
+## Resolution (round 12)
+
+**Status:** 🟢 Done
+
+Confirmed first — the built wheel really did list `tools/` beside `bga/`
+at top level. Fixed, and with considerably less churn than the Required
+Fix anticipated.
+
+### The lighter route the task did not consider
+
+The Required Fix proposes moving the code to `bga._tools` and leaving
+re-export shims in the repo. The same end state is reachable without
+moving anything, because the *repository layout* and the *installed
+layout* do not have to agree:
+
+```toml
+[tool.setuptools]
+package-dir = {"bga._tools" = "tools"}
+```
+
+The directory stays `tools/` in the checkout and installs as
+`bga._tools`. So the 55 test imports, 34 CI invocations and 263
+documented `tools/` paths all keep working untouched, no shim files
+exist to drift, and the wheel owns exactly one top-level name.
+
+**What made it possible** was one real change: the modules imported each
+other by absolute name (`from tools.bst_show_to_graph import …`), which
+breaks the moment the package is installed under a different name. Those
+twelve imports are now relative (`from .bst_show_to_graph import …`), so
+the package no longer cares what it is called. That is a genuine
+improvement independent of packaging.
+
+`bga/tools_dispatch.py` tries the installed name first and falls back to
+the checkout name — both are normal states, neither is an error.
+
+### Acceptance test
+
+Built the wheel and ran all four criteria against it:
+
+```
+$ unzip -l dist/bga-*.whl | ... | cut -d/ -f1 | sort -u
+    bga
+    bga-0.1.0.dist-info                      # (1) one top-level name
+
+$ for a in analyze … gen-synthetic; do (cd /tmp/empty && bga "$a" --help); done
+    all 16 aliases exit 0                    # (2) UX-77's acceptance still passes
+
+$ cd /tmp/empty && python -c "import tools"
+    ModuleNotFoundError: No module named 'tools'    # (3) the name is free
+
+$ python3 -m tools.bst_extract_run --help
+    exit 0                                   # (4) the checkout form still works
+```
+
+`hook.c` moved with the package and is present at
+`bga/_tools/native_trace/hook.c` in the installed venv.
+
+### Guards
+
+- CI's `packaging` job gained a step that asserts the **built artifact**:
+  the wheel's top-level entries are exactly `bga`, and nothing in the
+  clean venv is importable as `tools`.
+- A unit test asserts the `package-dir` mapping and that every declared
+  package is under `bga.` — so a future `include = ["tools*"]` fails
+  before it reaches a wheel.
+
+### One trap worth recording
+
+`import bga._tools` fails when run from the repository root even with
+the wheel installed, because the checkout's own `bga/` shadows
+site-packages. That is not a packaging bug and it is why both the CI
+step and the manual check `cd /tmp/empty` first — the same reason
+`UX-77`'s original job did.

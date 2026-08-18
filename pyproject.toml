@@ -67,29 +67,53 @@ Documentation = "https://github.com/rmorozov/buildstream-graph-analysis/blob/mai
 Repository = "https://github.com/rmorozov/buildstream-graph-analysis"
 Specification = "https://github.com/rmorozov/buildstream-graph-analysis/blob/main/docs/spec/specification.md"
 
-[tool.setuptools.packages.find]
-where = ["."]
-# UX-77: `tools*` is not optional. Every `bga wrap/extract/capture/...`
-# alias dispatches by importing `tools.<module>` (bga/tools_dispatch.py),
-# so packaging only `bga*` made the entire documented real-project
-# workflow die with a raw `ModuleNotFoundError` for anyone who installed
-# the package - reproduced from a wheel in a clean venv. Nothing caught
-# it because every consumer avoided the alias path: CI invokes
-# `python3 -m tools.<module>` with an explicit PYTHONPATH, pytest runs
-# from the repo root, and legacy editable installs put the repo root on
-# `sys.path` as a side effect.
+[tool.setuptools]
+# UX-94: the wheel owns exactly one top-level name.
 #
-# Known tradeoff, recorded rather than hidden: `tools` is a generic
-# top-level name to occupy in site-packages. The namespaced fix - moving
-# the code under `bga/` and leaving `tools/` as re-export shims - is
-# better and is a larger change (49 test import sites, 41 documented
-# `python3 -m tools.<module>` invocations); see UX-77's own doc.
-include = ["bga*", "tools*"]
+# `UX-77` made the alias dispatch work from an installed wheel by
+# packaging `tools*` - which shipped a top-level package called `tools`
+# into site-packages. That is about the most generic importable name in
+# Python: any other distribution shipping a `tools/` top-level collides
+# with `bga`'s internals, and pip will happily overwrite files between
+# two distributions that both ship it, breaking whichever was installed
+# first, silently.
+#
+# The directory stays `tools/` in the repository and is *installed* as
+# `bga._tools`. Nothing else has to move: 55 test imports, 34 CI
+# invocations and 263 documented `tools/` paths keep working from a
+# checkout exactly as before, and `python3 -m tools.<module>` still
+# runs. What made this possible was making the modules' imports of each
+# other relative (`from .bst_show_to_graph import ...`), so the package
+# does not care which name it is installed under.
+package-dir = {"bga._tools" = "tools"}
+
+# Listed rather than discovered: `packages.find` cannot see `bga._tools`,
+# because that package's source lives in `tools/` and only the mapping
+# above says so. A subpackage added under `bga/` and forgotten here is
+# caught by CI's `packaging` job, which installs the built wheel into a
+# clean venv and runs every documented alias from an empty directory.
+packages = [
+    "bga",
+    "bga.attribution",
+    "bga.diagnostics",
+    "bga.floors",
+    "bga.graph",
+    "bga.ingest",
+    "bga.normalize",
+    "bga.occupancy",
+    "bga.replay",
+    "bga.report",
+    "bga.structural",
+    "bga.utilisation",
+    "bga.validation",
+    "bga._tools",
+    "bga._tools.native_trace",
+]
 
 [tool.setuptools.package-data]
 # The LD_PRELOAD hook is C source compiled at capture time, not a Python
 # module, so it needs naming explicitly or Plane 2 is packaged broken.
-"tools.native_trace" = ["*.c", "*.h"]
+"bga._tools.native_trace" = ["*.c", "*.h"]
 
 [tool.ruff]
 line-length = 120

@@ -182,3 +182,34 @@ def test_the_pinned_bst_tier_count_matches_the_number_of_marked_tests():
         f"{pinned.group(1)}. Update the pin deliberately - it is what stops a skipped "
         f"tier reading as a pass."
     )
+
+
+def test_the_packaging_config_keeps_tools_out_of_the_top_level():
+    """UX-94: the wheel must own exactly one top-level name.
+
+    `UX-77` made the aliases work from an installed wheel by packaging
+    `tools*`, which shipped a top-level package called `tools` into
+    site-packages - about the most generic importable name in Python.
+    Two distributions that both ship `tools/` overwrite each other's
+    files, and pip does it silently.
+
+    The directory stays `tools/` in the repository and installs as
+    `bga._tools`, so nothing in the checkout had to move. This asserts
+    the mapping is still declared; CI's `packaging` job asserts the
+    built wheel actually behaves (every alias from an empty directory in
+    a clean venv, `hook.c` present, and nothing importable as `tools`).
+    """
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover - Python 3.9/3.10
+        pytest.skip("tomllib is 3.11+; CI's packaging job covers this everywhere")
+
+    config = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+    setuptools = config["tool"]["setuptools"]
+
+    assert setuptools["package-dir"] == {"bga._tools": "tools"}
+    packages = setuptools["packages"]
+    top_level = {name.split(".")[0] for name in packages}
+    assert top_level == {"bga"}, f"the wheel would ship top-level {sorted(top_level)}"
+    assert "bga._tools" in packages and "bga._tools.native_trace" in packages
+    assert "bga._tools.native_trace" in setuptools["package-data"]

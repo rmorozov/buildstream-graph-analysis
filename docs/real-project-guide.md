@@ -571,12 +571,31 @@ and written up in
 [`UX-27`](scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md)
 and [`UX-39`](scenarios/UX-39-ci-gate-cannot-express-inefficiency-regression.md).
 
-The honest gap in all of this: **every real capture so far is
-incremental.** The caches-off nightly — the scenario where a
-whole-project analyzer has the most to say — has never been captured, so
-the critical path above is the chain through 25 rebuilt elements rather
-than the project's real one. See
-[`docs/audit-round-9.md`](audit-round-9.md).
+The gap this paragraph used to apologise for is closed. **A caches-off
+capture now exists** — `bootstrap/build/gcc-stage1.bst`, the whole
+closure built from source with remotes ignored: 18 elements built, **0
+cached**, in 34.2 minutes, at confidence 1.00 and with no
+incremental-run caveat anywhere in the report. Its critical path is the
+project's real one for that target, not a chain through a rebuilt
+subset:
+
+```
+Where the time is: 3 element(s) are 99.7% of the 1980.5s critical path
+  bootstrap/build/gcc-stage1.bst  1248.7s (63.0% of path)  -> fixing it saves 1248.7s
+  bootstrap/base-sdk/gettext.bst   725.9s (36.6% of path)  -> fixing it saves  110.1s
+```
+
+Note what the second row says, and what only a cold capture could have
+shown: `gettext` is 36.6% of the path and worth **5.4%** of the build.
+It sits behind `gcc-stage1` on the chain, so shortening it moves the
+finish by a fraction of its own size. Share of the path and what a fix
+is worth are different numbers, and here they differ by 6.6x.
+
+The incremental captures remain the pre-commit scenario and are still
+what you compare a pre-commit run against — `bga compare` refuses a
+cold-vs-incremental pair outright, which is the point of having both.
+See [`docs/audit-round-9.md`](audit-round-9.md) and
+[`UX-86`](scenarios/UX-86-caches-off-capture-has-never-been-performed.md).
 
 ## Where to go next
 

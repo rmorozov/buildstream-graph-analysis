@@ -114,9 +114,9 @@ def test_the_target_closure_is_accounted_separately():
 # --- the finding --------------------------------------------------------
 
 class _Result:
-    def __init__(self, cache):
+    def __init__(self, cache, run_mode=None):
         self.signals = {"cache": cache}
-        self.confidence = {"primary": 1.0}
+        self.confidence = {"primary": 1.0, "run_mode": run_mode}
         self.violations = []
         self.floors = {}
         self.attribution = {}
@@ -125,10 +125,12 @@ class _Result:
         self.occupancy_stats = {}
 
 
-def _cache_finding(hit_ratio, **extra):
+def _cache_finding(hit_ratio, run_mode=None, **extra):
     cache = {"hit_ratio": hit_ratio, "built_elements": 10, "cached_elements": 90}
     cache.update(extra)
-    return findings_by_id(compute_findings(_Result(cache))).get("cache-hit-ratio")
+    return findings_by_id(
+        compute_findings(_Result(cache, run_mode=run_mode))
+    ).get("cache-hit-ratio")
 
 
 def test_a_healthy_cache_is_still_reported():
@@ -151,6 +153,32 @@ def test_a_barely_incremental_build_says_so_loudly():
 def test_the_middle_band_is_a_question_not_an_alarm():
     finding = _cache_finding((POOR_HIT_RATIO + HEALTHY_HIT_RATIO) / 2)
     assert finding["severity"] == "medium"
+
+
+def test_a_caches_off_run_is_not_an_alarm():
+    """A nightly is *told* not to use the cache, so 0% is the intent.
+
+    Not hypothetical, and not caught by review: this project's first
+    ever cold capture - 18 of 18 elements built, 0 cached, exactly as
+    asked - was reported as "barely incremental - most of the project
+    rebuilt. Look for a volatile cache key near the root", hours after
+    the finding shipped. `run_mode` (UX-55) was already in hand and the
+    finding ignored it.
+    """
+    finding = _cache_finding(0.0, run_mode="full")
+    assert finding["severity"] == "info"
+    assert "Caches off" in finding["title"]
+    assert "volatile cache key" not in finding["title"]
+    assert finding["evidence"]["run_mode"] == "full"
+
+
+def test_the_same_ratio_on_an_incremental_run_is_still_an_alarm():
+    """The banding is not switched off - it is conditioned. An
+    incremental run that reused nothing is the failure mode this finding
+    exists for."""
+    finding = _cache_finding(0.0, run_mode="incremental")
+    assert finding["severity"] == "high"
+    assert "volatile cache key" in finding["title"]
 
 
 def test_no_ratio_means_no_finding():

@@ -1,6 +1,6 @@
 # UX-86: the caches-off scenario has never been captured, so half the product is untested on real data
 
-**Priority:** Medium | **Status:** 🟡 In Progress — mechanism shipped, capture not yet taken | **Depends on:** UX-81 (done), UX-55 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done), UX-55 (done)
 
 ## Motivation
 
@@ -183,3 +183,93 @@ The wall clock this produces is the number that decides whether a larger
 cold target is reachable later. Until the run finishes, this task stays
 🟡 — the acceptance test asks for a *published* capture, and a dispatch
 is not one.
+
+---
+
+## The capture, taken
+
+**Status:** 🟢 Done
+
+Run `32133112003`. `capture_mode=cold`, `traced_build_exit=0`, published
+to `captures/fdsdk/953683fb-cold-b4j4-32133112003` with
+`captures/fdsdk-cold-latest` moved to it — and all three incremental
+captures untouched, which is the separation `UX-81` and this task's own
+publish path were built for.
+
+### Acceptance test
+
+| requirement | result |
+|---|---|
+| run-context records the mode | `capture_mode=cold`; `queue_summary.build = {processed: 18, skipped: 0}` |
+| zero cached elements in its closure | **0 of 18** |
+| analyze confidence "high" | **1.00** |
+| no incremental-run caveat in the report | absent — `run_mode` is `full` |
+
+**34.2 minutes** against a 250-minute budget. That is the answer Required
+Fix item 2 wanted, and it means a considerably larger cold target is
+reachable next time.
+
+### What only a cold capture could show
+
+```
+Where the time is: 3 element(s) are 99.7% of the 1980.5s critical path
+  bootstrap/build/gcc-stage1.bst  1248.7s (63.0% of path)  -> fixing it saves 1248.7s (60.8%)
+  bootstrap/base-sdk/gettext.bst   725.9s (36.6% of path)  -> fixing it saves  110.1s ( 5.4%)
+  bootstrap/gnu-config.bst            1.1s ( 0.1% of path) -> fixing it saves    1.1s ( 0.1%)
+```
+
+`gettext` holds **36.6%** of the critical path and is worth **5.4%** of
+the build — a 6.8x gap between share-of-path and realizable saving, on a
+chain where it sits behind `gcc-stage1`. Every previous capture measured
+a chain through a rebuilt subset; this is the target's real one.
+
+Efficiency Score 0.97, Dispatch Occupancy 39.4%: the pairing `UX-27`
+exists to make readable — the scheduler is at the certified floor for
+this graph, and the graph is a chain, so the occupancy is low and
+nothing about the scheduler can fix that.
+
+### Required Fix item 3: the cold-vs-incremental pair
+
+`bga compare` between the cold capture and an incremental one refuses,
+on **both** checks, which is the first real exercise `UX-78`'s
+cache-scenario check has ever had:
+
+```
+Refusing to compare these runs (shared_elements, run_mode):
+  - baseline has 126 element(s), candidate has 18 - only 18 shared element UID(s)
+    (less than half) - these runs may not be the same project
+  - baseline is a incremental run and candidate is a full run - their durations and
+    floors differ by however much the cache happened to hold ...
+```
+
+Both reasons are correct and neither is redundant: the element-overlap
+check fires because a cold capture of a bounded subtree is a *smaller*
+graph, and the run-mode check fires because the two measure different
+builds. A pipeline that pointed at the wrong artifact would see the
+first; one that mixed the two scenarios would see the second.
+
+### It falsified a finding written the same day
+
+The cold capture's first `bga analyze` reported:
+
+> Cache hit ratio: 0% (0 cached, 18 rebuilt) - **barely incremental - most
+> of the project rebuilt. Look for a volatile cache key near the root**
+
+That is confidently wrong about a build that was *told* not to use the
+cache. `UX-92`'s hit-ratio finding, shipped hours earlier, banded the
+ratio without consulting `run_mode` — which `UX-55` already derives and
+which was sitting in the same result object. Fixed: on a `full` run the
+finding reports the fact at `info` (*"Caches off: all 18 element(s)
+built from source, none reused - this is the nightly scenario, so a 0%
+hit ratio is the intent rather than a finding"*), and the banding still
+fires on an incremental run that reused nothing, which is the failure
+mode it exists for. Two regression tests.
+
+Worth stating plainly: no amount of review would have caught this. It
+took the first capture of a scenario the tool had never seen.
+
+### Note on the log tree
+
+This run does not carry `bst-element-logs.tar.gz`: it was dispatched
+from `main` at `a5245ef`, before `UX-91` added log publication. The next
+capture will.

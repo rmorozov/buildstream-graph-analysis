@@ -102,3 +102,84 @@ publish path read directly. No cold capture has been produced, and the
 accurate until a cold capture exists, and editing them first would be
 the exact kind of documentation-ahead-of-code this round's `UX-88` was
 filed for.
+
+---
+
+## Part 2 of 2: Required Fix item 2, answered by measurement
+
+The open question was *which target fits the budget*. Answered by
+cloning `freedesktop-sdk` at the pinned ref and reading real closure
+sizes with `bst show --deps all`, rather than by dispatching a guess and
+watching a 250-minute job time out.
+
+| target | closure |
+|---|---|
+| `components/libxml2.bst` (the workflow default) | **126** |
+| `components/gperf.bst` | 110 |
+| `components/zlib.bst` | 85 |
+| `public-stacks/runtime-minimal.bst` | 84 |
+| `bootstrap/build/gcc-stage1.bst` | **18** |
+| `bootstrap/base-sdk/bison.bst` | 10 |
+| `bootstrap/base-sdk/m4.bst` | 4 |
+| `bootstrap/base-sdk/binary-seed.bst` | 2 |
+
+**The task's premise is confirmed and sharper than it was stated.** Of
+`runtime-minimal`'s 84 elements, **64 are `bootstrap/`** — every
+`components/*` target roots in the full compiler bootstrap, which is
+exactly why warm-then-cut exists. No `components/` target is a candidate
+for a cold build inside a runner budget, and the default
+(`components/libxml2.bst`, 126) is the worst of them.
+
+**What the table also shows is a way through.** The bootstrap is not a
+single indivisible block: `bootstrap/base-sdk/*` is rooted at
+`binary-seed.bst`, a 2-element pair (`import` + `compose`) of
+*pre-built binaries*. So a bounded subtree can be built genuinely from
+nothing — which is precisely the "cold capture of a bounded subtree" the
+Motivation allows.
+
+### The chosen target: `bootstrap/build/gcc-stage1.bst`
+
+18 elements, and real ones rather than a trivial tail:
+
+```
+bootstrap/base-sdk/binary-seed-x86_64.bst (import)     bootstrap/base-sdk/gettext.bst   (autotools)
+bootstrap/base-sdk/binary-seed.bst        (compose)    bootstrap/base-sdk/bison.bst     (autotools)
+bootstrap/gnu-config.bst                  (manual)     bootstrap/base-sdk/pkg-config.bst(autotools)
+bootstrap/base-sdk/m4.bst                 (autotools)  bootstrap/base-sdk/zstd.bst      (make)
+bootstrap/base-sdk/perl.bst               (make)       bootstrap/build/binutils-stage1.bst (autotools)
+bootstrap/base-sdk/autoconf2.69.bst       (autotools)  bootstrap/build/python3.bst      (autotools)
+bootstrap/base-sdk/autoconf.bst           (autotools)  bootstrap/build/gcc-stage1.bst   (autotools)
+bootstrap/base-sdk/automake.bst           (autotools)
+bootstrap/base-sdk/libtool.bst            (autotools)
+bootstrap/base-sdk/flex.bst               (autotools)
+bootstrap/base-sdk/tar.bst                (autotools)
+```
+
+Chosen over the smaller candidates deliberately. `bison.bst` (10) or
+`m4.bst` (4) would also be genuine cold captures and would certainly
+fit, but a capture whose point is to exercise whole-graph structural
+findings — blast radius, choke points, consolidation — needs a graph
+with real shape and real compute in it. This one has a genuine
+dependency chain (seed → m4 → autotools → flex/bison → binutils → gcc),
+one clear heavy element, and a comparable element count to round 9's
+25-element incremental cut, so the two are readable side by side.
+
+### Dispatched
+
+```
+workflow: real-project-capture.yml   ref: main
+target: bootstrap/build/gcc-stage1.bst   capture_mode: cold
+fdsdk_ref: 953683fb...   builders: 4   max_jobs: 4   trace_opens: true
+```
+
+Same `fdsdk_ref` as all three incremental captures, on purpose: the
+cold-vs-incremental pair the Required Fix item 3 asks for is only
+meaningful at one commit. Note that `bga compare` will (correctly)
+**refuse** that pair under `UX-78`'s cache-scenario check — which is
+itself the first real exercise that check has ever had, and the reason
+item 3 names it.
+
+The wall clock this produces is the number that decides whether a larger
+cold target is reachable later. Until the run finishes, this task stays
+🟡 — the acceptance test asks for a *published* capture, and a dispatch
+is not one.

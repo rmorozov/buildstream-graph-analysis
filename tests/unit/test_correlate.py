@@ -336,7 +336,7 @@ def test_analyze_and_correlate_name_the_same_element_first():
 
     from bga.ingest.models import AnalysisResult
     from bga.report.json import format_json
-    from bga.report.text import _heaviest_on_path
+    from bga.findings import heaviest_on_path
 
     analysis = _real_analysis()
     result = AnalysisResult(
@@ -348,7 +348,7 @@ def test_analyze_and_correlate_name_the_same_element_first():
         structural=analysis["structural"],
     )
 
-    analyze_first = _heaviest_on_path(result)[0]["element_uid"]
+    analyze_first = heaviest_on_path(result)[0]["element_uid"]
     joined = correlate(_json.loads(format_json(result)), _real_native())
     correlate_first = joined["elements"][0]["element"]
 

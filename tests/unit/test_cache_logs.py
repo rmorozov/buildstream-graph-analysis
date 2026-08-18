@@ -302,3 +302,103 @@ def test_a_real_buildstream_log_tree_parses(tmp_path):
     # And the report builds from real data without raising.
     report = build_report(records)
     assert report["provenance"]["build_logs"] == len(builds)
+
+
+# --- UX-99: the sandbox tax --------------------------------------------
+
+def test_the_toll_and_the_work_are_split_per_element(log_tree):
+    """`REAL_LOG` is a real bst 2.7.0 log and it already carries the
+    split: 2s staging dependencies, 14s running commands, 1s caching the
+    artifact, 17s total. The toll is 3 of those 17 seconds, and before
+    this it was booked as part of `core.bst`'s work."""
+    from tools.bst_cache_logs import phase_breakdown
+
+    row = phase_breakdown(scan_log_tree(str(log_tree)))[0]
+    assert row["work_us"] == 14_000_000
+    assert row["toll_us"] == 3_000_000
+    assert round(row["toll_share"], 4) == round(3 / 17, 4)
+
+
+def test_the_project_wide_tax_is_the_headline(log_tree):
+    from tools.bst_cache_logs import sandbox_tax
+
+    tax = sandbox_tax(scan_log_tree(str(log_tree)))
+    assert tax["toll_us"] == 3_000_000
+    assert tax["work_us"] == 14_000_000
+    assert tax["build_logs"] == 1
+    assert [p["phase"] for p in tax["by_phase"]] == [
+        "Staging dependencies", "Caching artifact", "Staging sources",
+    ]
+
+
+def test_the_staging_path_does_not_split_one_phase_into_many(log_tree):
+    """BuildStream writes the staging path into the activity name
+    (`Staging dependencies at: /`), so on a project that stages at
+    several prefixes the aggregate would otherwise carry one row per
+    prefix and none of them would be the phase."""
+    from tools.bst_cache_logs import _phase_family
+
+    assert _phase_family("Staging dependencies at: /usr") == "Staging dependencies"
+    assert _phase_family("Caching artifact") == "Caching artifact"
+
+
+def test_the_unaccounted_remainder_is_published_not_folded_into_the_toll(log_tree):
+    """The enclosing `Build` total need not equal the sum of the phases
+    it contains. Adding the difference to the toll would inflate exactly
+    the number this feature exists to report, so it goes in its own
+    field."""
+    from tools.bst_cache_logs import sandbox_tax
+
+    tax = sandbox_tax(scan_log_tree(str(log_tree)))
+    assert tax["unaccounted_us"] == tax["total_us"] - tax["work_us"] - tax["toll_us"]
+    assert tax["total_us"] == 17_000_000
+
+
+def test_the_resolution_limit_travels_in_the_payload(log_tree):
+    """Measured on `examples/06`: every overhead phase rounds to 0.0s at
+    BuildStream's one-second resolution, so the project-wide toll there
+    is 0.0s of 70.0s. That is a floor, not a measurement, and a consumer
+    must be able to tell which it has without reading this file."""
+    from tools.bst_cache_logs import LOG_RESOLUTION_US, sandbox_tax
+
+    tax = sandbox_tax(scan_log_tree(str(log_tree)))
+    assert tax["resolution_us"] == LOG_RESOLUTION_US == 1_000_000
+    assert "floor rather than a measurement" in tax["caveat"]
+    assert "accumulates across builds" in tax["caveat"]
+
+
+def test_the_top_payer_is_ranked_by_toll_seconds_not_by_share(tmp_path):
+    """A 90% toll on a 0.4s element is arithmetic; a 40s toll on a 90s
+    element is a finding. Ranking by share puts the arithmetic first."""
+    from tools.bst_cache_logs import sandbox_tax
+
+    def _log(element, key, staging, commands, total):
+        return (
+            f"BuildStream 2.7.0 - Tuesday, 18-08-2026 at 11:53:22\n"
+            f"[--:--:--] START   [{key}] {element}: Build\n"
+            f"[--:--:--] START   [{key}] {element}: Staging dependencies at: /\n"
+            f"[00:00:{staging:02d}] SUCCESS [{key}] {element}: Staging dependencies at: /\n"
+            f"[--:--:--] START   {element}: Running commands\n"
+            f"[00:00:{commands:02d}] SUCCESS {element}: Running commands\n"
+            f"[00:00:{total:02d}] SUCCESS [{key}] {element}: Build\n"
+        )
+
+    root = tmp_path / "logs"
+    for element, key, staging, commands, total in (
+        ("tiny.bst", "aaaaaaaa", 9, 1, 10),   # 90% toll, 9s
+        ("big.bst", "bbbbbbbb", 40, 50, 90),  # 44% toll, 40s
+    ):
+        directory = root / "p" / element.removesuffix(".bst")
+        directory.mkdir(parents=True)
+        (directory / f"{key}-build.20260818-115322.log").write_text(
+            _log(element, key, staging, commands, total)
+        )
+
+    payers = sandbox_tax(scan_log_tree(str(root)))["top_payers"]
+    assert [p["element"] for p in payers] == ["big.bst", "tiny.bst"]
+
+
+def test_the_tax_renders_in_the_text_report(log_tree):
+    text = format_report_text(build_report(scan_log_tree(str(log_tree))))
+    assert "Sandbox tax: 3.0s of 17.0s element time (17.6%)" in text
+    assert "Who paid it (by toll seconds, not by share):" in text

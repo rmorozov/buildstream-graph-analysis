@@ -167,3 +167,9 @@ examples/06-macro-micro-optimization/optimized/files/toolchain/
 # examples/07-declared-vs-used-dependencies stages the identical sysroot
 # (another hardlink clone). Same reasoning as 05 and 06.
 examples/07-declared-vs-used-dependencies/files/toolchain/
+
+# tests/fixtures/bst_build_root_override/files/runtime/: a real
+# dynamically-linked shell and `sleep` plus their library closure,
+# staged from the host by that fixture's own stage_runtime.sh. Same rule
+# as examples/: host-specific binaries are generated, never committed.
+tests/fixtures/bst_build_root_override/files/runtime/

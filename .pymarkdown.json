@@ -1,0 +1,35 @@
+{
+  "//": [
+    "UX-98: markdown correctness, not markdown opinions.",
+    "",
+    "Enabled is the class that changes how a document *renders*. Disabled",
+    "is the class that argues about house style - this repository's docs",
+    "style is its own, and rule-by-rule fights with an opinionated default",
+    "are how a docs linter gets switched off six weeks later.",
+    "",
+    "Table cell counts are NOT covered here and are checked by",
+    "tests/unit/test_docs_links_and_commands.py instead: PyMarkdown",
+    "implements MD001-MD048, and the table rules (MD055 pipe style, MD056",
+    "column count) are markdownlint v0.34+ additions with no PyMarkdown",
+    "equivalent. That was measured against the real defects, not assumed."
+  ],
+  "plugins": {
+    "md003": { "enabled": false, "//": "heading style: setext vs atx, pure preference" },
+    "md004": { "enabled": false, "//": "unordered list marker style, pure preference" },
+    "md007": { "enabled": false, "//": "list indent width, pure preference" },
+    "md012": { "enabled": false, "//": "multiple blank lines are used deliberately as section breaks" },
+    "md013": { "enabled": false, "//": "line length: this repo wraps prose by meaning, not by column" },
+    "md024": { "enabled": false, "//": "duplicate headings are correct in per-round audit files" },
+    "md025": { "enabled": false, "//": "a second H1 is used to separate an appended resolution" },
+    "md026": { "enabled": false, "//": "trailing punctuation in headings is deliberate here" },
+    "md029": { "enabled": false, "//": "ordered list numbering style, pure preference" },
+    "md033": { "enabled": false, "//": "inline HTML: the docs-style opt-out markers are HTML comments" },
+    "md034": { "enabled": false, "//": "bare URLs are readable in plain text, which matters for terminal output" },
+    "md035": { "enabled": false, "//": "horizontal rule style, pure preference" },
+    "md036": { "enabled": false, "//": "bold-as-heading is used for inline emphasis in tables" },
+    "md041": { "enabled": false, "//": "first line need not be a heading in an appended fragment" },
+    "md044": { "enabled": false, "//": "proper-name capitalisation needs a word list nobody will maintain" },
+    "md046": { "enabled": false, "//": "code block style: fenced and indented both appear deliberately" },
+    "md048": { "enabled": false, "//": "code fence style, pure preference" }
+  }
+}

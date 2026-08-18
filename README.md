@@ -25,7 +25,7 @@ bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make de
 
 A three-element fixture that runs instantly — small enough to read in full, which is the point:
 
-```
+```text
 Key Findings:
   Confidence: 0.88 (high)
   Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
@@ -45,7 +45,7 @@ Critical Path Length: 3 elements
 `make dev-run ARGS=--large` runs a bigger, more realistic sample — 14 elements across four
 subprojects, with real headroom to find:
 
-```
+```text
 Key Findings:
   Confidence: 0.99 (high)
   Biggest Opportunity: 5.6% of wall-clock time is IDLE (8.00s)
@@ -76,7 +76,7 @@ bga gen-synthetic /tmp/scale --seed 1   # 1202 elements, 14 levels, 16 builders
 bga analyze /tmp/scale --diagnostics                            # ~3.8s
 ```
 
-```
+```text
   Biggest Opportunity: 70.1% of wall-clock time is RESOURCE WAIT (250.25s)
     -> a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a
        higher N, or `bga sweep` to find the real knee point
@@ -95,7 +95,7 @@ A different shape from the sample above, and the report says so: this run is **r
 
 Below is `bga analyze` on a real 3614-second [`freedesktop-sdk`](https://gitlab.com/freedesktop-sdk/freedesktop-sdk) build (4-core runner, `--builders 4 --max-jobs 4`), verbatim:
 
-```
+```text
 Key Findings:
   Incremental run (caches on): BuildStream skipped elements it had already built, 2 of
   them on the critical path. Coverage and the floors below describe the work this run
@@ -128,7 +128,7 @@ Three things in that block are worth pointing at, because they are the differenc
 
 Then the same build, seen from inside the sandboxes and joined back to whole-build impact (`bga correlate`):
 
-```
+```text
 What to do next (ranked by Plane 1 impact):
   components/_private/cmake-stage1.bst:
     - holds 43% of the critical path and fixing it is worth 1569.8s (43.4% of the build)
@@ -162,6 +162,7 @@ Everything in that block is also published as **data**, with a stable `id`, a `s
 ```bash
 bga analyze /tmp/run --format json | jq '.findings[] | select(.id == "time-concentration") | .evidence'
 ```
+
 ```json
 {
   "path_us": 3610500000,
@@ -237,7 +238,7 @@ The second is the one worth reaching for on a growing project. Adding three new 
 bga compare runs/baseline runs/candidate --fail-on-inefficient-additions   # exit 5
 ```
 
-```
+```text
 New this change: g.bst, h.bst - 8.0s of work added, 8.0s of it on the critical path
 (stretch 1.00)
 ```
@@ -264,7 +265,7 @@ bga capture run /path/to/your/project report.json -- bst build <target>
 
 **Real CPU time per element** (`getrusage`, measured in-process — the only genuine CPU measurement anywhere in `bga`) answers what timing alone cannot: *was this element compute-bound, or waiting?* On the real `freedesktop-sdk` capture, on a 4-core runner:
 
-```
+```text
 Real CPU time (getrusage): 11744.07s across 119492 of 127627 traced processes
   components/_private/cmake-stage1.bst 5351.14s CPU over 1567.12s wall =  3.41 cores busy  [84% measured]
   components/doxygen.bst               1825.48s CPU over  512.62s wall =  3.56 cores busy  [80% measured]
@@ -275,7 +276,7 @@ The first two are genuinely compute-bound — nothing to win from their parallel
 
 **Where that CPU went**, ranked by time rather than by invocation count — which is the difference between finding the problem and finding the most frequent process:
 
-```
+```text
   components/_private/cmake-stage1.bst
     cc1plus           4352.6 CPU s (81.3%)     885 process(es), 5525.6s wall
     as                 397.5 CPU s ( 7.4%)    1918 process(es), 5929.8s wall
@@ -288,7 +289,7 @@ The first two are genuinely compute-bound — nothing to win from their parallel
 
 **Achieved parallelism against the `-jN` it asked for** — the number that separates "this element is legitimately 13 seconds of work" from "this element is 4 seconds stretched to 13 by a one-line `notparallel: True`" (from a small local project, where that case exists):
 
-```
+```text
 Per-element native parallelism (real compiler/assembler/linker processes only):
   element                  peak  req  achieved     span work
   core.bst                    2    1      200%   14.22s   32  <- pinned to -j1 while the rest of this build ran higher

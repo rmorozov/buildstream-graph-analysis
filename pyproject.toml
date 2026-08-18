@@ -46,6 +46,13 @@ dev = [
     # a real CI failure (ModuleNotFoundError: yaml) caught this being
     # missing from here originally.
     "pyyaml>=6.0",
+    # UX-98: markdown correctness (`make lint-docs`). Chosen because it
+    # is pip-installable and so joins the Python-only CI matrix without
+    # a Node toolchain. It does NOT cover table cell counts - the one
+    # markdown defect this repo has actually shipped - which is checked
+    # in tests/unit/test_docs_links_and_commands.py instead; see UX-98
+    # for the measurement behind that split.
+    "pymarkdownlnt>=0.9",
 ]
 # Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
 # (tests/unit/test_bst_show_to_graph.py) - skipped automatically when

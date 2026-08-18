@@ -1,6 +1,6 @@
 # UX-92: cache effectiveness — hits, misses, churn, trends — is invisible to the tool
 
-**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done | **Depends on:** UX-55 (done), UX-81 (history to trend over)
+**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is deferred on evidence | **Depends on:** UX-55 (done), UX-81 (history to trend over)
 
 ## Motivation
 
@@ -159,14 +159,46 @@ membership is not a built list. On a run that built nothing it reported
 all** when that signal is absent: "not measured" and "nothing rebuilt"
 are different facts and only one of them is an all-clear.
 
-### Not done: stage 3
+### Stage 3, split by what it was waiting for
 
-The trend projection and `--fail-on-cache-regression` gate. Stage 3
-needs a measured noise band for these ratios across a run history, on
-the same derive-the-threshold discipline as `UX-39` — and the three
-preserved fdsdk captures are all the *same* commit, so they measure
-noise in the hit ratio at zero churn rather than the spread a gate would
-have to clear. That is a real input for it, not a substitute.
+Stage 3 was one line — "the trend projection and
+`--fail-on-cache-regression` gate" — and the two halves turned out to be
+blocked on different things.
+
+**The trend shipped, as `UX-103`.** `bga cache-trend` reads a series of
+run directories, reports each one's hit ratio, transfer seconds, seconds
+per artifact and churn against its predecessor, and fires a finding when
+the newest reading leaves the band its trailing window describes. It
+reuses `bga compare`'s band rather than inventing a second noise model,
+including the widening rule that keeps a near-zero MAD from making every
+delta significant. See that task for the measurements.
+
+**The gate is still deferred, and now for a sharper reason.** Building
+the trend produced the evidence stage 3 was waiting on, and it argues
+against the gate rather than for it:
+
+- The three preserved fdsdk captures sit at hit ratio **72%, three times
+  over**, with zero churn — because they are the same commit, built the
+  same way, with the cut set deleted identically each time. That is
+  noise measured at a single point of a one-dimensional space.
+- The one quantity that *did* vary across those runs, total duration,
+  spans 3405.78s .. 3614.22s — a 6.1% spread on runs that differ in
+  nothing. A gate keyed on a cache ratio would inherit that variance
+  without inheriting an explanation for it.
+- Every published capture ignores remotes by design, so **transfer time
+  is not merely stable across the history, it is absent**. The metric
+  most worth gating (a remote that slowed down) has n=0, not n=3.
+
+What would close it is history across *different* commits, where the
+hit ratio has room to move for a reason a gate should catch. `UX-96`'s
+monthly cold schedule and the weekly incremental one accumulate that
+without a human; the gate is a decision to take when the spread it must
+clear has been measured, not before. `UX-39` set that discipline and it
+holds here.
+
+Recorded rather than left implicit: shipping
+`--fail-on-cache-regression` today would mean picking a threshold from
+nothing, in a tool whose central claim is that it does not do that.
 
 ### Verification
 

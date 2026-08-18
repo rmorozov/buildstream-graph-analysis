@@ -131,7 +131,7 @@ def test_text_report_still_shows_a_genuine_savings_group():
 
     output = _render_batch_section(batch_opportunities)
 
-    assert "Batch Opportunities" in output
+    assert "Independently workable together" in output
     assert "app.bst" in output and "extra.bst" in output
     assert "saves 4.00s combined" in output
     assert "further group(s)" not in output

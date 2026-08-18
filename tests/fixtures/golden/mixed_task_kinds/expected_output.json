@@ -113,6 +113,54 @@
             "lib.bst": 1,
             "app.bst": 2
         },
+        "optimization_horizon": [
+            {
+                "element_uid": "base.bst",
+                "saving_us": 6000,
+                "makespan_after_us": 8000,
+                "cumulative_saving_us": 6000,
+                "entering": []
+            },
+            {
+                "element_uid": "lib.bst",
+                "saving_us": 4000,
+                "makespan_after_us": 4000,
+                "cumulative_saving_us": 10000,
+                "entering": [
+                    "extra.bst"
+                ]
+            },
+            {
+                "element_uid": "extra.bst",
+                "saving_us": 1000,
+                "makespan_after_us": 3000,
+                "cumulative_saving_us": 11000,
+                "entering": []
+            },
+            {
+                "element_uid": "app.bst",
+                "saving_us": 3000,
+                "makespan_after_us": 0,
+                "cumulative_saving_us": 14000,
+                "entering": []
+            }
+        ],
+        "joint_saving": {
+            "elements": [
+                "base.bst",
+                "lib.bst",
+                "extra.bst"
+            ],
+            "joint_saving_us": 11000,
+            "sum_of_individual_us": 11000,
+            "savings_add": true
+        },
+        "latent_heavies": [
+            {
+                "element_uid": "extra.bst",
+                "duration_us": 4000
+            }
+        ],
         "wall_clock_share": {
             "base.bst|BUILD|BUILD|0": 4000.0,
             "extra.bst|FETCH|FETCH|0": 2000.0,

@@ -8,7 +8,7 @@ Implements Part 5: Static Dependency Graph including:
 """
 
 import logging
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Sequence, Set, Tuple, Optional
 from collections import defaultdict, deque
 
 from ..ingest.models import Graph, NormalizedTask
@@ -657,6 +657,156 @@ def compute_realizable_savings(
         shortened, _ = compute_critical_path(graph, hypothetical)
         savings[uid] = max(0, baseline - shortened)
     return savings
+
+
+# UX-74: how many fix-and-recapture cycles the report projects ahead.
+# Each step costs one longest-path recompute per candidate on the current
+# path - 0.40 ms each on a real 126-element graph - against the ~60
+# minutes a real re-capture costs. Bounded anyway: a projection five
+# hypothetical fixes deep is arithmetic, not advice.
+OPTIMIZATION_HORIZON_STEPS = 5
+
+
+def compute_joint_saving(
+    graph: Graph,
+    durations: Dict[str, int],
+    elements: Sequence[str],
+) -> int:
+    """What the build would lose if *all* of `elements` became instant.
+
+    Not the sum of their individual savings, and not assumed to be: on a
+    chain the savings compose, on parallel branches they take a maximum,
+    and which of those holds is a property of this graph that only the
+    simulation can answer (`UX-74`). Measured on a real
+    `freedesktop-sdk` capture: the top three are worth 2605.8s together,
+    exactly the sum - while `cmake-stage1` and `git-minimal`, on
+    different chains, are worth 1569.8s together, exactly the larger of
+    the two alone.
+    """
+    if not elements:
+        return 0
+    baseline, _path = compute_critical_path(graph, durations)
+    hypothetical = dict(durations)
+    for uid in elements:
+        hypothetical[uid] = 0
+    shortened, _ = compute_critical_path(graph, hypothetical)
+    return max(0, baseline - shortened)
+
+
+def compute_optimization_horizon(
+    graph: Graph,
+    durations: Dict[str, int],
+    excluded: Optional[Set[str]] = None,
+    steps: int = OPTIMIZATION_HORIZON_STEPS,
+) -> List[dict]:
+    """What becomes binding after each fix, projected from one capture.
+
+    A user learns one element per capture today, and on a graph where
+    77% of elements have zero slack the chain re-forms the moment
+    anything shrinks - so the second finding costs another full build.
+    Every number here is a longest-path recompute the tool already
+    performs, and the whole projection runs in milliseconds against the
+    ~60 minutes a real re-capture costs.
+
+    Greedy by realizable saving at each step, which is the order a user
+    would actually work in: the element worth most *now*, then the
+    element worth most once that is done. `entering` names elements that
+    were not on the previous step's critical path and are on this one -
+    the latent heavies, worth nothing today and binding two fixes from
+    now, which appear in no report the tool otherwise produces.
+
+    `excluded` is the structural set: a `stack` or `import` has no build
+    commands to make faster, so "fix it" is not a thing a reader can do
+    (`UX-34`).
+
+    This is a structural projection over *this run's* measured durations.
+    "Fixed" means the element becomes instant - the same convention
+    `compute_realizable_savings` and `best_case_speedup` already use - and
+    it assumes nothing else about the build changes. It is not a
+    forecast, and the caller is expected to say so.
+    """
+    excluded = excluded or set()
+    baseline, path = compute_critical_path(graph, durations)
+    if baseline <= 0:
+        return []
+    remaining = dict(durations)
+    on_path = set(path)
+    horizon: List[dict] = []
+    for _step in range(max(0, steps)):
+        candidates = [
+            uid for uid in path
+            if remaining.get(uid) and uid not in excluded
+        ]
+        if not candidates:
+            break
+        savings = compute_realizable_savings(
+            graph, remaining, sorted(candidates, key=lambda u: -remaining[u])
+        )
+        best = max(savings, key=lambda u: savings[u], default=None)
+        if best is None or savings[best] <= 0:
+            break
+        remaining[best] = 0
+        makespan, path = compute_critical_path(graph, remaining)
+        entering = [
+            uid for uid in path
+            if uid not in on_path and remaining.get(uid) and uid not in excluded
+        ]
+        on_path |= set(path)
+        horizon.append({
+            'element_uid': best,
+            'saving_us': savings[best],
+            'makespan_after_us': int(makespan),
+            'cumulative_saving_us': int(baseline - makespan),
+            # UX-74: the latent heavies. Sorted by their own duration,
+            # because "which of these should I care about" is a size
+            # question at the moment they appear.
+            'entering': sorted(entering, key=lambda u: -remaining[u]),
+        })
+    return horizon
+
+
+# UX-74: an off-path element below this share of the build is not a
+# latent anything - it is rounding. `UX-65`'s own floor, reused.
+LATENT_HEAVY_SHARE = 0.01
+
+LATENT_HEAVIES_SHOWN = 5
+
+# UX-74: how many of the horizon's steps the joint-saving figure covers.
+# Three is what a reader can hold at once and what the report already
+# ranks; the question "do these compose" is only interesting for a set
+# small enough to actually plan around.
+JOINT_SAVING_SET_SIZE = 3
+
+
+def compute_latent_heavies(
+    durations: Dict[str, int],
+    critical_path: Sequence[str],
+    total_us: int,
+    excluded: Optional[Set[str]] = None,
+    floor_share: float = LATENT_HEAVY_SHARE,
+) -> List[dict]:
+    """Heavy elements that are on no critical path and in no ranking.
+
+    Their realizable saving today is genuinely 0, so every ranking the
+    report produces is right to place them last - and that is exactly why
+    they are invisible. On a real `freedesktop-sdk` capture
+    `components/_private/git-minimal.bst` (547.7s) is the **4th heaviest
+    element in the whole build** and `components/icu.bst` (430.8s) the
+    6th, and neither appears anywhere in the report (`UX-74`).
+
+    They are not a to-do list. They are the floor the chain is being
+    shortened towards: fixing the critical path can only help until one
+    of these becomes the constraint.
+    """
+    excluded = excluded or set()
+    on_path = set(critical_path)
+    floor = total_us * floor_share if total_us else 0
+    latent = [
+        {'element_uid': uid, 'duration_us': dur}
+        for uid, dur in durations.items()
+        if uid not in on_path and uid not in excluded and dur >= floor and dur > 0
+    ]
+    return sorted(latent, key=lambda e: -e['duration_us'])[:LATENT_HEAVIES_SHOWN]
 
 
 def compute_element_durations(tasks: List[NormalizedTask]) -> Dict[str, int]:

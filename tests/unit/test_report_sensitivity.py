@@ -79,7 +79,7 @@ def test_text_report_surfaces_batch_opportunities(tmp_path):
 
     batch_opportunities = result.structural["batch_opportunities"]
     assert batch_opportunities["groups"], "two equal parallel chains must batch"
-    assert "Batch Opportunities" in output
+    assert "Independently workable together" in output
     group = batch_opportunities["groups"][0]
     assert group["elements"][0] in output
 

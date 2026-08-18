@@ -73,7 +73,7 @@ jobs:
           for alias in analyze compare correlate \
                        wrap extract capture rebuild-set checkout-cost run-context \
                        graph-from-show log-to-chrome chrome-to-trace native-to-chrome \
-                       cross-check gen-synthetic; do
+                       cache-logs cross-check gen-synthetic; do
             echo "--- bga $alias --help"
             /tmp/pkgvenv/bin/bga "$alias" --help > /dev/null
           done
@@ -150,7 +150,7 @@ jobs:
   bst-tests:
     # UX-84: the bst-gated tier, actually gated.
     #
-    # 14 tests are `skipif`-gated on a real `bst` (two of them also on
+    # 15 tests are `skipif`-gated on a real `bst` (two of them also on
     # bwrap and a C compiler). No job ran pytest with bst installed - the
     # `test` matrix has no bst, and `bst-smoke`/`bst-examples` run builds,
     # not pytest - so those 14 were skipped everywhere CI looked, and a
@@ -207,7 +207,7 @@ jobs:
 
       - name: The bst-gated tier runs, and every one of it passes
         # `-m bst` is the assertion, not a convenience: it selects exactly
-        # the marked tier, so "14 passed" is a claim about the tier rather
+        # the marked tier, so "15 passed" is a claim about the tier rather
         # than about the suite. A skip inside it would still show as
         # `passed` in the exit code, hence the explicit count check below.
         #
@@ -233,14 +233,14 @@ jobs:
             exit 1
           fi
           # Not anchored to column 0: pyproject's `addopts = "-v"` makes
-          # the summary line `===== 14 passed, 1187 deselected in ... =====`.
-          # Bounded on both sides so "114 passed" cannot satisfy it.
-          grep -qE "(^|[[:space:]=])14 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
-            echo "Expected exactly 14 bst-gated tests to run. Got:" >&2
+          # the summary line `===== 15 passed, 1215 deselected in ... =====`.
+          # Bounded on both sides so "115 passed" cannot satisfy it.
+          grep -qE "(^|[[:space:]=])15 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
+            echo "Expected exactly 15 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1
           }
-          echo "14 bst-gated tests ran, none skipped."
+          echo "15 bst-gated tests ran, none skipped."
 
       - name: The whole suite, with bst present
         # The tier does not live in isolation: an extraction change can

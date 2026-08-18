@@ -439,6 +439,30 @@ jobs:
           bga correlate capture/run capture/native-report.json \
             > capture/correlate.txt 2>&1 || true
 
+      - name: Collect BuildStream's own element logs (Plane 3)
+        # UX-91: BuildStream writes a per-element log for every task it
+        # runs and keeps them. They are the only source that can say
+        # anything about a build nobody captured, and until now every
+        # capture threw them away at job teardown. Published alongside
+        # the run directory so `bga cache-logs` has a real, large log
+        # tree to be checked against - the fdsdk half of UX-91's
+        # acceptance test needs exactly this.
+        #
+        # `_casd/` is excluded: those are the CAS daemon's own logs, in a
+        # different format, and there are hundreds of them per build.
+        # Compressed rather than copied: this is text and it is bulky.
+        if: always()
+        run: |
+          set -euo pipefail
+          log_root="$HOME/.cache/buildstream/logs"
+          if [ -d "$log_root" ]; then
+            tar -czf capture/bst-element-logs.tar.gz \
+                -C "$log_root" --exclude=_casd . || true
+            echo "element logs: $(find "$log_root" -name '*.log' -not -path '*/_casd/*' | wc -l) file(s), $(du -sh capture/bst-element-logs.tar.gz | cut -f1) compressed"
+          else
+            echo "no BuildStream log directory at $log_root - nothing to collect"
+          fi
+
       - name: Record the environment the capture was taken in
         if: always()
         run: |

@@ -1722,6 +1722,142 @@ def compute_cpu_time(records: List[dict]) -> dict:
     }
 
 
+# UX-102: what a *configure* invocation looks like on a command line.
+# Deliberately narrow. Each entry is a build system's own configure
+# entry point, and everything the classification below attributes to
+# configure is a *descendant* of one of these - so a pattern that is too
+# generous does not mis-file one process, it mis-files a whole subtree.
+_CONFIGURE_ROOT_PATTERNS = (
+    # autotools: `./configure`, `../configure`, `/src/foo/configure`,
+    # and `config.status`, which re-runs it.
+    re.compile(r'(?:^|[\s/])(?:configure|config\.status)(?:\s|$)'),
+    # autotools' own generators - they exist only to produce the
+    # configure machinery, so their cost is configure cost.
+    re.compile(r'(?:^|[\s/])(?:autoconf|autoreconf|automake|aclocal|autoheader|libtoolize)(?:\s|$)'),
+    # meson's configure step (`meson setup builddir`, and bare
+    # `meson builddir` which is the same thing).
+    re.compile(r'(?:^|[\s/])meson(?:\s+setup)?(?:\s|$)'),
+)
+
+# cmake is both phases in one binary, so it is decided by its arguments
+# rather than by its name: `cmake -B... -H...` configures, `cmake
+# --build` and `cmake --install` do not, and `cmake -E` is the utility
+# mode the *build* uses for copies and directory creation.
+_CMAKE_RE = re.compile(r'(?:^|[\s/])cmake(?:\s|$)')
+_CMAKE_NON_CONFIGURE = re.compile(r'(?:^|\s)(?:--build|--install|-E)(?:\s|$)')
+
+
+def is_configure_root(cmd: str) -> bool:
+    """Whether this command line is a build system configuring itself.
+
+    A *root*, not a member: the classification takes the process tree
+    below it, so what this has to recognise is the entry point, and
+    conftest compilers, `sed`, `grep` and the hundreds of little probes
+    autotools runs come along as descendants without needing a pattern
+    each.
+    """
+    if _CMAKE_RE.search(cmd):
+        return not _CMAKE_NON_CONFIGURE.search(cmd)
+    return any(pattern.search(cmd) for pattern in _CONFIGURE_ROOT_PATTERNS)
+
+
+def classify_configure_phase(records: List[dict]) -> dict:
+    """UX-102: split each element's traced CPU into configuring and
+    building, by process parentage.
+
+    Every element that runs `cmake` or `configure` re-answers questions
+    its siblings already answered - compiler identity, ABI probes,
+    header checks. `UX-23` already reports those as *repeated*; this
+    reports what they *cost*, which is the number a build owner acts on.
+
+    **By parentage, not by binary name.** An autotools configure run is
+    hundreds of processes - `sed`, `grep`, `cc` compiling `conftest.c` -
+    and not one of them is distinguishable from build work by its own
+    command line. What is distinguishable is that they descend from
+    `./configure`. So one pattern per build system's entry point, and
+    the tree does the rest.
+
+    Three limits, all of which make this an **under**-count rather than
+    an over-count, and all published in the payload:
+
+    - `LD_PRELOAD` does not see statically-linked executables. If a
+      configure root itself is static, its whole subtree is misfiled as
+      build work.
+    - A process whose parent was not traced starts a tree of its own and
+      is treated as build work. Defaulting the other way would attribute
+      unknown work to configure, which is the number being argued for.
+    - CPU time comes from `getrusage` at exit, so a process killed by a
+      signal or replaced by `exec` contributes none. Coverage is
+      reported per element.
+
+    Parentage is resolved within a sandbox (`invocation`, falling back
+    to the element name), because pids are namespaced per sandbox and
+    collide freely across them - the same defect `pair_events` documents.
+    """
+    by_key: Dict[Tuple[str, int], dict] = {}
+    for record in records:
+        sandbox = record.get("invocation") or record.get("element")
+        by_key[(sandbox, record["pid"])] = record
+
+    def _is_configure(record: dict) -> bool:
+        sandbox = record.get("invocation") or record.get("element")
+        seen = set()
+        current = record
+        while current is not None:
+            key = (sandbox, current["pid"])
+            if key in seen:  # defensive: a pid cycle is not possible, but cheap to refuse
+                return False
+            seen.add(key)
+            if is_configure_root(current["cmd"]):
+                return True
+            current = by_key.get((sandbox, current.get("ppid")))
+        return False
+
+    per_element: Dict[str, dict] = {}
+    for record in records:
+        entry = per_element.setdefault(record["element"], {
+            "configure_cpu_us": 0, "build_cpu_us": 0,
+            "configure_processes": 0, "build_processes": 0,
+            "measured": 0, "unmeasured": 0,
+        })
+        configure = _is_configure(record)
+        entry["configure_processes" if configure else "build_processes"] += 1
+        if "cpu_us" in record:
+            entry["measured"] += 1
+            entry["configure_cpu_us" if configure else "build_cpu_us"] += record["cpu_us"]
+        else:
+            entry["unmeasured"] += 1
+
+    for entry in per_element.values():
+        total_cpu = entry["configure_cpu_us"] + entry["build_cpu_us"]
+        entry["configure_share"] = (
+            entry["configure_cpu_us"] / total_cpu if total_cpu else None
+        )
+        total_processes = entry["configure_processes"] + entry["build_processes"]
+        entry["coverage"] = entry["measured"] / total_processes if total_processes else 0.0
+
+    configure_total = sum(e["configure_cpu_us"] for e in per_element.values())
+    cpu_total = configure_total + sum(e["build_cpu_us"] for e in per_element.values())
+    return {
+        "available": bool(per_element),
+        "configure_cpu_us": configure_total,
+        "total_cpu_us": cpu_total,
+        "configure_share": configure_total / cpu_total if cpu_total else None,
+        "per_element": dict(sorted(
+            per_element.items(), key=lambda kv: -kv[1]["configure_cpu_us"],
+        )),
+        "note": (
+            "Configure-phase CPU is every traced process descending from a build "
+            "system's configure entry point (./configure, config.status, cmake "
+            "without --build/--install/-E, meson setup, the autotools generators). "
+            "Classified by parentage, so a process is configure work because of "
+            "what started it, not what it is called. Statically-linked processes "
+            "are invisible to LD_PRELOAD and a process with no traced parent is "
+            "counted as build work - both make this a floor."
+        ),
+    }
+
+
 def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
     matched = [r for r in records if not r["open"]]
     open_records = [r for r in records if r["open"]]
@@ -1757,6 +1893,9 @@ def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
         "max_concurrency": compute_max_concurrency(records),
         # UX-45: real, kernel-measured CPU time per element.
         "cpu_time": compute_cpu_time(records),
+        # UX-102: of that CPU, how much was the build system working out
+        # how to build rather than building.
+        "configure_phase": classify_configure_phase(records),
         "peak_memory": compute_peak_memory(records),
         # UX-69: where the time went inside each element, not how many
         # times something ran.
@@ -1925,6 +2064,41 @@ def _format_cpu_time(cpu_time: dict) -> List[str]:
     return lines
 
 
+def _format_configure_phase(configure: dict) -> List[str]:
+    """UX-102: the configure tax, with the elements that pay it."""
+    if not configure.get("available") or not configure.get("total_cpu_us"):
+        return []
+    share = configure["configure_share"] or 0.0
+    lines = [
+        "",
+        f"Configure tax (Plane 2): {configure['configure_cpu_us'] / 1e6:.1f} of "
+        f"{configure['total_cpu_us'] / 1e6:.1f} measured CPU seconds ({share * 100:.1f}%) "
+        f"went to configuring rather than building",
+    ]
+    payers = [
+        (element, entry) for element, entry in configure["per_element"].items()
+        if entry["configure_cpu_us"]
+    ][:_CONFIGURE_PAYERS_SHOWN]
+    if not payers:
+        lines.append("  No traced process descended from a configure entry point.")
+    for element, entry in payers:
+        lines.append(
+            f"  {element:<32s} {entry['configure_cpu_us'] / 1e6:7.2f} CPU s "
+            f"({(entry['configure_share'] or 0) * 100:3.0f}% of its measured CPU, "
+            f"{entry['configure_processes']} process(es))"
+        )
+    remaining = sum(
+        1 for entry in configure["per_element"].values() if entry["configure_cpu_us"]
+    ) - len(payers)
+    if remaining > 0:
+        lines.append(f"  (+{remaining} more element(s), see --format json)")
+    lines.append(f"  ({configure['note']})")
+    return lines
+
+
+_CONFIGURE_PAYERS_SHOWN = 8
+
+
 def _format_binary_cost(binary_cost: dict, elements: List[str]) -> List[str]:
     """UX-69's per-element block, for the elements worth reading about.
 
@@ -2064,6 +2238,7 @@ def _format_text(report: dict) -> str:
         lines.append("")
         lines.append(f"ELEMENT ATTRIBUTION UNRELIABLE: {attribution['note']}")
     lines.extend(_format_cpu_time(report.get("cpu_time") or {}))
+    lines.extend(_format_configure_phase(report.get("configure_phase") or {}))
     # UX-69: shown for the elements that actually carry time - the
     # heaviest by measured CPU, which is where a reader is heading.
     _bc = report.get("binary_cost") or {}

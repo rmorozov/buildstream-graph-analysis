@@ -402,3 +402,125 @@ def test_the_tax_renders_in_the_text_report(log_tree):
     text = format_report_text(build_report(scan_log_tree(str(log_tree))))
     assert "Sandbox tax: 3.0s of 17.0s element time (17.6%)" in text
     assert "Who paid it (by toll seconds, not by share):" in text
+
+
+# --- UX-102: the configure tax, from one plane and from two -------------
+
+def test_the_self_reported_configure_time_is_totalled(log_tree):
+    """`REAL_LOG` carries cmake's own `-- Configuring done (0.8s)` and
+    `-- Generating done (0.0s)`. Plane 3's whole configure measurement is
+    those lines: the tool timed itself, so the number is real, and
+    nothing here infers one."""
+    from tools.bst_cache_logs import configure_tax
+
+    tax = configure_tax(scan_log_tree(str(log_tree)))
+    assert tax["configure_us"] == 800_000
+    assert tax["elements_reporting"] == 1
+    assert round(tax["configure_share"], 4) == round(0.8 / 17, 4)
+
+
+def test_a_build_system_that_does_not_report_itself_yields_a_floor_of_zero(tmp_path):
+    """The limit that decides how much Plane 3 alone is worth: autotools'
+    `configure` prints no total and meson prints none either, so on the
+    projects where elements are most often majority-configure this
+    measurement is zero. Stated in the payload, not just here."""
+    from tools.bst_cache_logs import configure_tax
+
+    directory = tmp_path / "logs" / "p" / "auto"
+    directory.mkdir(parents=True)
+    (directory / "abc12345-build.20260818-115322.log").write_text(
+        "BuildStream 2.7.0 - Tuesday, 18-08-2026 at 11:53:22\n"
+        "[--:--:--] START   [abc12345] auto.bst: Build\n"
+        "[--:--:--] START   auto.bst: Running commands\n"
+        "+ sh -c -e ./configure --prefix=/usr\n"
+        "[00:00:30] SUCCESS auto.bst: Running commands\n"
+        "[00:00:30] SUCCESS [abc12345] auto.bst: Build\n"
+    )
+    tax = configure_tax(scan_log_tree(str(tmp_path / "logs")))
+    assert tax["configure_us"] == 0
+    assert "floor of zero" in tax["caveat"]
+
+
+def test_the_two_planes_are_shown_side_by_side_and_never_summed(log_tree):
+    """A quantity computed twice is a free test - but only if the two
+    computations are kept apart. Plane 3's is cmake's self-reported wall
+    time; Plane 2's is kernel CPU over the traced process tree. The join
+    publishes both per element and adds neither to the other."""
+    from tools.bst_cache_logs import build_report
+
+    native = {"configure_phase": {
+        "available": True,
+        "per_element": {"core.bst": {
+            "configure_cpu_us": 650_000, "build_cpu_us": 7_000_000,
+            "configure_processes": 36, "build_processes": 40,
+            "configure_share": 0.085, "coverage": 0.81,
+        }},
+    }}
+    report = build_report(scan_log_tree(str(log_tree)), native_report=native)
+    row = report["configure_views"]["elements"][0]
+    assert row["element"] == "core.bst"
+    assert row["plane3_configure_us"] == 800_000
+    assert row["plane2_configure_cpu_us"] == 650_000
+    assert row["self_report_missing"] is False
+    assert "never summed" in report["configure_views"]["note"]
+
+
+def test_traced_configure_work_with_no_self_report_is_named(log_tree):
+    """The case the pair exists for: Plane 2 finds a large configure
+    subtree under an element Plane 3 heard nothing about. That is an
+    autotools element, and it is where the prize is largest and the
+    self-report blindest."""
+    from tools.bst_cache_logs import build_report
+
+    native = {"configure_phase": {
+        "available": True,
+        "per_element": {"auto.bst": {
+            "configure_cpu_us": 30_000_000, "build_cpu_us": 5_000_000,
+            "configure_processes": 900, "build_processes": 100,
+            "configure_share": 0.857, "coverage": 0.9,
+        }},
+    }}
+    views = build_report(scan_log_tree(str(log_tree)), native_report=native)["configure_views"]
+    assert views["elements_without_a_self_report"] == 1
+    assert views["elements"][0]["self_report_missing"] is True
+
+
+def test_the_project_wide_finding_names_the_prize_and_the_payers(tmp_path):
+    """`REAL_LOG` deliberately does *not* trigger this - 0.8s of 17s is
+    4.7%, under the bar - so the finding gets a log that is genuinely
+    majority-configure, which is the shape the task was filed about."""
+    from tools.bst_cache_logs import build_report
+
+    directory = tmp_path / "logs" / "p" / "small"
+    directory.mkdir(parents=True)
+    (directory / "abc12345-build.20260818-115322.log").write_text(
+        "BuildStream 2.7.0 - Tuesday, 18-08-2026 at 11:53:22\n"
+        "[--:--:--] START   [abc12345] small.bst: Build\n"
+        "[--:--:--] START   small.bst: Running commands\n"
+        "-- Configuring done (6.0s)\n"
+        "[00:00:10] SUCCESS small.bst: Running commands\n"
+        "[00:00:10] SUCCESS [abc12345] small.bst: Build\n"
+    )
+    findings = build_report(scan_log_tree(str(tmp_path / "logs")))["findings"]
+    assert [f["id"] for f in findings] == ["configure-tax"]
+    assert "small.bst" in findings[0]["title"]
+    assert findings[0]["evidence"]["plane3_configure_us"] == 6_000_000
+    assert findings[0]["severity"] == "medium"
+
+
+def test_a_configure_share_below_the_bar_is_not_a_finding(tmp_path):
+    """`CONFIGURE_SHARE_NOTABLE` is not decoration: a report that names
+    every 3% is a report nobody reads."""
+    from tools.bst_cache_logs import build_report
+
+    directory = tmp_path / "logs" / "p" / "big"
+    directory.mkdir(parents=True)
+    (directory / "abc12345-build.20260818-115322.log").write_text(
+        "BuildStream 2.7.0 - Tuesday, 18-08-2026 at 11:53:22\n"
+        "[--:--:--] START   [abc12345] big.bst: Build\n"
+        "[--:--:--] START   big.bst: Running commands\n"
+        "-- Configuring done (1.0s)\n"
+        "[00:01:00] SUCCESS big.bst: Running commands\n"
+        "[00:01:00] SUCCESS [abc12345] big.bst: Build\n"
+    )
+    assert build_report(scan_log_tree(str(tmp_path / "logs")))["findings"] == []

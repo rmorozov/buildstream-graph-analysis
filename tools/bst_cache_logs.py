@@ -426,6 +426,134 @@ def phase_breakdown(records: List[dict]) -> List[dict]:
     return sorted(rows, key=lambda r: (-r['total_us'], r['element']))
 
 
+# UX-102: the self-reported phases that are the *native build system*
+# configuring itself, as distinct from UX-99's toll, which is
+# BuildStream staging around it. `Configuring` and `Generating` are what
+# cmake prints; `Build files` is the line it prints when writing them.
+CONFIGURE_SELF_TIMED = frozenset({'Configuring', 'Generating', 'Build files'})
+
+# A configure share at or above this is worth a project-wide finding.
+# Below it the remedies (config caches, merged elements) cost more
+# attention than they return, and a report that names every 3% is a
+# report nobody reads.
+CONFIGURE_SHARE_NOTABLE = 0.10
+
+
+def configure_tax(records: List[dict]) -> dict:
+    """UX-102: how much of each element's time the native build system
+    spent working out how to build, rather than building.
+
+    **This is a different quantity from `sandbox_tax`, and the pair only
+    makes sense if the difference is kept in view.** The toll is
+    BuildStream's - staging, integrating, caching - and it is measured by
+    BuildStream's own clock. The configure tax is cmake's or autotools',
+    it happens *inside* `Running commands`, and here it is measured by
+    the tool itself: cmake prints `-- Configuring done (0.8s)` and this
+    reads that line. So the toll is timed to the second and the configure
+    tax to the millisecond, by two different clocks, and they are
+    reported side by side rather than added.
+
+    The known gap, stated because it bounds every number here: **only
+    tools that report their own timing are counted.** cmake does;
+    autotools' `configure` does not print a total, and neither does
+    meson. On an autotools-heavy project this returns a *floor of zero*
+    for elements that may be majority-configure - which is exactly
+    backwards from where the prize is, and is why `UX-102` pairs this
+    with the Plane 2 view (`bga cache-logs --native-report`), where the
+    measurement is the traced process tree rather than a self-report.
+    """
+    builds = [r for r in records if r['action'] == 'build' and r['total_us']]
+    rows = []
+    total_us = configure_us = 0
+    for record in builds:
+        element_configure = sum(
+            timed['duration_us'] for timed in record['self_timed']
+            if timed['what'] in CONFIGURE_SELF_TIMED
+        )
+        total_us += record['total_us']
+        configure_us += element_configure
+        if element_configure:
+            rows.append({
+                'element': record['element'],
+                'cache_key': record['cache_key'],
+                'started_at': record['started_at'],
+                'total_us': record['total_us'],
+                'configure_us': element_configure,
+                'configure_share': element_configure / record['total_us'],
+                'source': 'plane3-self-reported',
+            })
+    if not builds:
+        return {}
+    return {
+        'build_logs': len(builds),
+        'elements_reporting': len(rows),
+        'total_us': total_us,
+        'configure_us': configure_us,
+        'configure_share': configure_us / total_us if total_us else None,
+        'top_payers': sorted(rows, key=lambda r: (-r['configure_us'], r['element'])),
+        'caveat': (
+            "Counted only where the build tool reports its own configure timing - "
+            "cmake does, autotools' configure and meson do not. On a project "
+            "built with those, this is a floor of zero rather than a measurement, "
+            "and the Plane 2 view (--native-report) is the one to read."
+        ),
+    }
+
+
+def join_configure_views(plane3: dict, native_report: Optional[dict]) -> dict:
+    """UX-102: the configure tax as both planes measured it, per element.
+
+    A quantity computed twice is a free test (`UX-53`'s lesson), and
+    these two are computed from different evidence entirely: Plane 3
+    reads what cmake said about itself, Plane 2 sums kernel `getrusage`
+    over the process tree below the configure command. They are also
+    *different quantities* - Plane 3's self-report is wall time, Plane
+    2's is CPU time - so this reports them side by side and never adds
+    them, and the ratio it publishes is a ratio to look at, not a
+    tolerance to pass.
+
+    What the pair is actually good for is disagreement in *direction*:
+    an element Plane 3 says spends nothing configuring, while Plane 2
+    finds a large configure subtree under it, is an autotools element
+    whose `configure` does not report itself - and that is the case the
+    self-report is blind to and the prize is largest in.
+    """
+    plane2 = ((native_report or {}).get('configure_phase') or {})
+    if not plane2.get('available'):
+        return {}
+    plane3_by_element = {
+        row['element']: row for row in (plane3.get('top_payers') or [])
+    }
+    rows = []
+    for element, entry in plane2['per_element'].items():
+        plane3_row = plane3_by_element.get(element)
+        rows.append({
+            'element': element,
+            'plane2_configure_cpu_us': entry['configure_cpu_us'],
+            'plane2_configure_share': entry['configure_share'],
+            'plane2_coverage': entry['coverage'],
+            'plane3_configure_us': (plane3_row or {}).get('configure_us'),
+            'plane3_configure_share': (plane3_row or {}).get('configure_share'),
+            # The case worth naming: Plane 2 found a configure subtree
+            # and Plane 3 heard nothing about it.
+            'self_report_missing': bool(
+                entry['configure_cpu_us'] and not (plane3_row or {}).get('configure_us')
+            ),
+        })
+    return {
+        'elements': sorted(rows, key=lambda r: (-r['plane2_configure_cpu_us'], r['element'])),
+        'elements_without_a_self_report': sum(1 for r in rows if r['self_report_missing']),
+        'note': (
+            "Plane 3 is the build tool's own self-reported wall time; Plane 2 is "
+            "kernel CPU time over the traced process tree below the configure "
+            "command. Different clocks and different quantities - shown together, "
+            "never summed. An element with Plane 2 configure CPU and no Plane 3 "
+            "self-report is a build system that does not report itself (autotools, "
+            "meson), which is where this measurement earns its keep."
+        ),
+    }
+
+
 def repeated_operations(records: List[dict]) -> List[dict]:
     """Commands whose exact text recurs across distinct elements.
 
@@ -456,9 +584,68 @@ def repeated_operations(records: List[dict]) -> List[dict]:
     return sorted(findings, key=lambda f: (-f['element_count'], f['command']))
 
 
-def build_report(records: List[dict]) -> dict:
+def _plane3_findings(plane3_configure: dict, views: dict) -> List[dict]:
+    """UX-102 item 3: one project-wide finding, with an id, naming the
+    top payers and the size of the prize.
+
+    Shaped like `bga`'s own findings (`id`/`severity`/`title`/`evidence`)
+    because a consumer should not have to learn a second shape, but built
+    here rather than in `bga/findings.py`: that module analyses a run
+    directory and has no access to Plane 3's logs or Plane 2's trace.
+
+    The remedy is one hedged sentence, deliberately. Config caches,
+    merged elements and generated-config reuse are all real answers and
+    which one applies is a fact about the project, not about this
+    measurement - the tool names the prize, not the patch.
+    """
+    share = plane3_configure.get('configure_share')
+    plane2_share = None
+    if views.get('elements'):
+        configure_cpu = sum(r['plane2_configure_cpu_us'] for r in views['elements'])
+        if configure_cpu:
+            plane2_share = configure_cpu
+    if not share and not plane2_share:
+        return []
+    if (share or 0) < CONFIGURE_SHARE_NOTABLE and not plane2_share:
+        return []
+
+    payers = [r['element'] for r in (plane3_configure.get('top_payers') or [])[:4]]
+    if views.get('elements'):
+        payers = payers or [r['element'] for r in views['elements'][:4] if r['plane2_configure_cpu_us']]
+    prize = (
+        f"{plane3_configure['configure_us'] / 1e6:.1f}s self-reported"
+        if plane3_configure.get('configure_us') else None
+    )
+    if plane2_share:
+        measured = f"{plane2_share / 1e6:.1f} CPU s traced"
+        prize = f"{prize}, {measured}" if prize else measured
+    return [{
+        'id': 'configure-tax',
+        'severity': 'info' if (share or 0) < CONFIGURE_SHARE_NOTABLE else 'medium',
+        'title': (
+            f"Configuring cost {prize} across this log tree"
+            + (f" ({share * 100:.1f}% of element time)" if share else "")
+            + (f" - paid most by {', '.join(payers)}" if payers else "")
+            + ". Elements that configure independently re-answer the same "
+            "questions; config caches, merged elements or reusing a generated "
+            "config are the usual remedies, and which applies is a fact about "
+            "the project rather than about this measurement"
+        ),
+        'evidence': {
+            'plane3_configure_us': plane3_configure.get('configure_us'),
+            'plane3_configure_share': share,
+            'plane2_configure_cpu_us': plane2_share,
+            'elements_without_a_self_report': views.get('elements_without_a_self_report'),
+            'top_payers': payers,
+        },
+    }]
+
+
+def build_report(records: List[dict], native_report: Optional[dict] = None) -> dict:
     projects = sorted({r['project'] for r in records if r['project']})
     builds = [r for r in records if r['action'] == 'build']
+    plane3_configure = configure_tax(records)
+    views = join_configure_views(plane3_configure, native_report)
     return {
         'provenance': {
             'source': "BuildStream's own persisted element logs",
@@ -477,6 +664,9 @@ def build_report(records: List[dict]) -> dict:
         },
         'phase_breakdown': phase_breakdown(records),
         'sandbox_tax': sandbox_tax(records),
+        'configure_tax': plane3_configure,
+        'configure_views': views,
+        'findings': _plane3_findings(plane3_configure, views),
         'repeated_operations': repeated_operations(records),
     }
 
@@ -559,6 +749,51 @@ def format_report_text(report: dict) -> str:
             )
         lines.append('')
 
+    tax = report.get('configure_tax') or {}
+    views = report.get('configure_views') or {}
+    if tax.get('configure_us') or views.get('elements'):
+        # UX-102: the configure tax, one plane or two.
+        if tax.get('configure_us'):
+            lines.append(
+                f"Configure tax (Plane 3, self-reported): "
+                f"{tax['configure_us'] / 1e6:.1f}s of {tax['total_us'] / 1e6:.1f}s "
+                f"element time ({(tax['configure_share'] or 0) * 100:.1f}%), reported by "
+                f"{tax['elements_reporting']} of {tax['build_logs']} build log(s)"
+            )
+        else:
+            lines.append(
+                "Configure tax (Plane 3, self-reported): nothing reported - no build "
+                "tool in this tree printed its own configure timing"
+            )
+        if views.get('elements'):
+            lines.append('  Both planes, per element (wall vs CPU - shown, never summed):')
+            lines.append(
+                f"    {'element':<28s} {'Plane 3 wall':>13s} {'Plane 2 CPU':>12s}  coverage"
+            )
+            for row in views['elements'][:_TAX_PAYERS_SHOWN]:
+                plane3 = (
+                    f"{row['plane3_configure_us'] / 1e6:.2f}s"
+                    if row['plane3_configure_us'] else 'not reported'
+                )
+                lines.append(
+                    f"    {row['element']:<28s} {plane3:>13s} "
+                    f"{row['plane2_configure_cpu_us'] / 1e6:>11.2f}s "
+                    f"{row['plane2_coverage'] * 100:>8.0f}%"
+                )
+            missing = views['elements_without_a_self_report']
+            if missing:
+                lines.append(
+                    f"    {missing} element(s) have traced configure work and no "
+                    f"self-report - an autotools or meson build system, and the case "
+                    f"the self-report alone is blind to"
+                )
+        lines.append(f"  ({tax.get('caveat') or views.get('note')})")
+        lines.append('')
+
+    for finding in report.get('findings') or []:
+        lines.append(f"[{finding['severity']}] {finding['id']}: {finding['title']}")
+        lines.append('')
+
     repeated = report['repeated_operations']
     if repeated:
         lines.append(
@@ -610,6 +845,13 @@ def main(argv: Optional[List[str]] = None) -> int:
              '$XDG_CACHE_HOME/buildstream/logs (or ~/.cache/buildstream/logs).',
     )
     parser.add_argument('--project', default=None, help='Only this project\'s logs.')
+    parser.add_argument(
+        '--native-report', default=None,
+        help="A Plane 2 report (`bga capture run`'s JSON) from the same build. "
+             "Adds the traced configure measurement beside Plane 3's self-reported "
+             "one (UX-102) - the two are different quantities and are shown side "
+             "by side, never summed.",
+    )
     parser.add_argument('-f', '--format', choices=['text', 'json'], default='text')
     parser.add_argument('-o', '--output', default=None, help='Write here instead of stdout.')
     args = parser.parse_args(argv)
@@ -634,7 +876,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         return 1
 
-    report = build_report(records)
+    native_report = None
+    if args.native_report:
+        try:
+            with open(args.native_report, 'r', encoding='utf-8') as handle:
+                native_report = json.load(handle)
+        except (OSError, ValueError) as error:
+            print(
+                f"Error: could not read the Plane 2 report at {args.native_report}: "
+                f"{error}",
+                file=sys.stderr,
+            )
+            return 1
+
+    report = build_report(records, native_report=native_report)
     output = (
         json.dumps(report, indent=2) if args.format == 'json'
         else format_report_text(report)

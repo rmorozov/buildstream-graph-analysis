@@ -115,7 +115,7 @@ No unit test of the accounting could have caught that, so the three new
 **1. A cold pair.** `examples/06` built twice, cache directory deleted
 between builds. Both runs: 11 processed, 0 skipped.
 
-```
+```text
 Cache churn not assessed: the candidate is a caches-off run, so every element
 rebuilt by instruction - an unchanged cache key there is the intended behaviour,
 not waste
@@ -131,7 +131,7 @@ Before: 11 elements accused of buying nothing with the whole build.
 **2. Two real fdsdk incremental captures**, the ones the workflow
 publishes, with the identical deliberate 25-element cut:
 
-```
+```text
 Cache retention: 25 element(s) rebuilt in BOTH runs with the same cache key,
 costing 4879.9s here - components/_private/buildsystem-cmake.bst, ... (+21 more).
 The artifact is not surviving between runs (deliberate cut, eviction, or a
@@ -146,7 +146,7 @@ still reported — reframed, not suppressed.
 **3. The true-positive protocol** (cold A, tweak `codegen` → B, tweak
 `core` → C, compare B vs C), re-run from scratch. Output unchanged:
 
-```
+```text
 Invalidated at core.bst: its cache key changed (b7c2e411 -> 3a634ee3) and
 invalidated 8 element(s) below it, 25.7s of rebuilding in total. Nothing it
 depends on changed, so the change starts here
@@ -157,7 +157,7 @@ depends on changed, so the change starts here
 **4. Baseline cached, candidate rebuilt with an unchanged key.** From a
 fully-cached baseline, `bst artifact delete app.bst` then rebuild:
 
-```
+```text
 Cache churn: 2 element(s) rebuilt with an unchanged cache key, costing 3.3s -
 app.bst, lib-a.bst. Nothing they depend on changed, so that time bought nothing
 ```

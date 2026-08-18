@@ -432,3 +432,106 @@ def test_run_traced_build_captures_real_process_lifecycle(tmp_path):
     report = summarize(records)
     assert report["process_count"] > 0
     assert any(name in report["by_binary"] for name in ("cmake", "make", "cc1plus", "c++", "as", "ld"))
+
+
+# --- UX-102: configure-phase classification, by parentage ---------------
+
+def _proc(pid, ppid, cmd, element="core.bst", invocation="1", cpu_us=1_000_000):
+    record = {
+        "pid": pid, "ppid": ppid, "cmd": cmd, "element": element,
+        "invocation": invocation, "start_ts": float(pid), "end_ts": float(pid) + 1.0,
+        "open": False,
+    }
+    if cpu_us is not None:
+        record["cpu_us"] = cpu_us
+    return record
+
+
+def test_cmake_is_configure_or_build_by_its_arguments_not_its_name():
+    """One binary, both phases. Deciding by name would put every
+    `cmake --build` subtree - the actual compile - under configure."""
+    from tools.bst_native_build_tracer import is_configure_root
+
+    assert is_configure_root('cmake -B_builddir -H"." -G "Unix Makefiles"')
+    assert not is_configure_root("cmake --build _builddir -- -j4")
+    assert not is_configure_root("env DESTDIR=/x cmake --build _builddir --target install")
+    # `cmake -E` is the utility mode a *build* uses for copies and mkdir.
+    assert not is_configure_root("cmake -E copy_if_different a b")
+
+
+def test_the_autotools_entry_points_are_configure_roots():
+    from tools.bst_native_build_tracer import is_configure_root
+
+    assert is_configure_root("/bin/sh ./configure --prefix=/usr")
+    assert is_configure_root("/usr/bin/config.status")
+    assert is_configure_root("autoreconf -fi")
+    assert is_configure_root("meson setup builddir")
+    assert not is_configure_root("make -j4")
+    assert not is_configure_root("cc1plus foo.cpp")
+
+
+def test_a_conftest_compile_is_configure_work_because_of_its_parent():
+    """The reason this is done by parentage. An autotools configure run
+    is hundreds of `sed`, `grep` and `cc conftest.c` processes, and not
+    one of them is distinguishable from build work by its own command
+    line - only by what started it."""
+    from tools.bst_native_build_tracer import classify_configure_phase
+
+    records = [
+        _proc(1, 0, "/bin/sh ./configure --prefix=/usr"),
+        _proc(2, 1, "cc conftest.c"),
+        _proc(3, 2, "cc1 conftest.c"),
+        _proc(4, 0, "make -j4"),
+        _proc(5, 4, "cc1plus real.cpp"),
+    ]
+    per_element = classify_configure_phase(records)["per_element"]["core.bst"]
+    assert per_element["configure_processes"] == 3
+    assert per_element["build_processes"] == 2
+    assert per_element["configure_cpu_us"] == 3_000_000
+    assert per_element["build_cpu_us"] == 2_000_000
+
+
+def test_a_process_with_no_traced_parent_counts_as_build_work():
+    """The default has to fall somewhere, and it falls away from the
+    number being argued for: an unknown-parent process counted as
+    configure would inflate exactly the figure this measures."""
+    from tools.bst_native_build_tracer import classify_configure_phase
+
+    orphan = _proc(9, 404, "cc1plus foo.cpp")  # ppid 404 was never traced
+    result = classify_configure_phase([orphan])
+    assert result["per_element"]["core.bst"]["build_processes"] == 1
+    assert result["per_element"]["core.bst"]["configure_processes"] == 0
+
+
+def test_parentage_does_not_cross_sandboxes():
+    """Pids are namespaced per sandbox and collide freely across them -
+    the same defect `pair_events` documents. A configure root in one
+    element must not adopt a same-pid process in another."""
+    from tools.bst_native_build_tracer import classify_configure_phase
+
+    records = [
+        _proc(1, 0, "/bin/sh ./configure", element="a.bst", invocation="1"),
+        _proc(2, 1, "cc conftest.c", element="a.bst", invocation="1"),
+        # Same pids, different sandbox, and no configure anywhere in it.
+        _proc(1, 0, "make -j4", element="b.bst", invocation="2"),
+        _proc(2, 1, "cc1plus real.cpp", element="b.bst", invocation="2"),
+    ]
+    per_element = classify_configure_phase(records)["per_element"]
+    assert per_element["a.bst"]["configure_processes"] == 2
+    assert per_element["b.bst"]["configure_processes"] == 0
+
+
+def test_an_unmeasured_process_is_counted_but_contributes_no_cpu():
+    """`getrusage` at exit means a process killed by a signal or replaced
+    by `exec` reports nothing. Counting it as zero CPU would be a
+    measurement; counting it as unmeasured is the truth."""
+    from tools.bst_native_build_tracer import classify_configure_phase
+
+    records = [
+        _proc(1, 0, "cmake -B_builddir -H."),
+        _proc(2, 1, "cc conftest.c", cpu_us=None),
+    ]
+    entry = classify_configure_phase(records)["per_element"]["core.bst"]
+    assert entry["configure_processes"] == 2
+    assert entry["measured"] == 1 and entry["unmeasured"] == 1
+    assert entry["coverage"] == 0.5

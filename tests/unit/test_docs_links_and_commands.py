@@ -135,10 +135,13 @@ def _declared_finding_ids():
     for module in ("bga/findings.py", "bga/correlate.py"):
         ids |= set(FINDINGS_ID_RE.findall((REPO / module).read_text(encoding="utf-8")))
     # `find_restructuring_findings` builds its dict literally rather than
-    # through the `_finding(...)` helper the pattern above matches.
-    ids |= set(
-        re.findall(r"'id': '([a-z0-9-]+)'", (REPO / "bga/correlate.py").read_text(encoding="utf-8"))
-    )
+    # through the `_finding(...)` helper the pattern above matches, and
+    # `UX-102`'s Plane 3 finding is built in the tool because it reads
+    # BuildStream's own logs, which the analyzer never sees.
+    for module in ("bga/correlate.py", "tools/bst_cache_logs.py"):
+        ids |= set(
+            re.findall(r"'id': '([a-z0-9-]+)'", (REPO / module).read_text(encoding="utf-8"))
+        )
     return ids
 
 

@@ -108,7 +108,7 @@ the way it does:
   through `_exit()`, which bypasses libc's exit path. Measured directly
   against the hook, outside BuildStream:
 
-  ```
+  ```console
   $ BST_TRACE_LOG=t.log LD_PRELOAD=hook.so /bin/dash -c 'true; exit 0'
   START pid=17406 ...        <- and nothing else
   $ BST_TRACE_LOG=t.log LD_PRELOAD=hook.so /bin/bash -c 'true; exit 0'
@@ -132,13 +132,13 @@ the way it does:
 With those settled, the README's "Joining the two planes" sequence, run
 unmodified:
 
-```
+```text
 bga capture run --wrapped-log plane1.log tests/fixtures/bst_build_root_override plane2.json -- bst build worker.bst
 bga extract --format wrapped tests/fixtures/bst_build_root_override plane1.log run
 bga correlate run plane2.json
 ```
 
-```
+```text
 Joined 1 element(s) on element UID (2 in Plane 1, 1 traced in Plane 2)
 
 What to do next (ranked by Plane 1 impact):

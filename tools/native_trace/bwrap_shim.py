@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A `bwrap` shim placed ahead of the real `/usr/bin/bwrap` in `$PATH` -
 the mechanism validated for real in UX-11's Deep Experiment (see
-docs/backlog/scenarios/UX-11-native-build-system-profiler-tool.md): a naive
+docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md): a naive
 top-level `$PATH` shadow of `bwrap` really does reach BuildStream's real
 sandbox creation (`buildbox-run`'s own subprocess spawn), contrary to an
 external review's unverified claim that it "often fails to penetrate"

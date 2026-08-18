@@ -304,3 +304,55 @@ def test_every_table_row_has_its_header_cell_count():
                         f"{header_cells}-cell header - an unescaped pipe splits a cell"
                     )
     assert broken == [], "malformed markdown table row(s):\n  " + "\n  ".join(broken)
+
+
+def test_no_table_is_split_by_a_blank_line():
+    """A blank line inside a table ends it, and GitHub renders whatever
+    follows as a second, headerless table.
+
+    The rule is exact rather than heuristic: a well-formed table is a
+    header row, a `|---|` separator, then body rows. So a run of table
+    rows whose *second* row is not a separator is not a table at all —
+    it is the tail of one that a blank line cut in half. The author sees
+    one table in their editor; the reader sees two, the second with the
+    first body row promoted to a header.
+
+    Found three of these on first run — two in the backlog status table,
+    one in `architecture.md` — after a report that the previewer was
+    breaking at `docs/backlog/scenarios/README.md:111`.
+    """
+    fragments = []
+    for path in _markdown_files():
+        for table in _tables(path.read_text(encoding="utf-8")):
+            if len(table) >= 2 and _is_separator(table[1][1]):
+                continue
+            number, row = table[0]
+            fragments.append(
+                f"{path.relative_to(REPO)}:{number}: table rows with no `|---|` "
+                f"header separator — a blank line above split a table: {row[:60]}"
+            )
+    assert fragments == [], "split markdown table(s):\n  " + "\n  ".join(fragments)
+
+
+def test_scenario_filenames_are_zero_padded_so_they_sort():
+    """Backlog filenames sort the way a reader expects in `ls`.
+
+    Lexicographic sort is what every directory listing, file picker and
+    `git status` uses, and it puts `UX-100` between `UX-10` and `UX-11`.
+    With 103 scenarios that interleaving makes the listing unreadable.
+    Four digits give room the project will not reach.
+
+    The *identifier* stays unpadded — `UX-97` in prose, `UX-0097-…md` as
+    a filename — because the id is what people say and write, and
+    renaming it would invalidate every reference in every commit message
+    and audit already written.
+    """
+    offenders = [
+        path.name
+        for path in sorted((REPO / "docs/backlog/scenarios").glob("UX-*.md"))
+        if not re.match(r"^UX-\d{4}-", path.name)
+    ]
+    assert offenders == [], (
+        "scenario filenames must be zero-padded to four digits so they sort "
+        f"lexicographically: {offenders}"
+    )

@@ -430,7 +430,7 @@ jobs:
         # --format raw was found, while building this example, to corrupt
         # cross-task ordering on a saved multi-task log (BuildStream's own
         # elapsed prefix is per-activity, not session-wide - see
-        # docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md). This step
+        # docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md). This step
         # exercises the real optimization-walkthrough scenario
         # (docs/guides/optimization-walkthrough.md, UX-05) end to end: a baseline
         # build, a builders=4 rebuild, an optimized/ project variant, and
@@ -468,7 +468,7 @@ jobs:
       - name: Build + extract + analyze + compare 05-cmake-cpp-toolchain
         # Real CMake/C/C++ builds (docs/backlog/scenarios/UX-09) - exercises the
         # same builders/max-jobs joint-optimization question as
-        # docs/backlog/scenarios/UX-09-builders-max-jobs-joint-optimization.md, on
+        # docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md, on
         # whatever real core count this runner happens to have (not
         # gated/asserted - runner CPU counts vary, this just records real
         # numbers for that specific run, same "real corner-case data, not

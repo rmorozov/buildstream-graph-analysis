@@ -223,7 +223,7 @@ class WrapperTraceConverter:
 
         # Raw-mode timestamp reconstruction state (UX-06) - see
         # _process_raw_line's own docstring for the real bug this fixes
-        # and docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md for
+        # and docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md for
         # the full evidence.
         self._raw_watermark_us = None
         self._raw_task_depth = {}       # hash -> current nesting depth
@@ -554,7 +554,7 @@ class WrapperTraceConverter:
         start - not the immediately preceding sub-phase's). Naively
         anchoring every line to a single global session-start timestamp
         collapses concurrent/later tasks toward the start of the file -
-        see docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md for the
+        see docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md for the
         real reproduction.
 
         Fix: reconstruct absolute timestamps from two real signals the

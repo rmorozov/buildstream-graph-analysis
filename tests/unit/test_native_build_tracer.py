@@ -1,7 +1,7 @@
 """Tests for tools/bst_native_build_tracer.py's trace-log parsing/
 pairing/aggregation logic - all pure functions, no bwrap/bst/compiler
 dependency (those are exercised separately by the real, environment-
-gated end-to-end test below). See docs/backlog/scenarios/UX-11-native-build-
+gated end-to-end test below). See docs/backlog/scenarios/UX-0011-native-build-
 system-profiler-tool.md's Deep Experiment Findings for the real raw
 trace shape this is modeled on (119 real lines from one element build,
 including four cc1plus processes starting within 5ms of each other

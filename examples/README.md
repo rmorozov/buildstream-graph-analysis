@@ -64,7 +64,7 @@ oversized step on the critical path). `optimized/` is a second, complete
 BuildStream project - the same shape with both fixes applied - so the pair
 can be run through `bga compare` as a real before/after. See
 `docs/guides/optimization-walkthrough.md` for the full worked walkthrough (every
-command and its real output) and `docs/backlog/scenarios/UX-05-optimization-walkthrough-tutorial.md`
+command and its real output) and `docs/backlog/scenarios/UX-0005-optimization-walkthrough-tutorial.md`
 for the task this was built for.
 
 ```
@@ -78,7 +78,7 @@ build with `tools/bst_run_wrapped.py` and extracts with `--format wrapped`,
 not `--format raw` - `--format raw` was found, while building this example,
 to corrupt cross-task ordering on a real saved multi-task log (BuildStream's
 own `[HH:MM:SS]` elapsed prefix resets per-task, not per-invocation; see
-`docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md`). If you're capturing
+`docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md`). If you're capturing
 this project's build yourself rather than reading CI's artifacts, do the
 same:
 
@@ -96,10 +96,10 @@ with real GNU Make - not a `sleep N` proxy like 01/04. Built specifically
 to test whether BuildStream's `--builders` and each element's own native
 `max-jobs` (real intra-element parallelism, e.g. `make -jN`) compete for
 the same CPU cores - they do; see
-`docs/backlog/scenarios/UX-09-builders-max-jobs-joint-optimization.md` for the
+`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md` for the
 real evidence (both source-code citations and a real 6-configuration
-timing table) and `docs/backlog/scenarios/UX-10-total-duration-excludes-pre-task-overhead.md`/
-`UX-11-native-build-system-profiler-tool.md` for what it surfaced beyond
+timing table) and `docs/backlog/scenarios/UX-0010-total-duration-excludes-pre-task-overhead.md`/
+`UX-0011-native-build-system-profiler-tool.md` for what it surfaced beyond
 that.
 
 **Needs a real toolchain staged into the sandbox** (BuildStream's sandbox

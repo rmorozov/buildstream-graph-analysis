@@ -10,7 +10,7 @@ method, UX-12) cannot see a fractional quota; a container with a
 simply want to reserve headroom on a shared machine, independent of any
 cgroup at all. Either way, the number that should govern "is this
 run's configuration appropriate" is operator intent, not raw hardware
-detection - see docs/backlog/scenarios/UX-15-declared-cpu-budget-overrides-host-
+detection - see docs/backlog/scenarios/UX-0015-declared-cpu-budget-overrides-host-
 detection.md for the full evidence.
 """
 import json

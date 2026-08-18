@@ -233,7 +233,7 @@ The measured proof that neither can be dropped: on a real project, three
 one-line fixes made a build **30.5% faster** while `Efficiency Score`
 moved **1.00 → 0.83** and `Dispatch Occupancy` moved **27.8% → 63.0%**.
 Both of the first two numbers went the wrong way. See
-[`UX-27`](../backlog/scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md).
+[`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md).
 
 ### If your build is *not* execution-bound
 
@@ -561,15 +561,15 @@ Plane 1 figures (`bga analyze`, `bga correlate`) are that capture's own
 `binary_cost` (the "where the time went inside each element" table) and
 the redundancy list — were **recomputed from that capture's own process
 records**, because the capture predates
-[`UX-69`](../backlog/scenarios/UX-69-plane-2-ranks-by-count-not-time.md) and
-[`UX-73`](../backlog/scenarios/UX-73-redundancy-findings-treat-the-unresolved-bucket-as-an-element.md);
+[`UX-69`](../backlog/scenarios/UX-0069-plane-2-ranks-by-count-not-time.md) and
+[`UX-73`](../backlog/scenarios/UX-0073-redundancy-findings-treat-the-unresolved-bucket-as-an-element.md);
 the inputs are the same 127,627 records, only the analysis is newer.
 
 The `+2.5% / +44% / +19%` efficiency-gate table and the `30.5% faster`
 pair are from `examples/06-macro-micro-optimization`, measured locally
 and written up in
-[`UX-27`](../backlog/scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md)
-and [`UX-39`](../backlog/scenarios/UX-39-ci-gate-cannot-express-inefficiency-regression.md).
+[`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md)
+and [`UX-39`](../backlog/scenarios/UX-0039-ci-gate-cannot-express-inefficiency-regression.md).
 
 The gap this paragraph used to apologise for is closed. **A caches-off
 capture now exists** — `bootstrap/build/gcc-stage1.bst`, the whole
@@ -595,7 +595,7 @@ The incremental captures remain the pre-commit scenario and are still
 what you compare a pre-commit run against — `bga compare` refuses a
 cold-vs-incremental pair outright, which is the point of having both.
 See [`docs/audits/round-9.md`](../audits/round-9.md) and
-[`UX-86`](../backlog/scenarios/UX-86-caches-off-capture-has-never-been-performed.md).
+[`UX-86`](../backlog/scenarios/UX-0086-caches-off-capture-has-never-been-performed.md).
 
 ## Where to go next
 

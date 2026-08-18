@@ -14,7 +14,7 @@ session-wide wall clock. `--format raw`'s parser (bst_log_to_chrome_trace.py
 _process_raw_line) treats it as a global offset (`raw_start_time_us +
 elapsed_s`), which corrupts cross-task ordering for any real multi-task
 build captured to a file and parsed afterward - see
-docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md for the full
+docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md for the full
 writeup. `--format wrapped` doesn't have this problem (it anchors on an
 externally-supplied absolute timestamp, never on BuildStream's own
 elapsed field) - this tool supplies that external timestamp live, one

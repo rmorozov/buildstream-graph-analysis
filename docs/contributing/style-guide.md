@@ -154,7 +154,23 @@ one row's summary quoted a jq pipeline — two unescaped pipes turned a
 across three files, one of them broken since the P-task era. Prose
 rules cannot catch this class; a linter can, which is `UX-98`.
 
-## 9. Do not restate the code
+## 9. Backlog filenames are zero-padded; identifiers are not
+
+A scenario file is `UX-0097-short-slug.md`. The identifier it carries is
+`UX-97`.
+
+Those are deliberately different. Lexicographic sort is what every
+directory listing, file picker and `git status` uses, and it puts
+`UX-100` between `UX-10` and `UX-11` — with 103 scenarios that makes the
+listing unreadable. Four digits fix it with room to spare. The
+*identifier* stays unpadded because it is what people say, write in
+commit messages, and have already written in every audit; padding it
+would invalidate all of that to fix a problem the filename already
+solved.
+
+**Enforced by test.**
+
+## 10. Do not restate the code
 
 Explain what is *not* deducible from reading the source: why a threshold
 has the value it does, what was measured, what was rejected and why.
@@ -174,5 +190,6 @@ the docs should not diverge from it.
 - [ ] Does every number say where it came from? (rule 4)
 - [ ] Do the links resolve? (rule 5, tested — just run `make test`)
 - [ ] Would a stranger get the answer from the first paragraph? (rule 6)
+- [ ] New backlog file zero-padded to four digits? (rule 9, tested)
 - [ ] Do tables render? Same cell count per row, `\|` for literal pipes
       (rule 8 — `make lint-docs`, plus the table test)

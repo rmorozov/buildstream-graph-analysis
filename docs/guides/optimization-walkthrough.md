@@ -51,7 +51,7 @@ BuildStream's own real wall clock: 11 seconds (confirmed by the shell's own
 timing around the command). The log was captured live with
 [`tools/bst_run_wrapped.py`](../../tools/bst_run_wrapped.py) rather than saved to
 a file and parsed with `--format raw` - see the note at the end of this
-document on why (`docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md`), then
+document on why (`docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md`), then
 extracted with `tools/bst_extract_run.py --format wrapped`:
 
 ```
@@ -266,14 +266,14 @@ with `--format raw`. That was a deliberate choice, not a style preference:
 cross-task ordering on any real multi-task build (BuildStream's own
 `[HH:MM:SS]` per-line prefix restarts at zero for every individual task, not
 once per invocation - `--format raw`'s parser treats it as the latter). See
-[`docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md`](../backlog/scenarios/UX-06-raw-log-timestamp-corruption.md)
+[`docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md`](../backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md)
 for the full writeup and real reproduction evidence - this likely affects the
 CI-reported numbers for `examples/01-03` too, not just this new example.
 
 A second, unrelated bug was found the same way: comparing the baseline and
 `optimized/` runs above, `run_identity.manifest_hash` came back identical for
 both (two genuinely different projects) - see
-[`docs/backlog/scenarios/UX-07-run-identity-collides-across-sibling-projects.md`](../backlog/scenarios/UX-07-run-identity-collides-across-sibling-projects.md).
+[`docs/backlog/scenarios/UX-0007-run-identity-collides-across-sibling-projects.md`](../backlog/scenarios/UX-0007-run-identity-collides-across-sibling-projects.md).
 It didn't affect this walkthrough's actual numbers (`bga compare` still
 computed a correct delta from each run's own real data), just the identifying
 label `bga` prints for each run - worth knowing if you see two different

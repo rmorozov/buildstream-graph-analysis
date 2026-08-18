@@ -436,9 +436,60 @@ def compute_dominators(graph: Graph, start_elements: Optional[Set[str]] = None) 
     return dom
 
 
+def compute_element_stage_durations(
+    tasks: List[NormalizedTask],
+) -> Dict[str, Tuple[int, int]]:
+    """UX-60: each element split into the part that waits on nothing and
+    the part that waits on its dependencies.
+
+    `compute_element_durations` collapses an element to one number and is
+    right to: every path computation must collapse it the *same* way, and
+    `UX-53` is what happens when they do not. But the collapse it chose -
+    the longest task - was justified as *safe*, not as correct, and on an
+    element whose FETCH outlasts its BUILD the "structural floor of the
+    build" currently contains a download.
+
+    Run the spec's own sentence against it - *"no schedule with unlimited
+    relevant capacity can complete faster than this value"*. Under
+    unlimited capacity a BuildStream fetch depends on nothing: sources are
+    fetched independently of any dependency's build, so every FETCH starts
+    at t=0. But an element cannot build before its own sources arrive.
+    That gives two stages, not one:
+
+        build_start(E) = max( fetch(E), max over deps D of finish(D) )
+        finish(E)      = build_start(E) + build(E)
+
+    which is a genuine lower bound and also a faithful one: where a fetch
+    is shorter than the dependency chain's arrival time - the normal case,
+    and every capture this repository holds - it contributes exactly
+    nothing, because it really did overlap.
+
+    Returns `{uid: (head_us, work_us)}`. `head` is FETCH, the stage that
+    waits on nothing; `work` is the longest of everything else, keeping
+    `UX-53`'s collapse for the part where it applies. An element with no
+    FETCH therefore gets `(0, today's number)` and every existing figure
+    is unchanged - which is why this can be introduced without moving a
+    published floor on any real capture.
+    """
+    heads: Dict[str, int] = {}
+    works: Dict[str, int] = {}
+    for task in tasks:
+        uid = task.task_key.element_uid
+        kind = getattr(task.task_key.task_kind, 'value', task.task_key.task_kind)
+        if kind == 'FETCH':
+            heads[uid] = max(heads.get(uid, 0), task.dur_us)
+        else:
+            works[uid] = max(works.get(uid, 0), task.dur_us)
+    return {
+        uid: (heads.get(uid, 0), works.get(uid, 0))
+        for uid in set(heads) | set(works)
+    }
+
+
 def compute_critical_path(
     graph: Graph,
     task_durations: Dict[str, int],
+    head_durations: Optional[Dict[str, int]] = None,
 ) -> Tuple[int, List[str]]:
     """
     Compute observed critical path (Part 5.3, 14.1).
@@ -454,13 +505,26 @@ def compute_critical_path(
     counted as if it gated ordering: a real schedule could beat that
     inflated value by simply not waiting on it.
 
+    UX-60: `head_durations` is the per-element stage that waits on
+    nothing - a FETCH, under unlimited capacity, starts at t=0. An
+    element's build cannot begin before its own sources arrive *or*
+    before its dependencies finish, whichever is later, so:
+
+        finish(E) = max( head(E), max over deps of finish(D) ) + work(E)
+
+    Omitted, every element's head is zero and this is exactly the
+    single-number longest path it has always been - which is what every
+    caller that does not distinguish stages still gets.
+
     Args:
         graph: Input graph
         task_durations: Dict mapping element uid to duration in microseconds
+        head_durations: Optional per-element stage that waits on nothing
 
     Returns:
         Tuple of (critical_path_length, list of element UIDs on critical path)
     """
+    heads = head_durations or {}
     predecessors, successors = build_element_graph(graph, exclude_dependency_types={"runtime"})
     in_degree, _ = compute_in_out_degree(graph, exclude_dependency_types={"runtime"})
     
@@ -473,7 +537,9 @@ def compute_critical_path(
     queue = deque()
     for elem_uid, deg in in_degree.items():
         if deg == 0:
-            earliest_finish[elem_uid] = task_durations.get(elem_uid, 0)
+            earliest_finish[elem_uid] = (
+                heads.get(elem_uid, 0) + task_durations.get(elem_uid, 0)
+            )
             pred_on_critical[elem_uid] = None
             queue.append(elem_uid)
     
@@ -486,7 +552,13 @@ def compute_critical_path(
         
         for succ in successors.get(current, []):
             # Update earliest finish for successor
-            potential_finish = earliest_finish[current] + task_durations.get(succ, 0)
+            # max(head(succ), finish(pred)) + work(succ) - monotone in
+            # finish(pred), so the incremental maximum below still finds
+            # the true maximum over all predecessors.
+            potential_finish = (
+                max(heads.get(succ, 0), earliest_finish[current])
+                + task_durations.get(succ, 0)
+            )
             
             if succ not in earliest_finish:
                 earliest_finish[succ] = potential_finish
@@ -857,6 +929,14 @@ def analyze_graph(
         Dict containing all graph metrics
     """
     task_durations = compute_element_durations(tasks)
+    # UX-60: the two-stage model, applied at the one place that computes
+    # the chain, so every figure derived from it moves together. On a
+    # capture where no element's FETCH exceeds its BUILD - which is every
+    # capture this repository holds - `head` contributes nothing and
+    # `work` is `compute_element_durations`'s own number.
+    stages = compute_element_stage_durations(tasks)
+    head_durations = {uid: head for uid, (head, _work) in stages.items() if head}
+    work_durations = {uid: work for uid, (_head, work) in stages.items()}
 
     # Compute all metrics
     in_degree, out_degree = compute_in_out_degree(graph)
@@ -868,7 +948,9 @@ def analyze_graph(
     requested_targets = find_requested_targets(graph)
     reachable_from_targets = compute_reverse_reachability_from_targets(graph)
     dominators = compute_dominators(graph)
-    critical_path_length, critical_path = compute_critical_path(graph, task_durations)
+    critical_path_length, critical_path = compute_critical_path(
+        graph, work_durations, head_durations=head_durations,
+    )
     slack = compute_slack(graph, task_durations, critical_path_length)
     
     return {

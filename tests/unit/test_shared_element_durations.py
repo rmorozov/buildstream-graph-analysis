@@ -130,7 +130,17 @@ def test_critical_path_length_agrees_with_the_named_path(multi_kind_report):
 def test_t_infinity_is_not_the_summed_path(multi_kind_report):
     """Pins the magnitude of what was wrong rather than only that it is
     now right: the summed path over this fixture's critical path is
-    144.5s against a real floor of 118s, so the disagreement was 22% and
-    in the unsafe direction."""
-    assert multi_kind_report["floors"]["t_infinity_observed"] == 118_000_000
+    144.5s, so `UX-52`'s disagreement was 22% and in the unsafe
+    direction.
+
+    The floor itself is 122s, not the 118s this pinned before `UX-60`.
+    The four seconds are the head element's own FETCH: `libcore.bst`
+    fetches for 4s and builds for 8s, and under unlimited capacity its
+    build genuinely cannot start until its own sources have arrived, so
+    the chain is 4+8 -> 35 -> 35 -> 40. The old number took the longest
+    *task* per element (8s), which is safe but charges nothing for an
+    ordering that really happened. Neither is the summed path, which is
+    what this test exists to keep true.
+    """
+    assert multi_kind_report["floors"]["t_infinity_observed"] == 122_000_000
     assert multi_kind_report["structural"]["sensitivity"]["critical_path_us"] != 144_500_000

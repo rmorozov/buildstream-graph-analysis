@@ -24,7 +24,7 @@ def _record(element, cmd, start, end):
 
 
 def _findings(records):
-    return {f["example_cmd"]: f for f in detect_redundant_operations(records)}
+    return {f["example_cmd"]: f for f in detect_redundant_operations(records)[0]}
 
 
 def test_wall_clock_figure_is_the_worst_element_not_the_sum():
@@ -58,7 +58,7 @@ def test_ranking_uses_recoverable_wall_clock_not_the_sum():
         _record("x.bst", "/usr/bin/codegen big", 0.0, 5.0),
         _record("y.bst", "/usr/bin/codegen big", 0.0, 5.0),
     ]
-    ranked = detect_redundant_operations(records)
+    ranked, _coverage = detect_redundant_operations(records)
     assert ranked[0]["example_cmd"] == "/usr/bin/codegen big"
 
 
@@ -69,7 +69,7 @@ def test_an_elements_own_build_driver_is_not_redundancy():
         _record(f"lib-{c}.bst", "/usr/bin/make -f Makefile -j4", 0.0, 3.0)
         for c in "abcdef"
     ]
-    assert detect_redundant_operations(records) == []
+    assert detect_redundant_operations(records)[0] == []
 
 
 def test_build_drivers_are_recognized_through_the_wrappers_cmake_uses():
@@ -85,7 +85,7 @@ def test_the_configure_step_is_still_considered_redundancy():
     cmd = 'cmake -B_builddir -H. -GUnix Makefiles -DCMAKE_VERBOSE_MAKEFILE=ON'
     assert not _is_element_build_driver(cmd)
     records = [_record(f"lib-{c}.bst", cmd, 0.0, 1.3) for c in "abcdef"]
-    assert len(detect_redundant_operations(records)) == 1
+    assert len(detect_redundant_operations(records)[0]) == 1
 
 
 def test_a_signature_seen_in_only_one_element_is_not_redundancy():
@@ -93,7 +93,7 @@ def test_a_signature_seen_in_only_one_element_is_not_redundancy():
         _record("a.bst", "/usr/bin/c++ only-here.cpp", 0.0, 1.0),
         _record("a.bst", "/usr/bin/c++ only-here.cpp", 1.0, 2.0),
     ]
-    assert detect_redundant_operations(records) == []
+    assert detect_redundant_operations(records)[0] == []
 
 
 def test_command_elision_keeps_the_binary_and_the_distinguishing_tail():
@@ -108,3 +108,102 @@ def test_command_elision_keeps_the_binary_and_the_distinguishing_tail():
 
 def test_a_short_command_is_not_elided():
     assert _elide_cmd("/usr/bin/uname -r") == "/usr/bin/uname -r"
+
+
+# --- UX-73: what counts as a second element, and what is the element's
+# --- own command block -------------------------------------------------
+
+
+def _proc(element, cmd, start, end, pid=100, ppid=50):
+    return {
+        "pid": pid, "ppid": ppid, "element": element, "cmd": cmd,
+        "start_ts": start, "end_ts": end,
+        "duration_s": end - start, "open": False,
+    }
+
+
+def test_the_unresolved_bucket_is_not_a_second_element():
+    """The defect `UX-73` was filed for. `UX-64`/`UX-66` put processes
+    whose sandbox could not be matched to exactly one element into an
+    explicitly unresolved bucket; the guard excluded only `unknown`, so
+    one real element plus that bucket satisfied "2+ distinct elements".
+    On the real capture that produced 79 of 93 findings and 87% of the
+    claimed recoverable time - headed by `lto-wrapper` claiming up to
+    1932.9s against a bucket of 17,754 unattributed processes."""
+    records = [
+        _proc("components/python3.bst", "lto-wrapper @args", 0.0, 10.0),
+        _proc("buildstream-build", "lto-wrapper @args", 1.0, 1932.0),
+    ]
+    findings, coverage = detect_redundant_operations(records)
+
+    assert findings == []
+    assert coverage["excluded_unresolved_only"] == 1
+
+
+def test_two_real_elements_are_still_a_finding():
+    """The narrowing must not become "report nothing"."""
+    records = [
+        _proc("components/a.bst", "/usr/bin/m4 -P conf.m4", 0.0, 2.0),
+        _proc("components/b.bst", "/usr/bin/m4 -P conf.m4", 1.0, 4.0),
+    ]
+    findings, coverage = detect_redundant_operations(records)
+
+    assert len(findings) == 1
+    assert findings[0]["elements"] == ["components/a.bst", "components/b.bst"]
+    assert coverage["excluded_unresolved_only"] == 0
+
+
+def test_the_sandboxs_own_command_block_is_not_redundancy():
+    """bwrap gives each sandbox a PID namespace, so the element's
+    command block is pid 2 with ppid 1. Two elements using the same
+    BuildStream plugin run a byte-identical block by construction while
+    compiling entirely different sources - the same argument `UX-37`
+    made for `make -jN`."""
+    block = "sh -c -e (set -ex; sh -c -e 'if [ -n \"bst_build_dir\" ]; then"
+    records = [
+        _proc("components/a.bst", block, 0.0, 600.0, pid=2, ppid=1),
+        _proc("components/b.bst", block, 0.0, 500.0, pid=2, ppid=1),
+    ]
+    findings, coverage = detect_redundant_operations(records)
+
+    assert findings == []
+    assert coverage["excluded_element_command_blocks"] == 2
+
+
+def test_the_inner_shell_of_the_command_block_is_excluded_too():
+    """Measured: all 21 occurrences of the largest remaining false
+    positive (`sh -c -e if [ -n "bst_build_dir" ]; then`, 664.6s across
+    5 elements) are direct children of the sandbox root, because the
+    real shape is `sh -c -e (set -ex; sh -c -e '<script>')`."""
+    inner = "sh -c -e if [ -n \"bst_build_dir\" ]; then"
+    records = [
+        _proc("components/a.bst", inner, 0.0, 600.0, pid=3, ppid=2),
+        _proc("components/b.bst", inner, 0.0, 500.0, pid=3, ppid=2),
+    ]
+    findings, coverage = detect_redundant_operations(records)
+
+    assert findings == []
+    assert coverage["excluded_element_command_blocks"] == 2
+
+
+def test_real_work_launched_by_the_command_block_is_kept():
+    """A direct child of the root that is a compiler is the element's
+    real work - only a *shell* child is part of the block."""
+    records = [
+        _proc("components/a.bst", "/usr/bin/cc1 -quiet probe.c", 0.0, 2.0, pid=3, ppid=2),
+        _proc("components/b.bst", "/usr/bin/cc1 -quiet probe.c", 0.0, 3.0, pid=3, ppid=2),
+    ]
+    findings, coverage = detect_redundant_operations(records)
+
+    assert len(findings) == 1
+    assert coverage["excluded_element_command_blocks"] == 0
+
+
+def test_the_coverage_note_says_the_figures_do_not_add():
+    """On the real capture the shown findings' figures summed to 4129s
+    against a 3614.2s build - impossible, and invited by any list a
+    reader scans top-down."""
+    _findings_, coverage = detect_redundant_operations([])
+
+    assert "must not be summed" in coverage["note"]
+

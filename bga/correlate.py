@@ -128,6 +128,10 @@ class ElementJoin:
     """One element, seen from both planes."""
 
     element: str
+    # Whether Plane 1's declared graph knows this element at all. False
+    # means Plane 2 produced a name that looks like an element and is
+    # not one (`UX-66`), so nothing may be recommended for it.
+    declared: bool = True
     # Plane 1
     on_critical_path: bool = False
     critical_path_share: Optional[float] = None
@@ -221,6 +225,39 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
             view.setdefault(element, {})["blast_radius"] = count
 
     return view, metric
+
+
+def _declared_elements(analysis: dict) -> set:
+    """Every element UID Plane 1 knows about, from the declared graph.
+
+    `UX-66` required that "a bucket name that is not a declared element
+    uid never enters a join, even if it ends in `.bst`" - because round 7
+    measured `flit_core` and `expat` arriving as bwrap `--dir` segments
+    where neither is an element. The producer's own check is the
+    syntactic one (`assess_element_attribution`: a name ends in `.bst`),
+    which is all Plane 2 can do on its own; the *declared graph* is a
+    Plane 1 fact, so this is the only place the stronger check can be
+    made.
+
+    Built from the per-element signals rather than from the critical path
+    alone: a real element that is off the path and has no blast radius
+    still belongs to the graph, and refusing it would be a worse error
+    than the one being fixed. An analysis carrying none of these signals
+    yields an empty set, and the caller then skips the check rather than
+    rejecting everything.
+    """
+    signals = analysis.get("signals") or {}
+    known: set = set()
+    for key in ("slack", "downstream_count", "blast_radius", "criticality_probability"):
+        value = signals.get(key)
+        if isinstance(value, dict):
+            known |= set(value)
+    known |= set(signals.get("critical_path") or [])
+    for entry in signals.get("critical_path_detail") or []:
+        uid = entry.get("element_uid")
+        if uid:
+            known.add(uid)
+    return known
 
 
 def _plane2_view(native_report: dict) -> Dict[str, dict]:
@@ -441,6 +478,7 @@ def correlate(analysis: dict, native_report: dict) -> dict:
     """
     plane1, ranking_metric = _plane1_view(analysis)
     plane2 = _plane2_view(native_report)
+    declared = _declared_elements(analysis)
 
     joined: List[ElementJoin] = []
     for element in sorted(set(plane1) | set(plane2)):
@@ -448,6 +486,9 @@ def correlate(analysis: dict, native_report: dict) -> dict:
         p2 = plane2.get(element, {})
         entry = ElementJoin(
             element=element,
+            # No check to make when Plane 1 published no per-element
+            # signals at all - degrade, rather than reject every row.
+            declared=(not declared) or element in declared,
             on_critical_path=p1.get("on_critical_path", False),
             critical_path_share=p1.get("critical_path_share"),
             potential_saving_us=p1.get("potential_saving_us", 0),
@@ -465,7 +506,11 @@ def correlate(analysis: dict, native_report: dict) -> dict:
             redundancy_count=p2.get("redundancy_count", 0),
             aggregating_dependencies=p2.get("aggregating_dependencies", []),
         )
-        entry.recommendations = _recommend(entry)
+        # UX-66: a name Plane 1 never declared is fiction, whatever it
+        # ends in. Recommendations are what a reader acts on, so they are
+        # what must not be produced; the row still exists in `elements`,
+        # labelled, rather than vanishing.
+        entry.recommendations = _recommend(entry) if entry.declared else []
         joined.append(entry)
 
     # Ranked by what Plane 1 says is worth fixing, since that is the
@@ -531,6 +576,13 @@ def correlate(analysis: dict, native_report: dict) -> dict:
             "plane1_elements": len(plane1),
             "plane2_elements": len(plane2),
             "plane1_only_with_impact": plane1_only,
+            # UX-66: names Plane 2 produced that the declared graph does
+            # not contain. Reported rather than silently dropped - a
+            # non-empty list here means the sandbox-to-element mapping is
+            # producing fiction and is worth investigating on its own.
+            "undeclared_plane2_elements": sorted(
+                e.element for e in joined if not e.declared
+            ),
             # UX-72: `UX-68` set these aside as unprovable and nothing
             # has looked at them since. Counted here so the filtered
             # population is visible rather than merely absent.
@@ -585,6 +637,16 @@ def format_correlation(result: dict) -> str:
     # that stages almost nothing of its own cannot be shown unused by
     # nobody reading it - but a filtered population that is never
     # mentioned is indistinguishable from one that does not exist.
+    # UX-66: said before the rows, because it says the mapping produced
+    # names that are not elements - which is the failure mode `UX-56`
+    # measured and this check exists to stop reaching a reader.
+    if coverage.get("undeclared_plane2_elements"):
+        names = coverage["undeclared_plane2_elements"]
+        lines.append(
+            f"  {len(names)} Plane 2 name(s) are not declared elements and are "
+            f"excluded from the rows below: {', '.join(names[:5])}"
+            + (f" (+{len(names) - 5} more)" if len(names) > 5 else "")
+        )
     if coverage.get("aggregating_dependency_pairs"):
         lines.append(
             f"  {coverage['aggregating_dependency_pairs']} further dependency "

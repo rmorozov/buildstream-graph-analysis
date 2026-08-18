@@ -1,6 +1,6 @@
 # UX-65: on the only real build we have, both headline rankings point away from the answer — the tool leads with 3.47s and never names the element that is 43% of the build
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** — (blocks calling the tool an MVP)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocked calling the tool an MVP)
 
 ## Motivation
 
@@ -116,6 +116,53 @@ lines a user reads first.
    sub-1% category as its biggest opportunity.
 4. `examples/06`'s deliberately mis-optimized variant, where blast radius
    *is* the right ranking, still ranks by blast radius.
+
+## Fix Implemented — and a scope review
+
+Implemented in `b1c379d`, verified on round 9's real capture, and
+re-checked here acceptance test by acceptance test because the status
+was never updated when the work landed.
+
+```
+  Biggest Opportunity: this build is execution-bound - no wait category exceeds 1%
+  of wall-clock time, so there is no scheduling gap to close
+  Where the time is: 4 element(s) are 94.0% of the 3610.5s critical path - this
+  build is chain-bound, not scheduler-bound
+    components/_private/cmake-stage1.bst  1569.8s (43.5% of path)  -> fixing it saves 1569.8s (43.4%)
+    components/openssl.bst                 672.1s (18.6% of path)  -> fixing it saves  522.5s (14.5%)
+    components/python3.bst                 639.8s (17.7% of path)  -> fixing it saves  114.1s ( 3.2%)
+    components/doxygen.bst                 513.5s (14.2% of path)  -> fixing it saves  513.5s (14.2%)
+```
+
+Against round 7's headline — `0.1% of wall-clock time is UNTRACKED HEAD
+(3.47s)` and a list topped by two elements labelled structural — every
+acceptance test holds:
+
+1. ✅ `cmake-stage1.bst` is named with its share of the critical path, in
+   the first block a reader sees.
+2. ✅ A build with real wait time still leads with the wait category,
+   pinned by `test_a_real_wait_category_is_still_the_headline`.
+3. ✅ An execution-bound build says so, in those words.
+4. ✅ The blast-radius ranking is intact for the graph-bound shape and
+   still reached by the `SCHEDULER_BOUND` fixture.
+
+### Required Fix 4 was delivered by `UX-72`, not here
+
+"Join the agreeing signals — peak memory, critical-path share and
+per-element parallelism all point at `cmake-stage1`" cannot be done in
+`bga analyze`, which has no Plane 2 data at all. It is the join's job,
+and `UX-72` did it: `cmake-stage1.bst`'s row in `bga correlate` now
+carries its critical-path share, its 3.41 cores busy, `cc1plus` at 81% of
+its CPU, `dwz` as a single 138.6s process and its 1902 MB peak, in one
+place and ranked by evidence strength.
+
+### What this task started and later tasks finished
+
+`UX-70` replaced share-of-path with realizable saving as the ranking;
+`UX-76` merged the three headline rankings this task left into one table
+and fixed the regression `UX-70` introduced in it; `UX-74` added what to
+do *after* the first fix. The headline this task asked for is now the
+whole of `Key Findings`.
 
 ## Verification Log
 

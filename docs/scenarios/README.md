@@ -92,6 +92,60 @@ Same verification discipline as the closed backlog (see `docs/fixing-guide.md`):
 | UX-74 | One ~60-minute capture yields **one** finding, on a graph where 77% of elements have zero slack. Five longest-path recomputes at **0.40 ms each** produce the whole horizon: `git-minimal.bst` (547.7s, **4th heaviest in the build**) and `icu.bst` (430.8s, 6th) are invisible today and binding two fixes from now. The top three are worth **2605.8s = 72% together, exactly additive** - never stated. `UX-20`'s grouping is backwards: it refuses to group same-chain elements, whose savings *add*, and would group parallel-chain ones, whose savings take a *maximum* (measured both ways) | High | UX-70, UX-20 | 🟢 Done — `optimization_horizon`, `joint_saving` and `latent_heavies`, all from one capture in **17 ms**. The report now states that the top three are worth **2605.8s (72%) together and that this equals their sum**, projects what the build drops to after each fix, and names `git-minimal.bst` (547.7s, **4th heaviest in the build**) and `icu.bst` (430.8s), which appeared nowhere before. Two corrections: greedy-by-saving never routes through `python3.bst`, so latent heavies had to become their own signal; and feeding `UX-20` the *horizon* reintroduced a `UX-44` bug (a later step cannot move today's finish) - it is fed the baseline-realizable set instead, **0 groups → 1** | [UX-74](UX-74-one-capture-one-finding.md) |
 | UX-75 | The two formats carry disjoint halves: JSON has every number and **none of the conclusions** (a CI consumer must re-implement `_heaviest_on_path` and four thresholds from `bga/report/text.py` to reach what a human reads for free), while text has the conclusions and only part of the data. Proposal: one `findings[]` array with stable ids, rendered by text and published by JSON | Medium | UX-71..UX-74 (settle the conclusions first) | 🟢 Done — new `bga/findings.py` decides what is worth saying **once**; text renders it and JSON publishes it, so a CI gate reads `.findings[] | select(.id == "time-concentration") | .evidence.chain_bound` instead of re-deriving `_CHAIN_BOUND_RATIO` out of the renderer. Text output is **byte-identical** across the refactor and the 1100-test suite passed unmodified. `correlate`'s rows carry ids and severities too; `binary_cost`'s text cap now says what it capped and `aggregating_dependencies` finally has a renderer | [UX-75](UX-75-json-publishes-data-text-publishes-conclusions.md) |
 | UX-76 | `Key Findings` ranks the same five elements **three times** in 13 lines, and one ranking regressed: `UX-70` re-sorted the shared `_heaviest_on_path` helper, so "Where the time is" now reports **80.3%** and omits `python3.bst` (17.7% of the path, 3rd largest) in favour of `bison.bst` (4.0%) - it said 94.0% with the four largest one round ago | Medium | UX-70 | 🟢 Done — three rankings became one table: **94.0% restored**, `python3.bst` back in third place *and* shown to be worth only 3.2% to fix, which is the most useful disagreement in the report and was previously invisible. 13 lines → 8; the degenerate criticality list (every entry 100%, one of them a `stack`) is dropped | [UX-76](UX-76-three-rankings-of-the-same-elements.md) |
+| UX-77 | The installed CLI cannot reach its own capture tools: packaging includes only `bga*`, so every `bga wrap/extract/capture/...` alias dies with a raw `ModuleNotFoundError: No module named 'tools'` — **even from the repo root** in a modern-pip venv. The entire documented real-project workflow is broken for a pip-installed user; CI never sees it because it calls `python3 -m tools.*` with `PYTHONPATH` | High | — | 🔴 Not Started | [UX-77](UX-77-installed-cli-cannot-reach-its-own-tools.md) |
+| UX-78 | README/guide promise `bga compare` "refuses" cross-project / cross-cache-scenario comparisons; it actually warns and verdicts anyway — a golden fixture vs a real run yields `REGRESSED (+105668.8%)`, exit 0, and exit **4** under `--fail-on-regression`, so a CI artifact-path bug reads as "your build got slower" | High | — | 🔴 Not Started | [UX-78](UX-78-compare-refusal-is-actually-a-warning.md) |
+| UX-79 | The efficiency gate is a whole-build average, so a bad diff dilutes with project size: two maximally-mis-added elements moved an 11-element project's occupancy **6.1pp against the 5.0pp default** — the same additions on the 90-element fdsdk closure move it <1pp and pass. The build owner's rule ("adding work is fine, adding it inefficiently is not") needs a **marginal** gate on the diff's own elements | High | UX-39, UX-74 | 🔴 Not Started | [UX-79](UX-79-efficiency-gate-dilutes-with-project-size.md) |
+| UX-80 | The documented capture command cannot produce the documented join: the sandbox→element attribution needs `--invocation-log`, which appears **zero times** in README/cli.md/guide — only CI passes it. A user copy-pasting the guide on a non-default `build-root` project (fdsdk itself) gets the UX-56 collapse the docs present as solved | High | UX-56, UX-64 | 🔴 Not Started | [UX-80](UX-80-documented-capture-cannot-produce-the-documented-join.md) |
+| UX-81 | `captures/fdsdk-latest` is force-pushed — every publish destroys its predecessor — while the tool's own CI advice requires a **≥3-run baseline set** (measured 2.9% noise vs the 1% rule). No history, no schedule trigger, tarball-only, thin overwrite guard: the infrastructure cannot supply the input the gate requires | High | — | 🔴 Not Started | [UX-81](UX-81-captures-branch-keeps-no-history.md) |
+| UX-82 | The tool measures every fact of `examples/06`'s macro fix — six chain links on the critical path, **each chain edge individually reported never-read** — and never synthesizes "unchain them": the walkthrough's single biggest structural win (**27.9s → 25.0s** measured) is left for the user to invent from five hedged rows | High | UX-46, UX-74 | 🔴 Not Started | [UX-82](UX-82-never-read-chain-edges-never-become-a-restructuring-finding.md) |
+| UX-83 | The two planes give contradictory advice on the same capture and nothing arbitrates: Plane 1's headline says raise `--capacity`, `sweep` names knee **5 on a 4-core host**, while `correlate` (same run) correctly says remove `core.bst`'s `notparallel` (verified **−32.4%**). When Plane 2 data exists, Plane 1's capacity hints should consult it | Medium | UX-51, UX-45 | 🔴 Not Started | [UX-83](UX-83-the-two-planes-give-contradictory-advice-and-nothing-arbitrates.md) |
+| UX-84 | With a live bst 2.7 installed, `make test` fails: **4 bst-gated tests**, including per-element `max-jobs: 16` override extraction returning **4 (the host core count)** — and no CI job runs pytest with bst present, so the gated tier can rot green | Medium | UX-22 | 🔴 Not Started | [UX-84](UX-84-bst-gated-tests-fail-against-a-live-bst.md) |
+| UX-85 | `bga/report/text.py` still carries full shadow copies of `findings.py`'s thresholds and helpers, and the UX-71 guard tests import the **shadow** — the two judgement layers can drift with the guards green, the exact failure mode UX-75 shipped to eliminate | Medium | UX-75 | 🔴 Not Started | [UX-85](UX-85-report-text-shadows-the-findings-logic-and-tests-bind-to-the-copy.md) |
+| UX-86 | The caches-off scenario has never been captured (round 9's standing gap): every real capture is incremental, so coverage, floors and both efficiency signals are untested against a real cold build — add a `capture_mode: cold` to the workflow, bounded to the existing cut set | Medium | UX-81, UX-55 | 🔴 Not Started | [UX-86](UX-86-caches-off-capture-has-never-been-performed.md) |
+| UX-87 | Both efficiency gates silently return "pass" when either run lacks `occupancy_ratio` — a pipeline that believes it is gating is not, with nothing printed; the identical UX-40 failure mode, one field over | Medium | UX-39, UX-40 | 🔴 Not Started | [UX-87](UX-87-efficiency-gates-silently-no-op-when-occupancy-is-missing.md) |
+| UX-88 | Documentation-drift sweep from the round-10 claims audit: the README quick start shows another command's output, cli.md's Efficiency Score formula is wrong (`LB/total` vs `LB/horizon`), exit-4 semantics are under-documented, the band-mode example is not a runnable invocation, `findings[].id` values are published nowhere, + six smaller verified items | Medium | UX-78 | 🔴 Not Started | [UX-88](UX-88-docs-promise-what-the-code-does-not-do.md) |
+| UX-89 | `correlate` prints seven near-identical blocks for `examples/06`'s interchangeable libs (40 lines for two facts), and flags 0.1s `ranlib` single-processes as "serialization points" inside 2s elements — group identical findings, apply the UX-72 materiality bar to the single-process rule | Low | UX-72 | 🔴 Not Started | [UX-89](UX-89-correlate-repeats-one-finding-seven-times.md) |
+| UX-90 | **17 of 24** capture-workflow runs were push-triggered cancellations (several after 25–57 runner-minutes; five in one day, zero publishes) — the push trigger + `cancel-in-progress` burns runner-hours without producing data | Low | UX-81 | 🔴 Not Started | [UX-90](UX-90-push-triggered-captures-burn-runner-hours-without-publishing.md) |
+| UX-91 | BuildStream's own persisted per-element logs (`~/.cache/buildstream/logs/`, `bst artifact log`) are an uningested **third data plane**: per-phase (configure/compile/install) breakdown with zero capture overhead, cross-build frequency analysis of repeated operations, and retrospective timelines for builds nobody wrapped | Medium | — | 🔴 Not Started | [UX-91](UX-91-mine-the-build-cache-logs-as-a-third-data-plane.md) |
+| UX-92 | Cache effectiveness is invisible: no hit-ratio accounting, no pull/push economics, no **cache-key churn** detection (elements rebuilding with unchanged inputs — plausibly BuildStream's largest real-world waste, and a build exhibiting it still scores as *efficient*), no trends over a capture history | Medium | UX-55, UX-81 | 🔴 Not Started | [UX-92](UX-92-cache-effectiveness-is-invisible-to-the-tool.md) |
+
+## UX-77..UX-92: the tenth audit round (2026-08-18)
+
+Filed from a fresh full-cycle audit: a claims-vs-reality pass over every
+substantive README/cli.md claim, a real hands-on macro→micro
+optimization cycle on `examples/06` (dual-plane captures of the
+baseline, a macro-only-fixed variant, and `optimized/` — **27.9s →
+25.0s → 16.9s** on a real 4-core sandbox host), a grow-the-project
+gate experiment (two elements added well vs badly), and a review of the
+`captures/fdsdk-latest` branch plus all 24 runs of the capture
+workflow. Full narrative, protocol and verdict:
+[`../audit-round-10.md`](../audit-round-10.md); the design argument the
+round feeds: [`../design-directions.md`](../design-directions.md).
+
+The round's shape in one sentence each:
+
+- **The analysis held up; the packaging and the promises did not.**
+  Every number re-verified was right (floors, attribution identity,
+  gate exit codes, the fdsdk report reproduced byte-for-byte in 0.27s),
+  while the first documented command a new user runs crashes with a raw
+  traceback (`UX-77`), and three separate documents promise a refusal
+  the code deliberately downgraded to a warning (`UX-78`).
+- **The walkthrough works — because the user supplies the synthesis.**
+  Both planted problems were *found* (the `notparallel` finding is
+  exemplary), but the macro fix's conclusion is never drawn from its
+  own measured evidence (`UX-82`), and Plane 1's capacity advice
+  actively points away from the fix `correlate` names on the same
+  capture (`UX-83`).
+- **The CI story's remaining gaps are now precise.** The efficiency
+  gate discriminates exactly as designed at 11 elements and provably
+  dilutes at 90 (`UX-79`); the capture infrastructure destroys the
+  history the gate's own documentation requires (`UX-81`, `UX-86`,
+  `UX-90`); and a gate can silently stop gating (`UX-87`).
+- **Two new capability directions** came out of asking what the tool
+  could see within a few more cycles: BuildStream's own cached logs as
+  a retrospective, longitudinal third plane (`UX-91`), and cache
+  effectiveness — hits, churn, trends — as a first-class analysis
+  (`UX-92`).
 
 ## UX-41..UX-48: the second audit round (2026-08-16)
 

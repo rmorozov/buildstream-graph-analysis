@@ -17,7 +17,8 @@ from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .graph.edg import (
     JOINT_SAVING_SET_SIZE,
-    analyze_graph, compute_element_durations, compute_joint_saving,
+    analyze_graph, compute_element_durations, compute_element_stage_durations,
+    compute_joint_saving,
     compute_latent_heavies, compute_optimization_horizon,
     compute_realizable_savings,
 )
@@ -1884,12 +1885,25 @@ class BuildEfficiencyAnalyzer:
         # BUILD.
         tasks_dict = {t.task_key.element_uid: t for t in self.normalized_tasks}
         element_durations = compute_element_durations(self.normalized_tasks)
+        # UX-60: the same two-stage split `analyze_graph` uses for the
+        # floor, so `sensitivity.critical_path_us` and
+        # `floors.t_infinity_observed` keep agreeing - which `UX-52`
+        # established they must, and which two separate traversals make
+        # easy to break.
+        stages = compute_element_stage_durations(self.normalized_tasks)
+        work_durations = {uid: work for uid, (_head, work) in stages.items()}
+        head_durations = {uid: head for uid, (head, _work) in stages.items() if head}
 
         # Initialize structural analyzer
         from bga.structural.analyzer import build_edg
         edg = build_edg(self.graph)
         structural_analyzer = StructuralAnalyzer(
-            edg, tasks_dict, element_durations=element_durations
+            edg, tasks_dict,
+            element_durations={
+                uid: work_durations.get(uid, element_durations.get(uid, 0))
+                for uid in set(element_durations) | set(work_durations)
+            },
+            element_head_durations=head_durations,
         )
 
         # Run full structural analysis

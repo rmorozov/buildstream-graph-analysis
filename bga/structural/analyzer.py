@@ -113,6 +113,7 @@ class StructuralAnalyzer:
         edg: ElementDependencyGraph,
         tasks: Dict[str, NormalizedTask],
         element_durations: Optional[Dict[str, int]] = None,
+        element_head_durations: Optional[Dict[str, int]] = None,
     ):
         """
         `element_durations` (UX-50) is the authoritative per-element
@@ -142,6 +143,13 @@ class StructuralAnalyzer:
         self.edg = edg
         self.tasks = tasks
         self.element_durations = element_durations
+        # UX-60: the per-element stage that waits on nothing (a FETCH,
+        # which under unlimited capacity starts at t=0). Threaded here
+        # for one reason: `sensitivity.critical_path_us` and
+        # `floors.t_infinity_observed` are required to stay equal, and
+        # they are computed by two different traversals. A model applied
+        # to one of them is `UX-52` again.
+        self.element_head_durations = element_head_durations or {}
         self._graph = edg.G  # NetworkX DiGraph
         
     def compute_structural_metrics(self) -> StructuralMetrics:
@@ -668,7 +676,10 @@ class StructuralAnalyzer:
             
             graph_obj = Graph(elements=elements, dependencies=dependencies)
             
-            cp_length, cp_nodes = graph_compute_critical_path(graph_obj, task_durations)
+            cp_length, cp_nodes = graph_compute_critical_path(
+                graph_obj, task_durations,
+                head_durations=self.element_head_durations,
+            )
             return cp_nodes
         except Exception:
             logger.warning(
@@ -759,11 +770,20 @@ class StructuralAnalyzer:
         """
         zeroed = zeroed or set()
         durations = self._durations()
+        heads = self.element_head_durations
         finish: Dict[str, int] = {}
         longest = 0
         for node in nx.topological_sort(self._graph):
             duration = 0 if node in zeroed else durations[node]
-            start = max((finish[p] for p in self._graph.predecessors(node)), default=0)
+            # UX-60: an element's work cannot start before its own
+            # sources arrive *or* before its dependencies finish. A
+            # `zeroed` node is being asked "what if this work were free",
+            # which is a question about its build, not about waiting for
+            # its own sources - so the head stays.
+            start = max(
+                heads.get(node, 0),
+                max((finish[p] for p in self._graph.predecessors(node)), default=0),
+            )
             finish[node] = start + duration
             longest = max(longest, finish[node])
         return longest

@@ -1,6 +1,6 @@
 # UX-60: whether `FETCH` time belongs in any efficiency signal has been deferred by two separate tasks and never decided
 
-**Priority:** Medium | **Status:** 🟡 `I3` implemented; the floor definition decided but not yet applied | **Depends on:** `UX-53` (done — which made the duration definition single, and made this the remaining question)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-53` (done — which made the duration definition single, and made this the remaining question)
 
 ## Motivation
 
@@ -97,7 +97,7 @@ nothing: sources are fetched independently of any dependency's build. So
 every FETCH starts at t=0. But an element cannot build before its *own*
 sources are fetched. Therefore:
 
-```
+```text
 build_start(E) = max( fetch_duration(E), max over deps D of finish(D) )
 finish(E)      = build_start(E) + build_duration(E)
 ```
@@ -120,20 +120,96 @@ invalid for a certified floor; `BUILD`-only understates and can violate
 `I3`. The two-stage model is the one the spec's sentence actually
 implies.
 
-**Why it is not implemented here.** It cannot be expressed as one number
-per element, which is the shape `compute_element_durations` — and every
-consumer of it, both planes and the cold floor — is built around. It
-needs per-element durations split by task kind and a change inside
-`compute_critical_path`, and it moves a *certified* floor in both
-directions: down where a fetch overlapped, up where a head element really
-did fetch then build. That is a change that deserves its own verification
-pass against real captures, not a tail-end edit to a commit about
-something else.
+**Why it was not implemented when it was decided.** It cannot be
+expressed as one number per element, which is the shape
+`compute_element_durations` — and every consumer of it — is built
+around. It needs per-element durations split by task kind and a change
+inside `compute_critical_path`, and it moves a *certified* floor. That
+deserved its own verification pass against real captures rather than a
+tail-end edit to a commit about something else. `I3` went in first,
+which is the check that made attempting it safe. The pass is below.
 
-`I3` is now in place, which is the check that makes attempting it safe.
+## The decision, applied
+
+The two-stage model is in `compute_element_stage_durations` +
+`compute_critical_path(..., head_durations=...)`, wired at
+`analyze_graph` - the one place that computes the chain - so every
+figure derived from it moves together.
+
+`head` is FETCH, the stage that waits on nothing; `work` is the longest
+of everything else, which keeps `UX-53`'s collapse for the part where it
+applies. **An element with no FETCH gets `(0, today's number)`**, which
+is why this could be introduced without moving a published floor on any
+real capture: verified after the change, the freedesktop-sdk capture
+still reads `T∞ = 3401.9s` and `examples/06` still reads `28.2s`,
+because in both every fetch is either absent or zero-length.
+
+On the one checked-in fixture with real FETCH durations,
+`synthetic_multi_subproject`, the floor moves 118s → 122s. The four
+seconds are `libcore.bst`'s own fetch: it fetches for 4s and builds for
+8s with nothing above it, so its build genuinely cannot start until its
+sources have arrived, and the chain is `4+8 → 35 → 35 → 40`. The old
+number took the longest *task* per element (8s) - safe, and charging
+nothing for an ordering that really happened.
+
+`sensitivity.critical_path_us == t_infinity_observed` still holds, and
+keeping it held was not free: the two figures come from two different
+traversals (`compute_critical_path` and `StructuralAnalyzer.
+_longest_path_us`), so the model had to be threaded into both. A model
+applied to one of them is `UX-52` again.
+
+### What applying it found: the replay was under-constrained
+
+The moment the floor modelled fetch-before-build, the same fixture
+reported:
+
+```text
+Model score reduced: T_C (118000000) < LB (122000000)
+```
+
+The replay could still finish in 118s because **a BUILD task carried no
+dependency on its own element's FETCH**. `clamp_task_starts` built each
+BUILD's edges from the graph's `depends:` entries - its *dependencies'*
+builds - and nothing said an element must fetch its own sources first,
+so replay was free to start any build at t=0.
+
+That function's own comment had warned about exactly this class of
+error:
+
+> getting it wrong under-constrains replay's readiness gating, which can
+> under-schedule the replay makespan `T_C` below the certified `LB`,
+> violating `I2`
+
+It was invisible for as long as no floor modelled the ordering either -
+two models agreeing because both omitted the same constraint. The floor
+disagreeing is what surfaced it. BuildStream cannot run build commands
+before an element's sources are staged, so the edge is real and the
+replay was wrong: a BUILD task now depends on its own FETCH, and
+`T_C ≥ LB` again.
+
+### The acceptance
+
+1. A fetch longer than its own build produces a defensible `T∞` - it
+   precedes the build rather than replacing it, and does not accumulate
+   down the chain the way a `sum` collapse would (`4+8 → …`, pinned in
+   `tests/unit/test_fetch_in_the_floor.py`).
+2. `I3` was implemented first, before the definition moved - which is
+   the order that makes the move safe, and it is green on every fixture.
+3. `sensitivity.critical_path_us == t_infinity_observed` everywhere,
+   including on the real freedesktop-sdk capture.
+
+Tests: 7 new in `tests/unit/test_fetch_in_the_floor.py`. Suite: 1316 →
+1323.
 
 ## Verification Log
 
 Filed 2026-08-17. Both deferrals are quoted verbatim from the Out of
 Scope sections of `UX-50` and `UX-53`. The absence of `I3` was confirmed
 by grepping `bga/` for it, which returns nothing.
+
+Applied 2026-08-18. The two real captures were re-analyzed after the
+change and are unchanged (3401.9s and 28.2s), which is the evidence that
+the move is confined to elements that really do fetch before they build.
+The replay under-constraint was found by the change rather than looked
+for: it announced itself as `T_C (118000000) < LB (122000000)` on the
+first fixture with real FETCH durations.

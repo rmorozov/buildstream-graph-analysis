@@ -301,9 +301,23 @@ def clamp_task_starts(
     # starts (see compute_ready_times's identical filter), so replay
     # must not gate the successor's readiness on it either.
     build_task_by_element: Dict[str, str] = {}
+    # UX-60: an element's own FETCH, which its BUILD must wait for.
+    # BuildStream cannot run build commands before the element's sources
+    # are staged, and until now nothing in the replay's readiness model
+    # said so - a BUILD task carried edges to its *dependencies'* builds
+    # and none to its own fetch, so replay was free to start it at t=0.
+    # That was invisible while no floor modelled the ordering either;
+    # `UX-60`'s two-stage T-infinity does, and on the one checked-in
+    # fixture with real FETCH durations it immediately produced
+    # `T_C (118000000) < LB (122000000)` - the exact under-constraint
+    # this function's own comment warns about, found by a floor finally
+    # disagreeing with it.
+    fetch_task_by_element: Dict[str, str] = {}
     for span, _q_start, _q_finish in normalized_spans:
         if span.task_key.task_kind == TaskKind.BUILD:
             build_task_by_element[span.task_key.element_uid] = str(span.task_key)
+        elif span.task_key.task_kind == TaskKind.FETCH:
+            fetch_task_by_element[span.task_key.element_uid] = str(span.task_key)
 
     result = []
     violations = []
@@ -343,6 +357,10 @@ def clamp_task_starts(
 
         # Get build-gating dependencies for this task from the graph
         deps = []
+        if span.task_key.task_kind == TaskKind.BUILD:
+            own_fetch = fetch_task_by_element.get(span.task_key.element_uid)
+            if own_fetch:
+                deps.append(own_fetch)
         for dep_edge in graph.dependencies:
             if dep_edge.dependency_type == "runtime":
                 continue

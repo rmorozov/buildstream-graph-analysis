@@ -138,7 +138,7 @@ def _declared_finding_ids():
     # through the `_finding(...)` helper the pattern above matches, and
     # `UX-102`'s Plane 3 finding is built in the tool because it reads
     # BuildStream's own logs, which the analyzer never sees.
-    for module in ("bga/correlate.py", "tools/bst_cache_logs.py"):
+    for module in ("bga/correlate.py", "tools/bst_cache_logs.py", "bga/cache_trend.py"):
         ids |= set(
             re.findall(r"'id': '([a-z0-9-]+)'", (REPO / module).read_text(encoding="utf-8"))
         )

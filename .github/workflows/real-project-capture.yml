@@ -625,3 +625,30 @@ jobs:
             echo "traced build exited ${traced_rc}: published as data at ${RUN_REF}," \
                  "leaving ${LATEST_REF} pointing at the last good capture"
           fi
+
+      - name: Cache health trend across the retained refs
+        # UX-103 item 3: the trend accumulates without a human. Runs
+        # after the publish, so this capture is the newest row and is the
+        # run being judged.
+        #
+        # `continue-on-error` deliberately: a degrading cache is a
+        # finding to read, not a reason to fail the job that produced the
+        # data. `UX-92` stage 3's deferral of a hard gate stands until
+        # there is enough history to set one from evidence.
+        continue-on-error: true
+        if: always()
+        run: |
+          set -o pipefail
+          SHORT_REF="$(echo "$FDSDK_REF" | cut -c1-8)"
+          GLOB="captures/fdsdk/${SHORT_REF}-${CAPTURE_MODE}-b${BUILDERS}j${MAX_JOBS}-*"
+          if ! bga baseline --glob "$GLOB" -n 8 --workdir "$RUNNER_TEMP/trend" -f json \
+               > "$RUNNER_TEMP/trend-set.json"; then
+            echo "No comparable baseline set to trend against yet"
+            exit 0
+          fi
+          # `bga baseline` returns newest first; a trend reads forwards,
+          # because nothing in a run directory records which build came
+          # before it - the order is the caller's to supply.
+          DIRS="$(python3 -c 'import json,sys; print(" ".join(m["run_dir"] for m in reversed(json.load(open(sys.argv[1]))["members"])))' "$RUNNER_TEMP/trend-set.json")"
+          # shellcheck disable=SC2086
+          bga cache-trend $DIRS | tee "$RUNNER_TEMP/trend.txt"

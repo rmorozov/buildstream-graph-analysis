@@ -459,6 +459,11 @@ class AnalysisResult:
     violations: list = field(default_factory=list)
     structural: dict = field(default_factory=dict)
     run_id: str = ""
+    # UX-95: which capture this is, as opposed to `run_id`, which says
+    # which captures are comparable. `{started_at, started_at_us,
+    # run_dir}`, each key present only when the run directory recorded
+    # it. Additive - nothing reads `run_id` differently because of it.
+    run_instance: dict = field(default_factory=dict)
     total_duration_us: int = 0
     # BuildStream's own top-level pipeline overhead (Query cache, Resolving
     # elements, etc.) - not part of analysis/v9's spec-mandated schema

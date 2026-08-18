@@ -5,6 +5,7 @@ Orchestrates the complete analysis pipeline as specified in the v9 specification
 """
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
@@ -100,6 +101,34 @@ _SECTION_STAGES = {
 }
 
 
+def _run_instance(run_context, loaded_from) -> dict:
+    """UX-95: the facts that distinguish two captures of one identity.
+
+    Deliberately additive and deliberately small. The identity hash says
+    "these two runs are comparable"; this says *which* run this is, and
+    the two answer different questions - so it is a second line rather
+    than a change to the first.
+
+    `started_at` is the run's own wall-clock start, rendered in UTC
+    because that is what the field holds and a local rendering of a
+    capture taken on a CI runner in another zone would be a fiction.
+    Absent fields are omitted rather than filled with placeholders: a
+    run directory that records no wall clock has no capture time, and
+    printing "unknown" beside a real path is worse than printing the
+    path alone.
+    """
+    instance = {}
+    start_us = getattr(run_context, 'wall_start_us', None) if run_context else None
+    if start_us:
+        instance['started_at_us'] = start_us
+        instance['started_at'] = datetime.fromtimestamp(
+            start_us / 1e6, tz=timezone.utc,
+        ).strftime('%Y-%m-%d %H:%M:%S UTC')
+    if loaded_from:
+        instance['run_dir'] = loaded_from
+    return instance
+
+
 class BuildEfficiencyAnalyzer:
     """
     Main analyzer class implementing the bga v9 specification.
@@ -160,6 +189,7 @@ class BuildEfficiencyAnalyzer:
         self.allow_partial_cold = allow_partial_cold
         self.historical_runs = historical_runs or []
         self.run_context: Optional[RunContext] = None
+        self.loaded_from: Optional[str] = None
         self.graph: Optional[Graph] = None
         self.trace: Optional[Trace] = None
         self.normalized_tasks = []
@@ -193,6 +223,11 @@ class BuildEfficiencyAnalyzer:
             raise ValueError("No run directory specified")
         
         self.run_context, self.graph, self.trace = load_all(path)
+        # UX-95: which run directory this analysis came from. The
+        # identity hash is deliberately stable across captures of the
+        # same project and targets - that is its job - so it cannot tell
+        # two captures apart, and the path is half of what can.
+        self.loaded_from = str(path)
     
     def load_from_data(
         self,
@@ -1102,6 +1137,15 @@ class BuildEfficiencyAnalyzer:
         # manifest_hash (P1-37), when available.
         if self.run_context and self.run_context.run_identity:
             result.run_id = self.run_context.run_identity.get('manifest_hash', '') or ''
+        # UX-95: the run *instance*, beside the run *identity*. Two fdsdk
+        # captures taken 100 minutes apart, of different workflow runs
+        # and 28 seconds apart in total duration, both print
+        # `Run: f12a845e2327de7a...` - because the identity hash is
+        # stable across captures of the same project and targets by
+        # design (UX-07). Nothing in either report could tell them apart,
+        # which is exactly the situation the UX-81 baseline history now
+        # creates every week.
+        result.run_instance = _run_instance(self.run_context, self.loaded_from)
         
         # Compute horizon for total duration
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)

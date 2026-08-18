@@ -37,7 +37,15 @@ def _run_analyze(fixture_dir: Path) -> dict:
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"
-    return json.loads(proc.stdout)
+    payload = json.loads(proc.stdout)
+    # `UX-95`'s run-instance block names *which capture* this is - a
+    # wall-clock stamp and the absolute path it was read from. Both are
+    # properties of the machine that ran it, not of the analysis, so
+    # they cannot live in a committed snapshot. Removed here rather than
+    # withheld from the report: the identity hash, which is what a
+    # snapshot is about, is untouched and still compared.
+    payload.pop("run_instance", None)
+    return payload
 
 
 def test_mixed_task_kinds_golden_snapshot():

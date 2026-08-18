@@ -1,6 +1,6 @@
 # The single highest-blast-radius element (5 downstream: lib-a..d +
 # app) - still deliberately the slowest single step, but cut from
-# `sleep 4` to `sleep 2` per docs/optimization-walkthrough.md's
+# `sleep 4` to `sleep 2` per docs/guides/optimization-walkthrough.md's
 # opportunity #2.
 kind: manual
 depends:

@@ -1,0 +1,523 @@
+# Ingestion Pipeline: from a real BuildStream run to bga input
+
+This records the design decisions behind `P4-05`/`P4-08`/`P4-09`/`P4-10`
+(see `docs/backlog/progress-tracker.md`) and the empirical findings behind
+them, so a future session doesn't have to re-derive or re-discover any
+of this. If you're picking up one of those tasks, read this first.
+
+## Target architecture
+
+```
+real bst invocation (wrapper log OR raw log OR direct)
+        |
+        +--> tools/bst_log_to_chrome_trace.py --> Chrome Trace JSON (P4-05, done)
+        |          |                                (also the user's own real
+        |          |                                 perfetto.dev visualization
+        |          |                                 path - unchanged)
+        |          v
+        |    tools/chrome_trace_to_bga_trace.py --> trace/v9 (done)
+        |
+        +--> tools/bst_show_to_graph.py       --> graph/v9 (P4-08, done)
+        |
+        +--> tools/bst_run_context.py         --> run-context/v9 (P4-09, done)
+        |
+        v
+   tools/bst_extract_run.py (P4-10, done) coordinates all of the above
+   from one project dir + one log into one complete run directory
+        |
+        v
+   bga ingests it, produces a report - verified working end-to-end
+   against a real BuildStream 2.7.0 build with zero manual editing
+```
+
+`bga` itself stays a pure analyzer of already-v9-shaped input (Part 32).
+The extraction tools are separate, small, single-purpose scripts under
+`tools/` - not folded into `bga`'s own package - because they depend on
+a real `bst` binary (+ bubblewrap) being installed, which most of
+`bga`'s own test/dev environment does not need and should not be forced
+to install. `tests/unit/test_bst_show_to_graph.py`, `test_bst_extract_run.py`,
+and any other `bst`-dependent tests skip automatically when `bst` isn't
+on `PATH` (see `pyproject.toml`'s `bst` optional extra).
+
+`tools/bst_log_to_chrome_trace.py` produces Chrome Trace JSON, not
+trace/v9, directly - that's deliberate, not an oversight: it's also the
+user's own real, already-in-use tool for visualizing a build's timeline
+in `ui.perfetto.dev`, and that output shape must keep working exactly as
+before. `tools/chrome_trace_to_bga_trace.py` is a second, separate,
+general-purpose tool that does the trace/v9 conversion - see "Why a
+second, separate trace/v9 adapter" below for why this isn't the same
+thing as `tests/fixtures/synthetic_multi_subproject/adapter.py`.
+
+## Why `bst show`, not raw `.bst` YAML parsing
+
+Considered and rejected: parsing `.bst` element files directly. BuildStream's
+own dependency resolution (junction composition, the `all`-type default,
+"a build-dependency pulls in its own runtime dependencies transitively")
+is non-trivial and already correctly implemented by BuildStream itself;
+reimplementing it in `bga`'s tooling would be a second, likely-diverging
+copy of that logic. `bst show` gets this resolution for free. The
+trade-off (a real `bst` + bubblewrap install needed to run the
+extraction) was judged worth it - confirmed on 2026-08-14 against a
+real `bst show`/`bst build` (BuildStream 2.7.0).
+
+## Empirically confirmed facts (2026-08-14, against real `bst` 2.7.0)
+
+Do not re-guess these from documentation alone - they were confirmed by
+actually installing BuildStream (`pip install buildstream
+buildstream-plugins`, `apt install bubblewrap`) and running real
+commands against a small from-scratch project
+(`tests/fixtures/bst_show_project/`).
+
+1. **`--format` has `%{build-deps}`/`%{runtime-deps}`/`%{deps}` symbols**
+   in BuildStream 2.x (absent from some older/mirrored manpage
+   snapshots, which briefly suggested a `bst show`-per-element +
+   transitive-reduction approach was needed - it is not). Each returns
+   the element's own **direct** dependencies, not a transitive closure.
+2. **That value can contain embedded newlines** when an element has
+   more than one dependency of that type (rendered as one `"- name"`
+   line per dependency). A naive line-by-line stdout parser silently
+   corrupts any multi-dependency element's record. `bst_show_to_graph.py`
+   works around this by delimiting the whole record set with ASCII
+   `\x1e`/`\x1f` (record/field separator) control characters baked
+   into the `--format` string itself, and parsing the full stdout blob,
+   never splitting on `\n`.
+3. **`bst show`'s progress/log output goes to stderr, never stdout** -
+   confirmed by capturing both streams separately. `--format` output on
+   stdout is clean (no interleaved log lines), so the parser doesn't
+   need to filter anything out of stdout.
+4. **Junction-qualified element names round-trip identically** between
+   `bst show`'s `%{name}` and a real `bst build`'s own log lines (both
+   render `junction-name:element-name` the same way, confirmed by
+   actually running `bst build` and diffing the log line against `bst
+   show`'s output for the same element). This was the single highest-risk
+   unknown before implementing `P4-08`: if `tools/bst_log_to_chrome_trace.py`
+   (trace side) and `bst_show_to_graph.py` (graph side) disagreed on
+   how to spell a junctioned element's name, `graph.json`'s
+   `dependencies`/`trace.json`'s `task_key.element_uid` would silently
+   fail to join, with no obvious error. They agree - no changes were
+   needed to the existing log converter for this.
+5. **A dependency with BuildStream's default type (`all`, i.e. both
+   build and runtime) appears in *both* `%{build-deps}` and
+   `%{runtime-deps}`** for the same element. `bst_show_to_graph.py`
+   collapses this to a single `dependency_type: "build"` edge (a strict
+   superset of what `"runtime"` alone would constrain) rather than
+   emitting two edges - `graph/v9`'s schema (Part 32.2) models one type
+   per edge. The parenthetical that used to follow - "nothing
+   downstream reads `dependency_type` as a genuine tri-state today
+   anyway" - was true when written and stopped being true with `P4-11`:
+   `bga/graph/edg.py`'s `compute_critical_path`/`compute_slack`,
+   `bga/normalize/timestamps.py`'s ready-time gating and
+   `bga/analyzer.py`'s `explicit_predecessors` all exclude
+   `runtime`-only edges now, and `P4-11` found a real correctness bug in
+   a certified floor while doing it. See the `dependency_type`'s effect
+   on analysis section below.
+
+   The collapse itself still holds and is still deliberate: `"build"` is
+   a strict superset of what `"runtime"` alone would constrain, so an
+   `all` edge modelled as `build` gates exactly what it should.
+6. **`%{key}` (cache key) is available even before a build runs** (a
+   `waiting`-state element already has a real key), but the docs' own
+   caveat - "if all sources are consistent" - is real: an element with
+   an unpinned/unresolvable source ref can return an empty key. Maps to
+   `cache_key: null`, never a fabricated placeholder.
+7. **BuildStream's `git` source plugin is not bundled** in the base
+   `buildstream` PyPI package as of 2.x - it's in the separate
+   `buildstream-plugins` package. `tests/fixtures/bst_show_project/`
+   deliberately uses only `kind: local` sources so its tests need no
+   network access and no extra plugin package; a project using `git`
+   sources needs `buildstream-plugins` installed too.
+8. **`bst show`/`bst build` need a working sandbox backend (bubblewrap,
+   the `bwrap` binary) even to run `show`** (static introspection) -
+   BuildStream's platform initialization is unconditional. `apt install
+   bubblewrap` (or the equivalent for your OS) is required alongside
+   the `bst` optional extra, not just `pip install buildstream`.
+9. **`--format` also has `%{kind}`** (Since: BuildStream 2.6, present in
+   the real 2.7.0 install this was verified against) - the element's own
+   BuildStream plugin type (e.g. `import`, `manual`, `junction`,
+   `autotools`). Added to `bst_show_to_graph.py`'s captured fields as
+   `element_kind` on `Element` (`bga/ingest/models.py`) - an additive
+   extension beyond graph/v9's spec-minimal schema, same precedent as
+   `dependency_type`. Not read by any analysis consumer yet; see `P4-12`
+   for planned kind-based heuristics (raised directly by the user while
+   reviewing this tool's output).
+
+## Empirically confirmed facts about real BuildStream *logs* (2026-08-14, against real `bst` 2.7.0)
+
+Confirmed by actually running real builds (success and failure cases)
+against `tests/fixtures/bst_show_project/` and a throwaway `kind: manual`
+project, and by reading BuildStream's own source
+(`buildstream/_frontend/widget.py`, `buildstream/_context.py`,
+`buildstream/data/userconfig.yaml`) - not assumed from the log line
+*shape* alone (`[elapsed][hash][action:element] STATUS message`), which
+several wrong assumptions turned out to hide behind:
+
+1. **The status word for a real failure is `FAILURE`, not `FAIL`.**
+   `tools/bst_log_to_chrome_trace.py`'s original `BST_LOG_RE` alternation
+   only had `FAIL` - a real build failure never matched at all, in
+   *either* wrapped or raw mode, silently leaving the task "active"
+   forever (no `E` event ever emitted). Invisible against
+   `tests/fixtures/synthetic_multi_subproject/`, whose synthetic model
+   never generates a failing build. Fixed by adding `FAILURE` to the
+   alternation (kept `FAIL` too, untested but harmless to tolerate).
+2. **START/SUCCESS message text is not a phase description - it's a log
+   file path** (e.g. `bst-show-test-project/base/4a9059d4-build.log`)
+   for the *outer* per-(hash, action) bracket, confirmed directly in
+   BuildStream's own source: "START and SUCCESS messages are expected to
+   have no useful information in the message text, so we display the
+   logfile name for these messages" (`_frontend/widget.py`). The
+   synthetic fixture's own adapter (`tests/fixtures/synthetic_multi_subproject/adapter.py`)
+   recovers task kind by pattern-matching invented phase text ("Running
+   build commands") - that only works because the synthetic model
+   generates log lines that way; it is not how a real BuildStream log
+   looks, and would not work against one. The real, general adapter
+   (`tools/chrome_trace_to_bga_trace.py`) instead reads the `action` word
+   (`track`/`fetch`/`build`/`pull`/`push`) already present in the log
+   line's own `[hash][action:element]` bracket - `bst_log_to_chrome_trace.py`
+   now carries it straight through into each Chrome Trace event's
+   `args.action` (and `args.element`), an additive change verified
+   byte-for-byte harmless to the pinned synthetic-fixture test (it never
+   reads `args` on `B` events at all).
+3. **A single real task emits one *outer* START/terminal bracket plus one
+   or more *nested* START/terminal pairs for internal sub-phases**
+   ("Staging sources", "Caching artifact", …), all sharing the *same*
+   hash+action key. Confirmed on a real build:
+   ```
+   [--:--:--][4a9059d4][build:base.bst] START   base/4a9059d4-build.log
+   [--:--:--][4a9059d4][build:base.bst] START   Staging sources
+   [00:00:00][4a9059d4][build:base.bst] SUCCESS Staging sources
+   [--:--:--][4a9059d4][build:base.bst] START   Caching artifact
+   [00:00:00][4a9059d4][build:base.bst] SUCCESS Caching artifact
+   [00:00:00][4a9059d4][build:base.bst] SUCCESS base/4a9059d4-build.log
+   ```
+   The pre-existing "a new START force-closes whatever's already open for
+   this hash" handling would have produced 2-3 spurious short spans per
+   real build task instead of one correct one - a real correctness bug
+   for real logs (both wrapped and raw), invisible against the synthetic
+   fixture (whose model only ever emits one START per task, no nesting).
+   Fixed with a per-(hash, action) depth counter in `handle_bst_event`:
+   only the depth 0→1 `START` opens a span and only the matching depth
+   1→0 terminal status closes it - verified byte-identical on the
+   synthetic fixture (it never nests, so the counter never exceeds 1
+   there) and verified against the real nested sequence above (exactly
+   one span, `Status`/`Message` reflecting the *final*, outer terminal
+   event even when an inner sub-phase failed along the way).
+4. **BuildStream's real concurrency flags are `--builders`/`--fetchers`/`--pushers`**
+   (global flags, before the subcommand) - `--max-jobs` is a *different*
+   concept ("Number of parallel jobs allowed for a given build task",
+   confirmed in `_context.py`: `effective_build_max_jobs`, e.g. `make -j`
+   parallelism *within* one task), not what `run-context/v9`'s `max_jobs`
+   field means. `resource_capacities`/`max_jobs` map as: `PROCESS =
+   builders`, `DOWNLOAD = fetchers`, `UPLOAD = pushers`, `max_jobs =
+   builders` - confirmed against Part 27's own critical-path resource-mix
+   table (`FETCH / PULL / DOWNLOAD`, `PUSH / UPLOAD`) for the PULL/PUSH
+   mapping specifically.
+5. **BuildStream's bundled scheduler defaults** (`buildstream/data/userconfig.yaml`,
+   used whenever no `--builders`/`--fetchers`/`--pushers` override and no
+   user config file overrides them either): `fetchers: 10`, `builders:
+   4`, `pushers: 4`. `tools/bst_log_to_chrome_trace.py`'s `bst_max_jobs`
+   default (`4`) predates this investigation and turned out to already
+   match the real default by coincidence - now explicitly justified
+   rather than an unexplained guess, and extended with real
+   `bst_fetchers`/`bst_pushers` defaults too.
+6. **BuildStream prints its own already-resolved scheduler limits
+   unconditionally**, as standalone header lines (`Maximum Fetch Tasks:
+   10`, `Maximum Build Tasks: 4`, `Maximum Push Tasks: 4` - no
+   `[hash][action:element]` bracket at all, unlike per-task lines).
+   Reading these directly (`get_scheduler_config()`) is more robust than
+   re-parsing `--builders`/`--fetchers`/`--pushers` CLI flags ourselves,
+   since BuildStream has already applied whatever precedence it uses
+   (CLI flag > user config > bundled default) - `tools/bst_run_context.py`
+   (P4-09) relies entirely on this rather than re-deriving precedence.
+7. **BuildStream prints the real, resolved target list unconditionally**
+   too: `Targets:       base.bst, base2.bst` (comma-space-separated,
+   present in both wrapped and raw logs since it comes from BuildStream
+   itself, not a wrapper). This is what `tools/bst_extract_run.py`
+   (P4-10) uses for target derivation - more robust than parsing a
+   wrapper's own shell command line (which only exists for wrapped logs
+   and needs shell-quoting-aware parsing).
+8. **`local` sources still run a (fast) FETCH phase** in real BuildStream
+   - they are not skipped just because there's no network fetch to do.
+   Confirmed on `tests/fixtures/bst_show_project/` (all `kind: local`):
+   every element still gets a real `fetch:` bracket in the log.
+9. **A fully-cached build (nothing to do) produces *no* per-task log
+   lines at all** - not even a `CACHED` status line for the queue -
+   confirmed by rebuilding an already-built project: the "Pipeline"
+   summary shows `cached` for every element, and the queue-processing
+   section is entirely empty. `CACHED`/`SKIPPED`/`SKIP` remain in
+   `BST_LOG_RE`'s status alternation for tolerance (plausible for other
+   queue actions, e.g. artifact `pull`) but were not positively confirmed
+   the way `FAILURE` was.
+10. **Elapsed-time precision without `--verbose`'s microsecond mode is
+    1-second resolution** (`HH:MM:SS`, no fractional part) - a build
+    fast enough to complete within one second produces *every* event at
+    the same elapsed value, and therefore (in raw mode) the same absolute
+    timestamp. This is a real, inherent precision limit of raw-log
+    timestamps for fast builds, not a bug - `tests/fixtures/bst_show_project/`'s
+    own real end-to-end test run produces 0-duration spans for exactly
+    this reason. A wrapped log doesn't have this problem (it anchors on
+    the wrapper's own per-line UTC timestamp, not BuildStream's elapsed
+    prefix).
+11. **BuildStream logs a real "Query cache" activity - at default
+    verbosity, no `--verbose` needed - and it is currently dropped by
+    the ingestion pipeline entirely.** Confirmed against a real `bst
+    build` (BuildStream 2.7.0, from-scratch one-element project):
+    ```
+    [--:--:--][        ][    main:core activity   ] START   Query cache
+    [00:00:00][        ][    main:core activity   ] SUCCESS Query cache
+    ```
+    alongside sibling `main:core activity` brackets for `Build`,
+    `Loading elements`, `Resolving elements`, `Initializing remote
+    caches`. This is BuildStream's own `Stream.query_cache()`
+    (`_stream.py`), real work (checking every planned element's cache-hit
+    status before any FETCH/BUILD/PULL/PUSH work begins) with a real
+    elapsed cost - but it's one aggregate, non-element-scoped line, and
+    `tools/chrome_trace_to_bga_trace.py` already, deliberately, drops
+    `action="main"` events as "not a real element task" (its own
+    docstring). So `bga` has zero visibility into this cost today - not
+    "measured as negligible," genuinely never measured. See `P4-14`.
+12. **`action="main"` is not exclusive to the blank-hash pipeline-level
+    phases above - real commands beyond `bst build` reuse it for
+    genuinely different things.** Confirmed against real BuildStream
+    2.7.0 runs of `bst source track`, `bst source checkout`, and `bst
+    artifact checkout`:
+    - `bst source track` wraps its own pipeline-level phases in a
+      `"Track"` bracket, not `"Build"` - both are real, both span the
+      entire invocation and are excluded from `pipeline_overhead`
+      (`WrapperTraceConverter._MAIN_ACTIVITY_WRAPPER_NAMES`); the
+      original `P4-14` implementation only excluded `"Build"`, a real
+      bug found and fixed while extending this.
+    - `bst source checkout`'s `"Staging sources"` and `bst artifact
+      checkout`'s `"Staging dependencies"`/`"Integrating sandbox"`/
+      `"Checking out files in ..."` are also logged under
+      `action="main"` - but with the checked-out element's own *real*
+      hash, not the blank pipeline-level one. The original `P4-14`
+      implementation routed *all* `action="main"` events into the
+      blank-hash-only `pipeline_overhead` bucket regardless of hash,
+      which would have mis-swept this genuinely per-element data into
+      the wrong bucket - also found and fixed (`handle_bst_event` now
+      only routes there when `hash_val` is blank).
+    - Neither `bst source checkout` nor `bst artifact checkout` has any
+      outer wrapper bracket at all - their logs start directly with
+      `"Loading elements"`.
+    See `tools/bst_checkout_cost.py` and
+    `docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md` for what this
+    per-element checkout data is used for.
+13. **Run identity (I8, `P1-37`) proves extraction-time consistency, not
+    build-time correctness - a real, named limitation, not an
+    unfalsifiable guarantee.** `tools/bst_extract_run.py` embeds one
+    `manifest_hash` (project identity + targets + scheduler config +
+    project git commit + `project.refs` content hash, all real inputs
+    available *at extraction time* - `project_identity` added by `UX-07`,
+    see fact 15 below) into all three of `run-context.json`/`graph.json`/
+    `trace.json`, and `bga`'s own loader cross-checks they agree. This
+    closes the practical gap the identity invariant exists for - a
+    `trace.json` accidentally copied in from an unrelated run is now
+    caught - but it cannot detect a determined mismatch between what
+    actually ran and what's on disk *right now*: the analyzed build
+    already happened, potentially much earlier, and this pipeline only
+    ever reads an already-produced log plus the project directory's
+    *current* state. If the project's git commit or `project.refs`
+    changed between the real `bst build` and this extraction, the
+    manifest would reflect the *current* state consistently across all
+    three files - internally consistent, but not proof that state
+    matches what the build actually saw. Closing that gap for real would
+    require instrumenting the `bst build` invocation itself to record
+    its own identity at the moment it runs, not just what a later
+    extraction observes - a materially larger scope change (P4-13's
+    `--strict` project.refs check has the same fundamental boundary, for
+    the same reason). See `docs/backlog/tasks/P1-37-run-identity-not-captured-or-enforced.md`.
+14. **The two documented run-context producer paths (`tools/bst_run_context.py`
+    directly, and `tools/bst_extract_run.py`'s coordinated flow) had
+    silently diverged**: `native_max_jobs`/`host_cpu_count` (`UX-12`) and
+    `cpu_budget` (`UX-15`) were added only to `bst_extract_run.py`'s
+    inline run-context assembly, never to `bst_run_context.py`'s -
+    despite this doc presenting both as equally valid ways to produce
+    `run-context.json`. Fixed (`UX-18`) by extracting the shared piece
+    into `tools/_run_context_common.py` (`host_cpu_count()` +
+    `add_cpu_capacity_fields()`), which both tools now call - a future
+    addition to one automatically reaches the other. `bst_run_context.py`
+    gained matching `--native-max-jobs`/`--cpu-budget` CLI flags.
+    `UX-29` later made `native_max_jobs` **auto-extracted** in both
+    producers rather than operator-only: a wrapped log's own first
+    line records the real invocation
+    (`Executing command: bst --builders 4 --max-jobs 4 build all.bst`),
+    which is where `--max-jobs` actually lives - BuildStream's own
+    `Maximum ... Tasks:` header never reports it. An explicit
+    `--native-max-jobs` still overrides, and the new
+    `native_max_jobs_source` field records which of the two the
+    published value came from. Raw logs have no invocation line, so
+    they still need the flag.
+15. **`run_identity.manifest_hash` collided for two different real
+    BuildStream projects living as sibling directories under the same
+    git commit** - confirmed against `examples/04-critical-path-optimization`
+    (baseline) vs. its own `optimized/` subdirectory, both real, both
+    built for real, both hashing identically since the manifest only
+    ever recorded `project_git_commit` (identical for both - same repo,
+    same commit) and `targets` (identical too - both use the same
+    `all.bst` umbrella-target convention). Fixed (`UX-07`) by adding
+    `project_identity` to the manifest: the project directory's path
+    relative to its own git repository root (portable across clones),
+    falling back to its resolved absolute path outside a git repository
+    entirely. See `docs/backlog/scenarios/UX-07-run-identity-collides-across-sibling-projects.md`
+    for the real before/after hash values.
+16. **The oversubscription guard covered CPU only - no memory/swap
+    dimension existed anywhere in `bga`** (`UX-21`) - a real, independent
+    failure mode from CPU contention (pushing a build host into swap
+    thrashes the whole machine, not just the build). Added
+    `memory_budget_mb`/`estimated_job_memory_mb` to run-context/v9 as an
+    additive extension, same shared-helper pattern `UX-18` established
+    (`tools/_run_context_common.py`'s `add_memory_capacity_fields()`, now
+    called by both producer tools) - both purely operator-declared, no
+    auto-detection tier at all (unlike `host_cpu_count`'s CPU-side
+    counterpart), since no real per-task memory measurement source
+    exists in this pipeline. `bga/analyzer.py`'s new
+    `_check_memory_oversubscription` compares `builders x
+    native_max_jobs x estimated_job_memory_mb` against
+    `memory_budget_mb`, reported as its own `memory_oversubscription`
+    violation - independent of, and never conflated with,
+    `_check_process_oversubscription`'s own CPU-core check.
+17. **A real per-element `--max-jobs`-equivalent override is not what
+    two plausible-looking mechanisms would suggest** (`UX-22`, confirmed
+    against a real BuildStream 2.7.0 install): a `variables: max-jobs:`
+    block inside an element's own body is rejected outright by BuildStream
+    itself ("invalid redefinition of protected variable") - not a valid
+    override mechanism at all, despite `max-jobs` genuinely being a
+    resolvable project variable in other contexts. `bst show`'s
+    `%{vars}` format symbol, which dumps every resolved variable for an
+    element as one YAML block, reports `max-jobs` there too - but always
+    the *project-wide default*, identical for every element regardless
+    of any per-element override, confirmed by comparing an overridden
+    and a non-overridden element side by side. There is also no
+    standalone `%{max-jobs}` format symbol at all - it isn't substituted,
+    prints back as the literal text `%{max-jobs}`. The real mechanism is
+    `public: bst: max-jobs:` (BuildStream's own per-element build-
+    metadata block) - visible via `bst show`'s `%{public}` symbol, and
+    genuinely absent (not defaulted to any value) for an element that
+    doesn't override it. `tools/bst_show_to_graph.py` now captures this
+    as `Element.max_jobs`; `tests/fixtures/bst_show_project/elements/manual.bst`
+    carries a real override for end-to-end test coverage.
+
+## Why a second, separate trace/v9 adapter
+
+`tests/fixtures/synthetic_multi_subproject/adapter.py` stays exactly as
+it is - it's correct for what it does (converting the *synthetic*
+model's own Chrome Trace output, which uses invented phase-message text
+by construction) and is pinned by `tests/test_synthetic_multi_subproject.py`.
+`tools/chrome_trace_to_bga_trace.py` is a new, general, real tool built
+alongside `P4-10` specifically because that fixture-specific approach
+(recover task kind from message text) does not work against a real
+BuildStream log at all (see fact 2 above) - a genuinely different tool
+for a genuinely different, real-data problem, not a refactor of the
+fixture-only one.
+
+## `dependency_type`'s effect on analysis - fixed (`P4-11`)
+
+`DependencyEdge.dependency_type` (`bga/ingest/models.py`) is populated
+correctly by `bst_show_to_graph.py`, and **every gating consumer in
+`bga/` now respects it** - `bga/normalize/timestamps.py`'s ready-time
+gating (`compute_ready_times`/`validate_ordering`/`clamp_task_starts`),
+`bga/analyzer.py`'s `explicit_predecessors` (blame-chain responsible-
+predecessor selection), and `bga/graph/edg.py`'s
+`compute_critical_path`/`compute_slack` (Part 14.1's certified T∞
+floor) plus the Monte-Carlo criticality sampling that reuses the same
+concept (Part 26) now all exclude `runtime`-only edges. Per BuildStream's
+own semantics (confirmed via its docs): a `build`-type edge genuinely
+gates the successor's build start (the dependency's product must be
+staged first); a `runtime`-only edge does not - "an element's runtime
+dependencies are not available to the element at build time."
+
+**Found a more severe issue than originally scoped while verifying**:
+`compute_critical_path` was summing a `runtime`-only edge's duration
+into T∞,observed as if it gated ordering - directly contradicting Part
+14.1's own certification claim ("no schedule ... can complete faster
+than this value"). This wasn't just a ready-time-gating gap, it was a
+genuine correctness bug in a *certified floor*. Fixed via an
+`exclude_dependency_types` parameter on `build_element_graph`/
+`compute_in_out_degree` (default unfiltered, so every other, genuinely-
+structural caller - reachability, blast radius, leaf/deferrability,
+depth, dominators, Part 24/25 - is untouched).
+
+Purely-structural analysis deliberately still reads the full,
+unfiltered graph - a `runtime`-only edge is real and should still count
+for "what's affected if this changes," it just shouldn't force the
+successor's *build* to wait or inflate a certified scheduling floor.
+
+## A note on time-of-extraction consistency
+
+`graph.json`'s cache keys and dependency structure reflect the project
+state *at the moment `bst show` runs*. If graph extraction happens at a
+different time/commit than the build being analyzed, cache keys can
+silently stop matching what was actually built, corrupting cold-floor
+duration matching (Part 15.2) with no error raised anywhere.
+`tools/bst_extract_run.py` (P4-10) does a best-effort check for this: if
+the project directory is a git repository, it warns (does not fail) when
+the working tree is dirty (`git status --porcelain` non-empty) - the
+strongest signal available post-hoc, since a real BuildStream log
+carries no commit hash to compare against directly. This is a real,
+acknowledged limitation, not a full guarantee: a *clean* tree can still
+be at the wrong commit relative to what was actually built if extraction
+runs later against a since-moved branch. The most reliable fix is
+structural, not detectable after the fact - run graph extraction from
+the same checkout as the build it's paired with, ideally the same CI
+step, not as an independently-schedulable one.
+
+A stronger, opt-in check is possible for projects using BuildStream's
+`ref-storage: project.refs` (centralizing every trackable element's
+resolved source ref into one file, confirmed real against BuildStream
+2.7.0) - `--strict` (P4-13), done. **Real limitation, still true even
+with `--strict` built: this only works for projects that opt into
+`project.refs` and have at least one trackable-ref source** -
+`ref-storage: inline` (the default) and purely `kind: local` projects
+(like `tests/fixtures/bst_show_project/`) have no single file this
+mechanism can hash/compare, and `--strict` fails loudly rather than
+silently falling back to the weaker whole-tree check for them (confirmed
+real: `tools/bst_extract_run.py /path --strict` against
+`tests/fixtures/bst_show_project/` fails naming `ref-storage:
+project.refs` explicitly). When usable, `--strict` fails loudly - not
+just a warning - unless `project.refs` itself has zero uncommitted
+changes relative to the project's own git history; regardless of
+`--strict`, a real `project.refs` present at extraction time has its
+SHA-256 embedded into `run-context.json`'s new `project_refs_provenance`
+field (additive, no schema collision - confirmed against Part 32.1) as a
+permanent record for later drift detection.
+
+## A note on cache-query and sandbox/checkout overhead visibility
+
+Three related, unmeasured gaps were raised by the user and researched
+against a real BuildStream 2.7.0 install (source-level confirmation, see
+fact 11 above and `docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md`
+/ `docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md`):
+
+1. **Per-element/pipeline-level cache-query cost is real and material** -
+   confirmed (fact 11) and, since, actually measured: a real
+   ~2000-element fully-cached rebuild showed `Resolving elements` +
+   `Query cache` were 87% of total wall time. `P4-14` is done - see its
+   Verification Log. `bga analyze`/`bga graph` now surface this as a
+   "Pipeline Overhead" report block.
+2. **`bst artifact checkout` on a `kind: stack` element genuinely
+   batches sandbox setup and CAS export into one operation**, instead of
+   one per checked-out element - confirmed directly from `_stream.py`'s
+   `checkout()` (`_prepare_sandbox()`/`_export_artifact()` called once
+   for the whole scope). **Important real caveat, also measured**: this
+   is *not* automatically a net win - a consolidated target's own
+   resolved closure can cost *more* pipeline overhead than several
+   narrow individual checkouts combined, if that closure is much larger
+   than what was actually needed (a real 1500-element measurement showed
+   exactly this - see `P4-15`'s Verification Log). `tools/bst_checkout_cost.py`
+   (a deliberately standalone tool, not part of `bga`'s core `analyze`
+   pipeline - a checkout invocation shares no horizon with a build
+   trace) reports the real, measured comparison for a given pair of
+   checkout logs rather than assuming the sign. `bga`'s own report also
+   gained a purely structural, non-timing advisory (`bga graph`'s
+   "Stack-Consolidation Candidates", P4-15 Direction 1): groups of
+   elements sharing the exact same immediate consumers, with no `stack`
+   already covering them.
+3. **Splitting a project into subprojects/junctions does *not* reduce
+   per-element scheduler overhead** - checked against BuildStream's own
+   queue implementations (`CacheQueryQueue`, `BuildQueue`, etc.), which
+   process every planned element identically regardless of which
+   `project.conf`/junction declares it. This corrects part of the
+   original brainstorm rather than confirming it - see `P4-15`'s
+   Background for the full reasoning. Junctions are an
+   organizational/versioning tool, not a runtime-overhead-reduction
+   mechanism, on the evidence gathered so far.

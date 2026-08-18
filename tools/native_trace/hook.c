@@ -1,5 +1,5 @@
 /* LD_PRELOAD process-lifecycle hook for UX-11's native-build-system
- * tracer - see docs/scenarios/UX-11-native-build-system-profiler-tool.md
+ * tracer - see docs/backlog/scenarios/UX-11-native-build-system-profiler-tool.md
  * for the real prototype this was validated against (119 real trace
  * lines from one `cmake`+`make`+`gcc` element build, real evidence of
  * -j4 concurrency).

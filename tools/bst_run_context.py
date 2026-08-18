@@ -2,7 +2,7 @@
 """Produce run-context/v9 JSON (Part 32.1) from a real BuildStream
 invocation's own log - the second of the two producer pieces P4-08 split
 off (graph.json, from `bst show`, is done; this is the run-context.json
-side). See docs/ingestion-pipeline.md for the full design record.
+side). See docs/spec/ingestion-pipeline.md for the full design record.
 
 Unlike graph.json, run-context.json has no `bst show` equivalent - `bst
 show` is purely static project introspection with no notion of runtime
@@ -37,7 +37,7 @@ log instead:
       against a fabricated capacity. No real CPU-measurement source
       (cgroup accounting, /proc sampling) exists in this ingestion
       pipeline yet. See
-      docs/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
+      docs/backlog/tasks/P1-33-cpu-accounting-conflates-capacity-with-measurement.md.
   native_max_jobs / host_cpu_count / cpu_budget - UX-12/UX-15 fields,
       shared with tools/bst_extract_run.py via
       tools/_run_context_common.py (UX-18, so this standalone producer

@@ -37,7 +37,7 @@ SRC = os.path.join(HERE, "files", "src")
 # intent, but with real work; lib-a..d are a genuine 4-way fan-out, each
 # with multiple files so `make -j` (real intra-element parallelism) has
 # real work to distribute - the whole point of this round's experiment
-# (see docs/scenarios/UX-09-builders-max-jobs-joint-optimization.md).
+# (see docs/backlog/scenarios/UX-09-builders-max-jobs-joint-optimization.md).
 MODULE_CONFIG = {
     "core": (4, 5000),
     "lib-a": (2, 4000),

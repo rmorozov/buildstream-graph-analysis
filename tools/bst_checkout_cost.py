@@ -19,13 +19,13 @@ Two real, confirmed-via-source (BuildStream 2.7.0 `_stream.py::checkout()`)
 facts this tool relies on:
 - Checking out N elements as N separate invocations pays BuildStream's
   own pipeline-level overhead (Loading elements/Resolving elements/Query
-  cache - see docs/tasks/P4-14-cache-query-overhead-visibility.md) once
+  cache - see docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md) once
   *per invocation* - N times total.
 - Checking out one `stack` element depending on all N collapses this to
   a single sandbox-setup/export ("Staging dependencies"/"Integrating
   sandbox"/"Checking out files in ...", all logged under the stack
   element's own hash) plus one payment of the pipeline-level overhead -
-  see docs/tasks/P4-15-stack-consolidation-heuristic.md's Background.
+  see docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md's Background.
 
 Both `bst source checkout`'s "Staging sources" and `bst artifact
 checkout`'s "Staging dependencies"/"Integrating sandbox"/"Checking out
@@ -70,7 +70,7 @@ def _per_element_checkout_costs(trace_events: List[dict]) -> Dict[str, int]:
     WrapperTraceConverter's own handle_bst_event, which routes those
     separately into pipeline_overhead). These phases are confirmed
     non-overlapping per element (each fully closes before the next opens
-    - see docs/tasks/P4-15-stack-consolidation-heuristic.md), so a
+    - see docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md), so a
     simple per-tid stack is enough to pair them correctly.
     """
     costs: Dict[str, int] = {}
@@ -136,7 +136,7 @@ def compare(individual_log_paths: List[str], consolidated_log_path: str, log_for
             # invocation's 1) is actually a net win depends entirely on
             # how large *each* invocation's own resolved closure is -
             # confirmed by real measurement (see
-            # docs/tasks/P4-15-stack-consolidation-heuristic.md's
+            # docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md's
             # Verification Log): consolidating under a `stack` that pulls
             # in a much larger closure than any individual element needed
             # can easily cost *more* pipeline overhead overall, not less.

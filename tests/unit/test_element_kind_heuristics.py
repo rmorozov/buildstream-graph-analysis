@@ -2,7 +2,7 @@
 element_kind annotations on diagnostic signal listings, structural-kind
 flagging (linked with P4-15 Direction 2), and the `bga graph --by-kind`
 aggregate summary view. See
-docs/tasks/P4-12-element-kind-based-heuristics.md.
+docs/backlog/tasks/P4-12-element-kind-based-heuristics.md.
 
 Two layers, matching tests/unit/test_bst_show_to_graph.py's convention:
 1. A real, `bst`-gated end-to-end check that the extended
@@ -31,7 +31,7 @@ BST_AVAILABLE = shutil.which("bst") is not None
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_fixture_has_four_diverse_element_kinds():
     from tools.bst_show_to_graph import extract_graph
 
@@ -182,7 +182,7 @@ def test_by_kind_flag_does_not_leak_into_other_sections(analyzed_result):
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
+@pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_cli_graph_by_kind_end_to_end(tmp_path):
     """Real CLI invocation, real subprocess - `bga graph RUN --by-kind`
     against the synthetic-trace run dir (real bst not needed for the CLI

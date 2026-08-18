@@ -20,7 +20,7 @@
 # environment's egress proxy refuses (`403` to `CONNECT`), and its remote
 # artifact/source cache at `cache.freedesktop-sdk.io:11001` resets the TLS
 # handshake through the same proxy. Both are recorded with their real
-# error text in `docs/scenarios/UX-53-*.md`. A GitHub-hosted runner has
+# error text in `docs/backlog/scenarios/UX-53-*.md`. A GitHub-hosted runner has
 # unrestricted egress, so the capture happens here and the analysis
 # happens against the artifact this uploads.
 #
@@ -204,7 +204,7 @@ jobs:
         run: |
           pip install -e ".[dev]"
           # Pinned: the version every capture in this repository was taken
-          # with, and the one docs/architecture.md's claims are checked
+          # with, and the one docs/design/architecture.md's claims are checked
           # against. dulwich/requests are freedesktop-sdk's own plugin
           # dependencies (git and docker sources).
           pip install 'BuildStream==2.7.0' 'buildstream-plugins==2.7.0' dulwich requests

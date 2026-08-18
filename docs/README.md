@@ -1,0 +1,104 @@
+# Documentation
+
+Start here. Each folder answers one kind of question; if you know which
+question you have, you know which folder to open.
+
+| I want to… | go to |
+|---|---|
+| **use the tool** on a project | [`guides/`](#guides) |
+| know **what must be true** of its output | [`spec/`](#specification-and-contracts) |
+| understand **why it works this way** | [`design/`](#design) |
+| **work on this repository** | [`contributing/`](#contributing) |
+| see **what was found, and when** | [`audits/`](#audits) |
+| find **what is still open** | [`backlog/`](#backlog) |
+
+New to `bga`? The [project README](../README.md) has a 30-second start
+that needs no BuildStream. Then
+[`guides/real-project.md`](guides/real-project.md) is the end-to-end
+path on a real project.
+
+---
+
+## Guides
+
+How to use the tool. These are the documents that tell you what to type.
+
+| document | what it covers |
+|---|---|
+| [`guides/cli.md`](guides/cli.md) | every command, flag and exit code |
+| [`guides/real-project.md`](guides/real-project.md) | a real project end to end: capture, read, fix, prove, gate |
+| [`guides/real-project-capture.md`](guides/real-project-capture.md) | how the third-party capture workflow is built and why |
+| [`guides/optimization-walkthrough.md`](guides/optimization-walkthrough.md) | a worked example: find a critical-path problem and fix it |
+| [`guides/optimization-walkthrough-06.md`](guides/optimization-walkthrough-06.md) | the macro-then-micro cycle across both planes |
+
+## Specification and contracts
+
+What must be true. The ground truth for what every number means.
+
+| document | what it covers |
+|---|---|
+| [`spec/specification.md`](spec/specification.md) | the v9 specification — Parts 0-40, invariants `I1`-`I13` |
+| [`spec/ingestion-pipeline.md`](spec/ingestion-pipeline.md) | how real BuildStream output maps to the schema, with the empirically confirmed facts behind it |
+
+## Design
+
+Why it is this way. Arguments and structure, not instructions.
+
+| document | what it covers |
+|---|---|
+| [`design/architecture.md`](design/architecture.md) | the two analysis planes, and every extension beyond the spec |
+| [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
+
+## Contributing
+
+How to work on this repository.
+
+| document | what it covers |
+|---|---|
+| [`contributing/style-guide.md`](contributing/style-guide.md) | what documentation here has to do, and the two rules that are enforced by tests |
+| [`contributing/fixing-guide.md`](contributing/fixing-guide.md) | the mandatory entry point for picking up a backlog task |
+
+## Audits
+
+What was found, and when. Append-only by nature: each round is a
+timestamped record, not a statement of current state.
+
+[`audits/round-2.md`](audits/round-2.md) ·
+[3](audits/round-3.md) ·
+[4](audits/round-4.md) ·
+[5](audits/round-5.md) ·
+[6](audits/round-6.md) ·
+[7](audits/round-7.md) ·
+[8](audits/round-8.md) ·
+[9](audits/round-9.md) ·
+[10](audits/round-10.md) ·
+[the original spec-compliance review](audits/spec-compliance-review.md)
+
+## Backlog
+
+What is still open, and the record of what closed.
+
+| document | what it covers |
+|---|---|
+| [`backlog/scenarios/README.md`](backlog/scenarios/README.md) | the `UX-*` backlog — usability and workflow work, each item with real before/after evidence |
+| [`backlog/tasks/`](backlog/tasks/) | the `P*` backlog — spec-compliance work, complete |
+| [`backlog/progress-tracker.md`](backlog/progress-tracker.md) | the `P*` tracker, closed 2026-08-15 |
+
+---
+
+## A note on how this tree is arranged
+
+Until round 11 these were sixteen loose files in `docs/`, and
+`design/directions.md` had grown a "What the Nth round found" section
+per audit until it was 1237 lines — an argument about direction *and* a
+changelog. Rounds 2-6 now sit with rounds 7-10, where they always
+belonged.
+
+The rules that keep it this way, and the reason for each, are in
+[`contributing/style-guide.md`](contributing/style-guide.md). Two of
+them are enforced by
+[`tests/unit/test_docs_links_and_commands.py`](../tests/unit/test_docs_links_and_commands.py):
+every relative link must resolve, and no instructional document may tell
+a reader to run `python3 -m tools.<module>` <!-- docs-style: allow-direct-module -->
+instead of the installed
+`bga` alias.

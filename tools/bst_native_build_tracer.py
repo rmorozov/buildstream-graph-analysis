@@ -3,7 +3,7 @@
 element's "Running commands" span - `bga`'s own element-level log never
 records more than one START/SUCCESS pair per element, so a `make -j8`'s
 own internal parallelism (or lack of it) is otherwise invisible from
-outside the sandbox. See docs/scenarios/UX-11-native-build-system-
+outside the sandbox. See docs/backlog/scenarios/UX-11-native-build-system-
 profiler-tool.md for the full design history: five brainstormed
 options, an external contribution's `LD_PRELOAD` + `bwrap` PATH-shadow
 proxy design, a risk-reduction spike that resolved the cache-key risk
@@ -76,7 +76,7 @@ STATIC_BINARY_DISCLAIMER = (
     "own absence. Treat the process list below as a lower bound, not an "
     "exhaustive trace, unless the toolchain being profiled is known to "
     "be entirely dynamically-linked (the common case for a real C/C++ "
-    "gcc/clang toolchain - see docs/scenarios/UX-11-native-build-system-"
+    "gcc/clang toolchain - see docs/backlog/scenarios/UX-11-native-build-system-"
     "profiler-tool.md's Deep Experiment Findings)."
 )
 
@@ -555,7 +555,7 @@ def normalize_cmd_signature(cmd: str) -> str:
     this explicit Out-of-Scope boundary: real flag-order-insensitivity
     and fully general path/tmpfile stripping "needs its own design
     pass") - covers only the specific, real patterns this design has
-    directly confirmed cause spurious mismatches (see docs/scenarios/
+    directly confirmed cause spurious mismatches (see docs/backlog/scenarios/
     UX-23's own real `CMakeCXXCompilerABI.cpp` evidence: 6 independent
     per-element runs of the exact same compiler-capability probe). A
     command line with some other, unhandled source of incidental
@@ -2194,7 +2194,7 @@ def resolve_invocation_log_path(args) -> Optional[str]:
     log whose wall-clock timestamps the invocations are matched against.
     It used to run only when *both* flags were passed explicitly — and
     `--invocation-log` appeared **zero times** in `README.md`,
-    `docs/cli.md` and `docs/real-project-guide.md`, while the CI workflow
+    `docs/guides/cli.md` and `docs/guides/real-project.md`, while the CI workflow
     that produced every number those documents quote did pass it.
 
     So the documented capture command could not produce the documented

@@ -6,7 +6,7 @@ Why this exists
 ---------------
 Every finding in the first audit round (`UX-27`..`UX-40`) came from
 projects of 8-13 elements on one 4-core host, and
-`docs/design-directions.md` named scale as the thing no audit had probed.
+`docs/design/directions.md` named scale as the thing no audit had probed.
 The second round probed it with the output of this script and found four
 defects that were invisible at eleven elements - `UX-41` (level
 decomposition), `UX-42` (quadratic attribution), `UX-43` (choke-point
@@ -23,7 +23,7 @@ This synthesizes the *ingested* form - `graph.json`, `trace.json`,
 `run-context.json` - not a real build. It therefore exercises `bga`'s
 **analysis** side at scale and says nothing about whether the capture
 tools survive a thousand-element build (recorded as open item 6 in
-`docs/design-directions.md`).
+`docs/design/directions.md`).
 
 What makes it usable as evidence rather than noise is that the timeline
 is not random: durations are drawn per layer, and the schedule is a real

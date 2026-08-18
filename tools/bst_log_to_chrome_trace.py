@@ -22,7 +22,7 @@ conversion path (wrapped mode) from a BuildStream run log to the trace
 data bga ingests - see tests/test_synthetic_multi_subproject.py for the
 integration. tools/chrome_trace_to_bga_trace.py converts this tool's
 Chrome Trace output the rest of the way into trace/v9 (see
-docs/ingestion-pipeline.md).
+docs/spec/ingestion-pipeline.md).
 """
 import re
 import json
@@ -48,7 +48,7 @@ RETURN_CODE_RE = re.compile(r"^Return code:\s+(\d+)$")
 # 2.7.0) showed the actual status word is "FAILURE", not "FAIL" - the
 # original list never matched a real build failure at all, in either
 # mode; `FAIL` is kept for tolerance in case another version/context uses
-# it, but was never observed for real (see docs/ingestion-pipeline.md).
+# it, but was never observed for real (see docs/spec/ingestion-pipeline.md).
 BST_LOG_RE = re.compile(
     r"\[([^\]]*)\]\[([^\]]+)\]\[\s*(\w+):([^\]]+)\]\s+"
     r"(START|SUCCESS|FAILURE|FAIL|CACHED|SKIPPED|SKIP)\s+(.*)"
@@ -84,7 +84,7 @@ QUEUE_SUMMARY_RE = re.compile(
 # .ffffff (only shown with --verbose's microsecond mode), or the literal
 # "--:--:--" (elapsed not yet known - shown for the very first event(s)
 # before BuildStream's per-tick clock has advanced). Confirmed against a
-# real BuildStream 2.7.0 build (see docs/ingestion-pipeline.md) - never
+# real BuildStream 2.7.0 build (see docs/spec/ingestion-pipeline.md) - never
 # observed a nonzero elapsed value in short test builds, but the format is
 # also documented directly in BuildStream's own _frontend/widget.py
 # (render_time).
@@ -166,7 +166,7 @@ class WrapperTraceConverter:
         # per real task plus one or more *nested* START/terminal pairs for
         # internal sub-phases (e.g. "Staging sources", "Caching artifact"),
         # all under the identical hash+action key (confirmed against a real
-        # build - see docs/ingestion-pipeline.md). Only the depth 0->1 START
+        # build - see docs/spec/ingestion-pipeline.md). Only the depth 0->1 START
         # opens a trace span and only the matching depth 1->0 terminal
         # closes it; without this, every nested sub-phase would be
         # mistaken for a new phase and force-close/reopen a spurious span,
@@ -196,7 +196,7 @@ class WrapperTraceConverter:
         # A real `bst build` wraps them all in an outer "Build" bracket
         # (also action="main", also blank hash); `bst source track` wraps
         # them in "Track" instead (confirmed against a real build - see
-        # docs/ingestion-pipeline.md) - both spans the entire invocation
+        # docs/spec/ingestion-pipeline.md) - both spans the entire invocation
         # and are redundant with the horizon bga already computes
         # elsewhere, so both are excluded from the recorded list.
         # `bst source checkout`/`bst artifact checkout` have no such
@@ -223,7 +223,7 @@ class WrapperTraceConverter:
 
         # Raw-mode timestamp reconstruction state (UX-06) - see
         # _process_raw_line's own docstring for the real bug this fixes
-        # and docs/scenarios/UX-06-raw-log-timestamp-corruption.md for
+        # and docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md for
         # the full evidence.
         self._raw_watermark_us = None
         self._raw_task_depth = {}       # hash -> current nesting depth
@@ -554,7 +554,7 @@ class WrapperTraceConverter:
         start - not the immediately preceding sub-phase's). Naively
         anchoring every line to a single global session-start timestamp
         collapses concurrent/later tasks toward the start of the file -
-        see docs/scenarios/UX-06-raw-log-timestamp-corruption.md for the
+        see docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md for the
         real reproduction.
 
         Fix: reconstruct absolute timestamps from two real signals the

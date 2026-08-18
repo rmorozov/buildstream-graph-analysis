@@ -2,7 +2,7 @@
 run through the real (user-supplied) log-to-Chrome-trace converter, then
 through bga's full analysis pipeline end-to-end.
 
-This is the "large" test referenced in docs/fix-progress-tracker.md's
+This is the "large" test referenced in docs/backlog/progress-tracker.md's
 P3-01/P3-08 test-plan tasks - a bigger, more realistically-shaped fixture
 than the single 3-node linear chain in tests/test_e2e.py, and the first
 test to exercise tools/bst_log_to_chrome_trace.py for real.
@@ -222,7 +222,7 @@ def test_attribution_no_longer_produces_garbage_values(result):
     include a negative execution_on_chain_us and a dependency_wait_us of
     ~14.29e15us (~453,000 years) - not just an undercount, outright garbage.
     Three compounding root causes produced this (all fixed, see
-    docs/tasks/P1-03-attribution-identity-resource-chains.md): explicit
+    docs/backlog/tasks/P1-03-attribution-identity-resource-chains.md): explicit
     predecessor construction mismapping tasks for multi-task-kind elements,
     the blame-chain walk stopping dead on exactly-zero-wait links instead of
     continuing to the predecessor, and a terminal-task heuristic that

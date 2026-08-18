@@ -1,7 +1,7 @@
 """UX-78: the refusal the docs promise, actually refusing.
 
 `README.md` promised "a refusal if the two runs don't look like the same
-project or the same cache scenario" and `docs/real-project-guide.md`
+project or the same cache scenario" and `docs/guides/real-project.md`
 repeated it under a list of things the tool *guarantees* — while both
 checks only flagged. A golden fixture against a real run produced
 `Verdict: REGRESSED (+105668.8%)`, exit 0, and exit **4** under the gate.

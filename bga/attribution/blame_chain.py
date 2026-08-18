@@ -474,7 +474,7 @@ class BlameChainAnalyzer:
         prefix-only scope; only "saturated (possibly ending), never
         saturated again after freeing" wait shapes are covered - matching
         what the rest of the wait-gap classification architecture can
-        actually consume. See docs/tasks/P1-31 for the acceptance
+        actually consume. See docs/backlog/tasks/P1-31 for the acceptance
         scenarios this covers.
 
         Holder attribution within the saturated prefix is restricted, per
@@ -1355,7 +1355,7 @@ class BlameChainAnalyzer:
         # observed end of the build; ties are broken by task key ascending
         # (same determinism rule used elsewhere, e.g. select_dependency_blame).
         # Callers with multiple genuinely independent requested targets
-        # should pass terminal_tasks explicitly - see docs/tasks/P1-04.
+        # should pass terminal_tasks explicitly - see docs/backlog/tasks/P1-04.
         if terminal_tasks is None:
             if self.tasks:
                 max_finish = max(t.finish_us for t in self.tasks)

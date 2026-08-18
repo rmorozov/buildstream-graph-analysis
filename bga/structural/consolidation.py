@@ -1,7 +1,7 @@
 """Stack-consolidation structural advisory (P4-15 Direction 1).
 
 Not spec-mandated - bga's own added heuristic (see
-docs/tasks/P4-15-stack-consolidation-heuristic.md). Purely structural
+docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md). Purely structural
 (graph topology + element_kind only, no timing data needed) - for a real,
 measured comparison of a flagged candidate's actual checkout cost, see
 the separate standalone tool tools/bst_checkout_cost.py.

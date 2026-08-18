@@ -228,7 +228,7 @@ class _Args:
 def test_a_wrapped_log_implies_an_invocation_record():
     """The defect `UX-80` was filed for: correlation ran only when both
     flags were passed, and `--invocation-log` appeared **zero times** in
-    README.md, docs/cli.md and docs/real-project-guide.md - while the CI
+    README.md, docs/guides/cli.md and docs/guides/real-project.md - while the CI
     workflow that produced every number those documents quote did pass
     it. The documented command therefore could not produce the
     documented join on a project that overrides `build-root`."""

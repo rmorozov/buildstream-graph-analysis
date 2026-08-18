@@ -8,7 +8,7 @@ by bst_log_to_chrome_trace.py (or its wrapped-log converter) for the
 same invocation.
 
 Design decisions (settled empirically against a real `bst` 2.7.0
-install - see docs/ingestion-pipeline.md for the full record and the
+install - see docs/spec/ingestion-pipeline.md for the full record and the
 reasoning behind each):
 
 - Targets are passed explicitly by the caller (the actual elements a
@@ -50,12 +50,12 @@ reasoning behind each):
   not part of graph/v9's spec-mandated minimal schema (Part 32.2's JSON
   example is illustrative, not exhaustive; `dependency_type` is an
   existing precedent for the same kind of additive extension). No
-  analysis consumer reads it yet - see docs/tasks/P4-12 for planned
+  analysis consumer reads it yet - see docs/backlog/tasks/P4-12 for planned
   kind-based heuristics (a junction or import element's own build work
   is structurally different from an autotools/cmake element's, a real
   signal worth exploring once there's a task scoping exactly how).
 
-Out of scope here (see docs/ingestion-pipeline.md / P4-08's follow-on
+Out of scope here (see docs/spec/ingestion-pipeline.md / P4-08's follow-on
 tasks): run-context.json production (resource capacities, wall clock -
 those come from the real invocation's own environment/config, not from
 `bst show`), and wiring this together with the trace-side converter

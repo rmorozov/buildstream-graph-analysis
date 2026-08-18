@@ -40,7 +40,7 @@ def build_contention_calibration(
     built from 2+ real captured runs of the same project at different
     real `resource` capacities - the same `historical_runs` shape
     `bga/floors/cold.py`'s cold-floor analysis already consumes, reused
-    directly rather than reinvented (see docs/scenarios/UX-14's own
+    directly rather than reinvented (see docs/backlog/scenarios/UX-14's own
     "Tier 2 Design Proposal", PR #58).
 
     A calibration run whose own `RunContext.resource_capacities` doesn't

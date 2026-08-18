@@ -1,6 +1,6 @@
 """Tests for P4-05 (tools/bst_log_to_chrome_trace.py raw-log support) and
 two real bugs found while implementing it, confirmed against a real,
-installed BuildStream 2.7.0 (see docs/ingestion-pipeline.md):
+installed BuildStream 2.7.0 (see docs/spec/ingestion-pipeline.md):
 
 1. The status-word alternation never matched a real build failure at all,
    in either wrapped or raw mode - real BuildStream emits "FAILURE", not
@@ -34,7 +34,7 @@ def _builder_events(converter):
 # --- Raw-log parsing: real captured line shapes -------------------------
 
 # Real lines captured from `bst -C tests/fixtures/bst_show_project build
-# app.bst` against BuildStream 2.7.0 (see docs/ingestion-pipeline.md) -
+# app.bst` against BuildStream 2.7.0 (see docs/spec/ingestion-pipeline.md) -
 # the outer bracket's message is a logfile path, nested sub-phases use
 # short human phrases, both sharing the same hash+action key.
 REAL_BUILD_TASK_LINES = [
@@ -124,7 +124,7 @@ def test_scheduler_config_parsed_from_maximum_tasks_header_lines():
     header (confirmed against a real build - no [hash][action:element]
     bracket structure at all, unlike per-task log lines) - a more robust
     source than re-parsing --builders/--fetchers/--pushers CLI flags
-    ourselves (see docs/ingestion-pipeline.md)."""
+    ourselves (see docs/spec/ingestion-pipeline.md)."""
     lines = [
         "    Maximum Fetch Tasks:     7",
         "    Maximum Build Tasks:     3",
@@ -242,7 +242,7 @@ def test_raw_mode_anchors_a_tasks_first_start_to_the_current_watermark():
     lines always show "--:--:--" anyway (elapsed isn't known yet); this
     synthetic line's own nonzero elapsed [00:00:05] is deliberately
     ignored, matching real semantics (see _process_raw_line's docstring
-    and docs/scenarios/UX-06-raw-log-timestamp-corruption.md)."""
+    and docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md)."""
     converter = WrapperTraceConverter(raw_start_time_us=1_700_000_000_000_000)
     converter.process_line_raw(
         "[00:00:05][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log"
@@ -316,7 +316,7 @@ def test_targets_captured_during_wrapped_processing():
 #
 # A third real bug, found while building examples/04-critical-path-
 # optimization for a later, real optimization walkthrough (see
-# docs/scenarios/UX-06-raw-log-timestamp-corruption.md): BuildStream's own
+# docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md): BuildStream's own
 # `[HH:MM:SS]` elapsed prefix resets to zero at the start of *every*
 # individual timed activity (confirmed against the real installed
 # BuildStream 2.7.0 source, buildstream/_messenger.py's `timed_activity`)
@@ -331,7 +331,7 @@ def test_targets_captured_during_wrapped_processing():
 # core.bst takes 4 real seconds (three sub-phases, "Running commands" is
 # the slow one); lib.bst depends on core.bst and only starts once core.bst
 # genuinely finishes - real shape captured from examples/04-critical-path-
-# optimization's own build (see docs/scenarios/UX-06's Motivation section).
+# optimization's own build (see docs/backlog/scenarios/UX-06's Motivation section).
 _UPSTREAM_THEN_DOWNSTREAM_LINES = [
     "[--:--:--][aaaaaaaa][   build:core.bst                      ] START   proj/core/aaaaaaaa-build.log",
     "[--:--:--][aaaaaaaa][   build:core.bst                      ] START   Staging dependencies at: /",

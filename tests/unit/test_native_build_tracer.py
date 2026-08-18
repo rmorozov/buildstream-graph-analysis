@@ -1,7 +1,7 @@
 """Tests for tools/bst_native_build_tracer.py's trace-log parsing/
 pairing/aggregation logic - all pure functions, no bwrap/bst/compiler
 dependency (those are exercised separately by the real, environment-
-gated end-to-end test below). See docs/scenarios/UX-11-native-build-
+gated end-to-end test below). See docs/backlog/scenarios/UX-11-native-build-
 system-profiler-tool.md's Deep Experiment Findings for the real raw
 trace shape this is modeled on (119 real lines from one element build,
 including four cc1plus processes starting within 5ms of each other
@@ -402,7 +402,7 @@ def test_summarize_includes_redundant_operations():
 @pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BWRAP_AVAILABLE and CC_AVAILABLE),
-    reason="bst/bwrap/cc not all found on PATH - see docs/ingestion-pipeline.md",
+    reason="bst/bwrap/cc not all found on PATH - see docs/spec/ingestion-pipeline.md",
 )
 def test_run_traced_build_captures_real_process_lifecycle(tmp_path):
     """Real, live smoke test of the full mechanism against this repo's

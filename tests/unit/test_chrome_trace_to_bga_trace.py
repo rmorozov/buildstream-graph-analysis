@@ -6,7 +6,7 @@ recovers task kind from the synthetic model's own invented phase-message
 text), this tool reads the `action` field tools/bst_log_to_chrome_trace.py
 now records directly in each bst-builder event's args - BuildStream's own
 real action word, confirmed against a real, installed BuildStream 2.7.0
-build (see docs/ingestion-pipeline.md).
+build (see docs/spec/ingestion-pipeline.md).
 """
 from tools.chrome_trace_to_bga_trace import (
     ACTION_TO_KIND,
@@ -78,7 +78,7 @@ def test_every_task_kind_maps_to_the_right_resource():
 
 def test_unrecognized_action_is_dropped_not_crashed():
     """BuildStream's own top-level "main:core activity" pseudo-bracket
-    (confirmed real, see docs/ingestion-pipeline.md) has no TaskKind
+    (confirmed real, see docs/spec/ingestion-pipeline.md) has no TaskKind
     equivalent - must be skipped, not misclassified or crash."""
     events = [
         _builder_event("B", 0, 1, action="main", element="core activity"),

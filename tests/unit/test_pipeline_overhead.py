@@ -5,12 +5,12 @@ confirmed material on a real ~2000-element fully-cached rebuild (Query
 cache + Resolving elements were ~87% of total wall time there) - but were
 previously invisible to bga entirely: tools/chrome_trace_to_bga_trace.py
 already, deliberately, drops action="main" events as "not a real element
-task". See docs/tasks/P4-14-cache-query-overhead-visibility.md.
+task". See docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md.
 
 Two layers:
 1. WrapperTraceConverter's own extraction (tools/bst_log_to_chrome_trace.py) -
    fast, hermetic, uses real captured log text (see the module docstring's
-   log excerpt in docs/ingestion-pipeline.md's fact 11).
+   log excerpt in docs/spec/ingestion-pipeline.md's fact 11).
 2. Analyzer/report wiring (RunContext -> AnalysisResult -> text/json) -
    synthetic run dirs, same pattern as tests/unit/test_report_key_findings.py.
 """
@@ -24,8 +24,8 @@ from bga.report.json import format_json
 from tools.bst_log_to_chrome_trace import WrapperTraceConverter
 
 # A real, empirically captured log excerpt (BuildStream 2.7.0, default
-# verbosity, no --verbose needed) - see docs/ingestion-pipeline.md's fact
-# 11 and docs/tasks/P4-14-cache-query-overhead-visibility.md's Background.
+# verbosity, no --verbose needed) - see docs/spec/ingestion-pipeline.md's fact
+# 11 and docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md's Background.
 # Elapsed values here are all 0 in the real capture (a trivial one-element
 # project) - kept verbatim as the "real shape" test; a separate test below
 # constructs a synthetic nonzero-elapsed case to check the arithmetic.
@@ -91,7 +91,7 @@ def test_converter_does_not_emit_main_activity_as_a_trace_event():
 def test_converter_computes_correct_nonzero_elapsed():
     """Synthetic (not real-captured) - checks the arithmetic specifically,
     independent of whether a real short build happens to round to zero at
-    1-second elapsed precision (see docs/ingestion-pipeline.md fact 10).
+    1-second elapsed precision (see docs/spec/ingestion-pipeline.md fact 10).
 
     START lines show "--:--:--" (real BuildStream behavior - elapsed
     isn't known yet when an activity starts; see UX-06) - only the
@@ -170,7 +170,7 @@ def test_track_wrapper_real_per_element_track_event_still_captured():
 # are logged under action="main" but with the checked-out element's own
 # *real* hash, not a blank one - confirmed against BuildStream 2.7.0's
 # Stream.checkout() (`_prepare_sandbox()`/`_export_artifact()`, see
-# docs/tasks/P4-15-stack-consolidation-heuristic.md's Background). `bst
+# docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md's Background). `bst
 # source checkout`'s "Staging sources" follows the identical pattern.
 REAL_ARTIFACT_CHECKOUT_LOG_EXCERPT = """\
 [--:--:--][        ][    main:core activity                 ] START   Loading elements

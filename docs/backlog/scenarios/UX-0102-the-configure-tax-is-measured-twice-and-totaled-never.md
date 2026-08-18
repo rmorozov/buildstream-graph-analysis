@@ -1,6 +1,6 @@
 # UX-102: the configure tax is measured twice and totaled never
 
-**Priority:** Medium | **Status:** 🟡 In Progress — both planes ship and agree on a real dual capture; the fdsdk half waits on a capture | **Depends on:** UX-91 (Plane 3 phases), UX-45 (Plane 2 CPU per process)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (Plane 3 phases), UX-45 (Plane 2 CPU per process)
 
 Direction 3, item 3 — see
 [`design/directions.md`](../../design/directions.md).
@@ -139,15 +139,64 @@ probes doing file I/O — so the surprising figures are the seven near
 almost entirely CPU-bound probing, and `lib-f` happened to wait on
 something. Recorded because a reader comparing the columns will see it.
 
-### Not yet discharged
+### On freedesktop-sdk — and the bug the cross-check caught
 
-The acceptance's fdsdk half — *"autotools elements rank above cmake
-ones, and the top payer is named with both measurements"* — needs a
-capture carrying both the element-logs tarball and the native report.
-One is running. It is also the only place `self_report_missing` can fire
-against real data: every element in `examples/06` is cmake, so all nine
-self-report and the count is 0. The mechanism has a unit test; the
-population it was built for has not been seen yet.
+The published capture carries both artifacts, and running them together
+immediately falsified the Plane 2 figure:
+
+```text
+components/_private/cmake-stage1.bst   Plane 3: 30.50s wall   Plane 2: 1329.39s CPU
+```
+
+A 43x disagreement between two measurements of the same quantity. The
+cross-check `UX-53` argued for - *"a quantity computed twice is a free
+test"* - working exactly as intended, on its first contact with real
+data.
+
+**The cause was `is_configure_root` matching the pattern anywhere on the
+command line.** A linker invocation carried
+`-L/buildstream-build/_build_dir/Bootstrap.cmk/cmake` and a compile
+carried an include path ending the same way; both were read as cmake
+configure invocations. Because the classification takes the whole
+process tree *below* a root, that did not mis-file two processes, it
+mis-filed two subtrees: 1329 CPU seconds, 34% of the element.
+
+Matched against the **executable** instead - `argv[0]`, walking through
+`sh`/`bash`/`env` wrappers and leading `VAR=value` assignments, stopping
+at the first flag - the same capture reports:
+
+```text
+Configure tax (Plane 3, self-reported): 35.6s of 3630.0s element time (1.0%),
+reported by 3 of 23 build log(s)
+  Both planes, per element (wall vs CPU - shown, never summed):
+    element                       Plane 3 wall  Plane 2 CPU  coverage
+    components/_private/cmake-stage1.bst        30.50s       25.79s       84%
+    components/bison.bst          not reported       18.68s      100%
+    components/libxml2.bst        not reported        7.83s       99%
+    components/gperf.bst          not reported        6.25s       99%
+    components/expat.bst                 2.30s        1.26s       89%
+    5 element(s) have traced configure work and no self-report - an autotools
+    or meson build system, and the case the self-report alone is blind to
+```
+
+30.50s against 25.79s, which is the agreement the earlier 1329s was not.
+Project-wide the traced configure tax falls from 1383 CPU s (16.3%) to
+**75.8 CPU s (0.9%)**.
+
+**The acceptance's prediction holds, by share.** Ranked by what fraction
+of an element's own CPU went to configuring, the autotools elements lead
+and the cmake one is nowhere near them:
+
+| element | build system | configure share |
+|---|---|---|
+| `components/gperf.bst` | autotools | 38.9% |
+| `components/bison.bst` | autotools | 18.7% |
+| `components/expat.bst` | autotools | 18.5% |
+| `components/libxml2.bst` | autotools | 14.5% |
+| `components/_private/cmake-stage1.bst` | cmake | 0.7% |
+
+And `self_report_missing` fires on five real elements - the population
+`examples/06` could not contain, since every element there is cmake.
 
 Tests: 6 new in `test_cache_logs.py`, 6 in `test_native_build_tracer.py`.
 Suite: 1262 → 1274.

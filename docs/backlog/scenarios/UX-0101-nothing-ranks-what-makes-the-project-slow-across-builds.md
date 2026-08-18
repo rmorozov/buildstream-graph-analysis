@@ -1,6 +1,6 @@
 # UX-101: nothing ranks what makes the project slow across builds
 
-**Priority:** High | **Status:** 🟡 In Progress — shipped and verified on a real six-build tree; the fdsdk half waits on a published log tree | **Depends on:** UX-91 (the multi-build log tree), UX-92 (invalidation roots); UX-93 sharpens the cause labels
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-91 (the multi-build log tree), UX-92 (invalidation roots); UX-93 sharpens the cause labels
 
 Direction 3, item 2 — see
 [`design/directions.md`](../../design/directions.md).
@@ -126,11 +126,32 @@ which is exactly what was done to it.
 
 Determinism: two scans of one tree produce byte-identical JSON.
 
-### Not yet discharged
+### On the published freedesktop-sdk tree
 
-The fdsdk half — *"on the published tree: the ranking renders for the
-rebuild set and the top entry's cause distribution is printed"* — needs
-a capture carrying the element-logs tarball, the same artifact `UX-99`
-and `UX-102` are waiting on. One capture is running.
+```text
+Developer tax across 23 build log(s) over 18-08-2026 19:43:59 .. 20:28:34
+(at least 1 build(s)) - WEAK EVIDENCE at this few builds
+  element                      builds     total     mean  cause
+  components/_private/cmake-st      1   1185.0s  1185.0s
+  components/openssl.bst            1    494.0s   494.0s
+  components/python3.bst            1    474.0s   474.0s
+  components/_private/git-mini      1    399.0s   399.0s
+```
+
+The ranking renders for the rebuild set. The cause column is **empty**,
+and that is the correct output rather than a gap: a capture's log tree
+holds one build of each element, so no element has a *previous* build to
+compare a key against, and a cause is a fact about a rebuild. The
+"at least 1 build(s)" and the weak-evidence label say exactly that.
+
+This is also what makes the lower-bound treatment worth its complexity.
+A tree with one build per element gives `builds_lower_bound = 1`; a
+build-count heuristic that clustered by timestamp would have reported
+some confident number here, over a 45-minute window in which the whole
+capture ran.
+
+The tax figures themselves are real and useful even at n=1 - they rank
+the cut set by what it cost - which is why the ranking prints rather
+than being withheld.
 
 Tests: 6 new in `tests/unit/test_cache_logs.py`. Suite: 1310 → 1316.

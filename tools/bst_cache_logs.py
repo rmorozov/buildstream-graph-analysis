@@ -266,6 +266,21 @@ def _normalize_command(command: str) -> str:
     return ' '.join(command.split())
 
 
+def _is_empty_command(command: str) -> bool:
+    """Whether this echo is a command at all.
+
+    BuildStream writes a `+ sh -c -e $'\\n'` line for an element whose
+    command block is empty, and on the real freedesktop-sdk log tree
+    eight elements share one - which the repeated-operation report
+    happily called an operation repeated across eight elements. It is
+    not an operation; it is the absence of one.
+    """
+    body = command.strip()
+    if body.startswith("$'") and body.endswith("'"):
+        body = body[2:-1]
+    return not body.replace('\\n', '').replace('\\t', '').strip()
+
+
 # UX-99: the one build phase that is the element's own work. Everything
 # else BuildStream times inside a build log is the toll it pays to run
 # that work in a sandbox - staging dependencies, integrating them,
@@ -569,6 +584,8 @@ def repeated_operations(records: List[dict]) -> List[dict]:
         if record['action'] != 'build':
             continue
         for command in record['commands']:
+            if _is_empty_command(command):
+                continue
             by_command.setdefault(_normalize_command(command), set()).add(
                 record['element'],
             )

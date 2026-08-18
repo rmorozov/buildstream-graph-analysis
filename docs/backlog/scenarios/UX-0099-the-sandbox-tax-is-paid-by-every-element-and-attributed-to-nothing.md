@@ -1,6 +1,6 @@
 # UX-99: the sandbox tax is paid by every element and attributed to nothing
 
-**Priority:** Medium | **Status:** 🟡 In Progress — shipped and verified locally; the fdsdk half of the acceptance is waiting on a capture | **Depends on:** UX-91 (Plane 3 exists)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (Plane 3 exists)
 
 Direction 3, item 1 (first half) — see
 [`design/directions.md`](../../design/directions.md).
@@ -136,11 +136,35 @@ Those three seconds were previously booked as `core.bst`'s work.
 
 Tests: 7 new in `tests/unit/test_cache_logs.py`. Suite: 1255 → 1262.
 
-### Not yet discharged
+### On the real freedesktop-sdk tree
 
-The acceptance's second half — *"on the fdsdk element-logs tarball, the
-toll share renders for the 25-element rebuild set and the top payer is
-named"* — needs a capture published since `UX-91` added the tarball. One
-is running; this stays 🟡 until it is checked against it, because a
-project whose staging is measured in minutes is the only place this
-number is more than a floor.
+A capture published since `UX-91` added the tarball carries 178 element
+logs; 23 of them are builds with a recorded total:
+
+```text
+Sandbox tax: 12.0s of 3630.0s element time (0.3%) across 23 build log(s) went
+to staging, integrating and caching rather than to the build itself
+    Integrating sandbox                  9.0s
+    Staging dependencies                 3.0s
+  Who paid it (by toll seconds, not by share):
+    components/libffi.bst                5.0s toll of 48.0s (10%)
+    components/bison.bst                 4.0s toll of 121.0s (3%)
+    components/ninja.bst                 1.0s toll of 100.0s (1%)
+    components/openssl.bst               1.0s toll of 494.0s (0%)
+    components/which.bst                 1.0s toll of 6.0s (17%)
+  (8.0s of the enclosing Build activity is in neither bucket)
+```
+
+The toll share renders and the top payer is named, which is what the
+acceptance asked. The number itself is the more useful result: **0.3%**,
+on the project the motivation was written from. The direction's premise
+(*"a project that stages a multi-hundred-MB sysroot into each of 90
+sandboxes"*) is real, and the cost of doing it is not, because
+BuildStream stages from CAS by hardlink. Two elements pay a share worth
+looking at (`libffi.bst` 10%, `which.bst` 17%) and both are small
+elements where a second or two is most of their time.
+
+Recorded plainly because the honest outcome of a measurement is
+sometimes that the thing measured is small. `UX-100` consumes this to
+rank merge candidates by toll share, and it now knows what that
+distribution actually looks like rather than assuming a large one.

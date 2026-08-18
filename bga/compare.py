@@ -154,6 +154,10 @@ class ComparisonResult:
     # cannot tell them apart.
     baseline_run_instance: dict = field(default_factory=dict)
     candidate_run_instance: dict = field(default_factory=dict)
+    # UX-104: whether this change made the build need more memory. Set
+    # by the CLI, because it needs a Plane 2 report per run and this
+    # module reads run directories only.
+    memory_envelope_delta: dict = field(default_factory=dict)
     # UX-87: whether a requested efficiency gate actually ran. Set by the
     # CLI, because whether a gate was *requested* is a flag question this
     # module never sees. Three states, and the distinction is the point:
@@ -170,6 +174,7 @@ class ComparisonResult:
             'candidate_run_id': self.candidate_run_id,
             'baseline_run_instance': self.baseline_run_instance,
             'candidate_run_instance': self.candidate_run_instance,
+            'memory_envelope_delta': self.memory_envelope_delta,
             'baseline': self.baseline_metrics,
             'candidate': self.candidate_metrics,
             'deltas': self.deltas,

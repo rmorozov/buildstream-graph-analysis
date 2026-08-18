@@ -432,6 +432,98 @@ def _time_concentration_findings(
     return findings
 
 
+def _memory_envelope_findings(result: AnalysisResult) -> List[str]:
+    """UX-104: the multiplication the report used to leave to the reader.
+
+    One sentence, and it is the one the README used to perform in prose:
+    *"4 builders of this shape peak at ~7.6 GB of 15.6 GB; 8 would not
+    fit"*. Emitted only where both halves were measured - the peaks from
+    Plane 2, the host's RAM from the capture. Returns the sentence, which
+    `_memory_finding` wraps into the findings list.
+    """
+    envelope = getattr(result, 'memory_envelope', None) or {}
+    at_observed = envelope.get('at_observed_builders')
+    if not envelope or not at_observed:
+        return []
+    host_gb = envelope['host_memory_mb'] / 1024
+    line = (
+        f"{at_observed['builders']} builders of this shape peak at "
+        f"~{at_observed['envelope_mb'] / 1024:.1f} GB of {host_gb:.1f} GB "
+        f"({at_observed['share_of_host'] * 100:.0f}%)"
+    )
+    ceiling = envelope.get('first_builders_that_does_not_fit')
+    if ceiling:
+        line += f"; {ceiling} would not fit"
+    else:
+        higher = [
+            p for p in envelope['projections']
+            if p['builders'] > at_observed['builders']
+        ]
+        if higher:
+            line += (
+                f"; {higher[-1]['builders']} would still fit at "
+                f"~{higher[-1]['envelope_mb'] / 1024:.1f} GB, so memory is not what "
+                f"binds first here"
+            )
+    return [line]
+
+
+def _memory_refuses_more_builders(result: AnalysisResult) -> Optional[str]:
+    """Whether raising `--builders` is refused on memory grounds.
+
+    `UX-83` made "more builders" advice clear a CPU check. This is the
+    other half: an answer that clears CPU and fails memory is advice to
+    build into swap, which is the worst build slowdown there is and one
+    no CPU-side signal predicts.
+    """
+    envelope = getattr(result, 'memory_envelope', None) or {}
+    ceiling = envelope.get('first_builders_that_does_not_fit')
+    at_observed = envelope.get('at_observed_builders')
+    if not ceiling or not at_observed or ceiling != at_observed['builders'] + 1:
+        return None
+    return (
+        f"do NOT raise --builders on this host - measured per-element peaks put "
+        f"{ceiling} builders at ~{next(p['envelope_mb'] for p in envelope['projections'] if p['builders'] == ceiling) / 1024:.1f} GB "
+        f"against {envelope['host_memory_mb'] / 1024:.1f} GB of RAM, so the extra "
+        f"builder would swap. Swapping is the worst build slowdown there is and no "
+        f"CPU-side signal predicts it (UX-104)"
+    )
+
+
+def _memory_finding(result: AnalysisResult) -> List[dict]:
+    """UX-104's envelope, as a finding with an id like everything else
+    since `UX-75`.
+
+    Severity is a fact about the run, not a taste: a build that would
+    swap at one more builder is a different message from one where
+    memory is nowhere near binding, and a reader scanning severities
+    should be able to tell them apart without reading the sentence.
+    """
+    lines = _memory_envelope_findings(result)
+    if not lines:
+        return []
+    envelope = result.memory_envelope
+    at_observed = envelope['at_observed_builders']
+    ceiling = envelope.get('first_builders_that_does_not_fit')
+    severity = (
+        SEVERITY_HIGH if not at_observed['fits']
+        else SEVERITY_MEDIUM if ceiling == at_observed['builders'] + 1
+        else SEVERITY_INFO
+    )
+    return [_finding(
+        'memory-envelope', severity, f"Memory: {lines[0]}",
+        evidence={
+            'builders': at_observed['builders'],
+            'envelope_mb': at_observed['envelope_mb'],
+            'host_memory_mb': envelope['host_memory_mb'],
+            'share_of_host': at_observed['share_of_host'],
+            'fits': at_observed['fits'],
+            'first_builders_that_does_not_fit': ceiling,
+            'elements_measured': envelope['elements_measured'],
+        },
+    )]
+
+
 def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str]:
     """Replace the RESOURCE WAIT next step when Plane 2 contradicts it.
 
@@ -441,6 +533,13 @@ def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str
     """
     if category != 'resource_wait_us':
         return None
+    # UX-104: memory first, because it is the one that cannot be
+    # recovered by working harder. An element pinned to `-j1` is free
+    # capacity worth naming; a host that would swap at one more builder
+    # makes "raise capacity" wrong whatever else is true.
+    memory_refusal = _memory_refuses_more_builders(result)
+    if memory_refusal:
+        return memory_refusal
     plane2 = getattr(result, 'plane2_capacity', None) or {}
     pinned = plane2.get('pinned_elements') or []
     cores_busy, host = plane2.get('cores_busy'), plane2.get('host_cpu_count')
@@ -731,6 +830,7 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
         findings.extend(_ranking_findings(result, chain_bound))
     if concentration_emitted:
         findings.extend(_outlook_findings(result))
+    findings.extend(_memory_finding(result))
     findings.extend(_criticality_findings(result))
     findings.extend(_floor_findings(result))
     return findings

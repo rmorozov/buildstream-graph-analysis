@@ -122,6 +122,12 @@ class RunContext:
     # genuinely independent resource dimension (a config can be
     # memory-oversubscribed while CPU-fine, or vice versa).
     memory_budget_mb: Optional[int] = None
+    # UX-104: the host's own total RAM at capture time, auto-detected by
+    # the run-context producers. The denominator that turns Plane 2's
+    # measured per-element peaks into an answer about `--builders`.
+    # Distinct from `memory_budget_mb`, which is what the operator
+    # *intends* to use: a budget is a policy, this is a fact.
+    host_memory_mb: Optional[int] = None
     estimated_job_memory_mb: Optional[int] = None
     exclusive_resources: List[str] = field(default_factory=list)  # Part 31.3
     # BuildStream's own top-level, non-element-scoped pipeline phases
@@ -464,6 +470,11 @@ class AnalysisResult:
     # run_dir}`, each key present only when the run directory recorded
     # it. Additive - nothing reads `run_id` differently because of it.
     run_instance: dict = field(default_factory=dict)
+    # UX-104: what this build's measured per-element memory peaks imply
+    # for `--builders`, against the host's real RAM. Populated only when
+    # a Plane 2 report is supplied and the capture recorded the host's
+    # memory - the arithmetic needs both.
+    memory_envelope: dict = field(default_factory=dict)
     total_duration_us: int = 0
     # BuildStream's own top-level pipeline overhead (Query cache, Resolving
     # elements, etc.) - not part of analysis/v9's spec-mandated schema

@@ -619,7 +619,7 @@ def _group_header(elements: List[str], entries: List[dict]) -> str:
     return f"{_name_elements(elements)} ({', '.join(parts)}):"
 
 
-def _recommend(joined: ElementJoin) -> List[str]:
+def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> List[str]:
     """Turn one element's two-plane picture into directed next steps.
 
     Only fires where the join actually adds something. A Plane 2 finding
@@ -718,10 +718,23 @@ def _recommend(joined: ElementJoin) -> List[str]:
                 f"job count can help; it has to get faster or go away"))
 
         if joined.peak_rss_kb and joined.peak_rss_kb / 1024 >= _PEAK_RSS_NOTABLE_MB:
+            # UX-104: the trailing instruction used to be "multiply by
+            # however many elements build concurrently before raising
+            # `builders`". Where the capture recorded the host's RAM the
+            # tool does that multiplication itself, once, in the memory
+            # envelope above - so this row states the element's own
+            # measurement and points there rather than handing over
+            # arithmetic it can do.
             ranked.append((_EVIDENCE_MEMORY, 'peak-memory',
                 f"its largest single process peaked at "
-                f"{joined.peak_rss_kb / 1024:.0f} MB resident - multiply by however "
-                f"many elements build concurrently before raising `builders`"))
+                f"{joined.peak_rss_kb / 1024:.0f} MB resident"
+                + (
+                    " - see the memory envelope above for what that means for "
+                    "`builders`" if memory_envelope_available else
+                    " - multiply by however many elements build concurrently "
+                    "before raising `builders` (the capture recorded no host "
+                    "memory, so this cannot do it for you)"
+                )))
 
         redundancy = joined.worst_redundancy
         redundancy_s = (redundancy or {}).get("max_element_duration_s") or 0
@@ -764,6 +777,97 @@ def _recommend(joined: ElementJoin) -> List[str]:
 # being true, with a margin for the fact that the measure is an average
 # over the whole run rather than over the contended window.
 _SATURATION_SHARE = 0.8
+
+
+def compute_memory_envelope(
+    native_report: dict, builders: Optional[int], host_memory_mb: Optional[int],
+) -> dict:
+    """UX-104: how much memory this build's shape needs at N builders,
+    and whether the host has it.
+
+    The report's standing memory line is *"its largest single process
+    peaked at 1902 MB resident - multiply by however many elements build
+    concurrently before raising `builders`"*. That multiplication is the
+    tool's job, and every input is already measured: per-element peak RSS
+    (`UX-63`), the host's RAM (`UX-104` records it at capture time), and
+    the builders count (Plane 1).
+
+    **Conservative by construction, and it says so.** The envelope at N
+    is the sum of the N largest measured per-element peaks, as if those N
+    elements built at once *and* peaked at the same instant. Neither is
+    guaranteed - `compute_peak_memory`'s own note is emphatic that per-
+    process peaks must not be summed, because two processes peaking at
+    different moments never held the sum between them. The same caution
+    applies one level up and is the reason this is an upper bound: for
+    the question being asked - "is it safe to raise `builders`?" - an
+    upper bound is the useful direction to be wrong in.
+
+    **No invented safety margin.** A reserve for the OS and page cache
+    would be a threshold picked from nothing, which this codebase does
+    not do; `fits` is a strict comparison against the host's RAM, and
+    the payload says plainly that headroom below 100% is not the same as
+    safe.
+
+    Returns `{}` when Plane 2 has no memory data or the host's RAM was
+    not recorded - the arithmetic needs both, and half of it is not an
+    estimate, it is a guess.
+    """
+    peak_memory = (native_report or {}).get("peak_memory") or {}
+    per_element = peak_memory.get("per_element") or {}
+    peaks_mb = sorted(
+        ((entry.get("peak_rss_kb") or 0) / 1024 for entry in per_element.values()),
+        reverse=True,
+    )
+    peaks_mb = [peak for peak in peaks_mb if peak > 0]
+    if not peaks_mb or not host_memory_mb:
+        return {}
+
+    def _envelope(count: int) -> float:
+        # Fewer measured elements than builders means the build cannot
+        # actually run that many at once out of this population, so the
+        # sum is over what exists rather than padded with a guess.
+        return sum(peaks_mb[:count])
+
+    observed = builders if isinstance(builders, int) and builders > 0 else None
+    projections = []
+    # Projected up to the measured population, and no further. That is a
+    # real bound rather than a chosen one: N builders can only be N
+    # elements building at once, and beyond the elements whose peak was
+    # measured there is nothing to sum but a guess. (An earlier version
+    # stopped two past the observed count, which is arbitrary and hid a
+    # ceiling three builders away.)
+    for count in range(1, len(peaks_mb) + 1):
+        envelope = _envelope(count)
+        projections.append({
+            'builders': count,
+            'envelope_mb': envelope,
+            'share_of_host': envelope / host_memory_mb,
+            'fits': envelope <= host_memory_mb,
+        })
+    at_observed = next(
+        (p for p in projections if p['builders'] == observed), None,
+    )
+    higher = [p for p in projections if observed and p['builders'] > observed]
+    first_that_does_not_fit = next((p for p in higher if not p['fits']), None)
+    return {
+        'host_memory_mb': host_memory_mb,
+        'builders': observed,
+        'elements_measured': len(peaks_mb),
+        'largest_element_peak_mb': peaks_mb[0],
+        'at_observed_builders': at_observed,
+        'projections': projections,
+        'first_builders_that_does_not_fit': (
+            first_that_does_not_fit['builders'] if first_that_does_not_fit else None
+        ),
+        'note': (
+            "The envelope at N builders is the sum of the N largest measured "
+            "per-element peak RSS values, as if those elements built at once and "
+            "peaked at the same instant - an upper bound, which is the useful "
+            "direction to be wrong in for a question about raising --builders. No "
+            "reserve is subtracted for the OS or page cache, so headroom below "
+            "100% is not the same as safe."
+        ),
+    }
 
 
 def summarize_plane2_capacity(
@@ -863,6 +967,20 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None)
     plane2 = _plane2_view(native_report)
     declared = _declared_elements(analysis)
 
+    # UX-104: the multiplication the per-element memory row used to hand
+    # to the reader ("multiply by however many elements build
+    # concurrently"). Computed once for the whole join, because it is a
+    # fact about the build's shape rather than about any one element -
+    # and computed *before* the rows, because whether it exists decides
+    # what those rows say.
+    memory_envelope = compute_memory_envelope(
+        native_report,
+        getattr(run_context, 'max_jobs', None),
+        getattr(run_context, 'memory_budget_mb', None)
+        or getattr(run_context, 'host_memory_mb', None),
+    )
+    memory_envelope_available = bool(memory_envelope.get('at_observed_builders'))
+
     joined: List[ElementJoin] = []
     for element in sorted(set(plane1) | set(plane2)):
         p1 = plane1.get(element, {})
@@ -893,7 +1011,9 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None)
         # ends in. Recommendations are what a reader acts on, so they are
         # what must not be produced; the row still exists in `elements`,
         # labelled, rather than vanishing.
-        entry.recommendations = _recommend(entry) if entry.declared else []
+        entry.recommendations = (
+            _recommend(entry, memory_envelope_available) if entry.declared else []
+        )
         joined.append(entry)
 
     # Ranked by what Plane 1 says is worth fixing, since that is the
@@ -951,6 +1071,7 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None)
     return {
         "elements": [vars(e) for e in joined],
         "restructuring": restructuring,
+        "memory_envelope": memory_envelope,
         "actionable": (
             [] if attribution_unreliable
             else [vars(e) for e in joined if e.recommendations]
@@ -1068,6 +1189,32 @@ def format_correlation(result: dict) -> str:
             f"their own, so 'nobody opened it' says nothing about them (UX-68); "
             f"see --format json for the list"
         )
+    # UX-104: the whole-build memory answer, once, before the per-element
+    # rows that used to tell the reader to work it out themselves.
+    envelope = result.get("memory_envelope") or {}
+    at_observed = envelope.get("at_observed_builders")
+    if at_observed:
+        host_gb = envelope["host_memory_mb"] / 1024
+        line = (
+            f"  Memory envelope: {at_observed['builders']} builders of this shape "
+            f"peak at ~{at_observed['envelope_mb'] / 1024:.1f} GB of {host_gb:.1f} GB "
+            f"({at_observed['share_of_host'] * 100:.0f}%)"
+        )
+        ceiling = envelope.get("first_builders_that_does_not_fit")
+        if ceiling:
+            line += f"; {ceiling} would not fit"
+        else:
+            higher = [
+                p for p in envelope["projections"]
+                if p["builders"] > at_observed["builders"]
+            ]
+            if higher:
+                line += (
+                    f"; {higher[-1]['builders']} would still fit, so memory is not "
+                    f"what binds first here"
+                )
+        lines.append(line)
+        lines.append(f"    ({envelope['note']})")
     lines.append("")
 
     # UX-82: before the per-element rows. A structural conclusion

@@ -723,6 +723,50 @@ def format_csv(result: AnalysisResult) -> str:
     return "\n".join(lines)
 
 
+def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> List[str]:
+    """UX-104: which constraint binds at the knee.
+
+    The sweep's knee is a replay-model answer about *scheduling*, and
+    the replay model knows nothing about memory any more than it knows
+    about CPU (`UX-09`/`UX-14`). A knee above the memory-feasible
+    capacity is not a recommendation, it is a recommendation to swap -
+    and swapping is the worst build slowdown there is, with no CPU-side
+    signal that predicts it.
+    """
+    envelope = memory_envelope or {}
+    projections = envelope.get('projections') or []
+    if knee is None or not projections:
+        return []
+    # `knee_points` maps a resource name to a plain capacity integer -
+    # the same value the line above prints.
+    capacity = knee if isinstance(knee, int) else None
+    if not capacity:
+        return []
+    at_knee = next((p for p in projections if p['builders'] == capacity), None)
+    host_gb = envelope['host_memory_mb'] / 1024
+    if at_knee is None:
+        # The knee sits beyond the measured population - more builders
+        # than there are elements with a measured peak - so the envelope
+        # has nothing to say rather than an extrapolation to offer.
+        return [
+            f"  Memory: no envelope at capacity {capacity} - only "
+            f"{envelope['elements_measured']} element(s) have a measured peak, so "
+            f"this cannot say whether {host_gb:.1f} GB is enough there."
+        ]
+    if at_knee['fits']:
+        return [
+            f"  Memory: capacity {capacity} needs ~{at_knee['envelope_mb'] / 1024:.1f} GB "
+            f"of {host_gb:.1f} GB ({at_knee['share_of_host'] * 100:.0f}%) - memory is "
+            f"not what binds at the knee."
+        ]
+    return [
+        f"  MEMORY BINDS BEFORE THE KNEE: capacity {capacity} needs "
+        f"~{at_knee['envelope_mb'] / 1024:.1f} GB against {host_gb:.1f} GB of RAM. The "
+        f"knee is a scheduling answer and the replay model does not know about "
+        f"memory (UX-09/UX-14) - building there would swap."
+    ]
+
+
 def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> List[str]:
     """What Plane 2 knows about whether the knee is reachable (`UX-83`).
 
@@ -755,7 +799,7 @@ def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> List[str]:
     return lines
 
 
-def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[List[int]] = None, plane2_capacity: Optional[dict] = None) -> str:
+def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[List[int]] = None, plane2_capacity: Optional[dict] = None, memory_envelope: Optional[dict] = None) -> str:
     """Format a capacity_sweep result (Part 19) as human-readable text.
 
     `calibration_capacities` (UX-14 tier 2, PR #58's approved design):
@@ -793,6 +837,8 @@ def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optio
             # does not know about CPU. When Plane 2 measured this same
             # run, say what it measured - a knee above a saturated host
             # is a scheduling answer to a contention question.
+            for line in _memory_knee_caveat(memory_envelope, knee):
+                lines.append(line)
             for line in _plane2_knee_caveat(plane2_capacity, knee):
                 lines.append(line)
     if sweep_result.monotonicity_violations:
@@ -947,6 +993,22 @@ def format_compare_text(comparison) -> str:
             lines.append(
                 f"    (+{extra} more independent invalidation root(s), see --format json)"
             )
+
+    # UX-104: did this change make the build need more memory? Placed
+    # with the other "what did this change cost" answers.
+    memory_delta = getattr(comparison, 'memory_envelope_delta', None) or {}
+    if memory_delta:
+        share = memory_delta.get('delta_share')
+        direction = 'grew' if memory_delta['delta_mb'] > 0 else 'shrank'
+        lines.append(
+            f"  Memory envelope {direction}: "
+            f"{memory_delta['baseline_envelope_mb'] / 1024:.1f} GB -> "
+            f"{memory_delta['candidate_envelope_mb'] / 1024:.1f} GB "
+            f"({memory_delta['delta_mb'] / 1024:+.1f} GB"
+            + (f", {share * 100:+.0f}%" if share is not None else "")
+            + f") against {memory_delta['host_memory_mb'] / 1024:.1f} GB of RAM"
+            + ("" if memory_delta['candidate_fits'] else " - the candidate does NOT fit")
+        )
 
     # UX-81: a band that could not be built used to be silent, so a
     # pipeline that asked for one got the fixed rule it was trying to

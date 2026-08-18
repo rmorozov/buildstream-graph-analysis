@@ -1,0 +1,65 @@
+{
+  "trace_epsilon_us": 50000,
+  "resource_capacities": {
+    "PROCESS": 4,
+    "DOWNLOAD": 10,
+    "UPLOAD": 4
+  },
+  "max_jobs": 4,
+  "native_max_jobs": 4,
+  "native_max_jobs_source": "operator_declared",
+  "host_cpu_count": 4,
+  "wall_clock": {
+    "start_us": 1787053668062000,
+    "end_us": 1787055720947000
+  },
+  "pipeline_overhead": [
+    {
+      "phase": "Loading elements",
+      "elapsed_us": 102000
+    },
+    {
+      "phase": "Resolving elements",
+      "elapsed_us": 128000
+    },
+    {
+      "phase": "Initializing remote caches",
+      "elapsed_us": 0
+    },
+    {
+      "phase": "Query cache",
+      "elapsed_us": 2270000
+    }
+  ],
+  "build_outcome": {
+    "failed_elements": [],
+    "failed_count": 0
+  },
+  "queue_summary": {
+    "fetch": {
+      "processed": 0,
+      "skipped": 18,
+      "failed": 0
+    },
+    "build": {
+      "processed": 18,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "run_identity": {
+    "manifest_hash": "1f8162e344560ee14cbc3f98b8516102211411d891e58366767da8243254df5f",
+    "project_identity": ".",
+    "targets": [
+      "bootstrap/build/gcc-stage1.bst"
+    ],
+    "scheduler": {
+      "builders": 4,
+      "fetchers": 10,
+      "pushers": 4,
+      "native_max_jobs": 4
+    },
+    "project_git_commit": "953683fb96b82cdf6d7941c4ba9859378942f22b",
+    "project_refs_sha256": null
+  }
+}

@@ -1,0 +1,12 @@
+fdsdk_ref=953683fb96b82cdf6d7941c4ba9859378942f22b
+bga_ref=a5245ef16c66e2d17b7b73ec01e11b3f817a579d
+bst_version=2.7.0
+runner_os=Linux runnervmzvulz 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+nproc=4
+builders=4
+max_jobs=4
+trace_opens=true
+capture_mode=cold
+mem_total_kb=16373452
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root       145G   43G  102G  30% /

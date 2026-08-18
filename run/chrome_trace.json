@@ -1,0 +1,492 @@
+[
+  {
+    "name": "bst --no-interactive --builders 4 --max-jobs 4 build --ignore-project-artifact-remotes --ignore-project-source-remotes b...",
+    "cat": "bst-invocation",
+    "ph": "B",
+    "ts": 1787053668062000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Full Command": "bst --no-interactive --builders 4 --max-jobs 4 build --ignore-project-artifact-remotes --ignore-project-source-remotes bootstrap/build/gcc-stage1.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/binary-seed-x86_64.bst [freedesktop-sdk/bootstrap-base-sdk-binary-seed-x86_64/f59399d8-build.20260818-114750.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053671818000,
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/binary-seed-x86_64.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/binary-seed-x86_64.bst [freedesktop-sdk/bootstrap-base-sdk-binary-seed-x86_64/f59399d8-build.20260818-114750.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787053671818000,
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-binary-seed-x86_64/f59399d8-build.20260818-114750.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/binary-seed-x86_64.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/binary-seed.bst [freedesktop-sdk/bootstrap-base-sdk-binary-seed/39bc8eb7-build.20260818-114750.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053671818000,
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/binary-seed.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/binary-seed.bst [freedesktop-sdk/bootstrap-base-sdk-binary-seed/39bc8eb7-build.20260818-114750.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787053676823000,
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-binary-seed/39bc8eb7-build.20260818-114750.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/binary-seed.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/perl.bst [freedesktop-sdk/bootstrap-base-sdk-perl/f4763ddd-build.20260818-114756.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053676823000,
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/perl.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/zstd.bst [freedesktop-sdk/bootstrap-base-sdk-zstd/9cfa3291-build.20260818-114756.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053676823000,
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/zstd.bst"
+    }
+  },
+  {
+    "name": "bootstrap/gnu-config.bst [freedesktop-sdk/bootstrap-gnu-config/2ba39927-build.20260818-114756.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053676823000,
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/gnu-config.bst"
+    }
+  },
+  {
+    "name": "bootstrap/gnu-config.bst [freedesktop-sdk/bootstrap-gnu-config/2ba39927-build.20260818-114756.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787053677829000,
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-gnu-config/2ba39927-build.20260818-114756.log",
+      "action": "build",
+      "element": "bootstrap/gnu-config.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/m4.bst [freedesktop-sdk/bootstrap-base-sdk-m4/d50782dd-build.20260818-114757.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053677829000,
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/m4.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/tar.bst [freedesktop-sdk/bootstrap-base-sdk-tar/08dcd9db-build.20260818-114757.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053677829000,
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/tar.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/zstd.bst [freedesktop-sdk/bootstrap-base-sdk-zstd/9cfa3291-build.20260818-114756.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787053745907000,
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-zstd/9cfa3291-build.20260818-114756.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/zstd.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/gettext.bst [freedesktop-sdk/bootstrap-base-sdk-gettext/2747cdfb-build.20260818-114905.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053745907000,
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/gettext.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/tar.bst [freedesktop-sdk/bootstrap-base-sdk-tar/08dcd9db-build.20260818-114757.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787053776949000,
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-tar/08dcd9db-build.20260818-114757.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/tar.bst"
+    }
+  },
+  {
+    "name": "bootstrap/build/python3.bst [freedesktop-sdk/bootstrap-build-python3/6ec59f77-build.20260818-114936.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053776949000,
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/build/python3.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/m4.bst [freedesktop-sdk/bootstrap-base-sdk-m4/d50782dd-build.20260818-114757.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787053789968000,
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-m4/d50782dd-build.20260818-114757.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/m4.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/libtool.bst [freedesktop-sdk/bootstrap-base-sdk-libtool/aa1d3e8e-build.20260818-114949.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787053789968000,
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/libtool.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/libtool.bst [freedesktop-sdk/bootstrap-base-sdk-libtool/aa1d3e8e-build.20260818-114949.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787053817001000,
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-libtool/aa1d3e8e-build.20260818-114949.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/libtool.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/perl.bst [freedesktop-sdk/bootstrap-base-sdk-perl/f4763ddd-build.20260818-114756.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054054301000,
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-perl/f4763ddd-build.20260818-114756.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/perl.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/autoconf.bst [freedesktop-sdk/bootstrap-base-sdk-autoconf/ca1ef6ef-build.20260818-115413.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054054301000,
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/autoconf.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/autoconf2.69.bst [freedesktop-sdk/bootstrap-base-sdk-autoconf2.69/92c8699b-build.20260818-115413.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054054301000,
+    "pid": 1,
+    "tid": 111,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/autoconf2.69.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/autoconf.bst [freedesktop-sdk/bootstrap-base-sdk-autoconf/ca1ef6ef-build.20260818-115413.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054059309000,
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-autoconf/ca1ef6ef-build.20260818-115413.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/autoconf.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/automake.bst [freedesktop-sdk/bootstrap-base-sdk-automake/5bef3e71-build.20260818-115418.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054059309000,
+    "pid": 1,
+    "tid": 112,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/automake.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/autoconf2.69.bst [freedesktop-sdk/bootstrap-base-sdk-autoconf2.69/92c8699b-build.20260818-115413.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054061311000,
+    "pid": 1,
+    "tid": 111,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-autoconf2.69/92c8699b-build.20260818-115413.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/autoconf2.69.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/automake.bst [freedesktop-sdk/bootstrap-base-sdk-automake/5bef3e71-build.20260818-115418.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054065316000,
+    "pid": 1,
+    "tid": 112,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-automake/5bef3e71-build.20260818-115418.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/automake.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/pkg-config.bst [freedesktop-sdk/bootstrap-base-sdk-pkg-config/38228dea-build.20260818-115424.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054065316000,
+    "pid": 1,
+    "tid": 113,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/pkg-config.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/flex.bst [freedesktop-sdk/bootstrap-base-sdk-flex/4812388a-build.20260818-115424.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054065316000,
+    "pid": 1,
+    "tid": 114,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/flex.bst"
+    }
+  },
+  {
+    "name": "bootstrap/build/python3.bst [freedesktop-sdk/bootstrap-build-python3/6ec59f77-build.20260818-114936.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054072322000,
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-build-python3/6ec59f77-build.20260818-114936.log",
+      "action": "build",
+      "element": "bootstrap/build/python3.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/pkg-config.bst [freedesktop-sdk/bootstrap-base-sdk-pkg-config/38228dea-build.20260818-115424.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054083332000,
+    "pid": 1,
+    "tid": 113,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-pkg-config/38228dea-build.20260818-115424.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/pkg-config.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/flex.bst [freedesktop-sdk/bootstrap-base-sdk-flex/4812388a-build.20260818-115424.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054099359000,
+    "pid": 1,
+    "tid": 114,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-flex/4812388a-build.20260818-115424.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/flex.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/bison.bst [freedesktop-sdk/bootstrap-base-sdk-bison/c16b5ed7-build.20260818-115458.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054099359000,
+    "pid": 1,
+    "tid": 115,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/base-sdk/bison.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/bison.bst [freedesktop-sdk/bootstrap-base-sdk-bison/c16b5ed7-build.20260818-115458.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054147416000,
+    "pid": 1,
+    "tid": 115,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-bison/c16b5ed7-build.20260818-115458.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/bison.bst"
+    }
+  },
+  {
+    "name": "bootstrap/build/binutils-stage1.bst [freedesktop-sdk/bootstrap-build-binutils-stage1/e6ca2690-build.20260818-115546.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054147416000,
+    "pid": 1,
+    "tid": 116,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/build/binutils-stage1.bst"
+    }
+  },
+  {
+    "name": "bootstrap/build/binutils-stage1.bst [freedesktop-sdk/bootstrap-build-binutils-stage1/e6ca2690-build.20260818-115546.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054293592000,
+    "pid": 1,
+    "tid": 116,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-build-binutils-stage1/e6ca2690-build.20260818-115546.log",
+      "action": "build",
+      "element": "bootstrap/build/binutils-stage1.bst"
+    }
+  },
+  {
+    "name": "bootstrap/base-sdk/gettext.bst [freedesktop-sdk/bootstrap-base-sdk-gettext/2747cdfb-build.20260818-114905.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787054471772000,
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-base-sdk-gettext/2747cdfb-build.20260818-114905.log",
+      "action": "build",
+      "element": "bootstrap/base-sdk/gettext.bst"
+    }
+  },
+  {
+    "name": "bootstrap/build/gcc-stage1.bst [freedesktop-sdk/bootstrap-build-gcc-stage1/9aff11c0-build.20260818-120111.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787054471772000,
+    "pid": 1,
+    "tid": 117,
+    "args": {
+      "action": "build",
+      "element": "bootstrap/build/gcc-stage1.bst"
+    }
+  },
+  {
+    "name": "bootstrap/build/gcc-stage1.bst [freedesktop-sdk/bootstrap-build-gcc-stage1/9aff11c0-build.20260818-120111.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787055720394000,
+    "pid": 1,
+    "tid": 117,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/bootstrap-build-gcc-stage1/9aff11c0-build.20260818-120111.log",
+      "action": "build",
+      "element": "bootstrap/build/gcc-stage1.bst"
+    }
+  },
+  {
+    "name": "bst --no-interactive --builders 4 --max-jobs 4 build --ignore-project-artifact-remotes --ignore-project-source-remotes b...",
+    "cat": "bst-invocation",
+    "ph": "E",
+    "ts": 1787055720947000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Return Code": "0"
+    }
+  }
+]

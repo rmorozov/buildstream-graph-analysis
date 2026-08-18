@@ -200,14 +200,15 @@ bga compare /tmp/my-run-before /tmp/my-run-after
 
 This reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence. If the two runs don't look like the same project, or one is a caches-off run and the other incremental, it **refuses** — exit 6, distinct from the gates' 4 and 5, so a CI job cannot mistake a wrong-artifact-path bug for a regression. `--allow-mismatch` compares anyway.
 
-> **One capture is not a baseline.** Measured run-to-run noise on a real project, across two captures of the *same commit*, is **2.9%** against a default significance rule of 1%. For CI, build a baseline *set* and use the band — the extra runs are `--baseline-run`, *in addition to* the two positional arguments, not instead of them:
+> **One capture is not a baseline.** Measured on **three** captures of the *same* freedesktop-sdk commit, taken by the scheduled capture workflow: 3614.2s, 3434.4s, 3405.8s — a **5.8% spread with nothing changed**, against a default significance rule of 1%. Compare the first against the third under the fixed rule and the verdict is `IMPROVED (-5.8%)`; judged against the band those three runs define (median 3434.4s ± 3×42.5s scaled MAD), the same pair is `NO SIGNIFICANT CHANGE` — which is the truth, because they are the same commit. For CI, build a baseline *set* and use the band. `--baseline-run` is *in addition to* the two positional arguments, not instead of them — and the band is built from the `--baseline-run` entries alone, so it needs **three of them**; the positional baseline is not counted:
 >
 > ```bash
 > bga compare baseline/ candidate/ \
->     --baseline-run baseline-2/ --baseline-run baseline-3/ --band-k 3.0
+>     --baseline-run baseline-1/ --baseline-run baseline-2/ \
+>     --baseline-run baseline-3/ --band-k 3.0
 > ```
 >
-> The band needs a minimum of three baseline runs in total (the positional one plus two).
+> With fewer, `bga` says so — `No noise band: 2 baseline run(s) supplied, 3 required` — and falls back to the fixed 1% rule rather than inventing a band.
 
 The full narrative version of this — capture, read, go inside, join, act, gate — is [`docs/real-project-guide.md`](docs/real-project-guide.md).
 

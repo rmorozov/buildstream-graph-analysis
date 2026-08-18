@@ -122,3 +122,75 @@ Fixed 2026-08-18. The force-push, the trigger list and the single-commit
 orphan branch were read from
 `.github/workflows/real-project-capture.yml`; `MIN_BASELINE_RUNS` and the
 silent fallback from `bga/compare.py`.
+
+---
+
+## Live verification (round 11)
+
+The fix shipped in round 10 but nothing had run through it yet. Capture
+run `32122941503` — the first started *after* the fix merged — completed
+successfully at 10:46 UTC and its "Publish the capture to a branch" step
+did exactly what the design says:
+
+```
+$ git ls-remote --heads origin 'refs/heads/captures/*'
+d8cff143...  refs/heads/captures/fdsdk-latest
+5eda28a1...  refs/heads/captures/fdsdk/953683fb-incremental-b4j4-32064333551
+bd01a3f1...  refs/heads/captures/fdsdk/953683fb-incremental-b4j4-32113933158
+d8cff143...  refs/heads/captures/fdsdk/953683fb-incremental-b4j4-32122941503
+```
+
+The new capture landed at its own per-run ref, `-latest` moved to it
+(gated on `traced_build_exit=0`, which it was), and **both prior
+captures survived untouched**. That is the whole task in one listing.
+
+### The last instance of the old behaviour, for the record
+
+Run `32113933158` started before the fix merged and still carried the
+old single-ref `--force` publish, so it overwrote round 9's capture at
+`captures/fdsdk-latest`. Round 9's commit `5eda28a` was recovered from a
+local object store and both older captures were pushed to per-run refs
+matching the new scheme. Nothing was lost, and the baseline set now has
+three members rather than one.
+
+### What three captures bought
+
+The point of the task was never the refs; it was that `UX-59`'s band
+needs three runs and the infrastructure could only ever hold one. All
+three are the same freedesktop-sdk commit
+(`953683fb96b82cdf6d7941c4ba9859378942f22b`), same runner shape, same
+`--builders 4 --max-jobs 4`:
+
+| run | total | occupancy | T∞ |
+|---|---|---|---|
+| 32064333551 | 3614.2s | 0.3379 | 3610.5s |
+| 32113933158 | 3434.4s | 0.3360 | 3430.7s |
+| 32122941503 | 3405.8s | 0.3384 | 3401.9s |
+
+**5.8% spread with nothing changed.** Under the fixed 1% rule, comparing
+the first against the third:
+
+```
+Verdict: IMPROVED  (total duration -208.44s, -5.8%, 3614.22s -> 3405.78s)
+```
+
+Judged against the band those same three runs define:
+
+```
+Verdict: NO SIGNIFICANT CHANGE  (total duration -208.44s, -5.8%, 3614.22s -> 3405.78s)
+  Judged against a noise band from 3 baseline run(s): 3307.03s .. 3561.82s
+  - median 3434.43s +/- 3x42.47s (scaled MAD)
+```
+
+The band is right and the fixed rule is wrong: they are the same commit.
+This is the first time either could be checked against real data.
+
+### One documentation correction it forced
+
+Writing the `UX-88` fix for the band example, the natural reading —
+"three baseline runs in total, the positional one plus two" — turned out
+to be false. `compare_runs` builds the band from the `--baseline-run`
+entries **alone** (`bga/compare.py:532-556`); the positional baseline is
+not counted. Caught by running it: two `--baseline-run` flags produced
+`No noise band: 2 baseline run(s) supplied, 3 required`. The README now
+says three `--baseline-run` entries and shows all three.

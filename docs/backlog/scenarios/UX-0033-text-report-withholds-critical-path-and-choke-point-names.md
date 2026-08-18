@@ -14,7 +14,7 @@ if len(critical_path) <= 5:
 
 The path is printed only when it is short. Real run, `examples/06-macro-micro-optimization` baseline - a project whose entire problem is a ten-element artificial chain:
 
-```
+```text
 Critical Path Length: 10 elements
 ```
 
@@ -29,7 +29,7 @@ The chain is computed, is correct, is the answer, and is suppressed precisely be
 
 The identical shape appears one section down:
 
-```
+```text
 Structural Analysis:
   Elements: 11, Edges: 34, Max Depth: 9
   Bottlenecks Identified: 5
@@ -80,7 +80,7 @@ Filed 2026-08-16. Implemented the same day. Text output and JSON are from one re
 
 Real end-to-end re-verification against the exact case in this doc's Motivation - a real `bst --builders 4 --max-jobs 4 build all.bst` capture of `examples/06-macro-micro-optimization`:
 
-```
+```text
 Critical Path Length: 10 elements
   Path (chain order, with each element's real measured duration):
     toolchain.bst                               0.00s (  0.0% of path) [structural: import, no build commands to speed up]

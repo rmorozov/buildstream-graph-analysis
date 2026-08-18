@@ -34,7 +34,7 @@ candidates and 14 used**, against round 7's 9 and 4.
 
 **`UX-63` peak memory** attributes to real elements for the first time:
 
-```
+```text
 components/_private/cmake-stage1.bst   1902.3 MB   measured 10057/11974
 components/doxygen.bst                 1491.3 MB   measured   913/1139
 components/python3.bst                  365.5 MB   measured 13774/14384
@@ -54,7 +54,7 @@ confidence **0.9996**, no failed hard gates, **0 violations**.
 `bga correlate` still refuses the join, and its message now contradicts
 itself:
 
-```
+```text
 NO USABLE JOIN: Plane 2's element attribution is unreliable.
   only 109873 of 127629 traced processes (86.1%) carry a name that looks
   like a BuildStream element; the largest bucket is

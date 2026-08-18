@@ -124,7 +124,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 | UX-106 | A process spine the linker cannot hide from: a static tracer injected by the existing shim chain, ptrace **process events only** (fork/exec/exit — never per-syscall), argv at exec-stop, CPU/RSS at exit-stop, same log and same monotonic timeline as the hook, init duties handled, fail-open structurally. The hook stays for opens and enrichment; alternatives (acct, CN_PROC, eBPF, polling, fanotify) weighed and rejected in Direction 4 | High | UX-105 | 🔴 Not Started | [UX-106](UX-0106-a-process-spine-that-the-linker-cannot-hide-from.md) |
 | UX-107 | Two record streams, one process list: without join+dedupe the spine double-counts every dynamic process's CPU; with it, each process carries provenance (`spine+hook` / `spine-only`), opens-dependent findings state their real coverage, the global disclaimer becomes a measured number, and old captures parse unchanged. Self+children CPU recorded twice becomes a free cross-check (the UX-53 pattern) | High | UX-106, UX-105 | 🔴 Not Started | [UX-107](UX-0107-two-record-streams-one-process-list.md) |
 | UX-108 | The spine proves itself on both build classes: `examples/01`'s busybox elements gain their first Plane 2 records ever (with `sleep 3` ≈ 0 CPU / 3s wall as a known answer), fdsdk confirms nothing regresses at 127k processes, and the measured overhead (<2% budget on a configure-heavy fixture) decides the default — on with the hook, or opt-in | Medium | UX-106, UX-107 | 🔴 Not Started | [UX-108](UX-0108-the-spine-proves-itself-on-the-builds-that-need-it-and-the-ones-that-do-not.md) |
-| UX-109 | `make lint-docs` runs PyMarkdown without `-r`, so the docs gate scans exactly two files — `README.md` and `docs/README.md` — while naming `docs/`. The other ~150 documents are unlinted; with `-r` the same config reports **1300 violations**. Same shape as `UX-84` and `UX-97`: a gate that cannot fail, in a repository written as though it holds | Medium | UX-98 | 🔴 Not Started | [UX-109](UX-0109-the-docs-lint-scans-two-files-not-the-docs-tree.md) |
+| UX-109 | `make lint-docs` runs PyMarkdown without `-r`, so the docs gate scans exactly two files — `README.md` and `docs/README.md` — while naming `docs/`. The other ~150 documents are unlinted; with `-r` the same config reports **1300 violations**. Same shape as `UX-84` and `UX-97`: a gate that cannot fail, in a repository written as though it holds | Medium | UX-98 | 🟢 Done — `scan -r`, and the tree it now scans is clean: 1287 of the 1300 fixed (blank lines around headings/lists/fences, fence languages — the class that changes rendering), 13 disabled across four rules that argue with correct content, each with its reason. PyMarkdown's own `fix` mode crashed on one file and left three rules untouched. Guarded by a test on the flag, verified by mutation both ways, and the lint verified by breaking a document it previously could not see | [UX-109](UX-0109-the-docs-lint-scans-two-files-not-the-docs-tree.md) |
 
 ## UX-105..UX-108: Direction 4 — seeing every process (2026-08-18)
 
@@ -359,20 +359,24 @@ Grounded in a real, hands-on walkthrough of the current CLI against `tests/fixtu
 Built by pulling each open item's real cross-dependencies - both declared "Depends on" fields and *practical* implementation-order dependencies (touching the same function/file, one task's output making another cheaper) found by re-reading every open doc together, not just each in isolation. All hard "Depends on" prerequisites for the items below (`UX-09`, `UX-12`, `UX-15`, `P1-31`/`P1-39`/`P1-30`) are already done.
 
 **Phase A - small, foundational, unblock everything else cleanly:**
+
 1. **`UX-16`** (max-jobs=0 truthiness fix) - small, no blockers, and the base every other capacity-check task below either extends (`UX-21`) or delegates through (`UX-17`). Do first so nothing downstream inherits a known bug.
 2. **`UX-18`** (canonical run-context builder, `bst_run_context.py` parity) - no blockers. Extracting one canonical manifest/run-context-builder function here is real prep work for `UX-07` below - do this first and `UX-07` only has to touch it once instead of twice.
 
 **Phase B - build directly on Phase A:**
+
 3. **`UX-07`** (run-identity collision fix) - do after `UX-18` for the reason above; otherwise fully independent.
 4. **`UX-17`** (`UtilizationAnalyzer` consolidation) - scope now decided (delegates to `_check_process_oversubscription`); do after `UX-16` so it delegates to an already-fixed base, not one that still needs the truthiness fix.
 5. **`UX-21`** (memory/swap oversubscription guard) - hard-depends on `UX-16` (mirrors its now-fixed governing-ceiling pattern for a new resource dimension); natural next pick while that pattern is fresh.
 
 **Phase C - independent tracks, any order, safe to parallelize across sessions/contributors:**
+
 6. **`UX-22`** (per-element `max-jobs` + serialization-point detection) - deliberately additive/decoupled from `UX-16`/`UX-17`/`UX-21`'s aggregate checks (confirmed in its own "Out of Scope" - not a replacement), so it doesn't force rework if done before *or* after them. Larger and more novel than the others (new per-element `bst show` capture).
 7. **`UX-20`** (batch/map-reduce reporting) - zero dependencies, reporting-layer only, doesn't touch the capacity-check cluster at all. Good filler for a narrower-context session, same role `UX-04` played earlier.
 8. **`UX-19`** (resource/scheduler-wait re-saturation + retry-gap decomposition) - zero dependencies on anything above, deep attribution-engine work, fully self-contained. Substantial; a good pick for a session with room for real design work.
 
 **Phase D - large, higher-risk, most speculative (do last, and do the spike before committing):**
+
 9. **`UX-11` risk-reduction spike** (not full implementation yet) - verify the two load-bearing, currently-unverified assumptions in its own leading candidate design before committing further work: does PATH-shadowing `bwrap` actually survive BuildStream's cache-key computation unchanged (real risk of silently invalidating caches, contradicting the design's own stated constraint), and how much real coverage is lost to statically-linked binaries in a real toolchain. A small real prototype against a live BuildStream sandbox answers both cheaply, before investing in the rest.
 10. **`UX-11` full implementation** - only once the spike confirms the leading candidate design is viable (or a different option is chosen instead).
 11. **`UX-14` tier 2** (contention-aware duration model) - explicitly gated on `UX-11` existing first per its own doc; needs real per-task CPU-vs-wall-clock data `UX-11` would supply to have any honest grounding.

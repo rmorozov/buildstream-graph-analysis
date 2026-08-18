@@ -56,7 +56,7 @@ All four points. `bst_trace_end` now calls `getrusage(RUSAGE_SELF)` and `getrusa
 
 `bst --builders 4 --max-jobs 4 build all.bst` over `examples/06-macro-micro-optimization`, BuildStream 2.7.0, real `bwrap` sandbox, 4-core host, 822 traced processes:
 
-```
+```text
 Real CPU time (getrusage): 45.56s across 663 of 822 traced processes (159 exited abnormally and are unmeasured)
   core.bst        10.70s CPU over  12.35s wall =  0.87 cores busy  [81% of processes measured]
   codegen.bst      5.90s CPU over   3.36s wall =  1.76 cores busy  [81% of processes measured]
@@ -72,7 +72,7 @@ Real CPU time (getrusage): 45.56s across 663 of 822 traced processes (159 exited
 
 The first working version emitted the line as three `dprintf` calls (header, rusage, command). A real 822-process capture came back with **three corrupted records**, where two processes had interleaved mid-line and produced nonsense element names:
 
-```
+```text
 element=lib-c.bstSTART
 element=lib-e.bstSTART
 element=lib-f.bstEND

@@ -2,7 +2,6 @@
 
 **Priority:** High | **Status:** 🟢 Done (guard + correlation) | **Depends on:** `UX-23` (which introduced the tag), `UX-51` (which made it a join key)
 
-
 ## Investigation, 2026-08-17: what the argv and the process tree rule out
 
 `UX-58` shipped the argv capture this task said it needed, and the answer
@@ -46,7 +45,7 @@ staging bind is randomly named (`cas-tmpdir2wnYto`).
 
 Walking the shim's full ancestry on a real build:
 
-```
+```text
 bwrap-shim
   └─ buildbox-run --remote=unix:… --action=/tmp/tmp5bfa04hs --action-result=…
       └─ …/venv/bin/python3 …/bst  (the main BuildStream process)
@@ -151,7 +150,7 @@ capture Plane 2 had ever seen.
 Plane 2 survived that scale. What it did not survive was the project's
 layout:
 
-```
+```text
 by_element:
   buildstream-build   126871      <- 99.4%
   expat                  411
@@ -192,7 +191,7 @@ name, and none of them reads as obviously wrong in isolation:
 And `bga correlate` — whose entire design (`UX-51`) rests on element UID
 being *the* contract between the planes — reported:
 
-```
+```text
 Joined 4 element(s) on element UID (126 in Plane 1, 4 traced in Plane 2)
   Not traced, but Plane 1 says they matter: components/_private/cmake-stage1.bst,
     components/bison.bst, components/doxygen.bst, components/openssl.bst,

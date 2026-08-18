@@ -12,7 +12,7 @@ engine yes, the report no**.
 Here is what `bga analyze` told a user about a real 3587.6-second
 `freedesktop-sdk` build, verbatim:
 
-```
+```text
   Biggest Opportunity: 0.1% of wall-clock time is UNTRACKED HEAD (3.47s)
   Elements Most Worth Optimizing First (by blast radius):
     1. bootstrap/base-sdk/binary-seed-x86_64.bst (124 downstream) [structural: import]
@@ -23,7 +23,7 @@ Here is what `bga analyze` told a user about a real 3587.6-second
 
 Here is what the same run's own Critical Path block says, further down:
 
-```
+```text
     components/_private/cmake-stage1.bst     1558.75s ( 43.5% of path)
     components/openssl.bst                    679.90s ( 19.0% of path)
     components/python3.bst                    625.75s ( 17.5% of path)
@@ -123,7 +123,7 @@ Implemented in `b1c379d`, verified on round 9's real capture, and
 re-checked here acceptance test by acceptance test because the status
 was never updated when the work landed.
 
-```
+```text
   Biggest Opportunity: this build is execution-bound - no wait category exceeds 1%
   of wall-clock time, so there is no scheduling gap to close
   Where the time is: 4 element(s) are 94.0% of the 3610.5s critical path - this

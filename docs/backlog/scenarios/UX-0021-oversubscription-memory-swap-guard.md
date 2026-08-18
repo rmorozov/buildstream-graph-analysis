@@ -42,7 +42,7 @@ Full suite green: 538 passed (up from 526 - 12 new tests), same 7 pre-existing e
 
 Real end-to-end re-verification against `examples/04-critical-path-optimization/optimized`, built fresh with real BuildStream 2.7.0 and extracted with `tools/bst_extract_run.py --native-max-jobs 8 --memory-budget-mb 4000 --estimated-job-memory-mb 1500` (builders=4, so estimated demand = 4 x 8 x 1500 = 48000MB vs a 4000MB budget):
 
-```
+```text
 memory_oversubscription violation: {'builders': 4, 'native_max_jobs': 8, 'estimated_job_memory_mb': 1500,
   'estimated_demand_mb': 48000, 'memory_budget_mb': 4000, ...}
 ```

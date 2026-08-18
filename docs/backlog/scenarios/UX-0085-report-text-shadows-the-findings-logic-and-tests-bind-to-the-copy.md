@@ -64,7 +64,7 @@ independently rather than trusting the commit message:
 
 Round 11, 2026-08-18, live environment:
 
-```
+```text
 $ grep -n '_CHAIN_BOUND_RATIO\s*=\|def _heaviest_on_path' bga/report/text.py
 24:_CHAIN_BOUND_RATIO = findings_mod.CHAIN_BOUND_RATIO
 $ grep -rn 'report\.text.*_heaviest_on_path' tests/ | wc -l

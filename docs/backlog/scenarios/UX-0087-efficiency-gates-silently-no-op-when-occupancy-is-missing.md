@@ -52,12 +52,13 @@ A run directory with `resource_capacities.PROCESS` removed — the real
 route by which `occupancy_ratio` goes missing, not a doctored field —
 compared against a normal one:
 
-```
+```text
 $ bga compare no-occupancy/ normal/ --fail-on-efficiency-regression
 $ echo $?
 0
 ```
-```
+
+```text
 Efficiency gate NOT APPLIED: --fail-on-efficiency-regression was requested,
 but the baseline run has no `occupancy_ratio` signal, so there is nothing to
 gate on. This is not a pass - it is an unevaluated check
@@ -74,7 +75,7 @@ gate on. This is not a pass - it is an unevaluated check
 }
 ```
 
-```
+```text
 $ bga compare no-occupancy/ normal/ --fail-on-efficiency-regression --require-efficiency-signal
 $ echo $?
 7
@@ -98,7 +99,7 @@ baseline with no occupancy must not turn it into a no-op. Verified end
 to end — a stripped baseline still trips the floor gate on its own exit
 code:
 
-```
+```text
 $ bga compare no-occupancy/ normal/ --min-efficiency 0.9
 Efficiency gate FAILED: dispatch occupancy 64.3% is below the declared floor
 of 90.0% (--min-efficiency). ...

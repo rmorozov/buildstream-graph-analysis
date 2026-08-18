@@ -43,7 +43,7 @@ direction for the first time, on real incremental builds: cold build A;
 tweak `codegen`'s source → build B (4 tasks); tweak `core`'s source →
 build C (12 tasks); compare B→C:
 
-```
+```text
 Invalidated at core.bst: its cache key changed (e50dfdfd -> dd012bbd)
 and invalidated 10 element(s) below it, 65.9s of rebuilding in total.
 Nothing it depends on changed, so the change starts here

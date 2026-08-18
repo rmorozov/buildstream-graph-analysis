@@ -3,6 +3,7 @@
 **Priority:** P1 (highest-value item found — this broke the tool's core promise) | **Status:** 🟢 Fixed & Verified (2026-08-13) — see "What remains" below for the honest residual, now scoped as `P1-19` | **Depends on:** none
 
 ## Spec Reference
+
 Read only: `sed -n '840,868p' docs/spec/specification.md` (Part 13 — Task Horizon and Invariant I1) and `sed -n '1720,1780p' docs/spec/specification.md` (Part 34 — Core Invariants, esp. I4: "for the selected horizon, `Σ attribution_duration == H` exactly").
 
 ## Original bug reports (both fully resolved by the fixes below)
@@ -28,17 +29,20 @@ After the three fixes above: **exact** identity (Σattribution == H) now holds f
 This is a deliberate scope boundary, not an oversight: the three root causes above were the ones producing *wrong/nonsensical* numbers (the original bug reports' actual complaint). The residual gap is a *narrower*, well-understood, separately-fixable completeness gap in the same subsystem, cleanly separable from what was actually broken.
 
 ## Out of Scope (unchanged from original)
+
 - The "raise a violation on undercount" reporting behavior is `P1-05`.
 - Rewriting algorithms for performance (beyond the `explicit_predecessors` complexity improvement that came for free with the correctness fix) is `P1-16`.
 
 ## Acceptance Test — as executed
+
 1. `python3 -m bga.cli analyze /tmp/bga_test_run` (the simple reproduction) — Attribution Breakdown now sums to exactly `0.45s` (100.0%), matching H.
 2. `tests/unit/test_attribution_identity.py::test_zero_wait_serialized_chain_attribution_is_exact` — new permanent regression test for the simple case, asserts exact integer equality.
 3. `tests/test_synthetic_multi_subproject.py::test_attribution_no_longer_produces_garbage_values` — new permanent regression test for the negative/overflow failure mode on the larger fixture; passes. (`test_attribution_identity_exact`, the *exact*-equality version on this same fixture, remains `xfail` — see "What remains" above; this was the original acceptance criterion #3, revised in light of the deeper understanding gained while fixing this.)
 4. Full suite: `PYTHONPATH=. python3 -m pytest tests/ -v` — no regressions.
 
 ## Verification Log
-```
+
+```text
 $ python3 -m bga.cli analyze /tmp/bga_test_run
 Execution On Chain Us   0.45s (100.0%)
 Dependency Wait Us      0.00s (  0.0%)

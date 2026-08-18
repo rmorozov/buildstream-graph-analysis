@@ -80,7 +80,7 @@ silently as part of a schema change would be exactly the kind of quiet
 semantic drift `UX-53` was about. What changed is that the report can now
 **say** it:
 
-```
+```text
   1 failed task attempt(s) contributed 5.30s of EXECUTION_ON_CHAIN -
   real time the build spent producing nothing. Counted as execution, not
   as waste, because reclassifying it would move the attribution identity (I4)

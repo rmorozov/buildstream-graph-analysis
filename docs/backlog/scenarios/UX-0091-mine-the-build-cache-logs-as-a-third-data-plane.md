@@ -109,7 +109,7 @@ logs, and the measurement changed the design:
 
 ### (1) Per-element phase breakdown
 
-```
+```text
   core.bst [84331b67] 18-08-2026 11:53:22 (14.0s)
     Running commands                    14.0s (100%)
     Configuring (self-reported)          0.8s
@@ -127,7 +127,7 @@ twice.
 Against this machine's real log tree, with **no Plane 2 artifact
 present**:
 
-```
+```text
 Operations repeated across 3+ elements (a pointer, not a measurement -
 these logs carry no per-command timing):
   9x  cmake --build _builddir -- ${JOBS}
@@ -171,7 +171,7 @@ one second across a build whose elements start within the same second
 of each other is not sufficient to reconstruct overlap honestly. The
 report says so in its own payload rather than only in this document:
 
-```
+```text
 "caveat": "Phase durations are BuildStream's own per-activity elapsed values
 at one-second resolution. These logs carry no --builders, no --max-jobs and
 no scheduler context, and no timestamps inside 'Running commands' - so there

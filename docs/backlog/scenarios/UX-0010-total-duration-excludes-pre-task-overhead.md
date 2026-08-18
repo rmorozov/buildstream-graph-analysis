@@ -10,7 +10,7 @@ Found while extracting real `examples/05-cmake-cpp-toolchain` builds (see `UX-09
 
 `tools/bst_extract_run.py --format wrapped`-extracted runs, real BuildStream 2.7.0 builds (`--builders 4 --max-jobs 4` and `--builders 8 --max-jobs 8`), inspected directly:
 
-```
+```text
 run-context.json (real, BuildStream-reported session wall clock):
   b4j4: wall_clock = 7.607s
   b8j8: wall_clock = 6.449s

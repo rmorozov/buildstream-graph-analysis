@@ -81,7 +81,7 @@ Filed 2026-08-16 from a real session; **Motivation corrected the same day** afte
 
 Real verification of the implemented fix, running the real `_check_process_oversubscription` against each of `UX-09`'s measured configurations:
 
-```
+```text
   4x4  on  4 cores  UX-09 BEST           -> ['(silent)']
   8x8  on  4 cores  UX-09 11% WORSE      -> ['resource_oversubscription', 'dispatch_oversubscription']
   4x16 on  4 cores  UX-09 ~flat          -> ['resource_oversubscription']

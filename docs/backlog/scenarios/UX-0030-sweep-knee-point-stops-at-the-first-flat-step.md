@@ -6,7 +6,7 @@
 
 `bga sweep` exists to answer "how many builders is enough?" - `README.md` says so in those words. Real run, `examples/05-cmake-cpp-toolchain` captured at `--builders 4 --max-jobs 4` on a 4-core host:
 
-```
+```text
 $ bga sweep /tmp/run-05-b4j4 --resource PROCESS --min-capacity 1 --max-capacity 8
   Capacity      T_C (s)    Improvement
          1        19.65           0.0%
@@ -74,7 +74,7 @@ Filed 2026-08-16. Implemented the same day. The sweep output is pasted verbatim 
 
 Real end-to-end re-verification against the exact sweep in this doc's Motivation (the same real `examples/05-cmake-cpp-toolchain` capture):
 
-```
+```text
   Capacity      T_C (s)    Improvement
          1        19.65           0.0%
          2        11.55          41.2%

@@ -86,7 +86,7 @@ the checkout name — both are normal states, neither is an error.
 
 Built the wheel and ran all four criteria against it:
 
-```
+```text
 $ unzip -l dist/bga-*.whl | ... | cut -d/ -f1 | sort -u
     bga
     bga-0.1.0.dist-info                      # (1) one top-level name

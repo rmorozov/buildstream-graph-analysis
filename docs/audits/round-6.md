@@ -80,7 +80,7 @@ precisely because it has found something every time it was pointed
 somewhere new — was aimed at `tests/fixtures/synthetic_multi_subproject`
 for the first time, and disagreed:
 
-```
+```text
 structural.sensitivity.critical_path_us   144500000
 floors.t_infinity_observed                118000000
 ```

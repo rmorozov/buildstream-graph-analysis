@@ -19,7 +19,7 @@ answer is neither — the two formats carry **disjoint halves**.
 **JSON has none of the conclusions.** Every sentence in the block a user
 actually reads is computed in `bga/report/text.py` and discarded:
 
-```
+```text
 Biggest Opportunity: this build is execution-bound - no wait category exceeds 1% ...
 Where the time is: 4 element(s) are 80.3% of the 3610.5s critical path
 Elements Most Worth Optimizing First (by what optimizing them would actually save -
@@ -122,7 +122,7 @@ columns rather than three lists of the same elements.
 decides only how to say it, and `bga/report/json.py` publishes the same
 list. On round 9's real capture:
 
-```
+```text
 $ bga analyze capture/run --format json | jq -r '.findings[] | "\(.severity)\t\(.id)"'
 info      run-mode-incremental
 info      confidence
@@ -137,7 +137,7 @@ info      efficiency-score
 
 The threshold a CI gate used to have to re-derive is now a field:
 
-```
+```text
 $ bga analyze capture/run --format json \
     | jq '.findings[] | select(.id == "time-concentration") | .evidence'
 { "path_us": 3610500000, "share_of_path": 0.9403545215344136, "chain_bound": true }

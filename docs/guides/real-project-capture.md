@@ -25,7 +25,7 @@ an `import` element whose source is a 238MB OCI image. Its blobs are
 served from `cdn.registry.gitlab-static.net`, which the environment's
 egress proxy refuses at the tunnel:
 
-```
+```text
 $ bst --no-interactive source fetch bootstrap/base-sdk/binary-seed-x86_64.bst
     [   fetch:bootstrap/base-sdk/binary-seed-x86_64.bst] FAILURE
     HTTPSConnectionPool(host='cdn.registry.gitlab-static.net', port=443):
@@ -38,7 +38,7 @@ The registry *API* host is reachable — `https://registry.gitlab.com/v2/`
 answers `401`, the normal unauthenticated challenge — so this is
 specifically the blob CDN, and specifically a `CONNECT` denial:
 
-```
+```text
 $ curl -sS -o /dev/null -w "%{http_code}\n" https://cdn.registry.gitlab-static.net/v2/
 curl: (56) CONNECT tunnel failed, response 403
 ```
@@ -49,7 +49,7 @@ and a source cache, which would have made the seed unnecessary. The
 proxy allows `CONNECT` to that host and port (`HTTP/1.1 200 Connection
 Established`), but the TLS handshake through the tunnel is reset:
 
-```
+```text
 $ bst --no-interactive artifact pull bootstrap/base-sdk/binary-seed-x86_64.bst
   WARNING Failed to initialize remote https://cache.freedesktop-sdk.io:11001:
   Remote initialisation failed with status UNAVAILABLE: FetchBlob: 14:
@@ -112,7 +112,7 @@ and ignores `runtime` ones, matching the rule `UX-52` enforced: a
 runtime-only edge does not make its dependent need the dependency at
 build time, so it cannot propagate a rebuild.
 
-```
+```text
 $ bga graph-from-show fdsdk components/libxml2.bst graph.json
 Wrote graph.json with 126 elements, 699 dependencies
 
@@ -195,7 +195,7 @@ destroying its predecessor). The ref name carries the tuple that has to
 match for two captures to be comparable, so a baseline set is
 discoverable with one command and no index file to keep consistent:
 
-```
+```text
 captures/fdsdk/<fdsdk-ref-short>-b<builders>j<max-jobs>-<run-id>
 ```
 
@@ -235,7 +235,7 @@ bga compare baseline-<run-id-1>/run candidate/run \
 With fewer than three, `bga compare` says so rather than silently falling
 back to the fixed rule:
 
-```
+```text
 No noise band: 2 baseline run(s) supplied, 3 required - 1 more of the same shape
 would replace the fixed 1% significance rule used here
 ```

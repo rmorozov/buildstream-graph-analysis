@@ -95,7 +95,7 @@ elements with real measured duration.
 
 On the real capture:
 
-```
+```text
 Elements Most Worth Optimizing First (by what optimizing them would
   actually save - this build is chain-bound, not scheduler-bound):
   1. components/_private/cmake-stage1.bst (1569.8s, 43.5% of the critical path)

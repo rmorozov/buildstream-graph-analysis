@@ -6,7 +6,7 @@
 
 Real run, `examples/06-macro-micro-optimization` baseline:
 
-```
+```text
   Top Improvement Opportunities (best-case speedup 1.05x if all 2.00s of improvable time were eliminated):
     - toolchain.bst: sensitivity 1.00 (100.0% impact)
     - all.bst: sensitivity 1.00 (100.0% impact)
@@ -17,7 +17,7 @@ Real run, `examples/06-macro-micro-optimization` baseline:
 
 and on `examples/05-cmake-cpp-toolchain`:
 
-```
+```text
     - all.bst: sensitivity 1.00 (100.0% impact)
     - toolchain.bst: sensitivity 1.00 (100.0% impact)
     - app.bst: sensitivity 0.82 (81.6% impact)
@@ -27,7 +27,7 @@ The two elements the tool ranks first, on both projects, are a `stack` (`all.bst
 
 The tool already knows this. The same report's Key Findings block tags them:
 
-```
+```text
     1. toolchain.bst (10 downstream elements) [structural: import, may not reflect real compute work]
     1. all.bst (100% probability of being on critical path) [structural: stack, may not reflect real compute work]
 ```
@@ -36,7 +36,7 @@ The tool already knows this. The same report's Key Findings block tags them:
 
 The same noise reaches the adjacent line:
 
-```
+```text
   Serialized (same dependency chain, not independently batchable): toolchain.bst -> all.bst; toolchain.bst -> lib-a.bst; all.bst -> lib-a.bst
 ```
 
@@ -79,7 +79,7 @@ Filed 2026-08-16. Implemented the same day. Both report excerpts are pasted from
 
 Real end-to-end re-verification against both projects quoted in this doc's Motivation, from fresh `bga analyze -d` runs on the same real captures:
 
-```
+```text
 examples/06-macro-micro-optimization          examples/05-cmake-cpp-toolchain
   Top Improvement Opportunities (...):          Top Improvement Opportunities (...):
     - lib-a.bst: sensitivity 0.40                 - app.bst:  sensitivity 0.82 (81.6% impact)

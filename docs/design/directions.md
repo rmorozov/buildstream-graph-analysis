@@ -96,7 +96,7 @@ question it was built to answer ("is this element's native build system
 achieving the parallelism it should?") is answerable from data it already
 writes to disk, per element, and is not answered:
 
-```
+```text
               baseline                      optimized/
   core.bst    peak=1  span=13.05s           peak=4  span=6.03s
   lib-a.bst   peak=3  span= 1.88s           peak=3  span=6.67s
@@ -187,7 +187,7 @@ slots. `UX-32`'s measured per-element concurrency is what would.
 
 Concretely, the report a user should get on the walkthrough's baseline:
 
-```
+```text
 Biggest structural problem: 6 elements are serialized that need not be
   lib-a.bst → lib-b.bst → lib-c.bst → lib-d.bst → lib-e.bst → lib-f.bst
   Each depends only on core.bst. Estimated wall-clock if fanned out: 21s (from 39.6s).
@@ -277,7 +277,7 @@ disabled — with nothing printed to say so (`UX-40`).
 **The shape of the fix.** A gate on a ratio that is invariant to how much
 work the build does. The candidate the audit data supports is work-vs-span:
 
-```
+```text
 occupancy_ratio = Σ task occupancy / (wall_clock × capacity)
 
   mis-optimized build:  40.25s / (39.57s × 4) = 25.4%
@@ -323,7 +323,7 @@ Around that metric, three properties matter more than the exact formula:
 
 ### What a good CI comment should look like
 
-```
+```text
 Build efficiency: 52% occupancy (baseline 55%, floor 45%)  PASS
 Wall-clock: 31.2s (baseline 27.5s, +13.5%)                 WARN - 2 new elements
 New elements this change:

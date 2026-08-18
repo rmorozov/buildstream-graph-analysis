@@ -73,7 +73,7 @@ Tier 2 done for real, 2026-08-16, per PR #58's approved design with no changes n
 
 Real end-to-end re-verification against `examples/05-cmake-cpp-toolchain` (not synthetic fixtures): captured two fresh, fully-cleared (`bst artifact delete` on every element first) real runs, `--builders 4 --max-jobs 8` and `--builders 8 --max-jobs 8` (`max-jobs` genuinely held fixed, matching `UX-09`'s own real methodology - a first attempt that let `max-jobs` fall back to its own host-core auto-default at `--builders 4` showed no real slowdown at all, a real capture-methodology bug caught and fixed before treating the result as evidence of anything). Real per-element durations directly confirmed the contention: `lib-a.bst`/`lib-b.bst`/`lib-c.bst`/`lib-d.bst` each went from `3.02s` (capacity 4) to `4.01s` (capacity 8) - genuine ~33% real slowdown, matching `UX-09`'s own original finding's shape. Feeding both real captures as `--calibration-dir`:
 
-```
+```text
 $ python3 -m bga.cli sweep run_b4 --resource PROCESS --min-capacity 4 --max-capacity 8 --step 4 \
     --calibration-dir run_b4 --calibration-dir run_b8
 

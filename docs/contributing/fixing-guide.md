@@ -29,13 +29,16 @@ This is the mandatory entry point for any agent (human or LLM) picking up a task
 **A task may only be marked 🟢 Fixed & Verified if you have personally run its Acceptance Test in this session and it passed.** Self-assessment ("this looks correct now") is not sufficient — that is exactly how the scheduler-wait regression above happened.
 
 For every task, before marking it done:
+
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
 3. Also run the full existing suite to confirm you didn't regress anything else:
-   ```
+
+   ```text
    pip install pytest   # if not already installed in this session - confirmed installable via pip
    PYTHONPATH=. python3 -m pytest tests/ -v
    ```
+
    `tests/test_e2e.py` is also directly runnable without pytest (`PYTHONPATH=. python3 tests/test_e2e.py`) if you want the fastest possible sanity check, but prefer the full `pytest tests/ -v` run before marking anything 🟢 — it now also covers `tests/test_cli.py` and `tests/test_synthetic_multi_subproject.py` (a larger multi-subproject fixture; see `docs/backlog/tasks/P3-10-synthetic-multi-subproject-large-test.md`), both of which the single e2e script does not run. Tests marked `xfail` (a handful, each pointing at the specific task file that will fix them) are expected — only genuinely new failures are regressions.
 4. Only then: update the status cell in the tracker (`docs/backlog/progress-tracker.md` or `docs/backlog/scenarios/README.md`) to 🟢, and update the task file's own status line.
 5. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
@@ -60,6 +63,7 @@ Status legend (same as the tracker):
 **A real incident, so this isn't hypothetical:** a prior fixing session ran `pip install "networkx>=2.8"` in a shell that mangled the unquoted `>`, redirecting command output into a literal file named `=2.8`, then committed it — along with `bga.egg-info/` and every package's `__pycache__/*.pyc` — straight into the repo, even though `.gitignore` already listed all of those patterns. `.gitignore` only stops *new* untracked files from being added by `git add .`/`git add -A`; it does nothing once a file is already tracked, and it does nothing to stop `git add <specific-ignored-path>` or a broad `git commit -a` from re-adding something after the fact.
 
 Rules to prevent a repeat:
+
 1. **Never run `git add -A` or `git add .`.** Stage specific files by name/path so you can see exactly what's going in.
 2. **Before every commit, run `git status` and read the full list of staged files.** If anything looks like a build artifact, cache file, log, or a filename you don't recognize authoring, stop and investigate before committing — don't assume it's fine.
 3. **Run `make check-clean` before committing.** It fails loudly if any tracked file matches a `.gitignore` pattern (this is exactly the check that would have caught the `=2.8`/`egg-info`/`__pycache__` incident). If it fails on a *pre-existing* tracked artifact you didn't add, still fix it — `git rm -r --cached <path>` and commit that removal — rather than leaving it for the next session.
@@ -78,7 +82,7 @@ Rules to prevent a repeat:
 
 ## 6. Where things live (context map — don't re-derive this)
 
-```
+```text
 bga/ingest/          JSON loading, dataclasses (models.py)
 bga/normalize/        timestamp quantization, ordering validation (timestamps.py)
 bga/occupancy/        sweep-line occupancy, task horizon (sweep.py)
@@ -123,6 +127,7 @@ json.dump(run_context, open(f"{d}/run-context.json", "w"))
 json.dump(graph, open(f"{d}/graph.json", "w"))
 json.dump(trace, open(f"{d}/trace.json", "w"))
 ```
+
 Then: `python3 -m bga.cli analyze /tmp/bga_test_run`
 
 A quick correctness sanity check with this fixture: the Attribution Breakdown should sum to the full 450000µs task horizon (I4, Σ attribution == H) - if it doesn't, something regressed in the attribution pipeline, and that's worth investigating before anything else.

@@ -67,7 +67,7 @@ edges chain elements along the critical path, it emits one finding
 naming the chain and replays this run without those edges — same
 durations, same capacity, same deterministic scheduler:
 
-```
+```text
 Restructuring opportunity: 5 declared build edge(s) among 6 element(s) were
 measured never-read, and they chain those elements along the critical path:
     lib-a.bst -> lib-b.bst -> lib-c.bst -> lib-d.bst -> lib-e.bst -> lib-f.bst
@@ -131,7 +131,7 @@ The fix shipped verified against a hand-built fixture reproducing
 the acceptance named. Round 11 closed that gap by running the filed
 command on the retained real capture:
 
-```
+```text
 $ bga correlate <round-10 run-baseline> <plane2-baseline.json>
 Restructuring opportunity: 18 declared build edge(s) among 8 element(s)
 were measured never-read, and they chain those elements along the

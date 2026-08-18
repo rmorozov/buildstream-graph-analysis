@@ -14,7 +14,7 @@ in as many words:
 
 Round 6's real `freedesktop-sdk` capture answers it. Naive:
 
-```
+```text
 opens_captured:
   buildstream-build   paths: 65101   dropped: 149053   processes: 90646
 ```
@@ -120,7 +120,7 @@ and windows separately from processes.
 A real traced build of `examples/07-declared-vs-used-dependencies`
 (BuildStream 2.7.0, real `bwrap` sandbox, `--trace-opens`, exit 0):
 
-```
+```text
 opens_captured:
   base.bst       paths: 35  dropped: 0  processes: 10  windows: 10
   unrelated.bst  paths: 33  dropped: 0  processes: 10  windows: 10

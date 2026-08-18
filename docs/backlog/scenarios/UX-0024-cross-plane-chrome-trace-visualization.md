@@ -49,7 +49,7 @@ Implemented for real the same day. 16 new tests, full suite green: 644 passed (u
 
 Real end-to-end re-verification against `examples/05-cmake-cpp-toolchain`'s `core.bst` (fully cleared first) - one single real `bst build` invocation capturing both planes at once:
 
-```
+```text
 $ python3 -m tools.bst_native_build_tracer run --raw-log raw.log --wrapped-log wrapped.log \
     examples/05-cmake-cpp-toolchain report.json -- bst --no-colors build core.bst
 

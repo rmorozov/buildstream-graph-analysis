@@ -7,7 +7,7 @@
 `Key Findings` on round 9's real capture is 21 lines, of which 13 are
 three separate rankings over the same handful of elements:
 
-```
+```text
   Where the time is: 4 element(s) are 80.3% of the 3610.5s critical path
     components/_private/cmake-stage1.bst  1569.8s (43.5% of path)
     components/openssl.bst                 672.1s (18.6% of path)
@@ -97,7 +97,7 @@ being conflated are now separate functions over the same population:
 (what a fix is worth). Round 9's capture, `Key Findings`, before and
 after:
 
-```
+```text
 before (13 lines, 3 rankings)              after (8 lines, 1 table)
   Where the time is: 4 elements, 80.3%       Where the time is: 4 element(s) are 94.0% of the
     cmake-stage1  1569.8s (43.5%)            3610.5s critical path - this build is chain-bound,

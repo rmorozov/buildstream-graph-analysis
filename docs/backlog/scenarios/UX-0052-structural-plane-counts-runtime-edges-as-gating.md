@@ -8,7 +8,7 @@ Found in round 5, the first round to point `bga` at a **real, well-maintained Bu
 
 The cross-check sweep disagrees on a real project graph, in the same two places `UX-50` disagreed:
 
-```
+```text
 $ bga analyze -f json <freedesktop-sdk zlib closure, 85 elements>
   structural.metrics.critical_path_length     32
   len(signals.critical_path)                  28
@@ -18,7 +18,7 @@ $ bga analyze -f json <freedesktop-sdk zlib closure, 85 elements>
 
 `UX-50` fixed the durations feeding this path. This is a different cause, and the numbers say exactly which:
 
-```
+```text
 ALL edges   (502 edges): longest path = 32 elements   <- what StructuralAnalyzer uses
 build-only  (475 edges): longest path = 28 elements   <- what t_infinity uses
 ```

@@ -90,7 +90,7 @@ Quote real output. Name the fixture, capture or command that produced
 it. A number with no provenance cannot be re-checked, and this project
 has repeatedly found that re-checking is where the bugs are.
 
-```
+```text
 3614.2s, 3434.4s, 3405.8s — three captures of the same freedesktop-sdk
 commit, taken by the scheduled capture workflow
 ```

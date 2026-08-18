@@ -24,6 +24,7 @@
 ## Correction Log (read once, this is why re-verification is mandatory)
 
 On 2026-08-13 the previous tracker's P1 "Attribution Categories" block (old rows 2.1–2.4) was marked 🟢 "All Fixed." Direct code inspection found:
+
 - `classify_resource_wait()` (`bga/attribution/blame_chain.py:291-338`) is now *called* (good), but its body is still the original stub: a `for res in task.resources: pass` no-op loop, `blocking_tasks: {}` always empty, `ambiguous: False` hardcoded regardless of whether a holder was actually identified. Not real per Part 8.
 - `classify_scheduler_wait()` (`bga/attribution/blame_chain.py:340-372`) still unconditionally `return False` — completely unimplemented, contradicting its "Fixed" mark.
 - Running the CLI end-to-end against a minimal 3-task single-resource-pool fixture (see `docs/contributing/fixing-guide.md` §7) shows the Attribution Breakdown summing to only ~33% of the task horizon (H) — a live invariant I4 violation, not previously listed as an issue at all. Filed as `P1-03` (highest real-world priority of the open P1 items).

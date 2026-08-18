@@ -44,7 +44,7 @@ is generated into both variants by the same script and is byte-identical.
 
 ## Iteration 0 — what `bga analyze` says about the broken build
 
-```
+```text
 $ bga analyze -d /tmp/run-06-baseline
 Total Duration: 39.6s
 
@@ -110,7 +110,7 @@ not printed at all. Filed as
 
 ## Iteration 1 — fix the graph and the one-line micro problem anyway
 
-```
+```text
 $ bga compare /tmp/run-06-baseline /tmp/run-06-optimized
 Verdict: IMPROVED  (total duration -12.07s, -30.5%, 39.57s -> 27.50s)
 
@@ -139,7 +139,7 @@ Nothing in Plane 1 can see problem 3 at all: BuildStream's log records one
 START/SUCCESS pair for `core.bst` either way. Plane 2 can, and the raw
 capture says so in one line:
 
-```
+```text
 $ bga capture run --raw-log /tmp/06.rawlog \
     examples/06-macro-micro-optimization /tmp/06-native.json \
     -- bst --builders 4 --max-jobs 4 build all.bst
@@ -156,7 +156,7 @@ By element:
 `core.bst` did more work than anything else. That is all the report says.
 The trace itself, however, contains the literal answer:
 
-```
+```text
 $ python3 - <<'EOF'   # ad-hoc, not something bga can do today
 core.bst    -> make -j1
 codegen.bst -> make -j4
@@ -166,7 +166,7 @@ EOF
 
 and the same conclusion is derivable from process overlap, per element:
 
-```
+```text
               baseline                                  optimized/
   core.bst    peak=1  span=13.05s  compile_cpu=11.05s   peak=4  span= 6.03s
   lib-a.bst   peak=3  span= 1.88s                       peak=3  span= 6.67s
@@ -233,7 +233,7 @@ against the intuition that produced it.
 
 Meanwhile the report's own next-step hint for this run says:
 
-```
+```text
   Biggest Opportunity: 32.7% of wall-clock time is RESOURCE WAIT (9.00s)
     -> a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N
        with a higher N, or `bga sweep` to find the real knee point
@@ -300,7 +300,7 @@ the two planes on element UID. Run against a real dual capture of this
 same project it produces, in one line, the finding this walkthrough needed
 three artifacts and an ad-hoc script to reach:
 
-```
+```text
   core.bst:
     - holds 25% of the critical path but runs at only 0.85 cores busy - it is waiting,
       not computing, and its native build asked for -j1: remove `notparallel` / raise

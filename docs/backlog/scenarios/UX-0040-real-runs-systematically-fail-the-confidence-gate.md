@@ -8,7 +8,7 @@
 
 The problem is what real data scores. Real capture, `examples/05-cmake-cpp-toolchain`, `bst --builders 4 --max-jobs 4 build all.bst`, produced by the exact pipeline `README.md` documents:
 
-```
+```text
 Confidence:
   Overall: 0.69 (medium)
 
@@ -63,13 +63,13 @@ Filed 2026-08-16. Implemented the same day. The confidence block is from a real 
 
 Real end-to-end re-verification against the exact capture in this doc's Motivation (`examples/05-cmake-cpp-toolchain`, the real `bst --builders 4 --max-jobs 4 build all.bst` run whose confidence block is quoted above):
 
-```
+```text
 primary = 0.8689 | attribution_score = 0.8689 | explained_untracked_us = 1889000
 ```
 
 0.694 -> **0.869**, i.e. "medium" -> "high", from the 1.889s of `Resolving elements` the tool had already measured and already printed. And the consequence that motivated the task, on the same run:
 
-```
+```text
 $ bga compare <run> <run> --fail-on-regression ; echo $?
 0        # and no "Warning: --fail-on-regression not applied" on stderr - the gate is live now
 ```

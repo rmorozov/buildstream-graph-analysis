@@ -61,7 +61,7 @@ Full suite green: 568 passed (up from 562 - 6 new tests), same 7 pre-existing en
 
 Real CLI re-verification (`bga analyze ... --format json`) against a hand-built run matching the re-saturation scenario (`holder_a` saturates PROCESS `[0,100)`, genuinely free `[100,200)`, `holder_b` saturates again `[200,300)`, capacity=1, max_jobs=2):
 
-```
+```text
 attribution: {'execution_on_chain_us': 100, 'dependency_wait_us': 0, 'resource_wait_us': 200,
               'scheduler_wait_us': 100, 'retry_wait_us': 0}
 ```

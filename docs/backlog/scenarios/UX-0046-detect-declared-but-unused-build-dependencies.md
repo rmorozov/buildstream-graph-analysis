@@ -24,7 +24,7 @@ This is the single highest-value macro finding a build-optimization tool can pro
 
 **Round 2 tested the cheap way of detecting it and it does not work.** The hypothesis was that Plane 2 already records every process's full `/proc/self/cmdline`, so a declared dependency whose staged path never appears in any of the element's traced command lines is unused. Against a real 822-process wrapped capture of `examples/06`, that hypothesis is refuted. Grouping every absolute path in every traced command line by owning element gives, for **every one of the nine elements**, the same set:
 
-```
+```text
 /bin/sh  /usr/bin/{c++,cmake,make,ar,ld,ranlib,uname}
 /usr/libexec/gcc/x86_64-linux-gnu/13/{cc1plus,collect2,liblto_plugin.so}
 /usr/lib/gcc/x86_64-linux-gnu/13/{crtbeginS.o,crtendS.o,...}
@@ -34,7 +34,7 @@ This is the single highest-value macro finding a build-optimization tool can pro
 
 Toolchain paths, temporaries, and the element's *own* source directory. Nothing else. The link lines confirm the reason - dependency artifacts are referenced by bare `-l` and default search paths, never by anything element-attributable:
 
-```
+```text
 -L/usr/lib/x86_64-linux-gnu  -L/usr/lib/gcc/x86_64-linux-gnu/13  -lstdc++ -lm -lgcc -lc
 ```
 
@@ -76,7 +76,7 @@ Both halves, plus the conservatism the task asked for.
 
 A real `--trace-opens` build of `examples/06-macro-micro-optimization` (BuildStream 2.7.0, real `bwrap`, 822 processes, 114 `OPENS` records, **zero** dropped paths):
 
-```
+```text
 Declared build dependencies never read: 24 candidate(s) across 7 element(s); 9 edge(s) confirmed used
   app.bst      never read: core.bst, lib-a.bst, lib-b.bst, lib-c.bst, lib-d.bst, lib-e.bst, lib-f.bst
   lib-a.bst    never read: codegen.bst, core.bst
@@ -107,7 +107,7 @@ Criterion 3 (the `optimized/` variant reporting no unused dependencies) is wrong
 
 Real `--trace-opens` build of that project:
 
-```
+```text
 Declared build dependencies never read: 1 candidate(s) across 1 element(s); 4 edge(s) confirmed used
   unrelated.bst              never read: base.bst  (5 staged file(s))
 

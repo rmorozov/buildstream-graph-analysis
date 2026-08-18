@@ -6,7 +6,7 @@
 
 Found during a real hands-on walkthrough of the current CLI against a fresh real capture of `examples/05-cmake-cpp-toolchain` (`bst --builders 4 build all.bst`, extracted via `tools/bst_run_wrapped.py` + `tools/bst_extract_run.py`, analyzed via `bga analyze`) - not hypothetical. Real output included:
 
-```
+```text
 Confidence:
   Overall: 0.73 (medium)
   Failed Hard Gates: critical_path_coverage_full

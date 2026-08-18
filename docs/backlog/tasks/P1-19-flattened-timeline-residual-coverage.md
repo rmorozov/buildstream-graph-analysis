@@ -3,9 +3,11 @@
 **Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** `P1-03` (done)
 
 ## Spec Reference
+
 Read only: `sed -n '466,534p' docs/spec/specification.md` (Part 6, esp. 6.2: "It proceeds backward until `wall_start` or until an attribution boundary is reached. The remaining time is represented as a **measured residual** rather than artificially forcing it through the dependency graph.") and `sed -n '788,839p' docs/spec/specification.md` (Part 12, esp. `Σ segment_duration == H` exactly).
 
 ## Where this came from
+
 `P1-03` fixed three compounding bugs producing outright garbage attribution values. After those fixes, attribution identity (I4) held exactly for single-task-kind graphs, but on `tests/fixtures/synthetic_multi_subproject/` (multi-task-kind elements, diamond dependency, real resource contention) there was a 5,500,000µs gap out of H=142,000,000µs, exactly matching `libcore.bst`'s own `TRACK`+`FETCH` duration.
 
 ## Two fixes — turned out simpler than the original design sketch predicted
@@ -20,25 +22,30 @@ The original design sketch (below, kept for reference) assumed this needed two s
 **What this does *not* solve** (confirmed empirically, not assumed): genuinely **disconnected** components — two elements with no dependency relationship to each other at all, each an independent "terminal" — are a different situation, since `compute_full_attribution` only walks from the single task with the overall maximum finish time (`P1-03`'s fix for the old broken multi-terminal heuristic). If an independent second component starts and finishes at times not nested within the first terminal's own span, its entire execution is dropped. This is confirmed as **`P1-04`'s distinct, still-open scope** — see `tests/unit/test_multi_terminal_coverage.py`, added as a permanent regression/documentation test for exactly this gap.
 
 ## Original design sketch (superseded by the above — kept for context)
+
 <details>
 <summary>What I originally thought this would require</summary>
 
 1. Intra-element sequencing: extend `build_blame_chain` to check for an earlier same-element task and continue the walk into it. (This part matched what was actually needed.)
 2. Off-chain parallel work: expected to need "an occupancy-sweep-based reconciliation ... that, for any horizon time not covered by the chain, determines from the full task set what best explains that interval." **This turned out to be unnecessary** for the connected-component case — see above for why.
+
 </details>
 
 ## Out of Scope (as executed)
+
 - Did not touch `P1-01` (resource-holder tracking) or `P1-02` (scheduler-wait, already done) - orthogonal to which tasks get a flattened-timeline segment.
 - Did not attempt disconnected multi-terminal support - that's confirmed as `P1-04`'s scope, now precisely bounded and testable rather than an open question.
 
 ## Acceptance Test — as executed
+
 1. `tests/test_synthetic_multi_subproject.py::test_attribution_identity_exact` - `xfail` mark removed, now a plain passing assertion.
 2. `tests/test_synthetic_multi_subproject.py::test_attribution_no_longer_produces_garbage_values` and `tests/unit/test_attribution_identity.py` - still pass, no regression.
 3. `tests/unit/test_multi_terminal_coverage.py` (new) - documents and locks in exactly what remains open for `P1-04`, so that task now has a concrete, runnable reproduction instead of a design question.
 4. Full suite green.
 
 ## Verification Log
-```
+
+```text
 $ python3 -c "... attribution on tests/fixtures/synthetic_multi_subproject ..."
 H: 142000000  total: 142000000  gap: 0  exact match: True
 

@@ -74,7 +74,7 @@ runner. One core busy is the `notparallel` signature named in
 critical path would actually lose if this element became instant" — is
 published in `analyze --format json` and used by the text report:
 
-```
+```text
 cmake-stage1  1569.8s realizable   (43.4% of the build)
 openssl        522.5s realizable   (14.5%)
 doxygen        513.5s realizable   (14.2%)
@@ -140,7 +140,7 @@ published as `ranking.metric`.
 
 Same capture, same command, before and after:
 
-```
+```text
 before                                   after
 1. cmake-stage1  (114.1s, tied)          1. cmake-stage1  1569.8s (43.4% of the build)
 2. bison         (114.1s, tied)          2. openssl        522.5s (14.5%)
@@ -152,7 +152,7 @@ before                                   after
 And the sentence the join exists for now appears, for the first time on
 real data:
 
-```
+```text
 components/_private/cmake-stage1.bst:
   - holds 43% of the critical path and fixing it is worth 1569.8s (43.4% of the
     build) - already compute-bound at 3.41 cores busy, so there is nothing to gain
@@ -186,7 +186,7 @@ Any metric can saturate on some graph. When every ranked element carries
 the same saving the join now says so, instead of presenting the
 alphabetical tiebreak as impact order:
 
-```
+```text
 NOTE: every ranked element carries the same Plane 1 impact (114.1s), so the order
 below is alphabetical, not an impact ranking - read the rows, not their positions
 ```

@@ -6,7 +6,7 @@
 
 Plane 2 exists to answer one question, quoted from `docs/design/architecture.md`: *"inside this one element's own sandbox, is its native build system actually achieving the parallelism it should, or silently serializing?"* Its report does not answer it. Real run, `examples/06-macro-micro-optimization`, `bst --builders 4 --max-jobs 4 build all.bst` on a 4-core host:
 
-```
+```text
 Processes traced: 822 (663 matched, 159 no observed exit)
 Max observed concurrency: 20 (matched processes only - see open_records_note)
 Wall span: 39.060s
@@ -20,7 +20,7 @@ Everything here is a count or a global. `core.bst` did more work than its siblin
 
 It is, however, fully derivable from `processes[]`, which the tool already writes to its own JSON. Computed by an ad-hoc script over that file:
 
-```
+```text
                 baseline                             optimized/
   element     n  peak  span      compile_cpu     peak  span
   core.bst   10    1   13.05s      11.05s          4    6.03s
@@ -62,7 +62,7 @@ Filed 2026-08-16 from a real session (`docs/guides/optimization-walkthrough-06.m
 
 Real end-to-end re-verification against the two real traces from this doc's Motivation (`examples/06-macro-micro-optimization`, baseline and `optimized/`, 822 traced processes each):
 
-```
+```text
 ### BASELINE
 Per-element native parallelism (real compiler/assembler/linker processes only):
   element                  peak  req  achieved     span work

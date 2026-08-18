@@ -16,7 +16,7 @@ Re-checked against a real BuildStream 2.7.0 install and a real build, that concl
 
 Real evidence, `examples/06-macro-micro-optimization` (filed with this task). `core.bst` carries `variables: notparallel: True`; every other element is identical but for its sources. Extracted from a real Plane 2 trace of a real `bst --builders 4 --max-jobs 4 build all.bst`:
 
-```
+```text
 core.bst    -> /usr/bin/make -f Makefile -j1
 codegen.bst -> /usr/bin/make -f Makefile -j4
 lib-a.bst   -> /usr/bin/make -f Makefile -j4
@@ -32,7 +32,7 @@ and the measured consequence, from the same trace: `core.bst` reached a peak of 
 
 `bga`'s own verdict on that run:
 
-```
+```text
 $ bga analyze -f json -d /tmp/run-06-baseline | jq .structural.serialization_point_risks
 []
 $ jq '.elements[] | {uid, max_jobs}' /tmp/run-06-baseline/graph.json
@@ -65,7 +65,7 @@ There is a second, narrower correction in the same place. `UX-22`'s motivating s
 
 **The capture route turned out to be simpler than this doc predicted, and it corrects a second half of `UX-22`'s finding.** Item 1 said `%{public}` would not carry `notparallel` and that a `%{vars}` read "may behave differently and must be tested rather than assumed". Tested against a real BuildStream 2.7.0 build of `examples/06-macro-micro-optimization`:
 
-```
+```text
 $ bst show --format '%{name}::%{vars}' core.bst lib-a.bst | grep -E 'notparallel|max-jobs'
 max-jobs: 1
 notparallel: True      <- core.bst
@@ -90,7 +90,7 @@ Filed 2026-08-16. Implemented the same day. The `-jN` table is extracted from a 
 
 Real end-to-end re-verification. Re-extracting the exact real capture from this doc's Motivation now yields the per-element values (`python3 -m tools.bst_show_to_graph examples/06-macro-micro-optimization all.bst`):
 
-```
+```text
 toolchain.bst    kind=import   max_jobs=4 notparallel=None
 core.bst         kind=cmake    max_jobs=1 notparallel=True
 codegen.bst      kind=cmake    max_jobs=4 notparallel=None
@@ -99,7 +99,7 @@ lib-a.bst .. lib-f.bst, app.bst, all.bst   max_jobs=4 notparallel=None
 
 matching the traced sandbox exactly (`core.bst -> make -j1`, everything else `-j4`). And `bga analyze -d` on the re-extracted run now names it:
 
-```
+```text
   Parallelism-Pinned Elements (UX-31 - running fewer native build jobs than the rest of
   this build, and expensive enough for it to matter):
     - core.bst runs its own build system at 1 job(s) - `variables: notparallel: True` -

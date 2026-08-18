@@ -3,6 +3,7 @@
 **Priority:** P1 | **Status:** 🟢 Fixed & Verified (2026-08-13) | **Depends on:** none (`P1-03`, `P1-19` both done)
 
 ## What was fixed
+
 `P1-19` resolved flattened-timeline coverage for any single connected component. This task closed the remaining gap: graphs with genuinely independent terminals (no dependency relationship between them at all - e.g. two unrelated requested targets in one CI run).
 
 Three pieces, all needed together:
@@ -13,20 +14,24 @@ Three pieces, all needed together:
 4. **Fill genuinely uncovered gaps with `IDLE`, not silence.** Discovered while fixing this: no code anywhere in the pipeline ever produced an `IDLE` segment - `idle_us` was structurally always `0`. `_build_flattened_timeline` now walks the final sorted segment list and fills any gap (before the first segment, between two segments, after the last) with an `AttributionSegment(category=IDLE)`, spanning `[min_start, max_finish)` of the task horizon. This is what makes exact identity (`Σ == H`) hold even when there's genuine dead time between disconnected components, not just when everything happens to be covered.
 
 ## Spec Reference
+
 `sed -n '788,839p' docs/spec/specification.md` (Part 12 — Flattened Timeline). "Segments are ordered / segments do not overlap / segments cover the selected horizon." `Σ segment_duration == H` exactly.
 
 ## Out of Scope (unchanged)
+
 - The reporting behavior for cases where coverage still comes up short (`P1-05`) - not needed here since coverage is now exact, but the violation-reporting mechanism itself is still a separate task for other scenarios.
 - `select_dependency_blame`'s tie-break logic - untouched, already correct.
 
 ## Acceptance Test — as executed
+
 1. `tests/unit/test_multi_terminal_coverage.py::test_independent_terminal_extending_horizon_now_covered` (renamed from `..._is_dropped_p1_04`) - now asserts exact identity (`Σ == H`) and `idle_us == 100000` for the genuine gap, replacing the old "documents the known shortfall" assertion.
 2. `tests/unit/test_multi_terminal_coverage.py::test_independent_terminal_nested_within_the_other` (renamed, no longer "harmless coincidence" - now correct because `covered_intervals` actually prevents double-counting the nested case).
 3. New: `test_independent_terminals_running_concurrently_do_not_double_count` (the overlap case) and `test_three_independent_terminals_all_covered` (3+ components, per the original acceptance test's request).
 4. Full suite: `PYTHONPATH=. python3 -m pytest tests/ -v` — 45 passed, 0 xfailed.
 
 ## Verification Log
-```
+
+```text
 $ PYTHONPATH=. python3 -m pytest tests/unit/test_multi_terminal_coverage.py -v
 4 passed
 

@@ -88,7 +88,7 @@ it correctly, and still reported "unavailable". That is now pinned by
 
 ### Verified on a real build
 
-```
+```text
 Peak Memory (largest single process per element):
   base.bst                 20.6 MB  (63 of 78 processes measured)
   unrelated.bst            20.6 MB  (63 of 78 processes measured)

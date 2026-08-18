@@ -44,7 +44,7 @@ Every conclusion the text report draws is also published by `--format json` as a
 
 `bga/` mirrors the spec's own pipeline stages fairly directly:
 
-```
+```text
 ingest/       -> load run-context/v9, graph/v9, trace/v9 (Part 32 data contracts)
 normalize/    -> timestamp quantization, clamp, violation reporting (Part 3)
 occupancy/    -> per-resource interval sweep (Part 4)
@@ -152,7 +152,7 @@ against was BuildStream's own default rather than the real core count
 (`UX-28`). Both are fixed, and the resulting verdict is now published
 once as `AnalysisResult.capacity_verdict`:
 
-```
+```text
 {"oversubscribed": bool, "undersubscribed": bool,
  "checks_ran": bool, "skipped_inputs": [...]}
 ```

@@ -6,7 +6,7 @@
 
 `tools/bst_native_build_tracer.py run` writes a JSON report to its `output` positional argument. Its sibling subcommand is `report`, and the obvious thing to do with a saved report is render it again. Real session:
 
-```
+```text
 $ python3 -m tools.bst_native_build_tracer run --wrapped-log /tmp/w.log \
     examples/05-cmake-cpp-toolchain /tmp/05-native.json -- bst --builders 4 --max-jobs 4 build all.bst
   ... (full report: 528 processes traced, max concurrency 38, 37 redundant-operation findings)
@@ -28,7 +28,7 @@ Two adjacent traps found in the same session:
 - **There is no way to re-render a saved JSON report at all.** Once `run` finishes without `--raw-log`, the text summary can never be regenerated - only the JSON remains, and nothing consumes it. Any downstream consumer (`UX-32`'s per-element parallelism, `UX-37`'s re-scoring) will want to work from the saved report rather than re-running a build.
 - **`run`'s `cmd` uses `argparse.REMAINDER`**, so any option written after the positionals is swallowed into the wrapped command. Getting the documented flag order slightly wrong:
 
-  ```
+  ```text
   $ python3 -m tools.bst_native_build_tracer run PROJ OUT --wrapped-log /tmp/w.log -- bst build all.bst
   FileNotFoundError: [Errno 2] No such file or directory: '--wrapped-log'
   ```
@@ -72,7 +72,7 @@ Filed 2026-08-16. Implemented the same day. All three outputs are pasted from a 
 
 Real end-to-end re-verification against the exact artifacts from this doc's Motivation - the real 822-process capture of `examples/06-macro-micro-optimization` and its own saved JSON report:
 
-```
+```text
 $ python3 -m tools.bst_native_build_tracer report /tmp/06-baseline-native.json
 Processes traced: 822 (663 matched, 159 no observed exit)     # was: 0 (0 matched, 0 ...)
 Max observed concurrency: 20

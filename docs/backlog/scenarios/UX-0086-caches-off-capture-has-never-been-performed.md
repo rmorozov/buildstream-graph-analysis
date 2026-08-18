@@ -141,7 +141,7 @@ Motivation allows.
 
 18 elements, and real ones rather than a trivial tail:
 
-```
+```text
 bootstrap/base-sdk/binary-seed-x86_64.bst (import)     bootstrap/base-sdk/gettext.bst   (autotools)
 bootstrap/base-sdk/binary-seed.bst        (compose)    bootstrap/base-sdk/bison.bst     (autotools)
 bootstrap/gnu-config.bst                  (manual)     bootstrap/base-sdk/pkg-config.bst(autotools)
@@ -166,7 +166,7 @@ one clear heavy element, and a comparable element count to round 9's
 
 ### Dispatched
 
-```
+```text
 workflow: real-project-capture.yml   ref: main
 target: bootstrap/build/gcc-stage1.bst   capture_mode: cold
 fdsdk_ref: 953683fb...   builders: 4   max_jobs: 4   trace_opens: true
@@ -211,7 +211,7 @@ reachable next time.
 
 ### What only a cold capture could show
 
-```
+```text
 Where the time is: 3 element(s) are 99.7% of the 1980.5s critical path
   bootstrap/build/gcc-stage1.bst  1248.7s (63.0% of path)  -> fixing it saves 1248.7s (60.8%)
   bootstrap/base-sdk/gettext.bst   725.9s (36.6% of path)  -> fixing it saves  110.1s ( 5.4%)
@@ -234,7 +234,7 @@ nothing about the scheduler can fix that.
 on **both** checks, which is the first real exercise `UX-78`'s
 cache-scenario check has ever had:
 
-```
+```text
 Refusing to compare these runs (shared_elements, run_mode):
   - baseline has 126 element(s), candidate has 18 - only 18 shared element UID(s)
     (less than half) - these runs may not be the same project

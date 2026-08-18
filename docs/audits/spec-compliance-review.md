@@ -37,6 +37,7 @@ These block everything else and should be fixed first; nothing downstream can be
 Organized by specification Part. Each item: requirement → current state → what's needed.
 
 ### Attribution categories (Part 11, Part 44 promises #3–6)
+
 - **`RESOURCE_WAIT` classifier is dead code.** `classify_resource_wait` (`bga/attribution/blame_chain.py:277-324`) contains a no-op `for res in task.resources: pass` loop and a comment admitting it: *"Simplified: check if resource was at capacity... Full implementation would track exact holders."* It just returns `len(task.resources) > 0`.
 - **`SCHEDULER_WAIT` classifier unconditionally returns `False`** (`bga/attribution/blame_chain.py:326-358`, comment: *"Would need more context to determine"*).
 - **Neither method is ever called** from `compute_full_attribution`/`compute_task_attribution` — confirmed via grep, zero call sites.
@@ -44,45 +45,58 @@ Organized by specification Part. Each item: requirement → current state → wh
 - **Consequence:** violates invariant **I4** (Σ attribution == H exactly) any time real elapsed time falls outside the blame-chain-execution / dependency-wait pair, and directly contradicts Part 44 promises 3–6.
 
 ### Flattened timeline (Part 12, I10)
+
 - `_build_flattened_timeline` (`bga/attribution/blame_chain.py:581-646`) only emits segments for tasks reachable via the backward blame-chain walk from terminal tasks; per-task attributions computed elsewhere are discarded for reconciliation. `reconcile_attribution` (line 648) sums only from these segments. On graphs with independent branches or multiple terminals, the total will silently undercount H — **no violation or log is raised.**
 
 ### Cold structural floor (Part 15, Part 44 #9)
+
 - `T∞,cold` is **hardcoded `None`** always (`bga/analyzer.py:223`, comment: *"Requires historical data (M6)"*). The M6 `analyze_historical_trends` code exists but `historical_runs` is never supplied (`bga/analyzer.py:642` — always `None`). Cold analysis is entirely unreachable, and the CLI has no `--cold`/`--allow-partial-cold` flags at all (spec Part 37.1).
 
 ### Capacity lower bound (Part 16)
+
 - `LB` only accounts for a single `PROCESS` resource pool (`bga/analyzer.py:189-199`), with explicit `# TODO: Add DOWNLOAD/UPLOAD work bounds` and `# TODO: Add exclusive serialization bounds`. Spec requires `LB = max(T∞, max_p(W_p/C_p) over all resources, provable exclusive-serialization bounds)`. This is a **correctness violation of the "certified" contract**, not just incompleteness — a certified lower bound that ignores whole resource classes can be wrong, not just weak.
 
 ### Criticality probability (Part 26, Part 44 #16)
+
 - `_compute_perturbed_critical_path` (`bga/diagnostics/analyzer.py:577-589`) **ignores the perturbed durations it's given** and returns the unperturbed critical path every sample (comment: *"Simplified implementation... Full implementation would re-run DAG longest path algorithm"*). Every element's `criticality_probability` collapses to a deterministic 0.0 or 1.0 instead of a genuine sampled distribution — this is not Monte Carlo at all.
 
 ### Rebuild blast radius (Part 25)
+
 - Weighted duration is `downstream_count × avg_duration` (a fake average over *all* elements), not a real downstream-subgraph traversal (`bga/diagnostics/analyzer.py:474-479`, comment admits the simplification).
 
 ### Leaf / deferrability analysis (Part 24)
+
 - `is_required_by_target` is **hardcoded `True`** for every element (`bga/diagnostics/analyzer.py:490-491`, comment: *"Assume all are required unless proven otherwise"*), and `compute_leaf_analysis` force-adds every element to `reachable_from_targets` (lines 648-653). The deferrability signal, as implemented, **can never flag anything as deferrable** — it's structurally incapable of doing the one thing it exists for.
 
 ### M6 Structural analysis (`bga/structural/analyzer.py`)
+
 - `build_edg` adds `Element` dataclass objects as networkx nodes while edges use string UIDs from a different construction path (`bga/structural/analyzer.py:44-49`) — this silently creates duplicate/disconnected nodes. **Confirmed empirically:** a 3-element graph reports `num_elements: 6`.
 - `_compute_critical_path_nodes` calls `self.edg.compute_critical_path(...)`, a method that doesn't exist on `ElementDependencyGraph` in this module (`bga/structural/analyzer.py:475-482`) — always raises `AttributeError`, caught by a **bare `except Exception: return []`**. Result: `critical_path_length`/`max_depth` are always 0 and `compute_sensitivity` treats every element as non-critical. **Confirmed:** a genuine 3-node linear chain reports `max_depth: 0`.
 
 ### Determinism (Part 35, I11)
+
 - No determinism-harness module exists anywhere (spec explicitly calls for an N≥100-repetition run comparing canonical serialized output). No `bga/validation/` package as recommended in Part 39.
 
 ### Reconciliation & confidence gates (Part 33)
+
 - `_compute_confidence` (`bga/analyzer.py:397-416`) only checks ordering violations and reduces confidence to a crude binary 1.0/0.5. `critical_path_coverage`, `dominator_coverage`, `blame_chain_coverage`, `task_coverage`, `duration_coverage` — all spec-mandated hard/soft gates — are **never computed or enforced**.
 
 ### CLI surface (Part 37)
+
 - Only `bga analyze` exists. Spec's recommended `graph`, `floors`, `replay`, `sweep`, `utilisation`, `diagnostics` subcommands, and the cold-analysis flags, are entirely absent.
 
 ### Architecture (Part 39)
+
 - No `bga/floors/`, `bga/report/`, or `bga/validation/` packages exist as the spec recommends — floors logic is inlined in `analyzer.py`, report formatting inlined in `cli.py`. This isn't just a style gap: it makes the invariant/report contracts much harder to unit-test in isolation (see §5 below).
 
 ### Performance (Part 41 — "avoid O(N²) for routine diagnostics")
+
 - Several graph algorithms are **O(N·E) instead of the mandated O(N+E)**: `compute_unweighted_depth`, `compute_weighted_depth`, `compute_dominators` all re-scan `graph.dependencies` inside topological-sort loops instead of using precomputed adjacency lists (`bga/graph/edg.py:96-98, 150-152, 360-362`).
 - `BlameChainAnalyzer._build_dependency_graph` is **O(N²)** — a nested loop matching finish times across all task pairs, run on every analysis (`bga/attribution/blame_chain.py:187-206`).
 - `explicit_predecessors` construction in `_compute_attribution` is **O(tasks²)** and additionally **assumes one task per element** (`bga/analyzer.py:262-280`, comment: *"Simplified: assume one task per element for now"*) — this will silently mis-map dependencies for elements with multiple task kinds/attempts (TRACK/PULL/FETCH/BUILD/PUSH, retries), which directly contradicts the spec's task-key model (`element_uid|task_kind|phase|attempt`, Part 5.2).
 
 ### Terminology (Part 43, worth a quick pass)
+
 - Spot-check CLI/report output strings against the spec's explicit "avoid" list ("interval eclipsing", "mathematically optimal schedule", "cold floor as certified bound", "resource blocker as causal predecessor") — not deeply audited here, but easy to check once output is actually reachable (post-P0 fix).
 
 ---
@@ -102,6 +116,7 @@ These matter even setting the spec aside; they're basic robustness gaps.
 ## 4. Test Coverage Plan
 
 ### Current state
+
 - **One file**, `tests/test_e2e.py`: 7 hand-rolled test functions, all against a single synthetic 3-node linear-chain fixture.
 - Assertions check **key presence, not values** — this is precisely why they missed `num_elements: 6` and `max_depth: 0` on a 3-node chain.
 - **Zero CLI coverage** — none of the 7 tests invoke `bga.cli`, which is why the P0 constructor/API breakage was never caught.
@@ -129,6 +144,7 @@ These matter even setting the spec aside; they're basic robustness gaps.
 | **Golden/regression tests** | Catch integration regressions unit tests miss | One or two realistic full traces in `tests/fixtures/golden/` with expected `analysis/v9`-shaped output snapshots, run through the full pipeline |
 
 ### Efficiency/approach
+
 1. Build the shared topology fixture library first — it's reused by nearly every other layer.
 2. Prefer `pytest.mark.parametrize` over duplicated near-identical test functions.
 3. Keep the unit layer hermetic and fast; gate golden/determinism/Monte-Carlo tests behind a `@pytest.mark.slow` marker so day-to-day CI stays quick.

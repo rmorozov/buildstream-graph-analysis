@@ -73,7 +73,7 @@ jobs:
           for alias in analyze compare correlate \
                        wrap extract capture rebuild-set checkout-cost run-context \
                        graph-from-show log-to-chrome chrome-to-trace native-to-chrome \
-                       cache-logs cross-check gen-synthetic; do
+                       cache-logs cross-check gen-synthetic baseline; do
             echo "--- bga $alias --help"
             /tmp/pkgvenv/bin/bga "$alias" --help > /dev/null
           done

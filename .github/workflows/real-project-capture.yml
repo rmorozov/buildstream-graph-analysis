@@ -105,6 +105,15 @@ on:
   # week's slack before the next one if a run wedges.
   schedule:
     - cron: "0 3 * * 0"
+    # UX-96: the cold mode on its own, lower cadence. Cold history was
+    # n=1 and accumulating only when someone remembered to dispatch it,
+    # so a cold baseline set - which any cold-vs-cold gate needs first -
+    # had no path to existence. Monthly rather than weekly because a
+    # cold capture builds a whole closure from source and the question it
+    # answers (the project's real critical path) changes on the scale of
+    # months, not days. The mode is selected from the schedule below,
+    # since a `schedule:` trigger cannot supply workflow inputs.
+    - cron: "0 4 1 * *"
   # UX-90: there is deliberately no `push` trigger. Of the first 24 runs
   # of this workflow, **17 were cancelled** - each new push to a working
   # branch killed the in-flight ~65-minute capture through the
@@ -137,7 +146,9 @@ env:
   BUILDERS: ${{ github.event.inputs.builders || '4' }}
   MAX_JOBS: ${{ github.event.inputs.max_jobs || '4' }}
   TRACE_OPENS: ${{ github.event.inputs.trace_opens || 'true' }}
-  CAPTURE_MODE: ${{ github.event.inputs.capture_mode || 'incremental' }}
+  # A dispatch says what it wants; a schedule says which cron fired, and
+  # the monthly one is the cold capture (UX-96).
+  CAPTURE_MODE: ${{ github.event.inputs.capture_mode || (github.event.schedule == '0 4 1 * *' && 'cold') || 'incremental' }}
 
 jobs:
   capture:
@@ -481,6 +492,12 @@ jobs:
             # for*, so a cold capture that silently found a warm cache is
             # visible as a disagreement rather than as a fact.
             echo "capture_mode=$CAPTURE_MODE"
+            # UX-96: the target belongs here for the same reason the mode
+            # does. Two captures of *different* targets are different
+            # builds, and the ref name carries commit, mode, builders and
+            # max_jobs but not this - so before it was recorded, nothing
+            # in a baseline set could tell them apart.
+            echo "target=$TARGET"
             echo "mem_total_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)"
           } > capture/capture-context.txt
           df -h / >> capture/capture-context.txt

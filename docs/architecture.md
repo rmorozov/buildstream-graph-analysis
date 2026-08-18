@@ -200,7 +200,7 @@ Every judgement the report makes lives in `bga/findings.py` with a stable `id`, 
 
 ### 4. The known gap, stated rather than papered over
 
-**Every real capture so far is incremental** — 25 elements built, 65 skipped. The caches-off nightly, which is the scenario a whole-project analyzer has the most to say about, has never been captured, so the critical path every round measured is the chain through the rebuilt elements rather than the project's real one. Related and measured: run-to-run noise on the real build is **2.9%** against the regression gate's fixed 1% default, so `UX-59`'s band over a baseline *set* is the correct path and its three-run minimum has not yet been reachable. See `docs/audit-round-9.md`.
+**Every real capture so far is incremental** — 25 elements built, 65 skipped. The caches-off nightly, which is the scenario a whole-project analyzer has the most to say about, has never been captured, so the critical path every round measured is the chain through the rebuilt elements rather than the project's real one. Related and measured: run-to-run noise on the real build spans **5.8%** across three captures of the *same* commit (3614.2s / 3434.4s / 3405.8s) against the regression gate's fixed 1% default, so `UX-59`'s band over a baseline *set* is the correct path. Its three-run minimum became reachable in round 11, once `UX-81` stopped each capture force-pushing over the last: the band those three define is median 3434.4s ± 3×42.5s (scaled MAD), and it correctly calls a pair the fixed rule reports as `IMPROVED (-5.8%)` no significant change. See `docs/audit-round-9.md`.
 
 ## Core invariants still load-bearing (Plane 1)
 

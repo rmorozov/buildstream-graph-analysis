@@ -266,6 +266,115 @@ def _normalize_command(command: str) -> str:
     return ' '.join(command.split())
 
 
+# UX-99: the one build phase that is the element's own work. Everything
+# else BuildStream times inside a build log is the toll it pays to run
+# that work in a sandbox - staging dependencies, integrating them,
+# staging sources, caching the artifact afterwards.
+WORK_PHASE = 'Running commands'
+
+# BuildStream times to the second, so a toll of "0.0s" means "under a
+# second", not "free". On a project that stages a 270 MB sysroot into 90
+# sandboxes the toll is minutes; on `examples/06` every overhead phase
+# rounds to zero. Published so a reader can tell a real zero from a
+# rounded one rather than having to know this.
+LOG_RESOLUTION_US = 1_000_000
+
+
+def _phase_family(name: str) -> str:
+    """`Staging dependencies at: /` -> `Staging dependencies`.
+
+    BuildStream puts the staging path in the activity name, so the same
+    phase reads as a different one per element whenever the path differs.
+    Only the aggregate is grouped by family; each element keeps the exact
+    string its own log carried.
+    """
+    return name.split(' at:', 1)[0].strip()
+
+
+def sandbox_tax(records: List[dict]) -> dict:
+    """UX-99: how much of this project's element time was the sandbox
+    rather than the build.
+
+    Three buckets, not two, and the third is the point of doing it this
+    way: `work` is `Running commands`, `toll` is every other timed
+    activity, and `unaccounted` is whatever the enclosing `Build`
+    activity's own total does not hand to either. Folding the
+    unaccounted remainder into the toll would inflate exactly the number
+    this exists to report, so it is published beside it instead.
+
+    Two limits, both in the payload rather than only here:
+
+    - **One-second resolution.** A per-element toll below a second reads
+      as 0.0s. The aggregate over many elements is still meaningful -
+      rounding down 90 times understates the toll, it does not invent
+      one - so this is a floor, and says so.
+    - **These logs accumulate across builds.** The share is over every
+      build log in the tree; if the tree holds three builds, it is that
+      population's share, not one build's. Filter with `--project`, or
+      scan a tree from one build (the capture workflow publishes one).
+    """
+    builds = [r for r in records if r['action'] == 'build' and r['total_us']]
+    if not builds:
+        return {}
+
+    by_family: Dict[str, int] = {}
+    work_us = toll_us = total_us = 0
+    payers = []
+    for record in builds:
+        element_work = element_toll = 0
+        for phase in record['phases']:
+            duration = phase['duration_us'] or 0
+            if phase['name'] == WORK_PHASE:
+                element_work += duration
+            else:
+                element_toll += duration
+                by_family[_phase_family(phase['name'])] = (
+                    by_family.get(_phase_family(phase['name']), 0) + duration
+                )
+        work_us += element_work
+        toll_us += element_toll
+        total_us += record['total_us']
+        payers.append({
+            'element': record['element'],
+            'cache_key': record['cache_key'],
+            'started_at': record['started_at'],
+            'total_us': record['total_us'],
+            'work_us': element_work,
+            'toll_us': element_toll,
+            'toll_share': element_toll / record['total_us'],
+        })
+
+    return {
+        # Logs, not distinct elements: these accumulate across builds, so
+        # `core.bst` appears once per build it took part in. Counted the
+        # way it is summed, so the two numbers agree.
+        'build_logs': len(builds),
+        'build_logs_without_a_total': sum(
+            1 for r in records if r['action'] == 'build' and not r['total_us']
+        ),
+        'total_us': total_us,
+        'work_us': work_us,
+        'toll_us': toll_us,
+        'toll_share': toll_us / total_us if total_us else None,
+        'unaccounted_us': total_us - work_us - toll_us,
+        'by_phase': [
+            {'phase': name, 'duration_us': duration}
+            for name, duration in sorted(by_family.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+        # Ranked by toll seconds, not by share: a 90% toll on a 0.4s
+        # element is arithmetic, a 40s toll on a 90s one is a finding.
+        'top_payers': sorted(payers, key=lambda p: (-p['toll_us'], p['element'])),
+        'resolution_us': LOG_RESOLUTION_US,
+        'caveat': (
+            "BuildStream times these activities to the second, so a toll under a "
+            "second reads as 0.0s and this total is a floor rather than a "
+            "measurement. It is also taken over every build log in the tree, "
+            "which accumulates across builds - filter with --project, or scan a "
+            "tree from one build."
+        ),
+    }
+
+
 def phase_breakdown(records: List[dict]) -> List[dict]:
     """Per element: where its own time went, by BuildStream phase.
 
@@ -292,11 +401,23 @@ def phase_breakdown(records: List[dict]) -> List[dict]:
         # whose time went to `Caching artifact` is a different problem
         # from one that spent it compiling, and nothing in `bga` could
         # previously tell them apart.
+        # UX-99: the toll/work split, per element, unfiltered by
+        # `PHASE_SHARE_FLOOR` - the floor decides which phases are worth
+        # a *row*, and a toll that is small is still part of the split.
+        work_us = sum(
+            p['duration_us'] or 0 for p in record['phases'] if p['name'] == WORK_PHASE
+        )
+        toll_us = sum(
+            p['duration_us'] or 0 for p in record['phases'] if p['name'] != WORK_PHASE
+        )
         rows.append({
             'element': record['element'],
             'cache_key': record['cache_key'],
             'started_at': record['started_at'],
             'total_us': total,
+            'work_us': work_us,
+            'toll_us': toll_us,
+            'toll_share': toll_us / total,
             'phases': sorted(phases, key=lambda p: -p['duration_us']),
             'commands': record['commands'],
             'self_timed': record['self_timed'],
@@ -355,6 +476,7 @@ def build_report(records: List[dict]) -> dict:
             ),
         },
         'phase_breakdown': phase_breakdown(records),
+        'sandbox_tax': sandbox_tax(records),
         'repeated_operations': repeated_operations(records),
     }
 
@@ -401,6 +523,42 @@ def format_report_text(report: dict) -> str:
             lines.append(f"  (+{len(rows) - _ELEMENTS_SHOWN} more element(s), see --format json)")
     lines.append('')
 
+    tax = report.get('sandbox_tax') or {}
+    if tax.get('total_us'):
+        # UX-99: the headline the direction asked for, then who paid it.
+        toll_s = tax['toll_us'] / 1e6
+        lines.append(
+            f"Sandbox tax: {toll_s:.1f}s of {tax['total_us'] / 1e6:.1f}s element time "
+            f"({tax['toll_share'] * 100:.1f}%) across {tax['build_logs']} build log(s) "
+            f"went to staging, integrating and caching rather than to the build itself"
+        )
+        if not tax['toll_us']:
+            lines.append(
+                "  Every overhead phase rounded to zero at BuildStream's one-second "
+                "resolution - which is a real answer on a small project, and the "
+                "reason this is a floor rather than a measurement"
+            )
+        for phase in tax['by_phase']:
+            if not phase['duration_us']:
+                continue
+            lines.append(
+                f"    {phase['phase']:<32s} {phase['duration_us'] / 1e6:7.1f}s"
+            )
+        payers = [p for p in tax['top_payers'] if p['toll_us']][:_TAX_PAYERS_SHOWN]
+        if payers:
+            lines.append('  Who paid it (by toll seconds, not by share):')
+            for payer in payers:
+                lines.append(
+                    f"    {payer['element']:<32s} {payer['toll_us'] / 1e6:7.1f}s toll "
+                    f"of {payer['total_us'] / 1e6:.1f}s ({payer['toll_share'] * 100:.0f}%)"
+                )
+        if tax['unaccounted_us']:
+            lines.append(
+                f"  ({tax['unaccounted_us'] / 1e6:.1f}s of the enclosing Build activity "
+                f"is in neither bucket - reported rather than folded into the toll)"
+            )
+        lines.append('')
+
     repeated = report['repeated_operations']
     if repeated:
         lines.append(
@@ -425,6 +583,7 @@ def format_report_text(report: dict) -> str:
 
 
 _ELEMENTS_SHOWN = 10
+_TAX_PAYERS_SHOWN = 8
 _REPEATED_SHOWN = 8
 
 

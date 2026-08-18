@@ -1,6 +1,6 @@
 # UX-101: nothing ranks what makes the project slow across builds
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-91 (the multi-build log tree), UX-92 (invalidation roots); UX-93 sharpens the cause labels
+**Priority:** High | **Status:** 🟡 In Progress — shipped and verified on a real six-build tree; the fdsdk half waits on a published log tree | **Depends on:** UX-91 (the multi-build log tree), UX-92 (invalidation roots); UX-93 sharpens the cause labels
 
 Direction 3, item 2 — see
 [`design/directions.md`](../../design/directions.md).
@@ -58,3 +58,79 @@ heaviest), the cause annotation shows B's rebuilds rooted at
 weak. On the fdsdk published tree: the ranking renders for the rebuild
 set and the top entry's cause distribution is printed. Determinism over
 the same tree.
+
+---
+
+## Fix Implemented
+
+`developer_tax` in `tools/bst_cache_logs.py`, rendered by `bga
+cache-logs` and carried in its JSON. `tax = rebuild count x mean rebuild
+cost`, which is the total, and the total is what ranks.
+
+### The logs carry no session id — measured, not assumed
+
+`UX-91` recorded that a log's header timestamp agrees with its filename
+stamp. Checked again for this task, on a real tree, and the agreement
+is the *problem*:
+
+```console
+$ head -1 all/92f30592-build.20260818-160457.log
+BuildStream 2.7.0 - Tuesday, 18-08-2026 at 16:04:57
+$ head -1 app/0b5380f2-build.20260818-160455.log
+BuildStream 2.7.0 - Tuesday, 18-08-2026 at 16:04:55
+```
+
+Two logs from the *same* `bst build`, two different header times. The
+header is the task's start, not the build's, and nothing in the tree
+says which logs belonged to one invocation. So this never prints a build
+count: the window is first-to-last log, the population is build logs,
+and `builds_lower_bound` is the largest per-element count — labelled for
+what it is, in the payload and in the text.
+
+That was the one design decision with a tempting wrong answer. Clustering
+logs by a time gap would produce a build count that looks authoritative
+and is a guess with a threshold nobody measured.
+
+### Cause annotation, and what needs a graph
+
+For each rebuild after an element's first, its key either changed or did
+not. Unchanged is `UX-93`'s case and keeps `UX-93`'s meaning. Changed
+splits again — but only with the dependency edges, which these logs do
+not contain. `--graph RUN/graph.json` supplies them; without it the
+third category is *absent from `causes_available`* and the output says
+so, rather than folding upstream-caused rebuilds silently into "its own
+definition changed".
+
+### Measured, on this machine's real tree
+
+Six builds of `examples/06` — a cold pair, then the `codegen`-tweak and
+`core`-tweak protocol, then two more:
+
+```text
+Developer tax across 27 build log(s) over 18-08-2026 16:04:32 .. 18-08-2026
+16:07:38 (at least 4 build(s)) - WEAK EVIDENCE at this few builds, printed with
+the count rather than withheld
+  element                      builds     total     mean  cause
+  core.bst                          2     19.0s     9.5s  1x own key changed
+  app.bst                           4      8.0s     2.0s  3x rooted upstream
+      rooted at lib-a.bst (6.0s of this element's rebuilds)
+  lib-a.bst                         4      8.0s     2.0s  1x own key changed, 2x rooted upstream
+      rooted at codegen.bst (2.0s of this element's rebuilds)
+      rooted at core.bst (2.0s of this element's rebuilds)
+```
+
+`core.bst` tops the ranking, as the acceptance predicts, and the cause
+column carries the experiment's own history: `lib-a.bst`'s rebuilds are
+rooted at `codegen.bst` (the B tweak) and at `core.bst` (the C tweak),
+which is exactly what was done to it.
+
+Determinism: two scans of one tree produce byte-identical JSON.
+
+### Not yet discharged
+
+The fdsdk half — *"on the published tree: the ranking renders for the
+rebuild set and the top entry's cause distribution is printed"* — needs
+a capture carrying the element-logs tarball, the same artifact `UX-99`
+and `UX-102` are waiting on. One capture is running.
+
+Tests: 6 new in `tests/unit/test_cache_logs.py`. Suite: 1310 → 1316.

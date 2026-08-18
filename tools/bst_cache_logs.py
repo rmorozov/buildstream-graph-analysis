@@ -641,7 +641,144 @@ def _plane3_findings(plane3_configure: dict, views: dict) -> List[dict]:
     }]
 
 
-def build_report(records: List[dict], native_report: Optional[dict] = None) -> dict:
+# UX-101: a ranking over fewer builds than this is a list, not a trend.
+# Below it the tax figures are printed with the count and explicitly
+# called weak evidence rather than withheld - a three-build tree is what
+# most developers have, and it does say something.
+TAX_WINDOW_STRONG_BUILDS = 5
+
+
+def developer_tax(records: List[dict], dependencies: Optional[List[dict]] = None) -> dict:
+    """UX-101: which element costs the most wall-clock across the whole
+    log tree, and why it keeps rebuilding.
+
+    Every other ranking in `bga` is about one build - the critical path
+    of *that* run, the realizable saving in *that* capture. The question
+    a team lead has is longitudinal: an element that is fourth on today's
+    critical path but rebuilds in most builds taxes the team more than
+    today's first, which rebuilds monthly. `tax = rebuild count x mean
+    rebuild cost`, which is just the total, and the total is what ranks.
+
+    **The logs carry no session id.** Measured rather than assumed: a
+    log's header timestamp equals its own filename stamp - `all/…-build.
+    20260818-160457.log` opens with `at 16:04:57` - so it is the *task's*
+    start, not the build's. Nothing in the tree says which logs belonged
+    to one `bst build`. So this never claims a build count it cannot
+    know: the window is first-to-last log, the population is build logs,
+    and `builds_lower_bound` is the largest per-element count, labelled
+    for what it is.
+
+    **Cause annotation.** For each rebuild after an element's first, its
+    key either changed or did not:
+
+    - unchanged: `UX-93`'s case - the artifact was not retained, which is
+      a question about the cache rather than the project;
+    - changed, and no dependency's key changed across the same interval:
+      the change starts here;
+    - changed, and a dependency's did too: rooted upstream, and the
+      dependency is named.
+
+    The third case needs the graph, which these logs do not contain -
+    pass `dependencies` (from a run directory's `graph.json`) to get it.
+    Without them the first two are still exact, and the payload says
+    which of the three it could distinguish rather than quietly folding
+    the third into the second.
+    """
+    builds = [r for r in records if r['action'] == 'build' and r['total_us']]
+    if not builds:
+        return {}
+
+    by_element: Dict[str, List[dict]] = {}
+    for record in builds:
+        by_element.setdefault(record['element'], []).append(record)
+    for history in by_element.values():
+        history.sort(key=lambda r: (r['started_us'] or 0, r['path']))
+
+    predecessors: Dict[str, List[str]] = {}
+    for dependency in dependencies or []:
+        predecessors.setdefault(dependency['successor'], []).append(
+            dependency['predecessor'],
+        )
+
+    def _key_changed_between(element: str, start_us, end_us) -> bool:
+        """Whether `element`'s cache key changed across (start_us, end_us]."""
+        history = by_element.get(element) or []
+        keys = [
+            record['cache_key'] for record in history
+            if start_us is not None and record['started_us'] is not None
+            and start_us < record['started_us'] <= (end_us or 0)
+        ]
+        if not keys:
+            return False
+        before = [
+            record['cache_key'] for record in history
+            if record['started_us'] is not None and record['started_us'] <= start_us
+        ]
+        return bool(before) and keys[-1] != before[-1]
+
+    rows = []
+    for element, history in by_element.items():
+        total_us = sum(record['total_us'] for record in history)
+        causes = {'unchanged_key': 0, 'own_key_changed': 0, 'rooted_upstream': 0}
+        roots: Dict[str, int] = {}
+        for previous, current in zip(history, history[1:]):
+            if current['cache_key'] == previous['cache_key']:
+                causes['unchanged_key'] += 1
+                continue
+            upstream = [
+                name for name in predecessors.get(element, [])
+                if _key_changed_between(
+                    name, previous['started_us'], current['started_us'],
+                )
+            ]
+            if upstream:
+                causes['rooted_upstream'] += 1
+                for name in upstream:
+                    roots[name] = roots.get(name, 0) + current['total_us']
+            else:
+                causes['own_key_changed'] += 1
+        rows.append({
+            'element': element,
+            'build_count': len(history),
+            'total_us': total_us,
+            'mean_us': total_us / len(history),
+            'distinct_keys': len({record['cache_key'] for record in history}),
+            'causes': causes,
+            'upstream_roots': sorted(
+                ({'element': name, 'downstream_us': cost} for name, cost in roots.items()),
+                key=lambda entry: (-entry['downstream_us'], entry['element']),
+            ),
+        })
+    rows.sort(key=lambda row: (-row['total_us'], row['element']))
+
+    starts = [r['started_us'] for r in builds if r['started_us']]
+    builds_lower_bound = max((row['build_count'] for row in rows), default=0)
+    return {
+        'build_logs': len(builds),
+        'builds_lower_bound': builds_lower_bound,
+        'window_start': min((r['started_at'] for r in builds if r['started_at']), default=None),
+        'window_end': max((r['started_at'] for r in builds if r['started_at']), default=None),
+        'window_us': (max(starts) - min(starts)) if len(starts) > 1 else 0,
+        'weak_window': builds_lower_bound < TAX_WINDOW_STRONG_BUILDS,
+        'causes_available': ['unchanged_key', 'own_key_changed'] + (
+            ['rooted_upstream'] if dependencies else []
+        ),
+        'ranking': rows,
+        'caveat': (
+            "Ranked by total build seconds across every build log in the tree. "
+            "These logs carry no session id - a log's header is its own task's "
+            "start, not its build's - so the number of builds is a lower bound "
+            "taken from the most-rebuilt element, never a count. One-second "
+            "resolution, no scheduler context, and nothing here may feed a "
+            "certified floor."
+        ),
+    }
+
+
+def build_report(
+    records: List[dict], native_report: Optional[dict] = None,
+    dependencies: Optional[List[dict]] = None,
+) -> dict:
     projects = sorted({r['project'] for r in records if r['project']})
     builds = [r for r in records if r['action'] == 'build']
     plane3_configure = configure_tax(records)
@@ -664,6 +801,7 @@ def build_report(records: List[dict], native_report: Optional[dict] = None) -> d
         },
         'phase_breakdown': phase_breakdown(records),
         'sandbox_tax': sandbox_tax(records),
+        'developer_tax': developer_tax(records, dependencies),
         'configure_tax': plane3_configure,
         'configure_views': views,
         'findings': _plane3_findings(plane3_configure, views),
@@ -790,6 +928,55 @@ def format_report_text(report: dict) -> str:
         lines.append(f"  ({tax.get('caveat') or views.get('note')})")
         lines.append('')
 
+    tax = report.get('developer_tax') or {}
+    if tax.get('ranking'):
+        # UX-101: the longitudinal ranking, which is a different question
+        # from any single build's critical path.
+        window = (
+            f"{tax['window_start']} .. {tax['window_end']}"
+            if tax['window_start'] and tax['window_end'] else 'an unrecorded window'
+        )
+        lines.append(
+            f"Developer tax across {tax['build_logs']} build log(s) over {window} "
+            f"(at least {tax['builds_lower_bound']} build(s))"
+            + (
+                " - WEAK EVIDENCE at this few builds, printed with the count rather "
+                "than withheld" if tax['weak_window'] else ""
+            )
+        )
+        lines.append(
+            f"  {'element':<28s} {'builds':>6s} {'total':>9s} {'mean':>8s}  cause"
+        )
+        for row in tax['ranking'][:_TAX_ELEMENTS_SHOWN]:
+            causes = row['causes']
+            parts = [
+                f"{count}x {name.replace('_', ' ')}"
+                for name, count in causes.items() if count
+            ]
+            lines.append(
+                f"  {row['element'][:28]:<28s} {row['build_count']:>6d} "
+                f"{row['total_us'] / 1e6:>8.1f}s {row['mean_us'] / 1e6:>7.1f}s  "
+                + ", ".join(parts)
+            )
+            for root in row['upstream_roots'][:2]:
+                lines.append(
+                    f"      rooted at {root['element']} "
+                    f"({root['downstream_us'] / 1e6:.1f}s of this element's rebuilds)"
+                )
+        if len(tax['ranking']) > _TAX_ELEMENTS_SHOWN:
+            lines.append(
+                f"  (+{len(tax['ranking']) - _TAX_ELEMENTS_SHOWN} more element(s), "
+                f"see --format json)"
+            )
+        if 'rooted_upstream' not in tax['causes_available']:
+            lines.append(
+                "  No graph supplied, so a rebuild caused by an upstream key change "
+                "is counted under `own key changed` - pass --graph RUN/graph.json to "
+                "separate them"
+            )
+        lines.append(f"  ({tax['caveat']})")
+        lines.append('')
+
     for finding in report.get('findings') or []:
         lines.append(f"[{finding['severity']}] {finding['id']}: {finding['title']}")
         lines.append('')
@@ -819,6 +1006,7 @@ def format_report_text(report: dict) -> str:
 
 _ELEMENTS_SHOWN = 10
 _TAX_PAYERS_SHOWN = 8
+_TAX_ELEMENTS_SHOWN = 10
 _REPEATED_SHOWN = 8
 
 
@@ -845,6 +1033,13 @@ def main(argv: Optional[List[str]] = None) -> int:
              '$XDG_CACHE_HOME/buildstream/logs (or ~/.cache/buildstream/logs).',
     )
     parser.add_argument('--project', default=None, help='Only this project\'s logs.')
+    parser.add_argument(
+        '--graph', default=None,
+        help="A run directory's `graph.json`. Lets the developer-tax cause "
+             "annotation (UX-101) tell a rebuild caused by an upstream key change "
+             "from one whose own definition changed - the logs alone carry no "
+             "dependency edges.",
+    )
     parser.add_argument(
         '--native-report', default=None,
         help="A Plane 2 report (`bga capture run`'s JSON) from the same build. "
@@ -889,7 +1084,19 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             return 1
 
-    report = build_report(records, native_report=native_report)
+    dependencies = None
+    if args.graph:
+        try:
+            with open(args.graph, 'r', encoding='utf-8') as handle:
+                dependencies = (json.load(handle) or {}).get('dependencies') or []
+        except (OSError, ValueError) as error:
+            print(f"Error: could not read the graph at {args.graph}: {error}",
+                  file=sys.stderr)
+            return 1
+
+    report = build_report(
+        records, native_report=native_report, dependencies=dependencies,
+    )
     output = (
         json.dumps(report, indent=2) if args.format == 'json'
         else format_report_text(report)

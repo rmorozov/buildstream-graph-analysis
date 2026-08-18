@@ -230,7 +230,7 @@ def main() -> int:
     # purpose per this module's own docstring; avoids importing
     # bst_native_build_tracer's argparse/subprocess-heavy CLI machinery
     # just to reuse its two pure parsing functions.
-    from tools.bst_native_build_tracer import pair_events, parse_trace_log
+    from .bst_native_build_tracer import pair_events, parse_trace_log
 
     with open(args.raw_log, "r", encoding="utf-8", errors="ignore") as f:
         records = pair_events(parse_trace_log(f.read()))

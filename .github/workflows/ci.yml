@@ -78,14 +78,34 @@ jobs:
             /tmp/pkgvenv/bin/bga "$alias" --help > /dev/null
           done
 
+      - name: The wheel owns exactly one top-level name
+        # UX-94: `UX-77` made the aliases work by packaging `tools*`,
+        # which put a top-level `tools` package into site-packages - the
+        # most generic importable name in Python, and one that pip will
+        # silently overwrite between two distributions that both ship
+        # it. The directory stays `tools/` in the repo and installs as
+        # `bga._tools`; this asserts the built artifact, not the config.
+        run: |
+          set -euo pipefail
+          top=$(unzip -l dist/*.whl | awk '{print $4}' | grep -v '^$' \
+                | cut -d/ -f1 | grep -vE '^(Name|----)$' | sort -u | grep -v dist-info)
+          echo "top-level entries in the wheel: $top"
+          [ "$top" = "bga" ] || { echo "wheel ships more than bga/: $top" >&2; exit 1; }
+          mkdir -p /tmp/empty && cd /tmp/empty
+          if /tmp/pkgvenv/bin/python -c "import tools" 2>/dev/null; then
+            echo "something is importable as top-level 'tools' - the name is squatted" >&2
+            exit 1
+          fi
+          echo "nothing squats the 'tools' name"
+
       - name: The packaged capture path carries its own C source
         # tools/native_trace/hook.c is compiled at capture time and is not
         # a Python module, so it needs package-data or Plane 2 installs
         # broken in a way no --help would reveal.
         run: |
-          /tmp/pkgvenv/bin/python -c "
-          import os, tools.native_trace
-          root = os.path.dirname(tools.native_trace.__file__)
+          mkdir -p /tmp/empty && cd /tmp/empty && /tmp/pkgvenv/bin/python -c "
+          import os, bga._tools.native_trace
+          root = os.path.dirname(bga._tools.native_trace.__file__)
           assert os.path.exists(os.path.join(root, 'hook.c')), 'hook.c missing from the wheel'
           print('hook.c present in the installed package')
           "

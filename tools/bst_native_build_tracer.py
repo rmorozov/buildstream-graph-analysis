@@ -65,8 +65,8 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
 
-from tools.bst_run_wrapped import run_wrapped
-from tools.native_trace.bwrap_shim import __file__ as _bwrap_shim_source
+from .bst_run_wrapped import run_wrapped
+from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
     "LD_PRELOAD only affects dynamically-linked executables. Any "

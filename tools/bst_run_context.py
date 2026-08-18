@@ -58,12 +58,12 @@ import argparse
 import json
 import sys
 
-from tools.bst_log_to_chrome_trace import (
+from .bst_log_to_chrome_trace import (
     WrapperTraceConverter,
     _resolve_start_time_us,
 )
-from tools.chrome_trace_to_bga_trace import invocation_wall_clock
-from tools._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
+from .chrome_trace_to_bga_trace import invocation_wall_clock
+from ._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
 
 
 def build_run_context(

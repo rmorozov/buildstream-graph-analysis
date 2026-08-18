@@ -43,8 +43,8 @@ import json
 import sys
 from typing import Dict, List
 
-from tools.bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
-from tools.chrome_trace_to_bga_trace import invocation_wall_clock
+from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
+from .chrome_trace_to_bga_trace import invocation_wall_clock
 
 
 def _parse_log(log_path: str, log_format: str = "auto") -> WrapperTraceConverter:

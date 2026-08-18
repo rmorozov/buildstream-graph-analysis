@@ -121,3 +121,31 @@ capture published as `5eda28a`; the 3.25-cores-busy figure is that
 capture's own `cpu_time` over its own `wall_span_s`, and
 `components/gperf.bst`'s `-j1` is its own `per_element_parallelism`
 finding.
+
+## Round-11 verification: the filed acceptance, run on the named capture
+
+The fix shipped verified against a freedesktop-sdk capture
+(`gperf.bst`, knee 2) and synthetic tests — not the `examples/06`
+macro-fixed capture the task was filed about. Round 11 ran the filed
+acceptance on that retained capture:
+
+```
+$ bga analyze <run-macro> --plane2 <plane2-macro.json>
+  Biggest Opportunity: 31.9% of wall-clock time is RESOURCE WAIT (8.00s)
+    -> core.bst asked its native build for -j1 while the rest of this
+    build asked for more: remove `notparallel` / raise that element's
+    job count first. That is capacity you already have, and unlike
+    --builders it cannot contend with itself (UX-83)
+
+$ bga sweep <run-macro> --plane2 <plane2-macro.json> --resource PROCESS ...
+Knee point (PROCESS): capacity 5 (diminishing returns beyond this)
+  Plane 2 measured 2.17 of 4 cores busy over this run
+  Free capacity you already have: core.bst asked its native build for -j1.
+```
+
+Every clause of the filed acceptance holds on the capture it named:
+the hint names `core.bst`'s pinning instead of recommending capacity,
+the sweep's knee-5 line now carries the measured saturation beside it,
+and without `--plane2` the output is the old text. The specific
+contradiction the task documented — "sweep names knee 5 on a 4-core
+host" — is resolved in the exact run that exhibited it.

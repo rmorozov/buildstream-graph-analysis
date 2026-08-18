@@ -1,6 +1,20 @@
 # UX-80: the documented capture command cannot produce the join the docs show
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-56, UX-64 (both done)
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-56, UX-64 (both done)
+
+> **Reopened by audit round 11 (2026-08-18).** The mechanism is in the
+> live path (`resolve_invocation_log_path`: `--wrapped-log` implies the
+> record, `--no-invocation-log` opts out — re-verified) and is probably
+> correct. But the filed acceptance test was never run: no
+> `build-root`-overriding fixture exists anywhere in the repo
+> (`git grep build-root -- examples tests` finds only prose), the four
+> new tests exercise flag resolution only — none runs a capture or a
+> correlate, so **none can fail if the join breaks** — and the
+> Verification Log says the plumbing was "read from" the source, which
+> is the exact insufficient form `docs/contributing/fixing-guide.md`
+> names. What remains is what the acceptance always asked for: the
+> one-element fixture with `build-root` overridden, and the README
+> sequence run against it end to end.
 
 ## Motivation
 

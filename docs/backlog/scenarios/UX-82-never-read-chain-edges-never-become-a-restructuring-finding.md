@@ -123,3 +123,36 @@ six libraries that really depend on `base` with decorative chain edges on
 top - and the 28s → 12s projection is the replay's own output at the
 run's own capacity of 4, not a hand-computed figure. Re-run against the
 published `freedesktop-sdk` capture to confirm it stays silent there.
+
+## Round-11 verification: the filed acceptance, run on the named capture
+
+The fix shipped verified against a hand-built fixture reproducing
+`examples/06`'s shape (28.0s → 12.0s), not against the round-10 capture
+the acceptance named. Round 11 closed that gap by running the filed
+command on the retained real capture:
+
+```
+$ bga correlate <round-10 run-baseline> <plane2-baseline.json>
+Restructuring opportunity: 18 declared build edge(s) among 8 element(s)
+were measured never-read, and they chain those elements along the
+critical path:
+    app.bst -> core.bst -> lib-a.bst -> ... -> lib-f.bst
+    Replaying this run with those edges removed - same durations, same
+    capacity - finishes in 11.1s against 24.9s: 13.8s
+```
+
+It fires, first in the output, above every declared-not-used row, with
+the UX-68 hedge intact — every clause of the acceptance except one,
+which the measurement corrects in place: the filed criterion expected
+the projection "within noise of the measured macro-fixed run
+(25.05s ±band)". That expectation was wrong as filed. The macro-fixed
+variant removed only the *chain* edges; the shipped finding removes
+every never-read edge on the chain, which includes the `core→lib`
+edges the example's own `optimized/` variant retains — so the correct
+comparison is against a graph where the libs fan out directly off
+`toolchain`, whose critical path is `core.bst` alone: **11.05s
+measured, 11.1s projected**. The projection is *more* accurate than
+the criterion, not less; the criterion tested the example's answer,
+and the tool's evidence is (correctly) more aggressive than the
+example. The `examples/07` negative case remains covered by fixture
+and by fdsdk's silence rather than by a live `examples/07` run.

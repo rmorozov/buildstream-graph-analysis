@@ -371,6 +371,74 @@ evidence attached*, not as a work list - and the cheapest way to catch
 the bad ones is to re-check each against measurements the repo already
 has before writing any code.
 
+## Direction 3: what the tool could see next (argued 2026-08-18, round 11)
+
+With rounds 10-11 the original two directions are substantially built:
+the local loop runs end to end from the documented commands, the
+marginal gate answers the build owner's growth rule at any project
+size, and a baseline history with a weekly cadence exists for the CI
+scenario. The question worth arguing now is which *new* class of
+finding each future cycle should add. Ranked by (evidence already in
+hand) × (how often real builds have the problem):
+
+1. **Sandbox-overhead economics.** BuildStream's per-element logs
+   record `Staging dependencies`, `Integrating sandbox`, `Staging
+   sources` and `Caching artifact` as timed activities — Plane 3
+   already parses the file they live in. On a project staging a
+   multi-hundred-MB sysroot into every one of 90 sandboxes, staging is
+   a real, per-element, *scheduler-invisible* cost that today lands in
+   untracked head or inside the element span, attributed to nothing.
+   The findings this enables: "staging is X% of your build",
+   "element Y stages 300 MB to run 2s of commands - a composition
+   problem", and a measured answer to BuildStream's oldest tuning
+   question, whether a project's elements are too fine-grained for
+   their overhead. This is the **element granularity advisor**: both
+   directions (too many tiny elements → overhead-dominated; too few
+   huge ones → poor cache granularity and a long chain) from data
+   already on disk.
+
+2. **The developer tax: longitudinal cost ranking.** A single run's
+   critical path ranks what made *that build* slow; nothing ranks what
+   makes *the project* slow across a month of builds. Plane 3 keeps
+   per-element history; UX-92 names invalidation roots per pair. Their
+   product is `rebuild frequency × rebuild cost`, summed over a run
+   history — which finds the element that costs the team the most
+   wall-clock per week, a different and more valuable answer than
+   either input. The cache-key churn roots weight this directly: a
+   volatile key near the root *is* a high developer tax.
+
+3. **Configure-tax accounting.** Plane 3's phase split plus Plane 2's
+   process table both measure the same fact from different sides: on
+   this repo's own examples, ~0.3-0.6s of every cmake element is
+   configure probes re-answering questions every sibling already
+   answered (the 9× repeated `CMakeCXXCompilerId` compiles are already
+   a Plane 2 finding). Summed across a real project and its history,
+   "N% of your build is configure" is a finding with three known
+   remedies (shared config caches, `ccache`, element merging) — and
+   the tool can say which elements pay the most.
+
+4. **Remote-cache health as a time series.** Pull/push durations per
+   artifact exist in Plane 1's task kinds; the per-run refs now retain
+   history. Bytes-per-second per remote over weeks spots a degrading
+   cache server before it quietly slows every build in the
+   organization — the CI-analytics finding with the highest blast
+   radius per implementation hour, and one no single-run report can
+   make.
+
+5. **Memory-bound capacity advice.** UX-63's per-task peak memory
+   exists; the standing advice "multiply by however many elements
+   build concurrently before raising `builders`" is still left as an
+   exercise. Computing it — max safe `builders` from the measured RSS
+   distribution against host memory, and a gate on additions whose
+   memory profile would force `builders` down — closes the last
+   decorative half of the capacity axis.
+
+Deliberately *not* on the list: merging the planes' timelines (still
+impossible for the reasons `architecture.md` gives), remote execution
+(still real, still needing a product decision first), and anything
+requiring new instrumentation before the three data sources already in
+hand — two planes and the persisted logs — are fully consumed.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -388,6 +456,7 @@ the other rounds now:
 | [8](../audits/round-8.md) | element attribution, 14.9% -> 86.1% |
 | [9](../audits/round-9.md) | the first real freedesktop-sdk capture |
 | [10](../audits/round-10.md) | both usage scenarios walked end to end |
+| [11](../audits/round-11.md) | round 10's fixes re-verified; verification discipline is where the defects were |
 
 ## Verification Log
 

@@ -1,6 +1,6 @@
 # UX-100: nothing answers whether the elements are the right size
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern)
+**Priority:** Medium | **Status:** 🟢 Done — with two deviations from the acceptance, both recorded and both forced by what the real data turned out to be | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern)
 
 Direction 3, item 1 (second half) — see
 [`design/directions.md`](../../design/directions.md).
@@ -66,3 +66,119 @@ each). On the fdsdk capture: `cmake-stage1.bst` (43% of path, internal
 parallelism 3.41 cores, bootstrap-wide invalidation root) appears as
 the split candidate with all three evidence clauses, and nothing else
 does.
+
+---
+
+## Fix Implemented
+
+`find_granularity_findings` in `bga/correlate.py`, reached by
+`bga correlate --cache-logs PLANE3.json` — Planes 1+2 were already
+there, and `--cache-logs` supplies Plane 3's per-element toll.
+
+### The merge criterion, and why it is not a derived cut
+
+The Required Fix asks for a threshold *"derived from the measured toll
+distribution, not guessed"*. Deriving one was tried first, and the real
+distribution refuses to supply it. On the freedesktop-sdk log tree, 23
+elements:
+
+```text
+median toll share  0.000
+MAD                0.000
+maximum            0.167   (components/which.bst, 1.0s of 6.0s)
+```
+
+`median + k·MAD` collapses to the median, **every** element clears it,
+and the derived threshold is decorative — `UX-28`'s lesson arriving
+through the back door. The cause is not a defect: BuildStream times
+these phases to the second and most stagings finish inside one, so the
+distribution genuinely has no spread to describe.
+
+So the criterion comes from the direction's own sentence instead —
+elements *"each paying the `UX-99` toll to do less work than the toll
+costs"*. That is `toll >= work`: a definition, with nothing to tune,
+which lands on the same ~50% share the direction hypothesised without
+anyone picking it. An absolute floor of one second sits beside it,
+because a 91% toll share on a 0.44s element is arithmetic — `UX-99`
+ranks toll payers by seconds for the same reason.
+
+**Deviation 1, recorded:** the threshold is derived from the definition
+rather than from the distribution, because the measured distribution
+cannot produce one.
+
+### What "no finding" says
+
+```text
+[info] merge-not-indicated: No element pays more sandbox toll than it spends
+building. Across 23 measured element(s) the largest toll share is 17%
+(components/which.bst, 1.0s of 6.0s), against the 50% that would make a merge
+worth its cache cost
+```
+
+and on `examples/06`, whose elements do ~2s of work each — the
+acceptance's own negative case:
+
+```text
+Across 27 measured element(s) the largest toll share is 0% (app.bst, 0.0s of
+2.0s)
+```
+
+Both are the acceptance's *"produces no merge candidate"*, said in a
+form that distinguishes it from a check that could not run.
+
+### Split candidates
+
+Three clauses were specified: a material share of the critical path,
+internal parallelism Plane 2 can see, and a wide invalidation blast in
+the run history. The first two are measured on the real capture:
+
+```text
+[info] split-candidate: components/_private/cmake-stage1.bst holds 44% of the
+critical path and runs 7.50 concurrent work processes inside one element (4586
+of them) - work BuildStream could have scheduled as separate cacheable
+elements. Evidence, not a recommendation: a split's shape is a human decision,
+and this run's history carries no invalidation blast for it (every capture is
+the same commit), which is the third piece of evidence and the one that would
+make the case
+```
+
+The acceptance predicted *"43% of path, internal parallelism 3.41
+cores"*; this capture measures **44%** and **7.50**.
+
+**Deviation 2, recorded:** the third clause cannot be evaluated. Every
+published capture is of the same freedesktop-sdk commit, so no element's
+cache key has ever changed and `UX-92` finds no invalidation roots at
+all. The finding therefore requires the first two clauses and *states*
+that the third is unavailable, rather than staying silent or pretending
+to have it. The cost is visible and worth naming: with two clauses
+instead of three, **four** elements qualify on this capture
+(`cmake-stage1` 44%, `openssl` 18%, `python3` 17%, `doxygen` 14%) where
+the acceptance expected *"and nothing else does"*. Captures at two
+different commits are what closes it, and `UX-96`'s schedules now
+accumulate them.
+
+### The projection
+
+Merging N siblings deletes N−1 stagings, and the saving is **replayed**,
+not summed: the `UX-82` pattern applied to durations instead of edges,
+through the replay scheduler's own `duration_overrides`. Deleting five
+stagings frees capacity, and what happens next is decided by the
+scheduler, which arithmetic does not know.
+
+### One bug found while wiring it
+
+`_merge_candidates` first read the parent map from
+`analysis['graph']['dependencies']`. The analysis JSON has no `graph`
+key, so the check could never fire — a gate that passes because it
+cannot fail, which is the exact defect class `UX-84`, `UX-97` and
+`UX-109` all are. Caught by printing the parent map while wiring it up;
+the graph now comes from the caller's own graph object.
+
+Tests: 8 new in `tests/unit/test_granularity.py`. Suite: 1327 → 1335.
+
+## Verification Log
+
+Done 2026-08-18. Every figure above is from the published
+freedesktop-sdk capture or from a real `examples/06` dual capture; the
+toll distribution that decided the criterion was computed from the
+former, not assumed.

@@ -915,6 +915,236 @@ def summarize_plane2_capacity(
     }
 
 
+# UX-100: the too-fine signature, stated as a definition rather than as
+# a threshold.
+#
+# The Required Fix asks for a cut "derived from the measured toll
+# distribution, not guessed". Deriving one was tried first and the real
+# distribution refuses to supply it: on the freedesktop-sdk log tree, 23
+# elements have a median toll share of **0.0** and a MAD of **0.0**,
+# because BuildStream times these phases to the second and most stagings
+# finish inside one. `median + k*MAD` collapses to the median, every
+# element clears it, and the "derived" threshold is decorative - `UX-28`
+# arriving through the back door.
+#
+# So the criterion comes from the direction's own sentence instead:
+# elements "each paying the UX-99 toll to do less work than the toll
+# costs". That is `toll >= work` - a definition, with nothing to tune -
+# and it is the same 50% share the direction hypothesised, arrived at
+# rather than picked. The measured distribution is still published
+# beside it, because "nothing here is close to the line" is the useful
+# thing to know when nothing fires: on fdsdk the maximum toll share is
+# 16.7%, on a 6-second element.
+MERGE_TOLL_AT_LEAST_WORK = 0.5
+
+# ...and an absolute floor, because a 91% toll share on a 0.44s element
+# is arithmetic. `UX-99` ranks toll payers by seconds for the same
+# reason.
+MERGE_TOLL_FLOOR_S = 1.0
+
+# A split candidate must hold at least this share of the critical path.
+# `UX-33`'s own materiality bar, one domain over.
+SPLIT_PATH_SHARE = 0.10
+
+# ...and show real internal parallelism, or splitting it buys nothing
+# that raising its job count would not.
+SPLIT_MEAN_CONCURRENCY = 2.0
+
+
+def find_granularity_findings(
+    analysis: dict, native_report: dict, cache_logs: Optional[dict] = None,
+    tasks=None, run_context=None, dependencies=None,
+) -> List[dict]:
+    """UX-100: are the elements the right size?
+
+    Element granularity is BuildStream's oldest tuning question and every
+    answer is folklore. Both failure directions are real and opposite,
+    and by this round the tool measures every ingredient of both - the
+    toll (`UX-99`), durations and critical-path share (Plane 1), internal
+    parallelism (Plane 2), invalidation blast (`UX-92`) - while drawing
+    no conclusion from any of them. That is the same measure-but-don't-say
+    gap `UX-82` closed for graph shape.
+
+    **Too fine** is a group of siblings each paying more toll than this
+    project's own toll distribution says is normal. The projected saving
+    is replayed, not summed: merging N of them deletes N-1 stagings, and
+    whether that shortens the *build* depends on the scheduler, which is
+    what a replay knows and arithmetic does not.
+
+    **Too coarse** is hedged harder and never projected, because a
+    split's shape is a human decision. It names an element and its
+    evidence: a material share of the critical path, real internal
+    parallelism Plane 2 measured, and - where the run history can supply
+    it - a wide invalidation blast.
+    """
+    findings = []
+    findings.extend(
+        _merge_candidates(dependencies, cache_logs, tasks, run_context)
+    )
+    findings.extend(_split_candidates(analysis, native_report))
+    return findings
+
+
+def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> List[dict]:
+    payers = ((cache_logs or {}).get('sandbox_tax') or {}).get('top_payers') or []
+    measured = [p for p in payers if p.get('total_us')]
+    if not measured:
+        return []
+    toll_share = {p['element']: p['toll_share'] for p in measured}
+    toll_us = {p['element']: p['toll_us'] for p in measured}
+
+    # Siblings: elements with the identical set of build dependencies. A
+    # merge only makes sense where the graph would not notice - two
+    # elements with different parents cannot become one without changing
+    # what depends on what.
+    #
+    # Taken from the caller's graph object, not from the analysis JSON:
+    # that payload carries no `graph` key, so reading one there produced
+    # a check that could never fire - the defect class this repository
+    # keeps finding in its own gates, caught here by printing the parent
+    # map while wiring it up.
+    parents: Dict[str, set] = {}
+    for dependency in dependencies or []:
+        if getattr(dependency, 'dependency_type', None) == 'runtime':
+            continue
+        parents.setdefault(dependency.successor, set()).add(dependency.predecessor)
+    groups: Dict[frozenset, List[str]] = {}
+    for element, own_parents in parents.items():
+        if element in toll_share:
+            groups.setdefault(frozenset(own_parents), []).append(element)
+
+    findings = []
+    for parent_set, members in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+        over = sorted(
+            member for member in members
+            if toll_share.get(member, 0) >= MERGE_TOLL_AT_LEAST_WORK
+            and toll_us.get(member, 0) / 1e6 >= MERGE_TOLL_FLOOR_S
+        )
+        if len(over) < 2:
+            continue
+        # Merging N deletes N-1 tolls; the largest is kept, because one
+        # staging still happens.
+        deleted = sorted((toll_us[member] for member in over), reverse=True)[1:]
+        projection = _project_with_reduced_durations(
+            tasks, run_context,
+            {member: toll_us[member] for member in over[1:]},
+        )
+        findings.append({
+            'id': 'merge-candidate',
+            'severity': 'medium',
+            'elements': over,
+            'parents': sorted(parent_set),
+            'deleted_toll_us': sum(deleted),
+            'projection': projection,
+            'title': (
+                f"{len(over)} sibling element(s) spend at least half their time on "
+                f"sandbox toll rather than on building: {', '.join(over[:4])}. "
+                f"Merging them would delete {len(deleted)} staging(s), "
+                f"{sum(deleted) / 1e6:.1f}s of toll"
+                + (
+                    f" and a replayed {projection['saving_us'] / 1e6:.1f}s of build"
+                    if projection else ""
+                )
+                + ". It also merges their cache granularity: one source change then "
+                "rebuilds the group"
+            ),
+        })
+    if findings:
+        return findings
+
+    # Nothing fired. Say how far away the project is from the line, which
+    # is the useful form of "no finding" here - and distinguishes it from
+    # a check that could not run.
+    worst = max(measured, key=lambda p: p['toll_share'])
+    return [{
+        'id': 'merge-not-indicated',
+        'severity': 'info',
+        'elements': [],
+        'title': (
+            f"No element pays more sandbox toll than it spends building. Across "
+            f"{len(measured)} measured element(s) the largest toll share is "
+            f"{worst['toll_share'] * 100:.0f}% ({worst['element']}, "
+            f"{worst['toll_us'] / 1e6:.1f}s of {worst['total_us'] / 1e6:.1f}s), "
+            f"against the {MERGE_TOLL_AT_LEAST_WORK * 100:.0f}% that would make a "
+            f"merge worth its cache cost (UX-100)"
+        ),
+    }]
+
+
+def _project_with_reduced_durations(tasks, run_context, reductions) -> Optional[dict]:
+    """Replay the run with each named element's BUILD shortened by its
+    toll - the `UX-82` pattern, applied to durations instead of edges.
+
+    Replayed rather than summed for the same reason: deleting five
+    stagings frees capacity, and what happens next is decided by the
+    scheduler.
+    """
+    from .floors.capacity import compute_default_capacities
+    from .replay.scheduler import ReplayScheduler
+
+    if not tasks or not reductions:
+        return None
+    overrides = {}
+    for task in tasks:
+        element = task.task_key.element_uid
+        if element in reductions and task.task_key.task_kind.value == 'BUILD':
+            duration = task.finish_us - task.start_us
+            overrides[str(task.task_key)] = max(0, duration - reductions[element])
+    if not overrides:
+        return None
+    capacities = compute_default_capacities(run_context)
+    before = ReplayScheduler(list(tasks), run_context).replay(capacities)
+    after = ReplayScheduler(list(tasks), run_context).replay(
+        capacities, duration_overrides=overrides,
+    )
+    return {
+        'replayed_baseline_us': before.makespan_us,
+        'projected_us': after.makespan_us,
+        'saving_us': max(0, before.makespan_us - after.makespan_us),
+    }
+
+
+def _split_candidates(analysis, native_report) -> List[dict]:
+    signals = analysis.get('signals') or {}
+    durations = signals.get('element_durations') or {}
+    path = signals.get('critical_path') or []
+    horizon = (analysis.get('floors') or {}).get('t_infinity_observed') or 0
+    if not path or not horizon:
+        return []
+    concurrency = {
+        entry['element']: entry
+        for entry in (native_report.get('per_element_parallelism') or [])
+        if entry.get('element')
+    }
+    findings = []
+    for element in path:
+        share = (durations.get(element) or 0) / horizon
+        entry = concurrency.get(element) or {}
+        mean = entry.get('mean_work_concurrency') or 0
+        if share < SPLIT_PATH_SHARE or mean < SPLIT_MEAN_CONCURRENCY:
+            continue
+        findings.append({
+            'id': 'split-candidate',
+            'severity': 'info',
+            'elements': [element],
+            'critical_path_share': share,
+            'mean_work_concurrency': mean,
+            'work_processes': entry.get('work_process_count'),
+            'invalidation_blast': None,
+            'title': (
+                f"{element} holds {share * 100:.0f}% of the critical path and runs "
+                f"{mean:.2f} concurrent work processes inside one element "
+                f"({entry.get('work_process_count')} of them) - work BuildStream "
+                f"could have scheduled as separate cacheable elements. Evidence, not "
+                f"a recommendation: a split's shape is a human decision, and this "
+                f"run's history carries no invalidation blast for it (every capture "
+                f"is the same commit), which is the third piece of evidence and the "
+                f"one that would make the case"
+            ),
+        })
+    return findings
+
+
 def find_restructuring_findings(
     analysis: dict, native_report: dict, tasks=None, run_context=None,
 ) -> List[dict]:
@@ -956,7 +1186,8 @@ def find_restructuring_findings(
     )
 
 
-def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None) -> dict:
+def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
+              cache_logs: Optional[dict] = None, dependencies=None) -> dict:
     """Join a Plane 1 analysis with a Plane 2 native report.
 
     Both arguments are already-parsed artifacts - this function performs
@@ -1067,10 +1298,21 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None)
         [] if attribution_unreliable
         else find_restructuring_findings(analysis, native_report, tasks, run_context)
     )
+    # UX-100: the same posture as `restructuring` - a conclusion about the
+    # graph's *shape* rather than about any one element's numbers, drawn
+    # after the per-element rows and rendered before them.
+    granularity = (
+        [] if attribution_unreliable
+        else find_granularity_findings(
+            analysis, native_report, cache_logs, tasks, run_context,
+            dependencies=dependencies,
+        )
+    )
 
     return {
         "elements": [vars(e) for e in joined],
         "restructuring": restructuring,
+        "granularity": granularity,
         "memory_envelope": memory_envelope,
         "actionable": (
             [] if attribution_unreliable
@@ -1216,6 +1458,11 @@ def format_correlation(result: dict) -> str:
         lines.append(line)
         lines.append(f"    ({envelope['note']})")
     lines.append("")
+
+    # UX-100: granularity, beside the other whole-graph conclusions.
+    for finding in result.get("granularity") or []:
+        lines.append(f"[{finding['severity']}] {finding['id']}: {finding['title']}")
+        lines.append("")
 
     # UX-82: before the per-element rows. A structural conclusion
     # outranks the individual measurements it is drawn from.

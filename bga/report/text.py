@@ -873,7 +873,26 @@ def format_compare_text(comparison) -> str:
     # change that quintuples the work while running efficiently reads as
     # fine everywhere else.
     churn = getattr(comparison, 'cache_churn', None)
-    if churn:
+    if churn and churn.get('applicable') is False:
+        # UX-93: silence would be indistinguishable from an all-clear.
+        # One line, and it names the precondition rather than the
+        # finding it declined to make.
+        lines.append(f"  Cache churn not assessed: {churn['explanation']}")
+    elif churn:
+        if churn.get('rebuilt_in_both_count'):
+            named = ", ".join(churn['rebuilt_in_both_elements'][:4])
+            more = (
+                f" (+{churn['rebuilt_in_both_count'] - 4} more)"
+                if churn['rebuilt_in_both_count'] > 4 else ""
+            )
+            lines.append(
+                f"  Cache retention: {churn['rebuilt_in_both_count']} element(s) "
+                f"rebuilt in BOTH runs with the same cache key, costing "
+                f"{churn['rebuilt_in_both_us'] / 1e6:.1f}s here - {named}{more}. The "
+                f"artifact is not surviving between runs (deliberate cut, eviction, "
+                f"or a remote that is not serving it): a question about the cache, "
+                f"not about the project"
+            )
         if churn.get('churned_count'):
             named = ", ".join(churn['churned_elements'][:4])
             more = (

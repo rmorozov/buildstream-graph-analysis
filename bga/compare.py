@@ -434,10 +434,24 @@ def _compare_results(
     built_durations = (getattr(candidate_result, 'signals', None) or {}).get(
         'element_durations'
     )
+    # UX-93: the baseline's built set and both runs' modes decide whether
+    # an unchanged-key rebuild is waste, a cache-retention failure, or
+    # simply what a caches-off run does. All three are already computed
+    # and sitting in the two results; the round-11 call passed none of
+    # them, which is how a deliberate cut came to be reported as 4604
+    # seconds that "bought nothing".
+    baseline_durations = (getattr(baseline_result, 'signals', None) or {}).get(
+        'element_durations'
+    )
     cache_churn = (
         compute_cache_churn(
             baseline_elements, candidate_elements, candidate_dependencies,
             set(built_durations), built_durations,
+            baseline_built=(
+                set(baseline_durations) if isinstance(baseline_durations, dict) else None
+            ),
+            candidate_run_mode=(candidate_result.confidence or {}).get('run_mode'),
+            baseline_run_mode=(baseline_result.confidence or {}).get('run_mode'),
         )
         if isinstance(built_durations, dict) else {}
     )

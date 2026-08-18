@@ -320,3 +320,78 @@ def test_custom_regression_threshold_can_pass_a_small_regression_the_default_wou
         baseline_dir, candidate_dir, "--fail-on-regression", "--regression-threshold", "5",
     )
     assert lenient_proc.returncode == 0, lenient_proc.stderr
+
+
+# --- UX-93: the churn verdict's preconditions, wired end to end --------
+
+def _cache_run_dir(tmp_path, name, *, keys, built, queue_summary):
+    """A run directory carrying cache keys and a Pipeline Summary, which
+    is what the churn verdict reads: the keys say what changed, the
+    summary says whether the cache was even in play."""
+    run_dir = tmp_path / name
+    run_dir.mkdir(parents=True)
+    (run_dir / "graph.json").write_text(json.dumps({
+        "elements": [{"uid": uid, "cache_key": key} for uid, key in keys.items()],
+        "dependencies": [],
+    }))
+    (run_dir / "trace.json").write_text(json.dumps({
+        "spans": [_span(uid, i * 100000, 100000) for i, uid in enumerate(sorted(built))],
+        "phases": [],
+    }))
+    (run_dir / "run-context.json").write_text(json.dumps(
+        {**_RUN_CONTEXT, "queue_summary": queue_summary}
+    ))
+    return run_dir
+
+
+_FULL = {"build": {"processed": 2, "skipped": 0, "failed": 0}}
+_INCREMENTAL = {"build": {"processed": 1, "skipped": 1, "failed": 0}}
+
+
+def test_a_cold_pair_gets_no_churn_verdict_through_the_whole_compare(tmp_path):
+    """UX-93 acceptance 1, through `compare_runs` rather than the
+    accounting function alone - the round-11 defect was in the wiring,
+    not in the arithmetic: `compute_cache_churn` was called without the
+    run modes it needed, so no unit test of it could have caught this.
+    """
+    keys = {"a.bst": "k1", "b.bst": "k2"}
+    comparison = compare_runs(
+        _cache_run_dir(tmp_path, "base", keys=keys, built=keys, queue_summary=_FULL),
+        _cache_run_dir(tmp_path, "cand", keys=keys, built=keys, queue_summary=_FULL),
+    )
+    assert comparison.cache_churn["applicable"] is False
+    assert comparison.cache_churn["reason"] == "candidate_run_is_full"
+
+
+def test_an_incremental_pair_that_rebuilt_the_same_element_reads_as_retention(tmp_path):
+    """UX-93 acceptance 2's shape: the same element rebuilt in both runs
+    with the same key. Verified against the two real fdsdk captures as
+    well - 25 elements, 4879.9s, all under this wording and none under
+    "bought nothing"."""
+    keys = {"a.bst": "k1", "b.bst": "k2"}
+    comparison = compare_runs(
+        _cache_run_dir(tmp_path, "base", keys=keys, built=["a.bst"],
+                       queue_summary=_INCREMENTAL),
+        _cache_run_dir(tmp_path, "cand", keys=keys, built=["a.bst"],
+                       queue_summary=_INCREMENTAL),
+    )
+    churn = comparison.cache_churn
+    assert churn["rebuilt_in_both_elements"] == ["a.bst"]
+    assert churn["churned_elements"] == []
+
+
+def test_an_element_the_baseline_had_cached_is_still_churn(tmp_path):
+    """UX-93 acceptance 4, and the case the original wording is true
+    for. Verified for real too: from a fully-cached baseline, deleting
+    `app.bst`'s artifact and rebuilding reported `app.bst, lib-a.bst`,
+    3.3s, unchanged wording."""
+    keys = {"a.bst": "k1", "b.bst": "k2"}
+    comparison = compare_runs(
+        _cache_run_dir(tmp_path, "base", keys=keys, built=[],
+                       queue_summary=_INCREMENTAL),
+        _cache_run_dir(tmp_path, "cand", keys=keys, built=["a.bst"],
+                       queue_summary=_INCREMENTAL),
+    )
+    churn = comparison.cache_churn
+    assert churn["churned_elements"] == ["a.bst"]
+    assert churn["rebuilt_in_both_elements"] == []

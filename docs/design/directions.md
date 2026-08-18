@@ -451,6 +451,74 @@ trend consumes history, `UX-83`'s plumbing carries the memory envelope.
 The backlog rows and files are the source of truth from here; this
 section stays the argument.
 
+## Direction 4: seeing every process — the static-binary blind spot (argued 2026-08-18)
+
+Plane 2's one deliberate, load-bearing limitation has been there since
+`UX-11` chose the mechanism: `LD_PRELOAD` fires when the dynamic linker
+loads the hook into a freshly exec'd process, so **a fully static
+executable produces no record and no error** — the hook, in its own
+words, cannot detect its own absence. Every Plane 2 report carries the
+disclaimer. What the disclaimer costs, concretely: a musl-based
+toolchain, busybox build steps, or static Rust/Go tooling is invisible
+to CPU-per-binary, concurrency, memory and redundancy analysis alike —
+and this repository's *own* `examples/01`/`02` manual elements run
+static busybox, so their Plane 2 capture is empty today and nothing
+says so beyond a generic footnote.
+
+The existing design is worth keeping, not replacing. The shim → argv
+rewrite → in-sandbox env transport chain (`bwrap_shim.py`) is validated
+against real BuildStream invocations and carries element/invocation
+tagging; the hook's open-tracking (`UX-46`) *requires* in-process
+interposition and cannot be had any other way at acceptable cost. So
+the question is what **complementary** mechanism sees the processes the
+linker never touches.
+
+Alternatives, weighed:
+
+| mechanism | sees statics | argv | CPU/RSS | extra privileges | verdict |
+|---|---|---|---|---|---|
+| `LD_PRELOAD` (today) | no | yes | yes (`getrusage`) | none | keep, for enrichment + opens |
+| **ptrace event spine** (fork/exec/exit stops only) | **yes** | **yes** (read at exec-stop, no race) | **yes** (`/proc` at exit-stop) | **none** (tracees are the tracer's own descendants; allowed under Yama `ptrace_scope=1`) | **chosen** |
+| BSD process accounting, `acct(2)` | yes | no (15-char comm) | yes | `CAP_SYS_PACCT` | rejected: needs root, loses identity |
+| netlink `CN_PROC` events | yes | race via `/proc` | no | `CAP_NET_ADMIN` in the init namespace | rejected: races on exactly the short-lived processes that matter |
+| eBPF (`sched_process_exec`/`exit`) | yes | yes | yes | root + kernel config | rejected as baseline: unavailable in the dev containers this project runs in; the data model gains nothing over ptrace events |
+| `/proc` polling | partially | race | race | none | rejected: misses sub-poll-interval processes — compilers' `as`/probe processes are exactly that |
+| `fanotify` `FAN_OPEN_EXEC` | yes | no | no | `CAP_SYS_ADMIN` | rejected |
+
+The chosen shape: a **static-linked process-spine tracer**, injected by
+the *existing* shim exactly the way the hook already is (one more
+`--ro-bind`, prepended to the sandboxed command), running inside the
+sandbox as the ancestor of the whole element build. It ptrace-follows
+fork/clone/exec/exit **events only** — never per-syscall, which is
+where strace-class overhead lives — and writes START/END records with
+argv, timestamps, exit status, `utime`/`stime` and peak RSS to the same
+trace log the hook already writes to, on the same `CLOCK_MONOTONIC`
+timeline. The hook stays exactly as is: where a process is dynamic, its
+hook record *enriches* the spine record (opens, child rusage); where it
+is static, the spine record stands alone and only open-tracking is
+honestly absent. Coverage stops being a disclaimer and becomes a
+measured number.
+
+The costs, named up front because each is a real risk: the tracer
+inherits init duties when BuildStream's `--as-pid-1`/`--unshare-pid`
+make it the sandbox's pid 1 (reap orphans, forward signals, propagate
+the real command's exit status); a tracer bug can hang a build, so the
+posture is fail-open everywhere (on any tracer error: detach all,
+record the degradation, the build continues — ptrace auto-detaches if
+the tracer dies, which makes crash-safety structural); and the
+per-process event cost must be *measured* against a configure-heavy
+build before the default flips on, not assumed.
+
+**Decomposed into the backlog (2026-08-18):** `UX-105` (the static
+census — make the blind spot itself measured and named, per element,
+before building anything; it also produces the ground truth the tracer
+is verified against), `UX-106` (the spine tracer), `UX-107` (merge,
+dedupe and provenance in the parser and report — coverage as a number),
+`UX-108` (validation at real scale: the busybox examples gain their
+first Plane 2 records ever, fdsdk confirms no regression and the
+overhead budget). The backlog files carry the design details; this
+section stays the argument.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which

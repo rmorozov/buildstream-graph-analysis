@@ -120,6 +120,31 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 | UX-102 | The configure tax is measured twice and totaled never: Plane 3 has per-element `Configuring` time, Plane 2 traces the probe processes (the 9× repeated compiler-id compiles), and neither sums to "N% of this project is configure, these elements pay the most". Direction 3.3; the two planes' agreement is a free cross-check | Medium | UX-91, UX-45 | 🔴 Not Started | [UX-102](UX-0102-the-configure-tax-is-measured-twice-and-totaled-never.md) |
 | UX-103 | Cache health is a point reading with no trend: hit ratio, churn, and transfer cost exist per run while the CI question is "is the cache getting worse?" — a degrading remote slows every build in the org and no single run shows it. Direction 3.4, and the trend stage UX-92 deferred: `bga cache-trend` over the retained per-run refs, reusing the UX-59 band | Medium | UX-92, UX-96, UX-93 | 🔴 Not Started | [UX-103](UX-0103-cache-health-is-a-point-reading-with-no-trend.md) |
 | UX-104 | The memory half of capacity advice is still an exercise for the reader: "multiply 1902 MB by however many elements build concurrently" is the tool's job — compute the builders memory envelope from measured peaks, make UX-83's arbitration memory-aware, and note envelope growth in compare. Direction 3.5 | Medium | UX-63, UX-21, UX-83 | 🔴 Not Started | [UX-104](UX-0104-the-memory-half-of-capacity-advice-is-still-an-exercise-for-the-reader.md) |
+| UX-105 | The hook's static-binary blind spot is itself unmeasured: the disclaimer fires identically on a capture that missed nothing and one that missed everything (`examples/01`'s busybox elements have an **empty Plane 2 capture today** and nothing says why). Static-ness is knowable pre-build from the staged roots (`PT_INTERP` absent) — Direction 4's census, and the ground truth `UX-106` verifies against | Medium | — | 🔴 Not Started | [UX-105](UX-0105-the-blind-spot-is-itself-unmeasured.md) |
+| UX-106 | A process spine the linker cannot hide from: a static tracer injected by the existing shim chain, ptrace **process events only** (fork/exec/exit — never per-syscall), argv at exec-stop, CPU/RSS at exit-stop, same log and same monotonic timeline as the hook, init duties handled, fail-open structurally. The hook stays for opens and enrichment; alternatives (acct, CN_PROC, eBPF, polling, fanotify) weighed and rejected in Direction 4 | High | UX-105 | 🔴 Not Started | [UX-106](UX-0106-a-process-spine-that-the-linker-cannot-hide-from.md) |
+| UX-107 | Two record streams, one process list: without join+dedupe the spine double-counts every dynamic process's CPU; with it, each process carries provenance (`spine+hook` / `spine-only`), opens-dependent findings state their real coverage, the global disclaimer becomes a measured number, and old captures parse unchanged. Self+children CPU recorded twice becomes a free cross-check (the UX-53 pattern) | High | UX-106, UX-105 | 🔴 Not Started | [UX-107](UX-0107-two-record-streams-one-process-list.md) |
+| UX-108 | The spine proves itself on both build classes: `examples/01`'s busybox elements gain their first Plane 2 records ever (with `sleep 3` ≈ 0 CPU / 3s wall as a known answer), fdsdk confirms nothing regresses at 127k processes, and the measured overhead (<2% budget on a configure-heavy fixture) decides the default — on with the hook, or opt-in | Medium | UX-106, UX-107 | 🔴 Not Started | [UX-108](UX-0108-the-spine-proves-itself-on-the-builds-that-need-it-and-the-ones-that-do-not.md) |
+
+## UX-105..UX-108: Direction 4 — seeing every process (2026-08-18)
+
+The one deliberate limitation Plane 2 has carried since `UX-11` chose
+`LD_PRELOAD`: a fully static executable never invokes the dynamic
+linker, so it produces no record and no error — and this repo's own
+`examples/01`/`02` busybox elements are invisible to Plane 2 today.
+[`design/directions.md`](../../design/directions.md) Direction 4
+carries the argument: the existing shim → argv-rewrite → in-sandbox
+env chain is kept (it is validated and the opens-tracking genuinely
+needs in-process interposition), and the complement is a **ptrace
+process-event spine** — chosen over acct(2), netlink CN_PROC, eBPF,
+`/proc` polling and fanotify because it alone sees statics with full
+argv/CPU/RSS, needs no privileges (tracees are its own descendants),
+and pays per *process*, not per syscall.
+
+Order: `UX-105` (measure the blind spot itself, pre-build, from the
+staged roots — small and independently shippable) → `UX-106` (the
+tracer) → `UX-107` (join/dedupe/provenance — without it the spine
+*corrupts* CPU accounting instead of completing it) → `UX-108`
+(validation on both build classes decides the default by measurement).
 
 ## UX-98..UX-104: linting, and the Direction 3 decomposition (2026-08-18)
 

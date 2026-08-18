@@ -613,6 +613,52 @@ def compute_slack(
     return slack
 
 
+# UX-70: how many candidates to evaluate. Each costs one longest-path
+# recomputation, which is linear in the graph, so this is O(N * (V+E)).
+# Bounded because the question only makes sense for elements a user might
+# actually work on, and an unbounded sweep on a 10,000-element graph
+# would be a surprising cost inside `analyze`.
+REALIZABLE_SAVING_CANDIDATES = 8
+
+
+def compute_realizable_savings(
+    graph: Graph,
+    durations: Dict[str, int],
+    candidates: List[str],
+) -> Dict[str, int]:
+    """UX-70: what the critical path would actually lose if each
+    candidate became instant.
+
+    Share of the critical path answers "what is the chain made of". It
+    does not answer "what happens if I change it", because it holds the
+    rest of the graph fixed — and on a real `freedesktop-sdk` capture
+    **97 of 126 elements have zero slack**, so the rest of the graph does
+    not stay fixed at all. Measured there: `components/python3.bst` holds
+    17.7% of the path and eliminating it entirely saves 114s of 3610s,
+    **3.2%**, because a near-tie chain takes over the moment it shrinks.
+
+    Zeroing rather than halving is deliberate: it is the *upper bound* on
+    what optimizing this element can ever be worth, which is the number
+    that stops a user spending a week for a minute. A saving far below
+    the element's own duration is the signal — it says the graph, not
+    this element, is what binds.
+
+    Returns `{element_uid: saving_us}` for the candidates evaluated.
+    """
+    if not candidates:
+        return {}
+    baseline, _path = compute_critical_path(graph, durations)
+    savings: Dict[str, int] = {}
+    for uid in candidates[:REALIZABLE_SAVING_CANDIDATES]:
+        if not durations.get(uid):
+            continue
+        hypothetical = dict(durations)
+        hypothetical[uid] = 0
+        shortened, _ = compute_critical_path(graph, hypothetical)
+        savings[uid] = max(0, baseline - shortened)
+    return savings
+
+
 def compute_element_durations(tasks: List[NormalizedTask]) -> Dict[str, int]:
     """The single per-element duration definition: the **longest** task
     the element ran.

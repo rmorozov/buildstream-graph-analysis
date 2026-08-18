@@ -101,7 +101,7 @@ def test_structural_elements_are_excluded_not_merely_tagged():
 def test_a_chain_bound_build_ranks_by_critical_path_share():
     text = _key_findings(_result(**CHAIN_BOUND))
 
-    assert "by share of the critical path" in text
+    assert "by what optimizing them would actually save" in text
     assert "chain-bound, not scheduler-bound" in text
 
 

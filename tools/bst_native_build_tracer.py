@@ -1379,6 +1379,87 @@ def apply_correlation(records: List[dict], resolved: Dict[str, str]) -> int:
     return relabelled
 
 
+def compute_binary_cost(records: List[dict], top_n: int = 5) -> dict:
+    """UX-69: per element, which binaries actually burned the time.
+
+    The report has always ranked binaries by **invocation count**, and on
+    a real capture that hides the answer. For `cmake-stage1.bst` - the
+    element Plane 1 correctly identifies as 43.5% of the critical path -
+    the top five by count are `sh`, `as`, `ninja`, `gcc`, `cc1`, while
+    the actual cost is:
+
+        cc1plus    885 procs   4352.6 CPU s   <- absent from the count top 5
+        as        1918 procs    397.5 CPU s
+        cc1       1034 procs    252.9 CPU s
+        dwz          1 proc     137.0 CPU s   <- one process, invisible by count
+
+    `cc1plus` dominating by 10x is the heavy-C++-template signal; `dwz`
+    holding 138 seconds of wall time in a *single* process is a
+    serialization point. Counting can see neither.
+
+    Everything here comes from records already captured (`UX-45`'s
+    `cpu_us`, the paired `duration_s`), so this is a missing analysis
+    rather than a missing measurement.
+
+    CPU and wall are both reported because they answer different
+    questions: CPU says what is expensive, wall says what is *blocking*.
+    A single-process finding is called out separately, since one process
+    holding N seconds cannot be parallelised away while N processes can.
+    """
+    per_element: Dict[str, dict] = {}
+    for record in records:
+        element = record.get("element")
+        if not element:
+            continue
+        binary = os.path.basename((record.get("cmd") or "").split(" ")[0]) or "unknown"
+        entry = per_element.setdefault(element, {})
+        stat = entry.setdefault(
+            binary, {"count": 0, "cpu_us": 0, "wall_s": 0.0, "measured": 0}
+        )
+        stat["count"] += 1
+        if record.get("cpu_us") is not None:
+            stat["cpu_us"] += record["cpu_us"]
+            stat["measured"] += 1
+        if record.get("duration_s") is not None:
+            stat["wall_s"] += record["duration_s"]
+
+    result: Dict[str, dict] = {}
+    for element, binaries in per_element.items():
+        by_cpu = sorted(binaries.items(), key=lambda kv: -kv[1]["cpu_us"])
+        measured_cpu = sum(v["cpu_us"] for v in binaries.values())
+        if not measured_cpu:
+            # UX-45's rule: no CPU coverage means say so, never fall back
+            # to ranking by count while looking like a cost ranking.
+            result[element] = {
+                "available": False,
+                "note": "no CPU time was measured for this element's processes",
+            }
+            continue
+        serial = [
+            {"binary": b, "cpu_us": v["cpu_us"], "wall_s": v["wall_s"]}
+            for b, v in by_cpu[:top_n]
+            if v["count"] == 1 and v["wall_s"] > 0
+        ]
+        result[element] = {
+            "available": True,
+            "measured_cpu_us": measured_cpu,
+            "by_cpu": [
+                {"binary": b, "count": v["count"], "cpu_us": v["cpu_us"],
+                 "wall_s": round(v["wall_s"], 1),
+                 "cpu_share": v["cpu_us"] / measured_cpu}
+                for b, v in by_cpu[:top_n]
+            ],
+            "by_count": [
+                {"binary": b, "count": v["count"]}
+                for b, v in sorted(binaries.items(), key=lambda kv: -kv[1]["count"])[:top_n]
+            ],
+            # UX-69: one process holding real wall time cannot be
+            # parallelised away - a different fix from N processes.
+            "single_process_costs": serial,
+        }
+    return result
+
+
 def compute_peak_memory(records: List[dict]) -> dict:
     """UX-63: peak resident set size per element, from the same
     `getrusage` call `UX-45` already makes at exit.
@@ -1551,6 +1632,9 @@ def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
         # UX-45: real, kernel-measured CPU time per element.
         "cpu_time": compute_cpu_time(records),
         "peak_memory": compute_peak_memory(records),
+        # UX-69: where the time went inside each element, not how many
+        # times something ran.
+        "binary_cost": compute_binary_cost(records),
         # UX-32: per-element achieved parallelism - the question this
         # plane exists to answer. See compute_per_element_parallelism.
         "per_element_parallelism": compute_per_element_parallelism(records),
@@ -1709,6 +1793,40 @@ def _format_cpu_time(cpu_time: dict) -> List[str]:
     return lines
 
 
+def _format_binary_cost(binary_cost: dict, elements: List[str]) -> List[str]:
+    """UX-69's per-element block, for the elements worth reading about.
+
+    Ranked by CPU time with the count shown beside it, because the two
+    answer different questions and the report used to publish only the
+    one that hides the answer.
+    """
+    if not binary_cost:
+        return []
+    lines = ["Where the time went inside each element (by CPU time, not count):"]
+    for element in elements:
+        entry = binary_cost.get(element)
+        if not entry:
+            continue
+        if not entry.get("available"):
+            lines.append(f"  {element}: {entry.get('note', 'unavailable')}")
+            continue
+        lines.append(f"  {element}")
+        for b in entry["by_cpu"]:
+            lines.append(
+                f"    {b['binary']:<14s} {b['cpu_us'] / 1e6:9.1f} CPU s "
+                f"({b['cpu_share']:5.1%})  {b['count']:6d} process(es), "
+                f"{b['wall_s']:.1f}s wall"
+            )
+        for serial in entry.get("single_process_costs") or []:
+            lines.append(
+                f"    NOTE: {serial['binary']} is a SINGLE process holding "
+                f"{serial['wall_s']:.1f}s of wall time - a serialization point "
+                f"that more parallelism cannot help"
+            )
+    lines.append("")
+    return lines
+
+
 def _format_peak_memory(peak_memory: dict) -> List[str]:
     """UX-63's per-element block. States that the figure is a per-process
     peak and not a total, because a bare "Peak memory" heading beside a
@@ -1802,6 +1920,14 @@ def _format_text(report: dict) -> str:
         lines.append("")
         lines.append(f"ELEMENT ATTRIBUTION UNRELIABLE: {attribution['note']}")
     lines.extend(_format_cpu_time(report.get("cpu_time") or {}))
+    # UX-69: shown for the elements that actually carry time - the
+    # heaviest by measured CPU, which is where a reader is heading.
+    _bc = report.get("binary_cost") or {}
+    _heaviest = sorted(
+        (e for e, v in _bc.items() if v.get("available")),
+        key=lambda e: -_bc[e]["measured_cpu_us"],
+    )[:3]
+    lines.extend(_format_binary_cost(_bc, _heaviest))
     lines.extend(_format_peak_memory(report.get("peak_memory") or {}))
     lines.extend(_format_declared_vs_used(report.get("declared_vs_used") or {}))
     # UX-32: per-element achieved parallelism.

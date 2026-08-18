@@ -129,7 +129,7 @@ def test_key_findings_tags_structural_top_element_but_not_real_work_one(analyzed
     # a structural element is never presented as a thing to go and make
     # faster. Previously that was satisfied by tagging `root.bst`; now it
     # is satisfied by not ranking it at all.
-    assert "Elements Most Worth Optimizing First (by share of the critical path" in key_findings
+    assert "Elements Most Worth Optimizing First (by what optimizing them" in key_findings
     assert "root.bst (2 downstream elements)" not in key_findings
     # Wherever any line does mention these elements, a structural tag
     # must never be attached to the one that does real work.

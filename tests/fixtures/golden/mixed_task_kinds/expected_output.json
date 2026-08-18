@@ -74,21 +74,24 @@
                 "element_kind": "unknown",
                 "is_structural_kind": false,
                 "duration_us": 6000,
-                "share_of_path": 0.42857142857142855
+                "share_of_path": 0.42857142857142855,
+                "realizable_saving_us": 6000
             },
             {
                 "element_uid": "lib.bst",
                 "element_kind": "unknown",
                 "is_structural_kind": false,
                 "duration_us": 5000,
-                "share_of_path": 0.35714285714285715
+                "share_of_path": 0.35714285714285715,
+                "realizable_saving_us": 5000
             },
             {
                 "element_uid": "app.bst",
                 "element_kind": "unknown",
                 "is_structural_kind": false,
                 "duration_us": 3000,
-                "share_of_path": 0.21428571428571427
+                "share_of_path": 0.21428571428571427,
+                "realizable_saving_us": 3000
             }
         ],
         "downstream_count": {
@@ -103,6 +106,7 @@
             "lib.bst": 0,
             "app.bst": 0
         },
+        "zero_slack_share": 0.75,
         "unweighted_depth": {
             "base.bst": 0,
             "extra.bst": 0,

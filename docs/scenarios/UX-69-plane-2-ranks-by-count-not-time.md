@@ -1,6 +1,6 @@
 # UX-69: Plane 2 ranks binaries by invocation count, so the thing actually burning the CPU is invisible
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** `UX-45` (CPU time), `UX-64` (real per-element attribution)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-45` (CPU time), `UX-64` (real per-element attribution)
 
 ## Motivation
 
@@ -77,9 +77,40 @@ measurement, which is the same shape as `UX-33` and `UX-65`.
 4. An element with no CPU-time coverage reports that, rather than
    ranking by count silently (the `UX-45` rule).
 
+## Fix Implemented
+
+`compute_binary_cost(records)` ranks each element's binaries by measured
+CPU time, publishing count alongside rather than as the sort key, and
+naming the single-process case separately. Rendered for the three
+elements carrying the most measured CPU.
+
+```
+Where the time went inside each element (by CPU time, not count):
+  components/_private/cmake-stage1.bst
+    cc1plus           4352.6 CPU s (81.3%)     885 process(es), 5525.6s wall
+    as                 397.5 CPU s ( 7.4%)    1918 process(es), 5929.8s wall
+    cc1                252.9 CPU s ( 4.7%)    1034 process(es), 272.4s wall
+    dwz                137.0 CPU s ( 2.6%)       1 process(es), 138.6s wall
+    NOTE: dwz is a SINGLE process holding 138.6s of wall time - a
+    serialization point that more parallelism cannot help
+```
+
+**`cc1plus` at 81.3%** is the heavy-C++-template answer, absent from the
+count-ranked top five entirely.
+
+It also found something nobody was looking for: in the unresolved
+bucket, **`lto1` holds 48.8% of CPU across 412 processes** — link-time
+optimization as a first-order cost, invisible by count.
+
+`UX-45`'s rule is preserved: an element with no CPU coverage says so,
+rather than silently falling back to counts while looking like a cost
+ranking.
+
+Tests: 7 (`tests/unit/test_binary_cost.py`).
+
 ## Verification Log
 
-Filed 2026-08-17. Every figure is computed from the `processes` array of
+Filed and implemented 2026-08-17. Every figure is computed from the `processes` array of
 `native-report.json` in the capture published to `captures/fdsdk-latest`
 as `5eda28a` (run `32064333551`), filtered to
 `components/_private/cmake-stage1.bst`.

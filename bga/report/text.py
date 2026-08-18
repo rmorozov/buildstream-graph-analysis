@@ -223,7 +223,9 @@ _CHAIN_BOUND_RATIO = 0.9
 
 
 def _heaviest_on_path(result) -> List[dict]:
-    """Critical-path elements with real measured work, heaviest first.
+    """Critical-path elements with real measured work, ranked by what
+    optimizing them is actually worth (`UX-70`), falling back to raw
+    duration where a realizable saving was not evaluated.
 
     Structural elements are excluded rather than ranked: a `stack` or
     `import` on the path is genuine graph structure with no build
@@ -232,7 +234,16 @@ def _heaviest_on_path(result) -> List[dict]:
     """
     detail = (result.signals or {}).get('critical_path_detail') or []
     real = [d for d in detail if d.get('duration_us') and not d.get('is_structural_kind')]
-    return sorted(real, key=lambda d: -d['duration_us'])
+    # UX-70: rank by realizable saving. Share of the path is what the
+    # chain is made of; the saving is what changing it is worth, and on a
+    # dense graph those differ by 5x. `None` means not evaluated, and
+    # falls back to duration rather than sorting to the bottom.
+    return sorted(
+        real,
+        key=lambda d: -(d['realizable_saving_us']
+                        if d.get('realizable_saving_us') is not None
+                        else d['duration_us']),
+    )
 
 
 def _format_time_concentration(result) -> List[str]:
@@ -400,13 +411,35 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     chain_bound = bool(total) and t_infinity / total >= _CHAIN_BOUND_RATIO
     if chain_bound and _heaviest_on_path(result):
         lines.append(
-            "  Elements Most Worth Optimizing First (by share of the critical "
-            "path - this build is chain-bound, not scheduler-bound):"
+            "  Elements Most Worth Optimizing First (by what optimizing them "
+            "would actually save - this build is chain-bound, not "
+            "scheduler-bound):"
         )
         for i, d in enumerate(_heaviest_on_path(result)[:3], start=1):
+            saving = d.get('realizable_saving_us')
+            # UX-70: the share is what the chain is made of; the saving is
+            # what changing it is worth. Where they differ the second is
+            # the one that stops a wasted week, so it is stated whenever
+            # it was evaluated.
+            worth = ""
+            if saving is not None and total:
+                worth = (
+                    f" - making it instant would save {saving / 1e6:.1f}s "
+                    f"({saving / total * 100:.1f}% of the build)"
+                )
             lines.append(
                 f"    {i}. {d['element_uid']} ({d['duration_us'] / 1e6:.1f}s, "
                 f"{d.get('share_of_path', 0) * 100:.1f}% of the critical path)"
+                f"{worth}"
+            )
+        # UX-70: chain or mesh? This decides whether "optimize the top
+        # element" is meaningful advice at all.
+        density = (result.signals or {}).get('zero_slack_share')
+        if density is not None and density >= 0.5:
+            lines.append(
+                f"    Note: {density:.0%} of elements have zero slack - this graph "
+                "is a mesh of near-equal chains, so savings on one element are "
+                "often capped by the next chain rather than by its own duration"
             )
     elif top_blast_radius:
         lines.append("  Elements Most Worth Optimizing First (by blast radius):")

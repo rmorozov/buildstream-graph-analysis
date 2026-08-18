@@ -291,6 +291,13 @@ EXIT_CODE_EFFICIENCY_REGRESSION = 5
 # comparing the wrong things".
 EXIT_CODE_MISMATCHED_RUNS = 6
 
+# UX-79: the share of newly-added work that may land on the critical path
+# before the marginal gate fires. Measured on fixtures at two scales: a
+# well-added pair scores 0.00 and a serialized pair 1.00, at 11 elements
+# and at 1201 - so the threshold sits in a wide, scale-invariant gap
+# rather than being tuned to one project's size.
+DEFAULT_MAX_ADDITION_STRETCH = 0.5
+
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     """UX-03's CI regression gate: only active when --fail-on-regression
@@ -304,7 +311,9 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         getattr(args, 'fail_on_efficiency_regression', False)
         or getattr(args, 'min_efficiency', None) is not None
     )
-    if not getattr(args, 'fail_on_regression', False) and not efficiency_gate_on:
+    marginal_gate_on = getattr(args, 'fail_on_inefficient_additions', False)
+    if (not getattr(args, 'fail_on_regression', False)
+            and not efficiency_gate_on and not marginal_gate_on):
         return 0
 
     # UX-54: checked before the low-confidence fail-open, and failing
@@ -350,6 +359,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 ('--fail-on-efficiency-regression',
                  getattr(args, 'fail_on_efficiency_regression', False)),
                 ('--min-efficiency', getattr(args, 'min_efficiency', None) is not None),
+                ('--fail-on-inefficient-additions', marginal_gate_on),
             ) if on
         ]
         print(
@@ -361,6 +371,37 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             file=sys.stderr,
         )
         return 0
+
+    # UX-79: the marginal gate first, because it is the specific verdict
+    # and the two whole-build gates are the general ones - a pipeline
+    # that asked for both should be told what the *change* did before
+    # being told what the repository looks like.
+    if marginal_gate_on:
+        marginal = getattr(comparison, 'marginal_efficiency', None)
+        limit = getattr(args, 'max_addition_stretch', DEFAULT_MAX_ADDITION_STRETCH)
+        if marginal is None:
+            # UX-87's lesson applied before it is fixed: a gate that
+            # silently stops gating reports green while checking nothing.
+            print(
+                "Marginal gate not applied: this change added no elements with "
+                "measured work, so there is nothing to judge the efficiency of. "
+                "(This is not a pass - it is an empty check.)",
+                file=sys.stderr,
+            )
+        elif marginal['stretch'] > limit:
+            on_path = ", ".join(marginal['on_critical_path'])
+            print(
+                f"Marginal efficiency gate FAILED: "
+                f"{marginal['added_critical_path_us'] / 1e6:.1f}s of the "
+                f"{marginal['added_work_us'] / 1e6:.1f}s this change added landed on "
+                f"the critical path (stretch {marginal['stretch']:.2f} > {limit:.2f}) - "
+                f"on the path: {on_path}. Adding work is allowed; adding it "
+                f"serialized is what this gate exists to catch, and unlike the "
+                f"whole-build efficiency gate it does not weaken as the project grows. "
+                f"See docs/scenarios/UX-79-efficiency-gate-dilutes-with-project-size.md.",
+                file=sys.stderr,
+            )
+            return EXIT_CODE_EFFICIENCY_REGRESSION
 
     # UX-39: the efficiency gate is checked first and reported on its own
     # exit code. Order matters only for which code a pipeline sees when
@@ -894,6 +935,27 @@ def create_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument(
         '-c', '--capacity', type=int, default=None, metavar='N',
         help='Override system resource capacity for both runs (applied symmetrically). Default: auto-detect per run'
+    )
+    compare_parser.add_argument(
+        '--fail-on-inefficient-additions', action='store_true',
+        help=f'UX-79: CI gate on the efficiency of the *change*, not of the repository. '
+        f'Exits {EXIT_CODE_EFFICIENCY_REGRESSION} when more than --max-addition-stretch '
+        f'of the work this change added landed on the critical path. Unlike '
+        f'--fail-on-efficiency-regression, which reads a whole-build average and so '
+        f'gets weaker as the project grows, this mentions only the added elements: '
+        f'measured on fixtures, two maximally-mis-added elements move whole-build '
+        f'occupancy -14.6pp in an 11-element project and -0.5pp in a 1201-element one '
+        f'(passing the 5.0pp default), while their stretch is 1.00 in both.'
+    )
+    compare_parser.add_argument(
+        '--max-addition-stretch', type=float, default=DEFAULT_MAX_ADDITION_STRETCH,
+        metavar='RATIO',
+        help=f'UX-79: the share of added work that may land on the critical path '
+        f'before --fail-on-inefficient-additions fires. 0.0 means the additions were '
+        f'fully absorbed by existing parallelism; 1.0 means every second of added work '
+        f'extended the chain. Default: {DEFAULT_MAX_ADDITION_STRETCH} - "at most half '
+        f'of what you added may land on the chain", sitting in the measured gap between '
+        f'a well-added set (0.00) and a serialized one (1.00).'
     )
     compare_parser.add_argument(
         '--allow-mismatch', action='store_true',

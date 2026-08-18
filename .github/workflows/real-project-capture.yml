@@ -73,6 +73,14 @@ on:
         description: Also interpose open()/openat() (UX-46). Slower.
         type: boolean
         default: true
+  # UX-81: trend data cannot accumulate if a human has to click. Weekly
+  # is enough at ~65 runner-minutes per capture, and three captures of one
+  # pinned ref is what `bga compare --baseline-run ... --band-k` needs
+  # before it can replace the fixed 1% rule that real noise (2.9%)
+  # already beats. Sunday 03:00 UTC: off the weekday peak, and a full
+  # week's slack before the next one if a run wedges.
+  schedule:
+    - cron: "0 3 * * 0"
   push:
     # Branch-scoped on purpose: a merge to `main` that touches the capture
     # tooling should not silently spend a runner-hour. On `main` this job
@@ -445,15 +453,52 @@ jobs:
             fi
           fi
           tar -czf publish/capture.tar.gz -C capture .
-          ls -la publish
+          # UX-81: the extracted run directory, uncompressed, beside the
+          # tarball. ~155 KB, and it makes `bga analyze <checkout>/run`
+          # work on a bare checkout of a capture ref with no untar step -
+          # which is what turns a published capture into something a
+          # baseline set can be assembled from.
+          cp -r capture/run publish/run
           cp capture/capture-context.txt publish/ 2>/dev/null || true
+          cp capture/capture-outcome.txt publish/ 2>/dev/null || true
+          ls -la publish
           cd publish
           git init -q
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -q -m "capture: freedesktop-sdk run ${{ github.run_id }}"
-          git push -q --force \
-            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
-            HEAD:refs/heads/captures/fdsdk-latest
-          echo "Published to branch captures/fdsdk-latest"
+
+          REMOTE="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+
+          # UX-81: the per-run ref is the *data*, and it is never
+          # force-pushed - each publish used to destroy its predecessor,
+          # while the tool's own documented CI usage needs a baseline set
+          # of at least three runs of the same shape. The tuple that has
+          # to match for those runs to be comparable is in the ref name,
+          # so the set is discoverable with one `git ls-remote` and no
+          # index file to keep consistent:
+          #
+          #   git ls-remote origin 'refs/heads/captures/fdsdk/<ref>-b4j4-*'
+          SHORT_REF="$(echo "$FDSDK_REF" | cut -c1-8)"
+          RUN_REF="captures/fdsdk/${SHORT_REF}-b${BUILDERS}j${MAX_JOBS}-${{ github.run_id }}"
+          git push -q "$REMOTE" "HEAD:refs/heads/${RUN_REF}"
+          echo "Published to branch ${RUN_REF}"
+
+          # `captures/fdsdk-latest` stays a moving pointer at the newest
+          # *good* capture, so every document that references it keeps
+          # working. Force is correct here and only here: the data lives
+          # at the per-run ref above and is not being overwritten.
+          #
+          # UX-81: a genuinely failed build is still worth publishing as
+          # data - that was `UX-66`'s decision and it stands - but it must
+          # not become what `-latest` points at, because everything
+          # downstream reads that as the current state of the project.
+          traced_rc="$(sed -n 's/^traced_build_exit=//p' capture-outcome.txt 2>/dev/null || true)"
+          if [ "${traced_rc:-0}" = "0" ]; then
+            git push -q --force "$REMOTE" HEAD:refs/heads/captures/fdsdk-latest
+            echo "Moved captures/fdsdk-latest to this capture"
+          else
+            echo "traced build exited ${traced_rc}: published as data at ${RUN_REF}," \
+                 "leaving captures/fdsdk-latest pointing at the last good capture"
+          fi

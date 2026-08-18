@@ -876,6 +876,39 @@ def format_compare_text(comparison) -> str:
             f"  Judged against a noise band from {band['n']} baseline run(s): "
             f"{_fmt_us(band['low_us'])} .. {_fmt_us(band['high_us'])} - {width}"
         )
+    # UX-79: what this change added, and how much of it landed on the
+    # chain. Said next to the verdict, because "the build got slower" and
+    # "the build got slower *because you serialized the new work*" are
+    # the same line to a reader who only sees the first.
+    marginal = getattr(comparison, 'marginal_efficiency', None)
+    if marginal:
+        added = ", ".join(marginal['added_elements'][:4])
+        more = (
+            f" (+{len(marginal['added_elements']) - 4} more)"
+            if len(marginal['added_elements']) > 4 else ""
+        )
+        lines.append(
+            f"  New this change: {added}{more} - "
+            f"{marginal['added_work_us'] / 1e6:.1f}s of work added, "
+            f"{marginal['added_critical_path_us'] / 1e6:.1f}s of it on the critical "
+            f"path (stretch {marginal['stretch']:.2f})"
+        )
+        if marginal['on_critical_path']:
+            lines.append(
+                "    on the path: " + ", ".join(marginal['on_critical_path'][:4])
+            )
+
+    # UX-81: a band that could not be built used to be silent, so a
+    # pipeline that asked for one got the fixed rule it was trying to
+    # replace and no way to know. Name the shortfall and what closes it.
+    shortfall = getattr(comparison, 'baseline_band_shortfall', None)
+    if shortfall:
+        lines.append(
+            f"  No noise band: {shortfall['supplied']} baseline run(s) supplied, "
+            f"{shortfall['required']} required - "
+            f"{shortfall['required'] - shortfall['supplied']} more of the same shape "
+            f"would replace the fixed 1% significance rule used here"
+        )
     if comparison.low_confidence:
         lines.append("  Caveat: at least one run's confidence is below the 'high' band - treat this comparison with caution.")
     if comparison.comparability_warning:

@@ -470,6 +470,24 @@ Measured on a real project:
 | oversubscribed (`8×8` on 4 cores) | +19% | fails | 63.0% → 48.6% | **fails** |
 | nothing changed (repeat capture) | −7.4% noise | fires on ±1% noise | 60.0% → 59.0% | passes |
 
+A third gate exists for the case those two cannot express, and it is the
+one a growing project wants. Occupancy is a whole-build average, so the
+same badly-added pair of elements moves it **−14.6pp** in an 11-element
+project and **−0.5pp** in a 1201-element one — the gate goes blind
+exactly as the project gets big enough for CI to matter.
+`--fail-on-inefficient-additions` asks instead what share of the work
+*this change* added landed on the critical path, which mentions only the
+added elements and so does not dilute:
+
+```bash
+bga compare runs/baseline runs/candidate --fail-on-inefficient-additions
+```
+
+```
+New this change: g.bst, h.bst - 8.0s of work added, 8.0s of it on the critical path
+(stretch 1.00)
+```
+
 For anything programmatic, read the JSON rather than the prose. Every
 conclusion the text report draws is published as data, with a stable id
 you can key on:

@@ -1,6 +1,6 @@
 # UX-79: the efficiency gate is a whole-build average, so a bad diff dilutes with project size
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-39, UX-74 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-39, UX-74 (both done)
 
 ## Motivation
 
@@ -70,3 +70,73 @@ badly to `examples/06/optimized`):
    appended elements) and show the marginal gate still fails the bad
    add there, where the whole-build occupancy delta is <1pp and the
    existing gate provably passes it.
+
+## Fix Implemented
+
+A marginal gate, and the per-element diff underneath it.
+
+**`element_diff`** — `new` / `removed` / `moved_onto_critical_path`, each
+with the element's measured duration and whether it is on the candidate's
+critical path, published in `bga compare --format json`.
+
+**`marginal_efficiency`** — `stretch = added_critical_path_us /
+added_work_us`, over the added elements only:
+
+- **0.0** — the additions were fully absorbed by existing parallelism.
+- **1.0** — every second of added work extended the chain.
+
+**`--fail-on-inefficient-additions`** (exit 5, with
+`--max-addition-stretch`, default 0.5).
+
+### The scale-invariance measurement, which is the whole point
+
+The same two maximally-mis-added elements, at two project sizes:
+
+| project size | whole-build occupancy | `--fail-on-efficiency-regression` | marginal stretch |
+|---|---|---|---|
+| 11 elements | −14.6pp | **fails (5)** | 1.00 |
+| 1201 elements | **−0.5pp** | **passes (0)** | **1.00** |
+
+Both rows are asserted in
+`tests/unit/test_marginal_efficiency_gate.py::test_the_marginal_gate_is_scale_invariant`
+and, at the CLI level, in
+`test_the_gate_still_fails_the_bad_add_where_the_whole_build_gate_goes_blind` —
+so the claim that the old gate goes blind is not an argument in a
+document, it is a test that fails if it stops being true.
+
+The default threshold comes from that gap: a well-added pair scores 0.00
+and a serialized pair 1.00, at *both* scales, so 0.5 is a wide margin
+either side rather than a number tuned to one project.
+
+### One thing this needed that did not exist
+
+`critical_path_detail` covers the path and `wall_clock_share` is
+amortized, so nothing published "how long did this element take" for an
+element *off* the path — and a well-added element is off the path by
+construction, which would have scored every good addition as zero added
+work. `signals.element_durations` now publishes every element's measured
+duration; the compare side falls back to the old path-only view for an
+analysis produced before this, which makes the metric decline to judge
+rather than judge wrongly.
+
+### Deliberate limits
+
+- **A change that adds no elements is an empty check and says so**
+  rather than reporting green — `UX-87`'s lesson applied before that task
+  is fixed. The whole-build gate remains the one that catches an
+  *existing* element getting worse, which is why it stays.
+- `moved_onto_critical_path` is computed and published but does not gate.
+  It is the other way a change makes a build worse, and it needs its own
+  threshold argument rather than being folded into this one.
+- The successor metric named in Out of Scope — Plane 2 CPU-vs-wall
+  stretch — is still the better measure, and still needs Plane 2 in CI.
+
+Tests: 9 new in `tests/unit/test_marginal_efficiency_gate.py`. Golden
+snapshot regenerated (additive `element_durations` only). Suite:
+1127 → 1136.
+
+## Verification Log
+
+Fixed 2026-08-18. The two-scale table was measured with the fixtures now
+in `tests/unit/test_marginal_efficiency_gate.py`, at 11 and 1201
+elements, through `compare_runs` and through the CLI's real exit codes.

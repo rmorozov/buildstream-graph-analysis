@@ -132,6 +132,17 @@ class ComparisonResult:
     # the fixed-percentage rule was used, which is what every
     # comparison did before this existed.
     baseline_band: Optional[dict] = None
+    # UX-81: `--baseline-run` was given, but fewer runs than a band can
+    # honestly be derived from. `baseline_band` is then None and the
+    # fixed-percentage rule applies - which is correct, and used to be
+    # silent, so a pipeline that asked for a band got the rule it was
+    # trying to replace and no way to know. `{supplied, required}`.
+    baseline_band_shortfall: Optional[dict] = None
+    # UX-79: what this change added, removed or moved, and how much of
+    # the added work landed on the critical path. The whole-build gate is
+    # an average and dilutes with project size; these two are marginal.
+    element_diff: Optional[dict] = None
+    marginal_efficiency: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {
@@ -147,6 +158,9 @@ class ComparisonResult:
             'low_confidence': self.low_confidence,
             'comparability_warning': self.comparability_warning,
             'mismatches': self.mismatches,
+            'baseline_band_shortfall': self.baseline_band_shortfall,
+            'element_diff': self.element_diff,
+            'marginal_efficiency': self.marginal_efficiency,
             'failed_runs': self.failed_runs,
             'baseline_band': self.baseline_band,
         }
@@ -192,6 +206,122 @@ def _attribution_deltas(
             'delta_pct_points': (c_pct - b_pct) if (b_pct is not None and c_pct is not None) else None,
         }
     return result
+
+
+def _element_durations(result: AnalysisResult) -> Dict[str, int]:
+    """Per-element measured duration for *every* element (`UX-79`).
+
+    A well-added element is off the critical path by construction, so a
+    marginal metric that could only see path members would score every
+    good addition as zero added work and have nothing to compare."""
+    signals = getattr(result, 'signals', None) or {}
+    published = signals.get('element_durations')
+    if isinstance(published, dict) and published:
+        return dict(published)
+    # An analysis from before `UX-79` published only the path. Degrade to
+    # that rather than refusing: the marginal metric then sees a
+    # well-added element as zero work and declines to judge, which is the
+    # safe direction.
+    return {
+        entry['element_uid']: entry.get('duration_us') or 0
+        for entry in signals.get('critical_path_detail') or []
+        if entry.get('element_uid')
+    }
+
+
+def _element_diff(
+    baseline_result: AnalysisResult,
+    candidate_result: AnalysisResult,
+    baseline_elements: List[Element],
+    candidate_elements: List[Element],
+) -> dict:
+    """Which elements this change added, removed, or moved (`UX-79`).
+
+    `bga compare` already had both graphs and only ever reported
+    whole-build aggregates over them. The diff is what makes a *marginal*
+    verdict possible: judging the change rather than the repository.
+    """
+    baseline_uids = {e.uid for e in baseline_elements}
+    candidate_uids = {e.uid for e in candidate_elements}
+    baseline_path = set(
+        (getattr(baseline_result, 'signals', None) or {}).get('critical_path') or []
+    )
+    candidate_path = set(
+        (getattr(candidate_result, 'signals', None) or {}).get('critical_path') or []
+    )
+    candidate_durations = _element_durations(candidate_result)
+    baseline_durations = _element_durations(baseline_result)
+
+    new = sorted(candidate_uids - baseline_uids)
+    removed = sorted(baseline_uids - candidate_uids)
+    moved_onto_path = sorted(
+        (candidate_path & baseline_uids) - baseline_path
+    )
+    return {
+        'new': [
+            {
+                'element_uid': uid,
+                'duration_us': candidate_durations.get(uid, 0),
+                'on_critical_path': uid in candidate_path,
+            }
+            for uid in new
+        ],
+        'removed': removed,
+        # An element that existed before and has moved onto the critical
+        # path is the other way a change makes a build worse, and the
+        # marginal metric below deliberately does not cover it - the
+        # whole-build gate does.
+        'moved_onto_critical_path': [
+            {'element_uid': uid, 'duration_us': candidate_durations.get(uid, 0)}
+            for uid in moved_onto_path
+        ],
+        'baseline_element_count': len(baseline_uids),
+        'candidate_element_count': len(candidate_uids),
+        'baseline_path_us': sum(baseline_durations.values()),
+        'candidate_path_us': sum(candidate_durations.values()),
+    }
+
+
+def compute_marginal_efficiency(element_diff: dict) -> Optional[dict]:
+    """How much of the work this change *added* landed on the critical
+    path (`UX-79`).
+
+    The whole-build efficiency gate is an average, so its sensitivity is
+    inversely proportional to project size: measured on real builds, two
+    maximally-mis-added elements moved global occupancy 6.1pp in an
+    11-element project - barely past the 5.0pp default - and the same two
+    elements added to a 90-element closure would move it under 1pp and
+    pass. A gate that gets weaker as the project grows is weakest exactly
+    where CI matters most.
+
+    `stretch` is scale-invariant because it mentions only the added
+    elements: `added_critical_path_us / added_work_us`, in [0, 1].
+
+    - **0** - the additions are fully absorbed by existing parallelism;
+      they cost wall-clock nothing.
+    - **1** - every second of added work extended the chain; the
+      additions are perfectly serial.
+
+    Returns None when the change added no measured work, which is the
+    ordinary case for a change that edits rather than adds - the gate
+    then has nothing to say and must not invent a verdict.
+    """
+    added = element_diff.get('new') or []
+    added_work_us = sum(entry['duration_us'] for entry in added)
+    if added_work_us <= 0:
+        return None
+    added_path_us = sum(
+        entry['duration_us'] for entry in added if entry['on_critical_path']
+    )
+    return {
+        'added_elements': [entry['element_uid'] for entry in added],
+        'added_work_us': added_work_us,
+        'added_critical_path_us': added_path_us,
+        'stretch': added_path_us / added_work_us,
+        'on_critical_path': [
+            entry['element_uid'] for entry in added if entry['on_critical_path']
+        ],
+    }
 
 
 def _check_comparability(baseline_elements: List[Element], candidate_elements: List[Element]) -> Optional[str]:
@@ -247,6 +377,7 @@ def _compare_results(
     baseline_elements: List[Element],
     candidate_elements: List[Element],
     baseline_band: Optional[dict] = None,
+    baseline_band_shortfall: Optional[dict] = None,
 ) -> ComparisonResult:
     baseline_metrics = _numeric_metrics(baseline_result)
     candidate_metrics = _numeric_metrics(candidate_result)
@@ -266,6 +397,11 @@ def _compare_results(
     # gate, so a CI artifact-path bug read as "your build got slower".
     # The refusal itself lives in the CLI (it is an exit-code decision);
     # what belongs here is naming which check failed.
+    element_diff = _element_diff(
+        baseline_result, candidate_result, baseline_elements, candidate_elements,
+    )
+    marginal_efficiency = compute_marginal_efficiency(element_diff)
+
     mismatches: List[dict] = []
     comparability_warning = _check_comparability(baseline_elements, candidate_elements)
     if comparability_warning:
@@ -349,6 +485,9 @@ def _compare_results(
         mismatches=mismatches,
         failed_runs=failed_runs,
         baseline_band=baseline_band,
+        baseline_band_shortfall=baseline_band_shortfall,
+        element_diff=element_diff,
+        marginal_efficiency=marginal_efficiency,
     )
 
 
@@ -378,6 +517,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
     # not comparable, and a band mixing them is that mistake with extra
     # arithmetic.
     band = None
+    band_shortfall = None
     if baseline_runs:
         candidate_mode = (candidate_result.confidence or {}).get('run_mode')
         durations = []
@@ -395,11 +535,20 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
                 )
             durations.append(result.total_duration_us)
         band = compute_band(durations, k=band_k)
+        if band is None:
+            # UX-81: name what is missing. The capture infrastructure
+            # published one run at a time until this task, so "supply
+            # three" was not something a user could act on; now it is,
+            # and a silent fallback would hide the one step left.
+            band_shortfall = {
+                'supplied': len(durations), 'required': MIN_BASELINE_RUNS,
+            }
 
     return _compare_results(
         baseline_result, candidate_result,
         baseline_analyzer.graph.elements, candidate_analyzer.graph.elements,
         baseline_band=band,
+        baseline_band_shortfall=band_shortfall,
     )
 
 

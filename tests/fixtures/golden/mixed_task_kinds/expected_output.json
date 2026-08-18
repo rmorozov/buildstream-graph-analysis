@@ -196,6 +196,12 @@
             "lib.bst": 1,
             "app.bst": 2
         },
+        "element_durations": {
+            "base.bst": 6000,
+            "extra.bst": 4000,
+            "lib.bst": 5000,
+            "app.bst": 3000
+        },
         "optimization_horizon": [
             {
                 "element_uid": "base.bst",

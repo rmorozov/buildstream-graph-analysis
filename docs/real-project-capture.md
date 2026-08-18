@@ -141,24 +141,76 @@ OpenSSL, ICU, Doxygen) are each minutes, not hours.
 
 ## Reproducing
 
-The workflow runs on `workflow_dispatch` once it is on the default
-branch. Before then it also runs on a push to a `claude/**` branch that
+The workflow runs **weekly** (Sunday 03:00 UTC) and on
+`workflow_dispatch`. It also runs on a push to a `claude/**` branch that
 touches the workflow or the capture tooling it drives — deliberately
 narrow, because the job costs a runner-hour or more.
+
+The weekly schedule exists because trend data cannot accumulate if a
+human has to click (`UX-81`), and because the tool's own documented CI
+usage needs a baseline *set*: measured same-commit noise on this project
+is **2.9%** against `bga compare`'s fixed 1% significance rule, and the
+band that replaces it (`--baseline-run … --band-k`) needs at least three
+runs of the same shape.
 
 The capture leaves the runner two ways, and both are needed. The
 `actions/upload-artifact` upload is for humans; it is **not** reachable
 from this development container, because workflow artifacts are served
 from `*.blob.core.windows.net`, which the same egress policy that blocks
 the `freedesktop-sdk` CDN also refuses with `403` to `CONNECT`. So the
-job additionally pushes a tarball of the same directory to the
-`captures/fdsdk-latest` branch, which is fetchable, and which makes each
-capture a versioned object rather than something that expires in
-fourteen days:
+job additionally pushes the capture to a branch, which is fetchable, and
+which makes each capture a versioned object rather than something that
+expires in fourteen days.
+
+**Every capture gets its own ref, and none is ever force-pushed**
+(`UX-81` — the branch used to hold exactly one capture, each publish
+destroying its predecessor). The ref name carries the tuple that has to
+match for two captures to be comparable, so a baseline set is
+discoverable with one command and no index file to keep consistent:
 
 ```
+captures/fdsdk/<fdsdk-ref-short>-b<builders>j<max-jobs>-<run-id>
+```
+
+`captures/fdsdk-latest` remains a moving pointer at the newest *good*
+capture, so every document that references it keeps working. A capture
+whose traced build failed is still published as data at its own ref — it
+is a real result — but does not become what `-latest` points at.
+
+```bash
+# The newest good capture, unchanged from before
 git fetch origin captures/fdsdk-latest
 git show origin/captures/fdsdk-latest:capture.tar.gz > capture.tar.gz
+
+# `run/` is committed uncompressed too, so a checkout is analysable
+# with no untar step at all
+git fetch origin captures/fdsdk-latest
+git checkout -q FETCH_HEAD -- run
+bga analyze run
+
+# Every capture of one shape - the baseline set
+git ls-remote origin 'refs/heads/captures/fdsdk/953683fb-b4j4-*'
+```
+
+Assembling a baseline set from three of those refs is then the documented
+CI comparison, straight from fetched refs:
+
+```bash
+for ref in <run-id-1> <run-id-2> <run-id-3>; do
+  git fetch -q origin "captures/fdsdk/953683fb-b4j4-$ref"
+  git --work-tree="baseline-$ref" checkout -q FETCH_HEAD -- run
+done
+bga compare baseline-<run-id-1>/run candidate/run \
+    --baseline-run baseline-<run-id-2>/run \
+    --baseline-run baseline-<run-id-3>/run --band-k 3.0
+```
+
+With fewer than three, `bga compare` says so rather than silently falling
+back to the fixed rule:
+
+```
+No noise band: 2 baseline run(s) supplied, 3 required - 1 more of the same shape
+would replace the fixed 1% significance rule used here
 ```
 
 Contents (uploaded and published on success *or* failure):

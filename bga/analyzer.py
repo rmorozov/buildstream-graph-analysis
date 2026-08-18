@@ -1199,6 +1199,17 @@ class BuildEfficiencyAnalyzer:
                     if graph_analysis['slack'] else None
                 ),
                 'unweighted_depth': graph_analysis['unweighted_depth'],
+                # UX-79: every element's measured duration, not just the
+                # ones on the critical path. `critical_path_detail`
+                # covers the path and `wall_clock_share` is amortized, so
+                # until now nothing published "how long did this element
+                # take" for an element off the path - which is exactly
+                # what a marginal, per-element diff between two runs
+                # needs, since a well-added element is off the path by
+                # construction.
+                'element_durations': dict(
+                    compute_element_durations(self.normalized_tasks)
+                ),
             }
             # UX-74: one ~60-minute capture used to yield exactly one
             # finding, on a graph where 77% of elements have zero slack -

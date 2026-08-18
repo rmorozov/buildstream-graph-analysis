@@ -922,6 +922,41 @@ def compute_max_concurrency(records: List[dict]) -> int:
     return peak
 
 
+def read_element_kinds(project_dir: str) -> Dict[str, str]:
+    """`{element_uid: kind}` read from the element files themselves.
+
+    UX-68 needs this to explain *why* a dependency staged nothing: a
+    `stack` is pure aggregation with no artifact content of its own, so
+    "nobody opened its files" is guaranteed rather than informative.
+
+    Read from the `.bst` files rather than from `bst show`, for the same
+    reason `read_declared_build_deps` does: this must work against a
+    project directory without invoking BuildStream, and the kind is a
+    plain top-level key. A file that cannot be read is simply absent from
+    the mapping - the caller degrades to a reason without the kind, never
+    to a wrong one.
+    """
+    kinds: Dict[str, str] = {}
+    elements_dir = os.path.join(project_dir, "elements")
+    if not os.path.isdir(elements_dir):
+        return kinds
+    for root, _dirs, files in os.walk(elements_dir):
+        for name in files:
+            if not name.endswith(".bst"):
+                continue
+            path = os.path.join(root, name)
+            uid = os.path.relpath(path, elements_dir)
+            try:
+                with open(path, "r", errors="replace") as handle:
+                    for line in handle:
+                        if line.startswith("kind:"):
+                            kinds[uid] = line.split(":", 1)[1].strip()
+                            break
+            except OSError:
+                continue
+    return kinds
+
+
 def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str, List[str]]:
     """`{element: [directly declared build dependencies]}`, read from the
     element files themselves.
@@ -1003,10 +1038,20 @@ def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, S
     return contents
 
 
+# UX-68: the number of staged files below which "none were opened" says
+# nothing. A BuildStream `stack` has no artifact content of its own - it
+# is pure aggregation - so it stages a single marker and every stack
+# dependency scores 0-of-1 by construction. Measured on a real
+# freedesktop-sdk capture: every one of the 9 stack candidates staged
+# exactly 1 file, against 128 to 9,443 for the real elements.
+_MIN_STAGED_FILES_FOR_EVIDENCE = 2
+
+
 def compute_declared_vs_used(
     opens_by_element: Dict[str, dict],
     declared_deps: Dict[str, List[str]],
     artifact_contents: Dict[str, Set[str]],
+    element_kinds: Optional[Dict[str, str]] = None,
 ) -> dict:
     """Which declared build dependencies did each element never read?
 
@@ -1034,6 +1079,9 @@ def compute_declared_vs_used(
     """
     unused: List[dict] = []
     used: List[dict] = []
+    # UX-68: kept separate rather than dropped - the pattern is real
+    # and worth reviewing, it is just not an 'unused dependency'.
+    aggregating: List[dict] = []
     uncovered: List[dict] = []
     skipped: List[dict] = []
 
@@ -1083,6 +1131,25 @@ def compute_declared_vs_used(
             }
             if touched:
                 used.append(record)
+            elif len(staged) < _MIN_STAGED_FILES_FOR_EVIDENCE:
+                # UX-68: a dependency that staged (almost) nothing cannot
+                # be shown unused by nobody reading it. A `stack` is the
+                # systematic case - pure aggregation, no artifact content
+                # of its own - and it brings its *transitive* closure into
+                # the sandbox, which this comparison never looked at. On a
+                # real capture 9 of 10 "unused" candidates were stacks
+                # staging exactly 1 file, including `runtime-minimal.bst`,
+                # whose closure is glibc and gcc-libs: content no compile
+                # can avoid touching.
+                record["reason"] = (
+                    f"{dep} staged only {len(staged)} file(s) of its own"
+                    + (f" (kind: {element_kinds[dep]})"
+                       if element_kinds and dep in element_kinds else "")
+                    + " - it contributes content through its dependencies, "
+                    "which this comparison does not attribute, so 'nobody "
+                    "opened it' is not evidence of anything"
+                )
+                aggregating.append(record)
             else:
                 record["evidence"] = (
                     f"0 of {len(staged)} files staged by {dep} were opened "
@@ -1093,6 +1160,11 @@ def compute_declared_vs_used(
     return {
         "available": bool(opens_by_element),
         "unused_candidates": unused,
+        # UX-68: dependencies that stage nothing of their own - stacks,
+        # almost always. Reported separately because "nobody opened it"
+        # is not evidence about them, and mixing them into the candidate
+        # list made 9 of 10 real findings false positives.
+        "aggregating_dependencies": aggregating,
         "used": used,
         "uncovered_elements": uncovered,
         "skipped": skipped,
@@ -1581,7 +1653,8 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
         needed = {dep for deps in declared.values() for dep in deps}
         contents = read_artifact_contents(project_dir, sorted(needed))
         report["declared_vs_used"] = compute_declared_vs_used(
-            opens_by_element, declared, contents
+            opens_by_element, declared, contents,
+            element_kinds=read_element_kinds(project_dir),
         )
     elif opens_by_element:
         report["declared_vs_used"] = {

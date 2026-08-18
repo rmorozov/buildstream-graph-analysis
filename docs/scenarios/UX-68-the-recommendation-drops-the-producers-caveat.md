@@ -1,6 +1,6 @@
 # UX-68: the producer says "evidence, not a verdict"; the recommendation says "removing the edge is free" — and repeats it 8 times about a runtime stack
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** `UX-46` (which produces the evidence), `UX-66` (which unblocked the join that surfaces it)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which produces the evidence), `UX-66` (which unblocked the join that surfaces it)
 
 ## Motivation
 
@@ -91,6 +91,73 @@ Worth being precise, because the fix should not touch the measurement:
    project-wide pattern, not once per element.
 4. A concrete, non-stack unused dependency (`components/zstd.bst` here)
    still surfaces, and ranks above the systemic one.
+
+## Fix Implemented — and the user was right about the pattern
+
+Investigated against the real capture's declared graph. The answer is
+sharper than this task first stated: the stack findings are **false
+positives by construction**, not probabilistically.
+
+### Every stack stages exactly one file
+
+| dependency | kind | staged | opened |
+|---|---|---|---|
+| `public-stacks/runtime-minimal.bst` (x8) | **stack** | **1** | 0 |
+| `components/zstd.bst` | **stack** | **1** | 0 |
+| `components/m4.bst` | autotools | **321** | 0 |
+
+against the *used* dependencies, which stage 128 to 9,443 files. A
+BuildStream `stack` has no artifact content of its own — it is pure
+aggregation — so it stages a marker, and **every stack dependency scores
+0-of-1 whatever the build does**.
+
+Worse, `runtime-minimal.bst` aggregates `glibc`, `gcc-libs`,
+`utf-locale` and `symlinks`. Declaring it `type: build` stages that
+closure into the sandbox, and no compile can avoid touching libc. The
+detector compared against the empty marker rather than the closure, and
+concluded the dependency was free to delete — **eight times, attached to
+the heaviest elements in the build**.
+
+So: `components/m4.bst` was the *only* true finding of the ten.
+
+### The user's hypothesis, tested
+
+> generally it discovered pattern of usage for leaf stack elements — that
+> are to optimize further export
+
+Correct, and measurable. Across the real graph:
+
+- **110 of 663 build edges (16.6%)** have a `stack` as their dependency.
+- Recomputing the longest path with those edges narrowed to `runtime`:
+  **3610.5s → 2241.9s, a 38% reduction.**
+
+That number is an **upper bound on a hypothetical**, not a
+recommendation, and the distinction matters: narrowing
+`runtime-minimal` would break every compile in the project. But it does
+establish that stack-mediated build ordering is a large, real lever on
+this graph, and that the tool currently cannot say which instances of it
+are safe — because it never attributes a stack's transitive content.
+
+### What changed
+
+- A dependency staging fewer than `_MIN_STAGED_FILES_FOR_EVIDENCE` files
+  is classified as `aggregating_dependencies`, not `unused_candidates`,
+  with a reason that names the kind when known. Kept rather than dropped,
+  per the user's suggestion of a full report that retains them.
+- `bga correlate` no longer says "removing the edge is free". It reports
+  what was measured — *opened no file staged by N declared build
+  dependencies* — and states that a runtime-only dependency looks
+  identical from here.
+
+**On the real capture: 10 candidates → 1, removing a 90% false-positive
+rate from the tool's most prominent recommendation.**
+
+### A correction to round 9
+
+`docs/audit-round-9.md` suggested `components/zstd.bst` was "a concrete
+library, read by nothing" and would make a better first recommendation.
+It is `kind: stack` staging 1 file — the same false positive. Corrected
+there.
 
 ## Verification Log
 

@@ -83,8 +83,11 @@ def test_dependency_whose_files_were_never_opened_is_a_candidate():
     result = compute_declared_vs_used(
         {"app.bst": _opens(["/usr/include/used.hpp"])},
         {"app.bst": ["used.bst", "unused.bst"]},
+        # UX-68: a real dependency stages many files. One staged file is
+        # the `stack` signature and is now classified separately, so this
+        # fixture uses a realistic count to keep testing what it means to.
         {"used.bst": {"/usr/include/used.hpp"},
-         "unused.bst": {"/usr/include/unused.hpp"}},
+         "unused.bst": {"/usr/include/unused.hpp", "/usr/lib/libunused.so"}},
     )
 
     assert [c["dependency"] for c in result["unused_candidates"]] == ["unused.bst"]
@@ -172,3 +175,68 @@ def test_no_opens_at_all_reports_unavailable():
     result = compute_declared_vs_used({}, {"a.bst": ["b.bst"]}, {"b.bst": {"/x"}})
 
     assert result["available"] is False
+
+
+# --- UX-68: a dependency that stages nothing of its own ------------------
+
+
+def test_a_stack_dependency_is_not_an_unused_candidate():
+    """Measured on a real freedesktop-sdk capture: 9 of 10 "unused"
+    candidates were `stack` elements staging exactly 1 file, against 128
+    to 9,443 for real elements. A stack has no artifact content of its
+    own - it contributes through its *transitive* closure, which this
+    comparison never attributes - so "nobody opened its files" is
+    guaranteed rather than informative.
+
+    The worst case was `public-stacks/runtime-minimal.bst`, whose closure
+    is glibc and gcc-libs: content no compile can avoid touching, flagged
+    8 times as a free removal."""
+    result = compute_declared_vs_used(
+        {"app.bst": _opens(["/usr/include/real.hpp"])},
+        {"app.bst": ["stack.bst"]},
+        {"stack.bst": {"/marker"}},
+        element_kinds={"stack.bst": "stack"},
+    )
+
+    assert result["unused_candidates"] == []
+    assert result["aggregating_dependencies"][0]["dependency"] == "stack.bst"
+
+
+def test_the_reason_names_the_kind_when_it_is_known():
+    result = compute_declared_vs_used(
+        {"app.bst": _opens(["/x"])},
+        {"app.bst": ["stack.bst"]},
+        {"stack.bst": {"/marker"}},
+        element_kinds={"stack.bst": "stack"},
+    )
+
+    reason = result["aggregating_dependencies"][0]["reason"]
+    assert "kind: stack" in reason
+    assert "not evidence of anything" in reason
+
+
+def test_the_kind_is_optional_and_its_absence_changes_nothing():
+    """Captures taken without a project directory have no kinds; the
+    classification must rest on the staged count, which is measured."""
+    result = compute_declared_vs_used(
+        {"app.bst": _opens(["/x"])},
+        {"app.bst": ["stack.bst"]},
+        {"stack.bst": {"/marker"}},
+    )
+
+    assert result["unused_candidates"] == []
+    assert len(result["aggregating_dependencies"]) == 1
+
+
+def test_a_real_dependency_is_still_a_candidate():
+    """The one true finding on the real capture: `components/m4.bst`
+    under `bison.bst` staged 321 files and none were opened."""
+    result = compute_declared_vs_used(
+        {"bison.bst": _opens(["/usr/include/real.hpp"])},
+        {"bison.bst": ["m4.bst"]},
+        {"m4.bst": {f"/f{i}" for i in range(321)}},
+        element_kinds={"m4.bst": "autotools"},
+    )
+
+    assert [c["dependency"] for c in result["unused_candidates"]] == ["m4.bst"]
+    assert result["aggregating_dependencies"] == []

@@ -120,3 +120,28 @@ the wheel installed, because the checkout's own `bga/` shadows
 site-packages. That is not a packaging bug and it is why both the CI
 step and the manual check `cd /tmp/empty` first — the same reason
 `UX-77`'s original job did.
+
+### The import order is load-bearing, and CI proved it
+
+The first version of `_import_tool` tried the **installed** name first.
+That is wrong, and only an editable install can show it: an editable
+install has *both* names, and importing one file under two names gives
+two module objects with separate globals. `dispatch` therefore ran
+`bga._tools.bst_extract_run.main` while everything else in the process —
+tests patching it, callers that had imported it — held
+`tools.bst_extract_run`.
+
+Five dispatch tests failed in CI on exactly that, across all four Python
+versions, and passed locally, because this container's editable install
+predated the packaging change and had only one of the two names. The
+local pass was the misleading result, not the CI failure.
+
+Fixed by trying the **checkout** name first: wherever `tools` resolves at
+all, every consumer agrees on one object, and the installed name is
+reached only by a real wheel, where it is the only name that exists.
+Verified in both layouts — editable (`dispatch` resolves
+`tools.bst_extract_run`, 13 dispatch tests pass) and wheel in a clean
+venv (`bga._tools.bst_extract_run`, top-level `tools` absent, all 16
+aliases exit 0). Guarded by
+`test_dispatch_and_the_rest_of_the_process_agree_on_one_module_object`,
+which fails when the ordering is reverted.

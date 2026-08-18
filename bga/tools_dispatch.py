@@ -118,22 +118,32 @@ def format_tool_help() -> str:
 #
 # The directory is `tools/` in the repository and is *installed* as
 # `bga._tools`, so the wheel occupies exactly one top-level name instead
-# of squatting the most generic one in Python. A source checkout has no
-# `bga._tools`; an installed wheel has no top-level `tools`. Both are
-# normal, so both are tried - installed name first, because that is the
-# one a user who typed `pip install bga` has.
+# of squatting the most generic one in Python. A wheel install has no
+# top-level `tools`; a source checkout has no `bga._tools`. Both are
+# normal, so both are tried.
+#
+# **The checkout name is tried first, and that order is load-bearing.**
+# An *editable* install has both, and importing the same file under two
+# names produces two module objects with separate globals. Preferring
+# the installed name there meant `dispatch` ran
+# `bga._tools.bst_extract_run.main` while everything else in the process
+# - tests that patch it, callers that imported it - held
+# `tools.bst_extract_run`. CI caught it immediately: five dispatch tests
+# patched a `main` that was never the one called. Trying `tools` first
+# means that wherever the name resolves at all, every consumer agrees on
+# one object; the installed name is reached only by a real wheel
+# install, where it is the only one that exists.
 _INSTALLED_PREFIX = "bga._"
 
 
 def _import_tool(module_name: str):
     """Import `tools.<x>` from wherever this installation keeps it."""
     try:
-        return importlib.import_module(_INSTALLED_PREFIX + module_name)
-    except ImportError:
-        # Not installed under `bga._tools` - a plain source checkout.
-        # Raising from here would report the *installed* name, which is
-        # not the one that is missing, so let the checkout name raise.
         return importlib.import_module(module_name)
+    except ImportError:
+        # No top-level `tools` - an installed wheel. Let this one raise
+        # if it fails too: it names the module that is genuinely absent.
+        return importlib.import_module(_INSTALLED_PREFIX + module_name)
 
 
 def dispatch(argv: List[str]) -> Optional[int]:

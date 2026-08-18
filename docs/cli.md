@@ -297,6 +297,35 @@ Notes on reading it:
 
 ## Example Workflows
 
+
+### CI Marginal Gate (`--fail-on-inefficient-additions`) — `UX-79`
+
+The gate above reads dispatch occupancy, which is a **whole-build average**, so its sensitivity is inversely proportional to project size. Measured on fixtures at two scales, with the *same* two maximally-mis-added elements:
+
+| project size | whole-build occupancy | that gate | marginal stretch |
+|---|---|---|---|
+| 11 elements | −14.6pp | **fails** | 1.00 |
+| 1201 elements | −0.5pp | passes (blind) | **1.00** |
+
+A gate that weakens as the project grows is weakest exactly where CI matters most, and a growing project approaches the blind spot with every element added.
+
+```bash
+bga compare runs/baseline runs/candidate --fail-on-inefficient-additions
+bga compare runs/baseline runs/candidate --fail-on-inefficient-additions --max-addition-stretch 0.3
+```
+
+**Stretch** is `added critical-path time / added work time`, over the elements this change *added* — so it mentions nothing about the rest of the repository and does not dilute:
+
+- **0.0** — the additions were fully absorbed by existing parallelism; they cost wall-clock nothing.
+- **1.0** — every second of added work extended the chain; the additions are perfectly serial.
+
+`--max-addition-stretch` defaults to **0.5** — "at most half of what you added may land on the chain" — which sits in the wide, scale-invariant gap the measurement above found between a well-added set (0.00) and a serialized one (1.00). Exit code is `5`, the same "less efficient" family as the gate above.
+
+Two deliberate limits:
+
+- **A change that adds no elements is an empty check, and says so** rather than reporting green. The whole-build gate is what catches an *existing* element that got worse.
+- **The per-element diff is published either way**, in `element_diff` (`new`/`removed`/`moved_onto_critical_path`) and `marginal_efficiency`, so a CI comment can render "New this change: … 8.0s added, 8.0s of it on the critical path" without running any gate at all.
+
 ### 1. Quick Efficiency Check
 Get a quick overview of build efficiency:
 ```bash
@@ -339,7 +368,8 @@ bga analyze /path/to/run-directory --diagnostics --format json | \
 - `2`: Data ingestion failure (e.g., malformed v9 artifacts).
 - `3`: Analysis failure (e.g., graph cycles detected).
 - `4`: `bga compare --fail-on-regression` only - the analyzed build itself regressed beyond the threshold. Distinct from 1/2/3, which all mean `bga` itself failed to run - this means `bga` ran successfully and is reporting a real regression (`docs/scenarios/UX-03`).
-- `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/scenarios/UX-39`).
+- `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/scenarios/UX-39`).
+- `6`: `bga compare` refused - the two runs are not comparable (they share fewer than half their element UIDs, or one is a caches-off run and the other incremental). Not a verdict about the build at all, which is why it does not share a code with one (`docs/scenarios/UX-78`). `--allow-mismatch` overrides.
 
 ## See Also
 

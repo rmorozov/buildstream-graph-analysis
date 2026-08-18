@@ -154,3 +154,46 @@ def test_mismatches_are_structured_in_the_json_report(tmp_path):
     assert result.returncode == EXIT_OK
     payload = json.loads(result.stdout)
     assert [m["check"] for m in payload["mismatches"]] == ["shared_elements"]
+
+
+# --- UX-81: a band that could not be built must say so ------------------
+
+
+def test_too_few_baseline_runs_names_what_is_missing(tmp_path):
+    """`compute_band` returns None below three runs - correctly, since a
+    "band" over two points restates them - and that used to be silent, so
+    a pipeline that asked for a band got the fixed 1% rule it was trying
+    to replace with no way to know.
+
+    It became actionable only with `UX-81`: the capture infrastructure
+    published one run at a time, so "supply three" was not something a
+    user could do.
+    """
+    uids = ["a.bst", "b.bst", "c.bst"]
+    baseline = _write_run(tmp_path, "b0", uids)
+    extra = _write_run(tmp_path, "b1", uids)
+    candidate = _write_run(tmp_path, "cand", uids)
+
+    result = _run_bga([
+        "compare", str(baseline), str(candidate),
+        "--baseline-run", str(baseline), "--baseline-run", str(extra),
+    ])
+
+    assert result.returncode == EXIT_OK
+    assert "No noise band: 2 baseline run(s) supplied, 3 required" in result.stdout
+    assert "1 more of the same shape" in result.stdout
+
+
+def test_the_shortfall_is_structured_in_the_json_report(tmp_path):
+    uids = ["a.bst", "b.bst", "c.bst"]
+    baseline = _write_run(tmp_path, "b0", uids)
+    candidate = _write_run(tmp_path, "cand", uids)
+
+    result = _run_bga([
+        "compare", str(baseline), str(candidate),
+        "--baseline-run", str(baseline), "--format", "json",
+    ])
+
+    payload = json.loads(result.stdout)
+    assert payload["baseline_band_shortfall"] == {"supplied": 1, "required": 3}
+    assert payload["baseline_band"] is None

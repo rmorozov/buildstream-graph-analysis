@@ -187,7 +187,18 @@ The second is the one worth reaching for on a growing project. Adding three new 
 | oversubscribed (`8×8` on 4 cores) | +19% | fails | 63.0% → 48.6% | **fails** |
 | nothing changed (repeat capture) | −7.4% noise | fires on ±1% noise | 60.0% → 59.0% | passes |
 
-Full flags, thresholds and how the default was derived: [`docs/cli.md`](docs/cli.md#ci-efficiency-gate---fail-on-efficiency-regression---min-efficiency).
+**On a growing project, reach for the third gate.** Dispatch occupancy is a whole-build average, so its sensitivity is inversely proportional to project size: measured on fixtures, two maximally-mis-added elements move it **−14.6pp in an 11-element project** (the gate fires) and **−0.5pp in a 1201-element one** (the gate passes, blind). `--fail-on-inefficient-additions` judges the *change* instead — what share of the work this diff added landed on the critical path — and scores those same two elements at **1.00 in both**:
+
+```bash
+bga compare runs/baseline runs/candidate --fail-on-inefficient-additions   # exit 5
+```
+
+```
+New this change: g.bst, h.bst - 8.0s of work added, 8.0s of it on the critical path
+(stretch 1.00)
+```
+
+Full flags, thresholds and how the defaults were derived: [`docs/cli.md`](docs/cli.md#ci-efficiency-gate---fail-on-efficiency-regression---min-efficiency).
 
 Other useful commands:
 

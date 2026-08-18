@@ -45,6 +45,16 @@
 # deep rather than merely numerous, because depth is what the structural
 # plane actually reads.
 #
+# That is one of the two CI scenarios: the pre-commit run, on a warm
+# cache. `capture_mode: cold` (UX-86) is the other - the nightly. It
+# skips the warm and cut phases entirely and builds the target's whole
+# closure from source with remotes ignored, so `run_mode` comes out
+# `full` and every whole-graph structural finding means what it claims.
+# The constraint that produced warm-then-cut bounds the *target*, not the
+# scenario: a cold capture needs a target whose entire closure fits the
+# job budget, and freedesktop-sdk's default target's does not - choosing
+# one is an empirical question the first cold dispatch answers.
+#
 # How to run it
 # -------------
 # `workflow_dispatch` once this file is on the default branch. Before
@@ -73,6 +83,18 @@ on:
         description: Also interpose open()/openat() (UX-46). Slower.
         type: boolean
         default: true
+      capture_mode:
+        description: >-
+          UX-86. `incremental` is the warm-then-cut capture every round so
+          far has used: a bounded subgraph rebuilt on top of a cached base,
+          which is CI's pre-commit scenario. `cold` skips the warm phase and
+          builds the target's whole closure from source with remotes ignored
+          - the nightly scenario, which has never been captured. Pick a
+          target whose *entire* closure fits the job budget for cold; the
+          default target's does not.
+        type: choice
+        options: [incremental, cold]
+        default: incremental
   # UX-81: trend data cannot accumulate if a human has to click. Weekly
   # is enough at ~65 runner-minutes per capture, and three captures of one
   # pinned ref is what `bga compare --baseline-run ... --band-k` needs
@@ -103,6 +125,7 @@ env:
   BUILDERS: ${{ github.event.inputs.builders || '4' }}
   MAX_JOBS: ${{ github.event.inputs.max_jobs || '4' }}
   TRACE_OPENS: ${{ github.event.inputs.trace_opens || 'true' }}
+  CAPTURE_MODE: ${{ github.event.inputs.capture_mode || 'incremental' }}
 
 jobs:
   capture:
@@ -222,7 +245,12 @@ jobs:
       # would have left the capture phase (remotes ignored) building the
       # entire compiler bootstrap from source. `artifact pull --deps all`
       # asks for the whole closure explicitly, which is what "warm" means.
+      # UX-86: skipped entirely in cold mode - "cold" *means* no cached
+      # base. Everything below that reads state-after-warm.txt is
+      # likewise conditioned, rather than being handed an empty file and
+      # left to draw conclusions from it.
       - name: Warm the local cache from the project's remote cache
+        if: env.CAPTURE_MODE != 'cold'
         timeout-minutes: 90
         run: |
           cd fdsdk
@@ -235,6 +263,7 @@ jobs:
       # timed build is dominated by real build work rather than by
       # downloads, which is the timeline the analysis is about.
       - name: Delete the rebuild set and pre-fetch its sources
+        if: env.CAPTURE_MODE != 'cold'
         timeout-minutes: 45
         run: |
           cd fdsdk
@@ -252,7 +281,29 @@ jobs:
       # dependency that failed to pull would silently turn a 30-minute
       # capture into an attempt to build a compiler from source, and the
       # only symptom would be a job that times out two hours later.
+      # UX-86: in cold mode there is no cut to verify - nothing is cached
+      # and the whole closure is expected to build, which is the point.
+      # The sources still need fetching first, for the same reason as in
+      # the incremental path: the timed build should be dominated by real
+      # build work rather than by downloads.
+      - name: Pre-fetch every source in the closure (cold mode)
+        if: env.CAPTURE_MODE == 'cold'
+        timeout-minutes: 90
+        run: |
+          cd fdsdk
+          bst --no-interactive source fetch --deps all "$TARGET"
+          bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
+            > ../capture/state-after-delete.txt
+          cached=$(grep -c '|cached$' ../capture/state-after-delete.txt || true)
+          total=$(wc -l < ../capture/state-after-delete.txt)
+          echo "cold start: $cached of $total elements cached (expected 0)"
+          if [ "$cached" != "0" ]; then
+            echo "a cold capture with cached elements is not a cold capture" >&2
+            exit 1
+          fi
+
       - name: Verify the cut is exactly the rebuild set
+        if: env.CAPTURE_MODE != 'cold'
         run: |
           python3 - <<'EOF'
           from pathlib import Path
@@ -388,6 +439,12 @@ jobs:
             echo "builders=$BUILDERS"
             echo "max_jobs=$MAX_JOBS"
             echo "trace_opens=$TRACE_OPENS"
+            # UX-86: which of the two CI scenarios this capture is. The
+            # run directory carries `run_mode` derived from BuildStream's
+            # own Pipeline Summary (UX-55); this records what was *asked
+            # for*, so a cold capture that silently found a warm cache is
+            # visible as a disagreement rather than as a fact.
+            echo "capture_mode=$CAPTURE_MODE"
             echo "mem_total_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)"
           } > capture/capture-context.txt
           df -h / >> capture/capture-context.txt
@@ -480,8 +537,12 @@ jobs:
           # index file to keep consistent:
           #
           #   git ls-remote origin 'refs/heads/captures/fdsdk/<ref>-b4j4-*'
+          # UX-86: the mode is part of the shape. A cold capture and an
+          # incremental one measure different builds of the same commit -
+          # `bga compare` refuses to compare them (UX-78) - so they must
+          # not land in the same baseline set through a shared ref glob.
           SHORT_REF="$(echo "$FDSDK_REF" | cut -c1-8)"
-          RUN_REF="captures/fdsdk/${SHORT_REF}-b${BUILDERS}j${MAX_JOBS}-${{ github.run_id }}"
+          RUN_REF="captures/fdsdk/${SHORT_REF}-${CAPTURE_MODE}-b${BUILDERS}j${MAX_JOBS}-${{ github.run_id }}"
           git push -q "$REMOTE" "HEAD:refs/heads/${RUN_REF}"
           echo "Published to branch ${RUN_REF}"
 
@@ -494,11 +555,20 @@ jobs:
           # data - that was `UX-66`'s decision and it stands - but it must
           # not become what `-latest` points at, because everything
           # downstream reads that as the current state of the project.
+          # UX-86: each mode has its own pointer. `captures/fdsdk-latest`
+          # keeps meaning what every existing document says it means - the
+          # newest good *incremental* capture - and a cold one does not
+          # silently replace it.
+          if [ "$CAPTURE_MODE" = "cold" ]; then
+            LATEST_REF="captures/fdsdk-cold-latest"
+          else
+            LATEST_REF="captures/fdsdk-latest"
+          fi
           traced_rc="$(sed -n 's/^traced_build_exit=//p' capture-outcome.txt 2>/dev/null || true)"
           if [ "${traced_rc:-0}" = "0" ]; then
-            git push -q --force "$REMOTE" HEAD:refs/heads/captures/fdsdk-latest
-            echo "Moved captures/fdsdk-latest to this capture"
+            git push -q --force "$REMOTE" "HEAD:refs/heads/${LATEST_REF}"
+            echo "Moved ${LATEST_REF} to this capture"
           else
             echo "traced build exited ${traced_rc}: published as data at ${RUN_REF}," \
-                 "leaving captures/fdsdk-latest pointing at the last good capture"
+                 "leaving ${LATEST_REF} pointing at the last good capture"
           fi

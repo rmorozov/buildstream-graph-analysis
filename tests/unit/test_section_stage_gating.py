@@ -114,10 +114,23 @@ def test_section_output_is_unchanged_by_gating(tmp_path, section, topology_name)
     gated = _analyzer(tmp_path, topology, name="gated").analyze(section=section)
     full = _analyzer(tmp_path, topology, name="full").analyze(section=None)
 
-    assert format_text(gated, section=section) == format_text(full, section=section)
-    assert json.loads(format_json(gated, section=section)) == json.loads(
-        format_json(full, section=section)
+    # `UX-95`'s run-instance line names *which capture* a result came
+    # from, and these two deliberately come from two directories. That
+    # difference is the feature working, and it is not what this test is
+    # about - so it is normalised out here rather than weakened there.
+    def _without_instance(rendered):
+        return "\n".join(
+            line for line in rendered.splitlines() if not line.startswith("Instance: ")
+        )
+
+    assert _without_instance(format_text(gated, section=section)) == _without_instance(
+        format_text(full, section=section)
     )
+    gated_json = json.loads(format_json(gated, section=section))
+    full_json = json.loads(format_json(full, section=section))
+    gated_json.pop("run_instance", None)
+    full_json.pop("run_instance", None)
+    assert gated_json == full_json
 
 
 def test_default_analyze_signature_is_unchanged(tmp_path, topology):

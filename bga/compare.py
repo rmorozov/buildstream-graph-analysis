@@ -148,6 +148,12 @@ class ComparisonResult:
     # own cache key changed with nothing above them changing - the roots
     # an invalidation actually started at.
     cache_churn: Optional[dict] = None
+    # UX-95: which two captures these are, beside which identity they
+    # share. Two same-config fdsdk captures print the same run id by
+    # design - that is what the id is for - so without these the report
+    # cannot tell them apart.
+    baseline_run_instance: dict = field(default_factory=dict)
+    candidate_run_instance: dict = field(default_factory=dict)
     # UX-87: whether a requested efficiency gate actually ran. Set by the
     # CLI, because whether a gate was *requested* is a flag question this
     # module never sees. Three states, and the distinction is the point:
@@ -162,6 +168,8 @@ class ComparisonResult:
         return {
             'baseline_run_id': self.baseline_run_id,
             'candidate_run_id': self.candidate_run_id,
+            'baseline_run_instance': self.baseline_run_instance,
+            'candidate_run_instance': self.candidate_run_instance,
             'baseline': self.baseline_metrics,
             'candidate': self.candidate_metrics,
             'deltas': self.deltas,
@@ -527,6 +535,8 @@ def _compare_results(
     return ComparisonResult(
         baseline_run_id=baseline_result.run_id,
         candidate_run_id=candidate_result.run_id,
+        baseline_run_instance=getattr(baseline_result, 'run_instance', None) or {},
+        candidate_run_instance=getattr(candidate_result, 'run_instance', None) or {},
         baseline_metrics=baseline_metrics,
         candidate_metrics=candidate_metrics,
         deltas=deltas,

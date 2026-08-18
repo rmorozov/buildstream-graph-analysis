@@ -29,6 +29,12 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         'run_id': result.run_id,
         'total_duration_us': result.total_duration_us,
     }
+    # UX-95: which capture this is, beside which captures it is
+    # comparable with. Additive, and omitted entirely when the run
+    # directory recorded nothing to say - an empty object would invite a
+    # consumer to render a blank line where there is no fact.
+    if getattr(result, 'run_instance', None):
+        data['run_instance'] = result.run_instance
 
     # UX-75: the report's *conclusions*, not just its numbers. Every
     # other key here is raw measurement; a consumer that wanted to know

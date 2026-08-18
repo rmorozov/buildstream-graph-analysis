@@ -36,6 +36,18 @@ _INVALIDATION_ROOTS_SHOWN = 3
 _CHOKE_POINTS_SHOWN_MAX = 8
 
 
+def _format_instance(instance: dict) -> str:
+    """UX-95: one line naming a capture, from whichever facts it kept.
+
+    Both halves are optional and the renderer says only what it has - a
+    run directory with no wall clock genuinely has no capture time, and
+    "unknown" beside a real path reads worse than the path alone.
+    """
+    return "  ".join(
+        instance[key] for key in ('started_at', 'run_dir') if instance.get(key)
+    )
+
+
 def _format_violation_summary(violation: dict) -> str:
     """One-line, human-readable summary for a single violation dict -
     every `type` currently produced anywhere in bga/ (P4-02's own
@@ -278,6 +290,12 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     lines.append("Build Efficiency Report")
     lines.append("=" * 60)
     lines.append(f"Run: {result.run_id}")
+    # UX-95: the identity hash above says which runs are comparable; it
+    # is stable across captures of the same project and targets by
+    # design, so on its own it cannot say *which* capture this is.
+    instance = getattr(result, 'run_instance', None) or {}
+    if instance:
+        lines.append(f"Instance: {_format_instance(instance)}")
     lines.append(f"Total Duration: {result.total_duration_us / 1e6:.1f}s")
     lines.append("")
 
@@ -822,7 +840,13 @@ def format_compare_text(comparison) -> str:
 
     lines = ["=" * 60, "Run Comparison", "=" * 60]
     lines.append(f"Baseline:  {comparison.baseline_run_id or '(no run identity)'}")
+    baseline_instance = getattr(comparison, 'baseline_run_instance', None) or {}
+    if baseline_instance:
+        lines.append(f"           {_format_instance(baseline_instance)}")
     lines.append(f"Candidate: {comparison.candidate_run_id or '(no run identity)'}")
+    candidate_instance = getattr(comparison, 'candidate_run_instance', None) or {}
+    if candidate_instance:
+        lines.append(f"           {_format_instance(candidate_instance)}")
     lines.append("")
 
     baseline_total = b.get('total_duration_us')

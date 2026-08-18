@@ -199,6 +199,27 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
             f"({closure['cached']} of {closure['elements']} elements cached)"
         )
 
+    # UX-92/UX-86: a caches-off run has a 0% hit ratio *by construction*
+    # and the banding below must not read that as an alarm. Caught by the
+    # first cold capture this project ever took, hours after this finding
+    # shipped: it reported freedesktop-sdk's nightly scenario as "barely
+    # incremental - look for a volatile cache key near the root", which
+    # is confidently wrong about a build that was told not to use the
+    # cache. `run_mode` (UX-55) is the fact that settles it and it was
+    # already in hand.
+    if (result.confidence or {}).get('run_mode') == 'full':
+        return [_finding(
+            'cache-hit-ratio', SEVERITY_INFO,
+            f"Caches off: all {built} element(s) built from source, none reused - "
+            f"this is the nightly scenario, so a 0% hit ratio is the intent "
+            f"rather than a finding",
+            detail=detail,
+            evidence={
+                'hit_ratio': hit_ratio, 'built_elements': built,
+                'cached_elements': cached, 'run_mode': 'full',
+            },
+        )]
+
     if hit_ratio < POOR_HIT_RATIO:
         severity, verdict = SEVERITY_HIGH, (
             "barely incremental - most of the project rebuilt. Look for a "

@@ -1,6 +1,6 @@
 # UX-80: the documented capture command cannot produce the join the docs show
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-56, UX-64 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-56, UX-64 (both done)
 
 > **Reopened by audit round 11 (2026-08-18).** The mechanism is in the
 > live path (`resolve_invocation_log_path`: `--wrapped-log` implies the
@@ -92,8 +92,89 @@ CI ever captured, using a flag the docs never mentioned.
 Tests: 4 new in `tests/unit/test_invocation_correlation.py`. Suite:
 1114 → 1118.
 
+## The acceptance test, run
+
+`tests/fixtures/bst_build_root_override/` is the missing fixture: two
+elements, `build-root: /buildstream-build`, and a sandbox runtime staged
+by its own `stage_runtime.sh`. Three things about it were discovered by
+running it rather than by design, and each one is why the fixture looks
+the way it does:
+
+- **A static busybox produces a trace with zero processes.** `LD_PRELOAD`
+  only affects dynamically-linked executables — the documented
+  limitation, met head-on. `examples/stage_runtimes.sh` stages exactly
+  that busybox, so this fixture needed its own staging script.
+- **`dash` never fires the shim's destructor.** It leaves the shell
+  through `_exit()`, which bypasses libc's exit path. Measured directly
+  against the hook, outside BuildStream:
+
+  ```
+  $ BST_TRACE_LOG=t.log LD_PRELOAD=hook.so /bin/dash -c 'true; exit 0'
+  START pid=17406 ...        <- and nothing else
+  $ BST_TRACE_LOG=t.log LD_PRELOAD=hook.so /bin/bash -c 'true; exit 0'
+  START pid=17776 ...
+  END   pid=17776 ...
+  ```
+
+  A build whose commands are all `sh -c` wrappers therefore yields nine
+  START lines and no END, so `sandbox_durations` returns `{}`,
+  `intervals_used` is false, and the match falls back to the start
+  instant — which sits *before* the element's logged BUILD START. That is
+  not a defect in the correlation; it is a fixture with nothing to
+  correlate. Staging `sleep`, an ordinary process that exits normally,
+  fixes both halves at once.
+- **The first fixture built too fast to have a span.** Plane 1's spans
+  came out degenerate — `{'element': 'worker.bst', 'start':
+  1787067818.844, 'end': 1787067818.844}` — because START and SUCCESS
+  landed in the same millisecond. `sleep 1` per command puts the element
+  above the log's resolution.
+
+With those settled, the README's "Joining the two planes" sequence, run
+unmodified:
+
+```
+bga capture run --wrapped-log plane1.log tests/fixtures/bst_build_root_override plane2.json -- bst build worker.bst
+bga extract --format wrapped tests/fixtures/bst_build_root_override plane1.log run
+bga correlate run plane2.json
+```
+
+```
+Joined 1 element(s) on element UID (2 in Plane 1, 1 traced in Plane 2)
+
+What to do next (ranked by Plane 1 impact):
+  worker.bst:
+    - holds 100% of the critical path and fixing it is worth 2.2s (60.6% of the build), but runs at
+      only 0.00 cores busy - it is waiting, not computing
+```
+
+```json
+"invocation_correlation": {"resolved": {"20749": "worker.bst"}, "certain": 1,
+                           "intervals_used": true, "unmatched": [], "ambiguous": []}
+"element_attribution":    {"reliable": true, "attributed_share": 1.0,
+                           "recognized_elements": ["worker.bst"], "unresolved_bucket": null}
+```
+
+**And the control, which matters as much.** The same build with
+`--no-invocation-log` collapses exactly as UX-56 described — so the
+fixture really is adversarial, and a passing assertion really is the
+mechanism working rather than the default layout being kind:
+
+```json
+"invocation_correlation": null
+"element_attribution": {"reliable": false, "attributed_share": 0.0,
+                        "recognized_elements": [], "unresolved_bucket": "buildstream-build",
+                        "largest_bucket_processes": 9}
+```
+
+Both are asserted in `tests/unit/test_build_root_override_join.py`, in
+the `bst`-gated tier. CI's pinned tier count moves 15 → 17.
+
 ## Verification Log
 
 Fixed 2026-08-18. The gating condition was read from
 `tools/bst_native_build_tracer.py`'s `load_and_summarize`, and the flag's
 absence from the three documents confirmed by grep before and after.
+
+Acceptance discharged 2026-08-18 by the run above: real `bst build` on a
+`build-root`-overriding fixture, the README's own three commands, and a
+paired control that fails the way the bug did. Suite: 1118 → 1120.

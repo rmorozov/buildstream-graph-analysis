@@ -99,7 +99,7 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 
 `id` is the contract — it does not change when the wording does, so a CI gate keys on it. Every id `bga` can emit, and nothing else:
 
-`bga analyze --format json` → `.findings[].id` (15, all defined in `bga/findings.py`):
+`bga analyze --format json` → `.findings[].id` (all defined in `bga/findings.py`; the set is test-enforced against this table):
 
 | id | severity | what it says |
 |---|---|---|
@@ -107,6 +107,8 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `failed-task-time` | high | how much of the measured chain was work that was thrown away |
 | `confidence` | varies | the confidence headline and any failed hard gates |
 | `run-mode-incremental` | info | this run was incremental, so its durations are not a cold-build baseline |
+| `cache-hit-ratio` | varies | how much of the project the cache reused, and for the requested target's own closure. On a caches-off run it reports the fact at `info` rather than banding it (`UX-86`) |
+| `cache-transfer-cost` | medium | this build spent a notable share of wall-clock moving artifacts rather than making them |
 | `wait-category` | varies | the single largest non-execution wait category, when it clears the 1% floor |
 | `execution-bound` | info | no wait category clears the floor — the time is in the work itself |
 | `certified-headroom` | varies | proven room to improve scheduling without changing any element |

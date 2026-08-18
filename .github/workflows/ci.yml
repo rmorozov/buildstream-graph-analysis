@@ -218,7 +218,19 @@ jobs:
         # collection on all six before running anything - which is how
         # this job first went red. `make test` has always used
         # `python -m pytest`; this now matches it.
-        run: python -m pytest -m bst -rs -p no:cacheprovider | tee /tmp/bst-tier.txt
+        #
+        # `set -o pipefail` is load-bearing, not tidiness (`UX-97`): the
+        # step's exit status is the *last* command in the pipe, which is
+        # `tee`, and `tee` succeeds whatever pytest did. The count check
+        # below catches an ordinary failure (`14 passed, 1 failed` fails
+        # the `15 passed` grep) but not `15 passed, 1 error` - a teardown
+        # or collection error alongside a full pass, which satisfies the
+        # grep and greens the job. Demonstrated:
+        #   bash -c 'false | tee /dev/null'; echo $?                 -> 0
+        #   bash -c 'set -o pipefail; false | tee /dev/null'; echo $? -> 1
+        run: |
+          set -o pipefail
+          python -m pytest -m bst -rs -p no:cacheprovider | tee /tmp/bst-tier.txt
 
       - name: No test was skipped for a missing bst
         # The failure this job exists to make impossible: bst silently

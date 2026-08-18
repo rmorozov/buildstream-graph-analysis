@@ -3,7 +3,7 @@
 Depth/reachability/dominators/critical-path/slack on small hand-built
 graphs with exact, hand-computed expected values - not just "key
 exists" checks (that class of check is exactly what missed the M6
-`max_depth: 0` / `num_elements: 6` bugs, per docs/backlog/tasks/P1-18.md).
+`max_depth: 0` / `num_elements: 6` bugs, per docs/backlog/tasks/P1-18-structural-max-depth-shortest-path-bug.md).
 """
 import pytest
 

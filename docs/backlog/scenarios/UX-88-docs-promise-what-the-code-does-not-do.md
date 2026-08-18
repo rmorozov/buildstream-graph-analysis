@@ -100,7 +100,7 @@ rather than by reading the edit.
 | 10c | `correlate -f csv` accepted and silently printed text | no csv renderer exists | flag narrowed to `text`/`json`; verified exit 2 |
 | 10d | `architecture.md` UX-60 🟢 vs backlog 🟡; "all 22 scenario files" | UX-60 is decided-not-applied; there are 92 files | status matched to the backlog; the count dropped rather than re-guessed |
 | 10e | ingestion fact 5: "nothing reads `dependency_type` as a tri-state" | `P4-11` made three consumers read it, and found a certified-floor bug doing so | corrected, keeping the collapse's own still-valid rationale |
-| 10f | dev section implied `make test` works on a base install | it needs `.[dev]` | added, plus how to run the 14 bst-gated tests |
+| 10f | dev section implied `make test` works on a base install | it needs `.[dev]` | added, plus how to run the bst-gated tests |
 | 10g | optimized `lib-f.bst`: codegen is consumed by "the one element that actually consumes it" | `UX-46` traced it: `lib-f` opens no file staged by `codegen.bst` | comment corrected; the fix is still right, just not for that reason |
 
 ### One item is a behavior change, deliberately

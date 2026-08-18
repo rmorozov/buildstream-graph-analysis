@@ -66,7 +66,7 @@ and did not name.
    `captures/fdsdk/<fdsdk-ref-short>-b<builders>j<max-jobs>-<run-id>`.
    The tuple that has to match for two captures to be comparable is *in
    the ref name*, so the baseline set is discoverable with one
-   `git ls-remote 'refs/heads/captures/fdsdk/953683fb-b4j4-*'` and no
+   `git ls-remote 'refs/heads/captures/fdsdk/953683fb-incremental-b4j4-*'` and no
    index file to keep consistent. `captures/fdsdk-latest` remains a
    moving pointer, so every document referencing it keeps working —
    force is correct there and only there, because the data lives at the

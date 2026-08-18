@@ -1,6 +1,6 @@
 # UX-97: the fix round broke five of its own claims in flight
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-84, UX-86, UX-88 (all done — this is their drift)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-84, UX-86, UX-88 (all done — this is their drift)
 
 ## Motivation
 
@@ -66,3 +66,95 @@ count appears in exactly one hand-written place (or none).
 ## Acceptance Test
 
 `grep -rn 'fourteen\|"14 ' README.md docs/backlog/scenarios/UX-84* docs/backlog/scenarios/UX-88*` shows no stale tier count; the id-list test fails when a finding id is added without a table row (verify by mutation); `git grep 'b4j4-\*'` shows only globs containing `-<mode>-`; the bst CI step fails on an injected pytest error (verify with a deliberately erroring test in a scratch branch or `act`-style dry run, or at minimum demonstrate `bash -c 'false | tee /tmp/x'` semantics before/after the pipefail change); the four bare paths resolve.
+
+---
+
+## Resolution (round 12)
+
+**Status:** 🟢 Done
+
+All five confirmed exactly as filed, and all five fixed. The two that
+matter most are the ones that became tests, because items 1 and 3 were
+both *shipped correct and verified by a throwaway script*, which is what
+let a commit days later falsify them.
+
+### 1 + 3: the two counts, now checked rather than remembered
+
+`tests/unit/test_docs_links_and_commands.py` gained two guards, each
+verified by mutation:
+
+- **Every declared finding id appears in the published table.** Adding
+  `ux97-mutation-probe` to `bga/findings.py` without a table row fails
+  with `finding id(s) declared in code but absent from the table in
+  docs/guides/cli.md: ['ux97-mutation-probe']`. The two missing ids
+  (`cache-hit-ratio`, `cache-transfer-cost`) are added, and the
+  sentence above the table no longer hand-writes a total.
+- **CI's pinned tier count matches the number of `@pytest.mark.bst`
+  tests.** Adding a sixteenth marked test without moving the pin fails
+  with `16 test(s) carry @pytest.mark.bst but .github/workflows/ci.yml
+  pins 15`.
+
+The count is now written down in exactly one place — the CI pin, which
+is the copy that has to exist, because a pin is what stops a *skipped*
+tier reading as a pass. `README.md` states the rule instead of a number;
+`UX-84`'s two figures are dated to the round that measured them rather
+than left reading as current state.
+
+### 4: the CI step could go green on a failing pytest
+
+Real, and the sharpest of the five. The step was
+`pytest … | tee /tmp/bst-tier.txt`, whose exit status is `tee`'s.
+Demonstrated:
+
+```
+$ bash -c 'python3 -c "raise SystemExit(1)" | tee /dev/null'; echo $?
+0
+$ bash -c 'set -o pipefail; python3 -c "raise SystemExit(1)" | tee /dev/null'; echo $?
+1
+```
+
+The count check is a partial backstop — `14 passed, 1 failed` fails the
+`15 passed` grep — but `15 passed, 1 error` satisfies it, which is
+precisely a teardown or collection error alongside a full pass. Fixed
+with `set -o pipefail` on the step, with the demonstration above kept in
+the workflow comment so the next reader does not have to re-derive why
+it is there.
+
+### 2: the discovery glob
+
+`UX-86` inserted the mode segment into the ref name and the documented
+glob was not moved with it. `<ref>-b4j4-*` matches nothing. Fixed in all
+three places — the workflow comment, `UX-81`'s doc, and
+`docs/guides/real-project-capture.md`.
+
+### 5: four stale bare paths, and why the link test missed them
+
+The link test only sees markdown link syntax, so a bare path in a
+comment is invisible to it. All four fixed. Two have a root cause worth
+recording rather than just repairing:
+
+- `examples/05-cmake-cpp-toolchain/project.conf` was skipped by the
+  reorganisation's own rewrite script, which excluded any path
+  containing `toolchain` in order to skip the 268 MB staged binary
+  sysroot. The exclusion was too broad and swallowed a real file.
+- `tests/unit/test_docs_links_and_commands.py`'s assertion message
+  pointed at `docs/style-guide.md`, which the reorg had moved to
+  `docs/contributing/style-guide.md` — the test that enforces "links
+  resolve" was handing a dead link to the contributor it failed on.
+
+`tests/unit/test_edg.py` referenced `docs/backlog/tasks/P1-18.md`, a
+filename that never existed (the file is
+`P1-18-structural-max-depth-shortest-path-bug.md`), so this one predates
+the reorg.
+
+### One item of the acceptance test is a false positive
+
+`grep -rn 'fourteen' docs/backlog/scenarios/README.md` also matches
+*"the score: fourteen of sixteen hold up"* — round 11's audit verdict,
+not a tier count. Left alone.
+
+### Verification
+
+Both guards verified by mutation (shown above). `pipefail` semantics
+demonstrated before and after. Suite 1239 (+2); `make lint` and
+`make check-clean` green.

@@ -173,8 +173,10 @@ jobs:
 
       - name: Install bubblewrap and a C toolchain
         # bwrap for the sandbox; gcc for the two tests that compile the
-        # Plane 2 LD_PRELOAD hook (`bst/bwrap/cc not all found on PATH`).
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static build-essential
+        # Plane 2 LD_PRELOAD hook (`bst/bwrap/cc not all found on PATH`);
+        # cmake because staging the example toolchain below needs it on
+        # the host to copy from.
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static build-essential cmake
 
       - name: Allow bwrap to configure loopback in its network namespace
         # Same sysctl as bst-smoke - see that job for the full diagnosis.
@@ -189,6 +191,19 @@ jobs:
 
       - name: bst --version
         run: bst --version
+
+      - name: Stage what the two dual-plane tests build
+        # `test_single_real_build_captures_both_planes_and_combined_trace_correlates`
+        # and `test_native_build_tracer`'s real-build test both build
+        # `examples/05-cmake-cpp-toolchain`'s `core.bst`, and both
+        # `pytest.skip` when its sysroot is not staged - a fresh runner
+        # has nothing staged. Without this the job would report "12
+        # passed, 2 skipped" and the count check below would fail, which
+        # is the check working: a skip is what this whole job exists to
+        # make impossible. Same two scripts `bst-examples` already runs.
+        run: |
+          examples/stage_runtimes.sh
+          examples/stage_cpp_toolchain.sh
 
       - name: The bst-gated tier runs, and every one of it passes
         # `-m bst` is the assertion, not a convenience: it selects exactly

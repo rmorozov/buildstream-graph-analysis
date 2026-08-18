@@ -439,6 +439,18 @@ impossible for the reasons `architecture.md` gives), remote execution
 requiring new instrumentation before the three data sources already in
 hand — two planes and the persisted logs — are fully consumed.
 
+**Decomposed into the backlog (2026-08-18):** each item above is now a
+filed task carrying its design and an acceptance test against data that
+already exists — item 1 as `UX-99` (measure the toll) → `UX-100` (the
+granularity advisor), item 2 as `UX-101` (the round's High), item 3 as
+`UX-102`, item 4 as `UX-103` (which is also the trend stage `UX-92`
+deferred), item 5 as `UX-104`. Prerequisite defects, filed by round 11,
+gate where they must: `UX-93` (honest churn labels) before anything
+ranks or trends on rebuild causes, `UX-96` (the refs helper) before the
+trend consumes history, `UX-83`'s plumbing carries the memory envelope.
+The backlog rows and files are the source of truth from here; this
+section stays the argument.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which

@@ -146,6 +146,24 @@ The workflow runs **weekly** (Sunday 03:00 UTC) and on
 touches the workflow or the capture tooling it drives — deliberately
 narrow, because the job costs a runner-hour or more.
 
+`capture_mode` selects which of the two CI scenarios is captured
+(`UX-86`). The default, `incremental`, is the warm-then-cut capture
+described above — CI's pre-commit run. `cold` skips the warm and cut
+phases and builds the target's whole closure from source with remotes
+ignored, so `run_mode` comes out `full` and the whole-graph structural
+findings mean what they claim. The two publish to separate pointers
+(`captures/fdsdk-latest` and `captures/fdsdk-cold-latest`) and carry the
+mode in their per-run ref names, because a cold and an incremental
+capture of the same commit measure different builds — `bga compare`
+refuses to compare them, and they must not land in one baseline set.
+
+A cold capture needs a target whose **entire closure** fits the job
+budget, and the default target's does not: freedesktop-sdk roots
+everything in a full compiler bootstrap. Choosing one is an empirical
+question the first cold dispatch answers, and the job fails fast if it
+starts with anything cached — a cold capture with a warm cache is not a
+cold capture.
+
 The weekly schedule exists because trend data cannot accumulate if a
 human has to click (`UX-81`), and because the tool's own documented CI
 usage needs a baseline *set*: measured same-commit noise on this project

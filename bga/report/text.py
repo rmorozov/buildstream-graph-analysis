@@ -29,6 +29,10 @@ _heaviest_on_path = findings_mod.heaviest_on_path
 _path_elements_by_duration = findings_mod.path_elements_by_duration
 
 _CRITICAL_PATH_INLINE_MAX = 5
+# UX-92: an invalidation with twenty independent roots is a different
+# problem from one with a single root, and the reader needs to see that
+# it is - but not twenty lines of it.
+_INVALIDATION_ROOTS_SHOWN = 3
 _CHOKE_POINTS_SHOWN_MAX = 8
 
 
@@ -860,6 +864,45 @@ def format_compare_text(comparison) -> str:
         if marginal['on_critical_path']:
             lines.append(
                 "    on the path: " + ", ".join(marginal['on_critical_path'][:4])
+            )
+
+    # UX-92: what the cache did between these two runs. Placed after the
+    # marginal block because both answer "what did this change cost",
+    # and the cache answer is the one nothing in the tool could give
+    # before: every other signal describes the work the build did, so a
+    # change that quintuples the work while running efficiently reads as
+    # fine everywhere else.
+    churn = getattr(comparison, 'cache_churn', None)
+    if churn:
+        if churn.get('churned_count'):
+            named = ", ".join(churn['churned_elements'][:4])
+            more = (
+                f" (+{churn['churned_count'] - 4} more)"
+                if churn['churned_count'] > 4 else ""
+            )
+            lines.append(
+                f"  Cache churn: {churn['churned_count']} element(s) rebuilt with an "
+                f"unchanged cache key, costing "
+                f"{churn['wasted_rebuild_us'] / 1e6:.1f}s - {named}{more}. Nothing "
+                f"they depend on changed, so that time bought nothing"
+            )
+        for root in (churn.get('invalidation_roots') or [])[:_INVALIDATION_ROOTS_SHOWN]:
+            total_us = root['duration_us'] + root['downstream_us']
+            downstream = (
+                f" and invalidated {root['downstream_rebuilt']} element(s) below it"
+                if root['downstream_rebuilt'] else " and invalidated nothing below it"
+            )
+            lines.append(
+                f"  Invalidated at {root['element_uid']}: its cache key changed "
+                f"({root['baseline_cache_key'][:8]} -> "
+                f"{root['candidate_cache_key'][:8]}){downstream}, "
+                f"{total_us / 1e6:.1f}s of rebuilding in total. Nothing it depends on "
+                f"changed, so the change starts here"
+            )
+        extra = len(churn.get('invalidation_roots') or []) - _INVALIDATION_ROOTS_SHOWN
+        if extra > 0:
+            lines.append(
+                f"    (+{extra} more independent invalidation root(s), see --format json)"
             )
 
     # UX-81: a band that could not be built used to be silent, so a

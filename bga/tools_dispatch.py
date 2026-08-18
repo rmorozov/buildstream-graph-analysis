@@ -79,6 +79,10 @@ TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
         "tools.native_trace_to_chrome_trace",
         "Convert a Plane 2 native trace to Chrome Trace JSON",
     ),
+    "cache-logs": (
+        "tools.bst_cache_logs",
+        "Plane 3: mine BuildStream's own persisted element logs (no capture needed)",
+    ),
     "cross-check": (
         "tools.bga_cross_check",
         "Cross-check an analysis against independently derived figures",

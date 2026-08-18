@@ -1,0 +1,593 @@
+"""UX-75: the report's conclusions, as data.
+
+Asked directly whether everything valuable reaches the JSON report, the
+measured answer on round 9's real capture was **neither format is a
+superset of the other**:
+
+- `--format json` published every *number* - floors, attribution,
+  occupancy, signals, confidence, violations - and **none of the
+  conclusions**. Every sentence a human actually reads ("this build is
+  execution-bound", "4 elements are 94.0% of the critical path", "work
+  them in this order") was computed inside `bga/report/text.py` and
+  thrown away. A machine consumer - the CI gate this project exists to
+  serve - had to re-implement `_heaviest_on_path`'s structural exclusion
+  and re-derive four thresholds from the source to reach the same
+  conclusion a human reads for free.
+- The text report, in the other direction, showed only part of the data.
+
+Two implementations of one judgement is how they drift, and `UX-71`
+documented that `bga analyze` and `bga correlate` had already drifted on
+the single most important judgement the tool makes.
+
+So the decision about *what is worth saying* happens once, here, as a
+list of findings; `bga/report/text.py` decides only *how to say it*, and
+`bga/report/json.py` publishes the same list. A finding that is not
+produced here cannot appear in either format.
+
+**Stable ids matter more than pretty titles.** `id` is what a CI gate
+keys on and what a diff between two runs joins on, so it is part of the
+contract and does not change with wording. `evidence` carries the raw
+numbers behind the sentence, so a consumer never has to parse `title`.
+"""
+from typing import Dict, List, Optional
+
+from .ingest.models import AnalysisResult
+
+# Severity is about what it means for the reader, not about size:
+#   critical - the run itself is not what it appears to be
+#   high     - a real opportunity or a real problem to act on
+#   medium   - worth reading, secondary to the above
+#   info     - scoping and context; changes how to read the rest
+SEVERITY_CRITICAL = "critical"
+SEVERITY_HIGH = "high"
+SEVERITY_MEDIUM = "medium"
+SEVERITY_INFO = "info"
+
+_CONFIDENCE_HIGH = 0.8
+_CONFIDENCE_MEDIUM = 0.5
+
+_EFFICIENCY_HIGH = 0.9
+_EFFICIENCY_MEDIUM = 0.7
+
+# UX-65: a "biggest opportunity" below this share of wall-clock is not an
+# opportunity, it is rounding. On a real freedesktop-sdk build the largest
+# non-execution category was UNTRACKED_HEAD at 0.1% - 3.47 seconds out of
+# 3587.6 - and that was the report's headline while four elements sat at
+# 94% of the critical path further down.
+OPPORTUNITY_FLOOR_PCT = 1.0
+
+# When the critical path is this share of total duration, the *chain* is
+# the constraint, not the scheduler. Blast radius answers "who depends on
+# me", which matters when the graph is the problem; here what matters is
+# "how long do I take".
+CHAIN_BOUND_RATIO = 0.9
+
+TIME_CONCENTRATION_SHOWN_MAX = 4
+FIX_ORDER_SHOWN_MAX = 3
+HORIZON_STEPS_SHOWN = 3
+LATENT_HEAVIES_SHOWN = 2
+BLAST_RADIUS_SHOWN = 3
+CRITICALITY_SHOWN = 3
+
+
+def confidence_band(score: float) -> str:
+    if score >= _CONFIDENCE_HIGH:
+        return "high"
+    if score >= _CONFIDENCE_MEDIUM:
+        return "medium"
+    return "low"
+
+
+def efficiency_band(score: float) -> str:
+    if score >= _EFFICIENCY_HIGH:
+        return (
+            "scheduling is near the certified floor for this graph - further "
+            "gains need the graph or the work itself to change, not the "
+            "scheduler (see Dispatch Occupancy and Critical Path)"
+        )
+    if score >= _EFFICIENCY_MEDIUM:
+        return "worth checking Certified Headroom for real scheduling gains"
+    return "significant scheduling headroom - see Certified Headroom below"
+
+
+def structural_kind_tag(entry: dict) -> str:
+    """P4-12 Direction 2 / P4-15 Direction 2 (linked): a short, only-
+    shown-when-relevant caveat for report listings ranking elements by a
+    real, directly-observed signal (blast radius, criticality, etc.) -
+    flags when the listed element is a BuildStream plugin kind that
+    typically does no real compute work of its own.
+    """
+    if not entry.get('is_structural_kind'):
+        return ''
+    kind = entry.get('element_kind', 'unknown')
+    return f" [structural: {kind}, may not reflect real compute work]"
+
+
+def heaviest_on_path(result) -> List[dict]:
+    """Critical-path elements with real measured work, ranked by what
+    optimizing them is actually worth (`UX-70`), falling back to raw
+    duration where a realizable saving was not evaluated.
+
+    Structural elements are excluded rather than ranked: a `stack` or
+    `import` on the path is genuine graph structure with no build
+    commands to speed up, and `UX-34` already established that ranking
+    them as "worth optimizing" wastes the reader's first glance.
+    """
+    detail = (result.signals or {}).get('critical_path_detail') or []
+    real = [d for d in detail if d.get('duration_us') and not d.get('is_structural_kind')]
+    return sorted(
+        real,
+        key=lambda d: -(d['realizable_saving_us']
+                        if d.get('realizable_saving_us') is not None
+                        else d['duration_us']),
+    )
+
+
+def path_elements_by_duration(result) -> List[dict]:
+    """The same population `heaviest_on_path` ranks, ordered by measured
+    duration (`UX-76`).
+
+    Two orderings of one list, and they are not interchangeable: "where
+    is the time" is a question about duration, "what should I fix" is a
+    question about realizable saving, and on a mesh graph they disagree.
+    """
+    detail = (result.signals or {}).get('critical_path_detail') or []
+    real = [d for d in detail if d.get('duration_us') and not d.get('is_structural_kind')]
+    return sorted(real, key=lambda d: -d['duration_us'])
+
+
+def _finding(
+    id: str,
+    severity: str,
+    title: str,
+    detail: Optional[List[str]] = None,
+    elements: Optional[List[str]] = None,
+    evidence: Optional[dict] = None,
+) -> dict:
+    return {
+        'id': id,
+        'severity': severity,
+        'title': title,
+        'detail': detail or [],
+        'elements': elements or [],
+        'evidence': evidence or {},
+    }
+
+
+def _run_scope_findings(result: AnalysisResult) -> List[dict]:
+    findings: List[dict] = []
+    # UX-54: said first, before any efficiency number, because every
+    # number below describes a build that did not finish. A real
+    # freedesktop-sdk capture in which all four attempted elements failed
+    # led with "Efficiency Score: 1.00" and never mentioned the failures.
+    build_failed = next(
+        (v for v in (result.violations or []) if v.get('type') == 'build_failed'),
+        None,
+    )
+    if build_failed is not None:
+        failed = build_failed.get('failed_elements') or []
+        shown = ", ".join(failed[:3]) + (", ..." if len(failed) > 3 else "")
+        findings.append(_finding(
+            'build-failed', SEVERITY_CRITICAL,
+            f"THIS BUILD FAILED: {build_failed.get('failed_count')} element(s) "
+            f"ended in FAILURE ({shown}) - every figure below describes a build "
+            f"that did not complete, and the elements that failed contributed "
+            f"only the time they ran before failing",
+            elements=list(failed),
+            evidence={'failed_count': build_failed.get('failed_count')},
+        ))
+
+    confidence = result.confidence or {}
+    # UX-62: how much of the measured chain was work that was thrown
+    # away. Attribution still counts it as EXECUTION_ON_CHAIN - moving it
+    # would change `I4`'s identity - so this reports the waste instead of
+    # silently reclassifying it.
+    failed_us = confidence.get('failed_task_us') or 0
+    if failed_us:
+        failed_count = confidence.get('failed_task_count') or 0
+        findings.append(_finding(
+            'failed-task-time', SEVERITY_HIGH,
+            f"{failed_count} failed task attempt(s) contributed "
+            f"{failed_us / 1e6:.2f}s of EXECUTION_ON_CHAIN - real time the build "
+            "spent producing nothing. Counted as execution, not as waste, because "
+            "reclassifying it would move the attribution identity (I4)",
+            evidence={'failed_task_us': failed_us, 'failed_task_count': failed_count},
+        ))
+
+    # UX-55: which of the two CI scenarios this run is, said before the
+    # numbers, because it changes what they are *about*.
+    if confidence.get('run_mode') == 'incremental':
+        cached = confidence.get('critical_path_cached') or []
+        detail = f", {len(cached)} of them on the critical path" if cached else ""
+        findings.append(_finding(
+            'run-mode-incremental', SEVERITY_INFO,
+            "Incremental run (caches on): BuildStream skipped elements it "
+            f"had already built{detail}. Coverage and the floors below "
+            "describe the work this run actually did, not the whole project - "
+            "compare against another incremental run, not against a "
+            "caches-off nightly",
+            elements=list(cached),
+            evidence={'run_mode': 'incremental', 'critical_path_cached': len(cached)},
+        ))
+
+    primary = confidence.get('primary')
+    if primary is not None:
+        band = confidence_band(primary)
+        violations = result.violations or []
+        suffix = (
+            f" - see {len(violations)} violation(s) below" if violations else ""
+        )
+        findings.append(_finding(
+            'confidence', SEVERITY_INFO if band == 'high' else SEVERITY_MEDIUM,
+            f"Confidence: {primary:.2f} ({band}){suffix}",
+            evidence={'primary': primary, 'band': band,
+                      'violation_count': len(violations)},
+        ))
+    return findings
+
+
+def _time_concentration_findings(
+    result: AnalysisResult, execution_bound: bool, chain_bound: bool,
+) -> List[dict]:
+    """UX-65 named where the time is; UX-76 made it one table.
+
+    The tool already computes every number here; it simply never put them
+    where a reader looks first.
+    """
+    heavy = path_elements_by_duration(result)
+    if not heavy:
+        return []
+    path_us = sum(
+        d.get('duration_us', 0)
+        for d in ((result.signals or {}).get('critical_path_detail') or [])
+    )
+    if path_us <= 0:
+        return []
+    total = result.total_duration_us or 0
+    top = heavy[:TIME_CONCENTRATION_SHOWN_MAX]
+    share = sum(d['duration_us'] for d in top) / path_us
+    verdict = " - this build is chain-bound, not scheduler-bound" if chain_bound else ""
+    detail: List[str] = []
+    width = max(len(d['element_uid']) for d in top)
+    rows = []
+    for d in top:
+        saving = d.get('realizable_saving_us')
+        worth = ""
+        if saving is not None and total:
+            worth = (
+                f"  -> fixing it saves {saving / 1e6:.1f}s "
+                f"({saving / total * 100:.1f}% of the build)"
+            )
+        detail.append(
+            f"    {d['element_uid']:<{width}}  {d['duration_us'] / 1e6:8.1f}s "
+            f"({d['duration_us'] / path_us * 100:4.1f}% of path){worth}"
+        )
+        rows.append({
+            'element_uid': d['element_uid'],
+            'duration_us': d['duration_us'],
+            'share_of_path': d['duration_us'] / path_us,
+            'realizable_saving_us': saving,
+        })
+    if execution_bound:
+        detail.append(
+            "    -> these elements must get faster, or come off the chain; "
+            "the scheduler has no room left to give"
+        )
+    # UX-74 names the same elements in the same order *with* the makespan
+    # each fix leaves behind, so this line would be a strictly weaker
+    # duplicate whenever the horizon renders.
+    fix_order = [
+        d['element_uid'] for d in heaviest_on_path(result)[:FIX_ORDER_SHOWN_MAX]
+        if d.get('realizable_saving_us')
+    ]
+    horizon_covers_it = len(
+        (result.signals or {}).get('optimization_horizon') or []
+    ) > 1
+    if (
+        fix_order
+        and not horizon_covers_it
+        and fix_order != [d['element_uid'] for d in top[:len(fix_order)]]
+    ):
+        detail.append(
+            "    -> work them in this order (by what a fix is worth, which is "
+            "not the order above): " + ", ".join(fix_order)
+        )
+
+    findings = [_finding(
+        'time-concentration', SEVERITY_HIGH,
+        f"Where the time is: {len(top)} element(s) are {share * 100:.1f}% of the "
+        f"{path_us / 1e6:.1f}s critical path{verdict}",
+        detail=detail,
+        elements=[d['element_uid'] for d in top],
+        evidence={'path_us': path_us, 'share_of_path': share,
+                  'chain_bound': chain_bound, 'rows': rows},
+    )]
+
+    # UX-70: chain or mesh? This decides whether "optimize the top
+    # element" is meaningful advice at all.
+    density = (result.signals or {}).get('zero_slack_share')
+    if density is not None and density >= 0.5:
+        findings.append(_finding(
+            'mesh-graph', SEVERITY_INFO,
+            f"Note: {density:.0%} of elements have zero slack - this graph "
+            "is a mesh of near-equal chains, so savings on one element are "
+            "often capped by the next chain rather than by its own duration",
+            evidence={'zero_slack_share': density},
+        ))
+        # Rendered inside the table it qualifies, where it has always been.
+        findings[-1]['indent'] = '    '
+    return findings
+
+
+def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
+    attribution = result.attribution or {}
+    total = result.total_duration_us
+    non_execution = {
+        k: v for k, v in attribution.items() if k != 'execution_on_chain_us'
+    }
+    if not non_execution or not total or total <= 0:
+        return []
+    top_category, top_duration_us = max(non_execution.items(), key=lambda kv: kv[1])
+    pct = top_duration_us / total * 100 if top_duration_us > 0 else 0.0
+    # UX-65: when nothing meaningful went anywhere other than useful
+    # work, "the largest of the remaining 0.1%" is not the answer.
+    if pct < OPPORTUNITY_FLOOR_PCT:
+        concentration = _time_concentration_findings(
+            result, execution_bound=True, chain_bound=chain_bound,
+        )
+        if not concentration:
+            return []
+        return [_finding(
+            'execution-bound', SEVERITY_HIGH,
+            f"Biggest Opportunity: this build is execution-bound - "
+            f"no wait category exceeds {OPPORTUNITY_FLOOR_PCT:.0f}% of "
+            f"wall-clock time, so there is no scheduling gap to close",
+            evidence={'largest_wait_category': top_category,
+                      'largest_wait_share': pct / 100},
+        )] + concentration
+    if top_duration_us <= 0:
+        return []
+    label = top_category.replace('_us', '').replace('_', ' ').upper()
+    # UX-04/UX-35: what the category means and what to do about it,
+    # conditioned on this run's own capacity verdict. Imported here
+    # rather than at module scope: `bga.report` imports this module, so a
+    # top-level import back into it is a cycle.
+    from .report._shared import resolve_attribution_hint
+
+    hint = resolve_attribution_hint(
+        top_category, getattr(result, 'capacity_verdict', None),
+    )
+    return [_finding(
+        'wait-category', SEVERITY_HIGH,
+        f"Biggest Opportunity: {pct:.1f}% of wall-clock time is "
+        f"{label} ({top_duration_us / 1e6:.2f}s)",
+        detail=[f"    -> {hint}"] if hint else None,
+        evidence={'category': top_category, 'category_us': top_duration_us,
+                  'share': pct / 100, 'hint': hint},
+    )]
+
+
+def _outlook_findings(result: AnalysisResult) -> List[dict]:
+    """UX-74: what to do after the first fix, what the set is worth
+    together, and what is waiting off the path."""
+    signals = result.signals or {}
+    total = result.total_duration_us or 0
+    findings: List[dict] = []
+
+    joint = signals.get('joint_saving')
+    if joint and joint.get('joint_saving_us') and total:
+        joint_us = joint['joint_saving_us']
+        sum_us = joint.get('sum_of_individual_us') or 0
+        if joint.get('savings_add'):
+            relation = (
+                "exactly the sum of their individual savings, so they are three "
+                "separate pieces of work that do not overlap"
+            )
+        else:
+            relation = (
+                f"less than the {sum_us / 1e6:.1f}s their individual savings add up "
+                f"to - fixing one makes the others worth less"
+            )
+        findings.append(_finding(
+            'joint-saving', SEVERITY_HIGH,
+            f"Together, the top {len(joint['elements'])} are worth "
+            f"{joint_us / 1e6:.1f}s ({joint_us / total * 100:.0f}% of the build) - "
+            f"{relation}",
+            elements=list(joint['elements']),
+            evidence={'joint_saving_us': joint_us, 'sum_of_individual_us': sum_us,
+                      'savings_add': joint.get('savings_add')},
+        ))
+
+    horizon = signals.get('optimization_horizon') or []
+    if len(horizon) > 1:
+        shown = horizon[:HORIZON_STEPS_SHOWN]
+        steps = " -> ".join(
+            f"{step['element_uid']} ({step['makespan_after_us'] / 1e6:.0f}s)"
+            for step in shown
+        )
+        last = shown[-1]
+        detail = []
+        if total:
+            detail.append(
+                f"    - the last of those leaves "
+                f"{last['cumulative_saving_us'] / total * 100:.0f}% of the build "
+                f"removed, projected from this run without building again"
+            )
+        findings.append(_finding(
+            'optimization-horizon', SEVERITY_HIGH,
+            f"Work them in this order (by what a fix is worth, not by size), "
+            f"with what the build drops to: {steps}",
+            detail=detail,
+            elements=[step['element_uid'] for step in shown],
+            evidence={'steps': shown},
+        ))
+
+    latent = signals.get('latent_heavies') or []
+    if latent:
+        shown = latent[:LATENT_HEAVIES_SHOWN]
+        named = ", ".join(
+            f"{e['element_uid']} ({e['duration_us'] / 1e6:.0f}s)" for e in shown
+        )
+        more = f" (+{len(latent) - len(shown)} more)" if len(latent) > len(shown) else ""
+        findings.append(_finding(
+            'latent-heavies', SEVERITY_MEDIUM,
+            f"Waiting off the critical path, worth nothing to fix today: "
+            f"{named}{more} - they bound how far shortening the chain can go",
+            elements=[e['element_uid'] for e in shown],
+            evidence={'latent_heavies': latent},
+        ))
+
+    if findings:
+        findings[-1]['detail'] = list(findings[-1]['detail']) + [
+            "    (structural projections over this run's measured durations, where "
+            "\"fixed\" means the element becomes instant - a re-capture is still "
+            "the ground truth)"
+        ]
+    return findings
+
+
+def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
+    signals = result.signals or {}
+    top_blast_radius = signals.get('top_blast_radius') or []
+    if chain_bound or not top_blast_radius:
+        return []
+    # UX-65: blast radius answers "who depends on me", which is the right
+    # question when the *graph* constrains the build, not when the chain
+    # does.
+    blast_radius = signals.get('blast_radius') or {}
+    shown = top_blast_radius[:BLAST_RADIUS_SHOWN]
+    detail = []
+    for i, elem_uid in enumerate(shown, start=1):
+        entry = blast_radius.get(elem_uid, {})
+        count = entry.get('downstream_count', 0)
+        detail.append(
+            f"    {i}. {elem_uid} ({count} downstream elements)"
+            f"{structural_kind_tag(entry)}"
+        )
+    return [_finding(
+        'blast-radius-ranking', SEVERITY_MEDIUM,
+        "Elements Most Worth Optimizing First (by blast radius):",
+        detail=detail, elements=list(shown),
+        evidence={'blast_radius': {u: blast_radius.get(u, {}) for u in shown}},
+    )]
+
+
+def _criticality_findings(result: AnalysisResult) -> List[dict]:
+    criticality = (result.signals or {}).get('criticality_probability') or {}
+    if not criticality:
+        return []
+    # UX-76: structural elements are excluded rather than annotated here,
+    # and a list where every entry scores 1.0 - the ordinary shape of a
+    # deterministic replay - ranks nothing and is dropped.
+    nonzero = sorted(
+        (
+            item for item in criticality.items()
+            if item[1].get('probability', 0) > 0
+            and not item[1].get('is_structural_kind')
+        ),
+        key=lambda kv: kv[1].get('probability', 0), reverse=True,
+    )[:CRITICALITY_SHOWN]
+    if not nonzero or all(d.get('probability', 0) >= 1.0 for _u, d in nonzero):
+        return []
+    detail = [
+        f"    {i}. {uid} ({data.get('probability', 0) * 100:.0f}% probability of "
+        f"being on critical path){structural_kind_tag(data)}"
+        for i, (uid, data) in enumerate(nonzero, start=1)
+    ]
+    return [_finding(
+        'criticality', SEVERITY_INFO,
+        "Highest Criticality Elements:",
+        detail=detail, elements=[uid for uid, _d in nonzero],
+        evidence={'criticality_probability': dict(nonzero)},
+    )]
+
+
+def _floor_findings(result: AnalysisResult) -> List[dict]:
+    floors = result.floors or {}
+    findings: List[dict] = []
+    t_inf = floors.get('t_infinity_observed') or floors.get('t_infinity_observed_us', 0)
+    lb_val = floors.get('lb') or floors.get('lb_us', 0)
+    headroom = floors.get('certified_headroom') or floors.get('certified_headroom_us', 0)
+    if headroom > 0:
+        findings.append(_finding(
+            'certified-headroom', SEVERITY_MEDIUM,
+            f"Certified Headroom: up to {headroom / 1e6:.2f}s available "
+            f"(T∞={t_inf / 1e6:.2f}s, LB={lb_val / 1e6:.2f}s)",
+            evidence={'certified_headroom_us': headroom, 't_infinity_us': t_inf,
+                      'lb_us': lb_val},
+        ))
+    # UX-02: never presented alone without the "not work-minimality"
+    # caveat, and gated on confidence - low-confidence input gets an
+    # explicit caveat rather than false precision.
+    efficiency_score = floors.get('efficiency_score')
+    if efficiency_score is not None:
+        band = efficiency_band(efficiency_score)
+        primary = (result.confidence or {}).get('primary')
+        caveat = ""
+        if primary is not None and primary < _CONFIDENCE_HIGH:
+            caveat = " - low-confidence data, treat with caution"
+        findings.append(_finding(
+            'efficiency-score', SEVERITY_INFO,
+            f"Efficiency Score: {efficiency_score:.2f} ({band}){caveat}",
+            evidence={'efficiency_score': efficiency_score,
+                      'low_confidence': bool(caveat)},
+        ))
+    return findings
+
+
+def compute_findings(result: AnalysisResult) -> List[dict]:
+    """Every conclusion the report draws, in the order it draws them.
+
+    Reads already-computed fields and performs no new analysis - the same
+    contract `_format_key_findings` has always had. What changed is where
+    the output goes: both renderers consume this, so they cannot disagree
+    and a consumer never has to re-derive a threshold from the source.
+    """
+    floors = result.floors or {}
+    total = result.total_duration_us
+    t_infinity = floors.get('t_infinity_observed') or 0
+    # `chain_bound` asks whether the chain or the scheduler is what binds;
+    # `execution_bound` asks whether any wait category is large enough to
+    # be worth naming. Different questions, and a real build is routinely
+    # both.
+    chain_bound = bool(total) and t_infinity / total >= CHAIN_BOUND_RATIO
+
+    findings = _run_scope_findings(result)
+    opportunity = _opportunity_findings(result, chain_bound)
+    findings.extend(opportunity)
+    concentration_emitted = any(
+        f['id'] == 'time-concentration' for f in opportunity
+    )
+    if chain_bound and heaviest_on_path(result):
+        # UX-76: one table, not a second ranking of the same names.
+        if not concentration_emitted:
+            concentration = _time_concentration_findings(
+                result, execution_bound=False, chain_bound=True,
+            )
+            findings.extend(concentration)
+            concentration_emitted = bool(concentration)
+    else:
+        findings.extend(_ranking_findings(result, chain_bound))
+    if concentration_emitted:
+        findings.extend(_outlook_findings(result))
+    findings.extend(_criticality_findings(result))
+    findings.extend(_floor_findings(result))
+    return findings
+
+
+def render_findings(findings: List[dict]) -> List[str]:
+    """The text form: a title line per finding, plus its own detail lines.
+
+    Detail lines carry their own indentation because they are tables and
+    sub-rankings whose alignment is part of their meaning; titles are
+    indented uniformly here.
+    """
+    lines: List[str] = []
+    for finding in findings:
+        lines.append(f"{finding.get('indent', '  ')}{finding['title']}")
+        lines.extend(finding.get('detail') or [])
+    return lines
+
+
+def findings_by_id(findings: List[dict]) -> Dict[str, dict]:
+    return {f['id']: f for f in findings}

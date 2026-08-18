@@ -2007,6 +2007,18 @@ def _format_declared_vs_used(analysis: dict) -> List[str]:
         lines.append(
             f"  {entry['element']:26s} skipped {entry['dependency']} - {entry['reason']}"
         )
+    # UX-75: `UX-68` filtered these out of the candidate list and gave
+    # them their own key, and until now nothing rendered that key at all
+    # - so the filtered population was visible only to someone reading
+    # the raw JSON, which is indistinguishable from it not existing.
+    aggregating = analysis.get("aggregating_dependencies") or []
+    if aggregating:
+        lines.append(
+            f"  {len(aggregating)} further pair(s) set aside as aggregating - the "
+            f"dependency stages almost nothing of its own (a `stack` stages one "
+            f"marker file), so 'nobody opened it' is not evidence about it; see "
+            f"`declared_vs_used.aggregating_dependencies` in the JSON report"
+        )
     lines.append(f"  ({analysis['note']})")
     return lines
 
@@ -2054,6 +2066,15 @@ def _format_text(report: dict) -> str:
         key=lambda e: -_bc[e]["measured_cpu_us"],
     )[:3]
     lines.extend(_format_binary_cost(_bc, _heaviest))
+    # UX-75: a text-side cap must say what it capped. The JSON carries
+    # every element; a block that silently shows three reads as a build
+    # with three elements worth measuring.
+    _available = [e for e, v in _bc.items() if v.get("available")]
+    if len(_available) > len(_heaviest):
+        lines.append(
+            f"  (+{len(_available) - len(_heaviest)} further element(s) measured, "
+            f"shown in the JSON report under `binary_cost`)"
+        )
     lines.extend(_format_peak_memory(report.get("peak_memory") or {}))
     lines.extend(_format_declared_vs_used(report.get("declared_vs_used") or {}))
     # UX-32: per-element achieved parallelism.

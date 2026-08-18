@@ -40,6 +40,8 @@ it builds"**.
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
+
 
 # An element is "not compute-bound" below this many cores busy. One core
 # means a build that never overlapped any work with anything - the
@@ -88,12 +90,28 @@ _REDUNDANCY_NOTABLE_S = 1.0
 # and an explicitly hedged dependency candidate must not print as two
 # identically-weighted bullets - round 9's join printed eight rows that
 # were all the second kind.
+#
+# UX-75: each class carries a stable id and a severity, so a consumer
+# acts on `id` rather than on a substring of the prose, and so the rank
+# that orders the text is the same fact the JSON publishes.
 _EVIDENCE_PARALLELISM = 1
 _EVIDENCE_CPU_CONCENTRATION = 2
 _EVIDENCE_SERIALIZATION = 3
 _EVIDENCE_MEMORY = 4
 _EVIDENCE_REDUNDANCY = 5
 _EVIDENCE_DECLARED_VS_USED = 6
+
+_EVIDENCE_SEVERITY = {
+    _EVIDENCE_PARALLELISM: SEVERITY_HIGH,
+    _EVIDENCE_CPU_CONCENTRATION: SEVERITY_HIGH,
+    _EVIDENCE_SERIALIZATION: SEVERITY_HIGH,
+    _EVIDENCE_MEMORY: SEVERITY_MEDIUM,
+    _EVIDENCE_REDUNDANCY: SEVERITY_MEDIUM,
+    # UX-68: the producer's own words are "this is evidence, not a
+    # verdict". Its severity says the same thing in a field a machine can
+    # read.
+    _EVIDENCE_DECLARED_VS_USED: SEVERITY_INFO,
+}
 
 # A finding below the gate above still earns a line when Plane 2 says the
 # fix is cheap and specific - an element running at ~1 core busy is a job
@@ -287,7 +305,7 @@ def _recommend(joined: ElementJoin) -> List[str]:
     true but is not what to do next, and saying so anyway is how a report
     becomes noise (the lesson of `UX-34` and `UX-37`).
     """
-    # (evidence rank, text) - sorted at the end so the strongest
+    # (evidence rank, id, text) - sorted at the end so the strongest
     # measured finding leads and the hedged one never displaces it.
     ranked: List[tuple] = []
     share = joined.critical_path_share
@@ -334,21 +352,21 @@ def _recommend(joined: ElementJoin) -> List[str]:
                 f"busy - it is waiting, not computing"
             )
             if "pinned_to_one_job" in joined.native_findings:
-                ranked.append((_EVIDENCE_PARALLELISM,
+                ranked.append((_EVIDENCE_PARALLELISM, 'pinned-to-one-job',
                     f"{detail}, and its native build asked for -j1: remove "
                     f"`notparallel` / raise its job count before touching its sources"))
             elif joined.requested_jobs and joined.requested_jobs > 1:
-                ranked.append((_EVIDENCE_PARALLELISM,
+                ranked.append((_EVIDENCE_PARALLELISM, 'underachieved-requested-jobs',
                     f"{detail}, despite asking for -j{joined.requested_jobs}: its "
                     f"native build is not achieving the parallelism it requested"))
             else:
-                ranked.append((_EVIDENCE_PARALLELISM,
+                ranked.append((_EVIDENCE_PARALLELISM, 'waiting-not-computing',
                     f"{detail}: look at how it is built before what it builds"))
         else:
             # Deliberately phrased as a *negative* result. Its value is
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
-            ranked.append((_EVIDENCE_PARALLELISM,
+            ranked.append((_EVIDENCE_PARALLELISM, 'already-compute-bound',
                 f"{_impact()} - already compute-bound at "
                 f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
                 f"from its parallelism; shortening it means less work"))
@@ -360,7 +378,7 @@ def _recommend(joined: ElementJoin) -> List[str]:
     if matters or cheap_win:
         dominant = joined.dominant_binary
         if dominant and (dominant.get("cpu_share") or 0) >= _DOMINANT_BINARY_SHARE:
-            ranked.append((_EVIDENCE_CPU_CONCENTRATION,
+            ranked.append((_EVIDENCE_CPU_CONCENTRATION, 'cpu-concentration',
                 f"{dominant['cpu_share']:.0%} of its measured CPU is one binary, "
                 f"`{dominant['binary']}` ({dominant['count']} process(es), "
                 f"{dominant['cpu_us'] / 1e6:.0f} CPU s) - this element is a "
@@ -368,13 +386,13 @@ def _recommend(joined: ElementJoin) -> List[str]:
 
         serial = joined.serial_binary
         if serial:
-            ranked.append((_EVIDENCE_SERIALIZATION,
+            ranked.append((_EVIDENCE_SERIALIZATION, 'serialization-point',
                 f"`{serial['binary']}` is a SINGLE process holding "
                 f"{serial['wall_s']:.1f}s of wall time - a serialization point no "
                 f"job count can help; it has to get faster or go away"))
 
         if joined.peak_rss_kb and joined.peak_rss_kb / 1024 >= _PEAK_RSS_NOTABLE_MB:
-            ranked.append((_EVIDENCE_MEMORY,
+            ranked.append((_EVIDENCE_MEMORY, 'peak-memory',
                 f"its largest single process peaked at "
                 f"{joined.peak_rss_kb / 1024:.0f} MB resident - multiply by however "
                 f"many elements build concurrently before raising `builders`"))
@@ -387,7 +405,7 @@ def _recommend(joined: ElementJoin) -> List[str]:
         )
         if redundancy and redundancy_s >= floor_s:
             others = [e for e in redundancy.get("elements", []) if e != joined.element]
-            ranked.append((_EVIDENCE_REDUNDANCY,
+            ranked.append((_EVIDENCE_REDUNDANCY, 'redundant-operation',
                 f"it pays {redundancy_s:.1f}s for an operation {len(others)} other "
                 f"element(s) also run ({redundancy['occurrence_count']}x in total): "
                 f"{redundancy.get('signature', '').strip()[:60]}"))
@@ -402,13 +420,16 @@ def _recommend(joined: ElementJoin) -> List[str]:
         # from here. Rendering that as "removing the edge is free" turned
         # a measurement into a claim the measurement does not support,
         # and on a real capture it did so for 8 of 10 findings.
-        ranked.append((_EVIDENCE_DECLARED_VS_USED,
+        ranked.append((_EVIDENCE_DECLARED_VS_USED, 'declared-not-used',
             f"opened no file staged by {count} declared build {plural} "
             f"({names}) - worth checking whether the edge is needed at "
             f"build time, or only at runtime; this is evidence, not a "
             f"verdict (a runtime-only dependency looks identical here)"))
 
-    return [text for _rank, text in sorted(ranked, key=lambda item: item[0])]
+    return [
+        {'id': id, 'severity': _EVIDENCE_SEVERITY[rank], 'text': text}
+        for rank, id, text in sorted(ranked, key=lambda item: item[0])
+    ]
 
 
 def correlate(analysis: dict, native_report: dict) -> dict:
@@ -595,7 +616,7 @@ def format_correlation(result: dict) -> str:
         for entry in actionable[:_SHOWN_MAX]:
             lines.append(f"  {entry['element']}:")
             for step in entry["recommendations"]:
-                lines.append(f"    - {step}")
+                lines.append(f"    - {step['text']}")
             if entry["cpu_coverage"] is not None and entry["cpu_coverage"] < 1.0:
                 lines.append(
                     f"    ({entry['cpu_coverage'] * 100:.0f}% of this element's "

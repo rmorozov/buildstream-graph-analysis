@@ -58,7 +58,7 @@ def test_critical_path_element_that_is_waiting_is_told_to_fix_its_parallelism():
         ),
     )
 
-    steps = result["actionable"][0]["recommendations"]
+    steps = [s["text"] for s in result["actionable"][0]["recommendations"]]
     assert result["actionable"][0]["element"] == "core.bst"
     assert "waiting, not computing" in steps[0]
     assert "notparallel" in steps[0]
@@ -76,7 +76,7 @@ def test_critical_path_element_that_is_busy_is_told_the_opposite():
         ),
     )
 
-    step = result["actionable"][0]["recommendations"][0]
+    step = result["actionable"][0]["recommendations"][0]["text"]
     assert "already compute-bound" in step
     assert "less work" in step
 
@@ -91,7 +91,7 @@ def test_underachieving_element_is_distinguished_from_a_pinned_one():
         ),
     )
 
-    step = result["actionable"][0]["recommendations"][0]
+    step = result["actionable"][0]["recommendations"][0]["text"]
     assert "despite asking for -j4" in step
     assert "notparallel" not in step
 
@@ -102,7 +102,7 @@ def test_unused_dependencies_are_reported_as_a_macro_fix():
         _native(unused=[{"element": "lib.bst", "dependency": "codegen.bst"}]),
     )
 
-    step = result["actionable"][0]["recommendations"][0]
+    step = result["actionable"][0]["recommendations"][0]["text"]
     assert "1 declared build dependency" in step
     # UX-68: never a verdict - the producer cannot distinguish a
     # runtime-only dependency from an unused one.
@@ -189,7 +189,7 @@ def test_dependency_pluralisation(count, expected):
 
     result = correlate(_analysis(), _native(unused=unused))
 
-    assert expected in result["actionable"][0]["recommendations"][0]
+    assert expected in result["actionable"][0]["recommendations"][0]["text"]
 
 
 def test_join_reports_its_own_coverage():
@@ -283,12 +283,11 @@ def test_the_headline_verdict_fires_on_the_real_capture():
     made unreachable: `bison.bst` at 0.91 cores busy was measured every
     round and never mentioned."""
     result = correlate(_real_analysis(), _real_native())
-    steps = {e["element"]: e["recommendations"] for e in result["actionable"]}
 
     assert any("waiting, not computing" in step
-               for step in steps["components/bison.bst"])
+               for step in _steps(result, "components/bison.bst"))
     assert any("already compute-bound" in step
-               for step in steps["components/_private/cmake-stage1.bst"])
+               for step in _steps(result, "components/_private/cmake-stage1.bst"))
 
 
 def test_a_cheap_win_below_the_gate_is_still_reported():
@@ -397,7 +396,11 @@ def _rich_native(**overrides):
 
 
 def _steps(result, element):
-    return {e["element"]: e["recommendations"] for e in result["actionable"]}[element]
+    """UX-75: recommendations carry an id and a severity now, so the
+    text a human reads and the class a machine acts on are the same
+    record. These tests are about the prose."""
+    entry = {e["element"]: e for e in result["actionable"]}[element]
+    return [step["text"] for step in entry["recommendations"]]
 
 
 def test_the_dominant_binary_reaches_the_join():
@@ -465,4 +468,21 @@ def test_aggregating_dependencies_are_counted_and_stated():
 
     assert result["coverage"]["aggregating_dependency_pairs"] == 2
     assert "set aside as aggregating" in format_correlation(result)
+
+
+def test_correlate_recommendations_carry_ids_and_severities():
+    """`UX-75`: the join's rows are conclusions too. A consumer acts on
+    `id`, not on a substring of the prose, and the severity says out loud
+    what `UX-68`'s own note says in words - the declared-vs-used row is
+    evidence, not a verdict."""
+    result = correlate(_real_analysis(), _rich_native())
+    entry = {e["element"]: e for e in result["actionable"]}[CMAKE]
+    by_id = {step["id"]: step for step in entry["recommendations"]}
+
+    assert by_id["cpu-concentration"]["severity"] == "high"
+    assert by_id["serialization-point"]["severity"] == "high"
+    assert by_id["peak-memory"]["severity"] == "medium"
+    assert by_id["declared-not-used"]["severity"] == "info"
+    # And the order still puts the hedged one last.
+    assert entry["recommendations"][-1]["id"] == "declared-not-used"
 

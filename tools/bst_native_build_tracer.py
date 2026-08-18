@@ -64,7 +64,6 @@ import tempfile
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
-import yaml
 
 from tools.bst_run_wrapped import run_wrapped
 from tools.native_trace.bwrap_shim import __file__ as _bwrap_shim_source
@@ -1100,6 +1099,13 @@ def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str,
         path = os.path.join(elements_dir, element)
         if not os.path.exists(path):
             continue
+        # UX-77: imported here rather than at module scope. Only this
+        # one function needs it, and a top-level import made `bga
+        # capture --help` fail outright on an install without PyYAML -
+        # the other three yaml call sites in `tools/` were already lazy
+        # for the same reason.
+        import yaml
+
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
@@ -2180,6 +2186,39 @@ def _format_text(report: dict) -> str:
     return "\n".join(lines)
 
 
+def resolve_invocation_log_path(args) -> Optional[str]:
+    """Where the per-sandbox invocation record goes (`UX-80`).
+
+    The correlation that recovers real element names (`UX-56`/`UX-64`)
+    needs two artifacts: the invocation record, and the Plane 1 wrapped
+    log whose wall-clock timestamps the invocations are matched against.
+    It used to run only when *both* flags were passed explicitly — and
+    `--invocation-log` appeared **zero times** in `README.md`,
+    `docs/cli.md` and `docs/real-project-guide.md`, while the CI workflow
+    that produced every number those documents quote did pass it.
+
+    So the documented capture command could not produce the documented
+    join on any project that overrides `build-root` — which includes
+    `freedesktop-sdk`, the project the guide is written from. It was
+    invisible on every example in this repository because they all use
+    the default layout, where the path-convention fallback happens to be
+    right.
+
+    There is no scenario in which a user asks for the Plane 1 log and
+    does *not* want the join, so `--wrapped-log` now implies the record;
+    it goes to a temporary path unless one is named, because its value is
+    the correlation rather than the file. `--no-invocation-log` restores
+    the old behaviour for anyone who needs to reproduce it.
+    """
+    if getattr(args, "invocation_log", None):
+        return args.invocation_log
+    if getattr(args, "no_invocation_log", False) or not getattr(args, "wrapped_log", None):
+        return None
+    return os.path.join(
+        tempfile.mkdtemp(prefix="bst-native-invocations-"), "invocations.jsonl"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -2193,7 +2232,17 @@ def main() -> int:
         help="UX-56: where to write the per-sandbox invocation record used to "
              "recover element names when the project overrides build-root. "
              "Correlation also needs --wrapped-log, whose wall-clock timestamps "
-             "are what the invocations are matched against.",
+             "are what the invocations are matched against. UX-80: recorded to a "
+             "temporary path automatically whenever --wrapped-log is given, so "
+             "the documented capture produces a joinable report; pass this only "
+             "to keep the artifact.",
+    )
+    run_parser.add_argument(
+        "--no-invocation-log", action="store_true",
+        help="UX-80: opt out of the automatic invocation record. Only useful to "
+             "reproduce the pre-UX-80 behaviour - without it, element attribution "
+             "falls back to the sandbox path convention, which is the element "
+             "only on a project that does not override build-root.",
     )
     run_parser.add_argument(
         "--argv-log", metavar="PATH",
@@ -2256,18 +2305,19 @@ def main() -> int:
             )
 
         raw_log_path = args.raw_log or os.path.join(tempfile.mkdtemp(prefix="bst-native-trace-log-"), "trace.log")
+        invocation_log_path = resolve_invocation_log_path(args)
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=args.wrapped_log,
                                           trace_opens=args.trace_opens,
                                           argv_log_path=args.argv_log,
-                                          invocation_log_path=args.invocation_log)
+                                          invocation_log_path=invocation_log_path)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
         report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
-                                    invocation_log_path=args.invocation_log,
+                                    invocation_log_path=invocation_log_path,
                                     plane1_log_path=args.wrapped_log)
         report["wrapped_command_exit_code"] = returncode
         with open(args.output, "w", encoding="utf-8") as f:

@@ -128,3 +128,51 @@ def test_the_tool_is_still_runnable_directly():
 
     assert result.returncode == 0
     assert "bst_extract_run.py" in result.stdout
+
+
+# --- UX-77: the front door ---------------------------------------------
+
+
+def test_every_alias_names_a_module_that_is_actually_importable():
+    """The defect `UX-77` was filed for, in the cheapest form that would
+    have caught it.
+
+    `pyproject.toml` packaged `bga*` only, so `tools` was never
+    installed and every alias died with a raw `ModuleNotFoundError` -
+    the first command the real-project docs tell a new user to run. This
+    test passes from a checkout either way; the packaging itself is
+    guarded by the `packaging` CI job, which runs a built wheel from an
+    empty directory.
+    """
+    import importlib
+
+    from bga.tools_dispatch import TOOL_ALIASES
+
+    for alias, (module_name, _help) in TOOL_ALIASES.items():
+        module = importlib.import_module(module_name)
+        assert getattr(module, "main", None) is not None, (
+            f"`bga {alias}` dispatches to {module_name}, which has no main()"
+        )
+
+
+def test_an_unimportable_tool_is_a_handled_error_not_a_traceback(monkeypatch, capsys):
+    """`UX-77` required exit 2 and one actionable sentence. A raw
+    traceback out of the first documented command is the failure mode
+    this replaces."""
+    import importlib
+
+    import bga.tools_dispatch as dispatch_mod
+
+    def _boom(name):
+        raise ImportError("No module named 'tools'")
+
+    monkeypatch.setattr(importlib, "import_module", _boom)
+
+    with pytest.raises(SystemExit) as excinfo:
+        dispatch_mod.dispatch(["extract", "--help"])
+
+    assert excinfo.value.code == 2
+    message = capsys.readouterr().err
+    assert "could not load tools.bst_extract_run" in message
+    assert "python3 -m tools.bst_extract_run" in message
+

@@ -35,6 +35,61 @@ jobs:
       - name: Test
         run: make test
 
+  packaging:
+    # UX-77: the front door. Every `bga wrap/extract/capture/...` alias
+    # dispatches by importing `tools.<module>`, and `pyproject.toml`
+    # packaged `bga*` only - so the first command the real-project docs
+    # tell a new user to run died with a raw `ModuleNotFoundError` for
+    # anyone who installed the package. Nothing caught it because every
+    # consumer avoided the alias path: this job runs a built wheel in a
+    # clean venv from an empty directory, which is exactly the path a
+    # user takes and the one no other job exercises.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build a wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist/
+
+      - name: Install the wheel into a clean venv (not editable, not from the repo)
+        run: |
+          python -m venv /tmp/pkgvenv
+          /tmp/pkgvenv/bin/pip install dist/*.whl
+
+      - name: Every documented alias runs from an empty directory
+        # `cd /tmp/empty` matters: a console-script entry point does not
+        # put the working directory on sys.path, which is precisely how
+        # running from the repo root hid this for every prior round.
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/empty && cd /tmp/empty
+          for alias in analyze compare correlate \
+                       wrap extract capture rebuild-set checkout-cost run-context \
+                       graph-from-show log-to-chrome chrome-to-trace native-to-chrome \
+                       cross-check gen-synthetic; do
+            echo "--- bga $alias --help"
+            /tmp/pkgvenv/bin/bga "$alias" --help > /dev/null
+          done
+
+      - name: The packaged capture path carries its own C source
+        # tools/native_trace/hook.c is compiled at capture time and is not
+        # a Python module, so it needs package-data or Plane 2 installs
+        # broken in a way no --help would reveal.
+        run: |
+          /tmp/pkgvenv/bin/python -c "
+          import os, tools.native_trace
+          root = os.path.dirname(tools.native_trace.__file__)
+          assert os.path.exists(os.path.join(root, 'hook.c')), 'hook.c missing from the wheel'
+          print('hook.c present in the installed package')
+          "
+
   bst-smoke:
     # Real `bst build` needs a sandbox (bubblewrap) - whether unprivileged
     # user namespaces work on GitHub's ubuntu-latest runners is unverified

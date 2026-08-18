@@ -213,3 +213,51 @@ def test_the_hook_emits_none_rather_than_omitting_the_field():
     text = "START pid=5 ppid=1 ts=1.0 element=core.bst inv=none cmd=/bin/sh\n"
 
     assert parse_trace_log(text)[0]["invocation"] is None
+
+
+# --- UX-80: the documented capture must produce the documented join ----
+
+
+class _Args:
+    def __init__(self, **kw):
+        self.invocation_log = kw.get("invocation_log")
+        self.no_invocation_log = kw.get("no_invocation_log", False)
+        self.wrapped_log = kw.get("wrapped_log")
+
+
+def test_a_wrapped_log_implies_an_invocation_record():
+    """The defect `UX-80` was filed for: correlation ran only when both
+    flags were passed, and `--invocation-log` appeared **zero times** in
+    README.md, docs/cli.md and docs/real-project-guide.md - while the CI
+    workflow that produced every number those documents quote did pass
+    it. The documented command therefore could not produce the
+    documented join on a project that overrides `build-root`."""
+    from tools.bst_native_build_tracer import resolve_invocation_log_path
+
+    path = resolve_invocation_log_path(_Args(wrapped_log="/tmp/plane1.log"))
+
+    assert path and path.endswith("invocations.jsonl")
+
+
+def test_an_explicit_path_is_honoured():
+    from tools.bst_native_build_tracer import resolve_invocation_log_path
+
+    args = _Args(wrapped_log="/tmp/plane1.log", invocation_log="/tmp/mine.jsonl")
+
+    assert resolve_invocation_log_path(args) == "/tmp/mine.jsonl"
+
+
+def test_no_wrapped_log_means_no_record():
+    """Without Plane 1's timestamps there is nothing to correlate
+    against, so recording invocations would buy nothing."""
+    from tools.bst_native_build_tracer import resolve_invocation_log_path
+
+    assert resolve_invocation_log_path(_Args()) is None
+
+
+def test_the_opt_out_restores_the_old_behaviour():
+    from tools.bst_native_build_tracer import resolve_invocation_log_path
+
+    args = _Args(wrapped_log="/tmp/plane1.log", no_invocation_log=True)
+
+    assert resolve_invocation_log_path(args) is None

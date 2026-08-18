@@ -115,6 +115,11 @@ class ComparisonResult:
     verdict: str
     low_confidence: bool
     comparability_warning: Optional[str] = None
+    # UX-78: the same facts as `comparability_warning`, structured, so a
+    # caller can refuse and name the check that failed rather than
+    # matching on prose. Each entry is `{"check": ..., "message": ...}`;
+    # `check` is stable, `message` is not.
+    mismatches: List[dict] = field(default_factory=list)
     # UX-54: which of the two runs describe a build that did not
     # complete ("baseline" and/or "candidate"). Kept separate from
     # `low_confidence`, which is about a signal being noisy: a failed
@@ -141,6 +146,7 @@ class ComparisonResult:
             'verdict': self.verdict,
             'low_confidence': self.low_confidence,
             'comparability_warning': self.comparability_warning,
+            'mismatches': self.mismatches,
             'failed_runs': self.failed_runs,
             'baseline_band': self.baseline_band,
         }
@@ -204,8 +210,7 @@ def _check_comparability(baseline_elements: List[Element], candidate_elements: L
         return (
             f"baseline has {len(baseline_uids)} element(s), candidate has "
             f"{len(candidate_uids)} - only {len(overlap)} shared element UID(s) "
-            "(less than half) - these runs may not be the same project; "
-            "treat any comparison below with real skepticism"
+            "(less than half) - these runs may not be the same project"
         )
     return None
 
@@ -254,7 +259,17 @@ def _compare_results(
         or candidate_confidence is None or candidate_confidence < _CONFIDENCE_HIGH
     )
 
+    # UX-78: both checks are recorded structurally as well as in prose.
+    # They used to *only* flag, while README/guide promised a refusal -
+    # and a golden fixture against a real run produced
+    # `Verdict: REGRESSED (+105668.8%)`, exit 0, and exit 4 under the
+    # gate, so a CI artifact-path bug read as "your build got slower".
+    # The refusal itself lives in the CLI (it is an exit-code decision);
+    # what belongs here is naming which check failed.
+    mismatches: List[dict] = []
     comparability_warning = _check_comparability(baseline_elements, candidate_elements)
+    if comparability_warning:
+        mismatches.append({'check': 'shared_elements', 'message': comparability_warning})
 
     # UX-55: the two CI scenarios are not comparable to each other. A
     # caches-off nightly builds everything; a pre-commit run builds
@@ -265,6 +280,7 @@ def _compare_results(
     # is the same kind of mistake.
     mode_warning = _check_run_modes(baseline_result, candidate_result)
     if mode_warning:
+        mismatches.append({'check': 'run_mode', 'message': mode_warning})
         comparability_warning = (
             f"{comparability_warning}; {mode_warning}" if comparability_warning
             else mode_warning
@@ -330,6 +346,7 @@ def _compare_results(
         verdict=verdict,
         low_confidence=low_confidence,
         comparability_warning=comparability_warning,
+        mismatches=mismatches,
         failed_runs=failed_runs,
         baseline_band=baseline_band,
     )

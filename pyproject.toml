@@ -24,6 +24,12 @@ classifiers = [
 ]
 dependencies = [
     "networkx>=2.8",
+    # UX-77: a real runtime dependency of the documented workflow, not a
+    # dev convenience - `bga extract` and `bga capture --trace-opens`
+    # both read BuildStream YAML. It was in the `dev` and `bst` extras
+    # only, so a plain install produced a `bga capture` that could not
+    # start.
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -63,7 +69,27 @@ Specification = "https://github.com/rmorozov/buildstream-graph-analysis/blob/mai
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["bga*"]
+# UX-77: `tools*` is not optional. Every `bga wrap/extract/capture/...`
+# alias dispatches by importing `tools.<module>` (bga/tools_dispatch.py),
+# so packaging only `bga*` made the entire documented real-project
+# workflow die with a raw `ModuleNotFoundError` for anyone who installed
+# the package - reproduced from a wheel in a clean venv. Nothing caught
+# it because every consumer avoided the alias path: CI invokes
+# `python3 -m tools.<module>` with an explicit PYTHONPATH, pytest runs
+# from the repo root, and legacy editable installs put the repo root on
+# `sys.path` as a side effect.
+#
+# Known tradeoff, recorded rather than hidden: `tools` is a generic
+# top-level name to occupy in site-packages. The namespaced fix - moving
+# the code under `bga/` and leaving `tools/` as re-export shims - is
+# better and is a larger change (49 test import sites, 41 documented
+# `python3 -m tools.<module>` invocations); see UX-77's own doc.
+include = ["bga*", "tools*"]
+
+[tool.setuptools.package-data]
+# The LD_PRELOAD hook is C source compiled at capture time, not a Python
+# module, so it needs naming explicitly or Plane 2 is packaged broken.
+"tools.native_trace" = ["*.c", "*.h"]
 
 [tool.ruff]
 line-length = 120

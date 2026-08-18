@@ -190,7 +190,7 @@ bga compare /path/to/before-run /path/to/after-run
 bga compare /path/to/before-run /path/to/after-run --format json | jq '.verdict'
 ```
 
-The verdict is one of `improved`/`regressed`/`no significant change` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a warning when the two runs' graphs share fewer than half their element UIDs (they may not even be the same project). Exit code is 0 for a successful comparison regardless of verdict by default - comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
+The verdict is one of `improved`/`regressed`/`no significant change` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a **refusal** (`UX-78`) when the two runs are not comparable at all — either their graphs share fewer than half their element UIDs (they may not even be the same project) or one is a caches-off run and the other incremental. A refusal prints the failing check to stderr, prints no comparison, and exits **6** — deliberately not 4 or 5, so a CI job keying on the gates cannot read a wrong-artifact-path bug as a regression. `--allow-mismatch` restores the older behaviour: the warning is printed above the comparison and the exit code is the gates' own. Otherwise the exit code is 0 for a successful comparison regardless of verdict — comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
 
 ### CI Regression Gate (`--fail-on-regression`)
 
@@ -202,7 +202,7 @@ bga compare /path/to/baseline-run /path/to/candidate-run --fail-on-regression
 
 Exits `4` (a distinct code from 1/2/3, which all mean "`bga` itself failed" - see Exit Codes below) when the candidate run's real total duration (Part 4.3) regressed beyond the threshold - by default, the same >=1% significance band the verdict already uses, i.e. it fails exactly when the report's own verdict says `REGRESSED`, not a second, silently-different definition. Override the threshold with `--regression-threshold PCT` (e.g. `--regression-threshold 5` to only fail on a regression of 5% or more). `total_duration_us` is the one primary gating metric - deliberately not an ambiguous multi-metric combination.
 
-A low-confidence comparison (either run's confidence below the "high" band) **fails open**: exits `0` with a warning printed to stderr, rather than blocking a pipeline on a possibly-noisy signal. The comparison report itself is always printed to stdout/`--output` regardless of the gate outcome, so a failing pipeline still shows *why*.
+A refused comparison (`--allow-mismatch` not given, exit 6) is checked before any gate, since "these runs are not comparable" is not a verdict about the build. A low-confidence comparison (either run's confidence below the "high" band) **fails open**: exits `0` with a warning printed to stderr, rather than blocking a pipeline on a possibly-noisy signal. The comparison report itself is always printed to stdout/`--output` regardless of the gate outcome, so a failing pipeline still shows *why*.
 
 Worked GitHub Actions example - extract two runs and gate on the comparison:
 

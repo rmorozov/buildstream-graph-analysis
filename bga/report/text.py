@@ -879,7 +879,12 @@ def format_compare_text(comparison) -> str:
     if comparison.low_confidence:
         lines.append("  Caveat: at least one run's confidence is below the 'high' band - treat this comparison with caution.")
     if comparison.comparability_warning:
+        # UX-78: reaching this text at all means `--allow-mismatch` was
+        # passed - the default is now a refusal, printed instead of the
+        # comparison rather than beside it - so the caveat belongs here,
+        # where there really is a comparison below it.
         lines.append(f"  Warning: {comparison.comparability_warning}")
+        lines.append("  (--allow-mismatch was given; treat every figure below with real skepticism)")
     lines.append("")
 
     lines.append("Certified Floors:")

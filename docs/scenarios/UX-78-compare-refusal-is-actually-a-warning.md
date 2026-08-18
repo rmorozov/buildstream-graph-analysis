@@ -1,6 +1,6 @@
 # UX-78: the compare "refusal" the docs promise is actually a warning
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** —
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** —
 
 ## Motivation
 
@@ -60,3 +60,54 @@ another incremental run" advice needs the cross-mode case to stay
 3. `--fail-on-regression` on a mismatched pair exits 6, not 4 — a CI job
    keying on 4 can no longer mistake a plumbing bug for a regression.
 4. The README/guide sentences and `docs/cli.md` quote the same behavior.
+
+## Fix Implemented
+
+The documented philosophy won: `bga compare` refuses by default, with a
+distinct exit code, and prints no comparison.
+
+```
+$ bga compare tests/fixtures/golden/mixed_task_kinds <real fdsdk run>
+Refusing to compare these runs (shared_elements):
+  - baseline has 4 element(s), candidate has 126 - only 0 shared element UID(s)
+    (less than half) - these runs may not be the same project
+Pass --allow-mismatch to compare anyway (the comparison is then printed with the
+warning above, as it was before UX-78).
+$ echo $?
+6
+```
+
+All four acceptance criteria, verified live on that pair and on fixtures:
+
+1. Exit **6** naming `shared_elements`; `--allow-mismatch` exits 0 and
+   prints the old warning plus the comparison.
+2. A caches-off run against an incremental one exits 6 naming `run_mode`.
+3. `--fail-on-regression` on a mismatched pair exits **6, not 4** — the
+   sharpest form of the defect, since a CI job keying on 4 would have
+   read an artifact-path bug as "your build got slower".
+4. `README.md`, `docs/real-project-guide.md` and `docs/cli.md` now quote
+   the same behaviour, including the exit code and the escape hatch.
+
+Two details worth stating:
+
+- **The refusal happens before the comparison is printed or written.**
+  Printing arithmetically-correct nonsense beside a refusal would leave a
+  reader to decide which of the two to believe.
+- **The checks are published structurally** as `mismatches[]`, each
+  `{check, message}` with a stable `check`, so a consumer keys on
+  `shared_elements`/`run_mode` rather than on prose — the same posture
+  `UX-75` established for the analysis findings.
+
+The `--allow-mismatch` path also gained the caveat the old message
+carried ("treat every figure below with real skepticism"), which now sits
+where there really is a comparison below it.
+
+Tests: 7 new in `tests/unit/test_compare_mismatch_refusal.py`, including
+the gate-cannot-mistake-a-mismatch case and a guard that an ordinary
+comparable pair is unaffected. Suite: 1118 → 1125.
+
+## Verification Log
+
+Fixed 2026-08-18. The live refusal above is `bga compare` against the
+capture published as `5eda28a`; the exit codes were read from the shell,
+not from the source.

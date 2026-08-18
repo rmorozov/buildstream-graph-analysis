@@ -1,10 +1,10 @@
 """Human-readable text/CSV report formatting (Part 37)."""
 from typing import List, Optional
 
+from .. import findings as findings_mod
+from ..findings import compute_findings, render_findings
 from ..ingest.models import AnalysisResult
-from ._shared import (
-    GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT, resolve_attribution_hint,
-)
+from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
 # Confidence-band labels for the Key Findings headline (P4-02) - a
 # presentation-only heuristic, not a spec-defined threshold (Part 33
@@ -12,57 +12,24 @@ from ._shared import (
 # it). Picked so a passing analysis with no gate failures (confidence
 # 1.0) reads "high" and a genuinely degraded one reads "low" - not a
 # claim of statistical significance.
-_CONFIDENCE_HIGH = 0.8
-_CONFIDENCE_MEDIUM = 0.5
+# UX-75: these live in `bga/findings.py` now, with everything else that
+# decides *what is worth saying*. Re-exported under their historic names
+# because they are a stable surface for tests and callers, and because a
+# rename would say something changed when nothing did.
+_CONFIDENCE_HIGH = findings_mod._CONFIDENCE_HIGH
+_CONFIDENCE_MEDIUM = findings_mod._CONFIDENCE_MEDIUM
+_EFFICIENCY_HIGH = findings_mod._EFFICIENCY_HIGH
+_EFFICIENCY_MEDIUM = findings_mod._EFFICIENCY_MEDIUM
+_OPPORTUNITY_FLOOR_PCT = findings_mod.OPPORTUNITY_FLOOR_PCT
+_CHAIN_BOUND_RATIO = findings_mod.CHAIN_BOUND_RATIO
+_confidence_band = findings_mod.confidence_band
+_efficiency_band = findings_mod.efficiency_band
+_structural_kind_tag = findings_mod.structural_kind_tag
+_heaviest_on_path = findings_mod.heaviest_on_path
+_path_elements_by_duration = findings_mod.path_elements_by_duration
 
-# UX-33: rendering thresholds, not analysis thresholds. A path at or
-# below this length reads fine as a single `a → b → c` line; above it,
-# the per-element form (duration + share of path) is what a reader
-# actually needs. Either way the full chain is printed - the previous
-# behavior withheld it entirely above 5 elements.
 _CRITICAL_PATH_INLINE_MAX = 5
-# Choke points are named, not counted. Capped only to keep one report
-# line readable; the overflow is stated explicitly rather than silently
-# dropped (this codebase's "no silent gaps" discipline).
 _CHOKE_POINTS_SHOWN_MAX = 8
-
-
-def _confidence_band(score: float) -> str:
-    if score >= _CONFIDENCE_HIGH:
-        return "high"
-    if score >= _CONFIDENCE_MEDIUM:
-        return "medium"
-    return "low"
-
-
-# efficiency_score bands (UX-02) - presentation-only, same status as the
-# confidence bands above (a labeling heuristic, not a spec threshold).
-# Deliberately distinct cut points from confidence's: 0.9/0.7 rather than
-# 0.8/0.5, chosen so "very efficient" only applies once remaining
-# scheduling headroom is genuinely small (under 10% of total duration),
-# and "worth checking Certified Headroom" starts well before that (30%+
-# headroom is real, actionable room, not noise).
-_EFFICIENCY_HIGH = 0.9
-_EFFICIENCY_MEDIUM = 0.7
-
-
-def _efficiency_band(score: float) -> str:
-    """UX-27: the band text now names what this score does and does not
-    cover. It measures how well the scheduler packed *the graph this run
-    actually had*; it cannot see whether that graph was worth packing,
-    because every input to it is derived from the observed graph. A build
-    whose independent elements were accidentally chained scores 1.00 -
-    correctly, by this definition, and uselessly. `Dispatch Occupancy`
-    below is the signal that moves the other way."""
-    if score >= _EFFICIENCY_HIGH:
-        return (
-            "scheduling is near the certified floor for this graph - further gains "
-            "need the graph or the work itself to change, not the scheduler "
-            "(see Dispatch Occupancy and Critical Path)"
-        )
-    if score >= _EFFICIENCY_MEDIUM:
-        return "worth checking Certified Headroom for real scheduling gains"
-    return "meaningful scheduling headroom available"
 
 
 def _format_violation_summary(violation: dict) -> str:
@@ -265,417 +232,21 @@ def _path_elements_by_duration(result) -> List[dict]:
     return sorted(real, key=lambda d: -d['duration_us'])
 
 
-_TIME_CONCENTRATION_SHOWN_MAX = 4
-_FIX_ORDER_SHOWN_MAX = 3
-
-
-def _format_time_concentration(
-    result, execution_bound: bool = False, chain_bound: bool = False,
-) -> List[str]:
-    """UX-65: name where the time actually is. UX-76: in one table.
-
-    The tool already computes every number in this block; it simply never
-    put them where a reader looks first. Same fix as `UX-25`/`UX-33` -
-    say what is already known.
-
-    `UX-76`: this used to be one of *three* headline rankings over the
-    same handful of elements ("where the time is", "most worth optimizing
-    first", "highest criticality"), which cost a reader their first
-    glance on reconciling three lists instead of reading one. It is now a
-    single table carrying both quantities, ordered by duration, with the
-    fix order named on its own line - so the interesting disagreement
-    between the two (a big share worth little to fix) is visible in the
-    rows rather than hidden by which list an element fell out of.
-    """
-    heavy = _path_elements_by_duration(result)
-    if not heavy:
-        return []
-    path_us = sum(
-        d.get('duration_us', 0)
-        for d in ((result.signals or {}).get('critical_path_detail') or [])
-    )
-    if path_us <= 0:
-        return []
-    total = result.total_duration_us or 0
-    top = heavy[:_TIME_CONCENTRATION_SHOWN_MAX]
-    share = sum(d['duration_us'] for d in top) / path_us * 100
-    # UX-76: the chain-bound verdict used to live on the heading of the
-    # second ranking, which meant it disappeared entirely once the two
-    # were merged and the table was emitted from the execution-bound
-    # branch instead. It belongs to the table, not to one of its two
-    # entry points.
-    verdict = " - this build is chain-bound, not scheduler-bound" if chain_bound else ""
-    lines = [
-        f"  Where the time is: {len(top)} element(s) are {share:.1f}% of the "
-        f"{path_us / 1e6:.1f}s critical path{verdict}"
-    ]
-    width = max(len(d['element_uid']) for d in top)
-    for d in top:
-        saving = d.get('realizable_saving_us')
-        # UX-70: the share is what the chain is made of; the saving is
-        # what changing it is worth. Where they differ the second is the
-        # one that stops a wasted week, so it is stated per row whenever
-        # it was evaluated.
-        worth = ""
-        if saving is not None and total:
-            worth = (
-                f"  -> fixing it saves {saving / 1e6:.1f}s "
-                f"({saving / total * 100:.1f}% of the build)"
-            )
-        lines.append(
-            f"    {d['element_uid']:<{width}}  {d['duration_us'] / 1e6:8.1f}s "
-            f"({d['duration_us'] / path_us * 100:4.1f}% of path){worth}"
-        )
-    if execution_bound:
-        lines.append(
-            "    -> these elements must get faster, or come off the chain; "
-            "the scheduler has no room left to give"
-        )
-    # UX-76: the rows are ordered by duration because that is what "where
-    # is the time" means. The order to *work* in is the other one, and
-    # saying so costs one line rather than a second list of the same
-    # names.
-    fix_order = [
-        d['element_uid'] for d in _heaviest_on_path(result)[:_FIX_ORDER_SHOWN_MAX]
-        if d.get('realizable_saving_us')
-    ]
-    # UX-74 names the same elements in the same order *with* the makespan
-    # each fix leaves behind, so this line would be a strictly weaker
-    # duplicate whenever the horizon renders.
-    horizon_covers_it = len((result.signals or {}).get('optimization_horizon') or []) > 1
-    if (
-        fix_order
-        and not horizon_covers_it
-        and fix_order != [d['element_uid'] for d in top[:len(fix_order)]]
-    ):
-        lines.append(
-            "    -> work them in this order (by what a fix is worth, which is "
-            "not the order above): " + ", ".join(fix_order)
-        )
-    # UX-70: chain or mesh? This decides whether "optimize the top
-    # element" is meaningful advice at all.
-    density = (result.signals or {}).get('zero_slack_share')
-    if density is not None and density >= 0.5:
-        lines.append(
-            f"    Note: {density:.0%} of elements have zero slack - this graph "
-            "is a mesh of near-equal chains, so savings on one element are "
-            "often capped by the next chain rather than by its own duration"
-        )
-    return lines
-
-
-_HORIZON_STEPS_SHOWN = 3
-_LATENT_HEAVIES_SHOWN = 2
-
-
-def _format_optimization_outlook(result) -> List[str]:
-    """UX-74: what the recommended set is worth together, what becomes
-    binding after it, and what is waiting off the path.
-
-    One ~60-minute capture used to yield exactly one finding. Everything
-    here is a longest-path recompute over data already in hand, and the
-    whole projection costs 17 ms on a real 126-element graph - so the
-    only reason a user was re-building to find the next problem was that
-    nobody had asked the question.
-    """
-    signals = result.signals or {}
-    total = result.total_duration_us or 0
-    lines: List[str] = []
-
-    joint = signals.get('joint_saving')
-    if joint and joint.get('joint_saving_us') and total:
-        joint_us = joint['joint_saving_us']
-        sum_us = joint.get('sum_of_individual_us') or 0
-        # Whether savings compose is a property of the graph, not an
-        # arithmetic identity: on a chain they add, on parallel branches
-        # they take a maximum. The report used to print the percentages
-        # separately and leave the reader to guess.
-        if joint.get('savings_add'):
-            relation = (
-                "exactly the sum of their individual savings, so they are three "
-                "separate pieces of work that do not overlap"
-            )
-        else:
-            relation = (
-                f"less than the {sum_us / 1e6:.1f}s their individual savings add up "
-                f"to - fixing one makes the others worth less"
-            )
-        lines.append(
-            f"  Together, the top {len(joint['elements'])} are worth "
-            f"{joint_us / 1e6:.1f}s ({joint_us / total * 100:.0f}% of the build) - "
-            f"{relation}"
-        )
-
-    horizon = signals.get('optimization_horizon') or []
-    if len(horizon) > 1:
-        steps = " -> ".join(
-            f"{step['element_uid']} ({step['makespan_after_us'] / 1e6:.0f}s)"
-            for step in horizon[:_HORIZON_STEPS_SHOWN]
-        )  # noqa: E501 - one line per step reads worse than one long line here
-        last = horizon[min(_HORIZON_STEPS_SHOWN, len(horizon)) - 1]
-        lines.append(
-            f"  Work them in this order (by what a fix is worth, not by size), "
-            f"with what the build drops to: {steps}"
-        )
-        if total:
-            lines.append(
-                f"    - the last of those leaves "
-                f"{last['cumulative_saving_us'] / total * 100:.0f}% of the build "
-                f"removed, projected from this run without building again"
-            )
-
-    latent = signals.get('latent_heavies') or []
-    if latent:
-        named = ", ".join(
-            f"{e['element_uid']} ({e['duration_us'] / 1e6:.0f}s)"
-            for e in latent[:_LATENT_HEAVIES_SHOWN]
-        )
-        more = (
-            f" (+{len(latent) - _LATENT_HEAVIES_SHOWN} more)"
-            if len(latent) > _LATENT_HEAVIES_SHOWN else ""
-        )
-        lines.append(
-            f"  Waiting off the critical path, worth nothing to fix today: "
-            f"{named}{more} - they bound how far shortening the chain can go"
-        )
-
-    if lines:
-        lines.append(
-            "    (structural projections over this run's measured durations, where "
-            "\"fixed\" means the element becomes instant - a re-capture is still "
-            "the ground truth)"
-        )
-    return lines
-
-
 def _format_key_findings(result: AnalysisResult) -> List[str]:
-    """Synthesized "what to look at first" summary (P4-02) - presentation
-    only, reads already-computed fields (result.confidence/.attribution/
-    .floors/.signals), performs no new computation. Shown before the
-    detailed sections in the full report so a reader gets the headline
-    before the flat metric dump, not instead of it.
+    """Synthesized "what to look at first" summary (P4-02).
+
+    `UX-75`: this used to *be* the synthesis - every conclusion the tool
+    draws was computed here, rendered, and thrown away, so a machine
+    consumer had to re-derive `_heaviest_on_path`'s structural exclusion
+    and four thresholds from this file's source to reach what a human
+    read for free. The synthesis moved to `bga/findings.py`, which both
+    renderers consume; this decides only how to say it.
+
+    A consequence worth stating: a finding `compute_findings` does not
+    produce cannot appear in either format, and one it does produce
+    appears in both. That is the property, not a side effect.
     """
-    lines: List[str] = ["Key Findings:"]
-
-    # UX-54: said first, before any efficiency number, because every
-    # number below describes a build that did not finish. A real
-    # freedesktop-sdk capture in which all four attempted elements failed
-    # led with "Efficiency Score: 1.00" and never mentioned the failures
-    # at all.
-    build_failed = next(
-        (v for v in (result.violations or []) if v.get('type') == 'build_failed'),
-        None,
-    )
-    if build_failed is not None:
-        failed = build_failed.get('failed_elements') or []
-        shown = ", ".join(failed[:3]) + (", ..." if len(failed) > 3 else "")
-        lines.append(
-            f"  THIS BUILD FAILED: {build_failed.get('failed_count')} element(s) "
-            f"ended in FAILURE ({shown}) - every figure below describes a build "
-            f"that did not complete, and the elements that failed contributed "
-            f"only the time they ran before failing"
-        )
-
-    # Confidence headline
-    confidence = result.confidence or {}
-    primary = confidence.get('primary')
-
-    # UX-55: which of the two CI scenarios this run is, said before the
-    # numbers, because it changes what they are *about*. A nightly with
-    # caches off measures the whole project; a pre-commit run measures
-    # the handful of elements that rebuilt on top of a cached base, and
-    # every floor below certifies only that work.
-    # UX-62: how much of the measured chain was work that was thrown
-    # away. Attribution still counts it as EXECUTION_ON_CHAIN - moving it
-    # would change `I4`'s identity, which is a decision with a proof
-    # obligation rather than a re-bucketing - so this reports the waste
-    # instead of silently reclassifying it.
-    failed_us = confidence.get('failed_task_us') or 0
-    if failed_us:
-        failed_count = confidence.get('failed_task_count') or 0
-        lines.append(
-            f"  {failed_count} failed task attempt(s) contributed "
-            f"{failed_us / 1e6:.2f}s of EXECUTION_ON_CHAIN - real time the build "
-            "spent producing nothing. Counted as execution, not as waste, because "
-            "reclassifying it would move the attribution identity (I4)"
-        )
-    if confidence.get('run_mode') == 'incremental':
-        cached = confidence.get('critical_path_cached') or []
-        detail = (
-            f", {len(cached)} of them on the critical path" if cached else ""
-        )
-        lines.append(
-            "  Incremental run (caches on): BuildStream skipped elements it "
-            f"had already built{detail}. Coverage and the floors below "
-            "describe the work this run actually did, not the whole project - "
-            "compare against another incremental run, not against a "
-            "caches-off nightly"
-        )
-    violations = result.violations or []
-    if primary is not None:
-        band = _confidence_band(primary)
-        if violations:
-            lines.append(
-                f"  Confidence: {primary:.2f} ({band}) - see {len(violations)} "
-                f"violation(s) below"
-            )
-        else:
-            lines.append(f"  Confidence: {primary:.2f} ({band})")
-
-    # Biggest opportunity: largest non-EXECUTION_ON_CHAIN attribution
-    # category, phrased as where the time actually went.
-    # UX-76: the where-the-time-is table is emitted at most once, whether
-    # it is reached through the execution-bound branch below or through
-    # the chain-bound one further down. Naming the same elements twice
-    # under two headings is the thing that task removed.
-    concentration_emitted = False
-    # UX-76: needed by the table below, and computed here because both of
-    # its entry points want it. `chain_bound` asks whether the chain or
-    # the scheduler is what binds; `execution_bound` (further down) asks
-    # whether any wait category is large enough to be worth naming. They
-    # are different questions and a real build is routinely both.
-    floors = result.floors or {}
-    total = result.total_duration_us
-    t_infinity = floors.get('t_infinity_observed') or 0
-    chain_bound = bool(total) and t_infinity / total >= _CHAIN_BOUND_RATIO
-    attribution = result.attribution or {}
-    non_execution = {
-        k: v for k, v in attribution.items() if k != 'execution_on_chain_us'
-    }
-    if non_execution and total > 0:
-        top_category, top_duration_us = max(non_execution.items(), key=lambda kv: kv[1])
-        pct = top_duration_us / total * 100 if top_duration_us > 0 else 0.0
-        # UX-65: when nothing meaningful went anywhere other than useful
-        # work, "the largest of the remaining 0.1%" is not the answer.
-        # Say the build is execution-bound - which is a real finding -
-        # and point at where the execution actually is.
-        if pct < _OPPORTUNITY_FLOOR_PCT:
-            concentration = _format_time_concentration(
-                result, execution_bound=True, chain_bound=chain_bound,
-            )
-            if concentration:
-                lines.append(
-                    f"  Biggest Opportunity: this build is execution-bound - "
-                    f"no wait category exceeds {_OPPORTUNITY_FLOOR_PCT:.0f}% of "
-                    f"wall-clock time, so there is no scheduling gap to close"
-                )
-                lines.extend(concentration)
-                concentration_emitted = True
-        elif top_duration_us > 0:
-            label = top_category.replace('_us', '').replace('_', ' ').upper()
-            lines.append(
-                f"  Biggest Opportunity: {pct:.1f}% of wall-clock time is "
-                f"{label} ({top_duration_us / 1e6:.2f}s)"
-            )
-            # UX-04: explain what this category means and what to do
-            # about it - previously a reader had no way to know from the
-            # report itself that IDLE/RESOURCE_WAIT/SCHEDULER_WAIT are
-            # three different problems with three different fixes.
-            # UX-35: conditioned on this run's own capacity verdict.
-            hint = resolve_attribution_hint(
-                top_category, getattr(result, 'capacity_verdict', None),
-            )
-            if hint:
-                lines.append(f"    -> {hint}")
-
-
-    # Top elements by blast radius / criticality probability, when
-    # diagnostics were actually run (Part 25/26) - already computed by
-    # BuildEfficiencyAnalyzer._compute_diagnostics, just surfaced here.
-    signals = result.signals or {}
-    top_blast_radius = signals.get('top_blast_radius') or []
-    # UX-65: blast radius answers "who depends on me", which is the right
-    # question when the *graph* constrains the build. When the chain does -
-    # T-infinity is nearly the whole wall clock - what matters is "how long
-    # do I take", and ranking by blast radius put two structural elements
-    # at the top of a real build's what-to-fix list while the element
-    # holding 43.5% of the path went unmentioned.
-    if chain_bound and _heaviest_on_path(result):
-        # UX-76: one table, not a second ranking of the same names. When
-        # the build was execution-bound the table is already above, under
-        # Biggest Opportunity, where UX-65 put it; when a real wait
-        # category dominates but the chain is still what binds, this is
-        # where it appears.
-        if not concentration_emitted:
-            lines.extend(_format_time_concentration(result, chain_bound=True))
-            concentration_emitted = True
-    elif top_blast_radius:
-        lines.append("  Elements Most Worth Optimizing First (by blast radius):")
-        blast_radius = signals.get('blast_radius') or {}
-        for i, elem_uid in enumerate(top_blast_radius[:3], start=1):
-            entry = blast_radius.get(elem_uid, {})
-            count = entry.get('downstream_count', 0)
-            lines.append(f"    {i}. {elem_uid} ({count} downstream elements){_structural_kind_tag(entry)}")
-
-    # UX-74: what to do after the first fix, said next to the ranking it
-    # continues rather than in a section of its own.
-    if concentration_emitted:
-        lines.extend(_format_optimization_outlook(result))
-
-    criticality = signals.get('criticality_probability') or {}
-    if criticality:
-        # UX-76: structural elements are excluded rather than annotated
-        # here. UX-34 established that ranking a `stack` as something to
-        # optimize wastes the reader's first glance, and on a real
-        # capture `buildsystem-cmake.bst` held the third slot of this
-        # very block. The annotation stays for the listings further down
-        # the report, which are reference material rather than headline.
-        nonzero_critical = sorted(
-            (
-                item for item in criticality.items()
-                if item[1].get('probability', 0) > 0
-                and not item[1].get('is_structural_kind')
-            ),
-            key=lambda kv: kv[1].get('probability', 0), reverse=True,
-        )[:3]
-        # UX-76: on a deterministic replay every element on the path
-        # scores 1.0, so a list of them distinguishes nothing and merely
-        # names, a third time, elements the table above already named.
-        # The signal is real on a graph with genuine schedule variance,
-        # which is exactly when this is not degenerate.
-        degenerate = bool(nonzero_critical) and all(
-            data.get('probability', 0) >= 1.0 for _uid, data in nonzero_critical
-        )
-        if degenerate:
-            nonzero_critical = []
-        if nonzero_critical:
-            lines.append("  Highest Criticality Elements:")
-            for i, (elem_uid, data) in enumerate(nonzero_critical, start=1):
-                pct = data.get('probability', 0) * 100
-                lines.append(
-                    f"    {i}. {elem_uid} ({pct:.0f}% probability of being on critical path)"
-                    f"{_structural_kind_tag(data)}"
-                )
-
-    # Certified headroom, in plain language
-    t_inf = floors.get('t_infinity_observed') or floors.get('t_infinity_observed_us', 0)
-    lb_val = floors.get('lb') or floors.get('lb_us', 0)
-    headroom = floors.get('certified_headroom') or floors.get('certified_headroom_us', 0)
-    if headroom > 0:
-        lines.append(
-            f"  Certified Headroom: up to {headroom / 1e6:.2f}s available "
-            f"(T∞={t_inf / 1e6:.2f}s, LB={lb_val / 1e6:.2f}s)"
-        )
-
-    # Efficiency score (UX-02): scheduling efficiency of the observed
-    # work only - never presented alone without the "not work-minimality"
-    # caveat, so a high score can't be misread as "nothing more to do"
-    # (Critical Path is where that remaining opportunity would show up).
-    # Gated on confidence per the same discipline as the comparison
-    # verdict this score feeds elsewhere - low-confidence input gets an
-    # explicit caveat rather than false precision.
-    efficiency_score = floors.get('efficiency_score')
-    if efficiency_score is not None:
-        band = _efficiency_band(efficiency_score)
-        caveat = ""
-        if primary is not None and primary < _CONFIDENCE_HIGH:
-            caveat = " - low-confidence data, treat with caution"
-        lines.append(
-            f"  Efficiency Score: {efficiency_score:.2f} ({band}){caveat}"
-        )
-
-    lines.append("")
-    return lines
+    return ["Key Findings:"] + render_findings(compute_findings(result)) + [""]
 
 
 def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:

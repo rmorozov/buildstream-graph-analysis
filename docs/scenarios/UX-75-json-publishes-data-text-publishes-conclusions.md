@@ -1,6 +1,6 @@
 # UX-75: the JSON report publishes every number and none of the conclusions; the text report publishes the conclusions and only some of the numbers
 
-**Priority:** Medium | **Depends on:** — (touches every producer, so best done after `UX-71`–`UX-74` settle what the conclusions are)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-71`–`UX-74` (all done — they settled what the conclusions are, which is why this was sequenced last)
 
 ## Motivation
 
@@ -115,6 +115,80 @@ columns rather than three lists of the same elements.
 3. `aggregating_dependencies` is visible somewhere a human reads.
 4. A `--format json` consumer can decide "is this build chain-bound"
    without re-implementing any threshold from `bga/report/text.py`.
+
+## Fix Implemented
+
+`bga/findings.py` decides what is worth saying, once. `bga/report/text.py`
+decides only how to say it, and `bga/report/json.py` publishes the same
+list. On round 9's real capture:
+
+```
+$ bga analyze capture/run --format json | jq -r '.findings[] | "\(.severity)\t\(.id)"'
+info      run-mode-incremental
+info      confidence
+high      execution-bound
+high      time-concentration
+info      mesh-graph
+high      joint-saving
+high      optimization-horizon
+medium    latent-heavies
+info      efficiency-score
+```
+
+The threshold a CI gate used to have to re-derive is now a field:
+
+```
+$ bga analyze capture/run --format json \
+    | jq '.findings[] | select(.id == "time-concentration") | .evidence'
+{ "path_us": 3610500000, "share_of_path": 0.9403545215344136, "chain_bound": true }
+```
+
+**The text report's output is byte-identical** before and after the
+refactor — verified by diffing `bga analyze` on the real capture across
+the change, and by the existing 1100-test suite passing unmodified. That
+was the acceptance bar for a change of this shape: if the presentation
+moved, something other than the plumbing changed.
+
+### The property, tested rather than asserted
+
+`test_a_finding_that_is_not_produced_appears_in_neither_format` removes
+one input and checks the sentence disappears from the text report *and*
+the id from the JSON, with neither renderer knowing about the other.
+That is the guarantee the whole task is for; everything else follows
+from it.
+
+### `bga correlate` too
+
+Its per-element recommendations were already ranked by evidence class
+(`UX-72`); they now carry that class as a stable `id` and a `severity`,
+so a consumer acts on `declared-not-used` rather than on a substring of
+the prose — and the severity says in a field what `UX-68`'s note says in
+words: that row is `info`, the measured ones are `high`.
+
+### The reverse gaps
+
+- `binary_cost`'s text block is capped at the three heaviest elements
+  and now says how many it capped, the pattern `correlate` already
+  followed. Silent truncation reads as a build with three elements worth
+  measuring.
+- `aggregating_dependencies` finally has a renderer in the tracer's own
+  report as well as in the join (`UX-72`). `UX-68` gave it a key three
+  rounds ago and nothing had ever displayed it.
+
+### One deviation from this task as filed
+
+Findings carry a rendered `title` and `detail`, not only structured
+evidence. Two reasons, both practical: a consumer that wants the same
+sentence a human reads should not have to re-assemble it from numbers
+and risk saying something slightly different, and the alternative -
+per-id renderers in the text layer - would have put the wording back in
+two places, which is the defect this task exists to remove. `evidence`
+carries every number separately, so nothing has to be parsed out of
+prose.
+
+Tests: 8 new in `tests/unit/test_findings_are_data.py`, 1 in
+`tests/unit/test_correlate.py`. Golden snapshot regenerated (additive
+`findings` key only). Suite: 1100 → 1109.
 
 ## Verification Log
 

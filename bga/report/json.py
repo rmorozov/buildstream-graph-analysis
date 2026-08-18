@@ -2,6 +2,7 @@
 import json as _json
 from typing import Optional
 
+from ..findings import compute_findings
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
 
@@ -28,6 +29,19 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         'run_id': result.run_id,
         'total_duration_us': result.total_duration_us,
     }
+
+    # UX-75: the report's *conclusions*, not just its numbers. Every
+    # other key here is raw measurement; a consumer that wanted to know
+    # "is this build chain-bound", "which elements are worth fixing
+    # first", "did the run finish" previously had to re-implement the
+    # judgement - including four thresholds - out of
+    # `bga/report/text.py`. This is the same list the text report
+    # renders, so the two cannot disagree. Additive: no existing key
+    # changes meaning or moves.
+    if section is None:
+        findings = compute_findings(result)
+        if findings:
+            data['findings'] = findings
 
     if section in (None, 'floors', 'replay'):
         data['floors'] = result.floors

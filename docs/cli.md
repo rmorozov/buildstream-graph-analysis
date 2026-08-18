@@ -91,6 +91,18 @@ Control the output format using `--format` (or `-f`):
 bga analyze /path/to/run --format json > report.json
 ```
 
+The JSON carries a **`findings` array** — the same conclusions the text report's `Key Findings` block renders, as data. Each entry has a stable `id` (what a CI gate keys on, and what a run-to-run diff joins on — it does not change when the wording does), a `severity` (`critical`/`high`/`medium`/`info`), the `elements` it concerns, and an `evidence` object with the raw numbers behind the sentence. Both formats render from this one list, so they cannot disagree, and a consumer never has to re-derive a threshold from `bga/report/text.py`:
+
+```bash
+# Is this build chain-bound, and which elements is its time in?
+bga analyze /path/to/run --format json \
+  | jq '.findings[] | select(.id == "time-concentration") | .evidence'
+
+# Anything critical or high, as a gate condition
+bga analyze /path/to/run --format json \
+  | jq -e '[.findings[] | select(.severity == "critical")] | length == 0'
+```
+
 #### Resource Capacity
 Override the detected system capacity (useful for simulating different hardware):
 ```bash

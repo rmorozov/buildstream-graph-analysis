@@ -206,3 +206,93 @@ def test_a_scheduler_bound_build_still_ranks_by_blast_radius():
 
     assert "by blast radius" in text
     assert "by share of the critical path" not in text
+
+
+# --- UX-74: what to do after the first fix -----------------------------
+
+
+OUTLOOK = dict(
+    optimization_horizon=[
+        {"element_uid": "components/_private/cmake-stage1.bst", "saving_us": 1_569_800_000,
+         "makespan_after_us": 2_040_750_000, "cumulative_saving_us": 1_569_750_000,
+         "entering": []},
+        {"element_uid": "components/openssl.bst", "saving_us": 522_550_000,
+         "makespan_after_us": 1_518_200_000, "cumulative_saving_us": 2_092_300_000,
+         "entering": ["components/ninja.bst"]},
+        {"element_uid": "components/doxygen.bst", "saving_us": 513_550_000,
+         "makespan_after_us": 1_004_650_000, "cumulative_saving_us": 2_605_850_000,
+         "entering": []},
+    ],
+    joint_saving={
+        "elements": ["components/_private/cmake-stage1.bst", "components/openssl.bst",
+                     "components/doxygen.bst"],
+        "joint_saving_us": 2_605_850_000,
+        "sum_of_individual_us": 2_605_850_000,
+        "savings_add": True,
+    },
+    latent_heavies=[
+        {"element_uid": "components/_private/git-minimal.bst", "duration_us": 547_700_000},
+        {"element_uid": "components/icu.bst", "duration_us": 430_800_000},
+    ],
+)
+
+
+def _with_outlook(**overrides):
+    base = _with_savings(REAL_SAVINGS)
+    signals = dict(OUTLOOK)
+    signals.update(overrides)
+    result = _result(**base)
+    result.signals.update(signals)
+    return result
+
+
+def test_the_joint_saving_of_the_recommended_set_is_stated():
+    """The report used to print 43.4%, 14.5% and 14.2% separately and
+    leave the reader to guess whether they compose."""
+    text = _key_findings(_with_outlook())
+
+    assert "2605.8s (73% of the build)" in text
+    assert "exactly the sum" in text
+
+
+def test_a_set_whose_savings_do_not_add_says_so():
+    text = _key_findings(_with_outlook(joint_saving={
+        "elements": ["a.bst", "b.bst"],
+        "joint_saving_us": 100_000_000,
+        "sum_of_individual_us": 180_000_000,
+        "savings_add": False,
+    }))
+
+    assert "fixing one makes the others worth less" in text
+
+
+def test_the_horizon_is_shown_with_what_the_build_drops_to():
+    text = _key_findings(_with_outlook())
+
+    assert "components/_private/cmake-stage1.bst (2041s)" in text
+    assert "components/doxygen.bst (1005s)" in text
+
+
+def test_the_latent_heavies_are_named():
+    """On the real capture these are the 4th and 6th heaviest elements in
+    the build, and they appear in no other ranking."""
+    text = _key_findings(_with_outlook())
+
+    assert "components/_private/git-minimal.bst (548s)" in text
+    assert "worth nothing to fix today" in text
+
+
+def test_the_projection_says_it_is_a_projection():
+    text = _key_findings(_with_outlook())
+
+    assert "a re-capture is still the ground truth" in text
+
+
+def test_the_fix_order_line_is_not_repeated_once_the_horizon_names_it():
+    """`UX-76` merged three rankings into one; the horizon must not
+    quietly restore a fourth listing of the same three names."""
+    text = _key_findings(_with_outlook())
+
+    assert "work them in this order (by what a fix is worth, which is" not in text
+    assert text.count("components/openssl.bst") <= 2
+

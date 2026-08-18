@@ -339,7 +339,15 @@ def _format_time_concentration(
         d['element_uid'] for d in _heaviest_on_path(result)[:_FIX_ORDER_SHOWN_MAX]
         if d.get('realizable_saving_us')
     ]
-    if fix_order and fix_order != [d['element_uid'] for d in top[:len(fix_order)]]:
+    # UX-74 names the same elements in the same order *with* the makespan
+    # each fix leaves behind, so this line would be a strictly weaker
+    # duplicate whenever the horizon renders.
+    horizon_covers_it = len((result.signals or {}).get('optimization_horizon') or []) > 1
+    if (
+        fix_order
+        and not horizon_covers_it
+        and fix_order != [d['element_uid'] for d in top[:len(fix_order)]]
+    ):
         lines.append(
             "    -> work them in this order (by what a fix is worth, which is "
             "not the order above): " + ", ".join(fix_order)
@@ -352,6 +360,90 @@ def _format_time_concentration(
             f"    Note: {density:.0%} of elements have zero slack - this graph "
             "is a mesh of near-equal chains, so savings on one element are "
             "often capped by the next chain rather than by its own duration"
+        )
+    return lines
+
+
+_HORIZON_STEPS_SHOWN = 3
+_LATENT_HEAVIES_SHOWN = 2
+
+
+def _format_optimization_outlook(result) -> List[str]:
+    """UX-74: what the recommended set is worth together, what becomes
+    binding after it, and what is waiting off the path.
+
+    One ~60-minute capture used to yield exactly one finding. Everything
+    here is a longest-path recompute over data already in hand, and the
+    whole projection costs 17 ms on a real 126-element graph - so the
+    only reason a user was re-building to find the next problem was that
+    nobody had asked the question.
+    """
+    signals = result.signals or {}
+    total = result.total_duration_us or 0
+    lines: List[str] = []
+
+    joint = signals.get('joint_saving')
+    if joint and joint.get('joint_saving_us') and total:
+        joint_us = joint['joint_saving_us']
+        sum_us = joint.get('sum_of_individual_us') or 0
+        # Whether savings compose is a property of the graph, not an
+        # arithmetic identity: on a chain they add, on parallel branches
+        # they take a maximum. The report used to print the percentages
+        # separately and leave the reader to guess.
+        if joint.get('savings_add'):
+            relation = (
+                "exactly the sum of their individual savings, so they are three "
+                "separate pieces of work that do not overlap"
+            )
+        else:
+            relation = (
+                f"less than the {sum_us / 1e6:.1f}s their individual savings add up "
+                f"to - fixing one makes the others worth less"
+            )
+        lines.append(
+            f"  Together, the top {len(joint['elements'])} are worth "
+            f"{joint_us / 1e6:.1f}s ({joint_us / total * 100:.0f}% of the build) - "
+            f"{relation}"
+        )
+
+    horizon = signals.get('optimization_horizon') or []
+    if len(horizon) > 1:
+        steps = " -> ".join(
+            f"{step['element_uid']} ({step['makespan_after_us'] / 1e6:.0f}s)"
+            for step in horizon[:_HORIZON_STEPS_SHOWN]
+        )  # noqa: E501 - one line per step reads worse than one long line here
+        last = horizon[min(_HORIZON_STEPS_SHOWN, len(horizon)) - 1]
+        lines.append(
+            f"  Work them in this order (by what a fix is worth, not by size), "
+            f"with what the build drops to: {steps}"
+        )
+        if total:
+            lines.append(
+                f"    - the last of those leaves "
+                f"{last['cumulative_saving_us'] / total * 100:.0f}% of the build "
+                f"removed, projected from this run without building again"
+            )
+
+    latent = signals.get('latent_heavies') or []
+    if latent:
+        named = ", ".join(
+            f"{e['element_uid']} ({e['duration_us'] / 1e6:.0f}s)"
+            for e in latent[:_LATENT_HEAVIES_SHOWN]
+        )
+        more = (
+            f" (+{len(latent) - _LATENT_HEAVIES_SHOWN} more)"
+            if len(latent) > _LATENT_HEAVIES_SHOWN else ""
+        )
+        lines.append(
+            f"  Waiting off the critical path, worth nothing to fix today: "
+            f"{named}{more} - they bound how far shortening the chain can go"
+        )
+
+    if lines:
+        lines.append(
+            "    (structural projections over this run's measured durations, where "
+            "\"fixed\" means the element becomes instant - a re-capture is still "
+            "the ground truth)"
         )
     return lines
 
@@ -514,6 +606,11 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
             entry = blast_radius.get(elem_uid, {})
             count = entry.get('downstream_count', 0)
             lines.append(f"    {i}. {elem_uid} ({count} downstream elements){_structural_kind_tag(entry)}")
+
+    # UX-74: what to do after the first fix, said next to the ranking it
+    # continues rather than in a section of its own.
+    if concentration_emitted:
+        lines.extend(_format_optimization_outlook(result))
 
     criticality = signals.get('criticality_probability') or {}
     if criticality:
@@ -1028,7 +1125,17 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             batch_opportunities = sm.get('batch_opportunities') or {}
             batch_groups = batch_opportunities.get('groups') or []
             if batch_groups:
-                lines.append("  Batch Opportunities (independent elements, simulated combined effect):")
+                # UX-74: this answers "can these be worked concurrently"
+                # - a fact about the graph, and about people. Whether the
+                # savings *add* is `joint_saving` in Key Findings, which
+                # is simulated in the same longest-path model as
+                # `realizable_saving_us`; the figures below come from the
+                # replay scheduler and are not the same quantity.
+                lines.append(
+                    "  Independently workable together (graph-independent elements; "
+                    "replay-model combined effect, not the longest-path joint saving "
+                    "in Key Findings):"
+                )
                 for group in batch_groups:
                     lines.append(
                         f"    - {', '.join(group['elements'])}: fixing all together -> "

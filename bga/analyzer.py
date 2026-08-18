@@ -14,7 +14,10 @@ from .ingest.loader import load_all
 from .normalize.timestamps import normalize_trace
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .graph.edg import (
-    analyze_graph, compute_element_durations, compute_realizable_savings,
+    JOINT_SAVING_SET_SIZE,
+    analyze_graph, compute_element_durations, compute_joint_saving,
+    compute_latent_heavies, compute_optimization_horizon,
+    compute_realizable_savings,
 )
 from .attribution.blame_chain import BlameChainAnalyzer
 from .floors import (
@@ -1197,6 +1200,20 @@ class BuildEfficiencyAnalyzer:
                 ),
                 'unweighted_depth': graph_analysis['unweighted_depth'],
             }
+            # UX-74: one ~60-minute capture used to yield exactly one
+            # finding, on a graph where 77% of elements have zero slack -
+            # so the chain re-forms the moment anything shrinks and the
+            # second finding cost another full build. The projection
+            # below is a bounded handful of longest-path recomputes
+            # (0.40 ms each on a real 126-element graph, 17 ms in total)
+            # over data already in hand.
+            result.signals.update(
+                self._build_optimization_outlook(
+                    graph_analysis['critical_path'],
+                    result.total_duration_us,
+                    result.signals['critical_path_detail'],
+                )
+            )
 
         # UX-47: which of the stages below this report section actually
         # renders. `section=None` (the `analyze` command, and every
@@ -1347,6 +1364,85 @@ class BuildEfficiencyAnalyzer:
             }
             for uid in critical_path
         ]
+
+    def _build_optimization_outlook(
+        self,
+        critical_path: List[str],
+        total_duration_us: int,
+        result_detail: Optional[List[dict]] = None,
+    ) -> dict:
+        """UX-74: what to do after the first fix, what the set is worth
+        together, and what is waiting off the path.
+
+        Three separate questions the report could already answer from one
+        capture and did not:
+
+        - **the horizon** - what becomes binding after each fix, so a
+          user is not paying a full re-capture per finding;
+        - **the joint saving** - whether the recommended set's savings
+          add. On a chain they compose, on parallel branches they take a
+          maximum, and only the simulation knows which. The report used
+          to print three separate percentages and leave the reader to
+          guess;
+        - **the latent heavies** - elements worth nothing to fix today
+          that are among the build's largest. On a real capture the 4th
+          and 6th heaviest elements appear in no ranking at all.
+
+        All three are structural projections over *this run's* measured
+        durations, sharing `compute_realizable_savings`' convention that
+        "fixed" means instant. The report is expected to say so.
+        """
+        if not self.graph or not critical_path:
+            return {}
+        durations: Dict[str, int] = defaultdict(int)
+        for task in self.normalized_tasks:
+            durations[task.task_key.element_uid] += task.dur_us
+        kind_by_uid = self._element_kind_lookup()
+        structural = {
+            uid for uid, kind in kind_by_uid.items()
+            if kind in STRUCTURAL_ELEMENT_KINDS
+        }
+        horizon = compute_optimization_horizon(
+            self.graph, dict(durations), excluded=structural
+        )
+        # Stashed for `_compute_structural_analysis`, which runs later in
+        # the same `analyze()` (UX-74). Only elements whose saving is
+        # realizable against *this* run's durations - the later horizon
+        # steps are worth something only once the steps above them are
+        # done, and feeding those to a batcher that simulates against the
+        # baseline would reintroduce exactly the error `UX-44` removed:
+        # ranking an element that cannot move the finish.
+        self._realizable_candidates = [
+            entry['element_uid']
+            for entry in sorted(
+                (
+                    d for d in (result_detail or [])
+                    if d.get('realizable_saving_us')
+                    and not d.get('is_structural_kind')
+                ),
+                key=lambda d: -d['realizable_saving_us'],
+            )
+        ]
+        recommended = [step['element_uid'] for step in horizon[:JOINT_SAVING_SET_SIZE]]
+        joint_us = compute_joint_saving(self.graph, dict(durations), recommended)
+        sum_us = sum(
+            step['saving_us'] for step in horizon[:JOINT_SAVING_SET_SIZE]
+        )
+        return {
+            'optimization_horizon': horizon,
+            'joint_saving': {
+                'elements': recommended,
+                'joint_saving_us': joint_us,
+                'sum_of_individual_us': sum_us,
+                # True means the savings compose - the set can be worked
+                # as separate pieces without them overlapping. False
+                # means fixing one of them makes another worth less.
+                'savings_add': joint_us >= sum_us,
+            } if recommended else None,
+            'latent_heavies': compute_latent_heavies(
+                dict(durations), critical_path, total_duration_us, structural,
+            ),
+        }
 
     def _element_kind_lookup(self) -> Dict[str, str]:
         """uid -> element_kind, defaulting to the explicit "unknown"
@@ -1771,7 +1867,22 @@ class BuildEfficiencyAnalyzer:
             # structural element means eliminating a zero-duration task,
             # which by construction can never change the replayed
             # makespan.
-            candidates = [key for key, _, _ in actionable_opportunities]
+            # UX-74: fed from the horizon's own ranking when it exists.
+            # `top_opportunities` scores `min(duration, next_binding_gap)`,
+            # which saturates: on a real capture all five candidates
+            # scored an identical 0.0316, so this list was five elements
+            # of one chain and `compute_batch_opportunities` returned
+            # **0 groups and 10 serialized pairs**. The two questions it
+            # conflates are separate, and the report now answers them
+            # separately: whether savings *add* is `joint_saving`, a
+            # simulation in the same longest-path model as
+            # `realizable_saving_us`; whether the work can proceed
+            # *concurrently* is this module's graph-independence result,
+            # which is a fact about people, not about the schedule.
+            realizable = getattr(self, '_realizable_candidates', None) or []
+            candidates = realizable[:5] or [
+                key for key, _, _ in actionable_opportunities
+            ]
             element_to_task_key = {
                 t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks
             }

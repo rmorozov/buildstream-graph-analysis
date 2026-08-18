@@ -309,6 +309,18 @@ Notes on reading it:
 - **Rows are ordered by evidence strength.** A measured CPU concentration or a single-process serialization point leads; the declared-vs-used candidate, which the producer itself calls "evidence, not a verdict", comes last. Dependency pairs `UX-68` set aside as *aggregating* — a `stack` stages almost nothing of its own, so "nobody opened it" says nothing about it — are counted under the coverage line rather than mixed into the findings.
 - **The ranking metric is `UX-70`'s realizable saving** — what the build would actually lose if the element became instant, which is the same number `bga analyze` ranks on, so the two commands cannot name different elements first. Share of the critical path is reported beside it because they routinely disagree: an element can hold a large share of a mesh graph and be worth very little to fix. If the metric saturates (every candidate carrying the same value), the report says so rather than presenting the alphabetical tiebreak as an impact order.
 - **A negative result is a result.** "Already compute-bound — nothing to gain from its parallelism" tells you to stop looking inside that element.
+- **Elements with identical findings share one block** (`UX-89`). Six sibling libraries that are all compute-bound and all `cc1plus`-dominated are one story, not six; the block names them, collapses their figures to ranges, and carries the total worth, while `--format json` still publishes every element separately. A group takes the position of its strongest member, so grouping never reorders what leads, and a finding whose figures do not generalize (peak RSS, a redundant operation's own element list) keeps its own per-element words rather than being averaged into something the measurement does not say.
+
+```
+app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3.0s apiece, 19.7s together):
+  - already compute-bound at 1.4-1.8 cores busy - nothing to gain from their parallelism;
+    shortening them means less work
+  - `cc1plus` is 72-78% of each one's measured CPU - they are all the same problem, so look
+    there before anywhere else
+  (81% of each element's processes were measured)
+```
+
+- **A serialization point has to be material** (`UX-89`). `ar` and `ranlib` are single processes by construction, so before this rule had a bar every element that linked a static library earned a "SINGLE process holding 0.2s" line. The bar is `max(1.0s, 1% of the element's realizable saving)` — the same shape the redundancy rule already used — so a 12s `ld` still reports and a 0.2s `ranlib` does not.
 - **Coverage is carried through.** A recommendation built on 81% of an element's processes says so (`UX-45`), and elements Plane 1 ranks that Plane 2 never traced are named rather than passed over.
 - The two planes' timelines are **not** merged and cannot be — see [`docs/architecture.md`](architecture.md). This is a join, and is deliberately named as one.
 

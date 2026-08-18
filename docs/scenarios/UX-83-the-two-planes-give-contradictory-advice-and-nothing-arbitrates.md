@@ -1,6 +1,6 @@
 # UX-83: the two planes give contradictory advice on the same run, and nothing arbitrates
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-51, UX-45 (both done); UX-09/UX-14 (context)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-51, UX-45 (both done); UX-09/UX-14 (context)
 
 ## Motivation
 
@@ -58,3 +58,66 @@ the same pair reports a pinned element; the hint must name `core.bst`'s
 pinning instead. `bga sweep` with the same input must annotate the knee
 line with the measured CPU saturation. Text without `--plane2` is
 byte-identical to today's.
+
+## Fix Implemented
+
+`bga analyze --plane2 <native-report.json>` and `bga sweep --plane2 …`.
+When Plane 2 is in hand for the same run, the two pieces of Plane 1
+advice that do not know about CPU consult what was actually measured
+inside the sandboxes.
+
+On the published `freedesktop-sdk` capture:
+
+```
+$ bga sweep capture/run --resource PROCESS --plane2 capture/native-report.json
+Knee point (PROCESS): capacity 2 (diminishing returns beyond this)
+  Plane 2 measured 3.25 of 4 cores busy over this run - the host was already
+  CPU-saturated
+  The knee above is a replay-model answer and the replay model does not know
+  about CPU (UX-09/UX-14): raising capacity past what the host can actually run
+  adds contention, not throughput.
+  Free capacity you already have: components/gperf.bst asked its native build
+  for -j1.
+```
+
+Both required behaviours, in the required order:
+
+1. A host Plane 2 measured as CPU-saturated is told **not** to raise
+   capacity, with the measurement quoted rather than asserted.
+2. An element pinned below its requested jobs is named **first** —
+   intra-element parallelism is capacity you already have, and unlike
+   `--builders` it cannot contend with itself.
+3. Without `--plane2`, every line is unchanged. Pinned by a test that
+   asserts the unconditioned hint is still what it was.
+
+### Scope kept narrow on purpose
+
+Only the `RESOURCE WAIT` hint is conditioned. Plane 2 says nothing about
+whether a *dependency* wait is real, and a hint that started quoting CPU
+measurements at unrelated categories would be the same mistake in the
+other direction — tested.
+
+`--plane2` is a *report* input, not a capture step: the dual-plane
+capture already produces both artifacts from one invocation
+(`UX-24`), so this is plumbing rather than new analysis, exactly as the
+task framed it.
+
+### The saturation bar
+
+`_SATURATION_SHARE = 0.8` of the host's cores, measured as total
+Plane 2 CPU time over the run's wall span. Not tuned: it is the point
+past which "there is idle CPU to fill" stops being true, with margin for
+the fact that the measure is an average over the whole run rather than
+over the contended window. On the real capture it reads 3.25 of 4.
+
+Tests: 10 new in
+`tests/unit/test_plane2_conditioned_capacity_advice.py`. Suite:
+1143 → 1153.
+
+## Verification Log
+
+Fixed 2026-08-18. The sweep output above is a real invocation against the
+capture published as `5eda28a`; the 3.25-cores-busy figure is that
+capture's own `cpu_time` over its own `wall_span_s`, and
+`components/gperf.bst`'s `-j1` is its own `per_element_parallelism`
+finding.

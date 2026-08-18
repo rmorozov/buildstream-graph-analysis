@@ -253,6 +253,19 @@ bga sweep /tmp/run --resource PROCESS --min-capacity 1 --max-capacity 16  # how 
 bga replay /tmp/run --capacity 16                                          # simulate a bigger machine
 ```
 
+**If you captured Plane 2, pass it in.** Both of those are replay-model
+answers and the replay model does not know about CPU, so on a host that
+is already saturated they will happily recommend more builders:
+
+```bash
+bga analyze /tmp/run --plane2 /tmp/plane2.json
+bga sweep   /tmp/run --resource PROCESS --plane2 /tmp/plane2.json
+```
+
+With the Plane 2 report in hand, a saturated host is told not to raise
+capacity, and an element pinned to `-j1` is named first — that is
+capacity you already have, and it costs nothing to reclaim.
+
 ---
 
 ## Step 5 — go inside the elements
@@ -385,6 +398,13 @@ What to do next (ranked by Plane 1 impact):
 **Rows are ordered by evidence strength**, strongest measurement first
 and the explicitly hedged one last. That ordering is a field in the JSON
 (`severity`), not just a convention in the prose.
+
+**A restructuring finding, when the edges form a chain.** Individually
+hedged "never read this dependency" rows are hard to act on; when a
+*group* of them chains elements along the critical path, the join says so
+as one finding and replays the run without those edges to attach a
+number. That is the difference between reporting five bricks and naming
+the wall.
 
 **Negative results are load-bearing.** "Already compute-bound at 3.41
 cores busy" is telling you to *stop looking* at this element's

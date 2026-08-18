@@ -775,7 +775,39 @@ def format_csv(result: AnalysisResult) -> str:
     return "\n".join(lines)
 
 
-def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[List[int]] = None) -> str:
+def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> List[str]:
+    """What Plane 2 knows about whether the knee is reachable (`UX-83`).
+
+    Measured once on a real dual-plane capture: the sweep put the knee at
+    capacity 5 on a 4-core host whose elements were already runnable at
+    16 potential compiler processes, while the same capture's `correlate`
+    output named a `-j1`-pinned element as the actual fix.
+    """
+    plane2 = plane2_capacity or {}
+    cores_busy, host = plane2.get('cores_busy'), plane2.get('host_cpu_count')
+    if cores_busy is None or not host:
+        return []
+    lines = [
+        f"  Plane 2 measured {cores_busy:.2f} of {host} cores busy over this run"
+        + (" - the host was already CPU-saturated" if plane2.get('saturated') else "")
+    ]
+    if plane2.get('saturated'):
+        lines.append(
+            "  The knee above is a replay-model answer and the replay model does "
+            "not know about CPU (UX-09/UX-14): raising capacity past what the host "
+            "can actually run adds contention, not throughput."
+        )
+    pinned = plane2.get('pinned_elements') or []
+    if pinned:
+        lines.append(
+            "  Free capacity you already have: "
+            + ", ".join(pinned[:3])
+            + " asked its native build for -j1."
+        )
+    return lines
+
+
+def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[List[int]] = None, plane2_capacity: Optional[dict] = None) -> str:
     """Format a capacity_sweep result (Part 19) as human-readable text.
 
     `calibration_capacities` (UX-14 tier 2, PR #58's approved design):
@@ -809,6 +841,12 @@ def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optio
         lines.append("")
         for res, knee in sweep_result.knee_points.items():
             lines.append(f"Knee point ({res}): capacity {knee} (diminishing returns beyond this)")
+            # UX-83: the knee is a property of the replay model, which
+            # does not know about CPU. When Plane 2 measured this same
+            # run, say what it measured - a knee above a saturated host
+            # is a scheduling answer to a contention question.
+            for line in _plane2_knee_caveat(plane2_capacity, knee):
+                lines.append(line)
     if sweep_result.monotonicity_violations:
         lines.append("")
         lines.append("Monotonicity violations:")

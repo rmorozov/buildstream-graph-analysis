@@ -479,3 +479,9 @@ class AnalysisResult:
     # "checks_ran": bool, "skipped_inputs": [str, ...]}. Populated from
     # _check_process_oversubscription's own already-computed verdict.
     capacity_verdict: dict = field(default_factory=dict)
+    # UX-83: what Plane 2 knows about whether more builders would help,
+    # when a Plane 2 report was supplied for this same run. Empty
+    # otherwise, and every consumer must behave exactly as before when
+    # it is - the two planes disagreeing is a real finding, but only
+    # when both are actually in hand.
+    plane2_capacity: dict = field(default_factory=dict)

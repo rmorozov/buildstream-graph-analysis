@@ -334,6 +334,111 @@ def _plane2_view(native_report: dict) -> Dict[str, dict]:
     return view
 
 
+# UX-82: an unread edge is only worth restructuring around if it is
+# holding the build up. Both endpoints on the critical path is the
+# cheapest honest filter - the projection below then tells the truth
+# about what removing them is actually worth, so this bound only has to
+# be *permissive enough*, not exact.
+def _unread_gating_edges(analysis: dict, native_report: dict) -> List[tuple]:
+    """`(predecessor, successor)` build edges measured never-read that
+    also sit on the critical path.
+
+    The producer reports `{element, dependency}` where `element` is the
+    consumer, so the graph edge runs `dependency -> element`.
+    """
+    declared = native_report.get("declared_vs_used") or {}
+    on_path = set((analysis.get("signals") or {}).get("critical_path") or [])
+    known = _declared_elements(analysis)
+    edges = []
+    for entry in declared.get("unused_candidates") or []:
+        predecessor, successor = entry.get("dependency"), entry.get("element")
+        if not predecessor or not successor:
+            continue
+        if known and (predecessor not in known or successor not in known):
+            continue
+        if predecessor in on_path and successor in on_path:
+            edges.append((predecessor, successor))
+    return sorted(set(edges))
+
+
+def _connected_edge_groups(edges: List[tuple]) -> List[List[tuple]]:
+    """Group edges that share an endpoint.
+
+    Five separately-hedged rows saying "`lib-b` never read `lib-a`" are
+    five bricks; one group saying "these six elements form a chain whose
+    every internal edge is unread" is the wall (`UX-82`).
+    """
+    parent: Dict[str, str] = {}
+
+    def find(node: str) -> str:
+        parent.setdefault(node, node)
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+
+    def union(a: str, b: str) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    for predecessor, successor in edges:
+        union(predecessor, successor)
+    groups: Dict[str, List[tuple]] = {}
+    for edge in edges:
+        groups.setdefault(find(edge[0]), []).append(edge)
+    return [sorted(group) for _root, group in sorted(groups.items())]
+
+
+def project_without_edges(
+    tasks, run_context, edges: List[tuple], capacities: Optional[dict] = None,
+) -> Optional[dict]:
+    """Replay the observed run with `edges` deleted from the graph.
+
+    Same durations, same capacity, same deterministic scheduler - only
+    the shape changes. A pure longest-path recomputation would be
+    cheaper and wrong here: removing five chain edges lets six elements
+    become ready at once, and what happens next is decided by how many
+    builders there are, not by the chain that no longer exists.
+
+    Returns None when there is nothing to replay, rather than a zero that
+    would read as "this change saves everything".
+    """
+    from dataclasses import replace
+
+    from .floors.capacity import compute_default_capacities
+    from .replay.scheduler import ReplayScheduler
+
+    if not tasks:
+        return None
+    removed = set(edges)
+    element_of = {str(task.task_key): task.task_key.element_uid for task in tasks}
+
+    def keep(successor_key: str, dependency_key: str) -> bool:
+        pair = (element_of.get(dependency_key), element_of.get(successor_key))
+        return pair not in removed
+
+    rewired = [
+        replace(
+            task,
+            dependencies=[
+                dep for dep in task.dependencies if keep(str(task.task_key), dep)
+            ],
+        )
+        for task in tasks
+    ]
+    if capacities is None:
+        capacities = compute_default_capacities(run_context)
+    before = ReplayScheduler(list(tasks), run_context).replay(capacities)
+    after = ReplayScheduler(rewired, run_context).replay(capacities)
+    return {
+        'replayed_baseline_us': before.makespan_us,
+        'projected_us': after.makespan_us,
+        'saving_us': max(0, before.makespan_us - after.makespan_us),
+        'capacities': dict(capacities),
+    }
+
+
 def _recommend(joined: ElementJoin) -> List[str]:
     """Turn one element's two-plane picture into directed next steps.
 
@@ -469,7 +574,101 @@ def _recommend(joined: ElementJoin) -> List[str]:
     ]
 
 
-def correlate(analysis: dict, native_report: dict) -> dict:
+# UX-83: at or above this share of the host's cores, the run was already
+# CPU-busy and another builder buys contention rather than throughput.
+# Not tuned: it is the point past which "there is idle CPU to fill" stops
+# being true, with a margin for the fact that the measure is an average
+# over the whole run rather than over the contended window.
+_SATURATION_SHARE = 0.8
+
+
+def summarize_plane2_capacity(
+    native_report: dict, host_cpu_count: Optional[int] = None,
+) -> dict:
+    """What Plane 2 knows about whether more builders would help.
+
+    `UX-83`: measured on one dual-plane capture, `bga analyze` said
+    *"31.9% of wall-clock is RESOURCE WAIT - try `--capacity N` with a
+    higher N"* and `bga sweep` put the knee at capacity 5, while
+    `bga correlate` on the **same capture** named the real fix -
+    `core.bst` at 0.90 cores busy with `-j1`, worth -32.4% and costing no
+    extra capacity. The capacity axis being unmodeled is a known gap
+    (`UX-09`); what was new is that when the missing information is
+    present in the same capture, the Plane 1 advice did not consult it.
+
+    Returns the two facts that change the advice, and enough provenance
+    to say why. Empty when Plane 2 cannot answer, which leaves today's
+    hint standing unchanged.
+    """
+    cpu_time = native_report.get("cpu_time") or {}
+    per_element = cpu_time.get("per_element") or {}
+    wall_span = native_report.get("wall_span_s")
+    measured_cpu_us = sum(
+        (entry.get("cpu_us") or 0) for entry in per_element.values()
+    )
+    cores_busy = (
+        (measured_cpu_us / 1e6) / wall_span if wall_span and measured_cpu_us else None
+    )
+    pinned = sorted(
+        entry["element"]
+        for entry in native_report.get("per_element_parallelism") or []
+        if "pinned_to_one_job" in (entry.get("findings") or [])
+        and entry.get("element")
+    )
+    saturated = (
+        cores_busy is not None and host_cpu_count
+        and cores_busy >= _SATURATION_SHARE * host_cpu_count
+    )
+    return {
+        "cores_busy": cores_busy,
+        "host_cpu_count": host_cpu_count,
+        "saturated": bool(saturated),
+        "pinned_elements": pinned,
+    }
+
+
+def find_restructuring_findings(
+    analysis: dict, native_report: dict, tasks=None, run_context=None,
+) -> List[dict]:
+    """The structural conclusion five per-element rows jointly support.
+
+    On `examples/06`'s baseline the tool had every fact of the macro
+    problem and never stated it: `analyze` printed a ten-element critical
+    path with `lib-a..lib-f` six links of it, and `correlate` reported
+    **each of the five chain edges** as "opened no file staged by …" -
+    five disconnected, deliberately-hedged rows, ranked last by design
+    (`UX-68`). The one conclusion they support together - *these six
+    elements form a chain whose every internal edge is unread; fan them
+    out* - was never drawn, and it was the biggest win in the project.
+
+    The hedge stands: this recommends *checking* the edges, and says so.
+    What it adds is the prize, replayed rather than guessed - and a
+    reason to look at the group at all, which five separate rows at the
+    bottom of a list did not provide.
+    """
+    edges = _unread_gating_edges(analysis, native_report)
+    if not edges:
+        return []
+    findings = []
+    for group in _connected_edge_groups(edges):
+        elements = sorted({uid for edge in group for uid in edge})
+        projection = project_without_edges(tasks, run_context, group)
+        findings.append({
+            'id': 'unread-gating-chain',
+            'severity': SEVERITY_HIGH,
+            'elements': elements,
+            'edges': [list(edge) for edge in group],
+            'projection': projection,
+        })
+    # Biggest projected prize first; an unprojected group sorts last
+    # rather than to the top, since "unknown" is not "large".
+    return sorted(
+        findings,
+        key=lambda f: -((f['projection'] or {}).get('saving_us') or 0),
+    )
+
+
+def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None) -> dict:
     """Join a Plane 1 analysis with a Plane 2 native report.
 
     Both arguments are already-parsed artifacts - this function performs
@@ -556,8 +755,18 @@ def correlate(analysis: dict, native_report: dict) -> dict:
         else None
     )
 
+    # UX-82: computed after the per-element rows, rendered before them -
+    # a structural conclusion outranks the individual measurements it is
+    # drawn from, and those measurements are the ones the producer
+    # itself hedges hardest.
+    restructuring = (
+        [] if attribution_unreliable
+        else find_restructuring_findings(analysis, native_report, tasks, run_context)
+    )
+
     return {
         "elements": [vars(e) for e in joined],
+        "restructuring": restructuring,
         "actionable": (
             [] if attribution_unreliable
             else [vars(e) for e in joined if e.recommendations]
@@ -599,6 +808,27 @@ def correlate(analysis: dict, native_report: dict) -> dict:
             "and shares no horizon with an element-level trace."
         ),
     }
+
+
+def _chain_order(finding: dict) -> List[str]:
+    """The group's elements in dependency order where it is a simple
+    chain, and sorted otherwise.
+
+    A chain is what this finding is usually about, and `a -> b -> c`
+    says "these are in a line" in a way an alphabetical list does not.
+    """
+    edges = [tuple(edge) for edge in finding['edges']]
+    successors = {a: b for a, b in edges}
+    heads = {a for a, _ in edges} - {b for _, b in edges}
+    if len(heads) != 1 or len(successors) != len(edges):
+        return list(finding['elements'])
+    chain = [heads.pop()]
+    while chain[-1] in successors:
+        nxt = successors[chain[-1]]
+        if nxt in chain:  # a cycle cannot be a chain; fall back
+            return list(finding['elements'])
+        chain.append(nxt)
+    return chain if len(chain) == len(finding['elements']) else list(finding['elements'])
 
 
 def format_correlation(result: dict) -> str:
@@ -655,6 +885,37 @@ def format_correlation(result: dict) -> str:
             f"see --format json for the list"
         )
     lines.append("")
+
+    # UX-82: before the per-element rows. A structural conclusion
+    # outranks the individual measurements it is drawn from.
+    for finding in result.get("restructuring") or []:
+        lines.append(
+            f"Restructuring opportunity: {len(finding['edges'])} declared build "
+            f"edge(s) among {len(finding['elements'])} element(s) were measured "
+            f"never-read, and they chain those elements along the critical path:"
+        )
+        lines.append("    " + " -> ".join(_chain_order(finding)))
+        projection = finding.get("projection")
+        if projection and projection.get("saving_us"):
+            lines.append(
+                f"    Replaying this run with those edges removed - same durations, "
+                f"same capacity - finishes in "
+                f"{projection['projected_us'] / 1e6:.1f}s against "
+                f"{projection['replayed_baseline_us'] / 1e6:.1f}s: "
+                f"{projection['saving_us'] / 1e6:.1f}s"
+            )
+        elif projection:
+            lines.append(
+                "    Replaying this run with those edges removed changes nothing - "
+                "the chain is not what binds here"
+            )
+        lines.append(
+            "    Worth checking whether those edges are needed at build time: each "
+            "one is evidence, not a verdict (a runtime-only dependency looks "
+            "identical here), and the projection is a replay of this run's "
+            "durations, not a re-capture."
+        )
+        lines.append("")
 
     actionable = result["actionable"]
     if not actionable:

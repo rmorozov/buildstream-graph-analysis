@@ -176,3 +176,37 @@ def test_an_unimportable_tool_is_a_handled_error_not_a_traceback(monkeypatch, ca
     assert "could not load tools.bst_extract_run" in message
     assert "python3 -m tools.bst_extract_run" in message
 
+
+def test_dispatch_and_the_rest_of_the_process_agree_on_one_module_object():
+    """UX-94: `tools.<x>` and `bga._tools.<x>` are the same file, and
+    importing it under both names produces two module objects with
+    separate globals.
+
+    An *editable* install has both names. The first version of the
+    dispatcher preferred the installed one, so it called
+    `bga._tools.bst_extract_run.main` while every test that patched
+    `tools.bst_extract_run.main` - and every caller that had imported it
+    - held the other object. Five dispatch tests failed in CI on exactly
+    that, and passed locally, because the local environment happened to
+    predate the packaging change and had only one of the two names.
+
+    Patching through the public name and asserting the dispatcher sees
+    it is the property that matters, and it holds under either layout:
+    where `tools` resolves, everyone uses it; a real wheel has only
+    `bga._tools` and no second object to disagree with.
+    """
+    import sys
+
+    module = pytest.importorskip("tools.bst_extract_run")
+    called = []
+    original = module.main
+    module.main = lambda: called.append(True) or 0
+    try:
+        assert dispatch(["extract", "proj/", "build.log", "run/"]) == 0
+    finally:
+        module.main = original
+    assert called == [True], (
+        "dispatch ran a different module object than the one patched - "
+        "see UX-94: prefer the checkout name so both resolve to one object"
+    )
+    assert sys.argv[0] != "bga extract"  # argv restored

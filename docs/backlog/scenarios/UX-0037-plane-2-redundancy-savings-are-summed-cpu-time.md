@@ -6,7 +6,7 @@
 
 `UX-23` shipped `detect_redundant_operations`: real operations repeated independently inside multiple elements' own sandboxes. It works - a real run against `examples/05-cmake-cpp-toolchain` found 37 findings, every one correctly spanning all 6 cmake elements. The output, real, from that run:
 
-```
+```text
   6x across 6 elements (['app.bst','core.bst','lib-a.bst','lib-b.bst','lib-c.bst','lib-d.bst']), 0.289s total:
     /usr/bin/ld -plugin /usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so -plugin-opt=/usr/libexec/g
   6x across 6 elements (...), 0.246s total:
@@ -67,7 +67,7 @@ Filed 2026-08-16. Implemented the same day. The findings block is pasted from a 
 
 Real end-to-end re-verification against a real 822-process capture of `examples/06-macro-micro-optimization` (the same class of trace as this doc's `examples/05` Motivation):
 
-```
+```text
 Redundant cross-element operations (20 found, 7 above 0.05s):
   9x across 9 elements (...) - up to 1.311s recoverable wall-clock (worst element: app.bst); 4.880s total machine time
     cmake -B_builddir -H. -GUnix Makefiles -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr ...

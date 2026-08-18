@@ -8,7 +8,7 @@ Real repro, `examples/06-macro-micro-optimization` (filed with this task; built 
 
 Baseline:
 
-```
+```text
 Total Duration: 39.6s
   Efficiency Score: 1.00 (very efficient - remaining gains are mostly in reducing Critical Path's own work, not scheduling)
   Certified Headroom:          0.00s
@@ -24,7 +24,7 @@ CPU Utilisation:
 
 After the three fixes:
 
-```
+```text
 $ bga compare /tmp/run-06-baseline /tmp/run-06-optimized
 Verdict: IMPROVED  (total duration -12.07s, -30.5%, 39.57s -> 27.50s)
   Certified Headroom        0.00s ->      4.05s   (+4.05s)
@@ -67,7 +67,7 @@ Filed 2026-08-16 from a real hands-on optimization walkthrough (`docs/guides/opt
 
 Real end-to-end re-verification against the exact pair in this doc's Motivation (`examples/06-macro-micro-optimization`, baseline vs `optimized/`, real captures):
 
-```
+```text
 $ bga compare /tmp/run-06-baseline /tmp/run-06-optimized
 Verdict: IMPROVED  (total duration -12.07s, -30.5%, 39.57s -> 27.50s)
 

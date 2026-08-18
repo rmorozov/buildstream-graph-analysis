@@ -29,11 +29,12 @@ Confirmed directly (grep across `bga/` and `docs/`): no `efficiency_score`, `ove
 5. Full suite green; existing floors/confidence tests unaffected (purely additive field).
 
 ## Verification Log
+
 Added `efficiency_score = lb / horizon_us` (`None` when `horizon_us == 0`, or when floors aren't computed at all) to `bga/analyzer.py::_compute_floors`, wrapped as `Certified` through the same `assemble_floors` boundary `P2-08` established (`Certified.value`'s type hint widened from `int` to `Union[int, float]` to honestly reflect this new ratio-shaped certified value alongside the existing duration-shaped ones). Surfaced in both the text report's Key Findings block and the Certified Floors section (`bga/report/text.py`), with a new `_efficiency_band` helper (thresholds 0.9/0.7, documented reasoning distinct from confidence's 0.8/0.5) and a mandatory "scheduling efficiency, not work-minimality" framing baked into the band text itself (`>= 0.9` explicitly says "not scheduling" as the remaining lever). Gated on confidence: any run below the existing `_CONFIDENCE_HIGH` band gets an explicit "low-confidence data, treat with caution" caveat next to the score. `--format json` picks it up for free (`floors` dict serialized wholesale).
 
 New tests (`tests/unit/test_report_key_findings.py`, 6 new): exact-formula match against an independently-recomputed value on a fixture with a real DEPENDENCY_WAIT gap; the low-confidence caveat appears when confidence is genuinely below 0.8 (this fixture's real confidence, not contrived); the score line appears in both Key Findings and the Certified Floors section; the checked-in golden fixture (real, high confidence, zero wait gaps) shows `1.00 (very efficient...)` with no caveat; a run with zero normalized tasks reports `None`, not a fabricated value or `ZeroDivisionError`. Updated the golden snapshot fixture (`expected_output.json`) with the new field.
 
-```
+```text
 $ python3 -m pytest tests/unit/test_report_key_findings.py -v
 17 passed
 $ python3 -m pytest -q   # full suite

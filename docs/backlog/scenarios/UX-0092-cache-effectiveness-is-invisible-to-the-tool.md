@@ -78,7 +78,7 @@ closing Pipeline Summary says how many elements it built and how many it
 skipped, and the run's own spans say where transfer time went. On the
 published fdsdk capture, exactly the acceptance test's numbers:
 
-```
+```text
 Cache hit ratio: 72% (65 cached, 25 rebuilt) - the cache did most of the work
   -> for components/libxml2.bst's own closure it is 80% (101 of 126 elements cached)
 ```
@@ -121,19 +121,19 @@ Two facts fall out:
 Measured on real `examples/06` builds with bst 2.7.0. Built twice with
 caches on, nothing touched:
 
-```
+```text
 comparable_elements = 11   changed_keys = 0   churned_count = 0   invalidation_roots = []
 ```
 
 Then **one comment added to one source file** (`files/src/core/unit_0.cpp`):
 
-```
+```text
 Build Queue: processed 9, skipped 2
 ```
 
 Nine of eleven elements rebuilt — and the report says why in one line:
 
-```
+```text
 Invalidated at core.bst: its cache key changed (b7c2e411 -> 84331b67) and
 invalidated 8 element(s) below it, 34.2s of rebuilding in total. Nothing it
 depends on changed, so the change starts here

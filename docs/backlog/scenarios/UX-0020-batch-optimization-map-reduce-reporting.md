@@ -41,6 +41,7 @@ Two tiers, matching this session's own "cheap win first, harder design work sepa
 **Tier 1 (minimum)**: `bga/report/text.py`'s "Structural Analysis" section now renders `sensitivity.top_opportunities`/`best_case_speedup`/`total_improvable_time_us` as a "Top Improvement Opportunities" block - previously reachable only via `--format json`.
 
 **Tier 2 (map-reduce)**: new `bga/structural/batching.py` module:
+
 - `_partition_into_independent_groups`: a greedy antichain partition over candidate elements (using `bga/graph/edg.py`'s existing `compute_reachability` - no new reachability logic duplicated) - each candidate joins the first group it has no ancestor/descendant relationship with every current member of, else starts a new group. Also records every genuinely serialized pair among the candidates (informational, so a reader can see *why* two elements weren't grouped).
 - `compute_batch_opportunities`: for each group with >=2 real, resolvable tasks, simulates the *combined* effect of eliminating every member's duration at once via `ReplayScheduler`'s new `duration_overrides` param (added to `bga/replay/scheduler.py`'s `replay()`/`_compute_priority()` - `{task_key: duration_us}` overrides, used by both the scheduling-order priority and the actual finish-time math), and separately simulates each member fixed *alone* for comparison - "fixing" defined as eliminating duration entirely, the same "if all slack/improvable time were eliminated" framing `best_case_speedup` already uses.
 - Wired into `bga/analyzer.py::_compute_structural_analysis` as a new `batch_opportunities` key (candidates = sensitivity's own top-5 `top_opportunities`, reusing the already-constructed `self.replay_scheduler`) and surfaced in both `--format json` (`structural.batch_opportunities.{groups,serialized_pairs}`) and the text report ("Batch Opportunities"/"Serialized" lines).
@@ -55,7 +56,7 @@ Full suite green: 547 passed (up from 538 - 9 new tests), same 7 pre-existing en
 
 Real CLI re-verification against `tests/fixtures/golden/mixed_task_kinds` (`bga analyze ... --format text`):
 
-```
+```text
 Structural Analysis:
   ...
   Top Improvement Opportunities (best-case speedup 1.12x if all 0.00s of improvable time were eliminated):

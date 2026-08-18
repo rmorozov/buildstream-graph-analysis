@@ -57,6 +57,7 @@ import the native tracer and the trace converters on every run.
 ## Installation
 
 Ensure the package is installed in your environment:
+
 ```bash
 pip install -e .
 ```
@@ -75,6 +76,7 @@ To produce a real run directory in this shape from an actual BuildStream project
 
 **Output:**
 By default, `bga` prints a human-readable summary to stdout, leading with a synthesized **Key Findings** block (confidence headline, the single largest wait-category opportunity, the top elements by blast radius/criticality probability when `--diagnostics` ran, and certified headroom in plain language) before the detailed sections:
+
 - **Confidence & Violations**: Overall confidence score, any failed hard gates, and a one-line summary per violation - previously only visible via `--format json`.
 - **Certified Floors**: $T_\infty$, Lower Bound ($LB$), Certified Headroom, and an Efficiency Score ($LB$ / **horizon**, 0.0-1.0 — the horizon is first-task-start to last-task-finish, *not* total duration, which also contains the untracked head and tail; on `tests/fixtures/golden/mixed_task_kinds` the two give 1.00 and 0.875) - measures scheduling efficiency of the observed work, not whether that work itself is minimal; see Critical Path for the latter. $LB$/Efficiency Score certify against this run's *recorded* resource capacities (`--builders`/`--fetchers`/`--pushers`), not real host CPU cores - a native build system's own internal parallelism (`--max-jobs`, e.g. `make -jN`) is a separate axis `bga` does not model here, and the two can genuinely compete for the same cores (see `docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s real evidence). A one-line note to this effect always accompanies the Certified Floors block, naming this run's own real numbers when a `resource_oversubscription` violation was detected for it (see `docs/backlog/scenarios/UX-0012-capture-native-max-jobs-and-host-cores.md`). When the run declares its own CPU budget (`--cpu-budget` at extraction time, e.g. because a cgroup CPU quota isn't visible to raw host-core detection), that declared budget - not the detected host core count - governs this check (see `docs/backlog/scenarios/UX-0015-declared-cpu-budget-overrides-host-detection.md`).
 - **Efficiency Metrics**: Parallelism, Utilization, and Attribution breakdown.
@@ -86,7 +88,9 @@ The Key Findings/Confidence blocks are shown for the full `analyze` report only 
 ### Options
 
 #### Output Format
+
 Control the output format using `--format` (or `-f`):
+
 - `text` (default): Human-readable summary.
 - `json`: Machine-readable JSON object (suitable for piping to `jq`).
 - `csv`: Comma-separated values for attribution data.
@@ -180,18 +184,25 @@ With `--plane2`, both consult what was actually measured inside the sandboxes:
 Without `--plane2` every line is byte-identical to before.
 
 #### Resource Capacity
+
 Override the detected system capacity (useful for simulating different hardware):
+
 ```bash
 bga analyze /path/to/run --capacity 16
 ```
+
 *Note: This affects the calculation of the Lower Bound ($LB$) and Replay Makespan ($T_C$).*
 
 #### Replay Simulation
+
 Run the deterministic replay scheduler to compute a feasible makespan ($T_C$) under the chosen scheduling heuristic - a counterfactual model for scheduler comparison, capacity sweeps, and model slack (Part 18), not a claim that $T_C$ is the mathematically optimal schedule:
+
 ```bash
 bga analyze /path/to/run --replay
 ```
+
 You can specify the scheduling heuristic:
+
 - `lpt` (Longest Processing Time first) - Default; a common, reasonable heuristic, not guaranteed optimal.
 - `spt` (Shortest Processing Time first).
 - `fifo` (First In First Out).
@@ -202,26 +213,35 @@ bga analyze /path/to/run --replay --heuristic lpt
 ```
 
 #### Diagnostics
+
 Enable advanced diagnostic signals (adds computation time):
+
 ```bash
 bga analyze /path/to/run --diagnostics
 ```
+
 This computes:
+
 - **Blast Radius**: Number of downstream dependents for each element.
 - **Criticality Probability**: Likelihood an element appears on the critical path under duration variance.
 - **Wall-Clock Shares**: Attribution of wall-clock time to specific elements.
 
 #### Output File
+
 Save the report to a file instead of stdout:
+
 ```bash
 bga analyze /path/to/run --output report.txt
 ```
 
 #### Cold Structural Floor (advisory)
+
 Compute the advisory cold structural floor (`T∞,cold`) using prior runs' observed durations as an estimate source. Off by default - never affects `LB`, `certified_headroom`, primary `confidence`, or measured attribution:
+
 ```bash
 bga analyze /path/to/run --cold --history-dir /path/to/prior-run-1 --history-dir /path/to/prior-run-2
 ```
+
 - `--cold` alone (no `--history-dir`) has nothing to estimate from. In `--format json` the cold fields are present and null; the **text report prints no cold line at all** rather than a line saying "unavailable" — absence is the report's way of saying a number was not computed, and it is the same in both formats in the sense that neither fabricates one.
 - By default, if any element on the resolved cold critical path has no resolvable historical duration, `T∞,cold` reports as unavailable rather than a misleading partial number.
 - `--allow-partial-cold` (only meaningful together with `--cold`; a no-op with a warning if passed alone) instead publishes a value with `partial=true`/`confidence=low` in that case.
@@ -229,13 +249,17 @@ bga analyze /path/to/run --cold --history-dir /path/to/prior-run-1 --history-dir
 ## Advanced Commands
 
 ### Version
+
 Check the installed version:
+
 ```bash
 bga --version
 ```
 
 ### Verbose Logging
+
 Enable debug logging to troubleshoot ingestion or normalization issues:
+
 ```bash
 bga analyze /path/to/run --verbose
 ```
@@ -346,7 +370,7 @@ Joins this run's whole-project analysis (Plane 1) with a native trace report of 
 
 It answers what neither plane can alone. Plane 1 knows an element dominates the critical path; Plane 2 knows what happened inside it; only the join says what to do:
 
-```
+```text
 What to do next (ranked by Plane 1 impact):
   core.bst:
     - holds 25% of the critical path and fixing it is worth 18.4s (24.1% of the build),
@@ -380,7 +404,7 @@ Notes on reading it:
 - **A negative result is a result.** "Already compute-bound — nothing to gain from its parallelism" tells you to stop looking inside that element.
 - **Elements with identical findings share one block** (`UX-89`). Six sibling libraries that are all compute-bound and all `cc1plus`-dominated are one story, not six; the block names them, collapses their figures to ranges, and carries the total worth, while `--format json` still publishes every element separately. A group takes the position of its strongest member, so grouping never reorders what leads, and a finding whose figures do not generalize (peak RSS, a redundant operation's own element list) keeps its own per-element words rather than being averaged into something the measurement does not say.
 
-```
+```text
 app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3.0s apiece, 19.7s together):
   - already compute-bound at 1.4-1.8 cores busy - nothing to gain from their parallelism;
     shortening them means less work
@@ -394,7 +418,6 @@ app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3
 - The two planes' timelines are **not** merged and cannot be — see [`docs/design/architecture.md`](../design/architecture.md). This is a join, and is deliberately named as one.
 
 ## Example Workflows
-
 
 ### CI Marginal Gate (`--fail-on-inefficient-additions`) — `UX-79`
 
@@ -451,13 +474,17 @@ so a baseline with no occupancy does not stop it; only
 `--fail-on-efficiency-regression` needs both.
 
 ### 1. Quick Efficiency Check
+
 Get a quick overview of build efficiency:
+
 ```bash
 bga analyze /path/to/run-directory
 ```
 
 ### 2. Generate JSON Report for CI
+
 Integrate into a CI pipeline to track metrics over time:
+
 ```bash
 bga analyze /path/to/run-directory --format json --output metrics.json
 # Then process with jq, e.g. (certified_headroom, not certified_headroom_us -
@@ -466,7 +493,9 @@ bga analyze /path/to/run-directory --format json --output metrics.json
 ```
 
 ### 3. Simulate Hardware Upgrade
+
 Estimate build time improvement if moving from 4 to 16 cores:
+
 ```bash
 # Current 4-core simulation
 bga analyze /path/to/run-directory --capacity 4 --replay
@@ -476,7 +505,9 @@ bga analyze /path/to/run-directory --capacity 16 --replay
 ```
 
 ### 4. Deep Dive into Bottlenecks
+
 Identify which elements to optimize for maximum speedup:
+
 ```bash
 # criticality_probability is a JSON *object* keyed by element UID
 # (confirmed against a real --format json run), not an array - to_entries

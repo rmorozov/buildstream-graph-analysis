@@ -35,7 +35,7 @@ Measured on round 9's capture (93 findings above the 0.05s floor):
 
 The single largest finding in the whole report is:
 
-```
+```text
 88x across 2 elements (buildstream-build, components/python3.bst)
   - up to 1932.9s recoverable wall-clock (worst element: buildstream-build)
 ```
@@ -52,7 +52,7 @@ headline.
 entirely different work. But BuildStream's own per-element command
 wrapper is not caught:
 
-```
+```text
 21x  worst=664.6s  'sh -c -e if [ -n "bst_build_dir" ]; then'
  2x  worst=512.6s  'sh -c -e (set -ex; sh -c -e \'cmake -B_builddir -H"." -G"Ninja" ...'
 ```
@@ -138,7 +138,7 @@ Round 9's capture, the same 0.05s reporting floor, before and after:
 The remaining list is the class `UX-23` was built to find, and nothing
 else:
 
-```
+```text
   30x worst= 20.4s els=2  /usr/bin/m4 -P
  594x worst= 16.3s els=3  .../x86_64-unknown-linux-gnu-gcc ... (autoconf probe)
  242x worst= 10.3s els=2  x86_64-unknown-linux-gnu-gcc -o conftest ...

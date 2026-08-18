@@ -12,7 +12,7 @@ confirms the clock alignment holds at real scale.
 
 It does not reach far enough:
 
-```
+```text
 certain 6, deduced 0, ambiguous 18, conflicting 1, unmatched 0
 ```
 

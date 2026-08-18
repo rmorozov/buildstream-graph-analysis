@@ -34,6 +34,7 @@ Real wall-clock time (`time bst --builders B --max-jobs J build all.bst`, cache 
 | 8 × 8 (heavy oversubscription on both axes) | 7.2s (**worse** than 4×4) |
 
 Three real, distinct effects, all confirmed on one machine, one project, same source:
+
 - **Both knobs matter independently**: 1×1 → 4×4 is a 2.2x real speedup.
 - **Oversubscription genuinely costs real time, not just theoretically**: 8×8 (up to 64-way concurrency on 4 cores) is ~11% *slower* than 4×4, not just "not faster" - real evidence naive "turn everything up" is wrong.
 - **Diminishing returns are real too**: 4×16 barely differs from 4×4, because each `lib-*.bst` here only has 2 source files - `max-jobs` beyond the real per-element file count buys nothing.

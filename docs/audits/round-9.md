@@ -13,7 +13,7 @@ be.
 
 **`bga analyze` names where the time is:**
 
-```
+```text
 Biggest Opportunity: this build is execution-bound - no wait category
   exceeds 1% of wall-clock time, so there is no scheduling gap to close
 Where the time is: 4 element(s) are 94.0% of the 3610.5s critical path
@@ -28,7 +28,7 @@ Round 8's report, on the same build, led with
 
 **`bga correlate` joins the planes and says what to do:**
 
-```
+```text
 PARTIAL ATTRIBUTION - the rows below are correct for the
 elements they name, and say nothing about the rest:
   109873 of 127627 traced processes (86.1%) are attributed to a named
@@ -129,7 +129,7 @@ ceiling on Plane 2's coverage.
 captures of the same commit now exist, so the cheapest validation in the
 backlog became free to run:
 
-```
+```text
 $ bga compare round8/run round9/run
 Verdict: REGRESSED  (total duration +101.22s, +2.9%, 3513.01s -> 3614.22s)
 ```

@@ -7,7 +7,7 @@
 With BuildStream 2.7.0 + buildstream-plugins genuinely installed (this
 round, clean venv, real `bwrap`), `make test` fails:
 
-```
+```text
 FAILED tests/unit/test_bst_extract_run.py::test_real_end_to_end_extraction_produces_a_complete_bga_ready_run - assert True is False
 FAILED tests/unit/test_bst_show_to_graph.py::test_real_bst_show_against_fixture_project - assert False
 FAILED tests/unit/test_bst_show_to_graph.py::test_real_bst_show_captures_per_element_max_jobs_override - assert 4 == 16
@@ -70,7 +70,7 @@ The Required Fix says *"the fixture declares 16; the graph must record
 
 Measured against the live bst, on the fixture itself:
 
-```
+```text
 $ bst show --deps none --format '%{public}' manual.bst
 bst:
   max-jobs: 16
@@ -97,7 +97,7 @@ the capture can tell one element's parallelism from another's. So the
 fixture gained `elements/notparallel.bst`, carrying the control
 BuildStream honours:
 
-```
+```text
 $ bst show --deps none --format '%{vars}' notparallel.bst | grep -E 'max-jobs|notparallel'
 max-jobs: 1
 notparallel: True
@@ -124,7 +124,7 @@ to isolate BuildStream's cache. Python resolves per-user
 `site-packages` *from `HOME`*, so on a machine where BuildStream was
 installed with `pip install --user`, `bst` dies at startup:
 
-```
+```text
 ModuleNotFoundError: No module named 'jinja2'
 ```
 
@@ -168,7 +168,7 @@ failure was not in the job.
 asserted **exactly one** outer `bst-builder` B event for `core.bst`. On
 a fresh runner there were two:
 
-```
+```text
 action=fetch  core.bst [.../9c77a3d5-fetch.<date>.log]
 action=build  core.bst [.../9c77a3d5-build.<date>.log]
 ```

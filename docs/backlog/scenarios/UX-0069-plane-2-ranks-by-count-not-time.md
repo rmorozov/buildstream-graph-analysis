@@ -84,7 +84,7 @@ CPU time, publishing count alongside rather than as the sort key, and
 naming the single-process case separately. Rendered for the three
 elements carrying the most measured CPU.
 
-```
+```text
 Where the time went inside each element (by CPU time, not count):
   components/_private/cmake-stage1.bst
     cc1plus           4352.6 CPU s (81.3%)     885 process(es), 5525.6s wall

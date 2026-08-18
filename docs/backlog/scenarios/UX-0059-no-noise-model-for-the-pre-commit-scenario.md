@@ -107,7 +107,7 @@ because `toolchain.bst` was uncached the first time. Mixing a `full` run
 into an `incremental` population inflates the spread, so the figures
 below are the six same-shape runs only.
 
-```
+```text
 26.30  26.91  27.06  27.28  27.51  27.66   (seconds)
 mean 27.121   sd 0.488 = 1.8% of mean
 median 27.171 scaled MAD 0.448
@@ -144,7 +144,7 @@ Suite: 977 → 991.
 Two real `freedesktop-sdk` captures of the **same commit** now exist, and
 the gate was run against them:
 
-```
+```text
 $ bga compare round8/run round9/run
 Verdict: REGRESSED  (total duration +101.22s, +2.9%, 3513.01s -> 3614.22s)
 ```

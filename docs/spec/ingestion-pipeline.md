@@ -7,7 +7,7 @@ of this. If you're picking up one of those tasks, read this first.
 
 ## Target architecture
 
-```
+```text
 real bst invocation (wrapper log OR raw log OR direct)
         |
         +--> tools/bst_log_to_chrome_trace.py --> Chrome Trace JSON (P4-05, done)
@@ -181,7 +181,8 @@ several wrong assumptions turned out to hide behind:
    or more *nested* START/terminal pairs for internal sub-phases**
    ("Staging sources", "Caching artifact", …), all sharing the *same*
    hash+action key. Confirmed on a real build:
-   ```
+
+   ```text
    [--:--:--][4a9059d4][build:base.bst] START   base/4a9059d4-build.log
    [--:--:--][4a9059d4][build:base.bst] START   Staging sources
    [00:00:00][4a9059d4][build:base.bst] SUCCESS Staging sources
@@ -189,6 +190,7 @@ several wrong assumptions turned out to hide behind:
    [00:00:00][4a9059d4][build:base.bst] SUCCESS Caching artifact
    [00:00:00][4a9059d4][build:base.bst] SUCCESS base/4a9059d4-build.log
    ```
+
    The pre-existing "a new START force-closes whatever's already open for
    this hash" handling would have produced 2-3 spurious short spans per
    real build task instead of one correct one - a real correctness bug
@@ -261,10 +263,12 @@ several wrong assumptions turned out to hide behind:
     verbosity, no `--verbose` needed - and it is currently dropped by
     the ingestion pipeline entirely.** Confirmed against a real `bst
     build` (BuildStream 2.7.0, from-scratch one-element project):
-    ```
+
+    ```text
     [--:--:--][        ][    main:core activity   ] START   Query cache
     [00:00:00][        ][    main:core activity   ] SUCCESS Query cache
     ```
+
     alongside sibling `main:core activity` brackets for `Build`,
     `Loading elements`, `Resolving elements`, `Initializing remote
     caches`. This is BuildStream's own `Stream.query_cache()`

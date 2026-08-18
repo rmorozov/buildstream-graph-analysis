@@ -6,7 +6,7 @@
 
 Real output, `examples/06-macro-micro-optimization`, the same project built twice - once with a serialized graph, once with the identical work correctly parallelized:
 
-```
+```text
 baseline (39.57s wall)            optimized/ (27.50s wall)
 CPU Utilisation:                  CPU Utilisation:
   Effective CPUs: 4.0               Effective CPUs: 4.0
@@ -67,7 +67,7 @@ Filed 2026-08-16. Implemented the same day. Both report blocks are pasted from r
 
 Real end-to-end re-verification against the exact pair in this doc's Motivation (`examples/06-macro-micro-optimization`, baseline and `optimized/`, real captures):
 
-```
+```text
 Dispatch Occupancy (no real CPU accounting in this run):
   Capacity: 4.0 (source: detected_host_cpu_count)
   Reconciliation: not performed (I9 needs real CPU accounting, absent here)

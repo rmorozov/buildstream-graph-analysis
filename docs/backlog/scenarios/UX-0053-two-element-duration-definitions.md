@@ -9,7 +9,7 @@ Found in round 6, by running the cross-check sweep against
 this repository since before the first audit round, and that no round had
 ever pointed the sweep at:
 
-```
+```text
 $ bga analyze -d tests/fixtures/synthetic_multi_subproject -f json
   structural.sensitivity.critical_path_us   144500000
   floors.t_infinity_observed                118000000
@@ -37,7 +37,7 @@ and after `UX-50` they collapsed it differently:
 
 The arithmetic is exactly the gap. On this fixture's critical path:
 
-```
+```text
 BUILD sum along the critical path   118.0s   <- t_infinity_observed
 FETCH sum along the same path        20.0s
 TRACK sum along the same path         6.5s

@@ -8,7 +8,7 @@
 literally `What to do next (ranked by Plane 1 impact)`. Here is all of it,
 on round 9's real capture, with the repeated body elided:
 
-```
+```text
 components/_private/cmake-stage1.bst:
   - opened no file staged by 1 declared build dependency (...) - this is evidence, not a verdict
 components/bison.bst:            - opened no file staged by 2 declared build dependencies (...)
@@ -119,7 +119,7 @@ happens to append in. `components/_private/cmake-stage1.bst` on round 9's
 capture — the element that is 43.4% of the build, whose entire row used
 to be the hedged sentence:
 
-```
+```text
 components/_private/cmake-stage1.bst:
   - holds 43% of the critical path and fixing it is worth 1569.8s (43.4% of the
     build) - already compute-bound at 3.41 cores busy, so there is nothing to gain
@@ -168,7 +168,7 @@ shares, costing it 10.3s.
 
 Counted in the join's coverage and stated in the text report:
 
-```
+```text
   N further dependency pair(s) set aside as aggregating - they stage almost nothing
   of their own, so 'nobody opened it' says nothing about them (UX-68); see
   --format json for the list

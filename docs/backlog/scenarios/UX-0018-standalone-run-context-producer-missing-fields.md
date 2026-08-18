@@ -48,7 +48,7 @@ Full suite green: 514 passed (up from 506 - 8 new tests), same 7 pre-existing en
 
 Real CLI re-verification, both producers given the same inputs:
 
-```
+```text
 $ python -m tools.bst_run_context <(printf '...same log as bst_extract_run would parse...') /tmp/rc-out.json \
     --format raw --start-time 2026-08-14T00:00:00+00:00 --native-max-jobs 4 --cpu-budget 6
 Wrote run-context.json to /tmp/rc-out.json

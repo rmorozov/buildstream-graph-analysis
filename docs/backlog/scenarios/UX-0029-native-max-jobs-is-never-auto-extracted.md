@@ -8,7 +8,7 @@
 
 Follow the repo's own documented ingestion recipe (`README.md` → "Use it on your real project") and you get:
 
-```
+```text
 $ python3 -m tools.bst_run_wrapped examples/05-cmake-cpp-toolchain /tmp/build.log \
     -- bst --builders 4 --max-jobs 4 build all.bst
 $ python3 -m tools.bst_extract_run --format wrapped examples/05-cmake-cpp-toolchain /tmp/build.log /tmp/run
@@ -26,7 +26,7 @@ and therefore, from `bga analyze -f json`, `violations: []` - the guards return 
 
 The value is not merely available - it is **already in the file the extractor just parsed**. Line 1 of every `tools/bst_run_wrapped.py` log is:
 
-```
+```text
 [wrapper][2026-08-16 18:22:59,383] INFO: Executing command: bst --builders 4 --max-jobs 4 build all.bst
 ```
 
@@ -60,7 +60,7 @@ Filed 2026-08-16 from a real session. The `run-context.json` excerpt is a real f
 
 Real end-to-end re-verification, re-extracting the exact real capture from this doc's Motivation with **no new flags** (`python3 -m tools.bst_extract_run --format wrapped ...`, against a real `bst --builders 4 --max-jobs 4 build all.bst` log):
 
-```
+```text
 native_max_jobs = 4
 native_max_jobs_source = parsed_from_invocation
 host_cpu_count = 4
@@ -69,7 +69,7 @@ scheduler = {'builders': 4, 'fetchers': 10, 'pushers': 4, 'native_max_jobs': 4}
 
 and the two sides of item 4, from real `bga analyze -d` runs on the new and the old extraction of the same build:
 
-```
+```text
 # newly extracted - guards ran, note stays clean
   Note: LB/Efficiency Score certify against this run's recorded resource capacities ... (see UX-09/UX-15).
 

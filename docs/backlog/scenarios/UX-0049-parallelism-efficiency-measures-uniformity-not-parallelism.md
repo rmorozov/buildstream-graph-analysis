@@ -15,7 +15,7 @@ efficiency = mean_width / max_width if max_width > 0 else 0.0
 
 That is the *uniformity* of the level widths - how close each level is to the widest one - which is a different question from how parallel the build is, and it is maximized by the worst possible graph. Measured directly:
 
-```
+```text
 pure chain   a->b->c->d     widths=[1, 1, 1, 1]   parallelism_efficiency = 1.000
 pure fan-out r->{x, y, z}   widths=[1, 3]         parallelism_efficiency = 0.667
 ```
@@ -72,7 +72,7 @@ Read `width_uniformity` as: low means the graph has a narrow waist somewhere, so
 
 **One thing the rename alone would have left broken.** The text report's `Parallelism Profile` line printed only `min` and `max`, so the one number that separates the two graphs was invisible to anyone reading the report rather than the JSON. It now reads:
 
-```
+```text
 run-06-baseline    Parallelism Profile: min=1.0x, avg=1.1x, max=2.0x
 run-06-optimized   Parallelism Profile: min=1.0x, avg=2.2x, max=6.0x
 ```

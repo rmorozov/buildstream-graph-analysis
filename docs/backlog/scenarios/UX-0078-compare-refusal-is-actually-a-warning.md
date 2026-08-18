@@ -12,7 +12,7 @@ a meaningless delta"). The code deliberately does the opposite — both
 checks *flag, don't block* (`bga/compare.py:191-196`, `:213-217`) — and
 the live behavior is a confident verdict over nonsense:
 
-```
+```text
 $ bga compare tests/fixtures/golden/mixed_task_kinds <real cmake run>
 Verdict: REGRESSED  (total duration +16.91s, +105668.8%, 0.02s -> 16.92s)
   Warning: baseline has 4 element(s), candidate has 11 - only 1 shared
@@ -66,7 +66,7 @@ another incremental run" advice needs the cross-mode case to stay
 The documented philosophy won: `bga compare` refuses by default, with a
 distinct exit code, and prints no comparison.
 
-```
+```text
 $ bga compare tests/fixtures/golden/mixed_task_kinds <real fdsdk run>
 Refusing to compare these runs (shared_elements):
   - baseline has 4 element(s), candidate has 126 - only 0 shared element UID(s)

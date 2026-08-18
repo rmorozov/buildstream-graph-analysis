@@ -6,7 +6,7 @@
 
 Round-2 scale probe, 1202-element run. Every section subcommand costs what the full report costs:
 
-```
+```text
 $ time bga graph        /tmp/run-scale-1200     real 1m6.827s
 $ time bga floors       /tmp/run-scale-1200     real 1m8.297s
 $ time bga utilisation  /tmp/run-scale-1200     real 1m8.340s
@@ -70,7 +70,7 @@ The map was derived by reading what each section renders in **both** formatters,
 
 ### Results, on the 1202-element scale fixture
 
-```
+```text
                 before UX-42/47     after UX-42     after UX-47
 bga graph          1m 57s              3.15s          0.99s
 bga floors         1m 08s              3.10s          0.66s

@@ -23,7 +23,7 @@ self.buckets[CPUBucket.IDLE_NO_TASKS] = idle_cpu_us
 
 Four real runs, including one built specifically to be the textbook underparallel case:
 
-```
+```text
 run-06-opt-b2j2   (--builders 2, six independent libs ready)
   Useful                  42.45s
   Idle No Tasks           72.30s
@@ -81,7 +81,7 @@ Idle capacity is then split by a boundary sweep: in each slice where at least on
 
 ### Real results
 
-```
+```text
 run-06-opt-b2j2  (--builders 2, six independent libraries)
   Useful                  42.45s
   Idle No Tasks           54.30s      (was 72.30s)

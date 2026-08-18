@@ -28,7 +28,7 @@ one artifact that would answer the question.
 Declared-vs-used (`UX-46`) returned **entirely empty** on the real
 `freedesktop-sdk` capture:
 
-```
+```text
 declared_vs_used: available: true, unused_candidates: [], used: [],
                   uncovered_elements: [], skipped: []
 ```
@@ -92,7 +92,7 @@ A real traced build of `examples/07` (BuildStream 2.7.0, real `bwrap`
 sandbox) captured three argvs of **349 tokens** each. The element name
 appears three times:
 
-```
+```text
 [ 11] --dir     buildstream/dep-usage-example/base.bst
 [ 13] --chdir   buildstream/dep-usage-example/base.bst
 [338] PWD      /buildstream/dep-usage-example/base.bst
@@ -109,6 +109,7 @@ So the next step for `UX-56` is more likely to be a mechanism *outside*
 the argv than a better field within it. This is pinned as a test so the
 next attempt starts from it rather than re-deriving it, and the decisive
 version - the same capture against a project that overrides `build-root`
+
 - is now one workflow run away.
 
 ## Settled on the real project (round 7)

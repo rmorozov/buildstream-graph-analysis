@@ -6,7 +6,7 @@
 
 Round-2 scale probe. A 1202-element run - roughly a six-minute real build - takes **68 seconds** to analyze:
 
-```
+```text
 $ time bga analyze -d /tmp/run-scale-1200
 real  1m7.784s
 
@@ -16,7 +16,7 @@ real  0m0.258s
 
 `cProfile` over the same analysis is unambiguous about where it goes:
 
-```
+```text
    ncalls  tottime   cumtime  function
         1    0.006   197.240  bga/analyzer.py:998(analyze)
         1    0.007   194.055  bga/analyzer.py:433(_compute_attribution)
@@ -82,7 +82,7 @@ Two cheap wins the doc also asked for came from the follow-up profile rather tha
 
 ### Results
 
-```
+```text
 $ time bga analyze -f json /tmp/run-scale-1200
 before   1m35.531s
 after    0m03.164s          <- 30x

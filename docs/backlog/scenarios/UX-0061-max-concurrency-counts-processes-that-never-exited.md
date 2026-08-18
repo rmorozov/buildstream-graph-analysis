@@ -6,7 +6,7 @@
 
 The real `freedesktop-sdk` capture reports:
 
-```
+```text
 process_count:   127630
 matched_count:   119590
 max_concurrency:   5268

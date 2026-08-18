@@ -27,6 +27,7 @@ A concrete, fully-worked implementation of option 5 was proposed externally: a w
 **Real strengths, confirmed by inspection**: user-space only, no elevated privileges needed (matches this doc's own "no `CAP_SYS_ADMIN`" constraint); genuinely lower overhead than options 1/3 (no polling interval, no per-syscall trap); PID-tree grouping via `getppid()`/`getpid()` is a real, workable way to associate child compile processes with their parent native build system, for the common case.
 
 **Real open risks - not yet verified, load-bearing for the design**:
+
 - **Static binaries silently evade tracing entirely.** `LD_PRELOAD` only affects dynamically-linked executables; a statically-linked toolchain component (common in bootstrap/stage toolchains, some Rust/Go tooling, musl-based builds) would produce *no* trace entry and *no error* - a silent gap in coverage the design doesn't address or even detect.
 - **PATH-shadowing `bwrap` may itself invalidate BuildStream's cache**, contradicting the design's own stated constraint #2 ("must not invalidate BuildStream artifact caches"). Whether BuildStream's cache-key computation is sensitive to the resolved `bwrap` path or to `$PATH`'s own content was not verified against BuildStream's real source in either the original design or this review - a real, unverified assumption the whole approach depends on.
 - **`LD_PRELOAD` support varies by libc** - reliable on glibc, weaker or absent in some musl-based environments (a real BuildStream sandbox base could plausibly be Alpine/musl-based) - another silent-coverage-gap risk, same class as the static-binary case.
@@ -51,6 +52,7 @@ This is a genuine, credible, well-reasoned concrete candidate for option 5 - mea
 Per the recommended-order plan's own instruction ("verify the two load-bearing, currently-unverified assumptions... before committing further work... a small real prototype against a live BuildStream sandbox answers both cheaply"), ran a real prototype against this environment's own real BuildStream 2.7.0 + bubblewrap 0.9.0 install (not a source-reading exercise alone). Findings:
 
 **Risk 1 (cache-key sensitivity to PATH-shadowing `bwrap`) - resolved, not a blocker.** Confirmed both by source and by direct empirical A/B test:
+
 - Source (`buildstream/element.py`): `_get_cache_key`'s `environment` component (`self.__cache_key_dict["environment"]`) is built from `self.__environment` - BuildStream's own *project-composited* element environment (from `project.conf`/element `environment:` blocks, filtered by a project-configurable `env-nocache` blocklist) - populated at element-loading time from project config, entirely independent of the *host* OS-level `$PATH` the `bst` process itself was launched with.
 - Empirical: `bst show --format '%{key}'` against a real fixture element (`manual.bst`) produced the byte-identical cache key (`282af023`) under two different host `$PATH` values - the normal one, and one with a directory containing a fake `bwrap` shim prepended. PATH-shadowing `bwrap` does not touch BuildStream's cache-key computation at all.
 
@@ -77,6 +79,7 @@ Built and ran a real, complete prototype against this environment's own live Bui
 **Mechanism**: a single-layer `bwrap` shim placed ahead of the real `/usr/bin/bwrap` in `$PATH`, which re-parses BuildStream's own generated `bwrap` argument list (correctly splitting bwrap's flag-args from the trailing sandboxed command, so injected args land *after* BuildStream's own root-filesystem bind rather than being wiped out by it - the first two attempts failed exactly this way: `Can't chdir to --bind` from a naive arity bug, then `Can't mkdir /trace: Read-only file system` from injecting before the real root bind instead of after), adds one `--bind` (a host-writable directory) and one `--setenv LD_PRELOAD` pointing at a real constructor/destructor-hook shared library, then execs the real `bwrap` with the modified argument list.
 
 **Result - all decisive, all real**:
+
 - The shim fired on every real `bst build` invocation (confirmed via its own log): the naive top-level `$PATH` shadow **does** penetrate to BuildStream's real sandbox creation, contradicting the external review's premise directly.
 - The real `cmake`/`make`/`gcc` build completed successfully end-to-end under the shadowed `bwrap`, including with `--unshare-user --uid 0 --gid 0 --cap-drop ALL` active (confirmed by isolated test before the full build, once an earlier hook-path bug - the compiled hook still referencing a stale path after a mid-experiment rename - was found and fixed) - `LD_PRELOAD` injection is not blocked by BuildStream's real user-namespace/capability-dropping sandbox setup.
 - **119 real per-process trace lines** were produced from one real element build: `cmake` (29), `sh` (18), `make` (11), `c++` (11), `cc1plus` (7), `as` (7), `ld` (6), `collect2` (4), `uname` (2), plus `ranlib`/`env`/`ar` - the actual compiler-driver internals (`cc1plus`, `as`, `ld`, `collect2`), not just the outer `cmake`/`make` wrappers, were captured, confirming dynamically-linked toolchain coverage is real and complete for this common case.
@@ -107,7 +110,7 @@ Design brainstorm filed 2026-08-15/16 following `UX-09`'s real, evidenced findin
 
 Real CLI end-to-end run against `examples/05-cmake-cpp-toolchain`'s `core.bst` (`bst artifact delete core.bst` first, to force a genuine non-cached rebuild):
 
-```
+```text
 $ python3 -m tools.bst_native_build_tracer run --raw-log ux11_raw.log \
     examples/05-cmake-cpp-toolchain ux11_report.json -- bst --no-colors build core.bst
 ...

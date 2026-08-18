@@ -54,7 +54,7 @@ against the audit's recollection of one.
 
 **Before — 48 lines**, of which seven blocks were interchangeable:
 
-```
+```text
   core.bst:
     - holds 42% of the critical path and fixing it is worth 9.0s (24.2% of the build), but runs at only 0.87 cores busy - it is waiting, not computing, and its native build asked for -j1: ...
     - 81% of its measured CPU is one binary, `cc1plus` (10 process(es), 9 CPU s) - ...
@@ -69,7 +69,7 @@ against the audit's recollection of one.
 
 **After — 21 lines:**
 
-```
+```text
   core.bst:
     - holds 42% of the critical path and fixing it is worth 9.0s (24.2% of the build), but runs at only 0.87 cores busy - it is waiting, not computing, and its native build asked for -j1: remove `notparallel` / raise its job count before touching its sources
     - 81% of its measured CPU is one binary, `cc1plus` (10 process(es), 9 CPU s) - this element is a `cc1plus` problem, so look there before anywhere else

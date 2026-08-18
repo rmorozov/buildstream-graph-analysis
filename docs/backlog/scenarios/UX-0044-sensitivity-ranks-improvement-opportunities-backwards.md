@@ -6,7 +6,7 @@
 
 `bga analyze` on a real capture of `examples/06-macro-micro-optimization` (11 elements, 39.57s wall):
 
-```
+```text
 Top Improvement Opportunities (best-case speedup 1.05x if all 2.00s of improvable time were eliminated):
   - lib-a.bst: sensitivity 0.40 (40.0% impact)
   - lib-b.bst: sensitivity 0.40 (40.0% impact)
@@ -17,7 +17,7 @@ Top Improvement Opportunities (best-case speedup 1.05x if all 2.00s of improvabl
 
 The element durations in that same run:
 
-```
+```text
   core.bst        14.01s      <- 35% of the whole build, and the one element pinned to -j1
   app.bst          4.22s
   codegen.bst      4.00s
@@ -104,7 +104,7 @@ The score is that saving as a fraction of the critical path - a real 0..1 quanti
 
 **4. The relationship to `certified_headroom`, stated where both appear.** The report block now reads:
 
-```
+```text
   Top Improvement Opportunities (critical path 36.25s; structural ceiling 9.06x, i.e. up to
   32.25s off it if every critical-path element were free):
     - core.bst: up to 10.00s off the finish (27.6%)

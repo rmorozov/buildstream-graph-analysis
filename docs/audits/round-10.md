@@ -1,7 +1,9 @@
 # Audit round 10: the user's walk, end to end
 
 Run on 2026-08-18 in a fresh environment: clean venv, BuildStream 2.7.0
+
 + buildstream-plugins, real `bwrap` sandboxes, gcc 13 / cmake 3.28
+
 staged by `examples/stage_cpp_toolchain.sh`, 4-core / 16 GB Linux host —
 deliberately the same shape as the environment every prior number came
 from, but set up from nothing by following the docs, which is itself

@@ -36,7 +36,7 @@ lint: lint-docs
 # no equivalent, so tests/unit/test_docs_links_and_commands.py owns that
 # one - which is the defect this repo actually shipped, five times.
 lint-docs:
-	python3 -m pymarkdown --config .pymarkdown.json scan README.md docs/
+	python3 -m pymarkdown --config .pymarkdown.json scan -r README.md docs/
 
 # Local dev convenience: analyze a checked-in sample fixture and print a
 # real report - one command from "I changed some code" to "I can see

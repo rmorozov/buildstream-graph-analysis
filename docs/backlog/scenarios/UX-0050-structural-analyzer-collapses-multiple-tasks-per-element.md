@@ -6,7 +6,7 @@
 
 Found by the cross-check sweep `docs/design/directions.md` named as its own un-run item: comparing quantities that are computed independently and ought to agree. Two of them disagree, on a real capture:
 
-```
+```text
 $ bga analyze -f json <run-06-optimized>
   floors.t_infinity_observed            20.35s     <- the observed critical path
   structural.sensitivity.critical_path_us  11.35s  <- the same quantity, 9.00s short
@@ -24,7 +24,7 @@ tasks_dict = {t.task_key.element_uid: t for t in self.normalized_tasks}
 
 Every element in a real BuildStream run has **more than one task** - at minimum a `FETCH` and a `BUILD`. A dict comprehension keyed on the element UID silently keeps whichever came **last** in `normalized_tasks`. When that is the `FETCH`, the structural analyzer sees a zero-duration element:
 
-```
+```text
 tasks_dict[core.bst]   -> kind=TaskKind.FETCH  dur=0.0s     (its BUILD is 9.0s)
 tasks_dict[lib-a.bst]  -> kind=TaskKind.BUILD  dur=9.0s
 ```
@@ -35,7 +35,7 @@ tasks_dict[lib-a.bst]  -> kind=TaskKind.BUILD  dur=9.0s
 
 On `run-06-optimized`, the two **heaviest** elements in the build are the two that get zeroed:
 
-```
+```text
 elements whose structural duration is understated: 2 of 11
   core.bst      sees 0.00s, real max 9.00s
   codegen.bst   sees 0.00s, real max 6.00s
@@ -43,7 +43,7 @@ elements whose structural duration is understated: 2 of 11
 
 and the ranking that results omits both:
 
-```
+```text
 Top Improvement Opportunities (critical path 11.35s; structural ceiling 2.80x ...):
   - lib-a.bst: up to 4.95s off the finish (43.6%)
   - lib-b.bst: up to 4.95s off the finish (43.6%)
@@ -102,7 +102,7 @@ Both disagreeing cross-checks now agree exactly, on every real capture:
 
 And the ranking recovers the element it had been dropping:
 
-```
+```text
 Top Improvement Opportunities (critical path 20.35s; structural ceiling 2.02x ...):
   - core.bst: up to 4.95s off the finish (24.3%)
   - lib-a.bst: up to 4.95s off the finish (24.3%)

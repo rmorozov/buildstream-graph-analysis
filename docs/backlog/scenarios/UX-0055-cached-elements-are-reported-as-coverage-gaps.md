@@ -9,7 +9,7 @@ third-party project: `freedesktop-sdk`, 126 elements, of which **25 were
 rebuilt from source and 101 were already cached** — the exact shape of
 every incremental CI build.
 
-```
+```text
 Confidence:
   Overall: 0.82 (high)
   Failed Hard Gates: critical_path_coverage_full

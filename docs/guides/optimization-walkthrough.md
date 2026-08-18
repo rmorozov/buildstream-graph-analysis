@@ -28,7 +28,7 @@ build target. Every element's "real work" is a `sleep N` in its
 BuildStream log with real timing, without needing an actual compiler
 toolchain in this environment).
 
-```
+```text
 runtime.bst -> base-config.bst -> base-generate.bst -> core.bst -+-> lib-a.bst -+-> app.bst -> all.bst
                                                                   +-> lib-b.bst -+
                                                                   +-> lib-c.bst -+
@@ -37,7 +37,7 @@ runtime.bst -> base-config.bst -> base-generate.bst -> core.bst -+-> lib-a.bst -
 
 ## Iteration 0: build and extract
 
-```
+```text
 $ bst --builders 2 build all.bst
 ...
 Pipeline Summary
@@ -54,7 +54,7 @@ a file and parsed with `--format raw` - see the note at the end of this
 document on why (`docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md`), then
 extracted with `tools/bst_extract_run.py --format wrapped`:
 
-```
+```text
 $ bga wrap examples/04-critical-path-optimization \
     build-baseline-b2.log -- bst --builders 2 build all.bst
 $ bga extract --format wrapped \
@@ -64,7 +64,7 @@ Wrote run directory to run-baseline-b2 - targets=['all.bst'], 10 elements, 19 de
 
 ## Iteration 1: what does `bga` say to look at first?
 
-```
+```text
 $ bga analyze run-baseline-b2
 ============================================================
 Build Efficiency Report
@@ -92,6 +92,7 @@ Attribution Breakdown:
   Untracked Head Us             1.28s ( 12.1%)
   Untracked Tail Us             0.17s (  1.6%)
 ```
+
 (full report also includes CPU Utilisation, Structural Analysis, and Pipeline
 Overhead sections, omitted here for length - see the actual command output
 for those.)
@@ -116,14 +117,14 @@ a scheduling fix, not a code change.
 
 No project change needed - just more real concurrency:
 
-```
+```text
 $ bga wrap examples/04-critical-path-optimization \
     build-baseline-b4.log -- bst --builders 4 build all.bst
 $ bga extract --format wrapped \
     examples/04-critical-path-optimization build-baseline-b4.log run-baseline-b4
 ```
 
-```
+```text
 $ bga compare run-baseline-b2 run-baseline-b4
 ============================================================
 Run Comparison
@@ -154,7 +155,7 @@ delta instead of eyeballing two separate reports.
 With `Certified Headroom` at zero, `bga`'s own re-run report on
 `run-baseline-b4` says what's next:
 
-```
+```text
 $ bga analyze run-baseline-b4
   Efficiency Score: 1.00 (very efficient - remaining gains are mostly in
     reducing Critical Path's own work, not scheduling)
@@ -175,6 +176,7 @@ it.
 Inspecting the project against that hint surfaces two real, fixable things
 that weren't visible from the report alone (the report says *what* has high
 leverage, not *why* it's slow - that inspection is still the human's job):
+
 1. `base-config.bst` -> `base-generate.bst` is an unnecessary two-step split
    - `base-generate.bst` has no real dependency on `base-config.bst`'s
      *output*, just an artificial ordering.
@@ -191,14 +193,14 @@ just the same project under different flags, but two genuinely different
 project variants, which is exactly what the `optimized/` subdirectory
 convention (`docs/backlog/scenarios/UX-05`'s own ask) is for.
 
-```
+```text
 $ bga wrap examples/04-critical-path-optimization/optimized \
     build-optimized-b4.log -- bst --builders 4 build all.bst
 $ bga extract --format wrapped \
     examples/04-critical-path-optimization/optimized build-optimized-b4.log run-optimized-b4
 ```
 
-```
+```text
 $ bga compare run-baseline-b4 run-optimized-b4
 ============================================================
 Run Comparison
@@ -220,7 +222,9 @@ Confidence:
 
 `T∞` itself (the observed critical path) dropped by exactly the 3.10s the two
 changes should save (1s from the merged `base` step, 2s from `core.bst`'s cut)
+
 - real confirmation the structural fix worked, not just a scheduling
+
 rearrangement (`Certified Headroom` stayed at 0.00s both times, since there
 was never any scheduling slack left to recover here - all of this iteration's
 gain is `efficiency_score`'s "critical path's own work" axis, exactly as
@@ -231,7 +235,7 @@ tool surfaces as a caveat on the comparison rather than hiding it.
 
 ## The full before/after
 
-```
+```text
 $ bga compare run-baseline-b2 run-optimized-b4
 Verdict: IMPROVED  (total duration -5.10s, -48.1%, 10.60s -> 5.50s)
 ```

@@ -45,7 +45,7 @@ Full suite green: 562 passed (up from 552 - 10 new tests), same 7 pre-existing e
 
 Real CLI re-verification (`bga analyze ... --format text`) against a hand-built run with two real `max_jobs=4` overrides on a `host_cpu_count=4`, `builders=4` run:
 
-```
+```text
 Large Serialization Point Risk (per-element max-jobs, real concurrent-dispatch risk):
     - elements llvm1.bst and llvm2.bst are both configured near full core parallelism and can dispatch concurrently under builders=4 - consider a lower per-element max-jobs for one, or reducing builders for this graph shape
 ```

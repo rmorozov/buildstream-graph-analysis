@@ -27,7 +27,7 @@ costs:
 Two of the elements in that right-hand column are among the heaviest in
 the entire build and **appear in no report the tool produces today**:
 
-```
+```text
   1569.8s  ON-PATH   components/_private/cmake-stage1.bst
    672.1s  ON-PATH   components/openssl.bst
    639.8s  ON-PATH   components/python3.bst
@@ -47,7 +47,7 @@ only by spending two fix-and-recapture cycles to find it.
 The same simulation answers "can two people work on this at once", and
 the answer here is yes, with a number:
 
-```
+```text
 individual:  cmake-stage1 1569.8s | openssl 522.5s | doxygen 513.5s
 sum:         2605.8s
 joint (all three zeroed together):  2605.8s  = 72% of the build
@@ -149,7 +149,7 @@ answering:
 Three new signals, all published in `--format json` and rendered in
 `Key Findings`, computed in 17 ms on the real 126-element graph:
 
-```
+```text
   Together, the top 3 are worth 2605.8s (72% of the build) - exactly the sum of
   their individual savings, so they are three separate pieces of work that do not overlap
   Work them in this order (by what a fix is worth, not by size), with what the build

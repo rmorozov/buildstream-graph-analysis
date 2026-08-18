@@ -106,7 +106,7 @@ Real, and the sharpest of the five. The step was
 `pytest … | tee /tmp/bst-tier.txt`, whose exit status is `tee`'s.
 Demonstrated:
 
-```
+```text
 $ bash -c 'python3 -c "raise SystemExit(1)" | tee /dev/null'; echo $?
 0
 $ bash -c 'set -o pipefail; python3 -c "raise SystemExit(1)" | tee /dev/null'; echo $?

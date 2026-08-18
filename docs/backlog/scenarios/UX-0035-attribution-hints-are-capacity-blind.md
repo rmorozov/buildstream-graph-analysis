@@ -6,7 +6,7 @@
 
 `UX-04` added a static per-category "what to do about it" line under Biggest Opportunity. The hints are constant strings, chosen by attribution category alone. Real run, `examples/06-macro-micro-optimization/optimized`, `bst --builders 4 --max-jobs 4` on a **4-core** host:
 
-```
+```text
   Biggest Opportunity: 32.7% of wall-clock time is RESOURCE WAIT (9.00s)
     -> a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a higher N,
        or `bga sweep` to find the real knee point
@@ -65,7 +65,7 @@ Filed 2026-08-16. Implemented the same day. The hint text is pasted from a real 
 
 Real end-to-end re-verification. A genuinely oversubscribed real capture was made for this - `examples/06-macro-micro-optimization/optimized` built at `--builders 8 --max-jobs 8` on the same real 4-core host, i.e. `UX-09`'s own measured-slower configuration:
 
-```
+```text
 $ bga analyze -f json -d /tmp/run-06-opt-b8j8 | jq '.capacity_verdict, .attribution_hints.resource_wait_us'
 {"oversubscribed": true, "undersubscribed": false, "checks_ran": true, "skipped_inputs": []}
 
@@ -76,7 +76,7 @@ $ bga analyze -f json -d /tmp/run-06-opt-b8j8 | jq '.capacity_verdict, .attribut
 
 and the same run's Violations block confirms the verdict is the real check's, not a second one:
 
-```
+```text
 Violations (2):
   - oversubscription: builders=8 x native max-jobs=8 = 64 potential concurrent processes vs a
     4-core host (16.0x the cores) - past the ratio UX-09 measured as genuinely slower...
@@ -85,7 +85,7 @@ Violations (2):
 
 The third branch is confirmed on the original capture from this doc's Motivation, which predates `UX-29` and therefore genuinely has no capacity verdict:
 
-```
+```text
   Biggest Opportunity: 32.7% of wall-clock time is RESOURCE WAIT (9.00s)
     -> a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity would help
        depends on how loaded this host already is, and this run's capacity checks could not run

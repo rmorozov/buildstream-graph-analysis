@@ -17,7 +17,7 @@ thing it produced end to end was a recommendation that is probably wrong.
 
 `bga correlate` renders it as:
 
-```
+```text
 components/_private/cmake-stage1.bst:
   - declares 1 build dependency it never read (public-stacks/runtime-minimal.bst)
     - removing the edge is free and widens the graph

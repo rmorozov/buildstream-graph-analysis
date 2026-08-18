@@ -10,7 +10,7 @@ For a **build-efficiency** CI gate that is the wrong question, in three concrete
 
 **1. It fires on noise.** Same project, same source tree, only the scheduler flags changed:
 
-```
+```text
 $ bga compare /tmp/run-06-optimized /tmp/run-06-opt-b2j2 --fail-on-regression
 Verdict: REGRESSED  (total duration +1.19s, +4.3%, 27.50s -> 28.69s)
 $ echo $?
@@ -64,6 +64,7 @@ All four properties, as an **independent second gate** rather than a change to t
 **1. The metric.** `occupancy_ratio` (`UX-27`), already published in `floors` and already in `bga compare`'s deltas. Nothing new was ingested for this.
 
 **2. Two knobs, both in `bga compare`.**
+
 - `--fail-on-efficiency-regression` + `--max-efficiency-drop PP` - the delta gate, in **percentage points** rather than relative percent (a 5% relative drop means something very different at 60% occupancy than at 10%, and the noise this is calibrated against is itself an absolute spread).
 - `--min-efficiency RATIO` - the absolute floor, consulting no baseline at all. It needs no other flag to activate, which is what makes it usable on a first run and what stops a slow drift no single delta ever trips.
 
@@ -71,7 +72,7 @@ All four properties, as an **independent second gate** rather than a change to t
 
 **4. A derived default.** The doc asked for a threshold "derived rather than guessed... from repeated captures of an unchanged project on the target runner". Three such captures were taken (`examples/06-macro-micro-optimization/optimized`, `bst --builders 4 --max-jobs 4`, artifact cache cleared between each):
 
-```
+```text
   run 1: wall 25.98s   occupancy 60.0%   efficiency_score 0.81
   run 2: wall 25.94s   occupancy 59.9%   efficiency_score 0.81
   run 3: wall 24.07s   occupancy 59.0%   efficiency_score 0.81
@@ -91,7 +92,7 @@ Filed 2026-08-16. Implemented the same day. Both `bga compare --fail-on-regressi
 
 Real end-to-end re-verification. A throwaway variant of `examples/06-macro-micro-optimization/optimized` with **two more well-parallelized libraries** was built for this - real added work, added the right way - alongside the existing real captures:
 
-```
+```text
 ### the case this gate exists for: two fan-out libraries added
 $ bga compare runs/baseline runs/grown --fail-on-regression
   exit=4        Regression gate FAILED: total duration +2.5% (25.98s -> 26.64s)
@@ -107,7 +108,7 @@ The build genuinely got slower, and the new work was added *well* - occupancy ro
 
 The three regressing cases, all against real captures:
 
-```
+```text
 ### graph serialized + one element pinned to -j1
 $ bga compare runs/optimized runs/mis-optimized --fail-on-efficiency-regression ; echo $?
 Efficiency gate FAILED: dispatch occupancy fell 35.2pp (63.0% -> 27.8%), beyond the default 5.0pp.

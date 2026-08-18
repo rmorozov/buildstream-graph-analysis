@@ -11,7 +11,7 @@ valid against the declared graph and zero unmatched sandboxes.
 `bga correlate` still refuses the join, and its message now contradicts
 itself:
 
-```
+```text
 NO USABLE JOIN: Plane 2's element attribution is unreliable.
   only 109873 of 127629 traced processes (86.1%) carry a name that looks
   like a BuildStream element; the largest bucket is
@@ -178,7 +178,7 @@ an empty set and the check is skipped rather than rejecting every row.
 On round 9's real capture it names exactly the three fictions and keeps
 all eight real rows:
 
-```
+```text
   3 Plane 2 name(s) are not declared elements and are excluded from the rows
   below: buildstream-build, flit_core, unknown
 ```

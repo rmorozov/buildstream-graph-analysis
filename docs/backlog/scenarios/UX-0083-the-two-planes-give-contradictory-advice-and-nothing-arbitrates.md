@@ -68,7 +68,7 @@ inside the sandboxes.
 
 On the published `freedesktop-sdk` capture:
 
-```
+```text
 $ bga sweep capture/run --resource PROCESS --plane2 capture/native-report.json
 Knee point (PROCESS): capacity 2 (diminishing returns beyond this)
   Plane 2 measured 3.25 of 4 cores busy over this run - the host was already
@@ -129,7 +129,7 @@ The fix shipped verified against a freedesktop-sdk capture
 macro-fixed capture the task was filed about. Round 11 ran the filed
 acceptance on that retained capture:
 
-```
+```text
 $ bga analyze <run-macro> --plane2 <plane2-macro.json>
   Biggest Opportunity: 31.9% of wall-clock time is RESOURCE WAIT (8.00s)
     -> core.bst asked its native build for -j1 while the rest of this

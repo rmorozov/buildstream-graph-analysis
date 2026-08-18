@@ -6,7 +6,7 @@
 
 Round-2 scale probe, 1202-element run:
 
-```
+```text
 Structural Analysis:
   Elements: 1202, Edges: 3500, Max Depth: 13
   Bottlenecks Identified: 606 - layer01/mod003.bst, layer01/mod004.bst, layer01/mod007.bst,
@@ -60,7 +60,7 @@ A choke point is now an element that **nothing else can overlap with**: every ot
 
 Dominance asks *"does every **path** to B pass through A"*, which is the right question for a control-flow graph, where exactly one path is taken at run time. BuildStream dependencies are **conjunctive** - every predecessor must finish, so all paths are taken. On the 1202-element fixture, where each module depends directly on `toolchain.bst`, the measurement is decisive:
 
-```
+```text
 $ nx.immediate_dominators(G + virtual root)
 nodes whose immediate dominator is the virtual root: 1201 of 1202
 ```

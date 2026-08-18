@@ -91,7 +91,7 @@ There are two CI scenarios and they answer different questions:
 The capture below is the second kind, and `bga` says so before any
 number, because it changes what those numbers are *about*:
 
-```
+```text
 Incremental run (caches on): BuildStream skipped elements it had already built,
 2 of them on the critical path. Coverage and the floors below describe the work
 this run actually did, not the whole project - compare against another
@@ -122,7 +122,7 @@ bga analyze /tmp/run
 
 Real output, top of the report:
 
-```
+```text
 Key Findings:
   Incremental run (caches on): BuildStream skipped elements it had already built, 2 of them on the critical path...
   Confidence: 1.00 (high)
@@ -198,7 +198,7 @@ is heading towards.
 
 ## Step 4 — floors: is this a scheduler, graph, or work problem?
 
-```
+```text
 Certified Floors:
   T∞ (observed critical path): 3610.50s
   LB (resource lower bound):   3610.50s
@@ -239,7 +239,7 @@ Both of the first two numbers went the wrong way. See
 
 You will see a wait category instead, with a next step attached to it:
 
-```
+```text
   Biggest Opportunity: 70.1% of wall-clock time is RESOURCE WAIT (250.25s)
     -> a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a
        higher N, or `bga sweep` to find the real knee point
@@ -281,7 +281,7 @@ bga capture report /tmp/plane2.json
 **Real CPU time**, which is the one measurement that separates "this
 element is expensive" from "this element is waiting":
 
-```
+```text
 Real CPU time (getrusage): 11744.07s across 119492 of 127627 traced processes
   components/_private/cmake-stage1.bst 5351.14s CPU over 1567.12s wall =  3.41 cores busy  [84% of processes measured]
   components/doxygen.bst               1825.48s CPU over  512.62s wall =  3.56 cores busy  [80% of processes measured]
@@ -301,7 +301,7 @@ zero.
 
 **Where that CPU went**, ranked by time rather than by invocation count:
 
-```
+```text
 Where the time went inside each element (by CPU time, not count):
   components/_private/cmake-stage1.bst
     cc1plus           4352.6 CPU s (81.3%)     885 process(es), 5525.6s wall
@@ -324,7 +324,7 @@ Ranking by count would have hidden both. `as` runs 1918 times to
 **Peak memory**, which is how you decide whether you can raise
 `--builders` at all:
 
-```
+```text
 Peak Memory (largest single process per element):
   components/_private/cmake-stage1.bst       1901.9 MB  (10057 of 11974 processes measured)
   components/doxygen.bst                     1491.6 MB  (913 of 1139 processes measured)
@@ -337,7 +337,7 @@ something like it need ~7.6 GB. That is a hard constraint on
 
 **Work repeated across elements:**
 
-```
+```text
 Redundant cross-element operations (329 found, 42 above 0.05s):
   30x across 2 elements (components/bison.bst, components/doxygen.bst) - up to 20.401s
     recoverable wall-clock (worst element: components/doxygen.bst)
@@ -366,7 +366,7 @@ The join says both, about the same element, ranked by whole-build impact:
 bga correlate /tmp/run /tmp/plane2.json
 ```
 
-```
+```text
 PARTIAL ATTRIBUTION - the rows below are correct for the elements they name,
 and say nothing about the rest:
   109873 of 127627 traced processes (86.1%) are attributed to a named element;
@@ -503,7 +503,7 @@ added elements and so does not dilute:
 bga compare runs/baseline runs/candidate --fail-on-inefficient-additions
 ```
 
-```
+```text
 New this change: g.bst, h.bst - 8.0s of work added, 8.0s of it on the critical path
 (stretch 1.00)
 ```
@@ -579,7 +579,7 @@ incremental-run caveat anywhere in the report. Its critical path is the
 project's real one for that target, not a chain through a rebuilt
 subset:
 
-```
+```text
 Where the time is: 3 element(s) are 99.7% of the 1980.5s critical path
   bootstrap/build/gcc-stage1.bst  1248.7s (63.0% of path)  -> fixing it saves 1248.7s
   bootstrap/base-sdk/gettext.bst   725.9s (36.6% of path)  -> fixing it saves  110.1s

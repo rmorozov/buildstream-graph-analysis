@@ -89,7 +89,7 @@ Full suite green: 526 passed (up from 517 - 9 new tests), same 7 pre-existing en
 
 Real end-to-end re-verification against `examples/04-critical-path-optimization/optimized`, re-extracted with `tools/bst_extract_run.py --native-max-jobs 8` (builders=4, host_cpu_count=4 - real demand 4x8=32 vs BuildStream's own 4x4=16 default for that ceiling):
 
-```
+```text
 effective_cpus: 4.0 source: detected_host_cpu_count
 potential_oversubscription: True
 oversubscription_evidence: LOW

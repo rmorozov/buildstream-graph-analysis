@@ -13,7 +13,7 @@ is never installed, and a console-script entry point does not put the
 current working directory on `sys.path`. Reproduced in a clean venv
 (`pip install -e .`, BuildStream 2.7.0 present), **from the repo root**:
 
-```
+```text
 $ bga capture run --wrapped-log /tmp/p1.log --trace-opens \
     examples/06-macro-micro-optimization /tmp/p2.json -- bst build all.bst
 ...
@@ -57,7 +57,7 @@ Make the dispatch work from any install:
 In a fresh venv, `pip install <built wheel>` (not editable, not from the
 repo directory), `cd` to an empty directory, and run:
 
-```
+```text
 bga extract --help
 bga capture --help
 ```
@@ -71,7 +71,7 @@ must be added so the packaging cannot regress silently.
 Reproduced first, exactly as filed — a built wheel, a clean venv, an
 empty working directory:
 
-```
+```text
 $ /tmp/pkgvenv/bin/bga extract --help
 ...
 ModuleNotFoundError: No module named 'tools'

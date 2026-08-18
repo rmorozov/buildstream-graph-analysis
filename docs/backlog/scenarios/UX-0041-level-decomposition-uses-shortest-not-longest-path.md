@@ -8,7 +8,7 @@ Found by the round-2 scale probe (`docs/design/directions.md`'s own next-round i
 
 The graph genuinely has 14 levels of width ~100. `bga` reports 3:
 
-```
+```text
 $ bga analyze -f json /tmp/run-scale-1200 | jq .structural.parallelism
   levels:         [0, 1, 2]
   width_at_level: [1, 1200, 1]
@@ -17,7 +17,7 @@ $ bga analyze -f json /tmp/run-scale-1200 | jq .structural.parallelism
 
 against the correct longest-path decomposition, computed independently over the same `graph.json`:
 
-```
+```text
   correct levels: 14   widths = [1, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 1]
 ```
 
@@ -27,7 +27,7 @@ Two independent numbers in the same report block therefore contradict each other
 
 **This is not a scale artifact - it is already wrong on the small example projects, where it reads as a plausible number.** Real `bga analyze -f json` output for `examples/06-macro-micro-optimization` (11 elements):
 
-```
+```text
   reported: levels = [0, 1, 2]   width_at_level = [1, 9, 1]   max_depth = 9
   correct:  levels = 10          widths = [1, 2, 1, 1, 1, 1, 1, 1, 1, 1]
 ```

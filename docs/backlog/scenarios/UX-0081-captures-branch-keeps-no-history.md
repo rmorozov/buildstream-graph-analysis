@@ -93,7 +93,7 @@ asked for a band got the rule it was trying to replace, with no way to
 know. That silence was defensible while three captures were impossible to
 obtain; this task is what makes them obtainable, so it is now named:
 
-```
+```text
 No noise band: 2 baseline run(s) supplied, 3 required - 1 more of the same shape
 would replace the fixed 1% significance rule used here
 ```
@@ -132,7 +132,7 @@ run `32122941503` — the first started *after* the fix merged — completed
 successfully at 10:46 UTC and its "Publish the capture to a branch" step
 did exactly what the design says:
 
-```
+```text
 $ git ls-remote --heads origin 'refs/heads/captures/*'
 d8cff143...  refs/heads/captures/fdsdk-latest
 5eda28a1...  refs/heads/captures/fdsdk/953683fb-incremental-b4j4-32064333551
@@ -170,13 +170,13 @@ three are the same freedesktop-sdk commit
 **5.8% spread with nothing changed.** Under the fixed 1% rule, comparing
 the first against the third:
 
-```
+```text
 Verdict: IMPROVED  (total duration -208.44s, -5.8%, 3614.22s -> 3405.78s)
 ```
 
 Judged against the band those same three runs define:
 
-```
+```text
 Verdict: NO SIGNIFICANT CHANGE  (total duration -208.44s, -5.8%, 3614.22s -> 3405.78s)
   Judged against a noise band from 3 baseline run(s): 3307.03s .. 3561.82s
   - median 3434.43s +/- 3x42.47s (scaled MAD)

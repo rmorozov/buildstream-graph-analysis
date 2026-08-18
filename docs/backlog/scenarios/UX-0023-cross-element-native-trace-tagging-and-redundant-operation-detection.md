@@ -8,7 +8,7 @@
 
 **Confirmed real, not speculative** - `tools.bst_native_build_tracer` wraps the *whole* `bst build` invocation, so a multi-element build already produces traced processes from every element's own sandbox in one raw log; the only thing missing is knowing *which* element each process belongs to. Ran a real, fully-fresh (`bst artifact delete` on every element first) `bst build all.bst` against `examples/05-cmake-cpp-toolchain` (6 real cmake elements: `core`, `lib-a..d`, `app`) under the tracer:
 
-```
+```text
 $ python3 -m tools.bst_native_build_tracer run --raw-log all_raw2.log \
     examples/05-cmake-cpp-toolchain all_report2.json -- bst --no-colors build all.bst
 ```
@@ -51,7 +51,7 @@ Implemented for real the same day. 15 new tests, full suite green: 628 passed (u
 
 Real end-to-end re-verification against `examples/05-cmake-cpp-toolchain`'s `all.bst` (all 6 elements, `bst artifact delete` on every element first for a fully fresh capture):
 
-```
+```text
 $ python3 -m tools.bst_native_build_tracer run --raw-log ux23_raw.log \
     examples/05-cmake-cpp-toolchain ux23_report.json -- bst --no-colors build all.bst
 ```

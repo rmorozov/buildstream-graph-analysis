@@ -80,7 +80,7 @@ the `\|` escape understood*.
 PyMarkdown catches **none** of it. Reconstructed the round-11 defect
 exactly — a 6-column header with a row quoting a jq pipeline — and:
 
-```
+```text
 $ python3 -m pymarkdown scan unescaped-pipe.md
 unescaped-pipe.md:5:1: MD013: Line length [Expected: 80, Actual: 95]
 ```
@@ -92,7 +92,7 @@ MD001–MD048**, and the table rules are markdownlint v0.34+ additions —
 `MD055` (table pipe style) and `MD056` (table column count) have no
 PyMarkdown equivalent:
 
-```
+```text
 $ python3 -m pymarkdown plugins list | grep -oE '^  md[0-9]+' | sort | tail -1
   md048
 ```
@@ -121,7 +121,7 @@ fixed.
 
 The round-11 sweep found five. The test found a sixth on its first run:
 
-```
+```text
 docs/backlog/scenarios/README.md:116: 7 cells against a 6-cell header
 ```
 

@@ -6,7 +6,7 @@
 
 Found in the same real walkthrough as `UX-25` (`bga analyze` against a fresh real `examples/05-cmake-cpp-toolchain` capture). Real output from `UX-20`'s batch/map-reduce reporting:
 
-```
+```text
 Batch Opportunities (independent elements, simulated combined effect):
     - lib-a.bst, lib-b.bst: fixing all together -> makespan 6.40s -> 6.40s (saves 0.00s combined, vs. lib-a.bst=0.00s, lib-b.bst=0.00s fixed alone)
 ```

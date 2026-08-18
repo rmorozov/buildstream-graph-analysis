@@ -26,7 +26,7 @@ Join the planes. The design question - explicit join versus merging the planes i
 1. **Is a merged capture needed?** No. `UX-24` already runs one real `bst build` and emits both artifacts: `bst_native_build_tracer.py run --wrapped-log`. Verified again for this task - one invocation produced `/tmp/seam-plane1.log` and `/tmp/seam-plane2.json`.
 2. **Does a join key exist, and is it exact?** Yes, and yes. Plane 1 is keyed by element UID; `UX-23` tags every traced process with its owning element. On the real dual capture:
 
-   ```
+   ```text
    Plane 1 elements: 11
    Plane 2 elements: 9
    exact intersection: 9
@@ -45,7 +45,7 @@ So the contract between the planes is **one string** - the element UID - and the
 
 Real output, from one `bst --builders 4 --max-jobs 4 build all.bst` of `examples/06-macro-micro-optimization` captured with `--wrapped-log --trace-opens`:
 
-```
+```text
 Joined 9 element(s) on element UID (11 in Plane 1, 9 traced in Plane 2)
 
 What to do next (ranked by Plane 1 impact):

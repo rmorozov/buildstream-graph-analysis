@@ -9,7 +9,7 @@ GitHub-hosted runner whose sandbox could not start. Four elements were
 attempted. **All four failed.** `bga analyze` on the resulting run
 directory opens:
 
-```
+```text
 Total Duration: 5.3s
 
 Key Findings:
@@ -55,7 +55,7 @@ BuildStream states each task's terminal status in its own log, and
 `tools/bst_log_to_chrome_trace.py` already carries it through — every End
 event in the chrome trace of this capture has `args.Status`:
 
-```
+```text
 components/openssl.bst [...]  FAILURE
 components/which.bst [...]    FAILURE
 components/ninja.bst [...]    FAILURE
@@ -130,7 +130,7 @@ low-confidence fail-open.
 
 Verified on the real capture:
 
-```
+```text
 Key Findings:
   THIS BUILD FAILED: 4 element(s) ended in FAILURE (components/_private/
   python3-flit-core.bst, components/ninja.bst, components/openssl.bst, ...)

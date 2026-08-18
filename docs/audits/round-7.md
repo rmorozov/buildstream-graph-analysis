@@ -48,7 +48,7 @@ of them blocked wrappers, not cores in use.
 
 **`UX-63` — peak memory is real, and immediately actionable.**
 
-```
+```text
 components/_private/cmake-stage1.bst   1902.0 MB  measured 10057/11974
 components/doxygen.bst                 1491.6 MB  measured  913/1139
 ```
@@ -68,7 +68,7 @@ block. It was gated on element names being real, which is `UX-56`.
 This is the decisive artefact, from a project that really does override
 `build-root`, and the answer is conclusive.
 
-```
+```text
 [ 11] --dir     buildstream-build/flit_core
 [ 13] --chdir   buildstream-build/flit_core
 [370] PWD      /buildstream-build/flit_core
@@ -99,7 +99,7 @@ The correlation ran and did real work — **19,024 processes relabelled**
 across 6 correctly-identified elements — but resolved only 6 of 25
 sandboxes:
 
-```
+```text
 certain 6, deduced 0, ambiguous 18, conflicting 1, unmatched 0
 ```
 

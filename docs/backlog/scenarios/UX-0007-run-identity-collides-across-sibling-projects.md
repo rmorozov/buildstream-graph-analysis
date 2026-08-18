@@ -6,7 +6,7 @@
 
 Found while using `bga compare` for real on UX-05's baseline vs. `optimized/` example projects (`examples/04-critical-path-optimization` and `examples/04-critical-path-optimization/optimized` - two genuinely different BuildStream projects, different `elements/`, different element counts, living as sibling directories inside the same git repository/commit). Both runs' extracted `run-context.json` reported the **exact same** `run_identity.manifest_hash`:
 
-```
+```text
 run-baseline-b4:  "manifest_hash": "eed010f3be8749d7e2039035a2e627476dfb1b392a647329b5ace0c11f777c2f"
 run-optimized-b4: "manifest_hash": "eed010f3be8749d7e2039035a2e627476dfb1b392a647329b5ace0c11f777c2f"
 ```
@@ -58,7 +58,7 @@ Fixed and re-verified for real, 2026-08-16. New unit tests in `tests/unit/test_b
 
 Real end-to-end re-verification against this doc's own cited projects, rebuilt fresh with real BuildStream 2.7.0 (`bst --no-colors build all.bst`) and re-extracted with `tools/bst_extract_run.py --format raw`:
 
-```
+```text
 baseline manifest_hash:  d8a3c6a2065248f251bb12dbbbad07ae9786825f90da7d13d940b23afecd5849
 optimized manifest_hash: 9d5da997073a4b9eacdba667c7e2dff6313c8ba6a1b50dd44cbb995b3e9276a8
 baseline project_identity:  examples/04-critical-path-optimization

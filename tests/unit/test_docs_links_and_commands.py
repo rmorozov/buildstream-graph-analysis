@@ -359,3 +359,29 @@ def test_scenario_filenames_are_zero_padded_so_they_sort():
         "scenario filenames must be zero-padded to four digits so they sort "
         f"lexicographically: {offenders}"
     )
+
+
+def test_the_docs_lint_scans_the_tree_it_names():
+    """UX-109: `make lint-docs` ran PyMarkdown without `-r`, which does
+    not recurse - so the gate scanned exactly two files, `README.md` and
+    `docs/README.md`, while naming `docs/`. Every other document was
+    unlinted, and with `-r` the same configuration reported **1300**
+    violations across ~150 of them.
+
+    Same shape as `UX-84` (a whole test tier gated on a binary CI did
+    not have) and `UX-97` (a count grep anchored at a column the output
+    never used): a gate that cannot fail, in a repository written as
+    though it holds. This pins the flag rather than the behaviour
+    because the behaviour is what the flag *is*.
+    """
+    makefile = (REPO / "Makefile").read_text(encoding="utf-8")
+    lint_line = next(
+        line for line in makefile.splitlines() if "pymarkdown" in line and "scan" in line
+    )
+    assert " -r " in lint_line, (
+        "the docs lint must recurse, or it scans README.md and docs/README.md "
+        f"and nothing else: {lint_line.strip()}"
+    )
+    # And it must still name both roots, so a future edit cannot narrow
+    # the scope by dropping one instead of the flag.
+    assert "README.md" in lint_line and "docs/" in lint_line

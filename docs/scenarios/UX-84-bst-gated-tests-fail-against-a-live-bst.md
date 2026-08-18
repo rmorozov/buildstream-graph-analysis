@@ -159,6 +159,46 @@ from the fabricated one, which is why it is the assertion.
 The `tests/test_e2e.py` chrome-trace failure the audit listed did not
 reproduce in either environment.
 
+### 3b. The job found a real bug on its first run
+
+The new job went red three times before it went green, and the third
+failure was not in the job.
+
+`test_single_real_build_captures_both_planes_and_combined_trace_correlates`
+asserted **exactly one** outer `bst-builder` B event for `core.bst`. On
+a fresh runner there were two:
+
+```
+action=fetch  core.bst [.../9c77a3d5-fetch.<date>.log]
+action=build  core.bst [.../9c77a3d5-build.<date>.log]
+```
+
+Plane 1 emits one B event per *task*, not per element, and an element
+whose sources are not already cached gets a `fetch` task too. Every run
+that had ever checked this assertion happened to be warm.
+
+The stale assertion was hiding a **production bug**.
+`compute_clock_offset_us` in `tools/native_trace_to_chrome_trace.py`
+took the *first* matching B event and its docstring stated that was "the
+only real per-element B event Plane 1 ever emits". On a cold cache it
+anchors Plane 2's whole timeline to the **fetch** task instead of the
+build - and Plane 2 only exists inside the *build* sandbox, so every
+traced process lands early by the entire fetch duration. On
+`examples/05` the error is 0 (its sources are `kind: local`); on a
+project with real network sources a fetch is minutes.
+
+Fixed to anchor on `args.action == "build"`, falling back to the first B
+event only when the element has no build task at all. The test now
+asserts the anchor *is* the build task's start, and injects a synthetic
+fetch event 30s earlier to prove ordering cannot capture the anchor.
+Verified by reverting the production fix: the guard fails with a 30s
+error, exactly the bug.
+
+Reproduced locally first by clearing the BuildStream cache — the same
+failure this container had produced once during an earlier full-suite
+run and which I had written off as transient interference from a
+concurrent capture. It was this bug both times.
+
 ### 4. The CI gap, closed
 
 The 14 bst-gated tests now carry a `bst` marker (registered in

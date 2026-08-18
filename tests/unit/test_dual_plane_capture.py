@@ -66,17 +66,54 @@ def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tm
     converter.end_current_command(converter.last_known_ts)
     plane1_events = json.loads(converter.get_json())  # a bare event list - real shape, see module docstring
 
-    # UX-24's own real correction: Plane 1 emits exactly one outer
-    # bst-builder B event per element (nested sub-phases like "Running
-    # commands" only affect that same open span's depth counter, they
-    # never get their own trace event - confirmed against this real
-    # capture, see native_trace_to_chrome_trace.py's own module
-    # docstring), so that single B event is the real anchor point.
+    # UX-24's own real correction: nested sub-phases like "Running
+    # commands" only affect an already-open span's depth counter, they
+    # never get their own trace event - so there is one outer
+    # bst-builder B event per element *per task*, not one per phase.
+    #
+    # UX-84's correction on top of that: "per task" is not "per element".
+    # This assertion used to demand exactly one B event for core.bst and
+    # passed everywhere it was ever run, because every one of those runs
+    # had core.bst's sources already cached. On a cold cache - which is
+    # every fresh CI runner - BuildStream also runs a `fetch` task, and
+    # Plane 1 emits a B event for it too:
+    #
+    #     action=fetch  core.bst [.../9c77a3d5-fetch.<date>.log]
+    #     action=build  core.bst [.../9c77a3d5-build.<date>.log]
+    #
+    # That is correct behaviour from Plane 1 and the test was wrong. It
+    # also hid a real bug in `compute_clock_offset_us`, which took the
+    # *first* matching B event - see the anchor assertions below.
     element_b_events = [
         e for e in plane1_events
         if e.get("ph") == "B" and e.get("cat") == "bst-builder" and e.get("args", {}).get("element") == "core.bst"
     ]
-    assert len(element_b_events) == 1, "expected exactly one real outer bst-builder B event for core.bst"
+    build_b_events = [e for e in element_b_events if e.get("args", {}).get("action") == "build"]
+    assert len(build_b_events) == 1, (
+        "expected exactly one real outer bst-builder B event for core.bst's build task, got "
+        f"{[e.get('args', {}).get('action') for e in element_b_events]}"
+    )
+
+    # The anchor must be the build task's start whatever else ran first.
+    # Plane 2 only exists inside the *build* sandbox, so anchoring on a
+    # fetch task is wrong by the whole fetch duration - zero here, since
+    # this fixture's sources are `kind: local`, but minutes on a project
+    # with real network sources, which is why this is asserted on the
+    # action rather than on the number coming out equal.
+    from tools.native_trace_to_chrome_trace import compute_clock_offset_us
+
+    offset_us = compute_clock_offset_us(plane1_events, plane2_records, "core.bst")
+    earliest_plane2_s = min(r["start_ts"] for r in plane2_records if r["element"] == "core.bst")
+    assert offset_us == build_b_events[0]["ts"] - earliest_plane2_s * 1e6
+
+    # And a fetch event that sorts first must not become the anchor - the
+    # regression this exists to prevent, checked directly rather than
+    # hoping the real capture happens to produce the ordering.
+    fetch_first = [
+        dict(e, ts=e["ts"] - 30_000_000, args=dict(e["args"], action="fetch"))
+        for e in build_b_events
+    ] + list(plane1_events)
+    assert compute_clock_offset_us(fetch_first, plane2_records, "core.bst") == offset_us
 
     combined = build_combined_chrome_trace(plane1_events, plane2_records, "core.bst")
 

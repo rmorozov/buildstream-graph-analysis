@@ -39,8 +39,8 @@ Two real, independent modes:
   `_resolve_start_time_us`), Plane 2's are `CLOCK_MONOTONIC`-anchored
   (an arbitrary epoch - see `hook.c`'s own header) - `compute_clock_offset_us`
   computes one real, single global additive offset from exactly one real
-  anchor point (a chosen element's own Plane 1 "Running commands" B event
-  vs. that same element's own earliest Plane 2 traced process), then
+  anchor point (a chosen element's own Plane 1 build-task B event vs.
+  that same element's own earliest Plane 2 traced process), then
   applies it uniformly to every Plane 2 timestamp. This is sound because
   `CLOCK_MONOTONIC` is the *same* underlying kernel clock for every
   process on the system regardless of which element's sandbox it's in
@@ -49,9 +49,13 @@ Two real, independent modes:
   a real risk of introducing *inconsistent* offsets that would break the
   "one shared timeline" property this whole mode exists to provide.
 
-  The anchor itself is each element's own single outer `bst-builder` B
-  event (`args.element == anchor_element`) - not, as an earlier draft of
-  this design assumed, a distinct "Running commands" event. Confirmed by
+  The anchor itself is the element's own outer `bst-builder` B event for
+  its **build** task (`args.element == anchor_element` and
+  `args.action == "build"`) - not, as an earlier draft of this design
+  assumed, a distinct "Running commands" event, and not merely the first
+  B event carrying the element's name: there is one per element per
+  *action*, so an element whose sources are not already cached has a
+  `fetch` event before its `build` one (`UX-84`). Confirmed by
   running the real end-to-end capture and inspecting Plane 1's own real
   output directly: `bst_log_to_chrome_trace.py`'s `handle_bst_event`
   treats every nested sub-phase (Staging sources, Running commands,
@@ -62,7 +66,7 @@ Two real, independent modes:
 """
 import argparse
 import json
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 PLANE2_CAT = "native-process"
 
@@ -127,22 +131,49 @@ def compute_clock_offset_us(plane1_trace_events: List[dict], plane2_records: Lis
     """The one real, global additive offset (microseconds) to convert
     every Plane 2 `CLOCK_MONOTONIC`-seconds timestamp into Plane 1's own
     real wall-clock-microseconds coordinate system - computed from
-    exactly one real anchor point: `anchor_element`'s own single, real
-    outer Plane 1 `bst-builder` B event (real wall-clock start of that
-    element's own build/fetch/... task as a whole - confirmed to be the
-    only real per-element B event Plane 1 ever emits, see this module's
-    own docstring) vs. that same element's own earliest Plane 2 traced
-    process (real monotonic start). Raises ValueError if either side has
-    no real data for `anchor_element` - never silently guesses an offset
-    of 0."""
-    plane1_ts_us = None
-    for ev in plane1_trace_events:
-        if ev.get("ph") != "B" or ev.get("cat") != "bst-builder":
-            continue
-        if ev.get("args", {}).get("element") != anchor_element:
-            continue
-        plane1_ts_us = ev["ts"]
-        break
+    exactly one real anchor point: the wall-clock start of
+    `anchor_element`'s own Plane 1 **build** task, against that same
+    element's earliest Plane 2 traced process (real monotonic start).
+    Raises ValueError if either side has no real data for
+    `anchor_element` - never silently guesses an offset of 0.
+
+    `UX-84`: this used to take the *first* `bst-builder` B event for the
+    element and documented that as "the only real per-element B event
+    Plane 1 ever emits". That is false. Plane 1 emits one per *task*, and
+    an element whose sources are not already cached gets a `fetch` task
+    as well as a `build` one - which is every element on a cold cache, so
+    the claim held only because every capture that checked it happened to
+    run warm. A fresh CI runner produced two immediately:
+
+        action=fetch  name=core.bst [.../9c77a3d5-fetch.<date>.log]
+        action=build  name=core.bst [.../9c77a3d5-build.<date>.log]
+
+    Anchoring on the fetch task is wrong by the whole fetch duration, and
+    it is wrong in the direction that matters: Plane 2 only exists inside
+    the *build* sandbox, so every traced process would be placed that far
+    early on the shared timeline. On `examples/05` the error is 0 - its
+    sources are `kind: local` and fetch is instantaneous - but on a
+    project with real network sources a fetch is minutes.
+
+    Falls back to the first B event when the element has no `build` task
+    at all, rather than raising: an anchor from the only task there is
+    beats refusing to correlate.
+    """
+    def _anchor_ts(action: Optional[str]) -> Optional[int]:
+        for ev in plane1_trace_events:
+            if ev.get("ph") != "B" or ev.get("cat") != "bst-builder":
+                continue
+            args = ev.get("args", {})
+            if args.get("element") != anchor_element:
+                continue
+            if action is not None and args.get("action") != action:
+                continue
+            return ev["ts"]
+        return None
+
+    plane1_ts_us = _anchor_ts("build")
+    if plane1_ts_us is None:
+        plane1_ts_us = _anchor_ts(None)
     if plane1_ts_us is None:
         raise ValueError(f"no Plane 1 'bst-builder' B event found for element {anchor_element!r}")
 

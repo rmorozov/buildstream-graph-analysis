@@ -2,6 +2,11 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-98 (done)
 
+> Filed as `UX-105` and renumbered to `UX-109`: Direction 4's
+> `UX-105`-`UX-108` landed on `main` first. The commit that filed this
+> one still says "UX-105" in its subject line, which is why this note is
+> here rather than left to whoever finds the mismatch.
+
 ## Motivation
 
 `make lint-docs` runs:

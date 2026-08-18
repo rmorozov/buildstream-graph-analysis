@@ -119,18 +119,21 @@ def test_key_findings_tags_structural_top_element_but_not_real_work_one(analyzed
     output = format_text(analyzed_result)
     key_findings = output.split("Certified Floors:")[0]
 
-    # UX-65 changed which ranking this fixture gets. It is chain-bound
-    # (T-infinity is essentially the whole wall clock), so "worth
-    # optimizing first" now ranks by share of the critical path, and that
-    # ranking *excludes* structural elements outright rather than listing
-    # them with a caveat.
+    # UX-65 changed which ranking this fixture gets, and UX-76 merged the
+    # two rankings that resulted into one table. It is chain-bound
+    # (T-infinity is essentially the whole wall clock) and execution-bound,
+    # so the table appears under Biggest Opportunity, ordered by duration
+    # and carrying each element's realizable saving beside it - and it
+    # *excludes* structural elements outright rather than listing them
+    # with a caveat.
     #
     # The guarantee this test exists for is unchanged and now stronger:
     # a structural element is never presented as a thing to go and make
     # faster. Previously that was satisfied by tagging `root.bst`; now it
     # is satisfied by not ranking it at all.
-    assert "Elements Most Worth Optimizing First (by what optimizing them" in key_findings
-    assert "root.bst (2 downstream elements)" not in key_findings
+    assert "Where the time is:" in key_findings
+    assert "manual.bst" in key_findings
+    assert "root.bst" not in key_findings
     # Wherever any line does mention these elements, a structural tag
     # must never be attached to the one that does real work.
     assert "manual.bst [structural" not in key_findings

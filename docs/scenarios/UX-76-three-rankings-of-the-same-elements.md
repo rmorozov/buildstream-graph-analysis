@@ -1,6 +1,6 @@
 # UX-76: the headline block ranks the same five elements three times, and one of the three has been quietly wrong since `UX-70`
 
-**Priority:** Medium | **Depends on:** `UX-70` (done — which introduced the regression below)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which introduced the regression below)
 
 ## Motivation
 
@@ -88,6 +88,58 @@ different quantity than its own heading claims.
    doxygen by realizable saving, unchanged from `UX-70`.
 3. `Key Findings` names each element at most once.
 4. No structural element appears in any headline ranking.
+
+## Fix Implemented
+
+The three rankings became one table, and the two orderings that were
+being conflated are now separate functions over the same population:
+`_path_elements_by_duration` (where the time is) and `_heaviest_on_path`
+(what a fix is worth). Round 9's capture, `Key Findings`, before and
+after:
+
+```
+before (13 lines, 3 rankings)              after (8 lines, 1 table)
+  Where the time is: 4 elements, 80.3%       Where the time is: 4 element(s) are 94.0% of the
+    cmake-stage1  1569.8s (43.5%)            3610.5s critical path - this build is chain-bound,
+    openssl        672.1s (18.6%)            not scheduler-bound
+    doxygen        513.5s (14.2%)              cmake-stage1  1569.8s (43.5% of path)  -> fixing it saves 1569.8s (43.4%)
+    bison          144.2s ( 4.0%)              openssl        672.1s (18.6% of path)  -> fixing it saves  522.5s (14.5%)
+  Elements Most Worth Optimizing First:        python3        639.8s (17.7% of path)  -> fixing it saves  114.1s ( 3.2%)
+    1. cmake-stage1 ... would save 1569.8s     doxygen        513.5s (14.2% of path)  -> fixing it saves  513.5s (14.2%)
+    2. openssl ... would save 522.5s           -> these elements must get faster, or come off the chain
+    3. doxygen ... would save 513.5s           -> work them in this order (by what a fix is worth,
+    Note: 77% of elements have zero slack         which is not the order above): cmake-stage1, openssl, doxygen
+  Highest Criticality Elements:                Note: 77% of elements have zero slack - this graph is a
+    1. openssl (100% probability)                 mesh of near-equal chains ...
+    2. cmake-stage1 (100% probability)
+    3. buildsystem-cmake (100%) [structural]
+```
+
+`python3.bst` is back where it belongs — third by duration — and the row
+that restores it is also the row that shows why it is *not* third by
+value (114.1s, 3.2%). That disagreement was the most useful thing in the
+report and it was previously invisible, hidden by which of two lists an
+element happened to fall out of.
+
+Three further things fell out of the merge:
+
+- **The concentration figure is right again**: 94.0%, not 80.3%.
+- **The chain-bound verdict moved onto the table's own heading.** It used
+  to live on the second ranking's heading, which meant merging would have
+  deleted it on any build that is *also* execution-bound — the ordinary
+  case on a real capture, and the one this was measured on.
+- **The degenerate criticality list is dropped.** On a deterministic
+  replay every element on the path scores 1.0, so a ranking of them ranks
+  nothing; it also held `buildsystem-cmake.bst`, a `stack`, in its third
+  slot. Structural elements are now excluded from it outright (`UX-34`'s
+  rule), and the list is skipped entirely when every entry scores 1.0. It
+  still renders, unchanged, on a graph with real schedule variance.
+
+Tests: 3 new in `tests/unit/test_headline_points_at_the_time.py` pinning
+duration ordering, the fix-order line, and each element being named once;
+1 new in `tests/unit/test_report_key_findings.py` for the dropped
+degenerate list, with the existing zero-probability guarantee re-pointed
+at a non-degenerate fixture so it still tests the filter.
 
 ## Verification Log
 

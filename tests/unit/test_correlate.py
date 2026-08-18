@@ -205,3 +205,153 @@ def test_join_reports_its_own_coverage():
     assert coverage["joined_elements"] == 1
     assert coverage["plane2_elements"] == 1
     assert coverage["plane1_elements"] >= 2
+
+
+# --- UX-71: rank on what a fix is worth, not on a capped proxy ---------
+#
+# Round 9's real capture, reduced to the five elements that matter. Its
+# `top_opportunities` score is `min(duration, next_binding_gap)/makespan`
+# with `next_binding_gap` = 114.1s, so every one of the five scores an
+# identical 0.0316 - while the simulated savings span 5x.
+
+_TIED_SCORE = 114_100_000 / 3_610_500_000
+
+REAL_ELEMENTS = [
+    # (uid, duration_us, share_of_path, realizable_saving_us, cores_busy)
+    ("components/_private/cmake-stage1.bst", 1_569_800_000, 0.435, 1_569_800_000, 3.41),
+    ("components/openssl.bst", 672_100_000, 0.186, 522_550_000, 1.61),
+    ("components/python3.bst", 639_750_000, 0.177, 114_100_000, 1.86),
+    ("components/doxygen.bst", 513_550_000, 0.142, 513_550_000, 3.56),
+    ("components/bison.bst", 144_150_000, 0.040, 144_150_000, 0.91),
+]
+
+
+def _real_analysis(with_savings=True):
+    detail = []
+    for uid, dur, share, saving, _cores in REAL_ELEMENTS:
+        entry = {"element_uid": uid, "duration_us": dur, "share_of_path": share,
+                 "is_structural_kind": False}
+        if with_savings:
+            entry["realizable_saving_us"] = saving
+        detail.append(entry)
+    return {
+        "total_duration_us": 3_614_220_000,
+        "signals": {
+            "critical_path": [e[0] for e in REAL_ELEMENTS],
+            "critical_path_detail": detail,
+            "blast_radius": {},
+        },
+        "structural": {
+            "sensitivity": {
+                # The saturated proxy, exactly as the real capture carries it.
+                "top_opportunities": [[e[0], _TIED_SCORE, _TIED_SCORE * 100]
+                                      for e in REAL_ELEMENTS],
+                "critical_path_us": 3_610_500_000,
+            }
+        },
+    }
+
+
+def _real_native():
+    return _native(
+        parallelism=[{"element": uid, "requested_jobs": 4, "findings": []}
+                     for uid, *_ in REAL_ELEMENTS],
+        cpu={uid: _cpu(cores) for uid, _d, _s, _sav, cores in REAL_ELEMENTS},
+    )
+
+
+def test_ranking_uses_the_realizable_saving_not_the_capped_proxy():
+    """The defect `UX-71` was filed for: all five candidates scored an
+    identical 0.0316, so `-potential_saving_us` was a constant and the
+    order came from the alphabetical tiebreak - putting `bison.bst`
+    (144.2s) second, above `openssl.bst` (672.1s)."""
+    result = correlate(_real_analysis(), _real_native())
+
+    ranked = [e["element"] for e in result["elements"] if e["potential_saving_us"]]
+    assert ranked[:4] == [
+        "components/_private/cmake-stage1.bst",
+        "components/openssl.bst",
+        "components/doxygen.bst",
+        "components/bison.bst",
+    ]
+    assert result["ranking"]["metric"] == "realizable_saving_us"
+    assert result["ranking"]["degenerate"] is False
+
+
+def test_the_headline_verdict_fires_on_the_real_capture():
+    """The sentence the join exists to produce, which the saturated gate
+    made unreachable: `bison.bst` at 0.91 cores busy was measured every
+    round and never mentioned."""
+    result = correlate(_real_analysis(), _real_native())
+    steps = {e["element"]: e["recommendations"] for e in result["actionable"]}
+
+    assert any("waiting, not computing" in step
+               for step in steps["components/bison.bst"])
+    assert any("already compute-bound" in step
+               for step in steps["components/_private/cmake-stage1.bst"])
+
+
+def test_a_cheap_win_below_the_gate_is_still_reported():
+    """`bison.bst` is worth 4.0% of the build - below the 5% gate - and
+    is reported anyway because Plane 2 says the fix is a job count.
+    `python3.bst`, worth less and already compute-bound, is not: there is
+    no cheap fix there to name."""
+    result = correlate(_real_analysis(), _real_native())
+    steps = {e["element"]: e["recommendations"] for e in result["actionable"]}
+
+    assert "components/bison.bst" in steps
+    assert "components/python3.bst" not in steps
+
+
+def test_a_saturated_ranking_is_declared_rather_than_broken_by_name():
+    """An artifact from a `bga` older than `UX-70` has no simulation to
+    rank on. The join degrades to the proxy - and says that every element
+    carries the same impact, instead of presenting alphabetical order as
+    a ranking."""
+    result = correlate(_real_analysis(with_savings=False), _real_native())
+
+    assert result["ranking"]["metric"] == "sensitivity_score"
+    assert result["ranking"]["degenerate"] is True
+    assert result["ranking"]["tied_saving_us"] == 114_100_000
+    text = format_correlation(result)
+    assert "the order below is alphabetical, not an impact ranking" in text
+
+
+def test_the_path_share_comes_from_the_same_place_analyze_prints():
+    """`bga analyze` and `bga correlate` must not describe one element
+    with two different numbers."""
+    result = correlate(_real_analysis(), _real_native())
+    by_uid = {e["element"]: e for e in result["elements"]}
+
+    assert by_uid["components/openssl.bst"]["critical_path_share"] == 0.186
+    assert by_uid["components/openssl.bst"]["potential_saving_us"] == 522_550_000
+
+
+def test_analyze_and_correlate_name_the_same_element_first():
+    """`UX-71`'s standing guarantee. The two commands read the same
+    artifact and answer the same question; on the real capture they
+    disagreed, because one had been re-based on the simulation and the
+    other still ranked on the proxy. Cheaper to pin here than to
+    re-notice in a later audit round."""
+    import json as _json
+
+    from bga.ingest.models import AnalysisResult
+    from bga.report.json import format_json
+    from bga.report.text import _heaviest_on_path
+
+    analysis = _real_analysis()
+    result = AnalysisResult(
+        attribution={"execution_on_chain_us": 3_610_500_000},
+        floors={"t_infinity_observed": 3_610_500_000},
+        total_duration_us=analysis["total_duration_us"],
+        confidence={"primary": 1.0},
+        signals=analysis["signals"],
+        structural=analysis["structural"],
+    )
+
+    analyze_first = _heaviest_on_path(result)[0]["element_uid"]
+    joined = correlate(_json.loads(format_json(result)), _real_native())
+    correlate_first = joined["elements"][0]["element"]
+
+    assert analyze_first == correlate_first == "components/_private/cmake-stage1.bst"
+

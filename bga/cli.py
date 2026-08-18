@@ -399,7 +399,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             "run describes a build that did not complete (one or more elements "
             "ended in FAILURE). No scheduling verdict is meaningful for it, so "
             "this is a failure rather than a fail-open. "
-            "See docs/backlog/scenarios/UX-54-a-failed-build-scores-perfectly.md.",
+            "See docs/backlog/scenarios/UX-0054-a-failed-build-scores-perfectly.md.",
             file=sys.stderr,
         )
         return EXIT_CODE_REGRESSION
@@ -414,7 +414,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 "Confidence gate FAILED: at least one run's confidence is below "
                 "the 'high' band and --fail-on-low-confidence was requested, so "
                 "this comparison is treated as a failure rather than failing open. "
-                "See docs/backlog/scenarios/UX-40-real-runs-systematically-fail-the-confidence-gate.md.",
+                "See docs/backlog/scenarios/UX-0040-real-runs-systematically-fail-the-confidence-gate.md.",
                 file=sys.stderr,
             )
             return EXIT_CODE_REGRESSION
@@ -436,7 +436,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             "confidence is below the 'high' band, so this comparison is not "
             "reliable enough to gate a pipeline on (failing open, exit 0). "
             "Pass --fail-on-low-confidence to treat this as a failure instead. "
-            "See docs/backlog/scenarios/UX-03-ci-regression-gate.md.",
+            "See docs/backlog/scenarios/UX-0003-ci-regression-gate.md.",
             file=sys.stderr,
         )
         return 0
@@ -467,7 +467,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 f"on the path: {on_path}. Adding work is allowed; adding it "
                 f"serialized is what this gate exists to catch, and unlike the "
                 f"whole-build efficiency gate it does not weaken as the project grows. "
-                f"See docs/backlog/scenarios/UX-79-efficiency-gate-dilutes-with-project-size.md.",
+                f"See docs/backlog/scenarios/UX-0079-efficiency-gate-dilutes-with-project-size.md.",
                 file=sys.stderr,
             )
             return EXIT_CODE_EFFICIENCY_REGRESSION
@@ -500,7 +500,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 f"unevaluated check (`efficiency_gate_evaluated: false` in --format "
                 f"json). Pass --require-efficiency-signal to treat this as a failure "
                 f"instead. See docs/backlog/scenarios/"
-                f"UX-87-efficiency-gates-silently-no-op-when-occupancy-is-missing.md.",
+                f"UX-0087-efficiency-gates-silently-no-op-when-occupancy-is-missing.md.",
                 file=sys.stderr,
             )
             if getattr(args, 'require_efficiency_signal', False):

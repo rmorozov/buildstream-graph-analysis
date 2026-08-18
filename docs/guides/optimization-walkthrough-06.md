@@ -103,10 +103,10 @@ Read that as a user who does not already know the answer:
 
 The only two facts a user can act on here are printed as raw JSON keys or
 not printed at all. Filed as
-[`UX-27`](../backlog/scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md),
-[`UX-33`](../backlog/scenarios/UX-33-text-report-withholds-critical-path-and-choke-point-names.md),
-[`UX-34`](../backlog/scenarios/UX-34-structural-elements-dominate-improvement-opportunities.md),
-[`UX-36`](../backlog/scenarios/UX-36-cpu-utilisation-block-reports-occupancy-not-cpu.md).
+[`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md),
+[`UX-33`](../backlog/scenarios/UX-0033-text-report-withholds-critical-path-and-choke-point-names.md),
+[`UX-34`](../backlog/scenarios/UX-0034-structural-elements-dominate-improvement-opportunities.md),
+[`UX-36`](../backlog/scenarios/UX-0036-cpu-utilisation-block-reports-occupancy-not-cpu.md).
 
 ## Iteration 1 — fix the graph and the one-line micro problem anyway
 
@@ -131,7 +131,7 @@ total work, so `LB == T∞ == T_C` and the scheduler is, tautologically,
 perfect. This is the tool's central design gap, not a rendering bug:
 `efficiency_score` answers *"did the scheduler pack this graph well"*,
 never *"is this graph worth packing"*. See
-[`UX-27`](../backlog/scenarios/UX-27-efficiency-score-certifies-the-graph-it-was-given.md).
+[`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md).
 
 ## Iteration 2 — going below the element, with Plane 2
 
@@ -179,7 +179,7 @@ element.) One element achieving a peak of 1 while its siblings reach 3-4
 tracer neither computes nor reports it — its only concurrency number is a
 single global `Max observed concurrency: 20`, which counts idle `make`
 and `sh` wrappers and so is inflated well past the four real cores. Filed
-as [`UX-32`](../backlog/scenarios/UX-32-plane-2-has-no-per-element-achieved-parallelism.md).
+as [`UX-32`](../backlog/scenarios/UX-0032-plane-2-has-no-per-element-achieved-parallelism.md).
 
 Two adjacent gaps surfaced in the same session. `bga` does have a
 per-element parallelism check (`UX-22`'s `serialization_point_risks`), and
@@ -187,11 +187,11 @@ on this run it reports `[]`, because it reads `public: bst: max-jobs`,
 which BuildStream 2.7.0 never consults when computing `-jN` — the real
 mechanism, `variables: notparallel: True`, is the one this project
 actually used and the one that produced `make -j1`
-([`UX-31`](../backlog/scenarios/UX-31-notparallel-is-the-real-per-element-parallelism-control.md)).
+([`UX-31`](../backlog/scenarios/UX-0031-notparallel-is-the-real-per-element-parallelism-control.md)).
 And feeding the *raw log* is mandatory: `bst_native_build_tracer report`
 takes a raw trace log, so handing it the JSON report that `run` just
 wrote prints `Processes traced: 0` and exits 0
-([`UX-38`](../backlog/scenarios/UX-38-tracer-report-accepts-the-wrong-artifact-silently.md)).
+([`UX-38`](../backlog/scenarios/UX-0038-tracer-report-accepts-the-wrong-artifact-silently.md)).
 
 ## Iteration 3 — the capacity question the tool declines to answer
 
@@ -207,7 +207,7 @@ run context: `bst_extract_run` only recorded it if the operator passed
 `--native-max-jobs` by hand, even though line 1 of the wrapped log it
 just parsed reads
 `Executing command: bst --builders 4 --max-jobs 4 build all.bst`
-([`UX-29`](../backlog/scenarios/UX-29-native-max-jobs-is-never-auto-extracted.md),
+([`UX-29`](../backlog/scenarios/UX-0029-native-max-jobs-is-never-auto-extracted.md),
 since fixed — the value is now recovered automatically).
 
 Supplying it by hand and re-extracting also produced no violation, and
@@ -224,7 +224,7 @@ than its silence here: the bar was BuildStream's own unconfigured default
 not — so the ratio at which the check fired was 4× the cores on this
 machine and 0.5× on a 64-core one, and above 8 cores it flagged
 configurations sitting *below* one process per core
-([`UX-28`](../backlog/scenarios/UX-28-oversubscription-threshold-is-self-referential.md),
+([`UX-28`](../backlog/scenarios/UX-0028-oversubscription-threshold-is-self-referential.md),
 since fixed and re-based onto the real core count, plus a sharper
 `builders > cores` dispatch check). Worth recording as a process note:
 the first framing of this finding was wrong, and it only came apart when
@@ -240,12 +240,12 @@ Meanwhile the report's own next-step hint for this run says:
 ```
 
 Raising `--builders` on a host already running 4 compilers per core is the
-opposite of the fix ([`UX-35`](../backlog/scenarios/UX-35-attribution-hints-are-capacity-blind.md)).
+opposite of the fix ([`UX-35`](../backlog/scenarios/UX-0035-attribution-hints-are-capacity-blind.md)).
 Taking the hint's other suggestion does not help either: `bga sweep` stops
 at the first capacity whose marginal gain is under 5%, so on
 `examples/05-cmake-cpp-toolchain` it reports `Knee point: capacity 2`
 while its own printed table shows capacity 4 is a further 35.1% faster
-([`UX-30`](../backlog/scenarios/UX-30-sweep-knee-point-stops-at-the-first-flat-step.md)).
+([`UX-30`](../backlog/scenarios/UX-0030-sweep-knee-point-stops-at-the-first-flat-step.md)).
 
 For completeness, the capacity change was measured rather than assumed:
 `--builders 2 --max-jobs 2` on the optimized project took 28.69s against

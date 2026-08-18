@@ -6,7 +6,7 @@ stated preference - the horizon-only calculation is explicitly marked
 available, not the primary definition.
 
 Found via a real run of examples/05-cmake-cpp-toolchain (see
-docs/backlog/scenarios/UX-10-total-duration-excludes-pre-task-overhead.md):
+docs/backlog/scenarios/UX-0010-total-duration-excludes-pre-task-overhead.md):
 `bga analyze` reported `Total Duration: 4.0s` while the real BuildStream
 session (run-context.json's own wall_clock field) was 7.6s - a real
 ~3.6s gap (BuildStream startup + real sandbox-staging cost for a large

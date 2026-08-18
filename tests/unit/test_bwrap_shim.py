@@ -1,7 +1,7 @@
 """Tests for tools/native_trace/bwrap_shim.py's split_bwrap_args/
 build_shim_argv - the one piece of real logic UX-11's tracer depends on
 to survive contact with BuildStream's own real, generated bwrap argv
-(see docs/backlog/scenarios/UX-11-native-build-system-profiler-tool.md's Deep
+(see docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md's Deep
 Experiment Findings for the two real bugs this was built to prevent
 regressing: injecting before BuildStream's own root-filesystem bind
 wipes the injection out, and mis-guessing `--dir`'s arity corrupts the

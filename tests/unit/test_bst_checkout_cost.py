@@ -37,7 +37,7 @@ BST_AVAILABLE = shutil.which("bst") is not None
 # = 2s) - 4s each, 8s combined.
 # START lines show "--:--:--" (real BuildStream behavior - elapsed isn't
 # known yet when an activity starts, and resets per-activity, not
-# globally; see UX-06/docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md)
+# globally; see UX-06/docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md)
 # - only each terminal line's own elapsed is real, applied on top of the
 # time in effect when *that* activity's own START was seen.
 LOG_A = """\

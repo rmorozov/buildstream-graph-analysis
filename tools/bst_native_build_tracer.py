@@ -3,7 +3,7 @@
 element's "Running commands" span - `bga`'s own element-level log never
 records more than one START/SUCCESS pair per element, so a `make -j8`'s
 own internal parallelism (or lack of it) is otherwise invisible from
-outside the sandbox. See docs/backlog/scenarios/UX-11-native-build-system-
+outside the sandbox. See docs/backlog/scenarios/UX-0011-native-build-system-
 profiler-tool.md for the full design history: five brainstormed
 options, an external contribution's `LD_PRELOAD` + `bwrap` PATH-shadow
 proxy design, a risk-reduction spike that resolved the cache-key risk
@@ -76,7 +76,7 @@ STATIC_BINARY_DISCLAIMER = (
     "own absence. Treat the process list below as a lower bound, not an "
     "exhaustive trace, unless the toolchain being profiled is known to "
     "be entirely dynamically-linked (the common case for a real C/C++ "
-    "gcc/clang toolchain - see docs/backlog/scenarios/UX-11-native-build-system-"
+    "gcc/clang toolchain - see docs/backlog/scenarios/UX-0011-native-build-system-"
     "profiler-tool.md's Deep Experiment Findings)."
 )
 

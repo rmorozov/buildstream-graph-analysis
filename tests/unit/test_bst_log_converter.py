@@ -242,7 +242,7 @@ def test_raw_mode_anchors_a_tasks_first_start_to_the_current_watermark():
     lines always show "--:--:--" anyway (elapsed isn't known yet); this
     synthetic line's own nonzero elapsed [00:00:05] is deliberately
     ignored, matching real semantics (see _process_raw_line's docstring
-    and docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md)."""
+    and docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md)."""
     converter = WrapperTraceConverter(raw_start_time_us=1_700_000_000_000_000)
     converter.process_line_raw(
         "[00:00:05][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log"
@@ -316,7 +316,7 @@ def test_targets_captured_during_wrapped_processing():
 #
 # A third real bug, found while building examples/04-critical-path-
 # optimization for a later, real optimization walkthrough (see
-# docs/backlog/scenarios/UX-06-raw-log-timestamp-corruption.md): BuildStream's own
+# docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md): BuildStream's own
 # `[HH:MM:SS]` elapsed prefix resets to zero at the start of *every*
 # individual timed activity (confirmed against the real installed
 # BuildStream 2.7.0 source, buildstream/_messenger.py's `timed_activity`)

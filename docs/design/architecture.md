@@ -70,7 +70,7 @@ One script in `tools/` is not part of that pipeline and needs no `bst` at all: `
 
 ## Plane 2: intra-element native-build-system tracing (`UX-11`)
 
-`tools/bst_native_build_tracer.py` wraps a real `bst build` invocation: a `bwrap` shim placed ahead of the real binary in `$PATH` injects an `LD_PRELOAD` hook (`tools/native_trace/hook.c`) into every dynamically-linked process the sandbox execs, recording real `CLOCK_MONOTONIC` start/end timestamps. Validated end-to-end against a real `cmake`+`make`+`gcc` build (98 real traced processes, reproduced real `-j4` compile concurrency across independent runs). Known, honestly-reported limitation: statically-linked processes are invisible to this mechanism and there is no way to detect that gap from outside — every report carries a fixed disclaimer rather than a false completeness claim. Full design history (five brainstormed options, an external design contribution, a risk-reduction spike, a second external review that was checked and refuted, and the final validated mechanism) is in `docs/backlog/scenarios/UX-11-native-build-system-profiler-tool.md` — read that only if you need the *why*; this doc is the *what, today*.
+`tools/bst_native_build_tracer.py` wraps a real `bst build` invocation: a `bwrap` shim placed ahead of the real binary in `$PATH` injects an `LD_PRELOAD` hook (`tools/native_trace/hook.c`) into every dynamically-linked process the sandbox execs, recording real `CLOCK_MONOTONIC` start/end timestamps. Validated end-to-end against a real `cmake`+`make`+`gcc` build (98 real traced processes, reproduced real `-j4` compile concurrency across independent runs). Known, honestly-reported limitation: statically-linked processes are invisible to this mechanism and there is no way to detect that gap from outside — every report carries a fixed disclaimer rather than a false completeness claim. Full design history (five brainstormed options, an external design contribution, a risk-reduction spike, a second external review that was checked and refuted, and the final validated mechanism) is in `docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md` — read that only if you need the *why*; this doc is the *what, today*.
 
 The hook records four things per process. The first is what `UX-11` shipped; the rest arrived as later rounds found questions timing alone could not answer:
 
@@ -257,7 +257,6 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-38 | Tracer `report` detects and re-renders a saved JSON report; wrong input is an error, not a zero-process result | 🟢 Done |
 | UX-39 | Independent CI efficiency gate (`--fail-on-efficiency-regression`, `--min-efficiency`, exit code 5) on `occupancy_ratio`, with a default derived from measured run-to-run noise | 🟢 Done |
 | UX-40 | Measured pipeline overhead no longer penalizes confidence (real capture 0.694 -> 0.869, CI gate live), plus `--fail-on-low-confidence` | 🟢 Done |
-
 | UX-41 | Parallelism levels decomposed by *longest* path from a root, not shortest | 🟢 Done |
 | UX-42 | Resource saturation computed once, not re-derived per wait gap (1200-element analyze: 68s → ~4s) | 🟢 Done |
 | UX-43 | "Choke point" re-defined against the real graph, not `fan-in >= 2 and fan-out >= 2` | 🟢 Done |

@@ -698,7 +698,7 @@ class BuildEfficiencyAnalyzer:
         and native `--max-jobs` (each element's own internal `make -jN`/
         `ninja` parallelism, `run_context.native_max_jobs`) both consume
         the same physical CPU cores, uncoordinated - confirmed with real
-        timing evidence in docs/backlog/scenarios/UX-09-builders-max-jobs-joint-
+        timing evidence in docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-
         optimization.md (examples/05-cmake-cpp-toolchain: 8 builders x 8
         max-jobs on a real 4-core host measured ~11% slower than
         BuildStream's own 4x4 defaults on that same host).
@@ -1116,7 +1116,7 @@ class BuildEfficiencyAnalyzer:
         # whenever meaningful pre-task overhead exists (BuildStream's own
         # startup, large sandbox-staging cost) - confirmed via a real run
         # where the reported Total Duration was 4.0s against a real 7.6s
-        # wall clock (docs/backlog/scenarios/UX-10-total-duration-excludes-pre-
+        # wall clock (docs/backlog/scenarios/UX-0010-total-duration-excludes-pre-
         # task-overhead.md). UNTRACKED_HEAD/UNTRACKED_TAIL (computed
         # above in _compute_attribution) are already wall-clock-relative,
         # so this also makes the Attribution Breakdown's percentages

@@ -358,7 +358,7 @@ several wrong assumptions turned out to hide behind:
     `project_identity` to the manifest: the project directory's path
     relative to its own git repository root (portable across clones),
     falling back to its resolved absolute path outside a git repository
-    entirely. See `docs/backlog/scenarios/UX-07-run-identity-collides-across-sibling-projects.md`
+    entirely. See `docs/backlog/scenarios/UX-0007-run-identity-collides-across-sibling-projects.md`
     for the real before/after hash values.
 16. **The oversubscription guard covered CPU only - no memory/swap
     dimension existed anywhere in `bga`** (`UX-21`) - a real, independent

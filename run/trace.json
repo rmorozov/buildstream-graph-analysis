@@ -1,0 +1,256 @@
+{
+  "spans": [
+    {
+      "task_key": "components/_private/python3-flit-core.bst|BUILD|BUILD|0",
+      "ts_us": 1787082240451000,
+      "dur_us": 2003000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/ninja.bst|BUILD|BUILD|0",
+      "ts_us": 1787082240451000,
+      "dur_us": 99705000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/openssl.bst|BUILD|BUILD|0",
+      "ts_us": 1787082240451000,
+      "dur_us": 494172000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/which.bst|BUILD|BUILD|0",
+      "ts_us": 1787082240451000,
+      "dur_us": 6007000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-installer.bst|BUILD|BUILD|0",
+      "ts_us": 1787082242455000,
+      "dur_us": 2002000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-packaging.bst|BUILD|BUILD|0",
+      "ts_us": 1787082244457000,
+      "dur_us": 2001000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-build.bst|BUILD|BUILD|0",
+      "ts_us": 1787082246458000,
+      "dur_us": 2074000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-pyproject-hooks.bst|BUILD|BUILD|0",
+      "ts_us": 1787082246458000,
+      "dur_us": 2074000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "public-stacks/buildsystem-autotools.bst|BUILD|BUILD|0",
+      "ts_us": 1787082246458000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gdbm.bst|BUILD|BUILD|0",
+      "ts_us": 1787082248532000,
+      "dur_us": 21025000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/libffi.bst|BUILD|BUILD|0",
+      "ts_us": 1787082248532000,
+      "dur_us": 47568000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-setuptools.bst|BUILD|BUILD|0",
+      "ts_us": 1787082269557000,
+      "dur_us": 11523000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-wheel.bst|BUILD|BUILD|0",
+      "ts_us": 1787082281080000,
+      "dur_us": 3006000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/help2man.bst|BUILD|BUILD|0",
+      "ts_us": 1787082284086000,
+      "dur_us": 4004000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/icu.bst|BUILD|BUILD|0",
+      "ts_us": 1787082288090000,
+      "dur_us": 308391000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/meson.bst|BUILD|BUILD|0",
+      "ts_us": 1787082340156000,
+      "dur_us": 19029000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/cmake-stage1.bst|BUILD|BUILD|0",
+      "ts_us": 1787082734623000,
+      "dur_us": 1185301000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/buildsystem-cmake.bst|BUILD|BUILD|0",
+      "ts_us": 1787083919924000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/expat.bst|BUILD|BUILD|0",
+      "ts_us": 1787083919924000,
+      "dur_us": 7009000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/git-minimal.bst|BUILD|BUILD|0",
+      "ts_us": 1787083926933000,
+      "dur_us": 398471000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/python3.bst|BUILD|BUILD|0",
+      "ts_us": 1787083926933000,
+      "dur_us": 473623000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gperf.bst|BUILD|BUILD|0",
+      "ts_us": 1787084400556000,
+      "dur_us": 20020000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/bison.bst|BUILD|BUILD|0",
+      "ts_us": 1787084420576000,
+      "dur_us": 121123000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/doxygen.bst|BUILD|BUILD|0",
+      "ts_us": 1787084541699000,
+      "dur_us": 373393000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/libxml2.bst|BUILD|BUILD|0",
+      "ts_us": 1787084915092000,
+      "dur_us": 33889000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    }
+  ],
+  "phases": [],
+  "run_identity_hash": "f12a845e2327de7a0101a227aaf602b15b8b45a3cfc78185af3485d3472cace8"
+}

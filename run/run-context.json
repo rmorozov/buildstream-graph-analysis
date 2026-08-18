@@ -1,0 +1,65 @@
+{
+  "trace_epsilon_us": 50000,
+  "resource_capacities": {
+    "PROCESS": 4,
+    "DOWNLOAD": 10,
+    "UPLOAD": 4
+  },
+  "max_jobs": 4,
+  "native_max_jobs": 4,
+  "native_max_jobs_source": "operator_declared",
+  "host_cpu_count": 4,
+  "wall_clock": {
+    "start_us": 1787082236808000,
+    "end_us": 1787084949194000
+  },
+  "pipeline_overhead": [
+    {
+      "phase": "Loading elements",
+      "elapsed_us": 254000
+    },
+    {
+      "phase": "Resolving elements",
+      "elapsed_us": 167000
+    },
+    {
+      "phase": "Initializing remote caches",
+      "elapsed_us": 0
+    },
+    {
+      "phase": "Query cache",
+      "elapsed_us": 2020000
+    }
+  ],
+  "build_outcome": {
+    "failed_elements": [],
+    "failed_count": 0
+  },
+  "queue_summary": {
+    "fetch": {
+      "processed": 0,
+      "skipped": 90,
+      "failed": 0
+    },
+    "build": {
+      "processed": 25,
+      "skipped": 65,
+      "failed": 0
+    }
+  },
+  "run_identity": {
+    "manifest_hash": "f12a845e2327de7a0101a227aaf602b15b8b45a3cfc78185af3485d3472cace8",
+    "project_identity": ".",
+    "targets": [
+      "components/libxml2.bst"
+    ],
+    "scheduler": {
+      "builders": 4,
+      "fetchers": 10,
+      "pushers": 4,
+      "native_max_jobs": 4
+    },
+    "project_git_commit": "953683fb96b82cdf6d7941c4ba9859378942f22b",
+    "project_refs_sha256": null
+  }
+}

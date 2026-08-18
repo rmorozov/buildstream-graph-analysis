@@ -165,8 +165,9 @@ def serialize_batch_opportunities(batch_result: BatchOpportunities) -> Dict[str,
     is a real, simulated fact, not a genuine opportunity worth mixing
     into `groups`; it's moved to `omitted_zero_savings_groups` instead
     (UX-26) so it stays visible (this codebase's "no silent gaps"
-    discipline - see `docs/scenarios/UX-26-...md`) without cluttering
-    the list a user actually wants to read.
+    discipline - see
+    `docs/scenarios/UX-26-batch-opportunities-report-zero-savings-groups.md`)
+    without cluttering the list a user actually wants to read.
     """
     all_groups = [
         {

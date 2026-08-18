@@ -97,7 +97,7 @@ def test_no_candidates_costs_nothing():
 def test_the_ranking_prefers_realizable_saving_over_duration():
     """The real inversion: `doxygen` is shorter than `python3` but worth
     4.5x more, and must therefore rank above it."""
-    from bga.report.text import _heaviest_on_path
+    from bga.findings import heaviest_on_path
 
     class _R:
         signals = {"critical_path_detail": [
@@ -109,7 +109,7 @@ def test_the_ranking_prefers_realizable_saving_over_duration():
              "realizable_saving_us": 513_500_000},
         ]}
 
-    assert [d["element_uid"] for d in _heaviest_on_path(_R())] == [
+    assert [d["element_uid"] for d in heaviest_on_path(_R())] == [
         "doxygen.bst", "python3.bst",
     ]
 
@@ -117,7 +117,7 @@ def test_the_ranking_prefers_realizable_saving_over_duration():
 def test_an_unevaluated_element_falls_back_to_duration():
     """`None` means not evaluated - it must not sort to the bottom as if
     it were worth nothing."""
-    from bga.report.text import _heaviest_on_path
+    from bga.findings import heaviest_on_path
 
     class _R:
         signals = {"critical_path_detail": [
@@ -127,4 +127,4 @@ def test_an_unevaluated_element_falls_back_to_duration():
              "is_structural_kind": False, "realizable_saving_us": None},
         ]}
 
-    assert [d["element_uid"] for d in _heaviest_on_path(_R())][0] == "big.bst"
+    assert [d["element_uid"] for d in heaviest_on_path(_R())][0] == "big.bst"

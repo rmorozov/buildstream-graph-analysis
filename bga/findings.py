@@ -95,7 +95,11 @@ def structural_kind_tag(entry: dict) -> str:
     shown-when-relevant caveat for report listings ranking elements by a
     real, directly-observed signal (blast radius, criticality, etc.) -
     flags when the listed element is a BuildStream plugin kind that
-    typically does no real compute work of its own.
+    typically does no real compute work of its own (junction/import/
+    filter/compose/stack - see bga.ingest.models.STRUCTURAL_ELEMENT_KINDS),
+    so a reader can judge whether its own recorded duration means what
+    they'd assume. Never hidden, never used to reorder or exclude - the
+    ranking itself is untouched, this is purely an annotation.
     """
     if not entry.get('is_structural_kind'):
         return ''
@@ -115,6 +119,10 @@ def heaviest_on_path(result) -> List[dict]:
     """
     detail = (result.signals or {}).get('critical_path_detail') or []
     real = [d for d in detail if d.get('duration_us') and not d.get('is_structural_kind')]
+    # UX-70: rank by realizable saving. Share of the path is what the
+    # chain is made of; the saving is what changing it is worth, and on a
+    # dense graph those differ by 5x. `None` means not evaluated, and
+    # falls back to duration rather than sorting to the bottom.
     return sorted(
         real,
         key=lambda d: -(d['realizable_saving_us']
@@ -130,6 +138,12 @@ def path_elements_by_duration(result) -> List[dict]:
     Two orderings of one list, and they are not interchangeable: "where
     is the time" is a question about duration, "what should I fix" is a
     question about realizable saving, and on a mesh graph they disagree.
+    `UX-70` re-sorted the shared helper by saving, and the concentration
+    block silently inherited it - on a real capture it began reporting
+    80.3% across four elements and omitting `python3.bst`, the third
+    largest on the path, in favour of one 3.5x smaller. Answering a
+    duration question with a saving ranking understated the
+    concentration by 13.7 points.
     """
     detail = (result.signals or {}).get('critical_path_detail') or []
     real = [d for d in detail if d.get('duration_us') and not d.get('is_structural_kind')]

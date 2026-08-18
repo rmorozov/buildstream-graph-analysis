@@ -15,13 +15,13 @@ processes. Here is what the report ranks, against what a user needs:
 
 | binary | count | CPU s | wall s |
 |---|---|---|---|
-| **ranked by count — what the report shows today** |
+| **ranked by count — what the report shows today** | | | |
 | `sh` | 2262 | 29.4 | 8745.1 |
 | `as` | 1918 | 397.5 | 5929.8 |
 | `ninja` | 1731 | 3.4 | 470.2 |
 | `gcc` | 1322 | 0.8 | 9.9 |
 | `cc1` | 1034 | 252.9 | 272.4 |
-| **ranked by CPU time — what a user needs** |
+| **ranked by CPU time — what a user needs** | | | |
 | **`cc1plus`** | **885** | **4352.6** | **5525.6** |
 | `as` | 1918 | 397.5 | 5929.8 |
 | `cc1` | 1034 | 252.9 | 272.4 |

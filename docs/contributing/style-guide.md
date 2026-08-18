@@ -124,7 +124,26 @@ they are a table. This is the same judgement `UX-89` applied to the
 report itself: seven near-identical blocks became one block with ranges,
 48 lines became 21, and nothing was lost.
 
-## 8. Do not restate the code
+## 8. Markdown must be well-formed, and a linter says so
+
+Write markdown a strict renderer agrees with — most concretely: **every
+table row has the same cell count as its header, and a literal `|`
+inside a table cell is escaped as `\|`** (GitHub splits rows on pipes
+even inside backtick spans). Fenced code blocks are closed, and heading
+levels do not skip.
+
+Until the linter lands (`UX-98`), the check is manual; once it lands,
+this rule is **enforced by lint** the same way rules 3 and 5 are
+enforced by test, and the editing checklist's answer becomes "run
+`make lint-docs`".
+
+**Why:** the round-11 status table rendered broken on GitHub because
+one row's summary quoted a jq pipeline — two unescaped pipes turned a
+6-column row into 8 cells. A sweep then found four more malformed rows
+across three files, one of them broken since the P-task era. Prose
+rules cannot catch this class; a linter can, which is `UX-98`.
+
+## 9. Do not restate the code
 
 Explain what is *not* deducible from reading the source: why a threshold
 has the value it does, what was measured, what was rejected and why.
@@ -144,3 +163,5 @@ the docs should not diverge from it.
 - [ ] Does every number say where it came from? (rule 4)
 - [ ] Do the links resolve? (rule 5, tested — just run `make test`)
 - [ ] Would a stranger get the answer from the first paragraph? (rule 6)
+- [ ] Do tables render? Same cell count per row, `\|` for literal pipes
+      (rule 8 — linted once `UX-98` lands)

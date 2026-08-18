@@ -162,7 +162,7 @@ Then iterate: make a change, rebuild, extract a new run, and compare it against 
 bga compare /tmp/my-run-before /tmp/my-run-after
 ```
 
-This reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence, with a refusal if the two runs don't look like the same project or the same cache scenario.
+This reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence. If the two runs don't look like the same project, or one is a caches-off run and the other incremental, it **refuses** — exit 6, distinct from the gates' 4 and 5, so a CI job cannot mistake a wrong-artifact-path bug for a regression. `--allow-mismatch` compares anyway.
 
 > **One capture is not a baseline.** Measured run-to-run noise on a real project, across two captures of the *same commit*, is **2.9%** against a default significance rule of 1%. For CI, build a baseline *set* and use the band: `--baseline-run A --baseline-run B --band-k 3.0` (minimum three runs).
 

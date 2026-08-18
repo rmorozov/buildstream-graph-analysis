@@ -99,7 +99,7 @@ incremental run, not against a caches-off nightly
 ```
 
 If you compare an incremental run against a caches-off one, `bga compare`
-refuses rather than producing a meaningless delta.
+refuses (exit 6) rather than producing a meaningless delta.
 
 ## Step 2 — turn the log into a run directory
 
@@ -422,8 +422,16 @@ bga compare /tmp/run-before /tmp/run-after
 
 You get a signed delta for every certified floor, both efficiency
 signals, and each attribution category, plus a verdict gated on
-confidence — and a refusal if the two runs do not look like the same
-project or the same cache scenario.
+confidence.
+
+If the two runs do not look like the same project — fewer than half
+their element UIDs shared — or one is a caches-off run and the other
+incremental, `bga compare` **refuses**: exit **6**, naming the check that
+failed, and prints no comparison. That exit code is deliberately not 4 or
+5: in CI the likeliest way to feed `compare` two unrelated runs is an
+artifact-path bug, and a pipeline keying on the gates' codes must not
+read it as "your build got slower". `--allow-mismatch` compares anyway,
+with the warning attached.
 
 **One capture is not a baseline.** Run-to-run noise on this real build,
 measured across two captures of the *same commit* with nothing changed,

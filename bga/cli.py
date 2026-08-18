@@ -282,6 +282,14 @@ EXIT_CODE_REGRESSION = 4
 # the first and fail on the second, which one shared exit code makes
 # impossible.
 EXIT_CODE_EFFICIENCY_REGRESSION = 5
+# UX-78: "these two runs are not comparable" is not a verdict about the
+# build, so it must not share an exit code with one. README and the
+# real-project guide both promised a refusal here while the code only
+# warned; a golden fixture against a real run produced
+# `Verdict: REGRESSED (+105668.8%)` and exit 4 under the gate, which in
+# CI reads as "your build got slower" when the truth is "your job is
+# comparing the wrong things".
+EXIT_CODE_MISMATCHED_RUNS = 6
 
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
@@ -426,6 +434,25 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
 
     try:
         output, comparison = _produce_compare_output(args)
+
+        # UX-78: refuse before the comparison is printed or written. A
+        # mismatched pair produces numbers that are arithmetically
+        # correct and meaningless, and printing them beside a refusal
+        # would leave a reader to decide which to believe.
+        if comparison.mismatches and not getattr(args, 'allow_mismatch', False):
+            checks = ", ".join(m['check'] for m in comparison.mismatches)
+            print(
+                f"Refusing to compare these runs ({checks}):",
+                file=sys.stderr,
+            )
+            for mismatch in comparison.mismatches:
+                print(f"  - {mismatch['message']}", file=sys.stderr)
+            print(
+                "Pass --allow-mismatch to compare anyway (the comparison is then "
+                "printed with the warning above, as it was before UX-78).",
+                file=sys.stderr,
+            )
+            return EXIT_CODE_MISMATCHED_RUNS
 
         if args.output:
             output_path = Path(args.output)
@@ -867,6 +894,15 @@ def create_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument(
         '-c', '--capacity', type=int, default=None, metavar='N',
         help='Override system resource capacity for both runs (applied symmetrically). Default: auto-detect per run'
+    )
+    compare_parser.add_argument(
+        '--allow-mismatch', action='store_true',
+        help=f'UX-78: compare anyway when the two runs fail a comparability check '
+        f'(they share less than half their element UIDs, or one is a caches-off run '
+        f'and the other incremental). Without this, such a pair is refused with exit '
+        f'{EXIT_CODE_MISMATCHED_RUNS} - distinct from the gates\' 4/5, so a CI job '
+        f'cannot mistake a wrong-artifact-path bug for a regression. With it, the '
+        f'warning and the comparison are both printed, which is what happened before.'
     )
     compare_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose (DEBUG-level) logging for debugging')
     compare_parser.add_argument('-q', '--quiet', action='store_true', help='Suppress all log output except errors')

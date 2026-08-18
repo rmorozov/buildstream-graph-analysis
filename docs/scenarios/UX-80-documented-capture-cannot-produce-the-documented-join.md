@@ -1,6 +1,6 @@
 # UX-80: the documented capture command cannot produce the join the docs show
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-56, UX-64 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-56, UX-64 (both done)
 
 ## Motivation
 
@@ -48,3 +48,38 @@ correlate command sequence, unmodified. `bga correlate` must join the
 traced element by UID rather than reporting an unresolved-bucket
 collapse. Grep the three docs for the final shipped command and confirm
 what they show is what was run.
+
+## Fix Implemented
+
+`--wrapped-log` now implies the invocation record. There is no scenario
+in which a user asks for the Plane 1 log and does *not* want the join, so
+the record goes to a temporary path unless one is named — its value is
+the correlation, not the file — and `--no-invocation-log` restores the
+old behaviour for anyone reproducing it.
+
+The resolution is a named function (`resolve_invocation_log_path`) rather
+than an inline conditional, so the rule is testable without running a
+build: four tests pin that a wrapped log implies a record, that an
+explicit path wins, that no wrapped log means no record (there would be
+nothing to correlate against), and that the opt-out works.
+
+The documented commands in `README.md`, `docs/cli.md` and
+`docs/real-project-guide.md` are now correct **as written** — which was
+the point. They are unchanged; the code moved to meet them.
+
+### Why this was invisible
+
+Every example project in this repository uses BuildStream's default
+build-root layout, where the path-convention fallback happens to be
+right. The failure needs a project that overrides `build-root` — which is
+`freedesktop-sdk`, the project the guide is written from, and which only
+CI ever captured, using a flag the docs never mentioned.
+
+Tests: 4 new in `tests/unit/test_invocation_correlation.py`. Suite:
+1114 → 1118.
+
+## Verification Log
+
+Fixed 2026-08-18. The gating condition was read from
+`tools/bst_native_build_tracer.py`'s `load_and_summarize`, and the flag's
+absence from the three documents confirmed by grep before and after.

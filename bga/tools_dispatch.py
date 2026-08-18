@@ -124,7 +124,26 @@ def dispatch(argv: List[str]) -> Optional[int]:
         return None
     alias = argv[0]
     module_name, _help = TOOL_ALIASES[alias]
-    module = importlib.import_module(module_name)
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        # UX-77: this used to be a raw traceback on the *first* command
+        # the real-project docs tell a new user to run, because
+        # `pyproject.toml` packaged `bga*` only and `tools` was never
+        # installed. Packaging fixes that case; this makes any remaining
+        # one - a partial install, a shadowed name, a missing optional
+        # dependency of the tool itself - a single actionable sentence
+        # with the exit code the rest of the CLI uses for bad input.
+        print(
+            f"Error: `bga {alias}` could not load {module_name} ({exc}).\n"
+            f"Hint: it lives in the `tools` package, which ships with `bga` - "
+            f"reinstall (`pip install -e .`), or run the tool directly with "
+            f"`python3 -m {module_name}` from a checkout.",
+            file=sys.stderr,
+        )
+        # Exit 2, the code the rest of the CLI uses for "the input to
+        # this invocation is wrong", not 1.
+        raise SystemExit(2) from exc
     main = getattr(module, "main", None)
     if main is None:  # pragma: no cover - every listed tool has one
         raise SystemExit(f"{module_name} has no main() to dispatch to")

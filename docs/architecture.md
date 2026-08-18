@@ -1,6 +1,8 @@
 # `bga`: Current Architecture — Two Analysis Planes
 
-**Start here to orient in this codebase.** `docs/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history from 22 `docs/scenarios/` files, 75 `docs/tasks/` files, and the commit log yourself.
+**Start here to orient in this codebase.** `docs/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history from 75 `docs/scenarios/` files, 75 `docs/tasks/` files, and the commit log yourself.
+
+**Want to *use* the tool rather than work on it?** [`docs/real-project-guide.md`](real-project-guide.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
 ## The shape of the tool today
 
@@ -15,7 +17,7 @@ Neither plane subsumes the other, and that's intentional: Plane 1 operates purel
 
 ### Where the two planes connect
 
-Plane 1 already tells you *which* elements are expensive or on the critical path (`UX-20`'s `sensitivity.top_opportunities`, `UX-22`'s serialization-point detection). Plane 2 can now tell you, for any *one* of those elements, exactly what its own native build system spent its time on. Running Plane 2 across **multiple** elements of the same project opens a genuinely new class of question neither plane can answer alone: are several elements each independently, redundantly doing the *same* real sub-work inside their own sandboxes — the same expensive `configure` step, the same codegen invocation, the same dependency-resolution pass — that could be shared or cached once instead of paid for by every element separately?
+Plane 1 already tells you *which* elements are worth fixing and by how much (`UX-70`'s realizable saving, `UX-74`'s horizon, `UX-22`'s serialization-point detection). Plane 2 can now tell you, for any *one* of those elements, exactly what its own native build system spent its time on. Running Plane 2 across **multiple** elements of the same project opens a genuinely new class of question neither plane can answer alone: are several elements each independently, redundantly doing the *same* real sub-work inside their own sandboxes — the same expensive `configure` step, the same codegen invocation, the same dependency-resolution pass — that could be shared or cached once instead of paid for by every element separately?
 
 **Confirmed real, not hypothetical, and now automatically detected** (`UX-23`, done): a real, fully-fresh `bst build all.bst` capture of `examples/05-cmake-cpp-toolchain` (6 cmake elements) traced under Plane 2, with real `--dir`-based element tagging, produced **37 redundant-operation findings, every one correctly spanning all 6 real elements** - including the exact CMake compiler-ABI-detection probe this section originally found by hand. Implementing element-tagging also surfaced and fixed a real, previously-latent correctness bug in `UX-11`'s own original design: pairing traced process START/END events by pid alone is unsound once a trace spans multiple elements, since each element gets its own independent `--unshare-pid` namespace and the same small pid number recurs across every element's sandbox. `UX-24` (Chrome Trace export for Plane 2, and a combined two-plane `perfetto.dev` view) is done too: one real single `bst build` invocation now captures both planes at once (`bst_native_build_tracer.py run --wrapped-log`), and a real end-to-end run confirmed the two clocks correlate correctly - Plane 2's earliest event landed exactly on Plane 1's own real build-start timestamp. Closest existing relatives: `UX-20` (batch/map-reduce simulation, but over already-observed element durations, not intra-element operation identity) and `UX-14`'s tier-2 design (PR #58/#61, cross-run calibration, a different but related use of multi-capture comparison).
 
@@ -33,7 +35,10 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga utilisation RUN` | CPU utilisation accounting | 30, M4 |
 | `bga diagnostics RUN` | Blast radius, criticality probability, wall-clock shares | 20–29, M5 |
 | `bga correlate RUN NATIVE_REPORT` | Joins this run with a Plane 2 native trace of the same build on element UID, and says what to fix. **Not spec-mandated**, `UX-51` | — |
-| `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5). **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39` | — |
+| `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5); `--baseline-run`/`--band-k` compare against a baseline *set* instead of a fixed threshold. **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39`/`UX-59` | — |
+| `bga wrap` / `extract` / `capture` / `rebuild-set` / … | Thin aliases dispatching to the programs in `tools/`, which stay independently runnable as `python3 -m tools.<module>` — the workflow reads as one tool without merging the code. **Not spec-mandated**, `UX-67` (`bga/tools_dispatch.py`) | — |
+
+Every conclusion the text report draws is also published by `--format json` as a `findings` array, each entry with a stable `id`, a `severity` and the numbers behind it (`UX-75`). Both renderers consume the same list, so they cannot disagree, and a CI consumer keys on `id` rather than re-deriving a threshold out of the renderer.
 
 ## Real package structure (Plane 1)
 
@@ -51,7 +56,12 @@ utilisation/  -> CPU accounting (Part 30, M4)
 diagnostics/  -> blast radius, Monte-Carlo criticality, leaf/deferrability (Part 20-29, M5)
 structural/   -> M6 graph metrics, batching (UX-20), serialization-point detection (UX-22)
 validation/   -> determinism harness, invariant checks, provenance (Part 35, I1-I13)
-report/       -> text/JSON rendering
+findings.py   -> every conclusion the report draws, as data (UX-75) - the single
+                 place that decides what is worth saying; both renderers read it
+correlate.py  -> the two-plane join (UX-51), a third consumer of two finished
+                 artifacts that neither plane knows about
+tools_dispatch.py -> `bga <alias>` -> tools/ programs, lazily imported (UX-67)
+report/       -> text/JSON rendering (presentation only, since UX-75)
 ```
 
 `tools/` is a separate, deliberately-not-`bga`-internal set of scripts that turn a real `bst` invocation into `bga`-ingestible input (needs a live `bst`+`bwrap` install; `bga` itself never does) — full data-flow diagram in `docs/ingestion-pipeline.md`. `tools/bst_native_build_tracer.py` (+ `tools/native_trace/`) is Plane 2 — see below.
@@ -62,13 +72,26 @@ One script in `tools/` is not part of that pipeline and needs no `bst` at all: `
 
 `tools/bst_native_build_tracer.py` wraps a real `bst build` invocation: a `bwrap` shim placed ahead of the real binary in `$PATH` injects an `LD_PRELOAD` hook (`tools/native_trace/hook.c`) into every dynamically-linked process the sandbox execs, recording real `CLOCK_MONOTONIC` start/end timestamps. Validated end-to-end against a real `cmake`+`make`+`gcc` build (98 real traced processes, reproduced real `-j4` compile concurrency across independent runs). Known, honestly-reported limitation: statically-linked processes are invisible to this mechanism and there is no way to detect that gap from outside — every report carries a fixed disclaimer rather than a false completeness claim. Full design history (five brainstormed options, an external design contribution, a risk-reduction spike, a second external review that was checked and refuted, and the final validated mechanism) is in `docs/scenarios/UX-11-native-build-system-profiler-tool.md` — read that only if you need the *why*; this doc is the *what, today*.
 
-The hook records three things per process, and the second and third arrived in the third round of work:
+The hook records four things per process. The first is what `UX-11` shipped; the rest arrived as later rounds found questions timing alone could not answer:
 
 1. **Lifecycle** (`UX-11`) — `CLOCK_MONOTONIC` START/END, which is what every timing analysis below is built on.
 2. **Real CPU time** (`UX-45`) — `getrusage(RUSAGE_SELF)` plus `RUSAGE_CHILDREN` in the destructor, the one place with access to the kernel's own accounting for a process about to exit. This is `bga`'s **only** CPU-time measurement anywhere; everything in Plane 1 is slot occupancy, and deliberately still says so (see `UX-36` below). Its value is a question Plane 1 structurally cannot answer — *was this element CPU-bound or waiting?* On a real capture, `core.bst` (pinned with `notparallel: True`) runs at **0.87 cores busy** while every sibling runs at ~1.7. Coverage is always reported: a process killed by a signal, or one replaced by `exec`, runs no destructor and is counted as **unmeasured**, never as zero (~19% of processes in a real `examples/06` build).
-3. **Opened file paths** (`UX-46`, opt-in via `--trace-opens`) — `open`/`openat` interposition, deduplicated in-process and flushed once at exit. Opt-in because unlike the other two it runs on a genuinely hot path. Matched against `bst artifact list-contents`, this answers *"which of this element's declared build dependencies did its sandbox never read?"* — the last macro-level gap, and the one problem in `examples/06` that no Plane 1 signal could find. It **refuses rather than guesses**: an element with no observed opens (a statically-linked build looks identical to one that used nothing) or with a truncated read set is reported `uncovered`, never as having unused dependencies.
+3. **Peak resident memory** (`UX-63`) — `ru_maxrss` from that same `getrusage` call, giving a *measured* per-element peak where the memory-oversubscription guard had only ever had operator-declared estimates. Reported as "no single process here exceeded this", never summed: two processes peaking at different moments never held the sum between them.
+4. **Opened file paths** (`UX-46`, opt-in via `--trace-opens`) — `open`/`openat` interposition, deduplicated in-process and flushed once at exit, and re-flushed rather than dropped when the window fills (`UX-57` — the fixed buffer had been losing 70% of a real build's opens). Opt-in because unlike the others it runs on a genuinely hot path. Matched against `bst artifact list-contents`, this answers *"which of this element's declared build dependencies did its sandbox never read?"* — the last macro-level gap, and the one problem in `examples/06` that no Plane 1 signal could find. It **refuses rather than guesses**: an element with no observed opens (a statically-linked build looks identical to one that used nothing) or with a truncated read set is reported `uncovered`, never as having unused dependencies.
 
-Every traced process is tagged with its real owning BuildStream element (`UX-23`, parsed from BuildStream's own `--dir` bwrap option). Two further analyses build on that. `compute_per_element_parallelism` (`UX-32`) reports, per element, the parallelism its native build system *actually achieved* against the `-jN` it asked for - splitting real work processes (compilers, assemblers, linkers) from orchestration that spends its life waiting on children, and emitting two findings: `pinned_to_one_job` (this element asked for `-j1` while its siblings asked for more - the `notparallel` case, invisible to any achieved-vs-requested ratio, since a pinned element gets exactly what it asked for) and `underachieved_requested_jobs`. `detect_redundant_operations` (`UX-23`, rescored by `UX-37`) flags real operations repeated independently across multiple elements' own sandboxes, ranked by *recoverable wall-clock* rather than by process time summed across elements that ran concurrently, and excluding each element's own build driver (identical across elements by construction, entirely different work in each). `tools/native_trace_to_chrome_trace.py` (`UX-24`) exports Plane 2 traces as Chrome Trace JSON, standalone or combined with Plane 1's own real export for the same run — `bst_native_build_tracer.py run --wrapped-log PATH` captures both planes from one single real `bst build` invocation.
+### Element attribution: the hardest thing in Plane 2
+
+Every traced process is tagged with its owning BuildStream element (`UX-23`, originally parsed from BuildStream's own `--dir` bwrap option). That parse is a *path convention*, and a real project overrides it: on `freedesktop-sdk`, which sets `build-root: /buildstream-build`, **99.4% of 127,630 processes landed in one bucket that is not an element** (`UX-56`), and every per-element figure was a whole-build figure wearing an element's name.
+
+The fix does not guess. Each sandbox is correlated against Plane 1's own BUILD spans, on the sandbox's **end** edge — chosen by measurement, not by argument: requiring the whole interval inside the span resolved 2 of 9 sandboxes with 7 unmatched, because Plane 1 timestamps a line when the wrapper reads it and every sandbox therefore begins *before* its element's logged BUILD START; matching on the end edge resolved 8 of 9 with none unmatched (`UX-64`). The same work removed an unsound elimination pass: a real project runs more than one sandbox per element, so striking a resolved element from every other candidate set could attribute a sandbox to the *wrong* element.
+
+Measured on a real capture, in order: **0.6% → 14.9% → 86.1%** of processes attributed to a named element. The remainder sits in an explicitly unresolved bucket, and every consumer states its coverage rather than folding it in — including `detect_redundant_operations`, which had been counting that bucket as a second element and thereby sourcing **87% of its claimed recoverable time from an element that does not exist** (`UX-73`).
+
+### What is built on the per-element split
+
+`compute_binary_cost` (`UX-69`) reports, per element, where the CPU actually went — binaries ranked by measured CPU rather than by invocation count, with the single-process case called out separately. On a real capture `cc1plus` is **81.3% of the CPU** of the element that is 43.5% of the build, and `dwz` is **one process holding 138.6s**, a serialization point no job count can help. Ranked by count neither is visible: `as` runs twice as often as `cc1plus` for a tenth of the cost.
+
+`compute_per_element_parallelism` (`UX-32`) reports, per element, the parallelism its native build system *actually achieved* against the `-jN` it asked for - splitting real work processes (compilers, assemblers, linkers) from orchestration that spends its life waiting on children, and emitting two findings: `pinned_to_one_job` (this element asked for `-j1` while its siblings asked for more - the `notparallel` case, invisible to any achieved-vs-requested ratio, since a pinned element gets exactly what it asked for) and `underachieved_requested_jobs`. `detect_redundant_operations` (`UX-23`, rescored by `UX-37`) flags real operations repeated independently across multiple elements' own sandboxes, ranked by *recoverable wall-clock* rather than by process time summed across elements that ran concurrently, and excluding both each element's own build driver (identical across elements by construction, entirely different work in each — `UX-37`) and its own top-level command block, which bwrap's PID namespace identifies structurally rather than by string matching (`UX-73`). `tools/native_trace_to_chrome_trace.py` (`UX-24`) exports Plane 2 traces as Chrome Trace JSON, standalone or combined with Plane 1's own real export for the same run — `bst_native_build_tracer.py run --wrapped-log PATH` captures both planes from one single real `bst build` invocation.
 
 ## Joining the planes (`UX-51`)
 
@@ -78,7 +101,14 @@ The two planes are joined by `bga correlate RUN_DIR NATIVE_REPORT.json`, and the
 - **The join key is exact.** On a real dual capture of `examples/06`, 9 of 9 Plane 2 elements matched Plane 1 UIDs with zero mismatches; the only Plane 1 elements absent were a `stack` and an `import`, which run no build commands, so their absence is correct.
 - **The horizons cannot be merged**, per this doc's own argument above — Plane 2 measures inside one element's sandbox and shares no horizon with an element-level trace. Anything called a merge would be a join with a misleading name.
 
-So `bga/correlate.py` is a third consumer that reads two finished artifacts and neither plane knows about, leaving both independently replaceable. It produces the sentence neither can alone — *"`core.bst` holds 25% of the critical path but runs at only 0.85 cores busy and asked for `-j1`"* — ranks by Plane 1 impact (Plane 2 explains that ranking, never reorders it), carries `UX-45`'s measurement coverage through so a partial result says so, and names elements Plane 1 ranks that Plane 2 never traced rather than passing over them in silence.
+So `bga/correlate.py` is a third consumer that reads two finished artifacts and neither plane knows about, leaving both independently replaceable. It produces the sentences neither can alone, ranks by Plane 1 impact (Plane 2 explains that ranking, never reorders it), carries `UX-45`'s measurement coverage through so a partial result says so, and names elements Plane 1 ranks that Plane 2 never traced rather than passing over them in silence.
+
+Four properties of the join are worth stating because each was a defect first:
+
+- **It ranks on what a fix is worth.** It used to rank and gate on `sensitivity.top_opportunities`, whose score is `min(duration, next_binding_gap)` — a correct upper bound and a useless ranking, because the cap is a constant over exactly the population being ranked. On a real capture all five candidates scored an identical `0.0316`, so the order was the alphabetical tiebreak and the gate never opened for anything, making the join's own headline verdict unreachable. It now reads `UX-70`'s realizable saving, the same number `bga analyze` ranks on, so the two commands cannot name different elements first (`UX-71`).
+- **It reads all of Plane 2, ranked by evidence strength.** Every row used to be the same explicitly-hedged declared-vs-used sentence while `binary_cost`, `peak_memory` and `redundant_operations` sat unread in the file it had just opened. It now carries all of them, strongest measurement first and the hedged one last, with that class published as an `id` and a `severity` rather than implied by ordering (`UX-72`, `UX-75`).
+- **It refuses fiction.** Plane 2's own element test is syntactic — a name ends in `.bst`, which is all Plane 2 can do alone. The *declared graph* is a Plane 1 fact, so the join checks against it: a bucket name the graph never contained is excluded from every recommendation and listed, rather than quietly recommended (`UX-66`). On the real capture that is exactly `buildstream-build`, `flit_core`, `unknown`.
+- **Negative results are load-bearing.** "Already compute-bound at 3.41 cores busy" tells a reader to stop looking inside that element, which is worth as much as a positive finding and much easier to skip past.
 
 ## What the 2026-08-16 audit round changed structurally
 
@@ -152,6 +182,26 @@ occupancy noise, against 7.4% of wall-clock noise - which is itself the
 measured evidence that the duration gate's own 1% default sits below the
 noise floor).
 
+## What the real-capture rounds (7–10) changed structurally
+
+Rounds 1–6 were measured against builds this repository wrote itself. From round 7 the tool has been audited against a real `freedesktop-sdk` capture, and four things changed shape as a result.
+
+### 1. The report ranks by what a fix is worth, not by how big something is
+
+`share of the critical path` answers *what is this chain made of*. It does not answer *what happens if I change it*, because it holds the rest of the graph fixed — and on the real capture **97 of 126 elements have zero slack**, so the rest of the graph does not stay fixed at all. `compute_realizable_savings` recomputes the longest path with each candidate zeroed: `python3.bst` holds **17.7%** of the path and eliminating it entirely saves **3.2%** of the build, because a near-tie chain takes over the moment it shrinks (`UX-70`). `zero_slack_share` is published beside it, because *chain or mesh* decides whether "optimize the top element" is meaningful advice at all.
+
+### 2. One capture answers more than one question
+
+A real capture costs ~60 minutes; a longest-path recomputation costs 0.40 ms. `UX-74` spends a handful of the latter to publish what becomes binding after each fix, what the recommended set is worth *together* (simulated — on a chain savings compose, on parallel branches they take a maximum, and only the simulation knows which), and which heavy elements sit off the path worth nothing to fix today. On the real capture the 4th and 6th heaviest elements in the whole build appear in no ranking, correctly, and are now named anyway.
+
+### 3. Conclusions are data, not prose
+
+Every judgement the report makes lives in `bga/findings.py` with a stable `id`, a `severity` and its numeric evidence; `bga/report/text.py` renders that list and `bga/report/json.py` publishes it (`UX-75`). Before this, `--format json` carried every number and none of the conclusions, so a CI consumer had to re-implement the structural exclusion and four thresholds out of the renderer — and two implementations of one judgement is precisely how `analyze` and `correlate` had already drifted (`UX-71`). A finding that is not produced cannot appear in either format; that property is tested, not asserted.
+
+### 4. The known gap, stated rather than papered over
+
+**Every real capture so far is incremental** — 25 elements built, 65 skipped. The caches-off nightly, which is the scenario a whole-project analyzer has the most to say about, has never been captured, so the critical path every round measured is the chain through the rebuilt elements rather than the project's real one. Related and measured: run-to-run noise on the real build is **2.9%** against the regression gate's fixed 1% default, so `UX-59`'s band over a baseline *set* is the correct path and its three-run minimum has not yet been reachable. See `docs/audit-round-9.md`.
+
 ## Core invariants still load-bearing (Plane 1)
 
 The spec's invariants (full text: `docs/specification.md`) remain the real correctness contract every Plane 1 change is checked against:
@@ -208,6 +258,43 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 | UX-39 | Independent CI efficiency gate (`--fail-on-efficiency-regression`, `--min-efficiency`, exit code 5) on `occupancy_ratio`, with a default derived from measured run-to-run noise | 🟢 Done |
 | UX-40 | Measured pipeline overhead no longer penalizes confidence (real capture 0.694 -> 0.869, CI gate live), plus `--fail-on-low-confidence` | 🟢 Done |
 
+| UX-41 | Parallelism levels decomposed by *longest* path from a root, not shortest | 🟢 Done |
+| UX-42 | Resource saturation computed once, not re-derived per wait gap (1200-element analyze: 68s → ~4s) | 🟢 Done |
+| UX-43 | "Choke point" re-defined against the real graph, not `fan-in >= 2 and fan-out >= 2` | 🟢 Done |
+| UX-44 | Real slack replaces the `duration × 0.5` placeholder; the improvement ranking was inverted | 🟢 Done |
+| UX-45 | **Real per-process CPU time** in Plane 2 (`getrusage`), with coverage always stated | 🟢 Done |
+| UX-46 | Declared-vs-used build dependencies, from `--trace-opens` matched against artifact contents | 🟢 Done |
+| UX-47 | Narrow subcommands run only the stages they render (`bga graph` ~1.2s vs `analyze` ~3.7s at 1200 elements) | 🟢 Done |
+| UX-48 | Idle capacity split into real buckets instead of all booking to `IDLE_NO_TASKS` | 🟢 Done |
+| UX-49 | `parallelism_efficiency` no longer scores a perfectly serial build 1.000 | 🟢 Done |
+| UX-50 | Structural analyzer keeps every task per element (an element whose FETCH sorted after its BUILD read as zero-duration) | 🟢 Done |
+| UX-51 | **`bga correlate`** — the two-plane join, on element UID | 🟢 Done |
+| UX-52 | Structural plane gates on `build` edges only; `runtime` edges no longer inflate its critical path | 🟢 Done |
+| UX-53 | One per-element duration definition across every path computation (two coexisted, 22% apart) | 🟢 Done |
+| UX-54 | A build in which elements **failed** says so before any efficiency figure | 🟢 Done |
+| UX-55 | Cached elements recognised as cached, not as coverage gaps — `run_mode` published, incremental scoping stated | 🟢 Done |
+| UX-56 | Plane 2 element attribution correlated against Plane 1 BUILD spans, not a path convention (0.6% → 14.9% on a real project) | 🟢 Done |
+| UX-57 | Hook's open-path buffer flushes instead of dropping (70% of a real build's opens were lost) | 🟢 Done |
+| UX-58 | Plane 2 shim records the bwrap argv and invocation it rewrites | 🟢 Done |
+| UX-59 | Regression gate can compare against a baseline *set* — median ± k·MAD band, minimum three runs | 🟢 Done |
+| UX-60 | `I3` implemented; the FETCH-in-efficiency question decided and documented rather than deferred again | 🟢 Done |
+| UX-61 | `max_concurrency` keyed on `(invocation, pid)` — it reported 5,268 concurrent processes on a 4-core runner | 🟢 Done |
+| UX-62 | Per-span terminal status carried through `trace/v9`; failed task time reported as waste, not silently reclassified | 🟢 Done |
+| UX-63 | **Measured per-element peak RSS** (`ru_maxrss`), replacing operator-declared memory estimates | 🟢 Done |
+| UX-64 | Sandbox correlation matches on the interval's **end** edge (measured: 8 of 9 resolved vs 2 of 9 for whole-interval containment) — real attribution 14.9% → **86.1%** | 🟢 Done |
+| UX-65 | The headline leads with **where the time is**, not with the largest sub-1% wait category | 🟢 Done |
+| UX-66 | Attribution guard judges *validity*, not completeness — an 86.1% join renders with its coverage stated; a name the declared graph never contained is excluded and listed; a cancelled capture can no longer publish over a good one | 🟢 Done |
+| UX-67 | **One entry point**: `bga wrap/extract/capture/…` dispatch to the programs in `tools/`, which stay independently runnable | 🟢 Done |
+| UX-68 | A `stack` stages one marker file, so "nobody opened it" is not evidence — 90% false-positive rate removed from declared-vs-used | 🟢 Done |
+| UX-69 | Plane 2 ranks binaries by **measured CPU**, not invocation count, and names single-process serialization points | 🟢 Done |
+| UX-70 | **Realizable saving** — the longest path recomputed with each candidate zeroed — replaces share-of-path as the what-to-fix ranking | 🟢 Done |
+| UX-71 | The join ranks and gates on that same realizable saving; a saturated metric is declared rather than broken by element name | 🟢 Done |
+| UX-72 | The join reads all of Plane 2 — CPU concentration, serialization points, peak memory, redundancy — ranked by evidence strength | 🟢 Done |
+| UX-73 | Redundancy detection excludes the unresolved attribution bucket and each element's own command block (claimed recoverable time 4129s → 91s on a real capture) | 🟢 Done |
+| UX-74 | **Optimization horizon**, joint saving of the recommended set, and latent heavies — the next several findings from one capture | 🟢 Done |
+| UX-75 | **`bga/findings.py`** — every conclusion the report draws, as data with stable ids and severities, rendered by text and published by JSON | 🟢 Done |
+| UX-76 | One headline table instead of three rankings of the same elements | 🟢 Done |
+
 (`UX-08` was never filed — not a missing/lost file.)
 
 ## Navigating the rest of the docs
@@ -216,6 +303,7 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 - **`docs/scenarios/README.md`** + `UX-*.md` — active backlog, full real-evidence trail for every extension above (why it was filed, what was tried, real command output).
 - **`docs/tasks/`** + `docs/fix-progress-tracker.md` — **closed** historical spec-compliance backlog (P0-P4). Read only for archaeology.
 - **`docs/ingestion-pipeline.md`** — real data flow from a `bst` invocation to `bga`-ingestible input.
+- **`docs/real-project-guide.md`** — the end-to-end user-facing walkthrough on a real project: capture → read → go inside → join → act → gate, with real output at every step and an explicit list of what the tool refuses to say.
 - **`docs/optimization-walkthrough.md`** — a full worked example using the tool for real.
 - **`docs/optimization-walkthrough-06.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
 - **`docs/design-directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough-06.md` (what that felt like) → `design-directions.md` (what to do about it).
@@ -224,4 +312,6 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 
 ## Verification Log
 
-Written 2026-08-16, grounded directly in `bga/cli.py`'s real subparser definitions, `bga/` and `tools/` directory listings, and `docs/scenarios/README.md`'s own current backlog table (re-read in full, not from memory) - not written from the original spec or from assumption. No code changed; this is a docs-only addition.
+Updated 2026-08-18 (after `UX-76`), re-grounded in `bga/cli.py`'s real subparser definitions, the current `bga/` and `tools/` directory listings, and `docs/scenarios/README.md`'s backlog table re-read in full: the extensions table gained `UX-41`–`UX-76`, the Plane 2 and join sections gained what rounds 7–10 measured, and the package listing gained `findings.py`/`correlate.py`/`tools_dispatch.py`. Every figure quoted is from the capture published as `5eda28a` or from the task file that measured it.
+
+Originally written 2026-08-16, grounded directly in `bga/cli.py`'s real subparser definitions, `bga/` and `tools/` directory listings, and `docs/scenarios/README.md`'s own current backlog table (re-read in full, not from memory) - not written from the original spec or from assumption. No code changed; this is a docs-only addition.

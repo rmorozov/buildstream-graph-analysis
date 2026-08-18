@@ -2,6 +2,8 @@
 
 The `bga` command-line interface provides access to the BuildStream Build Efficiency Analyzer, allowing you to analyze build traces, generate efficiency reports, and export data.
 
+This is the reference. If you are pointing `bga` at a real project for the first time, read [`docs/real-project-guide.md`](real-project-guide.md) instead — it walks the whole cycle end to end with real output at every step, and links back here for flags.
+
 This covers the `bga` command itself — the whole-project analysis plane. For real per-process tracing *inside* one element's own sandbox (a separate tool, `tools/bst_native_build_tracer.py`, with its own Chrome Trace export), see [`docs/architecture.md`](architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
 
 ## One entry point (`UX-67`)

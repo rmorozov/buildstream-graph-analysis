@@ -1,6 +1,6 @@
 # UX-98: markdown correctness is a prose rule, not a lint
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** —
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** —
 
 ## Motivation
 
@@ -63,3 +63,87 @@ line. On the clean tree, `make lint-docs` and `make lint` pass, and CI
 runs the docs lint (visible in the workflow log). `pip install -e
 ".[dev]"` is sufficient to run it — no toolchain outside the Python one
 CI already has.
+
+---
+
+## Resolution (round 12)
+
+**Status:** 🟢 Done
+
+### The measurement changed the answer
+
+The Required Fix says to decide between PyMarkdown and
+`markdownlint-cli2` **by measuring both against the five real defects**,
+and names the must-catch criterion: *inconsistent cells-per-row, with
+the `\|` escape understood*.
+
+PyMarkdown catches **none** of it. Reconstructed the round-11 defect
+exactly — a 6-column header with a row quoting a jq pipeline — and:
+
+```
+$ python3 -m pymarkdown scan unescaped-pipe.md
+unescaped-pipe.md:5:1: MD013: Line length [Expected: 80, Actual: 95]
+```
+
+Line length, which this task says to disable, and nothing else. The
+single-cell caption row produced no finding at all. The reason is
+structural rather than a configuration mistake: **PyMarkdown implements
+MD001–MD048**, and the table rules are markdownlint v0.34+ additions —
+`MD055` (table pipe style) and `MD056` (table column count) have no
+PyMarkdown equivalent:
+
+```
+$ python3 -m pymarkdown plugins list | grep -oE '^  md[0-9]+' | sort | tail -1
+  md048
+```
+
+So the preferred tool cannot meet the criterion, and the named fallback
+needs a Node toolchain the task explicitly rules out.
+
+### What shipped instead: both halves, each where it belongs
+
+**The table check is ours**, in
+`tests/unit/test_docs_links_and_commands.py` — about 40 lines, no
+dependency at all, and it understands what a renderer understands:
+`\|` does not split a cell, leading and trailing pipes are delimiters,
+fenced code blocks are not tables, and a *contiguous run* of rows is one
+table (two tables of different widths in one file are normal — the first
+draft got this wrong and failed on every document).
+
+**PyMarkdown still earns its place** for the rest of the correctness
+class and is wired as `make lint-docs`, called from `make lint`, with
+`.pymarkdown.json` giving a one-line reason for every disabled rule. It
+found 11 real pre-existing findings, all in `README.md` (fenced blocks
+with no language, two fences without surrounding blank lines); all
+fixed.
+
+### It found a sixth defect immediately — one written an hour earlier
+
+The round-11 sweep found five. The test found a sixth on its first run:
+
+```
+docs/backlog/scenarios/README.md:116: 7 cells against a 6-cell header
+```
+
+That row is `UX-97`'s own status text, committed about an hour before,
+describing the `pytest | tee` bug — with the pipe unescaped. The defect
+class recurred *inside the commit that fixed the last instance of it*,
+which is the entire argument of this task, demonstrated without being
+asked for.
+
+### Acceptance
+
+- Both defect shapes re-introduced one at a time on a scratch copy:
+  **CAUGHT**, each naming file and line.
+- Clean tree: `make lint-docs` and `make lint` pass; suite 1241.
+- `pip install -e ".[dev]"` is sufficient — `pymarkdownlnt` is in that
+  extra, no toolchain outside the Python one CI already has, so CI's
+  existing `Lint` step runs it with no workflow change.
+- `make lint-docs` exits 2 on an injected unclosed fence.
+
+### Deviation, recorded
+
+Required Fix item 1 says "pick and integrate a markdown linter… the
+linter must catch all five". No pip-installable linter does. The rule is
+enforced as specified; the mechanism is split because the tooling forced
+it, and the half that matters most is the half no linter offered.

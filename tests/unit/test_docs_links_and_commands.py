@@ -213,3 +213,94 @@ def test_the_packaging_config_keeps_tools_out_of_the_top_level():
     assert top_level == {"bga"}, f"the wheel would ship top-level {sorted(top_level)}"
     assert "bga._tools" in packages and "bga._tools.native_trace" in packages
     assert "bga._tools.native_trace" in setuptools["package-data"]
+
+
+# --- UX-98: table rows GitHub will render as written ------------------
+#
+# The one markdown defect this repository has actually shipped, five
+# times across three files, one of them broken since the P-task era: a
+# table row whose cell count does not match its header, because a
+# literal `|` inside the row was not escaped. GitHub splits table rows
+# on `|` *even inside backtick spans*, so a quoted jq pipeline turns a
+# 6-column row into 8 cells and the table collapses.
+#
+# This is checked here rather than by the markdown linter because
+# `pymarkdownlnt` cannot see it: it implements MD001-MD048, and the
+# table rules (MD055 pipe style, MD056 column count) are markdownlint
+# v0.34+ additions with no PyMarkdown equivalent. Measured, not assumed
+# - see UX-98. `make lint-docs` covers the rest of the correctness
+# class; this covers the part that actually broke.
+
+
+def _tables(text: str):
+    """Yield each pipe table as a list of (line number, row).
+
+    A table is a *contiguous* run of rows starting with `|`; anything
+    else ends it. Tracking that matters — two tables of different widths
+    in one file are normal, and treating the file as one table would
+    fail on every document here.
+
+    Fenced code blocks are skipped entirely: a `|` in a shell pipeline
+    inside a fence is not a table row.
+    """
+    in_fence = False
+    current = []
+    for number, line in enumerate(text.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+            if current:
+                yield current
+                current = []
+            continue
+        if in_fence:
+            continue
+        if stripped.startswith("|"):
+            current.append((number, stripped))
+        elif current:
+            yield current
+            current = []
+    if current:
+        yield current
+
+
+def _cell_count(row: str) -> int:
+    """Cells in a table row, counted the way a renderer counts them.
+
+    A backslash-escaped pipe does not split a cell; a leading and
+    trailing pipe are delimiters rather than empty cells.
+    """
+    without_escapes = row.replace("\\|", "\x00")
+    inner = without_escapes.strip()
+    if inner.startswith("|"):
+        inner = inner[1:]
+    if inner.endswith("|"):
+        inner = inner[:-1]
+    return len(inner.split("|"))
+
+
+def _is_separator(row: str) -> bool:
+    return not row.replace("|", "").replace("-", "").replace(":", "").strip()
+
+
+def test_every_table_row_has_its_header_cell_count():
+    """A row that does not match its header renders as a broken table.
+
+    The failure is invisible in every editor that renders leniently,
+    which is how it survived in three files at once - including one
+    broken since the P-task era.
+    """
+    broken = []
+    for path in _markdown_files():
+        for table in _tables(path.read_text(encoding="utf-8")):
+            header_cells = _cell_count(table[0][1])
+            for number, row in table[1:]:
+                if _is_separator(row):
+                    continue
+                cells = _cell_count(row)
+                if cells != header_cells:
+                    broken.append(
+                        f"{path.relative_to(REPO)}:{number}: {cells} cells against a "
+                        f"{header_cells}-cell header - an unescaped pipe splits a cell"
+                    )
+    assert broken == [], "malformed markdown table row(s):\n  " + "\n  ".join(broken)

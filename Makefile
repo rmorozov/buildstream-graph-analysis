@@ -1,6 +1,6 @@
 # BuildStream Build Efficiency Analyzer - Makefile
 
-.PHONY: test test-e2e lint dev-run clean check-clean install dev help
+.PHONY: test test-e2e lint lint-docs dev-run clean check-clean install dev help
 
 # Default target
 help:
@@ -9,6 +9,7 @@ help:
 	@echo "  make test        - Run all tests with pytest"
 	@echo "  make test-e2e    - Run end-to-end tests directly"
 	@echo "  make lint        - Run code linting (ruff)"
+	@echo "  make lint-docs   - Markdown correctness (UX-98); part of make lint"
 	@echo "  make dev-run     - Analyze a sample fixture and print a real report (fast smoke check)"
 	@echo "  make clean       - Remove build artifacts and cache"
 	@echo "  make check-clean - Fail if any ignored/build-artifact path is tracked by git"
@@ -25,8 +26,17 @@ test-e2e:
 	python tests/test_e2e.py
 
 # Code linting (ruff, pyflakes rule set - see pyproject.toml's [tool.ruff])
-lint:
+lint: lint-docs
 	ruff check bga/ tools/ tests/
+
+# UX-98: markdown correctness. Only the class that changes how a document
+# renders is enabled - see .pymarkdown.json for why each disabled rule is
+# disabled. Table cell counts are NOT checked here: PyMarkdown implements
+# MD001-MD048 and the table rules are markdownlint v0.34+ additions with
+# no equivalent, so tests/unit/test_docs_links_and_commands.py owns that
+# one - which is the defect this repo actually shipped, five times.
+lint-docs:
+	python3 -m pymarkdown --config .pymarkdown.json scan README.md docs/
 
 # Local dev convenience: analyze a checked-in sample fixture and print a
 # real report - one command from "I changed some code" to "I can see

@@ -132,10 +132,21 @@ inside a table cell is escaped as `\|`** (GitHub splits rows on pipes
 even inside backtick spans). Fenced code blocks are closed, and heading
 levels do not skip.
 
-Until the linter lands (`UX-98`), the check is manual; once it lands,
-this rule is **enforced by lint** the same way rules 3 and 5 are
-enforced by test, and the editing checklist's answer becomes "run
-`make lint-docs`".
+This rule is **enforced**, and by two things rather than one, because
+no single tool covers it:
+
+- `make lint-docs` (PyMarkdown, in the `[dev]` extra, part of
+  `make lint`) covers the correctness class — fence closure, fenced
+  blocks with a language, heading-level jumps, blockquote and list
+  spacing. Pure style rules are disabled with a one-line reason each in
+  `.pymarkdown.json`.
+- **Table cell counts are checked by test**, not by the linter.
+  PyMarkdown implements MD001–MD048; the table rules (MD055 pipe style,
+  MD056 column count) are markdownlint v0.34+ additions with no
+  PyMarkdown equivalent — measured against the real defects, not
+  assumed. `tests/unit/test_docs_links_and_commands.py` owns it, which
+  is fitting: it is the one markdown defect this repository has
+  actually shipped.
 
 **Why:** the round-11 status table rendered broken on GitHub because
 one row's summary quoted a jq pipeline — two unescaped pipes turned a
@@ -164,4 +175,4 @@ the docs should not diverge from it.
 - [ ] Do the links resolve? (rule 5, tested — just run `make test`)
 - [ ] Would a stranger get the answer from the first paragraph? (rule 6)
 - [ ] Do tables render? Same cell count per row, `\|` for literal pipes
-      (rule 8 — linted once `UX-98` lands)
+      (rule 8 — `make lint-docs`, plus the table test)

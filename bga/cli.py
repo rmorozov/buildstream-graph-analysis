@@ -87,7 +87,7 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     path = getattr(args, 'plane2', None)
     if not path:
         return
-    from bga.correlate import summarize_plane2_capacity
+    from bga.correlate import compute_memory_envelope, summarize_plane2_capacity
 
     try:
         with open(path, 'r', encoding='utf-8') as handle:
@@ -101,6 +101,16 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         context, 'cpu_budget', None
     )
     result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+    # UX-104: the memory half of the same question. `--builders` is the
+    # knob both halves are about, and advice that clears the CPU check
+    # and blows the memory one is advice to build into swap - the worst
+    # build slowdown there is, and one no CPU-side signal predicts.
+    result.memory_envelope = compute_memory_envelope(
+        native_report,
+        getattr(context, 'max_jobs', None),
+        getattr(context, 'memory_budget_mb', None)
+        or getattr(context, 'host_memory_mb', None),
+    )
 
 
 def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -> str:
@@ -178,15 +188,78 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
     # not know about CPU. When a Plane 2 report for the same run is
     # supplied, the knee line says what was actually measured.
     plane2_capacity = {}
+    memory_envelope = {}
     if getattr(args, 'plane2', None):
         holder = type('_R', (), {})()
         _attach_plane2_capacity(args, analyzer, holder)
         plane2_capacity = getattr(holder, 'plane2_capacity', {})
+        # UX-104: and the memory ceiling, for the same reason - a knee
+        # above the memory-feasible capacity is a recommendation to swap.
+        memory_envelope = getattr(holder, 'memory_envelope', {})
     return format_sweep_text(
         args.resource, sweep_result,
         calibration_capacities=calibration_capacities,
         plane2_capacity=plane2_capacity,
+        memory_envelope=memory_envelope,
     )
+
+
+def _memory_envelope_delta(args: argparse.Namespace) -> dict:
+    """UX-104: the two runs' memory envelopes, and whether the
+    candidate's grew.
+
+    Needs a Plane 2 report per run, because peak RSS is measured inside
+    the sandbox and a run directory does not carry it. Two flags rather
+    than one: reusing the candidate's report for both would compare a
+    run against itself and always report no growth, which is the kind of
+    check that passes because it cannot fail.
+    """
+    baseline_path = getattr(args, 'baseline_plane2', None)
+    candidate_path = getattr(args, 'candidate_plane2', None)
+    if not baseline_path or not candidate_path:
+        return {}
+    from bga.correlate import compute_memory_envelope
+    from bga.ingest.loader import load_all
+
+    envelopes = {}
+    for label, plane2_path, run_dir in (
+        ('baseline', baseline_path, args.baseline),
+        ('candidate', candidate_path, args.candidate),
+    ):
+        try:
+            with open(plane2_path, 'r', encoding='utf-8') as handle:
+                native_report = json.load(handle)
+            run_context, _graph, _trace = load_all(Path(run_dir))
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            print(f"Warning: --{label}-plane2 {plane2_path} could not be used ({exc}); "
+                  "continuing without the memory note", file=sys.stderr)
+            return {}
+        envelopes[label] = compute_memory_envelope(
+            native_report,
+            getattr(run_context, 'max_jobs', None),
+            getattr(run_context, 'memory_budget_mb', None)
+            or getattr(run_context, 'host_memory_mb', None),
+        )
+
+    baseline_at = (envelopes['baseline'] or {}).get('at_observed_builders')
+    candidate_at = (envelopes['candidate'] or {}).get('at_observed_builders')
+    if not baseline_at or not candidate_at:
+        return {}
+    delta_mb = candidate_at['envelope_mb'] - baseline_at['envelope_mb']
+    return {
+        'baseline_envelope_mb': baseline_at['envelope_mb'],
+        'candidate_envelope_mb': candidate_at['envelope_mb'],
+        'delta_mb': delta_mb,
+        'delta_share': (
+            delta_mb / baseline_at['envelope_mb'] if baseline_at['envelope_mb'] else None
+        ),
+        'candidate_fits': candidate_at['fits'],
+        'host_memory_mb': envelopes['candidate'].get('host_memory_mb'),
+        'note': (
+            "A note, not a gate: peak RSS has no measured noise band, so a grown "
+            "envelope is a fact to look at rather than a threshold to fail."
+        ),
+    }
 
 
 def _produce_compare_output(args: argparse.Namespace):
@@ -213,6 +286,11 @@ def _produce_compare_output(args: argparse.Namespace):
     )
     comparison.efficiency_gate_evaluated = signal['evaluated']
     comparison.efficiency_gate_signal = signal
+
+    # UX-104 item 2: did this change make the build need more memory?
+    # A note, not a gate - there is no noise band for peak RSS, and this
+    # codebase does not gate on a threshold it has not measured.
+    comparison.memory_envelope_delta = _memory_envelope_delta(args)
 
     if args.format == 'json':
         output = json.dumps(comparison.to_dict(), indent=2, default=str)
@@ -1221,6 +1299,21 @@ def create_parser() -> argparse.ArgumentParser:
         '--band-k', type=float, default=DEFAULT_BAND_K, metavar='K',
         help='Width of the --baseline-run noise band in scaled-MAD units '
              '(default: {}).'.format(DEFAULT_BAND_K),
+    )
+    # UX-104 item 2: a memory *note*, not a gate. Two flags rather than
+    # one because the envelope is a fact about a run and the two runs are
+    # independent captures - inferring the baseline's Plane 2 report from
+    # the candidate's would be comparing a run against itself.
+    compare_parser.add_argument(
+        '--baseline-plane2', default=None, metavar='PATH',
+        help='UX-104: the baseline run\'s Plane 2 report (`bga capture run`\'s JSON). '
+             'With --candidate-plane2, compare notes when the candidate\'s measured '
+             'memory envelope grew. A note, never a gate: there is no noise band for '
+             'peak RSS yet.',
+    )
+    compare_parser.add_argument(
+        '--candidate-plane2', default=None, metavar='PATH',
+        help='UX-104: the candidate run\'s Plane 2 report. See --baseline-plane2.',
     )
     compare_parser.add_argument(
         '--fail-on-low-confidence', action='store_true',

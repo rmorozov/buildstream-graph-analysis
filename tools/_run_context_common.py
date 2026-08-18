@@ -85,6 +85,35 @@ def add_cpu_capacity_fields(
         run_context["cpu_budget"] = cpu_budget
 
 
+def host_memory_mb():
+    """The machine's total RAM in MB, or None where it cannot be read.
+
+    `UX-21` scoped memory auto-detection out on the grounds that "real
+    per-task memory measurement has no source in this ingestion
+    pipeline". `UX-63` gave it one - Plane 2 records each process's peak
+    RSS from `getrusage` - so the reason for that scoping no longer
+    holds, and `UX-104` needs the *denominator* to turn measured peaks
+    into a builders answer.
+
+    Read from `/proc/meminfo`, which is the machine's own figure. Not
+    `os.sysconf`, which reports the host's pages even inside a container
+    with a lower cgroup limit - the same class of mistake
+    `host_cpu_count` avoids by preferring `sched_getaffinity`. A cgroup
+    *memory* limit is a further refinement this does not yet read, and
+    the field is named `host_memory_mb` rather than `memory_budget_mb`
+    so the two never get confused: the operator's declared budget stays
+    separate and still wins where it is set.
+    """
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("MemTotal:"):
+                    return int(line.split()[1]) // 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
 def add_memory_capacity_fields(
     run_context: dict, memory_budget_mb: int = None, estimated_job_memory_mb: int = None,
 ) -> None:
@@ -97,6 +126,13 @@ def add_memory_capacity_fields(
     source in this ingestion pipeline, so both fields stay a purely
     config-driven, explicitly-labeled estimate.
     """
+    # UX-104: the host's own total RAM, always auto-detected, so a
+    # capture carries the denominator its measured peaks need. Distinct
+    # from `memory_budget_mb` above, which is what the operator *intends*
+    # to use and still governs UX-21's oversubscription check.
+    detected_host_memory_mb = host_memory_mb()
+    if detected_host_memory_mb is not None:
+        run_context["host_memory_mb"] = detected_host_memory_mb
     if memory_budget_mb is not None:
         run_context["memory_budget_mb"] = memory_budget_mb
     if estimated_job_memory_mb is not None:

@@ -52,6 +52,7 @@ import the native tracer and the trace converters on every run.
 | `bga cross-check` | `tools.bga_cross_check` |
 | `bga gen-synthetic` | `tools.gen_synthetic_scale_run` |
 | `bga cache-logs` | `tools.bst_cache_logs` |
+| `bga baseline` | `tools.bst_baseline_set` |
 
 ## Installation
 
@@ -323,6 +324,7 @@ Documented here because they exist and nothing user-facing said so:
 
 - `bga sweep --calibration-dir DIR` (`UX-14` tier 2) — replaces the sweep's fixed-duration model with a contention-aware one calibrated from real runs in `DIR`. Without it the sweep's own caveat applies: the predicted curve is a shape, not a runtime prediction, because the replay model does not know about CPU.
 - `bga capture run --invocation-log PATH` / `--argv-log PATH` / `--raw-log PATH` — where Plane 2 writes its own capture logs. `--invocation-log` defaults to a path beside the report (`UX-80`); `--no-invocation-log` turns it off.
+- `bga baseline --glob 'captures/<project>/<commit>-<mode>-b<N>j<M>-*' -n 3 --candidate RUN` — assembles a baseline set from published capture refs and band-compares against it in one command (`UX-96`). Fetches the newest N, untars the refs that predate the uncompressed `run/`, refuses a set whose captures are not comparable (exit 6), and warns when the set was produced by more than one `bga` revision. Every member supplies the band, the newest is also the positional baseline — with three refs that is exactly the `MIN_BASELINE_RUNS` the band needs.
 - `bga cache-logs [LOG_ROOT] --project NAME --native-report PLANE2.json` — Plane 3, BuildStream's own persisted element logs (`UX-91`). Needs no capture at all: it reads what BuildStream already wrote, defaulting to `$XDG_CACHE_HOME/buildstream/logs`. Reports the per-element phase breakdown, the sandbox tax (`UX-99`) and the configure tax (`UX-102`); `--native-report` adds the traced configure measurement from a Plane 2 report of the same build, beside the build tool's self-reported one.
 
 ## `bga correlate` — Join the Two Planes

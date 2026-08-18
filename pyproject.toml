@@ -113,4 +113,12 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 markers = [
     "slow: full-scale tests (e.g. N=100 determinism runs) not needed on every fast pass",
+    # UX-84: the tier that needs a real BuildStream (plus, for two of
+    # them, bwrap and a C compiler). Each of these is *also*
+    # skipif-gated, so a developer without bst still gets a green
+    # `make test` - but a skip is invisible in a pass count, and for a
+    # long time no CI job installed bst at all, so the whole tier could
+    # rot behind a permanently green CI. The marker is what lets the
+    # `bst-tests` job assert the exact number that really ran.
+    "bst: requires a real `bst` binary (and sometimes bwrap/cc) on PATH",
 ]

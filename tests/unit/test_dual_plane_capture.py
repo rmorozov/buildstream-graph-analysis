@@ -23,6 +23,7 @@ BWRAP_AVAILABLE = shutil.which("bwrap") is not None
 CC_AVAILABLE = shutil.which("cc") is not None or shutil.which("gcc") is not None
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BWRAP_AVAILABLE and CC_AVAILABLE),
     reason="bst/bwrap/cc not all found on PATH - see docs/ingestion-pipeline.md",

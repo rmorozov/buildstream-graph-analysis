@@ -1,6 +1,6 @@
 # UX-84: the bst-gated tests fail against a live bst 2.7, and CI never runs them
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-22 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-22 (done)
 
 ## Motivation
 
@@ -51,3 +51,134 @@ On a host with bst 2.7.0: `make test` passes with **zero** failures and
 the max-jobs test asserts 16, not 4. The new CI job runs the previously
 skipped tests (assert the collected-and-run count includes them) and is
 red if any bst-gated test fails.
+
+---
+
+## Resolution (round 11)
+
+**Status:** 🟢 Done
+
+Installed BuildStream 2.7.0 + `buildstream-plugins` 2.7.0 into a clean
+venv alongside a real `bwrap` and ran the suite. Two of the three
+Required Fix items landed as written; the first did not, and the reason
+matters.
+
+### 1. The max-jobs "regression" is the correct answer, not a bug
+
+The Required Fix says *"the fixture declares 16; the graph must record
+16."* Recording 16 would record a number no build has ever used.
+
+Measured against the live bst, on the fixture itself:
+
+```
+$ bst show --deps none --format '%{public}' manual.bst
+bst:
+  max-jobs: 16
+  split-rules:
+    ...
+
+$ bst show --deps none --format '%{vars}' manual.bst | grep max-jobs
+max-jobs: 4                      # host core count; `nproc` = 4
+
+$ bst show --deps none --format '%{vars}' base.bst  | grep max-jobs
+max-jobs: 4                      # identical, and base.bst declares nothing
+```
+
+`public: bst: max-jobs: 16` really is in `%{public}` — and BuildStream
+really does ignore it. `%{max-jobs}`, which is what the plugins expand in
+`environment: JOBS: -j%{max-jobs}`, resolves to 4 for `manual.bst` and
+for `base.bst` alike. `UX-22` settled on the `public:` route; `UX-31`
+found the real one (`variables: notparallel: True`) and re-pointed the
+extractor at `%{vars}`, keeping `public:` only as a fallback for
+pre-UX-31 run directories. The extractor returning 4 is `UX-31` working.
+
+What the assertion lost was the *discrimination* — it no longer proved
+the capture can tell one element's parallelism from another's. So the
+fixture gained `elements/notparallel.bst`, carrying the control
+BuildStream honours:
+
+```
+$ bst show --deps none --format '%{vars}' notparallel.bst | grep -E 'max-jobs|notparallel'
+max-jobs: 1
+notparallel: True
+```
+
+and the test now asserts that: `notparallel.bst` → 1, `base.bst` → the
+host count, the two differ, and `manual.bst`'s `public:` override
+reaches the graph as the host count rather than as 16. Asserting
+`os.cpu_count()` rather than a literal `4` keeps it true on any runner.
+
+**Deviation from the Required Fix, recorded deliberately:** item 1 asked
+for the extraction to change so the graph records 16. It asked for the
+wrong thing, on a premise `UX-31` had already overturned. The extraction
+is unchanged; the assertion was re-baselined.
+
+### 2. Nine of the ten failures were the harness, not the tool
+
+The audit recorded four failures. In this container the same suite
+produced **ten**. In a clean venv it produced **one**.
+
+The nine were a harness bug. Every bst-gated test hands `bst` a
+two-key environment built from scratch — `{"HOME": tmp, "PATH": ...}` —
+to isolate BuildStream's cache. Python resolves per-user
+`site-packages` *from `HOME`*, so on a machine where BuildStream was
+installed with `pip install --user`, `bst` dies at startup:
+
+```
+ModuleNotFoundError: No module named 'jinja2'
+```
+
+before it reads the project. The tests then failed on the *symptom* —
+"Could not find a 'Targets:' line", `CalledProcessError` from
+`bst source track` — pointing squarely at the tool.
+
+Fixed in `tests/unit/_bst_env.py`: inherit the environment, override
+only `HOME`, and carry the real user `site-packages` across via
+`PYTHONPATH` when this interpreter is actually using one (None on the
+common venv/system case, so nothing is added that isn't needed). The
+isolation is unchanged — `HOME` is the only thing `bst` keys cache and
+config off. Verified both ways: 1169 passed under the `--user` layout
+that produced ten failures, and 1169 passed in the clean venv.
+
+### 3. The one real failure
+
+`test_real_end_to_end_extraction_produces_a_complete_bga_ready_run`
+asserted `cpu_accounting_available is False`. Measured: `True`, with
+`effective_cpus = 4.0` and `effective_cpus_source =
+detected_host_cpu_count`.
+
+`UX-17` widened that flag — it means "a real capacity value is
+available", not "a `cpu_accounting` block was present" — and
+`bga/utilisation/__init__.py:225-238` says so in as many words. P1-33's
+actual rule survives intact and is what is asserted now: capacity is
+never fabricated from a *scheduling parameter*. `builders` is also 4 in
+this run, so a regression that went back to reading it would produce the
+same `4.0`; only `effective_cpus_source` separates the honest answer
+from the fabricated one, which is why it is the assertion.
+
+The `tests/test_e2e.py` chrome-trace failure the audit listed did not
+reproduce in either environment.
+
+### 4. The CI gap, closed
+
+The 14 bst-gated tests now carry a `bst` marker (registered in
+`pyproject.toml`) alongside their existing `skipif`, and a new
+`bst-tests` CI job installs `.[dev,bst]` + `buildstream-plugins` +
+bubblewrap + a C toolchain and runs them.
+
+The job asserts the tier *ran*, not merely that nothing failed: a skip
+exits 0 and reads as a pass, which is precisely how this rotted. It
+greps its own output for `SKIPPED` and pins the count at exactly 14, so
+growing the tier is a deliberate edit rather than a silent drift. It
+then runs `make test` in full, because an extraction change can break an
+unmarked test only when a real bst produced the input.
+
+### Acceptance
+
+- `pytest` against bst 2.7.0 in a clean venv: **1169 passed, 0 failed**.
+- `pytest -m bst`: **14 passed, 1155 deselected** — zero skipped.
+- `pytest -m "not bst"`: 1155 passed, 14 deselected (the marker
+  partitions the suite exactly).
+- The max-jobs test asserts the `notparallel` discrimination against a
+  live `bst show`, and that 16 does *not* reach the graph.
+- `make lint`, `make check-clean` green.

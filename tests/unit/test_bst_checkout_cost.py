@@ -18,12 +18,13 @@ exercise this deterministically given BuildStream's 1-second elapsed
 precision without --verbose.
 """
 import json
-import os
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+
+from ._bst_env import isolated_bst_env
 
 from tools.bst_checkout_cost import compare, summarize
 
@@ -148,6 +149,7 @@ def test_compare_json_round_trips(tmp_path):
     assert reparsed["savings_us"] == 4_000_000
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_end_to_end_against_a_real_build_and_checkouts(tmp_path):
     """Real `bst build` + two individual `bst artifact checkout`s + one
@@ -156,7 +158,7 @@ def test_real_end_to_end_against_a_real_build_and_checkouts(tmp_path):
     structure, not a particular savings sign - real timing at this
     trivial fixture scale is unpredictable (see the task file's
     Verification Log for the real, meaningful large-project numbers)."""
-    env = {"HOME": str(tmp_path), "PATH": os.environ["PATH"]}
+    env = isolated_bst_env(tmp_path)
     subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "all.bst"],
         capture_output=True, text=True, env=env, check=True,

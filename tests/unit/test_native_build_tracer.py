@@ -399,6 +399,7 @@ def test_summarize_includes_redundant_operations():
 
 # --- Real end-to-end: run_traced_build against a real bst build ------------
 
+@pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BWRAP_AVAILABLE and CC_AVAILABLE),
     reason="bst/bwrap/cc not all found on PATH - see docs/ingestion-pipeline.md",

@@ -11,6 +11,7 @@ Two layers:
    docs/ingestion-pipeline.md for how to install them locally).
 """
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -201,6 +202,7 @@ def test_parse_notparallel_distinguishes_unset_from_false():
 
 # --- Real end-to-end test against a live `bst` binary ------------------
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_bst_show_against_fixture_project(tmp_path):
     graph = extract_graph(str(FIXTURE_PROJECT), targets=["app.bst"])
@@ -230,26 +232,54 @@ def test_real_bst_show_against_fixture_project(tmp_path):
         "subproj-junction.bst:libfoo.bst": "import", "app.bst": "import",
     }
 
-    # None of app.bst's own dependency set overrides max-jobs (see
-    # test_real_bst_show_captures_per_element_max_jobs_override below
-    # for the real override case, elements/manual.bst).
-    assert all(e["max_jobs"] is None for e in graph["elements"])
+    # UX-31/UX-84: `max_jobs` is the *effective, resolved* figure - what
+    # `%{max-jobs}` really expands to for this element, i.e. what reaches
+    # `make`. None of app.bst's dependency set carries `notparallel`, so
+    # every one of them resolves to the project default, which is the
+    # host core count. Asserting the host's own count rather than a
+    # literal keeps this true on any runner.
+    assert {e["max_jobs"] for e in graph["elements"]} == {os.cpu_count()}
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_bst_show_captures_per_element_max_jobs_override(tmp_path):
-    """UX-22: elements/manual.bst declares a real `public: bst:
-    max-jobs: 16` override; base.bst (its own dependency) does not -
-    confirms the real capture mechanism (%{public}, NOT %{vars} or a
-    `variables:` block - see _parse_max_jobs's own docstring for why
-    those two plausible-looking alternatives are wrong) against a real
-    bst show invocation, not just the hand-built stdout blobs above."""
-    graph = extract_graph(str(FIXTURE_PROJECT), targets=["manual.bst"])
+    """UX-31, re-baselined by UX-84: the per-element parallelism control
+    BuildStream 2.7 actually honours is `variables: notparallel: True`,
+    and the captured figure is the *resolved* one.
+
+    This test used to assert 16 for `manual.bst`, which declares
+    `public: bst: max-jobs: 16`. Against a live bst 2.7 the extractor
+    returns the host core count instead, and that is right, not a
+    regression: `%{public}` really does carry the 16 (verified:
+    `bst show --format '%{public}'` prints `bst: max-jobs: 16`), and
+    BuildStream really does ignore it - `%{vars}` reports `max-jobs: 4`
+    on a 4-core host for `manual.bst` and for `base.bst` alike, and
+    `%{max-jobs}` is what the plugins' `environment: JOBS: -j%{max-jobs}`
+    expands. Recording 16 would have recorded a number no build ever
+    used. `UX-22` settled on the `public:` route before `UX-31` found the
+    real one; the assertion outlived the mechanism because no CI job ran
+    the bst-gated tier (that gap is the rest of UX-84).
+
+    So what is asserted now is the *discrimination* the capture exists
+    for: `notparallel.bst` resolves to 1 while its siblings resolve to
+    the host default. That is the signal every downstream consumer reads
+    - it is how `analyze --plane2` names an element that asked its native
+    build for -j1 as free capacity."""
+    graph = extract_graph(str(FIXTURE_PROJECT), targets=["notparallel.bst"])
     max_jobs = {e["uid"]: e["max_jobs"] for e in graph["elements"]}
-    assert max_jobs["manual.bst"] == 16
-    assert max_jobs["base.bst"] is None
+    assert max_jobs["notparallel.bst"] == 1
+    assert max_jobs["base.bst"] == os.cpu_count()
+    assert max_jobs["notparallel.bst"] < max_jobs["base.bst"]
+
+    # And the superseded route is inert rather than merely outranked:
+    # `manual.bst`'s `public: bst: max-jobs: 16` reaches the graph as the
+    # host default, not as 16.
+    manual = extract_graph(str(FIXTURE_PROJECT), targets=["manual.bst"])
+    assert {e["uid"]: e["max_jobs"] for e in manual["elements"]}["manual.bst"] == os.cpu_count()
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_graph_output_loads_into_bga(tmp_path):
     """The extracted graph.json must be directly consumable by bga's

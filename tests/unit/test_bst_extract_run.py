@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from ._bst_env import isolated_bst_env
+
 from tools.bst_extract_run import (
     _compute_run_identity,
     _git_consistency_note,
@@ -209,6 +211,7 @@ def test_extract_run_fails_loudly_without_a_targets_line(tmp_path):
 
 # --- Real end-to-end test --------------------------------------------------
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     log_path = tmp_path / "real_build.log"
@@ -216,7 +219,7 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     proc = subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
         capture_output=True, text=True,
-        env={"HOME": str(tmp_path), "PATH": __import__("os").environ["PATH"]},
+        env=isolated_bst_env(tmp_path),
     )
     log_path.write_text(proc.stdout + proc.stderr)
 
@@ -258,26 +261,42 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     assert result.confidence["hard_gates"]["run_identity_consistent"] is True
     assert result.confidence["run_identity_available"] is True
     assert not any(v.get("type") == "run_identity_mismatch" for v in result.violations)
-    assert result.utilisation["cpu_accounting_available"] is False
-    assert result.utilisation["reconciliation_error_pct"] is None
+    # P1-33, re-baselined by UX-84 against a live bst 2.7. This used to
+    # assert `cpu_accounting_available is False`. `UX-17` widened that
+    # flag: it no longer means "a cpu_accounting block was present", it
+    # means "a *real* capacity value is available at all", and a detected
+    # host core count is one (see bga/utilisation/__init__.py:225-238,
+    # which says so in as many words). Measured here:
+    # `effective_cpus = 4.0`, `effective_cpus_source =
+    # detected_host_cpu_count`.
+    #
+    # P1-33's actual rule survives that widening intact and is what is
+    # asserted now: capacity is never fabricated from a *scheduling
+    # parameter*. `builders` is 4 in this run too, so a regression that
+    # went back to reading it would produce the same 4.0 - only the
+    # source string separates the honest answer from the fabricated one,
+    # which is why it is the assertion.
+    assert "cpu_accounting" not in run_context
+    assert result.utilisation["effective_cpus_source"] == "detected_host_cpu_count"
+    assert result.utilisation["cpu_accounting_available"] is True
     assert result.utilisation["potential_oversubscription"] is False
     assert result.utilisation["oversubscription_evidence"] == "INSUFFICIENT_EVIDENCE"
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_different_target_lists_produce_different_requested_targets(tmp_path):
     """Acceptance test (P4-10's own): using a *different* target list on
     two separate real builds produces two different, each-individually-
     correct requested_target sets - proving target derivation isn't
     hardcoded to a fixed convention."""
-    import os
 
     def _build_and_extract(targets, out_name):
         log_path = tmp_path / f"{out_name}.log"
         proc = subprocess.run(
             ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build"] + targets,
             capture_output=True, text=True,
-            env={"HOME": str(tmp_path), "PATH": os.environ["PATH"]},
+            env=isolated_bst_env(tmp_path),
         )
         log_path.write_text(proc.stdout + proc.stderr)
         out_dir = tmp_path / out_name
@@ -296,6 +315,7 @@ def test_different_target_lists_produce_different_requested_targets(tmp_path):
     assert requested_a != requested_b
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
     """P4-14: rebuilding an already-built project logs a real "Query
@@ -304,9 +324,8 @@ def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
     `pipeline_overhead` field and that bga's own report picks it up, even
     though `bst`'s own per-element FETCH/BUILD queues are entirely empty
     for a fully-cached rebuild (fact 9)."""
-    import os
 
-    env = {"HOME": str(tmp_path), "PATH": os.environ["PATH"]}
+    env = isolated_bst_env(tmp_path)
 
     # First build populates the cache.
     subprocess.run(

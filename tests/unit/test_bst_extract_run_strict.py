@@ -29,6 +29,8 @@ from pathlib import Path
 
 import pytest
 
+from ._bst_env import isolated_bst_env
+
 from tools.bst_extract_run import (
     _check_project_refs_strict,
     _read_ref_storage,
@@ -142,15 +144,15 @@ def test_strict_ignores_uncommitted_changes_to_other_files(tmp_path):
 
 # --- Real, bst-gated end-to-end: inline-storage fixture must fail loudly --
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_strict_fails_loudly_for_the_inline_storage_fixture(tmp_path):
-    import os
 
     log_path = tmp_path / "build.log"
     proc = subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
         capture_output=True, text=True,
-        env={"HOME": str(tmp_path), "PATH": os.environ["PATH"]},
+        env=isolated_bst_env(tmp_path),
     )
     log_path.write_text(proc.stdout + proc.stderr)
 
@@ -158,19 +160,19 @@ def test_strict_fails_loudly_for_the_inline_storage_fixture(tmp_path):
         extract_run(str(FIXTURE_PROJECT), str(log_path), str(tmp_path / "run"), strict=True)
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_non_strict_extraction_of_inline_fixture_has_no_provenance_field(tmp_path):
     """Default (non-strict) flow: unchanged behavior, and no
     project_refs_provenance field for a project with no project.refs at
     all (P4-13's own "no schema collision" requirement - the field is
     only ever present when a real project.refs exists)."""
-    import os
 
     log_path = tmp_path / "build.log"
     proc = subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
         capture_output=True, text=True,
-        env={"HOME": str(tmp_path), "PATH": os.environ["PATH"]},
+        env=isolated_bst_env(tmp_path),
     )
     log_path.write_text(proc.stdout + proc.stderr)
 
@@ -182,6 +184,7 @@ def test_non_strict_extraction_of_inline_fixture_has_no_provenance_field(tmp_pat
 
 # --- Real, bst + buildstream-plugins-gated: full project.refs lifecycle --
 
+@pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BUILDSTREAM_PLUGINS_AVAILABLE),
     reason="bst and/or buildstream-plugins not available - see docs/ingestion-pipeline.md",
@@ -193,9 +196,8 @@ def test_real_project_refs_lifecycle_clean_then_dirtied(tmp_path):
     project.refs (re-tracking against a new upstream commit without
     committing) makes --strict fail loudly, naming project.refs
     specifically."""
-    import os
 
-    env = {"HOME": str(tmp_path / "home"), "PATH": os.environ["PATH"]}
+    env = isolated_bst_env(tmp_path / "home")
     (tmp_path / "home").mkdir()
 
     srcrepo = tmp_path / "srcrepo"

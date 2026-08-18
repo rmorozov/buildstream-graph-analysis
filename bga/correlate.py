@@ -86,6 +86,20 @@ _REDUNDANCY_NOTABLE_SHARE = 0.01
 # worth under a second is not a next action however it is measured.
 _REDUNDANCY_NOTABLE_S = 1.0
 
+# UX-89: the same bar, applied to the single-process serialization rule,
+# which had none. `ar` and `ranlib` are single processes by construction,
+# so on `examples/06` every one of the six libs and `app.bst` earned an
+# identical "`ranlib` is a SINGLE process holding 0.1s of wall time - a
+# serialization point no job count can help" line. A tenth of a second
+# inside a two-second element is how `ar` works, not a finding.
+#
+# `UX-72`'s materiality bar is relative, and the absolute backstop is
+# what actually removes this case: a serialization point worth under a
+# second is not a next action at any scale, and on a large element the
+# 1% share raises the bar further rather than lowering it.
+_SERIALIZATION_NOTABLE_SHARE = _REDUNDANCY_NOTABLE_SHARE
+_SERIALIZATION_NOTABLE_S = 1.0
+
 # UX-72: evidence classes, strongest first. A measured 81%-of-CPU binary
 # and an explicitly hedged dependency candidate must not print as two
 # identically-weighted bullets - round 9's join printed eight rows that
@@ -439,6 +453,172 @@ def project_without_edges(
     }
 
 
+def _collapse_range(values: List[float], fmt, unit: str = "") -> str:
+    """`1.4-1.8` for a spread, `1.6` for agreement.
+
+    UX-89: a grouped block must not imply more precision than the group
+    has, and must not spend two numbers where the members agree. The unit
+    is carried separately so a range reads `6-9%` rather than `6%-9%`.
+    """
+    present = [v for v in values if v is not None]
+    if not present:
+        return ""
+    low, high = fmt(min(present)), fmt(max(present))
+    return f"{low}{unit}" if low == high else f"{low}-{high}{unit}"
+
+
+def _name_elements(elements: List[str]) -> str:
+    """`lib-a.bst..lib-f.bst, app.bst` rather than seven full names.
+
+    Only contracts a run of names sharing a prefix and differing in a
+    single trailing character - anything looser would invent a family
+    that is not there, and a reader has to be able to expand the label
+    back into real element names without guessing.
+    """
+    if len(elements) < 3:
+        return ", ".join(elements)
+    ordered = sorted(elements)
+    runs: List[List[str]] = []
+    for name in ordered:
+        if runs and _is_next_in_run(runs[-1][-1], name):
+            runs[-1].append(name)
+        else:
+            runs.append([name])
+    parts = []
+    for run in runs:
+        parts.append(f"{run[0]}..{run[-1]}" if len(run) >= 3 else ", ".join(run))
+    return ", ".join(parts)
+
+
+def _is_next_in_run(previous: str, name: str) -> bool:
+    """Same length, same everything but one character, and that
+    character is the next letter or digit."""
+    if len(previous) != len(name):
+        return False
+    diffs = [i for i, (a, b) in enumerate(zip(previous, name)) if a != b]
+    if len(diffs) != 1:
+        return False
+    a, b = previous[diffs[0]], name[diffs[0]]
+    return a.isalnum() and b.isalnum() and ord(b) == ord(a) + 1
+
+
+def _grouped_line(finding_id: str, entries: List[dict], text: str) -> Optional[str]:
+    """One line standing in for `len(entries)` identical ones.
+
+    Returns None for a finding whose per-element figures do not
+    generalize, and the caller then falls back to printing the group's
+    first member verbatim - preferring a slightly longer block to a
+    summary that quietly drops a number.
+    """
+    count = len(entries)
+
+    if finding_id == 'already-compute-bound':
+        cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.1f}")
+        return (f"already compute-bound at {cores} cores busy - nothing to gain from "
+                f"their parallelism; shortening them means less work")
+
+    if finding_id in ('waiting-not-computing', 'pinned-to-one-job',
+                      'underachieved-requested-jobs'):
+        cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.2f}")
+        return (f"running at only {cores} cores busy - waiting, not computing; "
+                f"look at how they are built before what they build")
+
+    if finding_id == 'cpu-concentration':
+        binaries = {(e.get('dominant_binary') or {}).get('binary') for e in entries}
+        if len(binaries) != 1 or None in binaries:
+            return None
+        shares = _collapse_range(
+            [(e.get('dominant_binary') or {}).get('cpu_share') for e in entries],
+            lambda v: f"{v * 100:.0f}", "%",
+        )
+        return (f"`{binaries.pop()}` is {shares} of each one's measured CPU - "
+                f"they are all the same problem, so look there before anywhere else")
+
+    if finding_id == 'serialization-point':
+        binaries = {(e.get('serial_binary') or {}).get('binary') for e in entries}
+        if len(binaries) != 1 or None in binaries:
+            return None
+        walls = _collapse_range(
+            [(e.get('serial_binary') or {}).get('wall_s') for e in entries],
+            lambda v: f"{v:.1f}", "s",
+        )
+        return (f"`{binaries.pop()}` is a SINGLE process holding {walls} of wall time "
+                f"in each - a serialization point no job count can help")
+
+    if finding_id == 'declared-not-used':
+        counts = [len(e.get('unused_dependencies') or []) for e in entries]
+        total = sum(counts)
+        spread = _collapse_range([float(c) for c in counts], lambda v: f"{v:.0f}")
+        return (f"opened no file staged by {spread} declared build dependencies each "
+                f"({total} edges across the {count}) - worth checking whether those "
+                f"edges are needed at build time; this is evidence, not a verdict (a "
+                f"runtime-only dependency looks identical here). Per-element lists are "
+                f"in --format json")
+
+    # peak-memory and redundant-operation carry per-element figures whose
+    # meaning does not survive being averaged (a shared operation's own
+    # element list, an absolute RSS to multiply by concurrency), so they
+    # are deliberately not generalized.
+    return None
+
+
+def _grouped_blocks(actionable: List[dict]) -> List[tuple]:
+    """Partition `actionable` into (elements, entries, signature) groups.
+
+    UX-89: on `examples/06`'s baseline, `lib-a.bst` through `lib-f.bst`
+    and `app.bst` each produced the *same four findings* differing only
+    in their parameters - forty lines to convey two facts, and at
+    freedesktop-sdk scale the same structure would bury the one
+    distinctive row under dozens of interchangeable ones.
+
+    Grouped on the finding-id signature alone, not on the numbers: two
+    elements with the same findings are the same *story*, and the
+    numbers are what the grouped line puts a range on. Order is
+    preserved - the list is already ranked by Plane 1 impact, and a
+    group takes the position of its strongest member, so grouping never
+    reorders what leads.
+    """
+    groups: List[tuple] = []
+    index: Dict[tuple, int] = {}
+    for entry in actionable:
+        signature = tuple(step['id'] for step in entry['recommendations'])
+        if signature in index:
+            groups[index[signature]][0].append(entry)
+        else:
+            index[signature] = len(groups)
+            groups.append(([entry], signature))
+    return [
+        ([e['element'] for e in entries], entries, signature)
+        for entries, signature in groups
+    ]
+
+
+def _group_header(elements: List[str], entries: List[dict]) -> str:
+    """`lib-a.bst..lib-f.bst, app.bst (7 elements, 6-9% of the critical
+    path each, 2.6-3.0s apiece, 19.7s together)`.
+
+    The per-element impact figures live in the finding text for a single
+    element; for a group they belong here, once, because the findings
+    below are what the group shares and the impact is what distinguishes
+    its members. The total is the number a reader actually acts on -
+    seven elements worth 3s each are a different decision from one worth
+    3s.
+    """
+    if len(entries) == 1:
+        return f"{elements[0]}:"
+    shares = _collapse_range(
+        [e.get('critical_path_share') for e in entries], lambda v: f"{v * 100:.0f}", "%",
+    )
+    savings_us = [e.get('potential_saving_us') or 0 for e in entries]
+    each = _collapse_range([v / 1e6 for v in savings_us], lambda v: f"{v:.1f}", "s")
+    parts = [f"{len(entries)} elements"]
+    if shares:
+        parts.append(f"{shares} of the critical path each")
+    if any(savings_us):
+        parts.append(f"{each} apiece, {sum(savings_us) / 1e6:.1f}s together")
+    return f"{_name_elements(elements)} ({', '.join(parts)}):"
+
+
 def _recommend(joined: ElementJoin) -> List[str]:
     """Turn one element's two-plane picture into directed next steps.
 
@@ -527,7 +707,11 @@ def _recommend(joined: ElementJoin) -> List[str]:
                 f"`{dominant['binary']}` problem, so look there before anywhere else"))
 
         serial = joined.serial_binary
-        if serial:
+        serial_floor_s = max(
+            _SERIALIZATION_NOTABLE_S,
+            joined.potential_saving_us / 1e6 * _SERIALIZATION_NOTABLE_SHARE,
+        )
+        if serial and (serial.get('wall_s') or 0) >= serial_floor_s:
             ranked.append((_EVIDENCE_SERIALIZATION, 'serialization-point',
                 f"`{serial['binary']}` is a SINGLE process holding "
                 f"{serial['wall_s']:.1f}s of wall time - a serialization point no "
@@ -936,18 +1120,36 @@ def format_correlation(result: dict) -> str:
         # Capped with an overflow line, the same house pattern UX-33 uses:
         # a real project produces one of these per element, and a list
         # nobody reads to the end is a list that hid its own first item.
-        for entry in actionable[:_SHOWN_MAX]:
-            lines.append(f"  {entry['element']}:")
-            for step in entry["recommendations"]:
-                lines.append(f"    - {step['text']}")
-            if entry["cpu_coverage"] is not None and entry["cpu_coverage"] < 1.0:
-                lines.append(
-                    f"    ({entry['cpu_coverage'] * 100:.0f}% of this element's "
-                    f"processes were measured)"
-                )
-        if len(actionable) > _SHOWN_MAX:
+        # UX-89: elements whose finding *sets* are identical share one
+        # block. A single-element group renders exactly as it always did,
+        # so nothing changes for the case that was never repetitive.
+        groups = _grouped_blocks(actionable)
+        shown, elements_shown = 0, 0
+        for elements, entries, signature in groups:
+            if shown >= _SHOWN_MAX:
+                break
+            shown += 1
+            elements_shown += len(entries)
+            lines.append(f"  {_group_header(elements, entries)}")
+            for index, step in enumerate(entries[0]["recommendations"]):
+                if len(entries) == 1:
+                    lines.append(f"    - {step['text']}")
+                    continue
+                grouped = _grouped_line(signature[index], entries, step['text'])
+                # A finding whose figures do not generalize keeps the
+                # first member's own words rather than being summarized
+                # into something the measurement does not say.
+                lines.append(f"    - {grouped or step['text']}")
+            coverages = [
+                e["cpu_coverage"] for e in entries if e["cpu_coverage"] is not None
+            ]
+            if coverages and min(coverages) < 1.0:
+                span = _collapse_range(coverages, lambda v: f"{v * 100:.0f}", "%")
+                scope = "this element's" if len(entries) == 1 else "each element's"
+                lines.append(f"    ({span} of {scope} processes were measured)")
+        if elements_shown < len(actionable):
             lines.append(
-                f"  (+{len(actionable) - _SHOWN_MAX} more element(s) with findings, "
+                f"  (+{len(actionable) - elements_shown} more element(s) with findings, "
                 f"see --format json)"
             )
     lines.append("")

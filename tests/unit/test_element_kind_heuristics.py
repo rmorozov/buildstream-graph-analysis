@@ -30,6 +30,7 @@ FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_p
 BST_AVAILABLE = shutil.which("bst") is not None
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_real_fixture_has_four_diverse_element_kinds():
     from tools.bst_show_to_graph import extract_graph
@@ -180,6 +181,7 @@ def test_by_kind_flag_does_not_leak_into_other_sections(analyzed_result):
     assert "element_kind_summary" not in data
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/ingestion-pipeline.md")
 def test_cli_graph_by_kind_end_to_end(tmp_path):
     """Real CLI invocation, real subprocess - `bga graph RUN --by-kind`

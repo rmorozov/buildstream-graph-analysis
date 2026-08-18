@@ -147,6 +147,80 @@ jobs:
         working-directory: tests/fixtures/bst_show_project
         run: bst build manual.bst
 
+  bst-tests:
+    # UX-84: the bst-gated tier, actually gated.
+    #
+    # 14 tests are `skipif`-gated on a real `bst` (two of them also on
+    # bwrap and a C compiler). No job ran pytest with bst installed - the
+    # `test` matrix has no bst, and `bst-smoke`/`bst-examples` run builds,
+    # not pytest - so those 14 were skipped everywhere CI looked, and a
+    # skip is indistinguishable from a pass in a summary line. They had
+    # in fact drifted: two assertions outlived the mechanisms they
+    # described (UX-31 superseding UX-22's max-jobs capture route, UX-17
+    # widening `cpu_accounting_available`) with CI permanently green.
+    #
+    # A single Python version is enough - this job is about the bst seam,
+    # not about interpreter compatibility, which the `test` matrix covers.
+    runs-on: ubuntu-latest
+    needs: [test, bst-smoke]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bubblewrap and a C toolchain
+        # bwrap for the sandbox; gcc for the two tests that compile the
+        # Plane 2 LD_PRELOAD hook (`bst/bwrap/cc not all found on PATH`).
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static build-essential
+
+      - name: Allow bwrap to configure loopback in its network namespace
+        # Same sysctl as bst-smoke - see that job for the full diagnosis.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Install bga with the dev and bst extras, plus buildstream-plugins
+        # buildstream-plugins carries the `git` source kind that
+        # test_real_project_refs_lifecycle_clean_then_dirtied needs.
+        run: |
+          pip install -e ".[dev,bst]"
+          pip install buildstream-plugins
+
+      - name: bst --version
+        run: bst --version
+
+      - name: The bst-gated tier runs, and every one of it passes
+        # `-m bst` is the assertion, not a convenience: it selects exactly
+        # the marked tier, so "14 passed" is a claim about the tier rather
+        # than about the suite. A skip inside it would still show as
+        # `passed` in the exit code, hence the explicit count check below.
+        run: pytest -m bst -rs -p no:cacheprovider | tee /tmp/bst-tier.txt
+
+      - name: No test was skipped for a missing bst
+        # The failure this job exists to make impossible: bst silently
+        # absent, the tier skipped, CI green. If the tier grows, update
+        # the expected count deliberately - that is the point of pinning
+        # it rather than asserting "> 0".
+        run: |
+          set -euo pipefail
+          if grep -q "SKIPPED" /tmp/bst-tier.txt; then
+            echo "A bst-gated test was SKIPPED - bst is not really installed in this job:" >&2
+            grep "SKIPPED" /tmp/bst-tier.txt >&2
+            exit 1
+          fi
+          grep -qE "^14 passed" /tmp/bst-tier.txt || {
+            echo "Expected exactly 14 bst-gated tests to run. Got:" >&2
+            tail -3 /tmp/bst-tier.txt >&2
+            exit 1
+          }
+          echo "14 bst-gated tests ran, none skipped."
+
+      - name: The whole suite, with bst present
+        # The tier does not live in isolation: an extraction change can
+        # break an unmarked test only when a real bst produced the input.
+        run: make test
+
   bst-examples:
     # Real builds of examples/*, gathering corner-case data (chrome
     # traces, full bga run directories, and reports) for later tool

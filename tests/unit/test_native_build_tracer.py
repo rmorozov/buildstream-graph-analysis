@@ -226,7 +226,11 @@ def test_max_concurrency_touching_intervals_do_not_overlap():
 
 def _record(pid, cmd, start_ts, end_ts, open_=False, element="unknown"):
     return {
-        "pid": pid, "ppid": 1, "element": element, "cmd": cmd,
+        # UX-73: `ppid` 0 rather than 1 - a record with pid 2 and ppid 1
+        # is the sandbox's own top-level command block, which is excluded
+        # from redundancy findings. These fixtures are ordinary traced
+        # processes and the value was arbitrary.
+        "pid": pid, "ppid": 0, "element": element, "cmd": cmd,
         "start_ts": start_ts, "end_ts": end_ts,
         "duration_s": (end_ts - start_ts) if end_ts is not None else None,
         "open": open_,
@@ -329,7 +333,7 @@ def test_detect_redundant_flags_signature_repeated_across_elements():
         _record(2, "/usr/bin/c++ -o CMakeFiles/cmTC_bbbbb.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 1.0, 1.1, element="lib-a.bst"),
         _record(3, "/usr/bin/c++ -o CMakeFiles/cmTC_ccccc.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 2.0, 2.1, element="lib-b.bst"),
     ]
-    findings = detect_redundant_operations(records)
+    findings, _coverage = detect_redundant_operations(records)
 
     assert len(findings) == 1
     assert findings[0]["elements"] == ["core.bst", "lib-a.bst", "lib-b.bst"]
@@ -345,7 +349,7 @@ def test_detect_redundant_requires_two_distinct_elements_not_just_occurrences():
         _record(1, "cc1plus a.cpp", 0.0, 0.1, element="core.bst"),
         _record(2, "cc1plus a.cpp", 1.0, 1.1, element="core.bst"),
     ]
-    assert detect_redundant_operations(records) == []
+    assert detect_redundant_operations(records)[0] == []
 
 
 def test_detect_redundant_excludes_unknown_element():
@@ -357,7 +361,7 @@ def test_detect_redundant_excludes_unknown_element():
         _record(1, "cc1plus a.cpp", 0.0, 0.1, element="unknown"),
         _record(2, "cc1plus a.cpp", 1.0, 1.1, element="unknown"),
     ]
-    assert detect_redundant_operations(records) == []
+    assert detect_redundant_operations(records)[0] == []
 
 
 def test_detect_redundant_excludes_open_records():
@@ -365,7 +369,7 @@ def test_detect_redundant_excludes_open_records():
         _record(1, "cc1plus a.cpp", 0.0, None, open_=True, element="core.bst"),
         _record(2, "cc1plus a.cpp", 1.0, None, open_=True, element="lib-a.bst"),
     ]
-    assert detect_redundant_operations(records) == []
+    assert detect_redundant_operations(records)[0] == []
 
 
 def test_detect_redundant_sorted_by_total_duration_most_costly_first():
@@ -375,7 +379,7 @@ def test_detect_redundant_sorted_by_total_duration_most_costly_first():
         _record(3, "expensive_codegen", 2.0, 32.0, element="core.bst"),
         _record(4, "expensive_codegen", 33.0, 63.0, element="lib-a.bst"),
     ]
-    findings = detect_redundant_operations(records)
+    findings, _coverage = detect_redundant_operations(records)
 
     assert len(findings) == 2
     assert findings[0]["example_cmd"] == "expensive_codegen"

@@ -1,6 +1,6 @@
 # UX-73: 87% of the redundancy findings' claimed recoverable time comes from an element that does not exist
 
-**Priority:** High | **Depends on:** `UX-64`, `UX-66` (done — which introduced the unresolved bucket this now mistakes for an element)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64`, `UX-66` (done — which introduced the unresolved bucket this now mistakes for an element)
 
 ## Motivation
 
@@ -123,6 +123,80 @@ attribution gap.
 4. A synthetic case with the same signature under two genuinely resolved
    elements still produces a finding — this must not become "report
    nothing".
+
+## Fix Implemented — with two measured corrections to this task as filed
+
+Round 9's capture, the same 0.05s reporting floor, before and after:
+
+| | before | after |
+|---|---|---|
+| findings | 599 | **329** |
+| shown above the floor | 93 | **42** |
+| claimed recoverable wall-clock | 4129s | **91s** |
+| findings involving the unresolved bucket | 79 | **0** |
+
+The remaining list is the class `UX-23` was built to find, and nothing
+else:
+
+```
+  30x worst= 20.4s els=2  /usr/bin/m4 -P
+ 594x worst= 16.3s els=3  .../x86_64-unknown-linux-gnu-gcc ... (autoconf probe)
+ 242x worst= 10.3s els=2  x86_64-unknown-linux-gnu-gcc -o conftest ...
+ 551x worst=  9.7s els=2  /usr/libexec/gcc/.../cc1 -quiet ...
+   8x worst=  2.2s els=8  rm -rf -- /buildstream-build
+   2x worst=  1.6s els=2  /usr/bin/perl /usr/bin/automake --add-missing ...
+```
+
+### Correction 1: identity, not the bucket's name
+
+This task proposed reading `element_attribution.unresolved_bucket` so a
+rename could not re-open the hole. That is weaker than it looks — the
+field names only the *largest* unrecognized bucket, and a capture can
+carry several. The fix instead shares the predicate
+`assess_element_attribution` already judges by: an element name ends in
+`.bst`. Anything else is not a second element, whichever bucket it is.
+
+### Correction 2: the `sh -c -e` wrapper needed no string heuristic
+
+This task proposed extending the build-driver exclusion to BuildStream's
+own command wrapper and stripping shell quoting so `'cmake` would match
+`cmake`. Measurement found a structural identification instead, so no
+string rule was added at all:
+
+- bwrap gives each sandbox a PID namespace, so the element's command
+  block is **pid 2 with ppid 1**. On the real capture, **exactly 25
+  records match — one per each of the 25 sandboxes**, all pid 2.
+- The block is *two* processes: BuildStream runs
+  `sh -c -e (set -ex; sh -c -e '<script>')`, so the script runs in an
+  inner shell. All **21** occurrences of the largest surviving false
+  positive — `sh -c -e if [ -n "bst_build_dir" ]; then`, 664.6s across 5
+  elements — carry `ppid == 2`, with the same script one nesting level
+  out as their invocation's root.
+
+So a direct child of the root that is *itself a shell* is part of the
+command block; a direct child that is a compiler is the element's real
+work and stays. That distinction is tested both ways. A capture taken
+without a PID namespace matches neither clause, so the rule never fires
+rather than mis-firing.
+
+The quoted-`cmake` case (`sh -c -e (set -ex; sh -c -e 'cmake -B_builddir
+...`, 512.6s across 2 elements) is a command block and is excluded by the
+structural rule, so `UX-37`'s deliberate decision to keep `cmake`
+*configure* as a finding is left exactly as it was.
+
+### Coverage is published, not implied
+
+`redundant_operations_coverage` is an additive sibling key — the same
+shape `UX-04`'s `attribution_hints` uses, so an existing consumer of
+`redundant_operations` sees no change. On round 9's capture it reports
+**256 candidates excluded as unresolved-only** and **169 processes
+excluded as command blocks**, and carries the note that the per-finding
+figures are maxima over concurrent elements and must not be summed. The
+text report prints both, because a list that merely got shorter reads as
+a cleaner build.
+
+Tests: 6 new in `tests/unit/test_redundancy_scoring.py`. Suite: 1075 →
+1081.
 
 ## Verification Log
 

@@ -492,6 +492,11 @@ def _elide_cmd(cmd: str) -> str:
 # different work in each.
 _BUILD_DRIVER_BINARIES = frozenset({"make", "gmake", "ninja"})
 
+# UX-73: the shells BuildStream's own command block runs in. Used only to
+# recognize the inner shell of `sh -c -e (set -ex; sh -c -e '<script>')`
+# as part of that block - never to classify work.
+_SHELL_BINARIES = frozenset({"sh", "bash", "dash", "ash"})
+
 
 def _is_element_build_driver(cmd: str) -> bool:
     """True if this command *is* an element's own build/install driver -
@@ -565,24 +570,108 @@ def normalize_cmd_signature(cmd: str) -> str:
     return normalized
 
 
-def detect_redundant_operations(records: List[dict]) -> List[dict]:
+def _is_element_command_block(record: dict) -> bool:
+    """True if this process is the sandbox's own top-level command -
+    the element's `configure-commands`/`build-commands` block (`UX-73`).
+
+    BuildStream runs an element's commands as a single `sh -c -e` inside
+    the sandbox, and bwrap gives each sandbox its own PID namespace, so
+    that shell is pid 2 with pid 1 (bwrap's init) as its parent. Measured
+    on a real 127,627-process `freedesktop-sdk` capture: **exactly 25
+    records have `ppid == 1`, exactly one per each of the 25 sandboxes**,
+    all of them pid 2. It is a structural identification, not a string
+    heuristic.
+
+    They must not be counted as redundancy for the same reason `UX-37`
+    excluded `make -jN`: two elements using the same BuildStream plugin
+    run a byte-identical command block by construction while compiling
+    entirely different sources. On the real capture this was 21
+    occurrences of `sh -c -e if [ -n "bst_build_dir" ]; then` claiming
+    664.6s, and a two-element `cmake -B_builddir` configure claiming
+    512.6s.
+
+    Both `pid == 2` and `ppid == 1` are required for the root. Either
+    alone is a weaker claim than the measurement supports, and the
+    failure mode of requiring both is to *under*-fire - leaving a false
+    positive in the list, which is visible - rather than to silently drop
+    a real finding. A capture taken without a PID namespace matches
+    neither, so this simply never fires; it cannot exclude anything it
+    was not meant to.
+
+    **The block is two processes, not one.** BuildStream's command is
+    `sh -c -e (set -ex; sh -c -e '<script>')`, so the script runs in an
+    inner shell that is a direct child of the root. Measured: all 21
+    occurrences of the `sh -c -e if [ -n "bst_build_dir" ]; then`
+    signature - the largest remaining false positive after the root-only
+    rule, claiming 664.6s across 5 elements - carry `ppid == 2`, and the
+    root of each of their invocations is the same script one nesting
+    level out. So a direct child of the root that is *itself a shell* is
+    part of the command block; a direct child that is a compiler or a
+    build driver is the element's real work and stays.
+    """
+    if record.get("ppid") == 1 and record.get("pid") == 2:
+        return True
+    return (
+        record.get("ppid") == 2
+        and _binary_name(record.get("cmd") or "") in _SHELL_BINARIES
+    )
+
+
+def _is_element_name(name: Optional[str]) -> bool:
+    """The same narrow, syntactic test `assess_element_attribution` uses:
+    a BuildStream element name ends in `.bst`.
+
+    Shared rather than re-derived because `UX-64`/`UX-66` introduced a
+    second non-element bucket name beside `unknown` - the *unresolved*
+    bucket, holding processes whose sandbox could not be matched to
+    exactly one element. Anything that tests only against `unknown` now
+    treats that bucket as an element, which is exactly what `UX-73`
+    found `detect_redundant_operations` doing.
+    """
+    return bool(name) and name.endswith(".bst")
+
+
+def detect_redundant_operations(records: List[dict]) -> Tuple[List[dict], dict]:
     """UX-23: group matched (start+end known), element-attributed traced
     processes by their normalized command signature - any signature
     occurring under 2+ *distinct* real elements is a real, concrete
-    redundant-operation candidate. Processes tagged `element="unknown"`
-    (a raw log captured without element-tagging, or hook.c loaded
-    without `BST_TRACE_ELEMENT` set) are excluded entirely - never claim
-    cross-element redundancy for a process this tool couldn't actually
-    attribute to a real element. Sorted by real total duration spent on
+    redundant-operation candidate. Sorted by real total duration spent on
     each redundant signature, most costly first, so a user can
     immediately see which finding is actually worth investigating (a
     100ms probe repeated 6 times is very different from a 30s codegen
     step repeated 6 times - same principle as this tool's own
     static-binary disclaimer: report real numbers, let the user judge).
+
+    `UX-73`: "element-attributed" means *resolved to a real element*, not
+    merely "not `unknown`". The original guard excluded only `unknown`,
+    which was complete until `UX-64`/`UX-66` added an explicitly
+    unresolved bucket - and then a signature seen under one real element
+    plus that bucket satisfied "2+ distinct elements". Measured on the
+    real capture: **79 of 93 findings above the reporting floor involved
+    the unresolved bucket, carrying 87% of the claimed recoverable
+    wall-clock (3588s of 4129s)**, and the single largest finding in the
+    report was `lto-wrapper` claiming "up to 1932.9s recoverable" against
+    a bucket of 17,754 unattributed processes.
+
+    Returns `(findings, coverage)`. The coverage half reports what was
+    excluded and why, because "how many findings were dropped for being
+    unresolved-only" is itself a signal - it rises when attribution gets
+    worse, and a silently shorter list reads as a cleaner build.
     """
     by_signature: Dict[str, List[dict]] = defaultdict(list)
+    # Signatures seen under a non-element bucket, so a finding that
+    # disappears for lack of a *second* resolved element can be counted
+    # rather than silently dropped.
+    unresolved_signatures: Dict[str, set] = defaultdict(set)
+    excluded_command_blocks = 0
     for r in records:
         if r["open"] or r["element"] == "unknown":
+            continue
+        if _is_element_command_block(r):
+            excluded_command_blocks += 1
+            continue
+        if not _is_element_name(r["element"]):
+            unresolved_signatures[normalize_cmd_signature(r["cmd"])].add(r["element"])
             continue
         if _is_element_build_driver(r["cmd"]):
             # UX-37: every element runs `make -f Makefile -jN` and
@@ -600,9 +689,15 @@ def detect_redundant_operations(records: List[dict]) -> List[dict]:
         by_signature[normalize_cmd_signature(r["cmd"])].append(r)
 
     findings = []
+    excluded_unresolved_only = 0
     for signature, occurrences in by_signature.items():
         elements = sorted({r["element"] for r in occurrences})
         if len(elements) < 2:
+            # UX-73: it would have been a finding only by counting an
+            # unresolved bucket as a second element. Counted, because a
+            # list that simply got shorter reads as a cleaner build.
+            if len(elements) + len(unresolved_signatures.get(signature, ())) >= 2:
+                excluded_unresolved_only += 1
             continue
         # UX-37: `total_duration_s` sums process time across elements
         # BuildStream dispatched *concurrently*, so it is not time the
@@ -628,10 +723,34 @@ def detect_redundant_operations(records: List[dict]) -> List[dict]:
             "worst_element": worst_element,
             "example_cmd": occurrences[0]["cmd"],
         })
+    # A signature seen *only* under unresolved buckets never reached the
+    # loop above, so it is counted here.
+    excluded_unresolved_only += sum(
+        1 for signature, buckets in unresolved_signatures.items()
+        if signature not in by_signature and len(buckets) >= 2
+    )
+    coverage = {
+        "excluded_unresolved_only": excluded_unresolved_only,
+        "excluded_element_command_blocks": excluded_command_blocks,
+        "note": (
+            "Each finding's `max_element_duration_s` is an upper bound on what "
+            "sharing that one operation could recover, for the single "
+            "worst-affected element. They are per-signature maxima over "
+            "elements that ran concurrently: they must not be summed, and on a "
+            "real capture their sum exceeds the build's own duration. A "
+            "signature is a finding only when it ran under 2+ *resolved* "
+            "elements (UX-73); processes in the unresolved attribution bucket "
+            "and each element's own top-level command block are excluded, and "
+            "counted above."
+        ),
+    }
     # Ranked by the wall-clock-relevant figure, not by the sum: a
     # 6x-repeated 50ms probe across six concurrent elements is not a
     # bigger finding than a 2x-repeated 5s codegen step.
-    return sorted(findings, key=lambda f: -f["max_element_duration_s"])
+    return (
+        sorted(findings, key=lambda f: -f["max_element_duration_s"]),
+        coverage,
+    )
 
 
 # UX-32: which traced binaries are doing the real work, and which are
@@ -1609,6 +1728,7 @@ def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
         by_element[r["element"]] = by_element.get(r["element"], 0) + 1
     wall_start = min((r["start_ts"] for r in records), default=None)
     wall_end = max((r["end_ts"] if r["end_ts"] is not None else r["start_ts"] for r in records), default=None)
+    redundant_operations, redundant_coverage = detect_redundant_operations(records)
     return {
         "process_count": len(records),
         "matched_count": len(matched),
@@ -1639,7 +1759,13 @@ def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
         # plane exists to answer. See compute_per_element_parallelism.
         "per_element_parallelism": compute_per_element_parallelism(records),
         "wall_span_s": (wall_end - wall_start) if wall_start is not None and wall_end is not None else None,
-        "redundant_operations": detect_redundant_operations(records),
+        "redundant_operations": redundant_operations,
+        # UX-73: additive sibling key - what the list above excluded and
+        # why, and the note that its figures do not add. Kept beside the
+        # findings rather than folded into them, the same shape UX-04's
+        # `attribution_hints` uses, so an existing consumer of
+        # `redundant_operations` sees no change.
+        "redundant_operations_coverage": redundant_coverage,
         "processes": records,
         "static_binary_disclaimer": STATIC_BINARY_DISCLAIMER,
     }
@@ -2005,6 +2131,29 @@ def _format_text(report: dict) -> str:
                 f"  ({omitted} further finding(s) below {_REDUNDANCY_MIN_SECONDS:.2f}s "
                 f"recoverable wall-clock, omitted - see --json for all of them)"
             )
+        # UX-73: said under the list, because a reader scanning it
+        # top-down will otherwise add the figures - and on the real
+        # capture their sum (4129s) exceeds the build's own duration
+        # (3614s), which is impossible.
+        lines.append(
+            "  (each figure is an upper bound for one signature on its own "
+            "worst-affected element; they are maxima over concurrent elements "
+            "and must not be summed)"
+        )
+    coverage = report.get("redundant_operations_coverage") or {}
+    if coverage.get("excluded_unresolved_only") or coverage.get(
+        "excluded_element_command_blocks"
+    ):
+        # UX-73: a shorter list reads as a cleaner build unless the
+        # exclusions are stated. The unresolved-only count is also a
+        # coverage signal in its own right: it rises when element
+        # attribution gets worse.
+        lines.append(
+            f"  ({coverage.get('excluded_unresolved_only', 0)} candidate(s) excluded "
+            f"as seen under the unresolved attribution bucket rather than 2+ real "
+            f"elements, and {coverage.get('excluded_element_command_blocks', 0)} "
+            f"process(es) excluded as each element's own top-level command block)"
+        )
     lines.append("")
     lines.append(f"NOTE: {report['static_binary_disclaimer']}")
     return "\n".join(lines)

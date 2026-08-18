@@ -637,6 +637,38 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return _execute_compare_and_write(args)
 
 
+def cmd_cache_trend(args: argparse.Namespace) -> int:
+    """Execute `bga cache-trend RUN...` (UX-103) - is the cache getting
+    worse?
+
+    Separate from `compare` for the same reason `correlate` is: it reads
+    a *series*, not a pair, and the question it answers - "is the
+    infrastructure degrading" - is about the cache rather than about any
+    change to the project."""
+    from bga.cache_trend import format_trend_text, trend_from_run_dirs
+
+    for run_dir in args.run_dirs:
+        if not Path(run_dir).is_dir():
+            print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
+            return 1
+    try:
+        trend = trend_from_run_dirs(args.run_dirs)
+    except (OSError, ValueError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+
+    output = (
+        json.dumps(trend, indent=2) if args.format == 'json'
+        else format_trend_text(trend)
+    )
+    if getattr(args, 'output', None):
+        with open(args.output, 'w', encoding='utf-8') as handle:
+            handle.write(output + '\n')
+    else:
+        print(output)
+    return 0
+
+
 def cmd_correlate(args: argparse.Namespace) -> int:
     """Execute `bga correlate RUN NATIVE_REPORT` (UX-51) - joins a Plane
     1 analysis with a Plane 2 native trace report on element UID, the
@@ -1056,6 +1088,33 @@ def create_parser() -> argparse.ArgumentParser:
              'Capture both from one build with `run --wrapped-log`.',
     )
     correlate_parser.set_defaults(func=cmd_correlate)
+
+    cache_trend_parser = subparsers.add_parser(
+        'cache-trend',
+        help="Is the cache getting worse? A series of runs, not a pair",
+        description='Read a chronological series of run directories and report the '
+                    'cache reading of each - hit ratio, transfer seconds, churn '
+                    'against its predecessor - plus a finding when the newest run '
+                    'leaves the band its trailing window describes '
+                    '(docs/backlog/scenarios/UX-0103 - not spec-mandated). In CI the '
+                    'series comes from `bga baseline`. The noise model is the one '
+                    '`bga compare --baseline-run` uses; there is deliberately not a '
+                    'second one.',
+    )
+    cache_trend_parser.add_argument(
+        'run_dirs', nargs='+', metavar='RUN',
+        help='Run directories, oldest first. Order is the caller\'s to know: '
+             'nothing in a run directory records which build came before it.',
+    )
+    cache_trend_parser.add_argument(
+        '-f', '--format', choices=['text', 'json'], default='text',
+        help='Output format: text (human-readable), json (machine-readable). '
+             'Default: text',
+    )
+    cache_trend_parser.add_argument(
+        '-o', '--output', default=None, help='Write output to file instead of stdout',
+    )
+    cache_trend_parser.set_defaults(func=cmd_cache_trend)
 
     compare_parser = subparsers.add_parser(
         'compare',

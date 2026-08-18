@@ -535,3 +535,40 @@ def test_an_unmeasured_process_is_counted_but_contributes_no_cpu():
     assert entry["configure_processes"] == 2
     assert entry["measured"] == 1 and entry["unmeasured"] == 1
     assert entry["coverage"] == 0.5
+
+
+def test_a_path_argument_ending_in_cmake_is_not_a_configure_root():
+    """The correction the real freedesktop-sdk capture forced.
+
+    Matching the pattern anywhere on the command line classified a
+    linker and a compiler as configure roots, because an `-L`/`-I` path
+    happened to end in `/cmake`. Since the classification takes the
+    whole process tree below a root, that mis-filed subtrees rather than
+    processes: `cmake-stage1.bst` reported **1329 CPU seconds of
+    "configure", 34% of the element**. Matched against the executable it
+    reports 25.8s, 0.7% - which agrees with the 30.5s wall time cmake
+    reported about itself, where 1329 did not.
+    """
+    from tools.bst_native_build_tracer import is_configure_root
+
+    linker = (
+        "/usr/libexec/gcc/x86_64-unknown-linux-gnu/16.2.0/collect2 -plugin p.so "
+        "-L/buildstream-build/_build_dir/Bootstrap.cmk/cmake -o cmake"
+    )
+    assert not is_configure_root(linker)
+    assert not is_configure_root("/bin/sh -c : && /usr/bin/g++ -O2 -I/b/cmake a.cpp")
+    # And the real thing, invoked by path, still is one.
+    assert is_configure_root("/buildstream-build/_build_dir/Bootstrap.cmk/cmake . -G Ninja")
+
+
+def test_a_shell_wrapper_does_not_hide_the_program_it_runs():
+    """`/bin/sh ./configure --prefix=/usr` is the ordinary autotools
+    invocation, and its `argv[0]` says nothing - so the check looks at
+    the next argument too, and skips leading `VAR=value` assignments for
+    the same reason."""
+    from tools.bst_native_build_tracer import is_configure_root
+
+    assert is_configure_root("/bin/sh ./configure --prefix=/usr")
+    assert is_configure_root("env CFLAGS=-O2 /bin/sh ../configure")
+    # But a shell running an inline script is not its `-c`.
+    assert not is_configure_root("/bin/sh -c 'make -j4'")

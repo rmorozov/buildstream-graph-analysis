@@ -1,6 +1,6 @@
 # UX-91: BuildStream's own cached logs are an uningested third data plane
 
-**Priority:** Medium | **Status:** 🟡 In Progress — (1) and (2) done | **Depends on:** — (new capability direction)
+**Priority:** Medium | **Status:** 🟢 Done — (1) and (2) shipped; (3) declined on a measurement | **Depends on:** — (new capability direction)
 
 ## Motivation
 
@@ -179,13 +179,46 @@ is no configure-vs-compile time split here, and nothing in this report may
 feed a certified floor."
 ```
 
-### The fdsdk half of the acceptance test
+### The fdsdk half of the acceptance test, met
 
-Not met yet, and now reachable: the capture workflow discarded its log
-directory at job teardown. It now publishes `bst-element-logs.tar.gz`
-alongside the run directory (`_casd/` excluded — different format,
-hundreds of files). The next capture will carry a real, large log tree
-to check this against.
+The capture workflow used to discard its log directory at job teardown;
+it now publishes `bst-element-logs.tar.gz` alongside the run directory.
+The first capture to carry one holds **178 element logs**, 23 of them
+builds with a recorded total, and both halves check out against it with
+no Plane 2 artifact present:
+
+```text
+components/_private/cmake-stage1.bst [0b0e308b] 18-08-2026 19:52:13 (1185.0s)
+    Running commands                  1185.0s (100%)
+    Configuring (self-reported)         30.2s
+    Generating (self-reported)           0.3s
+```
+
+That is the acceptance's *"`cmake-stage1.bst`'s configure/compile
+split"*, in the only form these logs can support - and the form this
+task's own measurement section predicted, since nothing times the
+individual commands. 30.2s of self-reported configuring inside 1185s of
+`Running commands`.
+
+The repeated-operation report finds real cross-element operations
+without a tracer:
+
+```text
+  10x  $'if [ -n "bst_build_dir" ]; then\n cd bst_build_dir\nfi\nmake \n'
+        in components/bison.bst, components/gdbm.bst, components/gperf.bst, ... (+6 more)
+  10x  $'if true || true; then\n find "/buildstream-install" -name "*.la" ...
+   9x  $'... make -j1 DESTDIR="/buildstream-install" install ...
+```
+
+Not the cmake probes the acceptance guessed at - this cut set is
+autotools-heavy, so what recurs is the autotools build/install idiom and
+the libtool `.la` cleanup. Reported as found rather than as expected.
+
+**One defect the real tree exposed**, and it is the kind only real data
+produces: BuildStream writes `+ sh -c -e $'\n'` for an element whose
+command block is empty, eight elements here share one, and the report
+called it an operation repeated across eight elements. It is the absence
+of an operation. Filtered, with a test.
 
 ### Verification
 

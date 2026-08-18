@@ -1722,29 +1722,60 @@ def compute_cpu_time(records: List[dict]) -> dict:
     }
 
 
-# UX-102: what a *configure* invocation looks like on a command line.
-# Deliberately narrow. Each entry is a build system's own configure
-# entry point, and everything the classification below attributes to
-# configure is a *descendant* of one of these - so a pattern that is too
-# generous does not mis-file one process, it mis-files a whole subtree.
-_CONFIGURE_ROOT_PATTERNS = (
+# UX-102: what a *configure* invocation looks like. Matched against the
+# **executable**, never the whole command line - and that is a
+# correction, not a precaution. Matching anywhere on the line classified
+# `collect2 -plugin ... -L/buildstream-build/_build_dir/Bootstrap.cmk/cmake`
+# and a `g++` compile as configure roots, because a *path argument*
+# ended in `/cmake`. On the real freedesktop-sdk capture that inflated
+# `cmake-stage1.bst` to 1329 CPU seconds of "configure", 34% of the
+# element, by mis-filing whole subtrees under a linker.
+_CONFIGURE_EXECUTABLES = (
     # autotools: `./configure`, `../configure`, `/src/foo/configure`,
     # and `config.status`, which re-runs it.
-    re.compile(r'(?:^|[\s/])(?:configure|config\.status)(?:\s|$)'),
+    'configure', 'config.status',
     # autotools' own generators - they exist only to produce the
     # configure machinery, so their cost is configure cost.
-    re.compile(r'(?:^|[\s/])(?:autoconf|autoreconf|automake|aclocal|autoheader|libtoolize)(?:\s|$)'),
-    # meson's configure step (`meson setup builddir`, and bare
-    # `meson builddir` which is the same thing).
-    re.compile(r'(?:^|[\s/])meson(?:\s+setup)?(?:\s|$)'),
+    'autoconf', 'autoreconf', 'automake', 'aclocal', 'autoheader', 'libtoolize',
+    # meson's configure step.
+    'meson',
 )
+
+# Wrappers whose *next* argument is the real program: `/bin/sh
+# ./configure --prefix=/usr` is the ordinary autotools invocation, and
+# `env FOO=1 cmake ...` is common in generated build systems.
+_ARGV0_WRAPPERS = frozenset({'sh', 'bash', 'dash', 'env'})
 
 # cmake is both phases in one binary, so it is decided by its arguments
 # rather than by its name: `cmake -B... -H...` configures, `cmake
 # --build` and `cmake --install` do not, and `cmake -E` is the utility
 # mode the *build* uses for copies and directory creation.
-_CMAKE_RE = re.compile(r'(?:^|[\s/])cmake(?:\s|$)')
 _CMAKE_NON_CONFIGURE = re.compile(r'(?:^|\s)(?:--build|--install|-E)(?:\s|$)')
+
+
+def _executable_candidates(cmd: str) -> List[str]:
+    """The basenames that could name the program this command runs.
+
+    Wrappers are walked through rather than stopped at:
+    `/bin/sh ./configure --prefix=/usr` is the ordinary autotools
+    invocation and its `argv[0]` says nothing, and `env CFLAGS=-O2
+    /bin/sh ../configure` stacks two of them. Leading `VAR=value`
+    assignments are skipped for the same reason, and a flag ends the
+    walk - `sh -c '<script>'` runs a script, not a program named `-c`.
+    """
+    candidates = []
+    for token in cmd.split():
+        if '=' in token.split('/')[-1] and token[:1].isalpha():
+            continue  # a leading `VAR=value` assignment, not the program
+        if token.startswith('-'):
+            # A flag: whatever the program was, it has already appeared.
+            # `sh -c '<script>'` runs a script, not a program named `-c`.
+            break
+        base = os.path.basename(token)
+        candidates.append(base)
+        if base not in _ARGV0_WRAPPERS:
+            break  # this is the program itself
+    return candidates
 
 
 def is_configure_root(cmd: str) -> bool:
@@ -1756,9 +1787,10 @@ def is_configure_root(cmd: str) -> bool:
     autotools runs come along as descendants without needing a pattern
     each.
     """
-    if _CMAKE_RE.search(cmd):
+    candidates = _executable_candidates(cmd)
+    if 'cmake' in candidates:
         return not _CMAKE_NON_CONFIGURE.search(cmd)
-    return any(pattern.search(cmd) for pattern in _CONFIGURE_ROOT_PATTERNS)
+    return any(name in _CONFIGURE_EXECUTABLES for name in candidates)
 
 
 def classify_configure_phase(records: List[dict]) -> dict:

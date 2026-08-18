@@ -647,3 +647,28 @@ def test_a_short_window_is_declared_weak_rather_than_withheld(tmp_path):
         ("a.bst", f"aaaa000{i}", 5, f"20260818-1600{i:02d}") for i in range(3)
     ])
     assert developer_tax(scan_log_tree(str(root)))['weak_window'] is True
+
+
+def test_an_empty_command_block_is_not_a_repeated_operation(tmp_path):
+    """BuildStream writes a `+ sh -c -e $'\\n'` line for an element whose
+    command block is empty. On the real freedesktop-sdk log tree eight
+    elements share one, and the repeated-operation report called it an
+    operation repeated across eight elements. It is the absence of one.
+    """
+    directory = tmp_path / "logs" / "p"
+    records = []
+    for index in range(4):
+        element_dir = directory / f"e{index}"
+        element_dir.mkdir(parents=True)
+        (element_dir / f"abc1234{index}-build.20260818-115322.log").write_text(
+            f"BuildStream 2.7.0 - Tuesday, 18-08-2026 at 11:53:22\n"
+            f"[--:--:--] START   [abc1234{index}] e{index}.bst: Build\n"
+            f"[--:--:--] START   e{index}.bst: Running commands\n"
+            "+ sh -c -e $'\\n'\n"
+            "+ sh -c -e make -j4\n"
+            f"[00:00:05] SUCCESS e{index}.bst: Running commands\n"
+            f"[00:00:05] SUCCESS [abc1234{index}] e{index}.bst: Build\n"
+        )
+        records.append(element_dir)
+    findings = repeated_operations(scan_log_tree(str(tmp_path / "logs")))
+    assert [f['command'] for f in findings] == ["make -j4"]

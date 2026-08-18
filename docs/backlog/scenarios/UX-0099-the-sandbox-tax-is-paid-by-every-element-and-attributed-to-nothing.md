@@ -19,7 +19,7 @@ during staging); no report names it.
 The data already exists. Round 11 verified the persisted per-element
 logs time each phase separately:
 
-```
+```text
 [--:--:--] START   [e50dfdfd] core.bst: Staging dependencies at: /
 [00:00:00] SUCCESS [e50dfdfd] core.bst: Staging dependencies at: /
 [--:--:--] START   [e50dfdfd] core.bst: Integrating sandbox
@@ -103,7 +103,7 @@ Two details that only show up on real logs:
 On this machine's `examples/06` log tree — 27 build logs, 70.0s of
 element time:
 
-```
+```text
 Sandbox tax: 0.0s of 70.0s element time (0.0%) across 27 build log(s) went to
 staging, integrating and caching rather than to the build itself
   Every overhead phase rounded to zero at BuildStream's one-second resolution -
@@ -124,7 +124,7 @@ On a real log with a real toll — the bst 2.7.0 log the parser was built
 against, 2s staging dependencies, 14s running commands, 1s caching the
 artifact, 17s total:
 
-```
+```text
 Sandbox tax: 3.0s of 17.0s element time (17.6%) across 1 build log(s) ...
     Staging dependencies                 2.0s
     Caching artifact                     1.0s

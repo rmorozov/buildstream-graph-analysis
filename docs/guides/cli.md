@@ -51,6 +51,7 @@ import the native tracer and the trace converters on every run.
 | `bga native-to-chrome` | `tools.native_trace_to_chrome_trace` |
 | `bga cross-check` | `tools.bga_cross_check` |
 | `bga gen-synthetic` | `tools.gen_synthetic_scale_run` |
+| `bga cache-logs` | `tools.bst_cache_logs` |
 
 ## Installation
 
@@ -135,6 +136,12 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `redundant-operation` | medium | it pays for an operation other elements also run |
 | `declared-not-used` | info | opened no file staged by a declared build dependency — evidence, not a verdict |
 | `unread-gating-chain` | high | a *group* of never-read edges chains elements along the critical path (`UX-82`) |
+
+`bga cache-logs --format json` → `.findings[].id` (1), built in `tools/bst_cache_logs.py` rather than `bga/findings.py` because it reads BuildStream's own logs and, optionally, a Plane 2 report — neither of which the run-directory analyzer has:
+
+| id | severity | what it says |
+|---|---|---|
+| `configure-tax` | varies | how much of this log tree's element time went to the build system configuring itself, who paid the most, and — with `--native-report` — the same figure measured from the traced process tree (`UX-102`) |
 
 A finding not in the run's output simply did not fire; ids are never emitted with an empty or placeholder value.
 
@@ -316,6 +323,7 @@ Documented here because they exist and nothing user-facing said so:
 
 - `bga sweep --calibration-dir DIR` (`UX-14` tier 2) — replaces the sweep's fixed-duration model with a contention-aware one calibrated from real runs in `DIR`. Without it the sweep's own caveat applies: the predicted curve is a shape, not a runtime prediction, because the replay model does not know about CPU.
 - `bga capture run --invocation-log PATH` / `--argv-log PATH` / `--raw-log PATH` — where Plane 2 writes its own capture logs. `--invocation-log` defaults to a path beside the report (`UX-80`); `--no-invocation-log` turns it off.
+- `bga cache-logs [LOG_ROOT] --project NAME --native-report PLANE2.json` — Plane 3, BuildStream's own persisted element logs (`UX-91`). Needs no capture at all: it reads what BuildStream already wrote, defaulting to `$XDG_CACHE_HOME/buildstream/logs`. Reports the per-element phase breakdown, the sandbox tax (`UX-99`) and the configure tax (`UX-102`); `--native-report` adds the traced configure measurement from a Plane 2 report of the same build, beside the build tool's self-reported one.
 
 ## `bga correlate` — Join the Two Planes
 

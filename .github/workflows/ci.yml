@@ -170,8 +170,8 @@ jobs:
   bst-tests:
     # UX-84: the bst-gated tier, actually gated.
     #
-    # 17 tests are `skipif`-gated on a real `bst` (four of them also on
-    # bwrap, two on a C compiler and two on an installed `bga`). No job ran pytest with bst installed - the
+    # 18 tests are `skipif`-gated on a real `bst` (five of them also on
+    # bwrap, three on a C compiler and two on an installed `bga`). No job ran pytest with bst installed - the
     # `test` matrix has no bst, and `bst-smoke`/`bst-examples` run builds,
     # not pytest - so those 14 were skipped everywhere CI looked, and a
     # skip is indistinguishable from a pass in a summary line. They had
@@ -227,7 +227,7 @@ jobs:
 
       - name: The bst-gated tier runs, and every one of it passes
         # `-m bst` is the assertion, not a convenience: it selects exactly
-        # the marked tier, so "17 passed" is a claim about the tier rather
+        # the marked tier, so "18 passed" is a claim about the tier rather
         # than about the suite. A skip inside it would still show as
         # `passed` in the exit code, hence the explicit count check below.
         #
@@ -242,8 +242,8 @@ jobs:
         # `set -o pipefail` is load-bearing, not tidiness (`UX-97`): the
         # step's exit status is the *last* command in the pipe, which is
         # `tee`, and `tee` succeeds whatever pytest did. The count check
-        # below catches an ordinary failure (`16 passed, 1 failed` fails
-        # the `17 passed` grep) but not `17 passed, 1 error` - a teardown
+        # below catches an ordinary failure (`17 passed, 1 failed` fails
+        # the `18 passed` grep) but not `18 passed, 1 error` - a teardown
         # or collection error alongside a full pass, which satisfies the
         # grep and greens the job. Demonstrated:
         #   bash -c 'false | tee /dev/null'; echo $?                 -> 0
@@ -265,14 +265,14 @@ jobs:
             exit 1
           fi
           # Not anchored to column 0: pyproject's `addopts = "-v"` makes
-          # the summary line `===== 17 passed, 1215 deselected in ... =====`.
-          # Bounded on both sides so "117 passed" cannot satisfy it.
-          grep -qE "(^|[[:space:]=])17 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
-            echo "Expected exactly 17 bst-gated tests to run. Got:" >&2
+          # the summary line `===== 18 passed, 1215 deselected in ... =====`.
+          # Bounded on both sides so "118 passed" cannot satisfy it.
+          grep -qE "(^|[[:space:]=])18 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
+            echo "Expected exactly 18 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1
           }
-          echo "17 bst-gated tests ran, none skipped."
+          echo "18 bst-gated tests ran, none skipped."
 
       - name: The whole suite, with bst present
         # The tier does not live in isolation: an extraction change can

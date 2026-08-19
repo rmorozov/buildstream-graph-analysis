@@ -108,6 +108,7 @@ def build_shim_argv(
     preload_so: str,
     trace_log: str,
     invocation_id: Optional[int] = None,
+    spine: Optional[str] = None,
 ) -> List[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -156,6 +157,17 @@ def build_shim_argv(
     # log path).
     if os.environ.get("BST_TRACE_OPENS"):
         injected += ["--setenv", "BST_TRACE_OPENS", "1"]
+    # UX-106: the ptrace spine, prepended to the sandboxed command so it
+    # becomes the parent of everything BuildStream asked to run - which
+    # is what makes every descendant its own tracee, and so traceable
+    # without any capability under Yama `ptrace_scope=1`.
+    #
+    # Prepended to `cmd`, not to the bwrap options: it must run *inside*
+    # the sandbox, after bwrap has set the namespaces up. Under
+    # `--unshare-pid` it therefore becomes pid 1, which is why it carries
+    # init duties.
+    if spine:
+        return [real_bwrap, *opts, *injected, spine, "--", *cmd]
     return [real_bwrap, *opts, *injected, *cmd]
 
 
@@ -293,7 +305,13 @@ def main() -> int:
         extract_element_name(sys.argv[1:]),
     )
     argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst, preload_so,
-                           trace_log, invocation_id=invocation_id)
+                           trace_log, invocation_id=invocation_id,
+                           # UX-106: the in-sandbox path of the ptrace
+                           # spine, or absent. Read from this shim's own
+                           # environment, which `run_traced_build` sets -
+                           # the same channel `BST_TRACE_PRELOAD_SO`
+                           # already uses.
+                           spine=os.environ.get("BST_TRACE_SPINE"))
     os.execv(real_bwrap, argv)
     return 1  # unreachable if execv succeeds
 

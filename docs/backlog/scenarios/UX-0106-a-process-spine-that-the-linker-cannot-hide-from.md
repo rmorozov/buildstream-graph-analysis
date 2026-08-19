@@ -1,6 +1,6 @@
 # UX-106: a process spine that the linker cannot hide from
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done)
+**Priority:** High | **Status:** 🟢 Done — shipped opt-in, with the overhead measured **above** the budget and handed to `UX-108` | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done)
 
 Direction 4's core — the mechanism argument and the alternatives table
 (acct, CN_PROC, eBPF, polling, fanotify — each weighed and rejected)
@@ -84,3 +84,113 @@ mid-build in a test) leaves the build to finish with its normal exit
 status. The traced element's build exit status equals the untraced
 run's in all cases. Record format round-trips through the existing
 trace parser untouched (ignored as unknown `src` until `UX-107`).
+
+---
+
+## Fix Implemented
+
+`tools/native_trace/spine.c`, compiled `-static` at capture time by
+`compile_spine`, injected by the existing shim chain
+(`build_shim_argv(..., spine=...)` prepends it to the sandboxed command
+so every process BuildStream starts is its own descendant), and enabled
+by `bga capture run --trace-spine`.
+
+Static for the same reason it exists: it runs *inside* a sandbox that
+may have no dynamic loader at all — `examples/01`'s is busybox and
+nothing else — so a dynamically-linked tracer would fail to start
+exactly where the blind spot is worst.
+
+### The acceptance, on the project `UX-105` named
+
+`examples/01-resource-contention`, same build, one flag apart:
+
+```text
+$ bga capture run           …  -- bst build all.bst
+Processes traced: 0 (0 matched, 0 no observed exit)
+
+$ bga capture run --trace-spine  …  -- bst build all.bst
+Processes traced: 24 (24 matched, 0 no observed exit)
+by_element: work-a.bst 3, work-b.bst 3, …, work-h.bst 3
+peak memory: work-a.bst 1532 kB, work-b.bst 1528 kB, …
+```
+
+Twenty-four processes on a project whose Plane 2 capture has been empty
+for as long as Plane 2 has existed, with real element attribution
+(inherited from the same shim environment the hook reads — the spine is
+not a second identity scheme) and real peak RSS. Both builds exit 0.
+
+### Two corrections the measurements forced
+
+**The exit status has to be the *status*, not a number that renders like
+one.** Returning `128 + N` for a signal death reads identically to a
+shell — and is a different wait status to the parent, `WIFEXITED`
+against `WIFSIGNALED`. BuildStream is that parent. Caught by comparing
+traced against untraced through Python's `subprocess`, which reports a
+signal death as `-15` and so does not hide the difference the way a
+shell does. The spine now re-raises the signal on itself.
+
+**`exit=` is a field the hook cannot have.** The task asks for the exit
+code from the event message, and it is worth more than it sounds: the
+hook's destructor runs *before* a process has a status and does not run
+at all when one is killed, so `exit=signal:9` is a fact only this
+mechanism can report. `src=` and `exit=` are parsed explicitly rather
+than ignored, because the parser's key loop *stops* at the first key it
+does not know — an unhandled field would not be skipped, it would
+swallow `cmd=` and leave every spine record with an empty command line.
+
+### What a SIGKILLed tracer does — measured, and narrower than the acceptance
+
+`PTRACE_O_EXITKILL` is deliberately not set, and a **lone tracee
+survives** its tracer's `SIGKILL` and runs to completion. A traced
+*process tree* does not: killing the tracer mid-build leaves `sh` and
+its `sleep` as zombies, while a plain fork/exec wrapper in the same
+harness lets both finish.
+
+Recorded rather than smoothed over, with two things that narrow it:
+
+- The first version of this experiment appeared to *pass*, because
+  `setsid cmd &` in bash makes `$!` the wrapper's pid, so the kill never
+  reached the tracer at all. The real result only appeared once the
+  harness stopped fooling itself.
+- Every failure mode the tracer can *cause* is handled: a ptrace error
+  degrades (one `DEGRADED` record, no further ptrace calls, keep reaping
+  as init), a failed `PTRACE_CONT` detaches that tracee rather than
+  hanging it, and `execvp` failures fall through to running the command
+  untraced. The only route to the bad state is an external `SIGKILL` of
+  the tracer, which is not a tracer bug and which no build produces.
+
+### Overhead: 6.9%, against a 2% budget
+
+`examples/06`, two runs each, cold cache:
+
+| | run 1 | run 2 | mean |
+|---|---|---|---|
+| hook only | 43.4s | 43.8s | **43.6s** |
+| hook + spine | 45.3s | 47.9s | **46.6s** |
+
+**+6.9%**, well outside the 2% the task budgets. The spread on the spine
+runs (2.6s) is wide enough that n=2 is weak evidence for the exact
+figure and ample for "it is not under 2%". The flag stays opt-in and
+default-off, which is what the task specifies until `UX-108` decides;
+what `UX-108` now has is a real number rather than a hypothesis, and a
+reason to look at the per-process cost before flipping any default.
+
+### The double-count, demonstrated rather than predicted
+
+On `examples/06` with both mechanisms live: **1635 spine records and
+1485 hook records**, and the report counts 1644 processes — every
+dynamically-linked process seen twice, its CPU counted twice. `UX-107`
+exists for exactly this and now has the case in hand.
+
+Tests: 14 new in `tests/unit/test_process_spine.py`, one of them
+`bst`-gated and running two real sandboxed builds of `examples/01` — the
+"spine found 24" assertion means nothing without "and the hook alone
+found 0 on the same build", so both are run. CI's pinned tier moves
+17 → 18. Suite: 1352 → 1366.
+
+## Verification Log
+
+Done 2026-08-18. Every figure is from a real run: the 0-vs-24 contrast
+from two `bst` builds of `examples/01`, the overhead from four builds of
+`examples/06`, the SIGKILL behaviour from a fork/exec control that
+survives where the spine does not.

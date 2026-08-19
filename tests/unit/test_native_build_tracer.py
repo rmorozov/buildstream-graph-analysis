@@ -50,6 +50,11 @@ def test_parse_matches_start_and_end_lines():
         # fabricated one.
         "invocation": None,
         "cmd": "cmake --build .",
+        # UX-106: which mechanism saw this process. A record with no
+        # `src=` is a hook record - every capture taken before the ptrace
+        # spine existed - and defaulting it gives those one honest
+        # answer rather than None.
+        "src": "hook",
     }
     assert events[1]["event"] == "END"
 

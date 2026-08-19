@@ -82,6 +82,7 @@ STATIC_BINARY_DISCLAIMER = (
 )
 
 _HOOK_C = os.path.join(os.path.dirname(__file__), "native_trace", "hook.c")
+_SPINE_C = os.path.join(os.path.dirname(__file__), "native_trace", "spine.c")
 
 
 class TraceError(RuntimeError):
@@ -110,6 +111,34 @@ def compile_hook(build_dir: str) -> str:
     return hook_so
 
 
+def compile_spine(build_dir: str) -> str:
+    """UX-106: compile the ptrace spine, statically, fresh into
+    `build_dir`.
+
+    Static for the same reason the spine exists: it runs *inside* the
+    sandbox, and a sandbox assembled from a project's own elements may
+    have no dynamic loader at all - `examples/01`'s is busybox and
+    nothing else. A dynamically-linked tracer would fail to start
+    exactly where the static blind spot is worst.
+
+    Compiled fresh rather than cached, the same rule `compile_hook`
+    follows and for the same reason it learned it.
+    """
+    spine_bin = os.path.join(build_dir, "spine")
+    cc = shutil.which("cc") or shutil.which("gcc")
+    if cc is None:
+        raise TraceError(
+            "no C compiler (cc/gcc) found on PATH - required to build the ptrace spine"
+        )
+    result = subprocess.run(
+        [cc, "-static", "-O2", "-o", spine_bin, _SPINE_C],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise TraceError(f"failed to compile {_SPINE_C}:\n{result.stderr}")
+    return spine_bin
+
+
 def install_bwrap_shim(shim_dir: str) -> str:
     """Copy the checked-in shim script into shim_dir as a file literally
     named `bwrap`, executable - PATH lookup only cares about the
@@ -124,7 +153,7 @@ def install_bwrap_shim(shim_dir: str) -> str:
     return real_bwrap
 
 
-def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None) -> int:
+def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None, trace_spine: bool = False) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -149,6 +178,12 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         os.makedirs(bind_dir)
 
         compile_hook(bind_dir)  # writes bind_dir/hook.so directly - no extra copy step
+        # UX-106: opt-in until `UX-108` measures the overhead. The hook
+        # stays either way - it is the only source of opened paths and of
+        # child-rusage enrichment, so the spine complements it rather
+        # than replacing it.
+        if trace_spine:
+            compile_spine(bind_dir)
         real_bwrap = install_bwrap_shim(shim_dir)
 
         env = dict(os.environ)
@@ -158,6 +193,12 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         env["BST_TRACE_BIND_DST"] = "/tmp/.bst-native-trace"
         env["BST_TRACE_PRELOAD_SO"] = "/tmp/.bst-native-trace/hook.so"
         env["BST_TRACE_LOG_DST"] = "/tmp/.bst-native-trace/trace.log"
+        if trace_spine:
+            # The path *inside* the sandbox, where the bind lands - the
+            # shim prepends this to the sandboxed command.
+            env["BST_TRACE_SPINE"] = "/tmp/.bst-native-trace/spine"
+        else:
+            env.pop("BST_TRACE_SPINE", None)
         # UX-46: opt-in, and propagated into the sandbox by the shim.
         if trace_opens:
             env["BST_TRACE_OPENS"] = "1"
@@ -332,12 +373,28 @@ def parse_trace_log(text: str) -> List[dict]:
         # unavailable rather than as zero - an unmeasured CPU time and a
         # genuinely-zero one are different claims.
         rusage: Dict[str, float] = {}
+        # UX-106: `src=` and `exit=` are written by the ptrace spine and
+        # absent from every hook-written record. Parsed here rather than
+        # tolerated as unknown, because this loop *stops* at the first
+        # key it does not know - so an unhandled field would not be
+        # ignored, it would swallow `cmd=` and leave every spine record
+        # with an empty command line.
+        source = "hook"
+        exit_status = None
         while not remaining.startswith("cmd="):
             next_space = remaining.find(" ")
             if next_space == -1:
                 break
             token, candidate = remaining[:next_space], remaining[next_space + 1:]
             key, _, value = token.partition("=")
+            if key == "src":
+                source = value
+                remaining = candidate
+                continue
+            if key == "exit":
+                exit_status = value
+                remaining = candidate
+                continue
             if key not in _RUSAGE_KEYS and key not in _RUSAGE_INT_KEYS:
                 break
             try:
@@ -356,6 +413,10 @@ def parse_trace_log(text: str) -> List[dict]:
                 "element": element,
                 "invocation": invocation,
                 "cmd": cmd,
+                # UX-106: which mechanism saw this process. Defaults to
+                # `hook` so every capture taken before the spine existed
+                # keeps one honest answer rather than None.
+                "src": source,
             }
         except (KeyError, ValueError):
             continue
@@ -371,6 +432,13 @@ def parse_trace_log(text: str) -> List[dict]:
             record["max_rss_kb"] = rusage["maxrss_kb"]
         if "cmaxrss_kb" in rusage:
             record["children_max_rss_kb"] = rusage["cmaxrss_kb"]
+        # UX-106: the spine reads this from the kernel's own exit-stop
+        # message, so a process killed by a signal is distinguishable
+        # from one that returned that number. The hook has no equivalent
+        # - its destructor runs before the process has a status, and not
+        # at all when one is killed.
+        if exit_status is not None:
+            record["exit_status"] = exit_status
         if {"cutime", "cstime"} <= rusage.keys():
             record["children_cpu_us"] = int(
                 round((rusage["cutime"] + rusage["cstime"]) * 1e6)
@@ -2842,6 +2910,13 @@ def main() -> int:
              "lifecycle hooks this interposes open()/openat() on a hot path.",
     )
     run_parser.add_argument(
+        "--trace-spine", action="store_true",
+        help="UX-106: also run a ptrace process-event spine inside the sandbox, "
+             "which sees statically-linked processes the LD_PRELOAD hook "
+             "structurally cannot. Opt-in until UX-108 measures the overhead; the "
+             "hook stays on either way, since it is the only source of opened paths.",
+    )
+    run_parser.add_argument(
         "--wrapped-log",
         help="UX-24: also capture a real Plane-1-compatible wrapped-format log of this same bst "
              "invocation (tools/bst_log_to_chrome_trace.py-ready) - lets one real build feed both "
@@ -2927,7 +3002,8 @@ def main() -> int:
                                           wrapped_log_path=args.wrapped_log,
                                           trace_opens=args.trace_opens,
                                           argv_log_path=args.argv_log,
-                                          invocation_log_path=invocation_log_path)
+                                          invocation_log_path=invocation_log_path,
+                                          trace_spine=args.trace_spine)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1

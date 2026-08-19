@@ -169,6 +169,72 @@ analysis planes and a band-comparison — under a heading that called them
 "capture & conversion", so a reader scanning for Plane 3 skipped the
 section that has it.
 
+### The one item the first pass did not finish
+
+Required Fix item 3 says **every** report names the run it is about. The
+first pass gave that to `bga correlate` and to the Plane 2 report and
+stopped, and the omission was not recorded either — so this is a
+follow-through on the same task rather than a new one.
+
+`bga cache-trend` identifies its runs by directory basename, and — unlike
+both of its siblings — checks nothing about whether they belong in one
+series. `bga compare` refuses a mismatched pair with exit 6; `bga
+baseline` refuses a set that is not homogeneous before it even fetches.
+The third multi-run command accepted anything:
+
+```text
+run                             hit  built  cached     xfer  /artifact   churn
+03-32064333551/run              72%     25      65        -          -       -
+02-32113933158/run              72%     25      65        -          -   0+25r
+u110/run06                       0%     11       0        -          -       -
+00-32177690506/run              72%     25      65        -          -       -
+
+Every trended metric on the newest run sits inside the band its trailing window describes.
+```
+
+Three freedesktop-sdk runs with one `examples/06` run among them — a
+different project, 0% hit ratio, 11 elements against 25 — and a clean,
+confident verdict computed over a band containing it. Exit 0.
+
+**The obvious key was the wrong one.** The other two commands key on the
+run-identity hash, and reaching for it here would have been consistent
+and wrong: that hash includes `project_git_commit`, so it changes on
+every commit, and a cache-health trend *is* a series across commits.
+Keying on identity would have refused the only kind of trend this
+command exists to produce — which is the sort of thing that only shows up
+when the manifest is read rather than assumed.
+
+The subject of a series is what does **not** vary along it: the project
+and its targets. That is what `_subject` compares, and the commit is
+explicitly excluded with a test that says so.
+
+Now:
+
+```text
+NOT COMPARABLE: 2 different projects or target sets in this series - these are not
+repeated readings of one thing, so no band over them describes anything. The rows
+above are each real readings of their own run.
+  03-32064333551/run           . components/libxml2.bst
+  02-32113933158/run           . components/libxml2.bst
+  u110/run06                   examples/06-macro-micro-optimization all.bst
+  00-32177690506/run           . components/libxml2.bst
+```
+
+Exit **6**, the same code `bga compare` uses for a pair it will not
+compare, so a CI job cannot read a refused verdict as a healthy cache.
+
+Two deliberate differences from `compare`, both because the reports are
+not the same shape:
+
+- **The rows still print.** `compare` refuses *before* printing, because
+  its numbers are derived from the mismatched pair and are arithmetically
+  correct and meaningless. Here every row is a reading of its own run and
+  stands alone; only the band was cross-run, and only the band is
+  withheld.
+- **One reason is given, not two.** A heterogeneous series shorter than
+  the window would otherwise report both "no verdict: too few runs" and
+  "not comparable", which invites fixing the wrong one.
+
 ### What was checked and left alone
 
 - **Positional `directory` vs a flag.** Every subcommand takes the run
@@ -180,14 +246,16 @@ section that has it.
   genuinely different quantities, each with a note saying which it is.
   Renaming either would make one of them wrong.
 
-Tests: 11 in `tests/unit/test_report_consistency.py`, which is a
+Tests: 8 in `tests/unit/test_cache_trend_series_subject.py` for the
+follow-through above, including the one that pins the commit *out* of the
+subject, and 11 in `tests/unit/test_report_consistency.py`, which is a
 *cross-report* test file by design — the properties it holds are about
 consistency between surfaces, which is exactly what having one test file
 per report could not check. Three existing tests asserted the old
 wording; each was updated to assert the property rather than the string
 (the hint test now checks the alias table, the occupancy test checks the
 slot-second unit, the granularity test checks the hedge is carried).
-Suite: 1409 → 1420.
+Suite: 1409 → 1420 → 1428.
 
 ## Verification Log
 

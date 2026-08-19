@@ -2280,6 +2280,15 @@ def compute_cpu_time(records: List[dict]) -> dict:
 
     measured_total = sum(e["measured"] for e in per_element.values())
     unmeasured_total = sum(e["unmeasured"] for e in per_element.values())
+    # UX-108: which mechanism actually produced the seconds above. With
+    # the spine on, a process the hook never entered carries
+    # `/proc/<pid>/stat`'s tick-truncated figure instead, and a note
+    # naming only `getrusage` would describe a measurement this report
+    # did not make. Zero on every capture taken without the spine, which
+    # is what keeps their reports word-for-word what they were.
+    spine_sourced = sum(
+        1 for record in records if record.get("cpu_source") == "spine"
+    )
     return {
         "available": measured_total > 0,
         "measured_processes": measured_total,
@@ -2288,9 +2297,20 @@ def compute_cpu_time(records: List[dict]) -> dict:
         "per_element": dict(
             sorted(per_element.items(), key=lambda kv: -kv[1]["cpu_us"])
         ),
+        # UX-108: which mechanism actually produced the seconds above.
+        # With the spine on, a process the hook never entered carries
+        # `/proc/<pid>/stat`'s tick-truncated figure instead, and a note
+        # naming only `getrusage` would be describing a measurement this
+        # report did not make.
+        "spine_sourced_processes": spine_sourced,
         "note": (
             "Real CPU time (getrusage utime+stime) for processes that exited "
-            "normally. Processes killed by a signal or replaced by exec run no "
+            "normally. "
+            + ("Where only the ptrace spine reached a process, the figure is "
+               "`/proc/<pid>/stat` read at its exit-stop instead, truncated to "
+               "whole 10ms ticks - so a short static process reads as zero "
+               "(UX-107). " if spine_sourced else "")
+            + "Processes killed by a signal or replaced by exec run no "
             "destructor and are counted as unmeasured, never as zero. This is "
             "Plane 2 only - it is not wired into Plane 1's utilisation buckets, "
             "which remain slot occupancy (UX-36)."
@@ -2806,8 +2826,13 @@ def _format_cpu_time(cpu_time: dict) -> List[str]:
 
     measured = cpu_time["measured_processes"]
     unmeasured = cpu_time["unmeasured_processes"]
+    # UX-108: name the mechanism only when it is the one that measured.
+    spine_sourced = cpu_time.get("spine_sourced_processes") or 0
+    source = "getrusage" if not spine_sourced else (
+        f"getrusage, {spine_sourced} from /proc at the ptrace exit-stop"
+    )
     lines = [
-        f"Real CPU time (getrusage): {cpu_time['total_cpu_us'] / 1e6:.2f}s across "
+        f"Real CPU time ({source}): {cpu_time['total_cpu_us'] / 1e6:.2f}s across "
         f"{measured} of {measured + unmeasured} traced processes"
         + (f" ({unmeasured} exited abnormally and are unmeasured)" if unmeasured else ""),
     ]

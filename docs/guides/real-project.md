@@ -50,9 +50,24 @@ Two limits worth knowing before you start, because they shape what you
 can conclude:
 
 - **Statically-linked processes are invisible** to the `LD_PRELOAD`
-  mechanism, and there is no way to detect that gap from outside. Every
-  Plane 2 report carries a fixed disclaimer rather than a false
-  completeness claim.
+  mechanism — a static binary never invokes the dynamic linker, so
+  nothing loads the hook. Two things now measure that gap instead of
+  disclaiming it. `bga capture census PROJECT` scans the staged sandbox
+  roots and says which elements stage a static executable at all
+  (`UX-105`), and `bga capture run --trace-spine` runs a ptrace
+  process-event tracer inside the sandbox that records every process
+  whatever its linkage (`UX-106`). With the spine on, each process in
+  the report carries `spine+hook`, `spine-only` or `hook-only`, and the
+  report states the coverage as a number rather than a footnote
+  (`UX-107`).
+- **The spine is opt-in, and the reason is measured.** On
+  `examples/06-macro-micro-optimization` it costs **+2.7%** wall over ten
+  runs per mode, and on `examples/08-process-storm` — 575 processes per
+  second, built to be the worst case — **+13.5%**. Both are past the 2%
+  budget `UX-106` set for defaulting it on, so it stays a flag. Turn it
+  on when coverage matters more than 3-13% of the build: a static
+  toolchain, a busybox sandbox, or any report whose process list looks
+  suspiciously short.
 - **Plane 2 costs real overhead.** `--trace-opens` in particular runs on
   a hot path. Capture it deliberately, not by default.
 

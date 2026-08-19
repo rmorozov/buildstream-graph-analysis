@@ -1,6 +1,6 @@
 # UX-121: compare still says "Us", and the consistency test cannot see it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-111 (done — this is its unfinished sixth surface)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-111 (done — this is its unfinished sixth surface)
 
 ## Motivation
 
@@ -33,3 +33,48 @@ labels, so a seventh surface added later is covered by construction.
 none ending in `Us`; the reworked consistency test fails when a raw
 label is reintroduced into any rendered surface (verified by
 mutation); golden compare fixtures updated in the same commit.
+
+---
+
+## Fix Implemented
+
+`bga compare`'s attribution-delta rendering now calls
+`_attribution_label`, the same path `analyze` uses:
+
+```text
+Attribution Deltas:
+  Execution On Chain        3610.50s ( 99.9%) -> 2708.55s ( 99.9%)   -901.95s (-0.0pp)
+```
+
+One line of renderer. The interesting half is the test.
+
+### The guard was bound to the wrong layer
+
+`UX-111`'s consistency test asserted `_attribution_label` — the helper —
+so it passed while one of the six surfaces it existed to police rendered
+the raw field name throughout the audit. That is `UX-85`'s pattern
+recurring inside the round that was fixing rendering.
+
+The test now **renders every surface** and greps the real text:
+
+```python
+for name, text in _rendered_surfaces().items():
+    for token in (" Us ", " Us\n", "_us ", "Wait Us", "Chain Us"):
+        assert token not in text, f"{name} renders a raw field name: {token!r}"
+```
+
+`_rendered_surfaces()` builds all nine text surfaces from one fixture, so
+a tenth added later is covered without anyone remembering to extend a
+list of helpers.
+
+Checked against the unfixed renderer before shipping, since a guard that
+has never failed is a guard nobody has tested:
+
+```text
+E   AssertionError: compare renders a raw field name: ' Us '
+```
+
+## Verification Log
+
+Done 2026-08-19. The failing-then-passing check was run by reverting the
+one-line renderer fix with the new test in place.

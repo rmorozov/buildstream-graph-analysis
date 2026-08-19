@@ -1154,7 +1154,12 @@ def format_compare_text(comparison) -> str:
     if comparison.attribution_deltas:
         lines.append("Attribution Deltas:")
         for category, entry in comparison.attribution_deltas.items():
-            label = category.replace('_', ' ').title()
+            # UX-121: the same label path `analyze` uses. This rendered
+            # the raw field name - `Execution On Chain Us` beside a value
+            # in seconds - on the one surface a CI reviewer reads most,
+            # through UX-111's whole audit, because the guard test
+            # asserted the helper rather than any rendered output.
+            label = _attribution_label(category)
             b_pct = f"{entry['baseline_pct']:.1f}%" if entry['baseline_pct'] is not None else "n/a"
             c_pct = f"{entry['candidate_pct']:.1f}%" if entry['candidate_pct'] is not None else "n/a"
             delta_pp = entry['delta_pct_points']

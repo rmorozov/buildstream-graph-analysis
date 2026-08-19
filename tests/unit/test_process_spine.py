@@ -14,7 +14,9 @@ that dies must leave the build running.
 """
 import os
 import shutil
+import signal
 import subprocess
+import time
 
 import pytest
 
@@ -301,3 +303,107 @@ def test_a_real_static_build_is_invisible_to_the_hook_and_visible_to_the_spine(t
     # And real measurements, not just names.
     ends = [r for r in spine_records if r["event"] == "END"]
     assert ends and all("max_rss_kb" in r for r in ends)
+
+
+# --- the two failure paths round 12's code review found -----------------
+
+def test_a_degrade_does_not_strand_the_tracees_it_was_meant_to_free(spine, tmp_path):
+    """UX-117: the error path inverted its own contract.
+
+    `degrade()` exists so that a tracer-side failure never breaks the
+    wrapped build. It detached the one offending pid and then *skipped*
+    every other tracee that reached a stop - and a tracee popped from
+    `waitpid` is stopped, so skipping it leaves it stopped forever. The
+    loop then waited on processes that could never move again and exited
+    only on `ECHILD`, which never came.
+
+    Measured before the fix, with the degrade forced at events 2, 4 and
+    8: **hung every time**, killed at a 25s timeout. After: exit 4 in
+    0.7s, every time.
+    """
+    marker = tmp_path / "done"
+    script = (f"for i in 1 2 3 4 5; do (sleep 0.4; true) & done; wait; "
+              f"sleep 0.3; echo done > {marker}; exit 4")
+    log = tmp_path / "trace.log"
+
+    result = subprocess.run(
+        [spine, "--", "/bin/sh", "-c", script],
+        env={**os.environ, "BST_TRACE_LOG": str(log),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
+             # The seam exists because this failure cannot be provoked
+             # from outside: only the tracer may detach its own tracees.
+             "BST_TRACE_SPINE_DEGRADE_AFTER": "4"},
+        capture_output=True, text=True, timeout=30,
+    )
+
+    assert result.returncode == 4, "the build's own exit status must survive a degrade"
+    assert marker.exists(), "the wrapped command did not run to completion"
+    assert "DEGRADED" in log.read_text(), "the degradation went unrecorded"
+
+
+def test_the_seam_is_off_unless_asked_for(spine, tmp_path):
+    """It ships in the binary, so it has to be inert. Nothing in the
+    capture path sets it: `bwrap_shim.py` passes a fixed list of
+    BST_TRACE_* variables through and this is not among them."""
+    from tools.native_trace.bwrap_shim import build_shim_argv
+
+    log = tmp_path / "trace.log"
+    result = _run(spine, "exit 0", log=log)
+
+    assert result.returncode == 0
+    assert "DEGRADED" not in (log.read_text() if log.exists() else "")
+    argv = build_shim_argv(
+        "/usr/bin/bwrap", ["--", "sh", "-c", "true"],
+        "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
+    )
+    assert not any("DEGRADE_AFTER" in str(arg) for arg in argv)
+
+
+def test_a_killed_tracer_leaves_the_build_running(spine, tmp_path):
+    """UX-106 recorded this clause as *measured failing* and attributed
+    it to ptrace at large: killing the tracer left `sh` and its `sleep`
+    as zombies where a plain fork/exec wrapper let both finish.
+
+    UX-118 found the real mechanism. Every auto-attached child's first
+    stop is the kernel's attach-SIGSTOP, and the spine restarted it *with*
+    that signal - turning an attach-stop into a real group stop. When the
+    tracer then died, `__ptrace_unlink` re-instated the pending group
+    stop and the tree stayed stopped. It was our bug, not ptrace's.
+
+    Measured across three runs each, before and after: the traced tree
+    never completed on the old binary and completed every time on the
+    new one.
+    """
+    marker = tmp_path / "done"
+    proc = subprocess.Popen(
+        [spine, "--", "/bin/sh", "-c", f"sleep 4; echo done > {marker}"],
+        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        start_new_session=True,
+    )
+    time.sleep(1.0)
+    os.kill(proc.pid, signal.SIGKILL)   # the tracer itself, directly
+    proc.wait()
+
+    deadline = time.monotonic() + 20
+    while time.monotonic() < deadline and not marker.exists():
+        time.sleep(0.2)
+    assert marker.exists(), "the traced tree did not survive its tracer"
+
+
+def test_a_signal_the_program_raises_itself_still_reaches_it(spine, tmp_path):
+    """The attach-stop is suppressed once per pid, not SIGSTOP in
+    general - a tracer that swallowed the program's own signals would be
+    changing the program it is supposed to be observing."""
+    marker = tmp_path / "resumed"
+    script = f"(sleep 1; kill -CONT $$) & kill -STOP $$; echo yes > {marker}"
+
+    result = subprocess.run(
+        [spine, "--", "/bin/sh", "-c", script],
+        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        capture_output=True, text=True, timeout=30,
+    )
+
+    assert result.returncode == 0
+    assert marker.exists(), "the shell's own SIGSTOP/SIGCONT round trip broke"

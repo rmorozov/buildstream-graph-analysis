@@ -81,6 +81,80 @@ static const char *g_invocation;
 static pid_t g_child;
 static int g_degraded;
 
+/* UX-118: the set of tracees whose attach-stop has already been
+ * consumed.
+ *
+ * A child auto-attached by PTRACE_O_TRACEFORK is stopped with SIGSTOP,
+ * and that SIGSTOP is the kernel's attach mechanism rather than a signal
+ * the program sent itself. Restarting the tracee with it - which is what
+ * passing every non-SIGTRAP signal through does - converts the
+ * attach-stop into a real group stop the tracee then has to escape, at
+ * two extra ptrace round-trips per process and a CLD_STOPPED the
+ * untraced build never produces. Suppressed exactly once per pid, so a
+ * SIGSTOP the program really does raise later is still passed through.
+ *
+ * Open-addressed, fixed size, no allocation: this runs as pid 1 inside a
+ * sandbox that may have no allocator worth trusting under memory
+ * pressure, and a tracer that can fail to malloc is a tracer that can
+ * hang a build. A full table degrades to the old behaviour for the
+ * overflowing pid rather than evicting an entry, because a wrong
+ * "already seen" is a swallowed signal and a wrong "not seen" costs one
+ * group stop.
+ */
+#define SEEN_SLOTS 8192
+static pid_t g_seen[SEEN_SLOTS];
+
+/* UX-117: a seam for testing the degrade path, and the only one in this
+ * file.
+ *
+ * The failure that path exists to handle - PTRACE_CONT refusing to
+ * resume a live tracee - cannot be provoked from outside the tracer:
+ * only the tracer may detach its own tracees, and the errno that matters
+ * (anything but ESRCH) is not reachable by any sequence a test can
+ * arrange. The alternative to a seam is shipping the worst failure mode
+ * this program has - a hung build - with no test at all, which is how it
+ * shipped the first time.
+ *
+ * Zero unless `BST_TRACE_SPINE_DEGRADE_AFTER` is set, read once at
+ * startup, and set by nothing in the capture path: `bwrap_shim.py`
+ * passes through a fixed list of BST_TRACE_* variables and this is not
+ * among them. */
+static long g_degrade_after;
+static long g_events_seen;
+
+/* Returns 1 the first time it is called for `pid`, 0 afterwards. */
+static int first_stop_for(pid_t pid)
+{
+    unsigned long start = (unsigned long)pid * 2654435761UL % SEEN_SLOTS;
+    for (unsigned long probe = 0; probe < SEEN_SLOTS; probe++) {
+        unsigned long slot = (start + probe) % SEEN_SLOTS;
+        if (g_seen[slot] == pid)
+            return 0;
+        if (g_seen[slot] == 0) {
+            g_seen[slot] = pid;
+            return 1;
+        }
+    }
+    return 0;  /* table full - the old behaviour, for this pid only */
+}
+
+/* A pid that has exited: its slot is freed so a pid namespace which
+ * recycles small numbers (every bwrap --unshare-pid sandbox does) does
+ * not fill the table or mistake a new process for an old one. */
+static void forget_pid(pid_t pid)
+{
+    unsigned long start = (unsigned long)pid * 2654435761UL % SEEN_SLOTS;
+    for (unsigned long probe = 0; probe < SEEN_SLOTS; probe++) {
+        unsigned long slot = (start + probe) % SEEN_SLOTS;
+        if (g_seen[slot] == pid) {
+            g_seen[slot] = 0;
+            return;
+        }
+        if (g_seen[slot] == 0)
+            return;
+    }
+}
+
 static double monotonic_now(void)
 {
     struct timespec ts;
@@ -348,6 +422,10 @@ int main(int argc, char **argv)
         return 2;
     }
 
+    {
+        const char *after = getenv("BST_TRACE_SPINE_DEGRADE_AFTER");
+        g_degrade_after = after && *after ? strtol(after, NULL, 10) : 0;
+    }
     g_trace_log = getenv("BST_TRACE_LOG");
     g_element = getenv("BST_TRACE_ELEMENT");
     g_invocation = getenv("BST_TRACE_INVOCATION");
@@ -411,6 +489,7 @@ int main(int argc, char **argv)
         }
 
         if (WIFEXITED(wstatus) || WIFSIGNALED(wstatus)) {
+            forget_pid(pid);
             if (pid == child) {
                 child_status = wstatus;
                 child_seen = 1;
@@ -423,11 +502,51 @@ int main(int argc, char **argv)
         int sig = WSTOPSIG(wstatus);
         int event = (wstatus >> 16) & 0xff;
 
+        if (g_degrade_after && ++g_events_seen == g_degrade_after)
+            degrade("forced-degrade-for-test");
+
+        /* What this tracee should be restarted (or detached) with.
+         *
+         * Computed here, before the degrade branch, because both paths
+         * need the same answer and getting it in only one of them is how
+         * the first attempt at UX-117 hung the build it was fixing: the
+         * degrade path detached a freshly-attached tracee *with* its
+         * attach-SIGSTOP, stopping for real the process it was trying to
+         * set free. Measured, not reasoned - the fix hung on its own
+         * test until the two paths shared this line. */
+        int pass_through = sig;
+        if (sig == SIGTRAP)
+            pass_through = 0;                       /* ours, not the program's */
+        else if (sig == SIGSTOP && first_stop_for(pid))
+            pass_through = 0;                       /* UX-118: the attach-stop */
+
         if (g_degraded) {
-            /* Tracing has failed. Keep reaping - as pid 1 that duty does
-             * not stop - but issue no further ptrace calls: a tracer
-             * that keeps poking after an error is a tracer that can turn
-             * one failure into a hung build. */
+            /* UX-117: tracing has failed, so detach this tracee and let
+             * it run untraced. Keep reaping afterwards - as pid 1 that
+             * duty does not stop.
+             *
+             * This branch used to `continue`, on the reasoning that a
+             * tracer which keeps poking after an error can turn one
+             * failure into a hung build. The reasoning was right and the
+             * code was backwards: a tracee popped from waitpid is
+             * *stopped*, and skipping it leaves it stopped forever. The
+             * loop then waits on tracees that will never move again and
+             * exits only on ECHILD, which never comes - the deadlock the
+             * header promises never to cause, in the path that exists to
+             * prevent one.
+             *
+             * Detach-on-stop, rather than walking a tracked set at the
+             * moment of degrading, because every tracee reaches this
+             * branch on its own: one is either running - and
+             * PTRACE_O_TRACEEXIT guarantees it stops at exit - or
+             * already stopped and queued for a later waitpid. The set
+             * would need bookkeeping to cover a case that cannot arise,
+             * since no tracee is ever left stopped by any other path.
+             *
+             * The pending signal is passed to the detach so a tracee
+             * stopped for a real signal still receives it - and only a
+             * real one, per `pass_through` above. */
+            ptrace(PTRACE_DETACH, pid, NULL, (void *)(long)pass_through);
             continue;
         }
 
@@ -458,9 +577,18 @@ int main(int argc, char **argv)
         /* A group-stop or an ordinary signal-delivery-stop: pass the
          * signal through so the tracee behaves exactly as it would
          * untraced. Swallowing it here is how a tracer changes the
-         * program it is supposed to be observing. */
-        if (sig == SIGTRAP)
-            sig = 0;
+         * program it is supposed to be observing.
+         *
+         * Two exceptions, and only two. A SIGTRAP with no event is ours
+         * rather than the program's. And a newly auto-attached child's
+         * first stop is the kernel's attach-SIGSTOP (UX-118): passing
+         * that back converts an attach-stop into a real group stop,
+         * which costs two ptrace round-trips per process and hands the
+         * real parent a CLD_STOPPED the untraced build never produces.
+         * Suppressed once per pid, so a SIGSTOP the program itself
+         * raises later still gets through. Both decisions are made by
+         * `pass_through` above, which the degrade path shares. */
+        sig = pass_through;
         if (ptrace(PTRACE_CONT, pid, NULL, (void *)(long)sig) != 0 && errno != ESRCH) {
             /* A tracee we cannot resume is a build we are about to hang.
              * Stop tracing entirely and let every remaining stop resolve

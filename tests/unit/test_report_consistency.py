@@ -38,6 +38,71 @@ def _correlation(**overrides) -> dict:
     return result
 
 
+def _rendered_surfaces() -> dict:
+    """Every text surface this tool prints, rendered on one fixture.
+
+    Deliberately built by *rendering*, not by listing label helpers: the
+    property is about what a reader sees, and a helper-level assertion is
+    exactly what let one of the six surfaces stay wrong through a whole
+    consistency audit (UX-121).
+    """
+    from bga.ingest.models import AnalysisResult
+    from bga.report.text import format_text
+
+    result = AnalysisResult()
+    result.total_duration_us = 10_000_000
+    result.attribution = {
+        'execution_on_chain_us': 9_000_000,
+        'dependency_wait_us': 500_000,
+        'resource_wait_us': 0,
+        'scheduler_wait_us': 0,
+        'idle_us': 0,
+        'retry_wait_us': 0,
+        'untracked_head_us': 400_000,
+        'untracked_tail_us': 100_000,
+    }
+    surfaces = {
+        section or 'analyze': format_text(result, section=section)
+        for section in (None, 'graph', 'floors', 'replay', 'utilisation',
+                        'diagnostics')
+    }
+    surfaces['compare'] = _rendered_comparison()
+    surfaces['correlate'] = format_correlation(_correlation())
+    surfaces['cache-trend'] = format_trend_text({
+        'runs': [], 'findings': [], 'insufficient_window': None,
+        'heterogeneous': None, 'note': 'a note',
+    })
+    return surfaces
+
+
+def _rendered_comparison() -> str:
+    """`bga compare`'s own surface - the one a CI reviewer reads most,
+    and the one UX-111 audited without ever rendering."""
+    from bga.compare import ComparisonResult
+    from bga.report.text import format_compare_text
+
+    comparison = ComparisonResult(
+        baseline_run_id='a' * 8, candidate_run_id='a' * 8,
+        baseline_metrics={'total_duration_us': 10_000_000},
+        candidate_metrics={'total_duration_us': 9_000_000},
+        deltas={'total_duration_us': -1_000_000},
+        baseline_confidence=1.0, candidate_confidence=1.0,
+        verdict='IMPROVED', low_confidence=False,
+        attribution_deltas={
+        'execution_on_chain_us': {
+            'baseline_us': 9_000_000, 'candidate_us': 8_000_000,
+            'baseline_pct': 90.0, 'candidate_pct': 88.9,
+            'delta_us': -1_000_000, 'delta_pct_points': -1.1,
+        },
+        'retry_wait_us': {
+            'baseline_us': 0, 'candidate_us': 0,
+            'baseline_pct': 0.0, 'candidate_pct': 0.0,
+            'delta_us': 0, 'delta_pct_points': 0.0,
+        },
+    })
+    return format_compare_text(comparison)
+
+
 class TestOneBannerWidth:
     """Two reports pasted into one issue should look like two reports
     from one tool. `bga cache-trend` was 78 columns wide while every
@@ -93,6 +158,21 @@ class TestNumbersThatCouldBeMisread:
         assert _attribution_label("idle_us") == "Idle"
         # A category without the suffix is untouched.
         assert _attribution_label("retry_wait") == "Retry Wait"
+
+    def test_and_no_rendered_surface_prints_one_either(self):
+        """UX-121: the assertion above passed while `bga compare` printed
+        `Execution On Chain Us` through UX-111's entire audit - because it
+        checks the *helper*, and nothing checked what any surface actually
+        renders. That is UX-85's pattern (a guard bound to the wrong
+        layer) recurring in the round that was fixing rendering.
+
+        This one greps the real text of every surface, so a seventh added
+        later is covered without anyone remembering to extend a list of
+        helpers."""
+        forbidden = (" Us ", " Us\n", "_us ", "Wait Us", "Chain Us")
+        for name, text in _rendered_surfaces().items():
+            for token in forbidden:
+                assert token not in text, f"{name} renders a raw field name: {token!r}"
 
     def test_a_nonzero_share_never_renders_as_zero(self):
         """A 1.0s toll on a 594.0s element is 0.17%. Printed as `0%`

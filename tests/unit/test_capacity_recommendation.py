@@ -269,3 +269,38 @@ class TestRoomToGrowIsAHypothesis:
             _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4))
 
         assert not any("Time it before keeping it" in line for line in finding['detail'])
+
+
+class TestTheMemoryEnvelopeNoteDoesNotClaimADirectionItCannotShow:
+    """UX-145, observed live: *"Memory envelope grew: 0.6 GB -> 0.6 GB
+    (+0.0 GB, +0%)"*. A direction the numbers printed beside it do not
+    show is the kind of sentence that teaches a reader to stop believing
+    the others."""
+
+    def test_a_zero_delta_is_unchanged(self):
+        from bga.report.text import memory_envelope_direction
+
+        assert memory_envelope_direction(0.0) == 'unchanged'
+
+    def test_a_delta_that_rounds_to_zero_gb_is_unchanged_too(self):
+        """The threshold is the precision the line prints at: claiming
+        growth beside `+0.0 GB` is the observed defect."""
+        from bga.report.text import memory_envelope_direction
+
+        assert memory_envelope_direction(12.0) == 'unchanged'
+        assert memory_envelope_direction(-12.0) == 'unchanged'
+
+    def test_real_growth_and_shrinkage_still_read_as_themselves(self):
+        from bga.report.text import memory_envelope_direction
+
+        assert memory_envelope_direction(900.0) == 'grew'
+        assert memory_envelope_direction(-900.0) == 'shrank'
+
+    def test_the_renderer_uses_it(self):
+        """Testing the rule is not testing that anything applies it."""
+        import inspect
+
+        from bga.report import text
+
+        source = inspect.getsource(text)
+        assert "memory_envelope_direction(memory_delta['delta_mb'])" in source

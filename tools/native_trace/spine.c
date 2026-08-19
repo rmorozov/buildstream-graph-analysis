@@ -167,11 +167,26 @@ static long g_events_seen;
  * above exists - a PTRACE_CONT that refuses to resume a live tracee
  * cannot be provoked from outside the tracer, and the alternative to a
  * seam is shipping the hang untested. One name per call site
- * ("initial", "exec", "exit", "fork", "signal"); unset means none.
+ * ("exec", "exit", "fork", "signal", "attach"); unset means none.
+ *
+ * UX-141: the list was ("initial", "exec", "exit", "fork", "signal")
+ * until UX-130 deleted the `initial` site - SEIZE has no
+ * post-SETOPTIONS CONT - and added `attach`, the restart that runs once
+ * per auto-attached descendant and therefore more often than all the
+ * others combined (~2,000 times on the process storm, ~127k on
+ * freedesktop-sdk). Two test lists went on naming `initial`; `resume`
+ * matches by `strcmp`, so those runs injected nothing and passed
+ * vacuously, while the busiest site had no coverage at all. An unknown
+ * name is now rejected at startup rather than silently ignored, so a
+ * list that drifts again fails loudly instead of testing nothing.
  *
  * `bwrap_shim.py` passes a fixed list of BST_TRACE_* variables through
  * and this is not among them, so it cannot reach the capture path. */
 static const char *g_fail_cont_at;
+
+static const char *const CONT_SITES[] = {
+    "exec", "exit", "fork", "signal", "attach", NULL,
+};
 
 static double monotonic_now(void)
 {
@@ -424,6 +439,28 @@ static void degrade(const char *reason)
  * and the continue. The pending signal goes to the detach as well, so a
  * tracee stopped for a real signal still receives it.
  */
+/* UX-143: which signal a detach must carry to leave the tracee as it
+ * would have been untraced.
+ *
+ * A **group-stop** carries one of the job-control signals, and detaching
+ * with it re-delivers it, so the process stays stopped - which is the
+ * whole point of being group-stopped. Detaching with 0 resumes it
+ * instead, silently converting a suspended process into a running one.
+ *
+ * The tracer's *own* stops - every `PTRACE_EVENT_*`, and the SIGTRAP of
+ * an attach or interrupt - carry nothing a program should receive, so
+ * they detach with 0. Passing SIGTRAP on would kill an ordinary process
+ * that never asked for it.
+ */
+static int detach_signal(int wstatus)
+{
+    int event = wstatus >> 16;
+    int sig = WSTOPSIG(wstatus);
+    if (event != 0 || sig == SIGTRAP)
+        return 0;
+    return sig;
+}
+
 static void resume(pid_t pid, int sig, const char *site)
 {
     int failed;
@@ -458,6 +495,23 @@ static void forward_signal(int signo)
         kill(-g_child, signo);
 }
 
+/* UX-140: undo `install_signal_forwarding` before this process becomes
+ * the command. `execvp` resets *caught* signals to their default on its
+ * own, so this is belt-and-braces - but the exec can fail, and a process
+ * that falls through to `_exit(127)` with a forwarder still installed
+ * would be forwarding to a child that no longer exists. */
+static void restore_default_signals(void)
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = SIG_DFL;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGHUP, &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+}
+
 static void install_signal_forwarding(void)
 {
     struct sigaction sa;
@@ -489,6 +543,25 @@ int main(int argc, char **argv)
         g_degrade_after = after && *after ? strtol(after, NULL, 10) : 0;
         const char *site = getenv("BST_TRACE_SPINE_FAIL_CONT_AT");
         g_fail_cont_at = site && *site ? site : NULL;
+        if (g_fail_cont_at) {
+            int known = 0;
+            for (int i = 0; CONT_SITES[i]; i++)
+                if (strcmp(g_fail_cont_at, CONT_SITES[i]) == 0)
+                    known = 1;
+            if (!known) {
+                /* UX-141: a name that matches no call site injects
+                 * nothing, and a test asking for it passes while
+                 * exercising the ordinary path. Two of them did, for a
+                 * whole round. */
+                fprintf(stderr,
+                        "spine: BST_TRACE_SPINE_FAIL_CONT_AT=%s names no "
+                        "restart site. Known sites:", g_fail_cont_at);
+                for (int i = 0; CONT_SITES[i]; i++)
+                    fprintf(stderr, " %s", CONT_SITES[i]);
+                fprintf(stderr, "\n");
+                return 2;
+            }
+        }
     }
     g_trace_log = getenv("BST_TRACE_LOG");
     g_element = getenv("BST_TRACE_ELEMENT");
@@ -546,28 +619,45 @@ int main(int argc, char **argv)
 
     long options = PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE
                  | PTRACE_O_TRACEEXEC | PTRACE_O_TRACEEXIT;
-    int seized = ptrace(PTRACE_SEIZE, child, 0, (void *)options) == 0;
+    /* UX-140: the seam, same family as BST_TRACE_SPINE_DEGRADE_AFTER and
+     * BST_TRACE_SPINE_FAIL_CONT_AT. This branch is taken in every
+     * environment without ptrace, and until now nothing could reach it
+     * on a machine that has it. */
+    int seized = !getenv("BST_TRACE_SPINE_FAIL_SEIZE")
+              && ptrace(PTRACE_SEIZE, child, 0, (void *)options) == 0;
     if (!seized) {
         /* No ptrace here - a restrictive Yama policy, a kernel without
-         * SEIZE, or an already-traced process. Release the child and let
-         * it run untraced, which is the fail-open contract this file
-         * opens with. Deliberately *not* a fallback to the TRACEME
-         * attach: that path is the one whose attach-stop had to be
-         * guessed at, and keeping a second, weaker mechanism alive would
-         * carry the defects UX-130 exists to delete into every
-         * environment where the primary one is unavailable. */
+         * SEIZE, or an already-traced process. Run the command untraced,
+         * which is the fail-open contract this file opens with.
+         * Deliberately *not* a fallback to the TRACEME attach: that path
+         * is the one whose attach-stop had to be guessed at, and keeping
+         * a second, weaker mechanism alive would carry the defects
+         * UX-130 exists to delete into every environment where the
+         * primary one is unavailable.
+         *
+         * UX-140: and *exec*, do not wrap. This branch used to `waitpid`
+         * and return `128 + WTERMSIG`, which renders a signal death as a
+         * normal exit - the exact WIFSIGNALED-vs-WIFEXITED confusion
+         * this file's own UX-106 correction documents as wrong, with
+         * BuildStream as the parent reading it. It also left a permanent
+         * extra process in every sandbox on every machine without
+         * ptrace.
+         *
+         * The child is still blocked on the handshake pipe and has not
+         * exec'd, so killing it costs nothing and cannot lose work. What
+         * survives is one process that *is* the command, which is what
+         * "the tracer is transparent" has to mean. */
         degrade("seize-failed");
+        kill(child, SIGKILL);
+        int discard = 0;
+        while (waitpid(child, &discard, __WALL) < 0 && errno == EINTR)
+            ;
+        close(ready[1]);
+        restore_default_signals();
+        execvp(argv[first], &argv[first]);
+        return 127;
     }
-    close(ready[1]);         /* the child may exec now, seized or not */
-
-    if (!seized) {
-        int status = 0;
-        while (waitpid(child, &status, __WALL) < 0) {
-            if (errno != EINTR)
-                return 127;
-        }
-        return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
-    }
+    close(ready[1]);         /* the child may exec now */
 
     int child_status = 0;
     int child_seen = 0;
@@ -612,7 +702,18 @@ int main(int argc, char **argv)
             break;  /* ECHILD: everything, including reaped orphans, is gone */
         }
         if (child_seen && ++drained > DRAIN_EVENT_CAP) {
+            /* UX-143: release this one before leaving. The cap used to
+             * break here, having already *popped* a stop that the
+             * cleanup loop below can never see again - `waitpid` does
+             * not re-report a stop it has delivered - so the tracee was
+             * left stopped until kernel auto-detach at exit, which is
+             * the hang route UX-117/UX-128 exist to close arriving by a
+             * new door. Detaching costs one syscall and ends the drain
+             * with nothing owed. */
             degrade("drain-cap-reached");
+            if (WIFSTOPPED(wstatus))
+                ptrace(PTRACE_DETACH, pid, NULL,
+                       (void *)(long)detach_signal(wstatus));
             break;
         }
 
@@ -762,14 +863,27 @@ int main(int argc, char **argv)
     /* Whatever is still stopped when the drain ends must be released, or
      * it is stopped forever - the hang UX-117/UX-128 exist to prevent,
      * arriving by a new route. Anything still *running* needs nothing:
-     * the kernel auto-detaches when this process exits. */
+     * the kernel auto-detaches when this process exits.
+     *
+     * UX-143: released *with its pending signal*. This detached with 0,
+     * which resumes a genuinely group-stopped tracee - one that untraced
+     * would have sat still, because sitting still is what being
+     * group-stopped means. A tracer that restarts a suspended process
+     * has changed the program it is observing, which is the one thing
+     * this file promises not to do.
+     *
+     * The stops this loop can still see are the ones the drain never
+     * popped. A stop already delivered to `waitpid` is not re-reported,
+     * so it cannot be reached from here - which is why the cap above
+     * now releases its own. */
     for (;;) {
         int wstatus = 0;
         pid_t pid = waitpid(-1, &wstatus, __WALL | WNOHANG);
         if (pid <= 0)
             break;
         if (WIFSTOPPED(wstatus))
-            ptrace(PTRACE_DETACH, pid, NULL, NULL);
+            ptrace(PTRACE_DETACH, pid, NULL,
+                   (void *)(long)detach_signal(wstatus));
     }
 
     if (!child_seen) {

@@ -1,6 +1,6 @@
 # UX-143: spine degrade/drain edges, and two guards that assert less than they say
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-130, UX-133 (done — these are their edges)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-130, UX-133 (done — these are their edges)
 
 ## Motivation
 
@@ -48,3 +48,32 @@ spine exits (probe pasted); the drain-cap case leaves nothing stopped
 or the comment says exactly what is left to kernel auto-detach; both
 tightened guards fail under the mutation each exists for (seam env var
 injected; predicate diverged) and pass restored.
+
+
+---
+
+## What was built
+
+1. **`detach_signal(wstatus)`**, named once and used by both detach
+   paths: an event-stop or an attach/interrupt SIGTRAP detaches with 0,
+   and anything else carries its own signal. A group-stopped tracee is
+   therefore re-delivered its job-control signal and **stays stopped**,
+   which is what being group-stopped means. Detaching with 0 silently
+   converted a suspended process into a running one.
+2. **The drain cap releases what it popped.** The cap used to `break`
+   having already taken a stop off `waitpid`, which the cleanup loop can
+   never re-see — `waitpid` does not re-report a delivered stop — so that
+   tracee was left stopped until kernel auto-detach at exit. One syscall
+   closes it, and the cleanup comment now says only what that loop can
+   actually do.
+3. **Both guards assert what they claim.** The seam test named one seam
+   of two while `UX-128`'s file said it covered both; it now names all
+   three (`DEGRADE_AFTER`, `FAIL_CONT_AT`, `FAIL_SEIZE`). Doctor's
+   compiler test restated the implementation — `shutil.which("cc") or
+   shutil.which("gcc")` on both sides, so a divergence would have passed
+   — and now reads the compiler names out of `compile_hook`'s own source
+   and compares.
+
+Falsified: injecting `FAIL_CONT_AT` into the shim's argv reddens the seam
+test; diverging doctor's predicate from the tracer's reddens the compiler
+test. Both green restored.

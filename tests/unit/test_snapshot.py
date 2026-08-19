@@ -380,3 +380,48 @@ def test_the_two_line_loop_on_a_real_build(tmp_path):
         [sys.executable, "-m", "bga.cli", "compare", "@prev", "@last"],
         cwd=str(project), env=env, capture_output=True, text=True, timeout=300)
     assert "Verdict:" in resolved.stdout, resolved.stderr[-4000:]
+
+
+class TestStickyFlagsSayThemselves:
+    """UX-145: set `--trace-spine=off` once and three weeks later a bare
+    `bga snapshot` still runs spine-off. What ran *is* recorded in the
+    report - and recording a surprise is not preventing one, since the
+    unexplained blind spot is otherwise found at read time."""
+
+    def test_a_remembered_non_default_is_named(self, project, capsys):
+        run_store.write_config(str(project), {"trace_spine": "off",
+                                              "trace_opens": True})
+
+        _sticky_config(str(project), _args())
+
+        err = capsys.readouterr().err
+        assert "--trace-spine=off" in err
+        assert ".bga/config" in err.replace(os.sep, "/")
+
+    def test_defaults_say_nothing(self, project, capsys):
+        """The ordinary case stays quiet - a line printed every run is a
+        line nobody reads."""
+        _sticky_config(str(project), _args())
+        capsys.readouterr()
+
+        _sticky_config(str(project), _args())
+
+        assert capsys.readouterr().err == ""
+
+    def test_a_flag_passed_now_is_not_reported_as_remembered(self, project, capsys):
+        """It is on the command line the user just typed; telling them
+        about it is noise, and calling it remembered is wrong."""
+        run_store.write_config(str(project), {"trace_spine": "off",
+                                              "trace_opens": True})
+
+        _sticky_config(str(project), _args(trace_spine="on"))
+
+        assert "--trace-spine" not in capsys.readouterr().err
+
+    def test_opens_off_is_reported_in_the_spelling_that_sets_it(self, project, capsys):
+        run_store.write_config(str(project), {"trace_spine": "auto",
+                                              "trace_opens": False})
+
+        _sticky_config(str(project), _args())
+
+        assert "--no-trace-opens" in capsys.readouterr().err

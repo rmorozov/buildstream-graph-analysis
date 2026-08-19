@@ -1,6 +1,6 @@
 # UX-106: a process spine that the linker cannot hide from
 
-**Priority:** High | **Status:** 🟡 In Progress (reopened by round 12) | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done)
+**Priority:** High | **Status:** 🟢 Done (reopened by round 12, closed by UX-144) | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done)
 
 Direction 4's core — the mechanism argument and the alternatives table
 (acct, CN_PROC, eBPF, polling, fanotify — each weighed and rejected)
@@ -251,3 +251,34 @@ auto-attached child's attach-SIGSTOP is re-injected — the likely
 mechanism of the failed clause itself (`UX-118`), and the pid-1 signal
 model is built for a configuration BuildStream never runs (`UX-119`).
 Returns to 🟢 when the fail-open clause passes in a real sandbox.
+
+
+---
+
+## Closed (`UX-144`, 2026-08-19)
+
+Round 12 reopened this because the fail-open acceptance clause was
+**measured failing** and had shipped 🟢 anyway. `UX-117`, `UX-118` and
+`UX-119` fixed the implementation causes and the clause passed 3/3 — but
+as a plain subprocess, while this file's own return condition says *in a
+real sandbox*. Round 13 recorded that remaining inch and pointed it at
+`UX-128`'s then-future in-sandbox clauses. Those landed.
+
+So it was run, rather than reasoned about: the spine `SIGKILL`ed at 0.6s
+inside `bwrap --dev-bind / / --unshare-pid`, wrapping a shell whose work
+finishes at 2s.
+
+```text
+spine pids: ['9438']          # the tracer, inside the sandbox
+bwrap returncode: 137         # 128+9, bwrap rendering its pid-2 death
+the build's own work completed: True
+```
+
+The work completed *after* the tracer died, which is the clause. The
+return condition is met and the status closes.
+
+One correction worth keeping, because it cost a test run: the first
+attempt used `pgrep -f spine_now`, which matched the driving Python
+process too — its own command line contains the pattern — and killed the
+harness instead of the tracer. `pgrep -x` matches the executable name.
+The same trap took out a pytest run during `UX-133`.

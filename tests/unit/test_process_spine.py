@@ -341,10 +341,15 @@ def test_a_degrade_does_not_strand_the_tracees_it_was_meant_to_free(spine, tmp_p
     assert "DEGRADED" in log.read_text(), "the degradation went unrecorded"
 
 
-def test_the_seam_is_off_unless_asked_for(spine, tmp_path):
-    """It ships in the binary, so it has to be inert. Nothing in the
-    capture path sets it: `bwrap_shim.py` passes a fixed list of
-    BST_TRACE_* variables through and this is not among them."""
+def test_the_seams_are_off_unless_asked_for(spine, tmp_path):
+    """They ship in the binary, so they have to be inert. Nothing in the
+    capture path sets them: `bwrap_shim.py` passes a fixed list of
+    BST_TRACE_* variables through and none of these is among it.
+
+    UX-143: this asserted only `DEGRADE_AFTER` while UX-128's own file
+    said it covered both seams - so the seam that can hang a build was
+    the one going unchecked. All three are named now, including
+    UX-140's."""
     from tools.native_trace.bwrap_shim import build_shim_argv
 
     log = tmp_path / "trace.log"
@@ -356,7 +361,9 @@ def test_the_seam_is_off_unless_asked_for(spine, tmp_path):
         "/usr/bin/bwrap", ["--", "sh", "-c", "true"],
         "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
     )
-    assert not any("DEGRADE_AFTER" in str(arg) for arg in argv)
+    rendered = " ".join(str(arg) for arg in argv)
+    for seam in ("DEGRADE_AFTER", "FAIL_CONT_AT", "FAIL_SEIZE"):
+        assert seam not in rendered, f"the {seam} seam reaches the capture path"
 
 
 def test_a_killed_tracer_leaves_the_build_running(spine, tmp_path):
@@ -667,7 +674,17 @@ def _descendants_of(root):
     return found
 
 
-@pytest.mark.parametrize("site", ["initial", "exec", "exit", "fork", "signal"])
+# UX-141: every site `resume()` actually has, and the spine rejects a
+# name that is not one of them - so this list drifting again fails
+# loudly instead of testing nothing. It named `initial`, which UX-130
+# deleted, for a whole round: two parametrized runs injected nothing and
+# passed vacuously while `attach` - the restart that runs once per
+# auto-attached descendant, more often than every other site combined -
+# had no coverage at all.
+CONT_SITES = ["exec", "exit", "fork", "signal", "attach"]
+
+
+@pytest.mark.parametrize("site", CONT_SITES)
 def test_a_cont_failure_at_any_site_still_completes_the_build(spine, tmp_path, site):
     """UX-128: UX-117 guarded one restart site of five and then wrote, in
     a comment, that no other path could strand a tracee.
@@ -696,7 +713,7 @@ def test_a_cont_failure_at_any_site_still_completes_the_build(spine, tmp_path, s
     assert marker.exists(), f"the wrapped command did not complete ({site})"
 
 
-@pytest.mark.parametrize("site", ["exec", "exit", "fork", "signal"])
+@pytest.mark.parametrize("site", CONT_SITES)
 def test_a_cont_failure_names_the_site_it_happened_at(spine, tmp_path, site):
     """A degradation record that says only "cont-failed" tells a reader
     the tracer gave up and not which restart broke - and with five sites
@@ -772,7 +789,7 @@ def _in_sandbox(argv, timeout=90, env=None):
 @pytest.mark.bst
 @pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE),
                     reason="bwrap/cc not both on PATH")
-@pytest.mark.parametrize("site", ["initial", "exec", "exit", "fork", "signal"])
+@pytest.mark.parametrize("site", CONT_SITES)
 def test_a_cont_failure_inside_the_sandbox_still_completes_the_build(
         spine, tmp_path, site):
     """UX-128, in the shape it ships in.
@@ -943,3 +960,133 @@ def test_a_build_that_reaps_its_own_children_leaves_no_open_records(spine, tmp_p
     records = pair_events(parse_trace_log(log.read_text()))
 
     assert [r for r in records if r["open"]] == []
+
+
+class TestWhenSeizeIsUnavailableTheSpineExecsRatherThanWrapping:
+    """UX-140: the branch taken in *every* environment without ptrace,
+    and until this seam existed nothing could reach it on a machine that
+    has it - `grep -rn seize tests/` was empty.
+
+    It used to `waitpid` and return `128 + WTERMSIG`, rendering a signal
+    death as a normal exit. That is the same WIFSIGNALED-vs-WIFEXITED
+    confusion this file's own UX-106 correction documents as wrong, with
+    BuildStream as the parent that reads it. Measured before the fix:
+    returncode **143** where untraced gives **-15**, and one extra
+    process alive for the whole build.
+    """
+
+    def _kill_after(self, argv, env, signal_name="SIGTERM", delay=0.4):
+        import signal as signals
+        import time
+
+        process = subprocess.Popen(argv, env=env)
+        time.sleep(delay)
+        process.send_signal(getattr(signals, signal_name))
+        return process.wait(timeout=30)
+
+    def test_a_signal_killed_command_reaches_the_caller_as_a_signal(
+            self, spine, tmp_path):
+        """`subprocess` reports WIFSIGNALED as a *negative* returncode -
+        the technique that caught this class of bug before."""
+        log = tmp_path / "trace.log"
+        env = {**os.environ, "BST_TRACE_LOG": str(log),
+               "BST_TRACE_SPINE_FAIL_SEIZE": "1"}
+
+        traced = self._kill_after([spine, "--", "/bin/sh", "-c", "sleep 30"], env)
+        untraced = self._kill_after(["/bin/sh", "-c", "sleep 30"], dict(os.environ))
+
+        assert traced == untraced == -15, (
+            f"traced {traced}, untraced {untraced} - the fallback must be "
+            f"indistinguishable from not being there")
+
+    def test_the_exit_status_of_a_normal_command_survives_too(self, spine, tmp_path):
+        log = tmp_path / "trace.log"
+
+        result = subprocess.run(
+            [spine, "--", "/bin/sh", "-c", "exit 7"],
+            env={**os.environ, "BST_TRACE_LOG": str(log),
+                 "BST_TRACE_SPINE_FAIL_SEIZE": "1"},
+            capture_output=True, text=True, timeout=30)
+
+        assert result.returncode == 7
+
+    def test_no_wrapper_process_lingers(self, spine, tmp_path):
+        """The spine *becomes* the command. An extra process per sandbox,
+        on every machine without ptrace, is a tracer that changed the
+        build it was measuring."""
+        import time
+
+        log = tmp_path / "trace.log"
+        marker = tmp_path / "pids"
+        process = subprocess.Popen(
+            [spine, "--", "/bin/sh", "-c",
+             f"sleep 5 & echo $$ > {marker}; wait"],
+            env={**os.environ, "BST_TRACE_LOG": str(log),
+                 "BST_TRACE_SPINE_FAIL_SEIZE": "1"})
+        time.sleep(0.6)
+        try:
+            # The spine's own pid *is* the shell's, because it exec'd.
+            shell_pid = int(marker.read_text().strip())
+            assert shell_pid == process.pid, (
+                f"the command runs as pid {shell_pid} under a wrapper at "
+                f"{process.pid} - the spine did not exec")
+        finally:
+            process.kill()
+            process.wait(timeout=30)
+
+    def test_the_degradation_is_recorded_before_control_transfers(
+            self, spine, tmp_path):
+        """Exec destroys this process image, so a record written after it
+        would never exist. "We could not trace" and "there was nothing to
+        trace" must not look the same."""
+        log = tmp_path / "trace.log"
+
+        subprocess.run(
+            [spine, "--", "/bin/sh", "-c", "exit 0"],
+            env={**os.environ, "BST_TRACE_LOG": str(log),
+                 "BST_TRACE_SPINE_FAIL_SEIZE": "1"},
+            capture_output=True, text=True, timeout=30)
+
+        assert "reason=seize-failed" in log.read_text()
+
+    def test_the_seam_is_absent_from_the_shims_injected_environment(self):
+        """Asserted alongside the other two seams: it ships in the
+        binary, so it has to be inert in every real capture."""
+        from tools.native_trace.bwrap_shim import build_shim_argv
+
+        argv = build_shim_argv(
+            "/usr/bin/bwrap", ["--", "sh", "-c", "true"],
+            "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
+        )
+
+        assert not any("FAIL_SEIZE" in str(arg) for arg in argv)
+
+    def test_without_the_seam_the_traced_path_is_what_runs(self, spine, tmp_path):
+        """The seam must not leak into a normal run: with it unset the
+        spine traces, so there is no degradation at all."""
+        log = tmp_path / "trace.log"
+
+        result = subprocess.run(
+            [spine, "--", "/bin/sh", "-c", "exit 0"],
+            env={**os.environ, "BST_TRACE_LOG": str(log)},
+            capture_output=True, text=True, timeout=30)
+
+        assert result.returncode == 0
+        assert "seize-failed" not in (log.read_text() if log.exists() else "")
+
+
+def test_a_site_that_names_no_restart_is_rejected_rather_than_ignored(spine, tmp_path):
+    """UX-141: `resume()` matches by `strcmp`, so a stale name injects
+    nothing and the test asking for it exercises the ordinary path while
+    reading as coverage. Two of them did exactly that for a round, one of
+    them inside the pinned bst tier."""
+    result = subprocess.run(
+        [spine, "--", "/bin/sh", "-c", "exit 7"],
+        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
+             "BST_TRACE_SPINE_FAIL_CONT_AT": "initial"},
+        capture_output=True, text=True, timeout=30,
+    )
+
+    assert result.returncode == 2, "a stale site name ran the build instead"
+    assert "names no restart site" in result.stderr
+    assert "attach" in result.stderr, "the error does not say what the sites are"

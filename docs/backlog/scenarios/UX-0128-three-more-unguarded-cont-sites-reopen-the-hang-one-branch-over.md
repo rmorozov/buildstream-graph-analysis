@@ -22,6 +22,16 @@ the bst-gated sandbox the acceptance names — the same real-sandbox gap
 UX-118 and UX-119's item 2 share (UX-119's SIGTERM test kills the
 *command*, not the spine, and never varies tracee count).
 
+> **Partly superseded by `UX-130` (2026-08-19).** The `initial` site
+> named below — the post-`SETOPTIONS` restart — no longer exists:
+> `PTRACE_SEIZE` sets its options at attach and has no such CONT, so the
+> five guarded sites are now four plus `attach`, the restart that runs
+> once per auto-attached descendant. The verification table's `initial`
+> row therefore describes a call site that is gone; its four others
+> stand. `UX-141` moved the test lists to match and made an unknown site
+> name a hard error, because for one round both `[initial]` runs passed
+> while injecting nothing.
+
 ## Required Fix
 
 1. Route all four CONT sites through the same failure guard as `:624`.

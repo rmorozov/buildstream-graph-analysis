@@ -1,6 +1,6 @@
 # UX-145: snapshot should say which sticky flags it applied
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-126 (done — these are its surprise edges)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-126 (done — these are its surprise edges)
 
 ## Motivation
 
@@ -42,3 +42,33 @@ A snapshot with a non-default `.bga/config` prints the line; one with
 defaults prints nothing extra; `bga baseline --candidate @last` works
 from inside a project; a zero-delta envelope renders "unchanged" and
 the golden fixture pins it.
+
+
+---
+
+## What was built
+
+1. **Sticky flags say themselves**, and only when they change something:
+
+   ```text
+   Using /path/to/project/.bga/config: --trace-spine=off
+   ```
+
+   Printed when the stored config differs from the defaults *and* the
+   user did not pass that flag on this invocation — a flag on the command
+   line they just typed is neither news nor "remembered". A project at
+   the defaults prints nothing.
+2. **`bga baseline --candidate` takes `@last`**, through
+   `run_store.resolve` rather than a copy of it, resolved before anything
+   is fetched. It was outside `bga.cli`'s threading for the same reason
+   `cache-logs --native-report` was (`UX-134`): the command dispatches
+   straight to `tools/`.
+3. **The envelope note no longer claims a direction it cannot show.**
+   `memory_envelope_direction()` returns `unchanged` for a delta that
+   rounds to zero at the one decimal of GB the line prints — the observed
+   *"Memory envelope grew: 0.6 GB -> 0.6 GB (+0.0 GB, +0%)"*.
+
+The direction rule is a named function rather than an expression inline,
+because the first attempt at a test reimplemented the condition in the
+test file and therefore tested itself. A guard now asserts the renderer
+calls it.

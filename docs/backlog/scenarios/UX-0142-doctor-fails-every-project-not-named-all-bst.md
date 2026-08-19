@@ -1,6 +1,6 @@
 # UX-142: doctor fails every project not named all.bst
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-125 (done — this is its flagship check's blind spot)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125 (done — this is its flagship check's blind spot)
 
 ## Motivation
 
@@ -41,3 +41,30 @@ with `project-loads` ok; on the fdsdk checkout the capture workflow
 already has, doctor exits 0 (wire it as a workflow step so the check
 meets a real project every capture); the plugin-diagnosis cases still
 produce their two distinct remedies.
+
+
+---
+
+## What was built
+
+`discover_elements()` walks the project's declared `element-path` (read
+from `project.conf`, defaulting to BuildStream's `elements`) and returns
+its `.bst` files **shallowest first, then by name** — a top-level element
+is the likeliest real target and the least likely to be an
+architecture-specific leaf. `check_project_loads` probes up to five of
+them and passes on the first that loads, so one broken element does not
+condemn the project. Nothing to probe is a **WARN** naming the path, not
+a FAIL: "we could not check" and "it does not load" are different claims.
+
+### Acceptance
+
+```text
+$ bga doctor /tmp/nb          # examples/06 with all.bst renamed to everything.bst
+  [ok  ] project-loads: /tmp/nb loads (app.bst)
+rc=0
+```
+
+Falsified by pinning the target back to `all.bst`: both new bst-gated
+tests go red.
+
+Two tests added to the bst tier (37 → 39); the pin moved deliberately.

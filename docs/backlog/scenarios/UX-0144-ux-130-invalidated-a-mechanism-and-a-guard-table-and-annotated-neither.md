@@ -1,6 +1,6 @@
 # UX-144: UX-130 invalidated a mechanism and a guard table, and annotated neither
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-132 (the convention this extends), UX-130
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-132 (the convention this extends), UX-130
 
 ## Motivation
 

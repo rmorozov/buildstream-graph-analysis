@@ -140,7 +140,7 @@ SEIZE all 2003 have one. A small unlooked-for gain: the three that got
 away were losing their exit-stop to the attach-stop confusion.
 
 Suite: 44 in `tests/unit/test_process_spine.py` (was 41), whole suite
-green, bst tier 34 with none skipped.
+green, bst tier 34 with none skipped. *(`UX-144`: 34 is what this log recorded and the same commit set the pin to **36** — the figure was written before the last two tests landed. The pin is the authority; see `.github/workflows/ci.yml`.)*
 
 ### Deviations, recorded
 

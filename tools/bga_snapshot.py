@@ -58,7 +58,8 @@ def _capture_context(project: str, command: List[str], config: dict) -> str:
 
 
 def take_snapshot(project: str, command: List[str], config: dict,
-                  snapshot: Optional[str] = None) -> Tuple[str, int]:
+                  snapshot: Optional[str] = None, diagnose: bool = False,
+                  no_inject: bool = False) -> Tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
     own exit code - which is the build's answer, not the capture's."""
     from .bst_native_build_tracer import main as capture_main
@@ -75,6 +76,13 @@ def take_snapshot(project: str, command: List[str], config: dict,
     # value, so `--trace-spine auto PROJECT` would be ambiguous with the
     # positional that follows it (UX-113's own capture command hit this).
     argv.append(f"--trace-spine={config.get('trace_spine', 'auto')}")
+    # UX-146: deliberately not sticky. These are for one debugging
+    # session, and a remembered `--no-inject` would silently stop
+    # capturing anything.
+    if diagnose:
+        argv.append("--diagnose")
+    if no_inject:
+        argv.append("--no-inject")
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
 
     print(f"Capturing into {snapshot}", file=sys.stderr)
@@ -113,6 +121,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--list", action="store_true",
         help="List this project's snapshots and exit.",
     )
+    parser.add_argument(
+        "--diagnose", action="store_true",
+        help="UX-146: record what the bwrap shim received and exec'd, into "
+             "the snapshot, and print a summary. For when a capture fails on "
+             "a build that plain `bst` completes. Not sticky.",
+    )
+    parser.add_argument(
+        "--no-inject", action="store_true",
+        help="UX-146: run the build with the shim installed but injecting "
+             "nothing, to find out whether the argv rewrite is what breaks it. "
+             "Captures nothing. Implies --diagnose. Not sticky.",
+    )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
                         help="The build to run, e.g. -- bst build all.bst")
     args = parser.parse_args(argv)
@@ -142,7 +162,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     # against, and offering it as `@prev` produces an error about a
     # path the user never typed.
     previous = run_store.list_runs(project)
-    snapshot, build_exit = take_snapshot(project, command, config)
+    snapshot, build_exit = take_snapshot(project, command, config,
+                                         diagnose=args.diagnose,
+                                         no_inject=args.no_inject)
+
+    if args.no_inject:
+        # Nothing was captured, so there is nothing to analyze and
+        # certainly nothing to compare. Saying so beats an analysis of an
+        # empty trace, which would read as a measurement.
+        print(f"\n--no-inject: the build ran with the shim installed and "
+              f"injecting nothing, so this snapshot holds no trace. The "
+              f"build exited {build_exit}.\n"
+              f"Diagnostics: {os.path.join(snapshot, PLANE2_NAME)}"
+              f".diagnostics.jsonl", file=sys.stderr)
+        return build_exit
 
     run_dir = os.path.join(snapshot, RUN_SUBDIR)
     if not os.path.isdir(run_dir):
@@ -179,13 +212,33 @@ def _sticky_config(project: str, args: argparse.Namespace) -> dict:
     what actually ran (UX-95/UX-113), so stickiness cannot make a capture
     *claim* something it did not do.
     """
-    config = {"trace_opens": True, "trace_spine": "auto"}
-    config.update(run_store.read_config(project))
+    defaults = {"trace_opens": True, "trace_spine": "auto"}
+    config = dict(defaults)
+    stored = run_store.read_config(project)
+    config.update(stored)
     if args.trace_opens is not None:
         config["trace_opens"] = args.trace_opens
     if args.trace_spine is not None:
         config["trace_spine"] = args.trace_spine
     run_store.write_config(project, config)
+
+    # UX-145: say which remembered flags are in force. Set
+    # `--trace-spine=off` once and three weeks later a bare
+    # `bga snapshot` still runs spine-off; what ran *is* recorded in the
+    # report, but recording a surprise is not preventing one, and the
+    # blind spot is otherwise discovered at read time. Printed only when
+    # the stored config actually changes something, so the ordinary case
+    # stays quiet.
+    remembered = {key: value for key, value in stored.items()
+                  if key in defaults and value != defaults[key]
+                  and getattr(args, key, None) is None}
+    if remembered:
+        flags = " ".join(
+            ("--trace-opens" if config["trace_opens"] else "--no-trace-opens")
+            if key == "trace_opens" else f"--trace-spine={config['trace_spine']}"
+            for key in sorted(remembered))
+        print(f"Using {os.path.join(run_store.store_dir(project), 'config')}: "
+              f"{flags}", file=sys.stderr)
     return config
 
 

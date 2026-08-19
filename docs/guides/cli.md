@@ -12,6 +12,7 @@ This covers the `bga` command itself — the whole-project analysis plane. For r
 its own analysis subcommands, so a session reads as one tool:
 
 ```bash
+bga doctor  PROJECT                                 # can this machine capture at all?
 bga wrap    PROJECT build.log -- bst build TARGET   # capture a log bga can read
 bga extract PROJECT build.log run/                  # log + project -> run directory
 bga analyze run/                                    # the analysis
@@ -51,6 +52,7 @@ import the native tracer and the trace converters on every run.
 | `bga native-to-chrome` | `tools.native_trace_to_chrome_trace` |
 | `bga cross-check` | `tools.bga_cross_check` |
 | `bga gen-synthetic` | `tools.gen_synthetic_scale_run` |
+| `bga doctor` | `tools.bga_doctor` |
 | `bga cache-logs` | `tools.bst_cache_logs` |
 | `bga baseline` | `tools.bst_baseline_set` |
 
@@ -170,6 +172,23 @@ bga analyze /path/to/run --format json \
 bga analyze /path/to/run --format json \
   | jq -e '[.findings[] | select(.severity == "critical")] | length == 0'
 ```
+
+#### Before anything else: `bga doctor` — `UX-125`
+
+```bash
+bga doctor                 # the environment
+bga doctor PROJECT_DIR     # and whether this project can be captured
+bga doctor --format json   # findings-style ids per check, for scripting
+```
+
+Read-only, one line per check, and a concrete remedy on every failure. It invents no check — each one fronts a failure that really happened while standing this project up, and the remedy quoted is the one that actually fixed it: a virtualenv for `pluginbase` under a distro-patched setuptools, `buildstream-plugins` for the `cmake` kind, the `apparmor_restrict_unprivileged_userns` sysctl for bwrap's loopback, `build-essential` for the hook and spine compile, `stage_runtimes.sh`/`stage_cpp_toolchain.sh` for a sandbox with no shell.
+
+Two details worth knowing:
+
+- **bwrap is probed, not just found.** Presence is not the check that matters — bwrap's namespace setup succeeds and then the sandbox fails to bring up loopback, deep inside a build. `doctor` runs the same trivial sandboxed command CI's `bst-smoke` job does.
+- **"No element plugin registered for kind" gets two different remedies**, because it has two different causes: the package is missing, or the project has not declared it. Telling a user to install what they already have is how a diagnostic loses its reader.
+
+Exit `1` only on a failure. A static-binary blind spot (`--trace-spine=auto` is the answer) and an empty Plane 3 log tree are **warnings**: facts to read, not broken environments. `bst-tests` runs it as a step, so its checks cannot drift from what CI actually installs.
 
 #### Conditioning capacity advice on Plane 2 (`--plane2`) — `UX-83`
 
@@ -385,7 +404,7 @@ Documented here because they exist and nothing user-facing said so:
 - `bga baseline --glob 'captures/<project>/<commit>-<mode>-b<N>j<M>-*' -n 3 --candidate RUN` — assembles a baseline set from published capture refs and band-compares against it in one command (`UX-96`). Fetches the newest N, untars the refs that predate the uncompressed `run/`, refuses a set whose captures are not comparable (exit 6), and warns when the set was produced by more than one `bga` revision. Absence in a capture's context is read per field (`UX-114`): `trace_spine` and `trace_opens` have a defined default, so a ref published before the field existed is taken under it and mismatches a capture instrumented differently — the assumption is stated either way; `target` and the rest have none, so partial coverage is reported as **unverified** rather than passed over. A band member whose run mode differs from the candidate's is refused with exit 6 too, not the generic exit 2 it used to produce. Every member supplies the band, the newest is also the positional baseline — with three refs that is exactly the `MIN_BASELINE_RUNS` the band needs.
 - `bga capture census PROJECT [--json]` — classifies every executable the project's `local` sources stage as static or dynamic, per element, without building anything (`UX-105`). A static ELF has no `PT_INTERP`, never invokes the dynamic linker, and so is invisible to Plane 2's `LD_PRELOAD` hook. `bga capture run` and `bga capture report --project-dir` run the same census and use it to replace the generic static-binary footnote with a named one — or with silence, when there is nothing to name.
 - `bga capture run --trace-spine` (`UX-106`/`UX-108`) — also runs a static ptrace process-event tracer inside the sandbox, which records every process whatever its linkage. It is what makes a static toolchain visible at all: `examples/01-resource-contention` traces **0 processes** without it and **24** with it. Each process in the report then carries `spine+hook`, `spine-only` or `hook-only`, and the coverage line is a counted number rather than a disclaimer (`UX-107`). Priced at **0.3–1.1 ms per process** (`UX-112` measured the factorial, `UX-129` narrowed the claim to its data; [raw figures](../audits/data/spine-cost-storm.md)): below the spread on `examples/06`, where processes live tens of milliseconds, and clearly visible on `examples/08-process-storm`, where they live two. The spread across five measurements is machine state, not noise in any one of them — the tightest, five interleaved pairs, gives +0.79s on 2003 processes. `--trace-spine=auto` (`UX-113`) pays it only for the elements the pre-build census says the hook is blind for, plus any it could not assess - zero elements on an all-dynamic project, all of them on a busybox one; the coverage line says how many. The hook stays on either way — opened paths need in-process interposition, which the spine deliberately does not do.
-- `bga cache-logs [LOG_ROOT] --project NAME --graph RUN/graph.json --native-report PLANE2.json` — Plane 3, BuildStream's own persisted element logs (`UX-91`). Needs no capture at all: it reads what BuildStream already wrote, defaulting to `$XDG_CACHE_HOME/buildstream/logs`. Reports the per-element phase breakdown, the sandbox tax (`UX-99`) and the configure tax (`UX-102`); `--native-report` adds the traced configure measurement from a Plane 2 report of the same build, beside the build tool's self-reported one, and `--graph` lets the developer-tax ranking (`UX-101`) tell a rebuild caused by an upstream key change from one whose own definition changed — the logs alone carry no dependency edges.
+- `bga cache-logs [PROJECT_DIR|LOG_ROOT] --graph RUN/graph.json --native-report PLANE2.json` — Plane 3, BuildStream's own persisted element logs (`UX-91`). Needs no capture at all: it reads what BuildStream already wrote, defaulting to `$XDG_CACHE_HOME/buildstream/logs`. **Hand it the project directory** (`UX-127`) — it reads the name from `project.conf` and resolves the log root itself, which is what the obvious invocation should have done all along; a log root still works. A bare `bga cache-logs` (or `--list`) enumerates the tree — projects, log counts, time spans — so discovery is the tool's job rather than an `ls` of a cache directory; `--all` reports over every project at once, which is what a bare invocation used to do. Given a project the tree has no logs for, the error names the project it derived, where it looked, and what is actually there. Reports the per-element phase breakdown, the sandbox tax (`UX-99`) and the configure tax (`UX-102`); `--native-report` adds the traced configure measurement from a Plane 2 report of the same build, beside the build tool's self-reported one, and `--graph` lets the developer-tax ranking (`UX-101`) tell a rebuild caused by an upstream key change from one whose own definition changed — the logs alone carry no dependency edges.
 
 ## `bga correlate` — Join the Two Planes
 

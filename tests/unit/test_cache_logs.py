@@ -672,3 +672,134 @@ def test_an_empty_command_block_is_not_a_repeated_operation(tmp_path):
         records.append(element_dir)
     findings = repeated_operations(scan_log_tree(str(tmp_path / "logs")))
     assert [f['command'] for f in findings] == ["make -j4"]
+
+
+# --- UX-127: the front door takes the project you have ------------------
+
+from tools.bst_cache_logs import (  # noqa: E402
+    is_project_dir, main, project_name_from_dir, summarize_log_tree,
+)
+
+
+@pytest.fixture
+def project_dir(tmp_path):
+    """A minimal BuildStream project whose declared name is the log
+    tree's directory name - the correspondence UX-127 is about."""
+    root = tmp_path / "proj"
+    root.mkdir()
+    (root / "project.conf").write_text(
+        "# a comment first, so the parser cannot rely on line 1\n"
+        "name: my-project\n"
+        "min-version: 2.0\n"
+        "element-path: elements\n"
+    )
+    return root
+
+
+class TestTheProjectDirectoryIsTheObviousArgument:
+    def test_the_name_is_read_from_project_conf(self, project_dir):
+        assert project_name_from_dir(str(project_dir)) == "my-project"
+
+    def test_a_directory_with_no_project_conf_is_not_a_project(self, tmp_path):
+        assert not is_project_dir(str(tmp_path))
+        assert project_name_from_dir(str(tmp_path)) is None
+
+    def test_a_project_directory_renders_that_projects_report(
+            self, project_dir, log_tree, monkeypatch, capsys):
+        """The Motivation's whole point: `bga cache-logs PROJECT` used to
+        report "nothing to report on" about a project whose logs sit two
+        directories away, because the positional was the *log root*."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(log_tree.parent))
+        (log_tree.parent / "buildstream").mkdir(exist_ok=True)
+        shutil.copytree(log_tree, log_tree.parent / "buildstream" / "logs")
+
+        assert main([str(project_dir)]) == 0
+
+        assert "my-project" in capsys.readouterr().out
+
+    def test_a_project_whose_conf_declares_no_name_says_so(self, tmp_path, capsys):
+        root = tmp_path / "nameless"
+        root.mkdir()
+        (root / "project.conf").write_text("min-version: 2.0\n")
+
+        assert main([str(root)]) == 1
+
+        assert "declares no `name:`" in capsys.readouterr().err
+
+    def test_a_log_root_still_works(self, log_tree, capsys):
+        """The old positional meaning is not withdrawn - a path that is
+        not a project is still read as the log root."""
+        assert main([str(log_tree)]) == 0
+        assert "Cached Build Logs" in capsys.readouterr().out
+
+
+class TestDiscoveryIsTheToolsJob:
+    def test_a_bare_invocation_lists_the_tree(self, log_tree, monkeypatch, capsys):
+        """It used to report over every project the machine had ever
+        built, which is never one user's question."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(log_tree.parent))
+        (log_tree.parent / "buildstream").mkdir(exist_ok=True)
+        shutil.copytree(log_tree, log_tree.parent / "buildstream" / "logs")
+
+        assert main([]) == 0
+
+        out = capsys.readouterr().out
+        assert "BuildStream log tree" in out
+        assert "my-project" in out
+
+    def test_the_listing_carries_counts_and_a_span(self, log_tree):
+        [entry] = summarize_log_tree(str(log_tree))
+
+        assert entry["project"] == "my-project"
+        assert entry["logs"] == 1
+        assert entry["elements"] == 1
+        assert entry["first_us"] is not None and entry["last_us"] is not None
+
+    def test_all_restores_the_report_over_everything(self, log_tree, capsys):
+        assert main([str(log_tree), "--all"]) == 0
+        assert "Cached Build Logs" in capsys.readouterr().out
+
+    def test_the_listing_is_machine_readable_too(self, log_tree, capsys):
+        assert main([str(log_tree), "--list", "--format", "json"]) == 0
+
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["projects"][0]["project"] == "my-project"
+
+
+class TestTheWrongArgumentRedirects:
+    def test_a_project_with_no_logs_names_what_was_derived_and_where(
+            self, tmp_path, log_tree, monkeypatch, capsys):
+        """UX-127 item 3. "Nothing to report on" is a confidently wrong
+        answer when the tool looked in the right place for the wrong
+        name - and the user has no way to tell those apart."""
+        other = tmp_path / "other"
+        other.mkdir()
+        (other / "project.conf").write_text("name: not-built-here\n")
+        monkeypatch.setenv("XDG_CACHE_HOME", str(log_tree.parent))
+        (log_tree.parent / "buildstream").mkdir(exist_ok=True)
+        shutil.copytree(log_tree, log_tree.parent / "buildstream" / "logs")
+
+        assert main([str(other)]) == 1
+
+        err = capsys.readouterr().err
+        assert "not-built-here" in err
+        assert "declares `name: not-built-here`" in err
+        assert "The tree holds: my-project" in err
+        assert "--list" in err
+
+    def test_an_empty_tree_says_no_build_has_written_here(
+            self, tmp_path, monkeypatch, capsys):
+        empty = tmp_path / "cache" / "buildstream" / "logs"
+        empty.mkdir(parents=True)
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+        project = tmp_path / "p"
+        project.mkdir()
+        (project / "project.conf").write_text("name: p\n")
+
+        assert main([str(project)]) == 1
+
+        assert "no build has written logs here yet" in capsys.readouterr().err
+
+    def test_project_name_still_works_unchanged(self, log_tree, capsys):
+        assert main([str(log_tree), "--project", "my-project"]) == 0
+        assert "Cached Build Logs" in capsys.readouterr().out

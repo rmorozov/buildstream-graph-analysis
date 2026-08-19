@@ -467,25 +467,61 @@ def parse_trace_log(text: str) -> List[dict]:
     return events
 
 
-def count_fork_only_exits(events: List[dict]) -> int:
-    """UX-123: exits recorded for pids that never exec'd.
+def _pair_key(ev: dict) -> Tuple[str, int, str]:
+    """What makes two records the same process's, for pairing.
 
-    `PTRACE_EVENT_EXIT` fires for every tracee, including a
-    fork-without-exec child - which is the same program as its parent and
-    wears the parent's cmdline, so it is not a process a profiler should
-    list. `pair_events` drops those ENDs; this counts them, because a
-    record class that is neither reported nor summarised is
-    indistinguishable from one that never occurred.
+    The sandbox (UX-56/UX-61) rather than the element, because pids are
+    namespaced per sandbox and a build-root override collapses every
+    element to one name; and the mechanism (UX-107), because with the
+    spine running each process writes a START and an END from *each*
+    stream and a shared key pops one stream's START for the other's END.
     """
-    seen_start = set()
-    fork_only = 0
+    return (ev.get("invocation") or ev["element"], ev["pid"], ev.get("src", "hook"))
+
+
+def count_unmatched_ends(events: List[dict]) -> Dict[str, int]:
+    """ENDs with no START to pair with, split by what they can support.
+
+    `UX-123` counted these as one number and called all of them
+    "fork-without-exec children". `UX-133` found that wrong twice over:
+
+    - **Under-counted.** `seen_start` was never cleared, so a pid that
+      exec'd, exited, and was then reused by a fork-only child had its
+      END matched against the *first* process's START and went
+      uncounted. The set now tracks whether a START is currently open,
+      exactly as `pair_events` does, so a reused pid is a fresh question.
+    - **Mislabelled.** Only the **spine** can produce a fork-only exit:
+      `PTRACE_EVENT_EXIT` fires for every tracee whether or not it
+      exec'd. The hook is loaded *by* the dynamic linker at exec, so a
+      hook END with no START is not a fork-only child at all - it is a
+      truncated log, or a START lost to a full buffer. Rendering it as
+      "fork-without-exec children, wearing their parent's command line"
+      states something that record cannot support.
+
+    Returns `{"fork_only": N, "unmatched": M}` - the first countable, the
+    second an honest "we have an exit and no beginning for it".
+    """
+    open_now = set()
+    counts = {"fork_only": 0, "unmatched": 0}
     for ev in sorted(events, key=lambda e: e["ts"]):
-        key = (ev.get("invocation") or ev["element"], ev["pid"], ev.get("src", "hook"))
+        key = _pair_key(ev)
         if ev["event"] == "START":
-            seen_start.add(key)
-        elif ev["event"] == "END" and key not in seen_start:
-            fork_only += 1
-    return fork_only
+            open_now.add(key)
+        elif ev["event"] == "END":
+            if key in open_now:
+                open_now.discard(key)
+            elif ev.get("src") == "spine":
+                counts["fork_only"] += 1
+            else:
+                counts["unmatched"] += 1
+    return counts
+
+
+def count_fork_only_exits(events: List[dict]) -> int:
+    """`UX-123`'s name, kept for its callers; the spine half of the pair
+    above. See `count_unmatched_ends` for why the two are not one number.
+    """
+    return count_unmatched_ends(events)["fork_only"]
 
 
 def pair_events(events: List[dict]) -> List[dict]:
@@ -534,9 +570,35 @@ def pair_events(events: List[dict]) -> List[dict]:
         # process count and the coverage classes both survive that
         # crossing intact, which is why it has to be keyed out rather
         # than checked for.
-        key = (ev.get("invocation") or ev["element"], ev["pid"], ev.get("src", "hook"))
+        key = _pair_key(ev)
         if ev["event"] == "START":
-            open_by_key.setdefault(key, []).append(ev)
+            pending = open_by_key.setdefault(key, [])
+            # UX-133: an exec chain and a reused pid look identical in the
+            # record stream - both are "another START for a pid that
+            # already has one open". `pending.clear()` on the eventual END
+            # collapsed *whatever was queued*, so a lost END plus a reused
+            # pid fabricated one record spanning two distinct processes,
+            # wearing `exec_chain=2` as if it were an ordinary chain.
+            #
+            # `execve` cannot change a process's parent. So a START whose
+            # ppid differs from the open chain's is **proof** of a
+            # different process, not a heuristic - and the chain is closed
+            # as END-lost rather than merged into.
+            #
+            # Reuse under the *same* parent stays undecidable from the
+            # record stream alone, and is left that way rather than
+            # guessed at with a timing threshold: measured on the retained
+            # freedesktop-sdk capture, 1859 real exec-chain gaps run from
+            # 0.4 ms (median) to 13.9 ms (max), and a `sh -c 'sleep 5;
+            # exec …'` is a legitimate chain five seconds wide. Any cut
+            # that separates those two populations would be picked to fit
+            # this corpus, which is the kind of threshold this codebase
+            # does not add.
+            if pending and pending[-1].get("ppid") != ev.get("ppid"):
+                records.append(_open_record(pending[0], pending[-1], len(pending),
+                                            reason="end-lost-pid-reused"))
+                pending.clear()
+            pending.append(ev)
         elif ev["event"] == "END":
             pending = open_by_key.get(key)
             if not pending:
@@ -611,20 +673,35 @@ def pair_events(events: List[dict]) -> List[dict]:
             records.append(record)
     for pending in open_by_key.values():
         for start_ev in pending:
-            records.append({
-                "pid": start_ev["pid"],
-                "ppid": start_ev["ppid"],
-                "element": start_ev["element"],
-                "invocation": start_ev.get("invocation"),
-                "cmd": start_ev["cmd"],
-                "start_ts": start_ev["ts"],
-                "end_ts": None,
-                "duration_s": None,
-                "open": True,
-                "src": start_ev.get("src", "hook"),
-                "exec_chain": 1,
-            })
+            records.append(_open_record(start_ev, start_ev, 1))
     return sorted(records, key=lambda r: r["start_ts"])
+
+
+def _open_record(start_ev: dict, final_ev: dict, exec_chain: int,
+                 reason: str = "no-observed-exit") -> dict:
+    """A process whose exit was never seen.
+
+    `reason` distinguishes the two ways that happens, because they are
+    different facts about the capture: `no-observed-exit` is the ordinary
+    one (killed by a signal, or still running when the trace ended), and
+    `end-lost-pid-reused` means the pid was handed to a new process
+    before this one's END arrived - so the record is deliberately left
+    incomplete rather than merged with its successor's (`UX-133`).
+    """
+    return {
+        "pid": start_ev["pid"],
+        "ppid": final_ev.get("ppid", start_ev.get("ppid")),
+        "element": start_ev["element"],
+        "invocation": start_ev.get("invocation"),
+        "cmd": final_ev["cmd"],
+        "start_ts": start_ev["ts"],
+        "end_ts": None,
+        "duration_s": None,
+        "open": True,
+        "open_reason": reason,
+        "src": start_ev.get("src", "hook"),
+        "exec_chain": exec_chain,
+    }
 
 
 # UX-107: how far apart the two streams' START stamps may be and still
@@ -2610,7 +2687,8 @@ CPU_RECONCILIATION_TOLERANCE_US = 50_000
 
 
 def compute_stream_coverage(records: List[dict],
-                            fork_only_exits: int = 0) -> dict:
+                            fork_only_exits: int = 0,
+                            unmatched_ends: int = 0) -> dict:
     """UX-107: coverage as a measured number rather than a footnote.
 
     Before the spine there was one sentence, printed identically whether
@@ -2707,6 +2785,11 @@ def compute_stream_coverage(records: List[dict],
         # wears its cmdline, so it is not a process to list. Dropped, and
         # said so.
         "fork_only_exits": fork_only_exits,
+        # UX-133: an END with no START that the *hook* produced. Only the
+        # spine can see a fork-without-exec exit, so a hook orphan is a
+        # truncated log or a lost START - a different fact, and one the
+        # old single count asserted was something it is not.
+        "unmatched_ends": unmatched_ends,
         "cpu_disagreements": disagreements[:8],
         "cpu_disagreement_count": len(disagreements),
         "cpu_aggregate": aggregate,
@@ -2723,7 +2806,7 @@ def compute_stream_coverage(records: List[dict],
 
 
 def summarize(records: List[dict], correlation: Optional[dict] = None,
-              fork_only_exits: int = 0) -> dict:
+              fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
     matched = [r for r in records if not r["open"]]
     open_records = [r for r in records if r["open"]]
     by_binary: Dict[str, int] = {}
@@ -2781,7 +2864,8 @@ def summarize(records: List[dict], correlation: Optional[dict] = None,
         # UX-107: which mechanism saw each process, as counts rather
         # than as a footnote.
         "stream_coverage": compute_stream_coverage(
-            records, fork_only_exits=fork_only_exits),
+            records, fork_only_exits=fork_only_exits,
+            unmatched_ends=unmatched_ends),
     }
 
 
@@ -2850,7 +2934,9 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # byte-identically.
     records = merge_record_streams(pair_events(events))
     # UX-123: counted from the events, since pairing drops them.
-    fork_only_exits = count_fork_only_exits(events)
+    unmatched = count_unmatched_ends(events)
+    fork_only_exits = unmatched["fork_only"]
+    unmatched_ends = unmatched["unmatched"]
 
     # UX-56: correct collapsed element names before anything is computed
     # from them - every downstream signal (declared-vs-used, per-element
@@ -2893,7 +2979,8 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
         )
         correlation["elements_in_plane1"] = len(spans)
     report = summarize(records, correlation=correlation,
-                       fork_only_exits=fork_only_exits)
+                       fork_only_exits=fork_only_exits,
+                       unmatched_ends=unmatched_ends)
     if spine_policy:
         report["spine_policy"] = spine_policy
 
@@ -3194,7 +3281,8 @@ def _format_stream_coverage(report: dict) -> List[str]:
         )
     collapsed = coverage.get("exec_chains_collapsed") or 0
     fork_only = coverage.get("fork_only_exits") or 0
-    if collapsed or fork_only:
+    unmatched = coverage.get("unmatched_ends") or 0
+    if collapsed or fork_only or unmatched:
         parts = []
         if collapsed:
             parts.append(
@@ -3205,11 +3293,21 @@ def _format_stream_coverage(report: dict) -> List[str]:
             )
         if fork_only:
             parts.append(
-                f"{fork_only} exit(s) were recorded for pids that never exec'd "
+                f"{fork_only} exit(s) the spine recorded for pids that never exec'd "
                 f"(fork-without-exec children, wearing their parent's command line) "
                 f"and are not listed as processes"
             )
-        lines.append("  " + "; ".join(parts) + " (UX-123).")
+        if unmatched:
+            # UX-133: said separately, because only the spine can see a
+            # fork-only exit. A hook END with no START is a truncated log
+            # or a lost START, and calling it a fork-only child asserts
+            # something the record cannot support.
+            parts.append(
+                f"{unmatched} exit(s) have no matching start in the same stream - "
+                f"a truncated log or a start lost to a full buffer, not a "
+                f"fork-without-exec child"
+            )
+        lines.append("  " + "; ".join(parts) + " (UX-123, UX-133).")
     spine_cpu = coverage.get("cpu_from_spine_only") or 0
     if spine_cpu:
         lines.append(

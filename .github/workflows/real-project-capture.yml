@@ -87,13 +87,21 @@ on:
         default: true
       trace_spine:
         description: >-
-          UX-106/UX-108/UX-112. Also run the ptrace process-event spine
-          inside the sandbox, which sees statically-linked processes
-          LD_PRELOAD structurally cannot. Priced at about a millisecond
-          per process, measured as a full spine x opens factorial - with
-          this job's 127k processes and trace_opens on by default, budget
-          roughly two minutes. There is no spine x opens interaction: the
-          spine costs the same alongside opens as without it.
+          UX-106/UX-108/UX-112/UX-129. Also run the ptrace process-event
+          spine inside the sandbox, which sees statically-linked processes
+          LD_PRELOAD structurally cannot. Priced at 0.3-1.1 ms per process
+          across five measurements of the 2003-process storm fixture - so
+          with this job's 127k processes, budget 45s to 2.5 minutes.
+          There is no spine x opens interaction: the spine costs the same
+          alongside opens as without it.
+
+          That budget is an extrapolation and this job cannot check it:
+          its own run-to-run spread on identical hook-only captures of one
+          commit is 15 minutes (2712s to 3614s), and the one spine capture
+          taken (32223468993, 3261s) sits inside that range - 9 minutes
+          slower than the fastest hook-only run and 2.6 minutes faster
+          than their median. Nothing here measures the spine at this
+          scale in either direction (UX-129).
         type: boolean
         default: false
       capture_mode:

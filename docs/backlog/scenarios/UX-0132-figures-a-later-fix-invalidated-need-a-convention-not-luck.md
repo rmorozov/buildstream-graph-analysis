@@ -1,6 +1,6 @@
 # UX-132: figures a later fix invalidated need a convention, not luck
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-123 (whose fix moved the figures)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-123 (whose fix moved the figures)
 
 ## Motivation
 
@@ -44,3 +44,43 @@ The three sites carry the annotation naming UX-123; the fixing guide
 names the convention with UX-106/UX-118 as the worked example; and a
 spot-grep for `822` across the three files finds no un-annotated
 instance presented as current.
+
+## Fix Implemented
+
+The three sites carry the annotation, in the shape `UX-118` used on
+`UX-106` — the old figure stays, with one line naming what changed it:
+
+1. **`UX-107`**, two places: the merge table's 822s (now 813 after
+   `UX-123`'s exec-chain collapse), and the "re-parses byte-identically"
+   acceptance clause, which was a property of that parser and is
+   deliberately no longer true.
+2. **`UX-108`**, two places: the overhead table's 822, and the +734
+   observed exits / 127,632 processes, both pre-collapse counts. Noted
+   there that the *finding* is sharpened rather than weakened —
+   exec'd processes are exactly what the hook cannot see.
+3. **`UX-112`**, whose 822 was stale *when written*: `UX-123` landed one
+   commit earlier. That is the clearest possible statement of why the
+   convention needed writing down.
+
+The convention is now item 5 of the fixing guide's Definition of Done,
+with `git grep <old figure> docs/backlog/scenarios` as the mechanic and
+`UX-106`/`UX-118` as the worked example. It is a checklist item rather
+than a test because it is judgment-shaped — which figure is presented as
+current, and which is a record of what was measured, cannot be decided
+by a regex.
+
+## Verification Log
+
+Done 2026-08-19.
+
+```text
+$ git grep -n "822" docs/backlog/scenarios/UX-0107*.md \
+      docs/backlog/scenarios/UX-0108*.md docs/backlog/scenarios/UX-0112*.md
+```
+
+Every hit in those three files now sits under an annotation naming
+`UX-123` and the corrected figure. Hits elsewhere in the backlog
+(`UX-32`, `UX-37`, `UX-38`, `UX-45`, `UX-46`, `UX-56`) are deliberately
+untouched: they are verification logs recording what a real capture
+measured on the day, which is history the style guide's rule 2 protects
+and this task's Out of Scope names explicitly.

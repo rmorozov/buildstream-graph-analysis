@@ -479,3 +479,233 @@ def test_why_the_shim_does_not_pass_as_pid_1(spine):
         "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
     )
     assert "--as-pid-1" not in argv, "the shim must not change the sandbox"
+
+
+# --- UX-128: every restart site, not one of five ------------------------
+
+def _nothing_is_stopped(pids):
+    """The pids from `pids` still in state `T`, read from /proc.
+
+    UX-117's acceptance asked for this assertion and it never landed: the
+    degrade test asserted the build's exit status, which a hung tracee
+    cannot affect once the tracer has already been killed by a timeout.
+    A stranded tracee is visible in `/proc/<pid>/stat`'s third field, and
+    nowhere in an exit code.
+    """
+    stopped = []
+    for pid in pids:
+        try:
+            with open(f"/proc/{pid}/stat") as handle:
+                fields = handle.read().rsplit(") ", 1)[-1].split()
+        except OSError:
+            continue                      # reaped between listing and reading
+        if fields and fields[0] == "T":
+            stopped.append(pid)
+    return stopped
+
+
+def _descendants_of(root):
+    """Every live pid whose ancestry reaches `root`, from /proc."""
+    parents = {}
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/stat") as handle:
+                fields = handle.read().rsplit(") ", 1)[-1].split()
+            parents[int(entry)] = int(fields[1])
+        except (OSError, IndexError, ValueError):
+            continue
+    found = []
+    for pid, _parent in parents.items():
+        walker, depth = pid, 0
+        while walker > 1 and depth < 64:
+            walker = parents.get(walker, 0)
+            depth += 1
+            if walker == root:
+                found.append(pid)
+                break
+    return found
+
+
+@pytest.mark.parametrize("site", ["initial", "exec", "exit", "fork", "signal"])
+def test_a_cont_failure_at_any_site_still_completes_the_build(spine, tmp_path, site):
+    """UX-128: UX-117 guarded one restart site of five and then wrote, in
+    a comment, that no other path could strand a tracee.
+
+    The exec-stop, exit-stop, fork-stop and initial restarts all
+    discarded the `PTRACE_CONT` return value. A failure at any of them
+    leaves that tracee stopped forever, `waitpid(-1)` never reaches
+    `ECHILD`, and the build hangs - the identical failure mode UX-117
+    exists to prevent, one branch over.
+    """
+    marker = tmp_path / f"done-{site}"
+    script = (f"for i in 1 2 3; do (sleep 0.3; true) & done; wait; "
+              f"echo done > {marker}; exit 7")
+    log = tmp_path / f"trace-{site}.log"
+
+    result = subprocess.run(
+        [spine, "--", "/bin/sh", "-c", script],
+        env={**os.environ, "BST_TRACE_LOG": str(log),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
+             "BST_TRACE_SPINE_FAIL_CONT_AT": site},
+        capture_output=True, text=True, timeout=30,
+    )
+
+    assert result.returncode == 7, (
+        f"a CONT failure at the {site} site changed the build's exit status")
+    assert marker.exists(), f"the wrapped command did not complete ({site})"
+
+
+@pytest.mark.parametrize("site", ["exec", "exit", "fork", "signal"])
+def test_a_cont_failure_names_the_site_it_happened_at(spine, tmp_path, site):
+    """A degradation record that says only "cont-failed" tells a reader
+    the tracer gave up and not which restart broke - and with five sites
+    sharing one guard, that is the whole diagnostic value."""
+    log = tmp_path / f"trace-{site}.log"
+    subprocess.run(
+        [spine, "--", "/bin/sh", "-c", "(sleep 0.2; true) & wait; exit 0"],
+        env={**os.environ, "BST_TRACE_LOG": str(log),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
+             "BST_TRACE_SPINE_FAIL_CONT_AT": site},
+        capture_output=True, text=True, timeout=30,
+    )
+
+    assert f"reason=cont-failed-{site}" in log.read_text()
+
+
+def test_a_degrade_leaves_nothing_in_state_T(spine, tmp_path):
+    """UX-117's acceptance clause, finally asserted rather than implied.
+
+    The exit status cannot see a stranded tracee - the build completes
+    around it - so the check has to read `/proc/<pid>/stat` while the
+    processes are still alive. The script keeps a descendant alive past
+    the tracer's exit precisely so there is something to look at.
+    """
+    log = tmp_path / "trace.log"
+    marker = tmp_path / "spawned"
+    script = (f"(sleep 2; true) & echo $! > {marker}; "
+              f"for i in 1 2 3; do (sleep 0.2; true) & done; wait -n; exit 0")
+
+    process = subprocess.Popen(
+        [spine, "--", "/bin/sh", "-c", script],
+        env={**os.environ, "BST_TRACE_LOG": str(log),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
+             "BST_TRACE_SPINE_DEGRADE_AFTER": "3"},
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    deadline = time.time() + 10
+    survivors = []
+    while time.time() < deadline:
+        survivors = _descendants_of(process.pid)
+        if survivors:
+            break
+        if process.poll() is not None:
+            break
+        time.sleep(0.05)
+    stopped = _nothing_is_stopped(survivors)
+    process.wait(timeout=20)
+
+    assert stopped == [], (
+        f"tracee(s) left in state T after a degrade: {stopped} - "
+        "a stranded tracee is exactly the hang UX-117 was filed for, and "
+        "an exit code cannot see it"
+    )
+
+
+# --- UX-128: the failure paths, inside the sandbox they ship in ---------
+#
+# UX-117 and UX-119 both wrote acceptance clauses saying "in a real bwrap
+# sandbox" and both landed as plain subprocess tests. The distinction is
+# not pedantic: `--unshare-pid` puts the traced command at pid 2 under
+# bubblewrap's own reaper, which is a different signal and reaping
+# environment from a bare `subprocess.run` - and it is the one every real
+# capture uses.
+
+def _in_sandbox(argv, timeout=90, env=None):
+    return subprocess.run(
+        ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv],
+        capture_output=True, text=True, timeout=timeout,
+        env={**os.environ, **(env or {})},
+    )
+
+
+@pytest.mark.bst
+@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE),
+                    reason="bwrap/cc not both on PATH")
+@pytest.mark.parametrize("site", ["initial", "exec", "exit", "fork", "signal"])
+def test_a_cont_failure_inside_the_sandbox_still_completes_the_build(
+        spine, tmp_path, site):
+    """UX-128, in the shape it ships in.
+
+    Measured with the guard removed (`resume` returning before its error
+    check, i.e. the pre-UX-128 discard): every one of the five sites
+    hangs until the test's own 30-second timeout. With it: the command's
+    exit status, every time.
+    """
+    log = tmp_path / f"sandbox-{site}.log"
+    result = _in_sandbox(
+        [spine, "--", "/bin/sh", "-c",
+         "for i in 1 2 3; do (sleep 0.3; true) & done; wait; exit 7"],
+        env={"BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst",
+             "BST_TRACE_INVOCATION": "inv",
+             "BST_TRACE_SPINE_FAIL_CONT_AT": site},
+    )
+
+    assert result.returncode == 7, (
+        f"a CONT failure at the {site} site inside the sandbox changed the "
+        f"build's exit status ({result.stderr[-400:]})")
+
+
+@pytest.mark.bst
+@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE),
+                    reason="bwrap/cc not both on PATH")
+def test_a_degrade_inside_the_sandbox_keeps_the_builds_exit_status(spine, tmp_path):
+    """UX-117's own acceptance clause, run where it said it would be."""
+    log = tmp_path / "sandbox-degrade.log"
+    result = _in_sandbox(
+        [spine, "--", "/bin/sh", "-c",
+         "for i in 1 2 3 4 5; do (sleep 0.4; true) & done; wait; exit 4"],
+        env={"BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst",
+             "BST_TRACE_INVOCATION": "inv",
+             "BST_TRACE_SPINE_DEGRADE_AFTER": "4"},
+    )
+
+    assert result.returncode == 4
+    assert "DEGRADED" in log.read_text()
+
+
+@pytest.mark.bst
+@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE),
+                    reason="bwrap/cc not both on PATH")
+@pytest.mark.parametrize("tracees", [1, 8])
+def test_sigterm_at_the_spine_inside_the_sandbox(spine, tmp_path, tracees):
+    """UX-119's clause, corrected twice over.
+
+    Its own test killed the *command*, not the spine, and never varied
+    the tracee count - so it could not see either thing it claimed to
+    check. This aims the signal at the spine's own pid, at one tracee and
+    at eight, inside the sandbox.
+
+    The assertion is against bare bwrap rather than a number, because
+    bubblewrap renders a signal death itself and the contract is
+    "identical to untraced", not "equal to 143".
+    """
+    script = (f"for i in $(seq {tracees}); do (sleep 5; true) & done; wait")
+
+    def _kill_after_start(argv):
+        process = subprocess.Popen(
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv,
+             "/bin/sh", "-c", script],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            env={**os.environ, "BST_TRACE_LOG": str(tmp_path / f"t{tracees}.log"),
+                 "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        )
+        time.sleep(1.0)
+        process.terminate()
+        process.wait(timeout=60)
+        return process.returncode
+
+    assert _kill_after_start([spine, "--"]) == _kill_after_start([]), (
+        f"a SIGTERM at the spine with {tracees} tracee(s) produced a different "
+        "status than the same signal with no tracer at all")

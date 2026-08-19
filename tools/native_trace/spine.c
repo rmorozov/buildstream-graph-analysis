@@ -143,6 +143,16 @@ static pid_t g_seen[SEEN_SLOTS];
 static long g_degrade_after;
 static long g_events_seen;
 
+/* UX-128: which restart site to make fail, for the same reason the seam
+ * above exists - a PTRACE_CONT that refuses to resume a live tracee
+ * cannot be provoked from outside the tracer, and the alternative to a
+ * seam is shipping the hang untested. One name per call site
+ * ("initial", "exec", "exit", "fork", "signal"); unset means none.
+ *
+ * `bwrap_shim.py` passes a fixed list of BST_TRACE_* variables through
+ * and this is not among them, so it cannot reach the capture path. */
+static const char *g_fail_cont_at;
+
 /* Returns 1 the first time it is called for `pid`, 0 afterwards. */
 static int first_stop_for(pid_t pid)
 {
@@ -407,6 +417,44 @@ static void degrade(const char *reason)
         emit(line, (size_t)len);
 }
 
+/* Every PTRACE_CONT in this file goes through here (UX-128).
+ *
+ * UX-117 guarded exactly one of five restart sites and then reasoned, in
+ * a comment, that "no tracee is ever left stopped by any other path, so
+ * there is no third case for a set to cover". There were four: the
+ * exec-stop, exit-stop and fork-stop restarts each discarded the CONT
+ * return value, and so did the initial post-SETOPTIONS restart. A
+ * failure at any of them leaves that tracee stopped forever, `waitpid`
+ * never reaches ECHILD, and the build hangs - the identical failure mode
+ * UX-117 was filed for, one branch over.
+ *
+ * The guard is therefore a function rather than a repeated three lines,
+ * because the defect was that the repetition diverged. On failure:
+ * degrade (naming the site, so a report says which restart broke) and
+ * detach, which resumes the tracee - after which the loop only reaps.
+ *
+ * ESRCH is ordinary and not a failure: the tracee died between the wait
+ * and the continue. The pending signal goes to the detach as well, so a
+ * tracee stopped for a real signal still receives it.
+ */
+static void resume(pid_t pid, int sig, const char *site)
+{
+    int failed;
+    if (g_fail_cont_at && strcmp(g_fail_cont_at, site) == 0) {
+        failed = 1;
+        errno = EIO;   /* any errno but ESRCH; see the seam above */
+    } else {
+        failed = ptrace(PTRACE_CONT, pid, NULL, (void *)(long)sig) != 0;
+    }
+    if (!failed || errno == ESRCH)
+        return;
+
+    char reason[64];
+    snprintf(reason, sizeof(reason), "cont-failed-%s", site);
+    degrade(reason);
+    ptrace(PTRACE_DETACH, pid, NULL, (void *)(long)sig);
+}
+
 /* Forwarded to the command's own process group so a cancellation reaches
  * the whole tree rather than only its root.
  *
@@ -452,6 +500,8 @@ int main(int argc, char **argv)
     {
         const char *after = getenv("BST_TRACE_SPINE_DEGRADE_AFTER");
         g_degrade_after = after && *after ? strtol(after, NULL, 10) : 0;
+        const char *site = getenv("BST_TRACE_SPINE_FAIL_CONT_AT");
+        g_fail_cont_at = site && *site ? site : NULL;
     }
     g_trace_log = getenv("BST_TRACE_LOG");
     g_element = getenv("BST_TRACE_ELEMENT");
@@ -504,8 +554,12 @@ int main(int argc, char **argv)
     if (ptrace(PTRACE_SETOPTIONS, child, 0, (void *)options) != 0) {
         degrade("setoptions-failed");
         ptrace(PTRACE_DETACH, child, NULL, NULL);
+    } else {
+        /* UX-128: guarded, and only on the path where the child is still
+         * ours. The unconditional form continued a pid the line above
+         * may just have detached. */
+        resume(child, 0, "initial");
     }
-    ptrace(PTRACE_CONT, child, NULL, NULL);
 
     int child_status = 0;
     int child_seen = 0;
@@ -571,9 +625,17 @@ int main(int argc, char **argv)
              * moment of degrading, because every tracee reaches this
              * branch on its own: one is either running - and
              * PTRACE_O_TRACEEXIT guarantees it stops at exit - or
-             * already stopped and queued for a later waitpid. The set
-             * would need bookkeeping to cover a case that cannot arise,
-             * since no tracee is ever left stopped by any other path.
+             * already stopped and queued for a later waitpid.
+             *
+             * That reasoning holds; the sentence that used to follow it
+             * did not. It read "no tracee is ever left stopped by any
+             * other path", which was true of the path this comment sits
+             * in and false of the four other restart sites, each of which
+             * discarded its PTRACE_CONT result and could strand a tracee
+             * exactly as UX-117 described (UX-128). Every restart now
+             * goes through `resume()`, which degrades and detaches on
+             * failure - so the invariant this branch relies on is
+             * enforced rather than asserted.
              *
              * The pending signal is passed to the detach so a tracee
              * stopped for a real signal still receives it - and only a
@@ -585,7 +647,7 @@ int main(int argc, char **argv)
         if (sig == SIGTRAP && event == PTRACE_EVENT_EXEC) {
             read_cmdline(pid, cmdline, sizeof(cmdline));
             write_start(pid, read_ppid(pid), cmdline);
-            ptrace(PTRACE_CONT, pid, NULL, NULL);
+            resume(pid, 0, "exec");
             continue;
         }
         if (sig == SIGTRAP && event == PTRACE_EVENT_EXIT) {
@@ -593,7 +655,7 @@ int main(int argc, char **argv)
             int have_exit = ptrace(PTRACE_GETEVENTMSG, pid, 0, &exit_msg) == 0;
             read_cmdline(pid, cmdline, sizeof(cmdline));
             write_end(pid, read_ppid(pid), cmdline, have_exit, exit_msg);
-            ptrace(PTRACE_CONT, pid, NULL, NULL);
+            resume(pid, 0, "exit");
             continue;
         }
         if (sig == SIGTRAP && (event == PTRACE_EVENT_FORK
@@ -602,7 +664,7 @@ int main(int argc, char **argv)
             /* The new child is auto-attached and will announce itself at
              * its own exec-stop; nothing to record here, because a fork
              * without an exec is the same program, not a new one. */
-            ptrace(PTRACE_CONT, pid, NULL, NULL);
+            resume(pid, 0, "fork");
             continue;
         }
 
@@ -620,17 +682,7 @@ int main(int argc, char **argv)
          * Suppressed once per pid, so a SIGSTOP the program itself
          * raises later still gets through. Both decisions are made by
          * `pass_through` above, which the degrade path shares. */
-        sig = pass_through;
-        if (ptrace(PTRACE_CONT, pid, NULL, (void *)(long)sig) != 0 && errno != ESRCH) {
-            /* A tracee we cannot resume is a build we are about to hang.
-             * Stop tracing entirely and let every remaining stop resolve
-             * itself: detaching resumes them, and after this the loop
-             * only reaps. ESRCH is ordinary - the tracee died between
-             * the wait and the continue - and is not a failure.
-             */
-            degrade("cont-failed");
-            ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        }
+        resume(pid, pass_through, "signal");
     }
 
     if (!child_seen) {

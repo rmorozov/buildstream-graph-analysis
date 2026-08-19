@@ -218,16 +218,25 @@ The spine is **opt-in**, and that is a measurement too (`UX-108`):
 `examples/08-process-storm` (575 processes/second, a fixture built
 because no project in this repository was process-dense enough to ask
 the question). The rule was stated before the numbers — under 2% it
-defaults on, over it stays a flag — and the numbers chose.
+defaults on, over it stays a flag — and the numbers chose. Those two
+percentages are kept as the figures that made the decision; `UX-112`
+then showed the ratio is a fact about the fixture's baseline rather than
+about the tool, and the per-process form below supersedes them.
 
 `UX-112` later re-measured that as a full {spine} × {opens} factorial and
-found the ratio unstable and the unit wrong: the price is **about a
-millisecond per process**, which is +41–56% on `examples/08` and below
-the spread on `examples/06`. The predicted spine × opens interaction is
+found the ratio unstable and the unit wrong. `UX-129` then found the
+replacement headline overshot too, and narrowed it to what five
+independent measurements support: the price is **0.3 to 1.1 ms per
+process**, below the spread on `examples/06` and clearly visible on
+`examples/08`. The spread is machine state rather than uncertainty
+within a run — the tightest measurement, five interleaved `off`/`on`
+pairs, gives +0.79s on 2003 processes (0.39 ms), with the raw figures in
+[`docs/audits/data/spine-cost-storm.md`](../audits/data/spine-cost-storm.md). The predicted spine × opens interaction is
 not there — on the process-dense fixture the spine is *cheaper* alongside
 opens, because opens raises the baseline. `UX-113`'s
-`--trace-spine=auto` follows directly: pay the millisecond only where the
-census says the hook is blind.
+`--trace-spine=auto` follows directly: pay that cost only where the
+census says the hook is blind — which is also why the exact size of it
+matters less than it looks.
 
 ### Plane 1 knows the resolution of its own timestamps
 

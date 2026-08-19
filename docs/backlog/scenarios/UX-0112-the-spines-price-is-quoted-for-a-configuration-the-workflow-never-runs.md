@@ -71,6 +71,15 @@ the dearer single mechanism.
 
 ### The matrix, five repeats a cell, warm-up discarded
 
+> **The 822s below are stale, and were already stale when written
+> (`UX-132`).** `UX-123` landed one commit earlier and collapsed exec
+> chains, making `examples/06` **813** processes; this file quoted the
+> pre-collapse figure fresh, which is exactly the failure `UX-132` was
+> filed for — the annotate-what-you-invalidate convention existed only
+> where one author remembered it. The timings and the conclusions drawn
+> from them are unaffected: 822 vs 813 is a 1.1% change in a divisor
+> whose own spread is larger.
+
 | fixture | opens | spine | wall | vs base |
 |---|---|---|---|---|
 | `examples/06` (822 processes / 30s) | off | off | 30.36s (sd 1.08) | — |
@@ -140,3 +149,18 @@ per-process cost rather than a combination price that does not exist.
 Done 2026-08-19. Forty real builds, cold cache each, first run of every
 cell discarded as machine warm-up; `matrix.json` carries the raw
 figures.
+
+> **Two corrections from `UX-129` (2026-08-19).**
+>
+> 1. **`matrix.json` was never checked in.** A cited file that does not
+>    exist is a citation to nothing. The raw figures now live in
+>    [`docs/audits/data/spine-cost-storm.md`](../../audits/data/spine-cost-storm.md),
+>    in a form the repository can keep.
+> 2. **The headline overshot its own inputs.** *"Roughly a millisecond
+>    per process … reconciles every figure this repository has
+>    published"* does not survive the set it claims to reconcile, which
+>    spans 0.32–1.14 ms; and *"the absolute cost barely moved — +1.5 to
+>    +2.3 seconds"* excludes two of the three prior figures. The claim is
+>    now stated as the measured range with its spread named. The
+>    *refutation* this task was filed for — no spine × opens interaction —
+>    stands, independently reconfirmed twice.

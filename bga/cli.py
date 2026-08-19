@@ -40,7 +40,12 @@ from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
 from .replay.scheduler import build_contention_calibration
-from .run_store import StoreError, resolve as resolve_run_alias
+from .run_store import (
+    StoreError,
+    resolve as resolve_run_alias,
+    resolve_plane2 as resolve_plane2_alias,
+    sibling_plane2,
+)
 from .report.ci_comment import render_ci_comment
 from .report import (
     SWEEP_CAPACITY_MODEL_CAVEAT,
@@ -871,6 +876,22 @@ def cmd_correlate(args: argparse.Namespace) -> int:
     the evidence behind that choice."""
     from bga.correlate import correlate, format_correlation
 
+    if args.native_report is None:
+        # UX-134: inferred from what is on disk, never from how the run
+        # directory was spelled - so `@last` and the full path it
+        # resolves to behave identically.
+        args.native_report = sibling_plane2(args.directory)
+        if args.native_report is None:
+            print(
+                f"Error: no Plane 2 report given, and none beside "
+                f"{args.directory}. Pass one, or point this at a snapshot "
+                f"(`bga correlate @last`), which keeps the run and its report "
+                f"together.",
+                file=sys.stderr,
+            )
+            return 2
+        print(f"Plane 2: {args.native_report}", file=sys.stderr)
+
     try:
         with open(args.native_report, 'r', encoding='utf-8') as f:
             native_report = json.load(f)
@@ -1292,9 +1313,16 @@ def create_parser() -> argparse.ArgumentParser:
              "merge half of the granularity findings is computed from (UX-100).",
     )
     correlate_parser.add_argument(
-        'native_report', type=str,
-        help='Path to the JSON report written by `tools/bst_native_build_tracer.py run` (Plane 2). '
-             'Capture both from one build with `run --wrapped-log`.',
+        'native_report', type=str, nargs='?', default=None,
+        help='Path to the JSON report written by `bga capture run` (Plane 2). '
+             'Capture both from one build with `run --wrapped-log --run-dir`, '
+             'or let `bga snapshot` do it. UX-134: optional when the run '
+             'directory has a plane2.json beside it, as every snapshot does - '
+             '`bga correlate @last` then joins the pair that came from one '
+             'build, which is the pairing this command is easiest to get '
+             'wrong by hand. Accepts a snapshot alias too, so '
+             '`bga correlate @prev @last` names a report from one snapshot '
+             'and a run from another when that is what you mean.',
     )
     correlate_parser.set_defaults(func=cmd_correlate)
 
@@ -1485,6 +1513,12 @@ def create_parser() -> argparse.ArgumentParser:
 _RUN_DIRECTORY_ARGS = ('directory', 'baseline', 'candidate')
 _RUN_DIRECTORY_LIST_ARGS = ('run_dirs', 'baseline_run', 'calibration_dir')
 
+# UX-134: the store holds both halves of a capture, so both halves take
+# its names. Kept as a separate tuple because they resolve to a
+# different file inside the same snapshot, not because they are a
+# different kind of argument.
+_PLANE2_ARGS = ('native_report', 'plane2', 'baseline_plane2', 'candidate_plane2')
+
 
 def _resolve_run_aliases(args: argparse.Namespace) -> None:
     """Turn snapshot aliases into paths, in place.
@@ -1502,6 +1536,10 @@ def _resolve_run_aliases(args: argparse.Namespace) -> None:
         values = getattr(args, name, None)
         if isinstance(values, list):
             setattr(args, name, [resolve_run_alias(v) for v in values])
+    for name in _PLANE2_ARGS:
+        value = getattr(args, name, None)
+        if isinstance(value, str):
+            setattr(args, name, resolve_plane2_alias(value))
 
 
 def main(argv: Optional[list[str]] = None) -> int:

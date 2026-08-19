@@ -348,8 +348,9 @@ bga correlate /tmp/run /tmp/plane2.json
 ```
 
 Inside a project, `bga snapshot` has already run the first two and kept
-both artifacts together, so the join is the last line alone:
-`bga correlate @last <snapshot>/plane2.json`.
+both artifacts together, so the join is `bga correlate @last` — the
+report beside that run is the one it came from, and naming it again is
+the mistake, not the safeguard (`UX-134`).
 
 This produces what neither plane can alone — see [the real example above](#on-a-real-project). Rows are ordered by evidence strength, strongest measurement first and explicitly hedged ones last; every row states its own measurement coverage; and a Plane 2 name that is not a declared element is excluded and listed rather than quietly recommended. The negative result matters too: an element reported as *already compute-bound* is one to stop looking inside.
 

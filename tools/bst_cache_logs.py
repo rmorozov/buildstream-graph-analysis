@@ -1195,11 +1195,26 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="A Plane 2 report (`bga capture run`'s JSON) from the same build. "
              "Adds the traced configure measurement beside Plane 3's self-reported "
              "one (UX-102) - the two are different quantities and are shown side "
-             "by side, never summed.",
+             "by side, never summed. Takes a snapshot alias (`@last`, `@prev`, "
+             "`@<stamp-prefix>`) as well as a path (UX-134).",
     )
     parser.add_argument('-f', '--format', choices=['text', 'json'], default='text')
     parser.add_argument('-o', '--output', default=None, help='Write here instead of stdout.')
     args = parser.parse_args(argv)
+
+    # UX-134: this command is dispatched straight to `tools/`, so it never
+    # passes through `bga.cli`'s own alias resolution - which left
+    # `--native-report` as the one Plane 2 argument the store could not
+    # name. Resolved before anything is read, so an argument that cannot
+    # be honoured is reported as itself rather than behind whatever the
+    # log-tree lookup happens to say first.
+    if args.native_report:
+        from bga.run_store import StoreError, resolve_plane2
+        try:
+            args.native_report = resolve_plane2(args.native_report)
+        except StoreError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 1
 
     # UX-127: work out what the user actually handed us.
     project = args.project

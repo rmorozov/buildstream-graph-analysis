@@ -803,3 +803,54 @@ class TestTheWrongArgumentRedirects:
     def test_project_name_still_works_unchanged(self, log_tree, capsys):
         assert main([str(log_tree), "--project", "my-project"]) == 0
         assert "Cached Build Logs" in capsys.readouterr().out
+
+
+class TestThePlane2ReportTakesASnapshotNameToo:
+    """UX-134: this command is dispatched straight to `tools/`, so it
+    never passes through `bga.cli`'s alias resolution — which made
+    `--native-report` the one Plane 2 argument the store could not name.
+    A seam one command wide is still a seam.
+    """
+
+    def _project_with_a_snapshot(self, tmp_path, with_plane2=True):
+        from bga import run_store
+
+        project = tmp_path / "proj"
+        project.mkdir()
+        (project / "project.conf").write_text("name: my-project\nmin-version: 2.0\n")
+        snapshot = run_store.new_snapshot_dir(str(project))
+        os.makedirs(os.path.join(snapshot, "run"))
+        if with_plane2:
+            with open(os.path.join(snapshot, "plane2.json"), "w") as handle:
+                json.dump({"by_element": {}, "configure_phase": {}}, handle)
+        return project, snapshot
+
+    def test_an_alias_names_the_snapshots_report(
+            self, tmp_path, log_tree, monkeypatch, capsys):
+        project, snapshot = self._project_with_a_snapshot(tmp_path)
+        monkeypatch.setenv("XDG_CACHE_HOME", str(log_tree.parent))
+        (log_tree.parent / "buildstream").mkdir(exist_ok=True)
+        shutil.copytree(log_tree, log_tree.parent / "buildstream" / "logs")
+        monkeypatch.chdir(project)
+
+        assert main([str(project), "--native-report", "@last"]) == 0
+
+        assert "my-project" in capsys.readouterr().out
+
+    def test_an_alias_with_no_report_fails_by_name_not_as_a_missing_file(
+            self, tmp_path, monkeypatch, capsys):
+        project, _snapshot = self._project_with_a_snapshot(tmp_path, with_plane2=False)
+        monkeypatch.chdir(project)
+
+        assert main([str(project), "--native-report", "@last"]) == 1
+
+        assert "no plane2.json" in capsys.readouterr().err
+
+    def test_an_explicit_path_is_unchanged(self, tmp_path, monkeypatch, capsys):
+        project, snapshot = self._project_with_a_snapshot(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        assert main([str(project), "--native-report",
+                     os.path.join(snapshot, "plane2.json")]) == 1
+
+        assert "no plane2.json" not in capsys.readouterr().err

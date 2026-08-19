@@ -540,3 +540,14 @@ def test_the_guides_teach_the_two_line_loop():
     quick_path = guide.split("## Step 1", 1)[0]
     assert "bga snapshot -- bst build" in quick_path
     assert "bga compare @prev @last" in quick_path
+
+
+def test_the_cli_reference_does_not_still_say_run_directories_only():
+    """UX-134's acceptance asks for the note to be *deleted* rather than
+    reworded: the seam it apologised for is closed, and a reference that
+    still warns about it sends the reader to type the longer form."""
+    reference = (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
+
+    assert "Run *directories* only" not in reference
+    assert "bga correlate @last\n" in reference, (
+        "the short form the note was standing in for is not documented")

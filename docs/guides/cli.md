@@ -94,19 +94,36 @@ a second shape. `.bga/` gitignores itself.
 
 ### Naming runs: `@last`, `@prev`, `@<stamp-prefix>`
 
-Every command that takes a run directory takes one of these instead:
+Every argument that names a run directory takes one of these instead —
+and so does every argument that names a Plane 2 report, since a snapshot
+holds both halves of the capture (`UX-134`):
 
 ```bash
 bga analyze @last
 bga compare @prev @last
 bga cache-trend @prev @last
-bga analyze @20260819                 # by stamp prefix, if it is unambiguous
+bga analyze @20260819                          # by stamp prefix, if unambiguous
+bga analyze @last --plane2 @last
+bga compare @prev @last --baseline-plane2 @prev --candidate-plane2 @last
+bga cache-logs . --native-report @last
 ```
 
-Run *directories* only. `bga correlate`'s Plane 2 report and
-`--plane2`/`--baseline-plane2` are still paths, so the join reads
-`bga correlate @last .bga/runs/<stamp>/plane2.json` — the snapshot has
-both artifacts side by side, but only one of them has a name (`UX-134`).
+**One alias is one snapshot**, whichever of its files is being asked
+for, so `bga correlate @prev @last` means a run from one and a report
+from another *because you said so* rather than by accident.
+
+And the join does not need to be told twice at all:
+
+```bash
+bga correlate @last          # the report beside that run is the one it came from
+```
+
+The Plane 2 report is optional whenever there is one sitting beside the
+run directory, which is true of every snapshot and of anything
+`bga capture run --run-dir` wrote. That is read off the filesystem, not
+off whether an alias was used, so an explicit path to a snapshot's `run/`
+behaves identically; the inferred path is printed. Where there is
+nothing to infer the argument is still required, and says so.
 
 The store is *resolution* and nothing else: an explicit path means what
 it always meant, no run-directory format changed, and comparability
@@ -121,7 +138,10 @@ from inside a project, or pass a path.
 
 `@prev` with only one snapshot on disk gets its own message — *"@prev
 needs two snapshots and PROJECT has one"* — because that is a different
-problem from a typo'd path.
+problem from a typo'd path. So does an alias whose snapshot recorded
+Plane 1 and not Plane 2: *"@prev resolves to 20260819T183424Z, which has
+no plane2.json"*, which is a fact about that capture rather than about
+your typing.
 
 ### Sticky flags
 
@@ -537,14 +557,18 @@ What to do next (ranked by Plane 1 impact):
     (81% of this element's processes were measured)
 ```
 
-Capture both artifacts from one build — or let
-[`bga snapshot`](#bga-snapshot--the-local-loop-ux-126) run the first two
-and keep them together:
+Inside a project this is one line, because `bga snapshot` already
+captured both halves and kept them together:
 
 ```bash
-bga capture run --wrapped-log /tmp/plane1.log \
+bga correlate @last
+```
+
+Elsewhere, capture both artifacts from one build and name them:
+
+```bash
+bga capture run --wrapped-log /tmp/plane1.log --run-dir /tmp/run \
     /path/to/project /tmp/plane2.json -- bst build <target>
-bga extract --format wrapped /path/to/project /tmp/plane1.log /tmp/run
 bga correlate /tmp/run /tmp/plane2.json
 ```
 

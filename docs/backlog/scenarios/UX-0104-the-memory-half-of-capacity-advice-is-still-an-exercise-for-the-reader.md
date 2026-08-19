@@ -174,6 +174,32 @@ memory-feasible capacity is a recommendation to swap.
 Tests: 11 new in `tests/unit/test_memory_envelope.py`. Suite: 1299 →
 1310.
 
+### The fdsdk clause, closed a round late (`UX-124`)
+
+This task's acceptance named an fdsdk check and recorded it
+**unattainable**: the retained captures predated `host_memory_mb`, so the
+envelope had no host figure to divide into. One day later `UX-108`'s
+capture shipped with the field, and nobody came back to it.
+
+Run against that capture (run `32223468993`):
+
+```text
+Memory envelope: 4 builders of this shape peak at ~4.0 GB of 15.6 GB (25%); 11 would
+still fit, so memory is not what binds first here
+  its largest single process peaked at 1906 MB resident - see the memory envelope
+  above for what that means for `builders`
+```
+
+Both halves of the clause: the envelope computed from the real
+per-element peaks, and the per-element row pointing at it instead of
+handing the reader a multiplication. The README's own sample still
+performed that multiplication and now shows the envelope beside it.
+
+Nothing in the envelope logic changed — the clause was always
+satisfiable, by a capture that did not exist when it was written and did
+by the next morning. Worth recording as a pattern: *"unattainable"* is a
+statement about the data on hand, and it expires.
+
 ## Verification Log
 
 Done 2026-08-18. The `examples/06` figures are a real dual-plane capture

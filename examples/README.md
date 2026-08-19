@@ -200,6 +200,22 @@ An over-eager detector flags both; an inert one flags neither. Full
 detail in that project's own
 [`README.md`](07-declared-vs-used-dependencies/README.md).
 
+## 08-process-storm
+
+Two thousand short-lived `cat /dev/null` processes in one sandbox — 575
+processes per second against `06-macro-micro-optimization`'s 18/s. It
+exists because `UX-106`'s overhead budget names a configure-heavy
+fixture and no project in this repository was one: `06`'s wall clock is
+`cc1plus`, so any per-process tracing cost hides inside it.
+
+```
+Processes traced: 2003 (2000 matched, 3 no observed exit)
+Wall span: 3.484s
+```
+
+Used by `UX-108` to decide whether the ptrace spine defaults on. Full
+detail in that project's own [`README.md`](08-process-storm/README.md).
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

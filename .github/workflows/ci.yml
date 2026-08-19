@@ -227,7 +227,7 @@ jobs:
 
       - name: The bst-gated tier runs, and every one of it passes
         # `-m bst` is the assertion, not a convenience: it selects exactly
-        # the marked tier, so "18 passed" is a claim about the tier rather
+        # the marked tier, so "21 passed" is a claim about the tier rather
         # than about the suite. A skip inside it would still show as
         # `passed` in the exit code, hence the explicit count check below.
         #
@@ -265,14 +265,14 @@ jobs:
             exit 1
           fi
           # Not anchored to column 0: pyproject's `addopts = "-v"` makes
-          # the summary line `===== 19 passed, 1215 deselected in ... =====`.
-          # Bounded on both sides so "119 passed" cannot satisfy it.
-          grep -qE "(^|[[:space:]=])19 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
-            echo "Expected exactly 19 bst-gated tests to run. Got:" >&2
+          # the summary line `===== 21 passed, 1215 deselected in ... =====`.
+          # Bounded on both sides so "121 passed" cannot satisfy it.
+          grep -qE "(^|[[:space:]=])21 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
+            echo "Expected exactly 21 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1
           }
-          echo "19 bst-gated tests ran, none skipped."
+          echo "21 bst-gated tests ran, none skipped."
 
       - name: The whole suite, with bst present
         # The tier does not live in isolation: an extraction change can
@@ -547,6 +547,25 @@ jobs:
             --raw-log "$OUT/native-baseline.rawlog" \
             "$PROJ" "$OUT/native-baseline.json" \
             -- bst --builders 4 --max-jobs 4 build all.bst > "$OUT/native-baseline.txt" 2>&1
+
+      - name: Capture 01-resource-contention with the ptrace spine (UX-108)
+        # The value case for the spine, on the project that has never had
+        # a Plane 2 capture at all: every command `examples/01` runs is
+        # static busybox, which `LD_PRELOAD` structurally cannot reach.
+        # Both planes from one build (`--wrapped-log`) so the spine's
+        # per-element wall spans can be read against Plane 1's task spans
+        # - and `sleep 3` is the known answer no other fixture provides:
+        # ~0 CPU over ~3s wall, eight times over.
+        run: |
+          set -euo pipefail
+          OUT=artifacts/01-resource-contention
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          python3 -m tools.bst_native_build_tracer run --trace-spine \
+            --raw-log "$OUT/native-spine.rawlog" \
+            --wrapped-log "$OUT/native-spine-plane1.log" \
+            examples/01-resource-contention "$OUT/native-spine.json" \
+            -- bst --builders 2 build all.bst > "$OUT/native-spine.txt" 2>&1
 
       - name: Upload real-build artifacts
         if: always()

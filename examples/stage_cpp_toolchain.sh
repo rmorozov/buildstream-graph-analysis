@@ -261,7 +261,8 @@ echo "Staged toolchain to $DEST ($(du -sh "$DEST" | cut -f1))"
 for clone in \
     "$HERE/06-macro-micro-optimization/files/toolchain" \
     "$HERE/06-macro-micro-optimization/optimized/files/toolchain" \
-    "$HERE/07-declared-vs-used-dependencies/files/toolchain"; do
+    "$HERE/07-declared-vs-used-dependencies/files/toolchain" \
+    "$HERE/08-process-storm/files/toolchain"; do
   rm -rf "$clone"
   mkdir -p "$(dirname "$clone")"
   cp -al "$DEST" "$clone"

@@ -149,3 +149,20 @@ def test_a_ref_carrying_neither_layout_is_an_error_not_an_empty_set(tmp_path, mo
     monkeypatch.setattr(subprocess, 'run', _run)
     with pytest.raises(RuntimeError, match="neither run/ nor capture.tar.gz"):
         fetch_run_directory('origin', {'ref': 'captures/x'}, str(tmp_path / "dest"))
+
+
+def test_a_spine_capture_does_not_silently_join_a_hook_only_band():
+    """UX-108: the spine records more processes and costs wall clock, so
+    a band mixing the two measures the tooling change rather than the
+    build's noise."""
+    from tools.bst_baseline_set import check_homogeneity
+
+    members = [
+        {"ref": {"ref": "captures/fdsdk/abc-incremental-b4j4-1"},
+         "context": {"fdsdk_ref": "abc", "trace_spine": "false"}},
+        {"ref": {"ref": "captures/fdsdk/abc-incremental-b4j4-2"},
+         "context": {"fdsdk_ref": "abc", "trace_spine": "true"}},
+    ]
+    result = check_homogeneity(members)
+
+    assert [m["field"] for m in result["mismatches"]] == ["trace_spine"]

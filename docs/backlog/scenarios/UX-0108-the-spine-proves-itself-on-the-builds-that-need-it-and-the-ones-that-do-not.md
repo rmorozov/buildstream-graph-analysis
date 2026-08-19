@@ -55,3 +55,112 @@ Items 1-3 *are* the acceptance test; each produces a number or a
 rendered report named above, pasted into the verification log. The
 decision rule for item 3's default is stated before the measurement
 and the shipped default matches it.
+
+---
+
+## Fix Implemented
+
+### The value case: `examples/01` measures a known answer
+
+Every command `examples/01-resource-contention` runs is `sleep 3`
+through static busybox. Its Plane 2 capture has been empty for as long
+as Plane 2 has existed. With `--trace-spine`, one build, both planes:
+
+```text
+Real CPU time (getrusage, 24 from /proc at the ptrace exit-stop): 0.00s across 24 of 24
+  work-a.bst    0.00s CPU over   3.01s wall =  0.00 cores busy
+  work-b.bst    0.00s CPU over   3.01s wall =  0.00 cores busy
+  …
+  work-h.bst    0.00s CPU over   3.01s wall =  0.00 cores busy
+
+Peak Memory (largest single process per element):
+  work-a.bst    1.5 MB
+```
+
+`sleep 3` is the one fixture in this repository whose answer is known
+before the measurement: ~0 CPU over ~3s wall, and eight elements doing
+identical work must measure identically. Both hold, eight times, to
+2ms. The per-element CPU and peak-memory blocks render for elements
+that have never had them.
+
+`sleep` arrives as the shell's own command line rather than as a
+separate `exec` — busybox runs it as a built-in applet — so what the
+argv identifies is the applet, not a second process. The 3.011s and the
+0 CPU are the shell's, and they are the sleep's.
+
+Two `bst`-gated tests hold this: the known answer and the
+self-consistency it implies. CI's `bst-examples` job now takes the same
+capture on every push, with both planes, so the data exists to look at
+when a future question needs it.
+
+### A Plane 1 defect the ground truth exposed
+
+The task asks the spine's per-element spans to **bracket** Plane 1's
+task spans. They do not, in either direction, and the reason is Plane
+1's:
+
+| element | Plane 1 | Plane 2 |
+|---|---|---|
+| work-a … work-f | 3.004 – 3.005s | 3.010 – 3.012s |
+| work-g | **2.687s** | 3.010s |
+| work-h | **2.686s** | 3.010s |
+
+Plane 1's spread across eight identical elements is **0.319s**; Plane
+2's is **0.002s**. Two of the eight are reported 11% shorter than the
+`sleep 3` they ran, which is not imprecise but impossible.
+`work-g`'s BuildStream log file is named `…build.20260819-061746.log`
+while the wrapper stamped its `START` at `06:17:47.199`: a wrapped line
+is stamped when the wrapper *reads* it, and BuildStream flushes in
+bursts.
+
+Filed as `UX-110` rather than absorbed into a tolerance here. The test
+asserts agreement within 1.0s and says why that is the honest assertion,
+which is a deviation from this task's wording, recorded rather than
+smoothed.
+
+### The overhead, and the decision it was supposed to make
+
+Ten runs per mode on `examples/06`, five on `examples/08-process-storm`,
+a fresh cold cache for every one:
+
+| fixture | processes | hook | spine | overhead |
+|---|---|---|---|---|
+| `examples/06` (compile-bound, 18 proc/s) | 822 | 45.90s (sd 0.59) | 47.15s (sd 1.36) | **+2.7%** |
+| `examples/08` (process-dense, 575 proc/s) | 2003 | 7.32s (sd 0.24) | 8.31s (sd 0.26) | **+13.5%** |
+
+The decision rule was stated before the measurement: within the 2%
+budget the spine defaults on with the hook, past it the flag stays
+opt-in. **Both fixtures are past it, so `--trace-spine` stays opt-in**,
+and the report's own footnote now names it and its price where a reader
+is already looking at the gap:
+
+```text
+… This bounds what the trace can be missing; it does not measure what it did miss
+(UX-105). Re-run with `bga capture run --trace-spine` to record them anyway: a
+ptrace process-event tracer sees a process whatever its linkage, at a measured
++2.7% wall on a compile-bound build and +13.5% on a process-dense one, which is
+why it is not the default.
+```
+
+Two things worth stating rather than rounding away:
+
+- **`UX-106`'s 6.9% was an over-estimate.** That figure came from n=2
+  and its own doc said so ("n=2 is weak evidence for the exact figure
+  and ample for 'it is not under 2%'"). At n=10 it is 2.7%, and the
+  weaker claim was the true one.
+- **The cost is not a constant per process.** 1.5ms per process on
+  `examples/06`'s four-way parallel compile against 0.5ms on the serial
+  storm — a 3× difference in the quantity that would let anyone
+  extrapolate to a real project. Neither fixture predicts fdsdk, which
+  is why fdsdk was captured rather than modelled.
+
+### The fixture the budget named and no project was
+
+`examples/08-process-storm` exists because `UX-106`'s budget names a
+configure-heavy fixture and instructs whoever implements it to build one
+if none exists. None did: `examples/06` runs 822 processes across 45s
+(18/s) and its wall clock is `cc1plus`, so a per-process cost hides
+inside it. The storm runs 2003 in 3.5s (**575/s**) — `cat /dev/null` in
+a shell loop, dynamically linked so the hook can see them too, because a
+fixture whose processes only one mechanism can see would measure that
+mechanism against nothing.

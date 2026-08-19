@@ -20,6 +20,11 @@ bga capture run PROJECT native.json -- bst build T  # Plane 2, inside the sandbo
 bga correlate run/ native.json                      # join the two planes
 ```
 
+For the local loop specifically, those are the plumbing: `bga snapshot`
+runs the capture, the extraction and the analysis together and compares
+against the previous one. See
+[`bga snapshot`](#bga-snapshot--the-local-loop-ux-126) below.
+
 Before this, the same workflow alternated between `bga <cmd>` and
 `python3 -m tools.<module>` at nearly every step — 74 occurrences across  <!-- docs-style: allow-direct-module -->
 the docs and CI.
@@ -52,9 +57,105 @@ import the native tracer and the trace converters on every run.
 | `bga native-to-chrome` | `tools.native_trace_to_chrome_trace` |
 | `bga cross-check` | `tools.bga_cross_check` |
 | `bga gen-synthetic` | `tools.gen_synthetic_scale_run` |
+| `bga snapshot` | `tools.bga_snapshot` |
 | `bga doctor` | `tools.bga_doctor` |
 | `bga cache-logs` | `tools.bst_cache_logs` |
 | `bga baseline` | `tools.bst_baseline_set` |
+
+## `bga snapshot` — the local loop (`UX-126`)
+
+```bash
+cd /path/to/your/project
+bga snapshot -- bst build target.bst   # capture + extract + analyze
+# ...edit...
+bga snapshot -- bst build target.bst   # ...and compare against the previous one
+```
+
+That is the whole local workflow. It replaces three commands and five
+paths the user has to invent:
+
+```bash
+bga capture run --wrapped-log /tmp/plane1.log --trace-opens \
+    /path/to/project /tmp/plane2.json -- bst build target.bst
+bga extract --format wrapped /path/to/project /tmp/plane1.log /tmp/run
+bga analyze /tmp/run --plane2 /tmp/plane2.json
+```
+
+`snapshot` composes exactly those commands — it does not reimplement
+them — so every number, every refusal and every hedge is the one the
+explicit form produces. In particular a cross-mode pair (a caches-off
+run against a caches-on one) is refused with exit 6, as it is when the
+paths are typed out (`UX-78`).
+
+Captures go to `.bga/runs/<UTC-stamp>/` under the project, holding
+`run/`, `plane2.json`, the wrapped log and a `capture-context.txt` — the
+same layout the published capture refs use, so nothing downstream learns
+a second shape. `.bga/` gitignores itself.
+
+### Naming runs: `@last`, `@prev`, `@<stamp-prefix>`
+
+Every command that takes a run directory takes one of these instead:
+
+```bash
+bga analyze @last
+bga compare @prev @last
+bga correlate @last /tmp/plane2.json
+bga cache-trend @prev @last
+bga analyze @20260819                 # by stamp prefix, if it is unambiguous
+```
+
+The store is *resolution* and nothing else: an explicit path means what
+it always meant, no run-directory format changed, and comparability
+rules are untouched. Outside a project an alias fails by name rather
+than as a missing path, with exit 2:
+
+```text
+Error: @last is a snapshot alias, and there is no BuildStream project here to
+resolve it against (no project.conf in this directory or any parent). Run it
+from inside a project, or pass a path.
+```
+
+`@prev` with only one snapshot on disk gets its own message — *"@prev
+needs two snapshots and PROJECT has one"* — because that is a different
+problem from a typo'd path.
+
+### Sticky flags
+
+`--trace-opens` and `--trace-spine` are recorded in `.bga/config` and
+reused until changed, so they are decided once per project rather than
+retyped per capture:
+
+```bash
+bga snapshot --trace-spine=off -- bst build target.bst   # and stays off
+```
+
+A new project starts at `--trace-opens --trace-spine=auto`. Stickiness
+is safe because every report records what actually ran (`UX-95`,
+`UX-113`), so a remembered flag cannot make a capture *claim* something
+it did not do.
+
+### Other flags
+
+| flag | what it does |
+|---|---|
+| `--list` | List this project's snapshots, showing which are `@last`/`@prev` |
+| `--no-compare` | Take the snapshot and report on it; skip the comparison |
+| `--project PATH` | Snapshot a project other than the enclosing one |
+
+`bga snapshot` exits with **the wrapped build's own exit code**. A
+failed build is not a successful snapshot; equally, a comparison verdict
+does not change the exit code — the CI gates live on `bga compare`
+(`--fail-on-regression` and friends), which is what CI should call.
+
+There is no retention policy: snapshots are build artifacts, `.bga/runs`
+entries can be deleted at any time, and the only thing `bga` does about
+size is warn once the store passes 2 GB.
+
+### The same job in CI
+
+Use published capture refs (`bga baseline`, `UX-96`) rather than the
+store. The store is the laptop's analogue of them, and a CI runner has
+no persistent project directory to keep one in.
 
 ## Installation
 

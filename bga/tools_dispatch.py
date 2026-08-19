@@ -26,6 +26,16 @@ reads as one tool:
     bga capture run . native.json -- bst build
     bga correlate run/ native.json
 
+`UX-126` then went one step further for the local loop specifically:
+those five are the plumbing, and the thing a user actually does twice a
+day is
+
+    bga snapshot -- bst build all.bst
+
+which runs the capture, the extraction and the analysis into a
+project-local store, and compares against the previous snapshot. It is
+built *out of* the aliases above rather than beside them.
+
 **Dispatch is lazy on purpose.** `importlib.import_module` is called only
 for the alias actually invoked, so `bga analyze` does not pay to import
 the native tracer, the Chrome-trace converters and the synthetic-run
@@ -90,6 +100,10 @@ TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
     "gen-synthetic": (
         "tools.gen_synthetic_scale_run",
         "Generate a synthetic run directory at a chosen scale",
+    ),
+    "snapshot": (
+        "tools.bga_snapshot",
+        "The whole local loop: capture + extract + analyze, and compare with the last one",
     ),
     "doctor": (
         "tools.bga_doctor",

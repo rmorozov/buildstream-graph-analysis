@@ -496,3 +496,47 @@ def test_the_table_status_matches_the_task_files():
         + "\nUpdate the row in docs/backlog/scenarios/README.md in the same "
           "commit as the file (docs/contributing/fixing-guide.md)."
     )
+
+
+def test_every_bga_command_the_docs_tell_you_to_type_exists():
+    """UX-126 extended this: the guides now teach `bga snapshot` first,
+    and a front door named in a guide but absent from the dispatch table
+    is worse than an undocumented one - the reader types it and gets
+    argparse's "invalid choice".
+
+    Both halves of the CLI are checked, because a reader cannot tell
+    them apart: the tool aliases in `tools_dispatch` and the analyzer's
+    own subcommands.
+    """
+    from bga.cli import create_parser
+    from bga.tools_dispatch import TOOL_ALIASES
+
+    known = set(TOOL_ALIASES)
+    for action in create_parser()._actions:
+        if getattr(action, "choices", None) and action.dest == "command":
+            known |= set(action.choices)
+
+    command_re = re.compile(r"\bbga ([a-z][a-z-]*)")
+    offenders = []
+    for path in _instructional_files():
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            for name in command_re.findall(line):
+                # `bga --help`, `bga doctor` and friends are commands;
+                # prose like "bga refuses" is not, so only flag a word
+                # that looks like one and is not known.
+                if name in known or name in {"is", "does", "refuses", "says", "and", "on", "can", "it"}:
+                    continue
+                offenders.append(f"{path.relative_to(REPO)}:{number}: bga {name}")
+    assert offenders == [], (
+        "documented `bga <command>` with no such command:\n  " + "\n  ".join(offenders))
+
+
+def test_the_guides_teach_the_two_line_loop():
+    """UX-126's acceptance: the quick path is the loop, not the
+    plumbing. Pinned because the three-command form is what three audit
+    rounds actually ran, and it will drift back without a guard."""
+    guide = (REPO / "docs" / "guides" / "real-project.md").read_text(encoding="utf-8")
+
+    quick_path = guide.split("## Step 1", 1)[0]
+    assert "bga snapshot -- bst build" in quick_path
+    assert "bga compare @prev @last" in quick_path

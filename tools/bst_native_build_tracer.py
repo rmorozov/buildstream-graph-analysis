@@ -2962,7 +2962,12 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
                 "policy": ("on" if traced == len(sandboxes)
                            else "off" if traced == 0 else "auto"),
             }
-    if invocation_log_path and plane1_log_path:
+    # `os.path.exists` and not just a truthy path: a build in which no
+    # sandbox ran at all - every element a cache hit, which is the
+    # *ordinary* second run of UX-126's loop - never creates the file,
+    # and this used to raise FileNotFoundError from inside the capture,
+    # after the build, discarding a report that was otherwise complete.
+    if invocation_log_path and os.path.exists(invocation_log_path) and plane1_log_path:
         invocations = [
             json.loads(line) for line in open(invocation_log_path, errors="replace")
             if line.strip()
@@ -3708,7 +3713,13 @@ def _spine_policy(flag: str):
     return {"off": False, "on": True, "auto": "auto"}[flag]
 
 
-def main() -> int:
+def main(argv: Optional[List[str]] = None) -> int:
+    """`argv` defaults to `sys.argv[1:]`, as argparse does.
+
+    Named so this is callable in-process (`UX-126`'s `bga snapshot`
+    composes `capture run` rather than reimplementing it); every existing
+    caller passes nothing and is unaffected.
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -3765,6 +3776,18 @@ def main() -> int:
              "invocation (tools/bst_log_to_chrome_trace.py-ready) - lets one real build feed both "
              "planes for tools/native_trace_to_chrome_trace.py's combined mode.",
     )
+    run_parser.add_argument(
+        "--run-dir", metavar="PATH",
+        help="UX-126: also extract a bga run directory (`bga analyze`'s input) "
+             "into PATH, from the Plane 1 log this same invocation captures. "
+             "This tool already holds every input `bga extract` needs - the "
+             "project, the wrapped log, the report path - so the second command "
+             "existed because the pieces shipped in different rounds, not "
+             "because a user benefits from typing them again. Implies "
+             "--wrapped-log; without one named, the log goes to a temporary "
+             "path, since its value here is the run directory rather than the "
+             "file.",
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -3802,7 +3825,7 @@ def main() -> int:
         "--json", action="store_true", help="Emit JSON instead of a summary",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.command == "census":
         elements_dir = os.path.join(args.project_dir, "elements")
@@ -3839,10 +3862,20 @@ def main() -> int:
             )
 
         raw_log_path = args.raw_log or os.path.join(tempfile.mkdtemp(prefix="bst-native-trace-log-"), "trace.log")
+        # UX-126: a run directory is extracted *from* the Plane 1 log, so
+        # asking for one asks for the log. Same shape as UX-80's implied
+        # invocation record: named, it is kept; unnamed, it goes to a
+        # temporary path, because what was asked for is the artifact it
+        # feeds and not the file itself.
+        wrapped_log_path = args.wrapped_log
+        if args.run_dir and not wrapped_log_path:
+            wrapped_log_path = os.path.join(
+                tempfile.mkdtemp(prefix="bst-native-trace-plane1-"), "build.log")
+        args.wrapped_log = wrapped_log_path
         invocation_log_path = resolve_invocation_log_path(args)
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
-                                          wrapped_log_path=args.wrapped_log,
+                                          wrapped_log_path=wrapped_log_path,
                                           trace_opens=args.trace_opens,
                                           argv_log_path=args.argv_log,
                                           invocation_log_path=invocation_log_path,
@@ -3853,10 +3886,24 @@ def main() -> int:
 
         report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
                                     invocation_log_path=invocation_log_path,
-                                    plane1_log_path=args.wrapped_log)
+                                    plane1_log_path=wrapped_log_path)
         report["wrapped_command_exit_code"] = returncode
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
+        if args.run_dir:
+            # Best-effort, and after the report is on disk: a build that
+            # failed early produces a log with no `Targets:` line, and
+            # losing the Plane 2 capture over that would throw away the
+            # expensive half of what just ran.
+            from .bst_extract_run import extract_run
+            try:
+                extract_run(args.project_dir, wrapped_log_path, args.run_dir,
+                            log_format="wrapped")
+            except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+                print(f"Warning: could not extract a run directory into "
+                      f"{args.run_dir}: {exc}", file=sys.stderr)
+            else:
+                print(f"Run directory: {args.run_dir}", file=sys.stderr)
         if args.json:
             print(json.dumps(report, indent=2))
         else:

@@ -411,6 +411,7 @@ def test_a_signal_the_program_raises_itself_still_reaches_it(spine, tmp_path):
 
 # --- the shape it actually ships in (UX-119) ----------------------------
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
 def test_the_spine_is_pid_2_in_the_shape_buildstream_runs(spine, tmp_path):
     """`spine.c`'s header claimed pid 1 and justified its signal handling
@@ -428,6 +429,7 @@ def test_the_spine_is_pid_2_in_the_shape_buildstream_runs(spine, tmp_path):
     assert _pid_of_shell(["--as-pid-1"]) == "1"
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
 @pytest.mark.parametrize("script,label", [
     ("exit 0", "success"),
@@ -453,6 +455,7 @@ def test_a_traced_status_equals_an_untraced_one_inside_the_sandbox(
     assert _run([spine, "--"]) == _run([]), label
 
 
+@pytest.mark.bst
 @pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
 def test_why_the_shim_does_not_pass_as_pid_1(spine):
     """UX-119 offers passing `--as-pid-1` as the alternative to accepting

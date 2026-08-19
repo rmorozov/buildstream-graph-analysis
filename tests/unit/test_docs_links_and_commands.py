@@ -21,6 +21,8 @@ Both are style-guide rules (`docs/contributing/style-guide.md`); these are
 that can be enforced rather than asked for.
 """
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -172,16 +174,32 @@ def test_the_pinned_bst_tier_count_matches_the_number_of_marked_tests():
     documents still said fourteen. The fix for that is not to update
     four numbers - it is to stop writing the number down anywhere a
     check cannot reach.
+
+    Counted by **collecting** the tier rather than by counting
+    `@pytest.mark.bst` decorators. The two agree only while no marked
+    test is parametrized, and the first one that was (`UX-119`'s
+    status-parity check, three scripts) made the decorator count say 24
+    where CI's own `N passed` said 26. CI greps the number pytest
+    prints, so the pin has to mean what pytest means.
     """
-    marked = 0
-    for path in (REPO / "tests").rglob("test_*.py"):
-        marked += len(re.findall(r"^\s*@pytest\.mark\.bst\b", path.read_text(encoding="utf-8"), re.M))
+    collected = subprocess.run(
+        [sys.executable, "-m", "pytest", "-m", "bst", "--collect-only", "-q",
+         "-p", "no:cacheprovider", str(REPO / "tests")],
+        capture_output=True, text=True, cwd=REPO,
+    )
+    assert collected.returncode == 0, collected.stdout[-2000:] + collected.stderr[-2000:]
+    # pytest's own summary, because `pyproject.toml`'s `addopts = "-v"`
+    # keeps `-q` from producing the one-line-per-test form.
+    summary = re.search(r"(\d+)/\d+ tests collected", collected.stdout)
+    assert summary, collected.stdout[-2000:]
+    marked = int(summary.group(1))
+    assert marked, "collected no bst-marked tests at all - the marker or the path moved"
 
     workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     pinned = re.search(r"Expected exactly (\d+) bst-gated tests to run", workflow)
     assert pinned, "the bst-tests job no longer pins a count - that pin is the guard"
     assert int(pinned.group(1)) == marked, (
-        f"{marked} test(s) carry @pytest.mark.bst but .github/workflows/ci.yml pins "
+        f"{marked} bst-gated test(s) collect but .github/workflows/ci.yml pins "
         f"{pinned.group(1)}. Update the pin deliberately - it is what stops a skipped "
         f"tier reading as a pass."
     )

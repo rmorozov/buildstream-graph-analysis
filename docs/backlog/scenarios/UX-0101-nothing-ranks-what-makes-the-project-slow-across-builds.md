@@ -155,3 +155,20 @@ the cut set by what it cost - which is why the ranking prints rather
 than being withheld.
 
 Tests: 6 new in `tests/unit/test_cache_logs.py`. Suite: 1310 → 1316.
+
+## Verification Log
+
+The verification evidence for this task is the pasted real output in
+the section above — it was run, but filed without the heading the
+fixing guide names, so a reader grepping for `## Verification Log`
+found nothing on a 🟢 item. Heading added by audit round 12; the
+evidence is the fixer's own.
+
+Two round-12 notes on the evidence as filed: the run substituted a
+fresh six-build tree for the round-11 A/B/C tree the acceptance named
+(legitimate — same shape, more builds — but unrecorded), and its own
+pasted output shows `core.bst 2 builds` where the acceptance predicted
+"rebuilt in all three", also without remark. Round 12 re-ran on the
+round-11 tree: the ranking renders with the WEAK EVIDENCE hedge, and
+`--graph` correctly reattributes the libs' rebuilds to
+`rooted at core.bst`.

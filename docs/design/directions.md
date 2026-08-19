@@ -519,6 +519,50 @@ first Plane 2 records ever, fdsdk confirms no regression and the
 overhead budget). The backlog files carry the design details; this
 section stays the argument.
 
+## Direction 5: the last inch, and the next axis (argued 2026-08-19, round 12)
+
+Directions 3 and 4 are implemented. What round 12's verification says
+about where the leverage now sits, ranked:
+
+1. **Render the CI story's last inch** (`UX-115`). Every ingredient of
+   the design-doc CI comment — the band verdict, both gates, the
+   marginal element table, churn with honest labels, findings ids —
+   is verified and shipping. Nothing renders them where a reviewer
+   looks. A gate that fails as JSON gets its threshold loosened; a
+   gate that fails as a named element with its cost gets the element
+   fixed. Render-only by design: if this task needs a new number,
+   something upstream was missed.
+
+2. **Assemble the founding answer** (`UX-116`). UX-09's original
+   question — what should `builders × max-jobs` *be* — now has every
+   constraint measured in one capture (scheduling knee, cores-busy,
+   memory envelope, pinning). Intersecting them is a paragraph, and it
+   retires the report's oldest standing caveat wherever it runs.
+
+3. **Make universal coverage affordable** (`UX-113`, after `UX-112`
+   prices it honestly). The spine works and sits opt-in on cost
+   grounds; the census knows per element where the hook is blind.
+   Joining them (`--trace-spine=auto`) buys statics coverage at
+   hook-only cost on the 95% of elements that don't need the spine —
+   otherwise Direction 4's blind spot quietly reopens by default.
+
+4. **Remote execution** — the one item untouched since round 1, and
+   still deliberately unfiled: with a remote worker pool, `builders`
+   stops being the capacity denominator and Plane 2's sandbox is on
+   another machine. It needs a product decision (detect-and-refuse vs
+   model) before it needs code, and nothing in rounds 2-12 has forced
+   that decision. It should be taken up only when a real
+   remote-execution user exists to measure against — every mechanism
+   this project shipped was validated against a real build, and this
+   one cannot be validated against anything else.
+
+5. **Fleet aggregation** — the developer tax (`UX-101`) is one
+   machine's history; a team's tax lives across laptops and runners.
+   Cross-machine aggregation is a data-plumbing direction (ship run
+   directories somewhere; the analysis exists) and should wait for the
+   single-machine tax to prove its worth in use, which the WEAK
+   EVIDENCE hedge currently reflects.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -537,6 +581,7 @@ the other rounds now:
 | [9](../audits/round-9.md) | the first real freedesktop-sdk capture |
 | [10](../audits/round-10.md) | both usage scenarios walked end to end |
 | [11](../audits/round-11.md) | round 10's fixes re-verified; verification discipline is where the defects were |
+| [12](../audits/round-12.md) | directions 3-4 re-verified; the MVP verdict: met |
 
 ## Verification Log
 

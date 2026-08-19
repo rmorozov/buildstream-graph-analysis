@@ -200,3 +200,15 @@ And `self_report_missing` fires on five real elements - the population
 
 Tests: 6 new in `test_cache_logs.py`, 6 in `test_native_build_tracer.py`.
 Suite: 1262 → 1274.
+
+## Verification Log
+
+The verification evidence for this task is the pasted real output in
+the section above — it was run, but filed without the heading the
+fixing guide names, so a reader grepping for `## Verification Log`
+found nothing on a 🟢 item. Heading added by audit round 12; the
+evidence is the fixer's own.
+
+One clause remains soft: "agree within the documented resolution
+floor" is asserted as a 0.62-1.05 ratio range, but no floor is
+documented anywhere the claim can be checked against.

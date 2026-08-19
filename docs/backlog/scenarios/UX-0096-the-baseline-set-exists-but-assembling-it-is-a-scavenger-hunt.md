@@ -160,3 +160,11 @@ settle. The schedule is in place; the first monthly firing is what
 closes it. Stated rather than declared done.
 
 Tests: 9 new in `tests/unit/test_baseline_set.py`. Suite: 1274 → 1283.
+
+## Verification Log
+
+The verification evidence for this task is the pasted real output in
+the section above — it was run, but filed without the heading the
+fixing guide names, so a reader grepping for `## Verification Log`
+found nothing on a 🟢 item. Heading added by audit round 12; the
+evidence is the fixer's own.

@@ -168,3 +168,16 @@ Recorded plainly because the honest outcome of a measurement is
 sometimes that the thing measured is small. `UX-100` consumes this to
 rank merge candidates by toll share, and it now knows what that
 distribution actually looks like rather than assuming a large one.
+
+## Verification Log
+
+The verification evidence for this task is the pasted real output in
+the section above — it was run, but filed without the heading the
+fixing guide names, so a reader grepping for `## Verification Log`
+found nothing on a 🟢 item. Heading added by audit round 12; the
+evidence is the fixer's own.
+
+Round 12 additionally re-ran the tool on this machine's real log tree:
+the toll line renders ("Sandbox tax: 0.0s of 155.0s element time
+(0.0%) across 24 build log(s)") with the one-second-resolution floor
+stated in the payload — the small-project answer the task predicted.

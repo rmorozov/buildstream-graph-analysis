@@ -1,6 +1,6 @@
 # UX-124: close UX-104's fdsdk clause with the capture that can
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-104 (done, one clause honestly unattainable at the time), UX-108 (whose capture makes it attainable)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-104 (done, one clause honestly unattainable at the time), UX-108 (whose capture makes it attainable)
 
 ## Motivation
 
@@ -36,3 +36,36 @@ per style rule 4).
 UX-104's file shows the fdsdk clause closed with the pasted output;
 `grep -n 'multiply by' README.md` returns nothing; the README's
 replacement line quotes the capture it came from.
+
+---
+
+## Fix Implemented
+
+`UX-104`'s verification log now carries the fdsdk envelope run, and the
+README shows the tool's own line where it used to hand the reader a
+multiplication:
+
+```text
+Memory envelope: 4 builders of this shape peak at ~4.0 GB of 15.6 GB (25%); 11 would
+still fit, so memory is not what binds first here
+```
+
+with the capture named (run `32223468993`) and the upper-bound caveat
+attached, per style rule 4.
+
+No logic changed, and none needed to: the fallback that produces
+*"multiply by however many elements build concurrently"* already fires
+only when a capture records no host memory, and says so. The README's
+sample was simply older than the capability.
+
+**The pattern worth keeping.** `UX-104` recorded a clause as
+unattainable, correctly, on the evidence then available — and the
+evidence arrived the next morning. "Unattainable" is a claim about the
+data on hand rather than about the world, and it expires; a filing that
+records *why* it was unattainable is what let round 12 notice that the
+reason had gone away.
+
+## Verification Log
+
+Done 2026-08-19. The envelope line is a live re-run of `bga correlate`
+against the retained capture, not a paste from round 12's notes.

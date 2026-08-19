@@ -138,10 +138,19 @@ What to do next (ranked by Plane 1 impact):
       this element is a `cc1plus` problem, so look there before anywhere else
     - `dwz` is a SINGLE process holding 138.6s of wall time - a serialization point no
       job count can help; it has to get faster or go away
-    - its largest single process peaked at 1902 MB resident - multiply by however many
-      elements build concurrently before raising `builders`
+    - its largest single process peaked at 1902 MB resident - see the memory envelope
+      above for what that means for `builders`
     (84% of this element's processes were measured)
 ```
+
+That last row used to end *"multiply by however many elements build concurrently before raising `builders`"* — arithmetic handed to the reader. It is now done, once, for the whole build, from the same capture:
+
+```text
+Memory envelope: 4 builders of this shape peak at ~4.0 GB of 15.6 GB (25%); 11 would
+still fit, so memory is not what binds first here
+```
+
+(freedesktop-sdk, capture run `32223468993`. The envelope at N builders is the sum of the N largest measured per-element peaks, as if they all peaked at once — an upper bound, which is the useful direction to be wrong in when the question is whether to raise `builders`. A capture that recorded no host memory gets the multiplication back, and says why.)
 
 That is one report telling you: the element that is 43% of your build is a C++ template problem, not a scheduling one; there is a 138-second serialization point inside it that no `-j` value touches; and four concurrent builders of that shape need ~7.6 GB. **Full step-by-step walkthrough, every command and every output: [`docs/guides/real-project.md`](docs/guides/real-project.md).**
 

@@ -265,14 +265,14 @@ jobs:
             exit 1
           fi
           # Not anchored to column 0: pyproject's `addopts = "-v"` makes
-          # the summary line `===== 18 passed, 1215 deselected in ... =====`.
-          # Bounded on both sides so "118 passed" cannot satisfy it.
-          grep -qE "(^|[[:space:]=])18 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
-            echo "Expected exactly 18 bst-gated tests to run. Got:" >&2
+          # the summary line `===== 19 passed, 1215 deselected in ... =====`.
+          # Bounded on both sides so "119 passed" cannot satisfy it.
+          grep -qE "(^|[[:space:]=])19 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
+            echo "Expected exactly 19 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1
           }
-          echo "18 bst-gated tests ran, none skipped."
+          echo "19 bst-gated tests ran, none skipped."
 
       - name: The whole suite, with bst present
         # The tier does not live in isolation: an extraction change can

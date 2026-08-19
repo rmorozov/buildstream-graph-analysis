@@ -1,6 +1,6 @@
 # UX-100: nothing answers whether the elements are the right size
 
-**Priority:** Medium | **Status:** 🟢 Done — with two deviations from the acceptance, both recorded and both forced by what the real data turned out to be | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern)
+**Priority:** Medium | **Status:** 🟡 In Progress (reopened by round 12) | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern)
 
 Direction 3, item 1 (second half) — see
 [`design/directions.md`](../../design/directions.md).
@@ -182,3 +182,14 @@ Done 2026-08-18. Every figure above is from the published
 freedesktop-sdk capture or from a real `examples/06` dual capture; the
 toll distribution that decided the criterion was computed from the
 former, not assumed.
+
+## Reopened by audit round 12 (2026-08-19)
+
+The file records two deviations; there is a third, unrecorded: the
+acceptance's *positive* merge case — the purpose-built fine-grained
+fixture, the fired candidate, and the projection checked against a real
+merged rebuild — was never run. The merge-candidate branch has fired
+only on synthetic unit-test input; round 12 re-ran both real captures
+live and confirmed the (correct) negative answers, which cannot
+distinguish a working detector from an inert one. `UX-120` carries the
+remaining work; this returns to 🟢 when its acceptance's clause 1 runs.

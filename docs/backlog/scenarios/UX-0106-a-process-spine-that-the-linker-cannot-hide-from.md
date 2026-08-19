@@ -1,6 +1,6 @@
 # UX-106: a process spine that the linker cannot hide from
 
-**Priority:** High | **Status:** 🟢 Done — shipped opt-in, with the overhead measured **above** the budget and handed to `UX-108` | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done)
+**Priority:** High | **Status:** 🟡 In Progress (reopened by round 12) | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done)
 
 Direction 4's core — the mechanism argument and the alternatives table
 (acct, CN_PROC, eBPF, polling, fanotify — each weighed and rejected)
@@ -194,3 +194,18 @@ Done 2026-08-18. Every figure is from a real run: the 0-vs-24 contrast
 from two `bst` builds of `examples/01`, the overhead from four builds of
 `examples/06`, the SIGKILL behaviour from a fork/exec control that
 survives where the spine does not.
+
+## Reopened by audit round 12 (2026-08-19)
+
+The mechanism is real and its value case is verified (round 12 captured
+`examples/01`'s static busybox elements live: 24 spine-only processes,
+`sleep 3` = 3.0016s wall / 0 CPU). But one filed acceptance clause —
+*"the tracer's own crash leaves the build to finish with its normal
+exit status"* — was **measured failing** and the item shipped 🟢 with
+the failure attributed to ptrace in general. Round 12's code review
+found three implementation-level causes filed as their own items: the
+degrade path detaches one tracee and strands the rest (`UX-117`), every
+auto-attached child's attach-SIGSTOP is re-injected — the likely
+mechanism of the failed clause itself (`UX-118`), and the pid-1 signal
+model is built for a configuration BuildStream never runs (`UX-119`).
+Returns to 🟢 when the fail-open clause passes in a real sandbox.

@@ -469,7 +469,7 @@ def pair_events(events: List[dict]) -> List[dict]:
     A START with no matching END (killed by a signal, or still running
     when the trace was captured) is reported "open" with
     duration_us=None rather than a fabricated duration."""
-    open_by_key: Dict[Tuple[str, int], List[dict]] = {}
+    open_by_key: Dict[Tuple[str, int, str], List[dict]] = {}
     records: List[dict] = []
     for ev in sorted(events, key=lambda e: e["ts"]):
         # UX-61: the sandbox id, when the capture has one, is the correct
@@ -482,7 +482,18 @@ def pair_events(events: List[dict]) -> List[dict]:
         # distinct pids, "durations" of 23s inside a 30s build, and a
         # max_concurrency of 34 on a 4-core `--builders 4` run. The real
         # freedesktop-sdk capture reported 5,268.
-        key = (ev.get("invocation") or ev["element"], ev["pid"])
+        # UX-107: and the *mechanism*, because with the spine running each
+        # process writes a START and an END from each stream. Without
+        # `src` in the key the FIFO pops the spine's START for the hook's
+        # END and vice versa: on a real dual-stream capture of
+        # `examples/07` every "spine" record carried the hook's
+        # microsecond rusage and every "hook" record carried the spine's
+        # tick-quantized one - pid 9's cc1plus reported utime 0.013204
+        # under `src=spine`, a resolution /proc cannot produce. The
+        # process count and the coverage classes both survive that
+        # crossing intact, which is why it has to be keyed out rather
+        # than checked for.
+        key = (ev.get("invocation") or ev["element"], ev["pid"], ev.get("src", "hook"))
         if ev["event"] == "START":
             open_by_key.setdefault(key, []).append(ev)
         elif ev["event"] == "END":
@@ -502,6 +513,11 @@ def pair_events(events: List[dict]) -> List[dict]:
                 "end_ts": ev["ts"],
                 "duration_s": ev["ts"] - start_ev["ts"],
                 "open": False,
+                # UX-106/UX-107: which mechanism produced this record.
+                # Carried through pairing because the merge below joins
+                # on it, and every consumer that reports coverage needs
+                # to know which stream a process came from.
+                "src": start_ev.get("src", "hook"),
             }
             # UX-45: real CPU time, from the END event's own getrusage.
             # Absent for a trace captured with a pre-UX-45 hook, and the
@@ -516,6 +532,11 @@ def pair_events(events: List[dict]) -> List[dict]:
                 record["max_rss_kb"] = ev["max_rss_kb"]
             if "children_max_rss_kb" in ev:
                 record["children_max_rss_kb"] = ev["children_max_rss_kb"]
+            # UX-106: only the spine has this - the hook's destructor
+            # runs before the process has a status, and not at all when
+            # it is killed.
+            if "exit_status" in ev:
+                record["exit_status"] = ev["exit_status"]
             records.append(record)
     for pending in open_by_key.values():
         for start_ev in pending:
@@ -529,8 +550,131 @@ def pair_events(events: List[dict]) -> List[dict]:
                 "end_ts": None,
                 "duration_s": None,
                 "open": True,
+                "src": start_ev.get("src", "hook"),
             })
     return sorted(records, key=lambda r: r["start_ts"])
+
+
+# UX-107: how far apart the two streams' START stamps may be and still
+# describe the same process image.
+#
+# They cannot be identical by construction: the spine writes at the
+# kernel's exec-stop, the hook writes from a constructor that runs after
+# the image is loaded, so the hook's stamp is always the later of the
+# two by however long the dynamic linker took. Measured on a real
+# examples/06 capture, that gap is sub-millisecond; a full second of
+# tolerance is three orders of magnitude of slack and still far below
+# the interval at which one sandbox reuses a pid.
+MERGE_START_TOLERANCE_S = 1.0
+
+COVERAGE_BOTH = "spine+hook"
+COVERAGE_SPINE_ONLY = "spine-only"
+COVERAGE_HOOK_ONLY = "hook-only"
+
+
+def merge_record_streams(records: List[dict]) -> List[dict]:
+    """UX-107: two record streams, one process list.
+
+    With `UX-106`'s spine running, a *dynamically*-linked process is
+    recorded twice - once by the spine (argv, lifecycle, exit status,
+    per-process CPU, peak RSS) and once by the hook (the same lifecycle
+    plus opened paths and reaped-children rusage) - while a static
+    process has only the spine's. Consumed naively that double-counts
+    every dynamic process's CPU and its concurrency, which would corrupt
+    every Plane 2 analysis in the name of fixing coverage. Measured on
+    `examples/06` before this existed: 1635 spine records beside 1485
+    hook records, and a report claiming 1644 processes.
+
+    Joined on `(invocation, pid)` and a START within
+    `MERGE_START_TOLERANCE_S`. That is exact in practice rather than
+    heuristic: both streams read the same `CLOCK_MONOTONIC`, and pids
+    are namespaced per sandbox, so the invocation id makes the pair
+    unique inside the only scope where a pid means anything.
+
+    **The spine is the base and the hook is enrichment**, not the other
+    way round: the spine's record exists for every process, so building
+    on it keeps one shape for both coverage classes. Only the fields the
+    hook alone has - reaped-children rusage, and the opens attached
+    later by path - are taken from it.
+
+    Every entry carries `coverage`. A capture with no spine records at
+    all comes back untouched with `hook-only` on every entry, which is
+    what makes every pre-spine capture parse exactly as before.
+    """
+    spine_records = [r for r in records if r.get("src") == "spine"]
+    if not spine_records:
+        for record in records:
+            record.setdefault("coverage", COVERAGE_HOOK_ONLY)
+        return records
+
+    hook_by_key: Dict[Tuple[Optional[str], int], List[dict]] = {}
+    for record in records:
+        if record.get("src") == "spine":
+            continue
+        hook_by_key.setdefault((record.get("invocation"), record["pid"]), []).append(record)
+    for pending in hook_by_key.values():
+        pending.sort(key=lambda r: r["start_ts"])
+
+    merged: List[dict] = []
+    matched_hooks = set()
+    for record in sorted(spine_records, key=lambda r: r["start_ts"]):
+        key = (record.get("invocation"), record["pid"])
+        partner = None
+        for candidate in hook_by_key.get(key) or []:
+            if id(candidate) in matched_hooks:
+                continue
+            if abs(candidate["start_ts"] - record["start_ts"]) <= MERGE_START_TOLERANCE_S:
+                partner = candidate
+                break
+        entry = dict(record)
+        if partner is None:
+            entry["coverage"] = COVERAGE_SPINE_ONLY
+            if "cpu_us" in entry:
+                entry["cpu_source"] = "spine"
+        else:
+            matched_hooks.add(id(partner))
+            entry["coverage"] = COVERAGE_BOTH
+            # What the hook alone can measure. Never its lifecycle and
+            # never a second copy of a quantity the spine already
+            # carries, which is the whole defect this function exists to
+            # prevent.
+            for field in ("children_cpu_us", "children_max_rss_kb"):
+                if field in partner:
+                    entry[field] = partner[field]
+            if "max_rss_kb" in partner:
+                entry["hook_max_rss_kb"] = partner["max_rss_kb"]
+            # UX-53's free test: the same CPU time measured by two
+            # mechanisms - `getrusage` at exit against `/proc/<pid>/stat`
+            # read at the exit-stop. Kept as evidence rather than
+            # averaged; a disagreement is a fact about the capture.
+            #
+            # And the *resolution* differs, which decides which of the
+            # two is used. `/proc/<pid>/stat` reports whole `USER_HZ`
+            # ticks - 10ms - and truncates, so every process shorter than
+            # a tick reads as zero: on a real `examples/06` capture the
+            # 531 processes under 20ms totalled 0.83s by the spine
+            # against 3.82s by the hook, while the 34 over 200ms agreed
+            # to 0.7%. The hook's microsecond figure is therefore the one
+            # used wherever it exists; the spine's stands alone only for
+            # a static process, where it is the only measurement there
+            # is and its truncation is stated rather than hidden.
+            if "cpu_us" in partner:
+                if "cpu_us" in entry:
+                    entry["spine_cpu_us"] = entry["cpu_us"]
+                entry["hook_cpu_us"] = partner["cpu_us"]
+                entry["cpu_us"] = partner["cpu_us"]
+                entry["cpu_source"] = "hook"
+            elif "cpu_us" in entry:
+                entry["cpu_source"] = "spine"
+        merged.append(entry)
+
+    for record in records:
+        if record.get("src") == "spine" or id(record) in matched_hooks:
+            continue
+        entry = dict(record)
+        entry["coverage"] = COVERAGE_HOOK_ONLY
+        merged.append(entry)
+    return sorted(merged, key=lambda r: r["start_ts"])
 
 
 # UX-37: findings below this much recoverable wall-clock are omitted
@@ -1525,11 +1669,41 @@ def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, S
 _MIN_STAGED_FILES_FOR_EVIDENCE = 2
 
 
+def compute_element_opens_coverage(records: List[dict]) -> Dict[str, dict]:
+    """UX-107: per element, what share of its processes the *hook* could
+    see - which is the share any opens-based finding speaks about.
+
+    Empty by design on a capture with no spine records: without a second
+    mechanism there is nothing to measure coverage against, and every
+    pre-spine capture must go on producing exactly the analysis it always
+    did. With the spine on, `spine-only` is a process the hook provably
+    never entered, so the share stops being an assumption.
+    """
+    if not any(r.get("coverage") in (COVERAGE_BOTH, COVERAGE_SPINE_ONLY)
+               for r in records):
+        return {}
+    coverage: Dict[str, dict] = {}
+    for record in records:
+        entry = coverage.setdefault(
+            record.get("element") or "unknown",
+            {"processes": 0, "opens_covered": 0, "spine_only": 0},
+        )
+        entry["processes"] += 1
+        if record.get("coverage") == COVERAGE_SPINE_ONLY:
+            entry["spine_only"] += 1
+        else:
+            entry["opens_covered"] += 1
+    for entry in coverage.values():
+        entry["opens_coverage"] = entry["opens_covered"] / entry["processes"]
+    return coverage
+
+
 def compute_declared_vs_used(
     opens_by_element: Dict[str, dict],
     declared_deps: Dict[str, List[str]],
     artifact_contents: Dict[str, Set[str]],
     element_kinds: Optional[Dict[str, str]] = None,
+    opens_coverage: Optional[Dict[str, dict]] = None,
 ) -> dict:
     """Which declared build dependencies did each element never read?
 
@@ -1552,6 +1726,13 @@ def compute_declared_vs_used(
     - an element whose hook dropped paths is `uncovered` too: a partial
       read set is precisely what turns a used dependency into a false
       unused.
+    - UX-107: an element whose processes were not all reachable by the
+      hook is `uncovered` by the *same* rule, now measured rather than
+      assumed. `opens_coverage` (from `compute_element_opens_coverage`)
+      names the share the spine proves the hook saw; anything below all
+      of them leaves a process that could have opened the very file this
+      analysis is about to call unread. Absent when the spine is off, and
+      then nothing here changes.
     - a dependency whose artifact contents could not be read is skipped
       with a reason, never counted as unused.
     """
@@ -1565,12 +1746,38 @@ def compute_declared_vs_used(
 
     for element, deps in sorted(declared_deps.items()):
         observed = opens_by_element.get(element)
+        measured = (opens_coverage or {}).get(element)
         if not observed or not observed["paths"]:
+            # UX-107: the same conclusion, but said as a measurement
+            # wherever one exists. "It may be built entirely by static
+            # processes" is a guess the spine can settle: it counted the
+            # processes and knows how many the hook could not enter.
+            if measured and not measured["opens_covered"]:
+                reason = (
+                    f"0 of {measured['processes']} process(es) run for this "
+                    f"element were reachable by the LD_PRELOAD hook - every one "
+                    f"was statically linked and seen only by the ptrace spine, "
+                    f"so its read set is unmeasured rather than empty"
+                )
+            else:
+                reason = ("no file opens observed for this element - it may be "
+                          "built entirely by statically-linked processes, which "
+                          "LD_PRELOAD cannot see")
+            uncovered.append({"element": element, "reason": reason})
+            continue
+        if measured and measured["opens_covered"] < measured["processes"]:
+            # Exactly the treatment a dropped-path element gets, and for
+            # exactly the same reason: a partial read set is what turns a
+            # used dependency into a false unused. The difference is that
+            # this one is a counted share rather than a suspicion.
             uncovered.append({
                 "element": element,
-                "reason": "no file opens observed for this element - it may be "
-                          "built entirely by statically-linked processes, which "
-                          "LD_PRELOAD cannot see",
+                "reason": f"only {measured['opens_covered']} of "
+                          f"{measured['processes']} process(es) "
+                          f"({measured['opens_coverage'] * 100:.0f}%) were "
+                          f"reachable by the hook; the other "
+                          f"{measured['spine_only']} ran statically and could "
+                          f"have opened anything this analysis would call unread",
             })
             continue
         if observed["dropped"]:
@@ -1635,8 +1842,28 @@ def compute_declared_vs_used(
                 )
                 unused.append(record)
 
+    covered_elements = [
+        element for element in declared_deps
+        if not (opens_coverage or {}).get(element)
+        or (opens_coverage or {})[element]["opens_covered"]
+        == (opens_coverage or {})[element]["processes"]
+    ]
     return {
-        "available": bool(opens_by_element),
+        # UX-107: an element whose every process was static has no opens
+        # and is still something this analysis has a measured statement
+        # about ("0 of 24 processes were reachable"), so coverage data
+        # alone makes the analysis available.
+        "available": bool(opens_by_element) or bool(opens_coverage),
+        # UX-107: the share this analysis speaks for. Published because a
+        # candidate list computed over a fraction of the processes and one
+        # computed over all of them render identically otherwise.
+        "opens_coverage": ({
+            "elements_considered": len(declared_deps),
+            "elements_fully_covered": len(covered_elements),
+            "processes": sum(e["processes"] for e in opens_coverage.values()),
+            "hook_covered_processes": sum(
+                e["opens_covered"] for e in opens_coverage.values()),
+        } if opens_coverage else None),
         "unused_candidates": unused,
         # UX-68: dependencies that stage nothing of their own - stacks,
         # almost always. Reported separately because "nobody opened it"
@@ -2243,6 +2470,118 @@ def classify_configure_phase(records: List[dict]) -> dict:
     }
 
 
+# UX-107: how far the two mechanisms' CPU figures may differ before the
+# disagreement is worth reporting.
+#
+# They measure the same quantity by different means - `getrusage` at
+# exit against `/proc/<pid>/stat` read at the exit-stop - and are
+# expected to agree to the clock tick. `/proc` reports in `USER_HZ`
+# (10ms on every Linux this runs on), so a difference of one tick is
+# quantization rather than disagreement; anything past a handful of them
+# is a fact about the capture.
+CPU_RECONCILIATION_TOLERANCE_US = 50_000
+
+
+def compute_stream_coverage(records: List[dict]) -> dict:
+    """UX-107: coverage as a measured number rather than a footnote.
+
+    Before the spine there was one sentence, printed identically whether
+    the trace had missed nothing or everything. With two streams there
+    are three real classes and the report can count them:
+
+    - `spine+hook` - seen by both, and so complete: lifecycle, CPU,
+      memory *and* opened paths.
+    - `spine-only` - a statically-linked process. Fully measured except
+      for opens, which need in-process interposition the spine
+      deliberately does not do.
+    - `hook-only` - either the spine was off (every capture before
+      `UX-106`) or it missed something, which is itself worth knowing.
+
+    Also reconciles the CPU figures the two mechanisms measured
+    independently, in the `UX-53` spirit: a quantity computed twice is a
+    free test. Disagreements are counted and the worst is named; nothing
+    is averaged, because averaging two measurements hides the fact that
+    they differed.
+    """
+    if not records:
+        return {}
+    counts: Dict[str, int] = {}
+    for record in records:
+        counts[record.get("coverage", COVERAGE_HOOK_ONLY)] = counts.get(
+            record.get("coverage", COVERAGE_HOOK_ONLY), 0,
+        ) + 1
+    opens_covered = counts.get(COVERAGE_BOTH, 0) + counts.get(COVERAGE_HOOK_ONLY, 0)
+    disagreements = []
+    for record in records:
+        if "hook_cpu_us" not in record or "spine_cpu_us" not in record:
+            continue
+        delta = abs(record["hook_cpu_us"] - record["spine_cpu_us"])
+        if delta > CPU_RECONCILIATION_TOLERANCE_US:
+            disagreements.append({
+                "pid": record["pid"], "element": record["element"],
+                "spine_cpu_us": record["spine_cpu_us"],
+                "hook_cpu_us": record["hook_cpu_us"],
+                "delta_us": delta, "cmd": record["cmd"][:120],
+            })
+    disagreements.sort(key=lambda entry: -entry["delta_us"])
+    # The per-process check above cannot see a *systematic* difference:
+    # 663 pairs each within one clock tick still summed to 58.47s against
+    # 54.14s on a real examples/06 capture - a 7.4% aggregate gap, and
+    # every pair individually "agreeing". Measured on the same
+    # population the per-process check ran on, because a total over one
+    # set compared with a total over another measures the sets.
+    reconciled = [r for r in records if "hook_cpu_us" in r and "spine_cpu_us" in r]
+    aggregate = None
+    if reconciled:
+        spine_total = sum(r["spine_cpu_us"] for r in reconciled)
+        hook_total = sum(r["hook_cpu_us"] for r in reconciled)
+        aggregate = {
+            "processes": len(reconciled),
+            "spine_cpu_us": spine_total,
+            "hook_cpu_us": hook_total,
+            "delta_us": spine_total - hook_total,
+            # Against the hook's total, because that is the figure the
+            # merged model uses - a percentage of the number nobody
+            # consumes measures nothing a reader can act on.
+            "delta_pct": (
+                (spine_total - hook_total) / hook_total * 100 if hook_total else 0.0
+            ),
+        }
+    return {
+        "processes": len(records),
+        "by_coverage": dict(sorted(counts.items())),
+        # Opened paths need the hook. This is the share of processes any
+        # opens-based finding (`UX-46`'s declared-vs-used) can speak
+        # about at all - published because the alternative is a finding
+        # that reads as "no unused dependencies" when it means "nobody
+        # could look".
+        "opens_covered_processes": opens_covered,
+        "opens_coverage": opens_covered / len(records),
+        "cpu_reconciled_processes": sum(
+            1 for record in records if "hook_cpu_us" in record
+        ),
+        # UX-107: how many processes' CPU time is a tick-truncated
+        # figure because no finer one exists for them. Published because
+        # a static-heavy build's CPU total is materially low and the
+        # report must say so rather than let the number pass as exact.
+        "cpu_from_spine_only": sum(
+            1 for record in records if record.get("cpu_source") == "spine"
+        ),
+        "cpu_disagreements": disagreements[:8],
+        "cpu_disagreement_count": len(disagreements),
+        "cpu_aggregate": aggregate,
+        "note": (
+            "Process coverage is the union of both mechanisms; opens coverage is the "
+            "hook's alone, since opened paths need in-process interposition. A "
+            "`spine-only` process is fully measured except for its opens. CPU time "
+            "reported for a process seen by both is the spine's per-process figure, "
+            "never the sum of the two - and it is the later of the two "
+            "measurements, since the hook's destructor runs before the process is "
+            "finished while the spine reads /proc at the kernel's exit-stop."
+        ),
+    }
+
+
 def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
     matched = [r for r in records if not r["open"]]
     open_records = [r for r in records if r["open"]]
@@ -2298,6 +2637,9 @@ def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
         "redundant_operations_coverage": redundant_coverage,
         "processes": records,
         "static_binary_disclaimer": STATIC_BINARY_DISCLAIMER,
+        # UX-107: which mechanism saw each process, as counts rather
+        # than as a footnote.
+        "stream_coverage": compute_stream_coverage(records),
     }
 
 
@@ -2358,7 +2700,13 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
             "If this is a JSON report written by `run`, it is now rendered "
             "directly - this error means the file is neither."
         )
-    records = pair_events(events)
+    # UX-107: one process, one entry. With the spine running every
+    # dynamically-linked process appears in both streams, and summing
+    # them would double-count exactly the CPU and concurrency this plane
+    # exists to measure. A capture with no spine records passes through
+    # unchanged, which is what keeps every pre-spine capture parsing
+    # byte-identically.
+    records = merge_record_streams(pair_events(events))
 
     # UX-56: correct collapsed element names before anything is computed
     # from them - every downstream signal (declared-vs-used, per-element
@@ -2388,13 +2736,35 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # declared dependency edges.
     opens_by_element = parse_open_records(
         text, open_element_overrides=(correlation or {}).get('resolved'))
-    if project_dir and opens_by_element:
-        declared = read_declared_build_deps(project_dir, sorted(opens_by_element))
+    # UX-107: the elements this analysis must speak about are not only the
+    # ones with opens. An element built entirely by static processes has
+    # none at all, and dropping it here is what made the analysis silent
+    # in exactly the case it most needs to say "unmeasured" - the
+    # difference between "no unused dependencies" and "nobody could look".
+    #
+    # Only elements the hook provably never entered are added, never
+    # every element with coverage data: a capture taken without
+    # open-tracking has no opens *and* full hook coverage, and pulling
+    # those in would report nine fully-traced elements as "may be built
+    # entirely by statically-linked processes" - a wrong reason where
+    # there had been no claim at all. Measured on `examples/06`.
+    element_coverage = compute_element_opens_coverage(records)
+    unmeasured = {
+        element for element, entry in element_coverage.items()
+        if element != "unknown" and not entry["opens_covered"]
+    }
+    analysed = sorted(set(opens_by_element) | unmeasured)
+    if project_dir and analysed and (opens_by_element or unmeasured):
+        declared = read_declared_build_deps(project_dir, analysed)
         needed = {dep for deps in declared.values() for dep in deps}
         contents = read_artifact_contents(project_dir, sorted(needed))
         report["declared_vs_used"] = compute_declared_vs_used(
             opens_by_element, declared, contents,
             element_kinds=read_element_kinds(project_dir),
+            # UX-107: computed over the hook-covered processes, and told
+            # to say so - the alternative is a finding that reads "no
+            # unused dependencies" when it means "nobody could look".
+            opens_coverage=element_coverage,
         )
 
     # UX-105: what the hook *could not* have seen, measured from the
@@ -2595,6 +2965,65 @@ _CENSUS_BINARIES_SHOWN = 8
 _CENSUS_ELEMENTS_SHOWN = 8
 
 
+def _format_stream_coverage(report: dict) -> List[str]:
+    """UX-107: coverage, counted. Silent on a capture with one stream and
+    nothing to say about the other - which is every capture taken before
+    the spine existed, and which must read exactly as it always did."""
+    coverage = report.get("stream_coverage") or {}
+    counts = coverage.get("by_coverage") or {}
+    if not counts or set(counts) == {COVERAGE_HOOK_ONLY}:
+        return []
+    lines = [""]
+    parts = ", ".join(f"{count} {name}" for name, count in counts.items())
+    lines.append(f"Process coverage: {coverage['processes']} process(es) - {parts}")
+    if counts.get(COVERAGE_SPINE_ONLY):
+        lines.append(
+            f"  {counts[COVERAGE_SPINE_ONLY]} were seen only by the ptrace spine - "
+            f"statically-linked, so fully measured except for opened paths, which "
+            f"need the in-process hook. Opens coverage: "
+            f"{coverage['opens_coverage'] * 100:.0f}% of processes."
+        )
+    reconciled = coverage.get("cpu_reconciled_processes") or 0
+    if reconciled:
+        disagreements = coverage.get("cpu_disagreement_count") or 0
+        if disagreements:
+            worst = coverage["cpu_disagreements"][0]
+            lines.append(
+                f"  CPU measured twice for {reconciled} process(es), and "
+                f"{disagreements} disagree by more than a clock tick - worst "
+                f"{worst['delta_us'] / 1e6:.2f}s on {worst['element']} "
+                f"(`{worst['cmd'][:60]}`). Reported, not averaged."
+            )
+        else:
+            lines.append(
+                f"  CPU measured twice for {reconciled} process(es) - `getrusage` at "
+                f"exit against `/proc/<pid>/stat` at the exit-stop - and every pair "
+                f"agrees to within a clock tick."
+            )
+        aggregate = coverage.get("cpu_aggregate")
+        if aggregate and abs(aggregate["delta_pct"]) >= 1.0:
+            lines.append(
+                f"  Over those {aggregate['processes']} process(es) the two "
+                f"mechanisms still total "
+                f"{aggregate['spine_cpu_us'] / 1e6:.2f}s (spine) against "
+                f"{aggregate['hook_cpu_us'] / 1e6:.2f}s (hook), "
+                f"{aggregate['delta_pct']:+.1f}% - a systematic offset no "
+                f"per-process tolerance can see, and a resolution difference "
+                f"rather than a disagreement: /proc reports whole 10ms ticks and "
+                f"truncates, so every process shorter than a tick reads as zero. "
+                f"The hook's microsecond figure is the one used."
+            )
+    spine_cpu = coverage.get("cpu_from_spine_only") or 0
+    if spine_cpu:
+        lines.append(
+            f"  {spine_cpu} process(es) carry only the spine's tick-truncated "
+            f"CPU time - statically linked, or gone before the hook's destructor "
+            f"could run - so their share of the CPU total is a lower bound, and a "
+            f"short-lived one among them reads as zero."
+        )
+    return lines
+
+
 def _format_static_census(report: dict) -> List[str]:
     """UX-105: the blind spot, named where it is measured and silent
     where it is not there.
@@ -2606,10 +3035,31 @@ def _format_static_census(report: dict) -> List[str]:
     one of them is the old sentence.
     """
     census = report.get("static_census")
+    coverage = report.get("stream_coverage") or {}
+    counts = coverage.get("by_coverage") or {}
+    # UX-107: whether a mechanism that sees a process regardless of its
+    # linkage was running at all. The old footnote's central claim -
+    # "this tool cannot detect its own absence" - stops being true the
+    # moment it was.
+    spine_ran = bool(
+        counts.get(COVERAGE_BOTH, 0) or counts.get(COVERAGE_SPINE_ONLY, 0)
+    )
+    spine_seen = counts.get(COVERAGE_SPINE_ONLY, 0)
     if census is None:
-        # No project directory, so nothing was measured. The old
-        # footnote is exactly right here and stays word for word.
-        return ["", f"NOTE: {report['static_binary_disclaimer']}"]
+        if not spine_ran:
+            # No project directory and one mechanism, so nothing was
+            # measured. The old footnote is exactly right here and stays
+            # word for word.
+            return ["", f"NOTE: {report['static_binary_disclaimer']}"]
+        return [
+            "",
+            f"NOTE: the ptrace spine recorded every process regardless of its "
+            f"linkage, so the LD_PRELOAD blind spot does not apply to this process "
+            f"list: {spine_seen} of {coverage['processes']} process(es) were seen "
+            f"by the spine alone. What remains partial is opened paths, which need "
+            f"the in-process hook - "
+            f"{coverage['opens_coverage'] * 100:.0f}% of processes (UX-107).",
+        ]
     at_risk = census.get("elements_at_risk") or []
     if not at_risk:
         return [
@@ -2622,6 +3072,30 @@ def _format_static_census(report: dict) -> List[str]:
     names = census.get("static_executables") or []
     shown = ", ".join(os.path.basename(name) for name in names[:4])
     more = f" (+{len(names) - 4} more)" if len(names) > 4 else ""
+    # UX-107: the census bounds what the hook can miss; the spine
+    # measures what was actually seen. With both in hand the footnote
+    # stops being a warning and becomes a statement about this capture.
+    if spine_ran and not spine_seen:
+        # The bound held and nothing hit it: the binaries are staged but
+        # no process was exec'd from one. That is the census's own stated
+        # limit - staged is not exec'd - closed by measurement rather
+        # than left as a standing warning.
+        return [
+            "",
+            f"NOTE: {len(names)} static executable(s) are staged ({shown}{more}), "
+            f"and the ptrace spine - which sees a process whatever its linkage - "
+            f"recorded none exec'd from them across "
+            f"{coverage['processes']} process(es). The census bounds the risk; this "
+            f"run did not hit it (UX-105/UX-107).",
+        ]
+    if spine_seen:
+        return [
+            "",
+            f"NOTE: {len(names)} static executable(s) are staged ({shown}{more}) and "
+            f"the ptrace spine recorded {spine_seen} process(es) the LD_PRELOAD hook "
+            f"could not have seen. The blind spot the census bounds is measured here, "
+            f"not merely disclaimed (UX-105/UX-106/UX-107).",
+        ]
     return [
         "",
         f"NOTE: {len(names)} static executable(s) staged for {len(at_risk)} "
@@ -2674,6 +3148,20 @@ def _format_declared_vs_used(analysis: dict) -> List[str]:
             f"dependency stages almost nothing of its own (a `stack` stages one "
             f"marker file), so 'nobody opened it' is not evidence about it; see "
             f"`declared_vs_used.aggregating_dependencies` in the JSON report"
+        )
+    # UX-107: what share of the processes this verdict is computed over.
+    # Silent when the spine was off, since then there is no measurement
+    # to report and the report must read as it always did.
+    share = analysis.get("opens_coverage")
+    if share:
+        lines.append(
+            f"  Computed over the hook-covered processes: "
+            f"{share['hook_covered_processes']} of {share['processes']} "
+            f"({share['hook_covered_processes'] / share['processes'] * 100:.0f}%), "
+            f"and {share['elements_fully_covered']} of "
+            f"{share['elements_considered']} element(s) had every process covered. "
+            f"The rest are listed UNCOVERED above rather than as having no unused "
+            f"dependencies."
         )
     lines.append(f"  ({analysis['note']})")
     return lines
@@ -2833,6 +3321,7 @@ def _format_text(report: dict) -> str:
             f"process(es) excluded as each element's own top-level command block)"
         )
     lines.append("")
+    lines.extend(_format_stream_coverage(report))
     lines.extend(_format_static_census(report))
     return "\n".join(lines)
 

@@ -88,9 +88,18 @@ def test_nonexistent_directory_exits_one(tmp_path):
 
 def test_graph_present_trace_missing_hints_at_extraction_tools(tmp_path):
     """P4-10: a partially-populated run directory (e.g. graph.json
-    produced via tools/bst_show_to_graph.py but trace.json not yet
-    generated) should get an actionable hint pointing at the real
-    extraction tools, not just a bare FileNotFoundError message."""
+    produced by `bga graph-from-show` but trace.json not yet generated)
+    should get an actionable hint naming the real extraction commands,
+    not just a bare FileNotFoundError message.
+
+    The hint has to be **runnable as printed**. It used to name
+    `tools/<script>.py` paths, which are not on PATH and carry no +x bit,
+    so a user who was already stuck got a command that fails with
+    "Permission denied" - which is why this asserts against the alias
+    table rather than against a string.
+    """
+    from bga.tools_dispatch import TOOL_ALIASES
+
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     (run_dir / "graph.json").write_text(json.dumps({"elements": [], "dependencies": []}))
@@ -98,9 +107,11 @@ def test_graph_present_trace_missing_hints_at_extraction_tools(tmp_path):
     result = _run_bga(["analyze", str(run_dir)])
 
     assert result.returncode == 1, result.stderr
-    assert "tools/bst_log_to_chrome_trace.py" in result.stderr
-    assert "tools/bst_run_context.py" in result.stderr
-    assert "tools/bst_extract_run.py" in result.stderr
+    for alias in ("log-to-chrome", "chrome-to-trace", "run-context", "extract"):
+        assert f"bga {alias}" in result.stderr, alias
+        # ...and every one of them is a command this build really has.
+        assert alias in TOOL_ALIASES, alias
+    assert "tools/bst_" not in result.stderr
 
 
 def test_empty_directory_gets_no_buildstream_specific_hint(tmp_path):

@@ -107,8 +107,13 @@ def format_tool_help() -> str:
     """
     width = max(len(name) for name in TOOL_ALIASES)
     lines = [
-        "capture & conversion (thin aliases for the programs in tools/,",
-        "which remain runnable directly as `python3 -m <module>`):",
+        # "capture & conversion" undersold what is in this list: three
+        # of these (`capture`, `cache-logs`, `baseline`) are whole
+        # analyses with their own reports, not format converters, and a
+        # reader scanning for Plane 2 or Plane 3 skipped the section
+        # that has them.
+        "capture, analysis and conversion (thin aliases for the programs in",
+        "tools/, which remain runnable directly as `python3 -m <module>`):",
     ]
     for alias, (module, help_text) in TOOL_ALIASES.items():
         lines.append(f"  {alias:<{width}}  {help_text}")

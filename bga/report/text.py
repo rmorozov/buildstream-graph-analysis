@@ -267,6 +267,17 @@ def _format_timestamp_resolution(result: AnalysisResult) -> List[str]:
     return lines + [""]
 
 
+def _attribution_label(category: str) -> str:
+    """The attribution categories are stored with the `_us` suffix their
+    schema field carries. Titled naively that renders as "Execution On
+    Chain Us" beside a value printed in *seconds* - a label that names
+    one unit next to a number in another. The suffix is dropped here
+    rather than in the model, where it is part of the contract."""
+    if category.endswith("_us"):
+        category = category[: -len("_us")]
+    return category.replace("_", " ").title()
+
+
 def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
     """Pipeline-level overhead block (P4-14) - BuildStream's own
     top-level "main:core activity" phases (Query cache, Resolving
@@ -401,7 +412,10 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         total = result.total_duration_us
         for category, duration_us in result.attribution.items():
             pct = (duration_us / total * 100) if total > 0 else 0
-            lines.append(f"  {category.replace('_', ' ').title():25s} {duration_us / 1e6:8.2f}s ({pct:5.1f}%)")
+            lines.append(
+                f"  {_attribution_label(category):25s} "
+                f"{duration_us / 1e6:8.2f}s ({pct:5.1f}%)"
+            )
         lines.append("")
 
     # Replay (Part 18) - dedicated block for `bga replay RUN`; the
@@ -516,9 +530,22 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             # conclusion from a real optimization - overlapping tasks
             # that used to run serially raises total occupancy while
             # doing identical work.
-            lines.append("  Buckets below are task slot-time (occupancy), not CPU time:")
+            # ...and in *slot*-seconds, which is a different quantity
+            # from the wall-clock seconds every other number in this
+            # report is printed in: N builders running for the whole
+            # build contribute N seconds per second. Printing both as
+            # bare `s` let a 3261s build report 8626s of idle, which
+            # reads as impossible rather than as a different unit.
+            lines.append(
+                "  Buckets below are task slot-time (occupancy), not CPU time, and "
+                "are measured in slot-seconds - a build of H seconds on N builders "
+                "has N*H of them to spend:"
+            )
         for bucket_name, bucket_us in buckets.items():
-            lines.append(f"  {str(bucket_name).replace('_', ' ').title():20s} {bucket_us / 1e6:8.2f}s")
+            lines.append(
+                f"  {str(bucket_name).replace('_', ' ').title():20s} "
+                f"{bucket_us / 1e6:8.2f} slot-s"
+            )
         # UX-48: the two idle buckets recommend opposite fixes, so
         # whichever one dominates is the actionable part of this block.
         # Naming that here rather than leaving a reader to infer it from
@@ -527,15 +554,15 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         no_tasks_us = buckets.get('idle_no_tasks', 0)
         if underparallel_us > 0:
             lines.append(
-                f"  -> {underparallel_us / 1e6:.2f}s of that idle capacity had work "
-                f"ready and waiting for a builder: raising build concurrency is the "
-                f"lever here (`bga sweep` estimates the payoff)."
+                f"  -> {underparallel_us / 1e6:.2f} slot-s of that idle capacity had "
+                f"work ready and waiting for a builder: raising build concurrency is "
+                f"the lever here (`bga sweep` estimates the payoff)."
             )
         if no_tasks_us > underparallel_us and no_tasks_us > 0:
             lines.append(
-                f"  -> {no_tasks_us / 1e6:.2f}s had nothing ready to run at all - no "
-                f"amount of extra concurrency helps that; it is a dependency-graph "
-                f"shape problem."
+                f"  -> {no_tasks_us / 1e6:.2f} slot-s had nothing ready to run at "
+                f"all - no amount of extra concurrency helps that; it is a "
+                f"dependency-graph shape problem."
             )
         lines.append("")
 
@@ -619,7 +646,7 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                     f"  Stack-Consolidation Candidates: {len(consolidation_candidates)} "
                     f"group(s) of elements always consumed together with no `stack` "
                     f"grouping them (P4-15, structural signal only - not a timing "
-                    f"estimate; see tools/bst_checkout_cost.py for real measurement):"
+                    f"estimate; see `bga checkout-cost` for real measurement):"
                 )
                 for candidate in consolidation_candidates[:5]:
                     lines.append(f"    - {', '.join(candidate['elements'])}")

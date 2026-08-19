@@ -275,9 +275,12 @@ def trend_from_run_dirs(run_dirs, **analyzer_kwargs) -> dict:
 
 def format_trend_text(trend: dict) -> str:
     lines = [
-        '=' * 78,
+        # 60, the width every other report in this tool uses. A single
+        # wider banner reads as a different program's output when two
+        # reports are pasted into one issue.
+        '=' * 60,
         'Cache Health Trend',
-        '=' * 78,
+        '=' * 60,
         f"{'run':<28s} {'hit':>6s} {'built':>6s} {'cached':>7s} "
         f"{'xfer':>8s} {'/artifact':>10s} {'churn':>7s}",
     ]
@@ -307,6 +310,18 @@ def format_trend_text(trend: dict) -> str:
             f"{churn_cell:>7s}"
         )
     lines.append('')
+    # The churn cell is the only column in this table a reader cannot
+    # decode from its header. `0+25r` said nothing until you found the
+    # docs, which is one lookup too many for a column of five characters.
+    if any((row.get('churn') or {}).get('rebuilt_in_both_count')
+           for row in trend['runs']):
+        lines.append(
+            'churn: elements rebuilt since the previous run, then `+Nr` for the '
+            'N of them that rebuilt in BOTH runs with the same cache key - work '
+            'the cache should have served and did not. `n/a` where the two runs '
+            'are not comparable (one full, one incremental).'
+        )
+        lines.append('')
     if trend['insufficient_window']:
         lines.append(f"No verdict: {trend['insufficient_window']['message']}")
     elif not trend['findings']:
@@ -318,5 +333,5 @@ def format_trend_text(trend: dict) -> str:
         lines.append(f"[{finding['severity']}] {finding['id']}: {finding['title']}")
     lines.append('')
     lines.append(f"({trend['note']})")
-    lines.append('=' * 78)
+    lines.append('=' * 60)
     return '\n'.join(lines)

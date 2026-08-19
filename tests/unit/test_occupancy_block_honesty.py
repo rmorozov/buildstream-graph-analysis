@@ -87,7 +87,13 @@ def test_buckets_are_labelled_as_occupancy_even_when_cpu_is_measured():
     the capacity/reconciliation numbers, not what the buckets are."""
     for result in (_detected_host_run(), _measured_run()):
         out = format_text(result, section="utilisation")
-        assert "Buckets below are task slot-time (occupancy), not CPU time:" in out
+        assert "task slot-time (occupancy), not CPU time" in out
+        # ...and in slot-seconds, which is not the unit the rest of the
+        # report prints: 4 builders over a 3261s build have 13044 of them
+        # to spend, so an "8626.73s idle" on a bare `s` read as
+        # impossible rather than as a different quantity.
+        assert "slot-seconds" in out
+        assert "slot-s" in out
 
 
 def test_measured_run_keeps_the_cpu_labels_and_its_reconciliation():

@@ -21,6 +21,8 @@ must be matched on its **end**, because Plane 1's timestamps lag the
 events they describe, and an element may host **several** sandboxes, so
 resolving one must not strike its element from the others.
 """
+import os
+
 from tools.bst_native_build_tracer import (
     apply_correlation,
     correlate_invocations,
@@ -286,3 +288,69 @@ def test_a_build_in_which_no_sandbox_ran_still_produces_a_report(tmp_path):
     )
 
     assert report["process_count"] == 0
+
+
+class TestRunDirImpliesTheLogItIsExtractedFrom:
+    """UX-126: `--run-dir` is documented as replacing the `wrap` +
+    `extract` pair in a CI job, so one build produces both planes rather
+    than two builds producing one each. That only holds if asking for a
+    run directory also captures the Plane 1 log it is extracted from -
+    the same shape UX-80 gave the invocation record."""
+
+    def _run(self, tmp_path, monkeypatch, extra_argv):
+        import tools.bst_native_build_tracer as tracer
+
+        captured = {}
+
+        def fake_build(project_dir, cmd, raw_log_path, **kwargs):
+            captured.update(kwargs)
+            with open(raw_log_path, "w"):
+                pass
+            if kwargs.get("wrapped_log_path"):
+                with open(kwargs["wrapped_log_path"], "w") as handle:
+                    handle.write("[--:--:--][][] START   Build\n")
+            return 0
+
+        def fake_extract(project_dir, log_path, output_dir, **kwargs):
+            captured["extracted"] = (log_path, output_dir)
+            os.makedirs(output_dir, exist_ok=True)
+            return {}
+
+        monkeypatch.setattr(tracer, "run_traced_build", fake_build)
+        import tools.bst_extract_run as extractor
+        monkeypatch.setattr(extractor, "extract_run", fake_extract)
+
+        argv = ["run", *extra_argv, str(tmp_path / "proj"),
+                str(tmp_path / "report.json"), "--", "bst", "build", "all.bst"]
+        assert tracer.main(argv) == 0
+        return captured
+
+    def test_asking_for_a_run_directory_captures_the_plane_1_log(
+            self, tmp_path, monkeypatch):
+        captured = self._run(
+            tmp_path, monkeypatch, ["--run-dir", str(tmp_path / "run")])
+
+        assert captured["wrapped_log_path"], "no Plane 1 log was captured"
+        assert captured["extracted"][0] == captured["wrapped_log_path"], (
+            "the run directory was extracted from a different log than the "
+            "one this build captured")
+        assert captured["extracted"][1] == str(tmp_path / "run")
+        assert os.path.isdir(tmp_path / "run"), (
+            "extraction was attempted and did not survive - the tracer reports "
+            "that as a warning, so asserting only the call would pass on it")
+
+    def test_a_named_log_is_the_one_used(self, tmp_path, monkeypatch):
+        named = str(tmp_path / "plane1.log")
+
+        captured = self._run(tmp_path, monkeypatch,
+                             ["--run-dir", str(tmp_path / "run"),
+                              "--wrapped-log", named])
+
+        assert captured["wrapped_log_path"] == named
+        assert captured["extracted"][0] == named
+
+    def test_without_it_nothing_changes(self, tmp_path, monkeypatch):
+        captured = self._run(tmp_path, monkeypatch, [])
+
+        assert captured["wrapped_log_path"] is None
+        assert "extracted" not in captured

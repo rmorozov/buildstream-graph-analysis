@@ -17,6 +17,11 @@ that needs no BuildStream. Then
 [`guides/real-project.md`](guides/real-project.md) is the end-to-end
 path on a real project.
 
+On a real project the two commands to know first are `bga doctor`
+(`UX-125` — can this machine capture at all, before a build proves it
+cannot) and `bga snapshot` (`UX-126` — the whole local loop, run twice).
+Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126).
+
 Three planes of evidence, and they cost different things to obtain —
 which is why the guides pick between them rather than always saying
 "capture everything":

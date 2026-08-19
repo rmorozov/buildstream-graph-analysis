@@ -148,13 +148,21 @@ Two details that are load-bearing:
   the situation this whole feature exists to end.
 
 With Plane 2 in the pipeline, add `--native-report` to the `bga compare`
-arguments to get the never-read column:
+arguments to get the never-read column. Capture both planes from **one**
+build — `--run-dir` (`UX-126`) writes the run directory from the same
+`bst` invocation, replacing the `wrap` + `extract` pair above rather
+than adding a second build to it:
 
 ```bash
-bga capture run --trace-opens "$PROJ" native.json -- bst build "$TARGET"
+bga capture run --trace-opens --run-dir runs/candidate \
+  "$PROJ" native.json -- bst build "$TARGET"
 bga compare runs/baseline runs/candidate \
   --format ci-comment --native-report native.json
 ```
+
+Two builds would put the never-read column on a different build from the
+one the verdict describes, and the join would correlate one build's
+sandboxes against the other's timeline.
 
 ## What it deliberately does not do
 

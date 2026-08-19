@@ -165,6 +165,12 @@ commands against a small from-scratch project
    BuildStream's platform initialization is unconditional. `apt install
    bubblewrap` (or the equivalent for your OS) is required alongside
    the `bst` optional extra, not just `pip install buildstream`.
+   `bga doctor` (`UX-125`) checks every requirement on this list against
+   the machine in front of you, including building a real `bwrap`
+   sandbox rather than merely finding the binary - which is what
+   distinguishes "not installed" from "installed and blocked by a
+   sysctl", two failures with the same error text and opposite
+   remedies.
 9. **`--format` also has `%{kind}`** (Since: BuildStream 2.6, present in
    the real 2.7.0 install this was verified against) - the element's own
    BuildStream plugin type (e.g. `import`, `manual`, `junction`,

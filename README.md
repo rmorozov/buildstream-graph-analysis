@@ -197,12 +197,19 @@ The short version is two commands, run from inside the project:
 ```bash
 pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/spec/ingestion-pipeline.md
 cd /path/to/your/project
+bga doctor .                          # is this machine able to capture at all?
 bga snapshot -- bst build <targets>   # capture + extract + analyze
 # ...make your change...
 bga snapshot -- bst build <targets>   # ...and compare against the previous one
 ```
 
-The second invocation prints the analysis **and** the verdict against
+Run `bga doctor` first — it takes a second or two. Every capture
+environment this project has stood up was assembled by failure: a
+missing plugin, a compiler that is not there, `bwrap` blocked by a
+sysctl. Each has a one-line remedy, and reading it before a thirty-minute
+build is much cheaper than reading it after.
+
+The second `snapshot` prints the analysis **and** the verdict against
 the first. Captures land in `.bga/runs/<UTC-stamp>/` under the project
 (gitignored), and every command that takes a run directory also takes
 `@last`, `@prev` or a stamp prefix — `bga analyze @last`,
@@ -222,13 +229,13 @@ bga extract --format wrapped /path/to/your/project /tmp/build.log /tmp/my-run
 bga analyze /tmp/my-run --diagnostics
 ```
 
-Then iterate: make a change, rebuild, extract a new run, and compare it against the baseline:
+Either way, comparing two runs is the same command — `bga snapshot` calls it for you, and you can call it yourself on any two run directories:
 
 ```bash
 bga compare /tmp/my-run-before /tmp/my-run-after
 ```
 
-This reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence. If the two runs don't look like the same project, or one is a caches-off run and the other incremental, it **refuses** — exit 6, distinct from the gates' 4 and 5, so a CI job cannot mistake a wrong-artifact-path bug for a regression. `--allow-mismatch` compares anyway.
+It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence. If the two runs don't look like the same project, or one is a caches-off run and the other incremental, it **refuses** — exit 6, distinct from the gates' 4 and 5, so a CI job cannot mistake a wrong-artifact-path bug for a regression. `--allow-mismatch` compares anyway.
 
 > **One capture is not a baseline.** Measured on **three** captures of the *same* freedesktop-sdk commit, taken by the scheduled capture workflow: 3614.2s, 3434.4s, 3405.8s — a **5.8% spread with nothing changed**, against a default significance rule of 1%. Compare the first against the third under the fixed rule and the verdict is `IMPROVED (-5.8%)`; judged against the band those three runs define (median 3434.4s ± 3×42.5s scaled MAD), the same pair is `NO SIGNIFICANT CHANGE` — which is the truth, because they are the same commit. For CI, build a baseline *set* and use the band. `--baseline-run` is *in addition to* the two positional arguments, not instead of them — and the band is built from the `--baseline-run` entries alone, so it needs **three of them**; the positional baseline is not counted:
 >
@@ -340,6 +347,10 @@ bga extract --format wrapped /path/to/project /tmp/plane1.log /tmp/run
 bga correlate /tmp/run /tmp/plane2.json
 ```
 
+Inside a project, `bga snapshot` has already run the first two and kept
+both artifacts together, so the join is the last line alone:
+`bga correlate @last <snapshot>/plane2.json`.
+
 This produces what neither plane can alone — see [the real example above](#on-a-real-project). Rows are ordered by evidence strength, strongest measurement first and explicitly hedged ones last; every row states its own measurement coverage; and a Plane 2 name that is not a declared element is excluded and listed rather than quietly recommended. The negative result matters too: an element reported as *already compute-bound* is one to stop looking inside.
 
 It also detects real operations repeated independently across *multiple* elements' sandboxes (`autoconf` probes, `m4` runs — scored in recoverable wall-clock for the worst-affected element rather than summed across elements that ran concurrently) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view into one file.
@@ -352,7 +363,7 @@ keeps them — so every build already on your machine, including the ones
 nobody thought to instrument, is evidence:
 
 ```bash
-bga cache-logs --project <your-project>
+bga cache-logs /path/to/your/project
 ```
 
 ```text

@@ -46,8 +46,10 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga correlate RUN NATIVE_REPORT` | Joins this run with a Plane 2 native trace of the same build on element UID, and says what to fix. **Not spec-mandated**, `UX-51` | — |
 | `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5); `--baseline-run`/`--band-k` compare against a baseline *set* instead of a fixed threshold. **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39`/`UX-59` | — |
 | `bga cache-trend RUN...` | Is the cache getting worse? A chronological *series*, not a pair — hit ratio, transfer seconds, churn per step, and a finding when the newest run leaves the band its trailing window describes. **Not spec-mandated**, `UX-103` | — |
-| `bga cache-logs [LOG_ROOT] --project NAME` | **Plane 3** — BuildStream's own persisted element logs: per-element phase breakdown, sandbox tax, configure tax, developer tax. Needs no capture. **Not spec-mandated**, `UX-91`/`UX-99`/`UX-101`/`UX-102` | — |
+| `bga cache-logs [PROJECT_DIR\|LOG_ROOT]` | **Plane 3** — BuildStream's own persisted element logs: per-element phase breakdown, sandbox tax, configure tax, developer tax. Needs no capture, and takes the project directory a user has rather than the log root they would have to derive (`UX-127`). **Not spec-mandated**, `UX-91`/`UX-99`/`UX-101`/`UX-102` | — |
 | `bga capture run\|report\|census PROJECT` | **Plane 2** — trace processes inside element sandboxes (`--trace-opens`, `--trace-spine`), re-render a saved report, or run the static-binary census with no build at all. **Not spec-mandated**, `UX-11`/`UX-105`/`UX-106` | — |
+| `bga snapshot -- bst build TARGET` | The local loop as one command: `capture run --run-dir` + `analyze` + `compare` against the previous snapshot, into a project-local store (`.bga/runs/`), with `@last`/`@prev`/`@<stamp-prefix>` resolving for every argument that names a run directory. Composes those commands rather than reimplementing them, so it changes no number and keeps every refusal. **Not spec-mandated**, `UX-126` | — |
+| `bga doctor [PROJECT]` | Can this machine capture at all: `bst`, a real `bwrap` sandbox, a compiler, Plane 3's log tree, whether the project loads and what it stages — each failure with its own remedy. Read-only; exits non-zero only on a real failure. **Not spec-mandated**, `UX-125` | — |
 | `bga baseline --glob REFS -n N` | Assemble a baseline *set* from published capture refs and band-compare against it in one command, refusing a set whose captures are not comparable. **Not spec-mandated**, `UX-96` | — |
 | `bga wrap` / `extract` / `rebuild-set` / … | Thin aliases dispatching to the programs in `tools/`, which stay independently runnable as `python3 -m tools.<module>` — the workflow reads as one tool without merging the code. **Not spec-mandated**, `UX-67` (`bga/tools_dispatch.py`) | — |
 
@@ -112,7 +114,7 @@ BuildStream writes a per-element log for every task it runs, and keeps
 them: `$XDG_CACHE_HOME/buildstream/logs/<project>/<element>/<key>-<action>.<timestamp>.log`.
 They were sitting on every developer's machine, unread by anything.
 
-`bga cache-logs [LOG_ROOT] --project NAME` reads them. It is the only
+`bga cache-logs PROJECT_DIR` reads them. It is the only
 part of this tool that needs **no capture, no flags and no foresight** —
 the evidence is a by-product of builds that already happened, including
 builds nobody thought to instrument.
@@ -197,7 +199,13 @@ empty.
 - **`bga capture run --trace-spine`** (`UX-106`) adds a static ptrace
   process-event tracer inside the sandbox that records every process
   whatever its linkage. On `examples/01` that is the difference between
-  **0 processes and 24**.
+  **0 processes and 24**. It attaches with `PTRACE_SEIZE` behind a pipe
+  handshake — the child blocks until the parent has seized it — rather
+  than inferring the attach stop from the first `SIGSTOP` it happens to
+  see (`UX-130`); every restart site degrades by name instead of failing
+  silently (`UX-128`); and the final drain is bounded rather than
+  unbounded, which took a build with a backgrounded daemon in it from
+  **30.01s to 0.01s** of teardown (`UX-133`).
 - **The two record streams are one process list** (`UX-107`). A
   dynamically-linked process is now recorded twice, and consumed naively
   that double-counts every one: on `examples/06`, 1644 records read as
@@ -213,30 +221,30 @@ empty.
   hook` instead of being skipped in a silence that reads as "no unused
   dependencies".
 
-The spine is **opt-in**, and that is a measurement too (`UX-108`):
-**+2.7%** wall on `examples/06` over ten runs per mode, **+13.5%** on
-`examples/08-process-storm` (575 processes/second, a fixture built
-because no project in this repository was process-dense enough to ask
-the question). The rule was stated before the numbers — under 2% it
-defaults on, over it stays a flag — and the numbers chose. Those two
-percentages are kept as the figures that made the decision; `UX-112`
-then showed the ratio is a fact about the fixture's baseline rather than
-about the tool, and the per-process form below supersedes them.
+The spine is **opt-in**, and that decision was a measurement (`UX-108`):
+the rule was stated before the numbers — under 2% wall it defaults on,
+over it stays a flag — and **+2.7%** on `examples/06` against **+13.5%**
+on `examples/08-process-storm` chose. Those two percentages are kept as
+the figures that decided it, but they are not the claim any more.
 
-`UX-112` later re-measured that as a full {spine} × {opens} factorial and
-found the ratio unstable and the unit wrong. `UX-129` then found the
-replacement headline overshot too, and narrowed it to what five
-independent measurements support: the price is **0.3 to 1.1 ms per
-process**, below the spread on `examples/06` and clearly visible on
-`examples/08`. The spread is machine state rather than uncertainty
-within a run — the tightest measurement, five interleaved `off`/`on`
-pairs, gives +0.79s on 2003 processes (0.39 ms), with the raw figures in
-[`docs/audits/data/spine-cost-storm.md`](../audits/data/spine-cost-storm.md). The predicted spine × opens interaction is
-not there — on the process-dense fixture the spine is *cheaper* alongside
-opens, because opens raises the baseline. `UX-113`'s
-`--trace-spine=auto` follows directly: pay that cost only where the
-census says the hook is blind — which is also why the exact size of it
-matters less than it looks.
+`UX-112` re-measured the same question as a full {spine} × {opens}
+factorial and found the ratio unstable and the *unit* wrong: it is a
+fact about the fixture's baseline, not about the tool. `UX-129` then
+found the replacement headline overshot too. What five independent
+measurements support is **0.3 to 1.1 ms per process** — below the
+run-to-run spread on `examples/06`, clearly visible on `examples/08`.
+The spread is machine state rather than uncertainty within a run: the
+tightest measurement, five interleaved `off`/`on` pairs, gives +0.79s on
+2003 processes (0.39 ms), with the raw figures in
+[`docs/audits/data/spine-cost-storm.md`](../audits/data/spine-cost-storm.md).
+The predicted spine × opens interaction is not there — on the
+process-dense fixture the spine is *cheaper* alongside opens, because
+opens raises the baseline.
+
+`UX-113`'s `--trace-spine=auto` follows directly: pay that cost only
+where the census says the hook is blind, which is also why the exact
+size of it matters less than it looks. It is what `bga snapshot` uses by
+default.
 
 ### Plane 1 knows the resolution of its own timestamps
 

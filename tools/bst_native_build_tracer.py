@@ -58,6 +58,7 @@ import os
 import re
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -1038,6 +1039,290 @@ def compute_max_concurrency(records: List[dict]) -> int:
         current += delta
         peak = max(peak, current)
     return peak
+
+
+# UX-105: the four bytes that start every ELF file, and the program
+# header type that means "this binary asks the dynamic linker to run
+# it". A binary with no `PT_INTERP` never invokes `ld.so`, so
+# `LD_PRELOAD` never reaches it and the hook cannot record it - which is
+# the whole of Plane 2's blind spot, and it is knowable from the file
+# before anything runs.
+_ELF_MAGIC = b"\x7fELF"
+_PT_INTERP = 3
+_ET_EXEC = 2
+
+
+def classify_elf(path: str) -> Optional[str]:
+    """`"static"` | `"dynamic"` | `"library"` | None for a non-ELF file.
+
+    Pure stdlib: a 64-byte header, then the program header table, read
+    with `struct`. No new dependency for what is a fixed, documented
+    layout - and one this repository can afford to get exactly right
+    rather than approximately. 32- and 64-bit, either endianness,
+    because a cross-built sysroot is exactly the case where this
+    question matters.
+
+    **`e_type` decides as much as `PT_INTERP` does**, and finding that
+    out was the first thing running it taught: `examples/06`'s staged
+    glibc toolchain reported five "static executables" that are
+    `ld-linux-x86-64.so.2` and three copies of `liblto_plugin.so`.
+    Shared objects have no `PT_INTERP` either - they are loaded, not
+    exec'd - so `PT_INTERP` alone calls every library on the system a
+    static binary.
+
+    So:
+
+    - `ET_EXEC` without `PT_INTERP` -> **static**: a classic static
+      executable, the thing `LD_PRELOAD` cannot reach.
+    - anything with `PT_INTERP` -> **dynamic**, `ET_EXEC` or PIE alike.
+    - `ET_DYN` without `PT_INTERP` -> **library**, reported separately.
+
+    The last bucket carries the one real ambiguity, stated rather than
+    resolved: a *static-PIE* executable is `ET_DYN` with no `PT_INTERP`
+    and is indistinguishable from a shared object without parsing the
+    dynamic section for `DT_SONAME`/`DT_NEEDED`. Static-PIE is rare and a
+    library is not; counting the bucket as libraries under-reports the
+    blind spot rather than over-reporting it, which is the safe
+    direction for a number whose whole job is to say "the trace may be
+    missing something".
+
+    A file that cannot be read, or is truncated mid-header, returns
+    None: "not classifiable" and "not static" are different answers and
+    only one of them is safe to act on.
+    """
+    try:
+        with open(path, "rb") as handle:
+            header = handle.read(64)
+            if len(header) < 20 or header[:4] != _ELF_MAGIC:
+                return None
+            is_64 = header[4] == 2
+            endian = "<" if header[5] == 1 else ">"
+            e_type = struct.unpack_from(endian + "H", header, 16)[0]
+            if is_64:
+                phoff, phentsize, phnum = struct.unpack_from(
+                    endian + "Q", header, 32)[0], *struct.unpack_from(
+                    endian + "HH", header, 54)
+            else:
+                phoff, phentsize, phnum = struct.unpack_from(
+                    endian + "I", header, 28)[0], *struct.unpack_from(
+                    endian + "HH", header, 42)
+            if not phnum:
+                # No program headers at all: a relocatable object or a
+                # static library, not an executable this can speak about.
+                return None
+            handle.seek(phoff)
+            table = handle.read(phentsize * phnum)
+            for index in range(phnum):
+                entry = table[index * phentsize:(index + 1) * phentsize]
+                if len(entry) < 4:
+                    break
+                if struct.unpack_from(endian + "I", entry, 0)[0] == _PT_INTERP:
+                    return "dynamic"
+            return "static" if e_type == _ET_EXEC else "library"
+    except (OSError, struct.error):
+        return None
+
+
+def _shebang_interpreter(path: str) -> Optional[str]:
+    """The interpreter a `#!` script names, or None.
+
+    One level only, deliberately (`UX-105` scopes deeper chains out): a
+    script is classified as whatever its interpreter is, because that is
+    the process that actually execs and therefore the process the hook
+    either sees or does not.
+    """
+    try:
+        with open(path, "rb") as handle:
+            first = handle.readline(256)
+    except OSError:
+        return None
+    if not first.startswith(b"#!"):
+        return None
+    parts = first[2:].decode("utf-8", "replace").split()
+    if not parts:
+        return None
+    # `#!/usr/bin/env python3` names the interpreter in the second word.
+    if os.path.basename(parts[0]) == "env" and len(parts) > 1:
+        return parts[1]
+    return parts[0]
+
+
+def census_static_executables(root: str) -> dict:
+    """Every executable under `root`, classified.
+
+    Returns `{"static": [paths], "dynamic": int, "libraries": int,
+    "unclassified": int, "scripts": int}` with paths relative to `root`,
+    sorted - two scans of one tree must produce identical output, and a
+    set would not.
+
+    Symlinks are followed to classify but reported at the name that was
+    walked, since that is the name a build command would exec. A symlink
+    loop or a dangling link is unclassified rather than an error: a
+    census that dies on a broken link in a staged sysroot is a census
+    nobody runs.
+    """
+    static: List[str] = []
+    dynamic = libraries = unclassified = scripts = 0
+    if not os.path.isdir(root):
+        return {"static": [], "dynamic": 0, "libraries": 0,
+                "unclassified": 0, "scripts": 0}
+    for current, _dirs, files in os.walk(root):
+        for name in sorted(files):
+            path = os.path.join(current, name)
+            try:
+                if not os.access(path, os.X_OK) or not os.path.isfile(path):
+                    continue
+            except OSError:
+                continue
+            verdict = classify_elf(path)
+            if verdict is None:
+                interpreter = _shebang_interpreter(path)
+                if interpreter is None:
+                    unclassified += 1
+                    continue
+                # A script is whatever its interpreter is - that is the
+                # process that execs, and so the one the hook sees or
+                # does not. The interpreter is resolved inside this same
+                # root when it is there, since that is what the sandbox
+                # would run.
+                scripts += 1
+                staged = os.path.join(root, interpreter.lstrip("/"))
+                verdict = classify_elf(staged)
+                if verdict is None:
+                    unclassified += 1
+                    continue
+            if verdict == "static":
+                static.append(os.path.relpath(path, root))
+            elif verdict == "library":
+                libraries += 1
+            else:
+                dynamic += 1
+    return {
+        "static": sorted(static),
+        "dynamic": dynamic,
+        # Shared objects with the executable bit, which every sysroot
+        # has. Counted, not listed: they are not programs a build execs.
+        "libraries": libraries,
+        "unclassified": unclassified,
+        "scripts": scripts,
+    }
+
+
+def _local_source_paths(project_dir: str, element: str) -> List[str]:
+    """The directories an element stages from its own `local` sources.
+
+    Read from the `.bst` file for the same reason
+    `read_declared_build_deps` reads its own: this must work against a
+    project directory without invoking BuildStream. Only `local`
+    sources - a `git` or `tar` source is not on disk before a fetch, and
+    a census that silently skipped one would be worse than one that says
+    it only sees local sources.
+    """
+    path = os.path.join(project_dir, "elements", element)
+    if not os.path.exists(path):
+        return []
+    import yaml
+
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = yaml.safe_load(handle) or {}
+    except (OSError, yaml.YAMLError):
+        return []
+    paths = []
+    for source in data.get("sources") or []:
+        if isinstance(source, dict) and source.get("kind") == "local":
+            local = source.get("path")
+            if local:
+                paths.append(os.path.join(project_dir, local))
+    return paths
+
+
+def census_project(project_dir: str, elements: List[str]) -> dict:
+    """UX-105: which elements have a static executable in their sandbox,
+    and which are therefore invisible to Plane 2 in part or in whole.
+
+    Every Plane 2 report carries the same footnote - statically-linked
+    processes ran but produced no trace entry, and the hook "cannot
+    detect its own absence". It is honest and useless in equal measure:
+    it fires identically on a capture that missed nothing and one that
+    missed everything. `examples/01`'s manual elements run static
+    busybox and their Plane 2 capture is empty; only a reader who knows
+    the staging script would guess why.
+
+    An element's sandbox holds what its own sources stage *and* what its
+    build dependencies stage, so the census propagates over the declared
+    build closure. Reported per element, so the disclaimer can name the
+    element rather than the toolchain.
+
+    **What this bounds, and what it does not.** It reads the project's
+    own `local` sources - the files on disk before anything runs. A
+    binary arriving from a remote artifact cache is not visible to it,
+    and neither is one produced by the build. So a zero here is "nothing
+    this project stages is static", not "nothing static will run"; the
+    honest limit `UX-105` names, and the one `UX-106`'s spine is for.
+
+    A staged-but-never-exec'd static binary inflates the *risk* count,
+    not the *missed process* count - this bounds what the hook can miss,
+    and only a spine measures what it did.
+    """
+    declared = read_declared_build_deps(project_dir, elements)
+    own: Dict[str, dict] = {}
+    for element in elements:
+        merged = {"static": [], "dynamic": 0, "libraries": 0,
+                  "unclassified": 0, "scripts": 0}
+        for root in _local_source_paths(project_dir, element):
+            counted = census_static_executables(root)
+            merged["static"].extend(counted["static"])
+            for key in ("dynamic", "libraries", "unclassified", "scripts"):
+                merged[key] += counted[key]
+        merged["static"] = sorted(set(merged["static"]))
+        own[element] = merged
+
+    def _closure(element: str, seen: Optional[Set[str]] = None) -> Set[str]:
+        seen = seen if seen is not None else set()
+        for dependency in declared.get(element) or []:
+            if dependency in seen:
+                continue
+            seen.add(dependency)
+            _closure(dependency, seen)
+        return seen
+
+    per_element = {}
+    for element in elements:
+        static = set(own[element]["static"])
+        staged_by = {name: sorted(own.get(name, {}).get("static") or [])
+                     for name in _closure(element)}
+        for names in staged_by.values():
+            static.update(names)
+        per_element[element] = {
+            "static_executables": sorted(static),
+            "static_count": len(static),
+            "own_static": own[element]["static"],
+            "staged_by_dependencies": {
+                name: names for name, names in sorted(staged_by.items()) if names
+            },
+            "dynamic_executables": own[element]["dynamic"],
+        }
+    total_static = sorted({
+        name for entry in per_element.values()
+        for name in entry["static_executables"]
+    })
+    return {
+        "per_element": per_element,
+        "static_executables": total_static,
+        "elements_at_risk": sorted(
+            element for element, entry in per_element.items() if entry["static_count"]
+        ),
+        "note": (
+            "Read from the project's own `local` sources before anything runs: an "
+            "ELF executable with no PT_INTERP never invokes the dynamic linker, so "
+            "LD_PRELOAD never reaches it. A binary arriving from a remote artifact "
+            "cache or produced by the build is not visible here, and a "
+            "staged-but-never-exec'd static binary inflates the risk count rather "
+            "than the missed-process count - this bounds what Plane 2 can miss, not "
+            "what it did miss."
+        ),
+    }
 
 
 def read_element_kinds(project_dir: str) -> Dict[str, str]:
@@ -2043,6 +2328,17 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
             opens_by_element, declared, contents,
             element_kinds=read_element_kinds(project_dir),
         )
+
+    # UX-105: what the hook *could not* have seen, measured from the
+    # staged roots rather than left to a footnote that fires identically
+    # whether it missed nothing or everything.
+    if project_dir:
+        elements = sorted(
+            name for name in os.listdir(os.path.join(project_dir, "elements"))
+            if name.endswith(".bst")
+        ) if os.path.isdir(os.path.join(project_dir, "elements")) else []
+        if elements:
+            report["static_census"] = census_project(project_dir, elements)
     elif opens_by_element:
         report["declared_vs_used"] = {
             "available": False,
@@ -2188,6 +2484,86 @@ def _format_peak_memory(peak_memory: dict) -> List[str]:
                  "maxima and must not be summed.")
     lines.append("")
     return lines
+
+
+def _format_census_text(census: dict) -> str:
+    """UX-105's standalone view: which elements have a static executable
+    in their sandbox, and where it came from."""
+    at_risk = census.get("elements_at_risk") or []
+    names = census.get("static_executables") or []
+    lines = [
+        "=" * 60,
+        "Static Executable Census (Plane 2 blind spot)",
+        "=" * 60,
+        f"{len(names)} static executable(s) staged, reaching {len(at_risk)} "
+        f"element(s) of {len(census.get('per_element') or {})}",
+    ]
+    if not names:
+        lines.append(
+            "  Nothing this project stages is statically linked, so LD_PRELOAD has "
+            "nothing to miss among them."
+        )
+    for name in names[:_CENSUS_BINARIES_SHOWN]:
+        lines.append(f"    {name}")
+    if len(names) > _CENSUS_BINARIES_SHOWN:
+        lines.append(f"    (+{len(names) - _CENSUS_BINARIES_SHOWN} more)")
+    for element in at_risk[:_CENSUS_ELEMENTS_SHOWN]:
+        entry = census["per_element"][element]
+        sources = entry.get("staged_by_dependencies") or {}
+        origin = (
+            f" via {', '.join(sorted(sources)[:2])}" if sources
+            else " from its own sources"
+        )
+        lines.append(f"  {element}: {entry['static_count']} static{origin}")
+    if len(at_risk) > _CENSUS_ELEMENTS_SHOWN:
+        lines.append(f"  (+{len(at_risk) - _CENSUS_ELEMENTS_SHOWN} more element(s))")
+    lines.append("")
+    lines.append(f"({census['note']})")
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
+
+_CENSUS_BINARIES_SHOWN = 8
+_CENSUS_ELEMENTS_SHOWN = 8
+
+
+def _format_static_census(report: dict) -> List[str]:
+    """UX-105: the blind spot, named where it is measured and silent
+    where it is not there.
+
+    The generic footnote fired on every report, which made it furniture:
+    identical on a capture that missed nothing and one whose entire
+    process list is empty because every command was static busybox. With
+    a census in hand there are three different things to say, and only
+    one of them is the old sentence.
+    """
+    census = report.get("static_census")
+    if census is None:
+        # No project directory, so nothing was measured. The old
+        # footnote is exactly right here and stays word for word.
+        return ["", f"NOTE: {report['static_binary_disclaimer']}"]
+    at_risk = census.get("elements_at_risk") or []
+    if not at_risk:
+        return [
+            "",
+            "NOTE: no statically-linked executable is staged by this project's own "
+            "sources, so LD_PRELOAD had nothing to miss among them. Binaries "
+            "arriving from a remote artifact cache or produced by the build are "
+            "outside what this census can see (UX-105).",
+        ]
+    names = census.get("static_executables") or []
+    shown = ", ".join(os.path.basename(name) for name in names[:4])
+    more = f" (+{len(names) - 4} more)" if len(names) > 4 else ""
+    return [
+        "",
+        f"NOTE: {len(names)} static executable(s) staged for {len(at_risk)} "
+        f"element(s) - {shown}{more}. Processes exec'd from these produce no trace "
+        f"record at all: LD_PRELOAD only reaches a binary that invokes the dynamic "
+        f"linker. Affected: {', '.join(at_risk[:4])}"
+        + (f" (+{len(at_risk) - 4} more)" if len(at_risk) > 4 else "")
+        + ". This bounds what the trace can be missing; it does not measure what it "
+          "did miss (UX-105).",
+    ]
 
 
 def _format_declared_vs_used(analysis: dict) -> List[str]:
@@ -2389,7 +2765,7 @@ def _format_text(report: dict) -> str:
             f"process(es) excluded as each element's own top-level command block)"
         )
     lines.append("")
-    lines.append(f"NOTE: {report['static_binary_disclaimer']}")
+    lines.extend(_format_static_census(report))
     return "\n".join(lines)
 
 
@@ -2491,7 +2867,40 @@ def main() -> int:
              "artifact contents via `bst artifact list-contents`.",
     )
 
+    # UX-105 item 3: the census, standalone. It reads files on disk and
+    # runs nothing, so it answers "what can Plane 2 not see here?"
+    # against an already-staged project without a build - which is when
+    # a reader most wants to know.
+    census_parser = subparsers.add_parser(
+        "census",
+        help="Classify a project's staged executables as static or dynamic (UX-105)",
+    )
+    census_parser.add_argument(
+        "project_dir",
+        help="A BuildStream project directory. Its elements' `local` sources are "
+             "scanned; nothing is built and BuildStream is not invoked.",
+    )
+    census_parser.add_argument(
+        "--json", action="store_true", help="Emit JSON instead of a summary",
+    )
+
     args = parser.parse_args()
+
+    if args.command == "census":
+        elements_dir = os.path.join(args.project_dir, "elements")
+        if not os.path.isdir(elements_dir):
+            print(f"Error: no elements/ directory under {args.project_dir}",
+                  file=sys.stderr)
+            return 1
+        elements = sorted(
+            name for name in os.listdir(elements_dir) if name.endswith(".bst")
+        )
+        census = census_project(args.project_dir, elements)
+        if args.json:
+            print(json.dumps(census, indent=2))
+            return 0
+        print(_format_census_text(census))
+        return 0
 
     if args.command == "run":
         cmd = args.cmd
@@ -2543,6 +2952,20 @@ def main() -> int:
     # with exit 0. Detect and re-render it instead.
     saved = load_saved_report(args.path)
     if saved is not None:
+        # UX-105: a re-render with a project directory can still census
+        # it - the census reads files on disk and runs nothing, so it is
+        # available to a saved report exactly as it is to a fresh one.
+        # Without this, re-rendering fell back to the generic footnote
+        # on a project the census can answer for, which is the same
+        # "fires identically whatever the truth is" problem one level up.
+        if args.project_dir and "static_census" not in saved:
+            elements_dir = os.path.join(args.project_dir, "elements")
+            if os.path.isdir(elements_dir):
+                elements = sorted(
+                    name for name in os.listdir(elements_dir) if name.endswith(".bst")
+                )
+                if elements:
+                    saved["static_census"] = census_project(args.project_dir, elements)
         print(json.dumps(saved, indent=2) if args.json else _format_text(saved))
         return 0
     try:

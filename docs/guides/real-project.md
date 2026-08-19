@@ -183,6 +183,38 @@ is static):
 Full dependency list and its known limits:
 [`docs/spec/ingestion-pipeline.md`](../spec/ingestion-pipeline.md).
 
+### When a capture fails on a build that `bst` completes
+
+`bga doctor` checks the environment. It does not check *this* capture —
+a real capture rewrites BuildStream's own generated `bwrap` argv, which
+doctor never sees. When `bst build` works and `bga snapshot` does not
+(typically `buildbox-run failed with returncode 1`, which is
+BuildStream's summary of something it also could not see), `--diagnose`
+records what the shim received and what it exec'd, one line per sandbox
+(`UX-146`):
+
+```bash
+bga snapshot --diagnose -- bst build <your-target>
+```
+
+The count leads, because **zero is a different problem**: BuildStream
+resolves `bwrap` through `buildbox-run`, one process layer below its own
+Python, so the shim is reached through `$PATH`. Zero invocations means
+that never happened and the build ran unmodified — not that the sandbox
+failed. (A fully cached build also launches no sandbox, and the summary
+says so.)
+
+Then bisect:
+
+```bash
+bga snapshot --no-inject -- bst build <your-target>
+```
+
+which installs the shim and injects nothing. Succeeding here and failing
+without it blames the argv rewrite; failing both ways blames the `$PATH`
+shadow or the exec. Either answer names the next thing to look at, and
+the diagnostics file is the thing to attach to a bug report.
+
 Two limits worth knowing before you start, because they shape what you
 can conclude:
 

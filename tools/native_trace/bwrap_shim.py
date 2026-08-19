@@ -322,6 +322,62 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
         return False
 
 
+def record_diagnostics(log_path: Optional[str], received: List[str],
+                       exec_argv: List[str], real_bwrap: str,
+                       element: Optional[str], spine: Optional[str],
+                       injected: bool) -> bool:
+    """UX-146: one line per invocation, holding both argvs.
+
+    A capture that fails tells the user `buildbox-run failed with
+    returncode 1` and nothing else, and three unrelated causes produce
+    it: the `$PATH` shadow never reaching `buildbox-run` at all, the
+    argv rewrite mis-splitting options from the command, or the
+    environment. Only the first is visible from outside, and only as an
+    absence.
+
+    So: what BuildStream generated, what this shim is about to exec, and
+    where the split fell - which is the fragile part, since
+    `split_bwrap_args`' arity table was validated against bubblewrap
+    0.9.0 and a newer flag it does not know is assumed to take no
+    arguments.
+
+    Written *before* the exec, because this process is replaced by the
+    real `bwrap` and never runs again. Never raises, for the same reason
+    `record_argv` never does: a diagnostic that can fail a real build is
+    worse than no diagnostic.
+    """
+    if not log_path:
+        return False
+    try:
+        opts, cmd = split_bwrap_args(received)
+        record = {
+            "pid": os.getpid(),
+            "ppid": os.getppid(),
+            "at": time.time(),
+            "real_bwrap": real_bwrap,
+            "real_bwrap_executable": os.access(real_bwrap, os.X_OK),
+            "element": element,
+            "spine": spine,
+            "injected": injected,
+            "received_argv": list(received),
+            "exec_argv": list(exec_argv),
+            # Where the parse thinks BuildStream's options end and the
+            # sandboxed command begins. A mis-split shows up here as a
+            # `command` starting with something that is plainly a flag.
+            "option_count": len(opts),
+            "command": cmd,
+        }
+        line = json.dumps(record, sort_keys=True) + "\n"
+        fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line.encode("utf-8"))
+        finally:
+            os.close(fd)
+        return True
+    except Exception:
+        return False
+
+
 def main() -> int:
     real_bwrap = os.environ.get("BST_TRACE_REAL_BWRAP", "/usr/bin/bwrap")
     bind_src = os.environ["BST_TRACE_BIND_SRC"]
@@ -357,15 +413,40 @@ def main() -> int:
         os.environ.get("BST_TRACE_INVOCATION_LOG"), invocation_id, element,
         spine_traced=bool(spine),
     )
-    argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst, preload_so,
-                           trace_log, invocation_id=invocation_id,
-                           # UX-106: the in-sandbox path of the ptrace
-                           # spine, or absent. Read from this shim's own
-                           # environment, which `run_traced_build` sets -
-                           # the same channel `BST_TRACE_PRELOAD_SO`
-                           # already uses.
-                           spine=spine)
-    os.execv(real_bwrap, argv)
+    # UX-146: the bisection a user cannot otherwise perform. With this
+    # set the shim is still on `$PATH` and still exec'd by
+    # `buildbox-run`, but BuildStream's argv reaches the real `bwrap`
+    # untouched - so a build that succeeds here and fails without it
+    # blames the rewrite, and one that fails both ways blames the
+    # shadowing or the exec. It captures nothing, deliberately.
+    inject = os.environ.get("BST_TRACE_NO_INJECT") != "1"
+    if inject:
+        argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
+                               preload_so, trace_log,
+                               invocation_id=invocation_id,
+                               # UX-106: the in-sandbox path of the ptrace
+                               # spine, or absent. Read from this shim's own
+                               # environment, which `run_traced_build` sets -
+                               # the same channel `BST_TRACE_PRELOAD_SO`
+                               # already uses.
+                               spine=spine)
+    else:
+        argv = [real_bwrap, *sys.argv[1:]]
+
+    record_diagnostics(os.environ.get("BST_TRACE_DIAGNOSTICS"), list(sys.argv[1:]),
+                       argv, real_bwrap, element, spine, inject)
+
+    try:
+        os.execv(real_bwrap, argv)
+    except OSError as error:
+        # UX-146: this used to be a Python traceback on `buildbox-run`'s
+        # stderr, which BuildStream reports as `buildbox-run failed with
+        # returncode 1` and buries in an element log. One sentence
+        # naming the binary and what the kernel said.
+        sys.stderr.write(
+            f"bga: could not exec the real bwrap at {real_bwrap}: {error}\n"
+            f"bga: set BST_TRACE_REAL_BWRAP if it lives somewhere else.\n")
+        return 127
     return 1  # unreachable if execv succeeds
 
 

@@ -380,13 +380,28 @@ def main(argv: Optional[List[str]] = None) -> int:
                         help='Git checkout to run git from. Default: the working directory.')
     parser.add_argument('--candidate', default=None,
                         help='A candidate run directory. Given one, this runs the band '
-                             'compare against the fetched set and returns its exit code.')
+                             'compare against the fetched set and returns its exit code. '
+                             'Takes a snapshot alias (`@last`, `@prev`, '
+                             '`@<stamp-prefix>`) as well as a path (UX-145).')
     parser.add_argument('-f', '--format', choices=['text', 'json'], default='text')
     parser.add_argument('--band-k', default=None,
                         help='Passed through to `bga compare --band-k`.')
     parser.add_argument('compare_args', nargs='*',
                         help='Further arguments passed through to `bga compare`.')
     args = parser.parse_args(argv)
+
+    # UX-145: the one run-directory argument outside `bga.cli`'s alias
+    # threading, because this command dispatches straight to `tools/` and
+    # never reaches that parser - the same gap `cache-logs` had for its
+    # Plane 2 report (UX-134). Resolved through the same resolver, not a
+    # copy of it, and before anything is fetched.
+    if args.candidate:
+        from bga.run_store import StoreError, resolve as resolve_run_alias
+        try:
+            args.candidate = resolve_run_alias(args.candidate)
+        except StoreError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 2
 
     try:
         refs = list_capture_refs(args.remote, args.glob, cwd=args.repo)

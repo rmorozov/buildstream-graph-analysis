@@ -54,6 +54,22 @@ fix, recorded either way.
 
 ---
 
+> **Superseded by `UX-130` (2026-08-19).** Everything below describes a
+> mechanism that no longer exists: `PTRACE_SEIZE` makes the attach-stop
+> *typed* (`PTRACE_EVENT_STOP`) rather than something to infer, so
+> `g_seen`, `first_stop_for` and `forget_pid` — the 8192-slot pid table
+> this file spends its Fix Implemented explaining — were deleted whole.
+> The text is kept rather than rewritten, for the reason this file
+> itself gives about `UX-106`: *a wrong explanation that was believed
+> for a while is worth being able to recognise again*. The finding was
+> real and the fix was right for classic ptrace; the guess it rests on
+> is what `UX-130` removed the need for.
+>
+> `UX-144` is why this annotation exists at all: the convention
+> (`UX-132`) was scoped to "a number", and this file — the convention's
+> own worked example — was left describing dead code by the very round
+> that wrote it down.
+
 ## Fix Implemented
 
 The restart signal is now decided by one `pass_through` expression: a

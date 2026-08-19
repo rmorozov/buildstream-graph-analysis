@@ -798,6 +798,20 @@ def format_csv(result: AnalysisResult) -> str:
     return "\n".join(lines)
 
 
+def memory_envelope_direction(delta_mb: float) -> str:
+    """UX-145: the word, gated on the delta the line actually *prints*.
+
+    It read "Memory envelope grew: 0.6 GB -> 0.6 GB (+0.0 GB, +0%)" on a
+    real run. A direction the numbers beside it do not show is the kind
+    of sentence that teaches a reader to stop believing the others, so
+    zero is "unchanged" - and so is anything that rounds to zero at the
+    one decimal place of GB this line renders.
+    """
+    if abs(round(delta_mb / 1024, 1)) < 0.05:
+        return 'unchanged'
+    return 'grew' if delta_mb > 0 else 'shrank'
+
+
 def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> List[str]:
     """UX-104: which constraint binds at the knee.
 
@@ -1074,7 +1088,7 @@ def format_compare_text(comparison) -> str:
     memory_delta = getattr(comparison, 'memory_envelope_delta', None) or {}
     if memory_delta:
         share = memory_delta.get('delta_share')
-        direction = 'grew' if memory_delta['delta_mb'] > 0 else 'shrank'
+        direction = memory_envelope_direction(memory_delta['delta_mb'])
         lines.append(
             f"  Memory envelope {direction}: "
             f"{memory_delta['baseline_envelope_mb'] / 1024:.1f} GB -> "

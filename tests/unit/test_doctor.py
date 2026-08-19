@@ -13,6 +13,7 @@ what a script would assume.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -229,12 +230,27 @@ class TestTheContractAScriptWouldAssume:
 
 def test_the_compiler_check_is_the_one_the_capture_performs():
     """`compile_hook` raises on a missing cc/gcc after the build has
-    already started. This is the same test, moved earlier - so it must
-    stay the same test."""
-    import shutil
+    already started. This is the same check, moved earlier - so it must
+    stay the same check.
 
-    expected = OK if (shutil.which("cc") or shutil.which("gcc")) else FAIL
-    assert check_compiler()["status"] == expected
+    UX-143: this used to restate the implementation (`shutil.which("cc")
+    or shutil.which("gcc")`), which is not a comparison - the two could
+    diverge and both this test and the doctor would agree with each other
+    while disagreeing with the capture. Now it reads the predicate the
+    tracer itself uses.
+    """
+    import inspect
+
+    from tools import bst_native_build_tracer as tracer
+
+    source = inspect.getsource(tracer.compile_hook)
+    compilers = set(re.findall(r'shutil\.which\(["\'](\w+)["\']\)', source))
+    assert compilers, "compile_hook no longer resolves a compiler by name"
+
+    import shutil
+    expected = OK if any(shutil.which(name) for name in compilers) else FAIL
+    assert check_compiler()["status"] == expected, (
+        f"doctor and compile_hook disagree about {sorted(compilers)}")
 
 
 def test_doctor_is_reachable_through_the_cli():
@@ -246,3 +262,102 @@ def test_doctor_is_reachable_through_the_cli():
 
     assert result.returncode in (0, 1), result.stderr
     assert json.loads(result.stdout)["checks"]
+
+
+class TestTheLoadProbeUsesTheProjectsOwnElements:
+    """UX-142: it ran `bst show ... all.bst`, hardcoded. Every project
+    here ships an `all.bst`, so nine fixtures agreed and every real
+    project - freedesktop-sdk included - got `[FAIL] project-loads` and
+    exit 1 while being perfectly healthy. A fixture convention read back
+    as a world fact, by the command the walkthrough teaches first."""
+
+    def test_elements_are_discovered_shallowest_first(self, tmp_path):
+        from tools.bga_doctor import discover_elements
+
+        root = tmp_path / "p" / "elements"
+        (root / "components" / "deep").mkdir(parents=True)
+        (tmp_path / "p" / "project.conf").write_text("name: p\n")
+        for relative in ("z.bst", "components/b.bst", "components/deep/c.bst"):
+            (root / relative).write_text("kind: manual\n")
+
+        assert discover_elements(str(tmp_path / "p")) == [
+            "z.bst", os.path.join("components", "b.bst"),
+            os.path.join("components", "deep", "c.bst")]
+
+    def test_a_declared_element_path_is_honoured(self, tmp_path):
+        from tools.bga_doctor import discover_elements, element_path
+
+        project = tmp_path / "p"
+        (project / "parts").mkdir(parents=True)
+        (project / "project.conf").write_text(
+            "name: p\nmin-version: 2.0\nelement-path: parts\n")
+        (project / "parts" / "only.bst").write_text("kind: manual\n")
+
+        assert element_path(str(project)) == "parts"
+        assert discover_elements(str(project)) == ["only.bst"]
+
+    def test_the_default_element_path_is_buildstreams(self, tmp_path):
+        from tools.bga_doctor import element_path
+
+        (tmp_path / "project.conf").write_text("name: p\n")
+
+        assert element_path(str(tmp_path)) == "elements"
+
+    def test_a_project_with_no_elements_warns_rather_than_failing(self, tmp_path):
+        """"Nothing to probe" is not "does not load" - the second sends a
+        user hunting a plugin problem that is not there."""
+        from tools.bga_doctor import check_project_loads
+
+        (tmp_path / "project.conf").write_text("name: p\nmin-version: 2.0\n")
+
+        [finding] = check_project_loads(str(tmp_path))
+
+        assert finding["status"] in (WARN, SKIP)
+        if finding["status"] == WARN:
+            assert "no element found to probe" in finding["summary"]
+
+    @pytest.mark.bst
+    def test_a_project_whose_only_element_is_not_all_bst_passes(self, tmp_path):
+        """The acceptance: `examples/06` with `all.bst` renamed."""
+        import shutil
+        if not shutil.which("bst"):
+            pytest.skip("bst not on PATH")
+        source = os.path.join(REPO, "examples", "06-macro-micro-optimization")
+        if not os.path.isfile(
+                os.path.join(source, "files", "toolchain", "usr", "bin", "gcc")):
+            pytest.skip("examples/06 is not staged - run examples/stage_cpp_toolchain.sh")
+
+        project = tmp_path / "renamed"
+        shutil.copytree(source, project, symlinks=True)
+        shutil.rmtree(project / "optimized", ignore_errors=True)
+        os.rename(project / "elements" / "all.bst",
+                  project / "elements" / "everything.bst")
+
+        [finding] = check_project_loads(str(project))
+
+        assert finding["status"] == OK, finding
+        assert "all.bst" not in finding["summary"]
+
+    @pytest.mark.bst
+    def test_one_broken_element_does_not_condemn_the_project(self, tmp_path):
+        """A single element failing on its own is a fact about that
+        element. The probe falls through to the next one."""
+        import shutil
+        if not shutil.which("bst"):
+            pytest.skip("bst not on PATH")
+
+        project = tmp_path / "mixed"
+        (project / "elements").mkdir(parents=True)
+        (project / "files").mkdir()
+        (project / "project.conf").write_text(
+            "name: mixed\nmin-version: 2.0\nelement-path: elements\n")
+        # Sorts first, and names a kind no plugin provides.
+        (project / "elements" / "aaa-broken.bst").write_text(
+            "kind: cmake\nsources:\n- kind: local\n  path: files\n")
+        (project / "elements" / "zzz-fine.bst").write_text(
+            "kind: import\nsources:\n- kind: local\n  path: files\n")
+
+        [finding] = check_project_loads(str(project))
+
+        assert finding["status"] == OK, finding
+        assert "zzz-fine.bst" in finding["summary"]

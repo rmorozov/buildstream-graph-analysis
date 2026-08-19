@@ -1,6 +1,6 @@
 # UX-140: when SEIZE is unavailable, the spine must exec, not wrap
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-130 (done — this is its fallback path)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-130 (done — this is its fallback path)
 
 ## Motivation
 
@@ -41,3 +41,40 @@ the caller as `WIFSIGNALED` (subprocess returncode −15), identical to
 untraced; `ps` during the run shows no lingering spine wrapper; the
 degradation record names `seize-failed`. The seam is absent from the
 shim's injected env, asserted alongside the other two.
+
+
+---
+
+## What was built
+
+On `!seized` the spine now **kills the not-yet-exec'd child and execs in
+its own process**, rather than surviving as a wrapper. The child is
+blocked on the handshake pipe and has not exec'd, so killing it costs
+nothing and cannot lose work; what remains is one process that *is* the
+command. `restore_default_signals()` undoes the forwarder first — `execvp`
+resets caught signals anyway, but the exec can fail, and a process
+falling through to `_exit(127)` with a forwarder installed would be
+forwarding to a child that no longer exists.
+
+`BST_TRACE_SPINE_FAIL_SEIZE` is the seam, third of its family, and it is
+asserted absent from the shim's injected environment alongside the other
+two (`UX-143` widened that guard, which previously checked one of them).
+
+### Measured, before and after
+
+The same command (`sh -c "sleep 30"`) killed with SIGTERM, through
+Python's `subprocess`, which reports a signal death as a **negative**
+returncode and so does not hide what a shell rounds off:
+
+| | returncode | spine processes alive |
+|---|---|---|
+| untraced | **-15** | — |
+| pre-UX-140 fallback | **143** | **1** |
+| after | **-15** | **0** |
+
+143 is `128 + 15`: a signal death rendered as a normal exit, read by
+BuildStream as the parent. That is the exact `WIFSIGNALED`-vs-`WIFEXITED`
+confusion the same file's `UX-106` correction documents as wrong.
+
+Falsified by restoring the wrapper: both the status test and the
+no-lingering-process test go red, the other four stay green.

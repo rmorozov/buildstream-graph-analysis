@@ -154,7 +154,8 @@ def install_bwrap_shim(shim_dir: str) -> str:
 
 
 def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
-                     trace_spine=False) -> int:
+                     trace_spine=False, diagnostics_path: Optional[str] = None,
+                     no_inject: bool = False) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -238,6 +239,20 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         else:
             env.pop("BST_TRACE_ARGV_LOG", None)
 
+        # UX-146: what the shim received and what it exec'd, per
+        # invocation. Written on the host side into the same temporary
+        # directory the shim already owns, and copied out afterwards, so
+        # a build that dies mid-way still leaves the record.
+        captured_diagnostics = os.path.join(bind_dir, "capture-diagnostics.jsonl")
+        if diagnostics_path is not None:
+            env["BST_TRACE_DIAGNOSTICS"] = captured_diagnostics
+        else:
+            env.pop("BST_TRACE_DIAGNOSTICS", None)
+        if no_inject:
+            env["BST_TRACE_NO_INJECT"] = "1"
+        else:
+            env.pop("BST_TRACE_NO_INJECT", None)
+
         if wrapped_log_path is not None:
             with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
                 returncode = run_wrapped(project_dir, cmd, out_f, env=env)
@@ -249,6 +264,14 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
             shutil.copyfile(captured_log, raw_log_path)
         if argv_log_path is not None and os.path.exists(captured_argv):
             shutil.copyfile(captured_argv, argv_log_path)
+        if diagnostics_path is not None:
+            # Created empty when the shim never ran, deliberately: zero
+            # invocations is this file's most important reading, and an
+            # absent file reads as "the flag did not work".
+            if os.path.exists(captured_diagnostics):
+                shutil.copyfile(captured_diagnostics, diagnostics_path)
+            else:
+                open(diagnostics_path, "w").close()
         if invocation_log_path is not None and os.path.exists(captured_invocations):
             shutil.copyfile(captured_invocations, invocation_log_path)
         return returncode
@@ -3713,6 +3736,94 @@ def _spine_policy(flag: str):
     return {"off": False, "on": True, "auto": "auto"}[flag]
 
 
+def read_capture_diagnostics(path: str) -> List[dict]:
+    """The shim's own records, or an empty list."""
+    records = []
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if line.strip():
+                    try:
+                        records.append(json.loads(line))
+                    except ValueError:
+                        continue
+    except OSError:
+        pass
+    return records
+
+
+def format_capture_diagnostics(path: str, no_inject: bool = False) -> str:
+    """UX-146: the count first, because zero is the answer that matters.
+
+    A capture that produced nothing has two completely different causes -
+    the `$PATH` shadow never reaching `buildbox-run`, so the build ran
+    entirely unmodified, or the shadow working and the rewrite breaking
+    the sandbox - and from outside they are the same silence. The
+    invocation count tells them apart in one line, so it leads.
+    """
+    records = read_capture_diagnostics(path)
+    lines = ["", "=" * 60, "Capture diagnostics (UX-146)", "=" * 60]
+    if not records:
+        lines += [
+            "  The bwrap shim ran 0 times.",
+            "",
+            "  BuildStream resolves `bwrap` through `buildbox-run`, one process",
+            "  layer below its own Python, so the shim is reached via $PATH. Zero",
+            "  invocations means that never happened: this build ran unmodified and",
+            "  the capture is empty for that reason, not because the sandbox failed.",
+            "",
+            "  Worth checking: whether the build used a sandbox at all (a fully",
+            "  cached build launches none), and whether anything in the chain",
+            "  sanitises $PATH.",
+            f"  Record: {path} (empty)",
+        ]
+        return "\n".join(lines)
+
+    injected = sum(1 for r in records if r.get("injected"))
+    elements = sorted({r.get("element") for r in records if r.get("element")})
+    unexecutable = [r for r in records if not r.get("real_bwrap_executable")]
+    # A mis-split shows up as a sandboxed command starting with what is
+    # plainly a flag - the failure mode the arity table can produce
+    # against a bubblewrap newer than the 0.9.0 it was built from.
+    suspicious = [r for r in records
+                  if (r.get("command") or [""])[0].startswith("-")]
+
+    lines += [
+        f"  The bwrap shim ran {len(records)} time(s); "
+        f"{injected} rewritten, {len(records) - injected} passed through.",
+        f"  Real bwrap: {records[-1].get('real_bwrap')}",
+    ]
+    if elements:
+        shown = ", ".join(elements[:6])
+        more = f" (+{len(elements) - 6} more)" if len(elements) > 6 else ""
+        lines.append(f"  Elements seen: {shown}{more}")
+    else:
+        lines.append("  Elements seen: none recoverable from the argv (UX-56)")
+    if unexecutable:
+        lines.append(f"  {len(unexecutable)} invocation(s) found no executable "
+                     f"bwrap at that path - that alone fails the build.")
+    if suspicious:
+        first = suspicious[0]
+        lines += [
+            f"  {len(suspicious)} invocation(s) parsed a sandboxed command that "
+            f"starts with an option:",
+            f"    {' '.join((first.get('command') or [])[:4])}",
+            "  That is what a mis-split looks like: `split_bwrap_args` assumes an",
+            "  unknown --flag takes no arguments, and its table was validated",
+            "  against bubblewrap 0.9.0. Send this file if you see it.",
+        ]
+    if no_inject:
+        lines += [
+            "",
+            "  --no-inject was set, so nothing was captured and no process record",
+            "  exists. If this build SUCCEEDED and the same build fails without",
+            "  the flag, the argv rewrite is at fault. If it failed here too, the",
+            "  shim's presence is - the PATH shadow or the exec, not the rewrite.",
+        ]
+    lines.append(f"  Record: {path}")
+    return "\n".join(lines)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """`argv` defaults to `sys.argv[1:]`, as argparse does.
 
@@ -3788,6 +3899,24 @@ def main(argv: Optional[List[str]] = None) -> int:
              "path, since its value here is the run directory rather than the "
              "file.",
     )
+    run_parser.add_argument(
+        "--diagnose", action="store_true",
+        help="UX-146: record what the bwrap shim received and what it exec'd, "
+             "one JSON line per sandbox, and print a summary of it. Written "
+             "beside the report as <output>.diagnostics.jsonl. Use this when a "
+             "capture fails on a build that succeeds under plain `bst`: the "
+             "count alone separates 'the PATH shadow never reached "
+             "buildbox-run' from 'the rewrite broke the sandbox', which look "
+             "identical from outside.",
+    )
+    run_parser.add_argument(
+        "--no-inject", action="store_true",
+        help="UX-146: install the shim but pass BuildStream's bwrap argv "
+             "through untouched. Captures nothing - it is a bisection tool. A "
+             "build that succeeds with this and fails without it blames the "
+             "argv rewrite; one that fails both ways blames the PATH shadow or "
+             "the exec. Implies --diagnose.",
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -3862,6 +3991,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
 
         raw_log_path = args.raw_log or os.path.join(tempfile.mkdtemp(prefix="bst-native-trace-log-"), "trace.log")
+        # UX-146: `--no-inject` without the record would answer "did it
+        # work?" and nothing else, and the record is the artifact the
+        # user sends on.
+        diagnostics_path = (f"{args.output}.diagnostics.jsonl"
+                            if (args.diagnose or args.no_inject) else None)
         # UX-126: a run directory is extracted *from* the Plane 1 log, so
         # asking for one asks for the log. Same shape as UX-80's implied
         # invocation record: named, it is kept; unnamed, it goes to a
@@ -3879,10 +4013,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                                           trace_opens=args.trace_opens,
                                           argv_log_path=args.argv_log,
                                           invocation_log_path=invocation_log_path,
-                                          trace_spine=_spine_policy(args.trace_spine))
+                                          trace_spine=_spine_policy(args.trace_spine),
+                                          diagnostics_path=diagnostics_path,
+                                          no_inject=args.no_inject)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+
+        if diagnostics_path:
+            print(format_capture_diagnostics(diagnostics_path,
+                                             no_inject=args.no_inject),
+                  file=sys.stderr)
 
         report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
                                     invocation_log_path=invocation_log_path,

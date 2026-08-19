@@ -179,12 +179,30 @@ def check_project_loads(project_dir: str) -> List[dict]:
     if not bst:
         return [_check("project-loads", SKIP,
                        "cannot load the project without bst")]
-    result = subprocess.run(
-        [bst, "show", "--deps", "none", "--format", "%{name}", "all.bst"],
-        cwd=project_dir, capture_output=True, text=True, timeout=300,
-    )
-    if result.returncode == 0:
-        return [_check("project-loads", OK, f"{project_dir} loads")]
+
+    # UX-142: whatever this project actually declares, not `all.bst`.
+    # Every `examples/*` here ships one, and reading that fixture
+    # convention back as a world fact made this check fail every real
+    # project - freedesktop-sdk included - from the first command the
+    # walkthrough teaches.
+    targets = discover_elements(project_dir)
+    if not targets:
+        return [_check(
+            "project-loads", WARN,
+            f"no element found to probe under {element_path(project_dir)}/",
+            remedy="this check loads one of the project's own elements; a "
+                   "project with none cannot be probed, which is not the same "
+                   "as one that fails to load")]
+
+    result = None
+    for target in targets[:_PROBE_LIMIT]:
+        result = subprocess.run(
+            [bst, "show", "--deps", "none", "--format", "%{name}", target],
+            cwd=project_dir, capture_output=True, text=True, timeout=300,
+        )
+        if result.returncode == 0:
+            return [_check("project-loads", OK,
+                           f"{project_dir} loads ({target})")]
 
     message = (result.stderr or result.stdout or "").strip()
     remedy = ("read the error below - `bst show` is what this ran, and it is "
@@ -203,8 +221,55 @@ def check_project_loads(project_dir: str) -> List[dict]:
             "kinds it uses (origin: pip, package-name: buildstream-plugins). "
             "See examples/06-macro-micro-optimization/project.conf"
         )
-    return [_check("project-loads", FAIL, "the project does not load", remedy=remedy,
+    probed = ", ".join(targets[:_PROBE_LIMIT])
+    return [_check("project-loads", FAIL,
+                   f"the project does not load (tried {probed})", remedy=remedy,
                    detail=message.splitlines()[-6:])]
+
+
+# How many of a project's own elements to try before calling it broken.
+# One is not enough - a single element can fail on its own plugin while
+# the project is fine - and every extra one costs a `bst` startup, which
+# is the whole runtime of this check.
+_PROBE_LIMIT = 5
+
+
+def element_path(project_dir: str) -> str:
+    """The project's declared `element-path`, or BuildStream's default.
+
+    Read straight out of `project.conf`, for the same reason
+    `project_name_from_dir` is: this has to work on a project whose
+    plugins are *not* installed, which is one of the failures this check
+    exists to name.
+    """
+    conf = os.path.join(project_dir, "project.conf")
+    try:
+        with open(conf, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if line.startswith("element-path:"):
+                    return line.split(":", 1)[1].strip() or "elements"
+    except OSError:
+        pass
+    return "elements"
+
+
+def discover_elements(project_dir: str) -> List[str]:
+    """Element names this project declares, as `bst show` takes them.
+
+    Sorted shallowest first, then by name: a top-level element is the
+    likeliest to be a real target and the least likely to be an
+    architecture-specific leaf, and stable order keeps the check's own
+    output reproducible.
+    """
+    root = os.path.join(project_dir, element_path(project_dir))
+    if not os.path.isdir(root):
+        return []
+    found = []
+    for base, _dirs, files in os.walk(root):
+        for name in files:
+            if name.endswith(".bst"):
+                found.append(os.path.relpath(os.path.join(base, name), root))
+    return sorted(found, key=lambda name: (name.count(os.sep), name))
 
 
 def _plugins_package_installed() -> bool:

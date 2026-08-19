@@ -17,6 +17,16 @@ that needs no BuildStream. Then
 [`guides/real-project.md`](guides/real-project.md) is the end-to-end
 path on a real project.
 
+Three planes of evidence, and they cost different things to obtain —
+which is why the guides pick between them rather than always saying
+"capture everything":
+
+| plane | what it sees | what it costs |
+|---|---|---|
+| **1** — one run's element-level log | the whole schedule, the critical path, the floors | a log; the analysis needs no live BuildStream |
+| **2** — processes inside a sandbox | what one element's own build system actually did | a real `bst` + `bwrap` build you decided to capture |
+| **3** — BuildStream's own kept logs | history: what this project keeps spending time on | nothing — `bga cache-logs` reads what is already on disk |
+
 ---
 
 ## Guides
@@ -46,7 +56,7 @@ Why it is this way. Arguments and structure, not instructions.
 
 | document | what it covers |
 |---|---|
-| [`design/architecture.md`](design/architecture.md) | the two analysis planes, and every extension beyond the spec |
+| [`design/architecture.md`](design/architecture.md) | the three analysis planes, how the ingestion path measures itself, and every extension beyond the spec |
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
 
 ## Contributing

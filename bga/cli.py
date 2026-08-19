@@ -317,13 +317,22 @@ def _print_missing_input_hint(run_dir: Path) -> None:
     if not (graph_present or trace_present or run_context_present):
         return
 
+    # Every hint here has to be runnable as printed. They used to name
+    # `tools/<script>.py` paths, which are not executable (no +x bit) and
+    # not on PATH - a user who is already stuck was handed a command that
+    # fails with "Permission denied". `bga` has had front-door aliases
+    # for all of them since UX-67; those are what a reader can paste.
     missing = []
     if not graph_present:
-        missing.append(("graph.json", "tools/bst_show_to_graph.py <project_dir> <targets...> graph.json"))
+        missing.append(("graph.json", "bga graph-from-show <project_dir> <targets...> graph.json"))
     if not trace_present:
-        missing.append(("trace.json", "tools/bst_log_to_chrome_trace.py + tools/chrome_trace_to_bga_trace.py <log>"))
+        missing.append((
+            "trace.json",
+            "bga log-to-chrome <log> trace-chrome.json"
+            " && bga chrome-to-trace trace-chrome.json trace.json",
+        ))
     if not run_context_present:
-        missing.append(("run-context.json", "tools/bst_run_context.py <log> run-context.json"))
+        missing.append(("run-context.json", "bga run-context <log> run-context.json"))
     if not missing:
         return
 
@@ -336,8 +345,9 @@ def _print_missing_input_hint(run_dir: Path) -> None:
     for filename, tool_hint in missing:
         print(f"  {filename}: {tool_hint}", file=sys.stderr)
     print(
-        "  (or run tools/bst_extract_run.py to produce all three from one "
-        "project + log in a single step - see docs/spec/ingestion-pipeline.md)",
+        "  (or run `bga extract <project_dir> <log> <run_dir>` to produce all three "
+        "from one project + log in a single step - see "
+        "docs/spec/ingestion-pipeline.md)",
         file=sys.stderr,
     )
 

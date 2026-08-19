@@ -147,7 +147,11 @@ def test_a_dominant_element_with_real_internal_parallelism_is_named():
     findings = _split_candidates(analysis, native)
     assert [f['elements'] for f in findings] == [['big.bst']]
     assert findings[0]['severity'] == 'info'
-    assert 'a split\'s shape is a human decision' in findings[0]['title']
+    # The hedge is carried on the finding, in `rationale` rather than
+    # `title`: it is identical for every candidate, so the renderer says
+    # it once for the group instead of once per element.
+    assert 'a split\'s shape is a human decision' in findings[0]['rationale']
+    assert 'big.bst' in findings[0]['title']
 
 
 def test_a_serial_element_is_not_a_split_candidate():

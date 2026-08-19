@@ -745,8 +745,10 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
         if redundancy and redundancy_s >= floor_s:
             others = [e for e in redundancy.get("elements", []) if e != joined.element]
             ranked.append((_EVIDENCE_REDUNDANCY, 'redundant-operation',
-                f"it pays {redundancy_s:.1f}s for an operation {len(others)} other "
-                f"element(s) also run ({redundancy['occurrence_count']}x in total): "
+                f"it pays {redundancy_s:.1f}s for an operation "
+                f"{_count(len(others), 'other element')} also run"
+                f"{'s' if len(others) == 1 else ''} "
+                f"({redundancy['occurrence_count']}x in total): "
                 f"{redundancy.get('signature', '').strip()[:60]}"))
 
     if joined.unused_dependencies:
@@ -1134,12 +1136,19 @@ def _split_candidates(analysis, native_report) -> List[dict]:
             'title': (
                 f"{element} holds {share * 100:.0f}% of the critical path and runs "
                 f"{mean:.2f} concurrent work processes inside one element "
-                f"({entry.get('work_process_count')} of them) - work BuildStream "
-                f"could have scheduled as separate cacheable elements. Evidence, not "
-                f"a recommendation: a split's shape is a human decision, and this "
-                f"run's history carries no invalidation blast for it (every capture "
-                f"is the same commit), which is the third piece of evidence and the "
-                f"one that would make the case"
+                f"({entry.get('work_process_count')} of them)"
+            ),
+            # The caveat is identical for every candidate, so it is
+            # carried separately and the renderer prints it once. Four
+            # candidates used to mean four verbatim copies of the same
+            # three sentences - 1300 characters saying one thing.
+            'rationale': (
+                "That is work BuildStream could have scheduled as separate "
+                "cacheable elements. Evidence, not a recommendation: a split's "
+                "shape is a human decision, and this run's history carries no "
+                "invalidation blast for it (every capture is the same commit), "
+                "which is the third piece of evidence and the one that would "
+                "make the case"
             ),
         })
     return findings
@@ -1310,6 +1319,13 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     )
 
     return {
+        # UX-95's rule, applied to the join: a report that names no run
+        # cannot be filed, compared, or trusted a week later. Plane 1's
+        # analysis already carries both halves - the identity hash that
+        # says which runs are comparable, and the instance that says
+        # which capture this was - and the join was dropping them.
+        "run_id": analysis.get("run_id"),
+        "run_instance": analysis.get("run_instance"),
         "elements": [vars(e) for e in joined],
         "restructuring": restructuring,
         "granularity": granularity,
@@ -1378,9 +1394,26 @@ def _chain_order(finding: dict) -> List[str]:
     return chain if len(chain) == len(finding['elements']) else list(finding['elements'])
 
 
+def _count(n: int, noun: str) -> str:
+    """`1 element` / `2 elements`, rather than `1 element(s)`. The
+    parenthesised plural is honest when a count is unknown at authoring
+    time and simply wrong once it is known to be one."""
+    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+
+
 def format_correlation(result: dict) -> str:
     """Human-readable join, leading with what to do next."""
-    lines = ["=" * 60, "Two-Plane Correlation", "=" * 60]
+    lines = ["=" * 60, "Two-Plane Correlation (Plane 1 x Plane 2)", "=" * 60]
+    if result.get("run_id"):
+        lines.append(f"Run: {result['run_id']}")
+    instance = result.get("run_instance") or {}
+    if instance.get("started_at"):
+        lines.append(
+            f"Instance: {instance['started_at']}"
+            + (f"  {instance['run_dir']}" if instance.get("run_dir") else "")
+        )
+    if len(lines) > 3:
+        lines.append("")
     # UX-56: said before the join, because it invalidates it.
     if result.get("attribution_unreliable"):
         lines.append("NO USABLE JOIN: Plane 2's element attribution is unreliable.")
@@ -1460,8 +1493,23 @@ def format_correlation(result: dict) -> str:
     lines.append("")
 
     # UX-100: granularity, beside the other whole-graph conclusions.
+    # Grouped by the caveat they share: the JSON keeps one entry per
+    # element, because that is what a CI consumer keys on, and the text
+    # says the shared half once.
+    grouped: List[Tuple[Tuple[str, str, str], List[dict]]] = []
     for finding in result.get("granularity") or []:
-        lines.append(f"[{finding['severity']}] {finding['id']}: {finding['title']}")
+        key = (finding['severity'], finding['id'], finding.get('rationale') or '')
+        if grouped and grouped[-1][0] == key:
+            grouped[-1][1].append(finding)
+        else:
+            grouped.append((key, [finding]))
+    for (severity, finding_id, rationale), group in grouped:
+        head, *rest = group
+        lines.append(f"[{severity}] {finding_id}: {head['title']}")
+        for finding in rest:
+            lines.append(f"  ...and {finding['title']}")
+        if rationale:
+            lines.append(f"  {rationale}")
         lines.append("")
 
     # UX-82: before the per-element rows. A structural conclusion

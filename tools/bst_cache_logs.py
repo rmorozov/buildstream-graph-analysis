@@ -826,6 +826,32 @@ def build_report(
     }
 
 
+_ELEMENT_COLUMN_CHARS = 28
+
+
+def _elide_element(name: str, width: int = _ELEMENT_COLUMN_CHARS) -> str:
+    """Fit an element name to the ranking column without hiding which
+    element it is. A fixed slice truncates the *head*, and on a real
+    project that turns `components/_private/cmake-stage1.bst` and
+    `components/_private/git-minimal.bst` into `components/_private/cmake-st`
+    and `components/_private/git-mini` - two names that differ only past
+    the cut, with nothing saying they were cut at all. The tail is the
+    distinguishing part, so the head is what gives way."""
+    if len(name) <= width:
+        return name
+    return "…" + name[-(width - 1):]
+
+
+def _pct(share: float) -> str:
+    """A share, rendered so a nonzero quantity never reads as zero. A
+    1.0s toll on a 594.0s element is 0.17%, and printing that as `0%`
+    beside a real number says the toll was not paid at all."""
+    if share <= 0:
+        return "0%"
+    pct = share * 100
+    return f"{pct:.0f}%" if pct >= 1 else "<1%"
+
+
 def format_report_text(report: dict) -> str:
     provenance = report['provenance']
     lines = [
@@ -857,7 +883,7 @@ def format_report_text(report: dict) -> str:
             for phase in row['phases']:
                 lines.append(
                     f"    {phase['name']:<32s} {phase['duration_us'] / 1e6:7.1f}s "
-                    f"({phase['share'] * 100:.0f}%)"
+                    f"({_pct(phase['share'])})"
                 )
             for timed in row['self_timed']:
                 lines.append(
@@ -894,8 +920,9 @@ def format_report_text(report: dict) -> str:
             lines.append('  Who paid it (by toll seconds, not by share):')
             for payer in payers:
                 lines.append(
-                    f"    {payer['element']:<32s} {payer['toll_us'] / 1e6:7.1f}s toll "
-                    f"of {payer['total_us'] / 1e6:.1f}s ({payer['toll_share'] * 100:.0f}%)"
+                    f"    {_elide_element(payer['element'], 32):<32s} "
+                    f"{payer['toll_us'] / 1e6:7.1f}s toll "
+                    f"of {payer['total_us'] / 1e6:.1f}s ({_pct(payer['toll_share'])})"
                 )
         if tax['unaccounted_us']:
             lines.append(
@@ -961,19 +988,28 @@ def format_report_text(report: dict) -> str:
                 "than withheld" if tax['weak_window'] else ""
             )
         )
-        lines.append(
-            f"  {'element':<28s} {'builds':>6s} {'total':>9s} {'mean':>8s}  cause"
+        shown = tax['ranking'][:_TAX_ELEMENTS_SHOWN]
+        # The `cause` column needs `--graph` *and* an element that
+        # rebuilt more than once. An empty column on every other run
+        # reads as "no cause found" rather than "no cause could be
+        # looked for".
+        any_cause = any(
+            any(count for count in row['causes'].values()) for row in shown
         )
-        for row in tax['ranking'][:_TAX_ELEMENTS_SHOWN]:
+        lines.append(
+            f"  {'element':<28s} {'builds':>6s} {'total':>9s} {'mean':>8s}"
+            + ("  cause" if any_cause else "")
+        )
+        for row in shown:
             causes = row['causes']
             parts = [
                 f"{count}x {name.replace('_', ' ')}"
                 for name, count in causes.items() if count
             ]
             lines.append(
-                f"  {row['element'][:28]:<28s} {row['build_count']:>6d} "
-                f"{row['total_us'] / 1e6:>8.1f}s {row['mean_us'] / 1e6:>7.1f}s  "
-                + ", ".join(parts)
+                (f"  {_elide_element(row['element']):<28s} {row['build_count']:>6d} "
+                 f"{row['total_us'] / 1e6:>8.1f}s {row['mean_us'] / 1e6:>7.1f}s"
+                 + ("  " + ", ".join(parts) if parts else "")).rstrip()
             )
             for root in row['upstream_roots'][:2]:
                 lines.append(

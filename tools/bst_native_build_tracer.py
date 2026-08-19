@@ -3218,7 +3218,18 @@ def _format_declared_vs_used(analysis: dict) -> List[str]:
 
 
 def _format_text(report: dict) -> str:
+    # Every other report this tool prints opens with a banner naming
+    # what it is; this one opened straight into a process count, so a
+    # Plane 2 report pasted anywhere was unidentifiable as one. No run id
+    # is claimed: that hash is Plane 1's, computed from the declared
+    # graph, and a native report has no access to it - `bga correlate`
+    # is where the two identities meet.
     lines = [
+        "=" * 60,
+        "Native Build Trace (Plane 2)",
+        "=" * 60,
+    ]
+    lines += [
         f"Processes traced: {report['process_count']} "
         f"({report['matched_count']} matched, {report['open_count']} no observed exit)",
         # UX-32: this counts every traced process, including `make`/`sh`
@@ -3228,10 +3239,14 @@ def _format_text(report: dict) -> str:
         # interpretable number.
         f"Max observed concurrency (all traced processes, incl. idle wrappers): "
         f"{report['max_concurrency']} live processes (matched only - see "
-        f"open_records_note). UX-61: a count of processes alive at once, "
-        f"NOT of cores in use - most are blocked wrappers (sh, make, the "
-        f"gcc driver), so a figure above the host's core count is expected "
-        f"and is not oversubscription evidence on its own.",
+        # The task citation belongs at the end, where every other note
+        # in this tool puts it - mid-sentence it interrupts the one line
+        # a reader has to understand before any number below means
+        # anything.
+        f"open_records_note). A count of processes alive at once, NOT of "
+        f"cores in use - most are blocked wrappers (sh, make, the gcc "
+        f"driver), so a figure above the host's core count is expected and "
+        f"is not oversubscription evidence on its own (UX-61).",
     ]
     if report.get("open_records_note"):
         lines.append(f"  ({report['open_records_note']})")
@@ -3373,6 +3388,9 @@ def _format_text(report: dict) -> str:
     lines.append("")
     lines.extend(_format_stream_coverage(report))
     lines.extend(_format_static_census(report))
+    # Closed the way every other report in this tool closes, so a reader
+    # can tell a truncated paste from a complete one.
+    lines.append("=" * 60)
     return "\n".join(lines)
 
 

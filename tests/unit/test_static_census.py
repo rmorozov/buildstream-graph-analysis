@@ -183,3 +183,24 @@ def test_two_censuses_of_one_project_are_identical(tmp_path):
     assert census_project(project, ["runtime.bst", "work.bst"]) == census_project(
         project, ["runtime.bst", "work.bst"]
     )
+
+
+def test_the_disclaimer_names_the_way_out_and_its_price():
+    """UX-108: the budget kept `--trace-spine` off by default, and a
+    default-off mechanism nothing points at is one nobody finds. The
+    footnote that describes the gap is where the reader already is."""
+    from tools.bst_native_build_tracer import _format_static_census
+
+    report = {
+        "static_binary_disclaimer": "the old generic footnote",
+        "static_census": {
+            "static_executables": ["bin/sh", "bin/sleep"],
+            "elements_at_risk": ["work-a.bst"],
+            "per_element": {},
+        },
+    }
+    note = " ".join(_format_static_census(report))
+
+    assert "--trace-spine" in note
+    # With the price attached, so it reads as a choice rather than an ad.
+    assert "+2.7%" in note and "+13.5%" in note

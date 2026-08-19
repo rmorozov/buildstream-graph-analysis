@@ -3129,7 +3129,16 @@ def _format_static_census(report: dict) -> List[str]:
         f"linker. Affected: {', '.join(at_risk[:4])}"
         + (f" (+{len(at_risk) - 4} more)" if len(at_risk) > 4 else "")
         + ". This bounds what the trace can be missing; it does not measure what it "
-          "did miss (UX-105).",
+          "did miss (UX-105). "
+        # UX-108: the budget decided the default, and a default-off
+        # mechanism that nothing points at is one nobody finds. Said
+        # here, where the reader is already looking at the gap, and with
+        # the price attached so it is a choice rather than an
+        # advertisement.
+          "Re-run with `bga capture run --trace-spine` to record them anyway: a "
+          "ptrace process-event tracer sees a process whatever its linkage, at a "
+          "measured +2.7% wall on a compile-bound build and +13.5% on a "
+          "process-dense one, which is why it is not the default (UX-106/UX-108).",
     ]
 
 

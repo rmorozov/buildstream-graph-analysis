@@ -407,3 +407,72 @@ def test_a_signal_the_program_raises_itself_still_reaches_it(spine, tmp_path):
 
     assert result.returncode == 0
     assert marker.exists(), "the shell's own SIGSTOP/SIGCONT round trip broke"
+
+
+# --- the shape it actually ships in (UX-119) ----------------------------
+
+@pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
+def test_the_spine_is_pid_2_in_the_shape_buildstream_runs(spine, tmp_path):
+    """`spine.c`'s header claimed pid 1 and justified its signal handling
+    by pid 1's missing default dispositions. BuildStream's real bwrap
+    argv carries `--unshare-pid --die-with-parent` and no `--as-pid-1`,
+    so bubblewrap's own reaper is pid 1 and everything it launches starts
+    at 2."""
+    def _pid_of_shell(extra):
+        return subprocess.run(
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *extra,
+             "/bin/sh", "-c", "echo $$"],
+            capture_output=True, text=True, timeout=60).stdout.strip()
+
+    assert _pid_of_shell([]) == "2"
+    assert _pid_of_shell(["--as-pid-1"]) == "1"
+
+
+@pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
+@pytest.mark.parametrize("script,label", [
+    ("exit 0", "success"),
+    ("exit 7", "an ordinary failure"),
+    ("kill -TERM $$", "a signal death"),
+])
+def test_a_traced_status_equals_an_untraced_one_inside_the_sandbox(
+        spine, script, label):
+    """The contract, checked where it is actually kept: inside a real
+    bwrap sandbox, against bare bwrap as the control.
+
+    This is what the spine's own tests could not see while they ran it as
+    a plain subprocess - and it is worth checking against the control
+    rather than against an expected number, because bwrap renders a
+    signal death as 143 all by itself.
+    """
+    def _run(argv):
+        return subprocess.run(
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv,
+             "/bin/sh", "-c", script],
+            capture_output=True, text=True, timeout=60).returncode
+
+    assert _run([spine, "--"]) == _run([]), label
+
+
+@pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
+def test_why_the_shim_does_not_pass_as_pid_1(spine):
+    """UX-119 offers passing `--as-pid-1` as the alternative to accepting
+    pid-2 reality. It is the wrong half of the choice, and bare bwrap
+    says so: with that flag a signal-killed command surfaces **0**, and
+    without it 143. Adding it would change what BuildStream observes
+    about its own builds even with no tracer attached."""
+    from tools.native_trace.bwrap_shim import build_shim_argv
+
+    def _bare(extra):
+        return subprocess.run(
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *extra,
+             "/bin/sh", "-c", "kill -TERM $$"],
+            capture_output=True, text=True, timeout=60).returncode
+
+    assert _bare([]) == 143
+    assert _bare(["--as-pid-1"]) == 0, "the reason the flag stays out"
+
+    argv = build_shim_argv(
+        "/usr/bin/bwrap", ["--unshare-pid", "--", "sh", "-c", "true"],
+        "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
+    )
+    assert "--as-pid-1" not in argv, "the shim must not change the sandbox"

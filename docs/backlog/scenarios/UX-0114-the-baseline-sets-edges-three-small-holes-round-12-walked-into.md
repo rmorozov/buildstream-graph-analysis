@@ -1,6 +1,6 @@
 # UX-114: the baseline set's edges — three small holes round 12 walked into
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-96, UX-108 (both done — this is their edges)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-96, UX-108 (both done — this is their edges)
 
 ## Motivation
 
@@ -68,3 +68,112 @@ dispatches mid-capture.
    its log).
 3. Cold candidate vs incremental band via the helper: exit 6, message
    naming the run-mode check.
+
+## Resolution
+
+### 1. Absence is read per field, and is never silent
+
+`HOMOGENEOUS_FIELDS` is now a mapping of field to **what an absent value
+means**, not a tuple of names:
+
+- a string — the capture workflow's own default, which a ref published
+  before the field existed was necessarily taken under. The default
+  participates in the comparison, so absent-vs-`true` is a mismatch.
+  `trace_spine` (`false`) and `trace_opens` (`true`), the latter added
+  here because it was never checked at all.
+- `None` — absence has no defined meaning. The field is compared across
+  the captures that record it and partial coverage is reported as
+  `UNVERIFIED`, so "checked and equal" and "checked on three of five"
+  stop printing identically. `fdsdk_ref`, `capture_mode`, `builders`,
+  `max_jobs`, `target`.
+
+**Before**, on the five live incremental refs — one of which
+(`32223468993`, `bga_ref=7bdb7e6f`) records `trace_spine=true`:
+
+```text
+$ bga baseline --glob 'captures/fdsdk/953683fb-incremental-b4j4-*' -n 5
+  DRIFT: 5 different bga_ref values across this baseline set - ...
+EXIT=0
+```
+
+The spine capture — a different instrument reading the same build —
+joined a four-run hook-only band with nothing said. **After**, same
+command, same refs:
+
+```text
+  NOT COMPARABLE: trace_spine differs across the set (false, true); 4 recorded
+      nothing and were taken as false
+      32064333551, 32113933158, 32122941503, +1 more
+  UNVERIFIED: 2 of 5 capture(s) do not record capture_mode, so the set was
+      checked on 3 of them. Absence has no defined meaning for this field -
+      it is unverified, not verified-equal
+      32064333551, 32113933158
+  UNVERIFIED: 4 of 5 capture(s) do not record target, so the set was checked
+      on 1 of them. ...
+      32064333551, 32113933158, 32122941503, +1 more
+EXIT=6
+```
+
+**Beyond the Required Fix, deliberately.** Two things the task did not
+ask for, both because the live data made them impossible to leave:
+
+- The task named `target` as the ambiguous-absence case. `capture_mode`
+  turned out to be one too — only 3 of the 5 refs record it — so the
+  mode check, the one `bga compare` refuses hardest on, was itself
+  running on a subset and reporting nothing about the rest.
+- An assumed default is stated (`ASSUMED: N of M capture(s) do not
+  record trace_spine; taken as trace_spine=false …`) even when it
+  changes no verdict. Absent-means-default is the right rule going
+  forward, but on today's corpus it is an assumption applied to four
+  captures out of five, and "we defaulted it" must not read as "it
+  recorded off". Suppressed where the field already mismatches, since
+  the mismatch line carries the same sentence.
+
+### 2. `-latest` moves only for the scheduled default instrumentation
+
+The publish step's decision is now a `publish_decision` shell function
+with three outcomes — `move-latest`, `non-default-instrumentation`,
+`failed-build` — and the `git push --force` to the pointer lives in the
+first branch only. A spine or opens-off capture still publishes its
+per-run ref, because it is data; it does not become the project's
+current state.
+
+Kept as a function so it could be *run* rather than described:
+`tests/unit/test_latest_ref_publish.py` extracts the definition from the
+YAML and executes it under bash across the instrumentation combinations.
+Verified by falsification — replacing the guard's condition with `false`
+turns 6 of its 10 tests red.
+
+### 3. The band's refusal carries exit 6, not exit 2
+
+Fixed in `bga compare` rather than in the helper, so every
+`--baseline-run` caller gets it and not only `bga baseline`:
+`RunsNotComparableError(ValueError)` is raised by the band's run-mode
+check and handled in `_execute_compare_and_write` ahead of the generic
+`ValueError` arm. A `ValueError` subclass, so any caller already
+catching the base class is unaffected.
+
+Measured on the real refs — the cold fdsdk capture against the
+incremental band, via the helper:
+
+```text
+$ bga baseline --glob 'captures/fdsdk/953683fb-incremental-b4j4-321*' -n 3 \
+      --candidate <cold run>
+Error: baseline run .../00-32177690506/run is a incremental run but the
+candidate is full - a noise band may only be built from runs of the same
+kind (UX-55)
+EXIT=6      # was 2
+```
+
+Tests: 7 added in `tests/unit/test_baseline_set.py` (10 → 17), 10 new in
+`tests/unit/test_latest_ref_publish.py`, 3 added in
+`tests/unit/test_compare_mismatch_refusal.py` (9 → 12).
+
+## Verification Log
+
+Done 2026-08-19. All three clauses run against the live capture refs
+rather than fixtures: the five-ref band before and after, the cold
+candidate against the incremental band, and the publish guard executed
+under bash. Clause 2's acceptance says "assert in the workflow's own
+publish-step logic or its log" — the assertion is on the logic, executed,
+because no dispatch was run.

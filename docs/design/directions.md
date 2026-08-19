@@ -333,11 +333,23 @@ New elements this change:
                     sandbox read lib-g.bst's output)
 ```
 
-The first two lines need `UX-27` and `UX-39` - **both now shipped**, so
-that half is buildable today. The element table needs 2b's per-element
-diff, which is still open. The parenthetical needs Plane 2's sandbox-read
-data - the declared-vs-used detection now named as candidate (1) for the
-next round.
+**Built (`UX-115`, 2026-08-19).** `bga compare --format ci-comment`
+renders it; [`docs/guides/ci-comment.md`](../guides/ci-comment.md) has the
+GitHub Actions wiring. Every part of the sketch above landed, including
+the parenthetical: rendered against a real pair of `examples/06` builds,
+the never-read column independently reproduced it —
+
+```text
+| `lib-h.bst` | 2.0s | yes — new on the path | `core.bst`, `lib-g.bst` |
+```
+
+— `lib-h.bst` declares a build dependency on `lib-g.bst` and opened none
+of the files it staged.
+
+The route there, for the record: the first two lines needed `UX-27` and
+`UX-39`; the element table needed 2b's per-element diff, which `UX-79`
+shipped; the parenthetical needed Plane 2's declared-vs-used detection
+(`UX-46`).
 
 ## Implementation status (updated 2026-08-16, round complete)
 

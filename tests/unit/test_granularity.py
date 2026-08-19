@@ -171,3 +171,100 @@ def test_a_parallel_element_off_the_critical_path_is_not_one_either():
         {'element': 'big.bst', 'mean_work_concurrency': 8.0, 'work_process_count': 900},
     ]}
     assert _split_candidates(analysis, native) == []
+
+
+# --- UX-120: the projection is a floor, and says so -----------------------
+
+def _run_with_siblings(tmp_path):
+    """Two sub-second siblings off one parent, each mostly staging.
+
+    A real run directory rather than hand-built task objects, because the
+    projection goes through the replay scheduler and a fake task list
+    would be testing the fake.
+    """
+    import json
+
+    elements = ["base.bst", "tiny-a.bst", "tiny-b.bst"]
+    identity = {"manifest_hash": "granularity-fixture", "targets": elements}
+    spans = [("base.bst", 0, 1_000_000),
+             ("tiny-a.bst", 1_000_000, 5_000_000),
+             ("tiny-b.bst", 1_000_000, 5_000_000)]
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run-context.json").write_text(json.dumps({
+        "trace_epsilon_us": 1000,
+        # One builder: with two, the two siblings already overlap and
+        # shortening one changes no makespan at all - the projection is
+        # then exactly 0 for a merge that would really delete a staging,
+        # which is the same floor-not-estimate property this file's last
+        # test is about, arriving from the other direction.
+        "resource_capacities": {"PROCESS": 1},
+        "run_identity": identity,
+        "wall_clock": {"start_us": 0, "end_us": 6_000_000},
+    }))
+    (run_dir / "graph.json").write_text(json.dumps({
+        "elements": [{"uid": uid, "requested_target": True} for uid in elements],
+        "dependencies": [
+            {"predecessor": "base.bst", "successor": "tiny-a.bst",
+             "dependency_type": "build"},
+            {"predecessor": "base.bst", "successor": "tiny-b.bst",
+             "dependency_type": "build"},
+        ],
+        "run_identity_hash": identity["manifest_hash"],
+    }))
+    (run_dir / "trace.json").write_text(json.dumps({
+        "run_identity_hash": identity["manifest_hash"],
+        "spans": [
+            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
+             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+            for uid, start, dur in spans
+        ],
+        "phases": [],
+    }))
+    return run_dir
+
+
+def _merge_finding(tmp_path):
+    from pathlib import Path
+
+    from bga.analyzer import BuildEfficiencyAnalyzer
+
+    analyzer = BuildEfficiencyAnalyzer()
+    analyzer.load(Path(_run_with_siblings(tmp_path)))
+    analyzer.analyze()
+    cache_logs = _cache_logs(
+        ("tiny-a.bst", 3_000_000, 5_000_000),
+        ("tiny-b.bst", 3_000_000, 5_000_000),
+    )
+    findings = _merge_candidates(
+        analyzer.graph.dependencies, cache_logs,
+        analyzer.normalized_tasks, analyzer.run_context,
+    )
+    return next(f for f in findings if f['id'] == 'merge-candidate')
+
+
+def test_the_projection_actually_replays_on_a_real_run(tmp_path):
+    """The projection path was only ever exercised with `tasks=None`
+    above, which returns `None` before reaching the scheduler - so the
+    replay itself had no test at all."""
+    finding = _merge_finding(tmp_path)
+
+    assert finding['projection'] is not None
+    assert finding['projection']['saving_us'] > 0
+
+
+def test_the_projected_saving_is_published_as_a_floor(tmp_path):
+    """UX-120 ran the loop the acceptance described - a purpose-built
+    fixture of eight sub-second siblings sharing one staged sysroot - and
+    the projection came back low. The replay shortens N tasks; a real
+    merge leaves *one*, so the group's wave structure survives the
+    projection and does not survive the merge.
+
+    Publishing it as an unqualified estimate would make a number that is
+    reliably too small look like a number that is roughly right.
+    """
+    finding = _merge_finding(tmp_path)
+
+    assert finding['projection_is_a_floor'] is True
+    assert "at least a replayed" in finding['title']
+    assert "without collapsing them into one" in finding['title']

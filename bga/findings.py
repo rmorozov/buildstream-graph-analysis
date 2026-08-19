@@ -524,6 +524,112 @@ def _memory_finding(result: AnalysisResult) -> List[dict]:
     )]
 
 
+def _capacity_recommendation_finding(result: AnalysisResult) -> List[dict]:
+    """UX-116: the paragraph that intersects the four constraints.
+
+    `UX-09` asked, in the first week of this backlog, whether `--builders`
+    and `--max-jobs` compete for the same cores and what they should be
+    set to. It was answered descriptively - yes, they compete, here is a
+    six-configuration timing table - and then every round added one more
+    input without ever assembling the answer: the sweep's knee, measured
+    cores-busy per element, pinning detection, the memory envelope. Four
+    blocks a reader had to reconcile, where one recommendation was
+    wanted.
+
+    The finding names the *binding* constraint, because that is the one
+    that changes what to do. A knee at 5 on a host whose cores are
+    already 85% drawn is not "raise builders to 5"; it is "CPU binds,
+    and the free capacity you have is the element asking its build for
+    `-j1`".
+    """
+    recommendation = getattr(result, 'capacity_recommendation', None) or {}
+    if not recommendation:
+        return []
+
+    binding = recommendation['binding_constraint']
+    recommended = recommendation['recommended_builders']
+    builders = recommendation['builders']
+    jobs = recommendation.get('native_max_jobs')
+    # The question is the *joint* one, so an unrecorded `--max-jobs` is
+    # named rather than dropped: "builders 4" reads as a complete setting
+    # and "builders 4 x max-jobs unrecorded" does not, which is the
+    # honest shape when UX-29 could not recover it from the log.
+    setting = f"builders {builders} x max-jobs {jobs if jobs else 'unrecorded'}"
+    if recommended > builders:
+        # Deliberately weaker than "raise it to N". Measured on a
+        # reconstructed macro-fixed `examples/06` where this block said
+        # "room for 2 more": a real timing table at builders 2/4/6/8 came
+        # back 21.6 / 24.2 / 23.5 / 23.3s - flat inside the run-to-run
+        # spread, with no ordering. The knee is a *scheduling* answer and
+        # `cores_busy` is an average over the whole run, so during the
+        # parallel stretch each element draws more than the average and
+        # the CPU ceiling is optimistic. The block's job is to name the
+        # constraint and the hypothesis; the timing table is what settles
+        # it, and saying otherwise would be UX-14's caveat with the
+        # caveat removed.
+        verdict = (
+            f"{binding} binds first, at {recommended} - nothing measured here "
+            f"rules out {recommended - builders} more builder(s), which is a "
+            f"hypothesis to time rather than a setting to apply"
+        )
+        severity = SEVERITY_MEDIUM
+    elif recommended < builders:
+        verdict = (
+            f"{binding} binds at {recommended}, below the {builders} configured - "
+            f"more builders contend rather than overlap here"
+        )
+        severity = SEVERITY_HIGH
+    else:
+        verdict = (
+            f"{binding} binds at exactly {recommended} - this run is already at "
+            f"the setting its own measurements support"
+        )
+        severity = SEVERITY_INFO
+
+    detail = [
+        f"    {constraint['name']} allows {constraint['allows']}: {constraint['reason']}"
+        for constraint in recommendation['constraints']
+    ]
+    pinned = recommendation.get('pinned_elements') or []
+    if pinned:
+        # Named whichever constraint binds, and the reason is the same in
+        # both directions: an element pinned to `-j1` holds a builder slot
+        # while drawing one core. Where CPU binds, the slot is the waste;
+        # where the graph binds, the element is longer than it needs to be
+        # and it is usually on the path. Either way it is capacity already
+        # paid for and declined, and it beats raising anything.
+        detail.append(
+            "    Free capacity you already have: "
+            + ", ".join(pinned[:3])
+            + " asked its native build for -j1 - a builder slot drawing one core. "
+              "Fix that before raising anything, then re-measure."
+        )
+    if recommended > builders:
+        detail.append(
+            "    Time it before keeping it: the knee is a scheduling answer and "
+            "cores-busy is a whole-run average, so both overstate what a "
+            "contended window can absorb."
+        )
+    detail.append(f"    {recommendation['caveat']}")
+
+    return [_finding(
+        'capacity-recommendation', severity,
+        f"Capacity: {setting} on {recommendation['host_cpu_count']} core(s): {verdict}",
+        detail=detail,
+        elements=pinned,
+        evidence={
+            'builders': builders,
+            'native_max_jobs': jobs,
+            'host_cpu_count': recommendation['host_cpu_count'],
+            'cores_busy': recommendation['cores_busy'],
+            'binding_constraint': binding,
+            'recommended_builders': recommended,
+            'change': recommendation['change'],
+            'constraints': recommendation['constraints'],
+        },
+    )]
+
+
 def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str]:
     """Replace the RESOURCE WAIT next step when Plane 2 contradicts it.
 
@@ -831,6 +937,9 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     if concentration_emitted:
         findings.extend(_outlook_findings(result))
     findings.extend(_memory_finding(result))
+    # UX-116: after the memory envelope, because it consumes it - the
+    # reader meets the inputs and then the sentence that intersects them.
+    findings.extend(_capacity_recommendation_finding(result))
     findings.extend(_criticality_findings(result))
     findings.extend(_floor_findings(result))
     return findings

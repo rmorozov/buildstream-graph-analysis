@@ -917,6 +917,149 @@ def summarize_plane2_capacity(
     }
 
 
+# UX-116: how far the sweep is run when the joint recommendation needs a
+# knee. The sweep's own default is "one configuration per task", which on
+# a 1200-element project is 1200 replays to answer a question about a
+# 4-core host. The recommendation only concerns the neighbourhood of what
+# is settable, so the range is bounded by the host and the current
+# setting - and when the knee lands at the top of that range, the block
+# says the graph wants "at least" that many rather than inventing a
+# number it did not reach.
+_RECOMMENDATION_SWEEP_HEADROOM = 2
+_RECOMMENDATION_SWEEP_CAP = 32
+
+
+def compute_capacity_recommendation(
+    plane2_capacity: dict,
+    memory_envelope: dict,
+    knee: Optional[int],
+    knee_range_top: Optional[int] = None,
+    builders: Optional[int] = None,
+    native_max_jobs: Optional[int] = None,
+) -> dict:
+    """UX-09, finally answered: what should `--builders` and `--max-jobs`
+    be, and which constraint is the reason (`UX-116`).
+
+    Every input has been measured for rounds and reported in a different
+    block: the sweep's scheduling knee (how many builders the *graph*
+    can use), Plane 2's aggregate cores-busy (how much CPU the elements
+    actually draw at their current `-j`), `UX-104`'s memory envelope per
+    builders value, and the host's core count. What was missing is the
+    sentence that intersects them - the difference between four blocks a
+    reader must reconcile and the one recommendation they came for.
+
+    **How the CPU ceiling is derived.** At the observed `builders`, the
+    run drew `cores_busy` cores; that is `cores_busy / builders` per
+    concurrently-building element, measured rather than assumed. The
+    number of builders the host's cores can feed at that draw is
+    `host_cores * builders / cores_busy`, floored. It is an average over
+    the whole run, not over the contended window, so it is a guide and
+    the payload says so.
+
+    **What it will not do.** It never recommends a value it has no
+    measurement for, and it does not try configurations - one capture
+    in, one recommendation out. `UX-09`'s real timing table remains the
+    ground truth this is checked against, not something this replaces.
+
+    Returns `{}` when Plane 2 cannot answer - the same bar `UX-83` uses,
+    because a recommendation resting on a missing `cores_busy` is a
+    guess wearing a measurement's clothes.
+    """
+    cores_busy = (plane2_capacity or {}).get('cores_busy')
+    host_cores = (plane2_capacity or {}).get('host_cpu_count')
+    if cores_busy is None or not host_cores or not builders or builders <= 0:
+        return {}
+
+    constraints = []
+    if knee:
+        constraints.append({
+            'name': 'graph',
+            'allows': knee,
+            'reason': (
+                f"the sweep's knee is at {knee} builder(s)"
+                + (", the top of the range swept, so the graph may want more"
+                   if knee_range_top and knee >= knee_range_top else "")
+            ),
+        })
+    cpu_allows = int(host_cores * builders / cores_busy) if cores_busy > 0 else None
+    if cpu_allows:
+        constraints.append({
+            'name': 'CPU',
+            'allows': cpu_allows,
+            'reason': (
+                f"{cores_busy:.2f} of {host_cores} core(s) busy at builders="
+                f"{builders}, i.e. {cores_busy / builders:.2f} core(s) per "
+                f"concurrent element"
+            ),
+        })
+    memory_allows = _memory_allows(memory_envelope)
+    if memory_allows:
+        constraints.append({
+            'name': 'memory',
+            'allows': memory_allows['allows'],
+            'reason': memory_allows['reason'],
+        })
+
+    if not constraints:
+        return {}
+    binding = min(constraints, key=lambda c: (c['allows'], c['name']))
+    pinned = (plane2_capacity or {}).get('pinned_elements') or []
+    return {
+        'builders': builders,
+        'native_max_jobs': native_max_jobs,
+        'host_cpu_count': host_cores,
+        'cores_busy': cores_busy,
+        'constraints': constraints,
+        'binding_constraint': binding['name'],
+        'recommended_builders': binding['allows'],
+        'change': binding['allows'] - builders,
+        'pinned_elements': pinned,
+        # UX-14, inherited rather than re-invented: the sweep replays the
+        # durations it observed and does not model contention, so a knee
+        # is what the *schedule* could do with more builders, not what
+        # this host would.
+        'caveat': (
+            "Derived from this run's shape: the sweep replays observed durations "
+            "and does not model contention (UX-14), and cores-busy is an average "
+            "over the whole run rather than over the contended window. One capture "
+            "in, one recommendation out - no configuration was tried."
+        ),
+    }
+
+
+def _memory_allows(memory_envelope: dict) -> Optional[dict]:
+    """The largest builders value whose envelope fits in the host's RAM.
+
+    `None` rather than a number when the envelope was never computed, so
+    a missing measurement cannot masquerade as an unbounded ceiling.
+    """
+    envelope = memory_envelope or {}
+    projections = envelope.get('projections') or []
+    if not projections:
+        return None
+    fitting = [p['builders'] for p in projections if p['fits']]
+    if not fitting:
+        return {
+            'allows': 0,
+            'reason': (
+                f"no builders value fits: even one element of this shape peaks at "
+                f"~{envelope['largest_element_peak_mb'] / 1024:.1f} GB against "
+                f"{envelope['host_memory_mb'] / 1024:.1f} GB of RAM"
+            ),
+        }
+    largest = max(fitting)
+    measured = envelope.get('elements_measured')
+    return {
+        'allows': largest,
+        'reason': (
+            f"the {largest}-builder envelope fits in "
+            f"{envelope['host_memory_mb'] / 1024:.1f} GB"
+            + (f" (measured over {measured} element peak(s), so it says nothing "
+               f"above {measured})" if measured and largest >= measured else "")
+        ),
+    }
+
+
 # UX-100: the too-fine signature, stated as a definition rather than as
 # a threshold.
 #
@@ -1038,13 +1181,16 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> List[dict
             'parents': sorted(parent_set),
             'deleted_toll_us': sum(deleted),
             'projection': projection,
+            'projection_is_a_floor': bool(projection),
             'title': (
                 f"{len(over)} sibling element(s) spend at least half their time on "
                 f"sandbox toll rather than on building: {', '.join(over[:4])}. "
                 f"Merging them would delete {len(deleted)} staging(s), "
                 f"{sum(deleted) / 1e6:.1f}s of toll"
                 + (
-                    f" and a replayed {projection['saving_us'] / 1e6:.1f}s of build"
+                    f" and at least a replayed {projection['saving_us'] / 1e6:.1f}s "
+                    f"of build - a floor, because the replay shortens the tasks "
+                    f"without collapsing them into one (UX-120)"
                     if projection else ""
                 )
                 + ". It also merges their cache granularity: one source change then "
@@ -1080,6 +1226,20 @@ def _project_with_reduced_durations(tasks, run_context, reductions) -> Optional[
     Replayed rather than summed for the same reason: deleting five
     stagings frees capacity, and what happens next is decided by the
     scheduler.
+
+    **It is a lower bound, and `UX-120` measured how loose.** The replay
+    shortens N tasks; a real merge leaves *one* task. The group's wave
+    structure therefore survives the projection - eight one-second tasks
+    on four builders still take two waves - while the real merge collapses
+    them into a single sandbox. On the purpose-built fixture the
+    projection said 1.0s and the real merged rebuild measured
+    substantially more (see `UX-0120`'s verification log for the table).
+
+    Modelling the collapse means synthesising a merged task and rewriting
+    the group's edges, which is a different change from this one; until
+    then the number is published as a floor and says so, because a
+    projection that under-predicts is safe to act on and a projection
+    that quietly under-predicts is not.
     """
     from .floors.capacity import compute_default_capacities
     from .replay.scheduler import ReplayScheduler

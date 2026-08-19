@@ -139,6 +139,25 @@ def _run_instance(run_context, loaded_from) -> dict:
 # the tool already refuses to read into.
 _RESOLUTION_MATERIAL_SHARE = 0.05
 
+# UX-09/UX-15's standing caveat, and UX-116's target. Named rather than
+# inlined because UX-116 retires *this clause* - and only where a joint
+# capacity recommendation actually ran for the capture in hand. Everywhere
+# else it stays, because everywhere else it is still true.
+UNMODELED_AXIS_CLAUSE = (
+    "native build-system parallelism (--max-jobs) is a separate, currently "
+    "unmodeled axis (see UX-09/UX-15)."
+)
+
+# What replaces it when UX-116's block ran: the axis was modelled for this
+# capture, from its own measurements, so the note must stop saying it was
+# not.
+MODELLED_AXIS_CLAUSE = (
+    "native build-system parallelism (--max-jobs) is modelled for this "
+    "capture from its own Plane 2 measurements - see the capacity "
+    "recommendation below (UX-116)."
+)
+
+
 class BuildEfficiencyAnalyzer:
     """
     Main analyzer class implementing the bga v9 specification.
@@ -1083,8 +1102,7 @@ class BuildEfficiencyAnalyzer:
         note = (
             "LB/Efficiency Score certify against this run's recorded resource "
             "capacities (builders/fetchers/pushers), not real host CPU cores or any "
-            "declared CPU budget - native build-system parallelism (--max-jobs) is a "
-            "separate, currently unmodeled axis (see UX-09/UX-15)."
+            "declared CPU budget - " + UNMODELED_AXIS_CLAUSE
         )
         # UX-29: a capacity guard that declined to run is indistinguishable,
         # in the report, from one that ran and found nothing - and until

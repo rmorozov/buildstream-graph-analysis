@@ -126,6 +126,7 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `optimization-horizon` | varies | what the build drops to after each of the next few fixes |
 | `joint-saving` | varies | whether the recommended set's savings add up or overlap |
 | `latent-heavies` | info | heavy elements off the critical path, worth nothing to fix today |
+| `capacity-recommendation` | varies | the joint `--builders` × `--max-jobs` answer (`UX-116`): the sweep's scheduling knee, Plane 2's measured cores-busy, the `UX-104` memory ceiling and the host's cores, intersected, with the **binding** constraint named and the others shown beneath it. `high` when the run is configured above what its own measurements support, `medium` when there is room to grow, `info` when it is already at its ceiling. Needs `--plane2` |
 | `memory-envelope` | varies | what this build's measured per-element peak RSS implies for `--builders` against the host's RAM — `high` when the current builders count does not fit, `medium` when one more would not, `info` otherwise. Needs `--plane2` and a capture that recorded the host's memory (`UX-104`) |
 
 `bga correlate --format json` → `.actionable[].recommendations[].id` (9) and `.restructuring[].id` (1):
@@ -184,7 +185,25 @@ With `--plane2`, both consult what was actually measured inside the sandboxes:
 - a host Plane 2 measured as already CPU-saturated is told **not** to raise capacity, with the measurement quoted;
 - an element pinned to `-j1` is named **first**, because intra-element parallelism is capacity you already have and, unlike `--builders`, it cannot contend with itself.
 
-Without `--plane2` every line is byte-identical to before.
+- the four constraints on the joint (`--builders` × `--max-jobs`) choice are **intersected** into one
+  recommendation naming the binding one (`UX-116`), instead of four blocks a reader has to reconcile:
+
+```text
+Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 6 - there is room for 2 more builder(s)
+  graph allows 6: the sweep's knee is at 6 builder(s)
+  CPU allows 7: 2.11 of 4 core(s) busy at builders=4, i.e. 0.53 core(s) per concurrent element
+  memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
+  Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core.
+```
+
+  The CPU ceiling is derived, not assumed: `cores_busy / builders` is what one concurrently-building element
+  actually drew, and the ceiling is how many of those the host's cores can feed. A constraint nothing measured
+  is omitted rather than treated as unbounded, and the whole block declines to appear at all when Plane 2 has
+  no `cores_busy` — the same bar `UX-83` uses.
+
+Without `--plane2` every line is byte-identical to before — including `UX-09`/`UX-15`'s standing "native
+build-system parallelism is a separate, currently unmodeled axis" note, which is retired **only** in captures
+where the block above actually ran.
 
 #### Resource Capacity
 
@@ -303,6 +322,8 @@ bga compare /path/to/baseline-run /path/to/candidate-run --fail-on-regression
 
 Exits `4` (a distinct code from 1/2/3, which all mean "`bga` itself failed" - see Exit Codes below) when the candidate run's real total duration (Part 4.3) regressed beyond the threshold - by default, the same >=1% significance band the verdict already uses, i.e. it fails exactly when the report's own verdict says `REGRESSED`, not a second, silently-different definition. Override the threshold with `--regression-threshold PCT` (e.g. `--regression-threshold 5` to only fail on a regression of 5% or more). `total_duration_us` is the one primary gating metric - deliberately not an ambiguous multi-metric combination.
 
+`--format ci-comment` renders the same verdict as markdown for a pull-request comment — the band verdict, every gate with a one-sentence reason, the elements the change added or moved onto the critical path, and (with `--native-report`) which of their declared dependencies nothing read. Render-only: no number in it is computed there, and the gate verdicts come from the same predicates the exit code does. See [`ci-comment.md`](ci-comment.md) for the worked GitHub Actions wiring.
+
 A refused comparison (`--allow-mismatch` not given, exit 6) is checked before any gate, since "these runs are not comparable" is not a verdict about the build. A low-confidence comparison (either run's confidence below the "high" band) **fails open**: exits `0` with a warning printed to stderr, rather than blocking a pipeline on a possibly-noisy signal. The comparison report itself is always printed to stdout/`--output` regardless of the gate outcome, so a failing pipeline still shows *why*.
 
 Worked GitHub Actions example - extract two runs and gate on the comparison:
@@ -361,7 +382,7 @@ Documented here because they exist and nothing user-facing said so:
 - `bga correlate --cache-logs PLANE3.json` — adds the per-element sandbox toll from a Plane 3 report, which is what the merge half of the granularity findings is computed from (`UX-100`). Without it the split half still runs; the merge half is silent, because the toll is the whole basis for calling an element too small.
 - `bga compare --baseline-plane2 A.json --candidate-plane2 B.json` — notes when the candidate's measured memory envelope grew (`UX-104`). Two flags, because reusing one report for both runs would compare a run against itself. A note, never a gate: peak RSS has no measured noise band.
 - `bga cache-trend RUN...` — a series, oldest first: per-run hit ratio, transfer seconds and seconds per artifact, churn against the predecessor (with `UX-93`'s labels), and a finding when the newest run leaves the band its trailing window describes (`UX-103`). Refuses a verdict, with exit 6, over a series whose runs are not of the same project and targets — the band would describe neither (`UX-111`). The *commit* is deliberately allowed to vary: a cache-health trend across commits is the only kind there is. The noise model is `bga compare`'s, widened to the fixed rule when the measured band is narrower. Four runs minimum — three trailing plus the one being judged — and it says so rather than trending fewer.
-- `bga baseline --glob 'captures/<project>/<commit>-<mode>-b<N>j<M>-*' -n 3 --candidate RUN` — assembles a baseline set from published capture refs and band-compares against it in one command (`UX-96`). Fetches the newest N, untars the refs that predate the uncompressed `run/`, refuses a set whose captures are not comparable (exit 6), and warns when the set was produced by more than one `bga` revision. Every member supplies the band, the newest is also the positional baseline — with three refs that is exactly the `MIN_BASELINE_RUNS` the band needs.
+- `bga baseline --glob 'captures/<project>/<commit>-<mode>-b<N>j<M>-*' -n 3 --candidate RUN` — assembles a baseline set from published capture refs and band-compares against it in one command (`UX-96`). Fetches the newest N, untars the refs that predate the uncompressed `run/`, refuses a set whose captures are not comparable (exit 6), and warns when the set was produced by more than one `bga` revision. Absence in a capture's context is read per field (`UX-114`): `trace_spine` and `trace_opens` have a defined default, so a ref published before the field existed is taken under it and mismatches a capture instrumented differently — the assumption is stated either way; `target` and the rest have none, so partial coverage is reported as **unverified** rather than passed over. A band member whose run mode differs from the candidate's is refused with exit 6 too, not the generic exit 2 it used to produce. Every member supplies the band, the newest is also the positional baseline — with three refs that is exactly the `MIN_BASELINE_RUNS` the band needs.
 - `bga capture census PROJECT [--json]` — classifies every executable the project's `local` sources stage as static or dynamic, per element, without building anything (`UX-105`). A static ELF has no `PT_INTERP`, never invokes the dynamic linker, and so is invisible to Plane 2's `LD_PRELOAD` hook. `bga capture run` and `bga capture report --project-dir` run the same census and use it to replace the generic static-binary footnote with a named one — or with silence, when there is nothing to name.
 - `bga capture run --trace-spine` (`UX-106`/`UX-108`) — also runs a static ptrace process-event tracer inside the sandbox, which records every process whatever its linkage. It is what makes a static toolchain visible at all: `examples/01-resource-contention` traces **0 processes** without it and **24** with it. Each process in the report then carries `spine+hook`, `spine-only` or `hook-only`, and the coverage line is a counted number rather than a disclaimer (`UX-107`). Priced at **about a millisecond per process** (`UX-112`, a full {spine} × {opens} factorial): below the spread on `examples/06`, where processes live tens of milliseconds, and +41–56% on `examples/08-process-storm`, where they live two. `--trace-spine=auto` (`UX-113`) pays it only for the elements the pre-build census says the hook is blind for, plus any it could not assess - zero elements on an all-dynamic project, all of them on a busybox one; the coverage line says how many. The hook stays on either way — opened paths need in-process interposition, which the spine deliberately does not do.
 - `bga cache-logs [LOG_ROOT] --project NAME --graph RUN/graph.json --native-report PLANE2.json` — Plane 3, BuildStream's own persisted element logs (`UX-91`). Needs no capture at all: it reads what BuildStream already wrote, defaulting to `$XDG_CACHE_HOME/buildstream/logs`. Reports the per-element phase breakdown, the sandbox tax (`UX-99`) and the configure tax (`UX-102`); `--native-report` adds the traced configure measurement from a Plane 2 report of the same build, beside the build tool's self-reported one, and `--graph` lets the developer-tax ranking (`UX-101`) tell a rebuild caused by an upstream key change from one whose own definition changed — the logs alone carry no dependency edges.

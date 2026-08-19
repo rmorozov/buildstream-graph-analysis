@@ -216,6 +216,39 @@ Wall span: 3.484s
 Used by `UX-108` to decide whether the ptrace spine defaults on. Full
 detail in that project's own [`README.md`](08-process-storm/README.md).
 
+## 09-fine-grained-siblings
+
+Eight elements with the identical build-dependency set, each doing
+sub-second work in a sandbox that stages a shared sysroot. It exists
+because `UX-100`'s merge criterion — *"siblings paying more sandbox toll
+than they spend building"* — had fired only on synthetic unit-test input,
+and both real captures correctly said no, which cannot tell a working
+detector from an inert one.
+
+The obstacle was not the shape but the instrument. BuildStream stages
+dependencies by hardlink and times its own phases to the second, so the
+project's real 8k-file C++ sysroot stages in `00:00:00` and the toll
+rounds to **zero**. `bulk.bst` is 60,000 one-byte files — the file count
+at which "Staging dependencies" reaches one second and the toll becomes
+visible at all:
+
+```text
+8k-file toolchain only:   toll 0.0s of 1.0s total, share 0.00  -> no candidate
+plus 60k-file bulk.bst:   toll 1.0s of 2.0s total, share 0.50  -> candidate fires
+```
+
+`merged/` is the same eight translation units in one element — the fix
+the candidate recommends — so the projection can be checked against a
+real rebuild rather than against arithmetic. `UX-120`'s verification log
+carries that table, and the measurement is why the projection now ships
+as a floor rather than an estimate.
+
+Generate the bulk tree once (it is gitignored, like the toolchain):
+
+```
+examples/09-fine-grained-siblings/generate_bulk.py
+```
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

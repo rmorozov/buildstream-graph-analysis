@@ -535,3 +535,9 @@ class AnalysisResult:
     # it is - the two planes disagreeing is a real finding, but only
     # when both are actually in hand.
     plane2_capacity: dict = field(default_factory=dict)
+    # UX-116: the joint (builders x max-jobs) recommendation - the sweep's
+    # scheduling knee, Plane 2's cores-busy, UX-104's memory ceiling and
+    # the host's cores, intersected, with the binding constraint named.
+    # Populated only alongside `plane2_capacity`, on the same bar UX-83
+    # uses: a recommendation without a measured `cores_busy` is a guess.
+    capacity_recommendation: dict = field(default_factory=dict)

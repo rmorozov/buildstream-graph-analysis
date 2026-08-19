@@ -38,6 +38,7 @@ How to use the tool. These are the documents that tell you what to type.
 | [`guides/cli.md`](guides/cli.md) | every command, flag and exit code |
 | [`guides/real-project.md`](guides/real-project.md) | a real project end to end: capture, read, fix, prove, gate |
 | [`guides/real-project-capture.md`](guides/real-project-capture.md) | how the third-party capture workflow is built and why |
+| [`guides/ci-comment.md`](guides/ci-comment.md) | render the verdict as a PR comment, and wire it into a pipeline |
 | [`guides/optimization-walkthrough.md`](guides/optimization-walkthrough.md) | a worked example: find a critical-path problem and fix it |
 | [`guides/optimization-walkthrough-06.md`](guides/optimization-walkthrough-06.md) | the macro-then-micro cycle across both planes |
 

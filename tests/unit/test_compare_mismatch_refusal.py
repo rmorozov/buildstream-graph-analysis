@@ -197,3 +197,66 @@ def test_the_shortfall_is_structured_in_the_json_report(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["baseline_band_shortfall"] == {"supplied": 1, "required": 3}
     assert payload["baseline_band"] is None
+
+
+# --- UX-114: the band's own refusal carries the same code ---------------
+
+def _cross_mode_band(tmp_path):
+    """An incremental band and a full candidate - what `bga baseline
+    --candidate` builds when a cold capture is fed to the incremental
+    set, which is exactly how round 12 hit this."""
+    uids = ["a.bst", "b.bst", "c.bst"]
+    band = [
+        _write_run(tmp_path, f"band{i}", uids, run_mode="incremental")
+        for i in range(3)
+    ]
+    candidate = _write_run(tmp_path, "cold", uids, run_mode="full")
+    return band, candidate
+
+
+def test_a_cross_mode_band_member_is_not_comparable_not_a_usage_error(tmp_path):
+    """The band raised a bare `ValueError` and landed in the generic
+    handler as exit 2. Nothing passed wrongly - both codes are non-zero -
+    but a CI job keying 6 = plumbing and 1/4/5 = verdicts reads 2 as a
+    malformed invocation, and the exit-code contract is the product here.
+
+    Measured before the fix on the real refs: the cold fdsdk capture
+    against the incremental band exited 2.
+    """
+    band, candidate = _cross_mode_band(tmp_path)
+
+    result = _run_bga(
+        ["compare", str(band[0]), str(candidate)]
+        + [arg for run in band for arg in ("--baseline-run", str(run))]
+    )
+
+    assert result.returncode == EXIT_MISMATCHED_RUNS, result.stderr
+    assert "a noise band may only be built from runs of the same kind" in result.stderr
+
+
+def test_the_band_refusal_names_the_run_mode_check(tmp_path):
+    """`UX-55` is the check; a refusal that did not name it would send
+    the reader to the wrong half of the problem."""
+    band, candidate = _cross_mode_band(tmp_path)
+
+    result = _run_bga(
+        ["compare", str(band[0]), str(candidate)]
+        + [arg for run in band for arg in ("--baseline-run", str(run))]
+    )
+
+    assert "UX-55" in result.stderr
+    assert str(band[0]) in result.stderr
+
+
+def test_a_genuine_usage_error_still_exits_2(tmp_path):
+    """The new code is for one refusal, not for every `ValueError` the
+    compare path can raise - otherwise it would relabel real plumbing
+    failures as verdicts about comparability."""
+    uids = ["a.bst", "b.bst"]
+    baseline = _write_run(tmp_path, "b", uids)
+    candidate = _write_run(tmp_path, "c", uids)
+    (candidate / "trace.json").write_text("{ this is not json")
+
+    result = _run_bga(["compare", str(baseline), str(candidate)])
+
+    assert result.returncode == 2, result.stderr

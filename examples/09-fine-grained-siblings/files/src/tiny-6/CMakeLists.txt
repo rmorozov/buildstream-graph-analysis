@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+project(tiny-6 CXX)
+set(CMAKE_CXX_STANDARD 17)
+add_library(tiny-6 STATIC tiny.cpp)
+install(TARGETS tiny-6 ARCHIVE DESTINATION lib)

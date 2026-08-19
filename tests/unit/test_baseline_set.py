@@ -91,15 +91,103 @@ def test_a_set_spanning_two_targets_is_not_a_set():
 
 
 def test_a_field_absent_from_an_older_capture_is_not_a_mismatch():
-    """`target` did not exist in `capture-context.txt` until this task,
-    so every already-published ref lacks it. Treating absence as a
-    difference would make the existing history unusable on the day the
-    field was added."""
+    """`target` did not exist in `capture-context.txt` until UX-96, so
+    already-published refs lack it. Treating absence as a difference
+    would make the existing history unusable on the day the field was
+    added - so it is not a mismatch, but UX-114 no longer lets it be
+    silence either (see below)."""
     result = check_homogeneity([
         _member('a', target='components/libxml2.bst'),
         _member('b'),  # published before the field existed
     ])
     assert result['mismatches'] == []
+
+
+# --- UX-114: absence is per-field, and never silent ---------------------
+
+def test_partial_coverage_of_an_ambiguous_field_is_reported_as_unverified():
+    """`target` has no default to fall back on: a capture that did not
+    record it might have built anything. "Checked and equal" and
+    "checked on three of five" are different claims, and the skip made
+    them print identically."""
+    result = check_homogeneity([
+        _member('a', target='components/libxml2.bst'),
+        _member('b'),
+        _member('c'),
+    ])
+    gap = next(g for g in result['coverage_gaps'] if g['field'] == 'target')
+    assert gap['refs'] == ['b', 'c']
+    assert '2 of 3' in gap['message']
+    assert result['mismatches'] == []
+
+
+def test_a_field_no_capture_records_is_not_a_coverage_gap():
+    """Nothing was checked *against*, so there is no partial coverage to
+    report - just a field the set is silent on, which the per-run listing
+    already shows. Warning here would put a line on every set forever."""
+    result = check_homogeneity([_member('a'), _member('b')])
+    assert [g['field'] for g in result['coverage_gaps']] == []
+
+
+def test_an_absent_spine_flag_means_off_and_mismatches_a_spine_capture():
+    """The failure UX-114 was filed for. `trace_spine` has a defined
+    default - `real-project-capture.yml` sets `TRACE_SPINE` to `false`
+    when nothing asks otherwise - so a capture that recorded nothing was
+    taken under it, and absent-vs-`true` is a real difference in
+    instrumentation rather than a field to skip."""
+    result = check_homogeneity([
+        _member('spine', trace_spine='true'),
+        _member('old-a'),
+        _member('old-b'),
+    ])
+    mismatch = next(m for m in result['mismatches'] if m['field'] == 'trace_spine')
+    assert mismatch['values'] == ['false', 'true']
+    assert mismatch['assumed'] == 'false'
+    assert mismatch['assumed_for'] == ['old-a', 'old-b']
+
+
+def test_an_absent_spine_flag_agrees_with_a_recorded_off():
+    """The other half of the same rule: absent and `false` are the same
+    claim, so a set of old refs plus a new hook-only one is still a set."""
+    result = check_homogeneity([
+        _member('new', trace_spine='false'),
+        _member('old'),
+    ])
+    assert [m['field'] for m in result['mismatches']] == []
+
+
+def test_an_assumed_default_is_stated_even_when_it_changes_nothing():
+    """Every capture published before the field existed is being taken
+    at its default, and a reader is entitled to know that is an
+    assumption rather than a reading. On the live five-ref fdsdk set this
+    fires for four of five."""
+    result = check_homogeneity([_member('old-a'), _member('old-b')])
+    assumption = next(a for a in result['assumptions'] if a['field'] == 'trace_spine')
+    assert assumption['assumed'] == 'false'
+    assert assumption['refs'] == ['old-a', 'old-b']
+
+
+def test_a_mismatch_does_not_also_print_the_assumption_underneath():
+    """The mismatch line already carries "N recorded nothing and were
+    taken as false"; a second block saying the same thing is the same
+    sentence twice."""
+    result = check_homogeneity([
+        _member('spine', trace_spine='true'),
+        _member('old'),
+    ])
+    assert [m['field'] for m in result['mismatches']] == ['trace_spine']
+    assert 'trace_spine' not in [a['field'] for a in result['assumptions']]
+
+
+def test_trace_opens_is_checked_at_all():
+    """It was never in the field list, so two captures instrumented
+    differently on the opens axis were a set. It has a default for the
+    same reason `trace_spine` does."""
+    result = check_homogeneity([
+        _member('with-opens', trace_opens='true'),
+        _member('without-opens', trace_opens='false'),
+    ])
+    assert [m['field'] for m in result['mismatches']] == ['trace_opens']
 
 
 def test_capture_tooling_drift_is_reported_and_not_refused():

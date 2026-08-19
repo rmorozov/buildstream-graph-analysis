@@ -7,9 +7,10 @@ which of the tool's answers you can act on and which you cannot.
 Every output below is **real**, from a capture of
 [`freedesktop-sdk`](https://gitlab.com/freedesktop-sdk/freedesktop-sdk)
 at `953683fb` on a 4-core GitHub Actions runner with `--builders 4
---max-jobs 4` — a 3614-second build of 90 elements, 25 of which rebuilt.
-Nothing here is illustrative or reconstructed. Provenance for every
-figure is in [Appendix: where these numbers came from](#appendix-where-these-numbers-came-from).
+--max-jobs 4` — a 3614-second build of 90 elements, 25 of which rebuilt,
+except where a block names a different project. Nothing here is
+illustrative or reconstructed. Provenance for every figure is in
+[Appendix: where these numbers came from](#appendix-where-these-numbers-came-from).
 
 If you want the 30-second version first, the top of
 [`README.md`](../../README.md) runs against a checked-in fixture and needs
@@ -76,7 +77,8 @@ laptop-shaped answer is replaced by published refs (`UX-96`).
 
 | step | what it answers | needs a live `bst`? |
 |---|---|---|
-| 0. `bga cache-logs` | What has this project been spending time on already | no — **and no capture either** |
+| 0. `bga doctor` | Can this machine capture this project at all | yes, and that is the point |
+| 0a. `bga cache-logs` | What has this project been spending time on already | no — **and no capture either** |
 | 1–2. Capture and extract | — | **yes** |
 | 3. `bga analyze` | Where is the time, what is worth fixing, and what after that | no |
 | 4. Floors and the two efficiency signals | Is this a scheduler problem, a graph problem, or a work problem | no |
@@ -87,7 +89,7 @@ laptop-shaped answer is replaced by published refs (`UX-96`).
 Steps 3–7 read finished artifacts. You can capture on a build machine
 and analyse anywhere, including from a tarball someone hands you.
 
-Step 0 is different from all of them: it reads logs BuildStream already
+Step 0a is different from all of them: it reads logs BuildStream already
 wrote, for builds that already happened. If you have ever built this
 project on this machine, you can run it right now, before reading any
 further.
@@ -102,7 +104,7 @@ for every element it builds, under
 again:
 
 ```bash
-bga cache-logs --project <your-project-name>
+bga cache-logs /path/to/your/project
 ```
 
 Real output, from a freedesktop-sdk log tree:
@@ -146,14 +148,40 @@ floor.
 
 ```bash
 pip install -e ".[bst]"
+bga doctor /path/to/your/project
 ```
 
 Plane 1 (the whole-project analysis) needs only Python. Plane 2 — the
 tracer that looks *inside* an element's sandbox — needs a real `bst` and
 a working `bubblewrap`, because it captures by injecting an `LD_PRELOAD`
-hook into the processes the sandbox execs. See
-[`docs/spec/ingestion-pipeline.md`](../spec/ingestion-pipeline.md) for the full
-dependency list and its known limits.
+hook into the processes the sandbox execs.
+
+`bga doctor` (`UX-125`) checks that list, and this project against it,
+in a second or two: `bst`, a real `bwrap` sandbox it actually builds and runs
+in, a C compiler, whether the project loads and its plugins resolve,
+what its sources stage, and whether Plane 3 has logs for it. Every check
+that is not `ok` prints its own remedy, and it exits non-zero only on a
+genuine failure — a static blind spot and an empty log tree are things
+to read, not to block on. It changes nothing it inspects.
+
+Real output, from this repository's `examples/01-resource-contention`
+(a busybox project, which is the interesting case — everything it stages
+is static):
+
+```text
+  [ok  ] bwrap-works: bwrap builds a sandbox and runs in it
+  [ok  ] staged-sources: 50 executable(s) staged by this project's own sources
+  [warn] static-blind-spot: 10 element(s) stage a statically-linked executable,
+         which the LD_PRELOAD hook structurally cannot see
+           all.bst / runtime.bst / work-a.bst / …
+         -> capture with `--trace-spine=auto` - it pays the ptrace cost only for
+            the elements the census says the hook is blind for (UX-105/UX-113)
+
+  Everything a capture needs is here. 2 warning(s) worth reading first.
+```
+
+Full dependency list and its known limits:
+[`docs/spec/ingestion-pipeline.md`](../spec/ingestion-pipeline.md).
 
 Two limits worth knowing before you start, because they shape what you
 can conclude:
@@ -169,32 +197,31 @@ can conclude:
   the report carries `spine+hook`, `spine-only` or `hook-only`, and the
   report states the coverage as a number rather than a footnote
   (`UX-107`).
-- **The spine's price is 0.3 to 1.1 ms per process** (`UX-112`
-  measured the factorial, `UX-129` narrowed the claim to what the data
-  supports). That is invisible on a compile-bound build, where processes
-  live tens of milliseconds — every cell of `examples/06`'s matrix
-  overlaps every other — and dominant on a process-dense one, where they
-  live two.
-
-  The range is the honest form, and the spread is real rather than
-  sloppy: five independent measurements of the same 2003-process fixture
-  land at 0.32, 0.35–0.42, 0.49, 0.85 and 1.14 ms, because machine state
-  moves both the baseline and the absolute cost. The tightest of them —
-  five interleaved `off`/`on` pairs on one machine, which cancels the
-  drift a blocked design absorbs — gives **+0.79s, 0.39 ms per process**
-  ([raw figures](../audits/data/spine-cost-storm.md)). Quote a ratio only
-  with its fixture attached: the same cell has been reported at +13.5%,
-  +13.2% and +55.7% while the absolute cost moved far less.
-- **So prefer `--trace-spine=auto`** (`UX-113`): it pays that cost
-  only for the elements the pre-build census says the hook is blind for,
-  plus any it could not assess. On an all-dynamic project that is no
-  elements at all; on a busybox one it is all of them.
+- **The spine's price is 0.3 to 1.1 ms per process** — a range, not a
+  constant, because five independent measurements of the same
+  2003-process fixture land across it (`UX-112` measured, `UX-129`
+  narrowed the claim to what the data supports; [raw
+  figures](../audits/data/spine-cost-storm.md)). That is invisible on a
+  compile-bound build, where processes live tens of milliseconds, and
+  dominant on a process-dense one, where they live two. Quote a ratio
+  only with its fixture attached: the same cell has been reported at
+  +13.5% and +55.7% while the absolute cost moved far less.
+- **So prefer `--trace-spine=auto`** (`UX-113`): it pays that cost only
+  for the elements the pre-build census says the hook is blind for, plus
+  any it could not assess. On an all-dynamic project that is no elements
+  at all; on a busybox one it is all of them. It is what `bga snapshot`
+  uses by default.
 - **Plane 2 costs real overhead.** `--trace-opens` in particular runs on
   a hot path. Capture it deliberately, not by default.
 
 ---
 
 ## Step 1 — capture both planes from one build
+
+> Steps 1 and 2 are what `bga snapshot` runs for you, into the project's
+> own store. They are spelled out here because you will need them for a
+> build you cannot run from inside the project directory — a CI runner,
+> or a log somebody else captured.
 
 One `bst build` produces both artifacts. Do not run two builds: the
 second would be a different build, and joining the planes across two
@@ -570,10 +597,12 @@ edge.
 
 ## Step 7 — change something, then prove it
 
-Make one change. Re-capture. Compare:
+Make one change, then take another snapshot — the comparison against the
+previous one is automatic:
 
 ```bash
-bga compare /tmp/run-before /tmp/run-after
+bga snapshot -- bst build <your-target>     # from inside the project
+bga compare /tmp/run-before /tmp/run-after  # or explicitly, on any two runs
 ```
 
 You get a signed delta for every certified floor, both efficiency

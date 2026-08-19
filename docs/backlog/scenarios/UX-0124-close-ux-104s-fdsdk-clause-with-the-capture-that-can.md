@@ -69,3 +69,10 @@ reason had gone away.
 
 Done 2026-08-19. The envelope line is a live re-run of `bga correlate`
 against the retained capture, not a paste from round 12's notes.
+
+**Round-13 note on the grep clause:** `grep -n 'multiply by' README.md`
+still matches one line — the new prose *quotes* the removed sentence as
+history ("That last row used to end \"multiply by…\""). The
+instruction is gone; the quotation is deliberate. Recorded here as the
+exemption the acceptance's literal grep needs, the same way UX-122
+wrote down its historical-glob exemption.

@@ -1,6 +1,6 @@
 # UX-112: the spine's price is quoted for a configuration the workflow never runs
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-108 (the per-mode measurement)
+**Priority:** High | **Status:** 🟢 Done — and the interaction it was filed for is not there | **Depends on:** UX-108 (the per-mode measurement)
 
 ## Motivation
 
@@ -64,3 +64,79 @@ file's verification log with the raw numbers; the three doc sites
 quote the combination cost; and if a code fix was taken, the
 combination cell is re-measured to within the budget's distance of
 the dearer single mechanism.
+
+---
+
+## Fix Implemented
+
+### The matrix, five repeats a cell, warm-up discarded
+
+| fixture | opens | spine | wall | vs base |
+|---|---|---|---|---|
+| `examples/06` (822 processes / 30s) | off | off | 30.36s (sd 1.08) | — |
+| | off | **on** | 29.35s (sd 1.59) | **-3.3%** |
+| | **on** | off | 29.08s (sd 1.10) | -4.2% |
+| | **on** | **on** | 29.76s (sd 0.59) | -2.0% |
+| `examples/08` (2003 processes / 4s) | off | off | 4.11s (sd 0.63) | — |
+| | off | **on** | 6.40s (sd 0.31) | **+55.7%** |
+| | **on** | off | 4.31s (sd 0.64) | +4.9% |
+| | **on** | **on** | 5.81s (sd 0.81) | **+41.3%** |
+
+### The interaction is not there
+
+This task was filed on a measured +31-44% for the combination "while
+each alone is free". Re-measured as a full factorial, that does not
+reproduce:
+
+| fixture | spine costs, opens off | spine costs, opens on | interaction |
+|---|---|---|---|
+| `examples/06` | **-1.00s** | +0.68s | +1.68s (< the spread) |
+| `examples/08` | **+2.29s** | **+1.50s** | **-0.79s** |
+
+On the process-dense fixture the spine is **cheaper** alongside opens,
+not dearer — opens raises the baseline, so the same absolute cost is a
+smaller share. On the compile-bound one every cell overlaps every other
+(ranges 27.6-32.3s throughout). Whatever produced the original figure,
+a factorial at n=5 does not.
+
+### What is real: about a millisecond per process
+
+The ratio is not a property of the spine. It is a property of the
+fixture's baseline, which is why the same cell has been quoted three
+times at three magnitudes:
+
+| round | `examples/08`, spine vs hook-only |
+|---|---|
+| `UX-108` | +13.5% (7.32s base) |
+| `UX-118` | +13.2% median (4.95s base) |
+| here | +55.7% (4.11s base) |
+
+The absolute cost barely moved — **+1.5 to +2.3 seconds** — while the
+baseline halved as the machine warmed. Per process:
+
+| fixture | processes | mean process lifetime | spine cost |
+|---|---|---|---|
+| `examples/06` | 822 over 30s | ~36ms | ~0 (below the spread) |
+| `examples/08` | 2003 over 4s | ~2ms | **+0.75 to +1.14 ms** |
+
+**So the price is roughly a millisecond per process**, which is
+invisible when a process lives 36ms and dominant when it lives 2ms.
+That single number reconciles every figure this repository has published
+for the spine, and it is what the docs now quote — a ratio would be a
+fact about the fixture rather than about the tool.
+
+### What follows
+
+`UX-113`'s `--trace-spine=auto` is the answer this measurement points
+at: pay the millisecond per process only for the elements the census
+says the hook cannot see. On `examples/06` that is no elements at all.
+
+Item 2's diagnosis is therefore not needed — there is no contention to
+fix, because there is no interaction. Item 3's help text states the
+per-process cost rather than a combination price that does not exist.
+
+## Verification Log
+
+Done 2026-08-19. Forty real builds, cold cache each, first run of every
+cell discarded as machine warm-up; `matrix.json` carries the raw
+figures.

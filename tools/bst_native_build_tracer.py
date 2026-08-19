@@ -153,7 +153,8 @@ def install_bwrap_shim(shim_dir: str) -> str:
     return real_bwrap
 
 
-def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None, trace_spine: bool = False) -> int:
+def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
+                     trace_spine=False) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -182,7 +183,11 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         # stays either way - it is the only source of opened paths and of
         # child-rusage enrichment, so the spine complements it rather
         # than replacing it.
-        if trace_spine:
+        # UX-113: `False` / `True` / `"auto"`. Kept as the same parameter
+        # rather than a second flag, because they are three values of one
+        # question and a capture may only answer it once.
+        spine_policy = "auto" if trace_spine == "auto" else bool(trace_spine)
+        if spine_policy:
             compile_spine(bind_dir)
         real_bwrap = install_bwrap_shim(shim_dir)
 
@@ -193,12 +198,27 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         env["BST_TRACE_BIND_DST"] = "/tmp/.bst-native-trace"
         env["BST_TRACE_PRELOAD_SO"] = "/tmp/.bst-native-trace/hook.so"
         env["BST_TRACE_LOG_DST"] = "/tmp/.bst-native-trace/trace.log"
-        if trace_spine:
+        if spine_policy:
             # The path *inside* the sandbox, where the bind lands - the
             # shim prepends this to the sandboxed command.
             env["BST_TRACE_SPINE"] = "/tmp/.bst-native-trace/spine"
+            env.pop("BST_TRACE_SPINE_POLICY", None)
+            env.pop("BST_TRACE_SPINE_CENSUS", None)
+            if spine_policy == "auto":
+                # UX-113: the census already knows, per element and
+                # before the build starts, where the hook is blind.
+                # Written on the host side, beside the shim's other
+                # state, and read per sandbox by the shim.
+                verdicts = census_spine_verdicts(project_dir)
+                census_path = os.path.join(shim_dir, "spine-census.json")
+                with open(census_path, "w", encoding="utf-8") as handle:
+                    json.dump(verdicts, handle, sort_keys=True)
+                env["BST_TRACE_SPINE_POLICY"] = "auto"
+                env["BST_TRACE_SPINE_CENSUS"] = census_path
         else:
             env.pop("BST_TRACE_SPINE", None)
+            env.pop("BST_TRACE_SPINE_POLICY", None)
+            env.pop("BST_TRACE_SPINE_CENSUS", None)
         # UX-46: opt-in, and propagated into the sandbox by the shim.
         if trace_opens:
             env["BST_TRACE_OPENS"] = "1"
@@ -1507,6 +1527,35 @@ def _local_source_paths(project_dir: str, element: str) -> List[str]:
     return paths
 
 
+def census_spine_verdicts(project_dir: str) -> Dict[str, bool]:
+    """UX-113: `{element: does the hook need help here}`, from the census.
+
+    True where the element's sandbox stages at least one static
+    executable - the case the `LD_PRELOAD` hook structurally cannot see.
+    An element the census cannot assess is simply absent, and the shim
+    traces what it has no verdict for: "not assessed" and "assessed and
+    clean" are different claims, and only one of them is safe to skip.
+
+    Returns `{}` on any failure, which the shim reads as "no census" and
+    therefore traces everything - the safe direction for a policy whose
+    whole purpose is to not lose coverage.
+    """
+    try:
+        elements_dir = os.path.join(project_dir, "elements")
+        elements = sorted(
+            name for name in os.listdir(elements_dir) if name.endswith(".bst")
+        )
+        if not elements:
+            return {}
+        census = census_project(project_dir, elements)
+    except (OSError, ValueError):
+        return {}
+    return {
+        element: bool(entry.get("static_count"))
+        for element, entry in (census.get("per_element") or {}).items()
+    }
+
+
 def census_project(project_dir: str, elements: List[str]) -> dict:
     """UX-105: which elements have a static executable in their sandbox,
     and which are therefore invisible to Plane 2 in part or in whole.
@@ -2808,6 +2857,25 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # parallelism, CPU time, peak memory) is keyed on this name, so a
     # correction applied later would leave them all disagreeing.
     correlation = None
+    # UX-113: the spine policy's own decisions, which only the shim knows
+    # and only the invocation log carries. Read whenever that log exists,
+    # not only when a correlation is being computed: "the policy skipped
+    # this element" and "this element ran no processes" are different
+    # facts, and the trace alone cannot tell them apart.
+    spine_policy = None
+    if invocation_log_path and os.path.exists(invocation_log_path):
+        sandboxes = [
+            json.loads(line) for line in open(invocation_log_path, errors="replace")
+            if line.strip()
+        ]
+        if sandboxes and any("spine_traced" in entry for entry in sandboxes):
+            traced = sum(1 for entry in sandboxes if entry.get("spine_traced"))
+            spine_policy = {
+                "sandboxes": len(sandboxes),
+                "spine_traced": traced,
+                "policy": ("on" if traced == len(sandboxes)
+                           else "off" if traced == 0 else "auto"),
+            }
     if invocation_log_path and plane1_log_path:
         invocations = [
             json.loads(line) for line in open(invocation_log_path, errors="replace")
@@ -2826,6 +2894,8 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
         correlation["elements_in_plane1"] = len(spans)
     report = summarize(records, correlation=correlation,
                        fork_only_exits=fork_only_exits)
+    if spine_policy:
+        report["spine_policy"] = spine_policy
 
     # UX-46: only attempted when a project directory is available, since
     # it needs `bst artifact list-contents` and the project's own
@@ -3114,6 +3184,14 @@ def _format_stream_coverage(report: dict) -> List[str]:
                 f"truncates, so every process shorter than a tick reads as zero. "
                 f"The hook's microsecond figure is the one used."
             )
+    policy = report.get("spine_policy")
+    if policy and policy["spine_traced"] < policy["sandboxes"]:
+        lines.append(
+            f"  The ptrace spine ran for {policy['spine_traced']} of "
+            f"{policy['sandboxes']} sandbox(es) - the ones the pre-build census "
+            f"says the LD_PRELOAD hook is blind for, plus any it could not assess. "
+            f"The rest ran hook-only, at hook-only cost (UX-113)."
+        )
     collapsed = coverage.get("exec_chains_collapsed") or 0
     fork_only = coverage.get("fork_only_exits") or 0
     if collapsed or fork_only:
@@ -3521,6 +3599,17 @@ def resolve_invocation_log_path(args) -> Optional[str]:
     )
 
 
+
+def _spine_policy(flag: str):
+    """`--trace-spine`'s three values, as `run_traced_build` wants them.
+
+    `False`/`True` rather than `"off"`/`"on"` so every existing caller
+    and test that passes a bool keeps working unchanged - the flag grew a
+    third value, which is not a reason to churn the two already there.
+    """
+    return {"off": False, "on": True, "auto": "auto"}[flag]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -3561,11 +3650,16 @@ def main() -> int:
              "lifecycle hooks this interposes open()/openat() on a hot path.",
     )
     run_parser.add_argument(
-        "--trace-spine", action="store_true",
+        "--trace-spine", nargs="?", const="on", default="off",
+        choices=("off", "on", "auto"),
         help="UX-106: also run a ptrace process-event spine inside the sandbox, "
              "which sees statically-linked processes the LD_PRELOAD hook "
-             "structurally cannot. Opt-in until UX-108 measures the overhead; the "
-             "hook stays on either way, since it is the only source of opened paths.",
+             "structurally cannot. The hook stays on either way, since it is the "
+             "only source of opened paths. "
+             "`auto` (UX-113) traces only the elements the pre-build census says "
+             "the hook is blind for, plus any it could not assess - on an "
+             "all-dynamic project that is no elements at all, and on a busybox "
+             "one it is all of them. Bare `--trace-spine` means `on`.",
     )
     run_parser.add_argument(
         "--wrapped-log",
@@ -3654,7 +3748,7 @@ def main() -> int:
                                           trace_opens=args.trace_opens,
                                           argv_log_path=args.argv_log,
                                           invocation_log_path=invocation_log_path,
-                                          trace_spine=args.trace_spine)
+                                          trace_spine=_spine_policy(args.trace_spine))
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1

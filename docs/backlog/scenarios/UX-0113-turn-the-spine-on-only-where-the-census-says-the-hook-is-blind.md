@@ -1,6 +1,6 @@
 # UX-113: turn the spine on only where the census says the hook is blind
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-105 (the census), UX-106 (the spine), UX-112 (the honest price)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-105 (the census), UX-106 (the spine), UX-112 (the honest price)
 
 ## Motivation
 
@@ -51,3 +51,80 @@ full `--trace-spine` capture of the same build. On a mixed fixture
 (one busybox element added to `examples/06`): exactly that element is
 spine-traced, and Plane 2 coverage reads 100% of processes across
 both policies combined.
+
+---
+
+## Fix Implemented
+
+`--trace-spine=off|on|auto`, defaulting to `off`, with bare
+`--trace-spine` still meaning `on` so every existing invocation and test
+keeps working.
+
+Under `auto`, `run_traced_build` runs the census before the build and
+writes `{element: does the hook need help here}` beside the shim's other
+state; the shim consults it per sandbox, in the one place that knows
+which element is about to build, and injects the spine only where needed.
+
+### It traces what it cannot vouch for
+
+Three cases get the spine regardless of the verdict, and each is a
+different kind of not-knowing:
+
+- an element the census **has no verdict for** — "we did not assess it"
+  and "we assessed it and it is clean" are different claims, and only one
+  is safe to skip;
+- an element whose **name the shim could not recover**, which under a
+  build-root override (`UX-56`) is *every* element, so a project that
+  collapses its names gets `on` rather than a silently empty policy;
+- **any failure to read the census at all**, which degrades to `on`.
+
+A policy meant to preserve coverage has to fail towards coverage.
+
+### The acceptance, on both classes
+
+| | sandboxes | spine-traced | spine records | processes |
+|---|---|---|---|---|
+| `examples/01` (busybox), `auto` | 8 | **8** | — | 24 |
+| `examples/01` (busybox), `on` | 8 | 8 | — | 24 |
+| `examples/06` (all-dynamic), `auto` | 9 | **0** | **0** | 813 |
+
+The per-element records from `auto` and `on` on `examples/01` are
+**identical** — same elements, same commands — so `auto` loses nothing
+where the spine is needed, and costs nothing where it is not.
+
+On a mixed fixture (`examples/06` plus a busybox element and its
+runtime), the census flags **exactly those two of thirteen** elements —
+so the discrimination works within one project, not only between them.
+
+### What the decision is recorded in
+
+The shim writes `spine_traced` into its per-sandbox invocation record,
+and the report reads it whenever that log exists:
+
+```text
+The ptrace spine ran for 2 of 13 sandbox(es) - the ones the pre-build census
+says the LD_PRELOAD hook is blind for, plus any it could not assess. The rest
+ran hook-only, at hook-only cost (UX-113).
+```
+
+Recorded rather than inferred from whether spine records appeared: an
+element the policy skipped and an element that ran no processes look
+identical in the trace, and only one of them is a coverage gap.
+
+### On the default
+
+`UX-112` measured the price at about a millisecond per process rather
+than the ratio the docs quoted, and found no spine × opens interaction.
+That makes `auto` the right *recommendation* — the guides now lead with
+it — but the default stays `off` for one round, because `auto` has one
+real build of each class behind it and the shipped default should not
+change on that alone. The homogeneity check already treats the three
+values as distinct, so a capture that used `auto` cannot silently join a
+band of `on` or `off` ones.
+
+Tests: 11 in `tests/unit/test_spine_auto_policy.py`.
+
+## Verification Log
+
+Done 2026-08-19. Three real traced builds (`examples/01` twice, once per
+policy; `examples/06` once) plus the mixed-fixture census.

@@ -220,6 +220,15 @@ because no project in this repository was process-dense enough to ask
 the question). The rule was stated before the numbers — under 2% it
 defaults on, over it stays a flag — and the numbers chose.
 
+`UX-112` later re-measured that as a full {spine} × {opens} factorial and
+found the ratio unstable and the unit wrong: the price is **about a
+millisecond per process**, which is +41–56% on `examples/08` and below
+the spread on `examples/06`. The predicted spine × opens interaction is
+not there — on the process-dense fixture the spine is *cheaper* alongside
+opens, because opens raises the baseline. `UX-113`'s
+`--trace-spine=auto` follows directly: pay the millisecond only where the
+census says the hook is blind.
+
 ### Plane 1 knows the resolution of its own timestamps
 
 A wrapped log line is stamped when the wrapper *reads* it, and

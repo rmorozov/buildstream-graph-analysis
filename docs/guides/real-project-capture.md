@@ -204,7 +204,7 @@ match for two captures to be comparable, so a baseline set is
 discoverable with one command and no index file to keep consistent:
 
 ```text
-captures/fdsdk/<fdsdk-ref-short>-b<builders>j<max-jobs>-<run-id>
+captures/fdsdk/<fdsdk-ref-short>-<capture-mode>-b<builders>j<max-jobs>-<run-id>
 ```
 
 `captures/fdsdk-latest` remains a moving pointer at the newest *good*
@@ -227,18 +227,32 @@ bga analyze run
 git ls-remote origin 'refs/heads/captures/fdsdk/953683fb-incremental-b4j4-*'
 ```
 
-Assembling a baseline set from three of those refs is then the documented
-CI comparison, straight from fetched refs:
+Assembling a baseline set from those refs is one command (`UX-96`) — it
+discovers the newest N, fetches and untars them, refuses a set whose
+captures are not comparable, and band-compares:
+
+```bash
+bga baseline --glob 'captures/fdsdk/953683fb-incremental-b4j4-*' -n 3 \
+    --candidate candidate/run --band-k 3.0
+```
+
+<details>
+<summary>The manual assembly it replaced</summary>
+
+Three fetches, three checkouts and a five-path `bga compare`. Kept only
+because a reader may meet it in an older CI job:
 
 ```bash
 for ref in <run-id-1> <run-id-2> <run-id-3>; do
-  git fetch -q origin "captures/fdsdk/953683fb-b4j4-$ref"
+  git fetch -q origin "captures/fdsdk/953683fb-incremental-b4j4-$ref"
   git --work-tree="baseline-$ref" checkout -q FETCH_HEAD -- run
 done
 bga compare baseline-<run-id-1>/run candidate/run \
     --baseline-run baseline-<run-id-2>/run \
     --baseline-run baseline-<run-id-3>/run --band-k 3.0
 ```
+
+</details>
 
 With fewer than three, `bga compare` says so rather than silently falling
 back to the fixed rule:

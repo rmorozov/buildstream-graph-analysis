@@ -8,12 +8,16 @@ of this. If you're picking up one of those tasks, read this first.
 ## Target architecture
 
 ```text
+PLANE 1 - one run's element-level log
 real bst invocation (wrapper log OR raw log OR direct)
         |
         +--> tools/bst_log_to_chrome_trace.py --> Chrome Trace JSON (P4-05, done)
         |          |                                (also the user's own real
         |          |                                 perfetto.dev visualization
         |          |                                 path - unchanged)
+        |          |    ...and, from the same pass, each task's duration
+        |          |    measured a second time against BuildStream's own
+        |          |    elapsed prefix -> timestamp_agreement (UX-110)
         |          v
         |    tools/chrome_trace_to_bga_trace.py --> trace/v9 (done)
         |
@@ -28,6 +32,36 @@ real bst invocation (wrapper log OR raw log OR direct)
         v
    bga ingests it, produces a report - verified working end-to-end
    against a real BuildStream 2.7.0 build with zero manual editing
+
+PLANE 2 - processes inside the sandboxes of that same build
+tools/bst_native_build_tracer.py run [--trace-opens] [--trace-spine]
+        |
+        +--> tools/native_trace/bwrap_shim.py rewrites BuildStream's own
+        |    bwrap argv, injecting BOTH interception mechanisms:
+        |       hook.c   (LD_PRELOAD)  - lifecycle, CPU, RSS, opened paths
+        |       spine.c  (ptrace, -static, UX-106) - every exec whatever
+        |                                its linkage, opt-in (UX-108)
+        |
+        +--> ELF census of the staged roots (UX-105) - what the hook
+        |    *could not* have seen, measured before the build runs
+        |
+        v
+   one raw trace log, two record streams, joined into one process list
+   on (invocation, pid) + START within tolerance (UX-107) - every entry
+   tagged spine+hook / spine-only / hook-only
+        |
+        v
+   native-report.json - and `bga correlate` joins it to Plane 1 on the
+   element UID, the only contract between them
+
+PLANE 3 - what BuildStream already wrote, for every build on this machine
+$XDG_CACHE_HOME/buildstream/logs/<project>/<element>/*.log
+        |
+        v
+   tools/bst_cache_logs.py (UX-91) - no capture, no flags, no foresight
+   phase breakdown, sandbox tax (UX-99), configure tax (UX-102),
+   developer tax (UX-101); --native-report puts Plane 2's traced
+   configure CPU beside Plane 3's self-reported wall clock
 ```
 
 `bga` itself stays a pure analyzer of already-v9-shaped input (Part 32).

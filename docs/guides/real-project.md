@@ -21,6 +21,7 @@ no BuildStream at all.
 
 | step | what it answers | needs a live `bst`? |
 |---|---|---|
+| 0. `bga cache-logs` | What has this project been spending time on already | no — **and no capture either** |
 | 1–2. Capture and extract | — | **yes** |
 | 3. `bga analyze` | Where is the time, what is worth fixing, and what after that | no |
 | 4. Floors and the two efficiency signals | Is this a scheduler problem, a graph problem, or a work problem | no |
@@ -30,6 +31,59 @@ no BuildStream at all.
 
 Steps 3–7 read finished artifacts. You can capture on a build machine
 and analyse anywhere, including from a tarball someone hands you.
+
+Step 0 is different from all of them: it reads logs BuildStream already
+wrote, for builds that already happened. If you have ever built this
+project on this machine, you can run it right now, before reading any
+further.
+
+---
+
+## Step 0a — the evidence you already have (Plane 3)
+
+Before capturing anything, look at what BuildStream kept. It writes a log
+for every element it builds, under
+`$XDG_CACHE_HOME/buildstream/logs/<project>/`, and never reads them
+again:
+
+```bash
+bga cache-logs --project <your-project-name>
+```
+
+Real output, from a freedesktop-sdk log tree:
+
+```text
+Sandbox tax: 13.0s of 4409.0s element time (0.3%) across 23 build log(s) went to
+staging, integrating and caching rather than to the build itself
+  Who paid it (by toll seconds, not by share):
+    components/libffi.bst                4.0s toll of 49.0s (8%)
+    components/bison.bst                 3.0s toll of 137.0s (2%)
+
+Configure tax (Plane 3, self-reported): 35.5s of 4409.0s element time (0.8%),
+reported by 3 of 23 build log(s)
+  5 element(s) have traced configure work and no self-report - an autotools or
+  meson build system, and the case the self-report alone is blind to
+```
+
+**What to do with it.** Three questions it answers that no capture can:
+
+- *Is any element paying more to be an element than to build?* That is
+  the sandbox tax. A high toll share on a short element is the signal
+  behind the `merge-candidate` finding — pass the JSON to
+  `bga correlate --cache-logs` and it will say so with the Plane 1 impact
+  attached.
+- *Which elements does this project keep rebuilding?* The developer-tax
+  ranking, across every build in the tree rather than the one you
+  happened to capture.
+- *Where does configure time go?* With `--native-report PLANE2.json` it
+  puts the build tool's own self-reported figure beside Plane 2's traced
+  CPU, per element, side by side and never summed.
+
+**What it costs, and the report says all of it:** one-second resolution,
+no scheduler context, no `--builders`, no per-command timing, and no
+session id — so "how many builds" is a lower bound taken from the
+most-rebuilt element, never a count. Nothing here may feed a certified
+floor.
 
 ---
 

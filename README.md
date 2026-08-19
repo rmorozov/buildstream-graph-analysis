@@ -7,7 +7,7 @@
 - **What should I fix first, and what is it actually worth?** — ranked by how much the build would really lose if that element were free, which on a dense graph is a very different number from how big it is.
 - **And then what?** — the next few fixes, what the build drops to after each, and whether their savings add — projected from the capture you already have, instead of costing you another full build per finding.
 
-It works in two complementary planes: a **whole-project** analysis of one build's element-level log, and an **intra-element** tracer that looks *inside* a single element's sandbox at its native build system's real process tree (`make -jN`, `cmake --build`, …) — see [Advanced: looking inside one element](#advanced-looking-inside-one-element-plane-2).
+It works in three complementary planes: a **whole-project** analysis of one build's element-level log; an **intra-element** tracer that looks *inside* a single element's sandbox at its native build system's real process tree (`make -jN`, `cmake --build`, …) — see [Advanced: looking inside one element](#advanced-looking-inside-one-element-plane-2); and a **retrospective** pass over the per-element logs BuildStream already wrote for every build on your machine, which needs no capture at all — see [Free evidence](#free-evidence-what-your-machine-already-recorded-plane-3).
 
 **New here?** [`docs/guides/real-project.md`](docs/guides/real-project.md) is the full end-to-end walkthrough on a real project, with real output at every step.
 
@@ -300,7 +300,7 @@ Per-element native parallelism (real compiler/assembler/linker processes only):
 
 And with `--trace-opens`, **which declared build dependencies an element never actually read** — by recording the files each sandbox opened and matching them against each dependency's own artifact contents. These are candidates with evidence, never verdicts: a runtime-only dependency is indistinguishable from an unused one from here, and a dependency that stages almost nothing of its own (a `stack` stages one marker file) is set aside rather than reported.
 
-### Joining the two planes
+### Joining the planes
 
 Capture both from one build, then join them on element UID — the only contract between the planes:
 
@@ -315,6 +315,40 @@ This produces what neither plane can alone — see [the real example above](#on-
 
 It also detects real operations repeated independently across *multiple* elements' sandboxes (`autoconf` probes, `m4` runs — scored in recoverable wall-clock for the worst-affected element rather than summed across elements that ran concurrently) and can export a [Chrome Trace](https://ui.perfetto.dev)-viewable timeline, standalone or combined with the whole-project view into one file.
 
+## Free evidence: what your machine already recorded (Plane 3)
+
+Both planes above need a build you decided to capture. A third one needs
+nothing at all. BuildStream writes a log for every element it builds and
+keeps them — so every build already on your machine, including the ones
+nobody thought to instrument, is evidence:
+
+```bash
+bga cache-logs --project <your-project>
+```
+
+```text
+Sandbox tax: 13.0s of 4409.0s element time (0.3%) across 23 build log(s) went to
+staging, integrating and caching rather than to the build itself
+
+Configure tax (Plane 3, self-reported): 35.5s of 4409.0s element time (0.8%),
+reported by 3 of 23 build log(s)
+  5 element(s) have traced configure work and no self-report - an autotools or
+  meson build system, and the case the self-report alone is blind to
+```
+
+It answers what neither capture plane can, because it sees *history*
+rather than one run: which elements this project has spent the most time
+rebuilding, how much of each element's time never reached the build at
+all (the **sandbox tax** — staging, integrating, caching), and what the
+build tools themselves claim they spent on configure. It costs one second
+of resolution and knows nothing about the scheduler, and it says so in
+its own output rather than letting you assume otherwise.
+
+Pass `--native-report` and it puts Plane 3's self-reported configure time
+beside Plane 2's traced CPU for the same elements — shown side by side,
+never summed, because one is wall-clock a tool reported about itself and
+the other is CPU seconds somebody measured.
+
 ## Documentation
 
 [**`docs/`**](docs/README.md) is the index — it says which folder answers
@@ -323,7 +357,7 @@ which kind of question. The three entry points:
 | you want to | read |
 |---|---|
 | **use the tool** on a real project | [`docs/guides/real-project.md`](docs/guides/real-project.md) — capture → read → go inside → join → act → gate, with real output at every step |
-| **work on the codebase** | [`docs/design/architecture.md`](docs/design/architecture.md) — both planes as one system, and every extension beyond the spec |
+| **work on the codebase** | [`docs/design/architecture.md`](docs/design/architecture.md) — all three planes as one system, and every extension beyond the spec |
 | **look something up** | [`docs/guides/cli.md`](docs/guides/cli.md) — every command, flag and exit code |
 
 ## Development

@@ -17,6 +17,61 @@ no BuildStream at all.
 
 ---
 
+## The short version: two commands, and the second one answers the question
+
+Everything below is the long form, and it is worth reading once. But the
+loop you will actually run twice a day is two lines, from inside the
+project:
+
+```bash
+bga snapshot -- bst build <your-target>
+# ...make your change...
+bga snapshot -- bst build <your-target>
+```
+
+The first prints the analysis. The second prints the analysis **and**
+the comparison against the first — `IMPROVED`, `REGRESSED`, or
+`NO SIGNIFICANT CHANGE`, with the deltas under it.
+
+`bga snapshot` is `bga capture run` + `bga extract` + `bga analyze` +
+`bga compare`, run for you, into `.bga/runs/<UTC-stamp>/` under the
+project. It invents no paths, because the store already knows them
+(`UX-126`); it changes no number, because it is those commands rather
+than a reimplementation of them; and it refuses what they refuse — a
+caches-off run against a caches-on one still says so instead of
+comparing.
+
+The store is a way of *naming* runs, so every command that takes a run
+directory takes a name too:
+
+```bash
+bga analyze @last              # the newest snapshot
+bga compare @prev @last        # the last two
+bga analyze @20260819          # by stamp prefix
+bga snapshot --list            # what is on disk, and which alias is which
+```
+
+An explicit path keeps working everywhere it worked before. Outside a
+project, an alias fails by name — *"there is no BuildStream project here
+to resolve it against"* — rather than as a missing directory.
+
+Two things stay sticky per project, in `.bga/config`: `--trace-opens`
+and `--trace-spine`. Decide them once (`bga snapshot --trace-spine=off
+-- bst build ...`) and every later snapshot of that project uses them.
+Every report still records what actually ran, so a sticky flag cannot
+make a capture *claim* something it did not do.
+
+`.bga/` gitignores itself the first time it is written. Snapshots are
+build artifacts: delete any of them whenever you like, nothing else
+refers to them.
+
+The rest of this guide is the plumbing underneath — worth knowing when
+you need a capture somewhere other than the project directory, when the
+log came from elsewhere, or when you are wiring CI, where the store's
+laptop-shaped answer is replaced by published refs (`UX-96`).
+
+---
+
 ## What you get, and what it costs
 
 | step | what it answers | needs a live `bst`? |

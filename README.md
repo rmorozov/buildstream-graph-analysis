@@ -192,8 +192,28 @@ graph is a much smaller number than its share suggests.
 
 ## Use it on your real project
 
+The short version is two commands, run from inside the project:
+
 ```bash
 pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/spec/ingestion-pipeline.md
+cd /path/to/your/project
+bga snapshot -- bst build <targets>   # capture + extract + analyze
+# ...make your change...
+bga snapshot -- bst build <targets>   # ...and compare against the previous one
+```
+
+The second invocation prints the analysis **and** the verdict against
+the first. Captures land in `.bga/runs/<UTC-stamp>/` under the project
+(gitignored), and every command that takes a run directory also takes
+`@last`, `@prev` or a stamp prefix — `bga analyze @last`,
+`bga compare @prev @last`. `bga snapshot` is those commands composed, so
+it changes no number and keeps every refusal: a caches-off run compared
+against a caches-on one still refuses.
+
+The pieces underneath, for a log captured somewhere else or a capture
+that cannot live in the project directory:
+
+```bash
 # Capture through the wrapper: it records the real invocation on its own first
 # line, which is where `--max-jobs` lives - without it bga's capacity checks
 # have nothing to check against and say so.

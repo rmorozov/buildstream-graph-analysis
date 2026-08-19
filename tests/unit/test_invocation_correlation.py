@@ -261,3 +261,28 @@ def test_the_opt_out_restores_the_old_behaviour():
     args = _Args(wrapped_log="/tmp/plane1.log", no_invocation_log=True)
 
     assert resolve_invocation_log_path(args) is None
+
+
+def test_a_build_in_which_no_sandbox_ran_still_produces_a_report(tmp_path):
+    """UX-126, found by running the loop's own second command.
+
+    An all-cache-hit build - which is the *ordinary* second run of
+    `bga snapshot` - launches no sandbox, so the invocation record is
+    never created. `load_and_summarize` guarded one of its two reads of
+    that file and not the other, so a capture that had already finished
+    died with `FileNotFoundError` and threw away a complete report.
+    """
+    from tools.bst_native_build_tracer import load_and_summarize
+
+    raw = tmp_path / "trace.log"
+    raw.write_text("")
+    plane1 = tmp_path / "plane1.log"
+    plane1.write_text("[--:--:--][][] START   Build\n")
+
+    report = load_and_summarize(
+        str(raw),
+        invocation_log_path=str(tmp_path / "never-created.jsonl"),
+        plane1_log_path=str(plane1),
+    )
+
+    assert report["process_count"] == 0

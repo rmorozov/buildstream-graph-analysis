@@ -135,7 +135,7 @@ def check_plane3(project_name: Optional[str] = None) -> dict:
     Plane 3 needs no capture at all, which makes "is there anything
     there?" the only question - and one nothing answered before.
     """
-    from tools.bst_cache_logs import default_log_root, summarize_log_tree
+    from .bst_cache_logs import default_log_root, summarize_log_tree
 
     root = default_log_root()
     if not os.path.isdir(root):
@@ -229,7 +229,7 @@ def check_staged_sources(project_dir: str) -> List[dict]:
     cryptic exec error) and a project staging **static executables**
     (which builds fine and produces an empty Plane 2 capture).
     """
-    from tools.bst_native_build_tracer import census_project
+    from .bst_native_build_tracer import census_project
 
     elements_dir = os.path.join(project_dir, "elements")
     if not os.path.isdir(elements_dir):
@@ -285,7 +285,7 @@ def run_checks(project_dir: Optional[str] = None) -> List[dict]:
     checks = [check_bst(), check_bwrap(), check_compiler()]
     project_name = None
     if project_dir:
-        from tools.bst_cache_logs import project_name_from_dir
+        from .bst_cache_logs import project_name_from_dir
         project_name = project_name_from_dir(project_dir)
         checks.extend(check_project_loads(project_dir))
         checks.extend(check_staged_sources(project_dir))

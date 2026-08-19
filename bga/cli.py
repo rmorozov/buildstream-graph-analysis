@@ -40,6 +40,7 @@ from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
 from .replay.scheduler import build_contention_calibration
+from .run_store import StoreError, resolve as resolve_run_alias
 from .report.ci_comment import render_ci_comment
 from .report import (
     SWEEP_CAPACITY_MODEL_CAVEAT,
@@ -1475,6 +1476,34 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# UX-126: every positional that names a run directory, so `@last` and
+# `@prev` work in all of them rather than in the two the store's author
+# happened to think of. Attributes rather than commands, because that is
+# what the resolution actually depends on - a new command that reuses
+# `directory` gets aliases for free, and one that invents a new name
+# does not silently half-work.
+_RUN_DIRECTORY_ARGS = ('directory', 'baseline', 'candidate')
+_RUN_DIRECTORY_LIST_ARGS = ('run_dirs', 'baseline_run', 'calibration_dir')
+
+
+def _resolve_run_aliases(args: argparse.Namespace) -> None:
+    """Turn snapshot aliases into paths, in place.
+
+    Anything that is not an alias passes through untouched, so an
+    explicit path means exactly what it meant before the store existed -
+    including a directory that really is called `@last`, which is a path
+    the store's grammar deliberately still reaches (`run_store._ALIAS`).
+    """
+    for name in _RUN_DIRECTORY_ARGS:
+        value = getattr(args, name, None)
+        if isinstance(value, str):
+            setattr(args, name, resolve_run_alias(value))
+    for name in _RUN_DIRECTORY_LIST_ARGS:
+        values = getattr(args, name, None)
+        if isinstance(values, list):
+            setattr(args, name, [resolve_run_alias(v) for v in values])
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     """
     Main entry point for the bga CLI.
@@ -1497,11 +1526,17 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     parser = create_parser()
     args = parser.parse_args(argv)
-    
+
     if args.command is None:
         parser.print_help()
         return 0
-    
+
+    try:
+        _resolve_run_aliases(args)
+    except StoreError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
+
     return args.func(args)
 
 

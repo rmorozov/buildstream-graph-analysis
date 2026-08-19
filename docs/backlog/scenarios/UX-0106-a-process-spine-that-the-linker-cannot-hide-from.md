@@ -138,7 +138,40 @@ than ignored, because the parser's key loop *stops* at the first key it
 does not know — an unhandled field would not be skipped, it would
 swallow `cmd=` and leave every spine record with an empty command line.
 
-### What a SIGKILLed tracer does — measured, and narrower than the acceptance
+### What a SIGKILLed tracer does — corrected by `UX-118`
+
+> **This section was wrong, and the way it was wrong is the point.**
+> It recorded a failing acceptance clause, attributed it to ptrace at
+> large, and shipped the task green on that attribution. `UX-118`'s code
+> review found the mechanism, and it was ours. The original text is kept
+> below the correction, because a wrong explanation that was believed for
+> a while is worth being able to recognise again.
+
+Killing the tracer mid-build now leaves the traced tree **running to
+completion** — measured three times against the old binary and three
+against the new, in the same harness:
+
+| | traced tree completed after `SIGKILL` of the tracer |
+|---|---|
+| as shipped in `UX-106` | **no**, 3 of 3 |
+| after `UX-118` | **yes**, 3 of 3 |
+
+The mechanism was the attach-SIGSTOP. Every auto-attached child's first
+stop is the kernel's `SIGSTOP`, and the loop restarted it *with* that
+signal — converting an attach-stop into a real group stop. When the
+tracer died, `__ptrace_unlink` re-instated the pending group stop and the
+tree stayed stopped. Not a property of ptrace: a property of restarting a
+tracee with a signal the kernel sent on the tracer's behalf.
+
+The claim below that "every failure mode the tracer can *cause* is
+handled" was also false, and in the worst possible place: `UX-117` found
+that `degrade()` — the path whose entire job is to never break the
+wrapped build — left every tracee other than the offending one stopped
+forever, hanging the build. Forced at three different points, the shipped
+binary hung 3 of 3 times.
+
+<details>
+<summary>The original text, as shipped</summary>
 
 `PTRACE_O_EXITKILL` is deliberately not set, and a **lone tracee
 survives** its tracer's `SIGKILL` and runs to completion. A traced
@@ -158,6 +191,15 @@ Recorded rather than smoothed over, with two things that narrow it:
   hanging it, and `execvp` failures fall through to running the command
   untraced. The only route to the bad state is an external `SIGKILL` of
   the tracer, which is not a tracer bug and which no build produces.
+
+</details>
+
+**What the harness could not see.** The experiment that produced the
+original result was sound — it really did measure a tree that did not
+survive. What it could not do was distinguish "ptrace behaves this way"
+from "we are using ptrace incorrectly", and the write-up chose the first
+without evidence for it. A measurement that rules nothing out is worth
+recording; the explanation attached to it is not the measurement.
 
 ### Overhead: 6.9%, against a 2% budget
 

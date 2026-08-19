@@ -1,0 +1,248 @@
+"""UX-125: the environment checked before a build proves it broken.
+
+Every capture-capable environment this project has stood up was
+assembled by failure - and each of those failures already had its answer
+written down, in a CI comment, a staging script's header, or the
+ingestion guide. What did not exist was the *sequence*.
+
+These cover the properties that make `doctor` worth running rather than
+its exact prose: that it never mutates anything, that a check which
+cannot run says so instead of passing, that two problems wearing the
+same error message get different remedies, and that the exit code means
+what a script would assume.
+"""
+import json
+import os
+import subprocess
+import sys
+
+import pytest
+
+from tools.bga_doctor import (
+    FAIL, OK, SKIP, WARN, check_compiler, check_plane3, check_project_loads,
+    check_staged_sources, format_text, main, run_checks,
+)
+
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+@pytest.fixture
+def bare_project(tmp_path):
+    """A loadable project that stages nothing executable - the
+    `stage_*.sh` trap, which fails a real build with a cryptic exec
+    error deep inside it."""
+    root = tmp_path / "bare"
+    (root / "elements").mkdir(parents=True)
+    (root / "files" / "src").mkdir(parents=True)
+    (root / "project.conf").write_text(
+        "name: bare-project\nmin-version: 2.0\nelement-path: elements\n")
+    (root / "elements" / "all.bst").write_text(
+        "kind: import\nsources:\n- kind: local\n  path: files/src\n")
+    (root / "files" / "src" / "README").write_text("nothing executable here\n")
+    return root
+
+
+class TestItNeverChangesAnything:
+    def test_a_project_directory_is_untouched(self, bare_project):
+        """Read-only by contract: it recommends `stage_runtimes.sh`, it
+        does not run it. A diagnostic that mutates what it diagnoses
+        cannot be run twice with the same meaning."""
+        before = {
+            path: os.stat(os.path.join(root, path)).st_mtime
+            for root, _dirs, files in os.walk(bare_project)
+            for path in files
+        }
+
+        run_checks(str(bare_project))
+
+        after = {
+            path: os.stat(os.path.join(root, path)).st_mtime
+            for root, _dirs, files in os.walk(bare_project)
+            for path in files
+        }
+        assert before == after
+
+    def test_no_new_files_appear(self, bare_project):
+        listing = sorted(
+            os.path.join(r, f) for r, _d, fs in os.walk(bare_project) for f in fs)
+
+        run_checks(str(bare_project))
+
+        assert sorted(
+            os.path.join(r, f) for r, _d, fs in os.walk(bare_project) for f in fs
+        ) == listing
+
+
+class TestAnUnrunnableCheckSaysSoRatherThanPassing:
+    def test_a_project_with_no_elements_directory_skips_the_census(self, tmp_path):
+        """`skip` and `ok` are different claims. A census that could not
+        run must not read as "nothing static here"."""
+        root = tmp_path / "empty"
+        root.mkdir()
+        (root / "project.conf").write_text("name: x\n")
+
+        [finding] = check_staged_sources(str(root))
+
+        assert finding["status"] == SKIP
+
+    def test_a_directory_that_is_not_a_project_fails_rather_than_skips(self, tmp_path):
+        """Being handed the wrong path is a user error worth reporting,
+        not a check to wave through."""
+        [finding] = check_project_loads(str(tmp_path))
+
+        assert finding["status"] == FAIL
+        assert "no project.conf" in finding["summary"]
+
+    def test_a_missing_log_tree_warns_rather_than_fails(self, tmp_path, monkeypatch):
+        """Plane 3 having nothing to read is a fact about the machine,
+        not a broken environment - Planes 1 and 2 are unaffected."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "nothing"))
+
+        assert check_plane3()["status"] == WARN
+
+
+class TestTheCensusChecksAreTwoDifferentThings:
+    def test_a_project_staging_nothing_executable_is_warned_about(self, bare_project):
+        findings = {f["id"]: f for f in check_staged_sources(str(bare_project))}
+
+        assert findings["staged-sources"]["status"] == WARN
+        assert "stage_runtimes.sh" in findings["staged-sources"]["remedy"]
+
+    def test_a_busybox_project_is_reported_as_a_blind_spot_not_a_failure(self):
+        """`examples/01` builds perfectly and produces an empty Plane 2
+        capture. That is a coverage fact with a remedy (`--trace-spine`),
+        not a broken environment."""
+        project = os.path.join(REPO, "examples", "01-resource-contention")
+        if not os.path.isfile(
+                os.path.join(project, "files", "runtime", "bin", "sh")):
+            pytest.skip("examples/01 is not staged - run examples/stage_runtimes.sh")
+
+        findings = {f["id"]: f for f in check_staged_sources(project)}
+
+        assert findings["static-blind-spot"]["status"] == WARN
+        assert "--trace-spine=auto" in findings["static-blind-spot"]["remedy"]
+        assert findings["staged-sources"]["status"] == OK
+
+    def test_an_all_dynamic_project_is_not_flagged_blind(self):
+        project = os.path.join(REPO, "examples", "06-macro-micro-optimization")
+        if not os.path.isfile(
+                os.path.join(project, "files", "toolchain", "usr", "bin", "gcc")):
+            pytest.skip("examples/06 is not staged - run examples/stage_cpp_toolchain.sh")
+
+        findings = {f["id"]: f for f in check_staged_sources(project)}
+
+        assert findings["static-blind-spot"]["status"] == OK
+
+
+class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
+    """"No element plugin registered for kind 'cmake'" is produced both
+    by a missing `buildstream-plugins` **and** by a project that has not
+    declared it. The remedies are opposites, and telling a user to
+    install what they already have is how a diagnostic loses its
+    reader."""
+
+    @pytest.fixture
+    def undeclared_cmake(self, tmp_path):
+        root = tmp_path / "nocmake"
+        (root / "elements").mkdir(parents=True)
+        (root / "files" / "src").mkdir(parents=True)
+        (root / "project.conf").write_text(
+            "name: no-plugins-project\nmin-version: 2.0\nelement-path: elements\n")
+        (root / "elements" / "all.bst").write_text(
+            "kind: cmake\nsources:\n- kind: local\n  path: files/src\n")
+        (root / "files" / "src" / "CMakeLists.txt").write_text("")
+        return root
+
+    def _remedy(self, project, installed, monkeypatch):
+        import tools.bga_doctor as doctor
+        monkeypatch.setattr(doctor, "_plugins_package_installed", lambda: installed)
+        [finding] = doctor.check_project_loads(str(project))
+        assert finding["status"] == FAIL, finding
+        return finding["remedy"]
+
+    @pytest.mark.bst
+    @pytest.mark.skipif(not os.environ.get("PATH"), reason="no PATH")
+    def test_the_package_missing_says_install_it(self, undeclared_cmake, monkeypatch):
+        import shutil
+        if not shutil.which("bst"):
+            pytest.skip("bst not on PATH")
+
+        remedy = self._remedy(undeclared_cmake, False, monkeypatch)
+
+        assert "pip install buildstream-plugins" in remedy
+
+    @pytest.mark.bst
+    def test_the_package_present_says_declare_it(self, undeclared_cmake, monkeypatch):
+        import shutil
+        if not shutil.which("bst"):
+            pytest.skip("bst not on PATH")
+
+        remedy = self._remedy(undeclared_cmake, True, monkeypatch)
+
+        assert "has not declared it" in remedy
+        assert "pip install" not in remedy
+
+
+class TestTheContractAScriptWouldAssume:
+    def test_only_a_failure_makes_the_exit_code_nonzero(self, capsys):
+        """A warning is a thing to read, not a thing to block on - a
+        static-binary blind spot and a missing log tree are both normal."""
+        assert main([]) in (0, 1)
+        out = capsys.readouterr().out
+        assert "bga doctor" in out
+
+    def test_the_json_form_carries_an_id_per_check(self, capsys):
+        main(["--format", "json"])
+
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["checks"]
+        assert all({"id", "status", "summary"} <= set(c) for c in payload["checks"])
+
+    def test_every_status_renders(self):
+        """`format_text` indexes a table by status; a status with no entry
+        would be a KeyError in the one command a broken environment
+        runs."""
+        checks = [
+            {"id": "a", "status": OK, "summary": "s", "remedy": None, "detail": []},
+            {"id": "b", "status": FAIL, "summary": "s", "remedy": "r", "detail": ["d"]},
+            {"id": "c", "status": WARN, "summary": "s", "remedy": "r", "detail": []},
+            {"id": "d", "status": SKIP, "summary": "s", "remedy": None, "detail": []},
+        ]
+
+        rendered = format_text(checks, "/some/project")
+
+        assert "[FAIL]" in rendered and "[warn]" in rendered and "[skip]" in rendered
+        assert "-> r" in rendered
+
+    def test_a_remedy_is_printed_for_everything_that_is_not_ok(self):
+        checks = [{"id": "x", "status": WARN, "summary": "s",
+                   "remedy": "do the thing", "detail": []}]
+
+        assert "do the thing" in format_text(checks, None)
+
+    def test_an_ok_check_does_not_print_a_remedy(self):
+        checks = [{"id": "x", "status": OK, "summary": "fine",
+                   "remedy": "unused", "detail": []}]
+
+        assert "unused" not in format_text(checks, None)
+
+
+def test_the_compiler_check_is_the_one_the_capture_performs():
+    """`compile_hook` raises on a missing cc/gcc after the build has
+    already started. This is the same test, moved earlier - so it must
+    stay the same test."""
+    import shutil
+
+    expected = OK if (shutil.which("cc") or shutil.which("gcc")) else FAIL
+    assert check_compiler()["status"] == expected
+
+
+def test_doctor_is_reachable_through_the_cli():
+    """It is only useful if it is the thing a confused user can find."""
+    result = subprocess.run(
+        [sys.executable, "-m", "bga.cli", "doctor", "--format", "json"],
+        capture_output=True, text=True, cwd=REPO, timeout=300,
+    )
+
+    assert result.returncode in (0, 1), result.stderr
+    assert json.loads(result.stdout)["checks"]

@@ -1,6 +1,6 @@
 # UX-127: cache-logs should take the project you have, not the name it hides
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-91 (done — this is its front door)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (done — this is its front door)
 
 Post-MVP polish, direction: simplify the user scenarios.
 
@@ -52,3 +52,76 @@ build) renders that project's Plane 3 report with no `--project` flag.
 Bare `bga cache-logs` lists the machine's projects with counts and
 spans. The wrong-argument case from Motivation names the derived
 project and where it looked. `--project NAME` keeps working unchanged.
+
+## Fix Implemented
+
+The positional is now `PROJECT_DIR|LOG_ROOT`, detected by the presence
+of `project.conf`. Given a project it reads `name:` from that file and
+resolves the log root itself — the obvious invocation does the obvious
+thing. A log root still works unchanged, and so does `--project NAME`.
+
+`project.conf` is read directly rather than through BuildStream, for the
+same reason `read_declared_build_deps` is: this has to work against a
+project directory without loading a plugin, and the name is a plain
+top-level key.
+
+Bare `bga cache-logs` (or `--list`) enumerates the tree; `--all` keeps
+the old report-over-everything behaviour for anyone who wants it.
+
+## Verification Log
+
+Done 2026-08-19, against a real log tree from this session's builds.
+
+### The obvious argument
+
+```text
+$ bga cache-logs examples/09-fine-grained-siblings
+============================================================
+Cached Build Logs (Plane 3)
+============================================================
+Read 22 log(s), 11 of them builds, from macro-micro-optimization-example-optimized
+
+Where each element spent its own time:
+  tiny-1.bst [df47e0c4] 19-08-2026 13:24:50 (2.0s)
+    Staging dependencies at: /           1.0s (50%)
+```
+
+No `--project`, no `ls` of the cache.
+
+### Discovery
+
+```text
+$ bga cache-logs
+============================================================
+BuildStream log tree
+============================================================
+  …/cache-fine2/buildstream/logs
+
+  project                                        logs  elements
+  macro-micro-optimization-example-optimized       22        11
+      2026-08-19 13:24:50 UTC .. 2026-08-19 13:24:55 UTC
+
+  Report on one with `bga cache-logs PROJECT_DIR` (or --project NAME),
+  or on every project at once with --all.
+```
+
+### The wrong-argument case from the Motivation
+
+```text
+$ bga cache-logs examples/06-macro-micro-optimization
+Error: no element logs found under …/logs for project 'macro-micro-optimization-example'
+  examples/06-macro-micro-optimization/project.conf declares
+  `name: macro-micro-optimization-example`, and that is the log-tree directory
+  this looked for.
+  The tree holds: macro-micro-optimization-example-optimized
+  `bga cache-logs --list` shows all of them with counts and spans.
+```
+
+The old message was `no element logs found under
+examples/06-macro-micro-optimization. Nothing to report on.` — confidently
+wrong about a project whose logs existed. The new one names what was
+derived, where it looked, and what is actually there; and here it
+happens to reveal a genuinely useful thing, that the *optimized* variant
+is what was built and the base project was not.
+
+Tests: 13 added in `tests/unit/test_cache_logs.py` (35 → 48).

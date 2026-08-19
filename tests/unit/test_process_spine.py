@@ -391,22 +391,161 @@ def test_a_killed_tracer_leaves_the_build_running(spine, tmp_path):
     assert marker.exists(), "the traced tree did not survive its tracer"
 
 
-def test_a_signal_the_program_raises_itself_still_reaches_it(spine, tmp_path):
-    """The attach-stop is suppressed once per pid, not SIGSTOP in
-    general - a tracer that swallowed the program's own signals would be
-    changing the program it is supposed to be observing."""
-    marker = tmp_path / "resumed"
-    script = f"(sleep 1; kill -CONT $$) & kill -STOP $$; echo yes > {marker}"
+def _stop_probe(binary, tmp_path, delay=1.0):
+    """Run `binary -- sh -c 'kill -STOP $$'` and look at the shell while
+    it should be stopped.
 
-    result = subprocess.run(
+    UX-130's central point, made executable. The test this replaces ran
+    `(sleep 1; kill -CONT $$) & kill -STOP $$` and asserted exit 0 plus a
+    marker file - **both of which hold whether the stop was honored or
+    swallowed**, because the `sleep 1` supplies the elapsed time either
+    way. It passed against a tracer that ate the signal.
+
+    The CONT here comes from *outside* the traced tree, after the probe
+    has already looked at `/proc/<pid>/stat`. A tracer that swallows the
+    SIGSTOP lets the shell run to completion immediately, so the process
+    is **gone** before the CONT is sent - which is what
+    `exited_before_cont` records, and what no exit code can show.
+    """
+    pidfile = tmp_path / "shell.pid"
+    script = f"echo $$ > {pidfile}; kill -STOP $$; exit 3"
+    started = time.time()
+    process = subprocess.Popen(
+        [binary, "--", "/bin/sh", "-c", script],
+        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    pid = None
+    while time.time() - started < 10 and pid is None:
+        try:
+            pid = int(pidfile.read_text().strip())
+        except (OSError, ValueError):
+            time.sleep(0.02)
+    assert pid is not None, "the traced shell never reported its pid"
+
+    time.sleep(delay)
+    try:
+        state = open(f"/proc/{pid}/stat").read().rsplit(") ", 1)[-1].split()[0]
+    except OSError:
+        state = "gone"
+    exited_before_cont = process.poll() is not None
+    try:
+        os.kill(pid, signal.SIGCONT)
+    except ProcessLookupError:
+        pass
+    returncode = process.wait(timeout=30)
+    return {"state": state, "exited_before_cont": exited_before_cont,
+            "returncode": returncode, "elapsed": time.time() - started}
+
+
+def test_a_stop_the_program_raises_itself_really_stops_it(spine, tmp_path):
+    """UX-130: the tracee must *stay* stopped, exactly as untraced.
+
+    Classic ptrace cannot tell a group-stop from a signal-delivery stop -
+    both are `WSTOPSIG == SIGSTOP` with no event - so the old spine
+    restarted the tracee and it never stayed still. `PTRACE_SEIZE` types
+    the stop and `PTRACE_LISTEN` holds it.
+
+    The state letter is `t` (tracing stop) rather than the untraced `T`,
+    because a listened group-stop *is* a ptrace-stop. What has to match
+    untraced is the behaviour - still alive, still stopped, resumable by
+    an ordinary SIGCONT, same exit status - and that is what is asserted.
+    """
+    probe = _stop_probe(spine, tmp_path)
+
+    assert not probe["exited_before_cont"], (
+        "the traced shell ran to completion through its own SIGSTOP - the "
+        "stop was swallowed, which is what UX-130 was filed for")
+    assert probe["state"] in ("T", "t"), (
+        f"the traced shell was in state {probe['state']!r}, not stopped")
+    assert probe["returncode"] == 3, "the exit status changed"
+
+
+def test_a_grandchilds_stop_is_honored_too(spine, tmp_path):
+    """The direct child and an auto-attached descendant reach the loop by
+    different routes - the child through the SEIZE the parent performs,
+    a grandchild through `PTRACE_O_TRACEFORK`'s inheritance - so both
+    halves need checking. The old code's defect was specifically in the
+    first: the child's attach-stop was consumed before the loop and so
+    never entered the seen-set, making its *next* genuine SIGSTOP look
+    like an attach-stop.
+    """
+    pidfile = tmp_path / "grandchild.pid"
+    script = f"( echo $$ > {pidfile}; kill -STOP $$; exit 0 ) & wait; exit 3"
+    started = time.time()
+    process = subprocess.Popen(
         [spine, "--", "/bin/sh", "-c", script],
         env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
              "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
-        capture_output=True, text=True, timeout=30,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    pid = None
+    while time.time() - started < 10 and pid is None:
+        try:
+            pid = int(pidfile.read_text().strip())
+        except (OSError, ValueError):
+            time.sleep(0.02)
+    assert pid is not None
+
+    time.sleep(1.0)
+    alive = process.poll() is None
+    try:
+        state = open(f"/proc/{pid}/stat").read().rsplit(") ", 1)[-1].split()[0]
+    except OSError:
+        state = "gone"
+    try:
+        os.kill(pid, signal.SIGCONT)
+    except ProcessLookupError:
+        pass
+    returncode = process.wait(timeout=30)
+
+    assert alive, "the whole tree finished through a stopped grandchild"
+    assert state in ("T", "t"), f"the grandchild was in state {state!r}"
+    assert returncode == 3
+
+
+def test_pid_churn_at_scale_loses_no_records(spine, tmp_path):
+    """UX-130's last clause, and the reason the table had to go rather
+    than be repaired.
+
+    `forget_pid` zeroed its slot instead of tombstoning it, which breaks
+    an open-addressed probe chain; the hash was a bijection below pid
+    8192, so the breakage began exactly where a real freedesktop-sdk
+    capture lives. There is no table any more, so the property to pin is
+    the outcome: churn several thousand pids through the tracer and lose
+    nothing.
+    """
+    log = tmp_path / "churn.log"
+    result = subprocess.run(
+        [spine, "--", "/bin/sh", "-c", "i=0; while [ $i -lt 2000 ]; do "
+                                       "/bin/true; i=$((i+1)); done; exit 0"],
+        env={**os.environ, "BST_TRACE_LOG": str(log),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        capture_output=True, text=True, timeout=300,
     )
 
     assert result.returncode == 0
-    assert marker.exists(), "the shell's own SIGSTOP/SIGCONT round trip broke"
+    text = log.read_text()
+    assert "DEGRADED" not in text, "the tracer degraded under ordinary pid churn"
+    starts = text.count("\nSTART ") + text.startswith("START ")
+    ends = text.count("\nEND ") + text.startswith("END ")
+    # 2000 `/bin/true` execs plus the shell itself; every one exits, and
+    # the spine reads the status at the kernel's exit-stop, so START and
+    # END counts agree exactly.
+    assert starts >= 2000, f"only {starts} START records for 2000 execs"
+    assert ends == starts, f"{starts} STARTs but {ends} ENDs"
+
+
+def test_the_stop_probe_reproduces_untraced_behaviour(tmp_path):
+    """The control, so the assertions above are anchored to what the
+    kernel does with no tracer rather than to what the spine happens to
+    do. `/bin/env` stands in for "no tracer": it execs its arguments."""
+    probe = _stop_probe("/bin/env", tmp_path)
+
+    assert not probe["exited_before_cont"]
+    assert probe["state"] == "T"
+    assert probe["returncode"] == 3
 
 
 # --- the shape it actually ships in (UX-119) ----------------------------
@@ -709,3 +848,98 @@ def test_sigterm_at_the_spine_inside_the_sandbox(spine, tmp_path, tracees):
     assert _kill_after_start([spine, "--"]) == _kill_after_start([]), (
         f"a SIGTERM at the spine with {tracees} tracee(s) produced a different "
         "status than the same signal with no tracer at all")
+
+
+# --- UX-133: the tracer must not change when an element finishes --------
+
+def test_a_background_daemon_does_not_hold_the_element_open(spine, tmp_path):
+    """UX-133 item 3, and a "never break the wrapped build" defect no
+    prior filing covered.
+
+    The loop ran to `ECHILD` - every descendant, not just the command -
+    so a build step that leaves a daemon behind kept the *element*
+    running until the daemon exited, while untraced bubblewrap's own
+    reaper owns it and BuildStream moves on. A tracer that changes when
+    an element finishes has changed the build.
+
+    Measured against the pre-fix binary: **30.01s** traced against
+    **0.00s** untraced, for a step whose own work is instant.
+    """
+    log = tmp_path / "daemon.log"
+    # The daemon's own stdout/stderr are redirected, deliberately: a
+    # backgrounded process inherits the captured pipe, and
+    # `subprocess.run` waits for that pipe to close whatever the tracer
+    # does. Without this the test measures Python's pipe semantics and
+    # reports 30s for the untraced control too - it would "pass" by
+    # comparing two hangs.
+    script = "sleep 30 >/dev/null 2>&1 & echo started; exit 0"
+
+    def _elapsed(argv):
+        started = time.time()
+        result = subprocess.run(
+            argv + ["/bin/sh", "-c", script],
+            env={**os.environ, "BST_TRACE_LOG": str(log),
+                 "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+            capture_output=True, text=True, timeout=60,
+        )
+        return time.time() - started, result.returncode
+
+    traced, traced_rc = _elapsed([spine, "--"])
+    untraced, untraced_rc = _elapsed([])
+
+    assert traced_rc == untraced_rc == 0
+    assert traced < untraced + 5.0, (
+        f"the traced step took {traced:.2f}s against {untraced:.2f}s untraced - "
+        "the tracer is waiting for a descendant the build does not wait for")
+
+
+def test_a_released_survivor_is_visible_as_an_open_record(spine, tmp_path):
+    """Letting go of a descendant is right, and also a fact about the
+    build worth knowing.
+
+    The first attempt had the spine emit a `SURVIVORS count=N` line, and
+    the count was wrong: `waitpid(WNOHANG)` reports only tracees stopped
+    at that instant, so a still-running daemon - the ordinary case - was
+    released uncounted. The record layer already carries this correctly:
+    a process the spine STARTed and never saw exit is an `open` record.
+    """
+    from tools.bst_native_build_tracer import pair_events, parse_trace_log
+
+    log = tmp_path / "survivors.log"
+    # The daemon is given time to exec before the command exits. Without
+    # that the test is a race and not a property: whether a survivor was
+    # recorded at all depends on whether its exec-stop had happened when
+    # the tracer stopped watching, which is inherent to stopping. What is
+    # guaranteed is that a process the spine *did* see start and never
+    # saw finish is reported as open rather than dropped.
+    subprocess.run(
+        [spine, "--", "/bin/sh", "-c",
+         "sleep 30 >/dev/null 2>&1 & sleep 0.3; exit 0"],
+        env={**os.environ, "BST_TRACE_LOG": str(log),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        capture_output=True, text=True, timeout=60,
+    )
+
+    records = pair_events(parse_trace_log(log.read_text()))
+    survivors = [r for r in records if r["open"]]
+
+    assert survivors, "the daemon the tracer let go left no trace at all"
+    assert all(r["open_reason"] == "no-observed-exit" for r in survivors)
+    assert any("sleep 30" in r["cmd"] for r in survivors), survivors
+
+
+def test_a_build_that_reaps_its_own_children_leaves_no_open_records(spine, tmp_path):
+    """The signal has to be evidence, not decoration."""
+    from tools.bst_native_build_tracer import pair_events, parse_trace_log
+
+    log = tmp_path / "clean.log"
+    subprocess.run(
+        [spine, "--", "/bin/sh", "-c", "(sleep 0.1; true) & wait; exit 0"],
+        env={**os.environ, "BST_TRACE_LOG": str(log),
+             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        capture_output=True, text=True, timeout=60,
+    )
+
+    records = pair_events(parse_trace_log(log.read_text()))
+
+    assert [r for r in records if r["open"]] == []

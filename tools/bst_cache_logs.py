@@ -1076,16 +1076,113 @@ def default_log_root() -> str:
     return os.path.join(base, 'buildstream', 'logs')
 
 
+def project_name_from_dir(project_dir: str) -> Optional[str]:
+    """The `name:` a BuildStream project declares, or `None`.
+
+    `UX-127`: the thing a user *has* is a project directory; the thing
+    this tool wanted was the project's **name** - BuildStream's log-tree
+    directory name - discoverable only by listing the cache yourself.
+    Three audit rounds passed `--project
+    macro-micro-optimization-example-optimized`, a value obtained by
+    `ls`-ing `~/.cache/buildstream/logs`, which is exactly the folklore
+    step Plane 3 exists to not need.
+
+    Read from `project.conf` directly rather than through BuildStream,
+    for the same reason `read_declared_build_deps` does: this has to work
+    against a project directory without loading a plugin, and the name is
+    a plain top-level key.
+    """
+    conf = os.path.join(project_dir, 'project.conf')
+    try:
+        with open(conf, 'r', encoding='utf-8', errors='replace') as handle:
+            for line in handle:
+                if line.startswith('name:'):
+                    return line.split(':', 1)[1].strip() or None
+    except OSError:
+        return None
+    return None
+
+
+def is_project_dir(path: str) -> bool:
+    return os.path.isfile(os.path.join(path, 'project.conf'))
+
+
+def summarize_log_tree(root: str) -> List[dict]:
+    """What the log tree holds, per project: counts and time span.
+
+    `UX-127` item 2. Discovery is the tool's job - a user should not have
+    to `ls` a cache directory to find out what is in it.
+    """
+    projects: Dict[str, dict] = {}
+    for record in scan_log_tree(root):
+        name = record.get('project') or '(unknown)'
+        entry = projects.setdefault(name, {
+            'project': name, 'logs': 0, 'elements': set(),
+            'first_us': None, 'last_us': None,
+        })
+        entry['logs'] += 1
+        entry['elements'].add(record.get('element'))
+        started = record.get('started_us')
+        if started is not None:
+            if entry['first_us'] is None or started < entry['first_us']:
+                entry['first_us'] = started
+            if entry['last_us'] is None or started > entry['last_us']:
+                entry['last_us'] = started
+    return sorted(
+        ({**entry, 'elements': len(entry['elements'])} for entry in projects.values()),
+        key=lambda e: (-e['logs'], e['project']),
+    )
+
+
+def format_log_tree_listing(root: str, projects: List[dict]) -> str:
+    lines = ['=' * 60, 'BuildStream log tree', '=' * 60, f"  {root}", '']
+    if not projects:
+        lines.append('  (no element logs - run a build first)')
+        return '\n'.join(lines)
+    lines.append(f"  {'project':<44} {'logs':>6} {'elements':>9}")
+    for entry in projects:
+        lines.append(f"  {entry['project']:<44} {entry['logs']:>6} {entry['elements']:>9}")
+        if entry['first_us'] is not None and entry['last_us'] is not None:
+            lines.append(
+                f"      {_stamp(entry['first_us'])} .. {_stamp(entry['last_us'])}"
+            )
+    lines += ['', '  Report on one with `bga cache-logs PROJECT_DIR` (or --project NAME),',
+              '  or on every project at once with --all.']
+    return '\n'.join(lines)
+
+
+def _stamp(micros: Optional[int]) -> str:
+    if micros is None:
+        return '(no timestamp)'
+    return datetime.fromtimestamp(micros / 1e6, timezone.utc).strftime(
+        '%Y-%m-%d %H:%M:%S UTC')
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        'log_root', nargs='?', default=None,
-        help='BuildStream\'s logs directory. Defaults to '
-             '$XDG_CACHE_HOME/buildstream/logs (or ~/.cache/buildstream/logs).',
+        'target', nargs='?', default=None, metavar='PROJECT_DIR|LOG_ROOT',
+        help='UX-127: a BuildStream **project directory** (detected by its '
+             'project.conf) - the obvious argument, and the one that does the '
+             'right thing: the project name is read from it and the log root '
+             'resolved automatically. A logs directory still works. With '
+             'neither, this lists what the log tree holds.',
     )
     parser.add_argument('--project', default=None, help='Only this project\'s logs.')
+    parser.add_argument(
+        '--all', action='store_true',
+        help='UX-127: report over every project in the log tree at once. This '
+             'used to be what a bare invocation did, and "report on every project '
+             'I ever built" is never one user\'s question - a bare invocation now '
+             'lists the tree instead.',
+    )
+    parser.add_argument(
+        '--list', action='store_true',
+        help='List the projects the log tree holds, with log counts and time '
+             'spans, and exit. The default when no target is given.',
+    )
     parser.add_argument(
         '--graph', default=None,
         help="A run directory's `graph.json`. Lets the developer-tax cause "
@@ -1104,7 +1201,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument('-o', '--output', default=None, help='Write here instead of stdout.')
     args = parser.parse_args(argv)
 
-    root = args.log_root or default_log_root()
+    # UX-127: work out what the user actually handed us.
+    project = args.project
+    project_dir = None
+    if args.target and is_project_dir(args.target):
+        project_dir = args.target
+        derived = project_name_from_dir(args.target)
+        if not derived:
+            print(
+                f"Error: {args.target} looks like a BuildStream project but its "
+                f"project.conf declares no `name:`, so there is no log-tree "
+                f"directory to look for. Pass --project NAME.",
+                file=sys.stderr,
+            )
+            return 1
+        project = project or derived
+        root = default_log_root()
+    else:
+        root = args.target or default_log_root()
+
     if not os.path.isdir(root):
         print(
             f"Error: no BuildStream log directory at {root}. Point this at one "
@@ -1114,14 +1229,49 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         return 1
 
-    records = scan_log_tree(root, project=args.project)
+    # UX-127 item 2: discovery is the tool's job. A bare invocation used to
+    # report over every project the machine had ever built, which is never
+    # one user's question; `--all` keeps that behaviour for anyone who
+    # wants it.
+    if args.list or (args.target is None and not args.project and not args.all):
+        projects = summarize_log_tree(root)
+        if args.format == 'json':
+            payload = json.dumps({'log_root': root, 'projects': projects}, indent=2)
+        else:
+            payload = format_log_tree_listing(root, projects)
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as handle:
+                handle.write(payload + '\n')
+        else:
+            print(payload)
+        return 0
+
+    records = scan_log_tree(root, project=project)
     if not records:
-        print(
-            f"Error: no element logs found under {root}"
-            + (f" for project {args.project!r}" if args.project else "")
-            + ". Nothing to report on.",
-            file=sys.stderr,
-        )
+        # UX-127 item 3: a redirect rather than a confidently wrong
+        # "nothing to report". Handing this tool the obvious argument -
+        # the project - used to produce that message about a project
+        # whose logs sit two directories away.
+        available = [entry['project'] for entry in summarize_log_tree(root)]
+        lines = [f"Error: no element logs found under {root}"]
+        if project:
+            lines[0] += f" for project {project!r}"
+            if project_dir:
+                lines.append(
+                    f"  {project_dir}/project.conf declares `name: {project}`, and "
+                    f"that is the log-tree directory this looked for."
+                )
+            lines.append(
+                "  The tree holds: "
+                + (", ".join(available[:8]) + ("…" if len(available) > 8 else "")
+                   if available else "nothing - no build has written logs here yet")
+            )
+            lines.append(
+                "  `bga cache-logs --list` shows all of them with counts and spans."
+            )
+        else:
+            lines.append("  Nothing to report on.")
+        print("\n".join(lines), file=sys.stderr)
         return 1
 
     native_report = None

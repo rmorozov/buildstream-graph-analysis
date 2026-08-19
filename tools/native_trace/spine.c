@@ -102,28 +102,48 @@ static const char *g_invocation;
 static pid_t g_child;
 static int g_degraded;
 
-/* UX-118: the set of tracees whose attach-stop has already been
- * consumed.
+/* UX-130: how a stop is classified, and why there is no table here any
+ * more.
  *
- * A child auto-attached by PTRACE_O_TRACEFORK is stopped with SIGSTOP,
- * and that SIGSTOP is the kernel's attach mechanism rather than a signal
- * the program sent itself. Restarting the tracee with it - which is what
- * passing every non-SIGTRAP signal through does - converts the
- * attach-stop into a real group stop the tracee then has to escape, at
- * two extra ptrace round-trips per process and a CLD_STOPPED the
- * untraced build never produces. Suppressed exactly once per pid, so a
- * SIGSTOP the program really does raise later is still passed through.
+ * UX-118 fixed a real bug - a newly auto-attached child's first stop is
+ * the kernel's attach-SIGSTOP, and restarting it *with* that signal
+ * turns an attach-stop into a real group stop - by *guessing* which
+ * SIGSTOP was the attach one: the first per pid, tracked in an
+ * 8192-slot open-addressed table. Round 13 found the guess wrong at both
+ * ends.
  *
- * Open-addressed, fixed size, no allocation: this runs as the sandbox's
- * root process, which may have no allocator worth trusting under memory
- * pressure, and a tracer that can fail to malloc is a tracer that can
- * hang a build. A full table degrades to the old behaviour for the
- * overflowing pid rather than evicting an entry, because a wrong
- * "already seen" is a swallowed signal and a wrong "not seen" costs one
- * group stop.
+ *   - The direct child's own attach-stop was consumed by the pre-loop
+ *     `waitpid` and never entered the table, so the first genuine
+ *     SIGSTOP the loop saw for it was classified as the attach-stop and
+ *     swallowed - contradicting the comment that said "exactly once per
+ *     pid".
+ *   - `forget_pid` zeroed its slot instead of tombstoning it, which
+ *     breaks the probe chain of an open-addressed table. The hash is a
+ *     bijection below pid 8192, so collisions - and therefore broken
+ *     chains, swallowed stops and leaked slots - begin exactly at the
+ *     127k-pid scale of a real freedesktop-sdk capture.
+ *   - Classic ptrace cannot tell a group-stop from a signal-delivery
+ *     stop at all: both are `WSTOPSIG == SIGSTOP` with no event. So a
+ *     genuinely group-stopped tracee ping-ponged instead of staying
+ *     stopped, which is not "behaves exactly as untraced".
+ *
+ * `PTRACE_SEIZE` removes all three at once rather than patching them.
+ * A seized tracee's stops are *typed*: the attach-stop and a group-stop
+ * both arrive as `PTRACE_EVENT_STOP`, distinguishable by their signal
+ * (SIGTRAP for the attach, one of the four job-control signals for a
+ * group-stop), so nothing is guessed and no table is needed. And
+ * `PTRACE_LISTEN` is only available under SEIZE - it is what lets a
+ * group-stopped tracee *stay* stopped, which is the untraced behaviour
+ * the old code could not reproduce.
  */
-#define SEEN_SLOTS 8192
-static pid_t g_seen[SEEN_SLOTS];
+
+/* The four signals that put a process in group-stop. A
+ * PTRACE_EVENT_STOP carrying one of these is a real group stop; one
+ * carrying SIGTRAP is the attach-stop or a PTRACE_INTERRUPT. */
+static int is_group_stop_signal(int sig)
+{
+    return sig == SIGSTOP || sig == SIGTSTP || sig == SIGTTIN || sig == SIGTTOU;
+}
 
 /* UX-117: a seam for testing the degrade path, and the only one in this
  * file.
@@ -152,39 +172,6 @@ static long g_events_seen;
  * `bwrap_shim.py` passes a fixed list of BST_TRACE_* variables through
  * and this is not among them, so it cannot reach the capture path. */
 static const char *g_fail_cont_at;
-
-/* Returns 1 the first time it is called for `pid`, 0 afterwards. */
-static int first_stop_for(pid_t pid)
-{
-    unsigned long start = (unsigned long)pid * 2654435761UL % SEEN_SLOTS;
-    for (unsigned long probe = 0; probe < SEEN_SLOTS; probe++) {
-        unsigned long slot = (start + probe) % SEEN_SLOTS;
-        if (g_seen[slot] == pid)
-            return 0;
-        if (g_seen[slot] == 0) {
-            g_seen[slot] = pid;
-            return 1;
-        }
-    }
-    return 0;  /* table full - the old behaviour, for this pid only */
-}
-
-/* A pid that has exited: its slot is freed so a pid namespace which
- * recycles small numbers (every bwrap --unshare-pid sandbox does) does
- * not fill the table or mistake a new process for an old one. */
-static void forget_pid(pid_t pid)
-{
-    unsigned long start = (unsigned long)pid * 2654435761UL % SEEN_SLOTS;
-    for (unsigned long probe = 0; probe < SEEN_SLOTS; probe++) {
-        unsigned long slot = (start + probe) % SEEN_SLOTS;
-        if (g_seen[slot] == pid) {
-            g_seen[slot] = 0;
-            return;
-        }
-        if (g_seen[slot] == 0)
-            return;
-    }
-}
 
 static double monotonic_now(void)
 {
@@ -507,10 +494,29 @@ int main(int argc, char **argv)
     g_element = getenv("BST_TRACE_ELEMENT");
     g_invocation = getenv("BST_TRACE_INVOCATION");
 
+    /* UX-130: the child waits on this pipe until the parent has seized
+     * it, which is what replaces `PTRACE_TRACEME` + `raise(SIGSTOP)`.
+     *
+     * SEIZE is done *by the parent to a running child*, so without a
+     * handshake the child could exec before the seize lands and the
+     * first exec - the one that names the command - would go unrecorded.
+     * A pipe is the whole synchronisation: the child blocks in `read`
+     * until the parent closes the write end, and a parent that dies
+     * before that still releases it (EOF), rather than wedging the
+     * build behind a tracer that is no longer there.
+     */
+    int ready[2];
+    if (pipe(ready) != 0) {
+        execvp(argv[first], &argv[first]);
+        return 127;
+    }
+
     pid_t child = fork();
     if (child < 0) {
         /* Could not even fork: exec the command directly rather than
          * failing the build. Tracing is the optional half. */
+        close(ready[0]);
+        close(ready[1]);
         execvp(argv[first], &argv[first]);
         return 127;
     }
@@ -522,14 +528,13 @@ int main(int argc, char **argv)
          * `fork` and this line would be forwarded to a process group
          * that does not exist yet and lost to ESRCH. */
         setpgid(0, 0);
-        if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) != 0) {
-            /* No ptrace here (a restrictive Yama policy, or an
-             * already-traced process). Run the command untraced, which
-             * is the whole fail-open contract. */
-            execvp(argv[first], &argv[first]);
-            _exit(127);
+        close(ready[1]);
+        {
+            char go;
+            while (read(ready[0], &go, 1) < 0 && errno == EINTR)
+                ;                       /* the parent is still seizing us */
         }
-        raise(SIGSTOP);
+        close(ready[0]);
         execvp(argv[first], &argv[first]);
         _exit(127);
     }
@@ -537,45 +542,81 @@ int main(int argc, char **argv)
     g_child = child;
     setpgid(child, child);   /* the parent half of the race above */
     install_signal_forwarding();
-
-    int status = 0;
-    if (waitpid(child, &status, __WALL) < 0) {
-        degrade("initial-wait-failed");
-        return 127;
-    }
-    if (!WIFSTOPPED(status)) {
-        /* The child never reached its SIGSTOP - it failed to exec, and
-         * its status is the answer. */
-        return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
-    }
+    close(ready[0]);
 
     long options = PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE
                  | PTRACE_O_TRACEEXEC | PTRACE_O_TRACEEXIT;
-    if (ptrace(PTRACE_SETOPTIONS, child, 0, (void *)options) != 0) {
-        degrade("setoptions-failed");
-        ptrace(PTRACE_DETACH, child, NULL, NULL);
-    } else {
-        /* UX-128: guarded, and only on the path where the child is still
-         * ours. The unconditional form continued a pid the line above
-         * may just have detached. */
-        resume(child, 0, "initial");
+    int seized = ptrace(PTRACE_SEIZE, child, 0, (void *)options) == 0;
+    if (!seized) {
+        /* No ptrace here - a restrictive Yama policy, a kernel without
+         * SEIZE, or an already-traced process. Release the child and let
+         * it run untraced, which is the fail-open contract this file
+         * opens with. Deliberately *not* a fallback to the TRACEME
+         * attach: that path is the one whose attach-stop had to be
+         * guessed at, and keeping a second, weaker mechanism alive would
+         * carry the defects UX-130 exists to delete into every
+         * environment where the primary one is unavailable. */
+        degrade("seize-failed");
+    }
+    close(ready[1]);         /* the child may exec now, seized or not */
+
+    if (!seized) {
+        int status = 0;
+        while (waitpid(child, &status, __WALL) < 0) {
+            if (errno != EINTR)
+                return 127;
+        }
+        return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
     }
 
     int child_status = 0;
     int child_seen = 0;
     char cmdline[MAX_CMDLINE];
 
+    /* UX-133: how many more events to take after the command is reaped.
+     *
+     * The loop used to run to `ECHILD` - every descendant, not just the
+     * command - so a build step that leaves a daemon behind
+     * (`some-server &`) kept the *element* running until the daemon
+     * exited, while untraced, bubblewrap's own reaper owns it and
+     * BuildStream moves on. Measured: 30.01s traced against 0.00s
+     * untraced for a step whose own work is instant. A tracer that
+     * changes when an element finishes has changed the build, which is
+     * the one thing this file promises never to do.
+     *
+     * But exiting the instant the command is reaped throws away events
+     * already queued for its descendants - the daemon's own exec-stop is
+     * typically among them - and those are real records. So after the
+     * command exits the loop switches to `WNOHANG` and keeps handling
+     * whatever is *immediately* ready, stopping as soon as nothing is.
+     * Survivors are then detached, not killed: `PTRACE_O_EXITKILL` is
+     * deliberately unset (see the header), so they carry on untraced
+     * exactly as they would have.
+     *
+     * The cap bounds a pathological tree that could keep the drain fed
+     * forever. It is large enough that no real build reaches it and
+     * small enough that hitting it costs milliseconds.
+     */
+#define DRAIN_EVENT_CAP 4096
+    long drained = 0;
+
     for (;;) {
         int wstatus = 0;
-        pid_t pid = waitpid(-1, &wstatus, __WALL);
+        int flags = __WALL | (child_seen ? WNOHANG : 0);
+        pid_t pid = waitpid(-1, &wstatus, flags);
+        if (pid == 0)
+            break;              /* command done, nothing else ready */
         if (pid < 0) {
             if (errno == EINTR)
                 continue;
             break;  /* ECHILD: everything, including reaped orphans, is gone */
         }
+        if (child_seen && ++drained > DRAIN_EVENT_CAP) {
+            degrade("drain-cap-reached");
+            break;
+        }
 
         if (WIFEXITED(wstatus) || WIFSIGNALED(wstatus)) {
-            forget_pid(pid);
             if (pid == child) {
                 child_status = wstatus;
                 child_seen = 1;
@@ -599,12 +640,16 @@ int main(int argc, char **argv)
          * degrade path detached a freshly-attached tracee *with* its
          * attach-SIGSTOP, stopping for real the process it was trying to
          * set free. Measured, not reasoned - the fix hung on its own
-         * test until the two paths shared this line. */
-        int pass_through = sig;
-        if (sig == SIGTRAP)
-            pass_through = 0;                       /* ours, not the program's */
-        else if (sig == SIGSTOP && first_stop_for(pid))
-            pass_through = 0;                       /* UX-118: the attach-stop */
+         * test until the two paths shared this line.
+         *
+         * UX-130 made this one line instead of two guesses. Under SEIZE
+         * every stop the tracer itself caused is an *event*-stop, so
+         * "was this signal ours?" is answered by `event != 0` rather
+         * than by pattern-matching SIGTRAP and remembering which
+         * SIGSTOPs have been seen. A bare SIGTRAP with no event is now
+         * passed through, because under `PTRACE_O_TRACEEXEC` it can only
+         * be the program's own - which is what untraced does with it. */
+        int pass_through = (event != 0) ? 0 : sig;
 
         if (g_degraded) {
             /* UX-117: tracing has failed, so detach this tracee and let
@@ -668,21 +713,63 @@ int main(int argc, char **argv)
             continue;
         }
 
-        /* A group-stop or an ordinary signal-delivery-stop: pass the
-         * signal through so the tracee behaves exactly as it would
-         * untraced. Swallowing it here is how a tracer changes the
-         * program it is supposed to be observing.
-         *
-         * Two exceptions, and only two. A SIGTRAP with no event is ours
-         * rather than the program's. And a newly auto-attached child's
-         * first stop is the kernel's attach-SIGSTOP (UX-118): passing
-         * that back converts an attach-stop into a real group stop,
-         * which costs two ptrace round-trips per process and hands the
-         * real parent a CLD_STOPPED the untraced build never produces.
-         * Suppressed once per pid, so a SIGSTOP the program itself
-         * raises later still gets through. Both decisions are made by
-         * `pass_through` above, which the degrade path shares. */
+        if (event == PTRACE_EVENT_STOP) {
+            /* UX-130. Two different things arrive here, and under SEIZE
+             * they are distinguishable rather than guessed at.
+             *
+             * A **group-stop** carries one of the four job-control
+             * signals. The tracee must *stay* stopped - that is what
+             * being group-stopped means, and the old code could not do
+             * it: with classic ptrace a group-stop is indistinguishable
+             * from a signal-delivery stop, so the tracee was restarted
+             * and immediately re-stopped, ping-ponging where untraced it
+             * would have sat still. `PTRACE_LISTEN` is the primitive
+             * that holds it, and it exists only for seized tracees.
+             * When the tracee is later SIGCONT'd the kernel reports
+             * another PTRACE_EVENT_STOP, this time with SIGTRAP, which
+             * falls through to the restart below.
+             *
+             * Everything else here is an **attach-stop** (a newly
+             * auto-attached child's first stop) or a PTRACE_INTERRUPT
+             * stop, both carrying SIGTRAP. These are the tracer's own
+             * doing and are restarted with no signal - which is exactly
+             * what UX-118 wanted and had to infer from "first SIGSTOP
+             * per pid".
+             */
+            if (is_group_stop_signal(sig)) {
+                if (ptrace(PTRACE_LISTEN, pid, NULL, NULL) != 0 && errno != ESRCH) {
+                    /* Cannot hold it stopped; resuming it is the wrong
+                     * behaviour but a live wrong behaviour, and a tracee
+                     * left stopped with no listener is the hang UX-117
+                     * and UX-128 exist to prevent. */
+                    degrade("listen-failed");
+                    ptrace(PTRACE_DETACH, pid, NULL, (void *)(long)sig);
+                }
+                continue;
+            }
+            resume(pid, 0, "attach");
+            continue;
+        }
+
+        /* An ordinary signal-delivery-stop: pass the signal through so
+         * the tracee behaves exactly as it would untraced. Swallowing it
+         * here is how a tracer changes the program it is supposed to be
+         * observing. `pass_through` above decides, and the degrade path
+         * shares that decision. */
         resume(pid, pass_through, "signal");
+    }
+
+    /* Whatever is still stopped when the drain ends must be released, or
+     * it is stopped forever - the hang UX-117/UX-128 exist to prevent,
+     * arriving by a new route. Anything still *running* needs nothing:
+     * the kernel auto-detaches when this process exits. */
+    for (;;) {
+        int wstatus = 0;
+        pid_t pid = waitpid(-1, &wstatus, __WALL | WNOHANG);
+        if (pid <= 0)
+            break;
+        if (WIFSTOPPED(wstatus))
+            ptrace(PTRACE_DETACH, pid, NULL, NULL);
     }
 
     if (!child_seen) {

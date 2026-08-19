@@ -91,6 +91,10 @@ TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
         "tools.gen_synthetic_scale_run",
         "Generate a synthetic run directory at a chosen scale",
     ),
+    "doctor": (
+        "tools.bga_doctor",
+        "Check this machine can capture at all, before a build proves it cannot",
+    ),
     "baseline": (
         "tools.bst_baseline_set",
         "Assemble a baseline set from published capture refs and band-compare against it",

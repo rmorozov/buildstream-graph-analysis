@@ -63,6 +63,14 @@ used correctly reports itself unmeasurable for those elements rather
 than reporting "no unused dependencies". A pre-spine capture (the
 retained fdsdk `native-report.json`) re-parses byte-identically.
 
+> **No longer true after `UX-123` (2026-08-19).** Byte-identical
+> re-parsing was a property of *this* parser, and the exec-chain collapse
+> deliberately changed what old captures render as — the fdsdk trace head
+> went from 1833 processes to 1812. The acceptance clause was correct when
+> run and is now a record of a parser that no longer exists; the standing
+> requirement it expressed (an old capture must still parse, and must not
+> silently change meaning) is carried by `UX-123`'s own verification.
+
 ---
 
 ## Fix Implemented
@@ -83,6 +91,16 @@ list and never chooses which stream to trust.
 | dual-stream, merged | 1644 | 822 | 58.47s |
 | hook-only, run 1 | 822 | 822 | 61.30s |
 | hook-only, run 2 | 822 | 822 | 57.85s |
+
+> **Superseded by `UX-123` (2026-08-19).** These 822s are this parser's
+> counts, and `UX-123`'s exec-chain collapse changed them: an `execve`
+> chain is one process, not one per image, so `examples/06` now reports
+> **813**. The figures above stay because the *claim* they support — the
+> merge halves the process count and the CPU total, and lands inside the
+> range two hook-only builds produce — is what was measured and is
+> unaffected. Only the absolute counts moved. (`UX-132`: a fix that
+> changes a number an earlier task file quotes annotates that file in the
+> same commit.)
 
 Every process joined on `(invocation, pid)` with a START inside
 `MERGE_START_TOLERANCE_S`, all 822 `spine+hook`, and the merged CPU

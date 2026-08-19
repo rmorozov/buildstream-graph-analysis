@@ -128,6 +128,14 @@ a fresh cold cache for every one:
 | `examples/06` (compile-bound, 18 proc/s) | 822 | 45.90s (sd 0.59) | 47.15s (sd 1.36) | **+2.7%** |
 | `examples/08` (process-dense, 575 proc/s) | 2003 | 7.32s (sd 0.24) | 8.31s (sd 0.26) | **+13.5%** |
 
+> **Two later corrections (`UX-132`).** The 822 is this parser's count;
+> `UX-123`'s exec-chain collapse made it **813** — the timings are
+> unaffected, only the divisor. And the *ratios* here were superseded by
+> `UX-112`, which measured the price as an absolute rather than a
+> percentage of whichever fixture it was measured on; `UX-129` then
+> narrowed that to a range. The +0.99s absolute this row carries is the
+> figure that survived, and it is one of the four `UX-129` reconciles.
+
 The decision rule was stated before the measurement: within the 2%
 budget the spine defaults on with the hook, past it the flag stays
 opt-in. **Both fixtures are past it, so `--trace-spine` stays opt-in**,
@@ -197,6 +205,15 @@ measurement. The real gain is **+734 processes that now have an observed
 exit**: a process replaced by `exec` runs no destructor, so the hook
 could never report its CPU or peak RSS, and the spine reads both at the
 kernel's exit-stop.
+
+> **Counted by a parser that no longer exists (`UX-123`, 2026-08-19).**
+> The +734 and the 127,632 are pre-collapse figures: an `execve` chain
+> was one record per image and is now one process, which moved the fdsdk
+> trace head from 1833 to 1812. The *finding* is untouched and in fact
+> sharpened — exec'd processes are exactly the ones the hook cannot see,
+> and collapsing the chain is a better account of them, not a smaller
+> one. Re-derive the counts from a fresh capture before quoting them as
+> current (`UX-132`).
 
 **Wall clock says nothing here, and that is itself the finding.** 3261.2s
 sits inside the hook-only range, and so would almost anything: those

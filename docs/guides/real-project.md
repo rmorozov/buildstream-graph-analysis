@@ -114,15 +114,23 @@ can conclude:
   the report carries `spine+hook`, `spine-only` or `hook-only`, and the
   report states the coverage as a number rather than a footnote
   (`UX-107`).
-- **The spine's price is about a millisecond per process** (`UX-112`,
-  measured as a full {spine} × {opens} factorial). That is invisible on a
-  compile-bound build, where processes live tens of milliseconds — every
-  cell of `examples/06`'s matrix overlaps every other — and dominant on a
-  process-dense one, where they live two: `examples/08-process-storm`
-  pays +41–56%. A ratio is a fact about the fixture's baseline rather
-  than about the tool, which is why the same cell has been quoted at
-  +13.5%, +13.2% and +55.7% while the absolute cost barely moved.
-- **So prefer `--trace-spine=auto`** (`UX-113`): it pays that millisecond
+- **The spine's price is 0.3 to 1.1 ms per process** (`UX-112`
+  measured the factorial, `UX-129` narrowed the claim to what the data
+  supports). That is invisible on a compile-bound build, where processes
+  live tens of milliseconds — every cell of `examples/06`'s matrix
+  overlaps every other — and dominant on a process-dense one, where they
+  live two.
+
+  The range is the honest form, and the spread is real rather than
+  sloppy: five independent measurements of the same 2003-process fixture
+  land at 0.32, 0.35–0.42, 0.49, 0.85 and 1.14 ms, because machine state
+  moves both the baseline and the absolute cost. The tightest of them —
+  five interleaved `off`/`on` pairs on one machine, which cancels the
+  drift a blocked design absorbs — gives **+0.79s, 0.39 ms per process**
+  ([raw figures](../audits/data/spine-cost-storm.md)). Quote a ratio only
+  with its fixture attached: the same cell has been reported at +13.5%,
+  +13.2% and +55.7% while the absolute cost moved far less.
+- **So prefer `--trace-spine=auto`** (`UX-113`): it pays that cost
   only for the elements the pre-build census says the hook is blind for,
   plus any it could not assess. On an all-dynamic project that is no
   elements at all; on a busybox one it is all of them.

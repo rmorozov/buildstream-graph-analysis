@@ -403,3 +403,96 @@ def test_the_docs_lint_scans_the_tree_it_names():
     # And it must still name both roots, so a future edit cannot narrow
     # the scope by dropping one instead of the flag.
     assert "README.md" in lint_line and "docs/" in lint_line
+
+
+# `**Status:** 🟢 Done | ...` on the task file's header line, and the
+# status cell of the backlog table's row for the same item.
+_STATUS_EMOJI = ("🔴", "🟡", "🟢", "⚪")
+_TABLE_ROW = re.compile(r"^\|\s*UX-0*(\d+)\s*\|")
+_FILE_ID = re.compile(r"^UX-0*(\d+)-")
+
+
+def _status_marker(text):
+    return next((emoji for emoji in _STATUS_EMOJI if emoji in text), None)
+
+
+def _table_statuses():
+    """`{item number: status cell}` from the backlog table."""
+    statuses = {}
+    path = REPO / "docs/backlog/scenarios/README.md"
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = _TABLE_ROW.match(line)
+        if not match:
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        statuses[int(match.group(1))] = cells[4]
+    return statuses
+
+
+def _file_statuses():
+    """`{item number: (filename, status line)}` from the task files."""
+    statuses = {}
+    for path in sorted((REPO / "docs/backlog/scenarios").glob("UX-*.md")):
+        match = _FILE_ID.match(path.name)
+        if not match:
+            continue
+        header = path.read_text(encoding="utf-8").splitlines()[:8]
+        line = next((line for line in header if "**Status:**" in line), None)
+        statuses[int(match.group(1))] = (path.name, line)
+    return statuses
+
+
+def test_every_task_file_declares_a_status():
+    """The guard below compares two markers; a file with none would make
+    it vacuously pass for that item."""
+    missing = [
+        name for _number, (name, line) in sorted(_file_statuses().items())
+        if line is None or _status_marker(line) is None
+    ]
+    assert missing == [], (
+        "task file(s) with no `**Status:**` marker in their first 8 lines: "
+        f"{missing}"
+    )
+
+
+def test_every_task_file_has_a_row_in_the_table():
+    """A file with no row is a scenario the backlog does not list, which
+    is the same invisibility the status drift causes."""
+    rows = _table_statuses()
+    orphans = [
+        name for number, (name, _line) in sorted(_file_statuses().items())
+        if number not in rows
+    ]
+    assert orphans == [], f"task file(s) with no backlog table row: {orphans}"
+
+
+def test_the_table_status_matches_the_task_files():
+    """UX-131: two hand-maintained copies of one fact, for the third time.
+
+    Round 11 found the table 🟢 where the file was 🔴 (`UX-85`); round 12
+    found row wording drift; round 13 found **five** rows 🔴 against
+    files that were 🟢 with full verification logs — the closing commit
+    of a range simply never touched the table.
+
+    The repo's own conclusion applies verbatim: every hand-maintained
+    correspondence here has drifted within days, and every mechanically
+    checked one has held. Only the marker is pinned — row *summaries*
+    legitimately compress and stay prose.
+    """
+    rows = _table_statuses()
+    disagreements = []
+    for number, (name, line) in sorted(_file_statuses().items()):
+        if number not in rows:
+            continue
+        in_table = _status_marker(rows[number])
+        in_file = _status_marker(line or "")
+        if in_table != in_file:
+            disagreements.append(
+                f"UX-{number}: table says {in_table}, {name} says {in_file}"
+            )
+    assert disagreements == [], (
+        "the backlog table and its task files disagree about status:\n  "
+        + "\n  ".join(disagreements)
+        + "\nUpdate the row in docs/backlog/scenarios/README.md in the same "
+          "commit as the file (docs/contributing/fixing-guide.md)."
+    )

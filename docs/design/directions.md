@@ -568,6 +568,15 @@ about where the leverage now sits, ranked:
    this project shipped was validated against a real build, and this
    one cannot be validated against anything else.
 
+5.5. **The polish axis** (added 2026-08-19, round 13): with the MVP
+   bar met, the highest-leverage work is shortening the user's path to
+   what already works — `bga doctor` for the environment (`UX-125`),
+   the one-command loop with a project-local run store (`UX-126`), and
+   Plane 3's front door (`UX-127`). Correctness that takes a half-day
+   of setup and five invented paths per iteration is correctness most
+   users never reach; this axis outranks new capability until those
+   three land.
+
 5. **Fleet aggregation** — the developer tax (`UX-101`) is one
    machine's history; a team's tax lives across laptops and runners.
    Cross-machine aggregation is a data-plumbing direction (ship run
@@ -594,6 +603,7 @@ the other rounds now:
 | [10](../audits/round-10.md) | both usage scenarios walked end to end |
 | [11](../audits/round-11.md) | round 10's fixes re-verified; verification discipline is where the defects were |
 | [12](../audits/round-12.md) | directions 3-4 re-verified; the MVP verdict: met |
+| [13](../audits/round-13.md) | round 12's fixes re-verified; the polish direction opened (`UX-125`..`UX-127`) |
 
 ## Verification Log
 

@@ -214,3 +214,9 @@ Two things came out of it, both recorded in full in
   real saving by 2.7× because the replay shortens N tasks and leaves them
   as N tasks, while a real merge collapses them into one. Re-hedged
   rather than re-modelled, and it now says so in its own title.
+
+**Closed by round 13:** `UX-120` ran the positive merge case on a real
+fixture (`examples/09-fine-grained-siblings`) with a real merged
+rebuild; the projection missed (1.00s vs measured median 2.70s) and now
+ships as an explicit floor rather than an estimate. The reopening above
+stands as the history of why that work existed.

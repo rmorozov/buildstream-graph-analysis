@@ -87,10 +87,13 @@ on:
         default: true
       trace_spine:
         description: >-
-          UX-106/UX-108. Also run the ptrace process-event spine inside
-          the sandbox, which sees statically-linked processes LD_PRELOAD
-          structurally cannot. Default off: this is the risk case for
-          per-process event cost, and fdsdk is where 127k of them are.
+          UX-106/UX-108/UX-112. Also run the ptrace process-event spine
+          inside the sandbox, which sees statically-linked processes
+          LD_PRELOAD structurally cannot. Priced at about a millisecond
+          per process, measured as a full spine x opens factorial - with
+          this job's 127k processes and trace_opens on by default, budget
+          roughly two minutes. There is no spine x opens interaction: the
+          spine costs the same alongside opens as without it.
         type: boolean
         default: false
       capture_mode:

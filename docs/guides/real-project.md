@@ -114,14 +114,18 @@ can conclude:
   the report carries `spine+hook`, `spine-only` or `hook-only`, and the
   report states the coverage as a number rather than a footnote
   (`UX-107`).
-- **The spine is opt-in, and the reason is measured.** On
-  `examples/06-macro-micro-optimization` it costs **+2.7%** wall over ten
-  runs per mode, and on `examples/08-process-storm` — 575 processes per
-  second, built to be the worst case — **+13.5%**. Both are past the 2%
-  budget `UX-106` set for defaulting it on, so it stays a flag. Turn it
-  on when coverage matters more than 3-13% of the build: a static
-  toolchain, a busybox sandbox, or any report whose process list looks
-  suspiciously short.
+- **The spine's price is about a millisecond per process** (`UX-112`,
+  measured as a full {spine} × {opens} factorial). That is invisible on a
+  compile-bound build, where processes live tens of milliseconds — every
+  cell of `examples/06`'s matrix overlaps every other — and dominant on a
+  process-dense one, where they live two: `examples/08-process-storm`
+  pays +41–56%. A ratio is a fact about the fixture's baseline rather
+  than about the tool, which is why the same cell has been quoted at
+  +13.5%, +13.2% and +55.7% while the absolute cost barely moved.
+- **So prefer `--trace-spine=auto`** (`UX-113`): it pays that millisecond
+  only for the elements the pre-build census says the hook is blind for,
+  plus any it could not assess. On an all-dynamic project that is no
+  elements at all; on a busybox one it is all of them.
 - **Plane 2 costs real overhead.** `--trace-opens` in particular runs on
   a hot path. Capture it deliberately, not by default.
 

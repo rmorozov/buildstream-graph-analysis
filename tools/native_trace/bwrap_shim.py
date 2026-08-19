@@ -243,8 +243,46 @@ def record_argv(log_path: str, argv: List[str], limit: int) -> bool:
         return False
 
 
+def spine_for_element(policy: Optional[str], census_path: Optional[str],
+                      element: Optional[str], spine: Optional[str]) -> Optional[str]:
+    """UX-113: whether *this* element's sandbox gets the ptrace spine.
+
+    The spine and the census were built in the same round and never
+    introduced. The census knows, before the build starts and per
+    element, whether the staged root holds a static executable - i.e.
+    whether the hook will be blind there. The spine was all-or-nothing,
+    priced for every element, to cover the few where it is the only
+    witness; so it stayed opt-in, and therefore mostly off, which
+    quietly re-opened the blind spot the whole of Direction 4 closed.
+
+    Three policies. `off` and `on` are what they were. `auto` traces an
+    element only where the census says the hook cannot see, and - always
+    and deliberately - where the census could not tell:
+
+    - an element the census has no verdict for is traced, because "we
+      did not assess it" and "we assessed it and it is clean" are
+      different claims and only one of them is safe to skip;
+    - an element whose name the shim could not recover is traced, which
+      under a build-root override (`UX-56`) is *every* element, so a
+      project that collapses its names gets `on` rather than a silently
+      empty policy.
+    """
+    if not spine or policy != "auto":
+        return spine
+    if element is None:
+        return spine                       # name unrecoverable - trace it
+    try:
+        with open(census_path, "r", encoding="utf-8") as handle:
+            verdicts = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return spine                       # no census to consult - trace it
+    if element not in verdicts:
+        return spine                       # unassessed - trace it
+    return spine if verdicts[element] else None
+
+
 def record_invocation(log_path: Optional[str], invocation_id: int,
-                      dir_tag: Optional[str]) -> bool:
+                      dir_tag: Optional[str], spine_traced: bool = False) -> bool:
     """UX-56: one line per sandbox - `{id, started_at, dir_tag}`.
 
     `started_at` is `CLOCK_REALTIME` on the host, deliberately not the
@@ -267,6 +305,12 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
             "invocation_id": invocation_id,
             "started_at": time.time(),
             "dir_tag": dir_tag,
+            # UX-113: what the spine policy decided for this sandbox.
+            # Recorded rather than inferred from whether spine records
+            # appeared: an element that ran no processes and one the
+            # policy skipped look identical in the trace, and only one of
+            # them is a coverage gap.
+            "spine_traced": spine_traced,
         }, sort_keys=True) + "\n"
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
@@ -300,9 +344,18 @@ def main() -> int:
     # start so the correlation has something to match Plane 1's BUILD
     # spans against; the shim cannot record an *end*, since it execv's.
     invocation_id = os.getpid()
+    element = extract_element_name(sys.argv[1:])
+    # UX-113: the per-element policy decision, made here because this is
+    # the only place that knows which element's sandbox is about to run.
+    spine = spine_for_element(
+        os.environ.get("BST_TRACE_SPINE_POLICY"),
+        os.environ.get("BST_TRACE_SPINE_CENSUS"),
+        element,
+        os.environ.get("BST_TRACE_SPINE"),
+    )
     record_invocation(
-        os.environ.get("BST_TRACE_INVOCATION_LOG"), invocation_id,
-        extract_element_name(sys.argv[1:]),
+        os.environ.get("BST_TRACE_INVOCATION_LOG"), invocation_id, element,
+        spine_traced=bool(spine),
     )
     argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst, preload_so,
                            trace_log, invocation_id=invocation_id,
@@ -311,7 +364,7 @@ def main() -> int:
                            # environment, which `run_traced_build` sets -
                            # the same channel `BST_TRACE_PRELOAD_SO`
                            # already uses.
-                           spine=os.environ.get("BST_TRACE_SPINE"))
+                           spine=spine)
     os.execv(real_bwrap, argv)
     return 1  # unreachable if execv succeeds
 

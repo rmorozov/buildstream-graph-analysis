@@ -263,6 +263,8 @@ Everything above answers *"across the whole build, where did the time go and wha
 bga capture run /path/to/your/project report.json -- bst build <target>
 ```
 
+An `LD_PRELOAD` hook cannot see a statically-linked process — nothing loads it there. `bga capture census PROJECT` measures how large that blind spot is for a given project without building anything, and `--trace-spine` adds a ptrace process-event tracer that records every process whatever its linkage, at a measured **+2.7%** wall on `examples/06` and **+13.5%** on a fixture built to be the worst case. It is a flag rather than the default for exactly that reason; on `examples/01-resource-contention`, whose every command is static busybox, it is the difference between 0 processes and 24.
+
 **Real CPU time per element** (`getrusage`, measured in-process — the only genuine CPU measurement anywhere in `bga`) answers what timing alone cannot: *was this element compute-bound, or waiting?* On the real `freedesktop-sdk` capture, on a 4-core runner:
 
 ```text

@@ -166,6 +166,14 @@ mode in their per-run ref names, because a cold and an incremental
 capture of the same commit measure different builds — `bga compare`
 refuses to compare them, and they must not land in one baseline set.
 
+`trace_spine` (`UX-106`/`UX-108`) adds the ptrace process-event tracer
+to the capture. Default off, and never set by the schedule: a spine
+capture is a *different measurement* of the same build — it records more
+processes and costs more wall clock — so letting the weekly trend pick
+it up would widen the band with a tooling change rather than with noise.
+The dispatch's choice is written into `capture-context.txt` as
+`trace_spine=`, and `bga baseline` refuses a set that mixes the two.
+
 A cold capture needs a target whose **entire closure** fits the job
 budget, and the default target's does not: freedesktop-sdk roots
 everything in a full compiler bootstrap. Choosing one is an empirical
@@ -246,7 +254,7 @@ Contents (uploaded and published on success *or* failure):
 |---|---|
 | `run/` | the `bga`-ready run directory (`graph.json`, `trace.json`, `run-context.json`) |
 | `native-report.json` | the Plane 2 report |
-| `native-trace.log` | the raw `LD_PRELOAD` trace |
+| `native-trace.log` | the raw `LD_PRELOAD` trace (and the ptrace spine's records too, when the dispatch set `trace_spine`) |
 | `build.log` | the wrapped-format Plane 1 log |
 | `graph-declared.json` | the declared graph, extracted before any build |
 | `rebuild-set.txt` | the exact elements deleted |

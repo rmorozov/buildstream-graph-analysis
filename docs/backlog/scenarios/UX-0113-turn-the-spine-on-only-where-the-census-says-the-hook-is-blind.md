@@ -122,9 +122,52 @@ change on that alone. The homogeneity check already treats the three
 values as distinct, so a capture that used `auto` cannot silently join a
 band of `on` or `off` ones.
 
-Tests: 11 in `tests/unit/test_spine_auto_policy.py`.
+Tests: 12 in `tests/unit/test_spine_auto_policy.py`.
 
 ## Verification Log
 
 Done 2026-08-19. Three real traced builds (`examples/01` twice, once per
 policy; `examples/06` once) plus the mixed-fixture census.
+
+### Follow-up: the census tests read fixtures CI does not stage
+
+The two census tests above went red on every `test` matrix job of
+PR #103 (`1 failed, 1436 passed, 26 skipped`, identically on 3.9-3.12):
+
+```text
+tests/unit/test_spine_auto_policy.py:65: in test_a_busybox_project_needs_the_spine_everywhere
+    assert all(verdicts.values()), "every element here runs static busybox"
+E   AssertionError: every element here runs static busybox
+E    + where dict_values([False x 10]) = {'all.bst': False, 'runtime.bst': False, ...}
+```
+
+`examples/01`'s busybox lives under `examples/**/files/runtime/bin/*`,
+which `.gitignore` excludes; `examples/stage_runtimes.sh` puts it there
+and only `bst-tests` and `bst-examples` run that script. So the census
+found nothing static and answered `False` everywhere — correctly, for a
+project that stages no binaries. The tests passed locally for the same
+reason they failed in CI.
+
+The second test was worse than red: it *passed* in CI, and would have
+gone on passing. `examples/06`'s toolchain is gitignored too, so its
+`assert not any(verdicts.values())` was satisfied by an empty shelf
+rather than by a classification. Measured on a fabricated copy of
+`examples/06` whose `files/toolchain` holds one empty `usr/bin/gcc`:
+
+```text
+old assertion  not any(verdicts): True   <- still passes on an empty shelf
+new assertion  dynamic > 0: False  dynamic = 0
+```
+
+Both now resolve their project through `staged_project()`, which skips
+with the staging-script name when the sentinel binary is absent — the
+pattern `tests/unit/test_process_spine.py` already uses. `bst-tests`
+runs both staging scripts and then `make test`, so the tier is exercised
+for real somewhere in CI rather than skipped everywhere.
+
+A third test pins the positive half `not any(...)` cannot: the census
+found 45 executables in `examples/06`'s toolchain and classified every
+one of them as dynamic. Without it, deleting the toolchain would
+strengthen the second test rather than break it.
+
+Tests: 12 in `tests/unit/test_spine_auto_policy.py` (was 11).

@@ -3087,6 +3087,22 @@ def _format_static_census(report: dict) -> List[str]:
         ]
     at_risk = census.get("elements_at_risk") or []
     if not at_risk:
+        if spine_ran:
+            # UX-108: the census's own stated blind spot - binaries it
+            # cannot see because they arrive from a cache or are produced
+            # by the build - is exactly what the spine *can* see. With
+            # both, this stops being a caveat and becomes a result.
+            # Measured on freedesktop-sdk: 0 of 127,632.
+            return [
+                "",
+                f"NOTE: no statically-linked executable is staged by this project's "
+                f"own sources, and the ptrace spine - which records a process "
+                f"whatever its linkage - found none among the "
+                f"{coverage['processes']} process(es) this build actually ran "
+                f"either. The census's own blind spot (binaries from a remote "
+                f"artifact cache, or produced by the build) is measured here "
+                f"rather than left as a caveat (UX-105/UX-108).",
+            ]
         return [
             "",
             "NOTE: no statically-linked executable is staged by this project's own "

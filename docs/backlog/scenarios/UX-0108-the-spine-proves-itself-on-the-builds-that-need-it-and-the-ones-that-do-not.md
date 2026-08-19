@@ -1,6 +1,6 @@
 # UX-108: the spine proves itself on the builds that need it, and the ones that don't
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-106, UX-107
+**Priority:** Medium | **Status:** 🟢 Done — the budget decided: `--trace-spine` stays opt-in | **Depends on:** UX-106, UX-107
 
 Direction 4, validation — see
 [`design/directions.md`](../../design/directions.md).
@@ -164,3 +164,78 @@ inside it. The storm runs 2003 in 3.5s (**575/s**) — `cat /dev/null` in
 a shell loop, dynamically linked so the hook can see them too, because a
 fixture whose processes only one mechanism can see would measure that
 mechanism against nothing.
+
+### The risk case: freedesktop-sdk, 127,632 processes
+
+One dispatch of the capture workflow with `trace_spine: true`
+([run 32223468993](https://github.com/rmorozov/buildstream-graph-analysis/actions/runs/32223468993),
+published as `captures/fdsdk/953683fb-incremental-b4j4-32223468993`),
+against the same commit, target, builders and max-jobs as the four
+retained hook-only captures. The build exited 0 and the analysis
+rendered unchanged.
+
+| | hook-only ×3 | hook+spine |
+|---|---|---|
+| processes | 127,627 / 127,628 / 127,629 | **127,632** |
+| with an observed exit | 119,492 / 119,493 / 119,494 | **120,228** |
+| no observed exit | 8,135 | **7,404** |
+| CPU total | 8,503.8s / 11,000.1s / 11,744.1s | **10,656.3s** |
+| wall clock | 2712.4 / 3405.8 / 3434.4 / 3614.2s | **3261.2s** |
+| raw trace | 693,995,599 B | **921,117,665 B** (+32.7%) |
+
+**Nothing double-counted, at scale.** All 127,632 processes are
+`spine+hook` — a single class, which is the whole claim `UX-107` makes,
+holding at 155× the size of the fixture it was developed on. A naive
+union would have reported ~255,000.
+
+**The spine sees strictly more, and what it adds is exits rather than
+processes.** Only +3 to +5 processes, because freedesktop-sdk's
+toolchain is entirely dynamic — the census finds no static executable
+and the spine confirms it saw none across all 127,632, which turns the
+census's standing caveat about cache-supplied binaries into a
+measurement. The real gain is **+734 processes that now have an observed
+exit**: a process replaced by `exec` runs no destructor, so the hook
+could never report its CPU or peak RSS, and the spine reads both at the
+kernel's exit-stop.
+
+**Wall clock says nothing here, and that is itself the finding.** 3261.2s
+sits inside the hook-only range, and so would almost anything: those
+four captures of *the same commit and target* span 2712–3614s, a 33%
+spread. The same is true of CPU total (8,504–11,744s across three
+hook-only captures — a 38% spread, which is why the spine capture's
++25% against the *most recent* one is not evidence of anything). A band
+that wide cannot resolve a 3–13% effect, which is precisely why
+`examples/06` and `examples/08` exist and why the default was decided
+there.
+
+**The cross-check paid at scale.** CPU measured twice for 119,497
+processes, **40 disagreeing** past the 50ms tolerance (0.03%), worst
+10.94s on a `doxygen` shell. In aggregate the spine totals 2.9% below
+the hook — the same tick-truncation signature that reads as -53.8% on
+`examples/07`'s two-millisecond processes and 0.7% on `examples/06`'s
+long ones, now measured across three orders of magnitude of process
+lifetime.
+
+**The publish budget held, and the raw trace did not.** 921 MB against
+694 MB, +32.7% rather than the ~2× the small fixtures showed, because
+fdsdk's records carry long command lines that the extra records do not
+duplicate. Both are far past the workflow's 40 MB threshold, so both
+publish a 4 MB head and a note — no change in behaviour, and the
+published tarball grew 7.1 MB → 8.2 MB.
+
+## Verification Log
+
+Done 2026-08-19.
+
+- **Item 1** — one traced build of `examples/01` with both planes; the
+  `sleep 3` figures and the eight-element agreement are from it, and two
+  `bst`-gated tests re-run the build rather than replaying a fixture.
+- **Item 2** — capture run 32223468993, compared against four retained
+  hook-only captures of the same commit fetched with `bga baseline -n 4`.
+- **Item 3** — 30 real builds: ten per mode on `examples/06` (two
+  batches of five, +2.8% and +2.7%, pooled to +2.7%) and five per mode
+  on `examples/08`, each with a fresh cold cache.
+- **Item 4** — docs updated to the default the numbers chose.
+
+The one thing this task asked for and did not get is its own wording:
+the spine's spans do not bracket Plane 1's, and `UX-110` is why.

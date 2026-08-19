@@ -204,3 +204,34 @@ def test_the_disclaimer_names_the_way_out_and_its_price():
     assert "--trace-spine" in note
     # With the price attached, so it reads as a choice rather than an ad.
     assert "+2.7%" in note and "+13.5%" in note
+
+
+def test_the_census_blind_spot_is_a_result_once_the_spine_has_run():
+    """UX-108: the census can only see what the project's own sources
+    stage. Binaries arriving from a remote artifact cache, or produced by
+    the build, were a standing caveat - and they are exactly what the
+    spine records regardless."""
+    from tools.bst_native_build_tracer import COVERAGE_BOTH, _format_static_census
+
+    report = {
+        "static_binary_disclaimer": "the old generic footnote",
+        "static_census": {"static_executables": [], "elements_at_risk": []},
+        "stream_coverage": {"processes": 127632,
+                            "by_coverage": {COVERAGE_BOTH: 127632}},
+    }
+    note = " ".join(_format_static_census(report))
+
+    assert "127632 process(es) this build actually ran" in note
+    assert "measured here rather than left as a caveat" in note
+
+
+def test_and_stays_a_caveat_when_only_one_mechanism_ran():
+    from tools.bst_native_build_tracer import _format_static_census
+
+    report = {
+        "static_binary_disclaimer": "the old generic footnote",
+        "static_census": {"static_executables": [], "elements_at_risk": []},
+    }
+    note = " ".join(_format_static_census(report))
+
+    assert "outside what this census can see" in note

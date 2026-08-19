@@ -37,7 +37,7 @@ reporting zero.
 """
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from .cache_effectiveness import compute_cache_accounting, compute_cache_churn
 from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
@@ -98,6 +98,22 @@ def _rebuild_us(tasks) -> Optional[int]:
     return total
 
 
+def _subject(run_context) -> Optional[Tuple[str, Tuple[str, ...]]]:
+    """What a series is a series *of*: the project and the targets built.
+
+    `None` when the capture records no identity at all - every run
+    directory extracted before `P1-37`. Absent has to stay
+    distinguishable from "checked and they matched", so a series with a
+    single unidentified run is not declared homogeneous on that basis.
+    """
+    identity = getattr(run_context, 'run_identity', None) or {}
+    project = identity.get('project_identity')
+    targets = identity.get('targets')
+    if project is None and not targets:
+        return None
+    return (project or 'unknown', tuple(targets or ()))
+
+
 def _row(name: str, result, run_context, graph, tasks, previous) -> dict:
     """One run's cache reading, plus its churn against its predecessor."""
     accounting = compute_cache_accounting(
@@ -111,6 +127,20 @@ def _row(name: str, result, run_context, graph, tasks, previous) -> dict:
 
     row = {
         'run': name,
+        # UX-111: *what* this reading is of, not just which directory it
+        # was read from. `bga compare` refuses across identities and
+        # `bga baseline` refuses a set that is not homogeneous; this is
+        # the third multi-run command and it had no idea what it was
+        # trending.
+        #
+        # Deliberately not the run-identity hash, which is what the other
+        # two use: that hash includes `project_git_commit`, so keying on
+        # it would refuse every trend that spans commits - which is the
+        # only kind of cache-health trend there is. The subject of the
+        # series is the project and its targets; the commit is what
+        # *varies* along it.
+        'subject': _subject(run_context),
+        'run_id': getattr(result, 'run_id', None),
         'run_mode': (result.confidence or {}).get('run_mode'),
         'total_duration_us': getattr(result, 'total_duration_us', None),
         'hit_ratio': accounting.get('hit_ratio'),
@@ -205,6 +235,14 @@ def _render(key: str, value: float) -> str:
     return f"{value / 1e6:.1f}s"
 
 
+def _subject_label(subject) -> str:
+    """A series subject, rendered for a reader rather than as a tuple."""
+    if not subject:
+        return "no identity recorded"
+    project, targets = subject
+    return f"{project} {', '.join(targets)}".strip()
+
+
 def build_trend(rows: List[dict]) -> dict:
     """The trend payload: the rows as given, plus whatever the window
     supports.
@@ -213,10 +251,33 @@ def build_trend(rows: List[dict]) -> dict:
     not a trend, and a command that quietly printed two rows and no
     verdict would look identical to one that checked and found nothing.
     """
-    findings = _band_findings(rows)
+    # UX-111: a series is a series *of* something. Two identities in one
+    # trend are two different builds, and a band computed across them
+    # describes neither - the same unlike-things comparison `bga compare`
+    # refuses outright and `bga baseline` refuses before it fetches.
+    # Demonstrated before it was fixed: three freedesktop-sdk runs with
+    # one `examples/06` run among them reported "every trended metric
+    # sits inside the band its trailing window describes".
+    subjects = {row['subject'] for row in rows if row.get('subject')}
+    heterogeneous = None
+    if len(subjects) > 1:
+        heterogeneous = {
+            'subjects': sorted(_subject_label(subject) for subject in subjects),
+            'by_run': {
+                row['run']: _subject_label(row.get('subject')) for row in rows
+            },
+            'message': (
+                f"{len(subjects)} different projects or target sets in this series "
+                f"- these are not repeated readings of one thing, so no band over "
+                f"them describes anything. The rows above are each real readings "
+                f"of their own run."
+            ),
+        }
+    findings = [] if heterogeneous else _band_findings(rows)
     return {
         'runs': rows,
         'findings': findings,
+        'heterogeneous': heterogeneous,
         'insufficient_window': (
             {
                 'supplied': len(rows),
@@ -227,7 +288,7 @@ def build_trend(rows: List[dict]) -> dict:
                     f"The rows above are real readings with no verdict attached."
                 ),
             }
-            if len(rows) <= MIN_BASELINE_RUNS else None
+            if len(rows) <= MIN_BASELINE_RUNS and not heterogeneous else None
         ),
         'note': (
             "Transfer figures are wall-clock seconds, not bytes: Plane 1 does not "
@@ -322,7 +383,12 @@ def format_trend_text(trend: dict) -> str:
             'are not comparable (one full, one incremental).'
         )
         lines.append('')
-    if trend['insufficient_window']:
+    if trend.get('heterogeneous'):
+        lines.append(f"NOT COMPARABLE: {trend['heterogeneous']['message']}")
+        for run, subject in trend['heterogeneous']['by_run'].items():
+            lines.append(f"  {run:<28s} {subject}")
+        lines.append('')
+    elif trend['insufficient_window']:
         lines.append(f"No verdict: {trend['insufficient_window']['message']}")
     elif not trend['findings']:
         lines.append(

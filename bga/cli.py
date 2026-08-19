@@ -754,6 +754,17 @@ def cmd_cache_trend(args: argparse.Namespace) -> int:
             handle.write(output + '\n')
     else:
         print(output)
+    # UX-111: the rows still print - unlike `bga compare`, which refuses
+    # before printing, because each row here is a real reading of its own
+    # run and only the *band* is cross-run. But a CI job that pipes a
+    # heterogeneous series must not read a clean exit as a healthy cache,
+    # so the not-comparable code is the same one `compare` uses.
+    if trend.get('heterogeneous'):
+        print(
+            f"Refusing a verdict: {trend['heterogeneous']['message']}",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_MISMATCHED_RUNS
     return 0
 
 

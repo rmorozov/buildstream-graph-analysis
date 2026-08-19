@@ -48,25 +48,54 @@ _REF_RE = re.compile(
 )
 
 # The fields of `capture-context.txt` that must agree across a baseline
-# set, and the reason each one does:
+# set, mapped to **what an absent value means**, and the reason each one
+# is here:
 #   - a different commit is a different project state;
 #   - a different mode is a different *kind* of build (UX-86);
 #   - different builders/max_jobs is a different machine shape;
 #   - a different target is a different build entirely, and the ref name
-#     does not carry it (UX-96 added it to `capture-context.txt`).
-# A field absent from a capture's context is skipped rather than treated
-# as a mismatch, so refs published before a field existed stay usable -
-# `target` is exactly that case today.
-# `bga compare` already refuses across the first two; this refuses
+#     does not carry it (UX-96 added it to `capture-context.txt`);
+#   - a capture taken with the ptrace spine is a different *measurement*
+#     of the same build - more processes, more wall clock - so mixing one
+#     into a band of hook-only captures widens the band with tooling
+#     rather than with noise (UX-108).
+#
+# UX-114: absence used to be skipped for every field, and that skip
+# failed in practice. `captures/fdsdk/953683fb-incremental-b4j4-32223468993`
+# records `trace_spine=true`; the four refs beneath it predate the field
+# and record nothing. `{absent, absent, absent, absent, 'true'}` filtered
+# to truthy values is one distinct value, so the spine capture joined a
+# four-run hook-only band with no warning at all, and `bga baseline -n 5`
+# exited 0.
+#
+# The repair is per-field, because absence does not mean one thing:
+#   - `None` - absence is genuinely ambiguous. The field is compared
+#     across the captures that record it, and partial coverage is
+#     *warned* about rather than passed over, so "they agree" and "two of
+#     them never said" stop looking identical. `target` is this case: the
+#     four older refs did not record it, and they were in fact building
+#     the same target as the fifth.
+#   - a string - absence has a known meaning, because the capture
+#     workflow's own default is that value and a ref published before the
+#     field existed was taken under it. Absent then *participates* in the
+#     comparison and mismatches against a differing value, which is what
+#     makes the spine capture visible.
+#
+# `bga compare` already refuses across commit and mode; this refuses
 # before the fetch, where the error is cheap and legible.
-HOMOGENEOUS_FIELDS = (
-    'fdsdk_ref', 'capture_mode', 'builders', 'max_jobs', 'target',
-    # UX-108: a capture taken with the ptrace spine is a different
-    # measurement of the same build - it records more processes and
-    # costs more wall clock - so mixing one into a band of hook-only
-    # captures widens the band with tooling, not with noise.
-    'trace_spine',
-)
+HOMOGENEOUS_FIELDS = {
+    'fdsdk_ref': None,
+    'capture_mode': None,
+    'builders': None,
+    'max_jobs': None,
+    'target': None,
+    # `real-project-capture.yml`: `TRACE_SPINE: ${{ ... || 'false' }}`
+    # and `TRACE_OPENS: ${{ ... || 'true' }}` - the scheduled default
+    # instrumentation, and therefore what an absent field was taken
+    # under.
+    'trace_spine': 'false',
+    'trace_opens': 'true',
+}
 
 # Reported, never enforced. Capture tooling changing between runs is a
 # real risk to a band and also a completely normal thing to happen in a
@@ -190,10 +219,66 @@ def check_homogeneity(members: List[dict]) -> dict:
     reader needs and not a reason to refuse.
     """
     mismatches = []
-    for field in HOMOGENEOUS_FIELDS:
-        values = {m['context'].get(field) for m in members if m['context'].get(field)}
+    coverage_gaps = []
+    assumptions = []
+    for field, absent_means in HOMOGENEOUS_FIELDS.items():
+        recorded = {
+            m['ref']['ref']: m['context'][field]
+            for m in members if m['context'].get(field)
+        }
+        silent = sorted(
+            m['ref']['ref'] for m in members if not m['context'].get(field)
+        )
+        values = set(recorded.values())
+
+        if absent_means is not None and silent:
+            # The default participates, so absent-vs-`true` is a mismatch
+            # rather than a single value (UX-114).
+            values.add(absent_means)
+            # Recorded even when it changes nothing, because "we assumed"
+            # and "it said so" are different claims and the reader is
+            # entitled to know which one they are looking at. On the live
+            # five-ref set this fires for every capture but one.
+            assumption = {
+                'field': field,
+                'assumed': absent_means,
+                'refs': silent,
+                'message': (
+                    f"{len(silent)} of {len(members)} capture(s) do not record "
+                    f"{field}; taken as {field}={absent_means}, the capture "
+                    f"workflow's default when those refs were published"
+                ),
+            }
+        else:
+            assumption = None
+
         if len(values) > 1:
-            mismatches.append({'field': field, 'values': sorted(values)})
+            mismatch = {'field': field, 'values': sorted(values)}
+            if absent_means is not None and silent:
+                mismatch['assumed'] = absent_means
+                mismatch['assumed_for'] = silent
+            mismatches.append(mismatch)
+            # The mismatch line already carries the assumption inline;
+            # repeating it underneath is the same sentence twice.
+            assumption = None
+        if assumption is not None:
+            assumptions.append(assumption)
+
+        if absent_means is None and silent and recorded:
+            # No default to fall back on, so this is neither a match nor
+            # a mismatch - it is a hole, and saying so is the whole point
+            # of UX-114's first clause.
+            coverage_gaps.append({
+                'field': field,
+                'refs': silent,
+                'recorded': sorted(values),
+                'message': (
+                    f"{len(silent)} of {len(members)} capture(s) do not record "
+                    f"{field}, so the set was checked on {len(recorded)} of them. "
+                    f"Absence has no defined meaning for this field - it is "
+                    f"unverified, not verified-equal"
+                ),
+            })
 
     revisions = [
         (m['ref']['ref'], m['context'].get(DRIFT_FIELD)) for m in members
@@ -213,7 +298,20 @@ def check_homogeneity(members: List[dict]) -> dict:
                 f"refusing would disable the helper exactly when it is most needed."
             ),
         }
-    return {'mismatches': mismatches, 'revision_drift': drift}
+    return {
+        'mismatches': mismatches,
+        'coverage_gaps': coverage_gaps,
+        'assumptions': assumptions,
+        'revision_drift': drift,
+    }
+
+
+def _name_refs(refs: List[str], limit: int = 3) -> str:
+    """The runs a warning is about, named - the drift warning already
+    names them, and a warning that says "2 captures" without saying which
+    two sends the reader back to `git ls-remote`."""
+    shown = ', '.join(ref.rsplit('-', 1)[-1] for ref in refs[:limit])
+    return shown if len(refs) <= limit else f"{shown}, +{len(refs) - limit} more"
 
 
 def format_set_text(members: List[dict], homogeneity: dict) -> str:
@@ -234,10 +332,24 @@ def format_set_text(members: List[dict], homogeneity: dict) -> str:
             f"bga={(member['context'].get(DRIFT_FIELD) or 'unrecorded')[:8]}"
         )
     for mismatch in homogeneity['mismatches']:
-        lines.append(
+        line = (
             f"  NOT COMPARABLE: {mismatch['field']} differs across the set "
             f"({', '.join(mismatch['values'])})"
         )
+        if mismatch.get('assumed_for'):
+            line += (
+                f"; {len(mismatch['assumed_for'])} recorded nothing and were "
+                f"taken as {mismatch['assumed']}"
+            )
+        lines.append(line)
+        if mismatch.get('assumed_for'):
+            lines.append(f"      {_name_refs(mismatch['assumed_for'])}")
+    for gap in homogeneity.get('coverage_gaps') or []:
+        lines.append(f"  UNVERIFIED: {gap['message']}")
+        lines.append(f"      {_name_refs(gap['refs'])}")
+    for assumption in homogeneity.get('assumptions') or []:
+        lines.append(f"  ASSUMED: {assumption['message']}")
+        lines.append(f"      {_name_refs(assumption['refs'])}")
     if homogeneity['revision_drift']:
         lines.append(f"  DRIFT: {homogeneity['revision_drift']['message']}")
     lines.append('=' * 60)

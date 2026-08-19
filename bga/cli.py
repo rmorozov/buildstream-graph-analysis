@@ -25,9 +25,13 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import __version__
-from .analyzer import BuildEfficiencyAnalyzer
+from .analyzer import (
+    MODELLED_AXIS_CLAUSE, UNMODELED_AXIS_CLAUSE, BuildEfficiencyAnalyzer,
+)
 from .compare import (
-    _EFFICIENCY_DROP_PP, DEFAULT_BAND_K, MIN_BASELINE_RUNS, compare_runs,
+    _EFFICIENCY_DROP_PP, DEFAULT_BAND_K, DEFAULT_MAX_ADDITION_STRETCH,
+    MIN_BASELINE_RUNS, RunsNotComparableError,
+    compare_runs,
     efficiency_below_floor,
     efficiency_regression_exceeds_threshold, efficiency_signal_status,
     regression_exceeds_threshold,
@@ -36,6 +40,7 @@ from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
 from .replay.scheduler import build_contention_calibration
+from .report.ci_comment import render_ci_comment
 from .report import (
     SWEEP_CAPACITY_MODEL_CAVEAT,
     format_compare_text,
@@ -110,6 +115,67 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         getattr(context, 'max_jobs', None),
         getattr(context, 'memory_budget_mb', None)
         or getattr(context, 'host_memory_mb', None),
+    )
+    # UX-116: and the sentence that intersects them. Every constraint on
+    # the joint (builders x max-jobs) choice is now a measured number in
+    # this one capture; what was missing was the intersection. Run only
+    # here, because the knee costs a capacity sweep and the whole block
+    # is gated on Plane 2 being in hand anyway.
+    result.capacity_recommendation = _capacity_recommendation(
+        analyzer, result, context)
+    if result.capacity_recommendation:
+        # UX-116 item 3: the "currently unmodeled axis" note is retired
+        # *only* where the block ran. Elsewhere it stays, because
+        # elsewhere it is still true - and the substitution is on a named
+        # constant rather than a re-typed sentence, so the two cannot
+        # drift into disagreeing about which clause is being retired.
+        note = (result.floors or {}).get('capacity_model_note') or ''
+        if UNMODELED_AXIS_CLAUSE in note:
+            result.floors['capacity_model_note'] = note.replace(
+                UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
+
+
+def _capacity_recommendation(analyzer, result, context) -> dict:
+    """UX-116: the knee, the CPU draw, the memory ceiling and the host,
+    intersected.
+
+    The sweep is bounded rather than run to its default of one
+    configuration per task: this question is about what is settable on
+    this host, and a 1200-element project would otherwise pay 1200
+    replays to answer it. `knee_range_top` is passed through so the
+    recommendation can say "at least" when the knee lands at the ceiling
+    of what was swept instead of asserting a number it did not reach.
+    """
+    from bga.correlate import (
+        _RECOMMENDATION_SWEEP_CAP, _RECOMMENDATION_SWEEP_HEADROOM,
+        compute_capacity_recommendation,
+    )
+
+    plane2 = getattr(result, 'plane2_capacity', None) or {}
+    builders = getattr(context, 'max_jobs', None)
+    host_cores = plane2.get('host_cpu_count')
+    if not plane2.get('cores_busy') or not host_cores or not builders:
+        return {}
+
+    top = min(
+        max(builders, host_cores) * _RECOMMENDATION_SWEEP_HEADROOM,
+        _RECOMMENDATION_SWEEP_CAP,
+    )
+    try:
+        sweep = analyzer.replay_scheduler.capacity_sweep(
+            resource='PROCESS', min_capacity=1, max_capacity=top, step=1,
+        )
+    except (AttributeError, ValueError) as exc:
+        logger.info("UX-116: no capacity sweep available (%s)", exc)
+        return {}
+
+    return compute_capacity_recommendation(
+        plane2,
+        getattr(result, 'memory_envelope', None) or {},
+        knee=(sweep.knee_points or {}).get('PROCESS'),
+        knee_range_top=top,
+        builders=builders,
+        native_max_jobs=getattr(context, 'native_max_jobs', None),
     )
 
 
@@ -294,9 +360,31 @@ def _produce_compare_output(args: argparse.Namespace):
 
     if args.format == 'json':
         output = json.dumps(comparison.to_dict(), indent=2, default=str)
+    elif args.format == 'ci-comment':
+        # UX-115: render-only. Everything it prints was computed above;
+        # the gate verdicts come from the same predicates
+        # `_compare_exit_code` calls, so the comment and the exit code
+        # cannot disagree.
+        output = render_ci_comment(
+            comparison, args,
+            native_report=_load_native_report(getattr(args, 'native_report', None)),
+        )
     else:
         output = format_compare_text(comparison)
     return output, comparison
+
+
+def _load_native_report(path: Optional[str]) -> Optional[dict]:
+    """The candidate run's Plane 2 report, when the caller has one.
+
+    Absent is a first-class answer, not an error: most projects have no
+    Plane 2 capture, and the comment says the never-read column is
+    *missing* rather than printing an empty one (UX-115).
+    """
+    if not path:
+        return None
+    with open(path) as handle:
+        return json.load(handle)
 
 
 def _print_missing_input_hint(run_dir: Path) -> None:
@@ -448,12 +536,6 @@ EXIT_CODE_MISMATCHED_RUNS = 6
 # same shape of flag - it shipped that way and a pipeline may key on it.
 EXIT_CODE_SIGNAL_UNAVAILABLE = 7
 
-# UX-79: the share of newly-added work that may land on the critical path
-# before the marginal gate fires. Measured on fixtures at two scales: a
-# well-added pair scores 0.00 and a serialized pair 1.00, at 11 elements
-# and at 1201 - so the threshold sits in a wide, scale-invariant gap
-# rather than being tuned to one project's size.
-DEFAULT_MAX_ADDITION_STRETCH = 0.5
 
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
@@ -702,6 +784,13 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
         logger.error("Ingestion failed: %s", e)
         print(f"Error: Malformed input - {e}", file=sys.stderr)
         return 2
+    except RunsNotComparableError as e:
+        # UX-114: before the generic ValueError handler, because a band
+        # that refused a run is the same verdict `--allow-mismatch`
+        # guards above and must carry the same code.
+        logger.error("Not comparable: %s", e)
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_CODE_MISMATCHED_RUNS
     except ValueError as e:
         logger.error("Error: %s", e)
         print(f"Error: {e}", file=sys.stderr)
@@ -1245,8 +1334,20 @@ def create_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument('baseline', type=str, help='Path to the baseline (before) run directory')
     compare_parser.add_argument('candidate', type=str, help='Path to the candidate (after) run directory')
     compare_parser.add_argument(
-        '-f', '--format', type=str, choices=['text', 'json'], default='text',
-        help='Output format: text (human-readable), json (machine-readable). Default: text'
+        '-f', '--format', type=str, choices=['text', 'json', 'ci-comment'],
+        default='text',
+        help='Output format: text (human-readable), json (machine-readable), '
+             'ci-comment (UX-115: markdown for a PR comment - the verdict and its '
+             'band, every gate with a one-sentence reason, the elements this change '
+             'added or moved onto the critical path, and cache churn. Render-only: '
+             'no number in it is computed here). Default: text'
+    )
+    compare_parser.add_argument(
+        '--native-report', type=str, default=None, metavar='PATH',
+        help='UX-115: the candidate run\'s Plane 2 native report, which adds a '
+             '"declared, never read" column to the element table. Without it the '
+             'column is absent and the comment says so - "nothing was never read" '
+             'and "nobody looked" are different claims.'
     )
     compare_parser.add_argument('-o', '--output', type=str, help='Write output to file instead of stdout')
     compare_parser.add_argument(

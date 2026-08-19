@@ -103,6 +103,28 @@ def compute_band(durations_us: List[float], k: float = DEFAULT_BAND_K) -> Option
     }
 
 
+class RunsNotComparableError(ValueError):
+    """UX-114: the band refused these runs, and that is not a usage error.
+
+    `bga compare` already answers "these two runs are not comparable"
+    with exit 6 (`EXIT_CODE_MISMATCHED_RUNS`, UX-78) precisely so a CI job
+    can tell "your job is comparing the wrong things" from "your build
+    got slower". The same refusal arriving from the *band* - a
+    `--baseline-run` whose run_mode differs from the candidate's - was
+    raised as a bare `ValueError` and landed in `cmd_compare`'s generic
+    handler as exit 2, which a job keying 6 = plumbing and 1/4/5 =
+    verdicts reads as a malformed invocation.
+
+    Measured before the fix, feeding the cold fdsdk capture to the
+    incremental band via `bga baseline --candidate`: exit 2, with the
+    UX-55 message on stderr. Nothing passed wrongly - both codes are
+    non-zero - but the exit-code contract is the product here.
+
+    A `ValueError` subclass so any caller that already catches the base
+    class keeps working.
+    """
+
+
 @dataclass
 class ComparisonResult:
     baseline_run_id: str
@@ -310,6 +332,14 @@ def _element_diff(
         'baseline_path_us': sum(baseline_durations.values()),
         'candidate_path_us': sum(candidate_durations.values()),
     }
+
+
+# UX-79: the share of newly-added work that may land on the critical path
+# before the marginal gate fires. Measured on fixtures at two scales: a
+# well-added pair scores 0.00 and a serialized pair 1.00, at 11 elements
+# and at 1201 - so the threshold sits in a wide, scale-invariant gap
+# rather than being tuned to one project's size.
+DEFAULT_MAX_ADDITION_STRETCH = 0.5
 
 
 def compute_marginal_efficiency(element_diff: dict) -> Optional[dict]:
@@ -598,7 +628,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
             mode = (result.confidence or {}).get('run_mode')
             if candidate_mode not in (None, 'unknown') and mode not in (None, 'unknown') \
                     and mode != candidate_mode:
-                raise ValueError(
+                raise RunsNotComparableError(
                     f"baseline run {run_dir} is a {mode} run but the candidate is "
                     f"{candidate_mode} - a noise band may only be built from runs of "
                     "the same kind (UX-55)"

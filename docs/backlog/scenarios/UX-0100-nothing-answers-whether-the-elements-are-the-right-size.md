@@ -1,6 +1,6 @@
 # UX-100: nothing answers whether the elements are the right size
 
-**Priority:** Medium | **Status:** 🟡 In Progress (reopened by round 12) | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern)
+**Priority:** Medium | **Status:** 🟢 Done (reopened by round 12, closed by UX-120) | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern)
 
 Direction 3, item 1 (second half) — see
 [`design/directions.md`](../../design/directions.md).
@@ -193,3 +193,24 @@ only on synthetic unit-test input; round 12 re-ran both real captures
 live and confirmed the (correct) negative answers, which cannot
 distinguish a working detector from an inert one. `UX-120` carries the
 remaining work; this returns to 🟢 when its acceptance's clause 1 runs.
+
+## Closed by UX-120 (2026-08-19)
+
+The missing clause ran. `examples/09-fine-grained-siblings` was built,
+captured, and the merge candidate fired on real data for the first time —
+naming all eight siblings, 7.0s of deleted toll, a replayed 1.0s. The
+group was then really merged and rebuilt: median 8.52s → 5.82s, a real
+saving of **2.70s**.
+
+Two things came out of it, both recorded in full in
+[`UX-0120`](UX-0120-the-merge-candidate-has-never-fired-on-real-data.md):
+
+- **Why the criterion had never fired on a real capture.** Not because
+  no project is too fine-grained — because BuildStream stages by hardlink
+  and times its phases to the second, so a normal 8k-file sysroot stages
+  in `00:00:00` and the toll rounds to zero. The fixture needs 60,000
+  files before the measurement can see the thing it measures.
+- **The projection is a floor, not an estimate.** It under-predicts the
+  real saving by 2.7× because the replay shortens N tasks and leaves them
+  as N tasks, while a real merge collapses them into one. Re-hedged
+  rather than re-modelled, and it now says so in its own title.

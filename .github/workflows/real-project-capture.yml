@@ -638,14 +638,47 @@ jobs:
           else
             LATEST_REF="captures/fdsdk-latest"
           fi
+          # UX-114: what `-latest` is allowed to point at, in one place.
+          # Kept as a function so the decision can be exercised directly
+          # rather than described in prose - `tests/unit/test_latest_ref_publish.py`
+          # extracts this definition from this file and runs it.
+          #
+          # A capture taken with non-default instrumentation is a
+          # different *measurement* of the same build (UX-108: the spine
+          # records more processes and costs more wall clock). Cold got
+          # its own pointer precisely so two kinds of build never mix
+          # through a shared ref; a spine capture landing on
+          # `fdsdk-latest` reopens that hole one axis over, and it
+          # happened: run 32223468993 (`trace_spine=true`) is what
+          # `captures/fdsdk-latest` pointed at when UX-114 was filed.
+          # Such a capture still publishes its per-run ref - it is data -
+          # it just does not become the project's current state.
+          publish_decision() {
+            if [ "${1:-0}" != "0" ]; then
+              echo "failed-build"
+            elif [ "$TRACE_SPINE" != "false" ] || [ "$TRACE_OPENS" != "true" ]; then
+              echo "non-default-instrumentation"
+            else
+              echo "move-latest"
+            fi
+          }
+
           traced_rc="$(sed -n 's/^traced_build_exit=//p' capture-outcome.txt 2>/dev/null || true)"
-          if [ "${traced_rc:-0}" = "0" ]; then
-            git push -q --force "$REMOTE" "HEAD:refs/heads/${LATEST_REF}"
-            echo "Moved ${LATEST_REF} to this capture"
-          else
-            echo "traced build exited ${traced_rc}: published as data at ${RUN_REF}," \
-                 "leaving ${LATEST_REF} pointing at the last good capture"
-          fi
+          case "$(publish_decision "${traced_rc:-0}")" in
+            move-latest)
+              git push -q --force "$REMOTE" "HEAD:refs/heads/${LATEST_REF}"
+              echo "Moved ${LATEST_REF} to this capture"
+              ;;
+            non-default-instrumentation)
+              echo "trace_spine=${TRACE_SPINE} trace_opens=${TRACE_OPENS} is not the" \
+                   "scheduled default instrumentation: published as data at ${RUN_REF}," \
+                   "leaving ${LATEST_REF} pointing at the last default-instrumentation capture"
+              ;;
+            failed-build)
+              echo "traced build exited ${traced_rc}: published as data at ${RUN_REF}," \
+                   "leaving ${LATEST_REF} pointing at the last good capture"
+              ;;
+          esac
 
       - name: Cache health trend across the retained refs
         # UX-103 item 3: the trend accumulates without a human. Runs

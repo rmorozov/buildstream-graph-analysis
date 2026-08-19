@@ -164,6 +164,30 @@ class RunContext:
     # whole project) from a pre-commit run (most elements skipped, the
     # analysis is only about the few that rebuilt).
     queue_summary: Optional[dict] = None
+    # UX-110: each task's duration measured twice - the wrapped log's own
+    # timestamps, stamped when the wrapper *read* each line, against
+    # BuildStream's `[HH:MM:SS]` elapsed prefix, its own timing truncated
+    # to whole seconds. Another additive run-context/v9 extension, and
+    # the resolution of every Plane 1 duration in the run:
+    # `{"tasks_compared": int, "tasks_shorter_than_bst": int,
+    #   "shorter_than_bst": [...], "worst_shortfall_s": float,
+    #   "worst_excess_s": float}`. Absent on a raw-format capture, which
+    # has no second measurement - and "not compared" must stay
+    # distinguishable from "compared and agreed".
+    timestamp_agreement: Optional[dict] = None
+
+    @property
+    def plane1_resolution_s(self) -> Optional[float]:
+        """UX-110: how far a Plane 1 duration in this run may be from the
+        truth, from the run's own two measurements of it. `None` when
+        nothing was compared."""
+        agreement = self.timestamp_agreement or {}
+        if not agreement.get("tasks_compared"):
+            return None
+        return max(
+            abs(agreement.get("worst_shortfall_s") or 0.0),
+            abs(agreement.get("worst_excess_s") or 0.0),
+        )
 
     @property
     def build_queue(self) -> dict:
@@ -482,6 +506,16 @@ class AnalysisResult:
     # {"phases": [{"phase": str, "elapsed_us": int}, ...], "total_us": int,
     # "fraction_of_horizon": Optional[float]}.
     pipeline_overhead: dict = field(default_factory=dict)
+    # UX-110: the measured resolution of every duration in this result -
+    # the run's own two independent measurements of each task's length,
+    # compared. Not spec-mandated, additive and presentational. Shape:
+    # `{"tasks_compared": int, "tasks_shorter_than_bst": int,
+    #   "shorter_than_bst": [...], "worst_shortfall_s": float,
+    #   "worst_excess_s": float, "resolution_s": float,
+    #   "shortest_task_s": Optional[float]}`. Empty when the capture has
+    # only one measurement (a raw-format log), which is not the same
+    # claim as "the two agreed".
+    timestamp_agreement: dict = field(default_factory=dict)
     # Aggregate stats grouped by element_kind (P4-12 Direction 3, `bga
     # graph --by-kind`) - not spec-mandated, additive/presentational.
     # Shape: {kind: {"count": int, "total_duration_us": int,

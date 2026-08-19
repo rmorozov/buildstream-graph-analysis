@@ -63,6 +63,7 @@ def load_run_context(path: Path) -> RunContext:
         run_identity=data.get('run_identity'),
         build_outcome=data.get('build_outcome'),
         queue_summary=data.get('queue_summary'),
+        timestamp_agreement=data.get('timestamp_agreement'),
     )
 
 

@@ -209,6 +209,8 @@ def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:
             lines.append(f"  Failed Hard Gates: {', '.join(failed_gates)}")
         lines.append("")
 
+    lines.extend(_format_timestamp_resolution(result))
+
     violations = result.violations or []
     if violations:
         lines.append(f"Violations ({len(violations)}):")
@@ -217,6 +219,52 @@ def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:
         lines.append("")
 
     return lines
+
+
+def _format_timestamp_resolution(result: AnalysisResult) -> List[str]:
+    """UX-110: how far every duration above can be from the truth, when
+    that distance is large enough to change a reading.
+
+    Silent on a run whose tasks are long relative to the lag, which is
+    every real build - a resolution line on a forty-minute compile is
+    furniture. It speaks when a task is short enough for the lag to be a
+    material share of it, and always when a task is reported as *shorter*
+    than BuildStream's own timing of it, which is not imprecision but a
+    duration that provably did not happen.
+    """
+    agreement = getattr(result, 'timestamp_agreement', None) or {}
+    resolution = agreement.get('resolution_s')
+    if not resolution:
+        return []
+    provably_short = agreement.get('tasks_shorter_than_bst') or 0
+    material = agreement.get('tasks_where_material') or 0
+    if not provably_short and not material:
+        return []
+    share = (agreement.get('material_share') or 0.05) * 100
+    lines = [
+        f"  Duration resolution: ±{resolution:.2f}s, measured - each task's length "
+        f"is in this capture twice (the wrapped log's own timestamps, stamped when "
+        f"the wrapper read each line, against BuildStream's own elapsed) and "
+        f"{agreement['tasks_compared']} task(s) were compared",
+    ]
+    if material:
+        lines.append(
+            f"    that is more than {share:.0f}% of the duration for "
+            f"{material} of {agreement.get('tasks_measured', material)} measured "
+            f"task(s) - the shortest is {agreement['shortest_task_s']:.2f}s"
+        )
+    if provably_short:
+        worst = (agreement.get('shorter_than_bst') or [{}])[0]
+        lines.append(
+            f"    {provably_short} task(s) are reported SHORTER than BuildStream's "
+            f"own timing of them"
+            + (f" - {worst.get('element')} at {worst['span_s']:.3f}s against "
+               f"{worst['bst_elapsed_s']:.0f}s" if worst.get('span_s') is not None
+               else "")
+            + ", which is a duration that did not happen rather than one measured "
+              "imprecisely (UX-110)"
+        )
+    return lines + [""]
 
 
 def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:

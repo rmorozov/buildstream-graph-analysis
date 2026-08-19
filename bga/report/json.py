@@ -122,6 +122,12 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section is None and hasattr(result, 'pipeline_overhead') and result.pipeline_overhead:
         data['pipeline_overhead'] = result.pipeline_overhead
 
+    # UX-110: the resolution of every duration in this report, from the
+    # run's own two measurements of each task. Absent when the capture
+    # carries only one - which is a different claim from "they agreed".
+    if section is None and getattr(result, 'timestamp_agreement', None):
+        data['timestamp_agreement'] = result.timestamp_agreement
+
     if section in (None, 'graph') and by_kind and hasattr(result, 'element_kind_summary') and result.element_kind_summary:
         data['element_kind_summary'] = result.element_kind_summary
 

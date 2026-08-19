@@ -130,6 +130,15 @@ def _run_instance(run_context, loaded_from) -> dict:
     return instance
 
 
+
+# UX-110: the share of a task's own duration at which the wrapped log's
+# read-lag stops being negligible. 5% rather than a rounder number
+# because it is the point where the lag exceeds the noise band `bga
+# compare` already treats as significant (1%) by a comfortable margin -
+# below it, a duration's error is smaller than the run-to-run variation
+# the tool already refuses to read into.
+_RESOLUTION_MATERIAL_SHARE = 0.05
+
 class BuildEfficiencyAnalyzer:
     """
     Main analyzer class implementing the bga v9 specification.
@@ -1203,6 +1212,11 @@ class BuildEfficiencyAnalyzer:
         # docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md
         result.pipeline_overhead = self._compute_pipeline_overhead(result.total_duration_us)
 
+        # UX-110: the resolution of every duration above, from the run's
+        # own two measurements of each task - see
+        # docs/backlog/scenarios/UX-0110-plane-1-under-reports-a-task-it-flushed-late.md
+        result.timestamp_agreement = self._compute_timestamp_agreement()
+
         # Element-kind summary (P4-12 Direction 3, non-spec additive
         # signal) - see docs/backlog/tasks/P4-12-element-kind-based-heuristics.md
         result.element_kind_summary = self._compute_element_kind_summary()
@@ -1343,6 +1357,41 @@ class BuildEfficiencyAnalyzer:
 
         self.analysis_result = result
         return result
+
+    def _compute_timestamp_agreement(self) -> dict:
+        """UX-110: what the run's two independent measurements of each
+        task's duration said, plus the one number a reader needs from
+        them - how long the *shortest* task in this run was, against how
+        far a duration here can be from the truth.
+
+        A read-lag of a second is nothing on a ten-minute compile and
+        everything on a three-second task, so the resolution alone does
+        not say whether it matters; the ratio does.
+        """
+        agreement = getattr(self.run_context, "timestamp_agreement", None) \
+            if self.run_context else None
+        if not agreement or not agreement.get("tasks_compared"):
+            return {}
+        resolution_s = self.run_context.plane1_resolution_s
+        durations = [
+            span.dur_us / 1e6 for span in (self.trace.spans if self.trace else [])
+            if span.dur_us
+        ]
+        # The lag is a fixed number of seconds, so whether it matters is
+        # a question about each task's own length. Counted at a stated
+        # share rather than left for the reader to divide.
+        material = [
+            d for d in durations
+            if resolution_s and d and resolution_s / d > _RESOLUTION_MATERIAL_SHARE
+        ]
+        return {
+            **{k: v for k, v in agreement.items() if k != "note"},
+            "resolution_s": resolution_s,
+            "shortest_task_s": min(durations) if durations else None,
+            "tasks_measured": len(durations),
+            "tasks_where_material": len(material),
+            "material_share": _RESOLUTION_MATERIAL_SHARE,
+        }
 
     def _compute_pipeline_overhead(self, horizon_us: int) -> dict:
         """BuildStream's own top-level "main:core activity" pipeline

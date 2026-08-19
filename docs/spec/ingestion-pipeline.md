@@ -400,6 +400,24 @@ several wrong assumptions turned out to hide behind:
     doesn't override it. `tools/bst_show_to_graph.py` now captures this
     as `Element.max_jobs`; `tests/fixtures/bst_show_project/elements/manual.bst`
     carries a real override for end-to-end test coverage.
+18. **A wrapped log's timestamps carry a read-lag, and the log already
+    contains the measurement of it** (`UX-110`). A wrapped line is
+    stamped when the wrapper *reads* it and BuildStream flushes in
+    bursts, so both ends of every task span are late by a variable
+    amount. The closing line's own `[HH:MM:SS]` elapsed prefix is
+    BuildStream's independent timing of the same task, and comparing the
+    two across three real builds (12s to 3261s) puts the envelope at
+    **-0.56s to +1.50s, bounded rather than proportional** — 0.03% of a
+    1415-second element and 11% of a three-second one. Recorded in
+    run-context/v9 as the additive `timestamp_agreement` extension and
+    rendered by `bga analyze` when it is a material share of some task,
+    including the case where a span is *shorter* than BuildStream's own
+    figure and so describes a duration that did not happen. Compared,
+    never substituted: the elapsed prefix is a second-resolution lower
+    bound, and moving a span endpoint to satisfy it manufactures overlap
+    the capacity model would report as an oversubscription violation.
+    Absent — not empty — on a raw-format capture, whose timestamps are
+    reconstructed from that same prefix.
 
 ## Why a second, separate trace/v9 adapter
 

@@ -436,6 +436,26 @@ def extract_run(
     # in the capture says which one happened.
     if converter.queue_summary:
         run_context["queue_summary"] = converter.queue_summary
+    # UX-110: every task's duration, measured twice - the wrapper's own
+    # timestamps against BuildStream's elapsed prefix. It is the
+    # resolution of every duration this run reports, and a task the
+    # wrapper timed as *shorter* than BuildStream did is provably short
+    # rather than merely imprecise. Absent from a raw-format capture,
+    # where the timestamps are reconstructed from that same elapsed and
+    # the comparison would be a tautology.
+    agreement = converter.get_timestamp_agreement()
+    if agreement:
+        run_context["timestamp_agreement"] = agreement
+        if agreement["tasks_shorter_than_bst"]:
+            worst = agreement["shorter_than_bst"][0]
+            warnings.append(
+                f"{agreement['tasks_shorter_than_bst']} of "
+                f"{agreement['tasks_compared']} task(s) are reported shorter than "
+                f"BuildStream's own timing of them - worst {worst['element']} at "
+                f"{worst['span_s']:.3f}s against {worst['bst_elapsed_s']:.0f}s. A "
+                f"wrapped log line is stamped when the wrapper read it, so both "
+                f"ends of every span carry that lag (UX-110)"
+            )
     if failed:
         warnings.append(
             f"{len(failed)} element(s) FAILED in this build "

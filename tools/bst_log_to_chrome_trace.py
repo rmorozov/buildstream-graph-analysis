@@ -175,6 +175,18 @@ class WrapperTraceConverter:
         # task), so this is a no-op there - verified byte-identical.
         self.active_tasks = {}
 
+        # UX-110: the wrapper's read-lag, measured rather than assumed.
+        # Every per-element task's duration is available twice in a
+        # wrapped log - see `_check_span_against_bst_elapsed`.
+        self._plane1_agreement = {
+            "tasks_compared": 0,
+            "tasks_shorter_than_bst": 0,
+            "shorter_than_bst": [],
+            "worst_shortfall_s": 0.0,
+            "worst_excess_s": 0.0,
+            "worst_shortfall_task": None,
+        }
+
         # BuildStream also logs a family of top-level, blank-hash,
         # non-element-scoped "main:core activity" phases (Loading
         # elements, Resolving elements, Initializing remote caches, Query
@@ -368,7 +380,8 @@ class WrapperTraceConverter:
                 "failed": int(queue_match.group(4)),
             }
 
-    def handle_bst_event(self, ts, hash_val, action, element, status, msg):
+    def handle_bst_event(self, ts, hash_val, action, element, status, msg,
+                         elapsed_s=None):
         # Clean up any accidental trailing whitespace from regex extraction
         action = action.strip()
         element = element.strip()
@@ -392,6 +405,9 @@ class WrapperTraceConverter:
                 "phase": phase,
                 "action": action,
                 "depth": 1,
+                # UX-110: kept so the closing line's own elapsed can be
+                # checked against the span these two stamps describe.
+                "start_ts": ts,
             }
             self.trace_events.append(
                 {
@@ -413,6 +429,7 @@ class WrapperTraceConverter:
                 # Closes a nested sub-phase only - the outer span stays open.
                 return
             self.active_tasks.pop(hash_val)
+            self._check_span_against_bst_elapsed(task, ts, elapsed_s)
             self.trace_events.append(
                 {
                     "name": f"{task['element']} [{task['phase']}]",
@@ -429,6 +446,79 @@ class WrapperTraceConverter:
                     },
                 }
             )
+
+    def _check_span_against_bst_elapsed(self, task, end_ts, elapsed_s):
+        """UX-110: the same task duration, measured twice.
+
+        A wrapped log line is stamped when the wrapper *reads* it, and
+        BuildStream flushes in bursts, so both ends of a span carry a
+        read-lag. The closing line also carries BuildStream's own
+        measurement of that task - `[HH:MM:SS]`, truncated to whole
+        seconds - which is independent of when anybody read anything.
+
+        Compared, never substituted. The elapsed prefix is a second-
+        resolution *lower bound*, so it cannot supply a better timestamp;
+        and moving a `B` earlier (or an `E` later) to satisfy it would
+        manufacture overlap between tasks that the capacity model would
+        then report as a violation - trading a bounded measurement error
+        for a fabricated finding.
+
+        Measured on real logs: the wrapper's span runs from 0.56s short
+        of BuildStream's own figure to 1.50s long, on tasks from 6s to
+        1415s. Bounded, not proportional - which is why it is invisible
+        on a real build and 11% of a three-second one.
+        """
+        if elapsed_s is None or task.get("start_ts") is None:
+            return
+        span_s = (end_ts - task["start_ts"]) / 1_000_000
+        agreement = self._plane1_agreement
+        agreement["tasks_compared"] += 1
+        delta = span_s - elapsed_s
+        if delta < agreement["worst_shortfall_s"]:
+            agreement["worst_shortfall_s"] = delta
+            agreement["worst_shortfall_task"] = {
+                "element": task["element"], "action": task["action"],
+                "span_s": round(span_s, 3), "bst_elapsed_s": elapsed_s,
+            }
+        if delta > agreement["worst_excess_s"]:
+            agreement["worst_excess_s"] = delta
+        if span_s < elapsed_s:
+            # Provably wrong rather than merely imprecise: BuildStream
+            # timed the task itself and says it ran longer than the span
+            # these two stamps describe.
+            agreement["tasks_shorter_than_bst"] += 1
+            if len(agreement["shorter_than_bst"]) < 8:
+                agreement["shorter_than_bst"].append({
+                    "element": task["element"], "action": task["action"],
+                    "span_s": round(span_s, 3), "bst_elapsed_s": elapsed_s,
+                    "shortfall_s": round(elapsed_s - span_s, 3),
+                })
+
+    def get_timestamp_agreement(self):
+        """UX-110: what the two independent measurements of every task's
+        duration said. Empty when nothing was compared - a raw-format log
+        has no second measurement, and saying so is not the same as
+        saying they agreed."""
+        agreement = self._plane1_agreement
+        if not agreement["tasks_compared"]:
+            return None
+        return {
+            "tasks_compared": agreement["tasks_compared"],
+            "tasks_shorter_than_bst": agreement["tasks_shorter_than_bst"],
+            "shorter_than_bst": agreement["shorter_than_bst"],
+            "worst_shortfall_s": round(agreement["worst_shortfall_s"], 3),
+            "worst_excess_s": round(agreement["worst_excess_s"], 3),
+            "note": (
+                "Each task's duration measured twice: the wrapped log's own "
+                "timestamps, which are stamped when the wrapper read each line, "
+                "against BuildStream's `[HH:MM:SS]` elapsed prefix, which is its "
+                "own timing truncated to whole seconds. The difference is the "
+                "wrapper's read-lag, and it bounds the resolution of every "
+                "Plane 1 duration in this run. A task reported as shorter than "
+                "BuildStream's own figure is provably short, not merely "
+                "imprecise (UX-110)."
+            ),
+        }
 
     def _handle_main_activity(self, ts, status, msg):
         """Track BuildStream's top-level "main:core activity" phases
@@ -534,7 +624,15 @@ class WrapperTraceConverter:
             bst_match = BST_LOG_RE.search(msg)
             if bst_match:
                 _elapsed, h, action, element, status, b_msg = bst_match.groups()
-                self.handle_bst_event(ts, h, action, element, status, b_msg)
+                # UX-110: BuildStream's own elapsed measurement of the
+                # task, passed only from *this* path. In raw mode the
+                # timestamps are reconstructed *from* that elapsed, so
+                # comparing them there would be a tautology rather than a
+                # cross-check.
+                self.handle_bst_event(
+                    ts, h, action, element, status, b_msg,
+                    elapsed_s=parse_elapsed_to_seconds(_elapsed),
+                )
                 return
 
     def _process_raw_line(self, line):

@@ -77,6 +77,7 @@ def runs_dir(project: str) -> str:
 
 
 RUN_SUBDIR = "run"
+PLANE2_NAME = "plane2.json"
 
 
 def list_snapshots(project: str) -> List[str]:
@@ -129,7 +130,52 @@ def resolve(token: str, start: Optional[str] = None) -> str:
     """
     if not is_alias(token):
         return token
+    return os.path.join(resolve_snapshot(token, start), RUN_SUBDIR)
 
+
+def resolve_plane2(token: str, start: Optional[str] = None) -> str:
+    """The same alias, naming that snapshot's Plane 2 report (`UX-134`).
+
+    Deliberately the *same* lookup as `resolve`: `@last` is one snapshot,
+    and `bga correlate @last @last` must not pair one snapshot's run
+    directory with another's report. The two functions differ only in
+    which file inside the answer they name.
+    """
+    if not is_alias(token):
+        return token
+    snapshot = resolve_snapshot(token, start)
+    plane2 = os.path.join(snapshot, PLANE2_NAME)
+    if not os.path.isfile(plane2):
+        raise StoreError(
+            f"{token} resolves to {os.path.basename(snapshot)}, which has no "
+            f"{PLANE2_NAME} - that capture recorded Plane 1 and not Plane 2. "
+            f"Name a different snapshot, or pass the report's path."
+        )
+    return plane2
+
+
+def sibling_plane2(run_dir: str) -> Optional[str]:
+    """The Plane 2 report beside a run directory, if there is one.
+
+    Read off the filesystem rather than off how the argument was spelled,
+    so `@last` and the full path it resolves to behave identically -
+    which is what makes this a fact about the capture rather than a
+    reward for using the store.
+    """
+    if os.path.basename(os.path.normpath(run_dir)) != RUN_SUBDIR:
+        return None
+    plane2 = os.path.join(os.path.dirname(os.path.normpath(run_dir)), PLANE2_NAME)
+    return plane2 if os.path.isfile(plane2) else None
+
+
+def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
+    """The snapshot directory an alias names.
+
+    Candidates are `list_runs`, not `list_snapshots`, for every artifact:
+    an alias has to mean one snapshot whichever file is being asked for,
+    and a capture with no run directory is not one `@last` ever meant
+    (`UX-126`).
+    """
     project = project_root(start)
     if project is None:
         raise StoreError(
@@ -149,14 +195,14 @@ def resolve(token: str, start: Optional[str] = None) -> str:
 
     name = token[1:]
     if name == "last":
-        return os.path.join(snapshots[-1], RUN_SUBDIR)
+        return snapshots[-1]
     if name == "prev":
         if len(snapshots) < 2:
             raise StoreError(
                 f"@prev needs two snapshots and {project} has one. Take another "
                 f"after your change and the comparison becomes automatic."
             )
-        return os.path.join(snapshots[-2], RUN_SUBDIR)
+        return snapshots[-2]
 
     matches = [s for s in snapshots if os.path.basename(s).startswith(name)]
     if not matches:
@@ -169,7 +215,7 @@ def resolve(token: str, start: Optional[str] = None) -> str:
             f"{name!r} matches {len(matches)} snapshots: "
             f"{', '.join(os.path.basename(s) for s in matches)}"
         )
-    return os.path.join(matches[0], RUN_SUBDIR)
+    return matches[0]
 
 
 def new_snapshot_dir(project: str, now: Optional[datetime] = None) -> str:

@@ -15,9 +15,10 @@ import os
 import pytest
 
 from bga.run_store import (
-    CONFIG_NAME, STORE_DIRNAME, StoreError, has_run, is_alias, list_runs,
-    list_snapshots, new_snapshot_dir, project_root, read_config, resolve,
-    runs_dir, store_size_bytes, write_config,
+    CONFIG_NAME, PLANE2_NAME, STORE_DIRNAME, StoreError, has_run, is_alias,
+    list_runs, list_snapshots, new_snapshot_dir, project_root, read_config,
+    resolve, resolve_plane2, resolve_snapshot, runs_dir, sibling_plane2,
+    store_size_bytes, write_config,
 )
 
 
@@ -29,11 +30,14 @@ def project(tmp_path):
     return root
 
 
-def _snapshot(project, stamp, with_run=True):
+def _snapshot(project, stamp, with_run=True, with_plane2=False):
     path = runs_dir(str(project)) + os.sep + stamp
     os.makedirs(path, exist_ok=True)
     if with_run:
         os.makedirs(os.path.join(path, "run"), exist_ok=True)
+    if with_plane2:
+        with open(os.path.join(path, PLANE2_NAME), "w", encoding="utf-8") as handle:
+            handle.write('{"by_element": {}}')
     return path
 
 
@@ -229,8 +233,9 @@ class TestAliasesReachEveryCommandThatTakesARun:
     `directory` gets aliases for free and one inventing a new name does
     not half-work silently."""
 
-    def _snapshot_pair(self, project):
-        return _snapshot(project, "20260101T000000Z"), _snapshot(project, "20260102T000000Z")
+    def _snapshot_pair(self, project, with_plane2=False):
+        return (_snapshot(project, "20260101T000000Z", with_plane2=with_plane2),
+                _snapshot(project, "20260102T000000Z", with_plane2=with_plane2))
 
     def test_analyze_resolves_last(self, project, monkeypatch):
         _old, new = self._snapshot_pair(project)
@@ -294,6 +299,46 @@ class TestAliasesReachEveryCommandThatTakesARun:
 
         assert "no BuildStream project here" in capsys.readouterr().err
 
+    def test_every_plane_2_argument_takes_them(self, project, monkeypatch):
+        """UX-134: `--plane2`, both of `compare`'s, and `correlate`'s
+        positional. Listed together because the seam was that some of a
+        capture had names and some did not."""
+        old, new = self._snapshot_pair(project, with_plane2=True)
+        monkeypatch.chdir(project)
+        seen = {}
+        import bga.cli as cli
+        monkeypatch.setattr(cli, "cmd_analyze",
+                            lambda args: seen.setdefault("plane2", args.plane2) and 0)
+        monkeypatch.setattr(cli, "cmd_compare",
+                            lambda args: seen.update(b=args.baseline_plane2,
+                                                     c=args.candidate_plane2))
+        monkeypatch.setattr(cli, "cmd_correlate",
+                            lambda args: seen.setdefault("report", args.native_report))
+
+        cli.main(["analyze", "@last", "--plane2", "@last"])
+        cli.main(["compare", "@prev", "@last",
+                  "--baseline-plane2", "@prev", "--candidate-plane2", "@last"])
+        cli.main(["correlate", "@last", "@prev"])
+
+        assert seen["plane2"] == os.path.join(new, PLANE2_NAME)
+        assert seen["b"] == os.path.join(old, PLANE2_NAME)
+        assert seen["c"] == os.path.join(new, PLANE2_NAME)
+        assert seen["report"] == os.path.join(old, PLANE2_NAME), (
+            "a report named from one snapshot and a run from another is a "
+            "legitimate thing to ask for")
+
+    def test_a_report_alias_with_no_report_stops_before_any_analysis(
+            self, project, monkeypatch, capsys):
+        self._snapshot_pair(project)
+        monkeypatch.chdir(project)
+        import bga.cli as cli
+        monkeypatch.setattr(cli, "cmd_analyze",
+                            lambda args: pytest.fail("analysis ran anyway"))
+
+        assert cli.main(["analyze", "@last", "--plane2", "@last"]) == 2
+
+        assert "no plane2.json" in capsys.readouterr().err
+
     def test_a_baseline_set_takes_them_too(self, project, monkeypatch):
         """`--baseline-run` is repeatable and each entry is a run
         directory, so the band `bga compare` builds can be named from
@@ -309,3 +354,77 @@ class TestAliasesReachEveryCommandThatTakesARun:
                   "--baseline-run", "@last"])
 
         assert seen["set"] == [os.path.join(old, "run"), os.path.join(new, "run")]
+
+
+class TestTheSameAliasNamesBothHalvesOfACapture:
+    """UX-134: a snapshot holds the run and its Plane 2 report side by
+    side, and the join is the one command that needs both at once - so
+    it was also the one command the store did not finish."""
+
+    def test_one_alias_is_one_snapshot_whichever_artifact_is_asked_for(self, project):
+        """The failure this prevents: `bga correlate @last @last` pairing
+        one snapshot's run directory with another's report, which is
+        exactly the mistake the store exists to make impossible."""
+        _snapshot(project, "20260101T000000Z", with_plane2=True)
+        newest = _snapshot(project, "20260102T000000Z", with_plane2=True)
+
+        assert resolve_snapshot("@last", str(project)) == newest
+        assert resolve("@last", str(project)) == os.path.join(newest, "run")
+        assert resolve_plane2("@last", str(project)) == os.path.join(
+            newest, PLANE2_NAME)
+
+    def test_a_non_alias_is_returned_untouched(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+
+        assert resolve_plane2("/explicit/plane2.json") == "/explicit/plane2.json"
+
+    def test_a_snapshot_without_a_report_fails_by_name(self, project):
+        """"That capture recorded Plane 1 and not Plane 2" and "no such
+        file" are different problems. Only the first has a remedy the
+        user can act on without going and looking."""
+        _snapshot(project, "20260101T000000Z", with_plane2=True)
+        _snapshot(project, "20260102T000000Z")
+
+        with pytest.raises(StoreError) as exc:
+            resolve_plane2("@last", str(project))
+
+        assert "20260102T000000Z" in str(exc.value)
+        assert "no plane2.json" in str(exc.value)
+
+    def test_the_run_half_still_resolves_when_the_report_is_missing(self, project):
+        """A capture that recorded Plane 1 and not Plane 2 is a usable
+        run - only the join is unavailable."""
+        snapshot = _snapshot(project, "20260102T000000Z")
+
+        assert resolve("@last", str(project)) == os.path.join(snapshot, "run")
+
+
+class TestTheReportBesideARunDirectory:
+    """UX-134 item 2, read off the filesystem rather than off how the
+    argument was spelled - so `@last` and the full path it resolves to
+    behave identically."""
+
+    def test_a_snapshot_run_finds_its_own_report(self, project):
+        snapshot = _snapshot(project, "20260101T000000Z", with_plane2=True)
+
+        assert sibling_plane2(os.path.join(snapshot, "run")) == os.path.join(
+            snapshot, PLANE2_NAME)
+
+    def test_a_trailing_slash_does_not_change_the_answer(self, project):
+        snapshot = _snapshot(project, "20260101T000000Z", with_plane2=True)
+
+        assert sibling_plane2(os.path.join(snapshot, "run") + os.sep) == (
+            os.path.join(snapshot, PLANE2_NAME))
+
+    def test_a_run_directory_with_no_report_beside_it_has_none(self, project):
+        snapshot = _snapshot(project, "20260101T000000Z")
+
+        assert sibling_plane2(os.path.join(snapshot, "run")) is None
+
+    def test_a_directory_that_is_not_called_run_is_not_guessed_about(self, tmp_path):
+        """The inference is "the run directory of a capture", not "any
+        directory with a JSON file near it"."""
+        (tmp_path / "elsewhere").mkdir()
+        (tmp_path / PLANE2_NAME).write_text("{}")
+
+        assert sibling_plane2(str(tmp_path / "elsewhere")) is None

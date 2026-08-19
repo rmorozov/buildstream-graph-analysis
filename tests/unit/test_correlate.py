@@ -10,9 +10,18 @@ The payoff to protect is the sentence neither plane can produce alone:
 *the element that dominates your critical path is not compute-bound, so
 fix how it is built, not what it builds.*
 """
+import json
+import os
+import shutil
+import subprocess
+import sys
+
 import pytest
 
 from bga.correlate import correlate, format_correlation
+
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+GOLDEN_RUN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
 
 
 def _analysis(critical_path=(), opportunities=(), critical_path_us=20_000_000, blast=None):
@@ -561,3 +570,64 @@ def test_an_analysis_with_no_per_element_signals_degrades_rather_than_refusing()
 
     assert [e["element"] for e in result["actionable"]] == ["x.bst"]
 
+
+
+class TestTheReportArgumentIsOptionalWhenTheCaptureKeptThemTogether:
+    """UX-134: `bga capture run --run-dir` and `bga snapshot` write the
+    run directory and its Plane 2 report side by side, so restating the
+    pairing is clerical - and getting it wrong (yesterday's report, this
+    morning's run) is the mistake this whole direction exists to remove.
+
+    Inferred from the filesystem, not from whether an alias was used, so
+    an explicit path to a snapshot behaves the same as `@last`.
+    """
+
+    def _snapshot(self, tmp_path, with_plane2=True):
+        snapshot = tmp_path / "20260101T000000Z"
+        snapshot.mkdir()
+        shutil.copytree(GOLDEN_RUN, snapshot / "run")
+        if with_plane2:
+            (snapshot / "plane2.json").write_text(json.dumps({
+                "by_element": {},
+                "per_element_parallelism": [],
+                "cpu_time": {"per_element": {}},
+                "declared_vs_used": {"unused_candidates": []},
+            }))
+        return snapshot
+
+    def _correlate(self, *argv):
+        return subprocess.run(
+            [sys.executable, "-m", "bga.cli", "correlate", *argv],
+            capture_output=True, text=True, cwd=REPO, timeout=300)
+
+    def test_omitting_it_joins_the_report_that_came_from_the_same_build(
+            self, tmp_path):
+        snapshot = self._snapshot(tmp_path)
+
+        inferred = self._correlate(str(snapshot / "run"))
+        explicit = self._correlate(str(snapshot / "run"),
+                                   str(snapshot / "plane2.json"))
+
+        assert inferred.returncode == 0, inferred.stderr
+        assert inferred.stdout == explicit.stdout, (
+            "inferring the sibling produced a different report than naming it")
+        assert str(snapshot / "plane2.json") in inferred.stderr, (
+            "the inferred path is not stated, so the reader cannot tell which "
+            "report was joined")
+
+    def test_omitting_it_with_nothing_beside_the_run_says_what_to_pass(
+            self, tmp_path):
+        """Not a traceback and not a silent single-plane report: the
+        argument is still required wherever there is nothing to infer."""
+        snapshot = self._snapshot(tmp_path, with_plane2=False)
+
+        result = self._correlate(str(snapshot / "run"))
+
+        assert result.returncode == 2, result.stdout
+        assert "no Plane 2 report given, and none beside" in result.stderr
+
+    def test_a_run_directory_not_from_a_capture_is_not_guessed_about(self):
+        result = self._correlate(GOLDEN_RUN)
+
+        assert result.returncode == 2
+        assert "none beside" in result.stderr

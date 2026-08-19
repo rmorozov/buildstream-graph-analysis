@@ -85,6 +85,14 @@ on:
         description: Also interpose open()/openat() (UX-46). Slower.
         type: boolean
         default: true
+      trace_spine:
+        description: >-
+          UX-106/UX-108. Also run the ptrace process-event spine inside
+          the sandbox, which sees statically-linked processes LD_PRELOAD
+          structurally cannot. Default off: this is the risk case for
+          per-process event cost, and fdsdk is where 127k of them are.
+        type: boolean
+        default: false
       capture_mode:
         description: >-
           UX-86. `incremental` is the warm-then-cut capture every round so
@@ -146,6 +154,9 @@ env:
   BUILDERS: ${{ github.event.inputs.builders || '4' }}
   MAX_JOBS: ${{ github.event.inputs.max_jobs || '4' }}
   TRACE_OPENS: ${{ github.event.inputs.trace_opens || 'true' }}
+  # A scheduled capture never sets it, so the trend keeps being
+  # produced by the same tooling it always was (UX-108).
+  TRACE_SPINE: ${{ github.event.inputs.trace_spine || 'false' }}
   # A dispatch says what it wants; a schedule says which cron fired, and
   # the monthly one is the cold capture (UX-96).
   CAPTURE_MODE: ${{ github.event.inputs.capture_mode || (github.event.schedule == '0 4 1 * *' && 'cold') || 'incremental' }}
@@ -375,13 +386,15 @@ jobs:
         run: |
           OPENS=""
           if [ "$TRACE_OPENS" = "true" ]; then OPENS="--trace-opens"; fi
+          SPINE=""
+          if [ "$TRACE_SPINE" = "true" ]; then SPINE="--trace-spine"; fi
           set +e
           python3 -m tools.bst_native_build_tracer run \
             --wrapped-log capture/build.log \
             --raw-log capture/native-trace.log \
             --invocation-log capture/invocations.jsonl \
             --argv-log capture/bwrap-argv.jsonl \
-            $OPENS \
+            $OPENS $SPINE \
             fdsdk capture/native-report.json \
             -- bst --no-interactive --builders "$BUILDERS" --max-jobs "$MAX_JOBS" \
                  build --ignore-project-artifact-remotes \
@@ -486,6 +499,11 @@ jobs:
             echo "builders=$BUILDERS"
             echo "max_jobs=$MAX_JOBS"
             echo "trace_opens=$TRACE_OPENS"
+            # UX-108: a spine capture is a different measurement of the
+            # same build - more processes, more wall clock - so it must
+            # be visible to `bga baseline`'s homogeneity check rather
+            # than silently joining a band of hook-only captures.
+            echo "trace_spine=$TRACE_SPINE"
             # UX-86: which of the two CI scenarios this capture is. The
             # run directory carries `run_mode` derived from BuildStream's
             # own Pipeline Summary (UX-55); this records what was *asked

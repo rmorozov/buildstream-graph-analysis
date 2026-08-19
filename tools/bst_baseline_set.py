@@ -59,7 +59,14 @@ _REF_RE = re.compile(
 # `target` is exactly that case today.
 # `bga compare` already refuses across the first two; this refuses
 # before the fetch, where the error is cheap and legible.
-HOMOGENEOUS_FIELDS = ('fdsdk_ref', 'capture_mode', 'builders', 'max_jobs', 'target')
+HOMOGENEOUS_FIELDS = (
+    'fdsdk_ref', 'capture_mode', 'builders', 'max_jobs', 'target',
+    # UX-108: a capture taken with the ptrace spine is a different
+    # measurement of the same build - it records more processes and
+    # costs more wall clock - so mixing one into a band of hook-only
+    # captures widens the band with tooling, not with noise.
+    'trace_spine',
+)
 
 # Reported, never enforced. Capture tooling changing between runs is a
 # real risk to a band and also a completely normal thing to happen in a

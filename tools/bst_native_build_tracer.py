@@ -447,6 +447,27 @@ def parse_trace_log(text: str) -> List[dict]:
     return events
 
 
+def count_fork_only_exits(events: List[dict]) -> int:
+    """UX-123: exits recorded for pids that never exec'd.
+
+    `PTRACE_EVENT_EXIT` fires for every tracee, including a
+    fork-without-exec child - which is the same program as its parent and
+    wears the parent's cmdline, so it is not a process a profiler should
+    list. `pair_events` drops those ENDs; this counts them, because a
+    record class that is neither reported nor summarised is
+    indistinguishable from one that never occurred.
+    """
+    seen_start = set()
+    fork_only = 0
+    for ev in sorted(events, key=lambda e: e["ts"]):
+        key = (ev.get("invocation") or ev["element"], ev["pid"], ev.get("src", "hook"))
+        if ev["event"] == "START":
+            seen_start.add(key)
+        elif ev["event"] == "END" and key not in seen_start:
+            fork_only += 1
+    return fork_only
+
+
 def pair_events(events: List[dict]) -> List[dict]:
     """Pair each START with its own process's END, FIFO per `(element,
     pid)` - correct as long as one pid's own lifetime doesn't overlap a
@@ -499,20 +520,50 @@ def pair_events(events: List[dict]) -> List[dict]:
         elif ev["event"] == "END":
             pending = open_by_key.get(key)
             if not pending:
+                # UX-123: an exit for a pid that never exec'd - a
+                # fork-without-exec child, whose recorded cmdline is its
+                # parent's. Dropped here and counted by
+                # `count_fork_only_exits` over the same events, so the
+                # report can say how many rather than leaving a whole
+                # record class neither shown nor mentioned.
                 continue
-            start_ev = pending.pop(0)
+            # UX-123: one pid, one record, even when it exec'd several
+            # times.
+            #
+            # `sh -c "gcc …"` execs in place: N STARTs, one END. Pairing
+            # the END with the *first* START billed the pid's whole CPU,
+            # peak RSS and exit status to the pre-exec image and left the
+            # rest as "no observed exit". Measured on freedesktop-sdk:
+            # **7,384 records** misfiled that way, including
+            # `sh -c -e python -P -mbuild …` carrying 195,219us that
+            # `python` spent.
+            #
+            # The chain is collapsed instead. `/proc/<pid>/stat` and
+            # `getrusage` are both per-*pid* and cumulative across execs,
+            # so the figures describe the whole lifetime and belong to
+            # the process, not to one of its images; the span runs from
+            # the first exec to the exit, and the name is the last image,
+            # which is what a profiler means by "the process".
+            start_ev = pending[0]
+            final_ev = pending[-1]
+            exec_chain = len(pending)
+            pending.clear()
             record = {
                 "pid": ev["pid"],
-                "ppid": start_ev["ppid"],
+                "ppid": final_ev["ppid"],
                 "element": start_ev["element"],
                 # UX-56: the sandbox this process ran in, so a correlation
                 # can relabel a whole sandbox at once.
                 "invocation": start_ev.get("invocation"),
-                "cmd": start_ev["cmd"],
+                "cmd": final_ev["cmd"],
                 "start_ts": start_ev["ts"],
                 "end_ts": ev["ts"],
                 "duration_s": ev["ts"] - start_ev["ts"],
                 "open": False,
+                # How many images this pid ran. 1 for the ordinary case;
+                # published so a reader can see that a collapsed chain is
+                # a collapse rather than a lost record.
+                "exec_chain": exec_chain,
                 # UX-106/UX-107: which mechanism produced this record.
                 # Carried through pairing because the merge below joins
                 # on it, and every consumer that reports coverage needs
@@ -551,6 +602,7 @@ def pair_events(events: List[dict]) -> List[dict]:
                 "duration_s": None,
                 "open": True,
                 "src": start_ev.get("src", "hook"),
+                "exec_chain": 1,
             })
     return sorted(records, key=lambda r: r["start_ts"])
 
@@ -619,13 +671,19 @@ def merge_record_streams(records: List[dict]) -> List[dict]:
     matched_hooks = set()
     for record in sorted(spine_records, key=lambda r: r["start_ts"]):
         key = (record.get("invocation"), record["pid"])
+        # UX-123: the *nearest* candidate within tolerance, not the
+        # first. A `--unshare-pid` sandbox recycles small pids quickly -
+        # this repository's own tests assert that it does - so a stale
+        # unmatched hook record from an earlier holder of the pid could
+        # capture a later spine record simply by being first in the list.
         partner = None
+        best = None
         for candidate in hook_by_key.get(key) or []:
             if id(candidate) in matched_hooks:
                 continue
-            if abs(candidate["start_ts"] - record["start_ts"]) <= MERGE_START_TOLERANCE_S:
-                partner = candidate
-                break
+            distance = abs(candidate["start_ts"] - record["start_ts"])
+            if distance <= MERGE_START_TOLERANCE_S and (best is None or distance < best):
+                partner, best = candidate, distance
         entry = dict(record)
         if partner is None:
             entry["coverage"] = COVERAGE_SPINE_ONLY
@@ -2502,7 +2560,8 @@ def classify_configure_phase(records: List[dict]) -> dict:
 CPU_RECONCILIATION_TOLERANCE_US = 50_000
 
 
-def compute_stream_coverage(records: List[dict]) -> dict:
+def compute_stream_coverage(records: List[dict],
+                            fork_only_exits: int = 0) -> dict:
     """UX-107: coverage as a measured number rather than a footnote.
 
     Before the spine there was one sentence, printed identically whether
@@ -2587,6 +2646,18 @@ def compute_stream_coverage(records: List[dict]) -> dict:
         "cpu_from_spine_only": sum(
             1 for record in records if record.get("cpu_source") == "spine"
         ),
+        # UX-123: pids that ran more than one image. Collapsed into one
+        # record each, because the kernel's CPU and RSS figures are
+        # per-pid and cumulative across execs - published so a reader can
+        # see the collapse rather than wonder where the records went.
+        "exec_chains_collapsed": sum(
+            1 for record in records if record.get("exec_chain", 1) > 1
+        ),
+        # UX-123: exits recorded for pids that never exec'd - a
+        # fork-without-exec child is the same program as its parent and
+        # wears its cmdline, so it is not a process to list. Dropped, and
+        # said so.
+        "fork_only_exits": fork_only_exits,
         "cpu_disagreements": disagreements[:8],
         "cpu_disagreement_count": len(disagreements),
         "cpu_aggregate": aggregate,
@@ -2602,7 +2673,8 @@ def compute_stream_coverage(records: List[dict]) -> dict:
     }
 
 
-def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
+def summarize(records: List[dict], correlation: Optional[dict] = None,
+              fork_only_exits: int = 0) -> dict:
     matched = [r for r in records if not r["open"]]
     open_records = [r for r in records if r["open"]]
     by_binary: Dict[str, int] = {}
@@ -2659,7 +2731,8 @@ def summarize(records: List[dict], correlation: Optional[dict] = None) -> dict:
         "static_binary_disclaimer": STATIC_BINARY_DISCLAIMER,
         # UX-107: which mechanism saw each process, as counts rather
         # than as a footnote.
-        "stream_coverage": compute_stream_coverage(records),
+        "stream_coverage": compute_stream_coverage(
+            records, fork_only_exits=fork_only_exits),
     }
 
 
@@ -2727,6 +2800,8 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # unchanged, which is what keeps every pre-spine capture parsing
     # byte-identically.
     records = merge_record_streams(pair_events(events))
+    # UX-123: counted from the events, since pairing drops them.
+    fork_only_exits = count_fork_only_exits(events)
 
     # UX-56: correct collapsed element names before anything is computed
     # from them - every downstream signal (declared-vs-used, per-element
@@ -2749,7 +2824,8 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
             records, correlation["resolved"]
         )
         correlation["elements_in_plane1"] = len(spans)
-    report = summarize(records, correlation=correlation)
+    report = summarize(records, correlation=correlation,
+                       fork_only_exits=fork_only_exits)
 
     # UX-46: only attempted when a project directory is available, since
     # it needs `bst artifact list-contents` and the project's own
@@ -3038,6 +3114,24 @@ def _format_stream_coverage(report: dict) -> List[str]:
                 f"truncates, so every process shorter than a tick reads as zero. "
                 f"The hook's microsecond figure is the one used."
             )
+    collapsed = coverage.get("exec_chains_collapsed") or 0
+    fork_only = coverage.get("fork_only_exits") or 0
+    if collapsed or fork_only:
+        parts = []
+        if collapsed:
+            parts.append(
+                f"{collapsed} pid(s) ran more than one image and are reported as one "
+                f"process each, named for the last - CPU and peak RSS are per-pid and "
+                f"cumulative across execs, so they describe the process rather than "
+                f"any one of its images"
+            )
+        if fork_only:
+            parts.append(
+                f"{fork_only} exit(s) were recorded for pids that never exec'd "
+                f"(fork-without-exec children, wearing their parent's command line) "
+                f"and are not listed as processes"
+            )
+        lines.append("  " + "; ".join(parts) + " (UX-123).")
     spine_cpu = coverage.get("cpu_from_spine_only") or 0
     if spine_cpu:
         lines.append(

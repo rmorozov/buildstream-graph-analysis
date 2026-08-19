@@ -42,14 +42,35 @@
  *     one DEGRADED record, stops tracing, and keeps running as a plain
  *     init.
  *
- * ## Init duties
+ * ## Where this process actually sits (corrected by UX-119)
  *
- * Under BuildStream's `--unshare-pid` this process is pid 1 of the
- * sandbox. Pid 1 has to reap orphans (the `waitpid(-1, __WALL)` loop
- * does that by construction) and has no default signal dispositions -
- * so fatal signals are caught and forwarded to the command's process
- * group rather than silently ignored, which is what would otherwise
- * make a `bst` cancellation hang.
+ * It is **pid 2**, not pid 1. BuildStream's real bwrap argv carries
+ * `--unshare-pid --die-with-parent` and no `--as-pid-1`, so bubblewrap
+ * installs its own reaper as pid 1 and everything it launches starts at
+ * pid 2. Measured, not assumed:
+ *
+ *     bwrap --unshare-pid            sh -c 'echo $$'   ->  2
+ *     bwrap --unshare-pid --as-pid-1 sh -c 'echo $$'   ->  1
+ *
+ * This header used to claim pid 1 and to justify its signal handling by
+ * pid 1's missing default dispositions. That justification was wrong.
+ * The handling is kept anyway, for a reason that survives the
+ * correction: forwarding to the command's own process group is how a
+ * `bst` cancellation reaches a *tree* rather than only its root, and the
+ * measured behaviour is right - a SIGTERM aimed at this process
+ * forwards, the command dies, and this process re-raises so its parent
+ * sees the same wait status it would have seen untraced.
+ *
+ * Orphan reaping is bwrap's reaper's job, not ours. The
+ * `waitpid(-1, __WALL)` loop still reaps what it is given, which is what
+ * a tracer needs regardless of pid.
+ *
+ * Passing `--as-pid-1` from the shim was considered and rejected: bare
+ * bwrap with that flag reports **0** for a command killed by a signal,
+ * where without it the same command surfaces 143. Adding the flag would
+ * change what BuildStream observes about its own builds, with or without
+ * this tracer attached - which is precisely what a capture mechanism
+ * must never do.
  *
  * ## What it does not do
  *
@@ -93,8 +114,8 @@ static int g_degraded;
  * untraced build never produces. Suppressed exactly once per pid, so a
  * SIGSTOP the program really does raise later is still passed through.
  *
- * Open-addressed, fixed size, no allocation: this runs as pid 1 inside a
- * sandbox that may have no allocator worth trusting under memory
+ * Open-addressed, fixed size, no allocation: this runs as the sandbox's
+ * root process, which may have no allocator worth trusting under memory
  * pressure, and a tracer that can fail to malloc is a tracer that can
  * hang a build. A full table degrades to the old behaviour for the
  * overflowing pid rather than evicting an entry, because a wrong
@@ -386,10 +407,16 @@ static void degrade(const char *reason)
         emit(line, (size_t)len);
 }
 
-/* As pid 1 there are no default dispositions, so a signal this process
- * does not handle is simply discarded - and a `bst` cancellation would
- * then never reach the build. Forwarded to the command's process group
- * so the whole tree goes down together. */
+/* Forwarded to the command's own process group so a cancellation reaches
+ * the whole tree rather than only its root.
+ *
+ * UX-119 predicted this handler would *prevent* a cancellation, since
+ * installing it replaces the default terminate disposition on an
+ * ordinary (pid 2) process. Measured, it does not: the signal forwards,
+ * the command dies of it, and the exit path below re-raises it here, so
+ * the parent sees the same wait status either way. The prediction was
+ * sound about dispositions and wrong about the outcome, because it did
+ * not account for the re-raise. */
 static void forward_signal(int signo)
 {
     if (g_child > 0)
@@ -439,7 +466,11 @@ int main(int argc, char **argv)
     }
     if (child == 0) {
         /* Its own process group, so signals can be forwarded to the
-         * whole tree at once. */
+         * whole tree at once. Set on both sides of the fork (UX-119):
+         * whichever call runs first wins and the other is a harmless
+         * no-op, which closes the window where a signal arriving between
+         * `fork` and this line would be forwarded to a process group
+         * that does not exist yet and lost to ESRCH. */
         setpgid(0, 0);
         if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) != 0) {
             /* No ptrace here (a restrictive Yama policy, or an
@@ -454,6 +485,7 @@ int main(int argc, char **argv)
     }
 
     g_child = child;
+    setpgid(child, child);   /* the parent half of the race above */
     install_signal_forwarding();
 
     int status = 0;
@@ -522,8 +554,8 @@ int main(int argc, char **argv)
 
         if (g_degraded) {
             /* UX-117: tracing has failed, so detach this tracee and let
-             * it run untraced. Keep reaping afterwards - as pid 1 that
-             * duty does not stop.
+             * it run untraced. Keep reaping afterwards - a tracer's
+             * `waitpid` loop owes that to whatever it is still given.
              *
              * This branch used to `continue`, on the reasoning that a
              * tracer which keeps poking after an error can turn one

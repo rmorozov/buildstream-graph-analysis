@@ -364,7 +364,12 @@ def _format_resource_blast(result) -> List[str]:
         kinds = ", ".join(f"{count} {kind}" for kind, count
                           in (row['by_element_kind'] or {}).items())
         if kinds:
-            lines.append(f"      rebuilds: {kinds}")
+            # UX-173: the split first, because it is what the count
+            # means; the per-kind detail behind it.
+            lines.append(
+                f"      rebuilds "
+                f"{sources.format_kind_split(row.get('building_count', row['blast_count']), row.get('assembling_count', 0))}"
+                f": {kinds}")
         if row['measured_elements'] < row['blast_count']:
             lines.append(f"      measured for {row['measured_elements']} of "
                          f"{row['blast_count']} - the rest did not run in this build")
@@ -377,9 +382,43 @@ def _format_resource_blast(result) -> List[str]:
     lines += [
         "",
         "  Work is the sum of the named elements' own durations, not wall clock:",
-        "  a build with any parallelism completes it in less.",
+        "  a build with any parallelism completes it in less. \"Assemble\" is a",
+        "  kind that runs no build commands (stack, import, filter, junction);",
+        "  an unrecognised kind counts as building, which overstates rather",
+        "  than understates what a change costs.",
         "",
     ]
+    return lines
+
+
+def _format_blast_ranking(signals: dict) -> List[str]:
+    """UX-173: the top blast elements, in the order the ranking used.
+
+    "Ranked by cost" and "ranked by count, because this run measured
+    nothing" are different claims and a reader acts on them
+    differently, so the line says which one it is showing rather than
+    leaving it to be inferred from whether the numbers look plausible.
+    """
+    top = signals.get('top_blast_radius') or []
+    if not top:
+        return []
+    br_data = signals.get('blast_radius') or {}
+    ranked_by = signals.get('blast_radius_ranked_by') or 'element-count'
+    label = ("measured rebuild time" if ranked_by == 'measured-rebuild-time'
+             else "downstream element count (this run measured no durations)")
+    lines = [f"  Widest blast radius, by {label}:"]
+    for uid in top[:5]:
+        entry = br_data.get(uid) if isinstance(br_data, dict) else None
+        if not isinstance(entry, dict):
+            lines.append(f"    {uid}")
+            continue
+        cost = entry.get('weighted_duration_us') or 0
+        kind = entry.get('element_kind') or 'unknown'
+        suffix = (f", {cost / 1e6:.1f}s of rebuilding below it"
+                  if cost else "")
+        assembles = "" if sources.is_building_kind(kind) else " - assembles, does not build"
+        lines.append(f"    {uid} ({kind}): "
+                     f"{entry.get('downstream_count', 0)} downstream{suffix}{assembles}")
     return lines
 
 
@@ -667,6 +706,10 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                 elif isinstance(br_data, list) and br_data:
                     max_blast = max((br.blast_count for br in br_data if hasattr(br, 'blast_count')), default=0)
                     lines.append(f"  Max Blast Radius: {max_blast} downstream elements")
+                # UX-173: which order the ranking below is in, and what
+                # the elements in it actually are. A blast of 84 where 39
+                # are stacks is not a blast of 84 things that build.
+                lines.extend(_format_blast_ranking(diagnostics_signals))
             if 'criticality_probability' in diagnostics_signals:
                 cp_data = diagnostics_signals['criticality_probability']
                 # Handle both dict format and dataclass format
@@ -1051,6 +1094,37 @@ def _fmt_signed_us(delta_us: Optional[float], pct: Optional[float] = None) -> st
     return text
 
 
+def _format_invalidation_roots(churn: dict) -> List[str]:
+    """UX-92's invalidation roots, one line each.
+
+    Extracted from `format_compare_text` by `UX-173`, which had to
+    change the counting: a root that invalidated four stacks and
+    three compilers is a different fact from one that invalidated
+    seven compilers, and a guard on that wording needs something to
+    call.
+    """
+    lines: List[str] = []
+    for root in (churn.get('invalidation_roots') or [])[:_INVALIDATION_ROOTS_SHOWN]:
+        total_us = root['duration_us'] + root['downstream_us']
+        # UX-173: the split, where there is one to make.
+        assembling = root.get('downstream_assembling') or 0
+        building = root.get('downstream_building',
+                            root['downstream_rebuilt'] - assembling)
+        downstream = (
+            f" and invalidated "
+            f"{sources.format_kind_split(building, assembling)} below it"
+            if root['downstream_rebuilt'] else " and invalidated nothing below it"
+        )
+        lines.append(
+            f"  Invalidated at {root['element_uid']}: its cache key changed "
+            f"({root['baseline_cache_key'][:8]} -> "
+            f"{root['candidate_cache_key'][:8]}){downstream}, "
+            f"{total_us / 1e6:.1f}s of rebuilding in total. Nothing it depends on "
+            f"changed, so the change starts here"
+        )
+    return lines
+
+
 def format_compare_text(comparison) -> str:
     """Format a ComparisonResult (UX-01) as human-readable text. Takes
     the dataclass directly (not AnalysisResult) - this is a genuinely
@@ -1169,19 +1243,7 @@ def format_compare_text(comparison) -> str:
                 f"{churn['wasted_rebuild_us'] / 1e6:.1f}s - {named}{more}. Nothing "
                 f"they depend on changed, so that time bought nothing"
             )
-        for root in (churn.get('invalidation_roots') or [])[:_INVALIDATION_ROOTS_SHOWN]:
-            total_us = root['duration_us'] + root['downstream_us']
-            downstream = (
-                f" and invalidated {root['downstream_rebuilt']} element(s) below it"
-                if root['downstream_rebuilt'] else " and invalidated nothing below it"
-            )
-            lines.append(
-                f"  Invalidated at {root['element_uid']}: its cache key changed "
-                f"({root['baseline_cache_key'][:8]} -> "
-                f"{root['candidate_cache_key'][:8]}){downstream}, "
-                f"{total_us / 1e6:.1f}s of rebuilding in total. Nothing it depends on "
-                f"changed, so the change starts here"
-            )
+        lines.extend(_format_invalidation_roots(churn))
         extra = len(churn.get('invalidation_roots') or []) - _INVALIDATION_ROOTS_SHOWN
         if extra > 0:
             lines.append(

@@ -22,6 +22,8 @@ that "not measured" and "measured as none" are different facts.
 """
 from typing import Dict, List, Optional, Set
 
+from .sources import split_by_kind
+
 # A hit ratio at or above this is not worth a line of report: the cache
 # is doing its job. `UX-65`'s bar, one domain over - below this share is
 # not an opportunity, it is how caching works.
@@ -273,6 +275,10 @@ def compute_cache_churn(
     """
     baseline_keys = {e.uid: e.cache_key for e in baseline_elements if e.cache_key}
     candidate_keys = {e.uid: e.cache_key for e in candidate_elements if e.cache_key}
+    # UX-173: the graph already carries `element_kind`; the invalidation
+    # note is one of the places that was counting without it.
+    candidate_kinds = {e.uid: (getattr(e, 'element_kind', None) or 'unknown')
+                       for e in candidate_elements}
     comparable = set(baseline_keys) & set(candidate_keys)
     if not comparable:
         return {}
@@ -323,6 +329,11 @@ def compute_cache_churn(
             invalidated.add(node)
             stack.extend(successors.get(node, []))
         rebuilt_downstream = (invalidated & candidate_built) - {uid}
+        # UX-173: how much of what this invalidated actually builds. A
+        # root that invalidated four stacks and three compilers is a
+        # different fact from one that invalidated seven compilers, and
+        # the count alone says they are the same.
+        building, assembling = split_by_kind(rebuilt_downstream, candidate_kinds)
         roots.append({
             'element_uid': uid,
             'baseline_cache_key': baseline_keys[uid],
@@ -330,6 +341,8 @@ def compute_cache_churn(
             'rebuilt': uid in candidate_built,
             'duration_us': candidate_durations.get(uid, 0),
             'downstream_rebuilt': len(rebuilt_downstream),
+            'downstream_building': building,
+            'downstream_assembling': assembling,
             'downstream_us': sum(candidate_durations.get(d, 0) for d in rebuilt_downstream),
         })
 

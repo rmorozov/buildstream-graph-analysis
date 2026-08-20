@@ -626,8 +626,17 @@ class DiagnosticsAnalyzer:
                 is_required_by_target=is_required,
             ))
         
-        # Sort by downstream count descending
-        results.sort(key=lambda x: x.downstream_count, reverse=True)
+        # UX-173: ranked by what a change to each element would *cost*,
+        # not by how many names it touches. A stack with 40 elements
+        # below it and a compiler with 6 are not the same risk, and the
+        # count says they are. Falls back to the count when this run
+        # measured nothing (a fully cached build has no durations at
+        # all), and the report says which order it is showing.
+        if any(r.downstream_weighted_duration_us for r in results):
+            results.sort(key=lambda x: (x.downstream_weighted_duration_us,
+                                        x.downstream_count), reverse=True)
+        else:
+            results.sort(key=lambda x: x.downstream_count, reverse=True)
         
         return results
     

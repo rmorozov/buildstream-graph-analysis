@@ -788,6 +788,63 @@ band its own presence helped compute
 Use more baseline runs than the minimum where you can. The whole CI
 sequence is [`ci-comment.md`](ci-comment.md).
 
+## One repository, many elements: the monorepo question
+
+If your project's elements are fed by one repository, the first thing
+to know is what BuildStream keys their cache on — because two ways of
+consuming the same repo differ by an order of magnitude in what a
+commit costs.
+
+A **`git` source keys on its ref.** `directory:` says where the
+checkout is *staged* in the sandbox; it does not narrow what the key
+covers. Twenty elements pointing at one url with twenty different
+`directory:` values all take a new cache key from *any* commit to that
+repository, including one that touched nothing they stage. A **`local`
+source keys on content**, so only the elements whose files actually
+changed rebuild. That single difference is the whole of this section.
+
+`bga` measures it rather than asserting it. The analysis report grows a
+`Shared Sources` block for any resource more than one element uses, and
+a Key Findings line when one repository's ref decides most of the
+graph:
+
+```bash
+bga analyze @last                  # the table, and the headline
+bga blast https://…/monorepo.git   # what a commit to it rebuilds
+bga blast components/lib-a         # what a commit to one directory does
+bga blast lib-a.bst                # and the element's own closure
+```
+
+`bga blast` is a question, not a gate: it always exits 0, and it says
+which reading of the target it used (url, then path, then element).
+
+### The four patterns, and what each costs
+
+| pattern | blast | price |
+|---|---|---|
+| One `git` url for every element | every consumer, on every commit | simplest to declare; the widest blast, and the one the headline measures |
+| A repository or ref per component | only that component's consumers | smallest blast; the most repositories and refs to maintain |
+| `local` sources over a checkout CI already has | per-directory, by content | the practical monorepo answer; needs the checkout to exist before `bst` runs |
+| Junction pinning | at junction granularity | coarse but explicit; a junction bump rebuilds its whole subproject |
+
+Read the table, not the taste: `bga analyze` gives each of these a
+measured cost on *your* graph, and `bga blast` prices a change before
+you make it. A pattern that is right for a 40-element project is often
+wrong for a 4,000-element one, which is why this page does not
+recommend one.
+
+### What this does not tell you
+
+It reads *declared* sources — what the `.bst` files say. Tracking
+behaviour (`bst track` cadence, how often refs are bumped, whether a
+branch or a tag is pinned) decides *when* rebuilds happen; the blast
+figures here decide *what one costs when it does*. Both matter, and
+only the second is measurable from the project on disk.
+
+Elements from a junctioned subproject are counted as unreadable rather
+than as sourcing nothing: their `.bst` files live in that project, not
+this one, and the report says how many it could not speak for.
+
 ## Step 8 — put it in CI
 
 Two independent gates, because "slower" and "less efficient" are

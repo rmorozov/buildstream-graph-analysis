@@ -490,6 +490,37 @@ def _memory_refuses_more_builders(result: AnalysisResult) -> Optional[str]:
     )
 
 
+def _shared_source_findings(result: AnalysisResult) -> List[dict]:
+    """UX-171: when one repository decides most of the build's rebuilds.
+
+    Only the headline lands here. The table itself is a report section,
+    because a monorepo can share a dozen resources and Key Findings is
+    for the sentence a reader acts on.
+
+    Silent when nothing is shared, which is the ordinary case for a
+    project of per-element `local` sources - "no shared resource" is not
+    a finding, it is the absence of one.
+    """
+    blast = getattr(result, 'resource_blast', None) or {}
+    headline = blast.get('headline')
+    if not headline:
+        return []
+    top = (blast.get('rows') or [{}])[0]
+    return [_finding(
+        'shared-source-blast', SEVERITY_MEDIUM, f"Shared source: {headline}",
+        evidence={
+            'resource': top.get('identity'),
+            'kind': top.get('kind'),
+            'keying': top.get('keying'),
+            'direct_count': top.get('direct_count'),
+            'blast_count': top.get('blast_count'),
+            'element_count': blast.get('element_count'),
+            'measured_seconds': top.get('measured_seconds'),
+        },
+        elements=top.get('direct_elements') or [],
+    )]
+
+
 def _memory_finding(result: AnalysisResult) -> List[dict]:
     """UX-104's envelope, as a finding with an id like everything else
     since `UX-75`.
@@ -942,6 +973,10 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     findings.extend(_capacity_recommendation_finding(result))
     findings.extend(_criticality_findings(result))
     findings.extend(_floor_findings(result))
+    # UX-171: last, because it is a fact about the project's shape
+    # rather than about this run - the reader has met the run's own
+    # numbers by the time they reach "and one repo rebuilds all of it".
+    findings.extend(_shared_source_findings(result))
     return findings
 
 

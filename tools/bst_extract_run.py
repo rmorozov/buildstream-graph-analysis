@@ -25,6 +25,7 @@ from the exact same log removes that whole class of mismatch.
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -511,6 +512,14 @@ def extract_run(
     (out_dir / "chrome_trace.json").write_text(
         json.dumps(converter.trace_events, indent=2)
     )
+    # UX-171: which repository feeds which elements. Written here
+    # because this is the one moment both the project and the run are in
+    # hand - `bga analyze` reads a run directory and nothing else, and
+    # keeping it that way is what makes a published capture analyzable
+    # anywhere.
+    inventory = build_source_inventory(
+        project_dir, [element["uid"] for element in graph["elements"]])
+    (out_dir / "sources.json").write_text(json.dumps(inventory, indent=2))
 
     return {
         "targets": targets,
@@ -520,6 +529,40 @@ def extract_run(
         "output_dir": str(out_dir),
         "warnings": warnings,
     }
+
+
+def build_source_inventory(project_dir: str, element_uids) -> dict:
+    """`sources/v1` for the elements this run built (`UX-171`).
+
+    Read from the `.bst` files, with the census's own memoised reader,
+    for the reason the census reads them: this must work against a
+    project directory without invoking BuildStream, and `bst show` has
+    no symbol for a source's url.
+
+    A uid carrying a junction prefix (`junction.bst:element.bst`) is a
+    *subproject's* element and its file lives in that subproject, not
+    here. Those are counted as unreadable rather than guessed at from a
+    path that does not exist, so the report can say how much of the
+    graph the inventory could speak for.
+    """
+    from bga import sources as sources_module
+    from .bst_native_build_tracer import elements_dir_for, read_element_yaml
+
+    elements_dir = elements_dir_for(project_dir)
+    per_element = {}
+    complaints = {}
+    for uid in element_uids:
+        if ":" in uid:
+            complaints[uid] = ["element of a junctioned subproject - its "
+                               "sources are declared in that project"]
+            continue
+        data = read_element_yaml(os.path.join(elements_dir, uid))
+        resources, notes = sources_module.resources_from_element(data)
+        if resources:
+            per_element[uid] = resources
+        if notes:
+            complaints[uid] = notes
+    return sources_module.build_inventory(per_element, complaints)
 
 
 def _CompactRawHelp(prog):

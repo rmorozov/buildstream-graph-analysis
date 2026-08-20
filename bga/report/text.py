@@ -2,6 +2,7 @@
 from typing import List, Optional
 
 from .. import findings as findings_mod
+from .. import sources
 from ..findings import compute_findings, render_findings
 from ..ingest.models import AnalysisResult
 from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
@@ -329,6 +330,59 @@ def _format_by_kind_summary(result: AnalysisResult) -> List[str]:
     return lines
 
 
+def _format_resource_blast(result) -> List[str]:
+    """UX-171: which repository feeds which elements, and what it costs.
+
+    Silent when the run carries no inventory (a capture from before
+    UX-171, or one extracted without its project) and when nothing is
+    shared - a project of per-element `local` sources has no resource
+    row to print, and printing an empty table would suggest it had been
+    looked for and found wanting.
+
+    The cost column is *work*, not wall clock: it is the sum of the
+    blast elements' own durations, which a build with any parallelism
+    at all completes in less. Labelled where it is printed, because a
+    number a reader can mistake for wall clock is worse than no number.
+    """
+    blast = getattr(result, 'resource_blast', None) or {}
+    rows = blast.get('rows') or []
+    if not rows:
+        return []
+    total = blast.get('element_count') or 0
+    lines = ["Shared Sources (blast radius by resource):", ""]
+    lines.append(f"  {'resource':<44}{'direct':>7}{'blast':>7}{'work':>10}")
+    for row in rows:
+        cost = ("unmeasured" if row['measured_seconds'] is None
+                else f"{row['measured_seconds']:.0f}s")
+        identity = row['identity']
+        if len(identity) > 43:
+            identity = "..." + identity[-40:]
+        share = f"/{total}" if total else ""
+        lines.append(f"  {identity:<44}{row['direct_count']:>7}"
+                     f"{str(row['blast_count']) + share:>7}{cost:>10}")
+        lines.append(f"      {sources.keying_clause(row)}")
+        kinds = ", ".join(f"{count} {kind}" for kind, count
+                          in (row['by_element_kind'] or {}).items())
+        if kinds:
+            lines.append(f"      rebuilds: {kinds}")
+        if row['measured_elements'] < row['blast_count']:
+            lines.append(f"      measured for {row['measured_elements']} of "
+                         f"{row['blast_count']} - the rest did not run in this build")
+    unreadable = blast.get('unreadable') or {}
+    if unreadable:
+        # UX-160's lesson: a reader that silently drops what it cannot
+        # parse reports zero and looks like an answer.
+        lines.append(f"  ({len(unreadable)} element(s) whose sources could not be "
+                     f"read are not counted above)")
+    lines += [
+        "",
+        "  Work is the sum of the named elements' own durations, not wall clock:",
+        "  a build with any parallelism completes it in less.",
+        "",
+    ]
+    return lines
+
+
 def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
     """
     Format analysis results as human-readable text.
@@ -393,6 +447,11 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section is None:
         lines.extend(_format_key_findings(result))
         lines.extend(_format_confidence_and_violations(result))
+
+    # UX-171: with the graph, because it is a fact about the graph's
+    # inputs rather than about this run's scheduling.
+    if section in (None, 'graph'):
+        lines.extend(_format_resource_blast(result))
 
     # Certified Floors (Parts 14-17)
     if section in (None, 'floors'):

@@ -35,7 +35,9 @@ Full background: docs/guides/local-loop.md
 import argparse
 import json
 import os
+import shutil
 import sys
+import time
 from typing import List, Optional, Tuple
 
 from bga import run_store
@@ -131,7 +133,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--list", action="store_true",
-        help="List this project's snapshots and exit.",
+        help="List this project's snapshots, with sizes, and exit.",
+    )
+    # UX-159: the store had a size warning and no way to act on it.
+    # A subcommand rather than a flag, because it deletes.
+    parser.add_argument(
+        "--prune", action="store_true",
+        help="Delete old snapshots. Needs --keep and/or --older-than.",
+    )
+    parser.add_argument(
+        "--keep", type=int, default=None, metavar="N",
+        help="With --prune: keep the newest N snapshots.",
+    )
+    parser.add_argument(
+        "--older-than", type=float, default=None, metavar="DAYS",
+        help="With --prune: delete snapshots older than DAYS.",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="With --prune: say what would go, delete nothing.",
     )
     parser.add_argument(
         "--diagnose", action="store_true",
@@ -157,6 +177,32 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.list:
         return _list(project)
+
+    # `prune` is spelled as a bare word, because that is how it reads and
+    # how the docs write it: `bga snapshot prune --keep 5`. Its own flags
+    # have to be parsed here rather than by the main parser: `cmd` is
+    # `argparse.REMAINDER`, so everything after the first positional is
+    # swallowed verbatim - which is exactly what the wrapped build needs
+    # and exactly what a subcommand does not.
+    if args.prune or (args.cmd and args.cmd[0] == "prune"):
+        rest = args.cmd[1:] if (args.cmd and args.cmd[0] == "prune") else []
+        prune_parser = argparse.ArgumentParser(
+            prog="bga snapshot prune", formatter_class=_CompactRawHelp,
+            description="Delete old snapshots, never @last or @prev.")
+        prune_parser.add_argument("--keep", type=int, default=args.keep,
+                                  metavar="N", help="Keep the newest N.")
+        prune_parser.add_argument("--older-than", type=float,
+                                  default=args.older_than, metavar="DAYS",
+                                  help="Delete snapshots older than DAYS.")
+        prune_parser.add_argument("--dry-run", action="store_true",
+                                  default=args.dry_run,
+                                  help="Say what would go, delete nothing.")
+        pruned = prune_parser.parse_args(rest)
+        if pruned.keep is None and pruned.older_than is None:
+            print("Error: prune needs --keep N and/or --older-than DAYS. "
+                  "Nothing was deleted.", file=sys.stderr)
+            return 2
+        return _prune(project, pruned.keep, pruned.older_than, pruned.dry_run)
 
     command = [token for token in args.cmd if token != "--"]
     if not command:
@@ -372,11 +418,80 @@ def _list(project: str) -> int:
     if len(runs) > 1:
         aliases[runs[-2]] = "  @prev"
     print(f"{len(snapshots)} snapshot(s) in {project}:")
+    total = 0
     for path in snapshots:
         suffix = aliases.get(path, "")
         if not run_store.has_run(path):
             suffix = "  (no run directory - the build produced no elements)"
-        print(f"  {os.path.basename(path)}{suffix}")
+        # UX-159: the size belongs next to the name. Without it the user
+        # is told the store is large and left to guess which snapshot is
+        # the heavy one.
+        size = run_store.snapshot_size_bytes(path)
+        total += size
+        print(f"  {os.path.basename(path):<18}{run_store.human_bytes(size):>9}{suffix}")
+    # Sum of file sizes, so it is a little under `du` (which also counts
+    # directory entries) and matches `du --apparent-size` closely.
+    print(f"  {'total':<18}{run_store.human_bytes(total):>9}")
+    return 0
+
+
+def _protected(project: str) -> set:
+    """Snapshots `prune` must never delete.
+
+    `@last` and `@prev` because they are what the next `bga compare`
+    resolves to, and a prune that silently removes the baseline turns
+    the next comparison into a first-snapshot message. Anything a
+    recorded baseline points at, for the same reason one level up.
+    """
+    runs = run_store.list_runs(project)
+    keep = set(runs[-2:])
+    baseline = run_store.read_config(project).get("baseline")
+    if baseline:
+        keep.add(os.path.abspath(baseline))
+    return keep
+
+
+def _prune(project: str, keep: Optional[int], older_than: Optional[float],
+           dry_run: bool) -> int:
+    """Delete snapshots by age or count, never the ones still referred to.
+
+    `UX-159` item 3. The store had exactly one management affordance - a
+    note at 2 GB advising hand-deletion - and no command that deletes
+    anything.
+    """
+    snapshots = run_store.list_snapshots(project)
+    if not snapshots:
+        print(f"No snapshots in {project}.")
+        return 0
+    protected = _protected(project)
+
+    doomed = []
+    if keep is not None:
+        doomed.extend(snapshots[:-keep] if keep > 0 else list(snapshots))
+    if older_than is not None:
+        cutoff = time.time() - older_than * 86400
+        doomed.extend(s for s in snapshots if os.path.getmtime(s) < cutoff)
+    doomed = [s for s in dict.fromkeys(doomed) if s not in protected]
+
+    skipped = [s for s in snapshots if s in protected]
+    if not doomed:
+        print(f"Nothing to prune: {len(snapshots)} snapshot(s), "
+              f"{len(skipped)} of them still referred to by @last/@prev.")
+        return 0
+
+    freed = 0
+    for path in doomed:
+        size = run_store.snapshot_size_bytes(path)
+        freed += size
+        print(f"{'would delete' if dry_run else 'deleted'} "
+              f"{os.path.basename(path)}  {run_store.human_bytes(size)}")
+        if not dry_run:
+            shutil.rmtree(path, ignore_errors=True)
+    print(f"{'would free' if dry_run else 'freed'} "
+          f"{run_store.human_bytes(freed)} from {run_store.runs_dir(project)}")
+    if skipped:
+        names = ", ".join(os.path.basename(s) for s in skipped)
+        print(f"kept {names} - @last/@prev, which the next comparison needs")
     return 0
 
 
@@ -391,8 +506,8 @@ def _warn_if_large(project: str) -> None:
     if size >= _SIZE_WARN_BYTES:
         print(
             f"\nNote: {run_store.runs_dir(project)} holds "
-            f"{size / 1024 ** 3:.1f} GB. Delete snapshot directories you no "
-            f"longer need - nothing else refers to them.",
+            f"{size / 1024 ** 3:.1f} GB. `bga snapshot prune --keep 5` "
+            f"deletes all but the newest five, and never @last or @prev.",
             file=sys.stderr,
         )
 

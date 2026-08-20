@@ -56,6 +56,21 @@ An explicit path keeps working everywhere it worked before. Outside a
 project, an alias fails by name — *"there is no BuildStream project here
 to resolve it against"* — rather than as a missing directory.
 
+When a capture fails, `--diagnose` now keeps what the sandbox said. The
+summary quotes the failing sandbox's stderr instead of leaving you with
+`buildbox-run failed with returncode 1`, and
+
+```bash
+bga capture replay-sandbox <snapshot>/plane2.json.diagnostics.jsonl --list
+bga capture replay-sandbox <snapshot>/plane2.json.diagnostics.jsonl -n 2
+```
+
+re-runs one recorded sandbox directly, with `buildbox-run` out of the
+way. Replay only works while the paths that sandbox bound still exist —
+BuildStream's staging roots are removed as the build proceeds — so it is
+a tool for the failure you are chasing now, and it says which path is
+gone rather than failing obscurely.
+
 One thing to check before the first capture: if any element declares a
 `local` source spanning the project root (or you open a workspace there),
 BuildStream stages `.bga/` — a running capture's scratch included — into

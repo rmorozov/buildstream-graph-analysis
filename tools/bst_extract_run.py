@@ -299,6 +299,7 @@ def extract_run(
     cpu_budget: int = None,
     memory_budget_mb: int = None,
     estimated_job_memory_mb: int = None,
+    interrupted: bool = False,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -427,6 +428,12 @@ def extract_run(
     run_context["build_outcome"] = {
         "failed_elements": failed,
         "failed_count": len(failed),
+        # UX-157: an interrupted build is incomplete for exactly the same
+        # reason a failed one is - elements that never ran contribute no
+        # time, so its duration is not a measurement. Recorded as its own
+        # flag rather than as a fake failed element, because nothing
+        # *failed*; the user stopped it.
+        "interrupted": bool(interrupted),
     }
     # UX-55: BuildStream's own closing Pipeline Summary. This is what
     # separates the two CI scenarios `bga` has to serve - a nightly with

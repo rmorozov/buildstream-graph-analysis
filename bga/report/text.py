@@ -364,16 +364,22 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     for violation in (result.violations or []):
         if violation.get('type') != 'build_failed':
             continue
-        named = ", ".join(violation.get('failed_elements') or []) or "unnamed element"
         counts = (
             f", {violation['built_count']} of {violation['scheduled_count']} "
             f"scheduled elements built"
             if violation.get('scheduled_count') is not None else ""
         )
+        if violation.get('interrupted') and not violation.get('failed_elements'):
+            # UX-157: an interrupt is not a failure, and saying it is
+            # sends the reader hunting for a compile error.
+            what = "it was interrupted before it finished"
+        else:
+            named = ", ".join(violation.get('failed_elements') or []) or "unnamed element"
+            what = (f"{violation.get('failed_count')} element(s) ended in "
+                    f"FAILURE ({named})")
         lines.append(
-            f"THIS BUILD DID NOT FINISH: {violation.get('failed_count')} element(s) "
-            f"ended in FAILURE ({named}){counts}. Every figure below describes a "
-            f"partial build."
+            f"THIS BUILD DID NOT FINISH: {what}{counts}. Every figure below "
+            f"describes a partial build."
         )
         break
     lines.append("")

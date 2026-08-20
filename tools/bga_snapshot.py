@@ -179,6 +179,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         return build_exit
 
     run_dir = os.path.join(snapshot, RUN_SUBDIR)
+    if build_exit == 130:
+        # UX-157: an interrupt is not a build failure and must not read
+        # as one. The capture already salvaged and analyzed whatever
+        # completed; what is left is to name the exit for what it was.
+        print(f"\nInterrupted. The capture was kept in {snapshot} - whatever "
+              f"completed before the interrupt is analyzed above, and a "
+              f"comparison against it obeys the same incompleteness rules as "
+              f"any unfinished build (UX-156).", file=sys.stderr)
     if not os.path.isdir(run_dir):
         # The capture kept whatever it got (the Plane 2 report is on
         # disk); there is simply nothing to analyze. Say which of the two
@@ -272,7 +280,7 @@ def _analyze(run_dir: str, plane2: str) -> int:
 
 
 def _snapshot_failed(snapshot: str) -> bool:
-    """Did this snapshot's build end with failed elements?
+    """Is this snapshot's build incomplete - failed, or interrupted?
 
     Read straight out of `run-context.json`'s `build_outcome` (`UX-54`),
     not by analyzing the run: choosing a baseline must not cost a second
@@ -290,7 +298,10 @@ def _snapshot_failed(snapshot: str) -> bool:
             outcome = json.load(handle).get("build_outcome") or {}
     except (OSError, ValueError):
         return False
-    return bool(outcome.get("failed_elements"))
+    # UX-157: interrupted counts too. Both mean "elements that never ran
+    # contributed no time", which is the only property the baseline
+    # choice cares about.
+    return bool(outcome.get("failed_elements") or outcome.get("interrupted"))
 
 
 def _healthy_baseline(previous):

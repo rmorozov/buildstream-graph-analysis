@@ -307,10 +307,20 @@ class BuildEfficiencyAnalyzer:
         # support cannot pass a broken build on scheduling grounds.
         failed = self.run_context.failed_elements if self.run_context else []
         if failed:
+            # UX-156: carry how far the build got, not just what broke.
+            # `AnalysisResult` does not expose `run_context`, so the
+            # comparison downstream cannot recover these - and a verdict
+            # that refuses without saying "0 of 7 elements built" is
+            # refusing without evidence.
+            queue = self.run_context.build_queue if self.run_context else {}
+            counts = [queue.get('processed'), queue.get('skipped'), queue.get('failed')]
+            recorded = all(isinstance(value, int) for value in counts)
             self.violations.append({
                 'type': 'build_failed',
                 'failed_count': len(failed),
                 'failed_elements': failed,
+                'built_count': queue.get('processed') if recorded else None,
+                'scheduled_count': sum(counts) if recorded else None,
             })
 
         # Initialize blame chain analyzer with normalized tasks

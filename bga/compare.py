@@ -150,6 +150,12 @@ class ComparisonResult:
     # therefore get opposite gate behaviour - low confidence fails open,
     # a failed build fails closed.
     failed_runs: List[str] = field(default_factory=list)
+    # UX-156: one entry per failed run - `{"run", "failed_elements",
+    # "built", "scheduled"}` - so the verdict can name the element and
+    # the counts instead of only the side. `built`/`scheduled` are None
+    # when the capture recorded no queue summary, and the wording drops
+    # the clause rather than inventing a number.
+    failed_run_details: List[dict] = field(default_factory=list)
     # UX-59: the noise band the verdict was judged against, when
     # enough baseline runs were supplied to derive one. None means
     # the fixed-percentage rule was used, which is what every
@@ -212,6 +218,7 @@ class ComparisonResult:
             'marginal_efficiency': self.marginal_efficiency,
             'cache_churn': self.cache_churn,
             'failed_runs': self.failed_runs,
+            'failed_run_details': self.failed_run_details,
             'baseline_band': self.baseline_band,
             'efficiency_gate_evaluated': self.efficiency_gate_evaluated,
             'efficiency_gate_signal': self.efficiency_gate_signal,
@@ -405,6 +412,48 @@ def _check_comparability(baseline_elements: List[Element], candidate_elements: L
     return None
 
 
+def _build_failure_detail(name: str, result) -> dict:
+    """What failed in this run, and how much of it ran at all.
+
+    `UX-156`. Everything comes off the `build_failed` violation
+    (`UX-54`, extended here): `AnalysisResult` carries no `run_context`,
+    so the counts have to be recorded by the analyzer, which does have
+    one. They come from BuildStream's own closing Pipeline Summary
+    (`UX-55`'s `queue_summary`) - the only place that says how many
+    elements were *scheduled* rather than how many produced tasks - and
+    are `None` on a capture taken before that field existed, where the
+    wording drops the clause rather than guessing.
+    """
+    failed: List[str] = []
+    built = scheduled = None
+    for violation in (result.violations or []):
+        if violation.get('type') == 'build_failed':
+            failed = list(violation.get('failed_elements') or [])
+            built = violation.get('built_count')
+            scheduled = violation.get('scheduled_count')
+            break
+    return {'run': name, 'failed_elements': failed,
+            'built': built, 'scheduled': scheduled}
+
+
+def _describe_build_failures(details: List[dict]) -> str:
+    """The verdict's parenthetical: which run died, on what, how far in.
+
+    One sentence, because it replaces IMPROVED/REGRESSED on the line the
+    user actually reads.
+    """
+    parts = []
+    for detail in details:
+        named = ", ".join(detail['failed_elements'][:3]) or "no element named"
+        if len(detail['failed_elements']) > 3:
+            named += f", +{len(detail['failed_elements']) - 3} more"
+        clause = f"the {detail['run']} build failed ({named}"
+        if detail['scheduled'] is not None:
+            clause += f"; {detail['built']} of {detail['scheduled']} scheduled elements built"
+        parts.append(clause + ")")
+    return "; ".join(parts) + " - duration deltas of an unfinished build are not a measurement"
+
+
 def _check_run_modes(
     baseline_result: AnalysisResult, candidate_result: AnalysisResult
 ) -> Optional[str]:
@@ -525,12 +574,29 @@ def _compare_results(
         name for name, res in (("baseline", baseline_result), ("candidate", candidate_result))
         if any(v.get('type') == 'build_failed' for v in (res.violations or []))
     ]
+    # UX-156: the same fact, with enough detail for the verdict to name
+    # what failed. `failed_runs` alone can only say "candidate", and a
+    # user returning to a scrolled terminal after three hours needs the
+    # element.
+    failed_run_details = [
+        _build_failure_detail(name, res)
+        for name, res in (("baseline", baseline_result), ("candidate", candidate_result))
+        if name in failed_runs
+    ]
 
     baseline_total = baseline_metrics['total_duration_us']
     candidate_total = candidate_metrics['total_duration_us']
     delta_total_us = deltas['total_duration_us']
 
-    if baseline_total is None or baseline_total <= 0 or delta_total_us is None:
+    if failed_run_details:
+        # UX-156: before the duration arithmetic, not after it. Round 16
+        # reproduced `Verdict: IMPROVED (-65.6%)` on a build where one
+        # element failed to compile and four never ran - of course it
+        # was faster. The deltas are still rendered below for a reader
+        # who wants the partial numbers; what must refuse is the
+        # verdict, because that is the line a user reads.
+        verdict = f"not comparable ({_describe_build_failures(failed_run_details)})"
+    elif baseline_total is None or baseline_total <= 0 or delta_total_us is None:
         verdict = "not comparable (baseline has no measurable duration)"
     else:
         # Integer-only significance check: |delta|/baseline >= 1% <=>
@@ -583,6 +649,7 @@ def _compare_results(
         comparability_warning=comparability_warning,
         mismatches=mismatches,
         failed_runs=failed_runs,
+        failed_run_details=failed_run_details,
         baseline_band=baseline_band,
         baseline_band_shortfall=baseline_band_shortfall,
         element_diff=element_diff,

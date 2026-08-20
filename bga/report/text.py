@@ -356,6 +356,26 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if instance:
         lines.append(f"Instance: {_format_instance(instance)}")
     lines.append(f"Total Duration: {result.total_duration_us / 1e6:.1f}s")
+    # UX-156 item 2: before any efficiency number, because every one of
+    # them describes a build that stopped early. `_format_key_findings`
+    # already carries the same fact (UX-54), but it is a dozen lines
+    # down a report a user scrolls past - and the figures above it are
+    # the ones that get quoted.
+    for violation in (result.violations or []):
+        if violation.get('type') != 'build_failed':
+            continue
+        named = ", ".join(violation.get('failed_elements') or []) or "unnamed element"
+        counts = (
+            f", {violation['built_count']} of {violation['scheduled_count']} "
+            f"scheduled elements built"
+            if violation.get('scheduled_count') is not None else ""
+        )
+        lines.append(
+            f"THIS BUILD DID NOT FINISH: {violation.get('failed_count')} element(s) "
+            f"ended in FAILURE ({named}){counts}. Every figure below describes a "
+            f"partial build."
+        )
+        break
     lines.append("")
 
     # Key Findings (P4-02) - synthesized summary, shown first, full
@@ -987,10 +1007,28 @@ def format_compare_text(comparison) -> str:
     baseline_total = b.get('total_duration_us')
     delta_total = d.get('total_duration_us')
     pct = (delta_total / baseline_total * 100) if (baseline_total and delta_total is not None) else None
-    verdict_line = f"Verdict: {comparison.verdict.upper()}"
-    if pct is not None:
-        verdict_line += f"  (total duration {_fmt_signed_us(delta_total, pct)}, {_fmt_us(baseline_total)} -> {_fmt_us(c.get('total_duration_us'))})"
-    lines.append(verdict_line)
+    # UX-156: a refusal is `not comparable (<why>)`, and the `<why>` is a
+    # whole sentence. Shouting it and then appending the very delta it
+    # calls meaningless - which is what uppercasing the entire verdict
+    # did - reads as a measurement with an angry preamble. The label is
+    # the verdict; the reason gets its own line; the numbers follow
+    # marked as what they are.
+    head, _, reason = comparison.verdict.partition(" (")
+    reason = reason[:-1] if reason.endswith(")") else reason
+    measurement = (
+        f"total duration {_fmt_signed_us(delta_total, pct)}, "
+        f"{_fmt_us(baseline_total)} -> {_fmt_us(c.get('total_duration_us'))}"
+    ) if pct is not None else None
+    if reason:
+        lines.append(f"Verdict: {head.upper()}")
+        lines.append(f"  {reason}")
+        if measurement:
+            lines.append(f"  Not a verdict, for reference only: {measurement}")
+    else:
+        verdict_line = f"Verdict: {head.upper()}"
+        if measurement:
+            verdict_line += f"  ({measurement})"
+        lines.append(verdict_line)
     # UX-59: a gate that fires must state the band it fired against, or
     # it cannot be argued with.
     band = comparison.baseline_band

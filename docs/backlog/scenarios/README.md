@@ -162,6 +162,48 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 | UX-144 | UX-130 deleted UX-118's entire mechanism and UX-128's `initial` site and annotated neither — in the same range that wrote the annotate-what-you-invalidate convention, whose scope ("a number") proved too narrow for its own worked example. Widen to mechanisms; annotate the two files; fix two stale counts; reconcile UX-106's 🟡 against its now-met return condition | Medium | UX-132, UX-130 | 🟢 Done | [UX-144](UX-0144-ux-130-invalidated-a-mechanism-and-a-guard-table-and-annotated-neither.md) |
 | UX-145 | Snapshot's sticky flags apply silently (set `--trace-spine=off` once, get an unexplained blind spot three weeks later — what-ran is recorded, which is not the same as not-surprising); `bga baseline --candidate` is the one run-dir argument without `@last`; and the compare note renders "Memory envelope grew" on a **+0.0 GB** delta (observed live) | Low | UX-126 | 🟢 Done | [UX-145](UX-0145-snapshot-should-say-which-sticky-flags-it-applied.md) |
 | UX-146 | Filed from a real user report, not an audit: `bst build` succeeds, `bga snapshot` fails with `buildbox-run failed with returncode 1`, and turning off both optional mechanisms changes nothing — three unrelated causes produce that sentence and none is visible from outside. `--diagnose` records what the shim received and exec'd; `--no-inject` bisects the rewrite against the shadowing | High | UX-11, UX-125 | 🟢 Done | [UX-146](UX-0146-a-capture-that-fails-tells-the-user-nothing-about-why.md) |
+| UX-147 | Zero shim invocations has **three** causes — all cache hits, shim never resolved (absolute-path bwrap, or a `buildbox-casd` started before the capture whose PATH predates the shim), shim resolved but exec failed (env-python3 shebang under a noexec/AppArmor temp dir) — and UX-146's summary asserts the benign one. Self-probe exec at capture start failing fast with the errno; absolute `sys.executable` shebang at install; stale-casd detection; a summary that names all three with its evidence | High | UX-146 | 🔴 Not Started | [UX-147](UX-0147-zero-shim-invocations-has-three-causes-and-diagnose-asserts-the-benign-one.md) |
+| UX-148 | The diagnostics record proves the rewrite happened; nothing preserves what the rewritten sandbox *said* when it died (`buildbox-run` reports only a return code on at least one real stack) and nothing can re-run it. Under `--diagnose` the shim tees the real bwrap's stderr per invocation (signal semantics kept — the UX-140 contract); a failed build's summary quotes the stderr tail; `bga capture replay-sandbox` re-execs a recorded argv directly | High | UX-146 | 🔴 Not Started | [UX-148](UX-0148-a-failed-sandbox-should-leave-its-argv-and-its-stderr-behind.md) |
+| UX-149 | `bga doctor` proves the parts with bga's own arguments and `--diagnose` instruments the user's real (expensive, already-failing) build; nothing runs the actual chain — bst → buildbox-run → PATH shim → rewritten argv → hook — on a canned ten-second probe with every recorder on. `bga doctor --capture`: per-link ok/FAIL/skip in chain order, classifying exactly UX-147's causes plus "hook produced no records" | High | UX-125, UX-146, UX-147, UX-148 | 🔴 Not Started | [UX-149](UX-0149-doctor-checks-the-parts-and-nothing-checks-the-chain.md) |
+| UX-150 | The one configuration users actually deploy — wheel from a checkout in one dir, installed into another project's venv, run from a third cwd — is the one configuration no CI capture runs; round 15 proved it works by hand and nothing keeps it working. The packaging job gains a real installed-wheel end-to-end capture; README Install documents the deployed form first, `-e .` as contributor mode | Medium | UX-77 | 🔴 Not Started | [UX-150](UX-0150-the-shape-real-users-install-in-has-zero-capture-coverage.md) |
+| UX-151 | The shim's arity table (validated on bubblewrap 0.9.0, unknown `--flag` = arity 0) mis-splits at any newer flag's *operand* — producing exactly the field sentence, unchanged by turning mechanisms off — while the mis-split detector only checks `command[0].startswith("-")` (the real mis-splits put a numeric operand there) and the record omits every version fact its own motivation blames. Widen the table; make unknown flags a recorded condition; detect numeric `command[0]`; fingerprint bwrap/bst versions | High | UX-146, UX-11 | 🔴 Not Started | [UX-151](UX-0151-the-arity-table-is-the-likeliest-field-failure-and-nothing-records-the-version-that-breaks-it.md) |
+| UX-152 | UX-143's `detach_signal` tests `event != 0` before consulting `is_group_stop_signal` — under SEIZE a group-stop **is** an event-stop, so it returns 0 for exactly the case it was written for; the degrade branch it was filed against still uses `pass_through` untouched; net: a group-stopped tracee is resumed on all three detach paths, and the acceptance's state-`T` probe was never written | High | UX-143, UX-130 | 🔴 Not Started | [UX-152](UX-0152-ux-143s-group-stop-fix-has-the-bug-it-was-filed-against.md) |
+| UX-153 | UX-142's probe principle, half-applied: `check_staged_sources` and the tracer's census (seven sites) still hardcode `elements/` — on a nonstandard layout the census comes back empty and `--trace-spine=auto` silently traces everything at full price; the "wire doctor into the real-project workflow" acceptance clause was dropped unrecorded; `check_compiler` tests presence while the spine needs `-static` | Medium | UX-142, UX-125 | 🔴 Not Started | [UX-153](UX-0153-ux-142-fixed-the-headline-and-left-its-principle-half-applied.md) |
+| UX-154 | Four round-14 claims outran their commits: `real-project.md` has zero `bga baseline` and still teaches the superseded three-flag assembly UX-136 was filed against; UX-138's `toll` sweep stopped one file short of `bga correlate` (which still alternates tax/toll in one sentence, pinned by a test); README's 430 was 420; UX-141 cross-references the wrong finding | Low | UX-136, UX-138, UX-141 | 🔴 Not Started | [UX-154](UX-0154-four-claims-that-outran-their-commits.md) |
+
+## UX-147..UX-154: the fifteenth audit round — a field failure the tool cannot see (2026-08-20)
+
+Round 15 chased the first real external deployment's failure (`bst
+build` works, `bga snapshot` dies with `buildbox-run failed with
+returncode 1` on Ubuntu 24.04) by rebuilding the user's exact shape on
+this container — wheel → fresh foreign venv with its own bst → project
+copy outside the checkout → snapshot from a third directory — and it
+**worked**, falsifying the packaging hypothesis: the failing link is
+environment-specific and *earlier than the shim*, precisely the region
+UX-146's shim-side record cannot see. The first four filings close
+that region: [`UX-147`](UX-0147-zero-shim-invocations-has-three-causes-and-diagnose-asserts-the-benign-one.md)
+makes the zero-invocation verdict honest (self-probe, absolute
+shebang, stale-daemon check, guarded environ),
+[`UX-148`](UX-0148-a-failed-sandbox-should-leave-its-argv-and-its-stderr-behind.md)
+preserves the dying sandbox's stderr and argv and replays them,
+[`UX-149`](UX-0149-doctor-checks-the-parts-and-nothing-checks-the-chain.md)
+composes everything into a canned whole-chain probe, and
+[`UX-150`](UX-0150-the-shape-real-users-install-in-has-zero-capture-coverage.md)
+puts the deployed install shape under CI so it stays working.
+
+The round's code review over `0acaff5..dcdd402` then produced the
+second batch: [`UX-151`](UX-0151-the-arity-table-is-the-likeliest-field-failure-and-nothing-records-the-version-that-breaks-it.md)
+— the arity table against post-0.9.0 bubblewrap, now the **strongest
+remaining hypothesis** for the field failure and invisible to the
+mis-split detector; [`UX-152`](UX-0152-ux-143s-group-stop-fix-has-the-bug-it-was-filed-against.md)
+— UX-143's group-stop fix re-verified by hand and found to contain the
+bug it was filed against, on all three detach paths;
+[`UX-153`](UX-0153-ux-142-fixed-the-headline-and-left-its-principle-half-applied.md)
+and [`UX-154`](UX-0154-four-claims-that-outran-their-commits.md) — the
+half-applied doctor principle and four claims that outran their
+commits. Everything else verified: UX-140/141/144/145/146 hold in
+full, UX-135..139's corpus arithmetic checks to the line. Full
+narrative: [`../../audits/round-15.md`](../../audits/round-15.md).
 
 ## UX-135..UX-145: the fourteenth audit round — docs made simple, concise, consistent (2026-08-19)
 

@@ -605,6 +605,7 @@ the other rounds now:
 | [12](../audits/round-12.md) | directions 3-4 re-verified; the MVP verdict: met |
 | [13](../audits/round-13.md) | round 12's fixes re-verified; the polish direction opened (`UX-125`..`UX-127`) |
 | [14](../audits/round-14.md) | the polish verified as a user; the docs read as a stranger (`UX-135`..`UX-145`) |
+| [15](../audits/round-15.md) | a real field failure the tool cannot see; the diagnosability chain filed and the fix claims re-verified (`UX-147`..`UX-154`) |
 
 ## Verification Log
 

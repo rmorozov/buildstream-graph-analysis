@@ -448,7 +448,10 @@ def check_staged_sources(project_dir: str) -> List[dict]:
         return [_check("census", SKIP,
                        f"{project_dir} has no {element_path(project_dir)}/ "
                        f"directory to census")]
-    elements = sorted(n for n in os.listdir(elements_dir) if n.endswith(".bst"))
+    # UX-160: recursive, via the tracer's one implementation - a
+    # nested layout is the normal shape of a real project.
+    from .bst_native_build_tracer import discover_element_names
+    elements = discover_element_names(project_dir)
     if not elements:
         return [_check("census", SKIP, "the project declares no elements")]
 

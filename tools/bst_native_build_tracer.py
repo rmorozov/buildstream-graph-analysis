@@ -430,6 +430,45 @@ def element_path(project_dir: str) -> str:
     return "elements"
 
 
+def discover_element_names(project_dir: str) -> List[str]:
+    """Every element in the project, by the name BuildStream calls it.
+
+    `UX-160`. Discovery was `os.listdir(...).endswith(".bst")` in four
+    places here and one in doctor - non-recursive, every one of them.
+    Every example in this repository keeps its elements at the top of
+    the element directory, so every test passed; essentially every real
+    project nests them (`elements/components/foo.bst` is
+    freedesktop-sdk's whole layout), and there the census assessed
+    nothing below the top level.
+
+    The bill lands through `UX-113`'s fail-safe: an unassessed element
+    is traced. With most elements unassessed, `--trace-spine=auto` -
+    snapshot's default - quietly becomes `--trace-spine=on` for the
+    whole build, at a per-process ptrace cost `UX-108` has still never
+    measured on a real workload.
+
+    Names are project-relative with `/` separators, which is what
+    BuildStream calls them, what Plane 1 records, and - since `UX-160`
+    also fixed the shim's recovery - what the shim reports per sandbox.
+    That agreement is the point: a census keyed differently from the
+    lookups is a census nobody reads.
+
+    This is `UX-142`'s lesson one directory deeper, and `UX-153`'s left
+    half: that item routed *which* directory through `element_path()`
+    and left *how it is walked* alone.
+    """
+    root = elements_dir_for(project_dir)
+    if not os.path.isdir(root):
+        return []
+    names = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames.sort()
+        for filename in filenames:
+            if filename.endswith(".bst"):
+                names.append(os.path.relpath(os.path.join(dirpath, filename), root))
+    return sorted(names)
+
+
 def elements_dir_for(project_dir: str) -> str:
     return os.path.join(project_dir, element_path(project_dir))
 
@@ -508,6 +547,12 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
                     json.dump(verdicts, handle, sort_keys=True)
                 env["BST_TRACE_SPINE_POLICY"] = "auto"
                 env["BST_TRACE_SPINE_CENSUS"] = census_path
+                # UX-160 item 3: `auto` silently becoming `on` is the
+                # expensive outcome, and it used to produce no output at
+                # all. One line, before the build, so the price is at
+                # least visible when it is being paid.
+                print(format_census_coverage(project_dir, verdicts),
+                      file=sys.stderr)
         else:
             env.pop("BST_TRACE_SPINE", None)
             env.pop("BST_TRACE_SPINE_POLICY", None)
@@ -1967,10 +2012,7 @@ def census_spine_verdicts(project_dir: str) -> Dict[str, bool]:
     whole purpose is to not lose coverage.
     """
     try:
-        elements_dir = elements_dir_for(project_dir)
-        elements = sorted(
-            name for name in os.listdir(elements_dir) if name.endswith(".bst")
-        )
+        elements = discover_element_names(project_dir)
         if not elements:
             return {}
         census = census_project(project_dir, elements)
@@ -1980,6 +2022,27 @@ def census_spine_verdicts(project_dir: str) -> Dict[str, bool]:
         element: bool(entry.get("static_count"))
         for element, entry in (census.get("per_element") or {}).items()
     }
+
+
+def format_census_coverage(project_dir: str, verdicts: Dict[str, bool]) -> str:
+    """One line naming what `--trace-spine=auto` decided, and on what.
+
+    `UX-160` item 3. The unassessed count is the number that matters:
+    those elements are traced by the fail-safe, so a large one means
+    `auto` is really `on` and the build is paying full spine price.
+    Until `UX-108` measures that price, this line is the user's only
+    hint that it is being charged.
+    """
+    declared = discover_element_names(project_dir)
+    assessed = len(verdicts)
+    traced = sum(1 for needs in verdicts.values() if needs)
+    unassessed = max(0, len(declared) - assessed)
+    line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
+            f"{traced} with static binaries (spine traced)")
+    if unassessed:
+        line += (f"; {unassessed} unassessed and therefore traced by default "
+                 f"- `auto` is behaving as `on` for those")
+    return line
 
 
 def census_project(project_dir: str, elements: List[str]) -> dict:
@@ -3378,10 +3441,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # staged roots rather than left to a footnote that fires identically
     # whether it missed nothing or everything.
     if project_dir:
-        elements = sorted(
-            name for name in os.listdir(elements_dir_for(project_dir))
-            if name.endswith(".bst")
-        ) if os.path.isdir(elements_dir_for(project_dir)) else []
+        elements = discover_element_names(project_dir)
         if elements:
             report["static_census"] = census_project(project_dir, elements)
     elif opens_by_element:
@@ -4447,9 +4507,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"Error: no elements/ directory under {args.project_dir}",
                   file=sys.stderr)
             return 1
-        elements = sorted(
-            name for name in os.listdir(elements_dir) if name.endswith(".bst")
-        )
+        elements = discover_element_names(args.project_dir)
         census = census_project(args.project_dir, elements)
         if args.json:
             print(json.dumps(census, indent=2))
@@ -4578,13 +4636,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         # on a project the census can answer for, which is the same
         # "fires identically whatever the truth is" problem one level up.
         if args.project_dir and "static_census" not in saved:
-            elements_dir = elements_dir_for(args.project_dir)
-            if os.path.isdir(elements_dir):
-                elements = sorted(
-                    name for name in os.listdir(elements_dir) if name.endswith(".bst")
-                )
-                if elements:
-                    saved["static_census"] = census_project(args.project_dir, elements)
+            elements = discover_element_names(args.project_dir)
+            if elements:
+                saved["static_census"] = census_project(args.project_dir, elements)
         print(json.dumps(saved, indent=2) if args.json else _format_text(saved))
         return 0
     try:

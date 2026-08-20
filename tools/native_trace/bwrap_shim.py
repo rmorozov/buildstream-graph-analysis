@@ -161,8 +161,42 @@ def extract_element_name(opts: List[str]) -> Optional[str]:
     """
     for i, opt in enumerate(opts):
         if opt == "--dir" and i + 1 < len(opts):
-            return opts[i + 1].rstrip("/").rsplit("/", 1)[-1]
+            return element_from_build_root(opts[i + 1])
     return None
+
+
+# BuildStream's default build root is `buildstream/<project-name>/<element>`,
+# where `<element>` is the element's *project-relative* name and so may
+# itself contain directories.
+_BUILD_ROOT = "buildstream"
+
+
+def element_from_build_root(path: str) -> Optional[str]:
+    """The element name BuildStream would call this build root's element.
+
+    `UX-160`. This used to be "the last path segment", which is right
+    only for a project whose elements all sit at the top of the element
+    directory - the layout every example in this repository happens to
+    use. Measured on a nested copy of `examples/06`:
+
+        --dir buildstream/<project>/components/core.bst
+
+    so the last segment is `core.bst` while BuildStream, Plane 1, and a
+    recursive census all call that element `components/core.bst`. Making
+    the census recursive *without* this would have left every nested
+    element unassessed, with the census carrying entries nobody looks
+    up - and `--trace-spine=auto` then traces them all at full price,
+    which is the bill this item is about.
+
+    Anything that is not a `buildstream/<project>/...` path keeps the
+    old last-segment answer: under a `build-root` override (`UX-56`)
+    every element collapses to the same directory, and inventing
+    structure there would be worse than the flat name.
+    """
+    parts = [part for part in path.strip("/").split("/") if part]
+    if len(parts) >= 3 and parts[0] == _BUILD_ROOT:
+        return "/".join(parts[2:])
+    return parts[-1] if parts else None
 
 
 def build_shim_argv(

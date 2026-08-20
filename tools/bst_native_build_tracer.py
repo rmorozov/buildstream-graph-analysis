@@ -778,6 +778,16 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
                     shutil.copyfile(captured_diagnostics, diagnostics_path)
                 else:
                     open(diagnostics_path, "w").close()
+                # UX-148: the per-invocation stderr the shim tee'd. It is
+                # written beside the record *inside the scratch*, which
+                # `capture_scratch` deletes - so without this the files
+                # exist for the length of the build and are gone by the
+                # time anyone reads the summary that points at them.
+                captured_stderr = captured_diagnostics + ".stderr"
+                if os.path.isdir(captured_stderr):
+                    shutil.copytree(captured_stderr,
+                                    diagnostics_path + ".stderr",
+                                    dirs_exist_ok=True)
             if invocation_log_path is not None and os.path.exists(captured_invocations):
                 shutil.copyfile(captured_invocations, invocation_log_path)
 
@@ -4439,6 +4449,185 @@ def capture_fingerprint() -> dict:
     }
 
 
+def read_invocations(path: str) -> List[dict]:
+    """Every invocation record in a diagnostics file, fingerprint aside."""
+    rows = []
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(row, dict) and "pid" in row:
+                    rows.append(row)
+    except OSError:
+        pass
+    return rows
+
+
+def sandbox_stderr_path(diagnostics: str, row: dict) -> Optional[str]:
+    """This invocation's stderr file, as it exists *now*.
+
+    `UX-148`. The path recorded in the row is where the shim wrote it -
+    inside the capture's scratch, which no longer exists by the time
+    anyone reads the summary. The file is copied out beside the
+    diagnostics record under the same name, so the live location is
+    derivable; the recorded path stays in the row as provenance and is
+    the fallback for a record moved by hand.
+    """
+    beside = os.path.join(diagnostics + ".stderr", f"{row.get('pid')}.stderr")
+    if os.path.exists(beside):
+        return beside
+    recorded = row.get("stderr_path")
+    return recorded if recorded and os.path.exists(recorded) else None
+
+
+def format_sandbox_stderr(path: str, tail_lines: int = 12) -> Optional[str]:
+    """What the failing sandbox said, if `--diagnose` kept it.
+
+    `UX-148` item 2. `buildbox-run` reports only a return code on at
+    least one real stack, so `buildbox-run failed with returncode 1` was
+    the whole of what a user could see - the record proved the rewrite
+    happened and could not say what `bwrap` objected to.
+
+    The *last* invocation with non-empty stderr is the one quoted: the
+    build stops at its first failing element, so the sandbox that spoke
+    last is the sandbox that died.
+    """
+    rows = read_invocations(path)
+    speaking = [(position, row) for position, row in enumerate(rows, 1)
+                if _stderr_size(sandbox_stderr_path(path, row) or "")]
+    if not speaking:
+        return None
+    position, row = speaking[-1]
+    live = sandbox_stderr_path(path, row)
+    try:
+        with open(live, "r", encoding="utf-8", errors="replace") as handle:
+            lines = handle.read().splitlines()
+    except OSError:
+        return None
+    if not lines:
+        return None
+    shown = lines[-tail_lines:]
+    elided = len(lines) - len(shown)
+    out = [
+        "",
+        f"  The sandbox for {row.get('element') or 'an unnamed element'} "
+        f"(pid {row.get('pid')}) wrote this before it ended:",
+        "",
+    ]
+    if elided:
+        out.append(f"    ... {elided} earlier line(s) in {row['stderr_path']}")
+    out.extend(f"    {line}" for line in shown)
+    out += [
+        "",
+        f"  Full output: {live}",
+        "  Re-run that sandbox directly, without buildbox-run in the way:",
+        f"    bga capture replay-sandbox {path} -n {position}",
+    ]
+    return "\n".join(out)
+
+
+def _stderr_size(path: str) -> int:
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return 0
+
+
+def replay_sandbox(diagnostics: str, index: Optional[int] = None,
+                   listing: bool = False, dry_run: bool = False) -> int:
+    """Re-exec one recorded rewritten argv, with nothing in the way.
+
+    `UX-148` item 3. Some sandboxes fail only under BuildStream's exact
+    argv, and `bga doctor`'s probe structurally cannot see that class: it
+    builds a sandbox out of bga's *own* arguments. This runs the argv
+    that actually ran.
+
+    Refuses politely when the recorded binds are gone rather than
+    letting `bwrap` fail obscurely: sandbox roots are ephemeral, so a
+    partially-expired recording is the common case, and a confusing
+    error here would recreate the problem this exists to fix.
+    """
+    rows = read_invocations(diagnostics)
+    if not rows:
+        print(f"No invocations recorded in {diagnostics}. A capture with zero "
+              f"shim invocations records none - see the capture's own summary "
+              f"for why.", file=sys.stderr)
+        return 2
+
+    if listing:
+        for position, row in enumerate(rows, 1):
+            spoke = _stderr_size(sandbox_stderr_path(diagnostics, row) or "")
+            print(f"{position:>3}  {row.get('element') or '(unnamed)':<28} "
+                  f"pid {row.get('pid')}"
+                  + (f"  [{spoke} bytes of stderr]" if spoke else ""))
+        return 0
+
+    if index is None:
+        speaking = [r for r in rows
+                    if _stderr_size(sandbox_stderr_path(diagnostics, r) or "")]
+        row = speaking[-1] if speaking else rows[-1]
+    elif 1 <= index <= len(rows):
+        row = rows[index - 1]
+    else:
+        print(f"There are {len(rows)} recorded invocation(s); -n must be "
+              f"between 1 and {len(rows)}. `--list` shows them.", file=sys.stderr)
+        return 2
+
+    argv = row.get("exec_argv") or []
+    if not argv:
+        print("That record has no exec argv - it predates UX-146.", file=sys.stderr)
+        return 2
+
+    missing = missing_bind_paths(argv)
+    if missing:
+        print(f"Cannot replay: {len(missing)} path(s) this sandbox bound no "
+              f"longer exist. Sandbox roots are ephemeral, so a recording "
+              f"outlives them:", file=sys.stderr)
+        for path in missing[:5]:
+            print(f"  {path}", file=sys.stderr)
+        if len(missing) > 5:
+            print(f"  ... and {len(missing) - 5} more", file=sys.stderr)
+        print("Re-run the capture with --diagnose to record a fresh one.",
+              file=sys.stderr)
+        return 2
+
+    print(f"Replaying {row.get('element') or '(unnamed element)'} "
+          f"(pid {row.get('pid')} at capture time)", file=sys.stderr)
+    if dry_run:
+        print(" ".join(argv))
+        return 0
+    try:
+        return subprocess.run(argv).returncode
+    except OSError as error:
+        print(f"Could not run {argv[0]}: {error}", file=sys.stderr)
+        return 2
+
+
+# bwrap's own bind options, whose *source* argument is a host path that a
+# recording can outlive.
+_BIND_FLAGS = frozenset({
+    "--bind", "--bind-try", "--ro-bind", "--ro-bind-try",
+    "--dev-bind", "--dev-bind-try",
+})
+
+
+def missing_bind_paths(argv: List[str]) -> List[str]:
+    """Host paths this argv binds that are no longer there (`UX-148`)."""
+    missing = []
+    for i, token in enumerate(argv):
+        if token in _BIND_FLAGS and i + 1 < len(argv):
+            source = argv[i + 1]
+            if source.startswith("/") and not os.path.exists(source):
+                missing.append(source)
+    return missing
+
+
 def format_capture_diagnostics(path: str, no_inject: bool = False,
                                sandbox_tasks: Optional[int] = None) -> str:
     """UX-146: the count first, because zero is the answer that matters.
@@ -4684,7 +4873,32 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--json", action="store_true", help="Emit JSON instead of a summary",
     )
 
+    # UX-148 item 3: the ten-second local reproduction for the class of
+    # failure where the sandbox only breaks under BuildStream's exact
+    # argv - which doctor's own-args probe can never see, because it
+    # builds a sandbox with bga's arguments rather than BuildStream's.
+    replay_parser = subparsers.add_parser(
+        "replay-sandbox",
+        help="Re-run a recorded sandbox argv directly, without buildbox-run",
+    )
+    replay_parser.add_argument(
+        "diagnostics", help="A capture's .diagnostics.jsonl file.")
+    replay_parser.add_argument(
+        "-n", type=int, default=None, metavar="N",
+        help="Which recorded invocation to replay (1-based). Default: the last "
+             "one that wrote to stderr, or the last recorded.")
+    replay_parser.add_argument(
+        "--list", action="store_true",
+        help="List the recorded invocations and exit.")
+    replay_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Print the argv that would run, and exit.")
+
     args = parser.parse_args(argv)
+
+    if args.command == "replay-sandbox":
+        return replay_sandbox(args.diagnostics, index=args.n,
+                              listing=args.list, dry_run=args.dry_run)
 
     if args.command == "census":
         elements_dir = elements_dir_for(args.project_dir)
@@ -4770,6 +4984,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                 diagnostics_path, no_inject=args.no_inject,
                 sandbox_tasks=count_build_tasks(wrapped_log_path)),
                 file=sys.stderr)
+            # UX-148 item 2: on a failed build, the generic return code
+            # becomes "and here is what bwrap said".
+            if returncode != 0:
+                spoke = format_sandbox_stderr(diagnostics_path)
+                if spoke:
+                    print(spoke, file=sys.stderr)
 
         print("Analyzing the captured trace...", file=sys.stderr)
         report = load_and_summarize(raw_log_path, project_dir=args.project_dir,

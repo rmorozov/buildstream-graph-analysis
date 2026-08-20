@@ -29,6 +29,7 @@ UX-11's own prototype run).
 """
 import json
 import os
+import signal
 import sys
 import time
 from typing import List, Optional, Tuple
@@ -424,7 +425,8 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
 def record_diagnostics(log_path: Optional[str], received: List[str],
                        exec_argv: List[str], real_bwrap: str,
                        element: Optional[str], spine: Optional[str],
-                       injected: bool) -> bool:
+                       injected: bool,
+                       stderr_path: Optional[str] = None) -> bool:
     """UX-146: one line per invocation, holding both argvs.
 
     A capture that fails tells the user `buildbox-run failed with
@@ -470,6 +472,10 @@ def record_diagnostics(log_path: Optional[str], received: List[str],
             # entry for. Non-empty means the split below this line is a
             # guess, and names the flag to add.
             "unknown_flags": unknown,
+            # UX-148: where this invocation's stderr was tee'd, when the
+            # capture ran under `--diagnose`. `None` on the default path,
+            # which still execs and therefore has nowhere to put it.
+            "stderr_path": stderr_path,
         }
         line = json.dumps(record, sort_keys=True) + "\n"
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
@@ -482,7 +488,86 @@ def record_diagnostics(log_path: Optional[str], received: List[str],
         return False
 
 
-SELF_TEST_ARGV = "--bga-shim-self-test"
+def stderr_record_path(diagnostics_path: str, invocation_id: int) -> str:
+    """Where one invocation's stderr goes, beside the JSONL record."""
+    directory = diagnostics_path + ".stderr"
+    os.makedirs(directory, exist_ok=True)
+    return os.path.join(directory, f"{invocation_id}.stderr")
+
+
+def run_teed(real_bwrap: str, argv: List[str], stderr_path: str) -> int:
+    """Run the real bwrap as a child, copying its stderr to a file.
+
+    `UX-148`, and the reason this is `--diagnose`-only. The default path
+    must keep `exec`-ing: `UX-140` established that the shim *becoming*
+    the real bwrap is what makes signals, exit status and process
+    identity reach `buildbox-run` unchanged, and a wrapper that changes
+    any of those reports on a build that is not the one the user runs.
+
+    Under diagnose the extra process is affordable, but the contract is
+    not: this returns the raw `wait` status so the caller can re-raise a
+    fatal signal against itself, which is the only way a forked shim can
+    still exit `WIFSIGNALED`.
+
+    A real tee, not a redirect - the child's stderr still has to reach
+    `buildbox-run`, or a capture run with `--diagnose` would hide the
+    very message the user is chasing.
+    """
+    read_fd, write_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:  # pragma: no cover - the child never returns
+        try:
+            os.close(read_fd)
+            os.dup2(write_fd, 2)
+            if write_fd > 2:
+                os.close(write_fd)
+            os.execv(real_bwrap, argv)
+        except BaseException as error:  # noqa: BLE001 - last chance to speak
+            try:
+                os.write(2, f"bga: could not exec {real_bwrap}: {error}\n".encode())
+            finally:
+                os._exit(127)
+    os.close(write_fd)
+    try:
+        with open(stderr_path, "wb") as sink:
+            while True:
+                chunk = os.read(read_fd, 65536)
+                if not chunk:
+                    break
+                sink.write(chunk)
+                # Straight to fd 2: this process's `sys.stderr` may be
+                # buffered, and the ordering buildbox-run sees should be
+                # the child's.
+                os.write(2, chunk)
+    except OSError:
+        pass
+    finally:
+        os.close(read_fd)
+    _, status = os.waitpid(pid, 0)
+    return status
+
+
+def exit_like(status: int) -> int:
+    """Reproduce a child's wait status as this process's own exit.
+
+    `UX-148`, preserving `UX-140`'s contract through the forked path: a
+    sandbox killed by a signal has to reach `bst` as `WIFSIGNALED`, and
+    the only way to do that from a parent is to re-raise the same signal
+    against itself with the default disposition restored.
+    """
+    if os.WIFSIGNALED(status):
+        signum = os.WTERMSIG(status)
+        try:
+            signal.signal(signum, signal.SIG_DFL)
+        except (ValueError, OSError):
+            pass
+        os.kill(os.getpid(), signum)
+        # Only reached if the signal was blocked or could not be raised.
+        return 128 + signum
+    return os.WEXITSTATUS(status)
+
+
+SELF_TEST_ARGV = SELF_TEST_ARGV = "--bga-shim-self-test"
 
 
 def main() -> int:
@@ -571,8 +656,32 @@ def main() -> int:
     else:
         argv = [real_bwrap, *sys.argv[1:]]
 
-    record_diagnostics(os.environ.get("BST_TRACE_DIAGNOSTICS"), list(sys.argv[1:]),
-                       argv, real_bwrap, element, spine, inject)
+    # UX-148: under `--diagnose` only, run the real bwrap as a child so
+    # its stderr can be kept. `buildbox-run` reports only a return code
+    # on at least one real stack, so whatever the sandbox said when it
+    # died was gone - the record proved the rewrite happened and could
+    # not say what bwrap objected to.
+    diagnostics_path = os.environ.get("BST_TRACE_DIAGNOSTICS")
+    stderr_path = None
+    if diagnostics_path:
+        try:
+            stderr_path = stderr_record_path(diagnostics_path, invocation_id)
+        except OSError:
+            stderr_path = None  # a diagnostic must never fail a build
+
+    record_diagnostics(diagnostics_path, list(sys.argv[1:]),
+                       argv, real_bwrap, element, spine, inject,
+                       stderr_path=stderr_path)
+
+    if stderr_path:
+        try:
+            return exit_like(run_teed(real_bwrap, argv, stderr_path))
+        except OSError as error:
+            # Falling through to the plain exec is the safe direction: a
+            # capture that cannot tee is still a capture.
+            sys.stderr.write(
+                f"bga: could not tee this sandbox's stderr ({error}); "
+                f"running it without the record.\n")
 
     try:
         os.execv(real_bwrap, argv)

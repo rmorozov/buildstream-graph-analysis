@@ -56,6 +56,13 @@ An explicit path keeps working everywhere it worked before. Outside a
 project, an alias fails by name — *"there is no BuildStream project here
 to resolve it against"* — rather than as a missing directory.
 
+One thing to check before the first capture: if any element declares a
+`local` source spanning the project root (or you open a workspace there),
+BuildStream stages `.bga/` — a running capture's scratch included — into
+that element's cache key and sandbox. There is no ignore mechanism, so
+every capture churns the key. Scope such sources below the root, or
+expect the churn; `bga doctor` warns when it finds one.
+
 A snapshot scales with process count, so a big project's store grows
 quickly — `--list` shows a size per snapshot and a total, and
 

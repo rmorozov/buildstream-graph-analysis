@@ -1,6 +1,6 @@
 # UX-160: the census reads only the top of the element tree, and auto-spine bills the difference
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-113 (the auto policy), UX-153 (which routed the directory and not the recursion), UX-108 (the unmeasured overhead this multiplies)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-113 (the auto policy), UX-153 (which routed the directory and not the recursion), UX-108 (the unmeasured overhead this multiplies)
 
 ## Motivation
 
@@ -60,3 +60,40 @@ than absence, and the census JSON keys equal the element names in the
 shim's records. The same copy under `element-path: files` passes
 identically (the UX-153 half). Mutation: reverting discovery to
 `os.listdir` reddens the census-coverage assertion.
+
+---
+
+## What was built
+
+Recursion alone would not have fixed this, and the measurement is why. On
+a nested copy of `examples/06`, BuildStream's own generated argv carries
+
+```text
+--dir buildstream/<project>/components/core.bst
+```
+
+while the shim's `extract_element_name` returned the last segment,
+`core.bst`. A recursive census keys on `components/core.bst`, so every
+nested element would have stayed unassessed with the census carrying
+entries nobody looks up. The shim now derives the name the way
+BuildStream does - the build root minus its `buildstream/<project>/`
+prefix - and a build-root override (`UX-56`), where every element
+collapses into one directory, keeps the old last-segment answer.
+
+Measured on that nested project, `--trace-spine=auto`:
+
+| | before | after |
+| --- | --- | --- |
+| elements assessed | 0 of 11 | **11 of 11** |
+| sandboxes given the spine | 9 | **0** |
+
+The flat layout is unchanged, and `element-path: src` with nested
+elements underneath - `UX-153`'s half and this one at once, which neither
+covered alone - discovers all 11. Captures now print
+`Census: N of M element(s) assessed ...`, naming the unassessed count
+when there is one.
+
+### Falsified
+
+Reverting discovery to `os.listdir`, reverting the shim to last-segment,
+and dropping the unassessed clause - each red.

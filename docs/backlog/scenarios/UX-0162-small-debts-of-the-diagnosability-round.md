@@ -1,6 +1,6 @@
 # UX-162: small debts of the diagnosability round
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-151, UX-152, UX-153, UX-149, UX-155 (the fixes these debts trail)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-151, UX-152, UX-153, UX-149, UX-155 (the fixes these debts trail)
 
 ## Motivation
 
@@ -64,3 +64,39 @@ claims has a red-on-mutation test; UX-152's log carries either the
 probe or the annotation; the docs-commands test covers the
 `real-project.md` sentence; `real-project-capture.yml`'s summary
 prints the doctor exit it records.
+
+---
+
+## What was built
+
+1. `buildbox_run_path` resolves BuildStream's vendored binary and falls
+   back to `PATH`. Live, it was `null`; it is now
+   `/usr/local/lib/python3.11/dist-packages/buildstream/subprojects/buildbox/buildbox-run`.
+2. `Record: <path>` says `(empty)` only when the file is - verified on a
+   zero-invocation capture whose record holds 361 bytes of fingerprint.
+3. `real-project-capture.yml` prints the `doctor_exit` it records, into
+   the run summary. It was written to `$GITHUB_ENV` and read by nothing.
+4. `element_path()` tolerates indentation, quoting and trailing comments
+   (`element-path: "files"` used to resolve to a directory literally
+   named `"files"`), and the "no elements/ directory" error names the
+   declared path.
+5. Four claims gained tests: the `--diagnose` hint on a failed capture,
+   the selftest seam's absence from the shim's injected environment,
+   the census on an `element-path:` project, and doctor's chain FAIL
+   branches.
+6. `UX-152`'s impossibility claim is annotated rather than rewritten.
+7. `bga doctor` warns when an element's `local` source spans the project
+   root, and `real-project.md` gains the sentence.
+
+### Deviation, recorded
+
+Item 6 offered "write the probe or annotate". The annotation was taken:
+the log now says the *orphaned-group* shape cannot discriminate, which is
+what was measured, rather than "cannot be written as specified", which
+generalised from one shape to all. The constructible probe the review
+describes is named in the annotation and has not been written.
+
+### Falsified
+
+Four mutations - `which`-only resolution, unconditional `(empty)`,
+quote-stripping removed, and the root-spanning check disabled - each red.

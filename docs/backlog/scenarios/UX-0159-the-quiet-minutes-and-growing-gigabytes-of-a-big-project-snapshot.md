@@ -1,6 +1,6 @@
 # UX-159: the quiet minutes and growing gigabytes of a big-project snapshot
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-126 (snapshot), UX-113 (the census), UX-155 (scratch, whose store this sizes)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot), UX-113 (the census), UX-155 (scratch, whose store this sizes)
 
 ## Motivation
 
@@ -57,3 +57,46 @@ within rounding; `prune --keep 2` on a store of five deletes three,
 never the two aliased ones, and reports the freed bytes; the
 `_warn_if_large` text names `bga snapshot prune`. The docs-commands
 test covers the new `--list`/`prune` lines in `real-project.md`.
+
+---
+
+## What was built
+
+**The quiet minutes.** Each bga-owned phase announces itself on stderr,
+one line, no progress bars:
+
+```text
+Capturing into /tmp/p/.bga/runs/20260820T124201Z
+Compiling the trace hook...
+Assessing 11 element(s) for static binaries...
+Census: 11 of 11 element(s) assessed, 0 with static binaries (spine traced)
+...
+Analyzing the captured trace...
+Extracting run data (bst show)...
+```
+
+The rule: any step that can plausibly take >5s on a big project says so,
+so silence always means the build is running.
+
+**The growing gigabytes.** `--list` shows a size per snapshot and a
+total; `bga snapshot prune` takes `--keep N`, `--older-than DAYS` and
+`--dry-run`. It never deletes `@last`, `@prev`, or a recorded baseline -
+a prune that removes the baseline turns the next comparison into a
+first-snapshot message. The 2 GB warning names the command.
+
+Measured on a five-snapshot store: `--list` totals 3.1M against
+`du --apparent-size` 3.2M (bga sums file bytes; `du` also counts
+directory entries), and `prune --keep 2` deleted three, kept the two
+aliased ones, and reported 1.9M freed.
+
+### Deviation, recorded
+
+The task's example lists "Extracting..." before "Analyzing...". The code
+runs them the other way round - the Plane 2 analysis precedes the Plane 1
+extraction - so the lines print in the order the work happens rather than
+in the order the example wrote them.
+
+`prune`'s own flags needed their own parser: `cmd` is
+`argparse.REMAINDER`, so everything after the first positional is
+swallowed verbatim. `--keep` reached `_prune` as `None` before that was
+handled, and a test pins it.

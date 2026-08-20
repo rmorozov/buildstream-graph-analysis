@@ -190,6 +190,52 @@ def _compiles(argv: List[str]) -> bool:
         return False
 
 
+def check_root_spanning_sources(project_dir: Optional[str] = None) -> dict:
+    """Does any element stage the project root - and therefore `.bga`?
+
+    `UX-162` item 7. A `local` source whose path is the project root (or
+    an ancestor of `.bga`) stages bga's own store into that element's
+    cache key and sandbox - live capture scratch included. BuildStream
+    has no ignore mechanism for this, so every capture changes the key
+    of every element that does it, and the cache churn looks like a
+    build problem.
+
+    The census already reads each element's `local` source paths, so
+    this costs one more walk of data already in hand.
+    """
+    if not project_dir:
+        return _check("sources-scoped", SKIP, "no project given")
+    from .bst_native_build_tracer import (
+        _local_source_paths, discover_element_names,
+    )
+    root = os.path.abspath(project_dir)
+    store = os.path.join(root, ".bga")
+    offenders = []
+    try:
+        for element in discover_element_names(project_dir):
+            for path in _local_source_paths(project_dir, element):
+                staged = os.path.abspath(path)
+                if staged == root or store.startswith(staged + os.sep):
+                    offenders.append(f"{element} -> {os.path.relpath(staged, root)}")
+    except (OSError, ValueError) as error:
+        return _check("sources-scoped", SKIP,
+                      f"could not read the project's sources: {error}")
+    if not offenders:
+        return _check("sources-scoped", OK,
+                      "no element stages the project root, so `.bga` stays out "
+                      "of cache keys")
+    shown = ", ".join(offenders[:3])
+    if len(offenders) > 3:
+        shown += f", +{len(offenders) - 3} more"
+    return _check(
+        "sources-scoped", WARN,
+        f"{len(offenders)} element(s) stage the project root: {shown}",
+        remedy=("that stages `.bga/` - including a capture's live scratch - "
+                "into the element's cache key and sandbox, so every capture "
+                "churns the key. BuildStream has no ignore mechanism for it: "
+                "scope the source below the project root, or expect the churn."))
+
+
 def check_stale_casd() -> dict:
     """Is a `buildbox-casd` already running that a capture would reuse?
 
@@ -543,6 +589,8 @@ def run_checks(project_dir: Optional[str] = None) -> List[dict]:
     checks = [check_bst(), check_bwrap(), check_compiler()]
     checks.append(check_stale_casd())
     checks.extend(check_scratch(project_dir))
+    if project_dir:
+        checks.append(check_root_spanning_sources(project_dir))
     project_name = None
     if project_dir:
         from .bst_cache_logs import project_name_from_dir

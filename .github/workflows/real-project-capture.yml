@@ -741,3 +741,25 @@ jobs:
           DIRS="$(python3 -c 'import json,sys; print(" ".join(m["run_dir"] for m in reversed(json.load(open(sys.argv[1]))["members"])))' "$RUNNER_TEMP/trend-set.json")"
           # shellcheck disable=SC2086
           bga cache-trend $DIRS | tee "$RUNNER_TEMP/trend.txt"
+
+      # UX-162 item 3: `doctor_exit` was written into $GITHUB_ENV and
+      # read by nothing - recorded data nobody could see. The environment
+      # check is the first thing to look at when a capture comes back
+      # empty, so its verdict belongs in the run summary rather than in a
+      # variable.
+      - name: Environment check verdict
+        if: always()
+        run: |
+          set -euo pipefail
+          rc="${doctor_exit:-unset}"
+          case "$rc" in
+            0)      note="all checks passed" ;;
+            unset)  note="doctor did not run" ;;
+            *)      note="at least one check FAILED - see the 'bga doctor' step" ;;
+          esac
+          {
+            echo "### Environment check (\`bga doctor\`)"
+            echo
+            echo "Exit \`$rc\` - $note."
+          } >> "$GITHUB_STEP_SUMMARY"
+        shell: bash

@@ -1,6 +1,6 @@
 # UX-156: a build that did not finish must not verdict as if it did
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-126 (snapshot's auto-compare), UX-78 (the refusal grammar this extends)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot's auto-compare), UX-78 (the refusal grammar this extends)
 
 ## Motivation
 
@@ -68,3 +68,47 @@ healthy snapshot auto-compares against the *first* snapshot, names the
 skip, and verdicts normally. The docs-commands test covers the new
 wording's home in `real-project.md` (one sentence: a failed build's
 snapshot refuses its verdict).
+
+---
+
+## What was built
+
+Reproduced first, on a sabotaged `examples/06` where lib-d fails to
+compile and 0 of 7 elements build:
+
+```text
+Verdict: IMPROVED  (total duration -53.25s, -93.0%, 57.23s -> 3.98s)
+rc=0
+```
+
+Now:
+
+```text
+Verdict: NOT COMPARABLE
+  the candidate build failed (lib-d.bst; 0 of 7 scheduled elements built) -
+  duration deltas of an unfinished build are not a measurement
+  Not a verdict, for reference only: total duration -53.25s, -93.0%, ...
+```
+
+The partial numbers stay for a reader who wants them; the *verdict*
+refuses. `analyze` opens with `THIS BUILD DID NOT FINISH` before any
+efficiency figure, and snapshot's automatic comparison walks back to the
+last healthy run and says which it used.
+
+The gate's exit code moved from 4 to 6, deliberately: `UX-54` made it
+fail closed, which stands, but it borrowed "your build got slower" to
+say "your build did not finish". Both `UX-54` tests that pinned 4 are
+updated with the reason.
+
+Element counts are recorded on the `build_failed` violation by the
+analyzer rather than read downstream, because `AnalysisResult` exposes no
+`run_context` - the first attempt's `getattr` would have returned `None`
+on every real run and silently dropped the clause. A test pins that
+absence.
+
+### Falsified
+
+Four mutations, each red. The first attempt at the verdict falsification
+reddened **nothing**: every test built the comparison by hand with a
+ready-made verdict string, so none exercised the decision. Four tests now
+drive the real `compare_runs` over run directories.

@@ -433,8 +433,17 @@ def element_path(project_dir: str) -> str:
     try:
         with open(conf, "r", encoding="utf-8", errors="replace") as handle:
             for line in handle:
-                if line.startswith("element-path:"):
-                    return line.split(":", 1)[1].strip() or "elements"
+                # UX-162 item 4: a naive `startswith` missed an indented
+                # key, and returning the raw remainder handed back YAML
+                # quotes verbatim - `element-path: "files"` resolved to a
+                # directory literally named `"files"`.
+                stripped = line.strip()
+                if stripped.startswith("element-path:"):
+                    value = stripped.split(":", 1)[1].strip()
+                    value = value.split("#", 1)[0].strip()
+                    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                        value = value[1:-1]
+                    return value or "elements"
     except OSError:
         pass
     return "elements"
@@ -4363,6 +4372,46 @@ def count_build_tasks(plane1_log_path: Optional[str]) -> Optional[int]:
     return started
 
 
+def resolve_buildbox_run() -> Optional[str]:
+    """Where `buildbox-run` actually is.
+
+    `UX-162` item 1. This field was `shutil.which("buildbox-run")`, which
+    is null on every standard install: bst 2.x vendors the binary at
+    `site-packages/buildstream/subprojects/buildbox/buildbox-run` and
+    never puts it on `PATH`. Verified null live on this container while
+    the binary was sitting there - and `UX-151`'s motivation had named
+    this exact field as the one a maintainer needs.
+
+    Asking BuildStream where its own subprojects live is the reliable
+    answer; `PATH` stays as the fallback for a distro that does install
+    it normally.
+    """
+    try:
+        from buildstream import _site
+        candidate = os.path.join(_site.subprojects, "buildbox", "buildbox-run")
+        if os.access(candidate, os.X_OK):
+            return candidate
+    except (ImportError, AttributeError, OSError):
+        pass
+    return shutil.which("buildbox-run")
+
+
+def _record_line(path: str) -> str:
+    """`Record: <path>`, saying "empty" only when the file is.
+
+    `UX-162` item 2. This printed `(empty)` on every zero-invocation
+    capture, including one whose record holds `UX-151`'s fingerprint
+    line - so a maintainer told to look at an "empty" file found the
+    version data they needed sitting in it. "Empty" is a claim about
+    the file.
+    """
+    try:
+        empty = os.path.getsize(path) == 0
+    except OSError:
+        empty = True
+    return f"  Record: {path}" + (" (empty)" if empty else "")
+
+
 def capture_fingerprint() -> dict:
     """What the argv above should be *parsed against* (`UX-151`).
 
@@ -4384,7 +4433,7 @@ def capture_fingerprint() -> dict:
         "bwrap_path": bwrap,
         "bwrap_version": _version([bwrap, "--version"]) if bwrap else None,
         "bst_version": _version(["bst", "--version"]) if shutil.which("bst") else None,
-        "buildbox_run_path": shutil.which("buildbox-run"),
+        "buildbox_run_path": resolve_buildbox_run(),
         "arity_table_validated_against": "bubblewrap 0.9.0",
         "platform": platform.platform(),
     }
@@ -4425,7 +4474,7 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
                 "  cache hit - so there was nothing for the shim to be called by.",
                 "  That is the benign reading, and here it is the confirmed one.",
             ]
-            lines.append(f"  Record: {path} (empty)")
+            lines.append(_record_line(path))
             return "\n".join(lines)
         else:
             lines += [
@@ -4473,7 +4522,7 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
             "  but this build did run tasks, so that is not what happened here."
             if sandbox_tasks else
             "  A fully cached build launches no sandbox, which is benign.",
-            f"  Record: {path} (empty)",
+            _record_line(path),
         ]
         return "\n".join(lines)
 
@@ -4640,8 +4689,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "census":
         elements_dir = elements_dir_for(args.project_dir)
         if not os.path.isdir(elements_dir):
-            print(f"Error: no elements/ directory under {args.project_dir}",
-                  file=sys.stderr)
+            print(f"Error: no {element_path(args.project_dir)}/ directory "
+                  f"under {args.project_dir} (the project's declared "
+                  f"element-path)", file=sys.stderr)
             return 1
         elements = discover_element_names(args.project_dir)
         census = census_project(args.project_dir, elements)

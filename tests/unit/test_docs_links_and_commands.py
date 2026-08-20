@@ -551,3 +551,16 @@ def test_the_cli_reference_does_not_still_say_run_directories_only():
     assert "Run *directories* only" not in reference
     assert "bga correlate @last\n" in reference, (
         "the short form the note was standing in for is not documented")
+
+
+def test_the_guide_teaches_the_one_command_baseline_set():
+    """UX-154: UX-136's log claimed this guide taught `bga baseline`
+    while `grep -c` returned 0 — the claim named a file the commit did
+    not touch. A guard, because prose claims about prose are exactly what
+    no other test catches."""
+    guide = (REPO / "docs" / "guides" / "real-project.md").read_text(encoding="utf-8")
+
+    assert "bga baseline" in guide, (
+        "the guide still teaches only the manual --baseline-run assembly")
+    assert guide.index("bga baseline") < guide.index("--baseline-run"), (
+        "the one-command form should lead; the explicit one is what it composes")

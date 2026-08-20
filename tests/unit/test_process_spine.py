@@ -20,8 +20,12 @@ import time
 
 import pytest
 
+from pathlib import Path
+
 from tools.bst_native_build_tracer import compile_spine, parse_trace_log
 from tools.native_trace.bwrap_shim import build_shim_argv
+
+SPINE_SOURCE = Path(__file__).resolve().parents[2] / "tools" / "native_trace" / "spine.c"
 
 CC_AVAILABLE = shutil.which("cc") is not None or shutil.which("gcc") is not None
 
@@ -1090,3 +1094,79 @@ def test_a_site_that_names_no_restart_is_rejected_rather_than_ignored(spine, tmp
     assert result.returncode == 2, "a stale site name ran the build instead"
     assert "names no restart site" in result.stderr
     assert "attach" in result.stderr, "the error does not say what the sites are"
+
+
+class TestAGroupStoppedTraceeIsNotResumedByADetach:
+    """UX-152: UX-143 shipped this function with the bug it was filed
+    against, and the log claimed otherwise.
+
+    Under `PTRACE_SEIZE` a group-stop **is** an event-stop -
+    `wstatus >> 16 == PTRACE_EVENT_STOP`, with `WSTOPSIG` carrying the
+    job-control signal. `detach_signal` tested `event != 0` *first*, so
+    it returned 0 for precisely the case it was written for, on every
+    detach path at once. Detaching with 0 resumes a suspended process;
+    untraced it would have stayed stopped.
+
+    Checked through a decision table rather than a live process, and the
+    reason is itself a finding: when the traced command exits, the
+    survivor's process group is orphaned, and POSIX has the kernel send
+    SIGHUP+SIGCONT to an orphaned group with stopped members. The
+    survivor is therefore resumed moments after the detach whatever
+    signal it carried - measured, identically, on a correct spine and a
+    broken one. A state-`T` probe cannot tell them apart, which is why
+    UX-143's acceptance asked for one and it was never written.
+    """
+
+    def _table(self, spine):
+        result = subprocess.run(
+            [spine], env={**os.environ, "BST_TRACE_SPINE_SELFTEST": "detach-signal"},
+            capture_output=True, text=True, timeout=60)
+        assert result.returncode == 0, result.stderr
+        return dict(
+            (line.split()[0], int(line.split()[1]))
+            for line in result.stdout.splitlines() if line.strip())
+
+    @pytest.mark.parametrize("case,expected", [
+        ("group-stop-SIGSTOP", signal.SIGSTOP),
+        ("group-stop-SIGTSTP", signal.SIGTSTP),
+        ("group-stop-SIGTTIN", signal.SIGTTIN),
+        ("group-stop-SIGTTOU", signal.SIGTTOU),
+    ])
+    def test_a_group_stop_detaches_with_its_own_signal(self, spine, case, expected):
+        """Re-delivering it is what keeps the process stopped."""
+        assert self._table(spine)[case] == expected
+
+    @pytest.mark.parametrize("case", [
+        "attach-stop-SIGTRAP", "exec-event", "exit-event", "signal-SIGTRAP",
+    ])
+    def test_the_tracers_own_stops_detach_with_nothing(self, spine, case):
+        """Passing SIGTRAP on would kill a process that never asked for
+        it - the mirror error, and the reason the group-stop test comes
+        first rather than the event test being deleted."""
+        assert self._table(spine)[case] == 0
+
+    def test_a_real_signal_still_reaches_the_process(self, spine):
+        assert self._table(spine)["signal-SIGSEGV"] == signal.SIGSEGV
+
+    def test_all_three_detach_paths_use_the_one_rule(self):
+        """The degrade branch kept its own copy (`pass_through`) and so
+        kept resuming group-stopped tracees after the other two were
+        fixed. One rule, three call sites."""
+        import re
+
+        source = SPINE_SOURCE.read_text()
+        # The call spans two lines at three of the sites, so match the
+        # whole call rather than a line containing part of it.
+        calls = re.findall(r"ptrace\(PTRACE_DETACH[^;]*;", source, re.S)
+        assert len(calls) == 5, [c.split("\n")[0] for c in calls]
+
+        by_rule = [c for c in calls if "detach_signal" in c]
+        assert len(by_rule) == 3, (
+            f"{len(by_rule)} of 5 detach sites use detach_signal; the degrade "
+            f"branch keeping its own copy is what UX-152 was filed for")
+
+        # The other two are `resume`'s failure detach and the
+        # listen-failed branch, which pass on the signal they were handed
+        # rather than re-deriving it from a wait status they do not have.
+        others = [c for c in calls if "detach_signal" not in c]
+        assert all("(long)sig" in c for c in others), others

@@ -1186,7 +1186,7 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> List[dict
                 f"{len(over)} sibling element(s) spend at least half their time on "
                 f"sandbox tax rather than on building: {', '.join(over[:4])}. "
                 f"Merging them would delete {len(deleted)} staging(s), "
-                f"{sum(deleted) / 1e6:.1f}s of toll"
+                f"{sum(deleted) / 1e6:.1f}s of sandbox tax"
                 + (
                     f" and at least a replayed {projection['saving_us'] / 1e6:.1f}s "
                     f"of build - a floor, because the replay shortens the tasks "
@@ -1209,8 +1209,8 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> List[dict
         'severity': 'info',
         'elements': [],
         'title': (
-            f"No element pays more sandbox toll than it spends building. Across "
-            f"{len(measured)} measured element(s) the largest toll share is "
+            f"No element pays more sandbox tax than it spends building. Across "
+            f"{len(measured)} measured element(s) the largest tax share is "
             f"{worst['toll_share'] * 100:.0f}% ({worst['element']}, "
             f"{worst['toll_us'] / 1e6:.1f}s of {worst['total_us'] / 1e6:.1f}s), "
             f"against the {MERGE_TOLL_AT_LEAST_WORK * 100:.0f}% that would make a "

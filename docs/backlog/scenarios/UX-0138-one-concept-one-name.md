@@ -80,3 +80,13 @@ of `/path/to/run-directory` and `/path/to/run` collapsed);
 
 Out of scope held: the spec's own "task" vocabulary is untouched, and so
 are quoted historical outputs in the audits and case studies.
+
+
+> **Reopened and closed by `UX-154`.** The sweep stopped one file short:
+> `bga correlate` went on alternating "sandbox tax" and "toll" inside a
+> single sentence, and the no-`toll` guard this log claimed was scoped to
+> the cache-logs report alone. Both fixed. The guard now parses every
+> module in `bga/` and `tools/` and checks string *literals the code can
+> print* — docstrings and comments recording `UX-99`'s history are where
+> the word belongs, and the `toll_*` JSON keys stay, because they are a
+> published contract (`UX-75`) rather than prose.

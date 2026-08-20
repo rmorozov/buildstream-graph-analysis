@@ -110,6 +110,82 @@ jobs:
           print('hook.c present in the installed package')
           "
 
+  installed-capture:
+    # UX-150: the shape real users deploy in - a wheel built from a
+    # checkout in one directory, installed into the venv of a project in
+    # another, run from a third - is the one shape no job captures in.
+    # Every capture CI runs is from the repo checkout with the repo's own
+    # layout, and the packaging job above stops at `--help`. So the next
+    # `_bwrap_shim_source`-style path assumption ships unnoticed and the
+    # next field report starts from zero, which is where round 15 started.
+    #
+    # The cheap whole-chain assertion is UX-146's own: `--diagnose`
+    # reports how many times the bwrap shim ran, and a number greater than
+    # zero means bst -> buildbox-run -> PATH shim -> rewritten argv all
+    # held, from an installed wheel.
+    runs-on: ubuntu-latest
+    needs: packaging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install host prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap build-essential cmake
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Build a wheel and install it into a project venv elsewhere
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist/
+          python -m venv /tmp/projvenv
+          /tmp/projvenv/bin/pip install "BuildStream==2.7.0" buildstream-plugins
+          # The wheel, by path, the way a user installs this repo into
+          # their own project's venv - not `-e .`, not from the checkout.
+          /tmp/projvenv/bin/pip install dist/*.whl
+
+      - name: Stage a project outside the checkout
+        run: |
+          examples/stage_cpp_toolchain.sh
+          mkdir -p /tmp/theirproject
+          cp -r examples/06-macro-micro-optimization /tmp/theirproject/proj
+          rm -rf /tmp/theirproject/proj/optimized
+
+      - name: Capture it, from a third directory, with no PYTHONPATH
+        # `cd /tmp/theirproject/proj` and nothing else on the path: the
+        # console script does not put cwd on sys.path, which is how every
+        # prior round's checkout-relative assumption stayed hidden.
+        run: |
+          set -euo pipefail
+          cd /tmp/theirproject/proj
+          unset PYTHONPATH
+          /tmp/projvenv/bin/bga doctor .
+          /tmp/projvenv/bin/bga snapshot --diagnose -- bst --builders 2 build all.bst
+
+      - name: The whole chain held
+        run: |
+          set -euo pipefail
+          cd /tmp/theirproject/proj
+          snapshot=$(ls -d .bga/runs/*/ | tail -1)
+          echo "snapshot: $snapshot"
+          test -d "$snapshot/run"          || { echo "no run directory" >&2; exit 1; }
+          test -s "$snapshot/plane2.json"  || { echo "no Plane 2 report" >&2; exit 1; }
+          test -s "$snapshot/build.log"    || { echo "no Plane 1 log" >&2; exit 1; }
+          ran=$(grep -c '"injected"' "$snapshot/plane2.json.diagnostics.jsonl" || true)
+          echo "the bwrap shim ran $ran time(s) from an installed wheel"
+          [ "$ran" -gt 0 ] || {
+            echo "the shim never ran: bst -> buildbox-run -> PATH shim is broken" >&2
+            exit 1
+          }
+          /tmp/projvenv/bin/bga analyze @last > /dev/null
+          echo "analyze @last resolved from the store, in a foreign venv"
+
   bst-smoke:
     # Real `bst build` needs a sandbox (bubblewrap) - whether unprivileged
     # user namespaces work on GitHub's ubuntu-latest runners is unverified
@@ -234,7 +310,7 @@ jobs:
 
       - name: The bst-gated tier runs, and every one of it passes
         # `-m bst` is the assertion, not a convenience: it selects exactly
-        # the marked tier, so "39 passed" is a claim about the tier rather
+        # the marked tier, so "41 passed" is a claim about the tier rather
         # than about the suite. A skip inside it would still show as
         # `passed` in the exit code, hence the explicit count check below.
         #
@@ -272,14 +348,14 @@ jobs:
             exit 1
           fi
           # Not anchored to column 0: pyproject's `addopts = "-v"` makes
-          # the summary line `===== 39 passed, 1215 deselected in ... =====`.
-          # Bounded on both sides so "139 passed" cannot satisfy it.
-          grep -qE "(^|[[:space:]=])39 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
-            echo "Expected exactly 39 bst-gated tests to run. Got:" >&2
+          # the summary line `===== 41 passed, 1215 deselected in ... =====`.
+          # Bounded on both sides so "141 passed" cannot satisfy it.
+          grep -qE "(^|[[:space:]=])41 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
+            echo "Expected exactly 41 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1
           }
-          echo "39 bst-gated tests ran, none skipped."
+          echo "41 bst-gated tests ran, none skipped."
 
       - name: The whole suite, with bst present
         # The tier does not live in isolation: an extraction change can

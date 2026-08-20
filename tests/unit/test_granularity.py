@@ -117,7 +117,10 @@ def test_nothing_firing_says_how_far_from_the_line_the_project_is():
     edges = [_Edge("base.bst", name) for name in ("a.bst", "b.bst", "c.bst", "d.bst")]
     findings = _merge_candidates(edges, cache_logs, None, None)
     assert [f['id'] for f in findings] == ['merge-not-indicated']
-    assert "largest toll share is 17%" in findings[0]['title']
+    assert "largest tax share is 17%" in findings[0]['title']
+    assert "toll" not in findings[0]['title'], (
+        "UX-138/UX-154: one concept, one name - the rendered text says "
+        "sandbox tax everywhere, including here")
 
 
 def test_no_plane3_report_means_no_merge_half_at_all():
@@ -268,3 +271,47 @@ def test_the_projected_saving_is_published_as_a_floor(tmp_path):
     assert finding['projection_is_a_floor'] is True
     assert "at least a replayed" in finding['title']
     assert "without collapsing them into one" in finding['title']
+
+
+def test_no_user_facing_renderer_says_toll():
+    """UX-154: UX-138's sweep stopped one file short, and the guard it
+    claimed (`test_cache_logs.py`) was scoped to the cache-logs report
+    only — so `bga correlate` went on alternating "sandbox tax" and
+    "toll" inside one sentence, pinned by a test.
+
+    Scoped to string *literals the code can print*, found by parsing
+    rather than grepping: docstrings and comments recording UX-99's own
+    history are exactly the places the word belongs. The JSON keys stay
+    `toll_*` too - they are a published contract (`UX-75`), and renaming
+    a field to tidy prose would break every consumer keyed on it.
+    """
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    offenders = []
+    for path in list((root / "bga").rglob("*.py")) + list((root / "tools").glob("*.py")):
+        tree = ast.parse(path.read_text())
+        docstrings = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef,
+                                 ast.ClassDef)):
+                body = getattr(node, "body", None)
+                if (body and isinstance(body[0], ast.Expr)
+                        and isinstance(body[0].value, ast.Constant)
+                        and isinstance(body[0].value.value, str)):
+                    docstrings.add(id(body[0].value))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+                continue
+            if id(node) in docstrings:
+                continue
+            text = node.value
+            # dict keys and field names are the published contract
+            if text in ("toll", "toll_us", "toll_share", "toll_s"):
+                continue
+            if "toll" in text.replace("toll_us", "").replace("toll_share", ""):
+                offenders.append(
+                    f"{path.relative_to(root)}:{node.lineno}: {text.strip()[:80]}")
+    assert offenders == [], (
+        "user-facing 'toll' left after UX-138's sweep:\n  " + "\n  ".join(offenders))

@@ -32,7 +32,7 @@ the UX-132 convention while touching it.
 
 ## Out of Scope
 
-- The SEIZE-unavailable path (UX-140) and group-stop detach (UX-142).
+- The SEIZE-unavailable path (UX-140) and group-stop detach (UX-143 — this line said UX-142, which is `bga doctor`'s hardcoded target; corrected by `UX-154`).
 
 ## Acceptance Test
 

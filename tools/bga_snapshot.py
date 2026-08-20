@@ -185,6 +185,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"\nNo run directory was extracted - the build exited "
               f"{build_exit} and its log has no completed elements to read. "
               f"The Plane 2 capture is in {snapshot}.", file=sys.stderr)
+        if not args.diagnose and not args.no_inject:
+            # UX-147 item 5: the one thing worth saying to someone whose
+            # build works under plain `bst` and not here.
+            print("Re-run with --diagnose to record what the bwrap shim "
+                  "received and exec'd; --no-inject then says whether the "
+                  "rewrite is what breaks it.", file=sys.stderr)
         return build_exit or 1
 
     print()

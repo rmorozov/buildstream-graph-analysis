@@ -456,6 +456,15 @@ static int detach_signal(int wstatus)
 {
     int event = wstatus >> 16;
     int sig = WSTOPSIG(wstatus);
+    /* UX-152: this test comes FIRST, and getting the order wrong is how
+     * UX-143 shipped the bug it was filed against. Under SEIZE a
+     * group-stop *is* an event-stop - `wstatus >> 16` is
+     * `PTRACE_EVENT_STOP` with `WSTOPSIG` carrying the job-control
+     * signal (see the SEIZE commentary at the top of this file) - so an
+     * `event != 0` short-circuit returns 0 for precisely the case this
+     * function exists to handle, on every detach path at once. */
+    if (event == PTRACE_EVENT_STOP && is_group_stop_signal(sig))
+        return sig;
     if (event != 0 || sig == SIGTRAP)
         return 0;
     return sig;
@@ -528,8 +537,47 @@ static void install_signal_forwarding(void)
     sigaction(SIGQUIT, &sa, NULL);
 }
 
+/* UX-152: `detach_signal` is the whole of the group-stop contract and it
+ * shipped inverted, so it needs a test that does not depend on catching a
+ * process in state `T`.
+ *
+ * That end-to-end probe is not reliably writable: when the traced command
+ * exits, the survivor's process group is orphaned, and POSIX requires the
+ * kernel to send SIGHUP+SIGCONT to an orphaned group containing stopped
+ * members. The survivor is therefore resumed by the *kernel* moments
+ * after the spine detaches it, whatever signal the detach carried - so
+ * sampling `/proc/<pid>/stat` afterwards reads Z or S on a correct spine
+ * and on a broken one alike. Measured: identical results from both
+ * binaries, which is what sent this back to a decision table.
+ *
+ * So the decision itself is exposed instead, for synthesized statuses the
+ * kernel would produce. Inert unless asked for, same as the three failure
+ * seams, and not among the variables `bwrap_shim.py` passes through. */
+static int selftest_detach_signal(void)
+{
+    struct { const char *name; int wstatus; } cases[] = {
+        {"group-stop-SIGSTOP",  (PTRACE_EVENT_STOP << 16) | (SIGSTOP << 8) | 0x7f},
+        {"group-stop-SIGTSTP",  (PTRACE_EVENT_STOP << 16) | (SIGTSTP << 8) | 0x7f},
+        {"group-stop-SIGTTIN",  (PTRACE_EVENT_STOP << 16) | (SIGTTIN << 8) | 0x7f},
+        {"group-stop-SIGTTOU",  (PTRACE_EVENT_STOP << 16) | (SIGTTOU << 8) | 0x7f},
+        {"attach-stop-SIGTRAP", (PTRACE_EVENT_STOP << 16) | (SIGTRAP << 8) | 0x7f},
+        {"exec-event",          (PTRACE_EVENT_EXEC << 16) | (SIGTRAP << 8) | 0x7f},
+        {"exit-event",          (PTRACE_EVENT_EXIT << 16) | (SIGTRAP << 8) | 0x7f},
+        {"signal-SIGSEGV",      (SIGSEGV << 8) | 0x7f},
+        {"signal-SIGTRAP",      (SIGTRAP << 8) | 0x7f},
+    };
+    for (unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+        printf("%s %d\n", cases[i].name, detach_signal(cases[i].wstatus));
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
+    {
+        const char *selftest = getenv("BST_TRACE_SPINE_SELFTEST");
+        if (selftest && strcmp(selftest, "detach-signal") == 0)
+            return selftest_detach_signal();
+    }
     int first = 1;
     if (argc > 1 && strcmp(argv[1], "--") == 0)
         first = 2;
@@ -785,8 +833,12 @@ int main(int argc, char **argv)
              *
              * The pending signal is passed to the detach so a tracee
              * stopped for a real signal still receives it - and only a
-             * real one, per `pass_through` above. */
-            ptrace(PTRACE_DETACH, pid, NULL, (void *)(long)pass_through);
+             * real one. `detach_signal`, not `pass_through`: this branch
+             * kept its own copy of the rule and therefore kept resuming
+             * group-stopped tracees after UX-143 fixed the other two
+             * paths (UX-152). One rule, three call sites. */
+            ptrace(PTRACE_DETACH, pid, NULL,
+                   (void *)(long)detach_signal(wstatus));
             continue;
         }
 
@@ -855,8 +907,9 @@ int main(int argc, char **argv)
         /* An ordinary signal-delivery-stop: pass the signal through so
          * the tracee behaves exactly as it would untraced. Swallowing it
          * here is how a tracer changes the program it is supposed to be
-         * observing. `pass_through` above decides, and the degrade path
-         * shares that decision. */
+         * observing. `pass_through` above decides; the three detach
+         * paths use `detach_signal`, which answers the same question for
+         * a *stop* rather than a restart (UX-152). */
         resume(pid, pass_through, "signal");
     }
 

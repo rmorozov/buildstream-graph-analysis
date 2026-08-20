@@ -13,9 +13,18 @@ It works in three planes — one build's element schedule, the processes inside 
 
 ## Install
 
+Into the venv of the project you want to analyze — `bga` does not have to
+live in that project, or anywhere near it:
+
 ```bash
-pip install -e .
+pip install /path/to/bga-checkout          # or the git URL
 ```
+
+`pip install -e .` from inside this checkout is the **contributor** mode;
+it is what `make test` and `make lint` expect, and not what a user needs.
+Plane 1 and Plane 3 work on that alone. Capturing Plane 2 also needs a
+real `bst` and `bubblewrap` in the same venv — `pip install -e ".[bst]"`,
+or your project's own BuildStream install.
 
 ## Quick start (30 seconds, no BuildStream needed)
 

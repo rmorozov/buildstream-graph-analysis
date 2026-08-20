@@ -229,6 +229,15 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
             )
         return snapshots[-2]
 
+    # UX-177 item 1: an exact name wins before prefix matching. The
+    # store's own same-second disambiguation (`<stamp>`, `<stamp>-01`)
+    # makes a full stamp a strict prefix of its sibling, so the walk-back
+    # hint could print `@20260820T153932Z` and pasting it back raised
+    # "matches 2 snapshots" - a hint the tool produced and then refused.
+    exact = [s for s in snapshots if os.path.basename(s) == name]
+    if exact:
+        return exact[0]
+
     matches = [s for s in snapshots if os.path.basename(s).startswith(name)]
     if not matches:
         raise StoreError(

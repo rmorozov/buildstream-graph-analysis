@@ -441,15 +441,11 @@ def extract_run(
     # failed read as "0 of 7 scheduled elements built", overstating the
     # damage seven-fold and sending a user hunting for six lost builds.
     # The three numbers mean different things, so carry all three.
-    build_queue = (converter.queue_summary or {}).get("build") or {}
-    counts = {name: build_queue.get(name) for name in
-              ("processed", "skipped", "failed")}
-    if all(isinstance(value, int) for value in counts.values()):
-        run_context["build_outcome"].update({
-            "built_count": counts["processed"],
-            "cached_count": counts["skipped"],
-            "failed_task_count": counts["failed"],
-        })
+    # UX-177 item 3: and carried in *one* place. These three were also
+    # copied into `build_outcome`, where nothing read them - the
+    # `build_failed` violation derives them from `queue_summary` below,
+    # which is the recorded source. Two spellings of one number is how a
+    # drift finding starts, so the copy is gone rather than wired up.
     # UX-55: BuildStream's own closing Pipeline Summary. This is what
     # separates the two CI scenarios `bga` has to serve - a nightly with
     # caches off, where every element runs and every signal is about the
@@ -500,6 +496,12 @@ def extract_run(
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    # UX-177 item 4: an extraction into an existing snapshot overwrites
+    # files in place, which moves no directory mtime - so `UX-168`'s size
+    # memo, keyed on exactly that, would survive a re-extraction that
+    # changed the snapshot's size. Dropped here rather than made
+    # cleverer: the producer knows it just rewrote the run.
+    _drop_size_memo(out_dir)
     (out_dir / "graph.json").write_text(json.dumps(graph, indent=2))
     (out_dir / "trace.json").write_text(json.dumps(trace, indent=2))
     (out_dir / "run-context.json").write_text(json.dumps(run_context, indent=2))
@@ -529,6 +531,22 @@ def extract_run(
         "output_dir": str(out_dir),
         "warnings": warnings,
     }
+
+
+def _drop_size_memo(run_dir: Path) -> None:
+    """Invalidate `UX-168`'s snapshot size memo, if this run is in one.
+
+    The memo lives at `<snapshot>/.size` and the run directory is
+    `<snapshot>/run`, so this looks one level up - and does nothing at
+    all for a run directory that is not inside a store, which is most
+    of them.
+    """
+    from bga.run_store import SIZE_CACHE_NAME
+
+    try:
+        (run_dir.parent / SIZE_CACHE_NAME).unlink()
+    except OSError:
+        pass
 
 
 def build_source_inventory(project_dir: str, element_uids) -> dict:
@@ -577,12 +595,12 @@ def main() -> int:
         description="Produce a complete bga-ready run directory (run-context.json + "
         "graph.json + trace.json) from a real BuildStream project + log in one step.",
     )
-    parser.add_argument("project_dir", help="Path to the BuildStream project directory")
-    parser.add_argument("log_path", help="Path to the build log (wrapped or raw)")
+    parser.add_argument("project_dir", help="Path to the BuildStream project directory.")
+    parser.add_argument("log_path", help="Path to the build log (wrapped or raw).")
     parser.add_argument("output_dir", help="Where to write the run directory.")
     parser.add_argument(
         "--format", choices=("auto", "wrapped", "raw"), default="auto",
-        help="Input log format - same semantics as bst_log_to_chrome_trace.py",
+        help="Input log format - same semantics as bst_log_to_chrome_trace.py.",
     )
     parser.add_argument(
         "--start-time", default=None,
@@ -590,7 +608,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--trace-epsilon-us", type=int, default=50000,
-        help="Quantization epsilon in microseconds (Part 3.2 default: 50000)",
+        help="Quantization epsilon in microseconds (Part 3.2 default: 50000).",
     )
     parser.add_argument(
         "--bst-bin", default="bst",

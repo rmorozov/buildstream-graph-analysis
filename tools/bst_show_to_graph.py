@@ -311,7 +311,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Convert real `bst show` output into graph/v9 JSON for bga.",
     )
-    parser.add_argument("project_dir", help="Path to the BuildStream project directory")
+    parser.add_argument("project_dir", help="Path to the BuildStream project directory.")
     parser.add_argument(
         "targets", nargs="+",
         help="Element(s) actually passed to the real bst build/show invocation "

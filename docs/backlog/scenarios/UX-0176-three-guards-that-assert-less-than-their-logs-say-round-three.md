@@ -1,6 +1,6 @@
 # UX-176: three guards that assert less than their logs say, round three
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-163, UX-164, UX-165, UX-169, UX-170 (the logs these correct)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-163, UX-164, UX-165, UX-169, UX-170 (the logs these correct)
 
 ## Motivation
 
@@ -54,3 +54,43 @@ from the wrong pair; conditional inverted; a help string truncated to
 end on a noun; one handler removed); the annotations are in place;
 `grep -n "slowest" docs/guides/real-project.md` finds no band
 sentence.
+
+## What was built
+
+Five guards that described more than they checked, made to check what
+they describe.
+
+1. **The walk-back hint is pasted.** The tests asserted on the *string*
+   `_compare_refs` returns; one now resolves both refs through the same
+   store lookup a user's paste goes through and asserts they land on
+   the two run directories that were compared. Reverting
+   `_compare_refs` to `@prev @last` reddens it. Found while writing it:
+   the fixture used `01`/`02` as snapshot names, which are not valid
+   `@<stamp-prefix>` aliases at all - the paste property is only
+   testable against real stamps, so the test uses them.
+2. **Both store shapes render.** The singular/plural check asserted
+   that both wordings appeared in `main`'s source, which holds whichever
+   branch is reachable. The sentence moved into `_walkback_notice` and
+   the test renders it for one skip and for two. Making the singular
+   branch unreachable reddens it.
+3. **The fragment check matches its description.** It was documented as
+   "every one must end in a terminator" while its pass-list accepted
+   `,` `:` `)` `]`. The pass-list is now real terminators only, scoped
+   to blocks that carry prose rather than argparse's own metavar
+   renderings - which took **sixteen** further help strings to satisfy,
+   every one of them a real unpunctuated sentence.
+4. **The phase-conversion guard uses a seam.** It compared two
+   `source.index()` positions, which holds for any file where one
+   string precedes another - it would have passed with the handler
+   deleted and the words left in a comment. It now raises
+   `KeyboardInterrupt` from inside the analysis phase and asserts on
+   exit 130 and what the user sees on stderr.
+5. **Two prose slips annotated**, per the `UX-132`/`UX-144` convention:
+   `real-project.md` called the band's escapee the "slowest" run when
+   2712.39s is the *fastest*, and `UX-169`'s Motivation called the
+   report row a third copy when `report["processes"]` *is* the records
+   list. Both corrected in place with the correction marked.
+
+**And UX-165's count is one number.** That file said "seven" in three
+places and listed nine; the commit repaired **ten** - nine in
+`bga/cli.py`, one in `tools/`. Counted from the diff, not from memory.

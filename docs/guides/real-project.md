@@ -782,7 +782,7 @@ the baseline set — a minimum of three runs, because a "band" over two
 points just restates them. Strictly better than the fixed rule, and not
 yet enough: over those five same-commit captures the band absorbs the
 −5.8% and −9.8% pairs and still calls the widest one `IMPROVED
-(-25.0%)`, because the slowest run falls below the lower edge of the
+(-25.0%)`, because the *fastest* run falls below the lower edge of the
 band its own presence helped compute
 ([`UX-170`](../backlog/scenarios/UX-0170-the-noise-band-still-calls-a-same-commit-pair-a-25-percent-win.md)).
 Use more baseline runs than the minimum where you can. The whole CI

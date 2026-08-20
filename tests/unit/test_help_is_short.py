@@ -124,6 +124,25 @@ def _help_blocks(rendered):
     return [" ".join(l.strip() for l in b).rstrip() for b in blocks]
 
 
+def _carries_prose(block: str) -> bool:
+    """Whether this block has help text, rather than only an invocation.
+
+    argparse renders `  -f {text,json}, --format {text,json}` with its
+    help on the same or the next line; a block that is only the
+    invocation has no sentence in it to end.
+    """
+    words = block.split()
+    if len(words) < 4:
+        return False
+    # Everything after the last token that still looks like part of the
+    # invocation - a flag, a metavar, a choice list.
+    for index, word in enumerate(words):
+        if not (word.startswith("-") or word.startswith("{")
+                or word.rstrip(",").isupper() or word.endswith(",")):
+            return len(words) - index >= 3
+    return False
+
+
 @pytest.mark.parametrize("command", SUBCOMMANDS)
 def test_no_help_string_ends_mid_sentence(command):
     """A help block must not stop on a word the sentence was still using."""
@@ -142,8 +161,20 @@ def test_no_help_string_ends_mid_sentence(command):
         if not words:
             continue
         last = words[-1]
-        if last.endswith((".", ")", "]", ":", "!", "?", ",")):
-            continue
+        # UX-176: the terminator requirement, applied to blocks that
+        # actually carry prose. The pass-list used to include `,` `:`
+        # `)` `]`, so a help string ending mid-clause was waved through
+        # while the log claimed "every one must end in a terminator" -
+        # a description of a check that was not running.
+        #
+        # A block with no help text at all is argparse's own rendering
+        # of a metavar (`{text,json}`) or a bare positional, and is not
+        # a sentence anybody wrote.
+        if _carries_prose(block):
+            assert last.rstrip(")]\"'").endswith((".", "!", "?")), (
+                f"`bga {command} --help` ends a help block on {last!r}, "
+                f"which is not the end of a sentence:\n    {block}"
+            )
         assert last.lower() not in dangling, (
             f"`bga {command} --help` ends a help block on {last!r}:\n"
             f"  ...{block[-90:]}\n"

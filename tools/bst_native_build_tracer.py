@@ -483,10 +483,19 @@ def buildstream_cache_dir() -> str:
     # the wrong directory for anyone following bst's own docs - a silent
     # false negative on the real daemon, or a false positive against one
     # sitting on the XDG default.
+    # UX-177 item 2: the *file* is selected by existence, and the search
+    # stops there - which is what bst does. Falling through on a missing
+    # *key* instead would read `cachedir` out of `buildstream.conf` when
+    # bst is using a `buildstream2.conf` that simply does not set one,
+    # and answer a directory bst is not using.
     for name in ("buildstream2.conf", "buildstream.conf"):
-        value = read_scalar_key(os.path.join(config_home, name), "cachedir")
+        path = os.path.join(config_home, name)
+        if not os.path.exists(path):
+            continue
+        value = read_scalar_key(path, "cachedir")
         if value:
             return os.path.abspath(os.path.expanduser(value))
+        break
     base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
     return os.path.join(os.path.abspath(base), "buildstream")
 
@@ -888,7 +897,10 @@ def parse_open_lines(lines, open_element_overrides: Optional[Dict[str, str]] = N
     entry: Optional[dict] = None
     remaining = 0
     for raw in lines:
-        line = raw.rstrip("\n")
+        # UX-177 item 5: the `\r` too. `splitlines()`, which the
+        # string-taking wrappers use, drops it; iterating a handle
+        # does not, and a CRLF trace would leave one on every line.
+        line = raw.rstrip("\r\n")
         match = _OPENS_HEADER_RE.match(line)
         if match is None:
             if remaining <= 0:
@@ -962,7 +974,7 @@ def parse_trace_lines(lines) -> List[dict]:
     """
     events = []
     for line in lines:
-        line = line.rstrip("\n")
+        line = line.rstrip("\r\n")
         if not line or not (line.startswith("START ") or line.startswith("END ")):
             continue
         event, rest = line.split(" ", 1)

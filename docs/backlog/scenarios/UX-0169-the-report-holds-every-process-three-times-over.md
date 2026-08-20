@@ -22,7 +22,15 @@ after full report    917 MB   400k entries in report["processes"]
 Every traced process is materialised three times in three shapes —
 parsed event, paired/merged record, report row — and all three are
 alive at once because each stage takes the previous stage's list as an
-argument and the caller keeps a name bound to it. The multiplier is
+argument and the caller keeps a name bound to it.
+
+**Corrected (`UX-176`, round 18):** the third is not a copy.
+`report["processes"]` *is* the records list, the same objects under
+another name, so what is alive at once is two materialisations plus
+the aggregates the report derives from them. The measured breakdown
+below is unaffected - it was measured, not inferred from this
+sentence - and the fix was the right one for a different reason than
+the count of copies. The multiplier is
 ~2.3 kB of Python object per traced process, against ~140 bytes of
 trace text: a **16x amplification**, and it is the amplification, not
 the file, that decides whether a multi-hour build can be analyzed on

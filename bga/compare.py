@@ -93,7 +93,7 @@ def compute_band(durations_us: List[float], k: float = DEFAULT_BAND_K) -> Option
     median = statistics.median(ordered)
     mad = statistics.median([abs(x - median) for x in ordered])
     scaled = 1.4826 * mad
-    return {
+    band = {
         "n": len(ordered),
         "median_us": median,
         "scaled_mad_us": scaled,
@@ -101,6 +101,30 @@ def compute_band(durations_us: List[float], k: float = DEFAULT_BAND_K) -> Option
         "low_us": median - k * scaled,
         "high_us": median + k * scaled,
     }
+    # UX-170: whether the band describes the set it was built from.
+    #
+    # The median and MAD are chosen for robustness to one contaminated
+    # baseline run, and that is still right - see the argument above.
+    # What robustness cannot do is tell a contaminated run from a
+    # genuinely noisy environment, and at n=5 on real GitHub runners the
+    # difference matters: five captures of one fdsdk commit spanned
+    # 2712.39s .. 3614.22s, the band came to 2762.79s .. 4048.77s, and
+    # the *fastest* run fell below the band its own presence helped
+    # compute. `bga compare` then called that same-commit pair
+    # `IMPROVED (-25.0%)`.
+    #
+    # So the band reports it rather than absorbing it. A set with a run
+    # outside its own band is one the band does not describe - and the
+    # caller withholds the duration verdict instead of issuing one the
+    # set's own members contradict. No threshold is introduced: the
+    # check is "does this band contain the runs it came from", which the
+    # data answers by itself.
+    band["observed_low_us"] = ordered[0]
+    band["observed_high_us"] = ordered[-1]
+    outside = [x for x in ordered if x < band["low_us"] or x > band["high_us"]]
+    band["runs_outside_band"] = len(outside)
+    band["describes_its_own_set"] = not outside
+    return band
 
 
 class RunsNotComparableError(ValueError):
@@ -638,6 +662,7 @@ def _compare_results(
         # band is widened to the fixed rule when it is narrower - a set
         # of near-identical baseline runs yields a near-zero MAD, and a
         # band tighter than quantization noise would fire on everything.
+        band_disputed = False
         if baseline_band is not None:
             fixed_half_width = baseline_total * _SIGNIFICANCE_PCT / 100
             half_width = max(
@@ -647,10 +672,37 @@ def _compare_results(
             high = baseline_band['median_us'] + half_width
             baseline_band = dict(baseline_band, low_us=low, high_us=high,
                                  widened_to_fixed_pct=half_width == fixed_half_width)
+            # UX-170: recomputed against the widened edges - widening for
+            # the fixed floor can bring a run back inside.
+            edges = [baseline_band.get('observed_low_us'),
+                     baseline_band.get('observed_high_us')]
+            outside = [x for x in edges
+                       if x is not None and not (low <= x <= high)]
+            baseline_band['runs_outside_band'] = len(outside)
+            baseline_band['describes_its_own_set'] = not outside
             significant = not (low <= candidate_total <= high)
+            # UX-170: the disputed region - outside the band, but inside
+            # the range the baseline set itself produced. A duration the
+            # baselines reached, on the commit they are *of*, is not
+            # evidence that anything changed; calling it one is how a
+            # same-commit pair got announced as `IMPROVED (-25.0%)`.
+            #
+            # Deliberately narrower than "refuse whenever the set is
+            # inconsistent": the pairs the band handles correctly keep
+            # their answers, and only the claim the set contradicts is
+            # withheld. Nothing here is a threshold - the region is the
+            # gap between the band and the runs that built it.
+            in_observed_range = (
+                edges[0] is not None and edges[0] <= candidate_total <= edges[1])
+            band_disputed = significant and in_observed_range and bool(outside)
         else:
             significant = abs(delta_total_us) * 100 >= baseline_total * _SIGNIFICANCE_PCT
-        if not significant:
+            band_disputed = False
+        if band_disputed:
+            # Not a verdict about the build: a duration the baseline set
+            # itself reached cannot be evidence that something changed.
+            verdict = "within the baseline set's own observed range"
+        elif not significant:
             verdict = "no significant change"
         elif delta_total_us < 0:
             verdict = "improved"

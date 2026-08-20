@@ -1,6 +1,6 @@
 # UX-170: the noise band still calls a same-commit pair a 25% win
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-59 (the band), UX-96 (the set that feeds it), UX-92 (which measured the spread)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-59 (the band), UX-96 (the set that feeds it), UX-92 (which measured the spread)
 
 ## Motivation
 
@@ -81,3 +81,59 @@ pair returns a duration verdict other than `NO SIGNIFICANT CHANGE` or an
 explicit refusal. Mutation: shrinking the band back to its current shape
 reddens the outlier pair. Whatever threshold or width is introduced is
 derived from those runs' own measured spread and says so in the code.
+
+## What was built
+
+The band still uses the median and a scaled MAD - `UX-59`'s robustness
+argument is unchanged, and widening the band to cover the observed
+range was tried and **rejected**: it makes one contaminated baseline run
+swallow a real regression (the existing test measures that at
+2.67s → 19.16s of band width, at which point a +15% regression is no
+longer caught). Robustness cannot distinguish a contaminated run from a
+genuinely noisy environment, so the fix is not a wider band.
+
+What the band now reports is whether it describes the set it came
+from - `describes_its_own_set`, `runs_outside_band`, and the set's
+observed edges - and the verdict layer withholds a duration answer in
+the one region where the band and its own runs disagree:
+
+- candidate **inside the band** → `no significant change`, as before;
+- candidate **outside the band but inside the range the baselines
+  themselves reached** → `within the baseline set's own observed
+  range`, which is not a verdict about the build;
+- candidate **outside both** → a real verdict, as before.
+
+No constant is introduced. The disputed region is the gap between the
+band and the runs that built it, which the data defines by itself; the
+rule it encodes is that a duration the baseline set reached, on the
+commit the set is *of*, cannot be evidence that something changed.
+
+### Measured on the five real fdsdk refs
+
+```text
+32064333551 vs 32177690506 -> WITHIN THE BASELINE SET'S OWN OBSERVED RANGE  (-901.83s, -25.0%)
+32064333551 vs 32122941503 -> NO SIGNIFICANT CHANGE  (-208.44s, -5.8%)
+32064333551 vs 32223468993 -> NO SIGNIFICANT CHANGE  (-353.00s, -9.8%)
+```
+
+The pair that read `IMPROVED (-25.0%)` refuses; the two the band
+already handled keep their answers. That is the acceptance, on the same
+five captures that produced the finding.
+
+### A seam left open, deliberately
+
+`--fail-on-regression` has never consulted the band - it applies the
+fixed significance percentage directly (`regression_exceeds_threshold`,
+and its docstring says so). So a *regression* inside the disputed
+region would be refused by the report and failed by the gate. That
+divergence predates this item and changing it changes gate behaviour
+for every existing pipeline, which is more than this item asked for.
+Named here rather than fixed quietly.
+
+### Guards
+
+`tests/unit/test_band_observed_range.py`, seven of them, all on the
+real fdsdk numbers. Three mutations, each red: the refusal removed;
+the refusal widened to "whenever the set is inconsistent" (which
+swallows the answers the band gets right); and the band no longer
+reporting whether it fits its own set.

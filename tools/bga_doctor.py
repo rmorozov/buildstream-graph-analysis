@@ -183,6 +183,40 @@ def _compiles(argv: List[str]) -> bool:
         return False
 
 
+def check_stale_casd() -> dict:
+    """Is a `buildbox-casd` already running that a capture would reuse?
+
+    `UX-161` item 3, and it exists because `--capture`'s own probe
+    structurally cannot see this: that probe isolates `HOME`
+    (`UX-84`'s lesson), which starts a *fresh* daemon with the shim
+    already on `$PATH`. So the chain can pass while the user's next
+    real capture reuses a daemon sitting right there - and a passing
+    chain would be read as "your next capture will work".
+
+    A warning rather than a failure: a running daemon is a fact about
+    the machine, not a broken environment, and `UX-147`'s caution about
+    claiming more than the evidence supports still stands.
+    """
+    from .bst_native_build_tracer import detect_stale_casd
+    found = detect_stale_casd()
+    if not found:
+        return _check("casd-fresh", OK,
+                      "no buildbox-casd is running that a capture would reuse")
+    described = ", ".join(
+        f"pid {entry['pid']}"
+        + (f" ({entry['age_s'] / 60:.0f}m old)" if entry.get("age_s") else "")
+        for entry in found
+    )
+    return _check(
+        "casd-fresh", WARN,
+        f"a buildbox-casd is already running ({described})",
+        remedy=("it was started by a `bst` that never saw a capture's PATH, so a "
+                "build reusing it can miss the shim and capture nothing. Stop it "
+                "before capturing - `bst shutdown`, or kill it - and `bst` will "
+                "start a fresh one. Note the `--capture` chain probe cannot see "
+                "this: it isolates HOME and so starts its own daemon."))
+
+
 def check_scratch(project_dir: Optional[str] = None) -> List[dict]:
     """Can bga execute the shim it writes, and is `TMPDIR` sane?
 
@@ -500,6 +534,7 @@ def check_staged_sources(project_dir: str) -> List[dict]:
 
 def run_checks(project_dir: Optional[str] = None) -> List[dict]:
     checks = [check_bst(), check_bwrap(), check_compiler()]
+    checks.append(check_stale_casd())
     checks.extend(check_scratch(project_dir))
     project_name = None
     if project_dir:

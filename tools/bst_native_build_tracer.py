@@ -156,6 +156,21 @@ def install_bwrap_shim(shim_dir: str) -> str:
     real_bwrap = shutil.which("bwrap")
     if real_bwrap is None:
         raise TraceError("no real bwrap found on PATH - required for the shim to fall back to")
+    write_bwrap_shim(shim_dir)
+    return real_bwrap
+
+
+def write_bwrap_shim(shim_dir: str) -> str:
+    """Materialize the shim as `<shim_dir>/bwrap`, executable.
+
+    Split out of `install_bwrap_shim` (`UX-147` follow-up): resolving the
+    *real* bwrap and writing the shim are two different things, and only
+    the first needs bubblewrap installed. The tests for what this file
+    contains - an absolute shebang, an exec that answers its own probe, a
+    fall-through when the environment is missing - are about this half,
+    and requiring a bwrap binary made all four fail in the one CI matrix
+    that has none, which is exactly where they most needed to run.
+    """
     shim_path = os.path.join(shim_dir, "bwrap")
     with open(_bwrap_shim_source, "r", encoding="utf-8") as handle:
         source = handle.read()
@@ -165,7 +180,7 @@ def install_bwrap_shim(shim_dir: str) -> str:
         handle.write(source)
     st = os.stat(shim_path)
     os.chmod(shim_path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
-    return real_bwrap
+    return shim_path
 
 
 def probe_bwrap_shim(shim_path: str) -> None:

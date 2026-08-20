@@ -50,6 +50,23 @@ def check_bst() -> dict:
     """`bst` on PATH, and which line it is."""
     path = shutil.which("bst")
     if not path:
+        # UX-150 follow-up, found by the installed-capture job on its
+        # first run: invoking `bga` by absolute path - `/venv/bin/bga` -
+        # does *not* put that venv's `bin` on PATH, so a `bst` installed
+        # right beside it is invisible to `shutil.which` and to every
+        # subprocess the capture launches. "Not installed" and "installed
+        # next to me and not on PATH" are different problems, and only
+        # one of them is fixed by installing something.
+        sibling = os.path.join(os.path.dirname(sys.executable), "bst")
+        if os.access(sibling, os.X_OK):
+            return _check(
+                "bst-present", FAIL,
+                f"bst is not on PATH, but there is one at {sibling}",
+                remedy=f"that is the venv this `bga` lives in - activate it "
+                       f"(`source {os.path.dirname(sys.executable)}/activate`) or "
+                       f"put it on PATH. Running the console script by its full "
+                       f"path does not do that, and the capture launches `bst` "
+                       f"as a subprocess, so it needs PATH too")
         return _check(
             "bst-present", FAIL, "bst is not on PATH",
             remedy="pip install 'bga[bst]' (in a virtualenv - a distro-patched "

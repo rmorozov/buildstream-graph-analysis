@@ -518,10 +518,10 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
 
     def test_a_freshly_installed_shim_answers_its_own_probe(self, tmp_path):
         from tools.bst_native_build_tracer import (
-            install_bwrap_shim, probe_bwrap_shim,
+            probe_bwrap_shim, write_bwrap_shim,
         )
 
-        install_bwrap_shim(str(tmp_path))
+        write_bwrap_shim(str(tmp_path))
         probe_bwrap_shim(str(tmp_path / "bwrap"))   # raises on failure
 
     def test_the_shebang_is_an_absolute_interpreter(self, tmp_path):
@@ -529,19 +529,19 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
         whatever process the sandbox layer hands it."""
         import sys
 
-        from tools.bst_native_build_tracer import install_bwrap_shim
+        from tools.bst_native_build_tracer import write_bwrap_shim
 
-        install_bwrap_shim(str(tmp_path))
+        write_bwrap_shim(str(tmp_path))
 
         assert (tmp_path / "bwrap").read_text().startswith(f"#!{sys.executable}\n")
         assert "/usr/bin/env" not in (tmp_path / "bwrap").read_text().split("\n")[0]
 
     def test_a_shim_that_cannot_be_executed_fails_with_the_reason(self, tmp_path):
         from tools.bst_native_build_tracer import (
-            TraceError, install_bwrap_shim, probe_bwrap_shim,
+            TraceError, probe_bwrap_shim, write_bwrap_shim,
         )
 
-        install_bwrap_shim(str(tmp_path))
+        write_bwrap_shim(str(tmp_path))
         os.chmod(tmp_path / "bwrap", 0o644)
 
         with pytest.raises(TraceError) as exc:
@@ -559,9 +559,9 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
         import subprocess
         import sys
 
-        from tools.bst_native_build_tracer import install_bwrap_shim
+        from tools.bst_native_build_tracer import write_bwrap_shim
 
-        install_bwrap_shim(str(tmp_path))
+        write_bwrap_shim(str(tmp_path))
         real = tmp_path / "fake-bwrap"
         real.write_text("#!/bin/sh\nexit 42\n")
         real.chmod(0o755)

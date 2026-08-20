@@ -70,7 +70,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
 
-from .bst_run_wrapped import run_wrapped
+from .bst_run_wrapped import run_wrapped, shutdown_build_group
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
@@ -183,6 +183,16 @@ def write_bwrap_shim(shim_dir: str) -> str:
     st = os.stat(shim_path)
     os.chmod(shim_path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
     return shim_path
+
+
+class CaptureInterrupted(TraceError):
+    """The user stopped the capture; whatever was traced was kept.
+
+    `UX-157`. A distinct class rather than a return code because the
+    caller has a different job in this case - salvage and say so - and
+    because `130` arriving as an ordinary exit status is exactly how
+    an interrupt got mistaken for a build failure before.
+    """
 
 
 class ScratchError(TraceError):
@@ -539,27 +549,57 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         else:
             env.pop("BST_TRACE_NO_INJECT", None)
 
-        if wrapped_log_path is not None:
-            with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
-                returncode = run_wrapped(project_dir, cmd, out_f, env=env)
-        else:
-            returncode = subprocess.run(cmd, cwd=project_dir, env=env).returncode
+        def copy_out():
+            """Move everything the shim wrote out of the scratch.
 
-        captured_log = os.path.join(bind_dir, "trace.log")
-        if os.path.exists(captured_log):
-            shutil.copyfile(captured_log, raw_log_path)
-        if argv_log_path is not None and os.path.exists(captured_argv):
-            shutil.copyfile(captured_argv, argv_log_path)
-        if diagnostics_path is not None:
-            # Created empty when the shim never ran, deliberately: zero
-            # invocations is this file's most important reading, and an
-            # absent file reads as "the flag did not work".
-            if os.path.exists(captured_diagnostics):
-                shutil.copyfile(captured_diagnostics, diagnostics_path)
+            UX-157: this is in a `finally` because the scratch is deleted
+            on the way out of `capture_scratch`, and until UX-157 an
+            interrupt skipped straight past these copies to that
+            deletion. On a three-hour build that threw away three hours
+            of trace that were already on disk - and interruption is the
+            *common* way a long build ends, far more so than the
+            mid-build failure the original comment had in mind.
+            """
+            captured_log = os.path.join(bind_dir, "trace.log")
+            if os.path.exists(captured_log):
+                shutil.copyfile(captured_log, raw_log_path)
+            if argv_log_path is not None and os.path.exists(captured_argv):
+                shutil.copyfile(captured_argv, argv_log_path)
+            if diagnostics_path is not None:
+                # Created empty when the shim never ran, deliberately:
+                # zero invocations is this file's most important reading,
+                # and an absent file reads as "the flag did not work".
+                if os.path.exists(captured_diagnostics):
+                    shutil.copyfile(captured_diagnostics, diagnostics_path)
+                else:
+                    open(diagnostics_path, "w").close()
+            if invocation_log_path is not None and os.path.exists(captured_invocations):
+                shutil.copyfile(captured_invocations, invocation_log_path)
+
+        try:
+            if wrapped_log_path is not None:
+                with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
+                    returncode = run_wrapped(project_dir, cmd, out_f, env=env)
             else:
-                open(diagnostics_path, "w").close()
-        if invocation_log_path is not None and os.path.exists(captured_invocations):
-            shutil.copyfile(captured_invocations, invocation_log_path)
+                # UX-157: same own-group treatment as the wrapped path,
+                # so an interrupt here cannot orphan the build either.
+                proc = subprocess.Popen(cmd, cwd=project_dir, env=env,
+                                        start_new_session=True)
+                try:
+                    returncode = proc.wait()
+                except BaseException:
+                    shutdown_build_group(proc)
+                    raise
+        except KeyboardInterrupt:
+            # The trace is already on disk; `copy_out` in the `finally`
+            # below is what saves it. Re-raised as `CaptureInterrupted`
+            # so callers can tell "the user stopped this" from "bga
+            # crashed" without matching on a signal number.
+            raise CaptureInterrupted(
+                "the capture was interrupted; the trace captured so far was kept"
+            ) from None
+        finally:
+            copy_out()
         return returncode
 
 
@@ -4453,6 +4493,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 scratch_mkdtemp(args.project_dir, "plane1-"), "build.log")
         args.wrapped_log = wrapped_log_path
         invocation_log_path = resolve_invocation_log_path(args)
+        interrupted = False
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=wrapped_log_path,
@@ -4462,6 +4503,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                                           trace_spine=_spine_policy(args.trace_spine),
                                           diagnostics_path=diagnostics_path,
                                           no_inject=args.no_inject)
+        except CaptureInterrupted:
+            # UX-157: everything below this point is salvage, and it is
+            # the same salvage a failed build already got. The trace was
+            # copied out of the scratch before the exception reached
+            # here; what is left is to analyze what there is and say so.
+            interrupted = True
+            returncode = 130
+            print("\nInterrupted. Analyzing what was captured before the "
+                  "interrupt - this is a partial build, and every figure "
+                  "below describes only the elements that finished.",
+                  file=sys.stderr)
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
@@ -4489,7 +4541,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             from .bst_extract_run import extract_run
             try:
                 extract_run(args.project_dir, wrapped_log_path, args.run_dir,
-                            log_format="wrapped")
+                            log_format="wrapped", interrupted=interrupted)
             except Exception as exc:  # noqa: BLE001 - reported, not swallowed
                 print(f"Warning: could not extract a run directory into "
                       f"{args.run_dir}: {exc}", file=sys.stderr)
@@ -4503,7 +4555,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # UX-147 item 5: the failing user is told what would answer the
         # question. Only when it was not already asked for, and only on a
         # failure - a working capture does not need advice.
-        if returncode != 0 and not diagnostics_path:
+        if returncode != 0 and not diagnostics_path and not interrupted:
             print(
                 "\nThe wrapped build failed. If it succeeds under plain `bst` and "
                 "only fails here, re-run with --diagnose: it records what the "

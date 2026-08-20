@@ -306,7 +306,8 @@ class BuildEfficiencyAnalyzer:
         # a violation here, so the CI gate this project is meant to
         # support cannot pass a broken build on scheduling grounds.
         failed = self.run_context.failed_elements if self.run_context else []
-        if failed:
+        interrupted = bool(self.run_context and self.run_context.interrupted)
+        if failed or interrupted:
             # UX-156: carry how far the build got, not just what broke.
             # `AnalysisResult` does not expose `run_context`, so the
             # comparison downstream cannot recover these - and a verdict
@@ -321,6 +322,11 @@ class BuildEfficiencyAnalyzer:
                 'failed_elements': failed,
                 'built_count': queue.get('processed') if recorded else None,
                 'scheduled_count': sum(counts) if recorded else None,
+                # UX-157: the same violation covers both ways of not
+                # finishing, so every consumer of `build_failed` gets
+                # the interrupted case for free instead of needing to
+                # learn about it separately.
+                'interrupted': interrupted,
             })
 
         # Initialize blame chain analyzer with normalized tasks

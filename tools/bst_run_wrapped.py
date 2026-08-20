@@ -29,6 +29,8 @@ own is_bst detection) for the resulting log to parse as a real BuildStream
 invocation under --format wrapped.
 """
 import argparse
+import os
+import signal
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -40,6 +42,59 @@ def _now_str():
     # milliseconds, which is what WrapperTraceConverter.parse_timestamp
     # (strptime "%Y-%m-%d %H:%M:%S,%f") expects.
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+
+
+def signal_build_group(proc, sig) -> None:
+    """Send `sig` to the whole process group the build runs in.
+
+    `UX-157`. The build is spawned with `start_new_session=True`, so it
+    is not in this process's group and a terminal's Ctrl-C no longer
+    reaches it. That is deliberate: `bga` decides when the build is
+    interrupted, so it can salvage the trace afterwards rather than
+    being torn down alongside it. The cost is that forwarding becomes
+    our job, which is what this is.
+
+    Silent on a group that is already gone - a race with the build's own
+    exit is the normal case here, not an error.
+    """
+    try:
+        os.killpg(os.getpgid(proc.pid), sig)
+    except (ProcessLookupError, PermissionError, OSError):
+        pass
+
+
+def shutdown_build_group(proc, emit=None, grace: float = 120.0) -> None:
+    """Stop an interrupted build the way a user pressing Ctrl-C expects.
+
+    `UX-157`. SIGINT first, because `bst` handles it properly - it stops
+    scheduling, lets running jobs finish or abort, and writes its
+    summary, which is what makes the partial Plane 1 log worth having.
+    Escalates only if it does not go, and the escalation is to the whole
+    group: round 16 observed a `bst` that kept building for hours after
+    `bga` died, because nothing had ever addressed anything but the
+    direct child.
+    """
+    def say(message):
+        if emit is not None:
+            emit(message)
+
+    signal_build_group(proc, signal.SIGINT)
+    try:
+        proc.wait(timeout=grace)
+        return
+    except subprocess.TimeoutExpired:
+        say(f"the build did not stop within {grace:g}s of SIGINT - sending SIGTERM")
+    signal_build_group(proc, signal.SIGTERM)
+    try:
+        proc.wait(timeout=30)
+        return
+    except subprocess.TimeoutExpired:
+        say("the build did not stop after SIGTERM - sending SIGKILL")
+    signal_build_group(proc, signal.SIGKILL)
+    try:
+        proc.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        say("the build's process group survived SIGKILL; giving up on it")
 
 
 def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:
@@ -77,10 +132,24 @@ def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:
         text=True,
         bufsize=1,
         env=env,
+        # UX-157: its own session, hence its own process group. Without
+        # it there is nothing to address but the direct child, and round
+        # 16 watched a `bst` build on for hours after the `bga` that
+        # started it was gone.
+        start_new_session=True,
     )
-    for line in proc.stdout:
-        emit(line.rstrip("\n"))
-    proc.wait()
+    try:
+        for line in proc.stdout:
+            emit(line.rstrip("\n"))
+        proc.wait()
+    except BaseException as error:
+        # `BaseException`, not `Exception`: `KeyboardInterrupt` is the
+        # case this exists for, and it is not an `Exception`. Anything
+        # that gets us out of the read loop leaves a build running that
+        # nobody is reading from any more, so it is stopped either way.
+        emit(f"Stopping the build after {type(error).__name__}")
+        shutdown_build_group(proc, emit=emit)
+        raise
 
     emit(f"Return code: {proc.returncode}")
     return proc.returncode

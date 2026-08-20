@@ -426,14 +426,16 @@ def _build_failure_detail(name: str, result) -> dict:
     """
     failed: List[str] = []
     built = scheduled = None
+    interrupted = False
     for violation in (result.violations or []):
         if violation.get('type') == 'build_failed':
             failed = list(violation.get('failed_elements') or [])
             built = violation.get('built_count')
             scheduled = violation.get('scheduled_count')
+            interrupted = bool(violation.get('interrupted'))
             break
-    return {'run': name, 'failed_elements': failed,
-            'built': built, 'scheduled': scheduled}
+    return {'run': name, 'failed_elements': failed, 'built': built,
+            'scheduled': scheduled, 'interrupted': interrupted}
 
 
 def _describe_build_failures(details: List[dict]) -> str:
@@ -444,13 +446,24 @@ def _describe_build_failures(details: List[dict]) -> str:
     """
     parts = []
     for detail in details:
-        named = ", ".join(detail['failed_elements'][:3]) or "no element named"
-        if len(detail['failed_elements']) > 3:
-            named += f", +{len(detail['failed_elements']) - 3} more"
-        clause = f"the {detail['run']} build failed ({named}"
-        if detail['scheduled'] is not None:
-            clause += f"; {detail['built']} of {detail['scheduled']} scheduled elements built"
-        parts.append(clause + ")")
+        counted = (
+            f"{detail['built']} of {detail['scheduled']} scheduled elements built"
+            if detail['scheduled'] is not None else None
+        )
+        if detail.get('interrupted') and not detail['failed_elements']:
+            # UX-157: say what happened. "The build failed" is wrong here
+            # and would send a user looking for a compile error that does
+            # not exist.
+            clause = f"the {detail['run']} build was interrupted"
+            if counted:
+                clause += f" ({counted})"
+        else:
+            named = ", ".join(detail['failed_elements'][:3]) or "no element named"
+            if len(detail['failed_elements']) > 3:
+                named += f", +{len(detail['failed_elements']) - 3} more"
+            clause = f"the {detail['run']} build failed ({named}"
+            clause += f"; {counted})" if counted else ")"
+        parts.append(clause)
     return "; ".join(parts) + " - duration deltas of an unfinished build are not a measurement"
 
 

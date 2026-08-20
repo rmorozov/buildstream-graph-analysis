@@ -240,6 +240,32 @@ class RunContext:
         return list(self.build_outcome.get("failed_elements", []))
 
     @property
+    def interrupted(self) -> bool:
+        """Was this build stopped by the user before it finished?
+
+        `UX-157`. Distinct from `failed_elements`: nothing failed, the
+        user pressed Ctrl-C. Both make the run *incomplete*, which is
+        what every consumer of this actually cares about, so they are
+        answered together by `incomplete_reason` below.
+        """
+        return bool((self.build_outcome or {}).get("interrupted"))
+
+    @property
+    def incomplete_reason(self) -> Optional[str]:
+        """Why this build is not a measurement, or `None` if it is one.
+
+        `UX-156` refuses to verdict an unfinished build; `UX-157` added
+        the second way to be unfinished. One accessor so a consumer
+        cannot handle one and forget the other - which is what happened
+        between those two items.
+        """
+        if self.failed_elements:
+            return "failed"
+        if self.interrupted:
+            return "interrupted"
+        return None
+
+    @property
     def wall_clock_us(self) -> Optional[int]:
         """Wall clock duration in microseconds."""
         if self.wall_start_us is not None and self.wall_end_us is not None:

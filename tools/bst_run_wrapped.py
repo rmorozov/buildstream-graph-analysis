@@ -284,7 +284,7 @@ def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("project_dir", help="Path to the BuildStream project directory (cwd for the command)")
+    parser.add_argument("project_dir", help="Path to the BuildStream project directory (cwd for the command).")
     parser.add_argument("output_log", help="Path to write the wrapped-format log to")
     parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst --builders 2 build all.bst")
     args = parser.parse_args()

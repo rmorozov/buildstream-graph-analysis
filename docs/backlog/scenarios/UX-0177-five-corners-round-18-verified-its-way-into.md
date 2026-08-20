@@ -1,6 +1,6 @@
 # UX-177: five corners round 18 verified its way into
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-164, UX-166, UX-168 (the landings these trail)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-164, UX-166, UX-168 (the landings these trail)
 
 ## Motivation
 
@@ -51,3 +51,32 @@ short-circuit reddens it); the config corner test asserts bga and
 bst agree on both file layouts; one source of truth for the failed-run
 counts (grep proves the other gone); re-extraction drops `.size` and
 `--list` shows the new size; both readers `splitlines()`.
+
+## What was built
+
+1. **An exact stamp wins before prefix matching.** The store's
+   same-second disambiguation makes `<stamp>` a strict prefix of
+   `<stamp>-01`, so `resolve_snapshot` refused the exact name as
+   ambiguous - and the walk-back hint prints exactly that name. A
+   genuinely ambiguous prefix is still refused; only the exact match
+   short-circuits.
+2. **The casd config file is selected by existence, then read.** bst
+   picks the *file* and stops; bga's loop fell through on a missing
+   *key*, so a `buildstream2.conf` without `cachedir` beside a
+   `buildstream.conf` with one made the check answer a directory bst is
+   not using.
+3. **One number, one source.** `build_outcome`'s three-way counts had
+   no consumer - the `build_failed` violation derives them from
+   `queue_summary` - so the copy is gone rather than wired up.
+4. **The size memo does not survive a re-extraction.** An extraction
+   into an existing snapshot overwrites files in place, which moves no
+   directory mtime, so `UX-168`'s memo - keyed on exactly that - would
+   have survived a re-extraction that changed the size. The producer
+   drops it, because the producer is what knows.
+5. **CRLF in both streaming readers.** `rstrip("\r\n")`, so a CRLF
+   trace parses identically to an LF one, which `splitlines()` (used by
+   the string-taking wrappers) already did.
+
+Twelve guards in `tests/unit/test_round18_tail.py`. Four mutations,
+each red; item 3's guard is a source check and is labelled as one -
+there is nothing left to call.

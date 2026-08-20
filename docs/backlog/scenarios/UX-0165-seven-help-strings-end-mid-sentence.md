@@ -1,4 +1,4 @@
-# UX-165: seven help strings end mid-sentence
+# UX-165: ten help strings end mid-sentence
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the concision pass that cut them)
 
@@ -6,7 +6,7 @@
 
 UX-158's cut worked at the line level and the guard proves it — but
 "flag help cut to its first sentence" was applied by deleting
-continuation *lines*, and at least seven strings lost their sentence's
+continuation *lines*, and ten strings lost their sentence's
 back half. Rendered verbatim today: `bga correlate --help` ends a flag
 with "for the same", `bga graph --help` with "grouped by BuildStream",
 and the round-17 review lists five more (`bga/cli.py:1083` "…run.
@@ -34,17 +34,18 @@ the UX-132/UX-144 convention.
 
 ## Acceptance Test
 
-The seven sites render complete sentences under `--help`; the
+The ten sites render complete sentences under `--help`; the
 fragment check reddens when a continuation line is deleted from any
 flag help (mutation on one site); every command still meets its
 line cap.
 
 ## What was built
 
-Seven flag helps got their sentences back — `--plane2` (twice),
+Ten flag helps got their sentences back — `--plane2` (twice),
 `graph --by-kind`, `sweep --calibration-dir`, `correlate --cache-logs`,
 `correlate native_report`, `cache-trend run_dirs`, `cache-trend
---format`, `compare --regression-threshold` — rewritten to end where
+--format`, `compare --regression-threshold`, and `extract
+--native-max-jobs` — rewritten to end where
 they mean to rather than restored verbatim, since what UX-158 cut was
 mostly design history and only incidentally the predicate.
 
@@ -56,3 +57,15 @@ balance. That check is what makes the line-count guard safe to keep.
 
 UX-158's own task file carries an annotation that its table of
 before/after line counts predates this repair.
+
+**Count corrected (`UX-176`, round 18).** This file said "seven" in
+three places and listed nine; the commit repaired **ten** - nine in
+`bga/cli.py` and one in `tools/`. One number now, and it is the one the
+diff supports.
+
+**And the guard was weaker than this file claimed.** The fragment check
+was described here as "every one must end in a terminator", while its
+pass-list accepted `,` `:` `)` `]` - a help string ending mid-clause
+went through. `UX-176` narrowed the pass-list to real terminators and
+scoped the check to blocks that carry prose rather than argparse's own
+metavar renderings, which took sixteen further help strings to satisfy.

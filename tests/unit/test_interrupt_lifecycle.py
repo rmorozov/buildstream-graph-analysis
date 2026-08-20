@@ -133,10 +133,35 @@ class TestEveryPhaseConverts:
             "both the pre-build and post-build windows need one")
         assert "Interrupted before the build started" in source
 
-    def test_the_post_build_region_is_inside_a_handler(self):
-        import inspect
+    def test_the_post_build_region_is_inside_a_handler(self, tmp_path, capsys,
+                                                       monkeypatch):
+        """UX-176: through a seam, not by reading the source.
+
+        The previous version compared two `source.index()` positions,
+        which holds for any file where one string happens to precede
+        another - it would have passed with the handler deleted and the
+        words left in a comment. This raises the interrupt from inside
+        the phase and asserts on what the user sees.
+        """
+        import sys as _sys
         from tools import bst_native_build_tracer as tracer
-        source = inspect.getsource(tracer.main)
-        analysing = source.index("Analyzing the captured trace")
-        handler = source.index("format_post_build_interrupt")
-        assert analysing < handler, "the handler must follow the region it guards"
+
+        log = tmp_path / "build.log"
+        log.write_text("[wrapper] INFO: Executing command: bst build a.bst\n")
+
+        def interrupt_during_analysis(*_args, **_kwargs):
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(tracer, "load_and_summarize", interrupt_during_analysis)
+        monkeypatch.setattr(tracer, "run_traced_build",
+                            lambda *a, **k: (0, str(log), False))
+        monkeypatch.setattr(_sys, "argv", [
+            "bga-capture", "run", "--wrapped-log", str(log),
+            str(tmp_path), str(tmp_path / "out.json"),
+            "--", "bst", "build", "a.bst",
+        ])
+        code = tracer.main()
+        captured = capsys.readouterr()
+        assert code == 130, f"the post-build interrupt did not convert: {captured.err}"
+        assert "Interrupted after the build" in captured.err or \
+            "Interrupted again" in captured.err, captured.err

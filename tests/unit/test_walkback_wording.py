@@ -39,6 +39,27 @@ class TestTheReplayHintNamesThePairActuallyCompared:
         first, _skipped, third = self._store(tmp_path, ["01", "02", "03"])
         assert _compare_refs(first, third) == "@01 @last"
 
+    def test_the_printed_hint_resolves_to_the_pair_that_was_compared(self, tmp_path):
+        """UX-176: paste it, and check where it lands.
+
+        Everything above asserts on the *string* the hint would be.
+        This resolves it through the same store lookup a user's paste
+        goes through, so "paste-and-go" is a checked property rather
+        than prose.
+        """
+        from bga.run_store import resolve as resolve_alias
+
+        # Real stamps, not the "01"/"02" shorthand the tests above use:
+        # the alias grammar takes `@<stamp-prefix>` of at least four
+        # characters, so a paste is only a paste against a real name.
+        first, _skipped, third = self._store(tmp_path, [
+            "20260820T120000Z", "20260820T130000Z", "20260820T140000Z"])
+        baseline_ref, candidate_ref = _compare_refs(first, third).split()
+        assert os.path.realpath(resolve_alias(baseline_ref, str(tmp_path))) == \
+            os.path.realpath(os.path.join(first, "run"))
+        assert os.path.realpath(resolve_alias(candidate_ref, str(tmp_path))) == \
+            os.path.realpath(os.path.join(third, "run"))
+
     def test_the_hint_never_names_a_snapshot_that_was_not_compared(self, tmp_path):
         first, skipped, third = self._store(tmp_path, ["01", "02", "03"])
         refs = _compare_refs(first, third)
@@ -60,20 +81,36 @@ class TestNumberAgreement:
                                "failed_count": len(failed)}}))
         return str(tmp_path / name)
 
-    def test_one_skipped_snapshot_reads_singular(self, tmp_path, capsys):
-        from tools.bga_snapshot import main
+    def _walkback(self, tmp_path, unhealthy):
+        """The skip sentence itself, rendered for `unhealthy` skips.
+
+        UX-176: the previous version asserted both wordings appeared in
+        `main`'s *source*, which they do whichever one is reachable -
+        it would have passed with the singular branch unreachable. This
+        renders the sentence.
+        """
+        from tools.bga_snapshot import _healthy_baseline, _walkback_notice
         (tmp_path / "project.conf").write_text("name: x\n")
         runs = tmp_path / ".bga" / "runs"
-        healthy = runs / "01" / "run"
+        healthy = runs / "00" / "run"
         healthy.mkdir(parents=True)
         (healthy / "run-context.json").write_text("{}")
-        self._snapshot(runs, "02")
-        main(["--project", str(tmp_path), "--list"])  # touch the store
-        # the wording itself, without needing a build
-        import inspect
-        from tools import bga_snapshot
-        source = inspect.getsource(bga_snapshot.main)
-        assert "records a build" in source and "record builds" in source
+        made = [str(runs / "00")]
+        for index in range(unhealthy):
+            made.append(self._snapshot(runs, f"{index + 1:02d}"))
+        baseline, skipped = _healthy_baseline(made)
+        assert baseline == made[0] and len(skipped) == unhealthy
+        return _walkback_notice(baseline, skipped)
+
+    def test_one_skipped_snapshot_reads_singular(self, tmp_path):
+        notice = self._walkback(tmp_path, 1)
+        assert "01 records a build that did not finish" in notice, notice
+        assert "record builds" not in notice
+
+    def test_two_skipped_snapshots_read_plural(self, tmp_path):
+        notice = self._walkback(tmp_path, 2)
+        assert "01, 02 record builds that did not finish" in notice, notice
+        assert "records a build" not in notice
 
 
 class TestCacheHitsAreNotCasualties:

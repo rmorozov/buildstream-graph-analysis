@@ -1105,7 +1105,7 @@ def _add_common_arguments(
     subparser.add_argument(
         'directory',
         type=str,
-        help='Path to the BuildStream run directory (e.g., ~/.buildstream/cache/artifacts/run-<uuid>)'
+        help='Path to the BuildStream run directory (e.g., ~/.buildstream/cache/artifacts/run-<uuid>).'
     )
 
     subparser.add_argument(
@@ -1113,7 +1113,7 @@ def _add_common_arguments(
         type=str,
         choices=['text', 'json', 'csv'],
         default='text',
-        help='Output format: text (human-readable), json (machine-readable), csv (attribution data). Default: text'
+        help='Output format: text (human-readable), json (machine-readable), csv (attribution data). Default: text.'
     )
 
     subparser.add_argument(
@@ -1127,14 +1127,14 @@ def _add_common_arguments(
         type=int,
         default=None,
         metavar='N',
-        help='Override system resource capacity (affects LB and replay calculations). Default: auto-detect from run-context'
+        help='Override system resource capacity (affects LB and replay calculations). Default: auto-detect from run-context.'
     )
 
     if include_replay:
         subparser.add_argument(
             '-r', '--replay',
             action='store_true',
-            help='Run deterministic replay scheduler to compute a feasible makespan (T_C) under the chosen heuristic - a counterfactual model, not a claim of scheduling optimality (Part 18)'
+            help='Run deterministic replay scheduler to compute a feasible makespan (T_C) under the chosen heuristic - a counterfactual model, not a claim of scheduling optimality (Part 18).'
         )
 
         subparser.add_argument(
@@ -1142,7 +1142,7 @@ def _add_common_arguments(
             type=str,
             choices=['lpt', 'spt', 'fifo', 'depth'],
             default='lpt',
-            help='Scheduling heuristic for replay. Options: lpt (Longest Processing Time), spt (Shortest Processing Time), fifo (First In First Out), depth (Dependency Depth). Default: lpt'
+            help='Scheduling heuristic for replay. Options: lpt (Longest Processing Time), spt (Shortest Processing Time), fifo (First In First Out), depth (Dependency Depth). Default: lpt.'
         )
 
     if include_diagnostics:
@@ -1304,7 +1304,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     sweep_parser.add_argument(
         'directory', type=str,
-        help='Path to the BuildStream run directory'
+        help='Path to the BuildStream run directory.'
     )
     sweep_parser.add_argument(
         '--plane2', type=str, metavar='NATIVE_REPORT.json',
@@ -1313,19 +1313,19 @@ def create_parser() -> argparse.ArgumentParser:
     )
     sweep_parser.add_argument(
         '--resource', type=str, default='PROCESS',
-        help='Resource to sweep (e.g. PROCESS, DOWNLOAD, UPLOAD). Default: PROCESS'
+        help='Resource to sweep (e.g. PROCESS, DOWNLOAD, UPLOAD). Default: PROCESS.'
     )
     sweep_parser.add_argument(
         '--min-capacity', type=int, default=1, metavar='N',
-        help='Minimum capacity to test. Default: 1'
+        help='Minimum capacity to test. Default: 1.'
     )
     sweep_parser.add_argument(
         '--max-capacity', type=int, default=None, metavar='N',
-        help='Maximum capacity to test. Default: number of tasks'
+        help='Maximum capacity to test. Default: number of tasks.'
     )
     sweep_parser.add_argument(
         '--step', type=int, default=1, metavar='N',
-        help='Increment between tested capacities. Default: 1'
+        help='Increment between tested capacities. Default: 1.'
     )
     sweep_parser.add_argument(
         '--calibration-dir', action='append', default=[], metavar='PATH',
@@ -1335,12 +1335,12 @@ def create_parser() -> argparse.ArgumentParser:
     )
     sweep_parser.add_argument(
         '-f', '--format', type=str, choices=['text', 'json'], default='text',
-        help='Output format: text (human-readable), json (machine-readable). Default: text'
+        help='Output format: text (human-readable), json (machine-readable). Default: text.'
     )
     sweep_parser.add_argument('-o', '--output', type=str, help='Write output to PATH instead of stdout.')
     sweep_parser.add_argument(
         '-c', '--capacity', type=int, default=None, metavar='N',
-        help='Override system resource capacity for resources not being swept. Default: auto-detect from run-context'
+        help='Override system resource capacity for resources not being swept. Default: auto-detect from run-context.'
     )
     sweep_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
     sweep_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')
@@ -1472,8 +1472,8 @@ def create_parser() -> argparse.ArgumentParser:
                     'efficiency score, and attribution, plus an improved/regressed/no-significant-change '
                     'verdict gated on confidence and graph comparability (docs/backlog/scenarios/UX-01 - not spec-mandated).',
     )
-    compare_parser.add_argument('baseline', type=str, help='Path to the baseline (before) run directory')
-    compare_parser.add_argument('candidate', type=str, help='Path to the candidate (after) run directory')
+    compare_parser.add_argument('baseline', type=str, help='Path to the baseline (before) run directory.')
+    compare_parser.add_argument('candidate', type=str, help='Path to the candidate (after) run directory.')
     compare_parser.add_argument(
         '-f', '--format', type=str, choices=['text', 'json', 'ci-comment'],
         default='text',

@@ -162,7 +162,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         help='UX-146: run the build with the shim installed but injecting nothing, to find out whether the argv rewrite is what breaks it.'
     )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
-                        help="The build to run, e.g. -- bst build all.bst")
+                        help="The build to run, e.g. -- bst build all.bst.")
     args = parser.parse_args(argv)
 
     project = args.project or run_store.project_root()
@@ -262,22 +262,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print()
         baseline, skipped = _healthy_baseline(previous)
         if skipped:
-            names = ", ".join(os.path.basename(p.rstrip("/")) for p in skipped)
-            # UX-164 item 2: the sentence was built for a plural list and
-            # read broken for the common single-skip case.
-            one = len(skipped) == 1
-            if baseline is None:
-                print(f"No comparison: the {len(skipped)} previous "
-                      f"snapshot{'' if one else 's'} ({names}) "
-                      f"{'records a build' if one else 'all record builds'} that "
-                      f"did not finish, and a duration delta against one is not a "
-                      f"measurement (UX-156). `bga compare` on an explicit pair "
-                      f"still works.")
-            else:
-                print(f"Comparing against {os.path.basename(baseline.rstrip('/'))} "
-                      f"rather than the previous snapshot: {names} "
-                      f"{'records a build' if one else 'record builds'} that did "
-                      f"not finish (UX-156).")
+            print(_walkback_notice(baseline, skipped))
         if baseline is not None:
             _compare(baseline, snapshot)
     elif not args.no_compare:
@@ -381,6 +366,30 @@ def _healthy_baseline(previous):
             continue
         return candidate, list(reversed(skipped))
     return None, list(reversed(skipped))
+
+
+def _walkback_notice(baseline: Optional[str], skipped: List[str]) -> str:
+    """What the walk-back says it did, and why.
+
+    `UX-164` item 2: the sentence was built for a plural list and read
+    broken for the common single-skip case. `UX-176`: extracted from
+    `main` so a guard can render both shapes instead of asserting that
+    both wordings appear in the source - which they do whichever branch
+    is reachable.
+    """
+    names = ", ".join(os.path.basename(p.rstrip("/")) for p in skipped)
+    one = len(skipped) == 1
+    if baseline is None:
+        return (f"No comparison: the {len(skipped)} previous "
+                f"snapshot{'' if one else 's'} ({names}) "
+                f"{'records a build' if one else 'all record builds'} that "
+                f"did not finish, and a duration delta against one is not a "
+                f"measurement (UX-156). `bga compare` on an explicit pair "
+                f"still works.")
+    return (f"Comparing against {os.path.basename(baseline.rstrip('/'))} "
+            f"rather than the previous snapshot: {names} "
+            f"{'records a build' if one else 'record builds'} that did "
+            f"not finish (UX-156).")
 
 
 def _compare_refs(baseline_snapshot: str, candidate_snapshot: str) -> str:

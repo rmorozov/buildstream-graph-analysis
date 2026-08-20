@@ -401,7 +401,11 @@ def test_the_top_payer_is_ranked_by_toll_seconds_not_by_share(tmp_path):
 def test_the_tax_renders_in_the_text_report(log_tree):
     text = format_report_text(build_report(scan_log_tree(str(log_tree))))
     assert "Sandbox tax: 3.0s of 17.0s element time (17.6%)" in text
-    assert "Who paid it (by toll seconds, not by share):" in text
+    # UX-138: one concept, one name. The report prints "Sandbox tax" as
+    # its heading and used to say "toll" in the rows beneath it, which is
+    # where the docs' own alternating variant came from.
+    assert "Who paid it (by tax seconds, not by share):" in text
+    assert "toll" not in text, "the report mixes tax and toll for one concept"
 
 
 # --- UX-102: the configure tax, from one plane and from two -------------

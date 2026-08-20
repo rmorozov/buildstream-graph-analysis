@@ -917,17 +917,17 @@ def format_report_text(report: dict) -> str:
             )
         payers = [p for p in tax['top_payers'] if p['toll_us']][:_TAX_PAYERS_SHOWN]
         if payers:
-            lines.append('  Who paid it (by toll seconds, not by share):')
+            lines.append('  Who paid it (by tax seconds, not by share):')
             for payer in payers:
                 lines.append(
                     f"    {_elide_element(payer['element'], 32):<32s} "
-                    f"{payer['toll_us'] / 1e6:7.1f}s toll "
+                    f"{payer['toll_us'] / 1e6:7.1f}s tax "
                     f"of {payer['total_us'] / 1e6:.1f}s ({_pct(payer['toll_share'])})"
                 )
         if tax['unaccounted_us']:
             lines.append(
                 f"  ({tax['unaccounted_us'] / 1e6:.1f}s of the enclosing Build activity "
-                f"is in neither bucket - reported rather than folded into the toll)"
+                f"is in neither bucket - reported rather than folded into the tax)"
             )
         lines.append('')
 

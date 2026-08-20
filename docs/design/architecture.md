@@ -468,7 +468,7 @@ Everything below is **additive**, not a spec contradiction — each is clearly m
 - **`docs/spec/ingestion-pipeline.md`** — real data flow from a `bst` invocation to `bga`-ingestible input.
 - **`docs/guides/real-project.md`** — the end-to-end user-facing walkthrough on a real project: capture → read → go inside → join → act → gate, with real output at every step and an explicit list of what the tool refuses to say.
 - **`docs/guides/optimization-walkthrough.md`** — a full worked example using the tool for real.
-- **`docs/guides/optimization-walkthrough-06.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
+- **`docs/audits/case-study-06-macro-micro.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
 - **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough-06.md` (what that felt like) → `design-directions.md` (what to do about it).
 - **`docs/contributing/fixing-guide.md`** — mandatory session-start discipline (verification rules) for either backlog.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.

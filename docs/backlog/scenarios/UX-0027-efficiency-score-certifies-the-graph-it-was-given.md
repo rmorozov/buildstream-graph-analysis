@@ -63,7 +63,7 @@ Whatever is chosen, `efficiency_score`'s own banding text must stop saying *"ver
 
 ## Verification Log
 
-Filed 2026-08-16 from a real hands-on optimization walkthrough (`docs/guides/optimization-walkthrough-06.md`), on a real BuildStream 2.7.0 + `bwrap` + real `gcc 13`/`cmake 3.28` sandbox, 4-core host. Every number above is pasted from that session. `examples/06-macro-micro-optimization` was built as part of this filing specifically so the case is reproducible rather than argued.
+Filed 2026-08-16 from a real hands-on optimization walkthrough (`docs/audits/case-study-06-macro-micro.md`), on a real BuildStream 2.7.0 + `bwrap` + real `gcc 13`/`cmake 3.28` sandbox, 4-core host. Every number above is pasted from that session. `examples/06-macro-micro-optimization` was built as part of this filing specifically so the case is reproducible rather than argued.
 
 Real end-to-end re-verification against the exact pair in this doc's Motivation (`examples/06-macro-micro-optimization`, baseline vs `optimized/`, real captures):
 

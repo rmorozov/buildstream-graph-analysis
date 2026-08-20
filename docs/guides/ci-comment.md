@@ -1,5 +1,49 @@
 # Post the verdict where the reviewer will read it
 
+> **The CI owner's page** (`UX-139`). Gates, the baseline set, the
+> capture and the comment used to live in four documents and a README
+> summary; this is the sequence, in order. `bga`'s other entry point,
+> [`real-project.md`](real-project.md), is the local optimizer's.
+
+## The sequence
+
+One screen, then the detail:
+
+```bash
+# 1. capture the candidate — one build, both planes
+bga capture run --trace-opens --run-dir runs/candidate \
+    "$PROJ" native.json -- bst build "$TARGET"
+
+# 2. band-compare against the published baseline set (UX-96)
+bga baseline --glob "captures/$PROJ/<commit>-incremental-b4j4-*" -n 3 \
+    --candidate runs/candidate
+
+# 3. gate on it — two independent verdicts, two exit codes
+bga compare runs/baseline runs/candidate --fail-on-regression             # 4: slower
+bga compare runs/baseline runs/candidate --fail-on-efficiency-regression  # 5: less efficient
+
+# 4. and render the verdict for the reviewer
+bga compare runs/baseline runs/candidate --format ci-comment \
+    --native-report native.json
+```
+
+**Why a baseline *set* and not one run.** Three captures of the same
+freedesktop-sdk commit, nothing changed, span **5.8%** against a default
+significance rule of 1%. Judged against the band those three define, the
+same pair is `NO SIGNIFICANT CHANGE` — which is the truth. `bga baseline`
+assembles that set from published refs, refuses one whose captures are
+not comparable (exit 6), and warns when they came from different `bga`
+revisions.
+
+**Which gate to reach for.** `--fail-on-regression` asks "did it get
+slower", which a growing project fails legitimately.
+`--fail-on-efficiency-regression` asks "did it get *worse*", and
+`--fail-on-inefficient-additions` asks it of the diff alone — the one
+that stays sensitive as the project grows, since dispatch occupancy is a
+whole-build average. Exit codes and thresholds:
+[`cli.md`](cli.md#exit-codes).
+
+
 `bga` can already decide. `bga compare --fail-on-inefficient-additions`
 exits 5 when a change serialized the work it added, and
 `--fail-on-regression` exits 4 when the build got slower than its band.
@@ -87,8 +131,8 @@ carries ten comments and the reviewer reads the stale one.
 ```yaml
 - name: Capture the candidate build
   run: |
-    bga wrap "$PROJ" candidate-build.log -- bst build "$TARGET"
-    bga extract "$PROJ" candidate-build.log runs/candidate
+    bga capture run --trace-opens --run-dir runs/candidate \
+      "$PROJ" native.json -- bst build "$TARGET"
 
 - name: Compare against the published baseline set
   id: compare
@@ -147,22 +191,22 @@ Two details that are load-bearing:
   that fails before commenting gives them only the red check, which is
   the situation this whole feature exists to end.
 
-With Plane 2 in the pipeline, add `--native-report` to the `bga compare`
-arguments to get the never-read column. Capture both planes from **one**
-build — `--run-dir` (`UX-126`) writes the run directory from the same
-`bst` invocation, replacing the `wrap` + `extract` pair above rather
-than adding a second build to it:
+The capture step above is already dual-plane: `--run-dir` (`UX-126`)
+writes the run directory from the same `bst` invocation that produces
+`native.json`, so one build feeds both. Pass that report to `compare`
+and the comment gains the never-read column:
 
 ```bash
-bga capture run --trace-opens --run-dir runs/candidate \
-  "$PROJ" native.json -- bst build "$TARGET"
 bga compare runs/baseline runs/candidate \
   --format ci-comment --native-report native.json
 ```
 
 Two builds would put the never-read column on a different build from the
 one the verdict describes, and the join would correlate one build's
-sandboxes against the other's timeline.
+sandboxes against the other's timeline. If you do not want Plane 2 at
+all, drop `--trace-opens` and `native.json` and use
+`bga wrap` + `bga extract` instead — the run directory is the only thing
+`compare` needs.
 
 ## What it deliberately does not do
 

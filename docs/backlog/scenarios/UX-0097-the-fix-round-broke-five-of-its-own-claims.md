@@ -125,7 +125,7 @@ it is there.
 `UX-86` inserted the mode segment into the ref name and the documented
 glob was not moved with it. `<ref>-b4j4-*` matches nothing. Fixed in all
 three places — the workflow comment, `UX-81`'s doc, and
-`docs/guides/real-project-capture.md`.
+`docs/design/capture-workflow.md`.
 
 ### 5: four stale bare paths, and why the link test missed them
 

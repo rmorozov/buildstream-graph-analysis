@@ -8,7 +8,7 @@
 > quoted here is what these commands produce.
 
 
-A second, deliberately harder companion to [`optimization-walkthrough.md`](optimization-walkthrough.md).
+A second, deliberately harder companion to [`optimization-walkthrough.md`](optimization-walkthrough-04.md).
 That one walks `examples/04-critical-path-optimization` (a `sleep N` proxy
 graph) through two iterations and lands a 48.1% improvement, with `bga`
 correctly guiding every step. **This one is the case where the tool does

@@ -8,7 +8,7 @@ UX-97 fixed the mode-less ref glob once and automated the two *counts*
 that had drifted; ref name patterns stayed hand-maintained prose, and
 they drifted again within two days, in the very file that was fixed:
 
-- `docs/guides/real-project-capture.md:235` — a fetch command using
+- `docs/design/capture-workflow.md:235` — a fetch command using
   `captures/fdsdk/<ref>-b4j4-…` with no mode segment: matches **no
   ref** that exists.
 - `:207` — the documented ref-name template omits `<mode>`; the
@@ -67,7 +67,7 @@ which is what a dropped segment looks like.
 Checked by putting the bug back:
 
 ```text
-E   AssertionError: docs/guides/real-project-capture.md documents
+E   AssertionError: docs/design/capture-workflow.md documents
     `captures/fdsdk/953683fb-b4j4-*`, which is not the shape the workflow
     publishes (`captures/fdsdk/${SHORT_REF}-${CAPTURE_MODE}-b${BUILDERS}j${MAX_JOBS}-${{ github.run_id }}`,
     e.g. `captures/fdsdk/953683fb-incremental-b4j4-32223468993`)

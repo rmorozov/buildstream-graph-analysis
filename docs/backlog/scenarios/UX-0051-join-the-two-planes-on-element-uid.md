@@ -10,7 +10,7 @@ The loop a user actually runs, from that doc:
 
 > Plane 1 ranks elements by blast radius and critical-path membership → the user picks the top one → Plane 2 explains where *that element's* time went → the fix is either a graph change (back to Plane 1) or a native-build change (stay in Plane 2).
 
-Every step of that is supported except the arrows. `docs/guides/optimization-walkthrough-06.md` records the consequence: the walkthrough's findings came out of two JSON files and an ad-hoc script, and its closing note still said the macro and micro halves "remain two tools and two captures".
+Every step of that is supported except the arrows. `docs/audits/case-study-06-macro-micro.md` records the consequence: the walkthrough's findings came out of two JSON files and an ad-hoc script, and its closing note still said the macro and micro halves "remain two tools and two captures".
 
 Concretely, on a real build of `examples/06`, the two planes each hold half of one sentence:
 

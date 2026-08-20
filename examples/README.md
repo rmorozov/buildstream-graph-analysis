@@ -131,7 +131,7 @@ here (`--format wrapped`, not `--format raw` - see `UX-06`).
 Eleven real elements (a `toolchain` import, nine real CMake/C++ modules,
 an `all` stack) built to be walked through a **full macro-then-micro
 optimization cycle** with `bga` - the project behind
-`docs/guides/optimization-walkthrough-06.md` and the `UX-27`..`UX-40` backlog
+`docs/audits/case-study-06-macro-micro.md` and the `UX-27`..`UX-40` backlog
 round.
 
 Where `05-cmake-cpp-toolchain` exists to answer one measurement question,

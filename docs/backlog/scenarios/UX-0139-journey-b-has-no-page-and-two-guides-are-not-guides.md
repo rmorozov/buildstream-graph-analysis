@@ -1,6 +1,6 @@
 # UX-139: journey B has no page, and two "guides" are not guides
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-136 (ci-comment's YAML must teach the current flow before it becomes the landing page)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-136 (ci-comment's YAML must teach the current flow before it becomes the landing page)
 
 Docs polish round (round 14); full navigation assessment in
 [`round-14`](../../audits/round-14.md).
@@ -59,3 +59,33 @@ A CI owner's path is one page: ci-comment.md covers capture → baseline
 CI readers there. `docs/guides/` lists only documents that tell a
 reader what to type today; the link test passes across every move; the
 two case studies remain reachable and byte-preserved.
+
+
+---
+
+## What was built
+
+1. **`ci-comment.md` is the CI owner's page.** It opens with the whole
+   sequence on one screen — capture with `--run-dir`, band-compare with
+   `bga baseline`, the two gate flags with their exit codes, then the
+   comment — and says which gate to reach for as a project grows.
+   README's CI section and `docs/README` point there first.
+2. **`optimization-walkthrough.md` retired to a stub** pointing at
+   `real-project.md`; the transcript itself is kept byte-preserved at
+   `audits/optimization-walkthrough-04.md`. The stub exists because
+   nine documents linked to the path.
+3. **`optimization-walkthrough-06.md` reclassified** as
+   `audits/case-study-06-macro-micro.md` — it is evidence by its own
+   framing, including where the tool did *not* guide the user, and it
+   was listed under "documents that tell you what to type".
+4. **`real-project-capture.md` moved whole** to
+   `design/capture-workflow.md` rather than split. Reading it end to
+   end, it is one argument — why this repository captures a third-party
+   project the way it does — and the ref scheme a consumer needs is now
+   in the CI page. It says so in its own opening rather than leaving the
+   reader to discover the reclassification.
+5. `docs/README`'s guides table is two journeys and a reference, with
+   the case studies under their own heading, marked as records rather
+   than instructions.
+
+Every move updated its inbound links (nine files); the link test passes.

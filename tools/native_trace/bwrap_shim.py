@@ -29,6 +29,7 @@ UX-11's own prototype run).
 """
 import json
 import os
+import select
 import signal
 import sys
 import time
@@ -495,6 +496,28 @@ def stderr_record_path(diagnostics_path: str, invocation_id: int) -> str:
     return os.path.join(directory, f"{invocation_id}.stderr")
 
 
+def _readable(fd: int, timeout: float = 0.0) -> bool:
+    """Is there anything to read on `fd` within `timeout`? (`UX-168`)"""
+    try:
+        return bool(select.select([fd], [], [], timeout)[0])
+    except (OSError, ValueError):
+        return False
+
+
+def _reap(pid: int) -> Optional[int]:
+    """The child's wait status if it has exited, else `None`.
+
+    Reaps at most once and hands the status back, because the caller
+    needs it: `exit_like` reproduces it, and a status thrown away here
+    would break `UX-140`'s contract from a different direction.
+    """
+    try:
+        done, status = os.waitpid(pid, os.WNOHANG)
+    except (ChildProcessError, OSError):
+        return None
+    return status if done == pid else None
+
+
 def run_teed(real_bwrap: str, argv: List[str], stderr_path: str) -> int:
     """Run the real bwrap as a child, copying its stderr to a file.
 
@@ -528,22 +551,39 @@ def run_teed(real_bwrap: str, argv: List[str], stderr_path: str) -> int:
             finally:
                 os._exit(127)
     os.close(write_fd)
+    status = None
     try:
         with open(stderr_path, "wb") as sink:
             while True:
-                chunk = os.read(read_fd, 65536)
-                if not chunk:
+                if _readable(read_fd, timeout=1.0):
+                    chunk = os.read(read_fd, 65536)
+                    if not chunk:
+                        break
+                    sink.write(chunk)
+                    # Straight to fd 2: this process's `sys.stderr` may
+                    # be buffered, and the ordering buildbox-run sees
+                    # should be the child's.
+                    os.write(2, chunk)
+                    continue
+                # UX-168 item 1: the read only ends when *every* holder
+                # of the write end closes it, and every descendant of
+                # the sandbox holds one - so a process that daemonizes
+                # past bwrap's own exit would hang the shim here.
+                # Unlikely under `--die-with-parent`, but "unlikely" is
+                # not a reason to let a debugging mode wedge a build.
+                # Once the child is reaped and the pipe has gone quiet,
+                # whatever still holds it is an orphan, not the sandbox.
+                if status is None:
+                    status = _reap(pid)
+                elif not _readable(read_fd):
                     break
-                sink.write(chunk)
-                # Straight to fd 2: this process's `sys.stderr` may be
-                # buffered, and the ordering buildbox-run sees should be
-                # the child's.
-                os.write(2, chunk)
     except OSError:
         pass
     finally:
         os.close(read_fd)
-    _, status = os.waitpid(pid, 0)
+    if status is None:
+        # The pipe closed first, which is the ordinary case.
+        _, status = os.waitpid(pid, 0)
     return status
 
 
@@ -567,7 +607,7 @@ def exit_like(status: int) -> int:
     return os.WEXITSTATUS(status)
 
 
-SELF_TEST_ARGV = SELF_TEST_ARGV = "--bga-shim-self-test"
+SELF_TEST_ARGV = "--bga-shim-self-test"
 
 
 def main() -> int:

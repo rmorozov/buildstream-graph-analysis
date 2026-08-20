@@ -81,12 +81,63 @@ class TestPruneDeletesButNotTheOnesInUse:
         remaining = [os.path.basename(p) for p in run_store.list_snapshots(project)]
         assert remaining == ["02", "03"], "@prev and @last must survive"
 
-    def test_a_recorded_baseline_is_protected_too(self, project):
+    def test_the_dead_baseline_key_is_gone(self, project):
+        """UX-167 decided it: nothing in production ever wrote
+        `config["baseline"]`, so the protection guarded a phantom. Only
+        prune's own test set it. Protecting the walk-back's actual target
+        (below) covers what it was for."""
         for name in ("01", "02", "03"):
             _snapshot(project, name)
-        target = os.path.join(project, ".bga", "runs", "01")
-        run_store.write_config(project, {"baseline": target})
-        assert os.path.abspath(target) in _protected(project)
+        run_store.write_config(project, {"baseline":
+                                         os.path.join(project, ".bga", "runs", "01")})
+        assert os.path.join(project, ".bga", "runs", "01") not in _protected(project)
+        import inspect
+        from tools import bga_snapshot
+        assert '"baseline"' not in inspect.getsource(bga_snapshot._protected)
+
+    def test_the_newest_healthy_run_survives_two_unhealthy_aliases(self, project):
+        """UX-167's headline. Round 17 hit this live: with a failed run and
+        an interrupted run as the two newest, `--keep 2` protected exactly
+        those and offered to delete the store's only healthy snapshot -
+        the one UX-156's walk-back needs as the next baseline."""
+        _snapshot(project, "01")                       # healthy
+        _snapshot(project, "02", failed=["lib-d.bst"])  # failed
+        broken = os.path.join(project, ".bga", "runs", "03", "run")
+        os.makedirs(broken)
+        with open(os.path.join(broken, "run-context.json"), "w") as handle:
+            json.dump({"build_outcome": {"failed_elements": [], "failed_count": 0,
+                                         "interrupted": True}}, handle)
+
+        _prune(project, keep=2, older_than=None, dry_run=False)
+
+        survivors = [os.path.basename(p) for p in run_store.list_snapshots(project)]
+        assert "01" in survivors, (
+            "the only healthy run is what the walk-back would compare against")
+        assert survivors == ["01", "02", "03"]
+
+    def test_a_store_of_healthy_runs_prunes_exactly_as_before(self, project):
+        """The extra directory is kept only when the aliased two are
+        unhealthy, so the ordinary case is unchanged."""
+        for name in ("01", "02", "03", "04"):
+            _snapshot(project, name)
+        _prune(project, keep=2, older_than=None, dry_run=False)
+        assert [os.path.basename(p)
+                for p in run_store.list_snapshots(project)] == ["03", "04"]
+
+    def test_husks_go_first_and_are_counted_separately(self, project, capsys):
+        """A snapshot with no run directory is not in `list_runs`, not
+        aliased, and not useful - and `--keep 2` used to leave it standing
+        while deleting run-bearing snapshots."""
+        for name in ("01", "02", "03"):
+            _snapshot(project, name)
+        os.makedirs(os.path.join(project, ".bga", "runs", "04"))  # husk
+
+        _prune(project, keep=2, older_than=None, dry_run=False)
+
+        survivors = [os.path.basename(p) for p in run_store.list_snapshots(project)]
+        assert "04" not in survivors, "the husk should go first"
+        assert survivors == ["02", "03"]
+        assert "held no run directory" in capsys.readouterr().out
 
     def test_older_than_deletes_by_age(self, project):
         old = _snapshot(project, "01")

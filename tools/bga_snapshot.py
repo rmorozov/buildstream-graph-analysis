@@ -236,10 +236,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         # UX-157: an interrupt is not a build failure and must not read
         # as one. The capture already salvaged and analyzed whatever
         # completed; what is left is to name the exit for what it was.
-        print(f"\nInterrupted. The capture was kept in {snapshot} - whatever "
-              f"completed before the interrupt is analyzed above, and a "
-              f"comparison against it obeys the same incompleteness rules as "
-              f"any unfinished build (UX-156).", file=sys.stderr)
+        print(f"\nInterrupted. The capture was kept in {snapshot}. Whatever "
+              f"completed before the interrupt is in the report above, and a "
+              f"comparison against this snapshot obeys the same incompleteness "
+              f"rules as any unfinished build (UX-156).", file=sys.stderr)
     if not os.path.isdir(run_dir):
         # The capture kept whatever it got (the Plane 2 report is on
         # disk); there is simply nothing to analyze. Say which of the two
@@ -478,15 +478,31 @@ def _protected(project: str) -> set:
     """Snapshots `prune` must never delete.
 
     `@last` and `@prev` because they are what the next `bga compare`
-    resolves to, and a prune that silently removes the baseline turns
-    the next comparison into a first-snapshot message. Anything a
-    recorded baseline points at, for the same reason one level up.
+    resolves to - and, `UX-167`, **the newest healthy run**, because that
+    is what `UX-156`'s walk-back will choose as the next comparison's
+    baseline.
+
+    Round 17 hit the contradiction live: in a store whose two newest
+    run-bearing snapshots were a failed run and an interrupted one,
+    `prune --keep 2` protected exactly those two and offered to delete
+    the store's only healthy snapshot. The two features were arguing -
+    the walk-back saying "the newest runs are not measurements", prune
+    saying "the newest runs are the ones worth keeping". The walk-back
+    is right about which one the next comparison needs.
+
+    The extra directory is only kept when the aliased two are unhealthy,
+    so a store of healthy runs prunes exactly as before.
+
+    The `baseline` config key that used to be read here is gone: nothing
+    in production ever wrote it, so it guarded a phantom (`UX-167`).
+    Protecting the walk-back's actual target covers what it was for.
     """
     runs = run_store.list_runs(project)
     keep = set(runs[-2:])
-    baseline = run_store.read_config(project).get("baseline")
-    if baseline:
-        keep.add(os.path.abspath(baseline))
+    if all(_snapshot_failed(run) for run in runs[-2:]):
+        healthy, _skipped = _healthy_baseline(runs)
+        if healthy:
+            keep.add(healthy)
     return keep
 
 
@@ -504,12 +520,20 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
         return 0
     protected = _protected(project)
 
-    doomed = []
+    # UX-167: a snapshot with no run directory - an interrupted capture
+    # from before UX-157, or a `--no-inject` session - is not in
+    # `list_runs`, not aliased, and not useful to anything. `--keep 2`
+    # used to leave those standing while deleting run-bearing snapshots,
+    # which is the store keeping exactly the wrong things.
+    husks = [s for s in snapshots if not run_store.has_run(s)]
+    live = [s for s in snapshots if s not in set(husks)]
+
+    doomed = list(husks)
     if keep is not None:
-        doomed.extend(snapshots[:-keep] if keep > 0 else list(snapshots))
+        doomed.extend(live[:-keep] if keep > 0 else list(live))
     if older_than is not None:
         cutoff = time.time() - older_than * 86400
-        doomed.extend(s for s in snapshots if os.path.getmtime(s) < cutoff)
+        doomed.extend(s for s in live if os.path.getmtime(s) < cutoff)
     doomed = [s for s in dict.fromkeys(doomed) if s not in protected]
 
     skipped = [s for s in snapshots if s in protected]
@@ -519,6 +543,7 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
         return 0
 
     freed = 0
+    husk_count = sum(1 for path in doomed if path in set(husks))
     for path in doomed:
         size = run_store.snapshot_size_bytes(path)
         freed += size
@@ -528,6 +553,10 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
             shutil.rmtree(path, ignore_errors=True)
     print(f"{'would free' if dry_run else 'freed'} "
           f"{run_store.human_bytes(freed)} from {run_store.runs_dir(project)}")
+    if husk_count:
+        # Counted separately because they are a different thing: not old
+        # captures, but captures that never produced anything.
+        print(f"  ({husk_count} of those held no run directory)")
     if skipped:
         names = ", ".join(os.path.basename(s) for s in skipped)
         print(f"kept {names} - @last/@prev, which the next comparison needs")

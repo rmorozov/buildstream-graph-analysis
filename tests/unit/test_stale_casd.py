@@ -14,6 +14,8 @@ the cache directory, as its last positional.
 """
 import os
 
+import pytest
+
 from tools.bst_native_build_tracer import (
     buildstream_cache_dir, detect_stale_casd, format_stale_casd_warning,
 )
@@ -162,3 +164,79 @@ class TestDoctorReportsItsOwnBlindSpot:
         assert found["status"] == doctor.WARN
         assert "4132" in found["summary"]
         assert "isolates HOME" in found["remedy"]
+
+class TestItResolvesTheConfigTheWayBstDoes:
+    """UX-166. UX-161's detection worked; its answer to "which cache
+    directory does this build use" diverged from BuildStream's own."""
+
+    def test_buildstream2_conf_wins(self, monkeypatch, tmp_path):
+        """bst 2.x tries `buildstream2.conf` first and falls back to
+        `buildstream.conf` (confirmed in the installed `_context.py`).
+        Reading only the second pointed the check at the wrong directory
+        for anyone following bst's own docs."""
+        config = tmp_path / "config"
+        config.mkdir()
+        (config / "buildstream2.conf").write_text("cachedir: /mnt/v2\n")
+        (config / "buildstream.conf").write_text("cachedir: /mnt/legacy\n")
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
+        assert buildstream_cache_dir() == "/mnt/v2"
+
+    def test_it_falls_back_to_the_legacy_name(self, monkeypatch, tmp_path):
+        config = tmp_path / "config"
+        config.mkdir()
+        (config / "buildstream.conf").write_text("cachedir: /mnt/legacy\n")
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
+        assert buildstream_cache_dir() == "/mnt/legacy"
+
+    @pytest.mark.parametrize("line", [
+        "cachedir: /mnt/big",
+        "  cachedir: /mnt/big",
+        'cachedir: "/mnt/big"',
+        "cachedir: '/mnt/big'",
+        "cachedir: /mnt/big  # moved off the root fs",
+    ])
+    def test_the_cachedir_parse_is_the_tolerant_one(self, monkeypatch, tmp_path, line):
+        """The same naive `startswith` UX-162 item 4 fixed for
+        `element-path:` had been copied here - same lesson, next key. One
+        shared parser now, so the third key does not repeat it."""
+        config = tmp_path / "config"
+        config.mkdir()
+        (config / "buildstream2.conf").write_text(line + "\n")
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
+        assert buildstream_cache_dir() == "/mnt/big"
+
+    def test_a_v2_config_matches_its_daemon_and_not_the_xdg_default(
+            self, monkeypatch, tmp_path):
+        """Both halves through the proc seam, as the acceptance asks."""
+        config = tmp_path / "config"
+        config.mkdir()
+        (config / "buildstream2.conf").write_text("cachedir: /mnt/v2\n")
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+
+        proc = _fake_proc(tmp_path, [
+            (10, "buildbox-casd", ["buildbox-casd", "/mnt/v2"], 0),
+            (11, "buildbox-casd",
+             ["buildbox-casd", str(tmp_path / "xdg" / "buildstream")], 0),
+        ])
+        found = detect_stale_casd(proc_root=proc)
+        assert [entry["pid"] for entry in found] == [10]
+
+
+class TestRelativeArgvIsUnmatchableEvidence:
+    def test_a_relative_cache_path_in_the_daemons_argv_is_skipped(self, tmp_path):
+        """`abspath` resolved it against *bga's* cwd, not the daemon's -
+        a different directory, so any match would be a coincidence."""
+        proc = _fake_proc(tmp_path, [
+            (4132, "buildbox-casd", ["buildbox-casd", "cache/buildstream"], 0),
+        ])
+        assert detect_stale_casd(os.path.join(os.getcwd(), "cache/buildstream"),
+                                 proc_root=proc) == []
+
+    def test_an_unnormalised_absolute_path_still_matches(self, tmp_path):
+        """Normalising an absolute path is unambiguous - no cwd involved -
+        so this must keep working."""
+        proc = _fake_proc(tmp_path, [
+            (4132, "buildbox-casd", ["buildbox-casd", "/cache/./buildstream/"], 0),
+        ])
+        assert len(detect_stale_casd("/cache/buildstream", proc_root=proc)) == 1

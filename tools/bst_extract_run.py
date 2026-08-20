@@ -559,7 +559,9 @@ def main() -> int:
     )
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,
-        help='Override the real --max-jobs value the build was invoked with (per-element internal build-system parallelism, e.g.'
+        help='Override the real --max-jobs the build ran with - `make -jN`\n'
+             'inside each sandbox, which is a different thing from\n'
+             '--builders. Usually recovered from a wrapped log (UX-29).'
     )
     parser.add_argument(
         "--cpu-budget", type=int, default=None,

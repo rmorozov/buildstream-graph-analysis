@@ -63,6 +63,18 @@ short kind (`snapshot`'s two-command loop stays).
 | `extract` | 77 | **40** | | `snapshot` | 53 | **29** |
 | `bga` (top) | 66 | **45** | | `sweep` | 47 | **31** |
 
+> **Annotated by `UX-165`.** The table above is honest at this item's
+> commit and stale at the tip: `capture` is 23 and `snapshot` 33 today,
+> grown by flags `UX-148` and `UX-159` landed later in the same range.
+> Every command still meets its cap, which is what the guard checks.
+>
+> `UX-165` also found the cut's real cost. "Flag help cut to its first
+> sentence" was applied by deleting continuation *lines*, and **ten**
+> strings lost their sentence's back half - the line-count guard could
+> not see it, because a truncated string is *shorter*, which is exactly
+> what the cap rewards. (`UX-132`/`UX-144`'s annotate-rather-than-rewrite
+> convention.)
+
 The biggest single win was not prose. argparse puts a flag's help on a
 second line whenever the flag exceeds 24 characters, and a third of these
 flags do (`--fail-on-inefficient-additions` is 31); widening that column

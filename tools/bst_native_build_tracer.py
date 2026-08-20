@@ -415,6 +415,36 @@ def probe_bwrap_shim(shim_path: str) -> None:
         )
 
 
+def read_scalar_key(path: str, key: str) -> Optional[str]:
+    """One top-level scalar out of a YAML-ish config, tolerantly.
+
+    `UX-162` item 4 wrote this for `element-path:` and `UX-166` found the
+    same naive `startswith` had been copied for `cachedir:` - the same
+    lesson, the next key. One implementation, so the third key does not
+    repeat it: indentation, quoting and trailing comments are all
+    tolerated, because a config that BuildStream reads and bga does not
+    is a silent wrong answer.
+
+    Read textually rather than with a YAML parser, for the reason the
+    rest of this file does: it has to work against a project whose
+    plugins are not installed and without importing BuildStream.
+    """
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                stripped = line.strip()
+                if not stripped.startswith(key + ":"):
+                    continue
+                value = stripped.split(":", 1)[1].strip()
+                value = value.split("#", 1)[0].strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                    value = value[1:-1]
+                return value or None
+    except OSError:
+        pass
+    return None
+
+
 def element_path(project_dir: str) -> str:
     """The project's declared `element-path`, or BuildStream's default.
 
@@ -429,24 +459,8 @@ def element_path(project_dir: str) -> str:
     for the same reason `read_declared_build_deps` is: this has to work
     on a project whose plugins are not installed.
     """
-    conf = os.path.join(project_dir, "project.conf")
-    try:
-        with open(conf, "r", encoding="utf-8", errors="replace") as handle:
-            for line in handle:
-                # UX-162 item 4: a naive `startswith` missed an indented
-                # key, and returning the raw remainder handed back YAML
-                # quotes verbatim - `element-path: "files"` resolved to a
-                # directory literally named `"files"`.
-                stripped = line.strip()
-                if stripped.startswith("element-path:"):
-                    value = stripped.split(":", 1)[1].strip()
-                    value = value.split("#", 1)[0].strip()
-                    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-                        value = value[1:-1]
-                    return value or "elements"
-    except OSError:
-        pass
-    return "elements"
+    return read_scalar_key(os.path.join(project_dir, "project.conf"),
+                           "element-path") or "elements"
 
 
 CASD_NAME = "buildbox-casd"
@@ -461,19 +475,18 @@ def buildstream_cache_dir() -> str:
     the root filesystem. Read textually for the same reason
     `element_path` is: this has to work without importing BuildStream.
     """
-    config = os.path.join(
-        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
-        "buildstream.conf",
-    )
-    try:
-        with open(config, "r", encoding="utf-8", errors="replace") as handle:
-            for line in handle:
-                if line.startswith("cachedir:"):
-                    value = line.split(":", 1)[1].strip()
-                    if value:
-                        return os.path.abspath(os.path.expanduser(value))
-    except OSError:
-        pass
+    config_home = (os.environ.get("XDG_CONFIG_HOME")
+                   or os.path.expanduser("~/.config"))
+    # UX-166: bst 2.x tries `buildstream2.conf` *first* and falls back to
+    # `buildstream.conf` (`buildstream/_context.py`, confirmed in the
+    # installed source). Reading only the second pointed this check at
+    # the wrong directory for anyone following bst's own docs - a silent
+    # false negative on the real daemon, or a false positive against one
+    # sitting on the XDG default.
+    for name in ("buildstream2.conf", "buildstream.conf"):
+        value = read_scalar_key(os.path.join(config_home, name), "cachedir")
+        if value:
+            return os.path.abspath(os.path.expanduser(value))
     base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
     return os.path.join(os.path.abspath(base), "buildstream")
 
@@ -519,7 +532,8 @@ def detect_stale_casd(cache_dir: Optional[str] = None,
     process's `comm` cannot be faked any other way - the alternative
     was to leave these matching rules unguarded.
     """
-    cache_dir = os.path.abspath(cache_dir or buildstream_cache_dir())
+    cache_dir = os.path.normpath(os.path.abspath(
+        cache_dir or buildstream_cache_dir()))
     found = []
     try:
         pids = [name for name in os.listdir(proc_root) if name.isdigit()]
@@ -535,8 +549,17 @@ def detect_stale_casd(cache_dir: Optional[str] = None,
                         for part in handle.read().split(b"\0") if part]
         except OSError:
             continue  # it exited while we looked; that is not staleness
-        if not any(os.path.abspath(arg) == cache_dir
-                   for arg in argv if arg and not arg.startswith("-")):
+        # UX-166: `abspath` on the daemon's argv resolved relative paths
+        # against *bga's* cwd, not the daemon's - a different directory,
+        # and a match derived from it would be a coincidence. A daemon
+        # started with a relative cache path is unmatchable evidence, so
+        # it is skipped rather than guessed at.
+        # `normpath`, not `abspath`: normalising an *absolute* path is
+        # unambiguous, while resolving a relative one uses bga's cwd
+        # rather than the daemon's - a different directory, so a match
+        # derived from it would be a coincidence.
+        if not any(os.path.normpath(arg) == cache_dir for arg in argv
+                   if arg.startswith("/")):
             continue
         found.append({"pid": int(pid),
                       "age_s": _process_start_age(pid, proc_root),
@@ -908,8 +931,23 @@ def parse_trace_log(text: str) -> List[dict]:
     unrelated stderr noise that ended up in the same file) are skipped,
     not fatal - a partial trace is still useful and this tool must never
     crash on a real, imperfect log."""
+    return parse_trace_lines(text.splitlines())
+
+
+def parse_trace_lines(lines) -> List[dict]:
+    """`parse_trace_log`, over an iterable of lines instead of one string.
+
+    `UX-168`. The caller used to read the whole trace into memory and
+    then build the event list beside it - two copies of a file that on a
+    multi-hour build is hundreds of MB. Measured on a 62 MB / 800k-event
+    trace: 596 MB peak, a ~10x amplification, on the machine that just
+    finished the build and in the phase right after it.
+
+    The format is line-oriented, so a file handle is a perfectly good
+    argument and the string copy simply need not exist.
+    """
     events = []
-    for line in text.splitlines():
+    for line in lines:
         line = line.rstrip("\n")
         if not line or not (line.startswith("START ") or line.startswith("END ")):
             continue
@@ -2139,6 +2177,51 @@ def census_static_executables(root: str) -> dict:
     }
 
 
+_ELEMENT_YAML_CACHE: Dict[tuple, Optional[dict]] = {}
+
+
+def read_element_yaml(path: str) -> Optional[dict]:
+    """One parse of one `.bst` file, shared by every reader that wants one.
+
+    `None` means "could not be read", which is not the same answer as an
+    element that declares nothing - both callers here already
+    distinguished the two and keep doing so.
+
+    UX-168: the census parsed each element file twice, once for its
+    declared build dependencies and once for its local sources, and YAML
+    parsing was where its time went: 5.0s of 5.9s under cProfile on a
+    synthetic 1,000-element project. The cache is keyed on the file's
+    mtime and size as well as its path, so a project edited between two
+    calls inside one process is re-read rather than remembered wrong.
+
+    UX-77: `yaml` stays imported inside the function. A module-scope
+    import made `bga capture --help` fail outright on an install without
+    PyYAML, and that is still true here.
+    """
+    import yaml
+
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    key = (path, stat.st_mtime_ns, stat.st_size)
+    if key in _ELEMENT_YAML_CACHE:
+        return _ELEMENT_YAML_CACHE[key]
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            # libyaml's loader wherever the binding was built with it;
+            # the pure-Python scanner is several times slower and this
+            # is the census's dominant cost.
+            loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+            data = yaml.load(handle, Loader=loader) or {}
+    except (OSError, yaml.YAMLError):
+        data = None
+    else:
+        data = data if isinstance(data, dict) else {}
+    _ELEMENT_YAML_CACHE[key] = data
+    return data
+
+
 def _local_source_paths(project_dir: str, element: str) -> List[str]:
     """The directories an element stages from its own `local` sources.
 
@@ -2150,14 +2233,8 @@ def _local_source_paths(project_dir: str, element: str) -> List[str]:
     it only sees local sources.
     """
     path = os.path.join(elements_dir_for(project_dir), element)
-    if not os.path.exists(path):
-        return []
-    import yaml
-
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            data = yaml.safe_load(handle) or {}
-    except (OSError, yaml.YAMLError):
+    data = read_element_yaml(path)
+    if data is None:
         return []
     paths = []
     for source in data.get("sources") or []:
@@ -2207,8 +2284,14 @@ def format_census_coverage(project_dir: str, verdicts: Dict[str, bool]) -> str:
     assessed = len(verdicts)
     traced = sum(1 for needs in verdicts.values() if needs)
     unassessed = max(0, len(declared) - assessed)
-    line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
-            f"{traced} with static binaries (spine traced)")
+    # UX-168 item 5: "0 with static binaries (spine traced)" made the
+    # parenthetical describe the zero elements, which is a riddle.
+    if traced:
+        line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
+                f"{traced} with static binaries (those get the spine)")
+    else:
+        line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
+                f"none with static binaries (the spine is not needed)")
     if unassessed:
         line += (f"; {unassessed} unassessed and therefore traced by default "
                  f"- `auto` is behaving as `on` for those")
@@ -2256,14 +2339,67 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
         merged["static"] = sorted(set(merged["static"]))
         own[element] = merged
 
-    def _closure(element: str, seen: Optional[Set[str]] = None) -> Set[str]:
-        seen = seen if seen is not None else set()
-        for dependency in declared.get(element) or []:
+    # UX-168: the closure was recomputed from scratch for every element,
+    # and recursively, so a project whose graph is a chain cost O(V*E)
+    # and needed one Python frame per link. Measured on a synthetic
+    # 1,000-element project (each element depending on the previous
+    # five): 2.04s before this memo.
+    closures: Dict[str, Set[str]] = {}
+
+    def _closure(element: str) -> Set[str]:
+        """Everything reachable from `element` over declared build deps.
+
+        Plain iterative reachability, short-circuited by `closures`
+        wherever a dependency's own answer is already complete. Written
+        so a dependency cycle cannot mislead it: every entry it stores
+        is a *finished* reachable set, so consuming one is always safe -
+        which a post-order memo would not be.
+        """
+        cached = closures.get(element)
+        if cached is not None:
+            return cached
+        seen: Set[str] = set()
+        stack = list(declared.get(element) or [])
+        while stack:
+            dependency = stack.pop()
             if dependency in seen:
                 continue
             seen.add(dependency)
-            _closure(dependency, seen)
+            memo = closures.get(dependency)
+            if memo is not None:
+                seen.update(memo)
+            else:
+                stack.extend(declared.get(dependency) or [])
+        closures[element] = seen
         return seen
+
+    def _prime_closures() -> None:
+        """Resolve dependencies before dependents, so each `_closure`
+        walk stops at the first memo instead of re-walking the tree.
+
+        Without this the saving depends on the order `elements` happens
+        to arrive in; a list in reverse dependency order would memoize
+        every answer and still walk the whole graph for each one.
+        """
+        visited: Set[str] = set()
+        for root in list(declared):
+            if root in visited:
+                continue
+            stack = [(root, iter(declared.get(root) or []))]
+            visited.add(root)
+            while stack:
+                name, pending = stack[-1]
+                for dependency in pending:
+                    if dependency in visited:
+                        continue
+                    visited.add(dependency)
+                    stack.append((dependency, iter(declared.get(dependency) or [])))
+                    break
+                else:
+                    stack.pop()
+                    _closure(name)
+
+    _prime_closures()
 
     per_element = {}
     for element in elements:
@@ -2360,19 +2496,10 @@ def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str,
     declared: Dict[str, List[str]] = {}
     for element in elements:
         path = os.path.join(elements_dir, element)
-        if not os.path.exists(path):
-            continue
-        # UX-77: imported here rather than at module scope. Only this
-        # one function needs it, and a top-level import made `bga
-        # capture --help` fail outright on an install without PyYAML -
-        # the other three yaml call sites in `tools/` were already lazy
-        # for the same reason.
-        import yaml
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f) or {}
-        except (OSError, yaml.YAMLError):
+        # UX-168: one shared, memoised parse - the census used to read
+        # every element file here and again in `_local_source_paths`.
+        data = read_element_yaml(path)
+        if data is None:
             continue
         deps: List[str] = []
         for entry in data.get("depends") or []:
@@ -3495,10 +3622,11 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     staged. Omitted - the default, and what `report` does without a
     project - the rest of the report is exactly as before.
     """
+    # UX-168: stream it. `parse_trace_lines` takes the handle directly, so
+    # the file is never held as one string beside the events it produced.
     with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as f:
-        text = f.read()
-    events = parse_trace_log(text)
-    if not events and text.strip():
+        events = parse_trace_lines(f)
+    if not events and os.path.getsize(raw_log_path) > 0:
         # UX-38: non-empty file, nothing parseable in it. Almost always
         # the wrong file (this tool's own JSON report is the usual
         # culprit); never something to report as "0 processes traced".
@@ -3574,8 +3702,13 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # UX-46: only attempted when a project directory is available, since
     # it needs `bst artifact list-contents` and the project's own
     # declared dependency edges.
-    opens_by_element = parse_open_records(
-        text, open_element_overrides=(correlation or {}).get('resolved'))
+    # UX-168: a second streaming pass rather than keeping the whole trace
+    # in memory for this one. `OPENS` blocks are a small fraction of a
+    # trace, so re-reading costs IO and saves the copy.
+    with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as handle:
+        opens_by_element = parse_open_records(
+            handle.read(),
+            open_element_overrides=(correlation or {}).get('resolved'))
     # UX-107: the elements this analysis must speak about are not only the
     # ones with opens. An element built entirely by static processes has
     # none at all, and dropping it here is what made the analysis silent
@@ -4521,7 +4654,11 @@ def format_sandbox_stderr(path: str, tail_lines: int = 12) -> Optional[str]:
         "",
     ]
     if elided:
-        out.append(f"    ... {elided} earlier line(s) in {row['stderr_path']}")
+        # UX-168 item 2: `.get`, not `[...]`. A record written before
+        # UX-148 has no `stderr_path`, and this branch would have raised
+        # while rendering a *failure* report - the worst place to.
+        out.append(f"    ... {elided} earlier line(s) in "
+                   f"{row.get('stderr_path') or live}")
     out.extend(f"    {line}" for line in shown)
     out += [
         "",
@@ -5005,9 +5142,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             # here; what is left is to analyze what there is and say so.
             interrupted = True
             returncode = 130
+            # UX-168 item 4: this used to say "analyzed above" while half
+            # the report was still below it. It prints before any of the
+            # analysis, so "below" is the whole of it.
             print("\nInterrupted. Analyzing what was captured before the "
                   "interrupt - this is a partial build, and every figure "
-                  "below describes only the elements that finished.",
+                  "that follows describes only the elements that finished.",
                   file=sys.stderr)
         except KeyboardInterrupt:
             # UX-163: the *pre*-build window - compiling the hook, and the

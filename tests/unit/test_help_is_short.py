@@ -95,3 +95,90 @@ def test_snapshots_two_command_loop_survived_the_cut():
     snapshot's is the one that teaches the whole local loop."""
     rendered = _help(["snapshot", "--help"])
     assert "bga snapshot" in rendered
+
+# UX-165: the cut that UX-158's guard could not see.
+#
+# "flag help cut to its first sentence" was applied by deleting
+# continuation *lines*, and nine strings lost their sentence's back half.
+# The line-count guard cannot catch that - a truncated string is
+# *shorter*, which is exactly what the cap rewards. So this checks shape
+# instead of length.
+
+def _help_blocks(rendered):
+    """Each flag or positional and its help, as one joined string."""
+    import re
+    blocks, current = [], None
+    for line in rendered.splitlines():
+        if re.match(r"^  (-|\{|[a-z][\w-]*\s{2,})", line):
+            if current:
+                blocks.append(current)
+            current = [line]
+        elif current is not None and line.startswith("      "):
+            current.append(line)
+        else:
+            if current:
+                blocks.append(current)
+            current = None
+    if current:
+        blocks.append(current)
+    return [" ".join(l.strip() for l in b).rstrip() for b in blocks]
+
+
+@pytest.mark.parametrize("command", SUBCOMMANDS)
+def test_no_help_string_ends_mid_sentence(command):
+    """A help block must not stop on a word the sentence was still using."""
+    # Words a sentence cannot end on. Deliberately a small, concrete list:
+    # this is a shape check for a known failure, not a grammar checker.
+    dangling = {
+        "the", "a", "an", "of", "for", "and", "or", "to", "in", "on", "at",
+        "by", "with", "from", "same", "when", "which", "that", "this", "its",
+        "than", "as", "is", "are", "was", "were", "be", "into", "per", "via",
+        "but", "so", "if", "then", "while", "because", "each", "knee",
+    }
+    for block in _help_blocks(_help([command, "--help"])):
+        if not block or block.startswith("-h,"):
+            continue
+        words = block.split()
+        if not words:
+            continue
+        last = words[-1]
+        if last.endswith((".", ")", "]", ":", "!", "?", ",")):
+            continue
+        assert last.lower() not in dangling, (
+            f"`bga {command} --help` ends a help block on {last!r}:\n"
+            f"  ...{block[-90:]}\n"
+            f"The sentence's back half was cut. UX-158 did this to nine "
+            f"strings and its line-count cap could not see it - a truncated "
+            f"string is shorter, which is what the cap rewards."
+        )
+
+
+@pytest.mark.parametrize("command", SUBCOMMANDS)
+def test_help_brackets_balance(command):
+    """`(default: the same significance` - an unbalanced paren is the other
+    shape a mid-sentence cut takes."""
+    for block in _help_blocks(_help([command, "--help"])):
+        assert block.count("(") == block.count(")"), (
+            f"`bga {command} --help` has an unbalanced bracket:\n  ...{block[-90:]}")
+
+
+def test_no_help_string_in_source_ends_on_a_dangling_space():
+    """The signature of the cut, at the source rather than the render: a
+    complete `help='...'` whose text ends with a space is a string whose
+    continuation line was deleted."""
+    import glob
+    import re
+    offenders = []
+    for path in ["bga/cli.py"] + glob.glob("tools/*.py") + glob.glob("tools/native_trace/*.py"):
+        lines = open(path, encoding="utf-8").read().split("\n")
+        for n, line in enumerate(lines):
+            match = re.match(r"\s*help=f?(['\"])(.*)\1,?\s*$", line.rstrip())
+            if not match or not match.group(2).endswith(" "):
+                continue
+            following = lines[n + 1].strip() if n + 1 < len(lines) else ""
+            if following.startswith(("'", '"', "f'", 'f\"')):
+                continue  # a real continuation follows
+            offenders.append(f"{path}:{n + 1}")
+    assert not offenders, (
+        "help strings ending in a space with no continuation - the "
+        f"signature of a deleted line: {offenders}")

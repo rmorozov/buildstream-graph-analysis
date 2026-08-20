@@ -1,6 +1,6 @@
 # UX-164: the walk-back's replay hint reproduces the comparison it just refused
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-156 (the refusal these words surround)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-156 (the refusal these words surround)
 
 ## Motivation
 
@@ -53,3 +53,25 @@ test). A single skipped snapshot reads grammatically. The failing
 snapshot's banner says "0 built, 6 already cached" against a queue
 summary of 0/6/1, with the docs-commands test covering the changed
 wording's home.
+
+## What was built
+
+Three separate wrongnesses in the walk-back's own prose:
+
+1. `_compare_refs` builds the hint from the pair actually chosen, so
+   after a walk-back it prints `bga compare @prev-1 @last` (or the
+   explicit stamps) rather than `@prev @last` — which resolved to the
+   wreckage the walk-back had just refused. The hint is now
+   byte-identical to what the snapshot command itself ran.
+2. The skip sentence agrees in number: one skipped snapshot reads
+   "records a build that did not finish", several read "all record
+   builds that did not finish".
+3. `_count_clause` in `bga/compare.py` stops counting cache hits as
+   casualties: the queue that was 0 built / 6 cached / 1 failed now
+   reads "0 built, 6 already cached", not "0 of 7 scheduled elements
+   built". `built_count`/`scheduled_count`/`cached_count` are carried
+   from `bst_extract_run.py` through the `build_failed` violation to
+   both renderers rather than re-derived in either.
+
+Six mutations falsified. Four UX-156 assertions that pinned the old
+wording were updated with the reason recorded in the test.

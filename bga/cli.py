@@ -1080,7 +1080,8 @@ def _add_common_arguments(
             '--plane2',
             type=str,
             metavar='NATIVE_REPORT.json',
-            help='UX-83: a Plane 2 native trace report for THIS SAME run. When '
+            help='Plane 2 report for this same run: capacity advice is then\n'
+                 'conditioned on what the sandboxes actually measured.'
         )
         subparser.add_argument(
             '-d', '--diagnostics',
@@ -1202,7 +1203,8 @@ def create_parser() -> argparse.ArgumentParser:
     graph_parser.add_argument(
         '--by-kind',
         action='store_true',
-        help='Also show aggregate stats (count, total/avg observed duration) grouped by BuildStream '
+        help='Also show per-kind aggregate stats (count, total and average\n'
+             'observed duration), grouped by BuildStream element kind.'
     )
     graph_parser.set_defaults(func=cmd_graph)
 
@@ -1236,7 +1238,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     sweep_parser.add_argument(
         '--plane2', type=str, metavar='NATIVE_REPORT.json',
-        help='UX-83: a Plane 2 native trace report for THIS SAME run. The knee '
+        help='Plane 2 report for this same run: the knee line then says how\n'
+             'many cores were measured busy, not just how many were asked for.'
     )
     sweep_parser.add_argument(
         '--resource', type=str, default='PROCESS',
@@ -1256,7 +1259,9 @@ def create_parser() -> argparse.ArgumentParser:
     )
     sweep_parser.add_argument(
         '--calibration-dir', action='append', default=[], metavar='PATH',
-        help='UX-14 tier 2: path to a real run directory, captured at a real, different value of the '
+        help='A run directory captured at a different value of the swept\n'
+             'resource, for duration calibration. Repeatable; 2+ enables\n'
+             'interpolation.'
     )
     sweep_parser.add_argument(
         '-f', '--format', type=str, choices=['text', 'json'], default='text',
@@ -1318,11 +1323,12 @@ def create_parser() -> argparse.ArgumentParser:
             )
     correlate_parser.add_argument(
         '--cache-logs', default=None, metavar='PATH',
-        help="A Plane 3 report (`bga cache-logs --format json`) for the same "
+        help="A Plane 3 report (`bga cache-logs --format json`) for the same\n"
+        "             project, supplying the per-element sandbox tax."
     )
     correlate_parser.add_argument(
         'native_report', type=str, nargs='?', default=None,
-        help='Path to the JSON report written by `bga capture run` (Plane 2). '
+        help='Path to the JSON report written by `bga capture run` (Plane 2).'
     )
     correlate_parser.set_defaults(func=cmd_correlate)
 
@@ -1340,11 +1346,12 @@ def create_parser() -> argparse.ArgumentParser:
     )
     cache_trend_parser.add_argument(
         'run_dirs', nargs='+', metavar='RUN',
-        help='Run directories, oldest first. Order is the caller\'s to know: '
+        help='Run directories, oldest first. Order is the caller\'s to know:\n'
+             'nothing in a run records which build came before it.'
     )
     cache_trend_parser.add_argument(
         '-f', '--format', choices=['text', 'json'], default='text',
-        help='Output format: text (human-readable), json (machine-readable). '
+        help='Output format: text (human-readable), json (machine-readable).'
     )
     cache_trend_parser.add_argument(
         '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
@@ -1437,7 +1444,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     compare_parser.add_argument(
         '--regression-threshold', type=float, default=None, metavar='PCT',
-        help='Percentage-point threshold for --fail-on-regression (default: the same significance '
+        help='Percentage-point threshold for --fail-on-regression (default: the\n'
+             'same 1%% significance rule the verdict uses).'
     )
     compare_parser.set_defaults(func=cmd_compare)
 

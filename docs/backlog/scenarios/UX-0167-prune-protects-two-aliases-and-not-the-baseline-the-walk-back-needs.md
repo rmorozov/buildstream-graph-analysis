@@ -1,6 +1,6 @@
 # UX-167: prune protects two aliases, and not the baseline the walk-back needs
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-159 (prune), UX-156 (the walk-back whose input this guards)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-159 (prune), UX-156 (the walk-back whose input this guards)
 
 ## Motivation
 
@@ -48,3 +48,25 @@ snapshot, deletes the husk, and says so in three distinct lines. A
 follow-up snapshot's auto-compare still finds its walk-back baseline.
 Mutation: dropping the healthy-run clause reddens the walk-back
 assertion.
+
+## What was built
+
+Prune's keep-set is now `@last`, `@prev`, and — only when both of those
+are unhealthy — the newest healthy run, which is exactly what UX-156's
+walk-back will pick as the next comparison's baseline. A store of
+healthy runs prunes precisely as it did before; the contradiction the
+review hit live (failed + interrupted as the two newest, and prune
+offering to delete the only healthy snapshot) cannot recur.
+
+Husks — snapshots with no run directory — are pruned first under any
+criterion and counted separately in the report ("(1 of those held no
+run directory)"), instead of surviving `--keep` while run-bearing
+snapshots were deleted around them.
+
+The `baseline` config key was removed rather than wired: nothing in
+production ever wrote it, so the protection guarded a phantom, and
+protecting the walk-back's real target covers what it was for.
+
+Guards in `tests/unit/test_snapshot_store_management.py`; dropping the
+healthy-run clause reddens the walk-back assertion, as the acceptance
+test asked.

@@ -1,6 +1,6 @@
 # UX-165: seven help strings end mid-sentence
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-158 (the concision pass that cut them)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the concision pass that cut them)
 
 ## Motivation
 
@@ -38,3 +38,21 @@ The seven sites render complete sentences under `--help`; the
 fragment check reddens when a continuation line is deleted from any
 flag help (mutation on one site); every command still meets its
 line cap.
+
+## What was built
+
+Seven flag helps got their sentences back — `--plane2` (twice),
+`graph --by-kind`, `sweep --calibration-dir`, `correlate --cache-logs`,
+`correlate native_report`, `cache-trend run_dirs`, `cache-trend
+--format`, `compare --regression-threshold` — rewritten to end where
+they mean to rather than restored verbatim, since what UX-158 cut was
+mostly design history and only incidentally the predicate.
+
+The reason the cut could do this silently was that UX-158's guard
+counted *lines*, so truncation scored as an improvement.
+`tests/unit/test_help_is_short.py` now also asserts no help string ends
+mid-sentence: every one must end in a terminator, and parens must
+balance. That check is what makes the line-count guard safe to keep.
+
+UX-158's own task file carries an annotation that its table of
+before/after line counts predates this repair.

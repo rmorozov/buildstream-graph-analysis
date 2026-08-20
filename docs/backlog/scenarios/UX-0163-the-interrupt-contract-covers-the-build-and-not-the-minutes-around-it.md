@@ -1,6 +1,6 @@
 # UX-163: the interrupt contract covers the build and not the minutes around it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-157 (the contract this widens), UX-159 (which made the surrounding phases visible)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-157 (the contract this widens), UX-159 (which made the surrounding phases visible)
 
 ## Motivation
 
@@ -59,3 +59,32 @@ Round 17's live shape, re-run: SIGINT during `Extracting run data...`
 command; running that command completes `run/` and `analyze` works.
 SIGINT during the census → exit 130, no traceback, scratch clean. The
 UX-157 mid-build acceptance still passes unchanged.
+
+## What was built
+
+`bst_run_wrapped.py` grew a build-group lifecycle: the build starts in
+its own session (`start_new_session=True`), a `BaseException` anywhere
+in the read loop routes through `shutdown_build_group`, and the SIGINT
+grace before escalation went from 120s to 300s
+(`BGA_INTERRUPT_GRACE_SECONDS` overrides it) — 120s was short enough
+that a big build lost the `queue_summary` the whole comparison is
+built from.
+
+The tracer's `main()` now has two `KeyboardInterrupt` handlers rather
+than one, because the two windows need different answers: before the
+build (hook compile, census walk) nothing was captured and it says so
+and exits 130; after it, `CaptureInterrupted` carries the salvage
+through, and `copy_out()` runs from a `finally` so the trace already on
+disk survives the scratch's deletion.
+
+The window the round-17 review actually hit — SIGINT during
+`Extracting run data...` — is now a printed walk-forward
+(`format_post_build_interrupt`) naming the complete `build.log`, the
+kept snapshot, and the exact `bga extract` line that re-runs the step
+that was interrupted, instead of a raw traceback and a snapshot with no
+`run/`.
+
+Verified end to end: interrupt → exit 130 → `bga extract` on the kept
+`build.log` → `bga analyze` produces a report that renders as an
+unfinished build. Guards in `tests/unit/test_interrupt_lifecycle.py`;
+every mutation falsified red.

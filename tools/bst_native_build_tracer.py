@@ -430,6 +430,126 @@ def element_path(project_dir: str) -> str:
     return "elements"
 
 
+CASD_NAME = "buildbox-casd"
+
+
+def buildstream_cache_dir() -> str:
+    """The cache directory `bst` will use, resolved the way `bst` does.
+
+    `UX-161`. `XDG_CACHE_HOME` if set, else `~/.cache`, plus
+    `buildstream` - and a `cachedir` in the user configuration wins over
+    both, which is how anyone with a large project moves the cache off
+    the root filesystem. Read textually for the same reason
+    `element_path` is: this has to work without importing BuildStream.
+    """
+    config = os.path.join(
+        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+        "buildstream.conf",
+    )
+    try:
+        with open(config, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if line.startswith("cachedir:"):
+                    value = line.split(":", 1)[1].strip()
+                    if value:
+                        return os.path.abspath(os.path.expanduser(value))
+    except OSError:
+        pass
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    return os.path.join(os.path.abspath(base), "buildstream")
+
+
+def _process_start_age(pid: str, proc_root: str = "/proc") -> Optional[float]:
+    """How many seconds ago this process started, or `None`.
+
+    From `/proc/<pid>/stat` field 22 against `/proc/uptime`, which is
+    the canonical answer. The `)` split is because a process name can
+    itself contain spaces and parentheses.
+    """
+    try:
+        with open(f"{proc_root}/{pid}/stat", "r", encoding="utf-8") as handle:
+            fields = handle.read().rsplit(")", 1)[1].split()
+        started_ticks = int(fields[19])
+        uptime = float(
+            open(f"{proc_root}/uptime", encoding="utf-8").read().split()[0])
+        return uptime - started_ticks / os.sysconf("SC_CLK_TCK")
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def detect_stale_casd(cache_dir: Optional[str] = None,
+                      proc_root: str = "/proc") -> List[dict]:
+    """Running `buildbox-casd` processes already serving this cache.
+
+    `UX-161`, completing `UX-147`'s deferred item 2. A `casd` started
+    before the capture was started by a `bst` that never saw the
+    capture's `PATH`, so a build that reuses it can miss the shim
+    entirely - and that produces a zero-invocation capture whose summary
+    could previously only list it as one of three guesses, after the
+    build.
+
+    Detection is evidence-shaped and deliberately not clever: `casd`
+    takes the cache directory as its last argument (measured -
+    `... --jobs=16 /tmp/x/cache/buildstream`), so a process named
+    `buildbox-casd` carrying this build's cache directory is one that
+    would be reused. What it does *not* claim is that reuse definitely
+    bypasses the shim on every `bst` version; `UX-147`'s caution stands
+    and the wording stays "this is running", not "this is your bug".
+
+    `proc_root` is a test seam. Nothing in production passes it, and a
+    process's `comm` cannot be faked any other way - the alternative
+    was to leave these matching rules unguarded.
+    """
+    cache_dir = os.path.abspath(cache_dir or buildstream_cache_dir())
+    found = []
+    try:
+        pids = [name for name in os.listdir(proc_root) if name.isdigit()]
+    except OSError:
+        return []
+    for pid in pids:
+        try:
+            with open(f"{proc_root}/{pid}/comm", "r", encoding="utf-8") as handle:
+                if handle.read().strip() != CASD_NAME:
+                    continue
+            with open(f"{proc_root}/{pid}/cmdline", "rb") as handle:
+                argv = [part.decode("utf-8", "replace")
+                        for part in handle.read().split(b"\0") if part]
+        except OSError:
+            continue  # it exited while we looked; that is not staleness
+        if not any(os.path.abspath(arg) == cache_dir
+                   for arg in argv if arg and not arg.startswith("-")):
+            continue
+        found.append({"pid": int(pid),
+                      "age_s": _process_start_age(pid, proc_root),
+                      "cache_dir": cache_dir})
+    return sorted(found, key=lambda entry: entry["pid"])
+
+
+def format_stale_casd_warning(found: List[dict]) -> Optional[str]:
+    """The up-front warning, or `None` when there is nothing to say.
+
+    Silent on a quiet machine is a requirement, not an oversight: a
+    warning that fires on every capture is one nobody reads by the
+    third.
+    """
+    if not found:
+        return None
+    lines = []
+    for entry in found:
+        age = entry["age_s"]
+        when = f", started {age / 60:.0f}m ago" if age and age >= 60 else (
+            f", started {age:.0f}s ago" if age else "")
+        lines.append(
+            f"Warning: a {CASD_NAME} serving {entry['cache_dir']} was already "
+            f"running when this capture started (pid {entry['pid']}{when}). It "
+            f"was started by a `bst` that never saw this capture's PATH, so a "
+            f"build that reuses it can miss the shim entirely and capture "
+            f"nothing. Stop it first - `bst shutdown`, or `kill "
+            f"{entry['pid']}` - and `bst` will start a fresh one."
+        )
+    return "\n".join(lines)
+
+
 def discover_element_names(project_dir: str) -> List[str]:
     """Every element in the project, by the name BuildStream calls it.
 
@@ -491,6 +611,13 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
     default) reproduces this function's own prior plain-`subprocess.run`
     behavior exactly, unchanged.
     """
+    # UX-161: before the build, because after it the same fact is only
+    # one of three guesses about a zero-invocation capture.
+    stale_casd = detect_stale_casd()
+    warning = format_stale_casd_warning(stale_casd)
+    if warning:
+        print(warning, file=sys.stderr)
+
     # UX-155: before anything here spawns a process. Correcting only the
     # build's own `env` left every other `bst` bga shells out to - the
     # census, the fingerprint probe, and `extract_run`'s `bst show` - on
@@ -586,7 +713,12 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
             # UX-151: once per capture, as the record's first line - what
             # the argvs below should be parsed *against*.
             with open(captured_diagnostics, "w", encoding="utf-8") as handle:
-                handle.write(json.dumps(capture_fingerprint(), sort_keys=True) + "\n")
+                fingerprint = capture_fingerprint()
+                # UX-161: pid and age, so "was a daemon already running?"
+                # is answerable from the record the user sends on rather
+                # than from memory of what they typed that afternoon.
+                fingerprint["stale_casd"] = stale_casd
+                handle.write(json.dumps(fingerprint, sort_keys=True) + "\n")
         else:
             env.pop("BST_TRACE_DIAGNOSTICS", None)
         if no_inject:
@@ -4283,16 +4415,41 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
                 "  itself is executable - the capture probes that before starting -",
                 "  so it was never *resolved*:",
             ]
+        # UX-161: when the pre-build check fired, the middle possibility
+        # below stops being a guess. The record carries the pid, so this
+        # is a reading of evidence rather than a hunch about it.
+        stale = (read_capture_fingerprint(path) or {}).get("stale_casd") or []
+        if stale:
+            pids = ", ".join(str(entry.get("pid")) for entry in stale)
+            lines += [
+                "",
+                f"    A `buildbox-casd` (pid {pids}) was ALREADY RUNNING when this",
+                "    capture started - it was warned about then, and it is by far the",
+                "    likeliest explanation for this zero. Its environment predates the",
+                "    shim directory, so a build that reused it never had the shim on",
+                "    $PATH. Stop it (`bst shutdown`, or kill it), re-run, and this",
+                "    count should be non-zero.",
+                "",
+                "  Less likely, if that is not it:",
+                "",
+                "    - `buildbox-run` found `bwrap` by an absolute path rather than",
+                "      through $PATH;",
+                "    - or something in the chain sanitises $PATH.",
+                "",
+            ]
+        else:
+            lines += [
+                "",
+                "    - `buildbox-run` found `bwrap` by an absolute path rather than",
+                "      through $PATH;",
+                "    - or `bst` reused a `buildbox-casd` that was already running",
+                "      before this capture, whose environment predates the shim",
+                "      directory. No such daemon was running when this capture",
+                "      started (UX-161 checks), so this one is unlikely here;",
+                "    - or something in the chain sanitises $PATH.",
+                "",
+            ]
         lines += [
-            "",
-            "    - `buildbox-run` found `bwrap` by an absolute path rather than",
-            "      through $PATH;",
-            "    - or `bst` reused a `buildbox-casd` that was already running",
-            "      before this capture, whose environment predates the shim",
-            "      directory. Stopping it and letting `bst` restart it is the",
-            "      ten-second fix;",
-            "    - or something in the chain sanitises $PATH.",
-            "",
             "  A fully cached build also launches no sandbox, which is benign -",
             "  but this build did run tasks, so that is not what happened here."
             if sandbox_tasks else

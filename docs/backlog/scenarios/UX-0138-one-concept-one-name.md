@@ -1,6 +1,6 @@
 # UX-138: one concept, one name
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — (mechanical; the worklist is written)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (mechanical; the worklist is written)
 
 Docs polish round (round 14); the full variants table with locations is
 in [`round-14`](../../audits/round-14.md).
@@ -55,3 +55,28 @@ The glossary exists; a grep per canonical term (pasted in the log)
 shows no competing variant remaining in guides/README outside quoted
 historical output; the CLI prints the same label the docs teach for
 the sandbox tax; both "cold"s are disambiguated at every co-occurrence.
+
+
+---
+
+## What was built
+
+The glossary is five rows in `docs/README.md`, and the corpus was swept
+to match it.
+
+**The tool was the source of one variant, so the tool changed.**
+`bga cache-logs` printed `Sandbox tax:` as its heading and `toll` in
+every row beneath it — which is where the docs' alternating usage came
+from. Now: *"Who paid it (by tax seconds, not by share)"*, `4.0s tax of
+49.0s`, and `bga correlate`'s granularity finding says "sandbox tax" too.
+A test asserts the report contains no `toll` at all, so the two cannot
+drift apart again.
+
+The rest: **element** in user prose; **cold floor (`--cold`)**
+disambiguated from **cold capture mode** at the one place both appear;
+**run directory** in prose with `RUN/` as the placeholder (six variants
+of `/path/to/run-directory` and `/path/to/run` collapsed);
+**baseline set → noise band** stated once with the distinction made.
+
+Out of scope held: the spec's own "task" vocabulary is untouched, and so
+are quoted historical outputs in the audits and case studies.

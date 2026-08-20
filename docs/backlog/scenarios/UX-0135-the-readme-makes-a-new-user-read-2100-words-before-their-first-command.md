@@ -1,6 +1,6 @@
 # UX-135: the README makes a new user read 2,100 words before their first command
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-125/UX-126 (the flow it should lead with — both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-126 (the flow it should lead with — both done)
 
 Docs polish round (round 14): simple, concise, consistent. The full
 fresh-eyes read this and its siblings (`UX-136`..`UX-141`) come from is
@@ -54,3 +54,26 @@ immediately after the quick start; every command block the README still
 carries passes the docs-commands test; nothing deleted here is absent
 from the corpus (each cut's content grep-locatable in the file the cut
 points to); `make lint-docs` and the link test pass.
+
+
+---
+
+## What was built
+
+`README.md`: **430 → 245 lines**, reordered to what it is → install →
+30-second fixture → **doctor + snapshot on your project** → one halved
+showcase → CI pointer → plane pointers → docs/dev/license.
+
+| cut | where it went |
+|---|---|
+| `--large` fixture output, the 1202-element synthetic block | one sentence naming both, with the round-2 link that explains why the big one exists |
+| the second half of the freedesktop-sdk showcase | replaced by three takeaway bullets; the full report is the walkthrough's |
+| "Reading the report" (36 lines) | **moved** to `cli.md`, where the reference lives, and linked from the showcase |
+| Plane 2 section (67 → 24) | kept the two commands and what the plane answers; the pasted CPU/memory/parallelism blocks are the walkthrough's |
+| Plane 3 section (34 → 17) | same shape |
+| the CI section's gate table | `ci-comment.md`, which `UX-139` made the CI owner's page |
+
+Nothing was deleted outright: every cut is either relocated (and the
+link points at where) or was already stated in the file it now points
+to. The line-10 plane paragraph became one clause plus a link to
+`docs/README`'s plane table.

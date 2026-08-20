@@ -76,7 +76,7 @@ Three design points, each of which could have gone wrong:
   their original commands. Those are historical records with pasted
   verbatim command-and-output evidence; rewriting the command would
   falsify the record. Only instructional docs — `README.md`,
-  `docs/guides/cli.md`, `docs/guides/real-project-capture.md` — moved to the aliases.
+  `docs/guides/cli.md`, `docs/design/capture-workflow.md` — moved to the aliases.
 - **The CI workflows**, for now. `real-project-capture.yml` had just
   received two correctness fixes and round 9 was about to run against
   it; changing invocation style in the same breath would have mixed a

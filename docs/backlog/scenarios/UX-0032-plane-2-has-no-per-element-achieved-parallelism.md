@@ -58,7 +58,7 @@ Add a per-element parallelism section to `tools/bst_native_build_tracer.py`'s re
 
 ## Verification Log
 
-Filed 2026-08-16 from a real session (`docs/guides/optimization-walkthrough-06.md`). Both traces are real `tools/bst_native_build_tracer.py run` captures of real `bst --builders 4 --max-jobs 4 build all.bst` invocations (BuildStream 2.7.0, real `bwrap` sandbox, real `gcc 13`/`cmake 3.28`, 4-core host); the per-element table was computed from those runs' own emitted `processes[]` arrays, which is the point - no new capture was needed to produce it.
+Filed 2026-08-16 from a real session (`docs/audits/case-study-06-macro-micro.md`). Both traces are real `tools/bst_native_build_tracer.py run` captures of real `bst --builders 4 --max-jobs 4 build all.bst` invocations (BuildStream 2.7.0, real `bwrap` sandbox, real `gcc 13`/`cmake 3.28`, 4-core host); the per-element table was computed from those runs' own emitted `processes[]` arrays, which is the point - no new capture was needed to produce it.
 
 Real end-to-end re-verification against the two real traces from this doc's Motivation (`examples/06-macro-micro-optimization`, baseline and `optimized/`, 822 traced processes each):
 

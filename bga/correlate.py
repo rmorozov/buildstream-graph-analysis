@@ -1184,7 +1184,7 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> List[dict
             'projection_is_a_floor': bool(projection),
             'title': (
                 f"{len(over)} sibling element(s) spend at least half their time on "
-                f"sandbox toll rather than on building: {', '.join(over[:4])}. "
+                f"sandbox tax rather than on building: {', '.join(over[:4])}. "
                 f"Merging them would delete {len(deleted)} staging(s), "
                 f"{sum(deleted) / 1e6:.1f}s of toll"
                 + (

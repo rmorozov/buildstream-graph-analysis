@@ -33,7 +33,7 @@ The 159-line gap between START and END is itself the honest part of this: those 
 3. **Report coverage explicitly.** "CPU time across N of M traced processes (K exited abnormally and are unmeasured)". A per-element CPU total that silently omits a third of its processes is worse than no CPU total.
 4. **Then, and only then, revisit the three caveats.** This task's deliverable is the *measurement*; whether Plane 2's per-element CPU time is a legitimate input to Plane 1's `utilisation` buckets and `occupancy_ratio` is a real question with a real obstacle - Plane 2 traces one element at a time under a wrapped build, Plane 1 covers the whole run, and `I9` reconciliation would need both for the same run. **Do not weaken the caveats on the strength of partial coverage.** File the plumbing as a follow-up rather than stretching this task to cover it.
 
-The genuinely new capability this unlocks, independent of the caveats, is a Plane 2 answer to *"is this element's build CPU-bound or waiting?"* - CPU-seconds vs. wall-seconds vs. `native_max_jobs`, per element. That is the question the micro-optimization half of the walkthrough (`docs/guides/optimization-walkthrough-06.md`) could not answer, and it needs no cross-plane plumbing at all.
+The genuinely new capability this unlocks, independent of the caveats, is a Plane 2 answer to *"is this element's build CPU-bound or waiting?"* - CPU-seconds vs. wall-seconds vs. `native_max_jobs`, per element. That is the question the micro-optimization half of the walkthrough (`docs/audits/case-study-06-macro-micro.md`) could not answer, and it needs no cross-plane plumbing at all.
 
 ## Out of Scope
 
@@ -66,7 +66,7 @@ Real CPU time (getrusage): 45.56s across 663 of 822 traced processes (159 exited
   app.bst          3.13s CPU over   2.34s wall =  1.34 cores busy  [81% of processes measured]
 ```
 
-**This is the capability the task was really for.** `core.bst` - the element pinned with `notparallel: True` - runs at **0.87 cores busy** while every sibling runs at ~1.7. The micro-optimization half of `docs/guides/optimization-walkthrough-06.md` could establish that `core.bst` was slow and that it asked for `-j1`; it could not say whether it was CPU-bound or waiting. It was waiting, and now the report says so in measured core-seconds. That needs no cross-plane plumbing at all, which is why it is the part that shipped.
+**This is the capability the task was really for.** `core.bst` - the element pinned with `notparallel: True` - runs at **0.87 cores busy** while every sibling runs at ~1.7. The micro-optimization half of `docs/audits/case-study-06-macro-micro.md` could establish that `core.bst` was slow and that it asked for `-j1`; it could not say whether it was CPU-bound or waiting. It was waiting, and now the report says so in measured core-seconds. That needs no cross-plane plumbing at all, which is why it is the part that shipped.
 
 ### A real bug this introduced, found by real data
 

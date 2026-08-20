@@ -32,20 +32,43 @@ which is why the guides pick between them rather than always saying
 | **2** — processes inside a sandbox | what one element's own build system actually did | a real `bst` + `bwrap` build you decided to capture |
 | **3** — BuildStream's own kept logs | history: what this project keeps spending time on | nothing — `bga cache-logs` reads what is already on disk |
 
+## Words this project uses precisely
+
+Five that are easy to blur, pinned here so every other document can be
+short (`UX-138`):
+
+| term | means |
+|---|---|
+| **element** | a BuildStream element — what user docs call the unit of work. The spec says "task"; that is spec vocabulary, defined there |
+| **capture** | the act of recording a build, and the artifact it publishes. **Snapshot** = a capture in a project's own `.bga/runs/`, named by `@last`/`@prev` |
+| **sandbox tax** | element time spent staging, integrating and caching rather than building. One name — the reports print it too |
+| **cold / incremental** | the two capture *modes* (caches off / caches on). Unrelated to the **cold floor** (`bga floors --cold`), which is a structural lower bound |
+| **baseline set → noise band** | the *runs* you compare against, and the *statistic* built from them (median ± k·MAD). A set of fewer than three defines no band |
+
 ---
 
 ## Guides
 
 How to use the tool. These are the documents that tell you what to type.
 
-| document | what it covers |
+Two journeys, one page each — then the reference.
+
+| document | what it covers | for |
+|---|---|---|
+| [`guides/real-project.md`](guides/real-project.md) | a real project end to end: capture, read, fix, prove | **the local optimizer** |
+| [`guides/ci-comment.md`](guides/ci-comment.md) | capture → baseline set → gates → the PR comment | **the CI owner** |
+| [`guides/cli.md`](guides/cli.md) | every command, flag and exit code | reference |
+
+### Case studies
+
+Records of real sessions, kept verbatim. They are evidence, not
+instructions — their commands are the ones those rounds ran, not the
+ones to run today (`UX-139`).
+
+| document | what it records |
 |---|---|
-| [`guides/cli.md`](guides/cli.md) | every command, flag and exit code |
-| [`guides/real-project.md`](guides/real-project.md) | a real project end to end: capture, read, fix, prove, gate |
-| [`guides/real-project-capture.md`](guides/real-project-capture.md) | how the third-party capture workflow is built and why |
-| [`guides/ci-comment.md`](guides/ci-comment.md) | render the verdict as a PR comment, and wire it into a pipeline |
-| [`guides/optimization-walkthrough.md`](guides/optimization-walkthrough.md) | a worked example: find a critical-path problem and fix it |
-| [`guides/optimization-walkthrough-06.md`](guides/optimization-walkthrough-06.md) | the macro-then-micro cycle across both planes |
+| [`audits/case-study-06-macro-micro.md`](audits/case-study-06-macro-micro.md) | the macro-then-micro cycle, **including where the tool did not guide the user** |
+| [`audits/optimization-walkthrough-04.md`](audits/optimization-walkthrough-04.md) | the retired `sleep N` proxy walkthrough, kept for provenance |
 
 ## Specification and contracts
 

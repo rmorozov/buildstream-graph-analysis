@@ -1,6 +1,6 @@
 # UX-136: the two most-read docs teach only the superseded flows
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-96, UX-115, UX-124, UX-126 (the shipped replacements)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-96, UX-115, UX-124, UX-126 (the shipped replacements)
 
 Docs polish round (round 14). Sibling of `UX-135`; full read in
 [`round-14`](../../audits/round-14.md).
@@ -61,3 +61,56 @@ each; ci-comment.md's first YAML block contains `--run-dir` and no
 the walkthrough's correlate output block is re-generated from the
 retained capture and shows the envelope; every changed command block
 passes the docs-commands test.
+
+
+---
+
+## What was built
+
+All five, and one correction to the finding itself.
+
+1. **`bga baseline` is taught where users read.** README's band block
+   leads with the one-command form and keeps the manual
+   three-`--baseline-run` assembly as "what it composes"; `real-project.md`
+   and the new CI page do the same.
+2. **`ci-comment.md`'s first YAML** is now `bga capture run --run-dir`,
+   one build for both planes. `wrap` + `extract` survives as the
+   Plane-1-only alternative, named as such.
+3. **Both correlate blocks regenerated** from the retained capture
+   (`captures/fdsdk/953683fb-incremental-b4j4-32064333551`, fetched and
+   re-run through today's `bga correlate`).
+4. **README's join leads with `bga correlate @last`**; the explicit
+   three-command form follows as the outside-a-project case.
+5. `cli.md`'s workflow examples use `RUN/` and `@last`; `-d` is defined
+   where it is used.
+
+### The finding was under-stated, and in an interesting direction
+
+Item 3 says the docs "print correlate output the tool no longer
+produces". Checked against the real capture, it is worse than that in
+`cli.md` and milder in `real-project.md`:
+
+- **`cli.md`'s block was a composite no run ever produced.** It printed
+  `core.bst` — an `examples/06` element — carrying freedesktop-sdk's
+  `cmake-stage1` figures: 885 `cc1plus` processes, 4353 CPU s, `dwz` at
+  138.6s, 1902 MB peak. Those are all in README's Plane 2 section under
+  the element they belong to. Two real captures were spliced into one
+  fictional row and labelled real output.
+- **`real-project.md`'s block was genuinely stale** but honestly
+  attributed: right element, output the tool has since changed (`UX-89`
+  now groups `cmake-stage1` with `doxygen` and collapses their figures
+  to ranges).
+
+Both are replaced with output regenerated today from the retained
+capture.
+
+### Deviation, recorded
+
+The acceptance asks that `grep -rn 'multiply by however' docs/guides/`
+come back empty. It does not, and should not: that line is what the tool
+**still prints** for a capture with no host memory recorded — which the
+retained fdsdk capture is — and it now carries the clause explaining why
+(*"the capture recorded no host memory, so this cannot do it for you"*).
+Deleting a line the tool really emits would trade one wrong doc for
+another. The computed envelope is shown beside it, from `examples/06`,
+labelled with which capture each came from.

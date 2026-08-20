@@ -112,9 +112,9 @@ Real output, from a freedesktop-sdk log tree:
 ```text
 Sandbox tax: 13.0s of 4409.0s element time (0.3%) across 23 build log(s) went to
 staging, integrating and caching rather than to the build itself
-  Who paid it (by toll seconds, not by share):
-    components/libffi.bst                4.0s toll of 49.0s (8%)
-    components/bison.bst                 3.0s toll of 137.0s (2%)
+  Who paid it (by tax seconds, not by share):
+    components/libffi.bst                4.0s tax of 49.0s (8%)
+    components/bison.bst                 3.0s tax of 137.0s (2%)
 
 Configure tax (Plane 3, self-reported): 35.5s of 4409.0s element time (0.8%),
 reported by 3 of 23 build log(s)
@@ -125,7 +125,7 @@ reported by 3 of 23 build log(s)
 **What to do with it.** Three questions it answers that no capture can:
 
 - *Is any element paying more to be an element than to build?* That is
-  the sandbox tax. A high toll share on a short element is the signal
+  the sandbox tax. A high tax share on a short element is the signal
   behind the `merge-candidate` finding — pass the JSON to
   `bga correlate --cache-logs` and it will say so with the Plane 1 impact
   attached.
@@ -229,15 +229,10 @@ can conclude:
   the report carries `spine+hook`, `spine-only` or `hook-only`, and the
   report states the coverage as a number rather than a footnote
   (`UX-107`).
-- **The spine's price is 0.3 to 1.1 ms per process** — a range, not a
-  constant, because five independent measurements of the same
-  2003-process fixture land across it (`UX-112` measured, `UX-129`
-  narrowed the claim to what the data supports; [raw
-  figures](../audits/data/spine-cost-storm.md)). That is invisible on a
-  compile-bound build, where processes live tens of milliseconds, and
-  dominant on a process-dense one, where they live two. Quote a ratio
-  only with its fixture attached: the same cell has been reported at
-  +13.5% and +55.7% while the absolute cost moved far less.
+- **The spine's price is 0.3 to 1.1 ms per process** — a measured range,
+  not a constant, and why it is a range is
+  [in the design doc](../design/architecture.md#plane-2-knows-the-size-of-its-own-blind-spot).
+  Invisible on a compile-bound build, dominant on a process-dense one.
 - **So prefer `--trace-spine=auto`** (`UX-113`): it pays that cost only
   for the elements the pre-build census says the hook is blind for, plus
   any it could not assess. On an all-dynamic project that is no elements
@@ -572,21 +567,43 @@ Joined 11 element(s) on element UID (126 in Plane 1, 11 traced in Plane 2)
   buildstream-build, flit_core, unknown
 
 What to do next (ranked by Plane 1 impact):
-  components/_private/cmake-stage1.bst:
-    - holds 43% of the critical path and fixing it is worth 1569.8s (43.4% of the build)
-      - already compute-bound at 3.41 cores busy, so there is nothing to gain from its
-      parallelism; shortening it means less work
-    - 81% of its measured CPU is one binary, `cc1plus` (885 process(es), 4353 CPU s) -
-      this element is a `cc1plus` problem, so look there before anywhere else
-    - `dwz` is a SINGLE process holding 138.6s of wall time - a serialization point no
-      job count can help; it has to get faster or go away
+  components/_private/cmake-stage1.bst, components/doxygen.bst (2 elements, 14-43% of
+  the critical path each, 513.5-1569.8s apiece, 2083.3s together):
+    - already compute-bound at 3.4-3.6 cores busy - nothing to gain from their
+      parallelism; shortening them means less work
     - its largest single process peaked at 1902 MB resident - multiply by however many
-      elements build concurrently before raising `builders`
-    - opened no file staged by 1 declared build dependency (public-stacks/runtime-minimal.bst)
-      - worth checking whether the edge is needed at build time, or only at runtime; this
-      is evidence, not a verdict (a runtime-only dependency looks identical here)
-    (84% of this element's processes were measured)
+      elements build concurrently before raising `builders` (the capture recorded no
+      host memory, so this cannot do it for you)
+    - it pays 186.7s for an operation 8 other elements also run (15x in total):
+      sh -c -e OPTS=()
+    - opened no file staged by 1 declared build dependencies each (2 edges across the 2)
+      - worth checking whether those edges are needed at build time; this is evidence,
+      not a verdict (a runtime-only dependency looks identical here). Per-element lists
+      are in --format json
+    (80-84% of each element's processes were measured)
+  components/openssl.bst:
+    - holds 19% of the critical path and fixing it is worth 522.5s (14.5% of the build) -
+      already compute-bound at 1.61 cores busy, so there is nothing to gain from its
+      parallelism; shortening it means less work
 ```
+
+Two elements share one block because they are one story (`UX-89`):
+grouping happens when the findings match, and the figures collapse to
+ranges rather than being averaged into something the measurement does
+not say.
+
+**On the memory line's parenthetical.** This capture predates the host
+memory field, so the join says what it *cannot* do rather than dropping
+the row. Where the capture does record it — anything `bga snapshot`
+takes today — that line is replaced by a computed envelope at the top of
+the report:
+
+```text
+  Memory envelope: 4 builders of this shape peak at ~0.6 GB of 15.7 GB (4%);
+  9 would still fit, so memory is not what binds first here
+```
+
+(from `examples/06`, since the retained fdsdk capture cannot produce it).
 
 ### Reading the join
 
@@ -641,19 +658,20 @@ You get a signed delta for every certified floor, both efficiency
 signals, and each attribution category, plus a verdict gated on
 confidence.
 
-If the two runs do not look like the same project — fewer than half
-their element UIDs shared — or one is a caches-off run and the other
-incremental, `bga compare` **refuses**: exit **6**, naming the check that
-failed, and prints no comparison. That exit code is deliberately not 4 or
-5: in CI the likeliest way to feed `compare` two unrelated runs is an
-artifact-path bug, and a pipeline keying on the gates' codes must not
-read it as "your build got slower". `--allow-mismatch` compares anyway,
-with the warning attached.
+If the two runs are not comparable — too few shared element UIDs, or one
+cold and the other incremental — `bga compare` **refuses** with exit 6
+rather than guessing, and names the check that failed. Why that is its
+own exit code, and what the others mean:
+[`cli.md`](cli.md#exit-codes). `--allow-mismatch` compares anyway.
 
 **One capture is not a baseline.** Run-to-run noise on this real build,
-measured across two captures of the *same commit* with nothing changed,
-is **2.9%** against a default significance rule of 1%. If you are gating
-CI, build a baseline set instead of trusting a single pair:
+measured across **three** captures of the *same commit* with nothing
+changed, is **5.8%** against a default significance rule of 1%
+(3614.2s, 3434.4s, 3405.8s, taken by the scheduled capture workflow).
+An earlier reading over two of those captures gave 2.9%, which is the
+same lesson with less of the spread visible — the wider figure is the
+one to plan against. If you are gating CI, build a baseline set instead
+of trusting a single pair:
 
 ```bash
 bga compare baseline/run candidate/run \
@@ -680,12 +698,7 @@ wall-clock gate cannot tell that apart from a regression — so the only
 remedy is raising the threshold, which blinds it to everything else.
 Measured on a real project:
 
-| change | wall-clock | duration gate | occupancy | efficiency gate |
-|---|---|---|---|---|
-| two more well-parallelized elements | +2.5% | **fails** | 60.0% → 73.8% | passes |
-| graph serialized, one element `-j1` | +44% | fails | 63.0% → 27.8% | **fails** |
-| oversubscribed (`8×8` on 4 cores) | +19% | fails | 63.0% → 48.6% | **fails** |
-| nothing changed (repeat capture) | −7.4% noise | fires on ±1% noise | 60.0% → 59.0% | passes |
+The same three configurations, gated: a duration gate fires on all of them including pure noise, and the efficiency gate fires on the two that are real. The measured table is in [`cli.md`](cli.md#ci-efficiency-gate---fail-on-efficiency-regression---min-efficiency).
 
 A third gate exists for the case those two cannot express, and it is the
 one a growing project wants. Occupancy is a whole-build average, so the
@@ -798,5 +811,5 @@ See [`docs/audits/round-9.md`](../audits/round-9.md) and
 
 - [`docs/guides/cli.md`](cli.md) — every command and flag
 - [`docs/design/architecture.md`](../design/architecture.md) — how the two planes work and why they are not merged
-- [`docs/guides/optimization-walkthrough-06.md`](optimization-walkthrough-06.md) — the same cycle on a small project, written up as a case where the tool did *not* guide well
+- [`docs/audits/case-study-06-macro-micro.md`](../audits/case-study-06-macro-micro.md) — the same cycle on a small project, written up as a case where the tool did *not* guide well
 - [`docs/backlog/scenarios/README.md`](../backlog/scenarios/README.md) — every behaviour above, with the evidence that produced it

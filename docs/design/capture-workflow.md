@@ -13,6 +13,14 @@ Plane 2 — had still only ever seen a timeline this repository produced.
 This document records how a real one is captured, and why it is done the
 way it is.
 
+**This is a design and operations record, not a usage guide** (`UX-139`).
+It was listed under `guides/` — "the documents that tell you what to
+type" — while being an argument about *this repository's own* capture
+workflow. A CI owner wanting to consume these captures needs the ref
+scheme and `bga baseline`, both of which are in
+[`docs/guides/ci-comment.md`](../guides/ci-comment.md); a reader wanting
+to know why the workflow is shaped this way is in the right place.
+
 ## Why not simply build it locally
 
 `freedesktop-sdk` cannot be built from the development container this
@@ -184,7 +192,8 @@ cold capture.
 The weekly schedule exists because trend data cannot accumulate if a
 human has to click (`UX-81`), and because the tool's own documented CI
 usage needs a baseline *set*: measured same-commit noise on this project
-is **2.9%** against `bga compare`'s fixed 1% significance rule, and the
+is **2.9%** against `bga compare`'s fixed 1% significance rule (superseded: a third
+capture widened this to **5.8%** — `UX-137`), and the
 band that replaces it (`--baseline-run … --band-k`) needs at least three
 runs of the same shape.
 

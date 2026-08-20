@@ -2,7 +2,7 @@
 
 Written 2026-08-16 after a full hands-on audit and a real macro-then-micro
 optimization walkthrough
-([`optimization-walkthrough-06.md`](../guides/optimization-walkthrough-06.md)). This
+([`optimization-walkthrough-06.md`](../audits/case-study-06-macro-micro.md)). This
 is an argument about direction, not a task list — the tasks it argues for
 are filed individually as `UX-27`..`UX-40` in
 [`scenarios/`](../backlog/scenarios/README.md). Read
@@ -613,7 +613,7 @@ Written 2026-08-16 from a real session: BuildStream 2.7.0 with
 staged by `examples/stage_cpp_toolchain.sh`, on a 4-core / 16GB Linux
 host. Every number quoted is from a real build and a real `bga`
 invocation in that session, recorded in
-[`optimization-walkthrough-06.md`](../guides/optimization-walkthrough-06.md); every
+[`optimization-walkthrough-06.md`](../audits/case-study-06-macro-micro.md); every
 claim about what the code does was checked against the source rather than
 inferred from output. The proposed report and CI-comment layouts are
 illustrations of intent, not implemented output.

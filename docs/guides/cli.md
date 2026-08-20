@@ -126,7 +126,7 @@ behaves identically; the inferred path is printed. Where there is
 nothing to infer the argument is still required, and says so.
 
 The store is *resolution* and nothing else: an explicit path means what
-it always meant, no run-directory format changed, and comparability
+it always meant, no run directory format changed, and comparability
 rules are untouched. Outside a project an alias fails by name rather
 than as a missing path, with exit 2:
 
@@ -196,7 +196,7 @@ pip install -e .
 The primary command analyzes a directory containing `run-context.json`, `graph.json`, and `trace.json` (the run-context/v9, graph/v9, and trace/v9 schemas, Part 32) - **not** a raw BuildStream cache/artifacts path directly; nothing in a live BuildStream cache is already in this shape.
 
 ```bash
-bga analyze /path/to/run-directory
+bga analyze RUN/
 ```
 
 To produce a real run directory in this shape from an actual BuildStream project and build log in one step, see `tools/bst_extract_run.py` (`docs/spec/ingestion-pipeline.md`) - or try the CLI right now against a checked-in sample fixture with no BuildStream install needed at all: `bga analyze tests/fixtures/golden/mixed_task_kinds` (see the README's Quick Start).
@@ -223,7 +223,7 @@ Control the output format using `--format` (or `-f`):
 - `csv`: Comma-separated values for attribution data.
 
 ```bash
-bga analyze /path/to/run --format json > report.json
+bga analyze RUN/ --format json > report.json
 ```
 
 The JSON carries a **`findings` array** — the same conclusions the text report's `Key Findings` block renders, as data. Each entry has a stable `id` (what a CI gate keys on, and what a run-to-run diff joins on — it does not change when the wording does), a `severity` (`critical`/`high`/`medium`/`info`), the `elements` it concerns, and an `evidence` object with the raw numbers behind the sentence. Both formats render from this one list, so they cannot disagree, and a consumer never has to re-derive a threshold from `bga/report/text.py`:
@@ -271,7 +271,7 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `declared-not-used` | info | opened no file staged by a declared build dependency — evidence, not a verdict |
 | `unread-gating-chain` | high | a *group* of never-read edges chains elements along the critical path (`UX-82`) |
 | `merge-candidate` | medium | sibling elements spending at least half their time on sandbox toll rather than building — needs `--cache-logs` (`UX-100`) |
-| `merge-not-indicated` | info | no element pays more toll than it builds, and how far the worst one is from the line |
+| `merge-not-indicated` | info | no element pays more sandbox tax than it builds, and how far the worst one is from the line |
 | `split-candidate` | info | an element holding a material share of the critical path with real internal parallelism — evidence, never a projection (`UX-100`) |
 
 `bga cache-logs --format json` → `.findings[].id` (1), built in `tools/bst_cache_logs.py` rather than `bga/findings.py` because it reads BuildStream's own logs and, optionally, a Plane 2 report — neither of which the run-directory analyzer has:
@@ -290,11 +290,11 @@ A finding not in the run's output simply did not fire; ids are never emitted wit
 
 ```bash
 # Is this build chain-bound, and which elements is its time in?
-bga analyze /path/to/run --format json \
+bga analyze RUN/ --format json \
   | jq '.findings[] | select(.id == "time-concentration") | .evidence'
 
 # Anything critical or high, as a gate condition
-bga analyze /path/to/run --format json \
+bga analyze RUN/ --format json \
   | jq -e '[.findings[] | select(.severity == "critical")] | length == 0'
 ```
 
@@ -318,8 +318,8 @@ Exit `1` only on a failure. A static-binary blind spot (`--trace-spine=auto` is 
 #### Conditioning capacity advice on Plane 2 (`--plane2`) — `UX-83`
 
 ```bash
-bga analyze /path/to/run --plane2 /path/to/native-report.json
-bga sweep   /path/to/run --resource PROCESS --plane2 /path/to/native-report.json
+bga analyze RUN/ --plane2 PLANE2.json
+bga sweep   RUN/ --resource PROCESS --plane2 PLANE2.json
 ```
 
 The `RESOURCE WAIT` hint and `sweep`'s knee point are both replay-model answers, and the replay model does not know about CPU (`UX-09`/`UX-14`). Measured once on a real dual-plane capture: `analyze` said *"31.9% of wall-clock is RESOURCE WAIT — try `--capacity N` with a higher N"* and `sweep` put the knee at capacity 5, on a 4-core host — while `correlate` on the **same capture** named the real fix, an element pinned to `-j1`, worth −32.4% and costing no extra capacity.
@@ -354,7 +354,7 @@ where the block above actually ran.
 Override the detected system capacity (useful for simulating different hardware):
 
 ```bash
-bga analyze /path/to/run --capacity 16
+bga analyze RUN/ --capacity 16
 ```
 
 *Note: This affects the calculation of the Lower Bound ($LB$) and Replay Makespan ($T_C$).*
@@ -364,7 +364,7 @@ bga analyze /path/to/run --capacity 16
 Run the deterministic replay scheduler to compute a feasible makespan ($T_C$) under the chosen scheduling heuristic - a counterfactual model for scheduler comparison, capacity sweeps, and model slack (Part 18), not a claim that $T_C$ is the mathematically optimal schedule:
 
 ```bash
-bga analyze /path/to/run --replay
+bga analyze RUN/ --replay
 ```
 
 You can specify the scheduling heuristic:
@@ -375,7 +375,7 @@ You can specify the scheduling heuristic:
 - `depth` (Dependency depth priority).
 
 ```bash
-bga analyze /path/to/run --replay --heuristic lpt
+bga analyze RUN/ --replay --heuristic lpt
 ```
 
 #### Diagnostics
@@ -383,7 +383,7 @@ bga analyze /path/to/run --replay --heuristic lpt
 Enable advanced diagnostic signals (adds computation time):
 
 ```bash
-bga analyze /path/to/run --diagnostics
+bga analyze RUN/ --diagnostics        # -d is the short form
 ```
 
 This computes:
@@ -397,15 +397,15 @@ This computes:
 Save the report to a file instead of stdout:
 
 ```bash
-bga analyze /path/to/run --output report.txt
+bga analyze RUN/ --output report.txt
 ```
 
 #### Cold Structural Floor (advisory)
 
-Compute the advisory cold structural floor (`T∞,cold`) using prior runs' observed durations as an estimate source. Off by default - never affects `LB`, `certified_headroom`, primary `confidence`, or measured attribution:
+Compute the advisory **cold floor** (`T∞,cold`) using prior runs' observed durations as an estimate source. *Two unrelated "cold"s meet here* (`UX-138`): this structural floor, and the **cold capture mode** (caches off) that `run-mode-incremental` above is about. This flag is the floor; nothing here changes how a build was captured. Off by default - never affects `LB`, `certified_headroom`, primary `confidence`, or measured attribution:
 
 ```bash
-bga analyze /path/to/run --cold --history-dir /path/to/prior-run-1 --history-dir /path/to/prior-run-2
+bga analyze RUN/ --cold --history-dir PRIOR-RUN-1/ --history-dir PRIOR-RUN-2/
 ```
 
 - `--cold` alone (no `--history-dir`) has nothing to estimate from. In `--format json` the cold fields are present and null; the **text report prints no cold line at all** rather than a line saying "unavailable" — absence is the report's way of saying a number was not computed, and it is the same in both formats in the sense that neither fabricates one.
@@ -427,7 +427,7 @@ bga --version
 Enable debug logging to troubleshoot ingestion or normalization issues:
 
 ```bash
-bga analyze /path/to/run --verbose
+bga analyze RUN/ --verbose
 ```
 
 ## Section Subcommands
@@ -435,15 +435,15 @@ bga analyze /path/to/run --verbose
 `analyze` is the primary command and produces the full report (every section together). `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` are thin aliases over the same analysis pipeline - each restricts output to just its own section, so you don't have to grep a full report or a `jq` filter out of `--format json` for a narrow question. They accept the same relevant `analyze` flags (`--format`/`--output`/`--capacity`/`--verbose`/`--quiet`/`--log-file`, plus each subcommand's own natural options) and the same exit-code contract.
 
 ```bash
-bga graph /path/to/run          # static dependency graph, critical path, structural metrics
-bga floors /path/to/run --cold  # certified/advisory floors (T-infinity, LB, certified headroom, cold floor)
-bga replay /path/to/run --heuristic spt   # deterministic replay makespan (T_C)
-bga sweep /path/to/run --resource PROCESS --min-capacity 1 --max-capacity 16  # capacity sweep (Part 19)
-bga utilisation /path/to/run    # CPU utilisation accounting
-bga diagnostics /path/to/run    # blast radius, criticality probability, wall-clock shares
+bga graph RUN/          # static dependency graph, critical path, structural metrics
+bga floors RUN/ --cold  # certified/advisory floors (T-infinity, LB, certified headroom, cold floor)
+bga replay RUN/ --heuristic spt   # deterministic replay makespan (T_C)
+bga sweep RUN/ --resource PROCESS --min-capacity 1 --max-capacity 16  # capacity sweep (Part 19)
+bga utilisation RUN/    # CPU utilisation accounting
+bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shares
 ```
 
-`floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph /path/to/run --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
+`floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
 ## `bga compare` — Run-to-Run Comparison
 
@@ -524,7 +524,7 @@ Documented here because they exist and nothing user-facing said so:
 - `bga sweep --calibration-dir DIR` (`UX-14` tier 2) — replaces the sweep's fixed-duration model with a contention-aware one calibrated from real runs in `DIR`. Without it the sweep's own caveat applies: the predicted curve is a shape, not a runtime prediction, because the replay model does not know about CPU.
 - `bga capture run --diagnose` / `--no-inject` (`UX-146`) — what the bwrap shim received and what it exec'd, one JSON line per sandbox, written as `<output>.diagnostics.jsonl` with a summary that **leads with the invocation count**. Zero means the `$PATH` shadow never reached `buildbox-run` and the build ran unmodified, which is a different problem from a sandbox that failed; the two are otherwise the same silence. `--no-inject` runs the build with the shim installed and injecting nothing — it captures nothing and says so, and exists to bisect the argv rewrite against the shadowing itself. Both are on `bga snapshot` too, and neither is sticky.
 - `bga capture run --invocation-log PATH` / `--argv-log PATH` / `--raw-log PATH` — where Plane 2 writes its own capture logs. `--invocation-log` defaults to a path beside the report (`UX-80`); `--no-invocation-log` turns it off.
-- `bga correlate --cache-logs PLANE3.json` — adds the per-element sandbox toll from a Plane 3 report, which is what the merge half of the granularity findings is computed from (`UX-100`). Without it the split half still runs; the merge half is silent, because the toll is the whole basis for calling an element too small.
+- `bga correlate --cache-logs PLANE3.json` — adds the per-element sandbox tax from a Plane 3 report, which is what the merge half of the granularity findings is computed from (`UX-100`). Without it the split half still runs; the merge half is silent, because the toll is the whole basis for calling an element too small.
 - `bga compare --baseline-plane2 A.json --candidate-plane2 B.json` — notes when the candidate's measured memory envelope grew (`UX-104`). Two flags, because reusing one report for both runs would compare a run against itself. A note, never a gate: peak RSS has no measured noise band.
 - `bga cache-trend RUN...` — a series, oldest first: per-run hit ratio, transfer seconds and seconds per artifact, churn against the predecessor (with `UX-93`'s labels), and a finding when the newest run leaves the band its trailing window describes (`UX-103`). Refuses a verdict, with exit 6, over a series whose runs are not of the same project and targets — the band would describe neither (`UX-111`). The *commit* is deliberately allowed to vary: a cache-health trend across commits is the only kind there is. The noise model is `bga compare`'s, widened to the fixed rule when the measured band is narrower. Four runs minimum — three trailing plus the one being judged — and it says so rather than trending fewer.
 - `bga baseline --glob 'captures/<project>/<commit>-<mode>-b<N>j<M>-*' -n 3 --candidate RUN` — assembles a baseline set from published capture refs and band-compares against it in one command (`UX-96`). Fetches the newest N, untars the refs that predate the uncompressed `run/`, refuses a set whose captures are not comparable (exit 6), and warns when the set was produced by more than one `bga` revision. Absence in a capture's context is read per field (`UX-114`): `trace_spine` and `trace_opens` have a defined default, so a ref published before the field existed is taken under it and mismatches a capture instrumented differently — the assumption is stated either way; `target` and the rest have none, so partial coverage is reported as **unverified** rather than passed over. A band member whose run mode differs from the candidate's is refused with exit 6 too, not the generic exit 2 it used to produce. Every member supplies the band, the newest is also the positional baseline — with three refs that is exactly the `MIN_BASELINE_RUNS` the band needs.
@@ -543,20 +543,24 @@ Joins this run's whole-project analysis (Plane 1) with a native trace report of 
 It answers what neither plane can alone. Plane 1 knows an element dominates the critical path; Plane 2 knows what happened inside it; only the join says what to do:
 
 ```text
+Joined 9 element(s) on element UID (11 in Plane 1, 9 traced in Plane 2)
+  Memory envelope: 4 builders of this shape peak at ~0.6 GB of 15.7 GB (4%);
+  9 would still fit, so memory is not what binds first here
+
 What to do next (ranked by Plane 1 impact):
   core.bst:
-    - holds 25% of the critical path and fixing it is worth 18.4s (24.1% of the build),
-      but runs at only 0.85 cores busy - it is waiting, not computing, and its native
+    - holds 45% of the critical path and fixing it is worth 8.0s (20.2% of the build),
+      but runs at only 0.89 cores busy - it is waiting, not computing, and its native
       build asked for -j1: remove `notparallel` / raise its job count before touching
       its sources
-    - 81% of its measured CPU is one binary, `cc1plus` (885 process(es), 4353 CPU s) -
+    - 82% of its measured CPU is one binary, `cc1plus` (10 process(es), 9 CPU s) -
       this element is a `cc1plus` problem, so look there before anywhere else
-    - `dwz` is a SINGLE process holding 138.6s of wall time - a serialization point no
-      job count can help; it has to get faster or go away
-    - its largest single process peaked at 1902 MB resident - multiply by however many
-      elements build concurrently before raising `builders`
     (81% of this element's processes were measured)
 ```
+
+(`examples/06-macro-micro-optimization`, one `bga snapshot`. The
+freedesktop-sdk version of the same shape, at 1500× the scale, is in
+[`real-project.md`](real-project.md).)
 
 Inside a project this is one line, because `bga snapshot` already
 captured both halves and kept them together:
@@ -656,7 +660,7 @@ so a baseline with no occupancy does not stop it; only
 Get a quick overview of build efficiency:
 
 ```bash
-bga analyze /path/to/run-directory
+bga analyze RUN/
 ```
 
 ### 2. Generate JSON Report for CI
@@ -664,7 +668,7 @@ bga analyze /path/to/run-directory
 Integrate into a CI pipeline to track metrics over time:
 
 ```bash
-bga analyze /path/to/run-directory --format json --output metrics.json
+bga analyze RUN/ --format json --output metrics.json
 # Then process with jq, e.g. (certified_headroom, not certified_headroom_us -
 # confirmed against a real --format json run):
 # jq '.floors.certified_headroom' metrics.json
@@ -676,10 +680,10 @@ Estimate build time improvement if moving from 4 to 16 cores:
 
 ```bash
 # Current 4-core simulation
-bga analyze /path/to/run-directory --capacity 4 --replay
+bga analyze RUN/ --capacity 4 --replay
 
 # Hypothetical 16-core simulation
-bga analyze /path/to/run-directory --capacity 16 --replay
+bga analyze RUN/ --capacity 16 --replay
 ```
 
 ### 4. Deep Dive into Bottlenecks
@@ -690,9 +694,45 @@ Identify which elements to optimize for maximum speedup:
 # criticality_probability is a JSON *object* keyed by element UID
 # (confirmed against a real --format json run), not an array - to_entries
 # converts it to an array of {key, value} pairs before sorting.
-bga analyze /path/to/run-directory --diagnostics --format json | \
+bga analyze @last --diagnostics --format json | \
   jq '.signals.criticality_probability | to_entries | sort_by(.value.probability) | reverse | .[0:10]'
 ```
+
+## Reading the report
+
+- **Confidence** — how much to trust the numbers below (data completeness/quality of this specific trace). Below "high"? Fix the underlying trace before acting on anything else. A build that *failed* is called out even louder, before any efficiency figure.
+- **Certified Headroom** — a *proven* lower bound, not a guess: given the work this build actually did, it cannot possibly finish faster than `T∞`/`LB` (whichever is larger) without changing that work. Headroom above zero means real room to improve scheduling *without touching any element's build steps*; zero means rescheduling cannot help at all.
+- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`docs/backlog/scenarios/UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md).)
+- **Where the time is** — on a build the chain constrains, the headline is one table: each heavy element's duration, its share of the critical path, and what fixing it would actually recover. The rows are ordered by duration because that is what "where is the time" means; the fix order is named separately, because on a dense graph the two disagree.
+- **What to do after that** — the next few fixes projected from the same capture: what the build drops to after each, whether the recommended set's savings *add*, and which heavy elements sit off the critical path worth nothing to fix today. Without it, finding the second thing to fix costs another full build. ([`UX-74`](../backlog/scenarios/UX-0074-one-capture-one-finding.md))
+- **Elements Most Worth Optimizing First** — on a build the *graph* constrains rather than the chain, this ranks by blast radius instead: fixing a slow element near the root helps every downstream element too.
+- **Biggest Opportunity / Attribution Breakdown** — where wall-clock time went, by category: execution, dependency wait, resource wait, scheduler wait, idle, retries, plus **untracked head and tail** (real wall-clock before the first task started and after the last one finished, which belongs to no task at all). All eight sum to exactly the total build time — nothing is hidden or double-counted, and the two untracked categories are why: on the quick-start fixture above, untracked tail is 12.5% of the build and is the *largest* non-execution category.
+- **Critical Path** — the chain that determines total build time, printed in full with each link's duration and share.
+- If a hard gate fails (e.g. `critical_path_coverage`), the violation names the specific missing element(s) and whether each is a structural element (`stack`/`import`/…) that never had a real compute task or a genuine gap worth investigating.
+
+Everything in that block is also published as **data**, with a stable `id`, a `severity` and the numbers behind each sentence — so a CI job acts on `.findings[]` rather than re-deriving a threshold or grepping prose:
+
+```bash
+bga analyze /tmp/run --format json | jq '.findings[] | select(.id == "time-concentration") | .evidence'
+```
+
+```json
+{
+  "path_us": 3610500000,
+  "share_of_path": 0.94035,
+  "chain_bound": true,
+  "rows": [
+    { "element_uid": "components/_private/cmake-stage1.bst", "duration_us": 1569800000,
+      "share_of_path": 0.43478, "realizable_saving_us": 1569800000 },
+    { "element_uid": "components/python3.bst", "duration_us": 639800000,
+      "share_of_path": 0.17720, "realizable_saving_us": 114100000 }
+  ]
+}
+```
+
+The `rows` array is the part a CI comment renders: each heavy element's measured duration, its
+share of the chain, and — separately — what fixing it would actually recover, which on a dense
+graph is a much smaller number than its share suggests.
 
 ## Exit Codes
 

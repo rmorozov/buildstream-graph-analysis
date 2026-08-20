@@ -21,10 +21,13 @@ class _Result:
         self.violations = violations
 
 
-def _failed_violation(elements, built=0, scheduled=7):
+def _failed_violation(elements, built=0, scheduled=7, cached=6):
     return {'type': 'build_failed', 'failed_count': len(elements),
             'failed_elements': list(elements),
-            'built_count': built, 'scheduled_count': scheduled}
+            'built_count': built, 'scheduled_count': scheduled,
+            # UX-164 item 3: how many of the rest were cache hits rather
+            # than losses.
+            'cached_count': cached}
 
 
 class TestTheDetailComesOffTheViolation:
@@ -32,7 +35,8 @@ class TestTheDetailComesOffTheViolation:
         detail = _build_failure_detail(
             "candidate", _Result([_failed_violation(["lib-d.bst"])]))
         assert detail == {'run': 'candidate', 'failed_elements': ['lib-d.bst'],
-                          'built': 0, 'scheduled': 7, 'interrupted': False}
+                          'built': 0, 'scheduled': 7, 'cached': 6,
+                          'interrupted': False}
 
     def test_a_capture_with_no_queue_summary_yields_no_counts(self):
         """`build_outcome` predates `queue_summary` on some captures, and a
@@ -40,6 +44,7 @@ class TestTheDetailComesOffTheViolation:
         the element."""
         violation = _failed_violation(["lib-d.bst"])
         violation['built_count'] = violation['scheduled_count'] = None
+        violation['cached_count'] = None
         detail = _build_failure_detail("candidate", _Result([violation]))
         assert detail['built'] is None and detail['scheduled'] is None
         assert "scheduled" not in _describe_build_failures([detail])
@@ -57,7 +62,7 @@ class TestTheVerdictRefuses:
     def _comparison(self, **kwargs):
         details = kwargs.pop('details', [
             {'run': 'candidate', 'failed_elements': ['lib-d.bst'],
-             'built': 0, 'scheduled': 7}])
+             'built': 0, 'scheduled': 7, 'cached': 6}])
         base = dict(
             baseline_confidence=1.0, candidate_confidence=1.0,
             attribution_deltas={}, low_confidence=False,
@@ -80,7 +85,10 @@ class TestTheVerdictRefuses:
     def test_it_names_the_element_and_how_far_the_build_got(self):
         text = format_compare_text(self._comparison())
         assert "lib-d.bst" in text
-        assert "0 of 7 scheduled elements built" in text
+        # UX-164 item 3 changed this wording deliberately: "0 of 7
+        # scheduled" counted six cache hits as casualties, overstating
+        # the damage sevenfold.
+        assert "0 built, 6 already cached" in text
 
     def test_the_delta_is_still_shown_but_marked_as_not_a_verdict(self):
         """The partial numbers stay for a reader who wants them; what must
@@ -175,7 +183,8 @@ class TestEndToEndThroughTheRealComparison:
         comparison = compare_runs(baseline, candidate)
 
         assert comparison.failed_run_details[0]['scheduled'] == 6
-        assert "0 of 6 scheduled elements built" in comparison.verdict
+        # UX-164 item 3: built and cached, not a lump "scheduled".
+        assert "0 built, 5 already cached" in comparison.verdict
 
 
 class TestTheBaselineChoiceSkipsWreckage:

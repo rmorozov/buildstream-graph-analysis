@@ -322,6 +322,10 @@ class BuildEfficiencyAnalyzer:
                 'failed_elements': failed,
                 'built_count': queue.get('processed') if recorded else None,
                 'scheduled_count': sum(counts) if recorded else None,
+                # UX-164 item 3: what actually happened to the rest.
+                # `scheduled` alone reads as "seven builds lost" when six
+                # of them were cache hits that never needed to run.
+                'cached_count': queue.get('skipped') if recorded else None,
                 # UX-157: the same violation covers both ways of not
                 # finishing, so every consumer of `build_failed` gets
                 # the interrupted case for free instead of needing to

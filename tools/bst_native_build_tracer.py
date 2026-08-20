@@ -4628,6 +4628,43 @@ def missing_bind_paths(argv: List[str]) -> List[str]:
     return missing
 
 
+def format_post_build_interrupt(report_path: Optional[str],
+                                wrapped_log_path: Optional[str],
+                                run_dir: Optional[str],
+                                project_dir: Optional[str]) -> str:
+    """What is on disk after an interrupt *between* phases, and how to finish.
+
+    `UX-163` item 2. The build is over by this point: `build.log` is
+    complete and `plane2.json` may be too, so nothing needs re-building -
+    only the extraction, which is a pure function of the log. Round 17
+    got a traceback and a snapshot with no `run/` here, and no
+    indication that one command would finish the job.
+    """
+    lines = ["", "Interrupted after the build. The build itself completed; "
+                 "what was interrupted is bga's own post-processing."]
+    kept = [(name, path) for name, path in (
+        ("Plane 1 log", wrapped_log_path),
+        ("Plane 2 report", report_path),
+    ) if path and os.path.exists(path)]
+    if kept:
+        lines.append("")
+        lines.append("  Already on disk:")
+        lines.extend(f"    {name}: {path}" for name, path in kept)
+    if run_dir and not os.path.isdir(run_dir) and wrapped_log_path \
+            and os.path.exists(wrapped_log_path) and project_dir:
+        lines += [
+            "",
+            "  The run directory was not extracted. Nothing needs rebuilding -",
+            "  extraction reads the log above, so this finishes the job:",
+            "",
+            f"    bga extract --format wrapped {project_dir} "
+            f"{wrapped_log_path} {run_dir}",
+        ]
+    elif run_dir and os.path.isdir(run_dir):
+        lines += ["", f"  The run directory is complete: {run_dir}"]
+    return "\n".join(lines)
+
+
 def format_capture_diagnostics(path: str, no_inject: bool = False,
                                sandbox_tasks: Optional[int] = None) -> str:
     """UX-146: the count first, because zero is the answer that matters.
@@ -4972,6 +5009,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                   "interrupt - this is a partial build, and every figure "
                   "below describes only the elements that finished.",
                   file=sys.stderr)
+        except KeyboardInterrupt:
+            # UX-163: the *pre*-build window - compiling the hook, and the
+            # census walk, which on a big project is minutes of silence
+            # with only UX-159's one line to show for it. Nothing was
+            # built, so there is nothing to salvage and nothing to resume.
+            print("\nInterrupted before the build started. Nothing was "
+                  "captured and nothing was left behind.", file=sys.stderr)
+            return 130
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
@@ -4991,44 +5036,58 @@ def main(argv: Optional[List[str]] = None) -> int:
                 if spoke:
                     print(spoke, file=sys.stderr)
 
-        print("Analyzing the captured trace...", file=sys.stderr)
-        report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
-                                    invocation_log_path=invocation_log_path,
-                                    plane1_log_path=wrapped_log_path)
-        report["wrapped_command_exit_code"] = returncode
-        with open(args.output, "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=2)
-        if args.run_dir:
-            # Best-effort, and after the report is on disk: a build that
-            # failed early produces a log with no `Targets:` line, and
-            # losing the Plane 2 capture over that would throw away the
-            # expensive half of what just ran.
-            from .bst_extract_run import extract_run
-            print("Extracting run data (bst show)...", file=sys.stderr)
-            try:
-                extract_run(args.project_dir, wrapped_log_path, args.run_dir,
-                            log_format="wrapped", interrupted=interrupted)
-            except Exception as exc:  # noqa: BLE001 - reported, not swallowed
-                print(f"Warning: could not extract a run directory into "
-                      f"{args.run_dir}: {exc}", file=sys.stderr)
+        # UX-163: everything after the build is unprotected without this.
+        # Round 17 SIGINTed a capture during `Extracting run data...` and
+        # got a raw traceback and a snapshot with no `run/` - even though
+        # `build.log` was complete on disk and extraction is re-runnable
+        # from it, which nothing said. On a big project these are the
+        # long phases: they are the ones UX-159 gave announcement lines
+        # *because* they take minutes, so they are exactly where a user
+        # who has already waited three hours presses Ctrl-C.
+        try:
+            print("Analyzing the captured trace...", file=sys.stderr)
+            report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
+                                        invocation_log_path=invocation_log_path,
+                                        plane1_log_path=wrapped_log_path)
+            report["wrapped_command_exit_code"] = returncode
+            with open(args.output, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2)
+            if args.run_dir:
+                # Best-effort, and after the report is on disk: a build that
+                # failed early produces a log with no `Targets:` line, and
+                # losing the Plane 2 capture over that would throw away the
+                # expensive half of what just ran.
+                from .bst_extract_run import extract_run
+                print("Extracting run data (bst show)...", file=sys.stderr)
+                try:
+                    extract_run(args.project_dir, wrapped_log_path, args.run_dir,
+                                log_format="wrapped", interrupted=interrupted)
+                except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+                    print(f"Warning: could not extract a run directory into "
+                          f"{args.run_dir}: {exc}", file=sys.stderr)
+                else:
+                    print(f"Run directory: {args.run_dir}", file=sys.stderr)
+            if args.json:
+                print(json.dumps(report, indent=2))
             else:
-                print(f"Run directory: {args.run_dir}", file=sys.stderr)
-        if args.json:
-            print(json.dumps(report, indent=2))
-        else:
-            print(_format_text(report))
-            print(f"\nWrapped command exit code: {returncode}")
-        # UX-147 item 5: the failing user is told what would answer the
-        # question. Only when it was not already asked for, and only on a
-        # failure - a working capture does not need advice.
-        if returncode != 0 and not diagnostics_path and not interrupted:
-            print(
-                "\nThe wrapped build failed. If it succeeds under plain `bst` and "
-                "only fails here, re-run with --diagnose: it records what the "
-                "bwrap shim received and exec'd, and the invocation count alone "
-                "separates the three things that produce this.",
-                file=sys.stderr)
-        return returncode
+                print(_format_text(report))
+                print(f"\nWrapped command exit code: {returncode}")
+            # UX-147 item 5: the failing user is told what would answer the
+            # question. Only when it was not already asked for, and only on a
+            # failure - a working capture does not need advice.
+            if returncode != 0 and not diagnostics_path and not interrupted:
+                print(
+                    "\nThe wrapped build failed. If it succeeds under plain `bst` and "
+                    "only fails here, re-run with --diagnose: it records what the "
+                    "bwrap shim received and exec'd, and the invocation count alone "
+                    "separates the three things that produce this.",
+                    file=sys.stderr)
+            return returncode
+        except KeyboardInterrupt:
+            print(format_post_build_interrupt(
+                args.output, wrapped_log_path, args.run_dir,
+                args.project_dir), file=sys.stderr)
+            return 130
 
     # report
     # UX-38: `run` writes a JSON report and discards the raw log unless

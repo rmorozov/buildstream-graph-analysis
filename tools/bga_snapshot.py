@@ -263,15 +263,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         baseline, skipped = _healthy_baseline(previous)
         if skipped:
             names = ", ".join(os.path.basename(p.rstrip("/")) for p in skipped)
+            # UX-164 item 2: the sentence was built for a plural list and
+            # read broken for the common single-skip case.
+            one = len(skipped) == 1
             if baseline is None:
-                print(f"No comparison: the {len(skipped)} previous snapshot(s) "
-                      f"({names}) all record builds that did not finish, and a "
-                      f"duration delta against one is not a measurement (UX-156). "
-                      f"`bga compare` on an explicit pair still works.")
+                print(f"No comparison: the {len(skipped)} previous "
+                      f"snapshot{'' if one else 's'} ({names}) "
+                      f"{'records a build' if one else 'all record builds'} that "
+                      f"did not finish, and a duration delta against one is not a "
+                      f"measurement (UX-156). `bga compare` on an explicit pair "
+                      f"still works.")
             else:
                 print(f"Comparing against {os.path.basename(baseline.rstrip('/'))} "
-                      f"rather than the previous snapshot: {names} record build(s) "
-                      f"that did not finish (UX-156).")
+                      f"rather than the previous snapshot: {names} "
+                      f"{'records a build' if one else 'record builds'} that did "
+                      f"not finish (UX-156).")
         if baseline is not None:
             _compare(baseline, snapshot)
     elif not args.no_compare:
@@ -377,6 +383,38 @@ def _healthy_baseline(previous):
     return None, list(reversed(skipped))
 
 
+def _compare_refs(baseline_snapshot: str, candidate_snapshot: str) -> str:
+    """The aliases that name *this* pair, or the stamps that do.
+
+    `UX-164` item 1. This printed `@prev @last` unconditionally - and
+    after a `UX-156` walk-back, `@prev` resolves to the snapshot that was
+    *skipped* (it has a `run/`, so `list_runs` includes it). Pasting the
+    suggested command reproduced exactly the wreckage comparison the
+    walk-back exists to prevent, and got a refusal instead of the
+    comparison printed above it.
+
+    On a long-running project failed and interrupted runs are the store's
+    common tenants, so the hint was wrong more often than right precisely
+    where `UX-156` matters most.
+    """
+    project = run_store.project_root(baseline_snapshot) or \
+        os.path.dirname(os.path.dirname(os.path.dirname(baseline_snapshot)))
+    runs = run_store.list_runs(project)
+    aliases = {}
+    if runs:
+        aliases[os.path.abspath(runs[-1])] = "@last"
+    if len(runs) > 1:
+        aliases[os.path.abspath(runs[-2])] = "@prev"
+
+    def ref(snapshot: str) -> str:
+        alias = aliases.get(os.path.abspath(snapshot))
+        # The stamp-prefix grammar already exists, so a snapshot with no
+        # alias still has a short name the user can type.
+        return alias or "@" + os.path.basename(snapshot.rstrip("/"))
+
+    return f"{ref(baseline_snapshot)} {ref(candidate_snapshot)}"
+
+
 def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:
     """The loop's whole point, and the reason the store exists.
 
@@ -395,7 +433,8 @@ def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:
         plane2 = os.path.join(snapshot, PLANE2_NAME)
         if os.path.isfile(plane2):
             argv += [flag, plane2]
-    print(f"$ bga compare @prev @last   # {' '.join(argv[1:3])}")
+    print(f"$ bga compare {_compare_refs(baseline_snapshot, candidate_snapshot)}"
+          f"   # {' '.join(argv[1:3])}")
     return cli_main(argv)
 
 

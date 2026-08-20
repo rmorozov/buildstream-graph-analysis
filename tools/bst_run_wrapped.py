@@ -34,6 +34,7 @@ import signal
 import subprocess
 import sys
 from datetime import datetime, timezone
+from typing import Optional
 
 
 def _now_str():
@@ -63,7 +64,33 @@ def signal_build_group(proc, sig) -> None:
         pass
 
 
-def shutdown_build_group(proc, emit=None, grace: float = 120.0) -> None:
+# UX-163 item 3: how long to let `bst` stop by itself before escalating.
+# 120s was a guess, and round 17 found the cost of getting it wrong: on a
+# big element bst's graceful stop can exceed it, SIGTERM then kills it
+# before it prints its closing Pipeline Summary, the run loses
+# `queue_summary`, and the "N of M scheduled" clause - the most useful
+# number - silently disappears from exactly the biggest builds.
+SIGINT_GRACE_ENV = "BGA_INTERRUPT_GRACE_SECONDS"
+DEFAULT_SIGINT_GRACE = 300.0
+
+
+def sigint_grace_seconds() -> float:
+    """The SIGINT grace window, overridable for a project that needs more."""
+    try:
+        value = float(os.environ.get(SIGINT_GRACE_ENV, DEFAULT_SIGINT_GRACE))
+    except (TypeError, ValueError):
+        return DEFAULT_SIGINT_GRACE
+    return value if value > 0 else DEFAULT_SIGINT_GRACE
+
+
+def shutdown_build_group(proc, emit=None, grace: Optional[float] = None) -> bool:
+    """Returns True when `bst` stopped on its own, False when it was killed.
+
+    The distinction matters downstream: a killed `bst` never printed its
+    closing summary, so the run's `queue_summary` is missing rather than
+    absent-by-nature, and a caller that says "N of M scheduled" should
+    say why it cannot instead (`UX-163` item 3).
+    """
     """Stop an interrupted build the way a user pressing Ctrl-C expects.
 
     `UX-157`. SIGINT first, because `bst` handles it properly - it stops
@@ -78,16 +105,20 @@ def shutdown_build_group(proc, emit=None, grace: float = 120.0) -> None:
         if emit is not None:
             emit(message)
 
+    if grace is None:
+        grace = sigint_grace_seconds()
     signal_build_group(proc, signal.SIGINT)
     try:
         proc.wait(timeout=grace)
-        return
+        return True
     except subprocess.TimeoutExpired:
-        say(f"the build did not stop within {grace:g}s of SIGINT - sending SIGTERM")
+        say(f"the build did not stop within {grace:g}s of SIGINT - sending "
+            f"SIGTERM. bst's closing summary may be lost; set "
+            f"{SIGINT_GRACE_ENV} higher if this project needs longer.")
     signal_build_group(proc, signal.SIGTERM)
     try:
         proc.wait(timeout=30)
-        return
+        return False
     except subprocess.TimeoutExpired:
         say("the build did not stop after SIGTERM - sending SIGKILL")
     signal_build_group(proc, signal.SIGKILL)
@@ -95,6 +126,7 @@ def shutdown_build_group(proc, emit=None, grace: float = 120.0) -> None:
         proc.wait(timeout=30)
     except subprocess.TimeoutExpired:
         say("the build's process group survived SIGKILL; giving up on it")
+    return False
 
 
 def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:

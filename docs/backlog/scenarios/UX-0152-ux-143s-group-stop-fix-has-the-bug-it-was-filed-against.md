@@ -1,6 +1,6 @@
 # UX-152: UX-143's group-stop fix has the bug it was filed against
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-143 (item 1 reopened), UX-130 (the SEIZE semantics)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-143 (item 1 reopened), UX-130 (the SEIZE semantics)
 
 ## Motivation
 
@@ -69,3 +69,60 @@ this time, passing on all three detach paths; a unit test on
 `detach_signal` with a synthesized `PTRACE_EVENT_STOP | SIGSTOP`
 status returning SIGSTOP, not 0. Mutation: restoring the `event != 0`
 short-circuit reddens both.
+
+
+---
+
+## What was built
+
+`detach_signal` consults `is_group_stop_signal` **before** the event
+test, and the degrade branch — the path this was filed against — now
+calls it instead of keeping its own `pass_through` copy. Three detach
+sites, one rule, asserted by a test that parses the source.
+
+### The decision table, before and after
+
+```text
+                        before   after
+group-stop-SIGSTOP        0       19
+group-stop-SIGTSTP        0       20
+group-stop-SIGTTIN        0       21
+group-stop-SIGTTOU        0       22
+attach-stop-SIGTRAP       0        0
+exec-event / exit-event   0        0
+signal-SIGSEGV           11       11
+```
+
+Exposed through `BST_TRACE_SPINE_SELFTEST=detach-signal`, a fourth seam
+in the family, inert unless asked for and absent from the shim's
+injected environment.
+
+### Why not the state-`T` probe the acceptance asked for
+
+`UX-143` asked for one and never wrote it; this round tried and found
+out why it cannot be written as specified. When the traced command
+exits, the survivor's process group is **orphaned**, and POSIX requires
+the kernel to send `SIGHUP`+`SIGCONT` to an orphaned process group
+containing stopped members. The survivor is therefore resumed by the
+kernel moments after the spine detaches it, *whatever signal the detach
+carried*.
+
+Measured, on the correct binary and the broken one:
+
+```text
+### cleanup path, UX-152 fix:  rc=7 survivor=8417 state=Z
+### cleanup path, pre-UX-152:  rc=7 survivor=8429 state=Z
+### degrade path, UX-152 fix:  rc=7 survivor=8441 state=Z
+### degrade path, pre-UX-152:  rc=7 survivor=8453 state=Z
+```
+
+Identical. A `/proc/<pid>/stat` probe after the spine exits cannot tell a
+correct spine from a broken one, which is exactly why the acceptance's
+own probe was never written and why writing it now would have produced a
+test that passes on the bug. The decision table is what can actually
+discriminate, so that is what guards it.
+
+(An earlier attempt did leave real `T` processes behind — and they held
+the harness's stdout pipe open, hanging the tool for five minutes. The
+`$$` in that probe was the parent shell's pid, so it stopped the command
+itself rather than a background child.)

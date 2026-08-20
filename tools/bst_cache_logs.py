@@ -381,7 +381,7 @@ def sandbox_tax(records: List[dict]) -> dict:
         'top_payers': sorted(payers, key=lambda p: (-p['toll_us'], p['element'])),
         'resolution_us': LOG_RESOLUTION_US,
         'caveat': (
-            "BuildStream times these activities to the second, so a toll under a "
+            "BuildStream times these activities to the second, so a tax under a "
             "second reads as 0.0s and this total is a floor rather than a "
             "measurement. It is also taken over every build log in the tree, "
             "which accumulates across builds - filter with --project, or scan a "

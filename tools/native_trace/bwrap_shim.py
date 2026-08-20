@@ -33,21 +33,83 @@ import sys
 import time
 from typing import List, Optional, Tuple
 
-# bwrap flags, keyed by how many trailing positional args each consumes -
-# from `bwrap --help` (bubblewrap 0.9.0, the version this was validated
-# against). Only flags BuildStream's own bwrap invocation is confirmed to
-# emit (via real `strace`/argv capture in UX-11's spike) need to be exactly
-# right; the rest degrade safely (see _split below).
-_TWO_ARG_FLAGS = {"--bind", "--ro-bind", "--dev-bind", "--ro-bind-try", "--dev-bind-try", "--setenv", "--symlink"}
+# bwrap flags, keyed by how many trailing positional args each consumes.
+#
+# UX-151: this used to list only the flags BuildStream's own invocation
+# was *confirmed* to emit, with everything else conservatively assumed to
+# take none. That assumption is the likeliest field failure this tool
+# has: a newer `buildbox-run` emitting, say, `--json-status-fd 12` makes
+# the split stop at the flag's own operand -
+# `opts=["--json-status-fd"]`, `command=["12", "--bind", ...]` - and the
+# rewritten argv hands bwrap garbage. bwrap exits non-zero and the user
+# sees `buildbox-run failed with returncode 1`, unchanged by turning
+# either optional mechanism off, because the injection happens either
+# way.
+#
+# So the table is now bubblewrap's *whole* option set, transcribed from
+# `bwrap --help` at 0.9.0 (the version this was checked against, printed
+# into every diagnostics record by UX-151 so a reader can tell), plus the
+# post-0.9.0 overlay family. An unknown flag is still assumed to take no
+# arguments - there is no safer guess - but it is now *recorded and
+# reported* rather than silently believed.
+_THREE_ARG_FLAGS = {"--overlay"}
+_TWO_ARG_FLAGS = {
+    "--bind", "--bind-try", "--dev-bind", "--dev-bind-try",
+    "--ro-bind", "--ro-bind-try", "--bind-fd", "--ro-bind-fd",
+    "--file", "--bind-data", "--ro-bind-data", "--symlink",
+    "--setenv", "--chmod",
+}
 _ONE_ARG_FLAGS = {
-    "--unsetenv", "--chdir", "--hostname", "--uid", "--gid", "--dir", "--cap-drop", "--cap-add",
-    "--proc", "--dev", "--tmpfs",
+    "--args", "--argv0", "--userns", "--userns2", "--pidns",
+    "--uid", "--gid", "--hostname", "--chdir", "--unsetenv",
+    "--lock-file", "--sync-fd", "--remount-ro", "--exec-label",
+    "--file-label", "--proc", "--dev", "--tmpfs", "--mqueue", "--dir",
+    "--seccomp", "--add-seccomp-fd", "--block-fd", "--userns-block-fd",
+    "--info-fd", "--json-status-fd", "--cap-add", "--cap-drop",
+    "--perms", "--size",
+    # post-0.9.0
+    "--overlay-src", "--tmp-overlay", "--ro-overlay",
 }
 _ZERO_ARG_FLAGS = {
-    "--unshare-pid", "--unshare-net", "--unshare-uts", "--unshare-ipc", "--unshare-user",
-    "--unshare-user-try", "--unshare-cgroup", "--unshare-cgroup-try", "--unshare-all",
-    "--die-with-parent", "--new-session", "--as-pid-1",
+    "--help", "--version", "--unshare-all", "--share-net",
+    "--unshare-user", "--unshare-user-try", "--unshare-ipc",
+    "--unshare-pid", "--unshare-net", "--unshare-uts",
+    "--unshare-cgroup", "--unshare-cgroup-try",
+    "--disable-userns", "--assert-userns-disabled",
+    "--clearenv", "--new-session", "--die-with-parent", "--as-pid-1",
+    # post-0.9.0
+    "--level-prefix",
 }
+
+KNOWN_FLAGS = _THREE_ARG_FLAGS | _TWO_ARG_FLAGS | _ONE_ARG_FLAGS | _ZERO_ARG_FLAGS
+
+
+def unknown_flags(args: List[str]) -> List[str]:
+    """Option-looking tokens the table has no arity for, in order.
+
+    Reported rather than reasoned about: an unknown flag means the split
+    below is a guess, and a reader of the diagnostics record should be
+    told which guess was made. `--args FD` deserves particular suspicion
+    - it tells bwrap to read *more arguments from a file descriptor*, so
+    an argv containing it is not fully visible here at all.
+    """
+    seen, i, n = [], 0, len(args)
+    while i < n:
+        arg = args[i]
+        if arg in _THREE_ARG_FLAGS:
+            i += 4
+        elif arg in _TWO_ARG_FLAGS:
+            i += 3
+        elif arg in _ONE_ARG_FLAGS:
+            i += 2
+        elif arg in _ZERO_ARG_FLAGS:
+            i += 1
+        elif arg.startswith("--"):
+            seen.append(arg)
+            i += 1
+        else:
+            break
+    return seen
 
 
 def split_bwrap_args(args: List[str]) -> Tuple[List[str], List[str]]:
@@ -70,7 +132,10 @@ def split_bwrap_args(args: List[str]) -> Tuple[List[str], List[str]]:
     opts: List[str] = []
     while i < n:
         arg = args[i]
-        if arg in _TWO_ARG_FLAGS:
+        if arg in _THREE_ARG_FLAGS:
+            opts.extend(args[i:i + 4])
+            i += 4
+        elif arg in _TWO_ARG_FLAGS:
             opts.extend(args[i:i + 3])
             i += 3
         elif arg in _ONE_ARG_FLAGS:
@@ -350,6 +415,7 @@ def record_diagnostics(log_path: Optional[str], received: List[str],
         return False
     try:
         opts, cmd = split_bwrap_args(received)
+        unknown = unknown_flags(received)
         record = {
             "pid": os.getpid(),
             "ppid": os.getppid(),
@@ -366,6 +432,10 @@ def record_diagnostics(log_path: Optional[str], received: List[str],
             # `command` starting with something that is plainly a flag.
             "option_count": len(opts),
             "command": cmd,
+            # UX-151: which option-looking tokens the arity table has no
+            # entry for. Non-empty means the split below this line is a
+            # guess, and names the flag to add.
+            "unknown_flags": unknown,
         }
         line = json.dumps(record, sort_keys=True) + "\n"
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
@@ -378,8 +448,42 @@ def record_diagnostics(log_path: Optional[str], received: List[str],
         return False
 
 
+SELF_TEST_ARGV = "--bga-shim-self-test"
+
+
 def main() -> int:
+    # UX-147 item 1: the tracer execs the installed shim once, itself,
+    # before `bst` runs. The shim is a script materialized under a temp
+    # directory, so a noexec mount, an AppArmor denial on executing from
+    # /tmp, or a missing interpreter all fail this exec *inside
+    # buildbox-run* - which reports `returncode 1` with the stderr
+    # swallowed, twenty minutes into a build, while the diagnostics
+    # record stays empty and the summary calls the build unmodified.
+    if len(sys.argv) > 1 and sys.argv[1] == SELF_TEST_ARGV:
+        sys.stdout.write("bga-shim-ok\n")
+        return 0
+
     real_bwrap = os.environ.get("BST_TRACE_REAL_BWRAP", "/usr/bin/bwrap")
+    # UX-147 item 4: these were four bare `os.environ[...]` lookups, four
+    # lines below the traceback UX-146 fixed. A shim reached without them
+    # - the environment sanitized somewhere in the chain, or any other
+    # process invoking `bwrap` while the shim directory is on PATH -
+    # raised KeyError onto buildbox-run's swallowed stderr and produced
+    # the same unexplained `returncode 1`.
+    required = ("BST_TRACE_BIND_SRC", "BST_TRACE_BIND_DST",
+                "BST_TRACE_PRELOAD_SO", "BST_TRACE_LOG_DST")
+    missing = [name for name in required if name not in os.environ]
+    if missing:
+        sys.stderr.write(
+            f"bga: this is bga's bwrap shim, invoked without {missing[0]} - so it "
+            f"is not being run by a bga capture. Falling through to the real "
+            f"bwrap at {real_bwrap}.\n")
+        try:
+            os.execv(real_bwrap, [real_bwrap, *sys.argv[1:]])
+        except OSError as error:
+            sys.stderr.write(f"bga: and could not exec it: {error}\n")
+            return 127
+        return 1
     bind_src = os.environ["BST_TRACE_BIND_SRC"]
     bind_dst = os.environ["BST_TRACE_BIND_DST"]
     preload_so = os.environ["BST_TRACE_PRELOAD_SO"]

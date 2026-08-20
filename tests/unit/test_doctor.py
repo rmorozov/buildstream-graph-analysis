@@ -248,8 +248,14 @@ def test_the_compiler_check_is_the_one_the_capture_performs():
     assert compilers, "compile_hook no longer resolves a compiler by name"
 
     import shutil
-    expected = OK if any(shutil.which(name) for name in compilers) else FAIL
-    assert check_compiler()["status"] == expected, (
+    if not any(shutil.which(name) for name in compilers):
+        assert check_compiler()["status"] == FAIL
+        return
+    # UX-153: present is not the same as capable, so OK is no longer the
+    # only pass - a compiler that cannot link `-static` warns, naming
+    # which capability is missing, rather than reporting a spine that
+    # will not build as a healthy environment.
+    assert check_compiler()["status"] in (OK, WARN), (
         f"doctor and compile_hook disagree about {sorted(compilers)}")
 
 
@@ -361,3 +367,162 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
 
         assert finding["status"] == OK, finding
         assert "zzz-fine.bst" in finding["summary"]
+
+
+class TestTheCompilerCheckProbesRatherThanChecks:
+    """UX-153: `bga doctor`'s own principle, applied to itself. A
+    compiler on PATH is not the question - the capture needs `-shared
+    -fPIC` for the hook and `-static` for the spine, and they fail
+    separately. A static libc is a separate package on some
+    distributions, so the spine is the half that goes missing on a
+    machine where the hook compiles fine."""
+
+    def test_both_capabilities_are_probed(self):
+        import inspect
+
+        import tools.bga_doctor as doctor
+
+        source = inspect.getsource(doctor.check_compiler)
+        assert "-shared" in source and "-fPIC" in source
+        assert "-static" in source
+
+    def test_a_compiler_that_cannot_link_static_warns_and_says_which(
+            self, monkeypatch):
+        """Not FAIL: Plane 1, Plane 3 and the hook all still work. Not
+        OK either, because `--trace-spine` will not."""
+        import tools.bga_doctor as doctor
+
+        monkeypatch.setattr(doctor, "_compiles",
+                            lambda argv: "-static" not in argv)
+
+        finding = doctor.check_compiler()
+
+        assert finding["status"] == WARN, finding
+        assert "-static" in finding["summary"]
+        assert "ptrace spine" in finding["summary"]
+        assert "-shared" not in finding["summary"], "the hook half is fine"
+
+    def test_a_working_compiler_is_ok(self, monkeypatch):
+        import tools.bga_doctor as doctor
+
+        monkeypatch.setattr(doctor, "_compiles", lambda argv: True)
+
+        assert doctor.check_compiler()["status"] == OK
+
+    def test_it_writes_nothing(self, monkeypatch, tmp_path):
+        """A diagnostic that leaves files behind cannot be run twice with
+        the same meaning. The probe feeds source on stdin and links to
+        /dev/null."""
+        import inspect
+
+        import tools.bga_doctor as doctor
+
+        source = inspect.getsource(doctor._compiles)
+        assert "/dev/null" in source
+        assert "input=" in source
+
+        before = sorted(os.listdir(tmp_path))
+        monkeypatch.chdir(tmp_path)
+        doctor.check_compiler()
+        assert sorted(os.listdir(tmp_path)) == before
+
+
+class TestTheWholeChainProbe:
+    """UX-149: doctor proved the *parts* - bst runs, bwrap builds a
+    sandbox with bga's own arguments, a compiler exists - and
+    `--diagnose` instruments the user's real build, which costs a real
+    build and yields evidence only after the failure. Nothing ran the
+    actual chain: bst → buildbox-run → the PATH shim → the rewritten
+    argv → the hook inside the sandbox."""
+
+    def test_it_is_off_unless_asked_for(self, capsys):
+        """It builds something. A default `bga doctor` must stay the
+        seconds-long read-only check it is documented as."""
+        main([])
+
+        out = capsys.readouterr().out
+        assert "chain-" not in out
+
+    def test_without_bst_it_skips_rather_than_failing(self, monkeypatch):
+        import tools.bga_doctor as doctor
+
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: None)
+
+        [finding] = doctor.check_capture_chain()
+
+        assert finding["status"] == SKIP
+
+    def test_without_a_staged_runtime_it_skips_and_names_the_script(
+            self, monkeypatch):
+        """It will not build a sysroot: a diagnostic that builds a
+        sysroot is not a diagnostic."""
+        import tools.bga_doctor as doctor
+
+        monkeypatch.setattr(doctor, "_find_stageable_runtime", lambda: None)
+
+        [finding] = doctor.check_capture_chain()
+
+        assert finding["status"] == SKIP
+        assert "stage_runtimes.sh" in finding["remedy"]
+
+    def test_the_isolated_home_keeps_the_user_site_packages(self, tmp_path):
+        """UX-84, hit again in production code the first time this ran:
+        `HOME` is how Python finds the per-user site-packages, so
+        replacing it unimports a `pip install --user` BuildStream and
+        `bst` dies with `ModuleNotFoundError: No module named 'jinja2'`
+        before reading the project."""
+        import site
+        import sys
+
+        import tools.bga_doctor as doctor
+
+        env = doctor._isolated_home(str(tmp_path))
+
+        assert env["HOME"] == str(tmp_path)
+        try:
+            user_site = site.getusersitepackages() if site.ENABLE_USER_SITE else None
+        except Exception:
+            user_site = None
+        if user_site and user_site in sys.path and os.path.isdir(user_site):
+            assert user_site in env["PYTHONPATH"]
+
+    @pytest.mark.bst
+    def test_the_chain_reports_every_link_in_order(self):
+        """The acceptance: each link named, in chain order, with its own
+        verdict."""
+        import shutil
+
+        import tools.bga_doctor as doctor
+
+        for tool in ("bst", "bwrap"):
+            if not shutil.which(tool):
+                pytest.skip(f"{tool} not on PATH")
+        if doctor._find_stageable_runtime() is None:
+            pytest.skip("no staged runtime - run examples/stage_runtimes.sh")
+
+        findings = doctor.check_capture_chain()
+
+        ids = [f["id"] for f in findings]
+        assert ids[:3] == ["chain-shim-exec", "chain-build", "chain-shim-reached"], ids
+        assert ids[-1] == "chain-records", ids
+        assert all(f["status"] in (OK, WARN) for f in findings), findings
+
+    @pytest.mark.bst
+    def test_a_static_runtime_warns_rather_than_failing(self):
+        """The probe's runtime is busybox, which the LD_PRELOAD hook
+        structurally cannot see - so the spine answers instead. That is
+        the blind spot being covered, working; reporting it as a broken
+        chain would fail every machine where everything is fine."""
+        import shutil
+
+        import tools.bga_doctor as doctor
+
+        if not shutil.which("bst") or doctor._find_stageable_runtime() is None:
+            pytest.skip("bst or a staged runtime is missing")
+
+        records = [f for f in doctor.check_capture_chain()
+                   if f["id"] == "chain-records"]
+
+        assert records and records[0]["status"] in (OK, WARN)
+        if records[0]["status"] == WARN:
+            assert "spine" in records[0]["remedy"]

@@ -1,6 +1,6 @@
 # UX-151: the arity table is the likeliest field failure, and nothing records the version that breaks it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-146 (the record this extends), UX-11 (the split contract)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the record this extends), UX-11 (the split contract)
 
 ## Motivation
 
@@ -66,3 +66,47 @@ removed (mutation), the summary reports the unknown flag *and* the
 numeric-`command[0]` detector fires. A live capture's diagnostics
 header shows the three version fields. The UX-11 split tests still
 pass verbatim.
+
+
+---
+
+## What was built
+
+1. **The table is bubblewrap's whole option set**, transcribed from
+   `bwrap --help` at 0.9.0, plus the post-0.9.0 overlay family — and a
+   `_THREE_ARG_FLAGS` set, because `--overlay RWSRC WORKDIR DEST` exists
+   and no arity-3 case did.
+
+   The exact field-failure shape now splits correctly:
+
+   ```text
+   ["--json-status-fd", "12", "--bind", "/x", "/", "--unshare-pid", "sh", "-c", "make"]
+   before: opts=["--json-status-fd"]  command=["12", "--bind", ...]
+   after:  opts=[... six tokens ...]  command=["sh", "-c", "make"]
+   ```
+
+2. **An unknown flag is recorded and reported**, not silently guessed.
+   The guess is still arity 0 — there is no safer one — but the JSONL
+   line carries `unknown_flags` and the summary counts and names them.
+
+3. **The mis-split detector sees the shapes that occur.** It checked
+   `command[0].startswith("-")`; the mis-splits a newer bwrap produces
+   put the flag's *operand* first — a file descriptor, a size, an octal
+   mode, all starting with a digit. It now flags a leading flag, a
+   leading bare number, and a `--` surviving inside the command.
+
+4. **An environment fingerprint**, once per capture, as the record's
+   first line: `bwrap --version`, `bst --version`, the `buildbox-run`
+   path, and the version the arity table was validated against. It is
+   excluded from the invocation count, because *"the shim ran 0 times"*
+   is the record's most important reading and a header must not make it
+   unsayable.
+
+   ```text
+   Real bwrap: /usr/bin/bwrap (bubblewrap 0.9.0)
+   2.7.0; arity table validated against bubblewrap 0.9.0
+   ```
+
+The first attempt at falsifying (1) mutated nothing — the string I
+replaced did not match — and reddened no test. Re-run with an asserted
+mutation, it reddens the split test, as it should.

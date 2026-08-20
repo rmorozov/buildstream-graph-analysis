@@ -73,6 +73,11 @@ All five, and one correction to the finding itself.
    leads with the one-command form and keeps the manual
    three-`--baseline-run` assembly as "what it composes"; `real-project.md`
    and the new CI page do the same.
+
+   *(`UX-154`: this claim was false for `real-project.md` when it was
+   written — README and `ci-comment.md` were edited and the guide named
+   in the sentence was not, `grep -c` returning 0. Corrected there, and
+   the docs-commands guard below now covers it.)*
 2. **`ci-comment.md`'s first YAML** is now `bga capture run --run-dir`,
    one build for both planes. `wrap` + `extract` survives as the
    Plane-1-only alternative, named as such.

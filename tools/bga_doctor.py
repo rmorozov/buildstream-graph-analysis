@@ -126,7 +126,43 @@ def check_compiler() -> dict:
             "hook and ptrace spine at capture time",
             remedy="apt-get install -y build-essential (Plane 1 and Plane 3 work "
                    "without it; only `bga capture` needs it)")
-    return _check("c-compiler", OK, f"C compiler at {cc}")
+
+    # UX-153: probe, do not check - this file's own principle, applied to
+    # itself. A compiler on PATH is not the question; the capture needs
+    # two *capabilities* from it, and they fail separately. `-static` in
+    # particular needs a static libc, which `build-essential` alone does
+    # not provide - and the spine is the half that goes missing, silently,
+    # on a machine where the hook compiles fine.
+    missing = [name for name, argv in (
+        ("-shared -fPIC (the LD_PRELOAD hook)", [cc, "-shared", "-fPIC",
+                                                 "-o", "/dev/null", "-x", "c", "-"]),
+        ("-static (the ptrace spine)", [cc, "-static",
+                                        "-o", "/dev/null", "-x", "c", "-"]),
+    ) if not _compiles(argv)]
+    if missing:
+        return _check(
+            "c-compiler", WARN,
+            f"{cc} cannot link: {', '.join(missing)}",
+            remedy="apt-get install -y build-essential libc6-dev "
+                   "(a static libc is a separate package on some distributions; "
+                   "without it the hook still works and `--trace-spine` does not)",
+            detail=[f"probed by compiling a trivial program with {cc}"])
+    return _check("c-compiler", OK, f"C compiler at {cc} links shared and static")
+
+
+def _compiles(argv: List[str]) -> bool:
+    """Whether a trivial program links with these flags.
+
+    Fed on stdin so nothing is written anywhere, and output goes to
+    `/dev/null`: a diagnostic that leaves files behind cannot be run
+    twice with the same meaning (`UX-125`).
+    """
+    try:
+        return subprocess.run(
+            argv, input="int main(void){return 0;}\n", text=True,
+            capture_output=True, timeout=120).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def check_plane3(project_name: Optional[str] = None) -> dict:
@@ -237,20 +273,13 @@ _PROBE_LIMIT = 5
 def element_path(project_dir: str) -> str:
     """The project's declared `element-path`, or BuildStream's default.
 
-    Read straight out of `project.conf`, for the same reason
-    `project_name_from_dir` is: this has to work on a project whose
-    plugins are *not* installed, which is one of the failures this check
-    exists to name.
+    UX-153: one implementation, in the tracer, because the census there
+    needs the same answer in seven places and two copies of a rule about
+    project layout is how this became a finding twice.
     """
-    conf = os.path.join(project_dir, "project.conf")
-    try:
-        with open(conf, "r", encoding="utf-8", errors="replace") as handle:
-            for line in handle:
-                if line.startswith("element-path:"):
-                    return line.split(":", 1)[1].strip() or "elements"
-    except OSError:
-        pass
-    return "elements"
+    from .bst_native_build_tracer import element_path as _element_path
+
+    return _element_path(project_dir)
 
 
 def discover_elements(project_dir: str) -> List[str]:
@@ -296,9 +325,15 @@ def check_staged_sources(project_dir: str) -> List[dict]:
     """
     from .bst_native_build_tracer import census_project
 
-    elements_dir = os.path.join(project_dir, "elements")
+    # UX-153: the same `element-path` the load probe reads. This
+    # hardcoded `elements/` and SKIPped when it was absent - so on a
+    # project with a declared layout the check silently stopped running,
+    # with `element_path()` sitting two functions away.
+    elements_dir = os.path.join(project_dir, element_path(project_dir))
     if not os.path.isdir(elements_dir):
-        return [_check("census", SKIP, f"{project_dir} has no elements/ directory")]
+        return [_check("census", SKIP,
+                       f"{project_dir} has no {element_path(project_dir)}/ "
+                       f"directory to census")]
     elements = sorted(n for n in os.listdir(elements_dir) if n.endswith(".bst"))
     if not elements:
         return [_check("census", SKIP, "the project declares no elements")]
@@ -389,6 +424,227 @@ def format_text(checks: List[dict], project_dir: Optional[str]) -> str:
     return "\n".join(lines)
 
 
+# UX-149: a one-element project whose build runs one command. Small
+# enough to build in seconds, real enough that every link in the chain
+# has to work for it to produce a record.
+_PROBE_PROJECT = "name: bga-capture-probe\nmin-version: 2.0\nelement-path: elements\n"
+_PROBE_ELEMENT = """kind: manual
+depends:
+- filename: base.bst
+  type: build
+config:
+  install-commands:
+  - |
+    echo bga-capture-probe > %{install-root}/probe.txt
+"""
+_PROBE_BASE = "kind: import\nsources:\n- kind: local\n  path: files/root\n"
+
+
+def _stage_probe_project(root: str, runtime: Optional[str]) -> None:
+    """A project whose one element runs one command inside a sandbox.
+
+    The runtime is borrowed from whatever the caller could find - this
+    check cannot build a sysroot, and a sandbox with no shell is the
+    `stage_*.sh` trap `check_staged_sources` already names.
+    """
+    os.makedirs(os.path.join(root, "elements"), exist_ok=True)
+    os.makedirs(os.path.join(root, "files"), exist_ok=True)
+    with open(os.path.join(root, "project.conf"), "w") as handle:
+        handle.write(_PROBE_PROJECT)
+    with open(os.path.join(root, "elements", "base.bst"), "w") as handle:
+        handle.write(_PROBE_BASE)
+    with open(os.path.join(root, "elements", "probe.bst"), "w") as handle:
+        handle.write(_PROBE_ELEMENT)
+    shutil.copytree(runtime, os.path.join(root, "files", "root"), symlinks=True)
+
+
+def _find_stageable_runtime() -> Optional[str]:
+    """A staged sysroot this repository already has, or None.
+
+    Deliberately not built here: `examples/stage_runtimes.sh` exists and
+    a diagnostic that builds a sysroot is not a diagnostic.
+    """
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for name in ("01-resource-contention", "02-cache-invalidation"):
+        candidate = os.path.join(repo, "examples", name, "files", "runtime")
+        if os.path.isfile(os.path.join(candidate, "bin", "sh")):
+            return candidate
+    return None
+
+
+def check_capture_chain(project_dir: Optional[str] = None) -> List[dict]:
+    """UX-149: run the whole chain on a canned workload.
+
+    `bga doctor` proves the *parts* - bst runs, bwrap builds a sandbox
+    with bga's own arguments, a compiler exists - and `--diagnose`
+    instruments the user's real build, which costs a real build and
+    yields its evidence only after the failure. Nothing ran the actual
+    chain: bst -> buildbox-run -> the PATH shim -> the rewritten argv ->
+    the hook loading inside the sandbox.
+
+    That is the probe a helper wants a remote user to run first, and
+    what it classifies is exactly `UX-147`'s three causes of a zero plus
+    "the shim ran and the hook recorded nothing".
+    """
+    import tempfile
+
+    if not shutil.which("bst"):
+        return [_check("capture-chain", SKIP, "cannot run a build without bst")]
+    runtime = _find_stageable_runtime()
+    if runtime is None:
+        return [_check(
+            "capture-chain", SKIP,
+            "no staged runtime to build a probe project from",
+            remedy="run examples/stage_runtimes.sh - the probe needs a sandbox "
+                   "with a shell in it, and this check will not build one")]
+
+    from .bst_native_build_tracer import (
+        count_build_tasks, load_and_summarize, read_capture_diagnostics,
+        run_traced_build,
+    )
+
+    findings = []
+    with tempfile.TemporaryDirectory(prefix="bga-capture-probe-") as tmp:
+        project = os.path.join(tmp, "project")
+        _stage_probe_project(project, runtime)
+        raw = os.path.join(tmp, "trace.log")
+        plane1 = os.path.join(tmp, "build.log")
+        diagnostics = os.path.join(tmp, "diagnostics.jsonl")
+        home = os.path.join(tmp, "home")
+        os.makedirs(home)
+        previous = dict(os.environ)
+        os.environ.update(_isolated_home(home))
+        try:
+            # `--trace-spine=auto` because that is what `bga snapshot`
+            # uses, and because the only runtimes this repository can
+            # stage a probe from are static busybox - where the hook is
+            # structurally blind and the spine is the whole answer.
+            # Probing with the hook alone would report a correct blind
+            # spot as a broken chain, every time.
+            code = run_traced_build(
+                project, ["bst", "--no-colors", "build", "probe.bst"], raw,
+                wrapped_log_path=plane1, trace_opens=True,
+                diagnostics_path=diagnostics, trace_spine="auto")
+        except Exception as error:  # noqa: BLE001 - reported as the finding
+            return [_check("capture-chain", FAIL,
+                           f"the probe capture could not start: {error}",
+                           remedy="the message above is the first broken link")]
+        finally:
+            os.environ.clear()
+            os.environ.update(previous)
+
+        # 1. the shim was executable at all - `run_traced_build` probes
+        #    this itself (UX-147) and raises above if it fails.
+        findings.append(_check("chain-shim-exec", OK,
+                               "the bwrap shim is executable and answers its probe"))
+
+        # 2. did bst launch a sandbox?
+        tasks = count_build_tasks(plane1) or 0
+        if code != 0 and tasks == 0:
+            findings.append(_check(
+                "chain-build", FAIL,
+                f"the probe build failed (exit {code}) before running any command",
+                remedy="the probe project is one `manual` element; a failure here "
+                       "is BuildStream or the sandbox, not bga",
+                detail=_tail(plane1)))
+            return findings
+        findings.append(_check("chain-build", OK,
+                               f"bst ran {tasks} sandboxed task(s)"))
+
+        # 3. did buildbox-run reach the shim?
+        records = read_capture_diagnostics(diagnostics)
+        if not records:
+            findings.append(_check(
+                "chain-shim-reached", FAIL,
+                "the shim was executable and bst launched a sandbox, but the "
+                "shim was never called",
+                remedy="buildbox-run resolved `bwrap` without going through "
+                       "$PATH, or `bst` reused a buildbox-casd started before "
+                       "this capture (stop it and let bst restart it), or "
+                       "something in the chain sanitises $PATH"))
+            findings.append(_check("chain-records", SKIP,
+                                   "unreachable: the shim never ran"))
+            return findings
+        findings.append(_check(
+            "chain-shim-reached", OK,
+            f"buildbox-run reached the shim {len(records)} time(s) through $PATH"))
+
+        # 4. did anything record a process from inside the sandbox?
+        report = load_and_summarize(raw, project_dir=project)
+        processes = report.get("process_count", 0)
+        if not processes:
+            findings.append(_check(
+                "chain-records", FAIL,
+                "the shim rewrote the argv and nothing recorded a process",
+                remedy="neither the LD_PRELOAD hook nor the ptrace spine saw "
+                       "anything inside a sandbox that ran a command - the "
+                       "injection reached bwrap and did not survive into the "
+                       "sandbox. Send the diagnostics record."))
+            return findings
+
+        by_coverage = {}
+        for record in report.get("processes") or []:
+            key = record.get("coverage") or "unknown"
+            by_coverage[key] = by_coverage.get(key, 0) + 1
+        hook_seen = sum(count for key, count in by_coverage.items() if "hook" in key)
+        summary = ", ".join(f"{count} {key}" for key, count in sorted(by_coverage.items()))
+        if not hook_seen:
+            # A real and expected reading, not a fault: the only runtimes
+            # this repository can stage a probe from are static busybox,
+            # which the hook structurally cannot see. The spine answering
+            # instead is the blind spot being covered, working.
+            findings.append(_check(
+                "chain-records", WARN,
+                f"{processes} process(es) recorded, none by the LD_PRELOAD hook "
+                f"({summary})",
+                remedy="the probe's runtime is statically linked, so only the "
+                       "ptrace spine can see it - which it did. On a dynamic "
+                       "project the hook is what carries opened paths"))
+        else:
+            findings.append(_check(
+                "chain-records", OK,
+                f"{processes} process(es) recorded from inside the sandbox "
+                f"({summary})"))
+    return findings
+
+
+def _isolated_home(home: str) -> dict:
+    """`HOME` pointed at a throwaway, and `PYTHONPATH` kept honest.
+
+    The probe needs a cache of its own or a warm hit makes it report "0
+    sandboxed tasks", which is the wrong answer to the question it asks.
+    But `HOME` is *how* Python finds the per-user `site-packages`, so
+    replacing it unimports a `pip install --user` BuildStream and `bst`
+    dies with `ModuleNotFoundError: No module named 'jinja2'` before
+    reading the project.
+
+    That is `UX-84` exactly, which `tests/unit/_bst_env.py` was written
+    for - and this hit it again, in production code, the first time it
+    ran. Carried across explicitly rather than rediscovered a third time.
+    """
+    import site
+    import sys
+
+    env = {"HOME": home}
+    try:
+        user_site = site.getusersitepackages() if site.ENABLE_USER_SITE else None
+    except Exception:  # pragma: no cover - site is not required to work
+        user_site = None
+    if user_site and user_site in sys.path and os.path.isdir(user_site):
+        existing = os.environ.get("PYTHONPATH")
+        env["PYTHONPATH"] = (f"{user_site}{os.pathsep}{existing}"
+                             if existing else user_site)
+    return env
+
+
+def _tail(path: str, lines: int = 6) -> List[str]:
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            return handle.read().splitlines()[-lines:]
+    except OSError:
+        return []
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -399,10 +655,20 @@ def main(argv: Optional[List[str]] = None) -> int:
              "loads, that every plugin kind it names is installed, and what its "
              "sources stage.",
     )
+    parser.add_argument(
+        "--capture", action="store_true",
+        help="UX-149: also run the whole capture chain - bst, buildbox-run, the "
+             "PATH shim, the rewritten argv, the hook inside the sandbox - on a "
+             "canned one-element probe build, and report per link in chain "
+             "order. Takes a few seconds and needs a staged runtime; this is the "
+             "check to run when a capture fails on a build plain `bst` completes.",
+    )
     parser.add_argument("-f", "--format", choices=["text", "json"], default="text")
     args = parser.parse_args(argv)
 
     checks = run_checks(args.project_dir)
+    if args.capture:
+        checks += check_capture_chain(args.project_dir)
     if args.format == "json":
         print(json.dumps({"project_dir": args.project_dir, "checks": checks}, indent=2))
     else:

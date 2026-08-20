@@ -147,9 +147,15 @@ floor.
 ## Step 0 — prerequisites
 
 ```bash
-pip install -e ".[bst]"
+pip install /path/to/bga-checkout     # into your project's venv (UX-150)
 bga doctor /path/to/your/project
 ```
+
+`bga` is installed *into the venv that has your BuildStream*, from
+wherever this repository happens to sit; it does not need to be in or
+near the project it analyzes, and the capture is exercised in exactly
+that shape by CI. `pip install -e ".[bst]"` from inside the checkout is
+the contributor mode.
 
 Plane 1 (the whole-project analysis) needs only Python. Plane 2 — the
 tracer that looks *inside* an element's sandbox — needs a real `bst` and
@@ -184,6 +190,28 @@ Full dependency list and its known limits:
 [`docs/spec/ingestion-pipeline.md`](../spec/ingestion-pipeline.md).
 
 ### When a capture fails on a build that `bst` completes
+
+Start here, before instrumenting the real build:
+
+```bash
+bga doctor --capture
+```
+
+That runs the whole chain — `bst` → `buildbox-run` → the `$PATH` shim →
+the rewritten argv → the recorders inside the sandbox — on a canned
+one-element build that takes seconds, and reports **per link, in chain
+order** (`UX-149`):
+
+```text
+  [ok  ] chain-shim-exec: the bwrap shim is executable and answers its probe
+  [ok  ] chain-build: bst ran 1 sandboxed task(s)
+  [ok  ] chain-shim-reached: buildbox-run reached the shim 1 time(s) through $PATH
+  [warn] chain-records: 3 process(es) recorded, none by the LD_PRELOAD hook (3 spine-only)
+```
+
+The first link that says `FAIL` is the one to fix, and it carries its own
+remedy. Plain `bga doctor` checks the *parts*; this checks that they are
+joined.
 
 `bga doctor` checks the environment. It does not check *this* capture —
 a real capture rewrites BuildStream's own generated `bwrap` argv, which
@@ -674,13 +702,24 @@ one to plan against. If you are gating CI, build a baseline set instead
 of trusting a single pair:
 
 ```bash
+bga baseline --glob 'captures/<project>/<commit>-incremental-b4j4-*' -n 3 \
+    --candidate runs/candidate
+```
+
+That fetches the newest three published captures, refuses a set whose
+members are not comparable to each other, and band-compares in one
+command (`UX-96`). It composes this, which is what to run when the runs
+are already on disk:
+
+```bash
 bga compare baseline/run candidate/run \
     --baseline-run baseline/run-2 --baseline-run baseline/run-3 --band-k 3.0
 ```
 
-That replaces the fixed threshold with a median ± k·MAD band over the
-baseline set (a minimum of three runs, because a "band" over two points
-just restates them).
+Either way the fixed threshold is replaced by a median ± k·MAD band over
+the baseline set — a minimum of three runs, because a "band" over two
+points just restates them. The whole CI sequence is
+[`ci-comment.md`](ci-comment.md).
 
 ## Step 8 — put it in CI
 

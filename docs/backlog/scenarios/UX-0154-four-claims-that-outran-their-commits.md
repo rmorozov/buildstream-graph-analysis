@@ -1,6 +1,6 @@
 # UX-154: four claims that outran their commits
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-136, UX-138, UX-141 (the logs this corrects)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-136, UX-138, UX-141 (the logs this corrects)
 
 ## Motivation
 
@@ -49,3 +49,31 @@ per the UX-132/UX-144 convention.
 covers `real-project.md`'s new `bga baseline` block; both corrected
 logs carry their annotations. `make lint-docs` and the full docs
 enforcement suite stay green.
+
+
+---
+
+## What was built
+
+All four, and each log annotated per the `UX-132`/`UX-144` convention.
+
+1. **`real-project.md` teaches `bga baseline`** — the one-command form
+   leading, the three-flag assembly kept as what it composes. A
+   docs-commands guard now asserts it, because a prose claim about prose
+   is exactly what nothing else catches.
+2. **The `toll` sweep finished.** `bga correlate` was alternating
+   "sandbox tax" and "toll" inside one sentence and printing "sandbox
+   toll" twice more, pinned by a test. The new guard **parses** every
+   module in `bga/` and `tools/` and checks string literals the code can
+   print — docstrings and comments recording `UX-99`'s history are where
+   the word belongs, and the `toll_*` JSON keys stay, because they are a
+   published contract (`UX-75`) and renaming a field to tidy prose would
+   break every consumer keyed on it.
+3. **430 → 420.** The README reduction is 175 lines, not 185.
+4. **UX-141's cross-reference** said UX-142 (doctor's hardcoded target)
+   where it meant UX-143 (the group-stop detach).
+
+Worth naming: three of these four are claims *I* wrote, in logs
+describing my own commits, and none of them was catchable by a test at
+the time. The guard added for (1) is the only one of the four that
+mechanically cannot recur.

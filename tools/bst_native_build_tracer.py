@@ -53,9 +53,11 @@ Usage:
     python3 -m tools.bst_native_build_tracer report trace.json --raw-log trace.log
 """
 import argparse
+import errno
 import json
 import os
 import re
+import platform
 import shutil
 import stat
 import struct
@@ -142,15 +144,98 @@ def compile_spine(build_dir: str) -> str:
 def install_bwrap_shim(shim_dir: str) -> str:
     """Copy the checked-in shim script into shim_dir as a file literally
     named `bwrap`, executable - PATH lookup only cares about the
-    filename, not where it lives."""
+    filename, not where it lives.
+
+    UX-147: the shebang is rewritten to this interpreter's absolute path.
+    It shipped as `#!/usr/bin/env python3`, which makes the exec depend
+    on the PATH of whatever process `buildbox-run` hands the sandbox -
+    and if that PATH has no `python3`, the exec fails inside a layer that
+    reports only `returncode 1`. `sys.executable` is the interpreter
+    already running this capture, so there is no lookup left to fail.
+    """
     real_bwrap = shutil.which("bwrap")
     if real_bwrap is None:
         raise TraceError("no real bwrap found on PATH - required for the shim to fall back to")
     shim_path = os.path.join(shim_dir, "bwrap")
-    shutil.copyfile(_bwrap_shim_source, shim_path)
+    with open(_bwrap_shim_source, "r", encoding="utf-8") as handle:
+        source = handle.read()
+    if source.startswith("#!"):
+        source = f"#!{sys.executable}\n" + source.split("\n", 1)[1]
+    with open(shim_path, "w", encoding="utf-8") as handle:
+        handle.write(source)
     st = os.stat(shim_path)
     os.chmod(shim_path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
     return real_bwrap
+
+
+def probe_bwrap_shim(shim_path: str) -> None:
+    """Exec the installed shim once, here, before the build starts.
+
+    UX-147 item 1: three different environment faults - a `noexec`
+    temp mount, an AppArmor denial on executing from `/tmp`, an
+    interpreter the sandbox layer cannot find - all fail this exec
+    *inside* `buildbox-run`, which reports `returncode 1` with the
+    stderr swallowed. The capture then finishes with an empty
+    diagnostics record and a summary calling the build unmodified.
+
+    Ten milliseconds here turns all three into one sentence with the
+    real errno, before an hour of build.
+    """
+    from .native_trace.bwrap_shim import SELF_TEST_ARGV
+
+    try:
+        result = subprocess.run([shim_path, SELF_TEST_ARGV],
+                                capture_output=True, text=True, timeout=120)
+    except OSError as error:
+        if error.errno == errno.ENOENT:
+            # Either the shim or the interpreter its shebang names. Both
+            # are bga's own doing, and neither is the user's TMPDIR.
+            raise TraceError(
+                f"the bwrap shim at {shim_path} could not be run: {error.strerror}. "
+                f"Either it was not installed or the interpreter its first line "
+                f"names is gone - both are bga bugs; please report this."
+            ) from error
+        raise TraceError(
+            f"the bwrap shim at {shim_path} cannot be executed ({error.strerror}). "
+            f"That is the temp directory, not bga: a noexec mount or an AppArmor "
+            f"rule on executing from it will fail the same way inside the sandbox "
+            f"layer, where the error is swallowed. Set TMPDIR to a directory you "
+            f"can execute from and re-run."
+        ) from error
+    if result.returncode != 0 or "bga-shim-ok" not in result.stdout:
+        raise TraceError(
+            f"the bwrap shim at {shim_path} ran but did not answer its own probe "
+            f"(exit {result.returncode}). stderr: {result.stderr.strip()[:400]}"
+        )
+
+
+def element_path(project_dir: str) -> str:
+    """The project's declared `element-path`, or BuildStream's default.
+
+    UX-142 taught doctor's load probe to read this; UX-153 found the same
+    assumption surviving in seven places here, where it costs something:
+    `bga snapshot` defaults to `--trace-spine=auto`, and a census that
+    finds no elements reports every element as unassessed - so the
+    fail-safe traces *everything*, silently at full spine price, on
+    exactly the nonstandard-layout projects UX-142 was filed for.
+
+    Read straight out of `project.conf` rather than through BuildStream,
+    for the same reason `read_declared_build_deps` is: this has to work
+    on a project whose plugins are not installed.
+    """
+    conf = os.path.join(project_dir, "project.conf")
+    try:
+        with open(conf, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if line.startswith("element-path:"):
+                    return line.split(":", 1)[1].strip() or "elements"
+    except OSError:
+        pass
+    return "elements"
+
+
+def elements_dir_for(project_dir: str) -> str:
+    return os.path.join(project_dir, element_path(project_dir))
 
 
 def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
@@ -191,6 +276,11 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         if spine_policy:
             compile_spine(bind_dir)
         real_bwrap = install_bwrap_shim(shim_dir)
+        # UX-147: after the shim exists, before `bst` runs. (Placed before
+        # `install_bwrap_shim` on the first attempt, which probed a file
+        # that was not there yet and reported ENOENT as a noexec mount -
+        # the error text now tells the two apart rather than assuming.)
+        probe_bwrap_shim(os.path.join(shim_dir, "bwrap"))
 
         env = dict(os.environ)
         env["PATH"] = shim_dir + os.pathsep + env.get("PATH", "")
@@ -246,6 +336,10 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         captured_diagnostics = os.path.join(bind_dir, "capture-diagnostics.jsonl")
         if diagnostics_path is not None:
             env["BST_TRACE_DIAGNOSTICS"] = captured_diagnostics
+            # UX-151: once per capture, as the record's first line - what
+            # the argvs below should be parsed *against*.
+            with open(captured_diagnostics, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(capture_fingerprint(), sort_keys=True) + "\n")
         else:
             env.pop("BST_TRACE_DIAGNOSTICS", None)
         if no_inject:
@@ -1608,7 +1702,7 @@ def _local_source_paths(project_dir: str, element: str) -> List[str]:
     a census that silently skipped one would be worse than one that says
     it only sees local sources.
     """
-    path = os.path.join(project_dir, "elements", element)
+    path = os.path.join(elements_dir_for(project_dir), element)
     if not os.path.exists(path):
         return []
     import yaml
@@ -1641,7 +1735,7 @@ def census_spine_verdicts(project_dir: str) -> Dict[str, bool]:
     whole purpose is to not lose coverage.
     """
     try:
-        elements_dir = os.path.join(project_dir, "elements")
+        elements_dir = elements_dir_for(project_dir)
         elements = sorted(
             name for name in os.listdir(elements_dir) if name.endswith(".bst")
         )
@@ -1759,7 +1853,7 @@ def read_element_kinds(project_dir: str) -> Dict[str, str]:
     to a wrong one.
     """
     kinds: Dict[str, str] = {}
-    elements_dir = os.path.join(project_dir, "elements")
+    elements_dir = elements_dir_for(project_dir)
     if not os.path.isdir(elements_dir):
         return kinds
     for root, _dirs, files in os.walk(elements_dir):
@@ -1797,7 +1891,7 @@ def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str,
     definition not read during the build, so this analysis says nothing
     about one and must not propose removing it.
     """
-    elements_dir = os.path.join(project_dir, "elements")
+    elements_dir = elements_dir_for(project_dir)
     declared: Dict[str, List[str]] = {}
     for element in elements:
         path = os.path.join(elements_dir, element)
@@ -3053,9 +3147,9 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # whether it missed nothing or everything.
     if project_dir:
         elements = sorted(
-            name for name in os.listdir(os.path.join(project_dir, "elements"))
+            name for name in os.listdir(elements_dir_for(project_dir))
             if name.endswith(".bst")
-        ) if os.path.isdir(os.path.join(project_dir, "elements")) else []
+        ) if os.path.isdir(elements_dir_for(project_dir)) else []
         if elements:
             report["static_census"] = census_project(project_dir, elements)
     elif opens_by_element:
@@ -3736,24 +3830,127 @@ def _spine_policy(flag: str):
     return {"off": False, "on": True, "auto": "auto"}[flag]
 
 
+def read_capture_fingerprint(path: str) -> Optional[dict]:
+    """The `UX-151` header line, if the record has one."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                if entry.get("record") == "fingerprint":
+                    return entry
+    except OSError:
+        pass
+    return None
+
+
 def read_capture_diagnostics(path: str) -> List[dict]:
-    """The shim's own records, or an empty list."""
+    """The shim's own records, or an empty list.
+
+    The fingerprint line (`UX-151`) is not one of them: it describes the
+    capture, not a sandbox, and counting it as an invocation would make
+    "the shim ran 0 times" impossible to say.
+    """
     records = []
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 if line.strip():
                     try:
-                        records.append(json.loads(line))
+                        entry = json.loads(line)
                     except ValueError:
                         continue
+                    if entry.get("record") == "fingerprint":
+                        continue
+                    records.append(entry)
     except OSError:
         pass
     return records
 
 
-def format_capture_diagnostics(path: str, no_inject: bool = False) -> str:
+def _looks_mis_split(record: dict) -> bool:
+    """Whether this invocation's parsed command looks like a command.
+
+    Three shapes say it does not, and only the first was checked before
+    `UX-151`: a leading flag, a leading bare number (a file descriptor, a
+    size or an octal mode - the operand of a newer bwrap option the arity
+    table does not know), and a `--` surviving inside the command, which
+    means the split fell on the wrong side of bwrap's own separator.
+    """
+    command = record.get("command") or []
+    if not command:
+        return False
+    first = command[0]
+    if first.startswith("-"):
+        return True
+    if first.isdigit():
+        return True
+    return "--" in command[1:]
+
+
+def count_build_tasks(plane1_log_path: Optional[str]) -> Optional[int]:
+    """How many element build tasks this run started, or `None`.
+
+    `None` and `0` are different answers and the summary treats them as
+    such: no log means "cannot say", and zero means "nothing was ever
+    going to launch a sandbox" (`UX-147`).
+    """
+    if not plane1_log_path or not os.path.exists(plane1_log_path):
+        return None
+    # `Running commands` is the phase that launches a sandbox, and it is
+    # the one whose count matches the shim's: measured on `examples/06`,
+    # 9 phases against 9 shim invocations. Staging and caching phases run
+    # inside BuildStream and launch nothing.
+    started = 0
+    try:
+        with open(plane1_log_path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if "START" in line and "Running commands" in line:
+                    started += 1
+    except OSError:
+        return None
+    return started
+
+
+def capture_fingerprint() -> dict:
+    """What the argv above should be *parsed against* (`UX-151`).
+
+    `UX-146`'s record blames an arity table validated on one bubblewrap
+    version and then recorded no version of anything, so a maintainer
+    reading a user's JSONL could not tell which table applied. Collected
+    once per capture rather than per sandbox.
+    """
+    def _version(argv):
+        try:
+            result = subprocess.run(argv, capture_output=True, text=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return (result.stdout or result.stderr or "").strip().splitlines()[:1] or None
+
+    bwrap = shutil.which("bwrap")
+    return {
+        "record": "fingerprint",
+        "bwrap_path": bwrap,
+        "bwrap_version": _version([bwrap, "--version"]) if bwrap else None,
+        "bst_version": _version(["bst", "--version"]) if shutil.which("bst") else None,
+        "buildbox_run_path": shutil.which("buildbox-run"),
+        "arity_table_validated_against": "bubblewrap 0.9.0",
+        "platform": platform.platform(),
+    }
+
+
+def format_capture_diagnostics(path: str, no_inject: bool = False,
+                               sandbox_tasks: Optional[int] = None) -> str:
     """UX-146: the count first, because zero is the answer that matters.
+
+    `sandbox_tasks` is how many element tasks the build actually ran, from
+    Plane 1. It is what separates UX-147's three causes of a zero: no
+    tasks means nothing was ever going to call the shim, and tasks with no
+    shim lines means it was never resolved.
 
     A capture that produced nothing has two completely different causes -
     the `$PATH` shadow never reaching `buildbox-run`, so the build ran
@@ -3764,17 +3961,46 @@ def format_capture_diagnostics(path: str, no_inject: bool = False) -> str:
     records = read_capture_diagnostics(path)
     lines = ["", "=" * 60, "Capture diagnostics (UX-146)", "=" * 60]
     if not records:
+        # UX-147: zero has three causes and this asserted the benign one.
+        # The probe at capture start (`probe_bwrap_shim`) has already
+        # excluded the third - the capture would have failed outright -
+        # so what is left is told apart by whether any sandbox was
+        # supposed to run at all.
+        lines += ["  The bwrap shim ran 0 times.", ""]
+        if sandbox_tasks is None:
+            lines += [
+                "  Three things produce that, and this record cannot tell them",
+                "  apart on its own:",
+            ]
+        elif sandbox_tasks == 0:
+            lines += [
+                "  This build launched no sandbox at all - every element was a",
+                "  cache hit - so there was nothing for the shim to be called by.",
+                "  That is the benign reading, and here it is the confirmed one.",
+            ]
+            lines.append(f"  Record: {path} (empty)")
+            return "\n".join(lines)
+        else:
+            lines += [
+                f"  This build ran {sandbox_tasks} element task(s), so sandboxes were",
+                "  launched and the shim was not called by any of them. The shim",
+                "  itself is executable - the capture probes that before starting -",
+                "  so it was never *resolved*:",
+            ]
         lines += [
-            "  The bwrap shim ran 0 times.",
             "",
-            "  BuildStream resolves `bwrap` through `buildbox-run`, one process",
-            "  layer below its own Python, so the shim is reached via $PATH. Zero",
-            "  invocations means that never happened: this build ran unmodified and",
-            "  the capture is empty for that reason, not because the sandbox failed.",
+            "    - `buildbox-run` found `bwrap` by an absolute path rather than",
+            "      through $PATH;",
+            "    - or `bst` reused a `buildbox-casd` that was already running",
+            "      before this capture, whose environment predates the shim",
+            "      directory. Stopping it and letting `bst` restart it is the",
+            "      ten-second fix;",
+            "    - or something in the chain sanitises $PATH.",
             "",
-            "  Worth checking: whether the build used a sandbox at all (a fully",
-            "  cached build launches none), and whether anything in the chain",
-            "  sanitises $PATH.",
+            "  A fully cached build also launches no sandbox, which is benign -",
+            "  but this build did run tasks, so that is not what happened here."
+            if sandbox_tasks else
+            "  A fully cached build launches no sandbox, which is benign.",
             f"  Record: {path} (empty)",
         ]
         return "\n".join(lines)
@@ -3782,17 +4008,30 @@ def format_capture_diagnostics(path: str, no_inject: bool = False) -> str:
     injected = sum(1 for r in records if r.get("injected"))
     elements = sorted({r.get("element") for r in records if r.get("element")})
     unexecutable = [r for r in records if not r.get("real_bwrap_executable")]
-    # A mis-split shows up as a sandboxed command starting with what is
-    # plainly a flag - the failure mode the arity table can produce
-    # against a bubblewrap newer than the 0.9.0 it was built from.
-    suspicious = [r for r in records
-                  if (r.get("command") or [""])[0].startswith("-")]
+    # UX-151: what a mis-split actually looks like. This checked only
+    # `command[0].startswith("-")` - and the mis-splits a post-0.9.0
+    # bwrap produces put the flag's *operand* first: a file descriptor, a
+    # size, an octal mode. All of those start with a digit, so the one
+    # automated detector for the rewrite breaking missed the shapes most
+    # likely to occur.
+    suspicious = [r for r in records if _looks_mis_split(r)]
+    unknown = {}
+    for record in records:
+        for flag in record.get("unknown_flags") or []:
+            unknown[flag] = unknown.get(flag, 0) + 1
 
+    fingerprint = read_capture_fingerprint(path) or {}
     lines += [
         f"  The bwrap shim ran {len(records)} time(s); "
         f"{injected} rewritten, {len(records) - injected} passed through.",
-        f"  Real bwrap: {records[-1].get('real_bwrap')}",
+        f"  Real bwrap: {records[-1].get('real_bwrap')}"
+        + (f" ({' '.join(fingerprint['bwrap_version'])})"
+           if fingerprint.get("bwrap_version") else ""),
     ]
+    if fingerprint.get("bst_version"):
+        lines.append(f"  {' '.join(fingerprint['bst_version'])}"
+                     f"; arity table validated against "
+                     f"{fingerprint.get('arity_table_validated_against')}")
     if elements:
         shown = ", ".join(elements[:6])
         more = f" (+{len(elements) - 6} more)" if len(elements) > 6 else ""
@@ -3802,15 +4041,25 @@ def format_capture_diagnostics(path: str, no_inject: bool = False) -> str:
     if unexecutable:
         lines.append(f"  {len(unexecutable)} invocation(s) found no executable "
                      f"bwrap at that path - that alone fails the build.")
+    if unknown:
+        named = ", ".join(f"{flag} (x{count})" for flag, count in
+                          sorted(unknown.items(), key=lambda kv: -kv[1])[:6])
+        lines += [
+            f"  {len(unknown)} bwrap option(s) this build used are not in the",
+            "  shim's arity table, so how many arguments each takes was guessed:",
+            f"    {named}",
+            "  That guess is zero, and if any of them actually takes an operand the",
+            "  rewritten argv is malformed - which bwrap reports as a non-zero exit",
+            "  and BuildStream as `buildbox-run failed with returncode 1`.",
+        ]
     if suspicious:
         first = suspicious[0]
         lines += [
             f"  {len(suspicious)} invocation(s) parsed a sandboxed command that "
-            f"starts with an option:",
+            f"does not look like one:",
             f"    {' '.join((first.get('command') or [])[:4])}",
-            "  That is what a mis-split looks like: `split_bwrap_args` assumes an",
-            "  unknown --flag takes no arguments, and its table was validated",
-            "  against bubblewrap 0.9.0. Send this file if you see it.",
+            "  That is what a mis-split looks like - the first token should be a",
+            "  program, not a flag, a number or a separator. Send this file.",
         ]
     if no_inject:
         lines += [
@@ -3957,7 +4206,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "census":
-        elements_dir = os.path.join(args.project_dir, "elements")
+        elements_dir = elements_dir_for(args.project_dir)
         if not os.path.isdir(elements_dir):
             print(f"Error: no elements/ directory under {args.project_dir}",
                   file=sys.stderr)
@@ -4021,9 +4270,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 1
 
         if diagnostics_path:
-            print(format_capture_diagnostics(diagnostics_path,
-                                             no_inject=args.no_inject),
-                  file=sys.stderr)
+            # UX-147: how many element tasks actually ran, so a zero can
+            # be told apart from a cache-hit build. Read from the Plane 1
+            # log this same capture wrote.
+            print(format_capture_diagnostics(
+                diagnostics_path, no_inject=args.no_inject,
+                sandbox_tasks=count_build_tasks(wrapped_log_path)),
+                file=sys.stderr)
 
         report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
                                     invocation_log_path=invocation_log_path,
@@ -4050,6 +4303,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         else:
             print(_format_text(report))
             print(f"\nWrapped command exit code: {returncode}")
+        # UX-147 item 5: the failing user is told what would answer the
+        # question. Only when it was not already asked for, and only on a
+        # failure - a working capture does not need advice.
+        if returncode != 0 and not diagnostics_path:
+            print(
+                "\nThe wrapped build failed. If it succeeds under plain `bst` and "
+                "only fails here, re-run with --diagnose: it records what the "
+                "bwrap shim received and exec'd, and the invocation count alone "
+                "separates the three things that produce this.",
+                file=sys.stderr)
         return returncode
 
     # report
@@ -4066,7 +4329,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # on a project the census can answer for, which is the same
         # "fires identically whatever the truth is" problem one level up.
         if args.project_dir and "static_census" not in saved:
-            elements_dir = os.path.join(args.project_dir, "elements")
+            elements_dir = elements_dir_for(args.project_dir)
             if os.path.isdir(elements_dir):
                 elements = sorted(
                     name for name in os.listdir(elements_dir) if name.endswith(".bst")

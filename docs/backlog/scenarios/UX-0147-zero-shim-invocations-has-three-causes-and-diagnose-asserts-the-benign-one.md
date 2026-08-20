@@ -1,6 +1,6 @@
 # UX-147: zero shim invocations has three causes, and diagnose asserts the benign one
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-146 (the diagnostics this sharpens)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the diagnostics this sharpens)
 
 Filed against the same real Ubuntu 24.04 field failure as UX-146
 (`bst build` works; `bga snapshot` fails with `buildbox-run failed
@@ -91,3 +91,63 @@ assumed. The probe adds one shim invocation, excluded from the
 prints one sentence naming the missing variable (no traceback —
 asserted through a real shim process, like UX-146's errno test), and a
 failed capture without diagnostics prints the `--diagnose` hint.
+
+
+---
+
+## What was built
+
+1. **A shim self-probe before the build.** `install_bwrap_shim` now
+   writes the shebang as `sys.executable` — the interpreter already
+   running the capture, so there is no `env` lookup left to fail in
+   whatever PATH the sandbox layer hands it — and `run_traced_build`
+   execs the installed shim once, itself, with `--bga-shim-self-test`.
+   A failure is one sentence with the real errno, before the build:
+
+   ```text
+   Error: the bwrap shim at /tmp/.../shim/bwrap cannot be executed
+   (Permission denied). That is the temp directory, not bga: a noexec
+   mount or an AppArmor rule on executing from it will fail the same way
+   inside the sandbox layer, where the error is swallowed. Set TMPDIR to
+   a directory you can execute from and re-run.
+   ```
+
+   ENOENT gets a *different* sentence, because it is bga's own bug and
+   not the user's `TMPDIR` — a distinction the first version got wrong
+   and reported as a noexec mount (found by placing the probe before
+   `install_bwrap_shim`, so it probed a file that did not exist yet).
+
+2. **The zero-invocation summary names all three causes**, told apart by
+   how many element tasks Plane 1 recorded. `Running commands` is the
+   phase that launches a sandbox, and its count matches the shim's
+   exactly — measured on `examples/06`, 9 against 9.
+
+   | evidence | reading |
+   |---|---|
+   | 0 tasks | *"no sandbox at all — every element was a cache hit … here it is the confirmed one"* |
+   | N tasks, 0 shim lines | *"sandboxes were launched and the shim was not called … it was never **resolved**"* + the three ways that happens, `buildbox-casd` reuse named as the ten-second fix |
+   | no count | all three, said to be indistinguishable |
+
+   Both readings verified live: a real `examples/06` build (9 and 9) and
+   the same build again on a warm cache (0 and 0).
+
+3. **The shim survives a missing environment.** Four bare
+   `os.environ[...]` reads, four lines below the traceback `UX-146`
+   fixed, meant anything else on the machine invoking `bwrap` while the
+   shim directory was on PATH got a `KeyError` on `buildbox-run`'s
+   swallowed stderr. It now names the missing variable and falls through
+   to the real `bwrap`.
+
+4. **A failing capture says what would answer the question** — `bga
+   capture run` and `bga snapshot` both suggest `--diagnose` on a
+   non-zero build, and only when it was not already asked for.
+
+### Deviation, recorded
+
+Item 2's *stale-daemon detection* is not implemented as a live check:
+the item itself says the remedy's wording is "to be settled by
+reproducing the reuse on a real `bst`", and that reproduction did not
+happen here. The cause is **named in the summary** as one of the three,
+with the fix, rather than detected. Detecting it needs a way to tell
+"this `buildbox-casd` predates my PATH" from "`bst` started one", which
+is a separate piece of work.

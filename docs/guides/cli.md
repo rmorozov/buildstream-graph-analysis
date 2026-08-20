@@ -306,6 +306,15 @@ bga doctor PROJECT_DIR     # and whether this project can be captured
 bga doctor --format json   # findings-style ids per check, for scripting
 ```
 
+`bga doctor --capture` goes further (`UX-149`): it runs the whole capture
+chain — `bst` → `buildbox-run` → the `$PATH` shim → the rewritten argv →
+the recorders inside the sandbox — on a canned one-element build, and
+reports per link in chain order. Seconds, and it needs a staged runtime
+(`examples/stage_runtimes.sh`); it skips rather than building one. This
+is the check to run when a capture fails on a build plain `bst`
+completes — the first `FAIL` names the broken link, where `--diagnose`
+would need the real failing build to say the same thing.
+
 Read-only, one line per check, and a concrete remedy on every failure. It invents no check — each one fronts a failure that really happened while standing this project up, and the remedy quoted is the one that actually fixed it: a virtualenv for `pluginbase` under a distro-patched setuptools, `buildstream-plugins` for the `cmake` kind, the `apparmor_restrict_unprivileged_userns` sysctl for bwrap's loopback, `build-essential` for the hook and spine compile, `stage_runtimes.sh`/`stage_cpp_toolchain.sh` for a sandbox with no shell.
 
 Two details worth knowing:

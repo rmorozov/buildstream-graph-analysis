@@ -60,7 +60,7 @@ points to); `make lint-docs` and the link test pass.
 
 ## What was built
 
-`README.md`: **430 → 245 lines**, reordered to what it is → install →
+`README.md`: **420 → 245 lines** *(`UX-154`: this log first said 430; `git show 0acaff5:README.md | wc -l` is 420. The reduction is 175 lines, not 185.)*, reordered to what it is → install →
 30-second fixture → **doctor + snapshot on your project** → one halved
 showcase → CI pointer → plane pointers → docs/dev/license.
 

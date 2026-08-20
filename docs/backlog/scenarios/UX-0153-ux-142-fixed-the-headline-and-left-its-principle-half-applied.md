@@ -1,6 +1,6 @@
 # UX-153: UX-142 fixed the headline and left its principle half-applied
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-142 (the fix this completes), UX-125 (doctor's probe principle)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-142 (the fix this completes), UX-125 (doctor's probe principle)
 
 ## Motivation
 
@@ -55,3 +55,30 @@ machine without static libc (simulated by a PATH shim hiding the
 static archive), doctor names the `-static` gap instead of passing on
 `cc`'s existence. The CI workflow shows the doctor step or UX-142's
 log records why not.
+
+
+---
+
+## What was built
+
+1. **One `element_path`, in the tracer**, where the census needs the
+   answer in seven places; doctor imports it. Two copies of a rule about
+   project layout is how this became a finding twice.
+2. **`check_staged_sources` reads it** and says which directory it
+   looked for when there is none, instead of SKIPping on a hardcoded
+   `elements/`.
+3. **The capture workflow runs doctor against freedesktop-sdk**, before
+   an hour of build — the acceptance clause `UX-142` dropped. Not a
+   gate: doctor exits non-zero only on a real failure, and a warning on
+   a real project (no top-level `elements/`, no Plane 3 logs on a fresh
+   runner) is information. The exit code is captured off `PIPESTATUS[0]`
+   into a variable on the next line, because every later command
+   rewrites it — including the `echo` that reports it, which the first
+   version of that step got wrong.
+4. **`check_compiler` probes instead of checking**: a trivial
+   `-shared -fPIC` link for the hook and a trivial `-static` link for
+   the spine, compiled from stdin to `/dev/null` so nothing is written.
+   A compiler that cannot link `-static` — a separate package on some
+   distributions — now **warns and says which capability is missing**,
+   rather than reporting a spine that will not build as a healthy
+   environment.

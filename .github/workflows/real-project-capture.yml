@@ -252,6 +252,33 @@ jobs:
           git -C fdsdk checkout -q FETCH_HEAD
           git -C fdsdk rev-parse HEAD
 
+      # UX-153: doctor, against a real project, before an hour is spent.
+      # UX-125's whole argument is that a capture environment should be
+      # checked before a build proves it broken - and until now the only
+      # doctor step in CI ran against `examples/06`, one of the nine
+      # fixtures that all ship an `all.bst`. That is the fixture
+      # convention UX-142 was filed against, checking itself.
+      #
+      # Not a gate: doctor exits non-zero only on a real failure, and a
+      # warning here (freedesktop-sdk has no `elements/` at the top level
+      # and Plane 3 has no logs on a fresh runner) is information, not a
+      # reason to abandon the capture. `|| true` would hide a genuine
+      # FAIL, so the exit code is recorded and read.
+      - name: Check the capture environment against a real project
+        run: |
+          mkdir -p capture
+          set +e
+          bga doctor fdsdk | tee capture/doctor.txt
+          # Captured into a variable on the very next line, because
+          # PIPESTATUS is rewritten by every command after it - including
+          # the `echo` that reports it. `$?` alone would be `tee`'s, which
+          # is the trap UX-97 recorded.
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "doctor_exit=$rc" >> "$GITHUB_ENV"
+          echo "doctor exited $rc"
+        shell: bash
+
       # Recorded before anything is built: if a later phase times out, the
       # graph alone still supports the structural half of the audit, which
       # is what round 5 ran on.

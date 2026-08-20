@@ -1,6 +1,6 @@
 # UX-149: doctor checks the parts, and nothing checks the chain
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-125/UX-142 (doctor), UX-146/UX-147/UX-148 (the diagnostics it composes)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-142 (doctor), UX-146/UX-147/UX-148 (the diagnostics it composes)
 
 ## Motivation
 
@@ -58,3 +58,43 @@ made non-executable (self-probe FAIL, chain short-circuits with
 `skip`s), and a PATH-bypass simulation (shim never reached →
 cause-2 text). The probe leaves nothing behind (temp project and
 cache keys cleaned, asserted the way doctor's read-only test works).
+
+
+---
+
+## What was built
+
+`bga doctor --capture` stages a one-element project from a runtime this
+repository already has (it will not build a sysroot — a diagnostic that
+builds a sysroot is not a diagnostic), runs one traced `bst build` of
+it, and reports per link in chain order:
+
+```text
+  [ok  ] chain-shim-exec: the bwrap shim is executable and answers its probe
+  [ok  ] chain-build: bst ran 1 sandboxed task(s)
+  [ok  ] chain-shim-reached: buildbox-run reached the shim 1 time(s) through $PATH
+  [warn] chain-records: 3 process(es) recorded, none by the LD_PRELOAD hook (3 spine-only)
+         -> the probe's runtime is statically linked, so only the ptrace spine
+            can see it - which it did.
+```
+
+Each link's failure is one of `UX-147`'s three causes, plus "the shim
+rewrote the argv and nothing recorded a process"; a link that cannot be
+reached is `skip`, not a pass.
+
+### Two corrections the first run forced
+
+- **It ran with the hook alone and reported a correct blind spot as a
+  broken chain.** The only runtimes here are static busybox, which the
+  `LD_PRELOAD` hook structurally cannot see — so `chain-hook` FAILed on
+  a machine where everything worked. The probe now uses
+  `--trace-spine=auto`, which is what `bga snapshot` uses, and *no
+  records at all* is the failure while *no hook records* is a warning
+  that names why.
+- **It hit `UX-84` in production code**, on its first execution: the
+  probe points `HOME` at a throwaway so a warm cache cannot make it
+  report zero tasks, and `HOME` is how Python finds the per-user
+  `site-packages` — so `bst` died with `ModuleNotFoundError: No module
+  named 'jinja2'` before reading the project. The fix that
+  `tests/unit/_bst_env.py` already carried is now carried here too,
+  with a comment saying so, rather than rediscovered a third time.

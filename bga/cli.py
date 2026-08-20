@@ -1309,7 +1309,7 @@ def create_parser() -> argparse.ArgumentParser:
     correlate_parser.add_argument(
         '--cache-logs', default=None, metavar='PATH',
         help="A Plane 3 report (`bga cache-logs --format json`) for the same "
-             "project. Supplies the per-element sandbox toll, which is what the "
+             "project. Supplies the per-element sandbox tax, which is what the "
              "merge half of the granularity findings is computed from (UX-100).",
     )
     correlate_parser.add_argument(

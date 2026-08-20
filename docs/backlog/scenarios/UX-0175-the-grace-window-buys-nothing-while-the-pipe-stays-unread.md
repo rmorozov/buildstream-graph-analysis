@@ -1,6 +1,6 @@
 # UX-175: the grace window buys nothing while the pipe stays unread
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-163 (the lifecycle this completes), UX-157 (the salvage it protects)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-163 (the lifecycle this completes), UX-157 (the salvage it protects)
 
 ## Motivation
 
@@ -65,3 +65,75 @@ interrupt mid-build, interrupt the salvage, paste the printed hint —
 the resulting run analyzes as interrupted (banner present), asserted
 end to end. Mutation: reverting the drain to `proc.wait()` reddens the
 marker assertion.
+
+## What was built
+
+**The shutdown drains, and the drain *is* the wait.** `proc.wait(timeout=grace)`
+became `drain_until_exit(proc, deadline, say)`: raw reads on a
+non-blocking fd, `select` with the grace as the deadline, every line
+emitted through the same `emit` the read loop used. So the summary the
+stopping `bst` writes lands in `build.log`, and the child can never
+block in `write()` on a full pipe — which was the second half of the
+defect, the grace causing the slow path it existed to prevent.
+
+Raw reads rather than `readline()` deliberately: a child that writes
+half a line and then hangs must not be able to hold the shutdown past
+its deadline, since the escalation exists for exactly the child that
+will not go. There is a test for that shape, and reverting to
+`readline()` makes it sit for the full 60s.
+
+The pipe is opened in binary now. The shutdown path reads the fd
+directly and a text wrapper's own decoding buffer cannot be mixed with
+that; decoding moved to the single place that emits. Whatever Python
+had already read ahead of the interrupt is handed over first
+(`read1` on the now-non-blocking fd), so no line the build produced
+before the interrupt is lost to the switch.
+
+**The caller consumes the answer.** `if not shutdown_build_group(...)`
+writes "bst was escalated before it could print its closing summary -
+this run has no queue_summary, so the built/cached counts are
+unavailable rather than zero." UX-163 item 3's own wording for this had
+reached the tests and nothing else. The stacked dead docstring is gone.
+
+**`bga extract --interrupted`**, and the printed hint includes it when
+the interrupted capture was mid-build. `format_post_build_interrupt`
+takes `build_interrupted` and words that case as what it is — a second
+interrupt during the salvage of a build that did not finish — instead
+of telling the user "the build itself completed" about a build that
+had not, and handing them a command that would produce a run directory
+claiming the same.
+
+### Measured
+
+The review's fixtures, as tests:
+
+- A child that traps SIGINT and prints `Pipeline Summary: 3 of 9
+  elements built`: the marker is in the emitted log, `stopped` is
+  True, and no SIGTERM line appears.
+- A child that ignores SIGINT and writes 20,000 lines: escalated at
+  the 2s deadline (not at 60s), with >500 of its lines captured up to
+  the cut.
+- A child that writes an unterminated line and hangs: escalated at the
+  deadline, with the partial line kept.
+
+### Guards
+
+`tests/unit/test_grace_window_drains.py`, seven of them. Five
+mutations, each red:
+
+- the shutdown waits without reading → the marker and flood
+  assertions fail.
+- the caller discards the return value → the escalation notice is
+  missing from the log.
+- the drain calls `readline()` → the partial-line test blocks for 60s.
+- `--interrupted` deleted → the extract guard fails with argparse's
+  own "unrecognized arguments".
+- the mid-build wording removed → the hint tests fail.
+
+One thing learned while falsifying, worth recording: *renaming*
+`--interrupted` does not redden the flag guard, because argparse
+accepts any unambiguous prefix and `--interrupted` is a prefix of
+`--interrupted-disabled`. Only deleting the argument reddens it. The
+guard is functional rather than a `--help` grep — it runs the command
+and distinguishes argparse's exit 2 from the failure further in —
+which is what `UX-176` asks of guards generally.

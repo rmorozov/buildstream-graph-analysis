@@ -4819,7 +4819,8 @@ def missing_bind_paths(argv: List[str]) -> List[str]:
 def format_post_build_interrupt(report_path: Optional[str],
                                 wrapped_log_path: Optional[str],
                                 run_dir: Optional[str],
-                                project_dir: Optional[str]) -> str:
+                                project_dir: Optional[str],
+                                build_interrupted: bool = False) -> str:
     """What is on disk after an interrupt *between* phases, and how to finish.
 
     `UX-163` item 2. The build is over by this point: `build.log` is
@@ -4827,9 +4828,20 @@ def format_post_build_interrupt(report_path: Optional[str],
     only the extraction, which is a pure function of the log. Round 17
     got a traceback and a snapshot with no `run/` here, and no
     indication that one command would finish the job.
+
+    `build_interrupted` (`UX-175`) distinguishes the two ways of arriving
+    here. A second Ctrl-C during the salvage of a *mid-build* interrupt
+    reached the same text, which told the user "the build itself
+    completed" about a build that had not - and printed a recovery
+    command that would produce a run directory claiming the same thing.
     """
-    lines = ["", "Interrupted after the build. The build itself completed; "
-                 "what was interrupted is bga's own post-processing."]
+    if build_interrupted:
+        lines = ["", "Interrupted again, during the salvage of an interrupted "
+                     "build. The build did not finish either; what was "
+                     "interrupted this time is bga's own post-processing."]
+    else:
+        lines = ["", "Interrupted after the build. The build itself completed; "
+                     "what was interrupted is bga's own post-processing."]
     kept = [(name, path) for name, path in (
         ("Plane 1 log", wrapped_log_path),
         ("Plane 2 report", report_path),
@@ -4845,9 +4857,18 @@ def format_post_build_interrupt(report_path: Optional[str],
             "  The run directory was not extracted. Nothing needs rebuilding -",
             "  extraction reads the log above, so this finishes the job:",
             "",
-            f"    bga extract --format wrapped {project_dir} "
-            f"{wrapped_log_path} {run_dir}",
+            f"    bga extract --format wrapped{' --interrupted' if build_interrupted else ''} "
+            f"{project_dir} {wrapped_log_path} {run_dir}",
         ]
+        if build_interrupted:
+            lines += [
+                "",
+                "  `--interrupted` is not optional here: without it the "
+                "recovered run",
+                "  reads as a complete build, and every figure in it would be "
+                "presented",
+                "  as a measurement of one.",
+            ]
     elif run_dir and os.path.isdir(run_dir):
         lines += ["", f"  The run directory is complete: {run_dir}"]
     return "\n".join(lines)
@@ -5277,7 +5298,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         except KeyboardInterrupt:
             print(format_post_build_interrupt(
                 args.output, wrapped_log_path, args.run_dir,
-                args.project_dir), file=sys.stderr)
+                args.project_dir, build_interrupted=interrupted),
+                file=sys.stderr)
             return 130
 
     # report

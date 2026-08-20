@@ -575,6 +575,12 @@ def main() -> int:
         "--estimated-job-memory-mb", type=int, default=None,
         help='A rough, operator-supplied estimate of one concurrent build job\'s memory footprint (MB) - a single configurable constant, not a real per-task measurement (no such measurement source exists in this pipeline, see UX-21).'
     )
+    parser.add_argument(
+        "--interrupted", action="store_true",
+        help="Record that this log's build was interrupted, so the run declares "
+        "itself unfinished. Needed when re-running this command from the hint an "
+        "interrupted capture printed; `bga snapshot` sets it for you."
+    )
     args = parser.parse_args()
 
     try:
@@ -586,6 +592,10 @@ def main() -> int:
             cpu_budget=args.cpu_budget,
             memory_budget_mb=args.memory_budget_mb,
             estimated_job_memory_mb=args.estimated_job_memory_mb,
+            # UX-175: `extract_run` has taken this since UX-157 and no
+            # command line could set it, so the recovery path UX-163
+            # printed produced a run that had forgotten it was partial.
+            interrupted=args.interrupted,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

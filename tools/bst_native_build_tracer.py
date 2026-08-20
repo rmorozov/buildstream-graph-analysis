@@ -53,6 +53,8 @@ Usage:
     python3 -m tools.bst_native_build_tracer report trace.json --raw-log trace.log
 """
 import argparse
+import atexit
+import contextlib
 import errno
 import json
 import os
@@ -183,6 +185,171 @@ def write_bwrap_shim(shim_dir: str) -> str:
     return shim_path
 
 
+class ScratchError(TraceError):
+    """`.bga/tmp` could not be created, and no fallback was usable."""
+
+
+@contextlib.contextmanager
+def capture_scratch(project_dir: str, prefix: str):
+    """A temporary directory under the project's `.bga/tmp`, removed after.
+
+    UX-155, filed from a real report: this used to be
+    `tempfile.TemporaryDirectory()`, so the shim, `hook.so` and the
+    spine landed wherever `TMPDIR` pointed - and the shim has to be
+    *executed* from there. On a machine whose temp mount is `noexec`
+    that fails inside `buildbox-run`, where the error is swallowed.
+
+    `TMPDIR` is the wrong knob to reach for, in both directions. It is
+    inherited by every service `bst` starts, so changing it to suit one
+    directory bga owns also reconfigures `buildbox-casd` and the
+    sandbox. The user who reported this was told by our own error text
+    to set it, set it to a *relative* path, and got
+
+        error in mkdtemp, errno: no such file or directory
+
+    out of `buildbox-casd` - because Python's `tempfile` treats an
+    unusable `TMPDIR` as a candidate and silently falls back, while the
+    C++ `mkdtemp` underneath takes it literally after the daemon has
+    `chdir`'d away.
+
+    So: bga's scratch goes where bga's other state already goes. The
+    fallback to `TMPDIR` remains for a project directory that cannot be
+    written to, but it is now the exception and it announces itself,
+    rather than being the default nobody could see.
+    """
+    from bga.run_store import ensure_store_ignored, scratch_dir
+
+    root = scratch_dir(project_dir)
+    try:
+        os.makedirs(root, exist_ok=True)
+        ensure_store_ignored(project_dir)
+        tmp = tempfile.mkdtemp(prefix=prefix, dir=root)
+    except OSError as error:
+        try:
+            tmp = tempfile.mkdtemp(prefix=prefix)
+        except OSError as fallback_error:
+            raise ScratchError(
+                f"could not create a scratch directory in {root} "
+                f"({error.strerror}) and the fallback to the system temp "
+                f"directory failed too ({fallback_error.strerror})."
+            ) from fallback_error
+        print(
+            f"Note: {root} is not writable ({error.strerror}); using {tmp} "
+            f"instead. bga executes a shim from this directory, so a noexec "
+            f"mount here will fail the capture inside the sandbox layer.",
+            file=sys.stderr,
+        )
+    try:
+        yield tmp
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def scratch_mkdtemp(project_dir: str, prefix: str) -> str:
+    """A scratch directory that has to outlive its `with` block.
+
+    UX-155's other half. `run`'s unnamed intermediates - the raw trace
+    log, the Plane 1 log written only to be parsed, the invocation
+    record - are read at several points across `main` and so cannot sit
+    in a context manager without wrapping the whole command in one.
+    They went to `tempfile.mkdtemp()` and were never removed at all,
+    which put them in `TMPDIR` *and* left them there.
+
+    Same directory as everything else bga owns, removed at exit. The
+    `atexit` hook is what buys the second half without re-shaping
+    `main` around a stack of context managers whose only job is
+    deletion.
+    """
+    root = scratch_dir_or_fallback(project_dir) if project_dir else None
+    tmp = tempfile.mkdtemp(prefix=prefix, dir=root)
+    atexit.register(shutil.rmtree, tmp, ignore_errors=True)
+    return tmp
+
+
+def scratch_dir_or_fallback(project_dir: str) -> Optional[str]:
+    """`<project>/.bga/tmp`, or `None` meaning "let tempfile decide".
+
+    `None` rather than a raise: a scratch directory bga cannot create is
+    a reason to fall back, not a reason to refuse to capture. The one
+    place that genuinely needs the directory to be executable
+    (`capture_scratch`) says so when it falls back; these callers write
+    data files and do not care.
+    """
+    from bga.run_store import ensure_store_ignored, scratch_dir
+
+    root = scratch_dir(project_dir)
+    try:
+        os.makedirs(root, exist_ok=True)
+        ensure_store_ignored(project_dir)
+    except OSError:
+        return None
+    return root
+
+
+def absolute_tmpdir_env(env: Dict[str, str]) -> Dict[str, str]:
+    """Make an inherited relative `TMPDIR` absolute before `bst` sees it.
+
+    UX-155. Python tolerates a relative `TMPDIR` - `tempfile` treats it
+    as one candidate among several and falls back when it is not usable
+    from the current directory. `buildbox-casd` does not: it is C++, it
+    `chdir`s, and its `mkdtemp` fails with `ENOENT` on a path that was
+    only ever meaningful relative to the directory the user typed it in.
+
+    That asymmetry is invisible from the outside - bga appears to accept
+    the setting, and the build dies several layers down with an error
+    that names neither `TMPDIR` nor bga. Resolving it here costs nothing
+    and means the value every process in the build sees is the one the
+    user meant.
+    """
+    value = env.get("TMPDIR")
+    if not value or os.path.isabs(value):
+        return env
+    resolved = os.path.abspath(value)
+    env["TMPDIR"] = resolved
+    print(
+        f"Note: TMPDIR was set to the relative path {value!r}; using {resolved} "
+        f"instead. BuildStream's helper daemons resolve it after changing "
+        f"directory - `buildbox-casd` runs from the cache directory - where a "
+        f"relative value fails as `mkdtemp, errno: no such file or directory`.",
+        file=sys.stderr,
+    )
+    return env
+
+
+def normalize_tmpdir() -> None:
+    """Fix a relative `TMPDIR` in this process, so every child inherits it.
+
+    UX-155. Doing this to the child `env` dict alone was not enough, and
+    the measurement that showed it is worth keeping: a wrapper on
+    `buildbox-casd` recording its own environment logged **two** casd
+    starts per capture,
+
+        casd TMPDIR=/tmp/ux155/p6/.bga_tmp cwd=/tmp/ux155/p6
+        casd TMPDIR=/tmp/ux155/p6/.bga_tmp cwd=/root/.cache/buildstream
+        casd TMPDIR=.bga_tmp              cwd=/tmp/ux155/p6
+        casd TMPDIR=.bga_tmp              cwd=/root/.cache/buildstream
+
+    - the traced build with the corrected value, and a second `bst` with
+    the raw one, because it spawns from `os.environ` and never saw the
+    fixed dict. Measured, that second one is `bst show`, run by
+    `extract_run` to build the run directory after the build; the census
+    and the `--diagnose` fingerprint probe shell out the same way. The
+    `cwd` column is the mechanism: casd really does run from the cache
+    directory, so a path that was only ever meaningful in the project
+    directory is gone by the time it resolves.
+
+    With the call removed, the capture still traced all nine sandboxes
+    and then failed at extraction with
+    `bst show failed (exit 255) ... buildbox-casd process died` - which
+    is why fixing only the build's environment looked like it worked.
+
+    Assigning through `os.environ` calls `putenv`, so this reaches every
+    subsequent child however it is spawned - which is the property the
+    per-call dict could not have.
+    """
+    absolute_tmpdir_env(os.environ)
+
+
 def probe_bwrap_shim(shim_path: str) -> None:
     """Exec the installed shim once, here, before the build starts.
 
@@ -211,11 +378,15 @@ def probe_bwrap_shim(shim_path: str) -> None:
                 f"names is gone - both are bga bugs; please report this."
             ) from error
         raise TraceError(
-            f"the bwrap shim at {shim_path} cannot be executed ({error.strerror}). "
-            f"That is the temp directory, not bga: a noexec mount or an AppArmor "
-            f"rule on executing from it will fail the same way inside the sandbox "
-            f"layer, where the error is swallowed. Set TMPDIR to a directory you "
-            f"can execute from and re-run."
+            f"the bwrap shim at {shim_path} cannot be executed "
+            f"({error.strerror}). That is the filesystem it sits on, not bga: a "
+            f"noexec mount or an AppArmor rule on executing from it will fail "
+            f"the same way inside the sandbox layer, where the error is "
+            f"swallowed. bga writes this shim under the project's `.bga/tmp` "
+            f"(UX-155), so mounting the project - or wherever `--run-dir` "
+            f"points - with exec permitted is what fixes it. Do not reach for "
+            f"TMPDIR: `bst` starts helper daemons that inherit it, and this "
+            f"error text used to say otherwise."
         ) from error
     if result.returncode != 0 or "bga-shim-ok" not in result.stdout:
         raise TraceError(
@@ -271,9 +442,15 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
     default) reproduces this function's own prior plain-`subprocess.run`
     behavior exactly, unchanged.
     """
+    # UX-155: before anything here spawns a process. Correcting only the
+    # build's own `env` left every other `bst` bga shells out to - the
+    # census, the fingerprint probe, and `extract_run`'s `bst show` - on
+    # the broken value.
+    normalize_tmpdir()
+
     open(raw_log_path, "w").close()  # truncate/create up front - the hook only ever appends
 
-    with tempfile.TemporaryDirectory(prefix="bst-native-trace-") as tmp:
+    with capture_scratch(project_dir, "trace-") as tmp:
         shim_dir = os.path.join(tmp, "shim")
         bind_dir = os.path.join(tmp, "bind")
         os.makedirs(shim_dir)
@@ -297,7 +474,7 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         # the error text now tells the two apart rather than assuming.)
         probe_bwrap_shim(os.path.join(shim_dir, "bwrap"))
 
-        env = dict(os.environ)
+        env = absolute_tmpdir_env(dict(os.environ))
         env["PATH"] = shim_dir + os.pathsep + env.get("PATH", "")
         env["BST_TRACE_REAL_BWRAP"] = real_bwrap
         env["BST_TRACE_BIND_SRC"] = bind_dir
@@ -3829,8 +4006,12 @@ def resolve_invocation_log_path(args) -> Optional[str]:
         return args.invocation_log
     if getattr(args, "no_invocation_log", False) or not getattr(args, "wrapped_log", None):
         return None
+    # `getattr`: this is reached from callers that build an args object by
+    # hand, and a missing project directory is a reason to fall back to
+    # the system temp directory, not to fail resolving a log path.
     return os.path.join(
-        tempfile.mkdtemp(prefix="bst-native-invocations-"), "invocations.jsonl"
+        scratch_mkdtemp(getattr(args, "project_dir", None), "invocations-"),
+        "invocations.jsonl",
     )
 
 
@@ -4254,7 +4435,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 "`run --wrapped-log PATH PROJECT_DIR OUTPUT -- bst build target.bst`"
             )
 
-        raw_log_path = args.raw_log or os.path.join(tempfile.mkdtemp(prefix="bst-native-trace-log-"), "trace.log")
+        raw_log_path = args.raw_log or os.path.join(
+            scratch_mkdtemp(args.project_dir, "trace-log-"), "trace.log")
         # UX-146: `--no-inject` without the record would answer "did it
         # work?" and nothing else, and the record is the artifact the
         # user sends on.
@@ -4268,7 +4450,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         wrapped_log_path = args.wrapped_log
         if args.run_dir and not wrapped_log_path:
             wrapped_log_path = os.path.join(
-                tempfile.mkdtemp(prefix="bst-native-trace-plane1-"), "build.log")
+                scratch_mkdtemp(args.project_dir, "plane1-"), "build.log")
         args.wrapped_log = wrapped_log_path
         invocation_log_path = resolve_invocation_log_path(args)
         try:

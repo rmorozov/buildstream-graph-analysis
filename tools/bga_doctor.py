@@ -26,6 +26,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import List, Optional
 
 # Findings-style ids (UX-75), so a script can key on the check rather
@@ -180,6 +181,102 @@ def _compiles(argv: List[str]) -> bool:
             capture_output=True, timeout=120).returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
+
+
+def check_scratch(project_dir: Optional[str] = None) -> List[dict]:
+    """Can bga execute the shim it writes, and is `TMPDIR` sane?
+
+    UX-155, from a field report that took two steps and where bga
+    supplied the second. The shim bga puts on `$PATH` has to be
+    *executed*, and it used to be written wherever `TMPDIR` pointed - so
+    a `noexec` temp mount failed the capture inside `buildbox-run`,
+    which reports `returncode 1` with the stderr swallowed. It now lives
+    under the project's `.bga/tmp`, which moves the question to a
+    directory the user can see but does not remove it.
+
+    The `TMPDIR` half is the one worth checking even though bga no
+    longer uses it. A *relative* `TMPDIR` is invisible to Python -
+    `tempfile` treats it as a candidate and falls back - and fatal to
+    `buildbox-casd`, whose C++ `mkdtemp` resolves it after the daemon
+    has changed directory. The user who reported this had been told to
+    set `TMPDIR` by bga's own error text.
+    """
+    findings = []
+    tmpdir = os.environ.get("TMPDIR")
+    if tmpdir and not os.path.isabs(tmpdir):
+        findings.append(_check(
+            "tmpdir-absolute", FAIL,
+            f"TMPDIR is set to the relative path {tmpdir!r}",
+            remedy=(f"use an absolute path (TMPDIR={os.path.abspath(tmpdir)}) or "
+                    f"unset it. BuildStream's helper daemons resolve TMPDIR "
+                    f"after changing directory, so a relative value fails as "
+                    f"`error in mkdtemp, errno: no such file or directory` from "
+                    f"buildbox-casd - while Python silently falls back, which is "
+                    f"why bga itself appears to accept it.")))
+    elif tmpdir:
+        findings.append(_check("tmpdir-absolute", OK, f"TMPDIR is absolute ({tmpdir})"))
+
+    if not tmpdir:
+        findings.append(_check("tmpdir-absolute", OK, "TMPDIR is not set"))
+
+    if not project_dir:
+        findings.append(_check(
+            "scratch-executable", SKIP,
+            "no project given, so there is no .bga/tmp to test"))
+        return findings
+    if not os.path.isdir(project_dir):
+        # Probing would `makedirs` the whole chain and leave a `.bga` in a
+        # path that is not a project. `check_project_loads` reports the
+        # real problem; this one has nothing to say about it.
+        findings.append(_check(
+            "scratch-executable", SKIP,
+            f"{project_dir} is not a directory"))
+        return findings
+
+    # Deliberately *not* `capture_scratch`: that creates `.bga/` (and the
+    # store's `.gitignore` inside it) and would leave both behind, and
+    # doctor is read-only by contract - `TestItNeverChangesAnything`
+    # caught exactly that. Exec permission is a property of the mount,
+    # so probing a directory beside `.bga` answers the same question and
+    # can be removed completely.
+    try:
+        scratch = tempfile.mkdtemp(dir=project_dir, prefix=".bga-doctor-")
+    except OSError as error:
+        return findings + [_check(
+            "scratch-executable", FAIL,
+            f"bga cannot create a scratch directory in {project_dir} "
+            f"({error.strerror})",
+            remedy=("a capture writes its shim under this project's `.bga/tmp`, "
+                    "so it needs to be writable"))]
+    try:
+        probe = os.path.join(scratch, "probe")
+        with open(probe, "w", encoding="utf-8") as handle:
+            handle.write("#!/bin/sh\nexit 0\n")
+        os.chmod(probe, 0o755)
+        try:
+            subprocess.run([probe], check=True, timeout=30,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError as error:
+            findings.append(_check(
+                "scratch-executable", FAIL,
+                f"bga cannot execute a file it wrote to {project_dir} "
+                f"({error.strerror})",
+                remedy=("bga puts a `bwrap` shim on $PATH from this project's "
+                        "`.bga/tmp`, so a noexec mount or an AppArmor rule "
+                        "covering it fails the capture inside the sandbox layer, "
+                        "where the error is swallowed. Mount the project with "
+                        "exec permitted, or check out somewhere that is.")))
+        except subprocess.SubprocessError as error:
+            findings.append(_check(
+                "scratch-executable", FAIL,
+                f"a file bga wrote to {project_dir} would not run: {error}"))
+        else:
+            findings.append(_check(
+                "scratch-executable", OK,
+                f"bga can write and execute from {project_dir}"))
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+    return findings
 
 
 def check_plane3(project_name: Optional[str] = None) -> dict:
@@ -400,6 +497,7 @@ def check_staged_sources(project_dir: str) -> List[dict]:
 
 def run_checks(project_dir: Optional[str] = None) -> List[dict]:
     checks = [check_bst(), check_bwrap(), check_compiler()]
+    checks.extend(check_scratch(project_dir))
     project_name = None
     if project_dir:
         from .bst_cache_logs import project_name_from_dir
@@ -503,8 +601,6 @@ def check_capture_chain(project_dir: Optional[str] = None) -> List[dict]:
     what it classifies is exactly `UX-147`'s three causes of a zero plus
     "the shim ran and the hook recorded nothing".
     """
-    import tempfile
-
     if not shutil.which("bst"):
         return [_check("capture-chain", SKIP, "cannot run a build without bst")]
     runtime = _find_stageable_runtime()

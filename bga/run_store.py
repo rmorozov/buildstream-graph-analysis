@@ -79,6 +79,31 @@ def runs_dir(project: str) -> str:
 RUN_SUBDIR = "run"
 PLANE2_NAME = "plane2.json"
 
+# UX-155: bga's own scratch — the shim it puts on `$PATH`, the compiled
+# hook and spine, and the unnamed intermediate logs. Project-local for
+# the same reason the runs are: `TMPDIR` is inherited by every service
+# `bst` starts, so using it to solve a problem that belongs to one
+# directory bga owns reconfigures `buildbox-casd` and the sandbox too.
+SCRATCH_DIRNAME = "tmp"
+
+
+def scratch_dir(project: str) -> str:
+    """Where bga puts files it will delete again. A path, not a mkdir —
+    resolution stays safe to call anywhere, as everything else here is.
+    """
+    return os.path.join(store_dir(project), SCRATCH_DIRNAME)
+
+
+def ensure_store_ignored(project: str) -> None:
+    """Make sure a `.bga/` that exists ignores itself.
+
+    A capture that never takes a snapshot still creates `.bga/tmp`, and
+    without this it would leave the first untracked `.bga/` in the
+    user's project with no `.gitignore` beside it — which is the thing
+    `_write_gitignore` exists to prevent.
+    """
+    _write_gitignore(project)
+
 
 def list_snapshots(project: str) -> List[str]:
     """Every snapshot directory, oldest first.

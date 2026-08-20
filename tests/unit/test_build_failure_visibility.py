@@ -131,11 +131,20 @@ def _args(**kwargs):
 
 
 def test_a_failed_candidate_fails_the_gate():
-    from bga.cli import EXIT_CODE_REGRESSION, _compare_exit_code
+    """UX-156 changed the code from 4 to 6, deliberately.
+
+    `UX-54` made this fail *closed*, which was right, and that is
+    unchanged. What it borrowed was 4 - "your build got slower" - to say
+    "your build did not finish". Those are different findings for
+    different people: a pipeline blocks on 4 and investigates 6, and 6
+    (`EXIT_CODE_MISMATCHED_RUNS`) already means "these runs were not
+    comparable", which is exactly the case here.
+    """
+    from bga.cli import EXIT_CODE_MISMATCHED_RUNS, _compare_exit_code
 
     comparison = _comparison(failed_runs=["candidate"])
 
-    assert _compare_exit_code(_args(), comparison) == EXIT_CODE_REGRESSION
+    assert _compare_exit_code(_args(), comparison) == EXIT_CODE_MISMATCHED_RUNS
 
 
 def test_a_failed_run_fails_closed_even_at_low_confidence():
@@ -143,11 +152,13 @@ def test_a_failed_run_fails_closed_even_at_low_confidence():
     (UX-40), and the real failed capture scored 0.14 - so had the failure
     check come second, the gate would have reported green on a build that
     did not complete."""
-    from bga.cli import EXIT_CODE_REGRESSION, _compare_exit_code
+    from bga.cli import EXIT_CODE_MISMATCHED_RUNS, _compare_exit_code
 
     comparison = _comparison(failed_runs=["candidate"], low_confidence=True)
 
-    assert _compare_exit_code(_args(), comparison) == EXIT_CODE_REGRESSION
+    # Still closed, still ordered ahead of the low-confidence fail-open.
+    # Only the code changed, in UX-156 - see the test above.
+    assert _compare_exit_code(_args(), comparison) == EXIT_CODE_MISMATCHED_RUNS
 
 
 def test_no_failures_leaves_the_existing_gate_behaviour_alone():

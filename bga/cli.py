@@ -570,15 +570,27 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     # scored an Efficiency Score of 1.00 at confidence 0.14, so the old
     # order would have failed open and reported green.
     if comparison.failed_runs:
+        # UX-156: exit 6, not 4. `UX-54` made this fail closed, which was
+        # right, but it borrowed "your build got slower" to say it - and
+        # a build that did not finish has not been measured at all, which
+        # is exactly what `EXIT_CODE_MISMATCHED_RUNS` already means. A
+        # pipeline that blocks on 4 and investigates 6 was being told the
+        # wrong one.
+        detail = comparison.failed_run_details or []
+        named = "; ".join(
+            f"{d['run']}: {', '.join(d['failed_elements'][:3]) or 'unnamed element'}"
+            + (f" ({d['built']} of {d['scheduled']} scheduled elements built)"
+               if d['scheduled'] is not None else "")
+            for d in detail
+        ) or " and ".join(comparison.failed_runs)
         print(
-            f"Build failure gate FAILED: the {' and '.join(comparison.failed_runs)} "
-            "run describes a build that did not complete (one or more elements "
-            "ended in FAILURE). No scheduling verdict is meaningful for it, so "
-            "this is a failure rather than a fail-open. "
+            f"Build failure gate FAILED: {named}. That build did not complete, "
+            "so no scheduling verdict is meaningful for it - this is a refusal "
+            "to compare, not a regression, and fails closed rather than open. "
             "See docs/backlog/scenarios/UX-0054-a-failed-build-scores-perfectly.md.",
             file=sys.stderr,
         )
-        return EXIT_CODE_REGRESSION
+        return EXIT_CODE_MISMATCHED_RUNS
 
     if comparison.low_confidence:
         # UX-40: failing open is the right default (do not block a

@@ -24,6 +24,7 @@ explicit three commands do, because it is them - including the UX-78
 refusals, which a cross-mode pair still hits.
 """
 import argparse
+import json
 import os
 import sys
 from typing import List, Optional, Tuple
@@ -198,7 +199,20 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if not args.no_compare and previous:
         print()
-        _compare(previous[-1], snapshot)
+        baseline, skipped = _healthy_baseline(previous)
+        if skipped:
+            names = ", ".join(os.path.basename(p.rstrip("/")) for p in skipped)
+            if baseline is None:
+                print(f"No comparison: the {len(skipped)} previous snapshot(s) "
+                      f"({names}) all record builds that did not finish, and a "
+                      f"duration delta against one is not a measurement (UX-156). "
+                      f"`bga compare` on an explicit pair still works.")
+            else:
+                print(f"Comparing against {os.path.basename(baseline.rstrip('/'))} "
+                      f"rather than the previous snapshot: {names} record build(s) "
+                      f"that did not finish (UX-156).")
+        if baseline is not None:
+            _compare(baseline, snapshot)
     elif not args.no_compare:
         print("\nThis is the first snapshot of this project - make your change "
               "and run the same command again, and the comparison against it "
@@ -255,6 +269,48 @@ def _analyze(run_dir: str, plane2: str) -> int:
     if os.path.isfile(plane2):
         argv += ["--plane2", plane2]
     return cli_main(argv)
+
+
+def _snapshot_failed(snapshot: str) -> bool:
+    """Did this snapshot's build end with failed elements?
+
+    Read straight out of `run-context.json`'s `build_outcome` (`UX-54`),
+    not by analyzing the run: choosing a baseline must not cost a second
+    full analysis of every snapshot in the store, and this is the same
+    field the analyzer would consult.
+
+    A snapshot that does not say is treated as healthy. `build_outcome`
+    is written unconditionally, so its absence means the capture predates
+    `UX-54` - and refusing to compare against every older run would be a
+    worse failure than the one this prevents.
+    """
+    path = os.path.join(snapshot, RUN_SUBDIR, "run-context.json")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            outcome = json.load(handle).get("build_outcome") or {}
+    except (OSError, ValueError):
+        return False
+    return bool(outcome.get("failed_elements"))
+
+
+def _healthy_baseline(previous):
+    """The most recent snapshot whose build finished, and what was passed.
+
+    `UX-156` item 3. `@prev` keeps its filed meaning - the previous
+    snapshot, whatever it is - because that is an alias the user types
+    and it must not silently mean something else. What changes is the
+    baseline *snapshot* picks on its own, where round 16 measured the
+    real damage: a failed run became `@prev`, and the next healthy
+    snapshot was compared against wreckage at confidence 0.57 with
+    nothing saying so.
+    """
+    skipped = []
+    for candidate in reversed(previous):
+        if _snapshot_failed(candidate):
+            skipped.append(candidate)
+            continue
+        return candidate, list(reversed(skipped))
+    return None, list(reversed(skipped))
 
 
 def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:

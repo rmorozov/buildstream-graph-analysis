@@ -193,6 +193,31 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 | UX-175 | UX-163's 300s grace cannot deliver what it promises: on interrupt the read loop exits and nothing reads the child's stdout again, so bst's closing Pipeline Summary — the `queue_summary` every incompleteness sentence needs — never reaches `build.log` however fast bst complies, and a full 64KB pipe blocks the stopping bst into the escalation (demonstrated with a SIGINT-trapping fake bst). Plus: the shutdown's stopped-vs-killed answer is discarded by its only caller, and a re-extracted interrupted capture forgets it was interrupted (`bga extract` has no flag) | High | UX-163, UX-157 | 🟢 Done | [UX-175](UX-0175-the-grace-window-buys-nothing-while-the-pipe-stays-unread.md) |
 | UX-176 | The clean-audit tail, one size smaller than UX-143's class: UX-164's paste-and-go hint is untested prose plus a vacuous source-grep guard; UX-165's "every string ends in a terminator" skips seven punctuation marks including the comma; UX-163's every-phase-converts guard counts `except` clauses in source; UX-169's Motivation keeps a table its own fix disproves; real-project.md calls the band's escapee the "slowest" run — it is the fastest | Medium | UX-163, UX-164, UX-165, UX-169, UX-170 | 🟢 Done | [UX-176](UX-0176-three-guards-that-assert-less-than-their-logs-say-round-three.md) |
 | UX-177 | Five corners: `@stamp` exact-match loses to its own same-second sibling's prefix (pasting the printed hint raises "matches 2 snapshots" — reproduced); the casd config loop falls through on missing *key* where bst stops at existing *file*; `build_outcome`'s three-way counts have no consumer; the `.size` memo survives re-extraction wrong; `rstrip("\n")` vs CRLF in both streaming readers | Medium | UX-164, UX-166, UX-168 | 🟢 Done | [UX-177](UX-0177-five-corners-round-18-verified-its-way-into.md) |
+| UX-178 | The Shared Sources table prints the normalized scheme-less identity; `bga blast`'s url detector requires a scheme — so the tool's own output, pasted as its own input, silently resolves as a *path* and answers "rebuilds nothing here" on the exact monorepo question the feature exists for (reproduced live). Plus: an existing-but-not-a-run directory is a raw traceback where the log promised exit 2, the deleted top-level file gap, and a promised sentence no code prints | High | UX-171, UX-172, UX-164 | 🔴 Not Started | [UX-178](UX-0178-the-tools-own-printed-identity-does-not-round-trip-through-blast.md) |
+| UX-179 | UX-173's acceptance named its one discriminating case (count order vs cost order disagreeing) and the review proved it was never built: reverting the sorter to count-only order left the class green — on the golden fixture both orders are identical, and the guard's closing assertion never compares them. The sorter is correct; the guard story is the exact shape UX-176 hunts, shipped beside UX-176. Plus `bga blast` outside every help guard and the untested memo-drop wiring | High | UX-173, UX-176 | 🔴 Not Started | [UX-179](UX-0179-the-discriminating-case-that-was-never-built.md) |
+| UX-180 | UX-170's mechanism holds and its documentation trail did not keep up: real-project.md still states the fixed defect in the present tense (its own Required Fix ordered the correction), every verdict list omits the fourth verdict, the gate docstring still promises "never a second definition" — now false twice over — and the glossary has zero rows for the round's five load-bearing terms (blast, resource, keying, work, building-vs-assembling). README at 266 vs the ≤250 budget | Medium | UX-170, UX-138, UX-135 | 🔴 Not Started | [UX-180](UX-0180-the-docs-still-assert-what-the-disputed-region-broke.md) |
+| UX-181 | `normalize_url` fails in both directions: `git+https://…` and uppercase schemes are mangled into garbage identities (the halved blast the function exists to prevent), while pip sources key on the *index* url — several pip elements report as one shared resource with "any commit rebuilds all of them" said about a package index. Per-kind identity, case-insensitive schemes, unknown schemes passed through; three one-line nits alongside | Medium | UX-171 | 🔴 Not Started | [UX-181](UX-0181-two-spellings-of-one-repository-and-one-spelling-of-two.md) |
+| UX-182 | The inventory declares junction-prefixed elements `unreadable` — honest, and on exactly the junction-heavy shape the monorepo question arrives from (fdsdk-style), the Shared Sources answer degrades to a table of unreadable rows. Walk into checked-out junction subprojects; let `bga blast` answer the durations-free half from the inventory alone; resolve path queries against cwd first | Medium | UX-171, UX-172 | 🔴 Not Started | [UX-182](UX-0182-the-inventory-stops-at-the-junction-boundary.md) |
+
+## UX-178..UX-182: the nineteenth audit round — the source axis meets its own output (2026-08-20)
+
+Round 19 verified all of round 18's landings live — the drain fixtures
+re-run, the disputed-region band verdicts checked at n=5 *and* n=3,
+and the whole source axis exercised end to end on a rewritten-fixture
+monorepo: the Shared Sources table, the keying clause, the kind
+split, the work-not-wall-clock note, `bga blast` in all three target
+shapes, and the pre-inventory run's honest "this capture cannot answer
+that". The headline finding came from pasting the tool's own output
+into itself: [`UX-178`](UX-0178-the-tools-own-printed-identity-does-not-round-trip-through-blast.md)
+— the table's identity string resolves as a path and answers
+"rebuilds nothing here". The review's live mutation proved
+[`UX-179`](UX-0179-the-discriminating-case-that-was-never-built.md)
+(the cost-order guard passes with the sorter reverted), and
+[`UX-180`](UX-0180-the-docs-still-assert-what-the-disputed-region-broke.md)..[`UX-182`](UX-0182-the-inventory-stops-at-the-junction-boundary.md)
+carry the docs trail, the identity edges, and the junction boundary —
+the last being where the user's real monorepo question most likely
+lands next. Full narrative:
+[`../../audits/round-19.md`](../../audits/round-19.md).
 
 ## UX-171..UX-177: the eighteenth audit round — the source axis (2026-08-20)
 

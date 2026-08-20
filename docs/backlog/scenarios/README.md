@@ -178,6 +178,32 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 | UX-160 | Element discovery is non-recursive `os.listdir` in all three census sites — every example keeps elements top-level, essentially every real project nests them — so on real layouts the census assesses nothing, and UX-113's correct fail-safe quietly turns `--trace-spine=auto` (snapshot's default) into full-build ptrace at a cost UX-108 never measured, with no output saying so. UX-142's lesson one directory deeper | High | UX-113, UX-153, UX-108 | 🟢 Done | [UX-160](UX-0160-the-census-reads-only-the-top-of-the-element-tree-and-auto-spine-bills-the-difference.md) |
 | UX-161 | UX-147 deferred its stale-`buildbox-casd` detection and the review sharpened the cost: the summary names the cause it cannot confirm, `doctor --capture` isolates `HOME` so it *structurally cannot* see the daemon (fresh casd every probe), and any plain `bst` command before a snapshot plants one. The question is answerable from `/proc` before the build — check, warn with the ten-second remedy, record in the fingerprint, upgrade the summary from guess to verdict | High | UX-147, UX-149 | 🟢 Done | [UX-161](UX-0161-the-stale-casd-everyone-suspects-is-checkable-before-the-build-and-nobody-looks.md) |
 | UX-162 | Small debts the diagnosability round still owes: `buildbox_run_path` null on every standard install (`which` misses the vendored binary — verified live), "Record: (empty)" beside a fingerprint-bearing file, dead `doctor_exit` in the workflow, `element_path()`'s naive parse, four acceptance-named claims with no test, UX-152's "impossible" probe that is merely unwritten, and the one-sentence `.bga`-staging caveat real projects need | Medium | UX-151, UX-152, UX-153, UX-149, UX-155 | 🟢 Done | [UX-162](UX-0162-small-debts-of-the-diagnosability-round.md) |
+| UX-163 | UX-157's salvage protects only interrupts that land while `bst` runs — round 17 hit the other window live: SIGINT during `Extracting run data...` is a raw traceback and a snapshot without `run/`, though `build.log` is complete and extraction re-runnable (nothing says how). The long unprotected windows are exactly the phases UX-159 flagged as slow; plus the 120s SIGINT grace whose escalation costs the biggest builds their `queue_summary` | High | UX-157, UX-159 | 🔴 Not Started | [UX-163](UX-0163-the-interrupt-contract-covers-the-build-and-not-the-minutes-around-it.md) |
+| UX-164 | After a walk-back the printed hint `$ bga compare @prev @last` resolves to the *skipped* wreckage — pasting it reproduces the comparison UX-156 exists to prevent (observed live); "…: \<stamp\> record build(s)" breaks number agreement; and "0 of 7 scheduled elements built" counts six cache hits as casualties (queue was 0 built / 6 cached / 1 failed) | High | UX-156 | 🔴 Not Started | [UX-164](UX-0164-the-walk-backs-replay-hint-reproduces-the-comparison-it-just-refused.md) |
+| UX-165 | UX-158's cut deleted continuation *lines* and at least seven flag helps lost their sentence's back half — `correlate --help` ends "for the same", `graph --help` "grouped by BuildStream", plus five more incl. an unbalanced paren. The line-count guard rewards truncation; add a fragment check, restore the sentences, annotate the log's stale table | Medium | UX-158 | 🔴 Not Started | [UX-165](UX-0165-seven-help-strings-end-mid-sentence.md) |
+| UX-166 | UX-161's cache-dir answer diverges from bst's: it reads only `buildstream.conf` while bst 2.7 tries `buildstream2.conf` first — a `cachedir` there makes the check silently miss the real daemon or alarm on the wrong one; the `cachedir:` parse repeats the naive `startswith` UX-162 just fixed for `element-path:`; relative argv resolves against bga's cwd | Medium | UX-161 | 🔴 Not Started | [UX-166](UX-0166-the-casd-check-reads-a-config-bst-does-not.md) |
+| UX-167 | Prune's keep-set (`list_runs()[-2:]` + a config key nothing writes) contradicts the walk-back: with failed+interrupted as the two newest runs, `prune --keep 2` protects exactly those and offers to delete the store's only healthy snapshot — the next comparison's baseline (observed live); husks with no run directory survive every criterion; the "recorded baseline" protection guards a phantom producer | Medium | UX-159, UX-156 | 🔴 Not Started | [UX-167](UX-0167-prune-protects-two-aliases-and-not-the-baseline-the-walk-back-needs.md) |
+| UX-168 | Big-project capacity and six one-liners: analysis slurps the whole trace into RAM (`load_and_summarize`, GB-scale RSS right after the build), the census closure is quadratic-ish and serial, the `--diagnose` tee can hang on a daemonizing sandbox descendant, a KeyError branch, a double assignment, the misplaced interrupt notice, the "0 with static binaries (spine traced)" riddle, and the per-invocation store stat-walk | Medium | UX-157, UX-148, UX-160 | 🔴 Not Started | [UX-168](UX-0168-analysis-holds-the-whole-trace-in-memory-and-other-round-17-leftovers.md) |
+
+## UX-163..UX-168: the seventeenth audit round — the fixes verified where they will be lived in (2026-08-20)
+
+Round 17 verified all eight round-16 landings live — the refusal
+verdict, the walk-back, the gate's exit 6, the mid-build interrupt
+salvage (exit 130, both planes kept), the recursive census joining
+both planes on a real nested layout, stale-casd detection positive and
+negative, the help caps, prune's alias protection, the stderr tee and
+`replay-sandbox`'s polite refusal — and every verdict is **holds**,
+five with caveats that became this round's filings rather than
+reopenings. The two Highs are edges the verification itself walked
+into: [`UX-163`](UX-0163-the-interrupt-contract-covers-the-build-and-not-the-minutes-around-it.md)
+(a SIGINT during post-build extraction is still a raw traceback — the
+salvage covers the build and not the slow minutes around it) and
+[`UX-164`](UX-0164-the-walk-backs-replay-hint-reproduces-the-comparison-it-just-refused.md)
+(the walk-back's own replay hint reproduces the wreckage comparison it
+just refused). [`UX-165`](UX-0165-seven-help-strings-end-mid-sentence.md)..[`UX-168`](UX-0168-analysis-holds-the-whole-trace-in-memory-and-other-round-17-leftovers.md)
+carry the truncated help sentences, the casd config divergence, the
+prune-vs-walk-back contradiction, and the big-project capacity list.
+Full narrative: [`../../audits/round-17.md`](../../audits/round-17.md).
 
 ## UX-156..UX-162: the sixteenth audit round — the tool meets a big project (2026-08-20)
 

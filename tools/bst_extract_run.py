@@ -435,6 +435,20 @@ def extract_run(
         # *failed*; the user stopped it.
         "interrupted": bool(interrupted),
     }
+    # UX-164 item 3: `scheduled = processed + skipped + failed` counted
+    # cache hits as casualties - a run with 0 processed, 6 skipped and 1
+    # failed read as "0 of 7 scheduled elements built", overstating the
+    # damage seven-fold and sending a user hunting for six lost builds.
+    # The three numbers mean different things, so carry all three.
+    build_queue = (converter.queue_summary or {}).get("build") or {}
+    counts = {name: build_queue.get(name) for name in
+              ("processed", "skipped", "failed")}
+    if all(isinstance(value, int) for value in counts.values()):
+        run_context["build_outcome"].update({
+            "built_count": counts["processed"],
+            "cached_count": counts["skipped"],
+            "failed_task_count": counts["failed"],
+        })
     # UX-55: BuildStream's own closing Pipeline Summary. This is what
     # separates the two CI scenarios `bga` has to serve - a nightly with
     # caches off, where every element runs and every signal is about the

@@ -364,11 +364,13 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     for violation in (result.violations or []):
         if violation.get('type') != 'build_failed':
             continue
-        counts = (
-            f", {violation['built_count']} of {violation['scheduled_count']} "
-            f"scheduled elements built"
-            if violation.get('scheduled_count') is not None else ""
-        )
+        # UX-164 item 3: cache hits are not casualties.
+        built, cached = violation.get('built_count'), violation.get('cached_count')
+        counts = ""
+        if built is not None:
+            counts = f", {built} built"
+            if cached:
+                counts += f", {cached} already cached"
         if violation.get('interrupted') and not violation.get('failed_elements'):
             # UX-157: an interrupt is not a failure, and saying it is
             # sends the reader hunting for a compile error.

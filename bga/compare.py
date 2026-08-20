@@ -425,17 +425,36 @@ def _build_failure_detail(name: str, result) -> dict:
     wording drops the clause rather than guessing.
     """
     failed: List[str] = []
-    built = scheduled = None
+    built = scheduled = cached = None
     interrupted = False
     for violation in (result.violations or []):
         if violation.get('type') == 'build_failed':
             failed = list(violation.get('failed_elements') or [])
             built = violation.get('built_count')
             scheduled = violation.get('scheduled_count')
+            cached = violation.get('cached_count')
             interrupted = bool(violation.get('interrupted'))
             break
     return {'run': name, 'failed_elements': failed, 'built': built,
-            'scheduled': scheduled, 'interrupted': interrupted}
+            'scheduled': scheduled, 'cached': cached,
+            'interrupted': interrupted}
+
+
+def _count_clause(detail: dict) -> Optional[str]:
+    """How far the build got, without calling cache hits casualties.
+
+    `UX-164` item 3. This said "0 of 7 scheduled elements built" for a
+    run whose queue was processed 0, skipped 6, failed 1 - six elements
+    were already cached and never needed building, so the sentence
+    overstated the damage sevenfold. Say what happened to each.
+    """
+    built, cached = detail.get('built'), detail.get('cached')
+    if built is None:
+        return None
+    parts = [f"{built} built"]
+    if cached:
+        parts.append(f"{cached} already cached")
+    return ", ".join(parts)
 
 
 def _describe_build_failures(details: List[dict]) -> str:
@@ -446,10 +465,7 @@ def _describe_build_failures(details: List[dict]) -> str:
     """
     parts = []
     for detail in details:
-        counted = (
-            f"{detail['built']} of {detail['scheduled']} scheduled elements built"
-            if detail['scheduled'] is not None else None
-        )
+        counted = _count_clause(detail)
         if detail.get('interrupted') and not detail['failed_elements']:
             # UX-157: say what happened. "The build failed" is wrong here
             # and would send a user looking for a compile error that does

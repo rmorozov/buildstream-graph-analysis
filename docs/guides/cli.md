@@ -162,18 +162,23 @@ it did not do.
 
 | flag | what it does |
 |---|---|
-| `--list` | List this project's snapshots, showing which are `@last`/`@prev` |
+| `--list` | List this project's snapshots with their sizes, showing which are `@last`/`@prev` |
 | `--no-compare` | Take the snapshot and report on it; skip the comparison |
 | `--project PATH` | Snapshot a project other than the enclosing one |
+| `prune --keep N` / `--older-than DAYS` | Delete old snapshots; `--dry-run` says what would go |
 
 `bga snapshot` exits with **the wrapped build's own exit code**. A
 failed build is not a successful snapshot; equally, a comparison verdict
 does not change the exit code — the CI gates live on `bga compare`
 (`--fail-on-regression` and friends), which is what CI should call.
 
-There is no retention policy: snapshots are build artifacts, `.bga/runs`
-entries can be deleted at any time, and the only thing `bga` does about
-size is warn once the store passes 2 GB.
+Snapshots are build artifacts and `.bga/runs` entries can be deleted at
+any time. `bga` warns once the store passes 2 GB and prunes on request;
+what `prune` will never delete is `@last`, `@prev`, and — when both of
+those record builds that did not finish — the newest *healthy* run,
+because that is the baseline the next comparison walks back to
+(`UX-167`). See [the real-project
+guide](real-project.md) for the store at big-project scale.
 
 ### The same job in CI
 
@@ -321,6 +326,7 @@ Two details worth knowing:
 
 - **bwrap is probed, not just found.** Presence is not the check that matters — bwrap's namespace setup succeeds and then the sandbox fails to bring up loopback, deep inside a build. `doctor` runs the same trivial sandboxed command CI's `bst-smoke` job does.
 - **"No element plugin registered for kind" gets two different remedies**, because it has two different causes: the package is missing, or the project has not declared it. Telling a user to install what they already have is how a diagnostic loses its reader.
+- **A stale `buildbox-casd` is checked before the build, not guessed at afterwards** (`UX-161`). Any plain `bst` command leaves a daemon holding the cache directory, and a capture that starts under one fails in a way the summary could previously only speculate about. `doctor` reads `/proc` for a casd already holding this project's cache — the directory `bst` itself would use, `buildstream2.conf` before `buildstream.conf` (`UX-166`) — and prints the remedy.
 
 Exit `1` only on a failure. A static-binary blind spot (`--trace-spine=auto` is the answer) and an empty Plane 3 log tree are **warnings**: facts to read, not broken environments. `bst-tests` runs it as a step, so its checks cannot drift from what CI actually installs.
 
@@ -758,6 +764,12 @@ graph is a much smaller number than its share suggests.
 - `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/backlog/scenarios/UX-39`).
 - `6`: **refused as not comparable** - not a verdict about the build at all, which is why it does not share a code with one. Two commands return it: `bga compare`, when the two runs share fewer than half their element UIDs or one is a caches-off run and the other incremental (`docs/backlog/scenarios/UX-78`; `--allow-mismatch` overrides); `bga cache-trend`, when the series is not all of one project and target set, in which case the per-run rows still print and only the band verdict is withheld (`docs/backlog/scenarios/UX-111`); and `bga baseline`, when the assembled set's captures are not comparable to each other (`docs/backlog/scenarios/UX-96`).
 - `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_ratio`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`docs/backlog/scenarios/UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
+- `130`: **interrupted** (`UX-157`, `UX-163`). Ctrl-C during a capture is
+  not a failure and not a verdict: whatever the build completed is kept,
+  analyzed, and labelled as a build that did not finish. A comparison
+  against that snapshot obeys the same incompleteness rules as any
+  unfinished build. Interrupting *before* the build starts leaves
+  nothing behind and says so.
 
 ## See Also
 

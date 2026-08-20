@@ -1,6 +1,6 @@
 # UX-168: analysis holds the whole trace in memory, and other round-17 leftovers
 
-**Priority:** Medium | **Status:** 🟡 In Progress — the census, the store and all six one-liners are done; the trace parse streams, but the memory headline it was filed for is **not** met and the reason is measured below (`UX-169`) | **Depends on:** UX-157/UX-148/UX-160 (the landings these trail)
+**Priority:** Medium | **Status:** 🟢 Done — the census, the store and all six one-liners; the memory headline it was filed for was met by `UX-169`, which also corrects this file's figures | **Depends on:** UX-157/UX-148/UX-160 (the landings these trail)
 
 ## Motivation
 
@@ -99,6 +99,32 @@ tree. Measured on a synthetic 50k-file, 10-snapshot store:
 
 The memo excludes itself from the total, is dropped when the signature
 moves, and a store it cannot write to simply pays the walk.
+
+### Correction (UX-169): the fixture below was not a real trace shape
+
+Every memory figure in this section was taken on a synthetic trace
+whose `END` lines carried no `ppid`. The parser requires it, so every
+`END` was skipped: what is described below as a "400k-event / 400k-
+process" trace was 400,000 `START`s with no observed exit. That is the
+one shape in which nothing can be released while pairing — every
+`START` stays pending to the end — so it cannot measure anything about
+what the analysis holds.
+
+The findings hold in direction. Streaming the reader does beat
+slurping it at the call site, and it did not move `bga analyze`'s
+end-to-end peak. Re-measured on a matched 52 MB / 200k-process trace:
+
+```text
+parse only, streaming   198 MB      (recorded below as 215 MB)
+parse only, slurped     318 MB      (recorded below as 365 MB)
+```
+
+And the end-to-end peak this section calls immovable moved once the
+right thing was changed: `UX-169` took it from 413 MB to 204 MB on
+that trace, with a byte-identical report. The conclusion below — that
+the reader was not the cost — is correct; the conclusion that the cost
+was irreducible was drawn from a fixture that could not show
+otherwise.
 
 ### The parse streams — and the memory headline does not land
 

@@ -856,6 +856,15 @@ _OPENS_HEADER_RE = re.compile(
 
 
 def parse_open_records(text: str, open_element_overrides: Optional[Dict[str, str]] = None) -> Dict[str, dict]:
+    """`parse_open_lines`, over one string instead of an iterable.
+
+    Kept because callers outside the analysis path have a string in hand
+    already; the analysis path itself hands over the file (`UX-169`).
+    """
+    return parse_open_lines(text.splitlines(), open_element_overrides)
+
+
+def parse_open_lines(lines, open_element_overrides: Optional[Dict[str, str]] = None) -> Dict[str, dict]:
     """Parse UX-46's `OPENS` blocks into `{element: {...}}`.
 
     Each block is a header line followed by exactly `unique` absolute
@@ -872,12 +881,26 @@ def parse_open_records(text: str, open_element_overrides: Optional[Dict[str, str
     """
     open_element_overrides = open_element_overrides or {}
     per_element: Dict[str, dict] = {}
-    lines = text.splitlines()
-    index = 0
-    while index < len(lines):
-        match = _OPENS_HEADER_RE.match(lines[index])
+    # UX-169: one pass over an iterable, with the block's own `unique`
+    # count as the only state - the index-with-lookahead version needed
+    # the whole trace as a list of lines, which is the copy the analysis
+    # path was trying not to make.
+    entry: Optional[dict] = None
+    remaining = 0
+    for raw in lines:
+        line = raw.rstrip("\n")
+        match = _OPENS_HEADER_RE.match(line)
         if match is None:
-            index += 1
+            if remaining <= 0:
+                continue
+            if line.startswith(("START ", "END ")):
+                # The block was short - the process was killed mid-write.
+                # Keep what it managed to say and stop counting.
+                remaining = 0
+                continue
+            remaining -= 1
+            if line.startswith("/"):
+                entry["paths"].add(line)
             continue
         pid, element, invocation, unique, dropped, _part = match.groups()
         # UX-56: when the element name collapsed, the sandbox id is
@@ -905,18 +928,9 @@ def parse_open_records(text: str, open_element_overrides: Optional[Dict[str, str
         by_pid[pid] = max(by_pid.get(pid, 0), int(dropped))
         entry["processes"] = len(by_pid)
         entry["dropped"] = sum(by_pid.values())
-        index += 1
-        for _ in range(int(unique)):
-            if index >= len(lines):
-                break  # truncated block (killed mid-write) - keep what we have
-            path = lines[index]
-            index += 1
-            # A following header means the block was short; don't consume it.
-            if _OPENS_HEADER_RE.match(path) or path.startswith(("START ", "END ")):
-                index -= 1
-                break
-            if path.startswith("/"):
-                entry["paths"].add(path)
+        # A header arriving mid-block ends the previous one, which the
+        # loop above gets for free by testing the header first.
+        remaining = int(unique)
     return per_element
 
 
@@ -1126,7 +1140,20 @@ def count_fork_only_exits(events: List[dict]) -> int:
     return count_unmatched_ends(events)["fork_only"]
 
 
-def pair_events(events: List[dict]) -> List[dict]:
+def _drain(events: List[dict]):
+    """Yield each event and drop the list's own reference to it.
+
+    `UX-169`. Iterating a list and clearing it afterwards keeps every
+    event alive until the last record is built; releasing each slot as
+    it is read means the two lists never both hold 400,000 dicts.
+    """
+    for index, event in enumerate(events):
+        events[index] = None
+        yield event
+    del events[:]
+
+
+def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
     """Pair each START with its own process's END, FIFO per `(element,
     pid)` - correct as long as one pid's own lifetime doesn't overlap a
     later reused instance of the same pid *within the same element's own
@@ -1147,10 +1174,23 @@ def pair_events(events: List[dict]) -> List[dict]:
 
     A START with no matching END (killed by a signal, or still running
     when the trace was captured) is reported "open" with
-    duration_us=None rather than a fabricated duration."""
+    duration_us=None rather than a fabricated duration.
+
+    `consume=True` (`UX-169`) sorts `events` in place and empties it as
+    it goes, so an event is freed as soon as its record exists instead
+    of the whole event list living alongside the whole record list. It
+    is destructive, which is why it is opt-in: only the analysis path,
+    which drops its reference immediately afterwards, asks for it.
+    Measured on a 400k-process trace: 479 MB peak against 545 MB before,
+    and the record list is unchanged either way."""
     open_by_key: Dict[Tuple[str, int, str], List[dict]] = {}
     records: List[dict] = []
-    for ev in sorted(events, key=lambda e: e["ts"]):
+    if consume:
+        events.sort(key=lambda e: e["ts"])
+        ordered = _drain(events)
+    else:
+        ordered = sorted(events, key=lambda e: e["ts"])
+    for ev in ordered:
         # UX-61: the sandbox id, when the capture has one, is the correct
         # disambiguator - not the element name. Pids are namespaced *per
         # sandbox*, so they collide freely across sandboxes, and keying on
@@ -3642,9 +3682,17 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # exists to measure. A capture with no spine records passes through
     # unchanged, which is what keeps every pre-spine capture parsing
     # byte-identically.
-    records = merge_record_streams(pair_events(events))
     # UX-123: counted from the events, since pairing drops them.
+    # UX-169: counted *before* pairing, so the event list can be dropped
+    # the moment the records exist. It used to stay bound through
+    # `summarize` and the opens pass - a quarter of a gigabyte on a
+    # 400k-process trace, alive for no reason at the exact moment the
+    # report's own aggregates are being built.
     unmatched = count_unmatched_ends(events)
+    # `consume=True`: this is the one caller that has no use for the
+    # events afterwards, so pairing may empty the list as it reads it.
+    records = merge_record_streams(pair_events(events, consume=True))
+    del events
     fork_only_exits = unmatched["fork_only"]
     unmatched_ends = unmatched["unmatched"]
 
@@ -3705,9 +3753,12 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # UX-168: a second streaming pass rather than keeping the whole trace
     # in memory for this one. `OPENS` blocks are a small fraction of a
     # trace, so re-reading costs IO and saves the copy.
+    # UX-169: and the handle goes in, not `handle.read()`. The comment
+    # above said "streaming" while the call built exactly the whole-file
+    # string it was written to avoid.
     with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as handle:
-        opens_by_element = parse_open_records(
-            handle.read(),
+        opens_by_element = parse_open_lines(
+            handle,
             open_element_overrides=(correlation or {}).get('resolved'))
     # UX-107: the elements this analysis must speak about are not only the
     # ones with opens. An element built entirely by static processes has

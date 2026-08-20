@@ -91,12 +91,15 @@ it. A number with no provenance cannot be re-checked, and this project
 has repeatedly found that re-checking is where the bugs are.
 
 ```text
-3614.2s, 3434.4s, 3405.8s — three captures of the same freedesktop-sdk
-commit, taken by the scheduled capture workflow
+3614.2s, 3434.4s, 3405.8s, 3261.2s, 2712.4s — five captures of the same
+freedesktop-sdk commit, taken by the scheduled capture workflow
 ```
 
 is useful. "roughly 5% run-to-run noise" is not, because nobody can tell
-later whether it is still true.
+later whether it is still true. This example earns its place twice over:
+the same list at n=3 supported a 5.8% figure that four docs quoted, and
+two more captures took it to 33%. The quoted runs are what made that
+re-checkable; a rounded adjective would not have been.
 
 **Why:** `UX-88` found ten documented claims that were checkably false,
 including an Efficiency Score formula (`LB / total duration`) that the

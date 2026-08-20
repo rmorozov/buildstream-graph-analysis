@@ -1,6 +1,6 @@
 # UX-158: --help is a design-history lecture
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-135/UX-137 (the same concision pass, which stopped at the docs)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-135/UX-137 (the same concision pass, which stopped at the docs)
 
 ## Motivation
 
@@ -50,3 +50,41 @@ new guard test fails when any subcommand's help exceeds the cap
 (verified by mutation: re-point one `description=` at `__doc__`); no
 command loses a flag or its epilogue examples where those are the
 short kind (`snapshot`'s two-command loop stays).
+
+---
+
+## What was built
+
+| command | before | after | | command | before | after |
+| --- | --- | --- | --- | --- | --- | --- |
+| `compare` | 143 | **36** | | `capture` | 66 | **20** |
+| `cache-logs` | 88 | **29** | | `analyze` | 60 | **42** |
+| `capture run` | 82 | **42** | | `baseline` | 59 | **34** |
+| `extract` | 77 | **40** | | `snapshot` | 53 | **29** |
+| `bga` (top) | 66 | **45** | | `sweep` | 47 | **31** |
+
+The biggest single win was not prose. argparse puts a flag's help on a
+second line whenever the flag exceeds 24 characters, and a third of these
+flags do (`--fail-on-inefficient-additions` is 31); widening that column
+alone took `compare` from 49 to 36. The rest: short `description=`
+constants for the five tools that passed `__doc__`, flag help cut to its
+first sentence, and one line per entry in the alias block.
+
+A guard test renders every subcommand's help and caps it, so the next
+design saga lands in a file rather than in argparse.
+
+### Deviation, recorded
+
+The acceptance asks for "~40 lines". `compare` (36), `capture` (20) and
+`extract` (40) meet it; `analyze` and `capture run` land at 42 and the top
+level at 45. Those are already one line per flag or per command - going
+further would mean deleting flags, not prose - so the cap is 45 and the
+number is stated rather than the target quietly restated.
+
+### One requirement broken and restored
+
+Dropping the module name from the alias block cost a documented property:
+these tools stay independently runnable, and a reader who wants to script
+one needs to know where it lives.
+`test_help_names_the_underlying_module` caught it; the module is back, on
+the same line.

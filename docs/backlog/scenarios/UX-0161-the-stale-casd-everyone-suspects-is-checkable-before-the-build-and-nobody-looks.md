@@ -1,6 +1,6 @@
 # UX-161: the stale casd everyone suspects is checkable before the build, and nobody looks
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-147 (whose item 2 this completes), UX-149 (the probe with the structural blind spot)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-147 (whose item 2 this completes), UX-149 (the probe with the structural blind spot)
 
 ## Motivation
 
@@ -66,3 +66,39 @@ capture's fingerprint records it; stop the daemon, snapshot again — no
 warning. `doctor --capture` run with that stale casd present reports
 it next to a passing chain. A capture on a quiet machine (no casd)
 prints nothing new — the check is silent when there is nothing to say.
+
+---
+
+## What was built
+
+Detection keys on what casd's argv actually carries, measured on a live
+daemon: `... --jobs=16 /tmp/x/cache/buildstream`, the cache directory as
+its last positional. The capture warns up front with pid, age and the
+one-command remedy; `--diagnose` records pid and age in the fingerprint;
+the zero-invocation summary promotes that possibility to the leading
+explanation when the check fired, and says the check found nothing when
+it did not.
+
+Doctor gained `casd-fresh`, which exists mainly to state doctor's own
+blind spot: `--capture` isolates `HOME` (`UX-84`), so its chain probe
+starts a *fresh* daemon and structurally cannot reproduce this.
+
+Verified live: with a casd on the build's cache directory the warning
+names it (pid 7464, started 14s ago) and the fingerprint records it;
+doctor reports it beside a passing chain; stopped, a capture prints
+nothing new. A daemon on a *different* cache directory produces no
+warning and the shim still ran 9/9 - specific, not a blanket alarm.
+
+### Deviation, recorded
+
+The acceptance asks for the stale daemon to be produced by running
+`bst show` first. On BuildStream 2.7.0 here **casd does not outlive its
+bst** - measured twice, no daemon survives `bst show` or `bst build`
+exiting - so it was started directly instead, which is what a shared or
+persistent-daemon setup looks like and what the check matches on. The
+"tasks ran but the shim was never called" branch is therefore covered by
+test rather than by a live reproduction: 2.7.0 could not be made to reuse
+a foreign daemon at all.
+
+A `proc_root` seam makes the matching rules testable - a process's `comm`
+cannot be faked otherwise.

@@ -117,10 +117,22 @@ Measured, on the correct binary and the broken one:
 ```
 
 Identical. A `/proc/<pid>/stat` probe after the spine exits cannot tell a
-correct spine from a broken one, which is exactly why the acceptance's
-own probe was never written and why writing it now would have produced a
-test that passes on the bug. The decision table is what can actually
-discriminate, so that is what guards it.
+correct spine from a broken one **in this shape**, which is why the
+acceptance's own probe was never written and why writing it that way
+would have produced a test that passes on the bug. The decision table is
+what discriminates here, so that is what guards it.
+
+> **Corrected by `UX-162` item 6.** The sentence above originally read
+> "cannot be written as specified", which over-reached: it generalised
+> from the one shape tried to every shape. A discriminating probe *is*
+> constructible - keep the survivor's group non-orphaned by forking it
+> into its own process group from a parent that stays alive in another
+> group of the same session, and the kernel has no reason to send
+> `SIGHUP`+`SIGCONT`, so state `T` survives on the fixed binary and not
+> on the broken one. That probe has not been written; what is claimed
+> here is that the *orphaned-group* shape cannot discriminate, which is
+> what was actually measured. (`UX-132`/`UX-144`'s annotate-rather-than-
+> rewrite convention, applied to a mechanism claim rather than a figure.)
 
 (An earlier attempt did leave real `T` processes behind — and they held
 the harness's stdout pipe open, hanging the tool for five minutes. The

@@ -1,6 +1,6 @@
 # UX-157: Ctrl-C on an hours-long capture destroys the trace it already has
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-155 (the scratch whose lifecycle this fixes), UX-126 (snapshot)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-155 (the scratch whose lifecycle this fixes), UX-126 (snapshot)
 
 ## Motivation
 
@@ -71,3 +71,42 @@ mid-build. The process exits 130 with no traceback; the snapshot holds
 exit. A second SIGINT during the salvage itself still leaves the
 copied files (the `finally` guarantee, testable by faking the copy to
 raise).
+
+---
+
+## What was built
+
+The copy-out moved into a `finally`, so no exception class can skip it
+while the scratch still exists - not `except KeyboardInterrupt`, because
+a crash mid-build loses the trace just as thoroughly. The build is
+spawned with `start_new_session=True` and stopped through its process
+group: SIGINT first (bst shuts down gracefully, which is what makes the
+partial Plane 1 log worth having), then SIGTERM, then SIGKILL.
+
+Verified live: SIGINT to a real capture mid-build exits with the
+interrupt notice and no traceback, leaving `plane2.json` and `run/` with
+**14 spans** of a build killed partway, an empty `.bga/tmp`, and no
+surviving `bst` or `buildbox-run`.
+
+An interrupted run is incomplete in `UX-156`'s sense, so `build_outcome`
+gained an `interrupted` flag feeding the same violation, and
+`RunContext.incomplete_reason` answers both in one place. The wording
+keeps them apart: "was interrupted", not "failed", which would send a
+user hunting for a compile error that does not exist.
+
+### Deviation, recorded
+
+Exit 130 is covered by test rather than by the live run. The harness kept
+mis-delivering the signal - a backgrounded job in a non-interactive shell
+gets `SIGINT` set to `SIG_IGN`, and one attempt killed the `bash -c`
+wrapper instead of Python. A real terminal Ctrl-C hits a foreground
+process, so the artifact does not apply to users, but the path is
+verified deterministically rather than end to end.
+
+### Falsified
+
+Five mutations. Two reddened nothing at first: deleting
+`start_new_session` was invisible because the test spawned its own
+`Popen` rather than checking `run_wrapped`'s, and deleting the shutdown
+call was invisible because every test called `shutdown_build_group`
+directly instead of through its caller.

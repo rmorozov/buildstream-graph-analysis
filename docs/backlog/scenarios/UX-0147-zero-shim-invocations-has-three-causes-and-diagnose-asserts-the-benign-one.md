@@ -117,6 +117,14 @@ failed capture without diagnostics prints the `--diagnose` hint.
    and reported as a noexec mount (found by placing the probe before
    `install_bwrap_shim`, so it probed a file that did not exist yet).
 
+   > **Superseded by `UX-155`.** The sentence above is no longer what
+   > the tool prints. "Set TMPDIR to a directory you can execute from"
+   > was followed by a real user, who set it to a *relative* path and
+   > got `buildbox-casd` dying on `mkdtemp`. The shim now lives under
+   > the project's `.bga/tmp` and the advice names that directory
+   > instead: `TMPDIR` is inherited by every service `bst` starts, so it
+   > was never the right knob for a directory bga owns.
+
 2. **The zero-invocation summary names all three causes**, told apart by
    how many element tasks Plane 1 recorded. `Running commands` is the
    phase that launches a sandbox, and its count matches the shim's

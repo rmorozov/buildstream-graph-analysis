@@ -21,8 +21,15 @@ import pytest
 
 from tools.bga_doctor import (
     FAIL, OK, SKIP, WARN, check_compiler, check_plane3, check_project_loads,
-    check_staged_sources, format_text, main, run_checks,
+    check_scratch, check_staged_sources, format_text, main, run_checks,
 )
+
+
+def _by_id(checks, check_id):
+    """The one check with this id, or a failure naming what was there."""
+    found = [c for c in checks if c["id"] == check_id]
+    assert len(found) == 1, f"expected one {check_id!r}, got {[c['id'] for c in checks]}"
+    return found[0]
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -575,3 +582,50 @@ class TestBstBesideTheConsoleScriptButNotOnPath:
 
         assert finding["status"] == FAIL
         assert "pip install" in finding["remedy"]
+
+
+class TestScratchAndTmpdirChecks:
+    """UX-155: the two conditions that produced a real field report."""
+
+    def test_a_relative_tmpdir_fails_and_the_remedy_names_the_error(
+            self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("TMPDIR", "rel_tmp")
+        found = _by_id(check_scratch(None), "tmpdir-absolute")
+        assert found["status"] == FAIL
+        assert "mkdtemp" in found["remedy"], (
+            "the remedy should quote the error buildbox-casd prints, since that "
+            "is the string the user will search for")
+        assert str(tmp_path) in found["remedy"]
+
+    def test_an_absolute_tmpdir_passes(self, monkeypatch):
+        monkeypatch.setenv("TMPDIR", "/var/tmp/mine")
+        assert _by_id(check_scratch(None), "tmpdir-absolute")["status"] == OK
+
+    def test_an_unset_tmpdir_is_reported_not_omitted(self, monkeypatch):
+        """A check that silently vanishes reads as one that passed."""
+        monkeypatch.delenv("TMPDIR", raising=False)
+        assert _by_id(check_scratch(None), "tmpdir-absolute")["status"] == OK
+
+    def test_it_reports_that_it_can_execute_from_the_projects_scratch(self, tmp_path):
+        found = _by_id(check_scratch(str(tmp_path)), "scratch-executable")
+        assert found["status"] == OK
+
+    def test_probing_leaves_no_bga_directory_behind(self, tmp_path):
+        """Doctor is read-only by contract. The first version of this probe
+        reused the capture's own `capture_scratch`, which creates `.bga/`
+        and the store's `.gitignore` inside it - `TestItNeverChangesAnything`
+        caught it, and this pins the specific trap."""
+        (tmp_path / "project.conf").write_text("name: x\n")
+        assert _by_id(check_scratch(str(tmp_path)), "scratch-executable")["status"] == OK
+        assert not (tmp_path / ".bga").exists()
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["project.conf"]
+
+    def test_it_does_not_create_a_bga_directory_in_a_path_that_is_not_one(
+            self, tmp_path):
+        """Probing used to `makedirs` the whole chain, leaving `.bga` behind in
+        a directory the user only mistyped."""
+        missing = tmp_path / "not-a-project"
+        found = _by_id(check_scratch(str(missing)), "scratch-executable")
+        assert found["status"] == SKIP
+        assert not missing.exists()

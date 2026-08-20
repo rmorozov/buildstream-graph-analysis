@@ -52,6 +52,16 @@ Usage:
     python3 -m tools.bst_native_build_tracer run PROJECT_DIR trace.json -- bst build core.bst
     python3 -m tools.bst_native_build_tracer report trace.json --raw-log trace.log
 """
+
+HELP = """Trace what runs *inside* each element's sandbox (Plane 2).
+
+A BuildStream log records one START/SUCCESS pair per element, so a
+`make -j8`'s own parallelism is invisible from outside. This runs a real
+`bst` command with an LD_PRELOAD hook and a PATH-shadowed `bwrap` shim and
+reports the per-process picture: who ran, for how long, at what concurrency.
+
+Full background: docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md
+"""
 import argparse
 import atexit
 import contextlib
@@ -4526,6 +4536,12 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
     return "\n".join(lines)
 
 
+def _CompactRawHelp(prog):
+    """UX-158: one shared compact help layout, imported lazily so
+    this module stays runnable on its own."""
+    from bga.help_format import CompactRawHelp
+    return CompactRawHelp(prog)
+
 def main(argv: Optional[List[str]] = None) -> int:
     """`argv` defaults to `sys.argv[1:]`, as argparse does.
 
@@ -4533,91 +4549,49 @@ def main(argv: Optional[List[str]] = None) -> int:
     composes `capture run` rather than reimplementing it); every existing
     caller passes nothing and is unaffected.
     """
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=HELP, formatter_class=_CompactRawHelp)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_parser = subparsers.add_parser("run", help="Run a real bst command under the tracer and report on it")
     run_parser.add_argument("project_dir", help="cwd for the wrapped command (the BuildStream project directory)")
     run_parser.add_argument("output", help="Path to write the JSON report to")
-    run_parser.add_argument("--raw-log", help="Also keep the raw trace log at this path (default: discarded after parsing)")
+    run_parser.add_argument("--raw-log", help="Keep the raw trace log at PATH.")
     run_parser.add_argument(
         "--invocation-log", metavar="PATH",
-        help="UX-56: where to write the per-sandbox invocation record used to "
-             "recover element names when the project overrides build-root. "
-             "Correlation also needs --wrapped-log, whose wall-clock timestamps "
-             "are what the invocations are matched against. UX-80: recorded to a "
-             "temporary path automatically whenever --wrapped-log is given, so "
-             "the documented capture produces a joinable report; pass this only "
-             "to keep the artifact.",
+        help='Where to write the per-sandbox invocation record.'
     )
     run_parser.add_argument(
         "--no-invocation-log", action="store_true",
-        help="UX-80: opt out of the automatic invocation record. Only useful to "
-             "reproduce the pre-UX-80 behaviour - without it, element attribution "
-             "falls back to the sandbox path convention, which is the element "
-             "only on a project that does not override build-root.",
+        help='UX-80: opt out of the automatic invocation record.'
     )
     run_parser.add_argument(
         "--argv-log", metavar="PATH",
-        help="UX-58: record the first few bwrap command lines BuildStream "
-             "generates, before this tool rewrites them, as JSON lines. The "
-             "artifact UX-56 needs to identify an authoritative element name; "
-             "bounded (BST_TRACE_ARGV_MAX, default 32) because a real build "
-             "spawns thousands and a handful answers the question.",
+        help='Record the bwrap argv BuildStream generated, as JSON lines.'
     )
     run_parser.add_argument(
         "--trace-opens", action="store_true",
-        help="UX-46: also record which files each element's sandbox opened, and "
-             "report declared build dependencies it never read. Opt-in: unlike the "
-             "lifecycle hooks this interposes open()/openat() on a hot path.",
+        help='Also record opened files, and unread declared dependencies.'
     )
     run_parser.add_argument(
         "--trace-spine", nargs="?", const="on", default="off",
         choices=("off", "on", "auto"),
-        help="UX-106: also run a ptrace process-event spine inside the sandbox, "
-             "which sees statically-linked processes the LD_PRELOAD hook "
-             "structurally cannot. The hook stays on either way, since it is the "
-             "only source of opened paths. "
-             "`auto` (UX-113) traces only the elements the pre-build census says "
-             "the hook is blind for, plus any it could not assess - on an "
-             "all-dynamic project that is no elements at all, and on a busybox "
-             "one it is all of them. Bare `--trace-spine` means `on`.",
+        help='UX-106: also run a ptrace process-event spine inside the sandbox, which sees statically-linked processes the LD_PRELOAD hook structurally cannot.'
     )
     run_parser.add_argument(
         "--wrapped-log",
-        help="UX-24: also capture a real Plane-1-compatible wrapped-format log of this same bst "
-             "invocation (tools/bst_log_to_chrome_trace.py-ready) - lets one real build feed both "
-             "planes for tools/native_trace_to_chrome_trace.py's combined mode.",
+        help='UX-24: also capture a real Plane-1-compatible wrapped-format log of this same bst invocation (tools/bst_log_to_chrome_trace.py-ready) - lets one real build feed both planes for tools/native_trace_to_chrome_trace.py\'s combined mode.'
     )
     run_parser.add_argument(
         "--run-dir", metavar="PATH",
-        help="UX-126: also extract a bga run directory (`bga analyze`'s input) "
-             "into PATH, from the Plane 1 log this same invocation captures. "
-             "This tool already holds every input `bga extract` needs - the "
-             "project, the wrapped log, the report path - so the second command "
-             "existed because the pieces shipped in different rounds, not "
-             "because a user benefits from typing them again. Implies "
-             "--wrapped-log; without one named, the log goes to a temporary "
-             "path, since its value here is the run directory rather than the "
-             "file.",
+        help='UX-126: also extract a bga run directory (`bga analyze`\'s input) into PATH, from the Plane 1 log this same invocation captures.'
     )
     run_parser.add_argument(
         "--diagnose", action="store_true",
-        help="UX-146: record what the bwrap shim received and what it exec'd, "
-             "one JSON line per sandbox, and print a summary of it. Written "
-             "beside the report as <output>.diagnostics.jsonl. Use this when a "
-             "capture fails on a build that succeeds under plain `bst`: the "
-             "count alone separates 'the PATH shadow never reached "
-             "buildbox-run' from 'the rewrite broke the sandbox', which look "
-             "identical from outside.",
+        help='UX-146: record what the bwrap shim received and what it exec\'d, one JSON line per sandbox, and print a summary of it.'
     )
     run_parser.add_argument(
         "--no-inject", action="store_true",
-        help="UX-146: install the shim but pass BuildStream's bwrap argv "
-             "through untouched. Captures nothing - it is a bisection tool. A "
-             "build that succeeds with this and fails without it blames the "
-             "argv rewrite; one that fails both ways blames the PATH shadow or "
-             "the exec. Implies --diagnose.",
+        help='UX-146: install the shim but pass BuildStream\'s bwrap argv through untouched.'
     )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
@@ -4628,15 +4602,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     report_parser.add_argument(
         "path",
-        help="A raw trace log (as written by `run --raw-log`) or a JSON report (as written by `run`) - "
-             "the kind is detected, not declared (UX-38)",
+        help='A raw trace log (as written by `run --raw-log`) or a JSON report (as written by `run`) - the kind is detected, not declared (UX-38)'
     )
     report_parser.add_argument("--json", action="store_true", help="Emit JSON instead of a human-readable summary")
     report_parser.add_argument(
         "--project-dir",
-        help="UX-46: the BuildStream project this trace came from. Required for the "
-             "declared-vs-used dependency analysis, which reads each dependency's "
-             "artifact contents via `bst artifact list-contents`.",
+        help='UX-46: the BuildStream project this trace came from.'
     )
 
     # UX-105 item 3: the census, standalone. It reads files on disk and
@@ -4649,8 +4620,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     census_parser.add_argument(
         "project_dir",
-        help="A BuildStream project directory. Its elements' `local` sources are "
-             "scanned; nothing is built and BuildStream is not invoked.",
+        help='A BuildStream project directory.'
     )
     census_parser.add_argument(
         "--json", action="store_true", help="Emit JSON instead of a summary",

@@ -48,6 +48,15 @@ and their resolution is a second. This tool reports what the logs say
 and labels its own provenance; it does not synthesize a run directory
 that would then be indistinguishable from a captured one.
 """
+
+HELP = """Read BuildStream's own persisted per-element logs (Plane 3).
+
+Every `bst` run leaves logs under the cache directory, including runs
+`bga` never wrapped. This reads them into the same run-directory shape
+`analyze` takes, so history you already have becomes measurable.
+
+Full background: docs/guides/plane3.md
+"""
 import argparse
 import json
 import os
@@ -1158,45 +1167,36 @@ def _stamp(micros: Optional[int]) -> str:
         '%Y-%m-%d %H:%M:%S UTC')
 
 
+def _CompactRawHelp(prog):
+    """UX-158: one shared compact help layout, imported lazily so
+    this module stays runnable on its own."""
+    from bga.help_format import CompactRawHelp
+    return CompactRawHelp(prog)
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=HELP, formatter_class=_CompactRawHelp,
     )
     parser.add_argument(
         'target', nargs='?', default=None, metavar='PROJECT_DIR|LOG_ROOT',
-        help='UX-127: a BuildStream **project directory** (detected by its '
-             'project.conf) - the obvious argument, and the one that does the '
-             'right thing: the project name is read from it and the log root '
-             'resolved automatically. A logs directory still works. With '
-             'neither, this lists what the log tree holds.',
+        help='UX-127: a BuildStream **project directory** (detected by its project.conf) - the obvious argument, and the one that does the right thing: the project name is read from it and the log root resolved automatically.'
     )
     parser.add_argument('--project', default=None, help='Only this project\'s logs.')
     parser.add_argument(
         '--all', action='store_true',
-        help='UX-127: report over every project in the log tree at once. This '
-             'used to be what a bare invocation did, and "report on every project '
-             'I ever built" is never one user\'s question - a bare invocation now '
-             'lists the tree instead.',
+        help='UX-127: report over every project in the log tree at once.'
     )
     parser.add_argument(
         '--list', action='store_true',
-        help='List the projects the log tree holds, with log counts and time '
-             'spans, and exit. The default when no target is given.',
+        help='List the projects the log tree holds, with log counts and time spans, and exit.'
     )
     parser.add_argument(
         '--graph', default=None,
-        help="A run directory's `graph.json`. Lets the developer-tax cause "
-             "annotation (UX-101) tell a rebuild caused by an upstream key change "
-             "from one whose own definition changed - the logs alone carry no "
-             "dependency edges.",
+        help='A run directory\'s `graph.json`.'
     )
     parser.add_argument(
         '--native-report', default=None,
-        help="A Plane 2 report (`bga capture run`'s JSON) from the same build. "
-             "Adds the traced configure measurement beside Plane 3's self-reported "
-             "one (UX-102) - the two are different quantities and are shown side "
-             "by side, never summed. Takes a snapshot alias (`@last`, `@prev`, "
-             "`@<stamp-prefix>`) as well as a path (UX-134).",
+        help='A Plane 2 report (`bga capture run`\'s JSON) from the same build.'
     )
     parser.add_argument('-f', '--format', choices=['text', 'json'], default='text')
     parser.add_argument('-o', '--output', default=None, help='Write here instead of stdout.')

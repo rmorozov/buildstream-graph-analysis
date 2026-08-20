@@ -28,9 +28,10 @@ from . import __version__
 from .analyzer import (
     MODELLED_AXIS_CLAUSE, UNMODELED_AXIS_CLAUSE, BuildEfficiencyAnalyzer,
 )
+from .help_format import CompactHelp
 from .compare import (
     _EFFICIENCY_DROP_PP, DEFAULT_BAND_K, DEFAULT_MAX_ADDITION_STRETCH,
-    MIN_BASELINE_RUNS, RunsNotComparableError,
+    RunsNotComparableError,
     compare_runs,
     efficiency_below_floor,
     efficiency_regression_exceeds_threshold, efficiency_signal_status,
@@ -1048,7 +1049,7 @@ def _add_common_arguments(
     subparser.add_argument(
         '-o', '--output',
         type=str,
-        help='Write output to file instead of stdout'
+        help='Write output to PATH instead of stdout.'
     )
 
     subparser.add_argument(
@@ -1080,12 +1081,6 @@ def _add_common_arguments(
             type=str,
             metavar='NATIVE_REPORT.json',
             help='UX-83: a Plane 2 native trace report for THIS SAME run. When '
-                 'given, capacity advice is conditioned on what was actually '
-                 'measured inside the sandboxes - a RESOURCE WAIT hint will not '
-                 'recommend more builders on a host Plane 2 measured as already '
-                 'CPU-saturated, and will name an element pinned to -j1 first, '
-                 'since that is capacity you already have. Without it every line '
-                 'is byte-identical to before.'
         )
         subparser.add_argument(
             '-d', '--diagnostics',
@@ -1117,13 +1112,13 @@ def _add_common_arguments(
     subparser.add_argument(
         '-v', '--verbose',
         action='store_true',
-        help='Enable verbose (DEBUG-level) logging for debugging'
+        help='Verbose (DEBUG) logging.'
     )
 
     subparser.add_argument(
         '-q', '--quiet',
         action='store_true',
-        help='Suppress all log output except errors'
+        help='Errors only.'
     )
 
     subparser.add_argument(
@@ -1131,8 +1126,17 @@ def _add_common_arguments(
         type=str,
         default=None,
         metavar='PATH',
-        help='Also write log output to PATH, independent of console verbosity'
+        help='Also write logs to PATH.'
     )
+
+
+class _CompactSubParser(argparse.ArgumentParser):
+    """A subparser that inherits the compact help layout without every
+    `add_parser` call having to remember to pass it (`UX-158`)."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("formatter_class", CompactHelp)
+        super().__init__(*args, **kwargs)
 
 
 def _tool_help() -> str:
@@ -1174,12 +1178,15 @@ def create_parser() -> argparse.ArgumentParser:
         help='Show program version and exit'
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    subparsers = parser.add_subparsers(
+        dest='command', metavar='COMMAND', help='Available commands',
+        parser_class=_CompactSubParser)
 
     # analyze - primary command, full report (every section)
     analyze_parser = subparsers.add_parser(
         'analyze',
-        help='Full analysis report (all sections)',
+        usage='bga analyze [options] RUN_DIR',
+        help='Full analysis report.',
         description='Analyze a directory containing BuildStream run artifacts (run-context/v9, graph/v9, trace/v9) and report every section.',
     )
     _add_common_arguments(analyze_parser, include_replay=True, include_diagnostics=True, include_cold=True)
@@ -1188,7 +1195,7 @@ def create_parser() -> argparse.ArgumentParser:
     # graph - static dependency graph + critical path + structural metrics
     graph_parser = subparsers.add_parser(
         'graph',
-        help='Static dependency graph, critical path, and structural metrics only',
+        help='Dependency graph, critical path, structural metrics.',
         description='Report the static dependency graph (Part 5), critical path (Part 14.1), and structural metrics (M6).',
     )
     _add_common_arguments(graph_parser)
@@ -1196,14 +1203,13 @@ def create_parser() -> argparse.ArgumentParser:
         '--by-kind',
         action='store_true',
         help='Also show aggregate stats (count, total/avg observed duration) grouped by BuildStream '
-             'element_kind (P4-12, non-spec additive signal - see docs/backlog/tasks/P4-12-element-kind-based-heuristics.md)'
     )
     graph_parser.set_defaults(func=cmd_graph)
 
     # floors - certified/advisory floors, matches spec's `bga floors RUN --cold` examples
     floors_parser = subparsers.add_parser(
         'floors',
-        help='Certified and advisory floors only (T-infinity, LB, certified headroom, cold floor)',
+        help='Certified and advisory floors only.',
         description='Report certified/advisory floors (Parts 14-17) - matches spec Part 37.1\'s "bga floors RUN [--cold] [--allow-partial-cold]".',
     )
     _add_common_arguments(floors_parser, include_cold=True)
@@ -1212,7 +1218,7 @@ def create_parser() -> argparse.ArgumentParser:
     # replay - deterministic replay makespan (T_C)
     replay_parser = subparsers.add_parser(
         'replay',
-        help='Deterministic replay makespan (T_C) only',
+        help='Replay makespan (T_C) only.',
         description='Run the deterministic replay scheduler (Part 18) and report T_C/model slack only.',
     )
     _add_common_arguments(replay_parser, include_replay=True)
@@ -1221,7 +1227,7 @@ def create_parser() -> argparse.ArgumentParser:
     # sweep - capacity sweep (Part 19)
     sweep_parser = subparsers.add_parser(
         'sweep',
-        help='Capacity sweep for one resource (Part 19)',
+        help='Capacity sweep for one resource.',
         description='Sweep capacity for one resource across a range and report predicted T_C, normalized improvement, and the knee point.',
     )
     sweep_parser.add_argument(
@@ -1231,10 +1237,6 @@ def create_parser() -> argparse.ArgumentParser:
     sweep_parser.add_argument(
         '--plane2', type=str, metavar='NATIVE_REPORT.json',
         help='UX-83: a Plane 2 native trace report for THIS SAME run. The knee '
-             'point is a replay-model answer and the replay model does not know '
-             'about CPU; with this, the knee line says how many cores Plane 2 '
-             'actually measured busy, and names any element pinned to -j1 - which '
-             'is capacity you already have. Without it the output is unchanged.'
     )
     sweep_parser.add_argument(
         '--resource', type=str, default='PROCESS',
@@ -1255,29 +1257,25 @@ def create_parser() -> argparse.ArgumentParser:
     sweep_parser.add_argument(
         '--calibration-dir', action='append', default=[], metavar='PATH',
         help='UX-14 tier 2: path to a real run directory, captured at a real, different value of the '
-             'swept --resource, to use as contention-aware duration calibration. Repeatable - give 2+ '
-             'for any interpolation to be possible. Real per-task durations are interpolated (never '
-             'extrapolated) between calibrated capacities; tasks with fewer than 2 calibration points '
-             'keep their own fixed, tier-1 duration unchanged.'
     )
     sweep_parser.add_argument(
         '-f', '--format', type=str, choices=['text', 'json'], default='text',
         help='Output format: text (human-readable), json (machine-readable). Default: text'
     )
-    sweep_parser.add_argument('-o', '--output', type=str, help='Write output to file instead of stdout')
+    sweep_parser.add_argument('-o', '--output', type=str, help='Write output to PATH instead of stdout.')
     sweep_parser.add_argument(
         '-c', '--capacity', type=int, default=None, metavar='N',
         help='Override system resource capacity for resources not being swept. Default: auto-detect from run-context'
     )
-    sweep_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose (DEBUG-level) logging for debugging')
-    sweep_parser.add_argument('-q', '--quiet', action='store_true', help='Suppress all log output except errors')
-    sweep_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write log output to PATH, independent of console verbosity')
+    sweep_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
+    sweep_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')
+    sweep_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write logs to PATH.')
     sweep_parser.set_defaults(func=cmd_sweep)
 
     # utilisation - CPU utilisation accounting
     utilisation_parser = subparsers.add_parser(
         'utilisation',
-        help='CPU utilisation accounting only',
+        help='CPU utilisation accounting only.',
         description='Report CPU utilisation accounting (Part 30, M4) only.',
     )
     _add_common_arguments(utilisation_parser)
@@ -1286,7 +1284,7 @@ def create_parser() -> argparse.ArgumentParser:
     # diagnostics - advanced diagnostics
     diagnostics_parser = subparsers.add_parser(
         'diagnostics',
-        help='Advanced diagnostics only (blast radius, criticality probability, wall-clock shares)',
+        help='Advanced diagnostics only.',
         description='Report advanced diagnostics (Parts 20-29, M5) only.',
     )
     _add_common_arguments(diagnostics_parser)
@@ -1321,20 +1319,10 @@ def create_parser() -> argparse.ArgumentParser:
     correlate_parser.add_argument(
         '--cache-logs', default=None, metavar='PATH',
         help="A Plane 3 report (`bga cache-logs --format json`) for the same "
-             "project. Supplies the per-element sandbox tax, which is what the "
-             "merge half of the granularity findings is computed from (UX-100).",
     )
     correlate_parser.add_argument(
         'native_report', type=str, nargs='?', default=None,
         help='Path to the JSON report written by `bga capture run` (Plane 2). '
-             'Capture both from one build with `run --wrapped-log --run-dir`, '
-             'or let `bga snapshot` do it. UX-134: optional when the run '
-             'directory has a plane2.json beside it, as every snapshot does - '
-             '`bga correlate @last` then joins the pair that came from one '
-             'build, which is the pairing this command is easiest to get '
-             'wrong by hand. Accepts a snapshot alias too, so '
-             '`bga correlate @prev @last` names a report from one snapshot '
-             'and a run from another when that is what you mean.',
     )
     correlate_parser.set_defaults(func=cmd_correlate)
 
@@ -1353,21 +1341,20 @@ def create_parser() -> argparse.ArgumentParser:
     cache_trend_parser.add_argument(
         'run_dirs', nargs='+', metavar='RUN',
         help='Run directories, oldest first. Order is the caller\'s to know: '
-             'nothing in a run directory records which build came before it.',
     )
     cache_trend_parser.add_argument(
         '-f', '--format', choices=['text', 'json'], default='text',
         help='Output format: text (human-readable), json (machine-readable). '
-             'Default: text',
     )
     cache_trend_parser.add_argument(
-        '-o', '--output', default=None, help='Write output to file instead of stdout',
+        '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
     )
     cache_trend_parser.set_defaults(func=cmd_cache_trend)
 
     compare_parser = subparsers.add_parser(
         'compare',
-        help='Compare two runs (baseline vs. candidate) and report deltas plus a verdict',
+        usage='bga compare [options] BASELINE CANDIDATE',
+        help='Compare two runs and report a verdict.',
         description='Compare a baseline run against a candidate run: signed deltas in certified floors, '
                     'efficiency score, and attribution, plus an improved/regressed/no-significant-change '
                     'verdict gated on confidence and graph comparability (docs/backlog/scenarios/UX-01 - not spec-mandated).',
@@ -1377,111 +1364,60 @@ def create_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument(
         '-f', '--format', type=str, choices=['text', 'json', 'ci-comment'],
         default='text',
-        help='Output format: text (human-readable), json (machine-readable), '
-             'ci-comment (UX-115: markdown for a PR comment - the verdict and its '
-             'band, every gate with a one-sentence reason, the elements this change '
-             'added or moved onto the critical path, and cache churn. Render-only: '
-             'no number in it is computed here). Default: text'
+        help='Output format. Default: text.'
     )
     compare_parser.add_argument(
         '--native-report', type=str, default=None, metavar='PATH',
-        help='UX-115: the candidate run\'s Plane 2 native report, which adds a '
-             '"declared, never read" column to the element table. Without it the '
-             'column is absent and the comment says so - "nothing was never read" '
-             'and "nobody looked" are different claims.'
+        help='Candidate Plane 2 report (adds unused-dependency detail).'
     )
-    compare_parser.add_argument('-o', '--output', type=str, help='Write output to file instead of stdout')
+    compare_parser.add_argument('-o', '--output', type=str, help='Write output to PATH instead of stdout.')
     compare_parser.add_argument(
         '-c', '--capacity', type=int, default=None, metavar='N',
-        help='Override system resource capacity for both runs (applied symmetrically). Default: auto-detect per run'
+        help='Override resource capacity for both runs.'
     )
     compare_parser.add_argument(
         '--fail-on-inefficient-additions', action='store_true',
-        help=f'UX-79: CI gate on the efficiency of the *change*, not of the repository. '
-        f'Exits {EXIT_CODE_EFFICIENCY_REGRESSION} when more than --max-addition-stretch '
-        f'of the work this change added landed on the critical path. Unlike '
-        f'--fail-on-efficiency-regression, which reads a whole-build average and so '
-        f'gets weaker as the project grows, this mentions only the added elements: '
-        f'measured on fixtures, two maximally-mis-added elements move whole-build '
-        f'occupancy -14.6pp in an 11-element project and -0.5pp in a 1201-element one '
-        f'(passing the 5.0pp default), while their stretch is 1.00 in both.'
+        help='CI gate: fail on inefficiently added work.'
     )
     compare_parser.add_argument(
         '--max-addition-stretch', type=float, default=DEFAULT_MAX_ADDITION_STRETCH,
         metavar='RATIO',
-        help=f'UX-79: the share of added work that may land on the critical path '
-        f'before --fail-on-inefficient-additions fires. 0.0 means the additions were '
-        f'fully absorbed by existing parallelism; 1.0 means every second of added work '
-        f'extended the chain. Default: {DEFAULT_MAX_ADDITION_STRETCH} - "at most half '
-        f'of what you added may land on the chain", sitting in the measured gap between '
-        f'a well-added set (0.00) and a serialized one (1.00).'
+        help='Threshold for the addition gate.'
     )
     compare_parser.add_argument(
         '--allow-mismatch', action='store_true',
-        help=f'UX-78: compare anyway when the two runs fail a comparability check '
-        f'(they share less than half their element UIDs, or one is a caches-off run '
-        f'and the other incremental). Without this, such a pair is refused with exit '
-        f'{EXIT_CODE_MISMATCHED_RUNS} - distinct from the gates\' 4/5, so a CI job '
-        f'cannot mistake a wrong-artifact-path bug for a regression. With it, the '
-        f'warning and the comparison are both printed, which is what happened before.'
+        help='Compare even if the runs are not comparable.'
     )
-    compare_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose (DEBUG-level) logging for debugging')
-    compare_parser.add_argument('-q', '--quiet', action='store_true', help='Suppress all log output except errors')
-    compare_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write log output to PATH, independent of console verbosity')
+    compare_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
+    compare_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')
+    compare_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write logs to PATH.')
     compare_parser.add_argument(
         '--fail-on-regression', action='store_true',
-        help=f'CI gate (UX-03): exit {EXIT_CODE_REGRESSION} (distinct from 1/2/3, which mean bga itself '
-        'failed) if the candidate run regressed in total duration beyond the threshold (see '
-        '--regression-threshold). A low-confidence comparison fails open (exit 0 with a warning) '
-        'rather than block a pipeline on a possibly-noisy signal (see --fail-on-low-confidence). '
-        'Default: off (bga compare always exits 0 regardless of verdict).'
+        help=f'CI gate: exit {EXIT_CODE_REGRESSION} if slower.'
     )
     compare_parser.add_argument(
         '--fail-on-efficiency-regression', action='store_true',
-        help=f'CI gate (UX-39): exit {EXIT_CODE_EFFICIENCY_REGRESSION} (distinct from '
-        f'{EXIT_CODE_REGRESSION}, "the build got slower") if the candidate run\'s dispatch '
-        'occupancy fell more than --max-efficiency-drop percentage points below the '
-        'baseline\'s. Occupancy is invariant to how much work the build does, so this '
-        'answers "was new work added efficiently", which wall-clock cannot: adding '
-        'well-parallelized elements barely moves it, adding serialized ones moves it '
-        'sharply. Default: off.'
+        help=f'CI gate: exit {EXIT_CODE_EFFICIENCY_REGRESSION} if less efficient.'
     )
     compare_parser.add_argument(
         '--max-efficiency-drop', type=float, default=None, metavar='PP',
-        help=f'With --fail-on-efficiency-regression: how many percentage points of dispatch '
-        f'occupancy may be lost before failing. Default: {_EFFICIENCY_DROP_PP}pp, derived from '
-        'three repeat captures of an unchanged project on one real runner (1.0pp of observed '
-        'noise) - re-derive it the same way on your own runner rather than trusting it.'
+        help='Occupancy drop allowed, in percentage points.'
     )
     compare_parser.add_argument(
         '--min-efficiency', type=float, default=None, metavar='RATIO',
-        help=f'CI gate (UX-39): exit {EXIT_CODE_EFFICIENCY_REGRESSION} if the candidate run\'s '
-        'dispatch occupancy is below this absolute floor (0.0-1.0, e.g. 0.45). Independent of '
-        'any baseline - which makes it usable on a first run, and stops a slow drift that no '
-        'single delta ever trips. No default: what counts as acceptable is a statement about '
-        'your project, not a universal constant.'
+        help=f'CI gate: exit {EXIT_CODE_EFFICIENCY_REGRESSION} below RATIO occupancy.'
     )
     compare_parser.add_argument(
         '--require-efficiency-signal', action='store_true',
-        help=f'UX-87: with either efficiency gate, exit {EXIT_CODE_SIGNAL_UNAVAILABLE} if a run '
-        'has no `occupancy_ratio` and the gate therefore could not be evaluated. Without this, '
-        'the gate fails open (exit 0) but says so on stderr and publishes '
-        '`efficiency_gate_evaluated: false` in --format json. For pipelines that would rather '
-        'break than silently stop gating.'
+        help=f'Exit {EXIT_CODE_SIGNAL_UNAVAILABLE} if the signal is missing.'
     )
     compare_parser.add_argument(
         '--baseline-run', action='append', metavar='PATH',
-        help='UX-59: an additional run directory forming the baseline *set*. '
-             'Repeatable. With at least {} of them, the no-significant-change '
-             'band is derived from their measured spread (median +- k*1.4826*MAD) '
-             'instead of a fixed percentage. Seven repeated builds of one '
-             'unchanged commit put 4 of 7 outside the fixed 1%% rule. All runs '
-             'must share the candidate run_mode (UX-55).'.format(MIN_BASELINE_RUNS),
+        help='Extra baseline run; repeat to form a noise band.'
     )
     compare_parser.add_argument(
         '--band-k', type=float, default=DEFAULT_BAND_K, metavar='K',
-        help='Width of the --baseline-run noise band in scaled-MAD units '
-             '(default: {}).'.format(DEFAULT_BAND_K),
+        help='Noise-band width, in scaled-MAD units.'
     )
     # UX-104 item 2: a memory *note*, not a gate. Two flags rather than
     # one because the envelope is a fact about a run and the two runs are
@@ -1489,10 +1425,7 @@ def create_parser() -> argparse.ArgumentParser:
     # the candidate's would be comparing a run against itself.
     compare_parser.add_argument(
         '--baseline-plane2', default=None, metavar='PATH',
-        help='UX-104: the baseline run\'s Plane 2 report (`bga capture run`\'s JSON). '
-             'With --candidate-plane2, compare notes when the candidate\'s measured '
-             'memory envelope grew. A note, never a gate: there is no noise band for '
-             'peak RSS yet.',
+        help='Baseline Plane 2 report (adds memory detail).'
     )
     compare_parser.add_argument(
         '--candidate-plane2', default=None, metavar='PATH',
@@ -1500,16 +1433,11 @@ def create_parser() -> argparse.ArgumentParser:
     )
     compare_parser.add_argument(
         '--fail-on-low-confidence', action='store_true',
-        help=f'CI gate (UX-40): with --fail-on-regression, exit {EXIT_CODE_REGRESSION} when a run\'s '
-        'confidence is too low to gate on, instead of failing open. A gate that silently stops '
-        'gating reports green while checking nothing; this makes that state a failure a pipeline '
-        'can see. Default: off (fail open, with a warning on stderr).'
+        help=f'CI gate: exit {EXIT_CODE_REGRESSION} on low confidence.'
     )
     compare_parser.add_argument(
         '--regression-threshold', type=float, default=None, metavar='PCT',
         help='Percentage-point threshold for --fail-on-regression (default: the same significance '
-        'band bga compare\'s own verdict already uses - i.e. gate on exactly what the report calls '
-        'REGRESSED). Only relevant together with --fail-on-regression.'
     )
     compare_parser.set_defaults(func=cmd_compare)
 

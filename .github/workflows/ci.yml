@@ -158,19 +158,28 @@ jobs:
           rm -rf /tmp/theirproject/proj/optimized
 
       - name: Capture it, from a third directory, with no PYTHONPATH
-        # `cd /tmp/theirproject/proj` and nothing else on the path: the
+        # The venv is *activated*, which is what a user does and what the
+        # capture needs: `bga` launches `bst` as a subprocess, so `bst`
+        # has to be on PATH, not merely installed beside the console
+        # script. Running `/tmp/projvenv/bin/bga` by full path instead
+        # was this job's first failure - and doctor now names that case
+        # specifically rather than saying "bst is not installed".
+        #
+        # `cd /tmp/theirproject/proj` and no PYTHONPATH still matter: the
         # console script does not put cwd on sys.path, which is how every
         # prior round's checkout-relative assumption stayed hidden.
         run: |
           set -euo pipefail
+          export PATH="/tmp/projvenv/bin:$PATH"
           cd /tmp/theirproject/proj
           unset PYTHONPATH
-          /tmp/projvenv/bin/bga doctor .
-          /tmp/projvenv/bin/bga snapshot --diagnose -- bst --builders 2 build all.bst
+          bga doctor .
+          bga snapshot --diagnose -- bst --builders 2 build all.bst
 
       - name: The whole chain held
         run: |
           set -euo pipefail
+          export PATH="/tmp/projvenv/bin:$PATH"
           cd /tmp/theirproject/proj
           snapshot=$(ls -d .bga/runs/*/ | tail -1)
           echo "snapshot: $snapshot"
@@ -183,7 +192,7 @@ jobs:
             echo "the shim never ran: bst -> buildbox-run -> PATH shim is broken" >&2
             exit 1
           }
-          /tmp/projvenv/bin/bga analyze @last > /dev/null
+          bga analyze @last > /dev/null
           echo "analyze @last resolved from the store, in a foreign venv"
 
   bst-smoke:

@@ -455,15 +455,23 @@ class TestTheWholeChainProbe:
     def test_without_a_staged_runtime_it_skips_and_names_the_script(
             self, monkeypatch):
         """It will not build a sysroot: a diagnostic that builds a
-        sysroot is not a diagnostic."""
+        sysroot is not a diagnostic.
+
+        `bst` is faked present as well as the runtime faked absent - on a
+        machine with no bst the earlier skip fires first, and asserting
+        on `remedy` then reads None. That is how this passed locally and
+        failed on every matrix job.
+        """
         import tools.bga_doctor as doctor
 
+        monkeypatch.setattr(doctor.shutil, "which",
+                            lambda name: "/usr/bin/bst" if name == "bst" else None)
         monkeypatch.setattr(doctor, "_find_stageable_runtime", lambda: None)
 
         [finding] = doctor.check_capture_chain()
 
         assert finding["status"] == SKIP
-        assert "stage_runtimes.sh" in finding["remedy"]
+        assert "stage_runtimes.sh" in (finding["remedy"] or "")
 
     def test_the_isolated_home_keeps_the_user_site_packages(self, tmp_path):
         """UX-84, hit again in production code the first time this ran:
@@ -526,3 +534,44 @@ class TestTheWholeChainProbe:
         assert records and records[0]["status"] in (OK, WARN)
         if records[0]["status"] == WARN:
             assert "spine" in records[0]["remedy"]
+
+
+class TestBstBesideTheConsoleScriptButNotOnPath:
+    """Found by `installed-capture`'s first run: invoking `bga` by its
+    full path — `/venv/bin/bga` — does *not* put that venv's `bin` on
+    PATH, so a `bst` installed right beside it is invisible to
+    `shutil.which` and to every subprocess the capture launches.
+
+    "Not installed" and "installed next to me and not on PATH" are
+    different problems, and only one is fixed by installing something."""
+
+    def test_a_sibling_bst_is_named_rather_than_missed(self, tmp_path, monkeypatch):
+        import tools.bga_doctor as doctor
+
+        venv_bin = tmp_path / "bin"
+        venv_bin.mkdir()
+        (venv_bin / "bst").write_text("#!/bin/sh\nexit 0\n")
+        (venv_bin / "bst").chmod(0o755)
+        monkeypatch.setattr(doctor.sys, "executable", str(venv_bin / "python3"))
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: None)
+
+        finding = doctor.check_bst()
+
+        assert finding["status"] == FAIL
+        assert str(venv_bin / "bst") in finding["summary"]
+        assert "activate" in finding["remedy"]
+        assert "pip install" not in finding["remedy"], (
+            "telling a user to install what is already beside the binary "
+            "they just ran is how a diagnostic loses its reader")
+
+    def test_with_no_bst_anywhere_the_install_remedy_stands(
+            self, tmp_path, monkeypatch):
+        import tools.bga_doctor as doctor
+
+        monkeypatch.setattr(doctor.sys, "executable", str(tmp_path / "python3"))
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: None)
+
+        finding = doctor.check_bst()
+
+        assert finding["status"] == FAIL
+        assert "pip install" in finding["remedy"]

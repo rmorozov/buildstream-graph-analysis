@@ -309,13 +309,33 @@ def write_config(project: str, config: dict) -> None:
         handle.write("\n")
 
 
-def store_size_bytes(project: str) -> int:
+def snapshot_size_bytes(snapshot: str) -> int:
+    """Bytes on disk under one snapshot directory.
+
+    `UX-159`. Split out of `store_size_bytes` so `--list` can show which
+    snapshot is the 1.8 GB one - the size warning could say the store
+    was large, and the listing could not say where the weight sat, so
+    the user was told to delete something by hand without being told
+    which.
+    """
     total = 0
-    for snapshot in list_snapshots(project):
-        for root, _dirs, files in os.walk(snapshot):
-            for name in files:
-                try:
-                    total += os.path.getsize(os.path.join(root, name))
-                except OSError:
-                    continue
+    for root, _dirs, files in os.walk(snapshot):
+        for name in files:
+            try:
+                total += os.path.getsize(os.path.join(root, name))
+            except OSError:
+                continue
     return total
+
+
+def store_size_bytes(project: str) -> int:
+    return sum(snapshot_size_bytes(s) for s in list_snapshots(project))
+
+
+def human_bytes(size: int) -> str:
+    """`du -h`-style, because that is what the user will compare against."""
+    for unit in ("B", "K", "M", "G", "T"):
+        if size < 1024 or unit == "T":
+            return f"{size:.0f}{unit}" if unit == "B" else f"{size:.1f}{unit}"
+        size /= 1024.0
+    return f"{size:.1f}T"

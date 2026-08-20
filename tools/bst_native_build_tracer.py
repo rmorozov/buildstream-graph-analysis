@@ -642,6 +642,7 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         os.makedirs(shim_dir)
         os.makedirs(bind_dir)
 
+        print("Compiling the trace hook...", file=sys.stderr)
         compile_hook(bind_dir)  # writes bind_dir/hook.so directly - no extra copy step
         # UX-106: opt-in until `UX-108` measures the overhead. The hook
         # stays either way - it is the only source of opened paths and of
@@ -678,6 +679,14 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
                 # before the build starts, where the hook is blind.
                 # Written on the host side, beside the shim's other
                 # state, and read per sandbox by the shim.
+                # UX-159: on a big project this walk plus the declared-deps
+                # resolution takes real time, and it used to be silent -
+                # so the user could not tell "working" from "hung"
+                # between `Capturing into ...` and BuildStream's first
+                # line. The rule this follows: any bga-owned step that
+                # can plausibly take >5s announces itself.
+                print(f"Assessing {len(discover_element_names(project_dir))} "
+                      f"element(s) for static binaries...", file=sys.stderr)
                 verdicts = census_spine_verdicts(project_dir)
                 census_path = os.path.join(shim_dir, "spine-census.json")
                 with open(census_path, "w", encoding="utf-8") as handle:
@@ -4712,6 +4721,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 sandbox_tasks=count_build_tasks(wrapped_log_path)),
                 file=sys.stderr)
 
+        print("Analyzing the captured trace...", file=sys.stderr)
         report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
                                     invocation_log_path=invocation_log_path,
                                     plane1_log_path=wrapped_log_path)
@@ -4724,6 +4734,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             # losing the Plane 2 capture over that would throw away the
             # expensive half of what just ran.
             from .bst_extract_run import extract_run
+            print("Extracting run data (bst show)...", file=sys.stderr)
             try:
                 extract_run(args.project_dir, wrapped_log_path, args.run_dir,
                             log_format="wrapped", interrupted=interrupted)

@@ -49,12 +49,24 @@ directory takes a name too:
 bga analyze @last              # the newest snapshot
 bga compare @prev @last        # the last two
 bga analyze @20260819          # by stamp prefix
-bga snapshot --list            # what is on disk, and which alias is which
+bga snapshot --list            # what is on disk, with sizes, and which alias is which
 ```
 
 An explicit path keeps working everywhere it worked before. Outside a
 project, an alias fails by name — *"there is no BuildStream project here
 to resolve it against"* — rather than as a missing directory.
+
+A snapshot scales with process count, so a big project's store grows
+quickly — `--list` shows a size per snapshot and a total, and
+
+```bash
+bga snapshot prune --keep 5            # delete all but the newest five
+bga snapshot prune --older-than 30     # or by age, in days
+bga snapshot prune --keep 5 --dry-run  # say what would go, delete nothing
+```
+
+deletes them. `@last` and `@prev` are never deleted: the next comparison
+needs them.
 
 Two things stay sticky per project, in `.bga/config`: `--trace-opens`
 and `--trace-spine`. Decide them once (`bga snapshot --trace-spine=off

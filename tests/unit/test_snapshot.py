@@ -274,9 +274,16 @@ class TestListing:
         _list(str(project))
 
         out = capsys.readouterr().out
-        assert "20260103T000000Z  @last" in out
-        assert "20260102T000000Z  @prev" in out
-        assert "20260101T000000Z\n" in out
+        assert "20260103T000000Z" in out and "@last" in out
+        # UX-159 put a size between the name and the alias.
+        assert [ln for ln in out.splitlines()
+                if "20260103T000000Z" in ln and ln.rstrip().endswith("@last")]
+        assert [ln for ln in out.splitlines()
+                if "20260102T000000Z" in ln and ln.rstrip().endswith("@prev")]
+        # the oldest carries no alias - the line ends at its size
+        assert [ln for ln in out.splitlines()
+                if "20260101T000000Z" in ln
+                and not ln.rstrip().endswith(("@last", "@prev"))]
 
     def test_an_incomplete_capture_is_listed_without_an_alias(self, project, capsys):
         os.makedirs(os.path.join(
@@ -287,8 +294,10 @@ class TestListing:
         _list(str(project))
 
         out = capsys.readouterr().out
-        assert "20260101T000000Z  @last" in out
-        assert "20260102T000000Z  (no run directory" in out
+        assert [ln for ln in out.splitlines()
+                if "20260101T000000Z" in ln and ln.rstrip().endswith("@last")]
+        assert [ln for ln in out.splitlines()
+                if "20260102T000000Z" in ln and "(no run directory" in ln]
 
 
 def test_the_size_warning_fires_only_past_the_threshold(project, monkeypatch, capsys):
@@ -300,7 +309,8 @@ def test_the_size_warning_fires_only_past_the_threshold(project, monkeypatch, ca
 
     bga_snapshot._warn_if_large(str(project))
 
-    assert "Delete snapshot directories" in capsys.readouterr().err
+    # UX-159: the warning now names the command that does it.
+    assert "bga snapshot prune" in capsys.readouterr().err
 
 
 def test_snapshot_is_reachable_through_the_cli():

@@ -66,6 +66,46 @@ KEYING_BY_KIND: Dict[str, str] = {
 _IDENTITY_KEYS = ("url", "path", "location")
 
 
+
+# UX-173: kinds that *assemble* rather than build. A `stack` runs no
+# commands and a `filter` re-presents what it was given, so a blast of
+# 84 where 39 are stacks is not a blast of 84 things that build - and
+# the user's first sentence about blast analysis was precisely that it
+# ignores element kind.
+#
+# Unknown kinds count as building, deliberately: overstating what a
+# change costs is the safe direction for a number a developer uses to
+# decide whether to make it. The report says so where it prints the
+# split.
+ASSEMBLING_KINDS = frozenset({
+    "stack", "import", "filter", "junction", "compose", "link",
+})
+
+
+def is_building_kind(kind: Optional[str]) -> bool:
+    return (kind or "unknown") not in ASSEMBLING_KINDS
+
+
+def split_by_kind(uids, element_kinds: Dict[str, str]) -> Tuple[int, int]:
+    """`(building, assembling)` counts for a set of elements."""
+    building = sum(1 for uid in uids
+                   if is_building_kind(element_kinds.get(uid)))
+    return building, len(list(uids)) - building
+
+
+def format_kind_split(building: int, assembling: int) -> str:
+    """"7 elements (3 that build, 4 that assemble)" - or nothing to add.
+
+    Silent when everything builds, because "(7 that build)" after "7
+    elements" is noise; a reader only needs the split where it changes
+    the number's meaning.
+    """
+    total = building + assembling
+    if not assembling:
+        return f"{total} element(s)"
+    return (f"{total} element(s) ({building} that build, "
+            f"{assembling} that assemble)")
+
 def keying_of(kind: str) -> str:
     return KEYING_BY_KIND.get(kind, "unknown")
 
@@ -213,6 +253,7 @@ def resource_blast(inventory: dict,
         for uid in sorted(blast):
             by_kind[element_kinds.get(uid, "unknown")] = \
                 by_kind.get(element_kinds.get(uid, "unknown"), 0) + 1
+        building, assembling = split_by_kind(blast, element_kinds)
         measured = [durations[uid] for uid in blast if uid in durations]
         staged = sorted({r.get("staged_at") for uid in direct
                          for r in (inventory.get("elements") or {}).get(uid, [])
@@ -226,6 +267,9 @@ def resource_blast(inventory: dict,
             "blast_elements": sorted(blast),
             "blast_count": len(blast),
             "by_element_kind": dict(sorted(by_kind.items(), key=lambda kv: (-kv[1], kv[0]))),
+            # UX-173: of the blast, how much of it actually builds.
+            "building_count": building,
+            "assembling_count": assembling,
             "measured_seconds": sum(measured) if measured else None,
             "measured_elements": len(measured),
             "staged_at": staged,

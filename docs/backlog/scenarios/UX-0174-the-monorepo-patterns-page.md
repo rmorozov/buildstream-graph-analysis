@@ -1,6 +1,6 @@
 # UX-174: the monorepo patterns page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-171 (the numbers the page reads), Direction 6 (the argument it condenses)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the numbers the page reads), Direction 6 (the argument it condenses)
 
 ## Motivation
 
@@ -57,3 +57,26 @@ provenance note (BuildStream source-kind docs or a measured
 demonstration on the UX-171 fixture — measured preferred, per house
 rule); `make lint-docs` green; the docs corpus line-count delta stays
 within the concision budget (one screenful, or the split-out guide).
+
+## What was built
+
+A section in `real-project.md` - "One repository, many elements: the
+monorepo question" - rather than a new page: the keying semantics in a
+paragraph, the four patterns as a table with blast shape and price, the
+one-command loop (`analyze` for the headline, `blast` to price a change
+before making it), and the honest limit.
+
+The limit is worth repeating here: this reads *declared* sources. When
+refs are bumped, how often `bst track` runs, whether a branch or a tag
+is pinned - those decide **when** a rebuild happens. What is measured
+here is **what one costs when it does**. Both matter and only the
+second is computable from the project on disk.
+
+The page does not recommend a pattern. It prints what each costs on the
+reader's own graph, which is the point: the right answer for a
+40-element project is routinely wrong for a 4,000-element one, and this
+tool's whole argument is that the number should decide.
+
+The README gains the same distinction in four lines and a link, per
+`UX-137`'s canonical-home rule, and `bga blast` joins the one-entry-point
+command list in `cli.md`.

@@ -1879,6 +1879,15 @@ class BuildEfficiencyAnalyzer:
             signals['top_blast_radius'] = [
                 br.element_uid for br in diag_result.top_blast_radius_elements[:5]
             ]
+            # UX-173: which order the ranking above is in, published
+            # rather than inferable - "ranked by cost" and "ranked by
+            # count because nothing was measured" are different claims.
+            signals['blast_radius_ranked_by'] = (
+                'measured-rebuild-time'
+                if any(br.downstream_weighted_duration_us
+                       for br in diag_result.blast_radius)
+                else 'element-count'
+            )
         
         # Criticality probability (Part 26)
         if diag_result.criticality_probabilities:

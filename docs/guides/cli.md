@@ -18,6 +18,7 @@ bga extract PROJECT build.log run/                  # log + project -> run direc
 bga analyze run/                                    # the analysis
 bga capture run PROJECT native.json -- bst build T  # Plane 2, inside the sandboxes
 bga correlate run/ native.json                      # join the two planes
+bga blast https://…/monorepo.git                    # what rebuilds if I touch this
 ```
 
 For the local loop specifically, those are the plumbing: `bga snapshot`

@@ -301,6 +301,7 @@
             "app.bst",
             "extra.bst"
         ],
+        "blast_radius_ranked_by": "measured-rebuild-time",
         "criticality_probability": {
             "base.bst": {
                 "probability": 1.0,

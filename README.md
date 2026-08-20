@@ -176,6 +176,25 @@ average, so two maximally-mis-added elements move it **−14.6pp in an 11-elemen
 The whole CI sequence — capture, baseline set, gates, and posting the verdict as a PR comment —
 is one page: [`docs/guides/ci-comment.md`](docs/guides/ci-comment.md).
 
+## One repository, many elements
+
+A `git` source keys on its **ref**, so `directory:` changes where a
+checkout is staged and not what its cache key covers: twenty elements
+sourcing one monorepo all rebuild on any commit to it. A `local` source
+keys on **content**, so only the elements whose files changed rebuild.
+
+`bga` measures which one your project does, and what it costs:
+
+```bash
+bga analyze @last                    # a Shared Sources table, and a headline
+                                     # when one repo's ref decides the graph
+bga blast https://…/monorepo.git     # what a commit to it rebuilds, and for how long
+bga blast components/lib-a           # the same question about one directory
+```
+
+The four ways to consume a monorepo and what each costs:
+[`real-project.md`](docs/guides/real-project.md#one-repository-many-elements-the-monorepo-question).
+
 ## Looking inside one element (Plane 2)
 
 Everything above is as deep as a BuildStream log goes: one start/end pair per element, nothing

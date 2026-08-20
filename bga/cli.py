@@ -872,6 +872,37 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return _execute_compare_and_write(args)
 
 
+def cmd_blast(args: argparse.Namespace) -> int:
+    """Execute `bga blast TARGET` (UX-172) - what rebuilds if I touch this.
+
+    A question rather than a gate, so it exits 0 on an answer of zero
+    just as it does on an answer of two hundred. The refusal grammar
+    lives in `compare`, where a gate belongs.
+    """
+    from bga.blast import blast, format_blast_json, format_blast_text
+
+    from bga.run_store import project_root
+
+    try:
+        run_dir = resolve_run_alias(args.run)
+    except StoreError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
+    if not Path(run_dir).is_dir():
+        print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
+        return 2
+    project = args.project or project_root() or "."
+    answer = blast(run_dir, args.target, project_dir=project)
+    output = (format_blast_json(answer) if args.format == 'json'
+              else format_blast_text(answer))
+    if getattr(args, 'output', None):
+        with open(args.output, 'w', encoding='utf-8') as handle:
+            handle.write(output + "\n")
+    else:
+        print(output)
+    return 0
+
+
 def cmd_cache_trend(args: argparse.Namespace) -> int:
     """Execute `bga cache-trend RUN...` (UX-103) - is the cache getting
     worse?
@@ -1370,6 +1401,42 @@ def create_parser() -> argparse.ArgumentParser:
         help='Path to the JSON report written by `bga capture run` (Plane 2).'
     )
     correlate_parser.set_defaults(func=cmd_correlate)
+
+    blast_parser = subparsers.add_parser(
+        'blast',
+        help="What rebuilds if I touch this repository, path or element?",
+        description='Answer the blast-radius question from whichever end you have '
+                    'it: a git url (every element sourcing that repository - the '
+                    'monorepo case, where one ref decides them all), a file or '
+                    'directory (the elements whose `local` sources stage it), or an '
+                    'element name (its downstream closure). Reports the direct '
+                    'elements, the closure split into kinds that build and kinds '
+                    'that assemble, and the measured cost from the named run '
+                    '(UX-172). A question, not a gate: always exits 0.',
+    )
+    blast_parser.add_argument(
+        'target', metavar='TARGET',
+        help='A git url, a path in the project, or an element name. Resolved in\n'
+             'that order, and the answer says which reading it used.'
+    )
+    blast_parser.add_argument(
+        'run', nargs='?', default='@last', metavar='RUN',
+        help='The run to measure against; `@last` by default, same alias grammar\n'
+             'as every other command.'
+    )
+    blast_parser.add_argument(
+        '--project', default=None, metavar='PATH',
+        help='The project a relative path is resolved against. Defaults to the\n'
+             'enclosing BuildStream project.'
+    )
+    blast_parser.add_argument(
+        '-f', '--format', choices=['text', 'json'], default='text',
+        help='Output format: text (human-readable), json (machine-readable).'
+    )
+    blast_parser.add_argument(
+        '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
+    )
+    blast_parser.set_defaults(func=cmd_blast)
 
     cache_trend_parser = subparsers.add_parser(
         'cache-trend',

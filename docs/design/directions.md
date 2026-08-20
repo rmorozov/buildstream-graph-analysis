@@ -584,6 +584,88 @@ about where the leverage now sits, ranked:
    single-machine tax to prove its worth in use, which the WEAK
    EVIDENCE hedge currently reflects.
 
+## Direction 6: the source axis — blast analysis by shared resource (argued 2026-08-20, round 18)
+
+Filed from a real user request, round 18: *blast analysis doesn't take
+element kind into consideration; and in the monorepo case — one repo
+populating the sources of many elements — it should answer "this repo
+was touched: how many recipes rebuild?"* Both halves are right, and the
+second opens an axis the tool has never had.
+
+### What blast radius currently is, and what it is blind to
+
+`compute_downstream_count` (`bga/graph/edg.py:281`) counts reachable
+downstream *elements*, per element, unweighted. Two blindnesses:
+
+1. **Kind.** `graph.json` already records `element_kind` per element,
+   and the counts ignore it: a blast of 84 where 39 are `stack`s and
+   4 are `import`s (no build commands, near-zero rebuild cost)
+   overstates the damage the way "0 of 7 scheduled built" overstated a
+   failed build's. The measured durations to weight by are in the same
+   run directory.
+2. **Sources.** Every blast question the tool can answer starts at an
+   *element*. The user's question starts at a *resource* — a git
+   repository, a local directory, a tarball — and no analysis maps
+   resources to the elements they populate, though `read_element_yaml`
+   already parses every element's `sources` stanza for the census.
+
+### The mechanism that makes monorepos the worst case
+
+BuildStream keys sources differently by kind, and the difference *is*
+the monorepo problem:
+
+- A **`git` source keys on its ref** (the commit sha). Twenty elements
+  sourcing the same url with different `directory:` values all carry
+  the same ref — any commit to that repository, touching any path,
+  bumps the tracked ref and rebuilds **all twenty** plus their
+  downstream closures. The `directory:` field narrows what is staged,
+  not what is keyed.
+- A **`local` source keys on content.** Elements staging different
+  subdirectories of one checkout rebuild only when *their* files
+  change — per-directory blast, which is what a monorepo wants and
+  exactly what the git-url pattern does not give.
+
+So the same monorepo consumed two ways has blast radii that differ by
+an order of magnitude, the project's `.bst` files encode which way it
+is consumed, and the tool can compute both today, offline, from the
+element YAML plus `graph.json`. That is the new dimension: **group
+elements by shared source resource, compute the union of their
+downstream closures, weight by kind and by measured durations, and
+rank resources by what touching them costs.** For `local` sources the
+question refines to the file level — "which elements' source
+directories contain this path" — which is the per-commit answer a
+monorepo actually needs.
+
+BuildStream has no native per-subdirectory git keying, so the
+patterns worth documenting are: whole-repo git url (simplest, widest
+blast — the pitfall this direction measures), per-component
+repositories or refs (smallest blast, most maintenance), the
+workspace/local-checkout pattern (content keying, per-directory blast,
+the practical monorepo answer for CI that checks the repo out anyway),
+and junction pinning (blast at junction granularity, visible the same
+way). The report's job is not to pick one — it is to show what the
+current pattern costs in measured time, so the choice is a number
+rather than a taste.
+
+### Decomposition
+
+- `UX-171` — the source inventory and the report section: resource →
+  elements → closure, counts by kind, measured cost when a run is
+  present, keying semantics stated per resource. The monorepo case is
+  the headline row.
+- `UX-172` — `bga blast <resource|element|path>`: the query form of
+  the same table, including the file-level answer for local sources.
+- `UX-173` — kind-awareness retrofitted into the *existing* blast
+  ranking and the compare-time invalidation note (the user's literal
+  first sentence).
+- `UX-174` — the monorepo patterns documentation: the keying
+  semantics, the four patterns, and how to read the new section.
+
+Plane 3 extension (not filed): cache logs already carry per-element
+rebuild history; joining it to the source inventory would turn "what
+would touching this cost" into "what has touching this cost this
+month" — worth filing once UX-171's inventory exists to join against.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -608,6 +690,7 @@ the other rounds now:
 | [15](../audits/round-15.md) | a real field failure the tool cannot see; the diagnosability chain filed and the fix claims re-verified (`UX-147`..`UX-154`) |
 | [16](../audits/round-16.md) | the tool meets a big project: a failed build verdicts IMPROVED, Ctrl-C destroys the trace, auto-spine bills every nested layout (`UX-156`..`UX-162`) |
 | [17](../audits/round-17.md) | all eight round-16 landings verified live and holding; the new findings are seams between verified features (`UX-163`..`UX-168`, plus `UX-169` from fixing them) |
+| [18](../audits/round-18.md) | every measured number reproduced exactly — the clean audit's tail is guards weaker than their prose; Direction 6 opened from the user's monorepo question (`UX-171`..`UX-177`) |
 
 ## Verification Log
 

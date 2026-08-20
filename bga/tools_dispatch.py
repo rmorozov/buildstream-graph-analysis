@@ -51,19 +51,19 @@ from typing import Dict, List, Optional, Tuple
 TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
     "wrap": (
         "tools.bst_run_wrapped",
-        "Run a command, writing a wrapper-timestamped log bga can ingest",
+        "Run a command, writing a log bga can ingest",
     ),
     "extract": (
         "tools.bst_extract_run",
-        "Turn a BuildStream log + project into a run directory (the analyzer's input)",
+        "Turn a log + project into a run directory",
     ),
     "capture": (
         "tools.bst_native_build_tracer",
-        "Plane 2: trace processes inside element sandboxes (run/report)",
+        "Plane 2: trace processes inside sandboxes",
     ),
     "rebuild-set": (
         "tools.bst_rebuild_set",
-        "Compute which elements a change would force a rebuild of",
+        "Which elements a change would force a rebuild of",
     ),
     "checkout-cost": (
         "tools.bst_checkout_cost",
@@ -87,31 +87,31 @@ TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
     ),
     "native-to-chrome": (
         "tools.native_trace_to_chrome_trace",
-        "Convert a Plane 2 native trace to Chrome Trace JSON",
+        "Plane 2 trace to Chrome Trace JSON",
     ),
     "cache-logs": (
         "tools.bst_cache_logs",
-        "Plane 3: mine BuildStream's own persisted element logs (no capture needed)",
+        "Plane 3: mine BuildStream's own element logs",
     ),
     "cross-check": (
         "tools.bga_cross_check",
-        "Cross-check an analysis against independently derived figures",
+        "Cross-check an analysis against other figures",
     ),
     "gen-synthetic": (
         "tools.gen_synthetic_scale_run",
-        "Generate a synthetic run directory at a chosen scale",
+        "Generate a synthetic run directory at a scale",
     ),
     "snapshot": (
         "tools.bga_snapshot",
-        "The whole local loop: capture + extract + analyze, and compare with the last one",
+        "Capture, analyze and compare - the whole local loop",
     ),
     "doctor": (
         "tools.bga_doctor",
-        "Check this machine can capture at all, before a build proves it cannot",
+        "Check this machine can capture at all",
     ),
     "baseline": (
         "tools.bst_baseline_set",
-        "Assemble a baseline set from published capture refs and band-compare against it",
+        "Assemble a baseline set and band-compare against it",
     ),
 }
 
@@ -134,8 +134,13 @@ def format_tool_help() -> str:
         "tools/, which remain runnable directly as `python3 -m <module>`):",
     ]
     for alias, (module, help_text) in TOOL_ALIASES.items():
-        lines.append(f"  {alias:<{width}}  {help_text}")
-        lines.append(f"  {'':<{width}}  ({module})")
+        # UX-158: one line each, module included. The module used to get a
+        # second line per alias, which doubled this block on the one
+        # screen every user reads first - but dropping it outright was
+        # wrong: these stay independently runnable, and a reader who
+        # wants to script one needs to know where it lives (the test
+        # above this behaviour caught that).
+        lines.append(f"  {alias:<{width}}  {help_text}  ({module})")
     return "\n".join(lines)
 
 

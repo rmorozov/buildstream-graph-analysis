@@ -28,6 +28,14 @@ reported, every time, whether or not anyone asked.
 that handled only the current layout would work today and fail on the
 history it exists to read.
 """
+
+HELP = """Fetch published capture refs and build a baseline set from them.
+
+A single baseline run cannot say whether a delta is noise. This assembles
+several comparable runs into the set `compare --baseline-run` judges against.
+
+Full background: docs/guides/ci.md
+"""
 import argparse
 import json
 import os
@@ -356,9 +364,15 @@ def format_set_text(members: List[dict], homogeneity: dict) -> str:
     return '\n'.join(lines)
 
 
+def _CompactRawHelp(prog):
+    """UX-158: one shared compact help layout, imported lazily so
+    this module stays runnable on its own."""
+    from bga.help_format import CompactRawHelp
+    return CompactRawHelp(prog)
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=HELP, formatter_class=_CompactRawHelp,
     )
     parser.add_argument(
         '--remote', default='origin',

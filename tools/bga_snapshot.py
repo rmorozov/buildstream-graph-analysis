@@ -23,6 +23,15 @@ through their own `main()`s. Nothing here can drift from what the
 explicit three commands do, because it is them - including the UX-78
 refusals, which a cross-mode pair still hits.
 """
+
+HELP = """Capture, analyze, and compare against the previous run - one command.
+
+Runs the build under the tracer, stores the capture in `.bga/runs/`, prints
+the analysis, and compares it against the last healthy snapshot. Run it once
+before your change and once after; the comparison is automatic.
+
+Full background: docs/guides/local-loop.md
+"""
 import argparse
 import json
 import os
@@ -90,19 +99,23 @@ def take_snapshot(project: str, command: List[str], config: dict,
     return snapshot, capture_main(argv)
 
 
+def _CompactRawHelp(prog):
+    """UX-158: one shared compact help layout, imported lazily so
+    this module stays runnable on its own."""
+    from bga.help_format import CompactRawHelp
+    return CompactRawHelp(prog)
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=HELP, formatter_class=_CompactRawHelp,
     )
     parser.add_argument(
         "--project", default=None,
-        help="The project to snapshot. Default: the nearest enclosing one, "
-             "found by walking up for project.conf.",
+        help='The project to snapshot.'
     )
     parser.add_argument(
         "--trace-opens", dest="trace_opens", action="store_true", default=None,
-        help="Record opened paths (UX-46). Sticky: stored in .bga/config and "
-             "reused until changed.",
+        help='Record opened paths (UX-46).'
     )
     parser.add_argument(
         "--no-trace-opens", dest="trace_opens", action="store_false",
@@ -110,13 +123,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--trace-spine", choices=["off", "on", "auto"], default=None,
-        help="The ptrace spine's policy (UX-113). Sticky, like --trace-opens. "
-             "Default for a new project: auto.",
+        help='The ptrace spine\'s policy (UX-113).'
     )
     parser.add_argument(
         "--no-compare", action="store_true",
-        help="Take the snapshot and report on it, but do not compare against "
-             "the previous one.",
+        help='Take the snapshot and report on it, but do not compare against the previous one.'
     )
     parser.add_argument(
         "--list", action="store_true",
@@ -124,15 +135,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--diagnose", action="store_true",
-        help="UX-146: record what the bwrap shim received and exec'd, into "
-             "the snapshot, and print a summary. For when a capture fails on "
-             "a build that plain `bst` completes. Not sticky.",
+        help='UX-146: record what the bwrap shim received and exec\'d, into the snapshot, and print a summary.'
     )
     parser.add_argument(
         "--no-inject", action="store_true",
-        help="UX-146: run the build with the shim installed but injecting "
-             "nothing, to find out whether the argv rewrite is what breaks it. "
-             "Captures nothing. Implies --diagnose. Not sticky.",
+        help='UX-146: run the build with the shim installed but injecting nothing, to find out whether the argv rewrite is what breaks it.'
     )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
                         help="The build to run, e.g. -- bst build all.bst")

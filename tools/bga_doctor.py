@@ -20,6 +20,13 @@ happened, and cites it. It is read-only by contract: it recommends
 `stage_runtimes.sh`, it never runs it - a diagnostic that mutates the
 thing it is diagnosing cannot be run twice with the same meaning.
 """
+
+HELP = """Check whether this machine can capture a build at all.
+
+Runs the environment checks a failed capture would have needed: bst, bwrap,
+a C compiler, an executable scratch directory, a fresh casd, and whether the
+project loads. Each failure carries the remedy that actually fixes it.
+"""
 import argparse
 import json
 import os
@@ -796,9 +803,15 @@ def _tail(path: str, lines: int = 6) -> List[str]:
         return []
 
 
+def _CompactRawHelp(prog):
+    """UX-158: one shared compact help layout, imported lazily so
+    this module stays runnable on its own."""
+    from bga.help_format import CompactRawHelp
+    return CompactRawHelp(prog)
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=HELP, formatter_class=_CompactRawHelp,
     )
     parser.add_argument(
         "project_dir", nargs="?", default=None,

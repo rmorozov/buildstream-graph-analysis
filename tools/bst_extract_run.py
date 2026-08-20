@@ -508,22 +508,28 @@ def extract_run(
     }
 
 
+def _CompactRawHelp(prog):
+    """UX-158: one shared compact help layout, imported lazily so this
+    module stays runnable on its own."""
+    from bga.help_format import CompactRawHelp
+    return CompactRawHelp(prog)
+
 def main() -> int:
     parser = argparse.ArgumentParser(
+        formatter_class=_CompactRawHelp,
         description="Produce a complete bga-ready run directory (run-context.json + "
         "graph.json + trace.json) from a real BuildStream project + log in one step.",
     )
     parser.add_argument("project_dir", help="Path to the BuildStream project directory")
     parser.add_argument("log_path", help="Path to the build log (wrapped or raw)")
-    parser.add_argument("output_dir", help="Directory to write the run directory into")
+    parser.add_argument("output_dir", help="Where to write the run directory.")
     parser.add_argument(
         "--format", choices=("auto", "wrapped", "raw"), default="auto",
         help="Input log format - same semantics as bst_log_to_chrome_trace.py",
     )
     parser.add_argument(
         "--start-time", default=None,
-        help="ISO-8601 timestamp anchor for raw-format elapsed timestamps; "
-        "defaults to the log file's mtime.",
+        help='ISO-8601 timestamp anchor for raw-format elapsed timestamps; defaults to the log file\'s mtime.'
     )
     parser.add_argument(
         "--trace-epsilon-us", type=int, default=50000,
@@ -531,48 +537,27 @@ def main() -> int:
     )
     parser.add_argument(
         "--bst-bin", default="bst",
-        help="Path to the bst executable (default: bst, resolved via PATH)",
+        help="Path to the bst executable.",
     )
     parser.add_argument(
         "--strict", action="store_true",
-        help="Fail loudly (instead of the default best-effort warning) unless the project "
-        "uses ref-storage: project.refs and project.refs itself has no uncommitted changes "
-        "(P4-13). Only usable for projects with ref-storage: project.refs and at least one "
-        "trackable-ref source - see docs/backlog/tasks/P4-13-strict-mode-project-refs-consistency.md.",
+        help='Fail loudly (instead of the default best-effort warning) unless the project uses ref-storage: project.refs and project.refs itself has no uncommitted changes (P4-13).'
     )
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,
-        help="Override the real --max-jobs value the build was invoked with (per-element "
-        "internal build-system parallelism, e.g. `make -jN` - a different, unrelated "
-        "concept from --builders/this tool's own resource_capacities.PROCESS). Usually "
-        "unnecessary: a wrapped log records the real invocation on its own first line and "
-        "this value is recovered from it automatically (UX-29). Pass it only to override "
-        "that, or for a raw log, which has no invocation line (UX-12).",
+        help='Override the real --max-jobs value the build was invoked with (per-element internal build-system parallelism, e.g.'
     )
     parser.add_argument(
         "--cpu-budget", type=int, default=None,
-        help="The number of CPU cores this build is *intended* to use - the operator's "
-        "declared envelope, as opposed to the environment's real detected core count "
-        "(host_cpu_count). Use this when the detected count doesn't reflect your real "
-        "constraint: a cgroup CFS CPU quota (docker --cpus/Kubernetes cpu limits throttle "
-        "CPU time, not core affinity, so os.sched_getaffinity can't see it), or simply "
-        "wanting to reserve headroom on a shared machine. When set, bga's oversubscription "
-        "check treats this as the governing ceiling instead of host_cpu_count (UX-15).",
+        help='The number of CPU cores this build is *intended* to use - the operator\'s declared envelope, as opposed to the environment\'s real detected core count (host_cpu_count).'
     )
     parser.add_argument(
         "--memory-budget-mb", type=int, default=None,
-        help="The amount of memory (MB) this build is *intended* to use - the operator's "
-        "declared envelope. No auto-detection (unlike --cpu-budget's host_cpu_count "
-        "counterpart) - purely operator-supplied. When set together with "
-        "--estimated-job-memory-mb, bga's memory oversubscription check (UX-21) compares "
-        "builders x native-max-jobs x --estimated-job-memory-mb against this budget.",
+        help='The amount of memory (MB) this build is *intended* to use - the operator\'s declared envelope.'
     )
     parser.add_argument(
         "--estimated-job-memory-mb", type=int, default=None,
-        help="A rough, operator-supplied estimate of one concurrent build job's memory "
-        "footprint (MB) - a single configurable constant, not a real per-task measurement "
-        "(no such measurement source exists in this pipeline, see UX-21). Only meaningful "
-        "together with --memory-budget-mb.",
+        help='A rough, operator-supplied estimate of one concurrent build job\'s memory footprint (MB) - a single configurable constant, not a real per-task measurement (no such measurement source exists in this pipeline, see UX-21).'
     )
     args = parser.parse_args()
 

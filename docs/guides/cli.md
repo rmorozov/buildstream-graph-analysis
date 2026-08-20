@@ -260,6 +260,7 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `latent-heavies` | info | heavy elements off the critical path, worth nothing to fix today |
 | `capacity-recommendation` | varies | the joint `--builders` × `--max-jobs` answer (`UX-116`): the sweep's scheduling knee, Plane 2's measured cores-busy, the `UX-104` memory ceiling and the host's cores, intersected, with the **binding** constraint named and the others shown beneath it. `high` when the run is configured above what its own measurements support, `medium` when there is room to grow, `info` when it is already at its ceiling. Needs `--plane2` |
 | `memory-envelope` | varies | what this build's measured per-element peak RSS implies for `--builders` against the host's RAM — `high` when the current builders count does not fit, `medium` when one more would not, `info` otherwise. Needs `--plane2` and a capture that recorded the host's memory (`UX-104`) |
+| `shared-source-blast` | medium | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). Needs a run whose `sources.json` the extraction wrote |
 
 `bga correlate --format json` → `.actionable[].recommendations[].id` (9) and `.restructuring[].id` (1):
 

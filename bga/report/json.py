@@ -52,6 +52,16 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section in (None, 'floors', 'replay'):
         data['floors'] = result.floors
 
+    # UX-171: the resource blast table, same rows the text report
+    # renders. Absent - not empty - when the run carries no source
+    # inventory or nothing is shared, for the same reason `run_instance`
+    # is: an empty list invites a consumer to render "no shared sources"
+    # where the truth is "not looked for".
+    if section in (None, 'graph') and getattr(result, 'resource_blast', None):
+        blast = result.resource_blast
+        if blast.get('rows'):
+            data['resource_blast'] = blast
+
     # UX-35: the already-decided capacity verdict the hints above are
     # conditioned on - published so a consumer can see *why* a hint
     # said what it said, and so `checks_ran: false` is legible rather

@@ -82,6 +82,44 @@ def _make_analyzer(args: argparse.Namespace) -> BuildEfficiencyAnalyzer:
     )
 
 
+def _attach_resource_blast(run_dir, analyzer, result) -> None:
+    """UX-171: the resource blast table, when the run carries an inventory.
+
+    `sources.json` is written by `bga extract`, which is the one moment
+    the project directory and the run are both in hand. A run captured
+    before UX-171 - or one extracted from a log without its project -
+    simply has none, and the section is absent rather than empty.
+    """
+    from bga import sources as sources_module
+    from bga.graph.edg import compute_reachability
+
+    inventory = sources_module.load_inventory(Path(run_dir) / 'sources.json')
+    if not inventory:
+        return
+    graph = getattr(analyzer, 'graph', None)
+    if graph is None:
+        return
+    downstream, _upstream = compute_reachability(graph)
+    element_kinds = {e.uid: (e.element_kind or 'unknown') for e in graph.elements}
+    # UX-53's single per-element duration definition, in seconds. Summed
+    # across a blast set this is *work*, not wall clock - the report
+    # says so where it prints it.
+    from bga.graph.edg import compute_element_durations
+    durations = {
+        uid: micros / 1e6
+        for uid, micros in compute_element_durations(
+            getattr(analyzer, 'normalized_tasks', []) or []).items()
+    }
+    rows = sources_module.resource_blast(
+        inventory, downstream, element_kinds, durations)
+    result.resource_blast = {
+        'rows': rows,
+        'element_count': len(graph.elements),
+        'headline': sources_module.monorepo_headline(rows, len(graph.elements)),
+        'unreadable': inventory.get('unreadable') or {},
+    }
+
+
 def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     """UX-83: let Plane 1's capacity advice consult Plane 2, when Plane 2
     is in hand for the same run.
@@ -206,6 +244,7 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
     # None and is unaffected.
     result = analyzer.analyze(run_dir, section=section)
     _attach_plane2_capacity(args, analyzer, result)
+    _attach_resource_blast(run_dir, analyzer, result)
     by_kind = getattr(args, 'by_kind', False)
 
     if args.format == 'json':

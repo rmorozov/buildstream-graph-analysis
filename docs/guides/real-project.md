@@ -78,6 +78,29 @@ that element's cache key and sandbox. There is no ignore mechanism, so
 every capture churns the key. Scope such sources below the root, or
 expect the churn; `bga doctor` warns when it finds one.
 
+### If you interrupt it
+
+A multi-hour capture is interrupted more often than it fails, so Ctrl-C
+is a supported way to end one rather than an accident.
+
+`bga snapshot` exits **130**. Whatever the build completed is kept and
+analyzed, and the report says the build did not finish — so no figure
+in it is presented as a measurement of a whole build, and a later
+comparison against that snapshot refuses for the same reason any
+unfinished build does. Interrupting *before* the build starts (the hook
+compile, the census walk) leaves nothing behind and says so, rather
+than leaving a snapshot that looks like a capture.
+
+An interrupt during the post-build extraction is the one case with a
+next step: `build.log` is complete, and the printed notice names the
+`bga extract` line that re-runs just the step that was cut off.
+
+The build gets a grace period to stop on its own before `bga`
+escalates, because a big build's `queue_summary` — which the whole
+comparison is built from — is written during that shutdown. Five
+minutes by default; raise it with `BGA_INTERRUPT_GRACE_SECONDS` if your
+build's own teardown is slower than that.
+
 A snapshot scales with process count, so a big project's store grows
 quickly — `--list` shows a size per snapshot and a total, and
 
@@ -87,8 +110,11 @@ bga snapshot prune --older-than 30     # or by age, in days
 bga snapshot prune --keep 5 --dry-run  # say what would go, delete nothing
 ```
 
-deletes them. `@last` and `@prev` are never deleted: the next comparison
-needs them.
+deletes them. `@last` and `@prev` are never deleted, and neither is the
+newest *healthy* run when both of those record builds that did not
+finish — that one is the baseline the next comparison walks back to.
+Snapshots with no run directory at all go first under any criterion,
+and are counted separately in what `prune` reports.
 
 Two things stay sticky per project, in `.bga/config`: `--trace-opens`
 and `--trace-spine`. Decide them once (`bga snapshot --trace-spine=off
@@ -727,13 +753,14 @@ own exit code, and what the others mean:
 [`cli.md`](cli.md#exit-codes). `--allow-mismatch` compares anyway.
 
 **One capture is not a baseline.** Run-to-run noise on this real build,
-measured across **three** captures of the *same commit* with nothing
-changed, is **5.8%** against a default significance rule of 1%
-(3614.2s, 3434.4s, 3405.8s, taken by the scheduled capture workflow).
-An earlier reading over two of those captures gave 2.9%, which is the
-same lesson with less of the spread visible — the wider figure is the
-one to plan against. If you are gating CI, build a baseline set instead
-of trusting a single pair:
+measured across **five** captures of the *same commit* with nothing
+changed, is **33%** against a default significance rule of 1% (3614.2s,
+3434.4s, 3405.8s, 3261.2s, 2712.4s, taken by the scheduled capture
+workflow). Earlier readings over two and then three of those captures
+gave 2.9% and 5.8% — the same lesson each time with less of the spread
+visible, which is the argument for planning against the widest figure
+you have and re-checking it as the history grows. If you are gating CI,
+build a baseline set instead of trusting a single pair:
 
 ```bash
 bga baseline --glob 'captures/<project>/<commit>-incremental-b4j4-*' -n 3 \
@@ -752,8 +779,14 @@ bga compare baseline/run candidate/run \
 
 Either way the fixed threshold is replaced by a median ± k·MAD band over
 the baseline set — a minimum of three runs, because a "band" over two
-points just restates them. The whole CI sequence is
-[`ci-comment.md`](ci-comment.md).
+points just restates them. Strictly better than the fixed rule, and not
+yet enough: over those five same-commit captures the band absorbs the
+−5.8% and −9.8% pairs and still calls the widest one `IMPROVED
+(-25.0%)`, because the slowest run falls below the lower edge of the
+band its own presence helped compute
+([`UX-170`](../backlog/scenarios/UX-0170-the-noise-band-still-calls-a-same-commit-pair-a-25-percent-win.md)).
+Use more baseline runs than the minimum where you can. The whole CI
+sequence is [`ci-comment.md`](ci-comment.md).
 
 ## Step 8 — put it in CI
 

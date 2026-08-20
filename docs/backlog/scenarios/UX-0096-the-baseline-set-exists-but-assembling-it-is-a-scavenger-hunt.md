@@ -168,3 +168,36 @@ the section above — it was run, but filed without the heading the
 fixing guide names, so a reader grepping for `## Verification Log`
 found nothing on a 🟢 item. Heading added by audit round 12; the
 evidence is the fixer's own.
+
+## Re-checked 2026-08-20 (round-17 follow-through): checked, not yet dischargeable
+
+The clause is *"after two scheduled cycles, at least one cold capture
+exists that no human dispatched (verify from the Actions ledger)"*. The
+ledger was read rather than waited on:
+
+- `real-project-capture.yml` has **31 runs, none of them `schedule`** —
+  every one is `workflow_dispatch` or the long-removed `push` trigger.
+- The weekly incremental cron (`0 3 * * 0`) landed 2026-08-18 with
+  `UX-81`; the monthly cold cron (`0 4 1 * *`) landed 2026-08-19 with
+  this item. Both are younger than their own period.
+- First weekly firing: **Sunday 2026-08-23**. First monthly firing:
+  **Tuesday 2026-09-01**. Two *cold* cycles — what the clause asks for
+  — therefore cannot be complete before 2026-10-01.
+
+So the clause is not merely undischarged, it is not yet dischargeable,
+and the date it becomes checkable is now written down instead of left
+as "only time can settle".
+
+Two mechanics worth naming while this waits, because either would make
+the schedule silently not fire and the clause would look like a
+tooling failure:
+
+- GitHub runs `schedule:` **only on the default branch's copy of the
+  workflow**. A cron that exists only on a feature branch never fires.
+- GitHub **disables scheduled workflows after 60 days without repository
+  activity**, and does not warn in the run list. This repository is far
+  from idle today; the risk is real for a quiet month later.
+
+Nothing to change in the workflow. Re-check after 2026-09-01 by
+filtering the ledger on `event: schedule`; the item closes when a
+`*-cold-*` capture ref exists whose run id belongs to a scheduled run.

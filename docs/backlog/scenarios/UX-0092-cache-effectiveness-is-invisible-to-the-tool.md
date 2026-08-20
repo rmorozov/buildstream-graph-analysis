@@ -205,3 +205,44 @@ nothing, in a tool whose central claim is that it does not do that.
 Suite 1215 (+14). `make lint`, `make check-clean` green. The end-to-end
 numbers above are real builds, not fixtures; the fdsdk figures are the
 published capture's own.
+
+## Re-checked 2026-08-20 (round-17 follow-through): still deferred, on more data
+
+The deferral above was written at n=3. The history has since grown to
+n=5 incremental captures plus one cold, and the check was re-run rather
+than assumed. `bga cache-trend` over all five, oldest first:
+
+```text
+run                             hit  built  cached     xfer  /artifact   churn
+32064333551/run                 72%     25      65        -          -       -
+32113933158/run                 72%     25      65        -          -   0+25r
+32122941503/run                 72%     25      65        -          -   0+25r
+32177690506/run                 72%     25      65        -          -   0+25r
+32223468993/run                 72%     25      65        -          -   0+25r
+```
+
+**The gateable metric has zero spread across five runs.** Same hit
+ratio, same built/cached split, no churn, and still no transfer at all
+— every published capture ignores remotes by design, so the metric most
+worth gating remains n=0. The `0+25r` column is the workflow's own cut
+set, deleted identically before each incremental capture, not a cache
+fault.
+
+Every capture on the remote is of the same freedesktop-sdk commit
+`953683fb` (five `*-incremental-b4j4-*` refs and one `*-cold-b4j4-*`).
+The blocker is unchanged and is now measured rather than predicted: a
+gate needs history across *different* commits, and there is none.
+
+**One figure above needs correcting.** The n=3 note records total
+duration spanning "3405.78s .. 3614.22s — a 6.1% spread". At n=5 the
+five wall clocks are 3614.22, 3434.43, 3405.78, 2712.39, 3261.22
+seconds — a spread of **33.2% of the minimum** (10.5% coefficient of
+variation), five times what the n=3 sample suggested. Runs that differ
+in nothing vary by a third of their own duration on GitHub's shared
+runners. That makes the argument against a duration-adjacent threshold
+stronger, not weaker, and it is the kind of figure `UX-132` exists to
+stop going stale silently.
+
+Still deferred. The next thing that would change the answer is the
+first scheduled capture of a *different* commit, which `UX-96`'s
+crons produce without a human — see that item for when they first fire.

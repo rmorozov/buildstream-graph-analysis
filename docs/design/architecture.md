@@ -364,7 +364,7 @@ Every judgement the report makes lives in `bga/findings.py` with a stable `id`, 
 
 ### 4. The known gap, stated rather than papered over
 
-**Both CI scenarios are now captured.** Rounds 6-10 were all incremental — 25 elements built, 65 skipped — which meant the critical path every round measured was the chain through the rebuilt elements rather than the project's real one. Round 11 took the first caches-off capture (`UX-86`): `bootstrap/build/gcc-stage1.bst`'s whole 18-element closure built from source with remotes ignored, 0 cached, 34.2 minutes, confidence 1.00. The constraint that produced warm-then-cut bounds the *target*, not the scenario — every `components/*` target roots in a 64-element compiler bootstrap, but `bootstrap/base-sdk/*` is rooted at a 2-element pre-built binary seed, so a bounded subtree builds from nothing. Related and measured: run-to-run noise on the real build spans **5.8%** across three captures of the *same* commit (3614.2s / 3434.4s / 3405.8s) against the regression gate's fixed 1% default, so `UX-59`'s band over a baseline *set* is the correct path. Its three-run minimum became reachable in round 11, once `UX-81` stopped each capture force-pushing over the last: the band those three define is median 3434.4s ± 3×42.5s (scaled MAD), and it correctly calls a pair the fixed rule reports as `IMPROVED (-5.8%)` no significant change. See `docs/audits/round-9.md`.
+**Both CI scenarios are now captured.** Rounds 6-10 were all incremental — 25 elements built, 65 skipped — which meant the critical path every round measured was the chain through the rebuilt elements rather than the project's real one. Round 11 took the first caches-off capture (`UX-86`): `bootstrap/build/gcc-stage1.bst`'s whole 18-element closure built from source with remotes ignored, 0 cached, 34.2 minutes, confidence 1.00. The constraint that produced warm-then-cut bounds the *target*, not the scenario — every `components/*` target roots in a 64-element compiler bootstrap, but `bootstrap/base-sdk/*` is rooted at a 2-element pre-built binary seed, so a bounded subtree builds from nothing. Related and measured: run-to-run noise on the real build spans **33%** across five captures of the *same* commit (3614.2 / 3434.4 / 3405.8 / 3261.2 / 2712.4s) against the regression gate's fixed 1% default, so `UX-59`'s band over a baseline *set* is the correct path. Its three-run minimum became reachable in round 11, once `UX-81` stopped each capture force-pushing over the last. The band those five define is median 3405.8s ± 3×214.3s (scaled MAD): it correctly calls the pairs the fixed rule reports as `IMPROVED (-5.8%)` and `(-9.8%)` no significant change, and — re-checked at n=5 on 2026-08-20 — still calls the widest same-commit pair `IMPROVED (-25.0%)`, because the slowest run falls below the lower edge of the band it helped build (`UX-170`). See `docs/audits/round-9.md`.
 
 ## Core invariants still load-bearing (Plane 1)
 
@@ -378,7 +378,9 @@ The spec's invariants (full text: `docs/spec/specification.md`) remain the real 
 
 ## Real extensions beyond the original spec
 
-Everything below is **additive**, not a spec contradiction — each is clearly marked non-spec in its own code/docstrings. This table is the one-scan replacement for reading the `docs/backlog/scenarios/*.md` files individually; each still has the full evidence trail if you need it.
+Everything below is **additive**, not a spec contradiction — each is clearly marked non-spec in its own code/docstrings.
+
+The table covers `UX-01`..`UX-76`: the additions that shaped the architecture this document describes. Everything filed since — the capture chain's diagnosability, the local snapshot store, the interrupt contract, the spine — is indexed with its status in [`docs/backlog/scenarios/README.md`](../backlog/scenarios/README.md), which is the live list; each item still has the full evidence trail in its own file.
 
 | ID | One-line addition | Status |
 |---|---|---|

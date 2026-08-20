@@ -100,23 +100,16 @@ bga compare /tmp/my-run-before /tmp/my-run-after
 
 It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence. Two runs that are not comparable are **refused** rather than compared, with an exit code of their own ([`cli.md`](docs/guides/cli.md#exit-codes)).
 
-> **One capture is not a baseline.** Measured on **three** captures of the *same* freedesktop-sdk commit, taken by the scheduled capture workflow: 3614.2s, 3434.4s, 3405.8s — a **5.8% spread with nothing changed**, against a default significance rule of 1%. Compare the first against the third under the fixed rule and the verdict is `IMPROVED (-5.8%)`; judged against the band those three runs define (median 3434.4s ± 3×42.5s scaled MAD), the same pair is `NO SIGNIFICANT CHANGE` — which is the truth, because they are the same commit. For CI, build a baseline *set* and use the band. `--baseline-run` is *in addition to* the two positional arguments, not instead of them — and the band is built from the `--baseline-run` entries alone, so it needs **three of them**; the positional baseline is not counted:
->
-> In CI, `bga baseline` assembles that set from published capture refs and band-compares in one command (`UX-96`):
->
-> ```bash
-> bga baseline --glob 'captures/<project>/<commit>-<mode>-b4j4-*' -n 3 --candidate runs/candidate
-> ```
->
-> It fetches the newest three, refuses a set whose captures are not comparable, and warns when they were produced by different `bga` revisions. What it composes is the explicit form:
->
-> ```bash
-> bga compare baseline/ candidate/ \
->     --baseline-run baseline-1/ --baseline-run baseline-2/ \
->     --baseline-run baseline-3/ --band-k 3.0
-> ```
->
-> With fewer, `bga` says so — `No noise band: 2 baseline run(s) supplied, 3 required` — and falls back to the fixed 1% rule rather than inventing a band.
+> **One capture is not a baseline.** Five captures of the *same*
+> freedesktop-sdk commit, nothing changed, span **33%** — 3614.2s down
+> to 2712.4s — against a default significance rule of 1%. Compare two of
+> them and the fixed rule says `IMPROVED (-25.0%)`. So gate CI on a
+> baseline *set* and its noise band, not on a single pair; `bga
+> baseline` assembles one from published capture refs in one command.
+> The figures, the band those five define, and where it is still not
+> enough:
+> [`real-project.md`](docs/guides/real-project.md#step-7--change-something-then-prove-it)
+> and [`ci-comment.md`](docs/guides/ci-comment.md).
 
 The full narrative version of this — capture, read, go inside, join, act, gate — is [`docs/guides/real-project.md`](docs/guides/real-project.md).
 

@@ -11,6 +11,9 @@
 // viewer should show has to enter the published schema first, where the
 // text renderer, CI and every external consumer get it too.
 
+import { handOff } from "./perfetto.js";
+import { renderBand, renderTrend, renderBlastSearch } from "./views.js";
+
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
 const COLUMNS = "bga:columns";
@@ -303,8 +306,7 @@ function wireTheHandoff() {
   button.addEventListener("click", async () => {
     status.textContent = "opening ui.perfetto.dev — sent tab to tab, not uploaded…";
     try {
-      const { handOff } = await import("./perfetto.js");
-      const { bytes } = await handOff();
+      const { bytes } = await handOff(traceUrl());
       status.textContent = `sent ${(bytes / 1024).toFixed(1)} KiB`;
     } catch (error) {
       status.textContent = String(error.message ?? error);
@@ -312,18 +314,67 @@ function wireTheHandoff() {
   });
 }
 
+// UX-195: inline first, fetch second - one code path, so the exported
+// file and the served page cannot render differently. `bga view
+// --export` writes the same payloads into `<script
+// type="application/json">` blocks; everything below is identical
+// either way, which is the point.
+export function inlined(name) {
+  const node = document.getElementById(`bga-${name}`);
+  if (!node) return null;
+  try {
+    return JSON.parse(node.textContent);
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function load(name, fallback = null) {
+  const here = inlined(name);
+  if (here !== null) return here;
+  try {
+    const response = await fetch(`${name}.json`);
+    if (!response.ok) throw new Error(String(response.status));
+    return await response.json();
+  } catch (error) {
+    if (fallback !== null) return fallback;
+    throw error;
+  }
+}
+
+// The trace is a data: URL in an export and a served path otherwise.
+// `handOff` fetches whichever it is given; `fetch` handles data: URLs,
+// so the Perfetto button works from `file://` with no server at all.
+export function traceUrl() {
+  const node = document.getElementById("bga-trace");
+  return node ? node.textContent.trim() : "timeline.json.gz";
+}
+
 async function boot() {
   const root = document.getElementById("report");
   try {
     const [payload, schemas, run] = await Promise.all([
-      fetch("report.json").then((r) => r.json()),
-      fetch("schemas.json").then((r) => r.json()),
-      fetch("run.json").then((r) => r.json()).catch(() => ({})),
+      load("report"),
+      load("schemas"),
+      load("run", {}),
     ]);
     document.getElementById("run-name").textContent = run.name ?? "bga";
     document.getElementById("run-path").textContent = run.run ?? "";
     document.title = `bga — ${run.name ?? "report"}`;
     render(payload, schemas[payload.schema], root);
+    // UX-196: the three views, each only when its payload is there.
+    const band = renderBand(payload);
+    if (band) root.prepend(band);
+    const store = await load("store", null).catch(() => null);
+    const trend = store && renderTrend(store);
+    if (trend) root.append(trend);
+    root.append(renderBlastSearch(async (target) => {
+      const response = await fetch(
+        `blast.json?target=${encodeURIComponent(target)}`);
+      const answer = await response.json();
+      if (!response.ok) throw new Error(answer.error ?? response.status);
+      return answer;
+    }));
     // UX-194: only when there is a timeline behind it. A dead button is
     // worse than no button - the run that has no Plane 2 log is exactly
     // the run whose user would spend a minute wondering what broke.

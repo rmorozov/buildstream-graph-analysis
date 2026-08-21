@@ -177,6 +177,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--list", action="store_true",
         help="List this project's snapshots, with sizes, and exit.",
     )
+    parser.add_argument(
+        "--format", choices=("text", "json"), default="text",
+        help="`json` emits the listing as a `store/v1` document, which "
+             "`bga view` draws the store trend from. Only with --list.",
+    )
     # UX-159: the store had a size warning and no way to act on it.
     # A subcommand rather than a flag, because it deletes.
     parser.add_argument(
@@ -243,7 +248,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     if args.list:
-        return _list(project)
+        return _list(project, as_json=args.format == "json")
 
     # `prune` is spelled as a bare word, because that is how it reads and
     # how the docs write it: `bga snapshot prune --keep 5`. Its own flags
@@ -516,39 +521,100 @@ def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:
     return cli_main(argv)
 
 
-def _list(project: str) -> int:
-    """Everything on disk, with the aliases resolution would give it.
+def store_listing(project: str) -> dict:
+    """The store as data - one `store/v1` document.
 
-    Incomplete captures are listed rather than hidden - they occupy the
-    disk the size warning is about - but they carry no alias, because
-    they are not what `@last` resolves to.
+    `UX-196`: the text listing and `--format json` are rendered from
+    *this*, so the viewer's store trend and `--list` cannot disagree
+    about what is on disk. Incomplete captures are listed rather than
+    hidden - they occupy the disk the size warning is about - but they
+    carry no alias, because they are not what `@last` resolves to.
     """
+    from bga import schemas
+
     snapshots = run_store.list_snapshots(project)
-    if not snapshots:
-        print(f"No snapshots in {project}. "
-              f"`bga snapshot -- bst build TARGET` takes one.")
-        return 0
     runs = run_store.list_runs(project)
     aliases = {}
     if runs:
-        aliases[runs[-1]] = "  @last"
+        aliases[runs[-1]] = "@last"
     if len(runs) > 1:
-        aliases[runs[-2]] = "  @prev"
-    print(f"{len(snapshots)} snapshot(s) in {project}:")
-    total = 0
+        aliases[runs[-2]] = "@prev"
+
+    rows = []
     for path in snapshots:
-        suffix = aliases.get(path, "")
-        if not run_store.has_run(path):
+        has_run = run_store.has_run(path)
+        rows.append({
+            "stamp": os.path.basename(path),
+            "path": os.path.abspath(path),
+            "bytes": run_store.snapshot_size_bytes(path),
+            "alias": aliases.get(path),
+            "has_run": has_run,
+            # UX-156/157/185's three ways to be incomplete, so the trend
+            # can mark them rather than drawing them as measurements.
+            "incomplete_reason": _incomplete_reason(path) if has_run else None,
+        })
+    return schemas.stamp({
+        "project": os.path.abspath(project),
+        "snapshots": rows,
+        "count": len(rows),
+        # Sum of file sizes, so it is a little under `du` (which also
+        # counts directory entries) and matches `du --apparent-size`.
+        "total_bytes": sum(row["bytes"] for row in rows),
+    }, schemas.STORE)
+
+
+def _incomplete_reason(snapshot: str):
+    """Why this snapshot is not a measurement, or None.
+
+    Read straight off the run context rather than recomputed, so the
+    one accessor `UX-185` consolidated stays the only answer.
+
+    The first version passed the *run directory* to `load_run_context`,
+    which takes the run-context **file** - and caught bare `Exception`,
+    so every row came back `None` and the listing quietly said no
+    snapshot was ever incomplete. Both halves are fixed: the path is
+    right, and the catch names the three failures a listing should
+    survive (an unreadable file, a malformed one, an older schema)
+    rather than hiding a typo.
+    """
+    from bga.exceptions import IngestionError
+    from bga.ingest.loader import load_run_context
+
+    context = os.path.join(snapshot, run_store.RUN_SUBDIR, "run-context.json")
+    try:
+        return load_run_context(context).incomplete_reason
+    except (OSError, IngestionError, json.JSONDecodeError, KeyError):
+        return None
+
+
+def _list(project: str, as_json: bool = False) -> int:
+    """Everything on disk, with the aliases resolution would give it."""
+    listing = store_listing(project)
+    if as_json:
+        print(json.dumps(listing, indent=2))
+        return 0
+
+    if not listing["snapshots"]:
+        print(f"No snapshots in {project}. "
+              f"`bga snapshot -- bst build TARGET` takes one.")
+        return 0
+    print(f"{listing['count']} snapshot(s) in {project}:")
+    for row in listing["snapshots"]:
+        if not row["has_run"]:
             suffix = "  (no run directory - the build produced no elements)"
+        elif row["alias"]:
+            suffix = f"  {row['alias']}"
+        else:
+            suffix = ""
+        if row["incomplete_reason"]:
+            suffix += f"  ({row['incomplete_reason']})"
         # UX-159: the size belongs next to the name. Without it the user
         # is told the store is large and left to guess which snapshot is
         # the heavy one.
-        size = run_store.snapshot_size_bytes(path)
-        total += size
-        print(f"  {os.path.basename(path):<18}{run_store.human_bytes(size):>9}{suffix}")
-    # Sum of file sizes, so it is a little under `du` (which also counts
-    # directory entries) and matches `du --apparent-size` closely.
-    print(f"  {'total':<18}{run_store.human_bytes(total):>9}")
+        print(f"  {row['stamp']:<18}"
+              f"{run_store.human_bytes(row['bytes']):>9}{suffix}")
+    print(f"  {'total':<18}"
+          f"{run_store.human_bytes(listing['total_bytes']):>9}")
     return 0
 
 

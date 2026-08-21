@@ -37,6 +37,7 @@ from typing import Dict, List
 ANALYZE = "analyze/v1"
 COMPARE = "compare/v1"
 BLAST = "blast/v1"
+STORE = "store/v1"
 
 # The key that carries the version, and the first key of every payload -
 # a consumer reading a truncated or streamed document sees it before it
@@ -267,6 +268,19 @@ _BLAST_HINTS = {
     "measured_seconds": {QUANTITY: "seconds"},
 }
 
+_STORE_REQUIRED = {
+    "project": "string",
+    "snapshots": "array",
+    "count": "integer",
+    "total_bytes": "integer",
+}
+
+_STORE_HINTS = {
+    "total_bytes": {QUANTITY: "bytes"},
+    "count": {QUANTITY: "count"},
+    "snapshots": {COLUMNS: ["stamp", "bytes", "alias", "incomplete_reason"]},
+}
+
 _SCHEMAS = {
     ANALYZE: lambda: _document(
         ANALYZE, "bga analyze --format json",
@@ -291,6 +305,14 @@ _SCHEMAS = {
         "the closure, the split into kinds that build and kinds that "
         "assemble, and the measured cost unless --no-cost was passed.",
         hints=_BLAST_HINTS),
+    STORE: lambda: _document(
+        STORE, "bga snapshot --list --format json",
+        _STORE_REQUIRED,
+        "What the run store holds: every snapshot with its stamp, size, "
+        "the alias `@last`/`@prev` resolution would give it, and why it "
+        "is not a measurement if it is not one. Incomplete captures are "
+        "listed rather than hidden - they occupy the disk.",
+        hints=_STORE_HINTS),
 }
 
 

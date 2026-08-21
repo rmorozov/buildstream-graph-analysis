@@ -777,6 +777,68 @@ handoff works identically from a `file://` opener.
 - `UX-196` — the comparative views: band strip, store trend, blast
   explorer.
 
+### Second iteration (argued 2026-08-21, round 22): the viewer learns what it is looking at
+
+Synthesized from two inputs after UX-193..196 landed: the user's four
+field observations, and an external review of the shipped viewer whose
+code claims round 22 verified one by one — **all six confirmed**. The
+review's thesis, adopted: *the biggest opportunity is not more generic
+JSON rendering; it is making the viewer understand BGA's analytical
+relationships and use Perfetto as the execution-detail engine.* The
+foundation (thin server, schema boundary, export, handoff) stays.
+
+**Adopted, with the ground truth that earned each:**
+
+1. **Recursive schema semantics** (review P0). Confirmed: hints are
+   read from top-level properties only, and everything nested falls to
+   `guessQuantity(key)` name-sniffing — two semantic systems that
+   demonstrably disagree (`peak_rss_mb: 512` renders "512 B";
+   a 0-100 `cpu_pct` renders "4200.0%"). The fix is the direction's
+   own rule taken seriously: hints resolve through nested schema
+   nodes, columns carry per-column metadata, the findings/blast item
+   shapes enter the schemas, `verdict` becomes a declared enum beside
+   its sentence (the banner currently string-matches prose), and
+   schema `description`s render on demand — the "why is this number
+   important" answer, sourced from the spec rather than viewer prose.
+2. **The BGA overview and the evidence header** (review P0 twice).
+   The shipped page renders sections; it does not render the
+   *argument* — real duration → scheduling gap → runtime gap →
+   floors, and above it the evidence line (confidence, coverage,
+   incompleteness). Every number from published JSON; the UX-196
+   no-arithmetic guard extends to both.
+3. **Perfetto as investigation, not destination** (review §6/§7).
+   Buttons that carry *why you are going* — a finding's context, a
+   pre-selected canned query — with a small link-builder
+   (TraceContext) rather than a new layer. Ordered **after** the
+   transport fix below, because context on a blocked popup is
+   context on nothing.
+4. **Tables that can be searched** (review §10), **the export keeps
+   its questions** (§8, option B — inline them), and **focused graphs
+   only** (§13/§14 — the review's own restraint matches the
+   direction's deferred-DAG stance: critical-path chain and blast
+   tree, no general DAG viewer).
+
+**Adjusted:** the review's four-layer architecture is directionally
+right and over-built for a no-toolchain viewer — TraceContext ships
+as a module, not a layer. Its P3s (element inspector, comparison
+workspace) stay deferred.
+
+**What the review missed and the field supplied:** the handoff it
+praises is **popup-blocked by construction in current Chrome** — the
+`window.open` is never synchronous with the user's click (the
+`--perfetto` page auto-runs with no activation at all; the report
+button opens only after an async fetch). Transport first: open the
+tab inside the click, fetch after, post when both are ready; the
+`?url=` deep-link (with a CORS allow for ui.perfetto.dev only)
+as the belt to the braces. And two shipped views cannot be seen at
+all — the band view renders only compare payloads, which no CLI path
+ever serves; the trend plots snapshot *size* where the filing
+promised duration and verdicts — found by this round's verification,
+not the review, and filed with it.
+
+Decomposed as `UX-198`..`UX-206`; the wheel-shape guard gap (CI never
+runs an installed `bga view`) rides with the unreachable-views item.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -805,6 +867,7 @@ the other rounds now:
 | [19](../audits/round-19.md) | the source axis landed and met its own output: the printed identity does not round-trip, and one guard passes with its sorter reverted (`UX-178`..`UX-182`) |
 | [20](../audits/round-20.md) | the field speaks: nine usage observations ground-truthed into ten filings, and the elision that reopened the round-trip (`UX-183`..`UX-192`) |
 | [21](../audits/round-21.md) | all ten field landings verified holding; Direction 7 argued — the viewer as a thin window onto the JSON, timelines to Perfetto (`UX-193`..`UX-197`) |
+| [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
 
 ## Verification Log
 

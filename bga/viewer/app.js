@@ -13,6 +13,8 @@
 
 import { handOff, deepLink } from "./perfetto.js";
 import { renderBand, renderTrend, renderBlastSearch } from "./views.js";
+import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
+import { renderQuestions } from "./questions.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -294,6 +296,67 @@ export function render(payload, schema, root) {
   return root;
 }
 
+
+// UX-199: a served page can ask the server; an export cannot. One
+// predicate, so the two modes cannot disagree about which they are.
+export function served() {
+  return /^https?:$/.test(location.protocol);
+}
+
+function safeStorage() {
+  try {
+    return window.localStorage;
+  } catch (error) {
+    // Blocked site data, a private window, a thumbnail renderer.
+    return null;
+  }
+}
+
+/** Type-ahead over section names and element uids. Scrolls; never filters. */
+export function wireJumpBox(nav, root, payload) {
+  const targets = jumpTargets(root, payload);
+  const box = document.createElement("input");
+  box.setAttribute("type", "search");
+  box.setAttribute("id", "jump");
+  box.setAttribute("placeholder", "Jump to…");
+  box.setAttribute("aria-label", "Jump to a section or element");
+  const list = document.createElement("ul");
+  list.className = "jump-hits";
+
+  const go = (target) => {
+    const node = target.kind === "section"
+      ? document.getElementById(target.key)
+      : root.querySelector(`[data-element="${CSS?.escape?.(target.key)
+          ?? target.key}"]`);
+    if (!node) return;
+    node.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    node.setAttribute("data-jumped", "true");
+    setTimeout(() => node.removeAttribute("data-jumped"), 1600);
+  };
+
+  box.addEventListener("input", () => {
+    const hits = matches(targets, box.value);
+    list.replaceChildren();
+    for (const hit of hits) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.textContent = hit.text;
+      button.setAttribute("data-jump", hit.key);
+      button.addEventListener("click", () => { go(hit); box.value = ""; list.replaceChildren(); });
+      item.append(button);
+      list.append(item);
+    }
+  });
+  box.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const [first] = matches(targets, box.value, 1);
+    if (first) { go(first); box.value = ""; list.replaceChildren(); }
+  });
+
+  nav.append(box, list);
+  return { targets, box, list };
+}
+
 // ------------------------------------------------------------------ boot
 
 
@@ -395,17 +458,50 @@ async function boot() {
     const store = await load("store", null).catch(() => null);
     const trend = store && renderTrend(store);
     if (trend) root.append(trend);
-    root.append(renderBlastSearch(async (target) => {
-      const response = await fetch(
-        `blast.json?target=${encodeURIComponent(target)}`);
-      const answer = await response.json();
-      if (!response.ok) throw new Error(answer.error ?? response.status);
-      return answer;
-    }));
+    // UX-199: the blast box is a *transport* - it asks the server. An
+    // export is a `file://` document with no server, so the box could
+    // never answer there and shipped as a control that always errors.
+    // Hidden in that mode, with the command to run instead.
+    if (served()) {
+      root.append(renderBlastSearch(async (target) => {
+        const response = await fetch(
+          `blast.json?target=${encodeURIComponent(target)}`);
+        const answer = await response.json();
+        if (!response.ok) throw new Error(answer.error ?? response.status);
+        return answer;
+      }));
+    } else {
+      const note = el("section", { "data-section": "blast-offline" },
+        el("h2", {}, "Blast radius"),
+        el("p", { class: "muted" },
+          "Not available in an exported report - the search asks the "
+          + "server, and there is not one here. Run "),
+        el("p", {}, el("code", {}, "bga blast <target> <run>")));
+      root.append(note);
+    }
+
+    // UX-199: the export used to strip the link to the questions page
+    // and leave nothing behind it - functionality lost rather than
+    // moved. They are inlined here instead, from the same module
+    // `sql.html` renders, so the two cannot drift.
+    if (!served()) root.append(renderQuestions(el));
     // UX-194: only when there is a timeline behind it. A dead button is
     // worse than no button - the run that has no Plane 2 log is exactly
     // the run whose user would spend a minute wondering what broke.
     if (run.has_timeline) wireTheHandoff();
+
+    // UX-199: navigation, last, over whatever was rendered. Nothing
+    // above changes; a reader who ignores all of it sees the same
+    // report in the same order.
+    anchor(root);
+    const controls = collapsible(root, {
+      document, storage: served() ? safeStorage() : null });
+    const contents = toc(root, { document, controls });
+    if (contents) {
+      wireJumpBox(contents, root, payload);
+      document.body.insertBefore(contents, document.body.firstChild);
+      document.body.setAttribute("data-has-toc", "true");
+    }
   } catch (error) {
     root.replaceChildren(el("div", { class: "verdict refused" },
       el("h2", {}, "Could not load this run"),

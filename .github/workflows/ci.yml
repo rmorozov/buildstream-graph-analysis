@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main]
 
+# UX-197: every job here installs the dev extras, so every job should
+# *fail* rather than skip if one of them is missing. Without this the
+# schema guards (UX-190, 25 of them) rendered as a single "1 skipped"
+# line whenever `jsonschema` was absent - real in CI, silent everywhere
+# else, which is backwards for a guard against schema drift.
+env:
+  BGA_EXPECT_DEV: "1"
+
 jobs:
   test:
     runs-on: ubuntu-latest

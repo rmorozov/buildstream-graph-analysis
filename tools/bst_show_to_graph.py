@@ -244,10 +244,25 @@ def run_bst_show(
         proc = subprocess.Popen(cmd, cwd=project_dir, stdout=out, stderr=err)
         tick = progress.ticker("bst show")
         started = time.monotonic()
-        while proc.poll() is None:
-            tick.note(f"{time.monotonic() - started:.0f}s elapsed")
-            time.sleep(0.1)
-        tick.done()
+        # `UX-197`: `subprocess.run` kills the child if the caller leaves
+        # the call by exception; the hand-rolled poll loop `UX-183` put
+        # here to draw a ticker dropped that, so a Ctrl-C during a long
+        # `bst show` returned to the shell and left `bst` running - the
+        # orphan reproduced at 120s, still alive after the parent took
+        # the KeyboardInterrupt. `BaseException`, not `Exception`,
+        # because KeyboardInterrupt and SystemExit are exactly the two
+        # this is about. Same contract `UX-157`/`UX-163` hold one phase
+        # over.
+        try:
+            while proc.poll() is None:
+                tick.note(f"{time.monotonic() - started:.0f}s elapsed")
+                time.sleep(0.1)
+        except BaseException:
+            proc.kill()
+            proc.wait()
+            raise
+        finally:
+            tick.done()
         out.seek(0)
         err.seek(0)
         stdout = out.read().decode("utf-8", errors="replace")

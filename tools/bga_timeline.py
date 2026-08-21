@@ -108,7 +108,7 @@ def render(snapshot: str, output: str,
         # The existing converters, called rather than reimplemented, so
         # this command cannot drift from the three-command form it
         # replaces.
-        code = plane1_main([wrapped, plane1])
+        code = plane1_main([wrapped, plane1], quiet=True)
         if code:
             raise RuntimeError(f"rendering Plane 1 failed (exit {code})")
 

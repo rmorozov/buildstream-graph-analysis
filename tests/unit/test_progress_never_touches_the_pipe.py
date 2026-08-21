@@ -12,8 +12,10 @@ cannot reach a pipe, a log file, or stdout is worth the rest of them.
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
+from unittest import mock
 
 import pytest
 
@@ -152,9 +154,55 @@ class TestWhatATerminalSees:
         assert stream.getvalue().endswith("\r")
 
 
+
+def _store(tmp_path, snapshots=("20260101T000000Z", "20260102T000000Z")):
+    """A project whose `.bga` store has something to measure.
+
+    `UX-183` put its ticker on the store walk, so this is the smallest
+    real long phase the suite can drive without a build.
+    """
+    (tmp_path / "project.conf").write_text("name: p\nmin-version: 2.0\n")
+    for stamp in snapshots:
+        run = tmp_path / ".bga" / "runs" / stamp / "run"
+        run.parent.mkdir(parents=True)
+        shutil.copytree(GOLDEN, run)
+        os.remove(run / "expected_output.json")
+    return tmp_path
+
+
 class TestStdoutIsUntouched:
     """The user's own scenario, made a test: `bga analyze --format json |
-    jq .` has to work with progress forced on."""
+    jq .` has to work with progress forced on.
+
+    `UX-197` corrected how this is checked. The original byte-identity
+    test ran `bga analyze` twice - once with no environment override,
+    once with `BGA_NO_PROGRESS=1` - and asserted the two stdouts
+    matched. Both children pipe their stderr, so `enabled()` saw a
+    non-TTY both times and drew nothing either time: the two runs were
+    byte-identical in **stderr** as well (0 bytes each, measured), so
+    the assertion said nothing whatever about progress. It would have
+    passed with the progress module deleted.
+
+    Two things were wrong and both are fixed here. `BGA_FORCE_PROGRESS`
+    now exists so a piped child can draw at all, and the command under
+    test is one that actually has a long phase - `bga analyze` on a
+    three-element fixture has none, so even forced it emits nothing.
+    `bga snapshot --list` walks the store, which is where `UX-183` put
+    a ticker.
+    """
+
+    def _run(self, argv, env_extra, cwd=None):
+        env = dict(os.environ, **env_extra)
+        env.pop("BGA_NO_PROGRESS", None)
+        env.pop("BGA_FORCE_PROGRESS", None)
+        env.update(env_extra)
+        return subprocess.run(
+            [sys.executable, "-c",
+             "import os, sys\n"
+             "os.chdir(sys.argv[1])\n"
+             "from bga.cli import main\n"
+             "raise SystemExit(main(%r))" % (argv,), cwd or os.getcwd()],
+            capture_output=True, env=env, cwd=os.getcwd())
 
     def _analyze(self, env_extra):
         env = dict(os.environ, **env_extra)
@@ -163,6 +211,39 @@ class TestStdoutIsUntouched:
              "from bga.cli import main; raise SystemExit(main("
              "['analyze', %r, '--format', 'json']))" % GOLDEN],
             capture_output=True, env=env, cwd=os.getcwd())
+
+    def test_forcing_progress_on_actually_draws(self, tmp_path):
+        """The precondition the old test lacked. Without this, every
+        assertion below is about two runs that both drew nothing."""
+        project = _store(tmp_path)
+        on = self._run(["snapshot", "--list"], {"BGA_FORCE_PROGRESS": "1"},
+                       str(project))
+        off = self._run(["snapshot", "--list"], {"BGA_NO_PROGRESS": "1"},
+                        str(project))
+        assert on.returncode == off.returncode == 0, on.stderr
+        assert on.stderr, "forcing progress on drew nothing - the comparison below would be vacuous"
+        assert b"\r" in on.stderr, "a ticker redraws in place; this is not one"
+        assert off.stderr == b"", off.stderr
+
+    def test_stdout_is_identical_while_progress_is_drawn(self, tmp_path):
+        project = _store(tmp_path)
+        on = self._run(["snapshot", "--list"], {"BGA_FORCE_PROGRESS": "1"},
+                       str(project))
+        off = self._run(["snapshot", "--list"], {"BGA_NO_PROGRESS": "1"},
+                        str(project))
+        assert on.stdout == off.stdout, (
+            "stdout differs depending on whether progress was drawn")
+        assert b"\r" not in on.stdout
+
+    def test_the_off_switch_beats_the_force_switch(self):
+        """`BGA_NO_PROGRESS` is documented; the force env is a test
+        affordance. A user who turned progress off must stay off no
+        matter what else is set."""
+        from bga import progress
+
+        with mock.patch.dict(os.environ,
+                             {"BGA_FORCE_PROGRESS": "1", "BGA_NO_PROGRESS": "1"}):
+            assert progress.enabled(_FakeTTY()) is False
 
     def test_the_json_bytes_are_identical_with_progress_on_and_off(self):
         with_progress = self._analyze({})

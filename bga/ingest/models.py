@@ -155,11 +155,6 @@ class RunContext:
     # refused every baseline older than itself would be telling users to
     # throw away the ones they came with.
     host_manifest: Optional[dict] = None
-    # UX-185: `{"suspended_seconds": float}` when the machine slept while
-    # this capture ran. Lives under `build_outcome` on disk beside
-    # `interrupted`, because it is the same claim: this run did not
-    # finish the way a measurement has to.
-    suspended: Optional[dict] = None
     # UX-54: whether the build this run describes actually succeeded -
     # not part of run-context/v9's spec-mandated schema (the spec has no
     # concept of a failed run at all), an additive extension
@@ -267,6 +262,15 @@ class RunContext:
     @property
     def suspension(self) -> Optional[dict]:
         """Did the machine sleep while this ran, and for how long?
+
+        `{"suspended_seconds": float}`, read from `build_outcome` where
+        it lives on disk beside `interrupted` - the same claim, that this
+        run did not finish the way a measurement has to.
+
+        `UX-197` deleted a `suspended` *field* that sat one letter from
+        this property's name, was never assigned by anything, and would
+        have answered `None` for a run that really did sleep. This
+        property is the only way to ask.
 
         `UX-185`. A third way to be incomplete, and the quietest: the
         hook and the spine stamp `CLOCK_MONOTONIC`, which does not

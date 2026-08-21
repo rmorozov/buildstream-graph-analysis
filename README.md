@@ -11,11 +11,11 @@ It works in three planes — one build's element schedule, the processes inside 
 
 ## Install
 
-Into the venv of the project you want to analyze — `bga` does not have to
-live in that project, or anywhere near it:
+Into the venv of the project you want to analyze — `bga` does not have to live in that project, or anywhere near it. Clone `--single-branch`: this repository also carries eight `captures/*` branches of published capture data, and a default clone fetches all of them (50 MiB against 5.3 MiB); nothing needs them up front, and `bga baseline` fetches the refs it wants on demand.
 
 ```bash
-pip install /path/to/bga-checkout          # or the git URL
+git clone --single-branch https://github.com/rmorozov/buildstream-graph-analysis
+pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
 
 Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real

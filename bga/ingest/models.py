@@ -155,6 +155,11 @@ class RunContext:
     # refused every baseline older than itself would be telling users to
     # throw away the ones they came with.
     host_manifest: Optional[dict] = None
+    # UX-185: `{"suspended_seconds": float}` when the machine slept while
+    # this capture ran. Lives under `build_outcome` on disk beside
+    # `interrupted`, because it is the same claim: this run did not
+    # finish the way a measurement has to.
+    suspended: Optional[dict] = None
     # UX-54: whether the build this run describes actually succeeded -
     # not part of run-context/v9's spec-mandated schema (the spec has no
     # concept of a failed run at all), an additive extension
@@ -260,18 +265,33 @@ class RunContext:
         return bool((self.build_outcome or {}).get("interrupted"))
 
     @property
+    def suspension(self) -> Optional[dict]:
+        """Did the machine sleep while this ran, and for how long?
+
+        `UX-185`. A third way to be incomplete, and the quietest: the
+        hook and the spine stamp `CLOCK_MONOTONIC`, which does not
+        advance during suspend, while Plane 1 stamps wall clock. So a
+        capture that met a laptop lid has one plane counting the sleep
+        as build time and the other not - and nothing about the run
+        looks wrong.
+        """
+        return (self.build_outcome or {}).get("suspended") or None
+
+    @property
     def incomplete_reason(self) -> Optional[str]:
         """Why this build is not a measurement, or `None` if it is one.
 
         `UX-156` refuses to verdict an unfinished build; `UX-157` added
-        the second way to be unfinished. One accessor so a consumer
-        cannot handle one and forget the other - which is what happened
-        between those two items.
+        the second way to be unfinished, `UX-185` the third. One
+        accessor so a consumer cannot handle one and forget the others -
+        which is what happened between the first two items.
         """
         if self.failed_elements:
             return "failed"
         if self.interrupted:
             return "interrupted"
+        if self.suspension:
+            return "suspended"
         return None
 
     @property

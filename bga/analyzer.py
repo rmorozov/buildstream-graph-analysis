@@ -313,7 +313,13 @@ class BuildEfficiencyAnalyzer:
         # support cannot pass a broken build on scheduling grounds.
         failed = self.run_context.failed_elements if self.run_context else []
         interrupted = bool(self.run_context and self.run_context.interrupted)
-        if failed or interrupted:
+        # UX-185: the third way to be incomplete, and the one that leaves
+        # no other trace. Same violation, so every consumer of
+        # `build_failed` - the analyze banner, compare's refusal, the CI
+        # gate - handles it without learning about it separately, which
+        # is the seam UX-157 established.
+        suspension = self.run_context.suspension if self.run_context else None
+        if failed or interrupted or suspension:
             # UX-156: carry how far the build got, not just what broke.
             # `AnalysisResult` does not expose `run_context`, so the
             # comparison downstream cannot recover these - and a verdict
@@ -337,6 +343,7 @@ class BuildEfficiencyAnalyzer:
                 # the interrupted case for free instead of needing to
                 # learn about it separately.
                 'interrupted': interrupted,
+                'suspended': suspension,
             })
 
         # Initialize blame chain analyzer with normalized tasks

@@ -647,7 +647,7 @@ def elements_dir_for(project_dir: str) -> str:
 
 def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
-                     no_inject: bool = False) -> int:
+                     no_inject: bool = False, inhibit: bool = False) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -827,7 +827,8 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
         try:
             if wrapped_log_path is not None:
                 with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
-                    returncode = run_wrapped(project_dir, cmd, out_f, env=env)
+                    returncode = run_wrapped(project_dir, cmd, out_f, env=env,
+                                             inhibit=inhibit)
             else:
                 # UX-157: same own-group treatment as the wrapped path,
                 # so an interrupt here cannot orphan the build either.
@@ -5122,6 +5123,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--no-inject", action="store_true",
         help='UX-146: install the shim but pass BuildStream\'s bwrap argv through untouched.'
     )
+    run_parser.add_argument(
+        "--inhibit", action="store_true",
+        help="UX-185: stop the machine sleeping while the build runs, via "
+             "systemd-inhibit (and gnome-session-inhibit when present)."
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -5242,7 +5248,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                                           invocation_log_path=invocation_log_path,
                                           trace_spine=_spine_policy(args.trace_spine),
                                           diagnostics_path=diagnostics_path,
-                                          no_inject=args.no_inject)
+                                          no_inject=args.no_inject,
+                                          inhibit=args.inhibit)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was

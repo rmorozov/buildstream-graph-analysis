@@ -462,6 +462,42 @@ bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shar
 
 `floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
+## A capture that meets a laptop lid (`UX-185`)
+
+The hook and the spine stamp `CLOCK_MONOTONIC`, which **does not advance
+while the machine is suspended**; the Plane 1 wrapper stamps wall clock.
+So a suspend mid-capture leaves Plane 2 under-reporting the elements it
+crossed and Plane 1 over-reporting them, and nothing about the run looks
+wrong.
+
+**Detection is not optional.** Every capture records both clocks at both
+ends; wall time running ahead of monotonic time is how long the machine
+slept. Past five seconds the run declares itself incomplete, and
+`UX-156`'s grammar does the rest — `bga analyze` banners it and `bga
+compare` refuses the verdict, with exit 6 under a gate:
+
+```text
+This capture spans a suspend: the machine slept for about 45 minutes
+while it ran. ... Re-run with `--inhibit`, or on mains power with the
+lid open.
+```
+
+**Prevention is.** `--inhibit` wraps the build in `systemd-inhibit
+--what=sleep:shutdown` (and `gnome-session-inhibit --inhibit idle` when
+present), which is not the default because taking a lock on your power
+management uninvited is not `bga`'s call:
+
+```bash
+bga snapshot --inhibit -- bst build all.bst
+```
+
+With neither inhibitor installed it says so in one line and runs anyway.
+`bga doctor` warns when the machine has a sleep policy that could fire.
+
+The spans are **not** corrected — which processes were mid-flight at the
+suspend is recorded nowhere, so there is nothing to correct them with.
+Refusal is the honest output.
+
 ## Long reports (`UX-187`)
 
 On a build whose critical path is hundreds of elements, the path alone

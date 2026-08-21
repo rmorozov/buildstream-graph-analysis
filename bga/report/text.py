@@ -518,7 +518,17 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
             counts = f", {built} built"
             if cached:
                 counts += f", {cached} already cached"
-        if violation.get('interrupted') and not violation.get('failed_elements'):
+        if violation.get('suspended') and not violation.get('failed_elements') \
+                and not violation.get('interrupted'):
+            # UX-185: neither a failure nor an interrupt - the build ran
+            # to the end, and the machine was asleep for part of it. The
+            # sentence names the fix, because the reader has a capture
+            # they cannot use and the next question is what to do
+            # differently.
+            from ..suspend import describe as _describe_suspension
+            lines.append(_describe_suspension(violation['suspended']))
+            what = "the machine slept while it ran"
+        elif violation.get('interrupted') and not violation.get('failed_elements'):
             # UX-157: an interrupt is not a failure, and saying it is
             # sends the reader hunting for a compile error.
             what = "it was interrupted before it finished"

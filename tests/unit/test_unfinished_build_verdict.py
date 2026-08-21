@@ -36,7 +36,9 @@ class TestTheDetailComesOffTheViolation:
             "candidate", _Result([_failed_violation(["lib-d.bst"])]))
         assert detail == {'run': 'candidate', 'failed_elements': ['lib-d.bst'],
                           'built': 0, 'scheduled': 7, 'cached': 6,
-                          'interrupted': False}
+                          'interrupted': False,
+                          # UX-185: the third way to be incomplete.
+                          'suspended': None}
 
     def test_a_capture_with_no_queue_summary_yields_no_counts(self):
         """`build_outcome` predates `queue_summary` on some captures, and a

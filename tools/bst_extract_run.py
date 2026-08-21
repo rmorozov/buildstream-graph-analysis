@@ -442,6 +442,18 @@ def extract_run(
         # *failed*; the user stopped it.
         "interrupted": bool(interrupted),
     }
+    # UX-185: whether the machine slept while this ran. Read from the
+    # wrapper's own clock pair, so a log kept and extracted later still
+    # carries the answer. Absent from every log written before UX-185,
+    # and those extract exactly as they did - a capture too old to have
+    # looked is not a capture that slept.
+    from bga import suspend as _suspend
+    from .bst_run_wrapped import read_clock_pairs
+
+    pairs = read_clock_pairs(log_path) if log_format != "raw" else {}
+    suspension = _suspend.slept(pairs.get("start"), pairs.get("end"))
+    if suspension:
+        run_context["build_outcome"]["suspended"] = suspension
     # UX-164 item 3: `scheduled = processed + skipped + failed` counted
     # cache hits as casualties - a run with 0 processed, 6 skipped and 1
     # failed read as "0 of 7 scheduled elements built", overstating the

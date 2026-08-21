@@ -458,6 +458,7 @@ def _build_failure_detail(name: str, result) -> dict:
     failed: List[str] = []
     built = scheduled = cached = None
     interrupted = False
+    suspended = None
     for violation in (result.violations or []):
         if violation.get('type') == 'build_failed':
             failed = list(violation.get('failed_elements') or [])
@@ -465,10 +466,11 @@ def _build_failure_detail(name: str, result) -> dict:
             scheduled = violation.get('scheduled_count')
             cached = violation.get('cached_count')
             interrupted = bool(violation.get('interrupted'))
+            suspended = violation.get('suspended')
             break
     return {'run': name, 'failed_elements': failed, 'built': built,
             'scheduled': scheduled, 'cached': cached,
-            'interrupted': interrupted}
+            'interrupted': interrupted, 'suspended': suspended}
 
 
 def _count_clause(detail: dict) -> Optional[str]:
@@ -497,7 +499,14 @@ def _describe_build_failures(details: List[dict]) -> str:
     parts = []
     for detail in details:
         counted = _count_clause(detail)
-        if detail.get('interrupted') and not detail['failed_elements']:
+        if detail.get('suspended') and not detail['failed_elements'] \
+                and not detail.get('interrupted'):
+            # UX-185: the durations are not measurements, so there is
+            # nothing to verdict - the same refusal, for a third reason.
+            slept = detail['suspended'].get('suspended_seconds', 0)
+            clause = (f"the {detail['run']} capture spans a suspend "
+                      f"({slept:.0f}s of sleep)")
+        elif detail.get('interrupted') and not detail['failed_elements']:
             # UX-157: say what happened. "The build failed" is wrong here
             # and would send a user looking for a compile error that does
             # not exist.

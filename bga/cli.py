@@ -248,10 +248,29 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
     by_kind = getattr(args, 'by_kind', False)
 
     if args.format == 'json':
+        # UX-187: the caps are a *text-rendering* concern. The machine
+        # format never truncates - a consumer that asked for JSON asked
+        # for all of it, and there is a guard.
         return format_json(result, section=section, by_kind=by_kind)
     elif args.format == 'csv':
         return format_csv(result)
-    return format_text(result, section=section, by_kind=by_kind)
+    return format_text(result, section=section, by_kind=by_kind,
+                       full_sections=_full_sections(args))
+
+
+# UX-187: which long sections a `--full-*` flag un-caps, by the name the
+# renderer keys on.
+_FULL_SECTION_FLAGS = {
+    "full_path": "path",
+    "full_sources": "sources",
+}
+
+
+def _full_sections(args: argparse.Namespace) -> frozenset:
+    return frozenset(
+        name for attribute, name in _FULL_SECTION_FLAGS.items()
+        if getattr(args, attribute, False)
+    )
 
 
 def _produce_sweep_output(args: argparse.Namespace) -> str:
@@ -1137,6 +1156,17 @@ def _add_common_arguments(
         'directory',
         type=str,
         help='Path to the BuildStream run directory (e.g., ~/.buildstream/cache/artifacts/run-<uuid>).'
+    )
+    # UX-187: the long sections are folded in the middle by default. The
+    # flags are on every analyze-shaped command because the sections are:
+    # `bga graph` renders the critical path too.
+    subparser.add_argument(
+        '--full-path', action='store_true',
+        help='Print every element of the critical path, not just its two ends.'
+    )
+    subparser.add_argument(
+        '--full-sources', action='store_true',
+        help='Print every shared-source row, not just the widest.'
     )
 
     subparser.add_argument(

@@ -699,8 +699,8 @@ server, no network — it opens from a downloads folder, a CI artifact
 viewer, or an email.
 
 Measured: a real 46 s capture of `examples/06` with both planes is
-**80 KiB**; the 1,202-element synthetic run is **636 KiB**, of which the
-page itself is 4.2% — the data is what an export weighs, which is the
+**82 KiB**; the 1,202-element synthetic run is **638 KiB**, of which the
+page itself is 6.0% — the data is what an export weighs, which is the
 point of keeping the viewer thin.
 
 Two ceilings, both **reported and never enforced** — a report that large

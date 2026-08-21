@@ -250,7 +250,7 @@ One self-contained page — the run's JSON inlined, the Perfetto timeline
 inlined as a `data:` URL, no port and no network. A reviewer downloads
 it from the run's artifacts and opens it; nothing has to be deployed for
 a viewer to exist. Measured on a real 46 s capture with both planes:
-**80 KiB**.
+**82 KiB**.
 
 ```yaml
       - name: Attach the full report

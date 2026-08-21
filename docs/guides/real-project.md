@@ -207,7 +207,8 @@ floor.
 ## Step 0 — prerequisites
 
 ```bash
-pip install /path/to/bga-checkout     # into your project's venv (UX-150)
+git clone --single-branch https://github.com/rmorozov/buildstream-graph-analysis
+pip install ./buildstream-graph-analysis   # into your project's venv (UX-150)
 bga doctor /path/to/your/project
 ```
 
@@ -216,6 +217,12 @@ wherever this repository happens to sit; it does not need to be in or
 near the project it analyzes, and the capture is exercised in exactly
 that shape by CI. `pip install -e ".[bst]"` from inside the checkout is
 the contributor mode.
+
+`--single-branch` because this repository doubles as the capture archive
+(`UX-77`): eight `captures/*` branches, which a default clone fetches
+whether or not you will ever read one. Nothing in this guide needs them,
+and the one command that does — `bga baseline` — fetches by ref rather
+than from the clone's refspec, so it works either way.
 
 Plane 1 (the whole-project analysis) needs only Python. Plane 2 — the
 tracer that looks *inside* an element's sandbox — needs a real `bst` and

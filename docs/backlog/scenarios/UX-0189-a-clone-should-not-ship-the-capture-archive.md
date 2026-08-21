@@ -1,6 +1,6 @@
 # UX-189: a clone should not ship the capture archive
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-77 (the capture-branch convention this documents around)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-77 (the capture-branch convention this documents around)
 
 ## Motivation
 
@@ -41,3 +41,81 @@ The documented clone command, run against the real remote in the
 packaging job (or a local mirror in tests), fetches no `captures/*`
 refs (`git branch -r` asserted); the docs-commands test covers the
 new lines; the fetch-on-demand line works against the mirror.
+
+---
+
+## What was built
+
+**The numbers first, measured against the real remote rather than
+estimated.** Eight `captures/*` refs, confirmed by `git ls-remote`, and
+the two clones side by side:
+
+```text
+git clone <url>                    .git = 50M    15 remote refs, 8 captures/*
+git clone --single-branch <url>    .git = 5.3M    2 remote refs, 0 captures/*
+```
+
+A 9.4x difference on first contact, for an archive nothing in the
+getting-started path reads. Fetching one capture back costs 8 MiB
+(`fdsdk-latest`: 7 files, 8.0 MiB of blobs), paid only by whoever wants
+it.
+
+**The clone is documented in both front doors** - README's install
+section and `real-project.md`'s Step 0 - each with the sentence saying
+what is being skipped and that `bga baseline` fetches on demand.
+Neither had a `git clone` line at all before this; both said
+`pip install /path/to/bga-checkout`, which quietly left the clone to
+the reader.
+
+**The safety check that mattered: is the archive still reachable?**
+`bga baseline` discovers with `git ls-remote` and reads through
+`FETCH_HEAD`, neither of which depends on the clone's refspec. Run for
+real from a `--single-branch` clone against the live remote, it fetched
+both captures of the named shape and then refused on a *content*
+ground (`NOT COMPARABLE: trace_spine differs across the set`) - the
+answer clone shape has nothing to do with.
+
+**A defect this item would have shipped without item 3.** In a
+`--single-branch` clone `refs/remotes/origin/captures/*` is never
+created, so `capture-workflow.md`'s own line
+
+```text
+git show origin/captures/fdsdk-latest:capture.tar.gz > capture.tar.gz
+```
+
+fails with `fatal: invalid object name` (exit 128, reproduced).
+Documenting the narrow clone without fixing that would have broken the
+workflow the narrow clone points people at. Both reads now go through
+`FETCH_HEAD`, the `src:dst` refspec is documented for when the ref
+should stay, and a guard forbids `git show|checkout|archive
+origin/captures/...` in any code fence outside the backlog and audit
+directories (which quote the defect deliberately).
+
+Tests: 10 new (`tests/unit/test_a_clone_without_the_archive.py`),
+against a local bare repository shaped like the remote - two
+`captures/*` branches carrying incompressible payload - so they assert
+git's behaviour with no network. The clone flags are **read out of the
+docs** rather than hardcoded, so the guard cannot pass against a
+command the docs no longer contain. Seven mutations, each red,
+including the discriminating one: swapping `--single-branch` for
+`--filter=blob:none`, which looks like the same optimization and still
+fetches all eight refs.
+
+**Two false greens found by falsifying, both in the fixture:**
+
+1. The payload was an arithmetic sequence, which zlib flattened to
+   nothing - the size guard was asserting 35 KiB against 35 KiB.
+   Seeded `random.Random(index).randbytes()` instead.
+2. Worse: `git clone` of a path on the same filesystem **hardlinks the
+   whole object store** and ignores `--single-branch` for the purpose
+   of what lands on disk, so both clones measured 828919 B against
+   829110 B. `--no-local` forces the negotiation a user actually gets
+   over http.
+
+**Deviation from the Required Fix:** the acceptance test runs against a
+local mirror rather than the real remote in the packaging job. A
+network fetch of the live repository would make a CI job fail on
+someone else's push, and the local mirror asserts the same property of
+git. The real-remote measurements above were taken by hand and are
+recorded here rather than re-run per commit.
+

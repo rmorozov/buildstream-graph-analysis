@@ -221,16 +221,26 @@ capture, so every document that references it keeps working. A capture
 whose traced build failed is still published as data at its own ref — it
 is a real result — but does not become what `-latest` points at.
 
+Fetch a capture ref explicitly rather than expecting the clone to carry
+it (`UX-189`): the documented clone is `--single-branch`, so
+`refs/remotes/origin/captures/*` does not exist locally and
+`git show origin/captures/fdsdk-latest:...` fails with *invalid object
+name*. Both forms below work in either clone shape — `FETCH_HEAD` for a
+one-shot read, the `src:dst` refspec when you want the ref to stay.
+
 ```bash
-# The newest good capture, unchanged from before
+# The newest good capture
 git fetch origin captures/fdsdk-latest
-git show origin/captures/fdsdk-latest:capture.tar.gz > capture.tar.gz
+git show FETCH_HEAD:capture.tar.gz > capture.tar.gz
 
 # `run/` is committed uncompressed too, so a checkout is analysable
 # with no untar step at all
 git fetch origin captures/fdsdk-latest
 git checkout -q FETCH_HEAD -- run
 bga analyze run
+
+# Keep the ref around instead of consuming FETCH_HEAD
+git fetch origin captures/fdsdk-latest:captures/fdsdk-latest
 
 # Every capture of one shape - the baseline set
 git ls-remote origin 'refs/heads/captures/fdsdk/953683fb-incremental-b4j4-*'

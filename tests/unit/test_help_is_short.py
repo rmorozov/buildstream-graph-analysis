@@ -53,7 +53,7 @@ SUBCOMMANDS = [
 TOOL_COMMANDS = [
     "wrap", "rebuild-set", "checkout-cost", "run-context",
     "graph-from-show", "log-to-chrome", "native-to-chrome",
-    "chrome-to-trace", "cross-check", "gen-synthetic", "timeline",
+    "chrome-to-trace", "cross-check", "gen-synthetic", "timeline", "view",
 ]
 
 

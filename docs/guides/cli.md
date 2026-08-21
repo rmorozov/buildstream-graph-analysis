@@ -628,6 +628,62 @@ guard asserting exactly that.
 Turn it off on a terminal with `BGA_NO_PROGRESS=1`, or
 `bga snapshot --no-progress`.
 
+## `bga view` — the report in a browser (`UX-193`)
+
+```bash
+bga view                 # @last, opens a tab
+bga view @prev --no-browser      # prints the url instead
+```
+
+A local page over one run's published JSON. `127.0.0.1`, a port the
+kernel picks, and an allowlist of exactly four documents — nothing else
+in the run is reachable, there is no directory listing, and no write
+method is answered.
+
+**It renders the schema, not the report.** The page asks
+`schemas.json` what each key *is* — a duration, a share, a findings
+array, a table with these columns — and renders from that. Two things
+follow, and both are deliberate:
+
+- A field added to `analyze/v1` appears in the viewer with **no change
+  to the viewer**.
+- Anything the viewer should show has to enter the published schema
+  first, where `--format json`, CI and every external consumer get it
+  too.
+
+The page is three files checked into the repository
+(`bga/viewer/{index.html,app.js,style.css}`) — no bundler, no npm, no
+build step. A richer TypeScript app is a welcome *consumer* of these
+payloads rather than a replacement: the view-hints below exist so one
+can be written without this project blessing a frontend stack.
+
+### View-hints v1
+
+Annotations in the JSON Schema, so a renderer does not have to guess
+what a number means. JSON Schema ignores keywords it does not know, so
+a hinted document validates exactly as before, and `UX-190`'s rule
+applies — adding a hint is an addition; changing what one *means* is a
+version bump.
+
+| Hint | Says |
+| --- | --- |
+| `bga:quantity` | `duration_us`, `bytes`, `share`, `count`, `seconds`, `ratio` |
+| `bga:severity` | this array is findings; that key carries the severity |
+| `bga:columns` | column order for an array of objects |
+| `bga:direction` | `lower_is_better` / `higher_is_better` / `neutral`, for signed deltas |
+
+Read them straight out of the tool:
+
+```bash
+bga analyze --schema | jq '.properties.total_duration_us'
+# { "bga:quantity": "duration_us" }
+```
+
+A quantity outside that closed set, or a hint on a key the document
+does not declare, is refused when the schema is built — a mistyped hint
+is invisible at the point of use, because the renderer just falls
+through and prints a plausible-looking raw number.
+
 ## `bga blast` — what rebuilds if I touch this (`UX-172`)
 
 The blast-radius question from whichever end you have it:

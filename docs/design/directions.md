@@ -666,6 +666,117 @@ rebuild history; joining it to the source inventory would turn "what
 would touching this cost" into "what has touching this cost this
 month" — worth filing once UX-171's inventory exists to join against.
 
+## Direction 7: the viewer — a thin window onto the JSON (argued 2026-08-21, round 21)
+
+Filed from the user's request, round 21: *"we are on the verge of
+necessity for making a viewer"* — `bga view @snapshot` serving a local
+page, timelines offloaded to ui.perfetto.dev, the schema enriched so
+standard visualization libraries can render the findings, and the
+whole thing thin enough to keep maintaining as the reports grow.
+
+### The one rule that keeps it thin
+
+**The published JSON is the entire interface.** UX-190 just gave every
+output a self-declared schema (`analyze/v1`, `compare/v1`,
+`blast/v1`); the viewer consumes exactly those payloads and nothing
+else — no private endpoints, no server-side rendering of report
+semantics, no viewer-only computation of numbers. Two consequences do
+all the work:
+
+1. *Anything the viewer should show must first exist in the JSON.*
+   Wanting a new panel forces the data into the published schema,
+   where the text renderer, CI consumers and external tools get it
+   too — the viewer can never fork the report's meaning.
+2. *The viewer renders the schema, not the report.* Sections are
+   generated generically — arrays with column hints become tables,
+   `findings[]` with severity become the findings list, deltas with
+   direction semantics get their arrows — so a new field renders with
+   zero viewer changes. Custom code is budgeted per-view and starts
+   at exactly one place: the Perfetto handoff.
+
+The door for "dozens of cool TypeScript libraries" is the same door:
+**view-hints in the schema** (a `bga:unit`/`bga:quantity`/
+`bga:severity` vocabulary on the JSON Schema properties — duration_us,
+bytes, share, count; finding severities; column orderings). Any
+external tool that reads JSON Schema can then chart the report without
+bga shipping or blessing a frontend stack. If a richer TS app ever
+exists, it is a *consumer* of this contract, not part of `bga view`.
+
+### The server: standard library, localhost, ephemeral
+
+`bga view @last`: `http.server` bound to `127.0.0.1` on an ephemeral
+port, `webbrowser.open`, `--port`/`--no-browser` for the rest. It
+serves three things: the static page (checked into the repo — vanilla
+ES modules, **no node toolchain, no build step**; the repo is a Python
+project and stays one), the snapshot's JSON payloads (generated
+through the same `main()`s the CLI uses, cached beside the run), and
+the chrome trace for the timeline handoff. Nothing writable, nothing
+outside the snapshot, no directory listing — the threat model is
+"local tool", and the binding plus a path allowlist keeps it that.
+
+### Timelines: all of it goes to Perfetto
+
+No timeline of our own, ever — ui.perfetto.dev's renderer and its SQL
+engine are better than anything this repo should maintain. The
+mechanics are the documented deep-link handshake: the local page opens
+`ui.perfetto.dev`, waits for the `PING`/`PONG`, and `postMessage`s the
+trace bytes — ~30 lines, no server round-trip, and worth one sentence
+of docs because it *looks* like an upload and is not: the trace goes
+browser-to-browser-tab, processed client-side.
+
+`bga view --perfetto @last` skips the report page entirely: serve the
+trace, open the handshake page, done — UX-188's `bga timeline` output
+is exactly the input. The **SQL engine** is exposed the cheap way: a
+"queries" page of canned PerfettoSQL snippets (per-element aggregates,
+sandbox-tax shares, longest stalls — each one paste-ready), grown as
+questions recur, costing a docs page rather than a feature.
+
+**Format decision, recorded**: stay with legacy Chrome JSON. Perfetto
+ingests it natively; the protobuf format buys density and streaming,
+not capability we lack, and our traces gzip well (Perfetto accepts
+gzipped input). Revisit trigger: a real capture whose JSON trace
+exceeds what the handshake comfortably posts (~hundreds of MB), which
+is UX-169 territory before it is a format problem.
+
+### Two delivery modes, one page
+
+The same static page runs from the server *and* as a file:
+`bga view --export report.html` inlines the JSON into the page and
+writes one self-contained artifact — the CI journey's PR-comment
+sibling (attach it to the pipeline), the "send me your report" answer
+for remote debugging, and the mode that needs no port. The Perfetto
+handoff works identically from a `file://` opener.
+
+### Usage scenarios (the brainstorm, kept)
+
+- **Snapshot home**: Key Findings first, the verdict banner with the
+  refusals given visual weight — a `NOT COMPARABLE` or suspend banner
+  in red is the honest-refusal work finally *looking* like what it is.
+- **The band, drawn**: compare view renders the noise band as a strip
+  with the baseline runs as dots and the candidate as a marker —
+  UX-170's "within the baseline set's own observed range" becomes
+  self-evident in a way no sentence achieves.
+- **Blast explorer**: the Shared Sources table with each row
+  clickable into its blast view; an element/path/url search box that
+  is `bga blast` in the browser.
+- **Store trend**: the run store as a timeline — durations, verdicts,
+  cache-trend per snapshot — making `--list` visual and the history
+  legible.
+- **Canned SQL page** (above) and **`--perfetto`** direct mode.
+- Deliberately *not* filed: a dependency-DAG view. It is the one
+  panel that would need a real graph library; it waits until a
+  concrete question needs it, with the vendoring decision made then.
+
+### Decomposition
+
+- `UX-193` — the core: server, shell page, schema-driven rendering,
+  view-hints v1 in the schemas.
+- `UX-194` — the Perfetto handoff: handshake, `--perfetto`, gzip,
+  canned SQL page, the format decision as a guard-visible note.
+- `UX-195` — the export mode and its CI wiring.
+- `UX-196` — the comparative views: band strip, store trend, blast
+  explorer.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -693,6 +804,7 @@ the other rounds now:
 | [18](../audits/round-18.md) | every measured number reproduced exactly — the clean audit's tail is guards weaker than their prose; Direction 6 opened from the user's monorepo question (`UX-171`..`UX-177`) |
 | [19](../audits/round-19.md) | the source axis landed and met its own output: the printed identity does not round-trip, and one guard passes with its sorter reverted (`UX-178`..`UX-182`) |
 | [20](../audits/round-20.md) | the field speaks: nine usage observations ground-truthed into ten filings, and the elision that reopened the round-trip (`UX-183`..`UX-192`) |
+| [21](../audits/round-21.md) | all ten field landings verified holding; Direction 7 argued — the viewer as a thin window onto the JSON, timelines to Perfetto (`UX-193`..`UX-197`) |
 
 ## Verification Log
 

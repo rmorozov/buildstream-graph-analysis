@@ -37,6 +37,30 @@ node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 
+def test_node_is_here_where_it_is_expected():
+    """The `UX-197` seam-6 rule, applied to the other silent gate.
+
+    That item made the `jsonschema` guards *fail* rather than skip
+    wherever `BGA_EXPECT_DEV` is set, because 25 guards vanishing into
+    one skip line is not a signal. This round then shipped 20
+    node-gated JavaScript guards behind exactly the same kind of gate
+    and did not apply the same rule - the identical hole, in the round
+    that fixed it.
+
+    Node is present on `ubuntu-latest`, and the arithmetic on CI's own
+    run confirms those 20 ran: 52 skips against 43 bst-gated + 1
+    trace_processor, where node's absence would have made it 64. This
+    keeps it that way.
+    """
+    if not os.environ.get("BGA_EXPECT_DEV"):
+        pytest.skip("not a dev environment by its own account "
+                    "(BGA_EXPECT_DEV is unset)")
+    assert node is not None, (
+        "BGA_EXPECT_DEV is set, so this environment claims to be able to run "
+        "the viewer's guards, but `node` is missing and every JavaScript "
+        "guard in this suite just skipped.")
+
+
 
 def _package_data_for(package):
     """`[tool.setuptools.package-data]`'s entry for `package`.

@@ -64,6 +64,10 @@ into one convenience command.
 import argparse
 import json
 import subprocess
+import tempfile
+import time
+
+from bga import progress
 import sys
 from typing import List, Optional, Sequence
 
@@ -226,13 +230,34 @@ def run_bst_show(
     own stderr, never mixed into stdout - confirmed empirically, so
     stdout only ever contains --format output."""
     cmd = [bst_bin, "show", "--deps", "all", "--format", _FORMAT, *targets]
-    proc = subprocess.run(cmd, cwd=project_dir, capture_output=True, text=True)
+    # UX-183: on a large project this is minutes inside one phase line,
+    # and there is nothing to count - `bst` is a subprocess and its
+    # stdout is the payload, not a progress stream. Elapsed seconds are
+    # the honest signal: "still running, 40s" beats a cursor that has
+    # not moved.
+    #
+    # Both streams go to temporary files rather than pipes. It is what
+    # makes the wait pollable at all, and it removes the pipe-buffer
+    # deadlock that a project with thousands of elements could otherwise
+    # reach while nothing is draining stdout.
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+        proc = subprocess.Popen(cmd, cwd=project_dir, stdout=out, stderr=err)
+        tick = progress.ticker("bst show")
+        started = time.monotonic()
+        while proc.poll() is None:
+            tick.note(f"{time.monotonic() - started:.0f}s elapsed")
+            time.sleep(0.1)
+        tick.done()
+        out.seek(0)
+        err.seek(0)
+        stdout = out.read().decode("utf-8", errors="replace")
+        stderr = err.read().decode("utf-8", errors="replace")
     if proc.returncode != 0:
         raise RuntimeError(
             f"bst show failed (exit {proc.returncode}) for targets {list(targets)}: "
-            f"{proc.stderr.strip()}"
+            f"{stderr.strip()}"
         )
-    return proc.stdout
+    return stdout
 
 
 def build_graph(stdout: str, targets: Sequence[str]) -> dict:

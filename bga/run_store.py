@@ -26,6 +26,8 @@ import re
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from . import progress
+
 STORE_DIRNAME = ".bga"
 RUNS_DIRNAME = "runs"
 CONFIG_NAME = "config"
@@ -367,7 +369,12 @@ def snapshot_size_bytes(snapshot: str, use_cache: bool = True) -> int:
         if cached is not None:
             return cached
     total = 0
+    # UX-183: the cold walk is 0.89s on a 50k-file store and grows with
+    # the store; on the machine that just finished a three-hour build it
+    # is the last thing between the user and their report.
+    tick = progress.ticker("measuring the store")
     for root, _dirs, files in os.walk(snapshot):
+        tick.step()
         for name in files:
             if root == snapshot and name == SIZE_CACHE_NAME:
                 # The memo is bga's own bookkeeping, not capture output;
@@ -378,6 +385,7 @@ def snapshot_size_bytes(snapshot: str, use_cache: bool = True) -> int:
                 total += os.path.getsize(os.path.join(root, name))
             except OSError:
                 continue
+    tick.done()
     if use_cache:
         _write_size_cache(snapshot, total)
     return total

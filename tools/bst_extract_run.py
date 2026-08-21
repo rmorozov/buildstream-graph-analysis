@@ -29,6 +29,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
 from .chrome_trace_to_bga_trace import (
@@ -549,6 +550,50 @@ def _drop_size_memo(run_dir: Path) -> None:
         pass
 
 
+def _junction_subproject(project_dir: str, junction_uid: str) -> Optional[str]:
+    """Where a junction's subproject is checked out, if it is on disk.
+
+    `UX-182`. Only a `local` source can be resolved without fetching -
+    which is the common case for a project being actively built, since
+    the subproject is right there in the tree. A junction sourced from
+    git that has not been fetched genuinely is not readable, and is
+    reported as such rather than guessed at.
+    """
+    from .bst_native_build_tracer import elements_dir_for, read_element_yaml
+
+    data = read_element_yaml(os.path.join(elements_dir_for(project_dir), junction_uid))
+    if not data or data.get("kind") != "junction":
+        return None
+    for source in data.get("sources") or []:
+        if isinstance(source, dict) and source.get("kind") == "local":
+            path = source.get("path")
+            if path:
+                candidate = os.path.join(project_dir, path)
+                if os.path.isdir(candidate):
+                    return candidate
+    return None
+
+
+def _resolve_junctioned(project_dir: str, uid: str) -> Tuple[Optional[str], Optional[str], str]:
+    """`(subproject_dir, element_name, junction_prefix)` for a uid.
+
+    A uid may nest (`a.bst:b.bst:c.bst`), so this walks left to right,
+    resolving each junction in the project the previous step landed in.
+    Returns `(None, None, prefix)` for the first junction it cannot
+    reach, so the caller can name it.
+    """
+    parts = uid.split(":")
+    current = project_dir
+    prefix_parts: List[str] = []
+    for junction in parts[:-1]:
+        subproject = _junction_subproject(current, junction)
+        if subproject is None:
+            return None, None, ":".join(prefix_parts + [junction])
+        current = subproject
+        prefix_parts.append(junction)
+    return current, parts[-1], ":".join(prefix_parts)
+
+
 def build_source_inventory(project_dir: str, element_uids) -> dict:
     """`sources/v1` for the elements this run built (`UX-171`).
 
@@ -557,30 +602,55 @@ def build_source_inventory(project_dir: str, element_uids) -> dict:
     project directory without invoking BuildStream, and `bst show` has
     no symbol for a source's url.
 
-    A uid carrying a junction prefix (`junction.bst:element.bst`) is a
-    *subproject's* element and its file lives in that subproject, not
-    here. Those are counted as unreadable rather than guessed at from a
-    path that does not exist, so the report can say how much of the
-    graph the inventory could speak for.
+    `UX-182`: a uid carrying a junction prefix
+    (`junction.bst:element.bst`) is a *subproject's* element, and its
+    file lives in that subproject - which is on disk whenever the
+    junction is sourced locally, the common case for a project being
+    actively built. Those are walked into and read. A junction that is
+    genuinely not there (sourced from a git the tree has not fetched)
+    stays `unreadable`, named, per `UX-171`'s own no-silent-skips rule.
+
+    **Identities cross the boundary differently by keying.** A
+    ref-keyed resource - a repository url - means the same repository
+    whichever project names it, so it is left global and two
+    subprojects sourcing one monorepo group together, which is the
+    whole question this axis answers. A content-keyed resource is a
+    path relative to *its own* project, so it is prefixed with the
+    junction it came from; without that, `files/src` in two
+    subprojects would report as one shared directory that does not
+    exist.
     """
     from bga import sources as sources_module
     from .bst_native_build_tracer import elements_dir_for, read_element_yaml
 
-    elements_dir = elements_dir_for(project_dir)
     per_element = {}
     complaints = {}
     for uid in element_uids:
-        if ":" in uid:
-            complaints[uid] = ["element of a junctioned subproject - its "
-                               "sources are declared in that project"]
+        subproject, name, prefix = _resolve_junctioned(project_dir, uid)
+        if subproject is None:
+            complaints[uid] = [
+                f"junction {prefix} is not checked out here - its subproject's "
+                f"sources cannot be read without fetching it"
+            ]
             continue
-        data = read_element_yaml(os.path.join(elements_dir, uid))
+        data = read_element_yaml(os.path.join(elements_dir_for(subproject), name))
         resources, notes = sources_module.resources_from_element(data)
+        if prefix:
+            resources = [_qualify(resource, prefix) for resource in resources]
         if resources:
             per_element[uid] = resources
         if notes:
             complaints[uid] = notes
     return sources_module.build_inventory(per_element, complaints)
+
+
+def _qualify(resource: dict, prefix: str) -> dict:
+    """Namespace a content-keyed identity to the junction it came from."""
+    if resource.get("keying") != "content":
+        return resource
+    qualified = dict(resource)
+    qualified["identity"] = f"{prefix}:{resource['identity']}"
+    return qualified
 
 
 def _CompactRawHelp(prog):

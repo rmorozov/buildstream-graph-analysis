@@ -1,6 +1,6 @@
 # UX-178: the tool's own printed identity does not round-trip through blast
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-171/UX-172 (the surfaces), UX-164 (the paste-and-go precedent)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-171/UX-172 (the surfaces), UX-164 (the paste-and-go precedent)
 
 ## Motivation
 
@@ -66,3 +66,33 @@ direct/blast/work numbers — the round-trip, by construction. The
 not-a-run directory exits 2 with the clean sentence (mutation:
 removing the guard reproduces the traceback). Help and docs lines
 unchanged.
+
+## What was built
+
+`known_identity(inventory, target)` in `bga/blast.py`, consulted
+*before* the url/path/element heuristics: a target that equals the raw
+identity, its stripped form, or `normalize_url(target)` resolves as
+that resource. The printed form round-trips by construction rather
+than by two heuristics happening to agree. The other readings are
+still reported, so an exact match decides the answer without hiding
+that the name was ambiguous.
+
+The adjacent edges, all four:
+
+- A directory that is not a run gets `analyze`'s clean sentence and
+  exit 2: `Error: <dir> is not a run directory (...). A snapshot's run
+  directory is `<snapshot>/run`.` — verified at the shell, `exit=2`.
+- `format_blast_text` prints *No element of that name is in this run*
+  when the element reading was used and the uid is unknown; the
+  comment that promised it no longer promises alone.
+- A top-level deleted file reads as a path when the inventory stages
+  the project root (`_stages_at_project_root`), and not otherwise —
+  the only case where a bare name could be one.
+- "a url", from `_ARTICLES`.
+
+Tests: 10 new (`tests/unit/test_printed_identity_round_trips.py`),
+including the acceptance's own construction — render the Shared
+Sources table on the fixture, extract the resource cell verbatim, feed
+it back to `blast`, and assert the same direct/blast/work numbers.
+Mutations: dropping the `known_identity` call reddens the round-trip;
+removing the not-a-run guard reproduces the raw traceback.

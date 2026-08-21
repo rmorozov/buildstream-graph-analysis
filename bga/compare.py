@@ -678,7 +678,12 @@ def _compare_results(
                      baseline_band.get('observed_high_us')]
             outside = [x for x in edges
                        if x is not None and not (low <= x <= high)]
-            baseline_band['runs_outside_band'] = len(outside)
+            # UX-181: named for what it is. After widening, only the
+            # set's two edges are still in hand, so this counts *edges*
+            # outside the band (0, 1 or 2) rather than runs - the
+            # boolean beside it is the load-bearing answer.
+            baseline_band['edges_outside_band'] = len(outside)
+            baseline_band.pop('runs_outside_band', None)
             baseline_band['describes_its_own_set'] = not outside
             significant = not (low <= candidate_total <= high)
             # UX-170: the disputed region - outside the band, but inside
@@ -814,16 +819,31 @@ def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Op
     an ambiguous multi-metric AND/OR) because it's the same real
     wall-clock number `compare_runs`'s own `verdict` field already
     gates on - "did the build get slower" is the natural top-level
-    question a CI regression gate exists to answer, and reusing the
-    exact same metric/formula the report already shows as `REGRESSED`
-    means `--fail-on-regression` (with no threshold override) fails
-    exactly when a human reading the report would call it a regression,
-    never a second, silently-different definition.
+    question a CI regression gate exists to answer.
+
+    **Where the gate and the verdict now diverge** (`UX-180`, correcting
+    this docstring's own former claim that they never could). Two later
+    features gave the report information this predicate does not read:
+
+    - `UX-59`'s noise band. With `--baseline-run`s supplied, the verdict
+      is judged against the band those runs define; this stays on
+      `threshold_pct`. A delta inside a wide band reads as no
+      significant change in the report and can still trip the gate.
+    - `UX-170`'s disputed region. A delta outside the band but inside
+      the range the baseline runs themselves reached is withheld as
+      `within the baseline set's own observed range` - not a verdict
+      about the build - while this predicate, seeing only the
+      percentage, would still call a regression there.
+
+    Both divergences are deliberate and neither is silent: the report
+    prints which rule it applied, and a pipeline that wants the band's
+    judgement should read `verdict` rather than only the exit code.
+    Left as-is because changing the gate changes behaviour for every
+    existing pipeline; `UX-170`'s own log names it as the open seam.
 
     threshold_pct defaults to the same _SIGNIFICANCE_PCT `verdict`
-    itself uses - an explicit override lets a CI pipeline set its own,
-    stricter or looser, bar without changing what the report's own
-    verdict text calls "regressed".
+    itself uses in the *no-band* case - an explicit override lets a CI
+    pipeline set its own, stricter or looser, bar.
     """
     baseline_total = comparison.baseline_metrics.get('total_duration_us')
     delta_total = comparison.deltas.get('total_duration_us')

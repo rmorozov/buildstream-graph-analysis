@@ -7,9 +7,7 @@
 - **What should I fix first, and what is it actually worth?** — ranked by how much the build would really lose if that element were free, which on a dense graph is a very different number from how big it is.
 - **And then what?** — the next few fixes, what the build drops to after each, and whether their savings add — projected from the capture you already have, instead of costing you another full build per finding.
 
-It works in three planes — one build's element schedule, the processes inside a single element's sandbox, and the per-element logs BuildStream already wrote for every build on your machine. What each one sees and costs is the table in [`docs/README.md`](docs/README.md#three-planes).
-
-**New here?** Install, then run the two commands under [Use it on your real project](#use-it-on-your-real-project). [`docs/guides/real-project.md`](docs/guides/real-project.md) is the same path at length, with real output at every step.
+It works in three planes — one build's element schedule, the processes inside a single element's sandbox, and the per-element logs BuildStream already wrote for every build on your machine. What each one sees and costs is the table in [`docs/README.md`](docs/README.md#three-planes). **New here?** Install, then run the two commands under [Use it on your real project](#use-it-on-your-real-project); [`docs/guides/real-project.md`](docs/guides/real-project.md) is the same path at length, with real output at every step.
 
 ## Install
 
@@ -20,11 +18,11 @@ live in that project, or anywhere near it:
 pip install /path/to/bga-checkout          # or the git URL
 ```
 
-`pip install -e .` from inside this checkout is the **contributor** mode;
-it is what `make test` and `make lint` expect, and not what a user needs.
-Plane 1 and Plane 3 work on that alone. Capturing Plane 2 also needs a
-real `bst` and `bubblewrap` in the same venv — `pip install -e ".[bst]"`,
-or your project's own BuildStream install.
+Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real
+`bst` and `bubblewrap` in the same venv (`pip install -e ".[bst]"`, or your
+project's own BuildStream install). `pip install -e .` from inside this
+checkout is the **contributor** mode, which is what `make test` and
+`make lint` expect and not what a user needs.
 
 ## Quick start (30 seconds, no BuildStream needed)
 
@@ -51,7 +49,7 @@ Critical Path Length: 3 elements
   Path: base.bst → lib.bst → app.bst
 ```
 
-Bigger fixtures need no BuildStream either: `make dev-run ARGS=--large` runs a 14-element sample, and `bga gen-synthetic /tmp/scale --seed 1` generates a byte-reproducible 1202-element one — which is how [round 2](docs/audits/round-2.md) found four defects invisible at eleven elements.
+Bigger fixtures need no BuildStream either: `make dev-run ARGS=--large` runs a 14-element sample, and `bga gen-synthetic /tmp/scale --seed 1` a byte-reproducible 1202-element one — which is how [round 2](docs/audits/round-2.md) found four defects invisible at eleven elements.
 
 ## Use it on your real project
 
@@ -66,22 +64,18 @@ bga snapshot -- bst build <targets>   # capture + extract + analyze
 bga snapshot -- bst build <targets>   # ...and compare against the previous one
 ```
 
-Run `bga doctor` first — it takes a second or two. Every capture
-environment this project has stood up was assembled by failure: a
-missing plugin, a compiler that is not there, `bwrap` blocked by a
-sysctl. Each has a one-line remedy, and reading it before a thirty-minute
-build is much cheaper than reading it after.
+Run `bga doctor` first — it takes a second or two. Every capture environment this project
+has stood up was assembled by failure (a missing plugin, an absent compiler, `bwrap` blocked
+by a sysctl); each has a one-line remedy, and reading it before a thirty-minute build is much
+cheaper than after.
 
-The second `snapshot` prints the analysis **and** the verdict against
-the first. Captures land in `.bga/runs/<UTC-stamp>/` under the project
-(gitignored), and every command that takes a run directory also takes
-`@last`, `@prev` or a stamp prefix — `bga analyze @last`,
-`bga compare @prev @last`. `bga snapshot` is those commands composed, so
-it changes no number and keeps every refusal: a caches-off run compared
-against a caches-on one still refuses.
+The second `snapshot` prints the analysis **and** the verdict against the first. Captures land
+in `.bga/runs/<UTC-stamp>/` under the project (gitignored), and every command taking a run
+directory also takes `@last`, `@prev` or a stamp prefix — `bga analyze @last`,
+`bga compare @prev @last`. `bga snapshot` is those commands composed, so it changes no number
+and keeps every refusal: a caches-off run compared against a caches-on one still refuses.
 
-The pieces underneath, for a log captured somewhere else or a capture
-that cannot live in the project directory:
+The pieces underneath, for a log captured elsewhere or a capture that cannot live in the project directory:
 
 ```bash
 # Capture through the wrapper: it records the real invocation on its own first
@@ -92,22 +86,19 @@ bga extract --format wrapped /path/to/your/project /tmp/build.log /tmp/my-run
 bga analyze /tmp/my-run --diagnostics
 ```
 
-Either way, comparing two runs is the same command — `bga snapshot` calls it for you, and you can call it yourself on any two run directories:
+Either way, comparing two runs is one command — `bga snapshot` calls it for you, and you can call it on any two run directories yourself:
 
 ```bash
 bga compare /tmp/my-run-before /tmp/my-run-after
 ```
 
-It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`) — gated on confidence. Two runs that are not comparable are **refused** rather than compared, with an exit code of their own ([`cli.md`](docs/guides/cli.md#exit-codes)).
+It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`, or `within the baseline set's own observed range` when a duration your own baselines already reached falls outside their band) — gated on confidence. Two runs that are not comparable are **refused** rather than compared, with an exit code of their own ([`cli.md`](docs/guides/cli.md#exit-codes)).
 
-> **One capture is not a baseline.** Five captures of the *same*
-> freedesktop-sdk commit, nothing changed, span **33%** — 3614.2s down
-> to 2712.4s — against a default significance rule of 1%. Compare two of
-> them and the fixed rule says `IMPROVED (-25.0%)`. So gate CI on a
-> baseline *set* and its noise band, not on a single pair; `bga
-> baseline` assembles one from published capture refs in one command.
-> The figures, the band those five define, and where it is still not
-> enough:
+> **One capture is not a baseline.** Five captures of the *same* freedesktop-sdk commit,
+> nothing changed, span **33%** (3614.2s → 2712.4s) against a default significance rule of 1%.
+> So gate CI on a baseline *set* and its noise band, not on a single pair — `bga baseline`
+> assembles one from published capture refs in one command. The figures, the band those five
+> define, and where it is still not enough:
 > [`real-project.md`](docs/guides/real-project.md#step-7--change-something-then-prove-it)
 > and [`ci-comment.md`](docs/guides/ci-comment.md).
 
@@ -142,20 +133,15 @@ Key Findings:
   components/_private/git-minimal.bst (548s), components/icu.bst (431s) (+2 more)
 ```
 
-
-That is one command on a real 3,614-second build, and every number in it is measured
-rather than estimated. What the block is doing, line by line, is
-[Reading the report](docs/guides/cli.md#reading-the-report) in the CLI reference; the same
-build walked end to end is [`docs/guides/real-project.md`](docs/guides/real-project.md).
-
-Three things worth taking from it:
-
-- **It names the constraint.** "This build is chain-bound, not scheduler-bound" is a different
-  problem from a scheduling gap, and the report says which one you have before it says anything else.
-- **Share of the path and what a fix is worth are different numbers.** `python3.bst` holds 17.7%
-  of the chain and fixing it recovers 3.2% of the build; on a mesh graph that gap is the norm.
-- **It refuses to double-count.** The top three are "exactly the sum of their individual savings",
-  stated because on other graphs they would not be.
+One command, every number measured rather than estimated. Three things worth taking from it:
+it **names the constraint** ("chain-bound, not scheduler-bound" is a different problem from a
+scheduling gap, and it says which one you have first); **share of the path and what a fix is
+worth are different numbers** (`python3.bst` holds 17.7% of the chain and fixing it recovers
+3.2% of the build — on a mesh graph that gap is the norm); and it **refuses to double-count**
+(the top three are "exactly the sum of their individual savings", said because elsewhere they
+would not be). Line by line:
+[Reading the report](docs/guides/cli.md#reading-the-report); the same build walked end to end:
+[`docs/guides/real-project.md`](docs/guides/real-project.md).
 
 ## Gating a CI pipeline
 
@@ -178,11 +164,9 @@ is one page: [`docs/guides/ci-comment.md`](docs/guides/ci-comment.md).
 
 ## One repository, many elements
 
-A `git` source keys on its **ref**, so `directory:` changes where a
-checkout is staged and not what its cache key covers: twenty elements
-sourcing one monorepo all rebuild on any commit to it. A `local` source
-keys on **content**, so only the elements whose files changed rebuild.
-
+A `git` source keys on its **ref**, so `directory:` changes where a checkout is staged and not
+what its cache key covers: twenty elements sourcing one monorepo all rebuild on any commit to
+it. A `local` source keys on **content**, so only the elements whose files changed rebuild.
 `bga` measures which one your project does, and what it costs:
 
 ```bash
@@ -197,10 +181,10 @@ The four ways to consume a monorepo and what each costs:
 
 ## Looking inside one element (Plane 2)
 
-Everything above is as deep as a BuildStream log goes: one start/end pair per element, nothing
-about what happened *inside* its sandbox. A second plane traces the real process tree there —
-`make -jN`, `cmake --build` — through an `LD_PRELOAD` hook, plus a ptrace spine for statically
-linked processes the hook structurally cannot see:
+A BuildStream log goes one start/end pair deep per element and says nothing about what happened
+*inside* the sandbox. A second plane traces the real process tree there — `make -jN`,
+`cmake --build` — through an `LD_PRELOAD` hook, plus a ptrace spine for statically linked
+processes the hook structurally cannot see:
 
 ```bash
 bga snapshot -- bst build <target>     # both planes, one build
@@ -231,9 +215,9 @@ bga cache-logs /path/to/your/project
 
 It answers what neither capture plane can, because it sees *history* rather than one run: which
 elements this project keeps rebuilding, how much of each element's time never reached the build
-at all (the **sandbox tax** — staging, integrating, caching), and what the build tools themselves
-claim they spent on configure. It costs one second of resolution and knows nothing about the
-scheduler, and its own output says so. Worked example and its limits:
+at all (the **sandbox tax** — staging, integrating, caching), and what the build tools claim they
+spent on configure. It costs one second of resolution and knows nothing about the scheduler, and
+says so. Worked example and limits:
 [`docs/guides/real-project.md`](docs/guides/real-project.md#step-0a--the-evidence-you-already-have-plane-3).
 
 ## Documentation
@@ -256,10 +240,9 @@ make lint                 # ruff
 make dev-run              # sample report, fast smoke check
 ```
 
-Some tests are gated on a real BuildStream being present and are skipped without one. To run
-them, add the `bst` extra and `buildstream-plugins`, then `pytest -m bst` (CI's `bst-tests` job
-does exactly this, and fails if *any* of them is skipped — a skipped tier would otherwise
-read as a pass).
+Some tests need a real BuildStream and are skipped without one: add the `bst` extra and
+`buildstream-plugins`, then `pytest -m bst`. CI's `bst-tests` job does exactly this and fails
+if *any* of them is skipped — a skipped tier would otherwise read as a pass.
 
 ## License
 

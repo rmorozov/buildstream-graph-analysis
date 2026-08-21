@@ -31,11 +31,35 @@ CAP = 45
 # bound - the thing to guard here is that no entry grows to two lines.
 TOP_LEVEL_CAP = 50
 
+# UX-179: `blast` was outside this list, so neither the line cap nor the
+# terminator check ran over its help - a guard that does not cover the
+# newest subcommand is the shape UX-176 exists to hunt. Every subcommand
+# `bga` dispatches belongs here, and the test below checks that.
 SUBCOMMANDS = [
     "analyze", "graph", "floors", "replay", "sweep", "utilisation",
-    "diagnostics", "correlate", "cache-trend", "compare",
+    "diagnostics", "correlate", "cache-trend", "compare", "blast",
     "extract", "capture", "snapshot", "cache-logs", "baseline", "doctor",
 ]
+
+
+def test_every_subcommand_is_covered_by_this_file():
+    """The list cannot silently fall behind the parser.
+
+    `blast` shipped and was not added here for a whole round; nothing
+    said so, because a list of names cannot notice what is missing from
+    it.
+    """
+    from bga.cli import create_parser
+
+    registered = set()
+    for action in create_parser()._actions:
+        if getattr(action, "choices", None) and hasattr(action.choices, "keys"):
+            registered |= set(action.choices.keys())
+    missing = sorted(registered - set(SUBCOMMANDS) - {"version"})
+    assert not missing, (
+        f"subcommand(s) with no help guard: {', '.join(missing)}. "
+        f"Add them to SUBCOMMANDS."
+    )
 
 
 def _help(argv):

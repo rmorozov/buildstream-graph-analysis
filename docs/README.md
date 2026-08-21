@@ -34,8 +34,8 @@ which is why the guides pick between them rather than always saying
 
 ## Words this project uses precisely
 
-Five that are easy to blur, pinned here so every other document can be
-short (`UX-138`):
+Ten that are easy to blur, pinned here so every other document can be
+short (`UX-138`, extended by `UX-180` for the source axis):
 
 | term | means |
 |---|---|
@@ -44,6 +44,11 @@ short (`UX-138`):
 | **sandbox tax** | element time spent staging, integrating and caching rather than building. One name — the reports print it too |
 | **cold / incremental** | the two capture *modes* (caches off / caches on). Unrelated to the **cold floor** (`bga floors --cold`), which is a structural lower bound |
 | **baseline set → noise band** | the *runs* you compare against, and the *statistic* built from them (median ± k·MAD). A set of fewer than three defines no band |
+| **resource** | the thing a source consumes, normalised to one identity — a repository url, or a path for content-keyed sources. Not the source, and not the element: many elements share one resource, which is what makes it worth naming |
+| **blast** | the elements a change to one resource rebuilds: the direct consumers plus their downstream closure. `bga blast <target>` prices it. A question, not a gate — it always exits 0 |
+| **keying: ref vs content** | what BuildStream's cache key for a source covers. **Ref-keyed** (`git`, `tar`, `pip`, …): any new ref rebuilds every consumer of that url. **Content-keyed** (`local`, `patch`): only the elements whose files changed |
+| **work vs wall clock** | **work** is the summed duration of the tasks a change rebuilds (what a blast reports); **wall clock** is what the build took. They differ by whatever ran in parallel, so a blast's work is never a predicted build time |
+| **building vs assembling** | **building** elements run a sandbox and cost real time; **assembling** ones (`stack`, `import`, `filter`, `junction`, `compose`, `link`) only rearrange what others produced. A blast counts both and says which is which, because forty assembling elements are not forty rebuilds |
 
 ---
 

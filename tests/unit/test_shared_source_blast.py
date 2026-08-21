@@ -157,18 +157,20 @@ class TestOneRepositoryConsumedTwoWays:
 
 
 class TestTheInventoryNamesWhatItCannotRead:
-    def test_a_junctioned_element_is_counted_not_guessed(self, tmp_path):
-        """`junction.bst:element.bst` lives in another project.
+    def test_an_unfetched_junction_is_counted_not_guessed(self, tmp_path):
+        """A junction that is not on disk cannot be read, and says so.
 
         UX-160's lesson: a reader that silently drops what it cannot
-        parse reports zero and looks like an answer.
+        parse reports zero and looks like an answer. UX-182 walks into
+        junctions that *are* checked out; this is the other half.
         """
         project = _project(tmp_path, {"local.bst": _local_element("files/x")})
         inventory = build_source_inventory(
             project, ["local.bst", "sub.bst:remote.bst"])
         assert "local.bst" in inventory["elements"]
         assert "sub.bst:remote.bst" not in inventory["elements"]
-        assert "sub.bst:remote.bst" in inventory["unreadable"]
+        assert "not checked out here" in \
+            " ".join(inventory["unreadable"]["sub.bst:remote.bst"])
 
     def test_an_unreadable_stanza_is_named(self, tmp_path):
         project = _project(tmp_path, {
@@ -324,9 +326,18 @@ def test_a_real_extraction_writes_the_inventory(tmp_path):
         "kind": "local", "identity": "files/base", "declared": "files/base",
         "keying": "content", "staged_at": None,
     }]
-    # The junctioned element's sources live in the subproject, and the
-    # inventory says so rather than reporting it as sourcing nothing.
-    assert "subproj-junction.bst:libfoo.bst" in inventory["unreadable"]
+    # UX-182 changed this deliberately. The junctioned element's sources
+    # used to be reported `unreadable`, which was honest but useless on
+    # exactly the projects the monorepo question comes from - they keep
+    # most elements behind junctions. The junction is sourced locally
+    # here, so the subproject is on disk and gets read; its
+    # content-keyed path is namespaced to the junction, because
+    # `files/libfoo` means a different directory in each project.
+    assert inventory["elements"]["subproj-junction.bst:libfoo.bst"] == [{
+        "kind": "local", "identity": "subproj-junction.bst:files/libfoo",
+        "declared": "files/libfoo", "keying": "content", "staged_at": None,
+    }]
+    assert inventory["unreadable"] == {}
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -462,6 +462,27 @@ bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shar
 
 `floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
+## Progress on a long run (`UX-183`)
+
+The phases that take minutes — parsing a 200k-process trace, pairing it,
+the census walk, `bst show`, measuring the store — draw a single
+self-overwriting line on **stderr**:
+
+```text
+  parsing trace: 120000/480000
+```
+
+**Only when stderr is a terminal.** Redirect it to a log file or a pipe
+and the output is exactly what it was before: `UX-159`'s whole phase
+lines, and nothing else. No carriage returns, no partial lines.
+
+**stdout is never touched.** `bga analyze --format json | jq .` produces
+the same bytes whether or not anything is being drawn, and there is a
+guard asserting exactly that.
+
+Turn it off on a terminal with `BGA_NO_PROGRESS=1`, or
+`bga snapshot --no-progress`.
+
 ## `bga blast` — what rebuilds if I touch this (`UX-172`)
 
 The blast-radius question from whichever end you have it:

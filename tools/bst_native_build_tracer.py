@@ -80,6 +80,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
 
+from bga import progress
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
@@ -960,7 +961,7 @@ def parse_trace_log(text: str) -> List[dict]:
     return parse_trace_lines(text.splitlines())
 
 
-def parse_trace_lines(lines) -> List[dict]:
+def parse_trace_lines(lines, total_lines: Optional[int] = None) -> List[dict]:
     """`parse_trace_log`, over an iterable of lines instead of one string.
 
     `UX-168`. The caller used to read the whole trace into memory and
@@ -973,7 +974,14 @@ def parse_trace_lines(lines) -> List[dict]:
     argument and the string copy simply need not exist.
     """
     events = []
-    for line in lines:
+    # UX-183: a 200k-process trace holds `Analyzing the captured trace...`
+    # for minutes. The line count is not known in advance without a
+    # second pass over the file, so this counts up rather than toward a
+    # total - which is what the user needs anyway: evidence of motion.
+    tick = progress.ticker("parsing trace", total=total_lines)
+    for index, line in enumerate(lines):
+        if not index % 5000:
+            tick.step(index)
         line = line.rstrip("\r\n")
         if not line or not (line.startswith("START ") or line.startswith("END ")):
             continue
@@ -1092,6 +1100,7 @@ def parse_trace_lines(lines) -> List[dict]:
                 round((rusage["cutime"] + rusage["cstime"]) * 1e6)
             )
         events.append(record)
+    tick.done()
     return events
 
 
@@ -1202,7 +1211,16 @@ def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
         ordered = _drain(events)
     else:
         ordered = sorted(events, key=lambda e: e["ts"])
-    for ev in ordered:
+    # UX-183: the second half of the same wait. A 200k-process trace pairs
+    # for as long as it parses, and both sit behind one phase line.
+    # `_drain` yields lazily on purpose (UX-169), so there is no length to
+    # count toward - the ticker then counts up, which is the same signal.
+    pair_tick = progress.ticker(
+        "pairing processes",
+        total=len(ordered) if isinstance(ordered, (list, tuple)) else None)
+    for index, ev in enumerate(ordered, 1):
+        if not index % 5000:
+            pair_tick.step(index)
         # UX-61: the sandbox id, when the capture has one, is the correct
         # disambiguator - not the element name. Pids are namespaced *per
         # sandbox*, so they collide freely across sandboxes, and keying on
@@ -1328,6 +1346,7 @@ def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
     for pending in open_by_key.values():
         for start_ev in pending:
             records.append(_open_record(start_ev, start_ev, 1))
+    pair_tick.done()
     return sorted(records, key=lambda r: r["start_ts"])
 
 
@@ -2380,7 +2399,11 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
     """
     declared = read_declared_build_deps(project_dir, elements)
     own: Dict[str, dict] = {}
-    for element in elements:
+    # UX-183: on freedesktop-sdk this walks every `local` source of every
+    # element before the build starts - minutes, behind one phase line.
+    census_tick = progress.ticker("census", total=len(elements))
+    for index, element in enumerate(elements, 1):
+        census_tick.step(index)
         merged = {"static": [], "dynamic": 0, "libraries": 0,
                   "unclassified": 0, "scripts": 0}
         for root in _local_source_paths(project_dir, element):
@@ -2390,6 +2413,7 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
                 merged[key] += counted[key]
         merged["static"] = sorted(set(merged["static"]))
         own[element] = merged
+    census_tick.done()
 
     # UX-168: the closure was recomputed from scratch for every element,
     # and recursively, so a project whose graph is a chain cost O(V*E)

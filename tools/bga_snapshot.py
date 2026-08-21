@@ -161,9 +161,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--no-inject", action="store_true",
         help='UX-146: run the build with the shim installed but injecting nothing, to find out whether the argv rewrite is what breaks it.'
     )
+    parser.add_argument(
+        "--no-progress", action="store_true",
+        help="UX-183: no in-phase progress line, even on a terminal. Same "
+             "as setting BGA_NO_PROGRESS=1."
+    )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
                         help="The build to run, e.g. -- bst build all.bst.")
     args = parser.parse_args(argv)
+
+    if args.no_progress:
+        # UX-183: an environment variable rather than a threaded-through
+        # flag, because the phases that draw progress are four modules
+        # deep and none of them should learn about argv. `progress`
+        # reads it fresh on every ticker.
+        os.environ["BGA_NO_PROGRESS"] = "1"
 
     project = args.project or run_store.project_root()
     if project is None:

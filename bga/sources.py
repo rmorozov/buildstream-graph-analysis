@@ -121,7 +121,8 @@ def keying_of(kind: str) -> str:
 # not know produced `git+https///host/org/repo` from a perfectly good
 # `git+https://host/org/repo.git`, which is a garbage identity *and* the
 # halved blast this function exists to prevent.
-_KNOWN_SCHEMES = ("https", "http", "ssh", "git", "git+ssh", "git+https")
+_KNOWN_SCHEMES = ("https", "http", "ssh", "git", "git+ssh", "git+https",
+                  "git+http")
 
 
 def normalize_url(url: str) -> str:
@@ -138,9 +139,14 @@ def normalize_url(url: str) -> str:
     `UX-181` found both failure directions live. Schemes are matched
     case-insensitively (`HTTPS://Host/Org/Repo` used to fall through the
     scheme strip, and the scp-colon rewrite then fired on the `://`
-    itself), and the scp heuristic applies **only** to a scheme-less
-    `user@host:path`, so an unknown scheme is returned untouched rather
-    than mangled into a new identity.
+    itself), and an unknown scheme is returned untouched rather than
+    mangled into a new identity.
+
+    `UX-192` corrected `UX-181`'s log, which claimed the scp heuristic
+    already applied only to scheme-less forms: it ran on every url, so
+    `https://host/a:b/c` - a colon in the *path*, which forges permit -
+    became `host/a/b/c`, a second identity for one repository. It now
+    genuinely runs only when no scheme was consumed.
     """
     text = url.strip()
     scheme, separator, rest = text.partition("://")
@@ -157,9 +163,10 @@ def normalize_url(url: str) -> str:
     # a port, since a numeric segment after the colon is not a path.
     # Only meaningful for the scheme-less form - a scheme's own colon
     # has already been consumed above.
-    host, colon, remainder = text.partition(":")
-    if colon and not remainder.split("/", 1)[0].isdigit():
-        text = f"{host}/{remainder}"
+    if not separator:
+        host, colon, remainder = text.partition(":")
+        if colon and not remainder.split("/", 1)[0].isdigit():
+            text = f"{host}/{remainder}"
     if "/" in text:
         head, _, tail = text.partition("/")
         text = head.lower() + "/" + tail
@@ -185,6 +192,7 @@ def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
     if not isinstance(kind, str) or not kind:
         return None, "source entry has no `kind`"
     identity = None
+    declared = None
     # UX-181: pip sources carry the *index* url, so keying on it groups
     # every pip element in a project into one "repository" and then says
     # "any commit to this rebuilds all of them" about a package index.
@@ -198,6 +206,15 @@ def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
         if identity is None:
             return None, ("`pip` source names no packages - its index url is "
                           "not an identity for one resource")
+        # UX-192: the index is not the identity, but dropping it entirely
+        # collapsed one package name published on two indexes into one
+        # resource - the same over-grouping UX-181 filed, pointing the
+        # other way. Kept as a suffix so the package still leads, and
+        # out of `declared`, which stays what the recipe wrote.
+        declared = identity
+        index = source.get("url")
+        if isinstance(index, str) and index.strip():
+            identity = f"{identity} @ {normalize_url(index)}"
     for key in () if identity else _IDENTITY_KEYS:
         value = source.get(key)
         if isinstance(value, str) and value.strip():
@@ -214,7 +231,7 @@ def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
     resource = {
         "kind": kind,
         "identity": normalized,
-        "declared": identity,
+        "declared": declared if declared is not None else identity,
         "keying": keying,
         # Where the element stages it. Not part of the identity - that
         # is the whole point of `directory:` on a ref-keyed source.
@@ -253,8 +270,16 @@ def build_inventory(per_element: Dict[str, List[dict]],
     }
 
 
-def _resource_key(resource: dict) -> Tuple[str, str]:
+def resource_key(resource: dict) -> Tuple[str, str]:
+    """The pair a resource is grouped by: its kind and its identity.
+
+    Public since `UX-192`, because `bga blast` grouped by identity alone
+    and so disagreed with the table it was printed beside.
+    """
     return resource.get("kind", "?"), resource.get("identity", "?")
+
+
+_resource_key = resource_key
 
 
 def elements_by_resource(inventory: dict) -> Dict[Tuple[str, str], List[str]]:

@@ -41,24 +41,41 @@ SUBCOMMANDS = [
     "extract", "capture", "snapshot", "cache-logs", "baseline", "doctor",
 ]
 
+# UX-192: the `UX-67` aliases dispatch through `tools/` rather than
+# through a registered subparser, so `create_parser()` cannot see them
+# and the coverage check below could not either. They are what `bga
+# --help` lists, a user types them exactly like a subcommand, and five
+# of them were over the cap when this list was written (`rebuild-set`
+# 55, `cross-check` 55, `run-context` 67, `gen-synthetic` 67,
+# `native-to-chrome` 75) - the design-history-in-argparse shape UX-158
+# was filed about, still live in the half of the surface its guard
+# could not reach.
+TOOL_COMMANDS = [
+    "wrap", "rebuild-set", "checkout-cost", "run-context",
+    "graph-from-show", "log-to-chrome", "native-to-chrome",
+    "chrome-to-trace", "cross-check", "gen-synthetic",
+]
 
-def test_every_subcommand_is_covered_by_this_file():
-    """The list cannot silently fall behind the parser.
+
+def test_every_command_bga_dispatches_is_covered_by_this_file():
+    """The lists cannot silently fall behind the parser or the aliases.
 
     `blast` shipped and was not added here for a whole round; nothing
     said so, because a list of names cannot notice what is missing from
-    it.
+    it. The alias table had the same hole one layer down.
     """
     from bga.cli import create_parser
+    from bga.tools_dispatch import TOOL_ALIASES
 
     registered = set()
     for action in create_parser()._actions:
         if getattr(action, "choices", None) and hasattr(action.choices, "keys"):
             registered |= set(action.choices.keys())
-    missing = sorted(registered - set(SUBCOMMANDS) - {"version"})
+    covered = set(SUBCOMMANDS) | set(TOOL_COMMANDS)
+    missing = sorted((registered | set(TOOL_ALIASES)) - covered - {"version"})
     assert not missing, (
-        f"subcommand(s) with no help guard: {', '.join(missing)}. "
-        f"Add them to SUBCOMMANDS."
+        f"command(s) with no help guard: {', '.join(missing)}. "
+        f"Add them to SUBCOMMANDS or TOOL_COMMANDS."
     )
 
 
@@ -71,7 +88,7 @@ def _help(argv):
     return out.getvalue()
 
 
-@pytest.mark.parametrize("command", SUBCOMMANDS)
+@pytest.mark.parametrize("command", SUBCOMMANDS + TOOL_COMMANDS)
 def test_each_subcommand_help_fits_a_screen(command):
     rendered = _help([command, "--help"]).splitlines()
     assert len(rendered) <= CAP, (
@@ -167,7 +184,7 @@ def _carries_prose(block: str) -> bool:
     return False
 
 
-@pytest.mark.parametrize("command", SUBCOMMANDS)
+@pytest.mark.parametrize("command", SUBCOMMANDS + TOOL_COMMANDS)
 def test_no_help_string_ends_mid_sentence(command):
     """A help block must not stop on a word the sentence was still using."""
     # Words a sentence cannot end on. Deliberately a small, concrete list:
@@ -208,7 +225,7 @@ def test_no_help_string_ends_mid_sentence(command):
         )
 
 
-@pytest.mark.parametrize("command", SUBCOMMANDS)
+@pytest.mark.parametrize("command", SUBCOMMANDS + TOOL_COMMANDS)
 def test_help_brackets_balance(command):
     """`(default: the same significance` - an unbalanced paren is the other
     shape a mid-sentence cut takes."""

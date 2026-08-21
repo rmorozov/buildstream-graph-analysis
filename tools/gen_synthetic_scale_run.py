@@ -51,6 +51,17 @@ per-element numbers quoted in UX-41..UX-44 slightly - those docs record
 the figures from the fixture as it stood when they were filed.
 """
 
+HELP = """Generate a synthetic, realistically-shaped run directory at a scale no
+example project in this repo reaches.
+
+Byte-reproducible from `--seed`, so a finding at 1,202 elements can be
+re-derived rather than re-guessed. The second audit round found four
+defects with it that were invisible at eleven elements.
+
+What it models and how the shape was chosen: this module's own
+docstring, and docs/audits/round-2.md.
+"""
+
 import argparse
 import json
 import random
@@ -219,8 +230,8 @@ def schedule(elements, dependencies, durations, builders):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("output", type=Path, help="Run directory to create")
+    parser = argparse.ArgumentParser(description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("output", type=Path, help="Run directory to create.")
     parser.add_argument("--layers", type=int, default=DEFAULT_LAYERS)
     parser.add_argument("--width", type=int, default=DEFAULT_WIDTH)
     parser.add_argument("--builders", type=int, default=DEFAULT_BUILDERS)

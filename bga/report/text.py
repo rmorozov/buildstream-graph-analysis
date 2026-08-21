@@ -350,16 +350,26 @@ def _format_resource_blast(result) -> List[str]:
         return []
     total = blast.get('element_count') or 0
     lines = ["Shared Sources (blast radius by resource):", ""]
-    lines.append(f"  {'resource':<44}{'direct':>7}{'blast':>7}{'work':>10}")
+    lines.append(f"  {'resource':<44}{'direct':>7}{'blast':>9}{'work':>11}")
     for row in rows:
         cost = ("unmeasured" if row['measured_seconds'] is None
                 else f"{row['measured_seconds']:.0f}s")
         identity = row['identity']
-        if len(identity) > 43:
-            identity = "..." + identity[-40:]
         share = f"/{total}" if total else ""
-        lines.append(f"  {identity:<44}{row['direct_count']:>7}"
-                     f"{str(row['blast_count']) + share:>7}{cost:>10}")
+        numbers = (f"{row['direct_count']:>7}"
+                   f"{str(row['blast_count']) + share:>9}{cost:>11}")
+        # UX-192: the identity is the join key - `bga blast <identity>`
+        # is the next command a reader types - so it is never elided.
+        # An identity too wide for the column takes its own line and the
+        # numbers keep their alignment underneath; a key you cannot
+        # paste is not a key, and the elided form resolved as a *path*
+        # and answered "rebuilds nothing here" (the UX-178 defect,
+        # reopened for exactly the long forge urls real projects use).
+        if len(identity) > 44:
+            lines.append(f"  {identity}")
+            lines.append(f"  {'':<44}{numbers}")
+        else:
+            lines.append(f"  {identity:<44}{numbers}")
         lines.append(f"      {sources.keying_clause(row)}")
         kinds = ", ".join(f"{count} {kind}" for kind, count
                           in (row['by_element_kind'] or {}).items())

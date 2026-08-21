@@ -64,6 +64,17 @@ Two real, independent modes:
   event of its own - so there is exactly one real B event per element
   per action to anchor on, not one per phase.
 """
+
+HELP = """Chrome Trace Event JSON for Plane 2, standalone or combined with Plane 1.
+
+`standalone` renders one Plane 2 capture; `combined` merges it onto Plane
+1's own export for the same run, aligning the two on a named element so
+the process lanes sit under the element that produced them.
+
+Open the result with Perfetto (https://ui.perfetto.dev) or
+chrome://tracing. Design record: this module's own docstring, and
+docs/spec/ingestion-pipeline.md.
+"""
 import argparse
 import json
 from typing import Dict, List, Optional
@@ -205,7 +216,7 @@ def build_combined_chrome_trace(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     standalone_parser = subparsers.add_parser("standalone", help="Plane 2 raw trace alone -> Chrome Trace JSON")

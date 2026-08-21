@@ -61,9 +61,32 @@ class TestPipKeysOnThePackage:
         second, _ = sources.resource_of_source({
             "kind": "pip", "url": "https://pypi.org/simple",
             "packages": ["numpy"]})
-        assert first["identity"] == "requests"
-        assert second["identity"] == "numpy"
         assert first["identity"] != second["identity"]
+        assert first["identity"].startswith("requests")
+        assert second["identity"].startswith("numpy")
+
+    def test_one_package_on_two_indexes_is_two_resources(self):
+        """UX-192, the same item's title case pointing the other way:
+        UX-181 dropped the index entirely, so a package name published
+        on a public index and on an internal mirror collapsed into one
+        resource - the over-grouping it was filed to remove."""
+        public, _ = sources.resource_of_source({
+            "kind": "pip", "url": "https://pypi.org/simple",
+            "packages": ["requests"]})
+        internal, _ = sources.resource_of_source({
+            "kind": "pip", "url": "https://mirror.example.com/simple",
+            "packages": ["requests"]})
+        assert public["identity"] != internal["identity"]
+        # The package still leads, because it is what a reader is
+        # looking for; the index disambiguates behind it.
+        assert public["identity"].startswith("requests ")
+        assert public["declared"] == internal["declared"] == "requests", (
+            "`declared` is what the recipe wrote, not what bga composed")
+
+    def test_an_index_less_pip_source_keys_on_the_package_alone(self):
+        resource, _ = sources.resource_of_source({
+            "kind": "pip", "packages": ["requests"]})
+        assert resource["identity"] == "requests"
 
     def test_the_sentence_comes_from_the_kind(self):
         assert "pinned version" in sources.keying_clause(

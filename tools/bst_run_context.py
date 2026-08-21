@@ -137,55 +137,45 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Produce run-context.json from a real BuildStream invocation's log."
     )
-    parser.add_argument("input_log", help="Path to the log file (wrapped or raw)")
-    parser.add_argument("output_json", help="Path to write run-context.json to")
+    parser.add_argument("input_log", help="Path to the log file (wrapped or raw).")
+    parser.add_argument("output_json", help="Path to write run-context.json to.")
     parser.add_argument(
         "--format", choices=("auto", "wrapped", "raw"), default="auto",
-        help="Input log format - same semantics as bst_log_to_chrome_trace.py",
+        help="Input log format - same semantics as bst_log_to_chrome_trace.py.",
     )
     parser.add_argument(
         "--start-time", default=None,
-        help="ISO-8601 timestamp anchor for raw-format elapsed timestamps "
-        "(only meaningful with --format raw or auto's raw fallback); "
-        "defaults to the input file's mtime.",
+        help="ISO-8601 anchor for a raw log's elapsed timestamps; defaults "
+        "to the input file's mtime.",
     )
     parser.add_argument(
         "--trace-epsilon-us", type=int, default=50000,
-        help="Quantization epsilon in microseconds (Part 3.2 default: 50000)",
+        help="Quantization epsilon in microseconds (Part 3.2 default: 50000).",
     )
-    parser.add_argument("--host", default=None, help="Optional host identifier to record")
+    parser.add_argument("--host", default=None,
+                        help="Optional host identifier to record.")
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,
-        help="Override the real --max-jobs value the build was invoked with (per-element "
-        "internal build-system parallelism, e.g. `make -jN` - a different, unrelated "
-        "concept from --builders/this tool's own resource_capacities.PROCESS). Usually "
-        "unnecessary: a wrapped log records the real invocation on its own first line and "
-        "this value is recovered from it automatically (UX-29). Pass it only to override "
-        "that, or for a raw log, which has no invocation line (UX-12).",
+        help="Override the per-element `make -jN` parallelism (not --builders). "
+        "A wrapped log records it; pass this for a raw log (UX-29).",
     )
     parser.add_argument(
         "--cpu-budget", type=int, default=None,
-        help="The number of CPU cores this build is *intended* to use - the operator's "
-        "declared envelope, as opposed to the environment's real detected core count "
-        "(host_cpu_count). Use this when the detected count doesn't reflect your real "
-        "constraint: a cgroup CFS CPU quota (docker --cpus/Kubernetes cpu limits throttle "
-        "CPU time, not core affinity, so os.sched_getaffinity can't see it), or simply "
-        "wanting to reserve headroom on a shared machine. When set, bga's oversubscription "
-        "check treats this as the governing ceiling instead of host_cpu_count (UX-15).",
+        help="The cores this build is *intended* to use, when the detected count is "
+        "not the real constraint - a cgroup CPU quota, or reserved headroom on a "
+        "shared machine. Governs the oversubscription check (UX-15).",
     )
     parser.add_argument(
         "--memory-budget-mb", type=int, default=None,
-        help="The amount of memory (MB) this build is *intended* to use - the operator's "
-        "declared envelope. No auto-detection - purely operator-supplied. When set together "
-        "with --estimated-job-memory-mb, bga's memory oversubscription check (UX-21) compares "
-        "builders x native-max-jobs x --estimated-job-memory-mb against this budget.",
+        help="The memory (MB) this build is *intended* to use. Operator-supplied; "
+        "with --estimated-job-memory-mb it drives the memory oversubscription "
+        "check (UX-21).",
     )
     parser.add_argument(
         "--estimated-job-memory-mb", type=int, default=None,
-        help="A rough, operator-supplied estimate of one concurrent build job's memory "
-        "footprint (MB) - a single configurable constant, not a real per-task measurement "
-        "(no such measurement source exists in this pipeline, see UX-21). Only meaningful "
-        "together with --memory-budget-mb.",
+        help="A rough estimate of one concurrent build job's memory footprint (MB) - "
+        "a constant, not a measurement. Only meaningful with --memory-budget-mb "
+        "(UX-21).",
     )
     args = parser.parse_args()
 

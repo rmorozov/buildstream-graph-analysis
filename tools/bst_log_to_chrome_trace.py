@@ -807,15 +807,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Convert a BuildStream log (wrapped or raw) to Chrome Trace Event JSON."
     )
-    parser.add_argument("input_log", help="Path to the log file")
-    parser.add_argument("output_json", help="Path to save the output trace.json file")
+    parser.add_argument("input_log", help="Path to the log file.")
+    parser.add_argument("output_json", help="Path to save the output trace.json file.")
     parser.add_argument(
         "--format",
         choices=("auto", "wrapped", "raw"),
         default="auto",
         help="Input log format: 'wrapped' (CI wrapper prefix required), "
         "'raw' (BuildStream's own log lines only, no wrapper), or "
-        "'auto' (try wrapped first, fall back to raw, per line - default)",
+        "'auto' (try wrapped first, fall back to raw, per line - default).",
     )
     parser.add_argument(
         "--start-time",

@@ -45,6 +45,17 @@ Usage
     tools/bst_rebuild_set.py graph.json --cut components/openssl.bst \\
                                         --cut components/expat.bst
 """
+
+HELP = """Expand a set of "cut" elements into the artifacts that must be deleted
+for those elements - and everything above them - to really rebuild.
+
+The set has to be upward-closed over *build* edges: BuildStream builds an
+element only when its own artifact is missing, so a cached dependent never
+asks for its dependencies at all. Runtime edges do not propagate a rebuild.
+
+Why this exists, and the captures it produced: this module's own
+docstring, and docs/audits/round-11.md.
+"""
 import argparse
 import json
 import sys
@@ -91,9 +102,9 @@ def rebuild_set(graph: dict, cuts: Iterable[str]) -> List[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+        description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("graph_json", help="graph.json from tools/bst_show_to_graph.py")
+    parser.add_argument("graph_json", help="graph.json from tools/bst_show_to_graph.py.")
     parser.add_argument(
         "--cut",
         action="append",

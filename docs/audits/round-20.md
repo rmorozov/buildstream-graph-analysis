@@ -115,3 +115,38 @@ UX-184/185/187/189/190/191 in dependency-free parallel. UX-187's
 render-and-measure step should run against the user's own capture if
 one can be shared — the 1,202-element synthetic is the floor, not
 the target.
+
+## Landed
+
+All twelve items UX-183..UX-192 are 🟢 Done, in this branch rather than
+a sibling's. The status table carries each one's measured outcome; the
+task files carry the falsification logs. Four things the fixes found
+that the audit itself had not:
+
+- **UX-192's class recurred inside the fixes.** The `UX-187` Shared
+  Sources cap shipped silent (no elision line), the serialized-pairs
+  elision reached no code path, `bga timeline <path>` refused an
+  explicit path, and the `UX-191` snapshot completer called `os` in a
+  module that does not import it. Every one was caught by the guard
+  written for its own item, not by review.
+- **A four-round-old defect surfaced from UX-185's angle.**
+  `findings.py` called an interrupted *and* a suspended capture "THIS
+  BUILD FAILED: 0 element(s) ended in FAILURE ()" — `UX-156` gave
+  `incomplete_reason` three values and the headline had only ever
+  branched on one.
+- **Three guards were found guarding nothing, by falsifying them**
+  (`UX-191`'s element completer; `UX-189`'s clone-size fixture, twice
+  over). The discipline earns its cost: a mutation that leaves a guard
+  green is the only way to learn it was never a guard.
+- **UX-189 would have shipped a break.** Documenting
+  `--single-branch` without item 3 would have left
+  `git show origin/captures/…` in the workflow doc, which under that
+  clone is `fatal: invalid object name`.
+
+Two counts in the round's own prose were estimates that the code had
+outgrown — "fifteen subcommands, ten aliases" against a real 11 and 17.
+Both guards that quoted them now read `create_parser()` and
+`TOOL_ALIASES` instead.
+
+The suite stands at **2,389**, the `bst` tier at 43.
+

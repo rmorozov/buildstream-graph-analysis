@@ -19,6 +19,8 @@ import hashlib
 import json
 import os
 import shutil
+import re
+import urllib.parse
 import subprocess
 import sys
 import tempfile
@@ -326,6 +328,276 @@ class TestTheFormatDecisionIsWrittenDown:
 
 # A scripted `window`: `perfetto.js` takes its whole environment through
 # `deps`, so the handshake runs under plain Node with no DOM at all.
+
+# UX-198: a browser grants transient activation on a click and revokes
+# it at the first `await`. This models exactly that - `activation` is
+# true inside the synchronous part of the click handler and is consumed
+# by the first async gap, after which `open()` returns null the way a
+# blocked pop-up does. The point is that the *test* can tell the two
+# orderings apart; a harness where `open` always succeeds cannot, which
+# is why the original bug shipped green.
+
+class TestThePageDoesNotOpenAnythingUninvited:
+    """`UX-198` item 1's other half. The `--perfetto` landing page ran
+    `go()` at script load, so no user activation had ever existed and
+    default-settings Chrome blocked the pop-up **every time**. The
+    "Try again" button beneath it was the tell."""
+
+    def test_the_handoff_page_has_no_call_at_script_load(self):
+        page = open("bga/viewer/perfetto.html", encoding="utf-8").read()
+        script = page.split("<script", 1)[1]
+        # A bare `go();` or `handOff();` statement at the top level of
+        # the module - what a browser runs with no gesture behind it.
+        offenders = [line.strip() for line in script.splitlines()
+                     if re.match(r"^\s*(go|handOff)\s*\(", line)]
+        assert not offenders, (
+            f"the page calls {offenders} at load, with no click behind it")
+
+    def test_it_opens_from_a_click_instead(self):
+        page = open("bga/viewer/perfetto.html", encoding="utf-8").read()
+        assert 'addEventListener("click"' in page
+        assert 'id="open"' in page, "there is no button to click"
+
+    def test_both_modes_offer_a_way_out_when_nothing_opens(self):
+        """Item 3: pop-up policy will change again."""
+        for name in ("perfetto.html", "index.html"):
+            page = open(f"bga/viewer/{name}", encoding="utf-8").read()
+            assert "Nothing opened?" in page, name
+
+
+class TestTheDeepLink:
+    """Item 2: a plain `<a href>` is immune to pop-up policy, but it
+    only works if this server will let Perfetto fetch the trace."""
+
+    def test_it_points_at_perfetto_with_the_trace_url(self):
+        result = subprocess.run(
+            [node, "--input-type=module", "-e",
+             'const { deepLink, PERFETTO_ORIGIN } = '
+             'await import("./bga/viewer/perfetto.js");'
+             'console.log(deepLink("http://127.0.0.1:8000/timeline.json.gz"));'],
+            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+        assert result.returncode == 0, result.stderr
+        link = result.stdout.strip()
+        assert link.startswith("https://ui.perfetto.dev/#!/?url=")
+        assert "127.0.0.1" in urllib.parse.unquote(link)
+
+    def test_the_trace_answers_perfettos_origin(self, snapshot, served):
+        from tools.bga_view import PERFETTO_ORIGIN, TRACE_NAME
+
+        url = served(str(snapshot / "run"))
+        request = urllib.request.Request(url + TRACE_NAME)
+        request.add_header("Origin", PERFETTO_ORIGIN)
+        with urllib.request.urlopen(request, timeout=10) as response:
+            assert response.headers.get("Access-Control-Allow-Origin") == \
+                PERFETTO_ORIGIN
+
+    def test_it_answers_nobody_else(self, snapshot, served):
+        from tools.bga_view import TRACE_NAME
+
+        url = served(str(snapshot / "run"))
+        for origin in ("https://evil.example", None):
+            request = urllib.request.Request(url + TRACE_NAME)
+            if origin:
+                request.add_header("Origin", origin)
+            with urllib.request.urlopen(request, timeout=10) as response:
+                assert response.headers.get("Access-Control-Allow-Origin") is None, \
+                    f"handed the trace to {origin}"
+
+    def test_no_other_document_is_cross_origin_readable(self, snapshot, served):
+        """The report and the blast endpoint carry this project's
+        element names and paths. Perfetto has no business reading them,
+        and `*` would have given them to every page on the internet."""
+        from tools.bga_view import PERFETTO_ORIGIN
+
+        url = served(str(snapshot / "run"))
+        for path in ("report.json", "schemas.json", "run.json",
+                     "blast.json?target=work-a.bst"):
+            request = urllib.request.Request(url + path)
+            request.add_header("Origin", PERFETTO_ORIGIN)
+            with urllib.request.urlopen(request, timeout=10) as response:
+                assert response.headers.get("Access-Control-Allow-Origin") is None, \
+                    f"{path} is readable cross-origin"
+
+    def test_the_two_origin_constants_agree(self):
+        """One is in Python and one in JavaScript; nothing else would
+        notice if they drifted, and the link would silently 404."""
+        from tools.bga_view import PERFETTO_ORIGIN as served_origin
+
+        module = open("bga/viewer/perfetto.js", encoding="utf-8").read()
+        match = re.search(r'PERFETTO_ORIGIN = "([^"]+)"', module)
+        assert match and match.group(1) == served_origin
+
+    @needs_node
+    @pytest.mark.parametrize("trace,shown", [
+        ("timeline.json.gz", True),                     # served
+        ("data:application/gzip;base64,H4sIAA==", False),   # exported
+    ])
+    def test_the_link_appears_only_where_a_server_is_behind_it(self, trace, shown):
+        """There is no server behind an export - the trace is inlined as
+        a `data:` URL - so a deep link would point at nothing.
+
+        Driven through the real `wireTheHandoff`. The first version of
+        this guard read the exported *file* for the link string and was
+        not discriminating at all: the href is set by script at runtime,
+        so the static file never contains it either way, and deleting
+        the check left the guard green.
+        """
+        script = _LINK_HARNESS % json.dumps(trace)
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+        assert result.returncode == 0, result.stderr
+        out = json.loads(result.stdout)
+        assert out["fallbackShown"] is shown, out
+        if shown:
+            assert out["href"].startswith("https://ui.perfetto.dev/#!/?url=")
+
+
+# UX-198: enough DOM to run `wireTheHandoff` for real. The question is
+# whether the fallback link is revealed, which depends on the trace's
+# protocol - `http(s):` served, `data:` exported.
+_LINK_HARNESS = """
+const trace = %s;
+
+function node(id) {
+  return {
+    id, hidden: true, href: "", textContent: "", parentElement: null,
+    children: [], addEventListener() {},
+  };
+}
+const nodes = {
+  actions: node("actions"),
+  perfetto: node("perfetto"),
+  handoff: node("handoff"),
+  "perfetto-link": node("perfetto-link"),
+  "actions-fallback": node("actions-fallback"),
+  "bga-trace": { textContent: trace },
+};
+nodes["perfetto-link"].parentElement = nodes["actions-fallback"];
+
+globalThis.document = { getElementById: (id) => nodes[id] ?? null };
+globalThis.location = { href: "http://127.0.0.1:8000/index.html" };
+
+const { wireTheHandoff } = await import("./bga/viewer/app.js");
+wireTheHandoff();
+
+console.log(JSON.stringify({
+  fallbackShown: nodes["actions-fallback"].hidden === false,
+  href: nodes["perfetto-link"].href,
+}));
+"""
+
+_GESTURE_HARNESS = """
+const { handOff, PERFETTO_ORIGIN } = await import("./bga/viewer/perfetto.js");
+
+globalThis.scenario = async function ({ fetchDelayMs = 5 }) {
+  const out = { openedDuringActivation: null, opens: 0, posted: 0, error: null };
+
+  let activation = true;
+  // Any await gives the event loop a turn; that is where a real browser
+  // drops activation. One macrotask hop reproduces it faithfully.
+  const dropActivationSoon = () => setTimeout(() => { activation = false; }, 0);
+
+  const listeners = [];
+  const tab = {
+    postMessage(message, origin) {
+      if (message === "PING") {
+        listeners.forEach((fn) => fn({ origin: PERFETTO_ORIGIN, data: "PONG" }));
+        return;
+      }
+      out.posted += 1;
+    },
+    close() { out.closed = true; },
+  };
+
+  const deps = {
+    open: () => {
+      out.opens += 1;
+      if (out.openedDuringActivation === null) {
+        out.openedDuringActivation = activation;
+      }
+      return activation ? tab : null;   // a blocked pop-up returns null
+    },
+    fetch: async () => {
+      dropActivationSoon();
+      await new Promise((r) => setTimeout(r, fetchDelayMs));
+      return {
+        ok: true,
+        arrayBuffer: async () => {
+          await new Promise((r) => setTimeout(r, fetchDelayMs));
+          return new Uint8Array([1, 2, 3]).buffer;
+        },
+      };
+    },
+    addEventListener: (_n, fn) => listeners.push(fn),
+    removeEventListener: (_n, fn) => {
+      const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1);
+    },
+    setInterval: (fn) => setInterval(fn, 1),
+    clearInterval: (id) => clearInterval(id),
+    setTimeout: (fn) => setTimeout(fn, 1e9),
+    clearTimeout: (id) => clearTimeout(id),
+  };
+
+  try {
+    // Called the way a click handler calls it: no await before it, so
+    // everything up to handOff's own first await runs while activation
+    // still holds.
+    await Promise.race([
+      handOff("timeline.json.gz", "bga timeline", deps),
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("never settled")), 1500)),
+    ]);
+  } catch (error) {
+    out.error = String(error.message ?? error);
+  }
+  console.log(JSON.stringify(out));
+  process.exit(0);
+};
+
+%s
+"""
+
+
+@needs_node
+class TestTheTabOpensWhileTheClickStillCounts:
+    """`UX-198`, the field's own report: *"transition to perfetto works
+    bad in latest chrome, I was not able to open my traces in one
+    click."*
+
+    Round 22 pinned it: `handOff` fetched the trace and awaited
+    `arrayBuffer()` before opening the tab, so by the time `window.open`
+    ran the click that authorised it had expired. It survived a 25 KB
+    file on a warm cache and failed for everything slower.
+    """
+
+    def _gesture(self, script):
+        result = subprocess.run(
+            [node, "--input-type=module", "-e",
+             _GESTURE_HARNESS % script],
+            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout)
+
+    def test_the_tab_opens_before_the_first_await(self):
+        out = self._gesture('await scenario({});')
+        assert out["openedDuringActivation"] is True, (
+            "window.open ran after an await - the click that authorised it "
+            "had already expired, which is the reported bug")
+        assert out["error"] is None, out["error"]
+        assert out["posted"] == 1
+
+    def test_it_still_opens_only_one_tab(self):
+        out = self._gesture('await scenario({});')
+        assert out["opens"] == 1
+
+    def test_a_slow_fetch_does_not_change_the_answer(self):
+        """The discriminating case: the old ordering passed with a fast
+        fetch and failed with a slow one, which is why it shipped."""
+        out = self._gesture('await scenario({ fetchDelayMs: 40 });')
+        assert out["openedDuringActivation"] is True
+        assert out["error"] is None, out["error"]
+
 _HARNESS = """
 const { openInPerfetto, PERFETTO_ORIGIN } = await import("./bga/viewer/perfetto.js");
 

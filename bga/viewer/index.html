@@ -22,6 +22,12 @@
     <a href="sql.html">Questions to ask it</a>
     <span id="handoff" class="muted"></span>
   </p>
+  <!-- UX-198: pop-up policy will change again, so there is always a
+       plain link. Unhidden only when a server is behind the trace. -->
+  <p id="actions-fallback" class="muted" hidden>
+    Nothing opened? <a id="perfetto-link" href="#">open ui.perfetto.dev
+    with this trace</a>.
+  </p>
 </header>
 <main id="report" aria-busy="true">
   <p class="muted">Loading…</p>

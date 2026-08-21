@@ -21,6 +21,8 @@ On a real project the two commands to know first are `bga doctor`
 (`UX-125` — can this machine capture at all, before a build proves it
 cannot) and `bga snapshot` (`UX-126` — the whole local loop, run twice).
 Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126).
+`bga view` (`UX-193`) opens the same report in a browser, and
+`bga view --export` writes it as one file you can attach.
 
 Three planes of evidence, and they cost different things to obtain —
 which is why the guides pick between them rather than always saying

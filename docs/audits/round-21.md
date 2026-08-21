@@ -107,3 +107,57 @@ already folded into the filings: `bga timeline` emits a bare-array
 legacy trace Perfetto loads, `findings[]` carry severity on every
 finding (the schema should say so — UX-193's hints make it so), and
 nothing in the repo serves HTTP today, so UX-193 starts clean.
+
+## Landed
+
+All five items UX-193..UX-197 are 🟢 Done, in this branch. The status
+table carries each one's measured outcome; the task files carry the
+falsification logs.
+
+**Direction 7 exists now.** `bga view` serves one run's published JSON
+behind an allowlist of four documents and four assets — no listing, no
+write method, no filesystem fall-through. The page renders the
+*schema*: `app.js` holds no list of the report's fields, and the
+discriminating guard adds a field that did not exist when it was
+written, asserts it renders, and hashes `app.js` to make "no viewer
+change" literal. `--perfetto` hands the timeline over tab-to-tab
+(**272,964 B → 24,782 B gzipped**, 9.1%); `--export` writes one
+self-contained file (**80 KiB** for a real capture with its timeline,
+**636 KiB** at 1,202 elements, of which the page is 4.2%).
+
+**What only real runs found.** The acceptance names `examples/06`, so a
+real `bst build all.bst` was captured under `bga snapshot` — 46.1 s, 9
+findings, 14 renderable sections — and it found two things every unit
+test had missed: `bga view @last` resolved to the *snapshot* instead of
+the run one level in, and the schema did not declare `pipeline_overhead`
+or `timestamp_agreement`, both present on every wrapper-derived run and
+absent from the golden fixture `UX-190`'s guard validates. `UX-179`'s
+shape, in the guard `UX-190` built to prevent exactly it.
+
+**The round's dominant finding is about guards, not code.** Of the
+defects fixed here, **eight were guards that could not fail**:
+
+- `UX-183`'s byte-identity test compared progress-off with
+  progress-off — and routing the ticker to stdout, the exact regression
+  it exists to prevent, left it *passing*.
+- `UX-191`'s element-completer guard stayed green with the branch it
+  guarded deleted.
+- `UX-189`'s clone-size fixture, twice (a compressible payload, then a
+  local clone hardlinking the object store).
+- `UX-194`'s origin-check guard asserted a property `postMessage` makes
+  untestable.
+- `UX-195`'s render guard never touched the loader; its escaping guard
+  injected through a computed field.
+- `UX-196`'s geometry guard was insensitive to the axis; its blast
+  mutation wrote the correct value.
+
+Every one was found by falsifying — and two of them only after two or
+three attempts, because a mutation that leaves a guard green looks
+exactly like a mutation that was harmless. Three further defects came
+from a fix being applied at one caller and not the class: `UX-197`
+fixed the doomed scratch path in the Plane 1 converter because
+`bga timeline` calls it, and `bga view` reached the *merge* converter
+the same way a week later.
+
+The suite stands at **2,494**, the `bst` tier at 43.
+

@@ -49,8 +49,22 @@ the terminal can never disagree about what a run says.
 Local only: 127.0.0.1, an ephemeral port, and no path outside the run.
 """
 
-ASSET_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                         "bga", "viewer")
+def _asset_dir() -> str:
+    """Where the page's files are, from a checkout *and* from a wheel.
+
+    `UX-193` computed this as "two directories up, then `bga/viewer`",
+    which is right from a checkout and wrong once installed: `UX-94`
+    packages this directory as `bga._tools`, so two up is
+    `site-packages`, and the answer became `site-packages/bga/bga/
+    viewer`. Asking the `bga` package where it lives is correct in both
+    shapes and needs no branch.
+    """
+    import bga
+
+    return os.path.join(os.path.dirname(os.path.abspath(bga.__file__)), "viewer")
+
+
+ASSET_DIR = _asset_dir()
 
 # The only paths this server answers. Everything else is 404 - there is
 # no directory listing and no fall-through to the filesystem.
@@ -107,7 +121,10 @@ def store_payload(run: str) -> Optional[dict]:
     cannot disagree about what is on disk.
     """
     from bga import run_store
-    from tools.bga_snapshot import store_listing
+    # Relative: packaged, this module is `bga._tools.bga_view`,
+    # and `tools` does not exist. `UX-94` made these siblings
+    # import each other relatively for exactly this reason.
+    from .bga_snapshot import store_listing
 
     project = run_store.project_root(os.path.abspath(run))
     if project is None:
@@ -148,7 +165,7 @@ def trace_bytes(run: str) -> Optional[bytes]:
     extracted directory, a fetched capture - simply has no timeline, and
     that is not an error.
     """
-    from tools.bga_timeline import render
+    from .bga_timeline import render
 
     snapshot = os.path.dirname(os.path.abspath(run))
     scratch = tempfile.mkdtemp(prefix="bga-view-")

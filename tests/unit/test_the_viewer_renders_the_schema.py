@@ -383,6 +383,69 @@ class TestTheViewerShipsNoToolchain:
         assert not os.path.exists("package.json")
 
 
+    def test_the_assets_are_found_through_the_package_not_the_checkout(self):
+        """`ASSET_DIR` must be right in both install shapes.
+
+        Measured, not argued: `UX-193` computed it as "two directories
+        up, then `bga/viewer`", which is correct from a checkout and
+        wrong from a wheel - `UX-94` installs this directory as
+        `bga._tools`, so two up is `site-packages` and the answer became
+        `site-packages/bga/bga/viewer`. Every asset 404'd, and no test
+        that runs from a checkout could have noticed.
+        """
+        import bga
+        import tools.bga_view as view
+
+        expected = os.path.join(os.path.dirname(os.path.abspath(bga.__file__)),
+                                "viewer")
+        assert view.ASSET_DIR == expected
+        for name in view.ASSETS:
+            assert os.path.exists(os.path.join(view.ASSET_DIR, name)), name
+
+        # The value alone cannot catch this - falsifying showed the
+        # broken derivation gives the *same answer from a checkout*,
+        # which is exactly why it shipped. So the derivation is what is
+        # asserted: the path must come from the `bga` package's own
+        # location, not from walking up from this file.
+        source = open("tools/bga_view.py", encoding="utf-8").read()
+        derivation = source.split("ASSET_DIR")[0].rsplit("def _asset_dir", 1)
+        assert len(derivation) == 2, "ASSET_DIR is no longer derived in one place"
+        assert "bga.__file__" in derivation[1], (
+            "ASSET_DIR is not derived from the bga package's location - "
+            "packaged as bga._tools, walking up from this file lands in "
+            "site-packages and every asset 404s")
+        assert "dirname(os.path.dirname" not in derivation[1].replace(" ", ""), (
+            "walking up from __file__ is the derivation that broke")
+
+    def test_the_viewer_ships_in_the_wheel(self):
+        """The other half: the files have to be *in* the package.
+
+        They are html, css and ES modules, so setuptools skips them
+        unless `package-data` names them - and it did not, so an
+        installed `bga view` served a 404 for every asset.
+        """
+        import tomllib
+
+        data = tomllib.load(open("pyproject.toml", "rb"))
+        patterns = data["tool"]["setuptools"]["package-data"].get("bga", [])
+        for name in sorted(os.listdir("bga/viewer")):
+            suffix = os.path.splitext(name)[1]
+            assert any(pattern.endswith(f"*{suffix}") for pattern in patterns), (
+                f"{name} is not covered by package-data {patterns} - it would "
+                f"not ship, and `bga view` would 404 on it")
+
+    def test_the_tool_modules_import_each_other_relatively(self):
+        """`UX-94`'s rule, which this round broke twice: packaged, this
+        directory is `bga._tools` and a top-level `tools` does not
+        exist, so `from tools.x import y` is an ImportError in every
+        installed shape."""
+        import re
+
+        source = open("tools/bga_view.py", encoding="utf-8").read()
+        offenders = [line.strip() for line in source.splitlines()
+                     if re.match(r"\s*(from|import)\s+tools\.", line)]
+        assert not offenders, offenders
+
 class TestTheCommandLine:
     def test_no_browser_prints_the_url_and_opens_nothing(self, tmp_path):
         """Asserted by patching `webbrowser.open` in-process: a test

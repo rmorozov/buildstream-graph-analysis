@@ -127,6 +127,12 @@ def _run_instance(run_context, loaded_from) -> dict:
         ).strftime('%Y-%m-%d %H:%M:%S UTC')
     if loaded_from:
         instance['run_dir'] = loaded_from
+    # UX-186: which machine measured it. Part of *which run this is*, so
+    # it rides with the rest of the instance facts rather than becoming
+    # a second channel `bga compare` would have to load separately.
+    manifest = getattr(run_context, 'host_manifest', None) if run_context else None
+    if manifest:
+        instance['host_manifest'] = manifest
     return instance
 
 

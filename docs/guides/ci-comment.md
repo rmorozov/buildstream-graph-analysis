@@ -121,6 +121,35 @@ edge that cost 2.0s of critical path is not carrying anything.
   identity. Two pushes of the same tree produce identical identity
   hashes; only the instant tells the two comments apart.
 
+## Comparing across machines (`UX-186`)
+
+Every capture records a **host manifest** — CPU model and count, memory,
+kernel, distro, and the `bst`/`bwrap`/`cc` versions — under
+`host_manifest` in `run-context.json`. `bga compare` reads both runs'
+manifests and classifies the pair:
+
+| the two runs | what happens |
+|---|---|
+| same machine | today's behaviour, unchanged |
+| **different machines** | the comparison prints with a caveat naming the differing fields and their values, confidence is capped below `high`, and any `--fail-on-*` gate refuses with **exit 6** unless `--allow-cross-host` is passed |
+| one has no manifest | `host unknown` — a caveat only. Captures taken before this existed still compare |
+
+Only CPU model, CPU count and memory decide the classification. Kernel
+release, distro and toolchain versions are recorded because a human
+reading a refusal wants them, but a point release of `bwrap` is not why
+a build took 12% longer, and refusing on it would make the check noise.
+
+```bash
+# A farm of uniform runners opts in once, deliberately:
+bga compare baseline/run candidate/run --fail-on-regression --allow-cross-host
+```
+
+Durations are **not** normalised across hosts. That would be a model
+dressed as a measurement, which is the `UX-129` lesson; refusal and
+honesty come first. `bga baseline` warns when a set spans machines
+rather than refusing — a band across a fleet is a real thing to look at,
+it is just not the thing the band's arithmetic claims to be.
+
 ## Wiring it into GitHub Actions
 
 The comment carries a marker, `<!-- bga-ci-comment -->`, as its first

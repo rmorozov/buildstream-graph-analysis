@@ -63,7 +63,8 @@ from .bst_log_to_chrome_trace import (
     _resolve_start_time_us,
 )
 from .chrome_trace_to_bga_trace import invocation_wall_clock
-from ._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
+from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
+                                  add_memory_capacity_fields)
 
 
 def build_run_context(
@@ -129,6 +130,10 @@ def build_run_context(
     add_memory_capacity_fields(
         run_context, memory_budget_mb=memory_budget_mb, estimated_job_memory_mb=estimated_job_memory_mb,
     )
+    # UX-186: which machine measured this. Every capture, so that two
+    # runs can be told apart - or told to be the same - rather than
+    # compared on the assumption that they are.
+    add_host_manifest(run_context)
 
     return run_context
 

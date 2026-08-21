@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .analyzer import BuildEfficiencyAnalyzer
+from . import hostinfo
 from .cache_effectiveness import compute_cache_churn
 from .ingest.models import AnalysisResult, Element
 from .report.text import _CONFIDENCE_HIGH
@@ -167,6 +168,11 @@ class ComparisonResult:
     # matching on prose. Each entry is `{"check": ..., "message": ...}`;
     # `check` is stable, `message` is not.
     mismatches: List[dict] = field(default_factory=list)
+    # UX-186: whether both runs were measured on the same machine.
+    # `{"status": same|different|unknown, "differing": [...]}`. `unknown`
+    # for a capture taken before the manifest existed, which still
+    # compares - with the caveat, and without the refusal.
+    host_comparison: Optional[dict] = None
     # UX-54: which of the two runs describe a build that did not
     # complete ("baseline" and/or "candidate"). Kept separate from
     # `low_confidence`, which is about a signal being noisy: a failed
@@ -224,6 +230,7 @@ class ComparisonResult:
         return {
             'baseline_run_id': self.baseline_run_id,
             'candidate_run_id': self.candidate_run_id,
+            'host_comparison': self.host_comparison,
             'baseline_run_instance': self.baseline_run_instance,
             'candidate_run_instance': self.candidate_run_instance,
             'memory_envelope_delta': self.memory_envelope_delta,
@@ -621,6 +628,34 @@ def _compare_results(
             else mode_warning
         )
 
+    # UX-186: and whether the two were measured on the same machine at
+    # all. Before this there was no host check of any kind, so a
+    # baseline captured on a laptop gated a candidate from a CI runner
+    # with no caveat - the class of not-a-measurement UX-78's refusal
+    # grammar exists for, never firing.
+    baseline_host = (getattr(baseline_result, 'run_instance', None)
+                     or {}).get('host_manifest')
+    candidate_host = (getattr(candidate_result, 'run_instance', None)
+                      or {}).get('host_manifest')
+    host_comparison = hostinfo.classify(baseline_host, candidate_host)
+    host_warning = hostinfo.describe(host_comparison, baseline_host, candidate_host)
+    if host_comparison['status'] == 'different':
+        # UX-186 item 2: capped below "high". Two machines' durations are
+        # not one measurement, whatever each run's own analysis thought
+        # of its own coverage.
+        low_confidence = True
+    if host_warning:
+        # Deliberately *not* in `mismatches`: that list refuses the whole
+        # comparison before it is printed, and a cross-host pair is worth
+        # looking at - it just is not worth *gating* on. So the caveat
+        # renders with the numbers, and the refusal lives on the
+        # `--fail-on-*` gates, where `--allow-cross-host` opts a uniform
+        # CI farm back in once, deliberately.
+        comparability_warning = (
+            f"{comparability_warning}; {host_warning}" if comparability_warning
+            else host_warning
+        )
+
     # UX-54: a run whose build failed is not a candidate for a
     # scheduling verdict at all.
     failed_runs = [
@@ -722,6 +757,7 @@ def _compare_results(
     return ComparisonResult(
         baseline_run_id=baseline_result.run_id,
         candidate_run_id=candidate_result.run_id,
+        host_comparison=host_comparison,
         baseline_run_instance=getattr(baseline_result, 'run_instance', None) or {},
         candidate_run_instance=getattr(candidate_result, 'run_instance', None) or {},
         baseline_metrics=baseline_metrics,

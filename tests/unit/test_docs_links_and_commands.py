@@ -707,3 +707,15 @@ def test_every_flag_blast_accepts_is_in_its_entry():
              if option.startswith("--")} - {"--help"}
     missing = sorted(flag for flag in flags if flag not in entry)
     assert not missing, f"cli.md's blast entry documents no {missing}"
+
+
+def test_the_ci_journey_documents_the_cross_host_gate():
+    """UX-186's acceptance: the journey this most affects has to name
+    the flag that decides whether a CI farm's gates fire at all."""
+    guide = (REPO / "docs" / "guides" / "ci-comment.md").read_text(encoding="utf-8")
+
+    assert "--allow-cross-host" in guide
+    assert "host_manifest" in guide, "the field a reader would go looking for"
+    assert "exit 6" in guide, "the code a pipeline branches on"
+    assert "host unknown" in guide.lower(), (
+        "old captures still compare, and the guide should say so")

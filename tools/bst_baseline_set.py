@@ -311,6 +311,46 @@ def check_homogeneity(members: List[dict]) -> dict:
         'coverage_gaps': coverage_gaps,
         'assumptions': assumptions,
         'revision_drift': drift,
+        'host_drift': _host_drift(members),
+    }
+
+
+def _host_drift(members: List[dict]) -> Optional[dict]:
+    """UX-186 item 3: whether the set was captured on one machine.
+
+    A warning rather than a refusal, unlike the mismatches above. A band
+    assembled across machines is a real object somebody may deliberately
+    want - "how much does the runner fleet vary" is a question - it just
+    is not the object the band's arithmetic claims to be, and `UX-92`
+    measured 33% spread on nominally identical runners to prove it.
+
+    Read from each member's own `run-context.json`, since the capture
+    context file records no host fields.
+    """
+    from bga import hostinfo
+
+    manifests = []
+    for member in members:
+        context_path = os.path.join(member.get('run_dir') or '', 'run-context.json')
+        try:
+            with open(context_path, encoding='utf-8') as handle:
+                manifests.append(json.load(handle).get('host_manifest'))
+        except (OSError, ValueError):
+            manifests.append(None)
+    known = [manifest for manifest in manifests if manifest]
+    if len(known) < 2 or hostinfo.homogeneous(manifests):
+        return None
+    models = sorted({str(manifest.get('cpu_model')) for manifest in known})
+    counts = sorted({manifest.get('cpu_count') for manifest in known})
+    return {
+        'message': (
+            f"this set spans {len(models)} CPU model(s) and {len(counts)} core "
+            f"count(s) - a band over runs from different machines describes the "
+            f"fleet, not the build (UX-92 measured 33% spread on one machine)"
+        ),
+        'cpu_models': models,
+        'cpu_counts': [count for count in counts],
+        'unknown': sum(1 for manifest in manifests if not manifest),
     }
 
 
@@ -360,6 +400,8 @@ def format_set_text(members: List[dict], homogeneity: dict) -> str:
         lines.append(f"      {_name_refs(assumption['refs'])}")
     if homogeneity['revision_drift']:
         lines.append(f"  DRIFT: {homogeneity['revision_drift']['message']}")
+    if homogeneity.get('host_drift'):
+        lines.append(f"  HOSTS: {homogeneity['host_drift']['message']}")
     lines.append('=' * 60)
     return '\n'.join(lines)
 

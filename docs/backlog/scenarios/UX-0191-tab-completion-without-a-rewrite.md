@@ -1,6 +1,6 @@
 # UX-191: tab completion without a rewrite
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-158 (the help surface completion complements), UX-126 (the alias grammar worth completing)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the help surface completion complements), UX-126 (the alias grammar worth completing)
 
 ## Motivation
 
@@ -58,3 +58,83 @@ store's snapshots on a fixture project, and `bga blast <TAB>` lists
 element names; a shell without activation sees zero behavior change
 (the marker line is inert); help lines and `--help` output are
 byte-identical before and after (the UX-158 caps hold).
+
+---
+
+## What was built
+
+**The decision, first, because it was the question the feedback
+asked.** `click` was considered and declined. `argcomplete` completes
+an argparse program as it stands: a `PYTHON_ARGCOMPLETE_OK` marker in
+the first kilobyte of the entry point, one
+`argcomplete.autocomplete(parser)` call, an optional extra. A click
+migration would touch all fifteen subcommands, re-render `UX-158`'s
+help from scratch (click formats its own), and buy nothing argcomplete
+does not already give. Recorded here rather than in a commit message,
+and revisitable if argcomplete ever cannot complete something users
+need.
+
+**The integration is two lines.** `# PYTHON_ARGCOMPLETE_OK` at
+`bga/cli.py:2`, and `_maybe_complete()` at the top of `main()` -
+before the schema hook and before the alias dispatch, so a TAB never
+pays for a tool import. It is inert without the shell hook:
+`argcomplete.autocomplete` returns immediately unless `_ARGCOMPLETE`
+is in the environment, and a missing `argcomplete` is a caught
+`ImportError`.
+
+**Three completers carry the value:**
+
+1. `_snapshot_completer` - `@last`, `@prev`, and the store's own
+   stamps, which is the completion the feedback named (*"bga
+   cache-trend"*, whose argument is a run). Attached by
+   `_attach_run_completers`, which walks every subparser driven off
+   `_RUN_DIRECTORY_ARGS`/`_RUN_DIRECTORY_LIST_ARGS`/`_PLANE2_ARGS` -
+   the same three lists `_resolve_run_aliases` uses, so an argument
+   that learns to take an alias gets completion for it without a
+   second edit. 22 arguments are completable.
+2. `_command_completer` - subcommands **and** all seventeen `UX-67`
+   aliases (the Motivation's "fifteen subcommands" and this item's
+   original "ten aliases" were both estimates; the real counts are 11
+   and 17, and a guard now reads them from `TOOL_ALIASES` rather than
+   from a list a human keeps in step).
+   The aliases are not argparse subparsers by design (registering them
+   would import every tool to build the parser, on every `bga
+   analyze`), so completion reads `TOOL_ALIASES` directly. A completion
+   that offered half the tool would be worse than none.
+3. `_element_completer` - element names for `bga blast`, from the
+   project's own files.
+
+Every one is best-effort by construction: a completer that raises
+reaches the user's shell as a traceback in the middle of a command
+line, so anything unreadable answers nothing.
+
+Packaging: `completion = ["argcomplete>=3.0"]` extra, plus `dev`.
+Documented in README (3 lines) and in `docs/guides/cli.md`.
+
+Tests: 17 new (`tests/unit/test_tab_completion.py`), driven through
+the real `argcomplete` entry point where the answer does not depend on
+a project on disk, and through the completer functions where it does.
+Seven mutations, each red.
+
+**A defect the guards found in the fix itself.** `_snapshot_completer`
+called `os.path.basename` - and `bga/cli.py` does not import `os`. The
+`NameError` was swallowed by the deliberate broad `except`, so the
+completion did not crash; it silently answered nothing, which is
+exactly the dead TAB with no explanation the completer's own docstring
+warns about. `Path(snapshot).name` instead.
+
+**A guard that guarded nothing, found by falsifying it.**
+`test_no_project_means_no_answer` asserted the element completer
+returns `[]` outside a project. Deleting the `project is None` branch -
+so the completer walked the current directory instead - left it green,
+because a `tmp_path` holds no `.bst` files either way. But the
+directory a user TABs in outside a project is `$HOME` or `/`, and a
+recursive walk of that on every keypress is the failure the design
+avoids. Rewritten to pin the *call*, not the answer: `discover_element_names`
+must not be invoked at all. It reddens now.
+
+**Deviation from the Required Fix:** `bga doctor` says nothing about
+completion. The item allowed either way ("only if trivially checkable,
+else nothing"); whether a shell rc has been sourced is not checkable
+from inside the process, so nothing.
+

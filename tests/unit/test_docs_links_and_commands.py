@@ -762,3 +762,16 @@ def test_the_reference_documents_the_timeline_command():
     assert "bga timeline" in reference
     assert "--no-keep-raw" in reference
     assert "Perfetto" in reference
+
+
+def test_the_docs_explain_how_to_turn_completion_on():
+    """UX-191: completion that nobody activates is completion nobody
+    has. The activation line is the feature."""
+    reference = (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+
+    for text in (reference, readme):
+        assert "register-python-argcomplete bga" in text
+        assert "bga[completion]" in text
+    assert "click" in reference.lower(), (
+        "the declined alternative should be recorded where a reader asks")

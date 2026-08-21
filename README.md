@@ -24,6 +24,8 @@ project's own BuildStream install). `pip install -e .` from inside this
 checkout is the **contributor** mode, which is what `make test` and
 `make lint` expect and not what a user needs.
 
+Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run is accepted — is `pip install "bga[completion]"` plus one line in your shell rc: `eval "$(register-python-argcomplete bga)"` for bash/zsh, or `register-python-argcomplete --shell fish bga | source` for fish.
+
 ## Quick start (30 seconds, no BuildStream needed)
 
 ```bash
@@ -64,10 +66,9 @@ bga snapshot -- bst build <targets>   # capture + extract + analyze
 bga snapshot -- bst build <targets>   # ...and compare against the previous one
 ```
 
-Run `bga doctor` first — it takes a second or two. Every capture environment this project
-has stood up was assembled by failure (a missing plugin, an absent compiler, `bwrap` blocked
-by a sysctl); each has a one-line remedy, and reading it before a thirty-minute build is much
-cheaper than after.
+Run `bga doctor` first — it takes a second or two. Every capture environment this project has
+stood up was assembled by failure (a missing plugin, an absent compiler, `bwrap` blocked by a
+sysctl); each has a one-line remedy, cheaper to read before a thirty-minute build than after.
 
 The second `snapshot` prints the analysis **and** the verdict against the first. Captures land
 in `.bga/runs/<UTC-stamp>/` under the project (gitignored), and every command taking a run

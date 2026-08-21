@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
 """
 BuildStream Build Efficiency Analyzer (bga) - Command Line Interface
 
@@ -1276,6 +1277,99 @@ def _tool_help() -> str:
     return format_tool_help()
 
 
+def _snapshot_completer(prefix, parsed_args, **_kwargs):
+    """`@last`, `@prev`, and this project's own snapshot stamps.
+
+    The completion the feedback actually named: *"it will greatly
+    improve UX on commands like bga cache-trend"*, where the argument is
+    a run and the useful answers are the aliases plus what the store
+    holds. Best-effort by construction - a completer that raises leaves
+    the user with a dead TAB, so anything unreadable answers nothing.
+    """
+    try:
+        from . import run_store
+
+        project = run_store.project_root()
+        if project is None:
+            return [alias for alias in ("@last", "@prev")
+                    if alias.startswith(prefix)]
+        # `os.path.basename` via `Path`: this module does not import
+        # `os`, and reaching for it here failed silently inside the
+        # broad `except` below - the exact dead-TAB-with-no-explanation
+        # this completer's own docstring warns about.
+        stamps = ["@" + Path(snapshot).name
+                  for snapshot in run_store.list_runs(project)]
+        return [candidate for candidate in ["@last", "@prev"] + stamps
+                if candidate.startswith(prefix)]
+    except Exception:  # noqa: BLE001 - a dead TAB is worse than no answer
+        return []
+
+
+def _element_completer(prefix, parsed_args, **_kwargs):
+    """Element names, for `bga blast`, from the project's own files."""
+    try:
+        from .tools_dispatch import TOOL_ALIASES  # noqa: F401  (import guard)
+        from tools.bst_native_build_tracer import discover_element_names
+
+        project = getattr(parsed_args, "project", None)
+        if project is None:
+            from . import run_store
+            project = run_store.project_root()
+        if project is None:
+            return []
+        return [name for name in discover_element_names(project)
+                if name.startswith(prefix)]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _attach_run_completers(parser) -> None:
+    """Give every run-shaped argument the `@`-alias completer.
+
+    Driven off `_RUN_DIRECTORY_ARGS`/`_RUN_DIRECTORY_LIST_ARGS`/
+    `_PLANE2_ARGS` - the same three lists `_resolve_run_aliases` uses -
+    so an argument that learns to take an alias gets completion for it
+    without a second edit, and the two cannot disagree about which
+    arguments those are.
+    """
+    completable = set(_RUN_DIRECTORY_ARGS) | set(_RUN_DIRECTORY_LIST_ARGS) \
+        | set(_PLANE2_ARGS) | {"run"}
+    for action in parser._actions:
+        if getattr(action, "choices", None) and hasattr(action.choices, "keys"):
+            for subparser in action.choices.values():
+                if subparser is not None:
+                    _attach_run_completers(subparser)
+        elif action.dest in completable:
+            action.completer = _snapshot_completer
+        elif action.dest == "target":
+            # `bga blast TARGET` - a url, a path or an element name. The
+            # first two have no source of truth to complete from; the
+            # third does.
+            action.completer = _element_completer
+
+
+def _command_completer(prefix, parsed_args, **_kwargs):
+    """Every name `bga` dispatches: subcommands *and* the aliases.
+
+    The `UX-67` aliases are not argparse subparsers - registering them
+    would import every tool to build the parser, on every `bga analyze`,
+    which is the cost that design deliberately avoids. So completion
+    reads `TOOL_ALIASES` directly and offers both sets, because a user
+    types `bga wrap` exactly as often as `bga analyze` and a completion
+    that omitted half the tool would be worse than none.
+    """
+    try:
+        from .tools_dispatch import TOOL_ALIASES
+
+        names = set(TOOL_ALIASES)
+        for action in create_parser()._actions:
+            if getattr(action, "choices", None) and hasattr(action.choices, "keys"):
+                names |= set(action.choices)
+        return sorted(name for name in names if name.startswith(prefix))
+    except Exception:  # noqa: BLE001 - a dead TAB is worse than no answer
+        return []
+
+
 def create_parser() -> argparse.ArgumentParser:
     """
     Create the argument parser with full inline documentation.
@@ -1313,6 +1407,10 @@ def create_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(
         dest='command', metavar='COMMAND', help='Available commands',
         parser_class=_CompactSubParser)
+    # UX-191: completion offers the aliases too - see
+    # `_command_completer`. Attached rather than registered, so the
+    # parser stays exactly as cheap to build as it was.
+    subparsers.completer = _command_completer
 
     # analyze - primary command, full report (every section)
     analyze_parser = subparsers.add_parser(
@@ -1627,6 +1725,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     compare_parser.set_defaults(func=cmd_compare)
 
+    # UX-191: after every subparser exists, so the walk sees all of them.
+    _attach_run_completers(parser)
     return parser
 
 
@@ -1682,6 +1782,20 @@ _SCHEMA_BY_COMMAND = {
 }
 
 
+def _maybe_complete() -> None:
+    """Hand the parser to `argcomplete`, when the shell asked for it.
+
+    Costs one failed import when completion is not installed, and
+    nothing at all when the shell hook is not active: `argcomplete`
+    returns immediately unless `_ARGCOMPLETE` is in the environment.
+    """
+    try:
+        import argcomplete
+    except ImportError:
+        return
+    argcomplete.autocomplete(create_parser())
+
+
 def _maybe_print_schema(argv: list) -> Optional[int]:
     """`bga <command> --schema` -> the JSON Schema of its output, exit 0.
 
@@ -1728,6 +1842,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     # that has never heard of the flag. A pre-parse hook rather than a
     # `nargs="?"` positional, because weakening three commands' argument
     # checking to add one switch is the wrong trade.
+    # UX-191: shell completion for the argparse program as it stands, via
+    # `argcomplete`. Inert without the shell hook - the marker line at the
+    # top of this file and this call are the whole integration, and an
+    # environment without `argcomplete` installed simply skips it.
+    #
+    # A `click` migration was considered and declined: it would touch
+    # every subcommand, re-render `UX-158`'s help from scratch, and buy
+    # nothing argcomplete does not already give. Recorded in UX-191.
+    _maybe_complete()
+
     schema_exit = _maybe_print_schema(raw_argv)
     if schema_exit is not None:
         return schema_exit

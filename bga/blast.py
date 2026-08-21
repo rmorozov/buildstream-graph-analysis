@@ -174,12 +174,36 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
         for resource in resources or []:
             if resource.get("keying") != "content":
                 continue
-            staged = os.path.normpath(resource.get("identity") or "").strip("/")
+            identity = resource.get("identity") or ""
+            # UX-192: a junctioned content identity is namespaced
+            # (`sub.bst:files/libfoo`, UX-182), and a developer types the
+            # filesystem path - so the prefix is stripped for matching.
+            # The identity keeps it: it is what the table prints and what
+            # `bga blast` resolves exactly.
+            _junction, _colon, within = identity.rpartition(":")
+            staged = os.path.normpath(within or identity).strip("/")
             if not staged:
                 continue
             if relative == staged or relative.startswith(staged + "/"):
                 found.add(uid)
     return found
+
+
+def _kind_of(inventory: dict, direct: Set[str], keying: Optional[str]) -> Optional[str]:
+    """The source kind behind a heuristic match, when it is unambiguous.
+
+    `UX-192`. A heuristic resolves a *spelling*, not a stanza, so more
+    than one kind can answer - two elements consuming one path through
+    `local` and `patch`, say. One kind is reported; several are reported
+    as none, and the keying sentence falls back to the keying-only
+    wording rather than picking a kind at random.
+    """
+    kinds = {resource.get("kind")
+             for uid in direct
+             for resource in (inventory.get("elements") or {}).get(uid) or []
+             if resource.get("keying") == keying}
+    kinds.discard(None)
+    return kinds.pop() if len(kinds) == 1 else None
 
 
 def blast(run_dir, target: str, project_dir: Optional[str] = None,
@@ -210,12 +234,18 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     direct: Set[str] = set()
     used: Optional[str] = None
     keying = None
+    kind = None
     if matched is not None:
         keying = matched.get("keying")
+        kind = matched.get("kind")
         used = "url" if keying == "ref" else "path"
-        identity = matched.get("identity")
+        # UX-192: grouped by the `(kind, identity)` pair the table groups
+        # by. Matching on identity alone merged two kinds that happen to
+        # share a spelling here while the table showed them apart, so the
+        # two surfaces disagreed about the same run.
+        key = (kind, matched.get("identity"))
         direct = {uid for uid, resources in (inventory.get("elements") or {}).items()
-                  if any(r.get("identity") == identity for r in resources or [])}
+                  if any(sources_mod.resource_key(r) == key for r in resources or [])}
         # The other readings are still reported: an exact match decides
         # the answer, it does not hide that the name was ambiguous.
         if used not in shapes:
@@ -232,6 +262,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
             keying = None
         if direct:
             used = shape
+            kind = _kind_of(inventory, direct, keying)
             break
     if used is None:
         used = shapes[0] if shapes else "element"
@@ -252,6 +283,11 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
         "resolved_as": used,
         "also_matched": [shape for shape in shapes if shape != used],
         "keying": keying,
+        # UX-192: the source kind, not the reading. The text renderer
+        # built its keying sentence from `resolved_as` - always "url" -
+        # so a pip resource said "any commit to this rebuilds all of
+        # them", the sentence UX-181 shipped to remove from the table.
+        "kind": kind,
         "direct_elements": sorted(direct),
         "direct_count": len(direct),
         "blast_elements": sorted(reachable),
@@ -346,7 +382,7 @@ def format_blast_text(answer: dict) -> str:
             f"{answer['blast_count']}")
     if answer['keying']:
         clause = sources_mod.keying_clause({'keying': answer['keying'],
-                                            'kind': answer['resolved_as']})
+                                            'kind': answer.get('kind')})
         lines.append(f"  {clause}")
     lines += [
         "",

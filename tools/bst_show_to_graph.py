@@ -315,12 +315,12 @@ def main() -> int:
     parser.add_argument(
         "targets", nargs="+",
         help="Element(s) actually passed to the real bst build/show invocation "
-             "being analyzed - these are marked requested_target: true",
+             "being analyzed - these are marked requested_target: true.",
     )
-    parser.add_argument("output_json", help="Path to write graph.json to")
+    parser.add_argument("output_json", help="Path to write graph.json to.")
     parser.add_argument(
         "--bst-bin", default="bst",
-        help="Path to the bst executable (default: bst, resolved via PATH)",
+        help="Path to the bst executable (default: bst, resolved via PATH).",
     )
     args = parser.parse_args()
 

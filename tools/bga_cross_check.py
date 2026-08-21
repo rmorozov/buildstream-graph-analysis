@@ -46,6 +46,17 @@ Usage
     bga analyze -d RUN_DIR -f json > analysis.json
     tools/bga_cross_check.py RUN_DIR analysis.json
 """
+
+HELP = """Recompute, from a run directory alone, quantities `bga` also computes
+internally, and report where the two disagree.
+
+An independent second implementation of the same arithmetic: agreement is
+evidence, disagreement is a defect in one of them. Every audit round from
+the third onward opened with some version of this, and it found something
+every time it was pointed somewhere new.
+
+The findings it produced are listed in this module's own docstring.
+"""
 import argparse
 import json
 import sys
@@ -204,10 +215,10 @@ def run(run_dir: str, analysis: dict) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+        description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("run_dir", help="A bga run directory")
-    parser.add_argument("analysis_json", help="`bga analyze -f json` output for it")
+    parser.add_argument("run_dir", help="A bga run directory.")
+    parser.add_argument("analysis_json", help="`bga analyze -f json` output for it.")
     args = parser.parse_args()
 
     with open(args.analysis_json, encoding="utf-8") as handle:

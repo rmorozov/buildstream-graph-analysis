@@ -58,9 +58,19 @@ Scheme handling in `normalize_url`: `_KNOWN_SCHEMES` matched
 case-insensitively, and a scheme it does not know returned untouched
 rather than run through the scp-colon rewrite. `git+https://host/org/
 repo.git` and `HTTPS://Host/Org/Repo` stop becoming
-`git+https///host/org/repo` and `https///Host/Org/Repo`; the scp
-heuristic now applies only to scheme-less `user@host:path` forms, and
-a port is still not a path.
+`git+https///host/org/repo` and `https///Host/Org/Repo`; and a port is
+still not a path.
+
+**Corrected (`UX-192`, round 20):** this log also claimed the scp
+heuristic "now applies only to scheme-less `user@host:path` forms". It
+did not — the rewrite still ran after a known scheme had been stripped,
+so `https://host/a:b/c`, a colon in the *path*, became `host/a/b/c`: a
+second identity for one repository, which is the defect this item was
+filed against, surviving in the one spelling nobody tested. The claim
+is true as of `UX-192`. Also corrected there: `git+http` was missing
+from `_KNOWN_SCHEMES` while `git+https` was present, and the pip
+identity dropped the index entirely, collapsing one package name
+published on two indexes into one resource.
 
 Per-kind identity: `resource_of_source` keys a `pip` source on its
 sorted package list, not the index url, so several pip elements

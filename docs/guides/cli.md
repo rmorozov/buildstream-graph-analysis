@@ -462,6 +462,41 @@ bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shar
 
 `floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
+## `bga blast` — what rebuilds if I touch this (`UX-172`)
+
+The blast-radius question from whichever end you have it:
+
+```bash
+bga blast https://gitlab.example.com/org/monorepo.git @last   # a repository
+bga blast components/lib-a                                    # a path in the project
+bga blast lib-a.bst                                           # an element
+bga blast gitlab.example.com/org/monorepo --no-cost           # structure only
+```
+
+The run defaults to `@last`. The target is resolved **url, then path,
+then element**, and the answer says which reading it used and which
+others also matched — a project can name an element after a directory,
+and the command picks deterministically rather than silently.
+
+An identity the run's `sources.json` already knows resolves *before*
+those heuristics, so the resource cell the `Shared Sources` table
+printed can be pasted straight back in (`UX-178`; `UX-192` stopped the
+table eliding long identities, which had reopened it).
+
+| flag | what it does |
+|---|---|
+| `--project PATH` | the project a relative path resolves against; defaults to the enclosing BuildStream project |
+| `--no-cost` | skip the measured rebuild time. The direct set, the closure and the kind split come from the graph and the inventory alone, which on a project of thousands of elements is the difference between a lookup and a full analysis — **0.10s against 3.22s** on the 1,202-element synthetic run (`UX-182`). The answer then says `Cost: not measured` rather than reporting zero |
+| `-f, --format` | `text` or `json` |
+| `-o, --output` | write to a file instead of stdout |
+
+**A question, not a gate**: `bga blast` exits 0 on an answer of zero the
+same as on an answer of two hundred. Gating belongs in `bga compare`,
+where the refusal grammar already lives.
+
+The work it reports is the **sum of the blast elements' own durations**,
+not wall clock — a build with any parallelism completes it in less.
+
 ## `bga compare` — Run-to-Run Comparison
 
 Not a spec-mandated command (`docs/backlog/scenarios/UX-01`) - compares a baseline run against a candidate run and reports signed deltas in certified floors, efficiency score, and attribution, plus a verdict:

@@ -668,3 +668,42 @@ def test_the_keying_claim_carries_the_provenance_it_was_accepted_with():
         "since that is the half a reader gets wrong")
     assert "BuildStream 2.7.0" in section, "the measurement names no version"
     assert "%{full-key}" in section, "no measured keys, only an argument"
+
+
+# ---------------------------------------------------------------------------
+# UX-192: the reference has to name the flag that changes what the answer
+# contains, and the round-trip's own precondition.
+
+
+def test_the_cli_reference_documents_the_blast_command():
+    """`bga blast` shipped in round 18 with a one-line mention in the
+    entry-point block and no entry of its own, so `--no-cost` - which
+    changes what the answer contains - was documented nowhere."""
+    reference = (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
+
+    assert "## `bga blast`" in reference, "the reference has no blast entry"
+    entry = reference.split("## `bga blast`", 1)[1].split("\n## ", 1)[0]
+    assert "--no-cost" in entry
+    assert "--project" in entry
+    for reading in ("url", "path", "element"):
+        assert reading in entry, f"the resolution order does not name {reading}"
+    assert "exits 0" in entry, "a question, not a gate - and the entry should say so"
+
+
+def test_every_flag_blast_accepts_is_in_its_entry():
+    """The entry cannot fall behind the parser: a flag that exists and is
+    undocumented is how `--no-cost` shipped invisible."""
+    from bga.cli import create_parser
+
+    blast = None
+    for action in create_parser()._actions:
+        if getattr(action, "choices", None) and hasattr(action.choices, "keys"):
+            blast = action.choices.get("blast")
+    assert blast is not None, "no `blast` subparser"
+
+    entry = ((REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
+             .split("## `bga blast`", 1)[1].split("\n## ", 1)[0])
+    flags = {option for action in blast._actions for option in action.option_strings
+             if option.startswith("--")} - {"--help"}
+    missing = sorted(flag for flag in flags if flag not in entry)
+    assert not missing, f"cli.md's blast entry documents no {missing}"

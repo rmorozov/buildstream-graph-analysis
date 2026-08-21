@@ -176,8 +176,8 @@ def main() -> int:
         description="Convert Chrome Trace Event JSON into trace/v9 JSON."
     )
     parser.add_argument("chrome_trace_json", help="Path to a Chrome Trace JSON file "
-                         "(from tools/bst_log_to_chrome_trace.py)")
-    parser.add_argument("output_json", help="Path to write the trace/v9 JSON to")
+                         "(from tools/bst_log_to_chrome_trace.py).")
+    parser.add_argument("output_json", help="Path to write the trace/v9 JSON to.")
     args = parser.parse_args()
 
     with open(args.chrome_trace_json, "r", encoding="utf-8") as f:

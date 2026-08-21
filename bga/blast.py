@@ -168,13 +168,22 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
             relative = normalised
             break
     if relative is None:
-        relative = os.path.normpath(target).strip("/")
+        # UX-184: no candidate stayed inside the project. Falling back to
+        # the `..`-prefixed form let a `../monorepo` *identity* - which
+        # the inventory no longer produces, but old `sources.json` files
+        # still carry - prefix-match a query and answer confidently
+        # about a path this project cannot key.
+        return set()
     found = set()
     for uid, resources in (inventory.get("elements") or {}).items():
         for resource in resources or []:
             if resource.get("keying") != "content":
                 continue
             identity = resource.get("identity") or ""
+            if os.path.isabs(identity) or identity.startswith(".."):
+                # UX-184: an inventory written before the complaint above
+                # existed. Not keyable, so not matchable.
+                continue
             # UX-192: a junctioned content identity is namespaced
             # (`sub.bst:files/libfoo`, UX-182), and a developer types the
             # filesystem path - so the prefix is stripped for matching.

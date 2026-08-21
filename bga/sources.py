@@ -27,6 +27,7 @@ run directory already carries. `tools/bst_extract_run.py` writes the
 inventory into the run directory at extract time, which is the one
 moment the project and the run are both in hand.
 """
+import os
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 SCHEMA = "sources/v1"
@@ -178,6 +179,23 @@ def normalize_url(url: str) -> str:
     return text
 
 
+def _unkeyable_path(kind: str, path: str) -> Optional[str]:
+    """Why a content-keyed path cannot be an identity, or None.
+
+    `UX-184`. Both shapes here are ones `bst` refuses to build, so the
+    honest answer is a complaint rather than a normalisation that
+    invents a project-relative path the project does not have.
+    """
+    if os.path.isabs(path):
+        return (f"`{kind}` source path {path!r} is absolute - `bst` rejects "
+                f"paths outside the project, and stripping the leading `/` "
+                f"would collide with a real project-relative path of that name")
+    if os.path.normpath(path).split(os.sep)[0] == "..":
+        return (f"`{kind}` source path {path!r} escapes the project - `bst` "
+                f"rejects it, and it has no project-relative identity")
+    return None
+
+
 def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
     """One `sources:` stanza as `(resource, complaint)`.
 
@@ -225,9 +243,27 @@ def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
         # plugin whose identity lives under a key this does not know.
         return None, f"`{kind}` source has none of {', '.join(_IDENTITY_KEYS)}"
     keying = keying_of(kind)
+    if keying == "content":
+        # UX-184: `bst` itself rejects a `local` path that is absolute or
+        # escapes the project (`node_get_project_path` raises LoadError),
+        # but bga's reader is fed element YAML directly and a project
+        # that does not build can still be inventoried. It used to
+        # `.strip("/")` an absolute path into a *project-relative* one -
+        # so `/opt/monorepo` became the identity `opt/monorepo` and
+        # collided with a genuine `opt/monorepo` inside the project - and
+        # keep `../monorepo` verbatim, both silently. Against `UX-171`'s
+        # own no-silent-skips rule: a stanza this cannot key is named.
+        complaint = _unkeyable_path(kind, identity)
+        if complaint:
+            return None, complaint
     normalized = (identity if kind == "pip"
                   else normalize_url(identity) if keying == "ref"
-                  else identity.strip("/"))
+                  # UX-184: normalised, so `sub/../files/src` and
+                  # `files/src` are one identity rather than two. The
+                  # query side (`blast._elements_for_path`) has always
+                  # normalised; the inventory side did not, so the two
+                  # disagreed about the same directory.
+                  else os.path.normpath(identity).strip("/"))
     resource = {
         "kind": kind,
         "identity": normalized,

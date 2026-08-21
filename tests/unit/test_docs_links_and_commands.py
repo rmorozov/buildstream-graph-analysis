@@ -731,3 +731,14 @@ def test_the_fixing_guide_names_the_output_versioning_rule():
     assert "bump" in guide.lower()
     assert "additionalProperties" in guide, (
         "the rule's other half - an addition is not a breaking change")
+
+
+def test_the_reference_documents_the_full_flags():
+    """UX-187: a flag that restores a folded section is only useful to
+    a reader who knows it exists - and the elision line names it, so
+    the reference must too."""
+    reference = (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
+
+    for flag in ("--full-path", "--full-sources"):
+        assert flag in reference, f"cli.md does not document {flag}"
+    assert "JSON never truncates" in reference

@@ -462,6 +462,33 @@ bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shar
 
 `floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
+## Long reports (`UX-187`)
+
+On a build whose critical path is hundreds of elements, the path alone
+used to be **405 of the report's 498 lines** — 81% of it, with every
+section a reader acts on below the fold. The list-shaped sections now
+render their two ends and fold the middle:
+
+```text
+    layer10/mod003.bst                          7.90s (  0.3% of path)
+    ... 382 more element(s) (--full-path to print all)
+    layer393/mod005.bst                         4.60s (  0.2% of path)
+```
+
+A chain's two ends are where an optimizer starts — the root everything
+waits on, and the last link before the build finishes — so the middle
+is what goes.
+
+| flag | restores |
+|---|---|
+| `--full-path` | every element of the critical path |
+| `--full-sources` | every row of the Shared Sources table |
+
+**Nothing is cut silently**: every elision names its own count and the
+flag that undoes it. **JSON never truncates** — the caps are a
+text-rendering concern, `--format json` carries the whole thing, and
+the `--full-*` flags do not change one byte of it.
+
 ## The JSON outputs, and their schemas (`UX-190`)
 
 Every machine-readable output declares its own shape as its **first

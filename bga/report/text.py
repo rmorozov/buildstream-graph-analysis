@@ -30,6 +30,39 @@ _heaviest_on_path = findings_mod.heaviest_on_path
 _path_elements_by_duration = findings_mod.path_elements_by_duration
 
 _CRITICAL_PATH_INLINE_MAX = 5
+
+# UX-187: how much of a list-shaped section may scroll before the rest
+# is folded behind a flag. Measured rather than guessed: on a 402-element
+# chain the critical path rendered **405 of the report's 498 lines** -
+# 81% of everything - and the four sections a reader actually acts on
+# were below it. The numbers here are what a terminal shows without
+# scrolling, split head and tail because a chain's two ends are the two
+# places an optimizer starts.
+#
+# Nothing is truncated silently: every elision names its own count and
+# the flag that undoes it (`UX-160`'s standing lesson - a reader cannot
+# act on a number they do not know is missing).
+_PATH_HEAD = 12
+_PATH_TAIL = 8
+_SHARED_SOURCE_ROWS = 10
+
+
+def _elision(hidden: int, flag: str, what: str = "element(s)") -> str:
+    return f"    ... {hidden} more {what} ({flag} to print all)"
+
+
+def _head_and_tail(items, head: int, tail: int, full: bool = False):
+    """`(items_to_render, index_the_elision_goes_before)`.
+
+    A chain's two ends are where an optimizer starts - the root that
+    everything waits on, and the last link before the build finishes -
+    so the middle is what folds. Returns `(items, None)` unchanged when
+    the list already fits or the caller asked for all of it, so the
+    common case pays nothing.
+    """
+    if full or len(items) <= head + tail:
+        return list(items), None
+    return list(items[:head]) + list(items[-tail:]), head
 # UX-92: an invalidation with twenty independent roots is a different
 # problem from one with a single root, and the reader needs to see that
 # it is - but not twenty lines of it.
@@ -330,7 +363,7 @@ def _format_by_kind_summary(result: AnalysisResult) -> List[str]:
     return lines
 
 
-def _format_resource_blast(result) -> List[str]:
+def _format_resource_blast(result, full_sections=frozenset()) -> List[str]:
     """UX-171: which repository feeds which elements, and what it costs.
 
     Silent when the run carries no inventory (a capture from before
@@ -351,7 +384,12 @@ def _format_resource_blast(result) -> List[str]:
     total = blast.get('element_count') or 0
     lines = ["Shared Sources (blast radius by resource):", ""]
     lines.append(f"  {'resource':<44}{'direct':>7}{'blast':>9}{'work':>11}")
-    for row in rows:
+    # UX-187: rows are already ranked widest-first, so a cap keeps the
+    # ones a reader acts on. Four lines each, so twenty repositories is
+    # eighty lines of table.
+    shown = rows if 'sources' in full_sections else rows[:_SHARED_SOURCE_ROWS]
+    hidden_rows = len(rows) - len(shown)
+    for row in shown:
         cost = ("unmeasured" if row['measured_seconds'] is None
                 else f"{row['measured_seconds']:.0f}s")
         identity = row['identity']
@@ -383,6 +421,11 @@ def _format_resource_blast(result) -> List[str]:
         if row['measured_elements'] < row['blast_count']:
             lines.append(f"      measured for {row['measured_elements']} of "
                          f"{row['blast_count']} - the rest did not run in this build")
+    if hidden_rows:
+        # UX-187: named, not silent. The rows are ranked widest-first,
+        # so what folds is the tail - but a reader still has to be told
+        # it exists.
+        lines.append(_elision(hidden_rows, "--full-sources", "resource(s)"))
     unreadable = blast.get('unreadable') or {}
     if unreadable:
         # UX-160's lesson: a reader that silently drops what it cannot
@@ -432,7 +475,8 @@ def _format_blast_ranking(signals: dict) -> List[str]:
     return lines
 
 
-def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
+def format_text(result: AnalysisResult, section: Optional[str] = None,
+                by_kind: bool = False, full_sections=frozenset()) -> str:
     """
     Format analysis results as human-readable text.
 
@@ -500,7 +544,7 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     # UX-171: with the graph, because it is a fact about the graph's
     # inputs rather than about this run's scheduling.
     if section in (None, 'graph'):
-        lines.extend(_format_resource_blast(result))
+        lines.extend(_format_resource_blast(result, full_sections))
 
     # Certified Floors (Parts 14-17)
     if section in (None, 'floors'):
@@ -590,7 +634,12 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             lines.append(f"  Path: {' → '.join(critical_path)}")
         elif detail:
             lines.append("  Path (chain order, with each element's real measured duration):")
-            for entry in detail:
+            shown, hidden_at = _head_and_tail(
+                detail, _PATH_HEAD, _PATH_TAIL,
+                full=('path' in full_sections))
+            for index, entry in enumerate(shown):
+                if index == hidden_at:
+                    lines.append(_elision(len(detail) - len(shown), "--full-path"))
                 share = entry.get('share_of_path')
                 share_text = f"{share * 100:5.1f}% of path" if share is not None else "  n/a"
                 structural = (
@@ -886,9 +935,13 @@ def format_text(result: AnalysisResult, section: Optional[str] = None, by_kind: 
                 )
             serialized_pairs = batch_opportunities.get('serialized_pairs') or []
             if serialized_pairs:
+                # UX-187: `[:5]` was silent. A reader cannot act on a
+                # number they do not know is missing (`UX-160`).
+                hidden = len(serialized_pairs) - 5
                 lines.append(
                     "  Serialized (same dependency chain, not independently batchable): "
                     + "; ".join(f"{a} -> {b}" for a, b in serialized_pairs[:5])
+                    + (f" (+{hidden} more, see --format json)" if hidden > 0 else "")
                 )
             # UX-22: real per-element `max-jobs` overrides that combine
             # a long measured duration with a near-full-core setting AND

@@ -110,7 +110,7 @@ used - reported as ambiguous rather than guessed.
 - `pip` identity keeps the index as a suffix, so one package on two
   indexes is two resources; `declared` stays what the recipe wrote.
 - `git+http` joined `_KNOWN_SCHEMES` beside `git+https`.
-- The ten `UX-67` alias commands joined the help guard - the line cap,
+- The seventeen `UX-67` alias commands joined the help guard - the line cap,
   the terminator check and the bracket check all run over them now,
   and the coverage test reads `TOOL_ALIASES` as well as the parser.
   Five were over the cap and are now under it:

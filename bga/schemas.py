@@ -278,7 +278,12 @@ _STORE_REQUIRED = {
 _STORE_HINTS = {
     "total_bytes": {QUANTITY: "bytes"},
     "count": {QUANTITY: "count"},
-    "snapshots": {COLUMNS: ["stamp", "bytes", "alias", "incomplete_reason"]},
+    # UX-203: duration leads, because "is this project drifting" is a
+    # question about time. Size is still here - it is what the store
+    # warning is about - but it stopped being the answer.
+    "snapshots": {COLUMNS: ["stamp", "total_duration_us", "verdict_kind",
+                            "cache_hit_rate", "bytes", "alias",
+                            "incomplete_reason"]},
 }
 
 _SCHEMAS = {

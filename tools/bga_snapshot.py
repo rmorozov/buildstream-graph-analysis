@@ -543,6 +543,7 @@ def store_listing(project: str) -> dict:
     rows = []
     for path in snapshots:
         has_run = run_store.has_run(path)
+        measured = _run_measurements(path) if has_run else {}
         rows.append({
             "stamp": os.path.basename(path),
             "path": os.path.abspath(path),
@@ -552,7 +553,15 @@ def store_listing(project: str) -> dict:
             # UX-156/157/185's three ways to be incomplete, so the trend
             # can mark them rather than drawing them as measurements.
             "incomplete_reason": _incomplete_reason(path) if has_run else None,
+            # UX-203: what the trend was always supposed to plot. The
+            # view drew `bytes` - so "is this project drifting" was
+            # answered by disk usage, which is not the question. Read
+            # straight off run-context rather than analysed, because
+            # this runs for every snapshot on every `bga view`.
+            "total_duration_us": measured.get("total_duration_us"),
+            "cache_hit_rate": measured.get("cache_hit_rate"),
         })
+    _mark_verdicts(rows)
     return schemas.stamp({
         "project": os.path.abspath(project),
         "snapshots": rows,
@@ -561,6 +570,73 @@ def store_listing(project: str) -> dict:
         # counts directory entries) and matches `du --apparent-size`.
         "total_bytes": sum(row["bytes"] for row in rows),
     }, schemas.STORE)
+
+
+
+def _run_measurements(snapshot: str) -> dict:
+    """Duration and cache hit rate for one snapshot, cheaply.
+
+    `UX-203`. Both come out of `run-context.json`, which is one small
+    read: `wall_clock` carries the horizon, and `queue_summary`'s build
+    queue carries what BuildStream skipped - a skipped build is a cache
+    hit, which is the same thing `bga analyze` reports and the only
+    cache signal a capture records without Plane 3.
+
+    Everything is optional: a capture from before a field existed
+    yields `None`, and the trend draws a gap rather than a zero.
+    """
+    path = os.path.join(snapshot, run_store.RUN_SUBDIR, "run-context.json")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            context = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+
+    out = {}
+    clock = context.get("wall_clock") or {}
+    start, end = clock.get("start_us"), clock.get("end_us")
+    if isinstance(start, int) and isinstance(end, int) and end >= start:
+        out["total_duration_us"] = end - start
+
+    build = (context.get("queue_summary") or {}).get("build") or {}
+    processed, skipped = build.get("processed"), build.get("skipped")
+    if isinstance(processed, int) and isinstance(skipped, int):
+        total = processed + skipped
+        if total:
+            out["cache_hit_rate"] = skipped / total
+    return out
+
+
+def _mark_verdicts(rows: List[dict]) -> None:
+    """Give each row a `verdict_kind` against the runs before it.
+
+    `UX-203` asked for "the verdict vs its walk-back baseline". Derived
+    from the same `compute_band` the comparison uses, over the
+    durations already collected - so it costs no analyses, and the
+    trend's colouring cannot disagree with what `bga compare` would
+    say about the same pair.
+
+    `None` below `MIN_BASELINE_RUNS`, where there is no band to judge
+    against, and for any run that is not a measurement at all.
+    """
+    from bga.compare import compute_band
+
+    history: List[int] = []
+    for row in rows:
+        duration = row.get("total_duration_us")
+        if duration is None or row.get("incomplete_reason"):
+            row["verdict_kind"] = None
+            continue
+        band = compute_band(history) if history else None
+        if band is None:
+            row["verdict_kind"] = None
+        elif duration > band["high_us"]:
+            row["verdict_kind"] = "regressed"
+        elif duration < band["low_us"]:
+            row["verdict_kind"] = "improved"
+        else:
+            row["verdict_kind"] = "within_band"
+        history.append(duration)
 
 
 def _incomplete_reason(snapshot: str):

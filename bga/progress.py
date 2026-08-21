@@ -56,6 +56,20 @@ def enabled(stream=None) -> bool:
     if os.environ.get("BGA_NO_PROGRESS"):
         return False
     stream = sys.stderr if stream is None else stream
+    if os.environ.get("BGA_FORCE_PROGRESS"):
+        # `UX-197`: draw even onto a pipe. This exists so a test can run
+        # a real subprocess with progress genuinely *on* and compare its
+        # stdout against a run with it off - the comparison `UX-183`
+        # claimed to make and did not, because without this there is no
+        # way to turn progress on without a terminal, so both sides of
+        # that assertion were progress-off.
+        #
+        # Deliberately not documented as a user-facing switch: it makes
+        # `bga ... 2>file` write control characters into that file, and
+        # the one thing `UX-183` is about is that nothing does. It loses
+        # to `BGA_NO_PROGRESS` above, so the documented off-switch stays
+        # absolute.
+        return True
     try:
         return bool(stream.isatty())
     except (AttributeError, ValueError):

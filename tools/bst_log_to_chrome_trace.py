@@ -804,7 +804,17 @@ def _resolve_start_time_us(start_time_arg, input_log_path):
     return int(mtime * 1_000_000)
 
 
-def main(argv=None):
+def main(argv=None, quiet=False):
+    """Convert one log. `quiet` suppresses the closing status line.
+
+    `UX-197`: `bga timeline` calls this to build its Plane 1 half inside
+    a scratch directory it deletes on the way out, so the "Open <path>"
+    sentence named a file that no longer existed by the time the user
+    read it. `UX-188` moved that sentence to stderr and wrote a comment
+    saying it must not reach a timeline user - and then did not do it.
+    The composing caller passes `quiet=True` and prints the final path
+    itself.
+    """
     parser = argparse.ArgumentParser(
         description="Convert a BuildStream log (wrapped or raw) to Chrome Trace Event JSON."
     )
@@ -830,8 +840,14 @@ def main(argv=None):
     try:
         start_time_us = _resolve_start_time_us(args.start_time, args.input_log)
     except FileNotFoundError:
-        print(f"Error: Could not find input file '{args.input_log}'")
-        return
+        # `UX-197`: stderr and a non-zero code. This printed the error to
+        # *stdout* and returned None, which `sys.exit(None)` renders as
+        # exit 0 - so a missing input was a silent success to every
+        # caller that checks the exit status, this file's own composing
+        # caller included.
+        print(f"Error: Could not find input file '{args.input_log}'",
+              file=sys.stderr)
+        return 2
 
     converter = WrapperTraceConverter(raw_start_time_us=start_time_us)
 
@@ -847,8 +863,14 @@ def main(argv=None):
         # FIX: Use last_known_ts instead of 0 to prevent broken trace blocks at EOF
         converter.end_current_command(converter.last_known_ts)
     except FileNotFoundError:
-        print(f"Error: Could not find input file '{args.input_log}'")
-        return
+        # `UX-197`: stderr and a non-zero code. This printed the error to
+        # *stdout* and returned None, which `sys.exit(None)` renders as
+        # exit 0 - so a missing input was a silent success to every
+        # caller that checks the exit status, this file's own composing
+        # caller included.
+        print(f"Error: Could not find input file '{args.input_log}'",
+              file=sys.stderr)
+        return 2
 
     with open(args.output_json, "w") as f:
         f.write(converter.get_json())
@@ -857,12 +879,14 @@ def main(argv=None):
     # stderr - and `bga timeline`, which calls this to build its Plane 1
     # half in a scratch directory, must not tell the user to open a
     # temporary path that is deleted a moment later.
-    print(
-        f"Successfully generated trace! Open {args.output_json} in "
-        f"chrome://tracing or ui.perfetto.dev",
-        file=sys.stderr,
-    )
+    if not quiet:
+        print(
+            f"Successfully generated trace! Open {args.output_json} in "
+            f"chrome://tracing or ui.perfetto.dev",
+            file=sys.stderr,
+        )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

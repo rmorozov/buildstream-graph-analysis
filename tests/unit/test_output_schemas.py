@@ -21,11 +21,47 @@ import sys
 
 import pytest
 
-jsonschema = pytest.importorskip("jsonschema")
+from bga import schemas
 
-from bga import schemas  # noqa: E402  (after importorskip, deliberately)
+# `UX-197`: this was `pytest.importorskip("jsonschema")` at module
+# scope, which skips the *module*. Without dev extras that renders all
+# 25 guards as a single "1 skipped" line - measured in a clean venv:
+#
+#     collected 0 items / 1 skipped
+#
+# In CI the extras are installed, so it was real there and silent
+# everywhere else, which is the wrong way round for a guard whose whole
+# job is to catch a schema drifting from its payload. The module now
+# always collects, and `test_the_dev_extras_are_actually_here` below
+# *fails* rather than skips wherever `BGA_EXPECT_DEV` is set - CI sets
+# it; a contributor's bare venv does not, and still gets the honest skip.
+try:
+    import jsonschema
+except ImportError:                      # pragma: no cover - the point
+    jsonschema = None
+
+needs_jsonschema = pytest.mark.skipif(
+    jsonschema is None,
+    reason="jsonschema is not installed - `pip install -e '.[dev]'`")
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
+
+
+def test_the_dev_extras_are_actually_here():
+    """The one test in this file that runs without `jsonschema`.
+
+    An environment that claims to be a dev environment and cannot
+    validate a schema is a broken dev environment, and it should say so
+    in the one place anybody reads - a red test - rather than in a
+    skip line nobody counts.
+    """
+    if not os.environ.get("BGA_EXPECT_DEV"):
+        pytest.skip("not a dev environment by its own account "
+                    "(BGA_EXPECT_DEV is unset)")
+    assert jsonschema is not None, (
+        "BGA_EXPECT_DEV is set, so this environment claims the dev extras, "
+        "but `jsonschema` is missing and every schema guard in this module "
+        "just skipped. `pip install -e '.[dev]'`.")
 
 
 def _bga(args):
@@ -43,6 +79,7 @@ def _two_runs(tmp_path):
     return str(tmp_path / "a"), str(tmp_path / "b")
 
 
+@needs_jsonschema
 class TestEveryPayloadDeclaresItsShape:
     def test_analyze(self):
         payload = json.loads(_bga(["analyze", GOLDEN, "--format", "json"]).stdout)
@@ -67,6 +104,7 @@ class TestEveryPayloadDeclaresItsShape:
         assert json.loads(raw, object_pairs_hook=lambda pairs: pairs)[0][0] == "schema"
 
 
+@needs_jsonschema
 class TestTheSwitchPrintsTheSchema:
     @pytest.mark.parametrize("command,name", [
         ("analyze", schemas.ANALYZE),
@@ -92,6 +130,7 @@ class TestTheSwitchPrintsTheSchema:
         assert "produces no versioned JSON output" in result.stderr
 
 
+@needs_jsonschema
 class TestTheRoundTrip:
     """The acceptance: real output, real schema, real validator."""
 
@@ -157,6 +196,7 @@ class TestTheRoundTrip:
         jsonschema.validate(payload, schemas.schema(schemas.ANALYZE))
 
 
+@needs_jsonschema
 class TestTheSchemaCannotBeLoosenedToPass:
     """The round trip only checks the payload against the schema, so a
     `required` entry *deleted* to make a failing test pass loosens the
@@ -195,6 +235,7 @@ class TestTheSchemaCannotBeLoosenedToPass:
             "every key `bga blast` emits is unconditional and should be required")
 
 
+@needs_jsonschema
 class TestTheFullReportKeepsItsKeys:
     """`required` cannot cover `analyze`'s optional keys - a section
     projection would fail it - so the full key set is pinned separately
@@ -219,6 +260,7 @@ class TestTheFullReportKeepsItsKeys:
             f"so the schema types them.")
 
 
+@needs_jsonschema
 class TestTheSchemasThemselves:
     def test_every_name_resolves(self):
         for name in schemas.names():

@@ -1,6 +1,6 @@
 # UX-197: six seams round 21 verified into
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-183, UX-185, UX-188 (the landings these trail), UX-190 (whose guard the environment note concerns)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183, UX-185, UX-188 (the landings these trail), UX-190 (whose guard the environment note concerns)
 
 ## Motivation
 
@@ -65,3 +65,106 @@ passes; (4) SIGINT during a mocked slow `bst show` leaves no child
 corrected with the annotation convention; (6) removing `jsonschema`
 from a venv with `BGA_EXPECT_DEV=1` turns the schema module red, not
 skipped.
+
+---
+
+## What was built
+
+All six, each reproduced before it was touched. Four were defects in
+round-20 code, and the class they share is worth naming: every one is a
+claim that was **written down and not checked**.
+
+**1. The byte-identity test was vacuous — and worse than the item
+says.** Measured: the "progress on" child and the "progress off" child
+both emitted **0 stderr bytes**, so the two runs were identical in
+stderr as well and the assertion could not have failed. The proof is
+direct — routing the ticker to stdout (the exact regression the test
+exists to prevent) leaves the *original* test **passing**:
+
+```text
+--- the ORIGINAL UX-183 test, against progress-writes-to-stdout ---
+1 passed
+--- the CORRECTED UX-197 test, same mutation ---
+2 failures
+```
+
+Two things were wrong, not one. `BGA_FORCE_PROGRESS` now lets a piped
+child draw at all — but the *command* was also wrong: `bga analyze` on
+a three-element fixture has no long phase, so even forced it emits
+nothing. The test drives `bga snapshot --list`, which walks the store
+where `UX-183` actually put a ticker: **102 stderr bytes on, 0 off,
+stdout byte-identical**. A precondition test asserts the force switch
+is effective, so the comparison can never go quiet again, and
+`BGA_NO_PROGRESS` still beats it — the documented off-switch stays
+absolute. The force env is deliberately undocumented: it would write
+control characters into `2>file`, which is the one thing `UX-183` is
+about.
+
+**2. `bga timeline` printed a path that was already gone.** Reproduced
+verbatim:
+
+```text
+Successfully generated trace! Open /tmp/bga-timeline-umfcn7q8/plane1.json in ...
+```
+
+`UX-188` moved that sentence to stderr and left a comment saying a
+timeline user must not see it. The stream changed; the sentence did
+not. `main(argv, quiet=False)` now, with the composing caller passing
+`quiet=True` and printing the final path itself — every path in the
+output exists after exit, and `bga log-to-chrome` still tells its own
+user where the file went. The adjacent pre-existing bug went too: both
+`FileNotFoundError` paths printed to **stdout** and returned `None`,
+which `sys.exit(None)` renders as **exit 0**, so a missing input was a
+silent success to every caller checking status — including this file's
+own composing caller.
+
+**3. `RunContext.suspended` deleted.** Never assigned, never read, and
+one letter from the `suspension` property that does the work — so the
+obvious name answered `None` for a run that really had slept. The
+comment explaining where the data lives moved onto the property that
+reads it.
+
+**4. Ctrl-C no longer orphans `bst show`.** Reproduced with a 120s
+child: after the parent took the `KeyboardInterrupt`, `kill -0` found
+the child alive. `UX-183` swapped `subprocess.run` for `Popen` plus a
+poll loop to draw a ticker and lost `run`'s kill-on-exception
+contract. `except BaseException: kill; wait; raise` restores it —
+`BaseException` because `KeyboardInterrupt` and `SystemExit` are
+exactly the two this is about.
+
+**5. Both counts corrected, with the annotation rather than silently.**
+`UX-183..UX-192` is ten items, not twelve; the `UX-192` row now reads
+the real 17 aliases. A guard reads the alias count from `TOOL_ALIASES`,
+so that half cannot drift again.
+
+**6. The schema guards cannot vanish quietly.** Reproduced in a clean
+venv:
+
+```text
+$ python -m pytest tests/unit/test_output_schemas.py -q
+collected 0 items / 1 skipped
+```
+
+25 guards, one skip line. The module now always collects; the
+per-class `needs_jsonschema` marker gives a contributor's bare venv an
+honest skip, and one canary test **fails** wherever `BGA_EXPECT_DEV` is
+set. CI sets it workflow-wide. Driven both ways for real:
+
+```text
+no jsonschema, BGA_EXPECT_DEV unset  -> 26 skipped
+no jsonschema, BGA_EXPECT_DEV=1      -> 1 failed, 25 skipped
+```
+
+Tests: 12 new (`tests/unit/test_six_seams_round_21_found.py`) plus
+three rewritten in the progress suite, and a
+`tests/support/_hide_jsonschema.py` plugin so seam 6's guard runs in
+the environment it describes rather than asserting about it. Ten
+mutations, each red — including two over-fixing directions (deleting
+the converter's sentence outright, and letting the canary skip).
+
+**Deviation from the Required Fix:** none. Item 2's parenthetical
+("or say the *final* path") was resolved the other way — suppress
+under `timeline`, keep it for the direct caller — because
+`log-to-chrome`'s own user does want that path, and the composing
+caller already prints the final one.
+

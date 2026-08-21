@@ -118,7 +118,7 @@ the target.
 
 ## Landed
 
-All twelve items UX-183..UX-192 are 🟢 Done, in this branch rather than
+All ten items UX-183..UX-192 are 🟢 Done, in this branch rather than
 a sibling's. The status table carries each one's measured outcome; the
 task files carry the falsification logs. Four things the fixes found
 that the audit itself had not:
@@ -147,6 +147,12 @@ Two counts in the round's own prose were estimates that the code had
 outgrown — "fifteen subcommands, ten aliases" against a real 11 and 17.
 Both guards that quoted them now read `create_parser()` and
 `TOOL_ALIASES` instead.
+
+> **Corrected in `UX-197`:** this section originally opened "All twelve
+> items UX-183..UX-192", which is ten. Round 21 caught it, and the
+> placement is the lesson — a miscount in the very paragraph announcing
+> that two other counts had been corrected. Hand-counted figures in
+> prose are the class; `UX-197` item 5.
 
 The suite stands at **2,389**, the `bst` tier at 43.
 

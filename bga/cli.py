@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from . import __version__
+from . import __version__, schemas
 from .analyzer import (
     MODELLED_AXIS_CLAUSE, UNMODELED_AXIS_CLAUSE, BuildEfficiencyAnalyzer,
 )
@@ -405,7 +405,8 @@ def _produce_compare_output(args: argparse.Namespace):
     comparison.memory_envelope_delta = _memory_envelope_delta(args)
 
     if args.format == 'json':
-        output = json.dumps(comparison.to_dict(), indent=2, default=str)
+        output = json.dumps(schemas.stamp(comparison.to_dict(), schemas.COMPARE),
+                            indent=2, default=str)
     elif args.format == 'ci-comment':
         # UX-115: render-only. Everything it prints was computed above;
         # the gate verdicts come from the same predicates
@@ -1637,6 +1638,42 @@ def _resolve_run_aliases(args: argparse.Namespace) -> None:
             setattr(args, name, resolve_plane2_alias(value))
 
 
+# UX-190: which command publishes which output schema.
+_SCHEMA_BY_COMMAND = {
+    "analyze": schemas.ANALYZE,
+    "graph": schemas.ANALYZE,
+    "floors": schemas.ANALYZE,
+    "replay": schemas.ANALYZE,
+    "sweep": schemas.ANALYZE,
+    "utilisation": schemas.ANALYZE,
+    "diagnostics": schemas.ANALYZE,
+    "compare": schemas.COMPARE,
+    "blast": schemas.BLAST,
+}
+
+
+def _maybe_print_schema(argv: list) -> Optional[int]:
+    """`bga <command> --schema` -> the JSON Schema of its output, exit 0.
+
+    Returns None when this invocation is not a schema request, so the
+    normal parse runs.
+    """
+    if "--schema" not in argv:
+        return None
+    command = next((arg for arg in argv if not arg.startswith("-")), None)
+    name = _SCHEMA_BY_COMMAND.get(command)
+    if name is None:
+        print(
+            f"Error: `--schema` is available on "
+            f"{', '.join(sorted(_SCHEMA_BY_COMMAND))}; "
+            f"{command or 'no command'} produces no versioned JSON output.",
+            file=sys.stderr,
+        )
+        return 2
+    print(json.dumps(schemas.schema(name), indent=2))
+    return 0
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     """
     Main entry point for the bga CLI.
@@ -1652,8 +1689,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     # extract . build.log run/ --format wrapped` must reach
     # `bst_extract_run` untouched, and letting this parser see them first
     # would mean teaching it every tool's flags.
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+
+    # UX-190: `--schema` answers about the *shape* of an output, not
+    # about a run, so it is checked before argparse insists on the run
+    # directory the command would otherwise need - and before the alias
+    # dispatch below, which would hand `bga doctor --schema` to a tool
+    # that has never heard of the flag. A pre-parse hook rather than a
+    # `nargs="?"` positional, because weakening three commands' argument
+    # checking to add one switch is the wrong trade.
+    schema_exit = _maybe_print_schema(raw_argv)
+    if schema_exit is not None:
+        return schema_exit
+
     from .tools_dispatch import dispatch
-    tool_exit = dispatch(list(sys.argv[1:] if argv is None else argv))
+    tool_exit = dispatch(raw_argv)
     if tool_exit is not None:
         return tool_exit
 

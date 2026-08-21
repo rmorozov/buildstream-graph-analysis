@@ -2,6 +2,7 @@
 import json as _json
 from typing import Optional
 
+from .. import schemas
 from ..findings import compute_findings
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
@@ -28,6 +29,10 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     data = {
         'run_id': result.run_id,
         'total_duration_us': result.total_duration_us,
+        # UX-190: which projection this is. `None` for the full report;
+        # a section subcommand names its own restriction, so a consumer
+        # can tell "this is `bga floors`" from "the field was removed".
+        'section': section,
     }
     # UX-95: which capture this is, beside which captures it is
     # comparable with. Additive, and omitted entirely when the run
@@ -141,4 +146,7 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section in (None, 'graph') and by_kind and hasattr(result, 'element_kind_summary') and result.element_kind_summary:
         data['element_kind_summary'] = result.element_kind_summary
 
-    return _json.dumps(data, indent=2, default=str)
+    # UX-190: the version leads. A consumer reading the first line of a
+    # streamed or truncated document sees what it is before it sees
+    # anything it would have to interpret.
+    return _json.dumps(schemas.stamp(data, schemas.ANALYZE), indent=2, default=str)

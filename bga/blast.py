@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+from . import schemas
 from . import sources as sources_mod
 from .graph.edg import compute_element_durations, compute_reachability
 from .ingest.loader import load_all
@@ -401,4 +402,4 @@ def format_blast_text(answer: dict) -> str:
 
 
 def format_blast_json(answer: dict) -> str:
-    return json.dumps(answer, indent=2)
+    return json.dumps(schemas.stamp(answer, schemas.BLAST), indent=2)

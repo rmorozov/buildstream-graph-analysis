@@ -31,7 +31,58 @@ from .ingest.loader import load_all
 RESOLUTION_ORDER = ("url", "path", "element")
 
 
-def classify_target(target: str, project_dir: Optional[str] = None) -> List[str]:
+def known_identity(inventory: dict, target: str) -> Optional[dict]:
+    """The resource this target *is*, when the inventory already knows it.
+
+    `UX-178`. The Shared Sources table prints the normalized, scheme-less
+    identity (`gitlab.example.com/org/monorepo`), and the url detector
+    below requires a scheme - so the tool's own output, pasted as its own
+    input one command later, resolved as a *path* and answered "rebuilds
+    nothing here" about the exact monorepo question the feature exists
+    for. Observed live in round 19.
+
+    Matching the inventory first makes the printed form round-trip by
+    construction rather than by two heuristics happening to agree: what
+    the report printed is what the query looks up.
+    """
+    if not inventory:
+        return None
+    candidates = {target, target.strip("/")}
+    candidates.add(sources_mod.normalize_url(target))
+    for resources in (inventory.get("elements") or {}).values():
+        for resource in resources or []:
+            identity = resource.get("identity")
+            if identity and identity in candidates:
+                return resource
+    return None
+
+
+def _stages_at_project_root(inventory: dict) -> bool:
+    """Does anything stage the project root, so a bare name could be one?"""
+    for resources in (inventory.get("elements") or {}).values():
+        for resource in resources or []:
+            if resource.get("keying") != "content":
+                continue
+            staged = (resource.get("identity") or "").strip("/")
+            if staged in ("", "."):
+                return True
+    return False
+
+
+def _cwd_is_inside(project_dir: Optional[str]) -> bool:
+    """Is the shell standing inside the project this question is about?"""
+    if not project_dir:
+        return False
+    try:
+        return os.path.commonpath(
+            [os.path.abspath(os.getcwd()), os.path.abspath(project_dir)]
+        ) == os.path.abspath(project_dir)
+    except ValueError:  # different drives / unrelated roots
+        return False
+
+
+def classify_target(target: str, project_dir: Optional[str] = None,
+                    inventory: Optional[dict] = None) -> List[str]:
     """Every shape `target` could be, most specific first.
 
     Ambiguity is real: a project could name an element `https` (it
@@ -43,14 +94,32 @@ def classify_target(target: str, project_dir: Optional[str] = None) -> List[str]
     shapes = []
     if "://" in target or target.startswith("git@") or target.endswith(".git"):
         shapes.append("url")
-    candidate = target if os.path.isabs(target) else os.path.join(
-        project_dir or ".", target)
+    # UX-182 item 3: cwd first, project root second. A developer asking
+    # this question is usually `cd`'d into the component they just
+    # edited, and a name their shell completed for them resolved against
+    # the project root instead - so it existed nowhere, read as an
+    # element name, and answered "rebuilds nothing".
+    #
+    # Only when cwd is *inside* the project, though: from anywhere else
+    # a bare `README.md` that happens to exist beside the shell says
+    # nothing about what this project stages, and reading it as a path
+    # would be a different confident wrong answer.
+    if os.path.isabs(target):
+        candidates = [target]
+    else:
+        candidates = [os.path.join(project_dir or ".", target)]
+        if _cwd_is_inside(project_dir):
+            candidates.insert(0, os.path.abspath(target))
     # On disk, or shaped like a path. The second half matters: the
     # question is often asked about a file that was just *deleted*, or
     # typed from a diff rather than from the filesystem, and refusing
     # to read those as paths would answer "nothing sources it" about a
     # change that rebuilds half the project.
-    if os.path.exists(candidate) or "/" in target:
+    # UX-178: a *top-level* deleted file has no `/` to recognise it by, so
+    # it only reads as a path when something in this project stages the
+    # root - which is the only case where a bare name could be one.
+    if (any(os.path.exists(candidate) for candidate in candidates) or "/" in target
+            or _stages_at_project_root(inventory or {})):
         shapes.append("path")
     if target.endswith(".bst"):
         shapes.append("element")
@@ -80,13 +149,26 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
     directory itself - which is the question a developer asks about a
     file they just edited.
     """
-    relative = target
-    if os.path.isabs(target) and project_dir:
+    # UX-182 item 3: a path typed from a subdirectory used to resolve
+    # against the project root only, and silently miss. Try it as given
+    # (relative to cwd) first, then as project-relative.
+    candidates = []
+    absolute = os.path.abspath(target)
+    for base in ([project_dir] if project_dir and (
+            os.path.isabs(target) or _cwd_is_inside(project_dir)) else []):
         try:
-            relative = os.path.relpath(target, project_dir)
+            candidates.append(os.path.relpath(absolute, base))
         except ValueError:
             pass
-    relative = os.path.normpath(relative).strip("/")
+    candidates.append(target)
+    relative = None
+    for candidate in candidates:
+        normalised = os.path.normpath(candidate).strip("/")
+        if not normalised.startswith(".."):
+            relative = normalised
+            break
+    if relative is None:
+        relative = os.path.normpath(target).strip("/")
     found = set()
     for uid, resources in (inventory.get("elements") or {}).items():
         for resource in resources or []:
@@ -100,8 +182,19 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
     return found
 
 
-def blast(run_dir, target: str, project_dir: Optional[str] = None) -> dict:
-    """The answer, as data. `bga/report` decides how to say it."""
+def blast(run_dir, target: str, project_dir: Optional[str] = None,
+          measure: bool = True) -> dict:
+    """The answer, as data. `bga/report` decides how to say it.
+
+    `measure=False` (`UX-182`) answers the direct/closure/kind half from
+    the graph and the inventory alone. The measured half needs the full
+    analysis pipeline, which on a project of thousands of elements is
+    the whole `UX-168`/`UX-169` cost - paid, until now, to answer one
+    lookup. The expensive half is still the default, because the cost
+    is what makes the answer actionable; it is now possible to decline
+    it, and the answer says the cost was not measured rather than
+    reporting it as unmeasured-by-the-run.
+    """
     run_dir = Path(run_dir)
     _context, graph, _trace = load_all(run_dir)
     inventory = sources_mod.load_inventory(run_dir / "sources.json") or {}
@@ -109,11 +202,25 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None) -> dict:
     kinds = {e.uid: (e.element_kind or "unknown") for e in graph.elements}
     known = set(kinds)
 
-    shapes = classify_target(target, project_dir)
+    # UX-178: what the report printed, looked up as what the report
+    # printed. Before any heuristic, because a heuristic that disagrees
+    # with the tool's own output is the bug this closes.
+    matched = known_identity(inventory, target)
+    shapes = classify_target(target, project_dir, inventory)
     direct: Set[str] = set()
     used: Optional[str] = None
     keying = None
-    for shape in shapes:
+    if matched is not None:
+        keying = matched.get("keying")
+        used = "url" if keying == "ref" else "path"
+        identity = matched.get("identity")
+        direct = {uid for uid, resources in (inventory.get("elements") or {}).items()
+                  if any(r.get("identity") == identity for r in resources or [])}
+        # The other readings are still reported: an exact match decides
+        # the answer, it does not hide that the name was ambiguous.
+        if used not in shapes:
+            shapes = [used] + shapes
+    for shape in [] if direct else shapes:
         if shape == "url":
             direct = _elements_for_url(inventory, target)
             keying = "ref"
@@ -133,8 +240,9 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None) -> dict:
     for uid in direct:
         reachable |= set(downstream.get(uid) or ())
     building, assembling = sources_mod.split_by_kind(reachable, kinds)
-    durations = {uid: micros / 1e6 for uid, micros
-                 in compute_element_durations(_tasks_of(run_dir)).items()}
+    durations = ({uid: micros / 1e6 for uid, micros
+                  in compute_element_durations(_tasks_of(run_dir)).items()}
+                 if measure else {})
     measured = [durations[uid] for uid in reachable if uid in durations]
     by_kind: Dict[str, int] = {}
     for uid in reachable:
@@ -155,6 +263,12 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None) -> dict:
         "measured_elements": len(measured),
         "element_count": len(graph.elements),
         "has_inventory": bool(inventory),
+        # UX-178: "this name is not an element here" and "this element
+        # rebuilds nothing" are different answers.
+        "element_exists": target in known,
+        # UX-182: "not measured because you asked for the cheap answer"
+        # is a different fact from "this run measured nothing".
+        "measured": measure,
     }
 
 
@@ -176,8 +290,13 @@ def _tasks_of(run_dir: Path):
     return getattr(analyzer, 'normalized_tasks', []) or []
 
 
+# UX-178: the article follows pronunciation, not spelling - "an url" is
+# how a vowel check reads it and not how anybody says it.
+_ARTICLES = {"url": "a url", "path": "a path", "element": "an element"}
+
+
 def _article(shape: str) -> str:
-    return f"an {shape}" if shape[0] in "aeiou" else f"a {shape}"
+    return _ARTICLES.get(shape, f"a {shape}")
 
 
 def format_blast_text(answer: dict) -> str:
@@ -188,6 +307,12 @@ def format_blast_text(answer: dict) -> str:
                     if answer['also_matched'] else ""))
     if not answer['direct_count']:
         lines.append("")
+        if answer['resolved_as'] == 'element' and not answer['element_exists']:
+            # UX-178: the sentence `classify_target`'s comment promised
+            # and no code printed.
+            lines.append("  No element of that name is in this run. Check the "
+                         "spelling, or pass a path or a repository url.")
+            return "\n".join(lines)
         if answer['resolved_as'] != 'element' and not answer['has_inventory']:
             lines.append("  Nothing matched, and this run carries no source "
                          "inventory - it was captured before `bga extract` wrote")
@@ -209,7 +334,10 @@ def format_blast_text(answer: dict) -> str:
     if answer['by_element_kind']:
         lines.append("    " + ", ".join(f"{count} {kind}" for kind, count
                                         in answer['by_element_kind'].items()))
-    if answer['measured_seconds'] is None:
+    if not answer.get('measured', True):
+        lines.append("  Cost: not measured - re-run without --no-cost for the "
+                     "measured rebuild time")
+    elif answer['measured_seconds'] is None:
         lines.append("  Cost: unmeasured - no element of the blast ran in this build")
     else:
         lines.append(

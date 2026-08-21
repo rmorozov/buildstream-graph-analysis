@@ -87,10 +87,16 @@ def is_building_kind(kind: Optional[str]) -> bool:
 
 
 def split_by_kind(uids, element_kinds: Dict[str, str]) -> Tuple[int, int]:
-    """`(building, assembling)` counts for a set of elements."""
-    building = sum(1 for uid in uids
+    """`(building, assembling)` counts for a set of elements.
+
+    `UX-181`: materialised once. The previous version counted the
+    argument twice, so a *generator* was exhausted by the first pass and
+    yielded a negative assembling count from the second.
+    """
+    names = list(uids)
+    building = sum(1 for uid in names
                    if is_building_kind(element_kinds.get(uid)))
-    return building, len(list(uids)) - building
+    return building, len(names) - building
 
 
 def format_kind_split(building: int, assembling: int) -> str:
@@ -110,6 +116,14 @@ def keying_of(kind: str) -> str:
     return KEYING_BY_KIND.get(kind, "unknown")
 
 
+# Schemes whose `://` prefix is decoration on a url this can read. Any
+# other scheme is left alone entirely (`UX-181`): rewriting one it does
+# not know produced `git+https///host/org/repo` from a perfectly good
+# `git+https://host/org/repo.git`, which is a garbage identity *and* the
+# halved blast this function exists to prevent.
+_KNOWN_SCHEMES = ("https", "http", "ssh", "git", "git+ssh", "git+https")
+
+
 def normalize_url(url: str) -> str:
     """One repository, one identity - conservatively.
 
@@ -120,19 +134,32 @@ def normalize_url(url: str) -> str:
     scheme, userinfo, a trailing `.git`, a trailing slash, and the
     `host:path` vs `host/path` spelling. Case is left alone below the
     host, because paths on most forges are case-sensitive.
+
+    `UX-181` found both failure directions live. Schemes are matched
+    case-insensitively (`HTTPS://Host/Org/Repo` used to fall through the
+    scheme strip, and the scp-colon rewrite then fired on the `://`
+    itself), and the scp heuristic applies **only** to a scheme-less
+    `user@host:path`, so an unknown scheme is returned untouched rather
+    than mangled into a new identity.
     """
     text = url.strip()
-    for scheme in ("https://", "http://", "ssh://", "git://", "git+ssh://"):
-        if text.startswith(scheme):
-            text = text[len(scheme):]
-            break
+    scheme, separator, rest = text.partition("://")
+    if separator:
+        if scheme.lower() not in _KNOWN_SCHEMES:
+            # Not a spelling this can normalise. Returning it as given
+            # keeps one identity for one resource, which matters more
+            # than folding two spellings of an exotic scheme.
+            return text
+        text = rest
     if "@" in text.split("/", 1)[0]:
         text = text.split("@", 1)[1]
     # `host:org/repo` (scp-style) becomes `host/org/repo`; a port stays
     # a port, since a numeric segment after the colon is not a path.
-    host, sep, rest = text.partition(":")
-    if sep and not rest.split("/", 1)[0].isdigit():
-        text = f"{host}/{rest}"
+    # Only meaningful for the scheme-less form - a scheme's own colon
+    # has already been consumed above.
+    host, colon, remainder = text.partition(":")
+    if colon and not remainder.split("/", 1)[0].isdigit():
+        text = f"{host}/{remainder}"
     if "/" in text:
         head, _, tail = text.partition("/")
         text = head.lower() + "/" + tail
@@ -158,7 +185,20 @@ def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
     if not isinstance(kind, str) or not kind:
         return None, "source entry has no `kind`"
     identity = None
-    for key in _IDENTITY_KEYS:
+    # UX-181: pip sources carry the *index* url, so keying on it groups
+    # every pip element in a project into one "repository" and then says
+    # "any commit to this rebuilds all of them" about a package index.
+    # The package is the resource; the index is context.
+    if kind == "pip":
+        packages = source.get("packages")
+        if isinstance(packages, list) and packages:
+            named = sorted(str(p) for p in packages if isinstance(p, (str, int)))
+            if named:
+                identity = ", ".join(named)
+        if identity is None:
+            return None, ("`pip` source names no packages - its index url is "
+                          "not an identity for one resource")
+    for key in () if identity else _IDENTITY_KEYS:
         value = source.get(key)
         if isinstance(value, str) and value.strip():
             identity = value.strip()
@@ -168,7 +208,9 @@ def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
         # plugin whose identity lives under a key this does not know.
         return None, f"`{kind}` source has none of {', '.join(_IDENTITY_KEYS)}"
     keying = keying_of(kind)
-    normalized = normalize_url(identity) if keying == "ref" else identity.strip("/")
+    normalized = (identity if kind == "pip"
+                  else normalize_url(identity) if keying == "ref"
+                  else identity.strip("/"))
     resource = {
         "kind": kind,
         "identity": normalized,
@@ -280,7 +322,18 @@ def resource_blast(inventory: dict,
 
 
 def keying_clause(row: dict) -> str:
-    """The sentence that turns a count into a decision."""
+    """The sentence that turns a count into a decision.
+
+    `UX-181`: the wording comes from the *kind*, because "any commit to
+    this" is the right sentence about a repository and the wrong one
+    about a pinned package version or a tarball.
+    """
+    if row.get("kind") == "pip":
+        return ("keys on the pinned version: a version bump rebuilds every "
+                "element that installs this package")
+    if row.get("kind") in ("tar", "zip", "remote", "deb"):
+        return ("keys on the archive's ref: republishing it rebuilds every "
+                "element that unpacks it")
     if row["keying"] == "ref":
         return ("keys on ref: any commit to this rebuilds all of them, "
                 "whatever each one stages")

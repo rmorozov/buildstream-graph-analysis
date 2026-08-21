@@ -1,6 +1,6 @@
 # UX-181: two spellings of one repository, and one spelling of two
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-171 (`normalize_url` and the identity model)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (`normalize_url` and the identity model)
 
 ## Motivation
 
@@ -51,3 +51,35 @@ packages on one index) stays distinct; the pip row renders the
 index-appropriate sentence. A generator into `split_by_kind` equals
 the list answer. Mutations: re-adding the case-sensitive match and the
 scp rewrite on schemes each redden.
+
+## What was built
+
+Scheme handling in `normalize_url`: `_KNOWN_SCHEMES` matched
+case-insensitively, and a scheme it does not know returned untouched
+rather than run through the scp-colon rewrite. `git+https://host/org/
+repo.git` and `HTTPS://Host/Org/Repo` stop becoming
+`git+https///host/org/repo` and `https///Host/Org/Repo`; the scp
+heuristic now applies only to scheme-less `user@host:path` forms, and
+a port is still not a path.
+
+Per-kind identity: `resource_of_source` keys a `pip` source on its
+sorted package list, not the index url, so several pip elements
+against one index are several resources instead of one shared
+"repository" whose ref rebuilds them all. A pip source with no
+packages is named as a complaint rather than grouped. `keying_clause`
+derives its wording from the *kind* — "pinned version" for pip, "the
+archive's ref" for tar/zip/remote/deb, "any commit" for git — so the
+sentence a row renders is the sentence that kind deserves.
+
+The three one-liners: `split_by_kind` materialises `list(uids)` once
+(a generator argument used to yield a negative assembling count);
+`runs_outside_band`'s post-widening field renamed `edges_outside_band`,
+which is what it counts; `drain_until_exit` takes one final read after
+`poll()` so a tail written between the select timeout and the exit
+check is not lost.
+
+Tests: in `tests/unit/test_identity_and_junctions.py` — the
+property-style table of spellings that must collapse and pairs that
+must not, the pip cases, the kind-derived sentence, and the generator
+equalling the list answer. Mutations: re-adding the case-sensitive
+scheme match and the scp rewrite on schemes each redden.

@@ -892,7 +892,17 @@ def cmd_blast(args: argparse.Namespace) -> int:
         print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
         return 2
     project = args.project or project_root() or "."
-    answer = blast(run_dir, args.target, project_dir=project)
+    try:
+        answer = blast(run_dir, args.target, project_dir=project,
+                       measure=not getattr(args, 'no_cost', False))
+    except (FileNotFoundError, ValueError) as error:
+        # UX-178: an existing directory that is not a run - the likeliest
+        # slip is `<snapshot>/` where `<snapshot>/run` was meant - used to
+        # be a raw traceback, while `analyze` on the same directory prints
+        # a sentence. Same treatment, and the exit code UX-172 documented.
+        print(f"Error: {run_dir} is not a run directory ({error}). "
+              f"A snapshot's run directory is `<snapshot>/run`.", file=sys.stderr)
+        return 2
     output = (format_blast_json(answer) if args.format == 'json'
               else format_blast_text(answer))
     if getattr(args, 'output', None):
@@ -1428,6 +1438,12 @@ def create_parser() -> argparse.ArgumentParser:
         '--project', default=None, metavar='PATH',
         help='The project a relative path is resolved against. Defaults to the\n'
              'enclosing BuildStream project.'
+    )
+    blast_parser.add_argument(
+        '--no-cost', action='store_true',
+        help='Skip the measured rebuild time. The rest of the answer comes from\n'
+             'the graph and the source inventory alone, which on a large project\n'
+             'is the difference between a lookup and a full analysis (UX-182).'
     )
     blast_parser.add_argument(
         '-f', '--format', choices=['text', 'json'], default='text',

@@ -564,3 +564,107 @@ def test_the_guide_teaches_the_one_command_baseline_set():
         "the guide still teaches only the manual --baseline-run assembly")
     assert guide.index("bga baseline") < guide.index("--baseline-run"), (
         "the one-command form should lead; the explicit one is what it composes")
+
+
+# ---------------------------------------------------------------------------
+# UX-180: the documents that describe the verdict, the gate and the source
+# axis have to keep describing what the code does.
+
+
+def _verdict_strings():
+    """The verdicts a *comparable* pair can receive, read out of the
+    code that emits them.
+
+    Scoped to the significance chain, so the refusal a non-comparable
+    pair gets (documented with the exit codes, not with the verdicts)
+    does not join the list. Read rather than pinned as literals, so that
+    renaming one reddens this guard instead of leaving two documents
+    quoting a string `bga` no longer prints."""
+    source = (REPO / "bga" / "compare.py").read_text(encoding="utf-8")
+    chain = source.split("if band_disputed:", 1)[1].split("\n    attribution_deltas", 1)[0]
+    verdicts = set(re.findall(r"verdict = \"([^\"]+)\"", chain))
+    assert len(verdicts) == 4, f"the significance chain now emits {sorted(verdicts)}"
+    return verdicts
+
+
+def test_every_verdict_the_code_emits_is_listed_where_verdicts_are_listed():
+    """UX-180 item 2: `UX-170` added a fourth duration verdict and left
+    both verdict lists at three, so a reader who met
+    `within the baseline set's own observed range` in real output could
+    not find it in either document."""
+    verdicts = _verdict_strings()
+    assert "within the baseline set's own observed range" in verdicts, (
+        "the disputed-region verdict is gone from bga/compare.py - "
+        "update this guard and the documents together")
+
+    for name in ("README.md", "docs/guides/cli.md"):
+        text = (REPO / name).read_text(encoding="utf-8")
+        missing = sorted(v for v in verdicts if v not in text)
+        assert not missing, f"{name} lists no {missing}"
+
+
+def test_no_document_still_promises_the_gate_and_the_verdict_agree():
+    """UX-180 item 3: `--fail-on-regression` has never consulted the
+    band, so the claim that the gate 'fails exactly when a human reading
+    the report would call it a regression' became false twice over. The
+    divergence is allowed; asserting it away is not."""
+    surfaces = {
+        "bga/compare.py": (REPO / "bga" / "compare.py").read_text(encoding="utf-8"),
+        "docs/guides/cli.md": (REPO / "docs" / "guides" / "cli.md").read_text(
+            encoding="utf-8"),
+    }
+    for name, text in surfaces.items():
+        assert "never a second, silently-different definition" not in text, (
+            f"{name} still promises an equivalence UX-59 and UX-170 removed")
+
+    assert "Where the gate and the verdict now diverge" in surfaces["bga/compare.py"], (
+        "regression_exceeds_threshold's docstring should name the two divergences")
+
+
+_GLOSSARY_TERMS = (
+    "**resource**",
+    "**blast**",
+    "**keying: ref vs content**",
+    "**work vs wall clock**",
+    "**building vs assembling**",
+)
+
+
+def test_the_glossary_defines_the_terms_the_source_axis_introduced():
+    """UX-180 item 6, against UX-138's rule: a word three documents use
+    precisely is defined once, in the index, or it drifts."""
+    index = (REPO / "docs" / "README.md").read_text(encoding="utf-8")
+    glossary = index.split("## Words this project uses precisely", 1)[1]
+    glossary = glossary.split("\n---", 1)[0]
+
+    missing = [term for term in _GLOSSARY_TERMS if term not in glossary]
+    assert not missing, f"the glossary defines no {missing}"
+
+
+def test_the_readme_stays_inside_its_measured_line_budget():
+    """UX-135 set `wc -l README.md` <= 250 and measured 420 -> 245 to
+    reach it; UX-180 item 7 found it at 266. Exceeding a measured target
+    is allowed - doing it silently is what turned 420 into '430'."""
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    lines = len(readme.splitlines())
+
+    if lines > 250:
+        assert f"{lines} lines" in readme, (
+            f"README is {lines} lines against UX-135's 250-line budget and "
+            "carries no annotation restating the number and the reason")
+
+
+def test_the_keying_claim_carries_the_provenance_it_was_accepted_with():
+    """UX-174's acceptance asked for provenance on the `directory:`
+    claim, measured preferred; UX-180 item 5 found none. The note names
+    the BuildStream version, both key sites, and real `%{full-key}`
+    output."""
+    guide = (REPO / "docs" / "guides" / "real-project.md").read_text(encoding="utf-8")
+    section = guide.split("## One repository, many elements", 1)[1]
+
+    assert "get_unique_key()" in section
+    assert 'key_dict["directory"] = source._directory' in section, (
+        "the note should say where BuildStream keys the staging path, "
+        "since that is the half a reader gets wrong")
+    assert "BuildStream 2.7.0" in section, "the measurement names no version"
+    assert "%{full-key}" in section, "no measured keys, only an argument"

@@ -779,11 +779,14 @@ bga compare baseline/run candidate/run \
 
 Either way the fixed threshold is replaced by a median ± k·MAD band over
 the baseline set — a minimum of three runs, because a "band" over two
-points just restates them. Strictly better than the fixed rule, and not
-yet enough: over those five same-commit captures the band absorbs the
-−5.8% and −9.8% pairs and still calls the widest one `IMPROVED
-(-25.0%)`, because the *fastest* run falls below the lower edge of the
-band its own presence helped compute
+points just restates them. Strictly better than the fixed
+rule, and on a noisy runner not sufficient by itself: over those five
+same-commit captures the band absorbs the −5.8% and −9.8% pairs, and
+the widest pair falls *outside* the band while still being a duration
+the baselines themselves reached. That pair now answers **`within the
+baseline set's own observed range`** rather than a verdict — a
+duration your own baselines produced, on the commit they are of, is
+not evidence that anything changed
 ([`UX-170`](../backlog/scenarios/UX-0170-the-noise-band-still-calls-a-same-commit-pair-a-25-percent-win.md)).
 Use more baseline runs than the minimum where you can. The whole CI
 sequence is [`ci-comment.md`](ci-comment.md).
@@ -802,6 +805,23 @@ covers. Twenty elements pointing at one url with twenty different
 repository, including one that touched nothing they stage. A **`local`
 source keys on content**, so only the elements whose files actually
 changed rebuild. That single difference is the whole of this section.
+
+Measured, on BuildStream 2.7.0, rather than taken from the manual: the
+`git` plugin's `get_unique_key()` returns `[original_url, ref]`
+(`buildstream_plugins/sources/git.py`), and BuildStream adds the
+staging path beside it as a separate field
+(`_elementsources.py`: `key_dict["directory"] = source._directory`).
+So `directory:` is keyed — editing it rebuilds that one element — but
+it is not part of what the *ref* covers. Two elements on one url with
+`directory: components/lib-a` and `components/lib-b`, ref bumped from
+`aaaa…` to `bbbb…`, both take a new `%{full-key}`; changing only
+`directory:` also changes the key, and narrows nothing:
+
+```text
+ref aaaa…, directory: components/lib-a   0b22707086e65278…
+ref aaaa…, directory: components/lib-b   b6598adc08fef23b…   # directory is keyed too
+ref bbbb…, directory: components/lib-a   41805ccf1029ba21…   # any commit, every consumer
+```
 
 `bga` measures it rather than asserting it. The analysis report grows a
 `Shared Sources` block for any resource more than one element uses, and

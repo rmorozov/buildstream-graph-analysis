@@ -1,6 +1,6 @@
 # UX-179: the discriminating case that was never built
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-173 (the guard this makes real), UX-176 (the standard it fails)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-173 (the guard this makes real), UX-176 (the standard it fails)
 
 ## Motivation
 
@@ -49,3 +49,32 @@ fixture has provably different orders (both printed in the assertion
 message on failure). `bga blast --help` violating the cap or the
 terminator check reddens. Deleting the memo-drop call reddens the
 extract-level test.
+
+## What was built
+
+The fixture the acceptance named: a graph where a stack-heavy blast
+outnumbers a cmake-heavy one, so the count order and the cost order
+**disagree**. The assertion compares the two orders directly (both
+printed on failure) instead of asserting that some set has more than
+one member, and the original mutation — treating stacks as building
+kinds, or reverting the sorter to count-only — now reddens exactly
+this test.
+
+`blast` joined `test_help_is_short.py`'s `SUBCOMMANDS`, and
+`test_every_subcommand_is_covered_by_this_file()` was added so the
+list cannot silently fall behind the parser again: it reads the
+registered subcommands out of the parser and fails on any that carry
+no help guard. That guard is the general fix; adding `blast` was the
+instance.
+
+`_drop_size_memo` is now exercised through `bga extract` rather than
+by calling the helper: deleting the call in `tools/bst_extract_run.py`
+reddens the test, which it did not before.
+
+Tests: 5 new (`tests/unit/test_blast_ranking_discriminates.py`) plus
+the two guards above.
+
+**Recorded, because the finding was about claims and not code:** this
+item's own evidence method — revert the mechanism, run the class, see
+what stays green — is the one that found it, and it is now applied to
+every guard this round shipped.

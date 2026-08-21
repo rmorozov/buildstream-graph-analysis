@@ -1,6 +1,6 @@
 # UX-182: the inventory stops at the junction boundary
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-171 (the inventory this extends), UX-172 (the query that inherits it)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory this extends), UX-172 (the query that inherits it)
 
 ## Motivation
 
@@ -48,3 +48,51 @@ junction checkout is removed (both asserted). `bga blast <url>`
 without durations answers in under a second on the 1,000-element
 synthetic project (timed bound, generous). A path query from a
 subdirectory finds what the root-relative form finds.
+
+## What was built
+
+**Junctions.** `tools/bst_extract_run.py` grew `_junction_subproject`,
+`_resolve_junctioned` (walking nested junctions left to right) and
+`_qualify`. When a junction's sources are on disk the subproject's
+element YAML is read through the same memoised reader, and identities
+are namespaced by the junction — but only **content-keyed** ones: a
+repository url stays global, so two subprojects sourcing one monorepo
+group into one resource instead of two, which is the whole question
+the axis exists for. `unreadable` survives only for junctions that
+genuinely are not there, counted and named per `UX-171`'s
+no-silent-skips rule.
+
+**The expensive half is optional.** `blast(..., measure=False)`, wired
+to `bga blast --no-cost`, answers the direct/closure/kind half from
+the graph and the inventory alone and says *Cost: not measured* rather
+than reporting zero. Measured on the 1202-element synthetic run
+(`bga gen-synthetic --seed 1`, inventory of one shared url):
+
+```text
+measure=False  0.102s  direct=1202 blast=1202 measured=False
+measure=True   3.221s  direct=1202 blast=1202 measured=True
+```
+
+**Paths resolve from where you are.** `classify_target` and
+`_elements_for_path` try the target relative to the shell's cwd first
+and project-relative second — but only when cwd is *inside* the
+project. A `main.c` beside an unrelated shell says nothing about what
+this project stages, and reading it as a path would trade one
+confident wrong answer for another; both directions are asserted.
+
+Tests: 24 in `tests/unit/test_identity_and_junctions.py` (shared with
+`UX-181`). Mutations: dropping the cwd candidate reddens the
+subdirectory case; consulting cwd unconditionally reddens the
+outside-the-project case; removing the junction walk reddens the
+prefixed-identity cases; deleting the junction checkout is what makes
+`unreadable` appear, asserted rather than assumed.
+
+## Deviation from the Required Fix
+
+The acceptance asked for a **timed** bound ("under a second on the
+1,000-element synthetic project"). The shipped guard is structural
+instead: `_tasks_of` is monkeypatched to raise, so `--no-cost`
+entering the analysis pipeline at all fails the test. A wall-clock
+assertion is flaky on a shared runner and proves less than "the
+expensive path is never entered"; the timing above is recorded here as
+evidence rather than asserted in CI.

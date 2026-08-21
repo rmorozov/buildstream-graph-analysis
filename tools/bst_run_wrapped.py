@@ -152,6 +152,17 @@ def drain_until_exit(proc, deadline: float, say) -> bool:
             flush_lines()
             continue
         if proc.poll() is not None:
+            # UX-181: one more read before giving up. A tail written in
+            # the gap between the select timeout and this poll would
+            # otherwise be lost with the build that wrote it.
+            try:
+                chunk = os.read(fd, 65536)
+            except (BlockingIOError, InterruptedError, OSError):
+                chunk = b""
+            if chunk:
+                pending += chunk
+                flush_lines()
+                continue
             break
     if pending:
         say(pending.decode("utf-8", "replace"))

@@ -61,6 +61,7 @@ def load_run_context(path: Path) -> RunContext:
         exclusive_resources=data.get('exclusive_resources', []),
         pipeline_overhead=data.get('pipeline_overhead', []),
         run_identity=data.get('run_identity'),
+        host_manifest=data.get('host_manifest'),
         build_outcome=data.get('build_outcome'),
         queue_summary=data.get('queue_summary'),
         timestamp_agreement=data.get('timestamp_agreement'),

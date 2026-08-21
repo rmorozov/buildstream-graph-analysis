@@ -38,7 +38,8 @@ from .chrome_trace_to_bga_trace import (
     invocation_wall_clock,
 )
 from .bst_show_to_graph import extract_graph
-from ._run_context_common import add_cpu_capacity_fields, add_memory_capacity_fields
+from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
+                                  add_memory_capacity_fields)
 
 
 def _parse_targets(targets_str: str):
@@ -406,6 +407,10 @@ def extract_run(
     add_memory_capacity_fields(
         run_context, memory_budget_mb=memory_budget_mb, estimated_job_memory_mb=estimated_job_memory_mb,
     )
+    # UX-186: which machine measured this. Every capture, so that two
+    # runs can be told apart - or told to be the same - rather than
+    # compared on the assumption that they are.
+    add_host_manifest(run_context)
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:

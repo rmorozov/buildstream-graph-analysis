@@ -114,6 +114,34 @@ def host_memory_mb():
     return None
 
 
+def add_host_manifest(run_context: dict) -> None:
+    """UX-186: which machine measured this run.
+
+    `host_cpu_count` and `host_memory_mb` above already described the
+    machine in two numbers, which call a laptop and a build runner with
+    the same core count the same host. The manifest is the rest of that
+    description, under one versioned key, so `bga compare` can say
+    whether two runs are even about the same machine - it performed no
+    host check of any kind before this.
+
+    Best-effort by construction: every field degrades to `None`, and a
+    failure to collect never fails an extraction. A capture that could
+    not read its own `/proc` still has a run directory.
+
+    **Not** `host`. `UX-186` asked for the manifest under that key, and
+    `--host` has published an operator-supplied *identifier* there since
+    `UX-12`; taking it would silently redefine a field consumers already
+    read, which is the exact drift `UX-190` was filed about. The two
+    coexist: `host` names the machine, `host_manifest` describes it.
+    """
+    from bga import hostinfo
+
+    try:
+        run_context["host_manifest"] = hostinfo.collect()
+    except Exception:  # noqa: BLE001 - provenance must not break a capture
+        pass
+
+
 def add_memory_capacity_fields(
     run_context: dict, memory_budget_mb: int = None, estimated_job_memory_mb: int = None,
 ) -> None:

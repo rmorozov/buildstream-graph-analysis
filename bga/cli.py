@@ -632,6 +632,26 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         )
         return EXIT_CODE_MISMATCHED_RUNS
 
+    # UX-186: also before the low-confidence fail-open, and also failing
+    # *closed*. Two machines' durations are not one measurement, and
+    # unlike a noisy signal that is not a matter of degree - so this is a
+    # refusal (exit 6, the not-comparable code) rather than a regression.
+    # The comparison itself still printed, with its caveat: looking is
+    # fine, gating is not.
+    host_comparison = getattr(comparison, 'host_comparison', None) or {}
+    if (host_comparison.get('status') == 'different'
+            and not getattr(args, 'allow_cross_host', False)):
+        differing = ", ".join(host_comparison.get('differing') or []) or "host"
+        print(
+            f"Cross-host gate FAILED: baseline and candidate were measured on "
+            f"different machines ({differing}). Run-to-run noise on one machine "
+            f"already reaches 33% (UX-92); across machines the difference between "
+            f"the two runs is not evidence about the change. Pass "
+            f"--allow-cross-host if your runners are uniform and you accept that.",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_MISMATCHED_RUNS
+
     if comparison.low_confidence:
         # UX-40: failing open is the right default (do not block a
         # pipeline on a signal you do not trust), but a gate that
@@ -1516,6 +1536,11 @@ def create_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument(
         '--allow-mismatch', action='store_true',
         help='Compare even if the runs are not comparable.'
+    )
+    compare_parser.add_argument(
+        '--allow-cross-host', action='store_true',
+        help='UX-186: let the CI gates pass on runs measured on different '
+             'machines. For a farm of uniform runners, opted into once.'
     )
     compare_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
     compare_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')

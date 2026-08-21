@@ -146,6 +146,15 @@ class RunContext:
     # Trace.run_identity_hash - see bga/ingest/loader.py::load_all's
     # cross-check. See docs/backlog/tasks/P1-37-run-identity-not-captured-or-enforced.md.
     run_identity: Optional[dict] = None
+    # UX-186: which machine measured this run - `host/v1`, written by
+    # both run-context producers. Distinct from `host` above, which is an
+    # operator-supplied *identifier* (`--host ci-runner-1`): that names
+    # the machine, this describes it (CPU model and count, memory,
+    # kernel, distro, toolchain versions). `None` for every capture taken
+    # before this field existed, and those still compare - a tool that
+    # refused every baseline older than itself would be telling users to
+    # throw away the ones they came with.
+    host_manifest: Optional[dict] = None
     # UX-54: whether the build this run describes actually succeeded -
     # not part of run-context/v9's spec-mandated schema (the spec has no
     # concept of a failed run at all), an additive extension

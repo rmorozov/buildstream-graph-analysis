@@ -199,10 +199,13 @@ def schemas_payload() -> dict:
 #
 #     1,202-element synthetic   report.json   816,573 B
 #     golden run                report.json    14,797 B
-#     the page itself (6 files)               26,387 B
+#     the page itself (7 files)               39,119 B
 #     the schemas                              4,535 B
 #
-# At 1,202 elements the payload is 31x the page, which is Direction 7's
+# (Re-measured after `UX-196` added `views.js`; at `UX-195` the page was
+# 6 files and 26,387 B.)
+#
+# At 1,202 elements the payload is 21x the page, which is Direction 7's
 # own test of whether the viewer stayed thin. The budget below is a
 # ceiling on the *file*, not an aspiration: past it a mail client
 # starts refusing the attachment, which is the whole use.

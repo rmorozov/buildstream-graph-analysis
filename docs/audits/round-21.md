@@ -122,8 +122,8 @@ discriminating guard adds a field that did not exist when it was
 written, asserts it renders, and hashes `app.js` to make "no viewer
 change" literal. `--perfetto` hands the timeline over tab-to-tab
 (**272,964 B → 24,782 B gzipped**, 9.1%); `--export` writes one
-self-contained file (**80 KiB** for a real capture with its timeline,
-**636 KiB** at 1,202 elements, of which the page is 4.2%).
+self-contained file (**82 KiB** for a real capture with its timeline,
+**638 KiB** at 1,202 elements, of which the page is 6.0%).
 
 **What only real runs found.** The acceptance names `examples/06`, so a
 real `bst build all.bst` was captured under `bga snapshot` — 46.1 s, 9
@@ -157,7 +157,7 @@ exactly like a mutation that was harmless. Three further defects came
 from a fix being applied at one caller and not the class: `UX-197`
 fixed the doomed scratch path in the Plane 1 converter because
 `bga timeline` calls it, and `bga view` reached the *merge* converter
-the same way a week later.
+the same way.
 
-The suite stands at **2,494**, the `bst` tier at 43.
+The suite stands at **2,495**, the `bst` tier at 43 with none skipped.
 

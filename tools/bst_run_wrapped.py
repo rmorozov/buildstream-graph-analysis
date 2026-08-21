@@ -30,11 +30,14 @@ invocation under --format wrapped.
 """
 import argparse
 import os
+import re
 import select
 import signal
 import subprocess
 import sys
 import time
+
+from bga import suspend
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -223,7 +226,42 @@ def shutdown_build_group(proc, emit=None, grace: Optional[float] = None) -> bool
     return False
 
 
-def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:
+# UX-185: the marker the extractor reads back. A wrapper INFO line
+# rather than a side file, so a log a user kept still carries it.
+CLOCK_MARKER = "bga-clocks"
+CLOCK_RE = re.compile(
+    r"bga-clocks (start|end) wall=([0-9.]+) monotonic=([0-9.]+)")
+
+
+def _clock_line(which: str, pair: dict) -> str:
+    return (f"{CLOCK_MARKER} {which} wall={pair['wall']:.6f} "
+            f"monotonic={pair['monotonic']:.6f}")
+
+
+def read_clock_pairs(log_path: str) -> dict:
+    """`{"start": {...}, "end": {...}}` from a wrapped log, best effort.
+
+    Absent from every log written before `UX-185`, and those must keep
+    extracting exactly as they did - a capture too old to have looked
+    is not a capture that slept.
+    """
+    pairs = {}
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                found = CLOCK_RE.search(line)
+                if found:
+                    pairs[found.group(1)] = {
+                        "wall": float(found.group(2)),
+                        "monotonic": float(found.group(3)),
+                    }
+    except OSError:
+        return {}
+    return pairs
+
+
+def run_wrapped(project_dir: str, cmd: list, out_f, env=None,
+                inhibit: bool = False) -> int:
     """`env`: UX-24 - when given, replaces the subprocess's own
     environment entirely (matching `subprocess.Popen`'s own semantics),
     instead of always inheriting this process's environment unmodified.
@@ -249,9 +287,31 @@ def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:
         print(line, file=sys.stderr, flush=True)
 
     emit(f"Executing command: {' '.join(cmd)}")
+    # UX-185: both clocks, at both ends. The hook and the spine stamp
+    # CLOCK_MONOTONIC, which does not advance while the machine is
+    # suspended, and this wrapper stamps wall clock - so the difference
+    # between how much of each elapsed *is* how long the machine slept.
+    # Emitted into the log rather than kept in memory, because the
+    # extractor may run later, from another process, against a log the
+    # user kept.
+    started = suspend.clocks()
+    emit(_clock_line("start", started))
+
+    # UX-185: the inhibitors wrap what is *launched*, not what is
+    # recorded. `Executing command:` above stays the real `bst`
+    # invocation, because `UX-29` recovers `--max-jobs` from it and a
+    # line reading `systemd-inhibit ... bst build` would break that.
+    launch = cmd
+    if inhibit:
+        notice = suspend.unavailable_notice()
+        if notice:
+            emit(notice)
+        else:
+            launch = suspend.inhibit_argv(cmd)
+            emit(f"Inhibiting sleep for this build: {' '.join(launch[:4])} ...")
 
     proc = subprocess.Popen(
-        cmd,
+        launch,
         cwd=project_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -289,6 +349,7 @@ def run_wrapped(project_dir: str, cmd: list, out_f, env=None) -> int:
                  "built/cached counts are unavailable rather than zero.")
         raise
 
+    emit(_clock_line("end", suspend.clocks()))
     emit(f"Return code: {proc.returncode}")
     return proc.returncode
 

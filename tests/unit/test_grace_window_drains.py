@@ -181,18 +181,24 @@ def _run_and_interrupt(project_dir, cmd, handle):
 
     class _Interrupting:
         """Raises once the child has said something, from inside the loop."""
+        # The wrapper's own preamble - what it writes before the child
+        # has produced a line. Keyed on content rather than on a count:
+        # counting broke the moment `UX-185` added a second preamble
+        # line, and it broke *silently*, by interrupting before the read
+        # loop instead of inside it.
+        _PREAMBLE = ("Executing command:", "bga-clocks")
+
         def __init__(self, stream):
             self._stream = stream
-            self._seen = 0
             self._fired = False
 
         def write(self, text):
             real_emit_lines.append(text)
-            self._seen += 1
             handle.write(text)
             # Once, from inside the read loop - after that this is just a
             # file, because the shutdown path writes through it too.
-            if self._seen >= 2 and not self._fired:
+            from_child = not any(marker in text for marker in self._PREAMBLE)
+            if from_child and not self._fired:
                 self._fired = True
                 raise KeyboardInterrupt
             return len(text)

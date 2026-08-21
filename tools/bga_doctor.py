@@ -270,6 +270,46 @@ def check_stale_casd() -> dict:
                 "this: it isolates HOME and so starts its own daemon."))
 
 
+def check_sleep_policy() -> Optional[dict]:
+    """Would this machine fall asleep during a long capture?
+
+    `UX-185` item 1. Returns `None` on a machine where the question does
+    not arise - no `systemctl`, or a sleep target that is masked - so
+    the check is silent on the CI runners and servers most captures run
+    on, and speaks only where a lid actually exists.
+
+    A warning, never a failure: a machine that can sleep is not a broken
+    environment, and a suspend is detected after the fact either way
+    (`UX-156`'s grammar). This is the affordance that stops the user
+    losing three hours first.
+    """
+    from bga import suspend
+
+    systemctl = shutil.which("systemctl")
+    if not systemctl or not suspend.available()["systemd-inhibit"]:
+        return None
+    try:
+        result = subprocess.run(
+            [systemctl, "is-enabled", "sleep.target"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    state = (result.stdout or "").strip()
+    if state in ("masked", "masked-runtime", "disabled"):
+        return _check("sleep-policy", OK,
+                      f"this machine will not suspend (sleep.target is {state})")
+    return _check(
+        "sleep-policy", WARN,
+        f"this machine can suspend while a capture runs (sleep.target is "
+        f"{state or 'enabled'})",
+        remedy=("a suspend makes Plane 1 count the sleep as build time and "
+                "Plane 2 not, so the capture's durations stop being "
+                "measurements. Pass `--inhibit` to `bga snapshot` to hold it "
+                "awake for the build. A capture that slept says so either "
+                "way, and refuses to verdict."))
+
+
 def check_scratch(project_dir: Optional[str] = None) -> List[dict]:
     """Can bga execute the shim it writes, and is `TMPDIR` sane?
 
@@ -588,6 +628,9 @@ def check_staged_sources(project_dir: str) -> List[dict]:
 def run_checks(project_dir: Optional[str] = None) -> List[dict]:
     checks = [check_bst(), check_bwrap(), check_compiler()]
     checks.append(check_stale_casd())
+    sleep_policy = check_sleep_policy()
+    if sleep_policy:
+        checks.append(sleep_policy)
     checks.extend(check_scratch(project_dir))
     if project_dir:
         checks.append(check_root_spanning_sources(project_dir))

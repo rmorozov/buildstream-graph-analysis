@@ -275,14 +275,38 @@ def _run_scope_findings(result: AnalysisResult) -> List[dict]:
     if build_failed is not None:
         failed = build_failed.get('failed_elements') or []
         shown = ", ".join(failed[:3]) + (", ..." if len(failed) > 3 else "")
+        # UX-185: this violation now carries three reasons, and only one
+        # of them is a failure. Saying "THIS BUILD FAILED: 0 element(s)
+        # ended in FAILURE ()" about a capture that met a laptop lid -
+        # or, before this, about an interrupt - sends the reader hunting
+        # for a compile error that does not exist. `UX-157` fixed that
+        # wording in the report and this second site kept it.
+        suspended = build_failed.get('suspended')
+        if failed:
+            headline = (
+                f"THIS BUILD FAILED: {build_failed.get('failed_count')} element(s) "
+                f"ended in FAILURE ({shown}) - every figure below describes a build "
+                f"that did not complete, and the elements that failed contributed "
+                f"only the time they ran before failing")
+        elif build_failed.get('interrupted'):
+            headline = (
+                "THIS BUILD DID NOT FINISH: it was interrupted before it "
+                "completed - every figure below describes a partial build")
+        elif suspended:
+            from .suspend import describe as _describe_suspension
+            # No prefix: `describe` already opens with "This capture
+            # spans a suspend", and the two together read as a stutter.
+            headline = _describe_suspension(suspended)
+        else:
+            headline = (
+                "THIS BUILD DID NOT FINISH - every figure below describes a "
+                "build that did not complete")
         findings.append(_finding(
-            'build-failed', SEVERITY_CRITICAL,
-            f"THIS BUILD FAILED: {build_failed.get('failed_count')} element(s) "
-            f"ended in FAILURE ({shown}) - every figure below describes a build "
-            f"that did not complete, and the elements that failed contributed "
-            f"only the time they ran before failing",
+            'build-failed', SEVERITY_CRITICAL, headline,
             elements=list(failed),
-            evidence={'failed_count': build_failed.get('failed_count')},
+            evidence={'failed_count': build_failed.get('failed_count'),
+                      'interrupted': bool(build_failed.get('interrupted')),
+                      'suspended': suspended},
         ))
 
     confidence = result.confidence or {}

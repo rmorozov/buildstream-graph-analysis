@@ -742,3 +742,13 @@ def test_the_reference_documents_the_full_flags():
     for flag in ("--full-path", "--full-sources"):
         assert flag in reference, f"cli.md does not document {flag}"
     assert "JSON never truncates" in reference
+
+
+def test_the_reference_documents_the_suspend_contract():
+    """UX-185: a user whose three-hour capture just refused needs to
+    find both halves - why it refused, and the flag that prevents it."""
+    reference = (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
+
+    assert "--inhibit" in reference
+    assert "CLOCK_MONOTONIC" in reference, "the mechanism, not just the symptom"
+    assert "spans a suspend" in reference

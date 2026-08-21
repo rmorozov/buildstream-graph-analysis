@@ -71,7 +71,7 @@ def _capture_context(project: str, command: List[str], config: dict) -> str:
 
 def take_snapshot(project: str, command: List[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
-                  no_inject: bool = False) -> Tuple[str, int]:
+                  no_inject: bool = False, inhibit: bool = False) -> Tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
     own exit code - which is the build's answer, not the capture's."""
     from .bst_native_build_tracer import main as capture_main
@@ -95,6 +95,8 @@ def take_snapshot(project: str, command: List[str], config: dict,
         argv.append("--diagnose")
     if no_inject:
         argv.append("--no-inject")
+    if inhibit:
+        argv.append("--inhibit")
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
 
     print(f"Capturing into {snapshot}", file=sys.stderr)
@@ -160,6 +162,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--no-inject", action="store_true",
         help='UX-146: run the build with the shim installed but injecting nothing, to find out whether the argv rewrite is what breaks it.'
+    )
+    parser.add_argument(
+        "--inhibit", action="store_true",
+        help="UX-185: stop the machine sleeping while the build runs, via "
+             "systemd-inhibit (and gnome-session-inhibit when present). Not "
+             "the default - taking a lock on your power management uninvited "
+             "is not bga's call. A suspend is detected either way."
     )
     parser.add_argument(
         "--no-progress", action="store_true",
@@ -230,7 +239,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     previous = run_store.list_runs(project)
     snapshot, build_exit = take_snapshot(project, command, config,
                                          diagnose=args.diagnose,
-                                         no_inject=args.no_inject)
+                                         no_inject=args.no_inject,
+                                         inhibit=args.inhibit)
 
     if args.no_inject:
         # Nothing was captured, so there is nothing to analyze and

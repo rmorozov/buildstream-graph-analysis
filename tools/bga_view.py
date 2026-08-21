@@ -70,7 +70,10 @@ ASSET_DIR = _asset_dir()
 # no directory listing and no fall-through to the filesystem.
 ASSETS = ("index.html", "app.js", "style.css", "views.js",
           # UX-194: the Perfetto handoff and the canned-SQL page.
-          "perfetto.html", "perfetto.js", "sql.html")
+          "perfetto.html", "perfetto.js", "sql.html",
+          # UX-199: navigation, and the questions as data so the export
+          # can inline what it used to strip.
+          "nav.js", "questions.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured
@@ -293,6 +296,35 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 TRACE_BUDGET_B = 4 * 1024 * 1024
 
 
+def _module_order(entry: str = "app.js") -> List[str]:
+    """Every module the export must inline, dependencies first.
+
+    **Derived, not listed.** `UX-199` found the export defining none of
+    `renderBand`, `renderTrend` or `renderBlastSearch` while calling all
+    three: `UX-196` added `views.js` and the hand-written pair
+    `perfetto.js + app.js` was never updated, so every exported report
+    since then threw a `ReferenceError` in `boot()` and rendered
+    **empty**. Reproduced under a DOM shim before this was written.
+
+    A hardcoded list is a thing to forget; walking `entry`'s own
+    `import` lines is not.
+    """
+    seen, order = set(), []
+
+    def walk(name: str) -> None:
+        if name in seen:
+            return
+        seen.add(name)
+        text = open(os.path.join(ASSET_DIR, name), encoding="utf-8").read()
+        for match in re.finditer(r'^\s*import\s.*?from\s+["\']\./([\w.-]+)["\']',
+                                 text, re.M):
+            walk(match.group(1))
+        order.append(name)
+
+    walk(entry)
+    return order
+
+
 def _inline_module(name: str) -> str:
     """One ES module's source, with its module syntax removed.
 
@@ -343,7 +375,7 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
 
     page = open(os.path.join(ASSET_DIR, "index.html"), encoding="utf-8").read()
     style = open(os.path.join(ASSET_DIR, "style.css"), encoding="utf-8").read()
-    script = _inline_module("perfetto.js") + "\n" + _inline_module("app.js")
+    script = "\n".join(_inline_module(name) for name in _module_order())
 
     blocks = []
     for name, document in documents.items():

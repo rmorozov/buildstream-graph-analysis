@@ -93,3 +93,50 @@ footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem
 [data-role="blast-form"] input { flex: 1 1 auto; padding: .3rem .5rem;
   border: 1px solid var(--line); border-radius: 3px;
   background: var(--bg); color: var(--fg); }
+
+/* UX-199: navigation. Everything here is chrome around the report -
+   nothing changes a number or hides a finding. */
+.toc {
+  position: sticky; top: 0; z-index: 5; background: var(--panel);
+  border-bottom: 1px solid var(--line); padding: .6rem 0 .8rem;
+  margin: 0 0 1rem;
+}
+.toc-title { margin: 0 0 .3rem; font-weight: 600; font-size: .9rem; }
+.toc ul {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: .2rem .9rem;
+}
+.toc a { font-size: .88rem; text-decoration: none; }
+.toc a:hover, .toc a:focus { text-decoration: underline; }
+.toc-controls { margin: .5rem 0 0; display: flex; gap: .5rem; }
+.toc-controls button, button.collapse {
+  font: inherit; font-size: .82rem; cursor: pointer;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 3px; padding: .1rem .45rem;
+}
+button.collapse { border: none; margin-right: .4rem; padding: 0 .3rem; }
+button.collapse:hover { color: var(--fg); }
+
+#jump { font: inherit; font-size: .88rem; margin-top: .5rem;
+        padding: .25rem .5rem; width: min(22rem, 100%);
+        border: 1px solid var(--line); border-radius: 3px;
+        background: var(--bg); color: var(--fg); }
+.jump-hits { list-style: none; margin: .3rem 0 0; padding: 0;
+             display: flex; flex-wrap: wrap; gap: .3rem; }
+.jump-hits button {
+  font: inherit; font-size: .82rem; cursor: pointer;
+  background: var(--bg); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 3px; padding: .1rem .45rem;
+}
+
+/* Collapsed sections keep their heading; everything below it goes. */
+section[data-collapsed="true"] > *:not(h2) { display: none; }
+section[data-jumped="true"], [data-jumped="true"] {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+
+/* UX-203: the trend's dots, coloured by the verdict rather than by
+   nothing. */
+.trend-point.verdict-regressed { fill: var(--bad); }
+.trend-point.verdict-improved { fill: var(--good); }
+.trend-point.verdict-within_band { fill: var(--muted); }

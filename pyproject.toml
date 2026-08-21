@@ -53,6 +53,11 @@ dev = [
     # in tests/unit/test_docs_links_and_commands.py instead; see UX-98
     # for the measurement behind that split.
     "pymarkdownlnt>=0.9",
+    # UX-190: validates the published output JSON against the schema
+    # `bga <cmd> --schema` prints. A *dev* dependency only - the runtime
+    # emits the `schema` key and never validates, so a user's install
+    # does not carry a validator to run a check nobody asked for.
+    "jsonschema>=4.0",
 ]
 # Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
 # (tests/unit/test_bst_show_to_graph.py) - skipped automatically when

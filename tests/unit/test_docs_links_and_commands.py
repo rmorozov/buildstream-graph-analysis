@@ -719,3 +719,15 @@ def test_the_ci_journey_documents_the_cross_host_gate():
     assert "exit 6" in guide, "the code a pipeline branches on"
     assert "host unknown" in guide.lower(), (
         "old captures still compare, and the guide should say so")
+
+
+def test_the_fixing_guide_names_the_output_versioning_rule():
+    """UX-190: a rule that lives only in a module docstring is a rule
+    the next fixer does not meet. The checklist is where they look."""
+    guide = (REPO / "docs" / "contributing" / "fixing-guide.md").read_text(
+        encoding="utf-8")
+
+    assert "analyze/v1" in guide
+    assert "bump" in guide.lower()
+    assert "additionalProperties" in guide, (
+        "the rule's other half - an addition is not a breaking change")

@@ -1,6 +1,8 @@
 {
+    "schema": "analyze/v1",
     "run_id": "golden-fixture-manifest-hash-v1",
     "total_duration_us": 16000,
+    "section": null,
     "findings": [
         {
             "id": "confidence",

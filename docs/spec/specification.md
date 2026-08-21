@@ -1517,10 +1517,9 @@ exclusive:
 Schemas:
 
 ```text
-run-context/v9
-graph/v9
-trace/v9
-analysis/v9
+run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the analysis shape)
+analyze/v1          compare/v1    blast/v1                    (published outputs - 32.5)
+sources/v1                                                    (the source inventory - UX-171)
 ```
 
 ---
@@ -1625,6 +1624,38 @@ Phases remain independent source intervals.
   "violations": []
 }
 ```
+
+## 32.5 The published output schemas (`UX-190`)
+
+`analysis/v9` above is the *shape of the analysis*, which the spec
+defines. What `bga` actually writes to stdout under `--format json` is
+a document built from it, and until `UX-190` that document declared no
+version at all - so a consumer had nothing to pin, and a field rename
+in a published payload (`runs_outside_band` → `edges_outside_band`,
+round 19) reached them silently.
+
+Three outputs now self-declare, with `schema` as their first key:
+
+| output | schema | printed by |
+|---|---|---|
+| `bga analyze --format json` (and every section subcommand) | `analyze/v1` | `bga analyze --schema` |
+| `bga compare --format json` | `compare/v1` | `bga compare --schema` |
+| `bga blast --format json` | `blast/v1` | `bga blast --schema` |
+
+**The versioning rule**: a field *rename or removal* bumps the version;
+an *addition* does not. So `additionalProperties` is true in all three,
+and a consumer that pins `analyze/v1` keeps working while the tool
+grows.
+
+The schemas live in one place, `bga/schemas.py`, which the renderers
+are built against and `--schema` prints from - they cannot be a
+hand-written copy drifting from the payload. A round-trip guard
+validates the golden run's real output against them
+(`tests/unit/test_output_schemas.py`).
+
+They pin the top level only: the always-present keys, their types, and
+the `schema` key. Enumerating every nested object would be a second
+implementation of the renderer, drifting from the first.
 
 ---
 

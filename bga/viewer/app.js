@@ -382,7 +382,15 @@ async function boot() {
     document.title = `bga — ${run.name ?? "report"}`;
     render(payload, schemas[payload.schema], root);
     // UX-196: the three views, each only when its payload is there.
-    const band = renderBand(payload);
+    //
+    // UX-203: from the *compare* document, which is what `renderBand`
+    // has always needed - it reads `baseline_band` and
+    // `candidate.total_duration_us`, neither of which an analyze
+    // document has. Handing it `payload` meant it returned null every
+    // time, so the band had never rendered for any user. `bga view`
+    // now serves the comparison against the run before this one.
+    const comparison = await load("compare", null).catch(() => null);
+    const band = comparison && renderBand(comparison);
     if (band) root.prepend(band);
     const store = await load("store", null).catch(() => null);
     const trend = store && renderTrend(store);

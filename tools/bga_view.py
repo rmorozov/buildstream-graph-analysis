@@ -106,16 +106,89 @@ def _capture(argv: List[str]) -> dict:
     return json.loads(text)
 
 
-def payloads(run: str) -> Dict[str, dict]:
+def history(run: str) -> List[str]:
+    """Every run in `run`'s own store that precedes it, oldest first.
+
+    `UX-203`: the band needs a *set*, not a pair.
+    `compare.MIN_BASELINE_RUNS` is 3, and a pairwise comparison has no
+    `baseline_band` at all - so serving one comparison would have left
+    `renderBand` returning null exactly as before, for a subtler
+    reason. The store is where the set comes from: it is the history
+    the user already captured.
+    """
+    from bga import run_store
+
+    snapshot = os.path.dirname(os.path.abspath(run.rstrip("/")))
+    project = run_store.project_root(snapshot)
+    if project is None:
+        return []
+    try:
+        runs = [os.path.abspath(r) for r in run_store.list_runs(project)]
+    except OSError:
+        return []
+    try:
+        index = runs.index(snapshot)
+    except ValueError:
+        return []
+    return [os.path.join(r, run_store.RUN_SUBDIR) for r in runs[:index]]
+
+
+def predecessor(run: str) -> Optional[str]:
+    """The run one snapshot before `run` in its own store, or None.
+
+    `UX-203`: this is what makes the band view reachable. `bga view`
+    served exactly one payload - the analyze document - while
+    `renderBand` needs a *compare* document (`baseline_band` plus
+    `candidate.total_duration_us`). Measured before the fix:
+    `renderBand(analyze)` returns `null` for every real report, so
+    `UX-196`'s headline view had never rendered outside its own test
+    harness.
+
+    Nothing else in the tool answers "the run before this one": `@prev`
+    is relative to the store's newest, and the run being viewed is not
+    always that.
+    """
+    earlier = history(run)
+    return earlier[-1] if earlier else None
+
+
+def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     """Everything the page renders, keyed by the url it is served at.
 
     A refusal is data, not an error: `bga compare` exits 6 on runs it
     will not judge, and that verdict is exactly what the viewer should
     show. So the exit code is ignored here and the document is served.
     """
-    return {
+    documents = {
         "report.json": _capture(["analyze", run, "--format", "json"]),
     }
+    # `UX-203`: the comparison the user already has. `bga snapshot`
+    # compares against the previous run automatically, so by the time
+    # anyone runs `bga view` the answer usually exists - it was just
+    # never put in front of the page.
+    earlier = history(run)
+    against = baseline if baseline is not None else (earlier[-1] if earlier else None)
+    if against:
+        argv = ["compare", against, run, "--format", "json"]
+        # Every earlier run in this store becomes a band sample, so the
+        # band is derived from the history the user actually has.
+        #
+        # Including the one used as the positional baseline: `compare`
+        # builds the band from `--baseline-run` *only* (compare.py:819),
+        # so leaving it out both narrowed the band and, in a two-run
+        # store, produced neither a band nor the `baseline_band_shortfall`
+        # that explains its absence - a blank where an answer belongs.
+        for path in earlier:
+            argv += ["--baseline-run", path]
+        try:
+            documents["compare.json"] = _capture(argv)
+        except (RuntimeError, json.JSONDecodeError, OSError):
+            # A predecessor that cannot be compared is not an error
+            # here - the report still renders, minus one view. An
+            # explicit `--compare` that fails is reported by `main`.
+            if baseline is not None:
+                raise
+    return documents
 
 
 def store_payload(run: str) -> Optional[dict]:
@@ -408,14 +481,16 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
 def serve(run: str, port: int = 0,
           documents: Optional[Dict[str, dict]] = None,
-          with_trace: bool = True):
+          with_trace: bool = True,
+          baseline: Optional[str] = None):
     """A started server on 127.0.0.1. The caller closes it.
 
     Returns `(httpd, url)`. Port 0 means the kernel picks one, so two
     `bga view`s never collide and nothing is left listening on a
     predictable port.
     """
-    documents = dict(documents if documents is not None else payloads(run))
+    documents = dict(documents if documents is not None
+                     else payloads(run, baseline))
     documents.setdefault("schemas.json", schemas_payload())
 
     store = store_payload(run)
@@ -468,6 +543,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--no-browser", action="store_true",
         help="Print the url instead of opening it - for a remote shell, or "
              "when you want to curl the payloads.")
+    parser.add_argument(
+        "--compare", default=None, metavar="BASELINE",
+        help="Draw the band against this run instead of the one before "
+             "RUN in the same store. Same alias grammar.")
     args = parser.parse_args(argv)
 
     from bga import run_store
@@ -483,6 +562,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # running the acceptance against a real capture, because every
         # unit test passed an explicit path.
         run = run_store.resolve(args.run)
+        baseline = run_store.resolve(args.compare) if args.compare else None
     except Exception as error:  # noqa: BLE001 - reported, not swallowed
         print(f"Error: {error}", file=sys.stderr)
         return 2
@@ -512,7 +592,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     try:
-        httpd, url = serve(run, port=args.port)
+        httpd, url = serve(run, port=args.port, baseline=baseline)
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2

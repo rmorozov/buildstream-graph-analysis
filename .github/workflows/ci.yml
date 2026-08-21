@@ -86,6 +86,58 @@ jobs:
             /tmp/pkgvenv/bin/bga "$alias" --help > /dev/null
           done
 
+      - name: The installed viewer really serves a page
+        # UX-203: the packaging loop above runs `--help` for every alias
+        # and never serves anything, so the class that shipped "broken in
+        # every installed shape" (an ASSET_DIR derived from the checkout
+        # layout, `from tools.` imports) was guarded only by static
+        # assertions about configuration. This is the install-shape
+        # exercise that found it, kept.
+        #
+        # Falsified against the real defect: restoring the checkout-relative
+        # ASSET_DIR, building a wheel and installing it makes this step's
+        # `curl app.js` fail. Measured.
+        #
+        # UX-203's filing proposed a different mutation - "fails when
+        # package-data loses the viewer glob" - and that one does *not*
+        # hold: emptying `[tool.setuptools.package-data]`'s `bga` entry,
+        # with a cleared `build/` and even with `include-package-data =
+        # false`, still ships all seven viewer files, because this
+        # setuptools includes files under a package directory regardless.
+        # So package-data is not the lever that keeps them in the wheel,
+        # and a guard written around it would have asserted nothing.
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/viewrun && mkdir -p /tmp/viewrun
+          cp -r "$GITHUB_WORKSPACE/tests/fixtures/golden/mixed_task_kinds" /tmp/viewrun/run
+          rm -f /tmp/viewrun/run/expected_output.json
+          cd /tmp
+          /tmp/pkgvenv/bin/bga view /tmp/viewrun/run --no-browser > /tmp/view.log 2>&1 &
+          VIEW_PID=$!
+          trap 'kill $VIEW_PID 2>/dev/null || true' EXIT
+          for _ in $(seq 1 40); do
+            URL=$(grep -oE 'http://127\.0\.0\.1:[0-9]+/' /tmp/view.log | head -1) || true
+            [ -n "${URL:-}" ] && break
+            sleep 0.25
+          done
+          if [ -z "${URL:-}" ]; then
+            echo "the installed viewer never printed a url:" >&2
+            cat /tmp/view.log >&2
+            exit 1
+          fi
+          echo "serving at $URL"
+          # The page, one asset and the payload - an asset is the half
+          # that package-data governs, and the payload is the half that
+          # the imports govern.
+          curl -fsS "${URL}index.html"  > /tmp/index.html
+          curl -fsS "${URL}app.js"      > /tmp/app.js
+          curl -fsS "${URL}report.json" > /tmp/report.json
+          grep -q "bga-report\|id=\"report\"" /tmp/index.html
+          grep -q "renderSection\|bga:quantity" /tmp/app.js
+          python -c "import json,sys; d=json.load(open('/tmp/report.json')); \
+            assert d['schema']=='analyze/v1', d.get('schema'); \
+            print('served analyze/v1 from the installed wheel')"
+
       - name: The wheel owns exactly one top-level name
         # UX-94: `UX-77` made the aliases work by packaging `tools*`,
         # which put a top-level `tools` package into site-packages - the

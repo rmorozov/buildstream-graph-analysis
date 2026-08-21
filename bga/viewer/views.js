@@ -21,6 +21,24 @@ function svg(tag, attrs = {}) {
   return node;
 }
 
+
+// Small local formatters rather than importing app.js's: app.js already
+// imports *this* module, and a cycle between the two would work today
+// (both export hoisted declarations) and break the first time either
+// grows a top-level side effect. `UX-201` folds formatting into one
+// schema-driven place, which is where this duplication goes to die.
+function seconds(microseconds) {
+  const s = microseconds / 1e6;
+  return s < 90 ? `${s.toFixed(1)} s` : `${(s / 60).toFixed(1)} min`;
+}
+
+function mib(value) {
+  const units = ["B", "KiB", "MiB", "GiB"];
+  let n = value, i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
+  return `${i === 0 ? n : n.toFixed(1)} ${units[i]}`;
+}
+
 // --------------------------------------------------------------- band
 //
 // `UX-170`'s disputed region is the case this drawing exists for: a
@@ -130,7 +148,9 @@ export function renderTrend(store) {
   if (rows.length < 2) return null;
 
   const W = 100, H = 40;
-  const sizes = rows.map((r) => r.bytes ?? 0);
+  // UX-203: the axis is duration. It was `bytes`, so the trend
+  // answered "is this project drifting" with disk usage.
+  const sizes = rows.map((r) => r.total_duration_us ?? 0);
   const max = Math.max(...sizes, 1);
   const x = (i) => (rows.length === 1 ? W / 2 : (i / (rows.length - 1)) * W);
   const y = (v) => H - (v / max) * (H - 6) - 3;
@@ -140,7 +160,7 @@ export function renderTrend(store) {
     role: "img", "data-points": rows.length,
   });
   figure.append(svg("polyline", {
-    points: rows.map((r, i) => `${x(i)},${y(r.bytes ?? 0)}`).join(" "),
+    points: rows.map((r, i) => `${x(i)},${y(r.total_duration_us ?? 0)}`).join(" "),
     class: "trend-line", fill: "none",
   }));
   for (const [index, row] of rows.entries()) {
@@ -148,13 +168,32 @@ export function renderTrend(store) {
     // disk, and a trend that quietly dropped them would answer the
     // drift question with a curated subset.
     const reason = row.incomplete_reason;
-    figure.append(svg(reason ? "rect" : "circle", reason
-      ? { x: x(index) - 1.3, y: y(row.bytes ?? 0) - 1.3, width: 2.6,
+    // UX-203: the verdict colours the dot - the question the trend is
+    // asked is whether this build is drifting, and the verdict is the
+    // answer the rest of the tool already gives for one pair.
+    const verdict = row.verdict_kind ?? "";
+    const point = svg(reason ? "rect" : "circle", reason
+      ? { x: x(index) - 1.3, y: y(row.total_duration_us ?? 0) - 1.3, width: 2.6,
           height: 2.6, class: "trend-point incomplete",
           "data-stamp": row.stamp, "data-incomplete": reason }
-      : { cx: x(index), cy: y(row.bytes ?? 0), r: 1.3,
-          class: `trend-point${row.alias ? " aliased" : ""}`,
-          "data-stamp": row.stamp, "data-alias": row.alias ?? "" }));
+      : { cx: x(index), cy: y(row.total_duration_us ?? 0), r: 1.3,
+          class: `trend-point${row.alias ? " aliased" : ""}`
+                 + (verdict ? ` verdict-${verdict}` : ""),
+          "data-stamp": row.stamp, "data-alias": row.alias ?? "",
+          "data-verdict": verdict });
+    // Size is still here, demoted to where it belongs: a detail you can
+    // hover for, not the axis the question is answered on.
+    const tip = svg("title");
+    tip.textContent = [
+      row.stamp,
+      row.total_duration_us != null ? seconds(row.total_duration_us) : null,
+      verdict ? verdict.replace(/_/g, " ") : null,
+      row.cache_hit_rate != null
+        ? `${(row.cache_hit_rate * 100).toFixed(0)}% cache hits` : null,
+      row.bytes != null ? mib(row.bytes) : null,
+    ].filter(Boolean).join(" · ");
+    point.append(tip);
+    figure.append(point);
   }
 
   const wrapper = document.createElement("section");

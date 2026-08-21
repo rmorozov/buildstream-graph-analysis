@@ -81,6 +81,10 @@ TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
         "tools.bga_timeline",
         "One Chrome-trace timeline, both planes",
     ),
+    "view": (
+        "tools.bga_view",
+        "Open a run's report in a browser",
+    ),
     "log-to-chrome": (
         "tools.bst_log_to_chrome_trace",
         "Convert a BuildStream log to Chrome Trace JSON",

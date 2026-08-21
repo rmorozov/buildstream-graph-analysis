@@ -62,8 +62,8 @@ pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/spec
 cd /path/to/your/project
 bga doctor .                          # is this machine able to capture at all?
 bga snapshot -- bst build <targets>   # capture + extract + analyze
-# ...make your change...
-bga snapshot -- bst build <targets>   # ...and compare against the previous one
+bga view @last                        # the same report, in a browser (UX-193)
+bga snapshot -- bst build <targets>   # after your change: compares against the previous run
 ```
 
 Run `bga doctor` first — it takes a second or two. Every capture environment this project has

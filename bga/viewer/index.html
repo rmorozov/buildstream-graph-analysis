@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+  UX-193. This page is checked into the repository and served as-is:
+  no bundler, no npm, no build step. If you are reading it in a browser
+  devtools pane, you are reading the same bytes that are in git.
+
+  It renders the *schema*, not the report - see app.js.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bga report</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1 id="run-name">bga</h1>
+  <p id="run-path" class="muted"></p>
+</header>
+<main id="report" aria-busy="true">
+  <p class="muted">Loading…</p>
+</main>
+<footer class="muted">
+  <p>Rendered from this run's published JSON — the same document
+     <code>bga analyze --format json</code> prints.
+     <a href="report.json">report.json</a> ·
+     <a href="schemas.json">schemas.json</a></p>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

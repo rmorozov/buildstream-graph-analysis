@@ -58,7 +58,19 @@ dev = [
     # emits the `schema` key and never validates, so a user's install
     # does not carry a validator to run a check nobody asked for.
     "jsonschema>=4.0",
+    # UX-191: shell completion, exercised by its own guards. A *runtime*
+    # optional extra as well (`bga[completion]`) - the CLI works without
+    # it and the import is guarded.
+    "argcomplete>=3.0",
 ]
+# UX-191: `pip install bga[completion]`, then
+# `eval "$(register-python-argcomplete bga)"`. Shell completion for the
+# argparse program as it stands - a `click` migration was considered and
+# declined (see the task file): it would touch every subcommand and
+# re-litigate UX-158's help formatting for nothing argcomplete does not
+# already give.
+completion = ["argcomplete>=3.0"]
+
 # Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
 # (tests/unit/test_bst_show_to_graph.py) - skipped automatically when
 # `bst` isn't on PATH, so this extra is optional, not part of `dev`.

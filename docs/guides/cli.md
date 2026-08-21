@@ -462,6 +462,33 @@ bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shar
 
 `floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
+## Tab completion (`UX-191`)
+
+```bash
+pip install "bga[completion]"
+eval "$(register-python-argcomplete bga)"          # bash/zsh, in your rc
+register-python-argcomplete --shell fish bga | source
+```
+
+What it completes:
+
+| where | what |
+|---|---|
+| `bga <TAB>` | every subcommand **and** every `UX-67` alias |
+| any run argument — `bga compare @<TAB>` | `@last`, `@prev`, and this project's own snapshot stamps |
+| `bga blast <TAB>` | element names, read from the project's `.bst` files |
+| any `--flag` with choices | its choices |
+
+Without the shell hook it is completely inert, and without `argcomplete`
+installed the import is skipped — the CLI behaves exactly as it did.
+
+**Why not `click`.** The feedback suggested migrating; `argcomplete`
+completes an argparse program as it stands, while a rewrite would touch
+every subcommand, re-litigate the help formatting `UX-158` measured, and
+buy nothing beyond what completion already gives. Recorded as considered
+and declined, revisitable if argcomplete cannot complete something users
+need.
+
 ## `bga timeline` — one trace, both planes (`UX-188`)
 
 ```bash

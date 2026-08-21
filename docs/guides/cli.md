@@ -462,6 +462,33 @@ bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shar
 
 `floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
+## `bga timeline` — one trace, both planes (`UX-188`)
+
+```bash
+bga timeline @last              # -> <snapshot>/timeline.json
+bga timeline @last -o /tmp/t.json --anchor-element components/openssl.bst
+```
+
+Plane 1's element schedule always; Plane 2's process lanes underneath it
+when the snapshot kept its raw trace log — which `bga snapshot` does by
+default (gzipped, **8% of its size**, measured on two real captures).
+`--no-keep-raw` opts out.
+
+Open the result with [Perfetto](https://ui.perfetto.dev) or
+`chrome://tracing`. The two planes are aligned on one element that
+appears in both; without `--anchor-element` that is the longest-running
+element Plane 2 traced, whose span is least sensitive to a small
+alignment error.
+
+Without a raw log it renders Plane 1 and **says what is missing** rather
+than silently producing half a timeline.
+
+This composes `bga log-to-chrome` and `bga native-to-chrome combined`,
+which still work on their own. Feeding either a file with no parseable
+trace lines is now a **refusal**, not `Wrote 0 trace events` and exit 0 —
+the usual cause is a `plane2.json` report where a raw log belongs. Every
+converter's status line goes to stderr; the payload is the file.
+
 ## A capture that meets a laptop lid (`UX-185`)
 
 The hook and the spine stamp `CLOCK_MONOTONIC`, which **does not advance

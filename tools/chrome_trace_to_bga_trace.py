@@ -21,6 +21,7 @@ straight from the log line's own `[hash][action:element]` bracket.
 """
 import argparse
 import json
+import sys
 from collections import defaultdict
 from typing import List, Sequence, Tuple
 
@@ -189,7 +190,8 @@ def main() -> int:
     with open(args.output_json, "w", encoding="utf-8") as f:
         json.dump(trace, f, indent=2)
 
-    print(f"Wrote trace.json with {len(spans)} span(s) to {args.output_json}")
+    print(f"Wrote trace.json with {len(spans)} span(s) to {args.output_json}",
+          file=sys.stderr)
     if dropped:
         print(f"Note: {len(dropped)} event(s) dropped:")
         for reason in dropped:

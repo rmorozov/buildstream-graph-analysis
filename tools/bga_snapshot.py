@@ -34,6 +34,7 @@ Full background: docs/guides/local-loop.md
 """
 import argparse
 import json
+import gzip
 import os
 import shutil
 import sys
@@ -47,6 +48,16 @@ from bga import run_store
 # second shape.
 RUN_SUBDIR = "run"
 PLANE2_NAME = "plane2.json"
+# UX-188: the raw Plane 2 log, gzipped, kept beside the processed
+# report. `bga native-to-chrome combined` - the plane merge the field
+# asked for - reads the *raw* log, and snapshots kept only the processed
+# one, so the merge existed for captures nobody made by default.
+#
+# Default-on, because the measured cost is small: on two real captures a
+# raw log gzips to **8.0%** and **8.6%** of itself (676,931 -> 53,828 B;
+# 150,969 -> 12,915 B), which is 12% on top of the processed report it
+# sits beside. `--no-keep-raw` turns it off.
+RAW_LOG_NAME = "plane2.log.gz"
 WRAPPED_LOG_NAME = "build.log"
 CONTEXT_NAME = "capture-context.txt"
 
@@ -71,7 +82,8 @@ def _capture_context(project: str, command: List[str], config: dict) -> str:
 
 def take_snapshot(project: str, command: List[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
-                  no_inject: bool = False, inhibit: bool = False) -> Tuple[str, int]:
+                  no_inject: bool = False, inhibit: bool = False,
+                  keep_raw: bool = True) -> Tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
     own exit code - which is the build's answer, not the capture's."""
     from .bst_native_build_tracer import main as capture_main
@@ -82,6 +94,11 @@ def take_snapshot(project: str, command: List[str], config: dict,
 
     argv = ["run", "--wrapped-log", os.path.join(snapshot, WRAPPED_LOG_NAME),
             "--run-dir", os.path.join(snapshot, RUN_SUBDIR)]
+    if keep_raw:
+        # Written uncompressed by the capture, then compressed in place
+        # below: the tracer streams into it for hours and gzip is the
+        # copy-out step, not the write path.
+        argv += ["--raw-log", os.path.join(snapshot, RAW_LOG_NAME[:-3])]
     if config.get("trace_opens", True):
         argv.append("--trace-opens")
     # `=` rather than a separate token: `--trace-spine` takes an optional
@@ -100,7 +117,30 @@ def take_snapshot(project: str, command: List[str], config: dict,
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
 
     print(f"Capturing into {snapshot}", file=sys.stderr)
-    return snapshot, capture_main(argv)
+    exit_code = capture_main(argv)
+    if keep_raw:
+        _compress_raw_log(snapshot)
+    return snapshot, exit_code
+
+
+def _compress_raw_log(snapshot: str) -> None:
+    """gzip the raw Plane 2 log in place, best effort.
+
+    Failing to compress must never lose the capture that just took three
+    hours - so an error here leaves the uncompressed log where it is and
+    says so, rather than raising.
+    """
+    plain = os.path.join(snapshot, RAW_LOG_NAME[:-3])
+    if not os.path.exists(plain):
+        return
+    try:
+        with open(plain, "rb") as source, gzip.open(
+                os.path.join(snapshot, RAW_LOG_NAME), "wb") as target:
+            shutil.copyfileobj(source, target, length=1024 * 1024)
+        os.remove(plain)
+    except OSError as error:
+        print(f"Warning: could not compress the raw Plane 2 log ({error}); "
+              f"it is kept uncompressed at {plain}.", file=sys.stderr)
 
 
 def _CompactRawHelp(prog):
@@ -162,6 +202,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--no-inject", action="store_true",
         help='UX-146: run the build with the shim installed but injecting nothing, to find out whether the argv rewrite is what breaks it.'
+    )
+    parser.add_argument(
+        "--no-keep-raw", action="store_true",
+        help="UX-188: do not keep the raw Plane 2 log. It is kept gzipped by "
+             "default (8%% of its size, measured) because `bga timeline` needs "
+             "it to render Plane 2's lanes."
     )
     parser.add_argument(
         "--inhibit", action="store_true",
@@ -240,7 +286,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     snapshot, build_exit = take_snapshot(project, command, config,
                                          diagnose=args.diagnose,
                                          no_inject=args.no_inject,
-                                         inhibit=args.inhibit)
+                                         inhibit=args.inhibit,
+                                         keep_raw=not args.no_keep_raw)
 
     if args.no_inject:
         # Nothing was captured, so there is nothing to analyze and

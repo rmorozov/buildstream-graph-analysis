@@ -752,3 +752,13 @@ def test_the_reference_documents_the_suspend_contract():
     assert "--inhibit" in reference
     assert "CLOCK_MONOTONIC" in reference, "the mechanism, not just the symptom"
     assert "spans a suspend" in reference
+
+
+def test_the_reference_documents_the_timeline_command():
+    """UX-188: the merge existed and worked for two rounds with no way
+    to reach it. A documented command is half of the route."""
+    reference = (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
+
+    assert "bga timeline" in reference
+    assert "--no-keep-raw" in reference
+    assert "Perfetto" in reference

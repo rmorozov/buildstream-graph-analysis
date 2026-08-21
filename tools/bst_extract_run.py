@@ -640,6 +640,8 @@ def build_source_inventory(project_dir: str, element_uids) -> dict:
             continue
         data = read_element_yaml(os.path.join(elements_dir_for(subproject), name))
         resources, notes = sources_module.resources_from_element(data)
+        resources, symlink_notes = _resolve_symlinked(subproject, resources)
+        notes = list(notes) + symlink_notes
         if prefix:
             resources = [_qualify(resource, prefix) for resource in resources]
         if resources:
@@ -647,6 +649,52 @@ def build_source_inventory(project_dir: str, element_uids) -> dict:
         if notes:
             complaints[uid] = notes
     return sources_module.build_inventory(per_element, complaints)
+
+
+def _resolve_symlinked(project_dir: str, resources):
+    """UX-184 item 2: one directory, one identity, however it is spelled.
+
+    A project that stages `vendor/lib` where `vendor/lib` is a symlink
+    to `files/lib` is staging the same bytes as an element that names
+    `files/lib` directly - and reported them as two resources, so the
+    blast the table exists to show was halved for exactly the projects
+    that use a checkout layout.
+
+    Resolved at inventory time, because that is the one moment the
+    project is on disk. `declared` keeps what the recipe wrote; the
+    identity becomes the real directory. A link pointing *out* of the
+    project has no project-relative identity at all, so it is a
+    complaint rather than an identity outside the tree - the same
+    reasoning as `UX-184`'s absolute-path case.
+    """
+    resolved = []
+    notes = []
+    root = os.path.realpath(project_dir)
+    for resource in resources:
+        if resource.get("keying") != "content":
+            resolved.append(resource)
+            continue
+        identity = resource.get("identity") or ""
+        real = os.path.realpath(os.path.join(project_dir, identity))
+        if real == os.path.join(root, identity) or not os.path.exists(real):
+            # Not a link, or not on disk to check - either way the
+            # declared path is the best identity available.
+            resolved.append(resource)
+            continue
+        try:
+            relative = os.path.relpath(real, root)
+        except ValueError:
+            relative = ".."
+        if relative.split(os.sep)[0] == "..":
+            notes.append(
+                f"`{resource.get('kind')}` source {identity!r} resolves to "
+                f"{real!r}, outside the project - it has no project-relative "
+                f"identity, so its blast cannot be grouped with anything")
+            continue
+        linked = dict(resource)
+        linked["identity"] = relative
+        resolved.append(linked)
+    return resolved, notes
 
 
 def _qualify(resource: dict, prefix: str) -> dict:

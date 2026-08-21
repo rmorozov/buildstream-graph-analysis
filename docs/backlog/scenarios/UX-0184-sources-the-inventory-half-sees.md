@@ -1,6 +1,6 @@
 # UX-184: sources the inventory half-sees
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-171 (the inventory), UX-181 (the identity model)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory), UX-181 (the identity model)
 
 ## Motivation
 
@@ -58,3 +58,66 @@ path, a symlinked directory, and the field stanza: the first two are
 complaints with element names, the symlink is one identity, the field
 stanza's behavior is asserted explicitly. Mutation: restoring the
 silent `.strip("/")` normalization reddens the collision test.
+
+## What was built
+
+Reproduced first, exactly as the Motivation describes:
+
+```text
+'/opt/monorepo' -> opt/monorepo   | complaint: None
+'../monorepo'   -> ../monorepo    | complaint: None
+```
+
+**1. A path this project cannot key is named.** `resource_of_source`
+now refuses an absolute or `..`-escaping *content-keyed* path with a
+complaint that says why - the absolute case naming the collision it
+used to create (`/opt/monorepo` and a genuine project-relative
+`opt/monorepo` became one row). Scoped to content keying: `git` against
+a bare repository on local disk has an absolute url and is a perfectly
+legal configuration, and there is a guard for it.
+
+Content identities are also `normpath`ed now, so `sub/../files/src` and
+`files/src` are one identity. The query side had always normalised; the
+inventory side had not, so the two disagreed about one directory.
+
+`_elements_for_path` refuses them too. A `sources.json` written before
+this complaint existed still carries `../monorepo`, and its fallback
+could prefix-match a query and answer confidently about a path the
+project cannot key - it now matches nothing.
+
+**2. A symlinked source directory is one resource.**
+`_resolve_symlinked`, at extract time (the one moment the project is on
+disk): a content-keyed identity whose realpath differs takes the real
+project-relative path, and `declared` keeps what the recipe wrote. A
+project staging `vendor/lib -> files/lib` beside an element naming
+`files/lib` reported two resources and halved the blast the table
+exists to show. A link pointing *out* of the project has no
+project-relative identity at all and becomes a complaint, on the same
+reasoning as the absolute case.
+
+Tests: 18 new (`tests/unit/test_sources_the_inventory_half_saw.py`),
+including the half round 20 verified as already working - every element
+kind's sources are read, pinned across five kinds so the inventory
+cannot learn to consult `kind:`. Five mutations, each red, and two of
+them are over-refusal directions (`".." in path`, and applying the
+check to ref-keyed urls), because refusing a working configuration is
+this fix's failure mode.
+
+## Deviation from the Required Fix
+
+**Item 3 - the ask-the-user acceptance - is not done.** It requires "one
+real import/manual element stanza from the field project (sanitized)",
+and this session has no channel to the person who filed the feedback.
+What was built instead is the *checkable* set: the three shapes round 20
+ground-truthed (absolute, `..`-escaping, symlinked) plus the
+already-working every-kind case, each asserted explicitly. The two
+shapes the item names as *possible* readings of "actual path to repo"
+are now handled and named respectively; the third reading it names - a
+repo path in `config:`/`variables:` rather than a `sources:` stanza -
+remains invisible by design and out of scope, per this item's own Out
+of Scope.
+
+This is recorded rather than quietly dropped: the fixture set does not
+contain a real field stanza, and nobody should read this item as
+evidence that one was checked.
+

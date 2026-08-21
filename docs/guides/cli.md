@@ -657,6 +657,44 @@ build step. A richer TypeScript app is a welcome *consumer* of these
 payloads rather than a replacement: the view-hints below exist so one
 can be written without this project blessing a frontend stack.
 
+### The Perfetto handoff (`UX-194`)
+
+```bash
+bga view --perfetto      # skip the report, hand the timeline straight over
+```
+
+`bga view`'s page carries an **Open timeline in Perfetto** button when
+the run has one, and `--perfetto` goes there directly. Either way the
+trace crosses **tab to tab**: the page opens `ui.perfetto.dev`, pings
+until it answers, and `postMessage`s the bytes.
+
+**Nothing is uploaded.** It looks exactly like an upload — a public URL
+opens and your build data appears in it — so it is worth saying plainly:
+ui.perfetto.dev is a static site, the trace is processed in your
+browser, and there is nowhere for it to be sent.
+
+The bytes go over gzipped, which Perfetto sniffs itself. Measured on a
+real capture of `examples/06` (871 events, both planes merged):
+
+```text
+272,964 B  ->  24,782 B   (9.1%, 11x smaller)
+```
+
+`--perfetto` needs the server alive while the tab fetches the trace, so
+it does not exit the moment the browser launches — Ctrl-C once Perfetto
+has it. A run with no raw Plane 2 log has no timeline to hand over and
+exits **7** rather than opening a page that would 404.
+
+The page also serves a list of **questions worth asking in Perfetto**
+(`sql.html`, beside the report) — paste-ready PerfettoSQL for
+per-element aggregates, process counts, sandbox tax and the longest
+stalls. It is a docs page, not a feature: the SQL engine is Perfetto's.
+
+**Format**: the trace stays legacy Chrome JSON, which Perfetto ingests
+natively. The reasons and the revisit trigger are argued in
+[Direction 7](../design/directions.md) — the next person reaching for
+protobuf should find the argument rather than an accident.
+
 ### View-hints v1
 
 Annotations in the JSON Schema, so a renderer does not have to guess

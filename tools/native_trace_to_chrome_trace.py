@@ -217,7 +217,16 @@ def build_combined_chrome_trace(
     )
 
 
-def main(argv=None) -> int:
+def main(argv=None, quiet=False) -> int:
+    """Convert or merge. `quiet` suppresses the closing status line.
+
+    `UX-194`: same reason `bst_log_to_chrome_trace.main` grew this in
+    `UX-197` - a caller that renders into a scratch directory it deletes
+    must not tell the user to look there. `UX-197` fixed the Plane 1
+    converter because `bga timeline` calls it; `bga view` calls *this*
+    one the same way, and the guard written then only watched
+    `timeline`'s own output. One caller per fix is how a class survives.
+    """
     parser = argparse.ArgumentParser(description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -277,7 +286,9 @@ def main(argv=None) -> int:
     # UX-188: the payload is the file. A status line on stdout is the one
     # stderr-purity exception left in the tool, and it breaks
     # `bga native-to-chrome ... /dev/stdout | jq`.
-    print(f"Wrote {len(output)} trace events to {args.output}", file=sys.stderr)
+    if not quiet:
+        print(f"Wrote {len(output)} trace events to {args.output}",
+              file=sys.stderr)
     return 0
 
 

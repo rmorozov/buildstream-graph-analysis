@@ -90,8 +90,14 @@ def pick_anchor(raw_log: str) -> Optional[str]:
 
 
 def render(snapshot: str, output: str,
-           anchor_element: Optional[str] = None) -> dict:
-    """Write the timeline. Returns what went into it, for the caller to say."""
+           anchor_element: Optional[str] = None, quiet: bool = False) -> dict:
+    """Write the timeline. Returns what went into it, for the caller to say.
+
+    `quiet` for a caller rendering into a scratch path it will delete -
+    `bga view`, which serves the bytes rather than the file. Without it
+    the converters name a path that is gone by the time anyone reads
+    the line (`UX-197` item 2, and `UX-194` for this second caller).
+    """
     from .bst_log_to_chrome_trace import main as plane1_main
     from .native_trace_to_chrome_trace import main as merge_main
 
@@ -135,7 +141,7 @@ def render(snapshot: str, output: str,
                 shutil.copyfileobj(handle, out, length=1024 * 1024)
 
         code = merge_main(["combined", plane1, source, output,
-                           "--anchor-element", anchor])
+                           "--anchor-element", anchor], quiet=quiet)
         if code:
             raise RuntimeError(f"merging Plane 2 failed (exit {code})")
         return {"planes": ["1", "2"], "anchor": anchor, "raw_log": raw}

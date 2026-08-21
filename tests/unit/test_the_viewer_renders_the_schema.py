@@ -345,9 +345,24 @@ class TestTheSchemaDescribesWhatRealRunsEmit:
 class TestTheViewerShipsNoToolchain:
     """Direction 7's rule, made checkable."""
 
-    def test_the_page_is_three_checked_in_files(self):
-        assert sorted(os.listdir("bga/viewer")) == [
-            "app.js", "index.html", "style.css"]
+    def test_every_file_is_plain_checked_in_source(self):
+        """The first draft pinned the literal list `["app.js",
+        "index.html", "style.css"]`, which `UX-194` immediately broke by
+        adding three more legitimate files. The property that matters is
+        not the count - it is that nothing here is generated, minified,
+        or fetched at build time."""
+        files = sorted(os.listdir("bga/viewer"))
+        assert files, "the viewer has no files"
+        for name in files:
+            assert os.path.splitext(name)[1] in (".html", ".js", ".css"), name
+            assert not name.endswith((".min.js", ".min.css", ".map")), (
+                f"{name} looks generated; every file here is source a "
+                f"human edits")
+            text = open(os.path.join("bga/viewer", name), encoding="utf-8").read()
+            longest = max((len(line) for line in text.splitlines()), default=0)
+            assert longest < 400, (
+                f"{name} has a {longest}-character line - that is what "
+                f"bundled output looks like")
 
     def test_nothing_is_fetched_from_a_cdn(self):
         for name in os.listdir("bga/viewer"):

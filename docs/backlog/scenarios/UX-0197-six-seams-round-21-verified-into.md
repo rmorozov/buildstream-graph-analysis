@@ -133,9 +133,16 @@ contract. `except BaseException: kill; wait; raise` restores it —
 exactly the two this is about.
 
 **5. Both counts corrected, with the annotation rather than silently.**
-`UX-183..UX-192` is ten items, not twelve; the `UX-192` row now reads
-the real 17 aliases. A guard reads the alias count from `TOOL_ALIASES`,
-so that half cannot drift again.
+`UX-183..UX-192` is ten items, not twelve.
+
+The alias half took two attempts, and the second is the lesson. The
+row was corrected from "ten" to "seventeen" and guarded against
+`len(TOOL_ALIASES)` — and `UX-194` broke that an hour later by adding
+an eighteenth alias (`bga view`). A row that must be edited whenever a
+command is added is a row that will be stale again, which is seam 5
+itself. It reads "every alias command" now, and the guard asserts it
+names **no** number; the coverage is checked where it belongs, in
+`test_help_is_short.py`, which reads the mapping directly.
 
 **6. The schema guards cannot vanish quietly.** Reproduced in a clean
 venv:

@@ -25,11 +25,14 @@ or a `..` cannot walk out.
 """
 import argparse
 import contextlib
+import gzip
 import http.server
 import io
 import json
 import os
+import shutil
 import sys
+import tempfile
 import threading
 import webbrowser
 from typing import Dict, List, Optional
@@ -48,7 +51,16 @@ ASSET_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 # The only paths this server answers. Everything else is 404 - there is
 # no directory listing and no fall-through to the filesystem.
-ASSETS = ("index.html", "app.js", "style.css")
+ASSETS = ("index.html", "app.js", "style.css",
+          # UX-194: the Perfetto handoff and the canned-SQL page.
+          "perfetto.html", "perfetto.js", "sql.html")
+
+# The trace, served gzipped. Perfetto sniffs gzip itself, so the
+# compressed bytes cross the postMessage boundary unchanged - measured
+# on a real capture of examples/06 (871 events, both planes):
+# 272,964 B -> 24,782 B, 9.1%, an 11x reduction in what the browser
+# copies between tabs.
+TRACE_NAME = "timeline.json.gz"
 
 
 def _capture(argv: List[str]) -> dict:
@@ -84,6 +96,30 @@ def payloads(run: str) -> Dict[str, dict]:
     }
 
 
+def trace_bytes(run: str) -> Optional[bytes]:
+    """`UX-188`'s merged timeline for this run, gzipped, or None.
+
+    `run` is the run directory; `bga timeline` renders the *snapshot*
+    that contains it, because the wrapped `build.log` and the raw Plane
+    2 log live one level up. A run that is not inside a snapshot - an
+    extracted directory, a fetched capture - simply has no timeline, and
+    that is not an error.
+    """
+    from tools.bga_timeline import render
+
+    snapshot = os.path.dirname(os.path.abspath(run))
+    scratch = tempfile.mkdtemp(prefix="bga-view-")
+    try:
+        rendered = os.path.join(scratch, "timeline.json")
+        render(snapshot, rendered, quiet=True)
+        with open(rendered, "rb") as handle:
+            return gzip.compress(handle.read(), 6)
+    except (FileNotFoundError, RuntimeError, OSError):
+        return None
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
 def schemas_payload() -> dict:
     """The schemas, so the page can render generically.
 
@@ -101,6 +137,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
     server_version = "bga-view"
     documents: Dict[str, dict] = {}
+    blobs: Dict[str, bytes] = {}
     run_root: str = ""
 
     def log_message(self, format, *args):        # noqa: A002
@@ -113,6 +150,12 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0].lstrip("/") or "index.html"
         if path in self.documents:
             return self._json(self.documents[path])
+        if path in self.blobs:
+            # `UX-194`: already gzipped on disk-in-memory, and served
+            # with its own type rather than Content-Encoding, because
+            # the page hands the *compressed bytes* to Perfetto - a
+            # transparently-decoding fetch would undo the win.
+            return self._send(200, "application/gzip", self.blobs[path])
         if path in ASSETS:
             return self._asset(path)
         self._refuse(404, f"{path}: not served")
@@ -159,7 +202,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
 
 def serve(run: str, port: int = 0,
-          documents: Optional[Dict[str, dict]] = None):
+          documents: Optional[Dict[str, dict]] = None,
+          with_trace: bool = True):
     """A started server on 127.0.0.1. The caller closes it.
 
     Returns `(httpd, url)`. Port 0 means the kernel picks one, so two
@@ -168,11 +212,23 @@ def serve(run: str, port: int = 0,
     """
     documents = dict(documents if documents is not None else payloads(run))
     documents.setdefault("schemas.json", schemas_payload())
-    documents.setdefault("run.json", {"run": os.path.abspath(run),
-                                      "name": os.path.basename(os.path.abspath(run))})
+
+    blobs = {}
+    trace = trace_bytes(run) if with_trace else None
+    if trace is not None:
+        blobs[TRACE_NAME] = trace
+
+    documents.setdefault("run.json", {
+        "run": os.path.abspath(run),
+        "name": os.path.basename(os.path.abspath(run)),
+        # So the page can offer the button only when there is something
+        # behind it - a dead "Open in Perfetto" is worse than none.
+        "has_timeline": TRACE_NAME in blobs,
+    })
 
     handler = type("_BoundHandler", (_Handler,),
-                   {"documents": documents, "run_root": os.path.abspath(run)})
+                   {"documents": documents, "blobs": blobs,
+                    "run_root": os.path.abspath(run)})
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
     return httpd, f"http://127.0.0.1:{httpd.server_address[1]}/"
 
@@ -190,6 +246,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--port", type=int, default=0, metavar="N",
         help="Listen on this port instead of one the kernel picks.")
+    parser.add_argument(
+        "--perfetto", action="store_true",
+        help="Skip the report and hand this run's timeline straight to "
+             "ui.perfetto.dev. Tab to tab - nothing is uploaded.")
     parser.add_argument(
         "--no-browser", action="store_true",
         help="Print the url instead of opening it - for a remote shell, or "
@@ -219,14 +279,30 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Error: {error}", file=sys.stderr)
         return 2
 
-    print(f"Serving {os.path.abspath(run)} at {url}", file=sys.stderr)
-    print("  Ctrl-C to stop. Nothing outside this run is reachable, and "
-          "nothing is listening beyond localhost.", file=sys.stderr)
+    landing = url + ("perfetto.html" if args.perfetto else "")
+    if args.perfetto and not httpd.RequestHandlerClass.blobs:
+        print("Error: this run has no timeline to hand over. `bga snapshot` "
+              "keeps the raw Plane 2 log by default; a capture taken with "
+              "--no-keep-raw, or before UX-188, has only the processed "
+              "report.", file=sys.stderr)
+        httpd.server_close()
+        return 7
+
+    print(f"Serving {os.path.abspath(run)} at {landing}", file=sys.stderr)
+    if args.perfetto:
+        # The handshake needs the server alive while the tab fetches the
+        # trace, which is why this does not exit as soon as the browser
+        # is launched.
+        print("  The tab fetches the trace from here, so leave this running "
+              "until Perfetto has it - then Ctrl-C.", file=sys.stderr)
+    else:
+        print("  Ctrl-C to stop. Nothing outside this run is reachable, and "
+              "nothing is listening beyond localhost.", file=sys.stderr)
     if not args.no_browser:
         # In a thread: `webbrowser.open` can block on a cold browser
         # start, and the server should already be answering when the tab
         # arrives.
-        threading.Thread(target=webbrowser.open, args=(url,),
+        threading.Thread(target=webbrowser.open, args=(landing,),
                          daemon=True).start()
 
     try:

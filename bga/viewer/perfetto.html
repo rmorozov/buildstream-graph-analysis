@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!-- UX-194: `bga view --perfetto` lands here and does one thing. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bga → Perfetto</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><h1>Handing the timeline to Perfetto</h1></header>
+<main id="status">
+  <p id="line">Opening <code>ui.perfetto.dev</code>…</p>
+  <p class="muted">
+    The trace is sent <strong>tab to tab</strong> and processed in your
+    browser. Nothing is uploaded: ui.perfetto.dev is a static site with
+    no server side to send a trace to. It looks like an upload, which is
+    why this says so.
+  </p>
+  <p class="muted">
+    If nothing happens, your browser blocked the pop-up.
+    <button id="again">Try again</button>
+    — or open <a href="https://ui.perfetto.dev">ui.perfetto.dev</a> and
+    drag <a href="timeline.json.gz" download>timeline.json.gz</a> into it.
+  </p>
+</main>
+<script type="module">
+import { handOff } from "./perfetto.js";
+
+const line = document.getElementById("line");
+async function go() {
+  line.textContent = "Opening ui.perfetto.dev…";
+  try {
+    const { bytes } = await handOff();
+    line.textContent =
+      `Sent ${(bytes / 1024).toFixed(1)} KiB to the Perfetto tab. ` +
+      `You can close this one — and stop the server with Ctrl-C.`;
+  } catch (error) {
+    line.textContent = String(error.message ?? error);
+  }
+}
+document.getElementById("again").addEventListener("click", go);
+go();
+</script>
+</body>
+</html>

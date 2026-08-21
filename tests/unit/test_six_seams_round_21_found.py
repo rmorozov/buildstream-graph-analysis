@@ -143,12 +143,28 @@ class TestTheCountsAreRight:
         assert "All ten items UX-183..UX-192" in text, (
             "UX-183..UX-192 is ten items; the section said twelve")
 
-    def test_the_status_table_agrees_with_the_alias_table(self):
-        from bga.tools_dispatch import TOOL_ALIASES
+    def test_the_status_table_does_not_hardcode_the_alias_count(self):
+        """The first version of this guard asserted the row named
+        `len(TOOL_ALIASES)` exactly - and `UX-194` broke it one hour
+        later by adding an eighteenth alias. A row that has to be edited
+        every time a command is added is a row that will be stale again,
+        which is the whole of seam 5.
 
-        row = open("docs/backlog/scenarios/README.md", encoding="utf-8").read()
-        assert f"all {len(TOOL_ALIASES)} alias commands" in row, (
-            f"the UX-192 row should name {len(TOOL_ALIASES)} aliases")
+        So the row says "every alias command", and this asserts it names
+        no number at all. The *coverage* is checked where it belongs, in
+        `test_help_is_short.py`, which reads `TOOL_ALIASES` itself.
+        """
+        import re
+
+        text = open("docs/backlog/scenarios/README.md", encoding="utf-8").read()
+        row = [line for line in text.splitlines()
+               if line.startswith("| UX-192 |")][0]
+        stale = re.search(r"(all )?\b(\d+|ten|eleven|twelve|seventeen|eighteen)\b"
+                          r" alias commands", row)
+        assert not stale, (
+            f"the UX-192 row names a count ({stale.group(0)}) that the next "
+            f"command added will make wrong")
+        assert "alias command" in row
 
 
 class TestTheSchemaGuardsCannotVanishQuietly:

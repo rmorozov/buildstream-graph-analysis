@@ -293,6 +293,25 @@ export function render(payload, schema, root) {
 
 // ------------------------------------------------------------------ boot
 
+
+function wireTheHandoff() {
+  const actions = document.getElementById("actions");
+  const button = document.getElementById("perfetto");
+  const status = document.getElementById("handoff");
+  if (!actions || !button) return;
+  actions.hidden = false;
+  button.addEventListener("click", async () => {
+    status.textContent = "opening ui.perfetto.dev — sent tab to tab, not uploaded…";
+    try {
+      const { handOff } = await import("./perfetto.js");
+      const { bytes } = await handOff();
+      status.textContent = `sent ${(bytes / 1024).toFixed(1)} KiB`;
+    } catch (error) {
+      status.textContent = String(error.message ?? error);
+    }
+  });
+}
+
 async function boot() {
   const root = document.getElementById("report");
   try {
@@ -305,6 +324,10 @@ async function boot() {
     document.getElementById("run-path").textContent = run.run ?? "";
     document.title = `bga — ${run.name ?? "report"}`;
     render(payload, schemas[payload.schema], root);
+    // UX-194: only when there is a timeline behind it. A dead button is
+    // worse than no button - the run that has no Plane 2 log is exactly
+    // the run whose user would spend a minute wondering what broke.
+    if (run.has_timeline) wireTheHandoff();
   } catch (error) {
     root.replaceChildren(el("div", { class: "verdict refused" },
       el("h2", {}, "Could not load this run"),

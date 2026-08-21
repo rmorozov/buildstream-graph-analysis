@@ -138,6 +138,12 @@ packages = [
 # The LD_PRELOAD hook is C source compiled at capture time, not a Python
 # module, so it needs naming explicitly or Plane 2 is packaged broken.
 "bga._tools.native_trace" = ["*.c", "*.h"]
+# UX-193/194/196: the viewer is html, css and ES modules - not Python,
+# so setuptools skips it, and `bga view` from an installed wheel served
+# a 404 for every asset. Caught by installing the wheel into a clean
+# venv, which is the only shape that shows it: from a checkout the
+# files are simply there.
+"bga" = ["viewer/*.html", "viewer/*.js", "viewer/*.css"]
 
 [tool.ruff]
 line-length = 120

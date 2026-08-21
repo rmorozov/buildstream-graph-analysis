@@ -16,9 +16,9 @@ Measured, on the two runs the item names:
 
     1,202-element synthetic   report.json   816,573 B
     golden run                report.json    14,797 B
-    the page itself (6 files)               26,387 B
+    the page itself (7 files)               39,119 B
 
-At 1,202 elements the payload is 31x the page, which is Direction 7's
+At 1,202 elements the payload is 21x the page, which is Direction 7's
 own test of whether the viewer stayed thin.
 """
 import base64
@@ -209,7 +209,7 @@ class TestTheTimeline:
 class TestTheSizeDiscipline:
     def test_the_payload_dwarfs_the_page(self):
         """Direction 7's own test of whether the viewer stayed thin. At
-        1,202 elements the report is 816,573 B against a 26,387 B page -
+        1,202 elements the report is 816,573 B against a 39,119 B page -
         if that ratio ever inverts, the page has grown a framework."""
         page = sum(os.path.getsize(os.path.join("bga/viewer", name))
                    for name in os.listdir("bga/viewer"))

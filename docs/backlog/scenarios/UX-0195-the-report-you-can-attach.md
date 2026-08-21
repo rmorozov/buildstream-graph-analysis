@@ -70,16 +70,17 @@ is no second code path to drift.
 **Measured, on the two runs the item names:**
 
 ```text
-                        report.json    export      page is
-1,202-element synthetic    816,573 B   651,072 B      4.2%
-real examples/06 capture              81,800 B       33.6%
-the page itself (6 files)   26,387 B
+                          report.json     export     page is
+1,202-element synthetic     816,573 B    653,379 B      6.0%
+real examples/06 capture                  84,107 B     46.5%
+the page itself (7 files)    39,119 B
 ```
 
 (The export is smaller than `report.json` because `--format json`
-indents and the inline block does not.) At 1,202 elements the payload
-is **24x the page** — Direction 7's own test of whether the viewer
-stayed thin, passed with room. Budgets: 8 MiB for the file, 4 MiB for
+indents and the inline block does not. Re-measured after `UX-196` added
+`views.js`; at `UX-195` the page was 6 files and 26,387 B.) At 1,202
+elements the payload is **17x the page** — Direction 7's own test of
+whether the viewer stayed thin, passed with room. Budgets: 8 MiB for the file, 4 MiB for
 the timeline alone. Both are *reported*, never enforced — a report that
 large is still the user's report, and a timeline dropped for size says
 why in the output.

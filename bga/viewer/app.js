@@ -11,7 +11,7 @@
 // viewer should show has to enter the published schema first, where the
 // text renderer, CI and every external consumer get it too.
 
-import { handOff } from "./perfetto.js";
+import { handOff, deepLink } from "./perfetto.js";
 import { renderBand, renderTrend, renderBlastSearch } from "./views.js";
 
 const QUANTITY = "bga:quantity";
@@ -297,16 +297,35 @@ export function render(payload, schema, root) {
 // ------------------------------------------------------------------ boot
 
 
-function wireTheHandoff() {
+export function wireTheHandoff() {
   const actions = document.getElementById("actions");
   const button = document.getElementById("perfetto");
   const status = document.getElementById("handoff");
+  const fallback = document.getElementById("perfetto-link");
   if (!actions || !button) return;
   actions.hidden = false;
+
+  // UX-198: the deep link only works when something is serving the
+  // trace over http for Perfetto to fetch. An export is a `file://`
+  // document with the trace inlined as a data: URL, and nothing can
+  // fetch that cross-origin - so the link is shown in served mode and
+  // stays hidden in an export, rather than shipping a link that 404s
+  // for exactly the readers least able to debug it.
+  const url = traceUrl();
+  const absolute = new URL(url, location.href);
+  const served = absolute.protocol === "http:" || absolute.protocol === "https:";
+  if (fallback && served) {
+    fallback.href = deepLink(absolute.href);
+    fallback.parentElement.hidden = false;
+  }
+
   button.addEventListener("click", async () => {
     status.textContent = "opening ui.perfetto.dev — sent tab to tab, not uploaded…";
+    // `handOff` opens the tab before its first `await` (UX-198), so
+    // this must call it without one - no `await` may come first in
+    // this handler, or the click's activation is gone before the open.
     try {
-      const { bytes } = await handOff(traceUrl());
+      const { bytes } = await handOff(url);
       status.textContent = `sent ${(bytes / 1024).toFixed(1)} KiB`;
     } catch (error) {
       status.textContent = String(error.message ?? error);

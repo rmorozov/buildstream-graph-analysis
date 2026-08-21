@@ -33,9 +33,44 @@ const TIMEOUT_MS = 20000;
  * answers (a blocked pop-up is the usual cause, and the message says
  * so, because "nothing happened" is the worst possible failure here).
  */
-export function openInPerfetto(buffer, title, deps = {}) {
+/**
+ * The `?url=` deep link (`UX-198` item 2).
+ *
+ * A plain `<a href>`: no script, no pop-up policy, no activation. The
+ * browser navigates, and Perfetto fetches the trace from this server
+ * itself - which is why the server answers a CORS pre-flight from
+ * Perfetto's origin and from nowhere else.
+ *
+ * Served mode only. An export has no server for Perfetto to fetch
+ * from, so `postMessage` stays its only path and the link is not
+ * rendered there.
+ */
+export function deepLink(traceUrl, origin = PERFETTO_ORIGIN) {
+  return `${origin}/#!/?url=${encodeURIComponent(traceUrl)}`;
+}
+
+export function openTab(deps = {}) {
+  const { open = (url) => window.open(url), origin = PERFETTO_ORIGIN } = deps;
+  const tab = open(origin);
+  if (!tab) {
+    throw new Error(
+      "The Perfetto tab did not open — your browser blocked the pop-up. " +
+      "Use the direct link below, allow pop-ups for this page, or open " +
+      "ui.perfetto.dev yourself and drag the trace file in.");
+  }
+  return tab;
+}
+
+/**
+ * Post `buffer` into an already-open Perfetto tab.
+ *
+ * Split from the opening (`UX-198`) because *when* the tab is opened is
+ * the whole bug: a browser grants a page transient activation on a
+ * click and revokes it at the first `await`, so anything that opens a
+ * window after fetching has already lost permission to.
+ */
+export function postTrace(tab, buffer, title, deps = {}) {
   const {
-    open = (url) => window.open(url),
     addEventListener = (...a) => window.addEventListener(...a),
     removeEventListener = (...a) => window.removeEventListener(...a),
     setInterval: setEvery = setInterval,
@@ -46,15 +81,6 @@ export function openInPerfetto(buffer, title, deps = {}) {
   } = deps;
 
   return new Promise((resolve, reject) => {
-    const tab = open(origin);
-    if (!tab) {
-      reject(new Error(
-        "The Perfetto tab did not open — your browser blocked the pop-up. " +
-        "Allow pop-ups for this page, or open ui.perfetto.dev yourself and " +
-        "drag the trace file in."));
-      return;
-    }
-
     let pinger = null, timer = null;
     const done = (fn, value) => {
       clearEvery(pinger);
@@ -84,12 +110,57 @@ export function openInPerfetto(buffer, title, deps = {}) {
   });
 }
 
-/** Fetch the served trace and hand it over. */
+/** Bytes already in hand: open a tab and post into it.
+ *
+ * Returns a *rejected promise* rather than throwing when the pop-up is
+ * blocked - `openTab` throws synchronously, and callers of this have
+ * always been able to write `.catch(...)`. Changing that was not part
+ * of `UX-198` and an existing guard caught it.
+ */
+export function openInPerfetto(buffer, title, deps = {}) {
+  let tab;
+  try {
+    tab = openTab(deps);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+  return postTrace(tab, buffer, title, deps);
+}
+
+/**
+ * Fetch the served trace and hand it over.
+ *
+ * **The tab is opened before the first `await`, deliberately.**
+ * `UX-198`: the field report was *"transition to perfetto works bad in
+ * latest chrome, I was not able to open my traces in one click"*, and
+ * the mechanism is transient activation. A click grants the page the
+ * right to open a window; that right is gone by the time an `await`
+ * resolves. The previous shape fetched the trace, awaited
+ * `arrayBuffer()`, and only then opened - which survives a 25 KB local
+ * file on a warm cache and is blocked for anything slower, which is
+ * every real trace.
+ *
+ * So: open synchronously, fetch afterwards, post when both the PONG
+ * and the bytes are in hand. If the fetch then fails, the tab is
+ * closed rather than left showing an empty Perfetto.
+ *
+ * `handOff` is `async`, but everything before its first `await` runs
+ * synchronously inside the caller's click handler - which is exactly
+ * the window activation covers.
+ */
 export async function handOff(url = "timeline.json.gz", title = "bga timeline",
                               deps = {}) {
   const fetchIt = deps.fetch ?? ((u) => fetch(u));
-  const response = await fetchIt(url);
+  const tab = openTab(deps);
+  let response;
+  try {
+    response = await fetchIt(url);
+  } catch (error) {
+    tab.close?.();
+    throw error;
+  }
   if (!response.ok) {
+    tab.close?.();
     throw new Error(
       `${url}: ${response.status}. This run has no timeline — it was ` +
       `captured with --no-keep-raw, or before UX-188.`);
@@ -98,6 +169,12 @@ export async function handOff(url = "timeline.json.gz", title = "bga timeline",
   // Measured on a real capture of examples/06: 272,964 B of merged
   // trace becomes 24,782 B, 9.1% - and that is what crosses the
   // postMessage boundary.
-  const buffer = await response.arrayBuffer();
-  return openInPerfetto(buffer, title, deps);
+  let buffer;
+  try {
+    buffer = await response.arrayBuffer();
+  } catch (error) {
+    tab.close?.();
+    throw error;
+  }
+  return postTrace(tab, buffer, title, deps);
 }

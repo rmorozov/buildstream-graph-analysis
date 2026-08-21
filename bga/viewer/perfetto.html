@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- UX-194: `bga view --perfetto` lands here and does one thing. -->
+<!-- UX-194: `bga view --perfetto` lands here and does one thing.
+     UX-198: and it waits for a click before doing it. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -8,9 +9,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><h1>Handing the timeline to Perfetto</h1></header>
+<header><h1>Hand the timeline to Perfetto</h1></header>
 <main id="status">
-  <p id="line">Opening <code>ui.perfetto.dev</code>…</p>
+  <p>
+    <button id="open" class="primary">Open in Perfetto</button>
+  </p>
+  <p id="line" class="muted">Ready.</p>
   <p class="muted">
     The trace is sent <strong>tab to tab</strong> and processed in your
     browser. Nothing is uploaded: ui.perfetto.dev is a static site with
@@ -18,17 +22,27 @@
     why this says so.
   </p>
   <p class="muted">
-    If nothing happens, your browser blocked the pop-up.
-    <button id="again">Try again</button>
+    <!-- UX-198: a plain link, immune to pop-up policy. Perfetto fetches
+         the trace from this server itself; the server answers its
+         origin and no other. -->
+    Nothing opened? Use the direct link:
+    <a id="deep" href="#">open ui.perfetto.dev with this trace</a>
     — or open <a href="https://ui.perfetto.dev">ui.perfetto.dev</a> and
     drag <a href="timeline.json.gz" download>timeline.json.gz</a> into it.
   </p>
 </main>
 <script type="module">
-import { handOff } from "./perfetto.js";
+import { handOff, deepLink } from "./perfetto.js";
 
 const line = document.getElementById("line");
-async function go() {
+const deep = document.getElementById("deep");
+deep.href = deepLink(new URL("timeline.json.gz", location.href).href);
+
+// UX-198: no `go()` at script load. The previous version called it
+// here, so there was never a user gesture and default-settings Chrome
+// blocked the pop-up *every time* - the "Try again" button below it was
+// the tell that nobody read as a bug report.
+document.getElementById("open").addEventListener("click", async () => {
   line.textContent = "Opening ui.perfetto.dev…";
   try {
     const { bytes } = await handOff();
@@ -38,9 +52,7 @@ async function go() {
   } catch (error) {
     line.textContent = String(error.message ?? error);
   }
-}
-document.getElementById("again").addEventListener("click", go);
-go();
+});
 </script>
 </body>
 </html>

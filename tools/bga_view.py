@@ -79,6 +79,11 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js",
 # copies between tabs.
 TRACE_NAME = "timeline.json.gz"
 
+# `UX-198`: the only origin this server will hand a trace to
+# cross-origin, and the target of the `?url=` deep link. Kept in step
+# with `bga/viewer/perfetto.js`'s own constant by a guard.
+PERFETTO_ORIGIN = "https://ui.perfetto.dev"
+
 
 def _capture(argv: List[str]) -> dict:
     """Run a bga command and return the JSON it printed.
@@ -327,7 +332,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             # with its own type rather than Content-Encoding, because
             # the page hands the *compressed bytes* to Perfetto - a
             # transparently-decoding fetch would undo the win.
-            return self._send(200, "application/gzip", self.blobs[path])
+            return self._send(200, "application/gzip", self.blobs[path],
+                              cors=True)
         if path in ASSETS:
             return self._asset(path)
         self._refuse(404, f"{path}: not served")
@@ -373,7 +379,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         kind = kinds.get(os.path.splitext(name)[1], "application/octet-stream")
         self._send(200, f"{kind}; charset=utf-8", body)
 
-    def _send(self, code, kind, body):
+    def _send(self, code, kind, body, cors=False):
         self.send_response(code)
         self.send_header("Content-Type", kind)
         self.send_header("Content-Length", str(len(body)))
@@ -381,6 +387,16 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy",
                          "default-src 'self'; frame-ancestors 'none'")
+        # `UX-198`: the `?url=` deep link has Perfetto fetch the trace
+        # from this server, which is a cross-origin read and needs an
+        # allow header. Granted on the trace blob **only**, and only to
+        # Perfetto's own origin - never `*`, and never on the report,
+        # the schemas or the blast endpoint, which is where a run's
+        # element names and paths live. An echo of whatever `Origin`
+        # asked would be the same as `*`, so the value is a constant
+        # and the request's own origin only decides whether to send it.
+        if cors and self.headers.get("Origin") == PERFETTO_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", PERFETTO_ORIGIN)
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)

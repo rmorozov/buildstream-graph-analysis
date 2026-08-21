@@ -1,6 +1,6 @@
 # UX-195: the report you can attach
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-193 (the page this exports), UX-115 (the CI journey this joins)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the page this exports), UX-115 (the CI journey this joins)
 
 ## Motivation
 
@@ -50,3 +50,74 @@ payload script blocks present) and renders the same data the served
 mode does (the UX-193 parse harness, pointed at the file). The
 export of the synthetic run stays under the stated budget or the
 budget note explains. The CI docs lines pass the docs-commands test.
+
+---
+
+## What was built
+
+**`bga view --export PATH`** writes one self-contained file: the same
+`index.html`, the CSS inlined, `perfetto.js` and `app.js` concatenated
+into a single inline module, and each payload in its own
+`<script type="application/json" id="bga-…">` block. The timeline
+travels as a `data:` URL, so the Perfetto button works from `file://` —
+`fetch` handles `data:` and the handshake never needed a server.
+
+**Inline first, fetch second, decided in one place.** `load(name)`
+looks for the inline block and falls through to `fetch` — so the
+exported file and the served page run the identical renderer, and there
+is no second code path to drift.
+
+**Measured, on the two runs the item names:**
+
+```text
+                        report.json    export      page is
+1,202-element synthetic    816,573 B   651,072 B      4.2%
+real examples/06 capture              81,800 B       33.6%
+the page itself (6 files)   26,387 B
+```
+
+(The export is smaller than `report.json` because `--format json`
+indents and the inline block does not.) At 1,202 elements the payload
+is **24x the page** — Direction 7's own test of whether the viewer
+stayed thin, passed with room. Budgets: 8 MiB for the file, 4 MiB for
+the timeline alone. Both are *reported*, never enforced — a report that
+large is still the user's report, and a timeline dropped for size says
+why in the output.
+
+**CI wiring**: `ci-comment.md` gains the artifact step beside the
+comment step, with `if: always()` because the report is most wanted
+when the gate failed.
+
+Tests: 16 (`tests/unit/test_the_report_you_can_attach.py`), the
+exported file parsed and rendered by the same Node harness `UX-193`
+uses on the served payload, with `fetch` wired to throw so anything not
+answered inline fails loudly. Eight mutations, each red.
+
+### Three defects, and one of them was in the guard
+
+1. **The inline blocks were keyed by url, not by name.** `payloads()`
+   returns `{"report.json": …}`, so the block came out as
+   `id="bga-report.json"` while the loader looks for `bga-report`. It
+   is silent: the block is never found, the page falls through to
+   `fetch`, and that *works when served* — so the export looks correct
+   everywhere except the one place it is used.
+2. **A guard that could not fail, found by falsifying it three times.**
+   The render harness called `render(inlined("report"), …)` directly,
+   never touching `load` — so deleting the inline-first branch outright
+   left every render guard green. Two attempts to fix it silently
+   no-op'd because the replacement string did not match the file's
+   escaping, and the guard kept passing, which looked like the mutation
+   being harmless. It now goes through `load`, and the mutation fails
+   with the harness's own `the export fetched something`.
+3. **A test that injected through a computed field.** The
+   `</script>`-escaping guard set `run_id` in `run-context.json` — but
+   `run_id` is *computed*, so the string never reached the payload and
+   the guard exercised nothing. Injected at the `payloads` seam
+   instead.
+
+The through-line, again: **a guard is not a guard until a mutation has
+made it fail.** Three of the eight mutations here found a guard rather
+than a defect.
+
+**Deviation from the Required Fix:** none.
+

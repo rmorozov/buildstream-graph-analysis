@@ -237,6 +237,37 @@ all, drop `--trace-opens` and `native.json` and use
 `bga wrap` + `bga extract` instead — the run directory is the only thing
 `compare` needs.
 
+## Attaching the full report (`UX-195`)
+
+The comment is the headline; the detail is a file. Beside the comment
+step, and optional:
+
+```bash
+bga view runs/candidate --export bga-report.html
+```
+
+One self-contained page — the run's JSON inlined, the Perfetto timeline
+inlined as a `data:` URL, no port and no network. A reviewer downloads
+it from the run's artifacts and opens it; nothing has to be deployed for
+a viewer to exist. Measured on a real 46 s capture with both planes:
+**80 KiB**.
+
+```yaml
+      - name: Attach the full report
+        if: always()
+        run: bga view runs/candidate --export bga-report.html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bga-report
+          path: bga-report.html
+```
+
+`if: always()` because the report is most wanted when the gate failed.
+A run whose timeline would blow the file's size ceiling drops the
+timeline and says so in the output rather than silently — the report is
+still the report.
+
 ## What it deliberately does not do
 
 - **No new metrics and no new thresholds.** If a number is not already

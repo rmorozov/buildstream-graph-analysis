@@ -365,11 +365,18 @@ class TestTheViewerShipsNoToolchain:
                 f"bundled output looks like")
 
     def test_nothing_is_fetched_from_a_cdn(self):
+        # `http://www.w3.org/2000/svg` is an XML *namespace identifier*,
+        # required by `createElementNS` and never dereferenced by
+        # anything. `UX-196` added the first SVG and this guard flagged
+        # it - correct instinct, wrong rule.
+        inert = ("http://127.0.0.1", "http://www.w3.org/2000/svg")
         for name in os.listdir("bga/viewer"):
             text = open(os.path.join("bga/viewer", name), encoding="utf-8").read()
-            assert "http://" not in text.replace("http://127.0.0.1", "")
-            assert "cdn." not in text
-            assert "unpkg" not in text and "jsdelivr" not in text
+            for allowed in inert:
+                text = text.replace(allowed, "")
+            assert "http://" not in text, name
+            assert "cdn." not in text, name
+            assert "unpkg" not in text and "jsdelivr" not in text, name
 
     def test_there_is_no_package_json_anywhere_near_it(self):
         assert not os.path.exists("bga/viewer/package.json")

@@ -24,16 +24,19 @@ served file resolved and re-checked against the run root so a symlink
 or a `..` cannot walk out.
 """
 import argparse
+import base64
 import contextlib
 import gzip
 import http.server
 import io
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
 import threading
+import urllib.parse
 import webbrowser
 from typing import Dict, List, Optional
 
@@ -51,7 +54,7 @@ ASSET_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 # The only paths this server answers. Everything else is 404 - there is
 # no directory listing and no fall-through to the filesystem.
-ASSETS = ("index.html", "app.js", "style.css",
+ASSETS = ("index.html", "app.js", "style.css", "views.js",
           # UX-194: the Perfetto handoff and the canned-SQL page.
           "perfetto.html", "perfetto.js", "sql.html")
 
@@ -96,6 +99,46 @@ def payloads(run: str) -> Dict[str, dict]:
     }
 
 
+def store_payload(run: str) -> Optional[dict]:
+    """`store/v1` for the project this run belongs to, or None.
+
+    `UX-196`'s store trend. Through `bga_snapshot.store_listing`, which
+    is also what `--list` renders from, so the drawing and the terminal
+    cannot disagree about what is on disk.
+    """
+    from bga import run_store
+    from tools.bga_snapshot import store_listing
+
+    project = run_store.project_root(os.path.abspath(run))
+    if project is None:
+        return None
+    try:
+        return store_listing(project)
+    except OSError:
+        return None
+
+
+def blast_answer(run: str, target: str) -> dict:
+    """`bga blast`'s answer for `target`, from the same function.
+
+    `UX-196` item 3, and the rule it is bound by: no viewer-side
+    semantics. Resolution order, keying, kinds and cost are all decided
+    by `bga.blast.blast` - this only carries the string in and the
+    document out, so the served answer and `bga blast --format json`
+    cannot diverge.
+    """
+    from bga import run_store, schemas
+    from bga.blast import blast
+
+    project = run_store.project_root(os.path.abspath(run))
+    # `measure=False`: this is answered while a user waits on a page,
+    # and the measured half is the whole UX-168/169 pipeline. The
+    # payload says `measured: false`, which is the honest answer, and
+    # `bga blast` on the command line still measures by default.
+    return schemas.stamp(
+        blast(run, target, project_dir=project, measure=False), schemas.BLAST)
+
+
 def trace_bytes(run: str) -> Optional[bytes]:
     """`UX-188`'s merged timeline for this run, gzipped, or None.
 
@@ -132,6 +175,112 @@ def schemas_payload() -> dict:
     return {name: schemas.schema(name) for name in schemas.names()}
 
 
+# ---------------------------------------------------------------- export
+#
+# `UX-195`: the same page, as one file. Measured on the runs the item
+# names:
+#
+#     1,202-element synthetic   report.json   816,573 B
+#     golden run                report.json    14,797 B
+#     the page itself (6 files)               26,387 B
+#     the schemas                              4,535 B
+#
+# At 1,202 elements the payload is 31x the page, which is Direction 7's
+# own test of whether the viewer stayed thin. The budget below is a
+# ceiling on the *file*, not an aspiration: past it a mail client
+# starts refusing the attachment, which is the whole use.
+EXPORT_BUDGET_B = 8 * 1024 * 1024
+# The trace is the one part that can be dropped without losing the
+# report, so it is the one part with its own ceiling.
+TRACE_BUDGET_B = 4 * 1024 * 1024
+
+
+def _inline_module(name: str) -> str:
+    """One ES module's source, with its module syntax removed.
+
+    An export opens over `file://`, where a browser refuses a relative
+    `import` - so `app.js` and `perfetto.js` are concatenated into a
+    single inline module instead. Stripping `export ` leaves plain
+    top-level declarations in one scope, and dropping the `import` line
+    is safe because what it imported is now declared above it.
+    """
+    text = open(os.path.join(ASSET_DIR, name), encoding="utf-8").read()
+    kept = []
+    for line in text.splitlines():
+        if re.match(r"\s*import\s.*from\s+[\"']\./", line):
+            continue
+        kept.append(re.sub(r"^export\s+(?=(function|const|let|class|async)\b)",
+                           "", line))
+    return "\n".join(kept)
+
+
+def export(run: str, path: str, with_trace: bool = True) -> dict:
+    """Write one self-contained file. Returns what went into it."""
+    # `payloads()` keys documents by the *url* they are served at, so
+    # they arrive as "report.json". The inline blocks are keyed by name
+    # - `id="bga-report"` - which is what `load()` looks for. Getting
+    # this wrong is silent: the block is written as `bga-report.json`,
+    # the loader does not find it, and it falls through to `fetch`,
+    # which works when served and fails on `file://` - so the export
+    # looks fine everywhere except where it is used.
+    documents = {name[:-len(".json")] if name.endswith(".json") else name: body
+                 for name, body in payloads(run).items()}
+    documents["schemas"] = schemas_payload()
+    documents["run"] = {"run": os.path.abspath(run),
+                        "name": os.path.basename(os.path.abspath(run))}
+
+    trace = trace_bytes(run) if with_trace else None
+    omitted = None
+    if trace is None:
+        omitted = ("this run kept no raw Plane 2 log, so there is no "
+                   "timeline to carry")
+    elif len(trace) * 4 / 3 > TRACE_BUDGET_B:
+        omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
+                   f"compressed, over this export's "
+                   f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
+        trace = None
+    documents["run"]["has_timeline"] = trace is not None
+    if omitted:
+        documents["run"]["timeline_omitted"] = omitted
+
+    page = open(os.path.join(ASSET_DIR, "index.html"), encoding="utf-8").read()
+    style = open(os.path.join(ASSET_DIR, "style.css"), encoding="utf-8").read()
+    script = _inline_module("perfetto.js") + "\n" + _inline_module("app.js")
+
+    blocks = []
+    for name, document in documents.items():
+        # `</script>` inside a payload would end the block early. A
+        # string can carry one (an element named after an html file is
+        # not hypothetical), so it is escaped rather than trusted.
+        body = json.dumps(document).replace("</", "<\\/")
+        blocks.append(
+            f'<script type="application/json" id="bga-{name}">{body}</script>')
+    if trace is not None:
+        encoded = base64.b64encode(trace).decode()
+        blocks.append(
+            '<script type="application/json" id="bga-trace">'
+            f'"data:application/gzip;base64,{encoded}"</script>')
+
+    page = page.replace('<link rel="stylesheet" href="style.css">',
+                        f"<style>\n{style}\n</style>")
+    page = page.replace('<script type="module" src="app.js"></script>',
+                        "\n".join(blocks) +
+                        f'\n<script type="module">\n{script}\n</script>')
+    # Nothing may remain that would reach the network from a file:// page.
+    page = page.replace('<a href="report.json">report.json</a> ·\n     '
+                        '<a href="schemas.json">schemas.json</a>',
+                        "Everything it needs is in this file.")
+    page = page.replace('<a href="sql.html">Questions to ask it</a>', "")
+
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(page)
+
+    size = os.path.getsize(path)
+    return {"path": os.path.abspath(path), "bytes": size,
+            "has_timeline": trace is not None, "omitted": omitted,
+            "over_budget": size > EXPORT_BUDGET_B}
+
+
 class _Handler(http.server.BaseHTTPRequestHandler):
     """GET only, from a fixed table. No filesystem fall-through."""
 
@@ -147,7 +296,10 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):                            # noqa: N802 - stdlib name
-        path = self.path.split("?", 1)[0].lstrip("/") or "index.html"
+        raw = self.path
+        path = raw.split("?", 1)[0].lstrip("/") or "index.html"
+        if path == "blast.json":
+            return self._blast(raw)
         if path in self.documents:
             return self._json(self.documents[path])
         if path in self.blobs:
@@ -162,6 +314,23 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
     def do_HEAD(self):                           # noqa: N802
         self.do_GET()
+
+    def _blast(self, raw):
+        """The one endpoint that takes a parameter. Read-only, and it
+        calls the same function the CLI does."""
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(raw).query)
+        target = (query.get("target") or [""])[0].strip()
+        if not target:
+            return self._refuse(400, "blast.json needs ?target=")
+        if len(target) > 512:
+            # A bound, because this reaches a resolver that touches the
+            # filesystem. Nothing here is a secret, but an unbounded
+            # string from a url is not something to hand a path walker.
+            return self._refuse(400, "target is too long")
+        try:
+            return self._json(blast_answer(self.run_root, target))
+        except Exception as error:  # noqa: BLE001 - reported as data
+            return self._refuse(422, f"{target}: {error}")
 
     def _json(self, document):
         body = json.dumps(document).encode()
@@ -213,6 +382,10 @@ def serve(run: str, port: int = 0,
     documents = dict(documents if documents is not None else payloads(run))
     documents.setdefault("schemas.json", schemas_payload())
 
+    store = store_payload(run)
+    if store is not None:
+        documents.setdefault("store.json", store)
+
     blobs = {}
     trace = trace_bytes(run) if with_trace else None
     if trace is not None:
@@ -247,6 +420,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--port", type=int, default=0, metavar="N",
         help="Listen on this port instead of one the kernel picks.")
     parser.add_argument(
+        "--export", default=None, metavar="PATH",
+        help="Write one self-contained HTML file instead of serving: the "
+             "same page with this run's payloads inlined. No port, no "
+             "network - for a CI artifact, or for \"send me your report\".")
+    parser.add_argument(
         "--perfetto", action="store_true",
         help="Skip the report and hand this run's timeline straight to "
              "ui.perfetto.dev. Tab to tab - nothing is uploaded.")
@@ -272,6 +450,30 @@ def main(argv: Optional[List[str]] = None) -> int:
     except Exception as error:  # noqa: BLE001 - reported, not swallowed
         print(f"Error: {error}", file=sys.stderr)
         return 2
+
+    if args.export:
+        try:
+            written = export(run, args.export)
+        except (OSError, RuntimeError, ValueError,
+                json.JSONDecodeError) as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 2
+        size = written["bytes"]
+        print(f"Wrote {written['path']} ({size / 1024:.0f} KiB). Open it with "
+              f"a browser - it needs no server and no network.",
+              file=sys.stderr)
+        if written["omitted"]:
+            print(f"  No Perfetto timeline in it: {written['omitted']}. "
+                  f"`bga timeline` renders one beside the snapshot.",
+                  file=sys.stderr)
+        if written["over_budget"]:
+            # Said, not enforced: a report that large is still the
+            # user's report, and refusing to write it would help nobody.
+            print(f"  Note: {size / 1048576:.1f} MiB is over the "
+                  f"{EXPORT_BUDGET_B / 1048576:.0f} MiB an attachment "
+                  f"usually survives.", file=sys.stderr)
+        print(json.dumps(written))
+        return 0
 
     try:
         httpd, url = serve(run, port=args.port)

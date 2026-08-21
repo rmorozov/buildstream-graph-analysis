@@ -657,6 +657,63 @@ build step. A richer TypeScript app is a welcome *consumer* of these
 payloads rather than a replacement: the view-hints below exist so one
 can be written without this project blessing a frontend stack.
 
+### Three views that draw (`UX-196`)
+
+The page carries three things a table could not say:
+
+- **The band.** Compare's noise band as a strip, the baseline runs as
+  dots, the candidate as a marker. `UX-170`'s **disputed region** — a
+  candidate outside the band but inside the range the baselines
+  themselves spanned — took a paragraph in prose and read like a
+  paradox; drawn, the marker simply sits between the strip's edge and
+  the dots' extent.
+- **The store trend.** `--list` made visual. Snapshots that are not
+  measurements (failed, interrupted, suspended) are drawn as squares
+  rather than dropped — they are on the disk, so they are on the chart.
+- **The blast explorer.** A box taking a url, a path or an element
+  name, answered by `blast.json?target=…`, which calls the same
+  function `bga blast` calls. The served answer is byte-identical to
+  `bga blast --format json` (`--no-cost`, because a page should not
+  block on the full pipeline).
+
+Exactly two custom SVGs, no library behind either, and nothing
+recomputed in the browser — the payloads already carry the band edges,
+the observed extent and the verdict.
+
+```bash
+bga snapshot --list --format json     # store/v1, what the trend draws
+```
+
+The text listing and this JSON render from the same rows, so the
+drawing and the terminal cannot disagree about what is on disk.
+
+### The report as one file (`UX-195`)
+
+```bash
+bga view @last --export report.html
+```
+
+The same page, as an attachment: the run's JSON inlined, the CSS and
+both modules inlined, the timeline carried as a `data:` URL. No port, no
+server, no network — it opens from a downloads folder, a CI artifact
+viewer, or an email.
+
+Measured: a real 46 s capture of `examples/06` with both planes is
+**80 KiB**; the 1,202-element synthetic run is **636 KiB**, of which the
+page itself is 4.2% — the data is what an export weighs, which is the
+point of keeping the viewer thin.
+
+Two ceilings, both **reported and never enforced** — a report that large
+is still your report:
+
+| | |
+| --- | --- |
+| the file | 8 MiB, past which an attachment starts being refused |
+| the timeline alone | 4 MiB, and it is dropped with the reason said |
+
+For CI, put it beside the comment step — see
+[`ci-comment.md`](ci-comment.md).
+
 ### The Perfetto handoff (`UX-194`)
 
 ```bash

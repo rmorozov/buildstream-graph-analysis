@@ -77,6 +77,8 @@ docs/spec/ingestion-pipeline.md.
 """
 import argparse
 import json
+import os
+import sys
 from typing import Dict, List, Optional
 
 PLANE2_CAT = "native-process"
@@ -215,7 +217,7 @@ def build_combined_chrome_trace(
     )
 
 
-def main() -> int:
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -235,7 +237,7 @@ def main() -> int:
              "clock onto Plane 1's own wall-clock timeline.",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # Local imports (not at module top) - this tool is standalone, single-
     # purpose per this module's own docstring; avoids importing
@@ -246,6 +248,23 @@ def main() -> int:
     with open(args.raw_log, "r", encoding="utf-8", errors="ignore") as f:
         records = pair_events(parse_trace_log(f.read()))
 
+    # UX-188: "Wrote 0 trace events", exit 0, from a non-empty file is a
+    # refusal wearing a success. The usual cause is the right *idea* and
+    # the wrong file - a `plane2.json` report where a raw log belongs,
+    # which is the same wrong-input-silent-success shape `UX-38` fixed
+    # in `report`. An empty file is a different claim and passes: a
+    # capture that traced nothing really did produce no events.
+    if not records and os.path.getsize(args.raw_log) > 0:
+        print(
+            f"Error: {args.raw_log}: no trace events could be parsed from this "
+            f"file, which is not empty. This expects a *raw* Plane 2 log - the "
+            f"START/END lines written by `bga capture run --raw-log`, or the "
+            f"`plane2.log.gz` a snapshot keeps. A `plane2.json` report is the "
+            f"usual mistake; it is already processed and has no trace lines.",
+            file=sys.stderr,
+        )
+        return 2
+
     if args.command == "standalone":
         output = build_standalone_chrome_trace(records)
     else:
@@ -255,7 +274,10 @@ def main() -> int:
 
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2)
-    print(f"Wrote {len(output)} trace events to {args.output}")
+    # UX-188: the payload is the file. A status line on stdout is the one
+    # stderr-purity exception left in the tool, and it breaks
+    # `bga native-to-chrome ... /dev/stdout | jq`.
+    print(f"Wrote {len(output)} trace events to {args.output}", file=sys.stderr)
     return 0
 
 

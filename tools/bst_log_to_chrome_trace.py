@@ -28,6 +28,7 @@ import re
 import json
 import argparse
 import os
+import sys
 from datetime import datetime, timezone
 
 # Regex to match your EXACT wrapper prefix and extract UTC time + the raw message
@@ -803,7 +804,7 @@ def _resolve_start_time_us(start_time_arg, input_log_path):
     return int(mtime * 1_000_000)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Convert a BuildStream log (wrapped or raw) to Chrome Trace Event JSON."
     )
@@ -824,7 +825,7 @@ def main():
         "against (only meaningful with --format raw or auto's raw "
         "fallback). Defaults to the input file's mtime.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     try:
         start_time_us = _resolve_start_time_us(args.start_time, args.input_log)
@@ -852,8 +853,14 @@ def main():
     with open(args.output_json, "w") as f:
         f.write(converter.get_json())
 
+    # UX-188: the payload is the file, so the status line goes to
+    # stderr - and `bga timeline`, which calls this to build its Plane 1
+    # half in a scratch directory, must not tell the user to open a
+    # temporary path that is deleted a moment later.
     print(
-        f"Successfully generated trace! Open {args.output_json} in chrome://tracing or ui.perfetto.dev"
+        f"Successfully generated trace! Open {args.output_json} in "
+        f"chrome://tracing or ui.perfetto.dev",
+        file=sys.stderr,
     )
 
 

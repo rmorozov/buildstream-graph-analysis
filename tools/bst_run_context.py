@@ -203,7 +203,7 @@ def main() -> int:
     with open(args.output_json, "w", encoding="utf-8") as f:
         json.dump(run_context, f, indent=2)
 
-    print(f"Wrote run-context.json to {args.output_json}")
+    print(f"Wrote run-context.json to {args.output_json}", file=sys.stderr)
     if "wall_clock" not in run_context:
         print(
             "Warning: no bst-invocation span found in the log - wall_clock omitted "

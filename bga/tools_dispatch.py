@@ -77,6 +77,10 @@ TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
         "tools.bst_show_to_graph",
         "Turn `bst show` output into graph.json",
     ),
+    "timeline": (
+        "tools.bga_timeline",
+        "One Chrome-trace timeline, both planes",
+    ),
     "log-to-chrome": (
         "tools.bst_log_to_chrome_trace",
         "Convert a BuildStream log to Chrome Trace JSON",

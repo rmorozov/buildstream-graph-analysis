@@ -3,7 +3,7 @@ import json as _json
 from typing import Optional
 
 from .. import schemas
-from ..findings import compute_findings
+from ..findings import compute_findings, compute_headline
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
 
@@ -53,6 +53,12 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         findings = compute_findings(result)
         if findings:
             data['findings'] = findings
+        # UX-207: what to fix first, and what it is worth. Decided in
+        # `findings.py` beside the ratio it comes from, so the decision
+        # panel reads a field instead of re-deriving a diagnosis the
+        # pipeline already made. Passed the findings it references so
+        # the ranking is read once.
+        data['headline'] = compute_headline(result, findings)
 
     if section in (None, 'floors', 'replay'):
         data['floors'] = result.floors

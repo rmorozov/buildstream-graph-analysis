@@ -1,6 +1,6 @@
 # UX-207: the first screen is a decision, the rest is evidence
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-202 (the overview it compresses), UX-204 (the investigate transport the actions ride)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the overview it compresses), UX-204 (the investigate transport the actions ride)
 
 ## Motivation
 
@@ -82,3 +82,82 @@ fixture exactly one `data-incomplete` banner exists (today's count:
 two). The text renderer prints the same diagnosis sentence from the
 same field. Schema round-trip validation covers `headline`; the
 page-size guard (< 80,000 B) holds.
+
+## Outcome
+
+All four items. The load-bearing decision was where the diagnosis
+lives, and the answer is Python.
+
+**1. `headline` is published.** `diagnose()` decides chain-boundness in
+`findings.py`, beside the ratio that decides it. That decision has
+existed since `UX-65`, but as a **local `bool` inside
+`compute_findings`** that reached the outside world only as the clause
+" - this build is chain-bound, not scheduler-bound" glued onto one
+finding's title — so a consumer wanting to *branch* on it had to
+string-match a sentence. `compute_findings` now reads `diagnose()`
+rather than recomputing the ratio, and a guard asserts
+`CHAIN_BOUND_RATIO` appears in exactly one comparison.
+
+The block carries the enum, the ratio, the threshold, the sentence, the
+opportunity split and the actions:
+
+| field | on the golden run | on `examples/06` |
+| --- | --- | --- |
+| `diagnosis` | `scheduler_bound` | `chain_bound` |
+| `chain_ratio` | 0.875 | 0.936 |
+| `scheduling_gap_us` | 2,000 | 2,933,000 |
+| `top_actions` | 3, by `downstream_count` | 3, by `saving_us` (core.bst 12.05 s) |
+
+**Two committed fixtures that answer differently** — which is the point:
+the golden run is scheduler-bound and falls back to the blast-radius
+ranking, the real capture is chain-bound and ranks by realizable
+saving. A guard that only ever saw one branch would not be guarding the
+branch. Both run on a fresh clone (`UX-213`'s rule, applied from the
+start rather than retrofitted).
+
+`scheduling_gap_us` is a *field* because the Required Fix says so —
+"not left as a subtraction for the page to do" — and `top_actions` are
+**references**, carrying `finding_id` so the panel can send a reader to
+the reasoning rather than restating it. A saving nobody projected is
+absent rather than zero.
+
+**2. The panel reads.** And proving that it reads took building the
+case, not writing the mutation: recomputing `t_infinity / total` in the
+viewer **reddened nothing**, because on both fixtures the recomputation
+agrees with the published answer — a deriving page and a reading page
+are indistinguishable there. They are only told apart by a payload
+where the two disagree, so there is now one: floors saying 0.95,
+`diagnosis` saying `scheduler_bound`. A reading page shows what was
+published; a second analyzer overrules the pipeline. That is
+`UX-179`'s lesson, met again in a new place.
+
+**3. The evidence header compresses, and the refusal renders once.**
+The duplicate was real and measured: **two `data-incomplete` nodes** on
+an interrupted fixture, the same claim in different words from
+`renderVerdict` and `renderEvidence`. The banner now belongs to
+`renderVerdict` alone — the header is also the part a reader may have
+collapsed, which is the worst place for the one sentence they must not
+miss — and it draws its wording from `INCOMPLETE`, where `UX-202` put
+the three sentences and where the `RunContext` guard still points. The
+`<dl>` moved behind a `<details>` under a one-line status
+(`✓ high confidence · 100% task coverage · Plane 2: 813 processes`),
+whose band comes from the payload, never from a threshold applied here.
+
+**4. The overview compacts with no "Other" row.** The four largest
+segments stay; the tail folds. The guard is the honest form of the
+rule: every bar's `data-field` must *resolve in the payload* — a summed
+row could not, which is exactly why that is the check rather than a
+prefix match.
+
+Tests: 37 new, plus four repointed to the banner's new home. Six
+mutations, each red. A seventh was **discarded rather than counted**
+(recomputing the diagnosis) until the discriminating payload existed to
+make it meaningful.
+
+**A guard of the project's own caught the gap while this was in
+flight:** `test_the_pin_describes_the_real_output` failed with "new
+top-level key(s) ['headline'] — add them to `ANALYZE_FULL_KEYS`". It
+was right, and `headline` is in the list.
+
+**Deviation from the Required Fix:** none. Stat-cards stay declined and
+no viewer-computed diagnosis, saving or residual was added.

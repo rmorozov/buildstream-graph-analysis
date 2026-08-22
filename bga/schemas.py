@@ -34,6 +34,15 @@ schema edit fails a test rather than a consumer.
 """
 from typing import Dict, List
 
+# UX-207: the diagnosis vocabulary is decided in `findings.py`,
+# beside the ratio that decides it. Imported rather than restated,
+# so the published enum and the value the pipeline emits are the
+# same tuple - `UX-201`'s rule about closed sets, applied to the
+# set this round adds. No cycle: `findings` reaches only
+# `ingest.models` and `cache_effectiveness`, neither of which
+# imports this module.
+from .findings import DIAGNOSES
+
 ANALYZE = "analyze/v1"
 COMPARE = "compare/v1"
 BLAST = "blast/v1"
@@ -230,6 +239,8 @@ _ANALYZE_OPTIONAL = {
     "timestamp_agreement": "object",
     # UX-202: present only when a Plane 2 report was in hand.
     "plane2_coverage": "object",
+    # UX-207: what to fix first, and what it is worth.
+    "headline": "object",
 }
 
 # What a *full* `bga analyze --format json` of a normal run contains.
@@ -240,6 +251,11 @@ _ANALYZE_OPTIONAL = {
 # in point.
 ANALYZE_FULL_KEYS = (
     "schema", "run_id", "total_duration_us", "section", "run_instance",
+    # UX-207: the decision the run supports. In this list because it is
+    # present on every full report - a run with nothing to diagnose
+    # still publishes `inconclusive` rather than dropping the key, so a
+    # consumer never has to tell "no diagnosis" from "no field".
+    "headline",
     "findings", "floors", "capacity_verdict", "attribution",
     "attribution_hints", "occupancy", "signals", "structural",
     "utilisation", "confidence", "violations",
@@ -337,6 +353,49 @@ _ANALYZE_HINTS = {
                                     "thresholds the report's headline uses."},
             "coverage_score": {QUANTITY: "share"},
             "task_coverage": {QUANTITY: "share"},
+        },
+    },
+    "headline": {
+        "description": "The decision this run supports: which constraint "
+                       "binds, what the opportunity is worth, and which "
+                       "elements to look at first. Decided in the "
+                       "pipeline so no consumer re-derives it.",
+        "properties": {
+            "diagnosis": {"enum": list(DIAGNOSES),
+                          "description": "Whether the chain or the "
+                                         "scheduler is the constraint, or "
+                                         "neither where the run did not "
+                                         "record enough to say."},
+            "chain_ratio": {QUANTITY: "share",
+                            "description": "The critical path as a share "
+                                           "of wall-clock - the number the "
+                                           "diagnosis is decided by."},
+            "chain_bound_ratio": {QUANTITY: "share",
+                                  "description": "The threshold "
+                                                 "`chain_ratio` is compared "
+                                                 "against."},
+            "certified_headroom_us": {QUANTITY: "duration_us"},
+            "scheduling_gap_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock beyond the critical path. "
+                               "Published rather than left as a "
+                               "subtraction for a consumer to perform."},
+            "top_actions": {
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "sortable": True},
+                    {"key": "saving_us", "title": "Worth",
+                     "quantity": "duration_us", "sortable": True},
+                    {"key": "finding_id", "title": "Reasoning in",
+                     "sortable": False},
+                ],
+                "items": {
+                    "properties": {
+                        "saving_us": {QUANTITY: "duration_us"},
+                        "downstream_count": {QUANTITY: "count"},
+                    },
+                },
+            },
         },
     },
     "plane2_coverage": {

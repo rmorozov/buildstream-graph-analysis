@@ -356,15 +356,33 @@ export function renderOverview(payload) {
   section.append(bar("Total duration", total, total,
                      { "data-field": "total_duration_us" }));
 
-  for (const entry of WATERFALL) {
-    const value = attribution[entry.key];
-    if (typeof value !== "number" || value === 0) continue;
-    section.append(bar(entry.label, value, total, {
-      "data-field": `attribution.${entry.key}`,
-      // UX-199's anchors: each segment points at the section that
-      // explains it.
-      "data-section-link": "attribution",
-    }));
+  // UX-207: the largest segments stay visible and the tail folds -
+  // **with no viewer-summed "Other" row.** A grouped figure would be a
+  // number the pipeline never published, which is the one thing this
+  // drawing is not allowed to invent. Ordering is by published value;
+  // the fold hides rows, it does not merge them.
+  const drawn = WATERFALL
+    .map((entry) => ({ entry, value: attribution[entry.key] }))
+    .filter((row) => typeof row.value === "number" && row.value !== 0)
+    .sort((a, b) => b.value - a.value);
+  const head = drawn.slice(0, OVERVIEW_SHOWN);
+  const tail = drawn.slice(OVERVIEW_SHOWN);
+  const segment = (row) => bar(row.entry.label, row.value, total, {
+    "data-field": `attribution.${row.entry.key}`,
+    // UX-199's anchors: each segment points at the section that
+    // explains it.
+    "data-section-link": "attribution",
+  });
+  for (const row of head) section.append(segment(row));
+  if (tail.length) {
+    const fold = document.createElement("details");
+    fold.className = "overview-tail";
+    fold.setAttribute("data-folded", String(tail.length));
+    const summary = document.createElement("summary");
+    summary.textContent = `${tail.length} smaller categories`;
+    fold.append(summary);
+    for (const row of tail) fold.append(segment(row));
+    section.append(fold);
   }
 
   const floors = payload?.floors;
@@ -440,13 +458,25 @@ export function renderEvidence(payload) {
   heading.textContent = "What this capture supports";
   section.append(heading);
 
-  if (reason) {
-    const banner = document.createElement("p");
-    banner.className = "verdict refused";
-    banner.setAttribute("data-incomplete", reason);
-    banner.textContent = INCOMPLETE[reason] ?? `This run is ${reason}.`;
-    section.append(banner);
-  }
+  // UX-207: **the refusal renders once.** It used to appear here *and*
+  // in `renderVerdict`, the same sentence in two banners - measured at
+  // two `data-incomplete` nodes on an interrupted fixture. The banner
+  // belongs above the decision, not inside a header a reader may have
+  // collapsed, so `renderVerdict` keeps it and this stops drawing it.
+  //
+  // Everything else here compresses to one line: six rows at the top of
+  // a page for values that matter only when they are alarming.
+  const status = document.createElement("p");
+  status.className = "status-line";
+  status.setAttribute("data-role", "status");
+  status.textContent = statusLine(payload);
+  section.append(status);
+
+  const fold = document.createElement("details");
+  fold.className = "evidence-detail";
+  const summary = document.createElement("summary");
+  summary.textContent = "The numbers behind that";
+  fold.append(summary);
 
   const list = document.createElement("dl");
   list.className = "pairs";
@@ -458,8 +488,36 @@ export function renderEvidence(payload) {
     detail.textContent = value;
     list.append(term, detail);
   }
-  section.append(list);
+  fold.append(list);
+  section.append(fold);
   return section;
+}
+
+/**
+ * `✓ high confidence · 100% task coverage · Plane 2 available`
+ *
+ * Every part read from a published field; a part with no field is
+ * simply not said. The tick is the *band*, which `findings.py` decides
+ * - the page does not get to call 0.87 high.
+ */
+export function statusLine(payload) {
+  const confidence = payload?.confidence ?? {};
+  const parts = [];
+  if (confidence.band) {
+    const mark = confidence.band === "high" ? "\u2713"
+      : confidence.band === "low" ? "\u26a0" : "\u00b7";
+    parts.push(`${mark} ${confidence.band} confidence`);
+  } else if (typeof confidence.primary === "number") {
+    parts.push(`confidence ${(confidence.primary * 100).toFixed(0)}%`);
+  }
+  if (typeof confidence.task_coverage === "number") {
+    parts.push(`${(confidence.task_coverage * 100).toFixed(0)}% task coverage`);
+  }
+  const plane2 = payload?.plane2_coverage;
+  parts.push(plane2 && typeof plane2.processes === "number"
+    ? `Plane 2: ${plane2.processes} processes`
+    : "Plane 2 not captured");
+  return parts.join(" \u00b7 ");
 }
 
 // The same three sentences the CLI banners use. One source, so the
@@ -484,6 +542,9 @@ export const INCOMPLETE = {
 // one is a list with widths, the other is an indented list.
 
 /** How many of the chain's elements are drawn before the fold. */
+// UX-207: how many attribution bars stay unfolded.
+const OVERVIEW_SHOWN = 4;
+
 const PATH_HEAD = 6;
 const PATH_TAIL = 3;
 
@@ -626,4 +687,114 @@ export function renderBlastTree(payload) {
   }
   section.append(list);
   return section;
+}
+
+
+// ------------------------------------------------- UX-207: the decision
+
+/**
+ * The first screen, and the only one that is not evidence.
+ *
+ * **Everything here is read.** The diagnosis, the ratio it came from,
+ * the opportunity split and the ranked actions are all fields of the
+ * published `headline` block - `UX-207`'s rule, and Direction 7's: a
+ * viewer that derives the diagnosis is a second analyzer, free to
+ * disagree with the report and the CI gate about the same build.
+ *
+ * No `headline`, no panel. An older payload renders the page it always
+ * did rather than a box explaining what is missing.
+ */
+export function renderDecision(payload, investigate = null) {
+  const headline = payload?.headline;
+  if (!headline || !headline.diagnosis) return null;
+
+  const section = document.createElement("section");
+  section.className = "decision";
+  section.setAttribute("data-section", "decision");
+  section.setAttribute("id", "decision");
+  section.setAttribute("data-diagnosis", headline.diagnosis);
+
+  const heading = document.createElement("h2");
+  heading.textContent = "What to fix first";
+  section.append(heading);
+
+  const sentence = document.createElement("p");
+  sentence.className = "diagnosis";
+  sentence.setAttribute("data-field", "headline.sentence");
+  sentence.textContent = headline.sentence ?? "";
+  section.append(sentence);
+
+  // The opportunity split, both halves published. Absent stays absent -
+  // a zero here would claim a measurement nobody made.
+  const split = document.createElement("dl");
+  split.className = "pairs opportunity";
+  for (const [label, key, kind] of [
+    ["Certified headroom", "certified_headroom_us", "duration_us"],
+    ["Beyond the chain", "scheduling_gap_us", "duration_us"],
+  ]) {
+    const value = headline[key];
+    if (typeof value !== "number") continue;
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.className = "num";
+    detail.setAttribute("data-field", `headline.${key}`);
+    detail.setAttribute("data-raw", String(value));
+    detail.textContent = kind === "duration_us" ? seconds(value) : String(value);
+    split.append(term, detail);
+  }
+  if (split.children?.length) section.append(split);
+
+  const actions = Array.isArray(headline.top_actions) ? headline.top_actions : [];
+  if (actions.length) {
+    const list = document.createElement("ol");
+    list.className = "actions";
+    for (const action of actions) {
+      list.append(actionRow(action, investigate));
+    }
+    section.append(list);
+  }
+  return section;
+}
+
+function actionRow(action, investigate) {
+  const row = document.createElement("li");
+  row.className = "action";
+  row.setAttribute("data-element", action.element_uid ?? "");
+  row.setAttribute("data-finding", action.finding_id ?? "");
+
+  const name = document.createElement("code");
+  name.textContent = action.element_uid ?? "";
+  row.append(name);
+
+  if (typeof action.saving_us === "number") {
+    const worth = document.createElement("span");
+    worth.className = "worth num";
+    worth.setAttribute("data-field", "saving_us");
+    worth.setAttribute("data-raw", String(action.saving_us));
+    worth.textContent = `saves ${seconds(action.saving_us)}`;
+    row.append(worth);
+  } else if (typeof action.downstream_count === "number") {
+    const reach = document.createElement("span");
+    reach.className = "worth num";
+    reach.setAttribute("data-field", "downstream_count");
+    reach.setAttribute("data-raw", String(action.downstream_count));
+    reach.textContent = `${action.downstream_count} downstream`;
+    row.append(reach);
+  }
+
+  // The reasoning is a section away, not restated here - `finding_id`
+  // is a reference for exactly this.
+  const why = document.createElement("a");
+  why.className = "why";
+  why.setAttribute("href", "#findings");
+  why.textContent = "why";
+  row.append(why);
+
+  // UX-204's transport, where there is a timeline behind it.
+  if (investigate) {
+    const button = investigate(action);
+    if (button) row.append(button);
+  }
+  return row;
 }

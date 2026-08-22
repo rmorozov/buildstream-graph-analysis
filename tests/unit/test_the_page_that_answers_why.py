@@ -117,11 +117,27 @@ class TestTheEvidenceHeader:
 
     @pytest.mark.parametrize("reason", ["failed", "interrupted", "suspended"])
     def test_each_incompleteness_gets_the_banner(self, reason):
+        """`UX-207`: from `renderVerdict`, now the only place a refusal
+        is drawn."""
         payload = _report()
         payload["run_instance"]["incomplete_reason"] = reason
-        out = _render("renderEvidence", payload)
+        out = _render("renderVerdict", payload)
         assert out["incomplete"] == reason, out
         assert out["banner"], "the run says nothing about not being a measurement"
+
+    @pytest.mark.parametrize("reason", ["failed", "interrupted", "suspended"])
+    def test_the_refusal_is_drawn_exactly_once(self, reason):
+        """`UX-207`'s named defect: the same claim rendered twice, once
+        by `renderVerdict` and once by `renderEvidence`, in different
+        words. Measured at two `data-incomplete` nodes on an interrupted
+        fixture before this."""
+        payload = _report()
+        payload["run_instance"]["incomplete_reason"] = reason
+        banners = (_render("renderVerdict", payload)["incomplete_count"]
+                   + _render("renderEvidence", payload)["incomplete_count"])
+        assert banners == 1, (
+            f"{banners} refusal banners for one run - a reader meets the "
+            f"same sentence twice and wonders which is the answer")
 
     def test_plane2_coverage_is_stated_when_plane_2_was_there(self):
         """The Required Fix asks for `stream_coverage` in this header.
@@ -143,7 +159,7 @@ class TestTheEvidenceHeader:
                     if r["field"].startswith("plane2_coverage")]
 
     def test_a_finished_run_gets_no_banner(self):
-        out = _render("renderEvidence", _report())
+        out = _render("renderVerdict", _report())
         assert out["incomplete"] is None
         assert not out["banner"]
 
@@ -174,7 +190,7 @@ class TestTheEvidenceHeader:
             f"published but never explained on the page: {published - described}")
 
     def test_the_three_sentences_agree_with_the_python_side(self):
-        out = _render("renderEvidence", {
+        out = _render("renderVerdict", {
             "schema": schemas.ANALYZE,
             "run_instance": {"incomplete_reason": "suspended"},
             "confidence": {"primary": 0.9},
@@ -272,13 +288,25 @@ function make(tag) {
       typeof x === "string" ? this.textContent += x : this.children.push(x); } },
   };
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t) };
+// `app.js` boots itself when `#report` exists; it must not here.
+globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
+                        getElementById: () => null };
 
 const views = await import("./bga/viewer/views.js");
-const node = views["%s"](%s);
+const app = await import("./bga/viewer/app.js");
+// `UX-207` moved the refusal banner out of the evidence header and into
+// `renderVerdict`, which returns a *list* of banners - so the harness
+// drives either module, and the banner *count* is what one of these
+// tests is now about.
+const name = "%s";
+const payload = %s;
+const produced = name === "renderVerdict"
+  ? app.renderVerdict(payload) : [views[name](payload)];
+const node = produced.length === 1
+  ? produced[0] : { children: produced.filter(Boolean) };
 
 const bars = [], rows = [];
-let incomplete = null, banner = "";
+let incomplete = null, banner = "", incompleteCount = 0;
 (function walk(n) {
   if (!n) return;
   const classes = (x) => String(x.className ?? "").split(/\s+/);
@@ -292,18 +320,27 @@ let incomplete = null, banner = "";
                 link: n.attrs["data-section-link"] ?? null,
                 raw: value ? value.attrs["data-raw"] : null });
   }
-  if (n.tagName === "dd" && n.attrs["data-field"]) {
+  if (n.attrs && n.tagName === "dd" && n.attrs["data-field"]) {
     rows.push({ field: n.attrs["data-field"], value: n.textContent });
   }
-  if (n.attrs["data-incomplete"]) {
+  if (n.attrs && n.attrs["data-incomplete"]) {
     incomplete = n.attrs["data-incomplete"];
-    banner = n.textContent;
+    // The sentence lives in a child `<p>` now, not on the banner node
+    // itself, so the text is gathered from the subtree. Reading only
+    // `n.textContent` reported an empty banner for a banner that was
+    // rendering perfectly well.
+    banner = (function text(x) {
+      return (x.textContent ?? "")
+        + (x.children ?? []).map(text).join(" ");
+    })(n).trim();
+    incompleteCount += 1;
   }
   (n.children ?? []).forEach(walk);
 })(node);
 
 console.log(JSON.stringify({
   rendered: Boolean(node), bars, rows, incomplete, banner,
+  incomplete_count: incompleteCount,
 }));
 """
 

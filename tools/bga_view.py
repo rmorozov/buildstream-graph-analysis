@@ -73,7 +73,11 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js",
           "perfetto.html", "perfetto.js", "sql.html",
           # UX-199: navigation, and the questions as data so the export
           # can inline what it used to strip.
-          "nav.js", "questions.js")
+          "nav.js", "questions.js",
+          # UX-204: the link-builder the investigate buttons read, and
+          # `sql.html` now renders its list from `questions.js` rather
+          # than carrying a copy - so the page needs it served too.
+          "trace_context.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured

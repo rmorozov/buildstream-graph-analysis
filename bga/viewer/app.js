@@ -16,6 +16,7 @@ import { renderBand, renderTrend, renderBlastSearch,
          renderOverview, renderEvidence } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
 import { renderQuestions } from "./questions.js";
+import { investigationFor } from "./trace_context.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -97,7 +98,16 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
-export function renderFindings(findings) {
+/**
+ * `UX-204`: each finding carries a button that knows *why* it is
+ * sending you to Perfetto.
+ *
+ * `investigate` is passed in rather than reached for, and it is only
+ * passed when the run has a timeline behind it - `UX-194`'s dead-button
+ * rule. No timeline, no buttons, rather than a row of controls that
+ * error.
+ */
+export function renderFindings(findings, investigate = null) {
   const section = el("section", { "data-section": "findings" },
     el("h2", {}, `Findings (${findings.length})`));
   for (const finding of findings) {
@@ -114,9 +124,51 @@ export function renderFindings(findings) {
       finding.elements && finding.elements.length
         ? el("p", { class: "muted" },
             el("code", {}, finding.elements.join(", ")))
-        : null));
+        : null,
+      investigate ? investigateButton(finding, investigate) : null));
   }
   return section;
+}
+
+/**
+ * The button, and the paste it leaves behind.
+ *
+ * `UX-204`'s always-works floor: Perfetto's deep-link API takes a trace
+ * and a title, and has no documented way to preload the Query pane -
+ * so the query is not faked into the URL, it is put one paste away. The
+ * button reveals it whether the handoff succeeds or not, because a
+ * blocked pop-up is exactly when the reader needs the SQL most.
+ */
+export function investigateButton(finding, investigate) {
+  const context = investigationFor(finding);
+  if (!context) return null;
+  const wrapper = el("div", { class: "investigate",
+                              "data-query-id": context.queryId,
+                              "data-element": context.element ?? "" });
+  const button = el("button", { type: "button" }, "Investigate in Perfetto");
+  // `hidden` through `el` lands as a *property* (it is not a
+  // `data-` attribute), so it is cleared as one: `removeAttribute`
+  // would not touch it, and the paste would never appear.
+  const paste = el("pre", { class: "query", hidden: true },
+                   el("code", {}, context.sql));
+  const status = el("span", { class: "muted handoff" });
+  button.addEventListener("click", () => {
+    // No `await` before the handoff: the click's transient activation
+    // is what opens the tab (`UX-198`), and it is gone by the time one
+    // resolves.
+    paste.hidden = false;
+    const sent = investigate(context);
+    status.textContent = "opening ui.perfetto.dev — the query is below…";
+    Promise.resolve(sent).then(
+      ({ bytes } = {}) => {
+        status.textContent = bytes
+          ? `sent ${(bytes / 1024).toFixed(1)} KiB — paste the query below`
+          : "paste the query below";
+      },
+      (error) => { status.textContent = String(error.message ?? error); });
+  });
+  wrapper.append(button, status, paste);
+  return wrapper;
 }
 
 /**
@@ -315,10 +367,11 @@ export function renderVerdict(payload) {
 
 // The generic dispatch. Note there is no `switch (key)` here: what a
 // value is rendered as follows from its *shape* and its hints.
-export function renderSection(key, value, hint = {}, node = undefined) {
+export function renderSection(key, value, hint = {}, node = undefined,
+                              investigate = null) {
   if (value === null || value === undefined) return null;
   if (hint[SEVERITY] && Array.isArray(value)) {
-    return value.length ? renderFindings(value) : null;
+    return value.length ? renderFindings(value, investigate) : null;
   }
   if (Array.isArray(value)) {
     if (!value.length) return null;
@@ -402,7 +455,7 @@ export function quantityFor(node, key) {
   return guessed;
 }
 
-export function render(payload, schema, root) {
+export function render(payload, schema, root, investigate = null) {
   const hints = {};
   for (const [key, sub] of Object.entries(schema?.properties ?? {})) {
     const hint = hintsOf(sub);
@@ -416,7 +469,8 @@ export function render(payload, schema, root) {
   if (summary) root.append(summary);
   for (const [key, value] of Object.entries(payload)) {
     if (key === "schema") continue;
-    const section = renderSection(key, value, hints[key] ?? {}, nodes[key]);
+    const section = renderSection(key, value, hints[key] ?? {}, nodes[key],
+                                  investigate);
     if (section) root.append(section);
   }
   root.setAttribute("aria-busy", "false");
@@ -554,6 +608,17 @@ export async function load(name, fallback = null) {
 // The trace is a data: URL in an export and a served path otherwise.
 // `handOff` fetches whichever it is given; `fetch` handles data: URLs,
 // so the Perfetto button works from `file://` with no server at all.
+/**
+ * `UX-204`: hand the timeline over with a title that says why.
+ *
+ * The title is what Perfetto shows in its tab, so a reader with three
+ * of these open can tell them apart - which is the whole point of the
+ * context travelling.
+ */
+export function investigate(context) {
+  return handOff(traceUrl(), context.title);
+}
+
 export function traceUrl() {
   const node = document.getElementById("bga-trace");
   return node ? node.textContent.trim() : "timeline.json.gz";
@@ -570,7 +635,13 @@ async function boot() {
     document.getElementById("run-name").textContent = run.name ?? "bga";
     document.getElementById("run-path").textContent = run.run ?? "";
     document.title = `bga — ${run.name ?? "report"}`;
-    render(payload, schemas[payload.schema], root);
+    // UX-204: the investigate buttons exist only when there is a
+    // timeline to investigate - `UX-194`'s dead-button rule, applied to
+    // ten more buttons than it was written for. Passed in rather than
+    // reached for, so `render` stays a pure function of what it is
+    // given.
+    render(payload, schemas[payload.schema], root,
+           run.has_timeline ? investigate : null);
     // UX-196: the three views, each only when its payload is there.
     //
     // UX-203: from the *compare* document, which is what `renderBand`

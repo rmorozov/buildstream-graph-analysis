@@ -203,19 +203,42 @@ class TestTheTwoFieldsEnteredTheSchema:
         assert payload["confidence"]["band"] == \
             confidence_band(payload["confidence"]["primary"])
 
-    def test_plane2_coverage_is_published_and_declared(self):
-        """On the real capture, through the same `--plane2` the CLI
-        takes - and through `bga view`, which now finds the sibling
-        report the store wrote."""
-        if not os.path.isdir(REAL):
-            pytest.skip("no real capture in this tree")
+    def test_plane2_coverage_is_published_and_declared(self, tmp_path):
+        """Through `bga view`, which finds the sibling report the store
+        wrote beside the run.
+
+        `UX-213`: this used to run only where the real capture lived, so
+        the whole Plane 2 half of the evidence header was guarded on one
+        machine. The store's *shape* is what matters here - a `run/`
+        directory with `plane2.json` beside it - and that is cheap to
+        build, so the guard now assembles one from the golden fixture
+        rather than waiting for a 595 KB capture nobody committed.
+        """
         from tools.bga_view import payloads
 
-        served = payloads(REAL)["report.json"]
+        snapshot = tmp_path / "20260101T000000Z"
+        shutil.copytree(GOLDEN, snapshot / "run")
+        (snapshot / "plane2.json").write_text(json.dumps({
+            "by_element": {},
+            "stream_coverage": {"processes": 7, "opens_coverage": 1.0,
+                                "by_coverage": {"hook-only": 7},
+                                "cpu_disagreement_count": 0},
+        }))
+
+        served = payloads(str(snapshot / "run"))["report.json"]
         coverage = served.get("plane2_coverage")
         assert coverage, "bga view served no Plane 2 coverage for a run that has one"
-        assert coverage["processes"] > 0
+        assert coverage["processes"] == 7
         assert "plane2_coverage" in schemas.schema(schemas.ANALYZE)["properties"]
+
+    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
+    def test_plane2_coverage_on_the_real_capture(self):
+        """The same property against a capture with 813 real processes,
+        where one exists. Extra coverage, never the only coverage."""
+        from tools.bga_view import payloads
+
+        coverage = payloads(REAL)["report.json"].get("plane2_coverage")
+        assert coverage and coverage["processes"] > 0
 
     def test_a_run_without_plane_2_publishes_no_coverage(self):
         assert "plane2_coverage" not in _report(), (

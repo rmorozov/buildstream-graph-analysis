@@ -610,16 +610,30 @@ def _run_measurements(snapshot: str) -> dict:
 def _mark_verdicts(rows: List[dict]) -> None:
     """Give each row a `verdict_kind` against the runs before it.
 
-    `UX-203` asked for "the verdict vs its walk-back baseline". Derived
-    from the same `compute_band` the comparison uses, over the
-    durations already collected - so it costs no analyses, and the
-    trend's colouring cannot disagree with what `bga compare` would
-    say about the same pair.
+    `UX-203` asked for "the verdict vs its walk-back baseline", and its
+    log claimed "the trend's colouring cannot disagree with what `bga
+    compare` would say about the same pair". **That was an over-claim**,
+    and `UX-214` measured it: only `compute_band` was shared. This
+    function classified on the widened band's edges alone, emitted
+    `within_band` - a value outside `schemas.VERDICT_KINDS` - and had no
+    `UX-170` disputed-region branch at all.
+
+    The disagreement, on the exact case the band view exists to teach:
+    baselines `[100, 100, 100, 100, 200]` give a band of `[99, 101]`
+    with one set edge outside it, and a candidate of `150` was coloured
+    **regressed** here while `bga compare` on the same pair answered
+    `within_observed_range` and declined the claim.
+
+    One chain now: `classify_against_band`, the same function compare
+    calls. The band is widened with the *median* as the reference
+    total, because that is what "the baseline" means for a set rather
+    than for one positional run - the widening reference differs, the
+    classification does not.
 
     `None` below `MIN_BASELINE_RUNS`, where there is no band to judge
     against, and for any run that is not a measurement at all.
     """
-    from bga.compare import compute_band
+    from bga.compare import classify_against_band, compute_band, widen_band
 
     history: List[int] = []
     for row in rows:
@@ -630,12 +644,9 @@ def _mark_verdicts(rows: List[dict]) -> None:
         band = compute_band(history) if history else None
         if band is None:
             row["verdict_kind"] = None
-        elif duration > band["high_us"]:
-            row["verdict_kind"] = "regressed"
-        elif duration < band["low_us"]:
-            row["verdict_kind"] = "improved"
         else:
-            row["verdict_kind"] = "within_band"
+            widened = widen_band(band, band["median_us"])
+            row["verdict_kind"] = classify_against_band(duration, widened)
         history.append(duration)
 
 

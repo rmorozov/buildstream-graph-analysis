@@ -36,50 +36,119 @@ export const QUESTIONS = [
     category: "execution",
     plane: "Plane 1",
     title: "Where did the time actually go, per element?",
-    why: "Plane 1's element spans, aggregated - scoped to the element plane, so Plane 2 command names cannot crowd the answer. The figure bga analyze prints in the Attribution table; here to cross-check it, or to slice it further.",
-    sql: "select extract_arg(s.arg_set_id, 'args.element') as element,\n       count(*) as spans,\n       sum(s.dur) / 1e9 as seconds\nfrom slice s\nwhere s.category = 'bst-builder'\ngroup by element\norder by seconds desc\nlimit 25;",
+    why:
+      "Plane 1's element spans, aggregated - scoped to the element " +
+      " plane, so Plane 2 command names cannot crowd the answer. The " +
+      " figure bga analyze prints in the Attribution table; here to " +
+      " cross-check it, or to slice it further.",
+    sql: `select extract_arg(s.arg_set_id, 'args.element') as element,
+       count(*) as spans,
+       sum(s.dur) / 1e9 as seconds
+from slice s
+where s.category = 'bst-builder'
+group by element
+order by seconds desc
+limit 25;`,
   },
   {
     id: "process-storm",
     category: "resources",
     plane: "Plane 2",
     title: "Which elements ran the most processes?",
-    why: "Plane 2's processes, grouped by the element that ran them. A high count with low total time is a process-storm - many short execs, the shape examples/08-process-storm exists to show.",
-    sql: "select extract_arg(s.arg_set_id, 'args.element') as element,\n       count(*) as processes,\n       sum(s.dur) / 1e9 as seconds\nfrom slice s\nwhere s.category = 'native-process'\ngroup by element\norder by processes desc\nlimit 25;",
+    why:
+      "Plane 2's processes, grouped by the element that ran them. A " +
+      " high count with low total time is a process-storm - many short " +
+      " execs, the shape examples/08-process-storm exists to show.",
+    sql: `select extract_arg(s.arg_set_id, 'args.element') as element,
+       count(*) as processes,
+       sum(s.dur) / 1e9 as seconds
+from slice s
+where s.category = 'native-process'
+group by element
+order by processes desc
+limit 25;`,
   },
   {
     id: "sandbox-tax",
     category: "resources",
     plane: "both planes",
     title: "What is the sandbox tax here?",
-    why: "Time inside an element's Plane 1 span that its own Plane 2 processes do not account for: staging, checkout, the sandbox itself. The containment is constrained to the same element, so another element building in parallel cannot be subtracted from this one. Compare with bga correlate's figure.",
-    sql: "select e.element,\n       e.dur / 1e9 as element_seconds,\n       (e.dur - coalesce(sum(n.dur), 0)) / 1e9 as unaccounted_seconds\nfrom (select s.id, s.ts, s.dur,\n             extract_arg(s.arg_set_id, 'args.element') as element\n      from slice s where s.category = 'bst-builder') e\nleft join (select s.ts, s.dur,\n                  extract_arg(s.arg_set_id, 'args.element') as element\n           from slice s where s.category = 'native-process') n\n  on n.element = e.element\n and n.ts >= e.ts and n.ts + n.dur <= e.ts + e.dur\ngroup by e.id\norder by unaccounted_seconds desc\nlimit 20;",
+    why:
+      "Time inside an element's Plane 1 span that its own Plane 2 " +
+      " processes do not account for: staging, checkout, the sandbox " +
+      " itself. The containment is constrained to the same element, so " +
+      " another element building in parallel cannot be subtracted from " +
+      " this one. Compare with bga correlate's figure.",
+    sql: `select e.element,
+       e.dur / 1e9 as element_seconds,
+       (e.dur - coalesce(sum(n.dur), 0)) / 1e9 as unaccounted_seconds
+from (select s.id, s.ts, s.dur,
+             extract_arg(s.arg_set_id, 'args.element') as element
+      from slice s where s.category = 'bst-builder') e
+left join (select s.ts, s.dur,
+                  extract_arg(s.arg_set_id, 'args.element') as element
+           from slice s where s.category = 'native-process') n
+  on n.element = e.element
+ and n.ts >= e.ts and n.ts + n.dur <= e.ts + e.dur
+group by e.id
+order by unaccounted_seconds desc
+limit 20;`,
   },
   {
     id: "stalls",
     category: "scheduling",
     plane: "Plane 1",
     title: "Where are the longest stalls?",
-    why: "Gaps on the element plane: the build was running and nothing was building. Windowed over element spans alone - measured against every track, thousands of interleaved Plane 2 slices close exactly the gaps this question is looking for.",
-    sql: "select element, ts, dur,\n       lead(ts) over (order by ts) - (ts + dur) as gap_after\nfrom (select extract_arg(s.arg_set_id, 'args.element') as element,\n             s.ts, s.dur\n      from slice s where s.category = 'bst-builder')\norder by gap_after desc\nlimit 20;",
+    why:
+      "Gaps on the element plane: the build was running and nothing " +
+      " was building. Windowed over element spans alone - measured " +
+      " against every track, thousands of interleaved Plane 2 slices " +
+      " close exactly the gaps this question is looking for.",
+    sql: `select element, ts, dur,
+       lead(ts) over (order by ts) - (ts + dur) as gap_after
+from (select extract_arg(s.arg_set_id, 'args.element') as element,
+             s.ts, s.dur
+      from slice s where s.category = 'bst-builder')
+order by gap_after desc
+limit 20;`,
   },
   {
     id: "element-commands",
     category: "execution",
     plane: "Plane 2",
     title: "What did one element actually execute?",
-    why: "The micro half of the cycle - the commands Plane 2 recorded inside one sandbox, longest first. Selected by the element uid both planes carry, not by a lane name.",
     example: "core.bst",
-    sql: "select s.name as command, s.dur / 1e6 as ms\nfrom slice s\nwhere s.category = 'native-process'\n  and extract_arg(s.arg_set_id, 'args.element') = '{element}'\norder by s.dur desc\nlimit 40;",
+    why:
+      "The micro half of the cycle - the commands Plane 2 recorded " +
+      " inside one sandbox, longest first. Selected by the element uid " +
+      " both planes carry, not by a lane name.",
+    sql: `select s.name as command, s.dur / 1e6 as ms
+from slice s
+where s.category = 'native-process'
+  and extract_arg(s.arg_set_id, 'args.element') = '{element}'
+order by s.dur desc
+limit 40;`,
   },
   {
     id: "dependency-wait",
     category: "dependencies",
     plane: "Plane 1",
     title: "What was this element waiting for?",
-    why: "The elements that finished last before it could start, on the element plane only. A long gap here is a dependency shape problem rather than a scheduler one - the distinction the blast and criticality findings are about.",
     example: "core.bst",
-    sql: "select element, (ts + dur) / 1e9 as ended_at_seconds\nfrom (select extract_arg(s.arg_set_id, 'args.element') as element,\n             s.ts, s.dur\n      from slice s where s.category = 'bst-builder')\nwhere ts + dur <= (select min(s.ts) from slice s\n                   where s.category = 'bst-builder'\n                     and extract_arg(s.arg_set_id, 'args.element') = '{element}')\norder by ended_at_seconds desc\nlimit 15;",
+    why:
+      "The elements that finished last before it could start, on the " +
+      " element plane only. A long gap here is a dependency shape " +
+      " problem rather than a scheduler one - the distinction the " +
+      " blast and criticality findings are about.",
+    sql: `select element, (ts + dur) / 1e9 as ended_at_seconds
+from (select extract_arg(s.arg_set_id, 'args.element') as element,
+             s.ts, s.dur
+      from slice s where s.category = 'bst-builder')
+where ts + dur <= (select min(s.ts) from slice s
+                   where s.category = 'bst-builder'
+                     and extract_arg(s.arg_set_id, 'args.element') = '{element}')
+order by ended_at_seconds desc
+limit 15;`,
   },
 ];
 

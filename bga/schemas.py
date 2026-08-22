@@ -452,6 +452,12 @@ _COMPARE_HINTS = {
         ],
     },
     "verdict_kind": {
+        # UX-214: the closed set, published. `UX-201` promised external
+        # consumers an enum and delivered a Python constant plus a map
+        # in the viewer - the two places inside this repository. A
+        # consumer reading the schema saw `["string", "null"]` and no
+        # vocabulary at all.
+        "enum": list(VERDICT_KINDS) + [None],
         "description": "The verdict as a value rather than a sentence, so a "
                        "consumer styles from it and a reworded sentence is "
                        "not a rendering change.",
@@ -505,7 +511,18 @@ _STORE_HINTS = {
     # warning is about - but it stopped being the answer.
     "snapshots": {COLUMNS: ["stamp", "total_duration_us", "verdict_kind",
                             "cache_hit_rate", "bytes", "alias",
-                            "incomplete_reason"]},
+                            "incomplete_reason"],
+                  "items": {
+                      "properties": {
+                          # UX-214: the same closed set as `compare/v1`.
+                          # These rows used to carry `within_band`, a
+                          # sixth value that existed only here.
+                          "verdict_kind": {"enum": list(VERDICT_KINDS) + [None]},
+                          "total_duration_us": {QUANTITY: "duration_us"},
+                          "cache_hit_rate": {QUANTITY: "share"},
+                          "bytes": {QUANTITY: "bytes"},
+                      },
+                  }},
 }
 
 _SCHEMAS = {

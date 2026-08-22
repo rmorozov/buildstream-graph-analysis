@@ -238,6 +238,7 @@ def _questions():
         'const q = await import("./bga/viewer/questions.js");'
         "console.log(JSON.stringify(q.QUESTIONS.map((x) => ({"
         "  id: x.id, title: x.title, why: x.why, category: x.category,"
+        "  plane: x.plane, sql: x.sql,"
         "  rendered: q.renderedSql(x), categories: q.CATEGORIES }))));")
     result = subprocess.run([node, "--input-type=module", "-e", script],
                             capture_output=True, text=True, cwd=os.getcwd(),
@@ -274,6 +275,78 @@ class TestTheCannedSql:
         for question in questions:
             assert question["title"].strip().endswith("?"), question["id"]
             assert len(question["why"].strip()) > 40, question["id"]
+
+    @pytest.mark.parametrize("plane,category", [
+        ("Plane 1", "bst-builder"), ("Plane 2", "native-process")])
+    def test_every_query_scopes_itself_to_a_plane(self, plane, category):
+        """`UX-210`: the merged trace puts both planes in one `slice`
+        table, and four of these six were written as if it had one
+        track. Every query constrains `slice.category` now, and the
+        plane it declares is the category it uses.
+
+        Measured on a real `examples/06` capture: 11 `bst-builder`
+        spans, 663 `native-process` slices, 1 `bst-invocation` - all in
+        one table, which is exactly why an unscoped `group by name`
+        answers with commands where the reader asked about elements.
+        """
+        for question in _questions():
+            if question["plane"] != plane:
+                continue
+            assert f"'{category}'" in question["sql"], (
+                f"{question['id']} says it reads {plane} and never says so "
+                f"in SQL - the answer will be drawn from both planes")
+
+    def test_no_query_is_unscoped(self):
+        """The guard the Required Fix asks for: a future question
+        cannot ship without saying which plane it reads."""
+        for question in _questions():
+            assert "s.category" in question["sql"] or \
+                   "category =" in question["sql"], (
+                f"{question['id']} does not constrain slice.category")
+            assert question["plane"], f"{question['id']} declares no plane"
+
+    def test_the_planes_are_joined_by_the_uid_both_carry(self):
+        """Not by parsing a span's display name, and not by a
+        `native: ` prefix - which is a *process* name, not a track
+        name, so the old `track.name like 'native:%'` matched nothing
+        on a real merged trace."""
+        for question in _questions():
+            if "native: " in question["sql"]:
+                pytest.fail(
+                    f"{question['id']} matches a lane by name prefix; "
+                    f"`args.element` is carried by both planes")
+            if question["plane"] == "Plane 2" or question["id"] == "sandbox-tax":
+                assert "extract_arg" in question["sql"], question["id"]
+
+    def test_a_containment_join_is_constrained_to_one_element(self):
+        """The acceptance names this mutation separately, and rightly:
+        stripping the *containment* scoping leaves `'bst-builder'`
+        elsewhere in the query, so a guard that only asks "is the word
+        category in here" stays green while the answer goes wrong.
+
+        Containment by time alone subtracts any slice that happens to
+        nest - including another element building in parallel - so the
+        "unaccounted" figure is wrong the moment two elements overlap,
+        which is every real build.
+        """
+        for question in _questions():
+            sql = question["sql"]
+            if "n.ts >= e.ts" not in sql:
+                continue
+            assert "n.element = e.element" in sql, (
+                f"{question['id']} nests by time without requiring the same "
+                f"element - a parallel build is subtracted from this one")
+            # And the nested side is the process plane, not everything.
+            native = sql.split("left join", 1)[1].split(") n", 1)[0]
+            assert "'native-process'" in native, (
+                f"{question['id']} subtracts slices from any plane")
+
+    def test_each_why_says_which_plane_it_reads(self):
+        for question in _questions():
+            why = question["why"].lower()
+            assert "plane 1" in why or "plane 2" in why or "element plane" in why, (
+                f"{question['id']} does not tell the reader which plane its "
+                f"answer comes from")
 
     def test_every_question_is_in_a_declared_category(self):
         """`UX-204` item 3: the library is categorized, and a question

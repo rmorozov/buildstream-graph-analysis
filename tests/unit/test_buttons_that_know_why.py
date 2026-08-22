@@ -83,7 +83,12 @@ class TestTheContextTravels:
             'console.log(JSON.stringify(t.traceContext({'
             '  element_uid: "libfoo.bst", reason: "why",'
             '  query: "element-commands" })));')
-        assert "native:libfoo.bst" in out["sql"], out["sql"]
+        # `UX-210` changed *how* an element is selected - by the
+        # `args.element` both planes carry, rather than by a
+        # `native: <uid>` lane name that is a process name and never
+        # matched a track. The property this guards is unchanged: the
+        # real uid is substituted, and the example does not leak.
+        assert "'libfoo.bst'" in out["sql"], out["sql"]
         assert "{element}" not in out["sql"]
         assert "core.bst" not in out["sql"], "the example leaked past the real uid"
 

@@ -14,7 +14,8 @@
 import { handOff, deepLink } from "./perfetto.js";
 import { renderBand, renderTrend, renderBlastSearch,
          renderOverview, renderEvidence,
-         renderCriticalPath, renderBlastTree } from "./views.js";
+         renderCriticalPath, renderBlastTree,
+         renderDecision, INCOMPLETE } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
 import { renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
@@ -435,11 +436,21 @@ export function renderVerdict(payload) {
   const outcome = payload.run_instance?.incomplete_reason
     ?? payload.run_instance?.build_outcome?.incomplete_reason;
   if (outcome) {
+    // UX-207: the *one* place a refusal is drawn. `renderEvidence` drew
+    // a second banner with the same claim in different words - measured
+    // at two `data-incomplete` nodes on an interrupted fixture - and the
+    // header is also the part a reader may have collapsed, which is the
+    // worst place to keep the one sentence they must not miss.
+    //
+    // The wording comes from `INCOMPLETE`, which is where UX-202 put the
+    // three sentences and where the guard against `RunContext`'s reasons
+    // still points.
     banner.push(el("div", { class: "verdict refused",
                             "data-incomplete": outcome },
       el("h2", {}, `This run is ${outcome}`),
       el("p", { class: "muted" },
-        "Durations from a run that did not finish are not measurements.")));
+        INCOMPLETE[outcome] ?? "Durations from a run that did not finish "
+                               + "are not measurements.")));
   }
   if (payload.comparability_warning) {
     banner.push(el("div", { class: "verdict warn", "data-warning": "1" },
@@ -703,6 +714,21 @@ export function investigate(context) {
   return handOff(traceUrl(), context.title);
 }
 
+/**
+ * `UX-207` x `UX-204`: an action's investigate button.
+ *
+ * The action carries `finding_id`, so the context is built from the
+ * finding it references rather than invented here - the same linkage
+ * `UX-204` asserts in both directions.
+ */
+export function decisionInvestigation(action, payload) {
+  const finding = (payload?.findings ?? []).find(
+    (f) => f.id === action.finding_id);
+  if (!finding) return null;
+  return investigateButton(
+    { ...finding, elements: [action.element_uid] }, investigate);
+}
+
 export function traceUrl() {
   const node = document.getElementById("bga-trace");
   return node ? node.textContent.trim() : "timeline.json.gz";
@@ -752,6 +778,18 @@ async function boot() {
     if (overview) root.prepend(overview);
     const evidence = renderEvidence(payload);
     if (evidence) root.prepend(evidence);
+
+    // UX-207: **first screen = decision, everything else = evidence.**
+    // Prepended last, so it lands above the status line and the
+    // overview - which is the whole point of the item: the reader knows
+    // what deserves attention before reading anything that justifies it.
+    //
+    // The refusal banners `renderVerdict` produced are still above even
+    // this; a run that is not a measurement says so before it offers a
+    // decision drawn from it.
+    const decision = renderDecision(payload,
+      run.has_timeline ? (action) => decisionInvestigation(action, payload) : null);
+    if (decision) root.prepend(decision);
     const store = await load("store", null).catch(() => null);
     const trend = store && renderTrend(store);
     if (trend) root.append(trend);

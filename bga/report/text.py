@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from .. import findings as findings_mod
 from .. import sources
-from ..findings import compute_findings, render_findings
+from ..findings import compute_findings, compute_headline, render_findings
 from ..ingest.models import AnalysisResult
 from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
@@ -222,7 +222,14 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     produce cannot appear in either format, and one it does produce
     appears in both. That is the property, not a side effect.
     """
-    return ["Key Findings:"] + render_findings(compute_findings(result)) + [""]
+    findings = compute_findings(result)
+    # UX-207: the diagnosis leads, from the published `headline` field
+    # rather than from a clause inside one finding's title. Same string
+    # the JSON carries and the decision panel shows, so the three cannot
+    # describe one build differently.
+    headline = compute_headline(result, findings)
+    lines = ["Key Findings:", f"  {headline['sentence']}"]
+    return lines + render_findings(findings) + [""]
 
 
 def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:

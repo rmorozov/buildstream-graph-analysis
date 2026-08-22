@@ -65,6 +65,39 @@ OPPORTUNITY_FLOOR_PCT = 1.0
 # "how long do I take".
 CHAIN_BOUND_RATIO = 0.9
 
+# UX-207: the diagnosis as an enum, a ratio and a sentence - the three
+# things a consumer needs and none of which it should re-derive. The
+# ratio decided this before; what changed is that it is now *published*
+# rather than surviving only as a clause of one finding's title.
+DIAGNOSIS_CHAIN_BOUND = 'chain_bound'
+DIAGNOSIS_SCHEDULER_BOUND = 'scheduler_bound'
+DIAGNOSIS_INCONCLUSIVE = 'inconclusive'
+DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND,
+             DIAGNOSIS_INCONCLUSIVE)
+
+# One wording, read by the text report, the JSON and the page. The
+# clause `_time_concentration_findings` used to spell out itself is now
+# derived from the same enum, so the report and the headline cannot
+# describe one build two ways.
+DIAGNOSIS_SENTENCES = {
+    DIAGNOSIS_CHAIN_BOUND:
+        "This build is chain-bound, not scheduler-bound: the critical path "
+        "is {ratio:.0%} of wall-clock, so the way to a shorter build is a "
+        "shorter chain.",
+    DIAGNOSIS_SCHEDULER_BOUND:
+        "This build is scheduler-bound, not chain-bound: the critical path "
+        "is {ratio:.0%} of wall-clock, so the time is going somewhere other "
+        "than the chain.",
+    DIAGNOSIS_INCONCLUSIVE:
+        "Neither the chain nor the scheduler can be named the constraint: "
+        "this run did not record the durations the comparison needs.",
+}
+
+# How many actions the decision names. Three, because the panel is a
+# decision rather than a backlog - the rest of the ranking is a section
+# away and says so.
+TOP_ACTIONS_SHOWN = 3
+
 TIME_CONCENTRATION_SHOWN_MAX = 4
 FIX_ORDER_SHOWN_MAX = 3
 HORIZON_STEPS_SHOWN = 3
@@ -964,14 +997,15 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     the output goes: both renderers consume this, so they cannot disagree
     and a consumer never has to re-derive a threshold from the source.
     """
-    floors = result.floors or {}
-    total = result.total_duration_us
-    t_infinity = floors.get('t_infinity_observed') or 0
     # `chain_bound` asks whether the chain or the scheduler is what binds;
     # `execution_bound` asks whether any wait category is large enough to
     # be worth naming. Different questions, and a real build is routinely
     # both.
-    chain_bound = bool(total) and t_infinity / total >= CHAIN_BOUND_RATIO
+    #
+    # UX-207: read from `diagnose()` rather than recomputed here, so the
+    # findings, the headline block and the text report cannot answer the
+    # same question differently.
+    chain_bound = diagnose(result)['diagnosis'] == DIAGNOSIS_CHAIN_BOUND
 
     findings = _run_scope_findings(result)
     opportunity = _opportunity_findings(result, chain_bound)
@@ -1002,6 +1036,96 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     # numbers by the time they reach "and one repo rebuilds all of it".
     findings.extend(_shared_source_findings(result))
     return findings
+
+
+def diagnose(result: AnalysisResult) -> dict:
+    """Chain-bound, scheduler-bound, or neither - with the ratio and the
+    sentence, so nobody downstream re-derives any of the three.
+
+    `UX-207`. This decision has existed since `UX-65` (the ratio at
+    `CHAIN_BOUND_RATIO`), but it lived inside `compute_findings` as a
+    local `bool` and reached the outside world only as the clause
+    " - this build is chain-bound, not scheduler-bound" glued onto one
+    finding's title. A consumer wanting to *branch* on it - the viewer's
+    decision panel, a CI gate, anything - had to string-match a
+    sentence. Now it is a field.
+    """
+    floors = result.floors or {}
+    total = result.total_duration_us or 0
+    t_infinity = floors.get('t_infinity_observed') or 0
+    if not total or not t_infinity:
+        return {'diagnosis': DIAGNOSIS_INCONCLUSIVE, 'chain_ratio': None,
+                'chain_bound_ratio': CHAIN_BOUND_RATIO,
+                'sentence': DIAGNOSIS_SENTENCES[DIAGNOSIS_INCONCLUSIVE]}
+    ratio = t_infinity / total
+    name = (DIAGNOSIS_CHAIN_BOUND if ratio >= CHAIN_BOUND_RATIO
+            else DIAGNOSIS_SCHEDULER_BOUND)
+    return {'diagnosis': name, 'chain_ratio': ratio,
+            'chain_bound_ratio': CHAIN_BOUND_RATIO,
+            'sentence': DIAGNOSIS_SENTENCES[name].format(ratio=ratio)}
+
+
+def _top_actions(result: AnalysisResult, findings: List[dict]) -> List[dict]:
+    """Ordered references into the findings that already rank things.
+
+    References, not copies: `finding_id` says where the reasoning is, so
+    the panel can send a reader to it rather than restating it. The
+    saving is carried where a projection exists and omitted where none
+    does - `None` would read as "zero", which is a different claim.
+    """
+    by_id = findings_by_id(findings)
+    actions: List[dict] = []
+
+    concentration = by_id.get('time-concentration')
+    for row in ((concentration or {}).get('evidence') or {}).get('rows') or []:
+        action = {'finding_id': 'time-concentration',
+                  'element_uid': row['element_uid']}
+        saving = row.get('realizable_saving_us')
+        if saving is not None:
+            action['saving_us'] = saving
+        actions.append(action)
+
+    # A scheduler-bound build has no chain to shorten, so the ranking
+    # that matters is who-depends-on-me. Same shape, different source.
+    ranking = by_id.get('blast-radius-ranking')
+    if not actions and ranking:
+        blast = (ranking.get('evidence') or {}).get('blast_radius') or {}
+        for uid in ranking.get('elements') or []:
+            actions.append({
+                'finding_id': 'blast-radius-ranking', 'element_uid': uid,
+                'downstream_count': (blast.get(uid) or {}).get(
+                    'downstream_count', 0),
+            })
+    return actions[:TOP_ACTIONS_SHOWN]
+
+
+def compute_headline(result: AnalysisResult,
+                     findings: Optional[List[dict]] = None) -> dict:
+    """What to fix first, and what it is worth - as data.
+
+    `UX-207`'s rule, and Direction 7's: **a viewer that derives the
+    diagnosis is a second analyzer.** Everything the decision panel
+    shows is decided here, where the text report, `--format json`, CI
+    and every external consumer see the same answer.
+
+    The opportunity split is published rather than left as a
+    subtraction: `scheduling_gap_us` is wall-clock beyond the critical
+    path, which is what a page would otherwise compute by taking
+    `total_duration_us - floors.t_infinity_observed` and calling it its
+    own.
+    """
+    if findings is None:
+        findings = compute_findings(result)
+    floors = result.floors or {}
+    total = result.total_duration_us or 0
+    t_infinity = floors.get('t_infinity_observed') or 0
+
+    headline = dict(diagnose(result))
+    headline['certified_headroom_us'] = floors.get('certified_headroom')
+    headline['scheduling_gap_us'] = (
+        max(0, total - t_infinity) if total and t_infinity else None)
+    headline['top_actions'] = _top_actions(result, findings)
+    return headline
 
 
 def render_findings(findings: List[dict]) -> List[str]:

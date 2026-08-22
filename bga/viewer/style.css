@@ -213,3 +213,21 @@ th .th-filter.unparsed { border-color: var(--bad); }
 .kind { font-size: .72rem; padding: 0 .3rem; border-radius: 2px;
         background: var(--panel); border: 1px solid var(--line);
         color: var(--muted); }
+
+/* UX-207: the decision, above everything that justifies it. */
+.decision { border: 1px solid var(--accent); border-radius: 4px;
+            padding: .7rem .9rem; margin-bottom: 1rem;
+            background: var(--panel); }
+.decision h2 { margin-top: 0; }
+.decision .diagnosis { font-size: 1.02rem; margin: .2rem 0 .6rem; }
+.decision .opportunity { margin: .3rem 0 .6rem; }
+.decision .actions { margin: 0; padding-left: 1.3rem; }
+.decision .action { margin: .2rem 0; display: flex; gap: .6rem;
+                    align-items: baseline; flex-wrap: wrap; }
+.decision .action .worth { color: var(--muted); font-size: .85rem; }
+.decision .action .why { font-size: .8rem; }
+.status-line { margin: .2rem 0 .4rem; font-size: .9rem; }
+.evidence-detail > summary { cursor: pointer; font-size: .85rem;
+                             color: var(--muted); }
+.overview-tail > summary { cursor: pointer; font-size: .82rem;
+                           color: var(--muted); margin-top: .3rem; }

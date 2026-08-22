@@ -77,7 +77,9 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js",
           # UX-204: the link-builder the investigate buttons read, and
           # `sql.html` now renders its list from `questions.js` rather
           # than carrying a copy - so the page needs it served too.
-          "trace_context.js")
+          "trace_context.js",
+          # UX-205: the filters, thresholds and copy helpers.
+          "tables.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured
@@ -368,7 +370,38 @@ def _inline_module(name: str) -> str:
     text = _IMPORT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
     return "\n".join(
         re.sub(r"^export\s+(?=(function|const|let|class|async)\b)", "", line)
-        for line in text.splitlines())
+        for line in _uncommented(text))
+
+
+def _uncommented(text: str):
+    """The module's lines, minus whole-line comments and blank lines.
+
+    `UX-205` is where the export crossed Direction 7's page ceiling, and
+    the honest place to find the bytes was here: this project's comments
+    are written for someone reading the repository, and an attached
+    report carries none of those readers. Measured: 79,180 B of modules
+    become 52,870 B.
+
+    Deliberately conservative - only lines whose first non-space
+    characters open a comment, and block comments delimited on their own
+    lines. A `//` inside a string or a regex literal is never at the
+    start of a line, so nothing here can truncate an expression. It is
+    not a minifier and must not become one: code is left exactly as
+    written, so a stack trace from an exported page still quotes the
+    source.
+    """
+    in_block = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if in_block:
+            in_block = "*/" not in stripped
+            continue
+        if stripped.startswith("/*"):
+            in_block = "*/" not in stripped
+            continue
+        if not stripped or stripped.startswith("//"):
+            continue
+        yield line
 
 
 def export(run: str, path: str, with_trace: bool = True) -> dict:

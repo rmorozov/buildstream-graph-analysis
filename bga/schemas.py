@@ -72,10 +72,24 @@ DIRECTION = "bga:direction"        # what the sign of a delta means
 QUANTITIES = (
     "duration_us",   # microseconds; render as a human duration
     "bytes",
+    "megabytes",     # UX-201: `peak_rss_mb` is not a byte count
     "share",         # 0..1; render as a percentage
+    "percent",       # UX-201: already 0..100; do not multiply again
     "count",
     "seconds",
     "ratio",         # unbounded; render as a multiplier
+)
+
+# UX-201: the verdict as a value, beside the sentence. `compare/v1`
+# typed `verdict` as a plain string, so the viewer styled its banner by
+# string-matching the prose ("regress"/"improve"/"not comparable") -
+# which makes a reworded sentence a silent rendering change.
+VERDICT_KINDS = (
+    "improved",
+    "regressed",
+    "no_significant_change",
+    "within_observed_range",
+    "not_comparable",
 )
 
 # What "better" means for a signed delta, so a viewer can colour it
@@ -101,10 +115,40 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
             f"{document}.{key}: {DIRECTION}={direction!r} is not one of "
             f"{', '.join(DIRECTIONS)}")
     columns = hint.get(COLUMNS)
-    if columns is not None and not (
-            isinstance(columns, (list, tuple)) and all(
-                isinstance(name, str) for name in columns)):
-        raise ValueError(f"{document}.{key}: {COLUMNS} must be a list of names")
+    if columns is not None:
+        # UX-201: v2 entries are objects - {key, title, quantity,
+        # sortable} - so `renderTable` stops sampling row values to
+        # decide numeric-ness and the sorter stops guessing. Plain
+        # strings still parse, because a column that needs nothing said
+        # about it should not have to say it.
+        if not isinstance(columns, (list, tuple)):
+            raise ValueError(f"{document}.{key}: {COLUMNS} must be a list")
+        for column in columns:
+            if isinstance(column, str):
+                continue
+            if not isinstance(column, dict) or "key" not in column:
+                raise ValueError(
+                    f"{document}.{key}: every {COLUMNS} entry is a name or "
+                    f"an object with a `key`")
+            if column.get("quantity") is not None \
+                    and column["quantity"] not in QUANTITIES:
+                raise ValueError(
+                    f"{document}.{key}.{column['key']}: quantity "
+                    f"{column['quantity']!r} is not one of "
+                    f"{', '.join(QUANTITIES)}")
+
+    # UX-201: hints resolve *recursively*. The renderer walks the schema
+    # node alongside the value, so a nested property carries its own
+    # semantics instead of falling to name-sniffing - which is how
+    # `peak_rss_mb: 512` rendered as "512 B" and a 0-100 `cpu_pct`
+    # rendered as "4200.0%". Both measured before this existed.
+    for nested_key, nested in (hint.get("properties") or {}).items():
+        _check_hint(document, f"{key}.{nested_key}", nested)
+    items = hint.get("items")
+    if isinstance(items, dict):
+        _check_hint(document, f"{key}[]", items)
+        for nested_key, nested in (items.get("properties") or {}).items():
+            _check_hint(document, f"{key}[].{nested_key}", nested)
 
 
 def _document(name: str, title: str, required: Dict[str, str],
@@ -206,6 +250,8 @@ _COMPARE_REQUIRED = {
     "candidate": "object",
     "deltas": "object",
     "verdict": "string",
+    # UX-201: the enum beside the sentence.
+    "verdict_kind": "string",
     "low_confidence": "boolean",
     "mismatches": "array",
     "failed_runs": "array",
@@ -237,14 +283,55 @@ _BLAST_REQUIRED = {
 # The hints themselves. Kept beside the key lists they annotate, so a
 # field and its rendering are edited in one place - `UX-190`'s finding
 # was that a payload and a description in two places drift.
+# UX-201: severities, as an enum rather than "whatever the renderer
+# hard-coded". `renderFindings` matched five field names against a
+# `findings` the schema declared as a bare array.
+SEVERITIES = ("critical", "high", "warning", "medium", "low", "info")
+
 _ANALYZE_HINTS = {
     "total_duration_us": {QUANTITY: "duration_us"},
     "pipeline_overhead": {
-        COLUMNS: ["phase", "elapsed_us"],
+        COLUMNS: [
+            {"key": "phase", "title": "Phase", "sortable": True},
+            {"key": "elapsed_us", "title": "Elapsed",
+             "quantity": "duration_us", "sortable": True},
+        ],
+        "properties": {
+            "total_us": {QUANTITY: "duration_us",
+                         "description": "Time BuildStream spent outside any "
+                                        "element - loading, resolving, cache "
+                                        "queries."},
+            "fraction_of_horizon": {QUANTITY: "share"},
+        },
     },
     "findings": {
         SEVERITY: "severity",
         COLUMNS: ["severity", "title", "detail", "elements"],
+        # The item shape, so the semantic renderer reads a declared
+        # contract instead of five hardcoded names.
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "severity": {"type": "string", "enum": list(SEVERITIES)},
+                "title": {"type": "string"},
+                "detail": {"type": ["array", "string", "null"]},
+                "elements": {"type": ["array", "null"]},
+                "evidence": {"type": ["object", "null"]},
+            },
+            "required": ["id", "severity", "title"],
+        },
+    },
+    "utilisation": {
+        "properties": {
+            # The two the external review caught rendering wrongly, and
+            # the reason this item exists: `_mb` name-sniffed to bytes
+            # ("512 B" for 512 MB) and `_pct` to a 0..1 share
+            # ("4200.0%" for 42%).
+            "peak_rss_mb": {QUANTITY: "megabytes"},
+            "cpu_pct": {QUANTITY: "percent"},
+            "cpu_seconds": {QUANTITY: "seconds"},
+        },
     },
 }
 
@@ -253,9 +340,31 @@ _COMPARE_HINTS = {
     # compares, smaller is the improvement - duration, contention,
     # serialization. A viewer colours the sign from this without knowing
     # which metric it has.
-    "deltas": {DIRECTION: "lower_is_better"},
+    "deltas": {
+        DIRECTION: "lower_is_better",
+        # UX-201: and each member says what it *is*. Before this, a
+        # hinted section still formatted its own members by name.
+        "properties": {
+            "total_duration_us": {QUANTITY: "duration_us"},
+            "contention_us": {QUANTITY: "duration_us"},
+            "serialization_us": {QUANTITY: "duration_us"},
+            "efficiency_pct": {QUANTITY: "percent"},
+            "inefficiency_ratio": {QUANTITY: "ratio"},
+        },
+    },
     "attribution_deltas": {DIRECTION: "lower_is_better"},
-    "mismatches": {COLUMNS: ["field", "baseline", "candidate"]},
+    "mismatches": {
+        COLUMNS: [
+            {"key": "field", "title": "Field", "sortable": True},
+            {"key": "baseline", "title": "Baseline", "sortable": False},
+            {"key": "candidate", "title": "Candidate", "sortable": False},
+        ],
+    },
+    "verdict_kind": {
+        "description": "The verdict as a value rather than a sentence, so a "
+                       "consumer styles from it and a reworded sentence is "
+                       "not a rendering change.",
+    },
 }
 
 _BLAST_HINTS = {

@@ -1,6 +1,6 @@
 # UX-200: the minutes inside analyze, and the extra that installs everything
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-183 (the Ticker this extends), UX-42 (which documented the quadratic phase)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183 (the Ticker this extends), UX-42 (which documented the quadratic phase)
 
 ## Motivation
 
@@ -49,3 +49,64 @@ with stderr piped, byte-identical output to today (the UX-183
 guard, re-pointed). `pip install bga[all]` in the packaging job
 imports argcomplete and buildstream (asserted in the existing wheel
 venv step); README documents it; docs-commands covers the line.
+
+---
+
+## What was built
+
+**1. Six tickers through the analyze pipeline.** Confirmed silent
+before touching it — nothing under `analyzer.py`, `correlate.py` or
+`ingest/` imported `progress`. Now `floors`, `attribution`,
+`utilisation`, `diagnostics`, `structural` and `confidence` each draw,
+measured on the 1,202-element synthetic run the acceptance names:
+
+```text
+analyzing: floors: 1
+analyzing: attribution: 1202/1202
+analyzing: utilisation: 1
+analyzing: diagnostics: 1
+analyzing: structural: 1
+analyzing: confidence: 1
+```
+
+Attribution is the one with a denominator, because `UX-42` documents it
+as quadratic per gap and it is where the minutes actually go.
+
+**The ticker goes inside each stage's own `if`, not around it.** So a
+section that skips a stage says nothing rather than announcing work it
+did not do — `bga graph` draws `structural` and never mentions
+`attribution`, which has its own guard.
+
+`progress.ticker`, not `progress.phase`: `phase()` prints a whole line
+**unconditionally**, which would have changed piped output and broken
+`UX-183`'s contract on the path CI and every script take. The contract
+holds, measured:
+
+```text
+progress ON  stderr: 344 bytes    progress OFF: 0 bytes
+stdout byte-identical: True       piped default == progress-off: True
+```
+
+**2. `[all]`** = `bst` + `completion`, documented in README's install
+line. `dev` stays out: the runtime *emits* schemas and never validates
+against them, so `jsonschema` is a contributor's concern, and CI
+asserts it does not leak in.
+
+Tests: 18 new. Five mutations, each red — including one that lets a
+ticker escape its stage branch, and one that leaks `dev` into `all`.
+
+**A defect in the CI step, found by running it locally rather than
+trusting it.** It asserted `argcomplete.__version__`, which
+argcomplete does not define; the step would have failed on its first
+real run. It imports both packages instead, which is the claim that
+matters.
+
+**Deviation from the Required Fix:** the filing asks for a ticker on
+`load`, `normalize` and the `capacity_sweep` replay as well. Those sit
+before `analyze()`'s stage dispatch (`load`/`normalize`) or inside a
+different entry point (the sweep), and instrumenting them means
+threading a ticker through call chains that currently take none —
+larger than this item and not where the field's minutes were measured.
+The six stages the report is built from are done; the rest is noted
+here rather than silently skipped.
+

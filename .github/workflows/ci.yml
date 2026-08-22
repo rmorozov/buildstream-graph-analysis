@@ -86,6 +86,30 @@ jobs:
             /tmp/pkgvenv/bin/bga "$alias" --help > /dev/null
           done
 
+      - name: The everything extra installs everything
+        # UX-200: `bga[all]` is the form the README tells a user to run,
+        # so CI runs it. A separate venv from the one above, because
+        # this one deliberately pulls buildstream and argcomplete in and
+        # the wheel-shape checks want the minimal install.
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/allvenv
+          /tmp/allvenv/bin/pip install --quiet "$(ls dist/*.whl)[all]"
+          # Import, not `__version__`: argcomplete does not define one,
+          # and asserting on it made this step fail on its first local
+          # run. Importing is the claim that matters anyway.
+          /tmp/allvenv/bin/python -c "
+          import argcomplete, buildstream
+          print('argcomplete and buildstream both import')
+          "
+          # `dev` is the contributor set and must stay out of `all` -
+          # the runtime emits schemas and never validates against them.
+          if /tmp/allvenv/bin/python -c "import jsonschema" 2>/dev/null; then
+            echo "jsonschema came in with [all]; it is a dev-only concern" >&2
+            exit 1
+          fi
+          echo "[all] installs the user-facing set and nothing more"
+
       - name: The installed viewer really serves a page
         # UX-203: the packaging loop above runs `--help` for every alias
         # and never serves anything, so the class that shipped "broken in

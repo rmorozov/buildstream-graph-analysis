@@ -15,6 +15,7 @@ The second half is `[all]`: `[dev]`, `[bst]` and `[completion]` existed
 and a user who wanted the full experience assembled it by hand.
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -105,23 +106,110 @@ class TestASectionDrawsOnlyItsOwnPhases:
             "announced a phase this section skips")
 
 
+def _extras_without_tomllib(path="pyproject.toml"):
+    """`[project.optional-dependencies]`, read without `tomllib`.
+
+    `tomllib` is stdlib only from 3.11 and this project supports 3.9, so
+    the three guards below need a reader that works there. Deliberately
+    not `importorskip("tomllib")`: a skip on two of the four matrix
+    versions is a guard that quietly stops guarding.
+
+    **Line-based, and scoped to one table, because the regex it replaces
+    was wrong twice over.** The first attempt matched
+    `^name = (\\[[^\\]]*\\])`, which stops at the first `]` in the block -
+    and `dev`'s own comments mention `pip install -e ".[dev]"`, so the
+    match ended mid-comment and `ast.literal_eval` raised
+    `SyntaxError: '[' was never closed`. It passed locally on 3.11,
+    where this path never runs, and failed on 3.9 and 3.10 in CI. The
+    second attempt read arrays from *every* table (picking up
+    `classifiers` and `packages`) and missed the two extras written on
+    one line.
+
+    Comments are dropped before anything is read and one requirement is
+    taken per line, so a `#` or a `]` inside prose cannot be mistaken
+    for syntax. `test_the_fallback_agrees_with_tomllib` pins the result
+    against the real parser wherever there is one - which is the check
+    that would have caught both mistakes.
+    """
+    table, name, out = None, None, {}
+    for raw in open(path, encoding="utf-8"):
+        line = raw.strip()
+        if name is None:
+            header = re.match(r"^\[([^\]]+)\]$", line)
+            if header:
+                table = header.group(1)
+                continue
+            if table != "project.optional-dependencies":
+                continue
+            single = re.match(r'^([\w-]+) = \[(.*)\]\s*(?:#.*)?$', line)
+            if single:
+                out[single.group(1)] = _requirements(single.group(2))
+                continue
+            opened = re.match(r"^([\w-]+) = \[\s*(?:#.*)?$", line)
+            if opened:
+                name = opened.group(1)
+                out[name] = []
+            continue
+        if line.startswith("]"):
+            name = None
+        elif not line.startswith("#"):
+            out[name].extend(_requirements(line))
+    return out
+
+
+def _requirements(text):
+    """Every quoted string in one array body, comments excluded."""
+    return re.findall(r'"([^"]*)"', text.split("#", 1)[0])
+
+
 class TestTheEverythingExtra:
     def _extras(self):
         try:
             import tomllib
         except ImportError:                      # pragma: no cover - <3.11
-            import ast
-            import re
-
-            text = open("pyproject.toml", encoding="utf-8").read()
-            out = {}
-            for name in ("dev", "bst", "completion", "all"):
-                match = re.search(rf'^{name} = (\[[^\]]*\])', text, re.M)
-                if match:
-                    out[name] = ast.literal_eval(match.group(1))
-            return out
+            return _extras_without_tomllib()
         return tomllib.load(open("pyproject.toml", "rb"))[
             "project"]["optional-dependencies"]
+
+    def test_the_fallback_agrees_with_tomllib(self):
+        """The guard that was missing, and would have caught both of the
+        fallback's bugs before CI did.
+
+        The `<3.11` path never runs on the interpreter most of this is
+        written on, so it has to be exercised *here* rather than only on
+        the two matrix versions that take it - and compared against the
+        real parser rather than against my idea of what it should say.
+        """
+        tomllib = pytest.importorskip(
+            "tomllib", reason="nothing to compare against below 3.11")
+        real = tomllib.load(open("pyproject.toml", "rb"))[
+            "project"]["optional-dependencies"]
+        assert _extras_without_tomllib() == real
+
+    def test_the_fallback_survives_prose_that_looks_like_syntax(self, tmp_path):
+        """The exact shapes that broke it: a `]` inside a comment, an
+        array written on one line, and arrays in other tables."""
+        toml = tmp_path / "pyproject.toml"
+        toml.write_text(
+            '[project]\n'
+            'classifiers = ["Programming Language :: Python :: 3"]\n'
+            '\n'
+            '[project.optional-dependencies]\n'
+            'dev = [\n'
+            '    # must run under plain `pip install -e ".[dev]"` - see\n'
+            '    # the note about the bst extra [sic]\n'
+            '    "pytest>=7.0",\n'
+            '    "ruff>=0.6",  # the linter\n'
+            ']\n'
+            'all = ["pytest>=7.0", "ruff>=0.6"]\n'
+            '\n'
+            '[project.scripts]\n'
+            'bga = "bga.cli:main"\n',
+            encoding="utf-8")
+        assert _extras_without_tomllib(str(toml)) == {
+            "dev": ["pytest>=7.0", "ruff>=0.6"],
+            "all": ["pytest>=7.0", "ruff>=0.6"],
+        }
 
     def test_it_exists(self):
         assert "all" in self._extras()

@@ -902,6 +902,59 @@ guard now asserts the thing the number was standing in for: the
 page *is* the checked-in modules plus the stylesheet, so 4 KB of
 new feature and 4 KB of vendored library stop looking alike.
 
+## Round 24: publish the relationship, then navigate it
+
+A third external review, evaluated the same way as the first two. Its
+one-line statement of where the tool is, adopted:
+
+> the next improvements should not make the page prettier; they should
+> turn existing BGA facts into stronger navigation and investigation
+> primitives.
+
+**The finding that reframes it.** `bga/correlate.py:141` already
+assembles the relationship layer — one `ElementJoin` per element,
+Plane 1's path share, saving and blast radius beside Plane 2's
+achieved parallelism, CPU coverage, peak RSS and dominant binary. `bga correlate --format json`
+emits it, correctly and completely — and unversioned: no `schema`
+stamp, so `UX-190`'s contract does not cover it; no view-hints, so the
+viewer could not render it generically; and `payloads()` does not serve
+it. `correlate --schema` says so itself: *"correlate produces no
+versioned JSON output"*. So the "element inspector" and the "three-plane
+investigation ladder" the review proposed as new work are one
+already-computed join missing a contract.
+That is this project's oldest pattern, on its fourth occurrence after
+`blast_tree`, `headline` and the compare payload the band needed: **the
+analysis knows, and the published schema does not say.** Direction 7's
+rule is what makes the fix cheap and the shortcut expensive — a viewer
+that assembled the join itself would be the second analyzer the whole
+architecture exists to prevent.
+
+**And the correction to round 23's own work.** `UX-208` shipped a
+generic Inspect on every element row, anchored at a fragment nothing in
+the page sets: 19 links, 11 distinct targets, 11 unresolvable. The
+guards asserted the affordance existed, not that it arrived. Same
+failure class this project keeps finding, in the round that was about
+finding it — which is the argument for `UX-216` naming resolution, not
+presence, as its acceptance.
+
+**Declined, with the reasons recorded:** the element inspector as a
+*drawer*. Overlay machinery is the one part of this page that would not
+survive an export opened from a downloads folder, a print,
+`filter: grayscale`, or a pasted anchor — and a section gets the same
+cross-reference value while making the dead anchor resolve as a side
+effect. "Resist adding more charts" was agreed rather than filed: it is
+this document's standing position already.
+
+**What the review did not look at: the loop.** Every item it proposed
+improves one reading of one report. The friction this tool is built
+around is `capture → analyze → read → change → capture again`, and that
+is where the repetition is. Three items came from walking it — the next
+three commands are always retyped and can be *published* (so the
+terminal, CI and the page agree on the next step rather than the viewer
+deciding), the investigation is not resumable because `UX-211` carried
+the view and not the decision, and "did my fix work?" is still answered
+by opening two reports side by side.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -932,6 +985,7 @@ the other rounds now:
 | [21](../audits/round-21.md) | all ten field landings verified holding; Direction 7 argued — the viewer as a thin window onto the JSON, timelines to Perfetto (`UX-193`..`UX-197`) |
 | [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
 | [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
+| [24](../audits/round-24.md) | the relationship layer the third external review asked for is already computed in `correlate.py` and published nowhere; round 23's own Inspect anchors resolve to nothing; three of the review's premises corrected, and the loop it did not look at filed (`UX-215`..`UX-226`) |
 
 ## Verification Log
 

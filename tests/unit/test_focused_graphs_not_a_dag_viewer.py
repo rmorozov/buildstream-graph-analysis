@@ -27,6 +27,24 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 REAL = "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run"
 
+# `UX-213`: every guard an acceptance names runs on a run that is **in
+# the repository**. The real capture stays as extra coverage where it
+# exists, but it is never the only place a mutation would be caught -
+# round 23 proved that uniform widths and a flattened depth kept the
+# whole file green on a fresh clone, because the two guards that would
+# have caught them were pinned to a timestamped snapshot no CI creates.
+#
+# The golden fixture carries what both drawings need: a three-element
+# critical path with distinct shares (0.43 / 0.36 / 0.21) and, from
+# `base.bst`, a three-level blast tree (depths 0, 1, 2).
+_needs_real = pytest.mark.skipif(not os.path.isdir(REAL),
+                                 reason="no real capture here")
+# `(run, blast target)` - the target differs because the fixtures do.
+RUNS = [
+    pytest.param(GOLDEN, "base.bst", id="committed"),
+    pytest.param(REAL, "toolchain.bst", id="real-capture", marks=_needs_real),
+]
+
 
 def _node(script, timeout=120):
     result = subprocess.run([node, "--input-type=module", "-e", script],
@@ -79,36 +97,47 @@ class TestTheDepthThatHadToBePublished:
     walking the graph in JavaScript, which is the second analysis the
     no-arithmetic rule exists to prevent."""
 
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_blast_publishes_each_element_at_a_depth(self):
-        answer = _blast(REAL, "toolchain.bst")
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_blast_publishes_each_element_at_a_depth(self, run, target):
+        answer = _blast(run, target)
         tree = answer["blast_tree"]
         assert tree, "blast/v1 carries no tree"
         assert {row["element_uid"] for row in tree} == set(answer["blast_elements"])
         assert all(row["depth"] >= 0 for row in tree)
 
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_the_direct_consumers_are_depth_zero(self):
-        answer = _blast(REAL, "toolchain.bst")
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_the_direct_consumers_are_depth_zero(self, run, target):
+        answer = _blast(run, target)
         zero = {row["element_uid"] for row in answer["blast_tree"]
                 if row["depth"] == 0}
         assert zero == set(answer["direct_elements"])
 
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_depth_is_hops_not_position_in_the_list(self):
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_depth_is_hops_not_position_in_the_list(self, run, target):
         """The bug the first attempt had: `compute_reachability` returns
         the *transitive* closure, so a breadth-first walk over it put
         every element at depth 1 and the tree was flat. It walks the
-        immediate successors now - `all.bst`, which consumes `app.bst`,
-        is two hops from `toolchain.bst` and says so."""
-        answer = _blast(REAL, "toolchain.bst")
-        depths = {row["element_uid"]: row["depth"] for row in answer["blast_tree"]}
-        assert depths["all.bst"] > depths["app.bst"], depths
-        assert max(depths.values()) >= 2, depths
+        immediate successors now.
 
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_each_row_carries_its_kind_and_its_measured_work(self):
-        answer = _blast(REAL, "toolchain.bst")
+        `UX-213`: this is one of the two guards the `UX-206` acceptance
+        names, and it used to run only where the real capture lived - so
+        hardcoding `depth` kept a fresh clone entirely green. The golden
+        fixture is a three-element chain, so `base.bst` reaches
+        `app.bst` at depth 2 through `lib.bst`, and flattening the walk
+        reddens *here*, in the repository.
+        """
+        answer = _blast(run, target)
+        depths = {row["element_uid"]: row["depth"] for row in answer["blast_tree"]}
+        assert max(depths.values()) >= 2, (
+            f"nothing is more than one hop away, so a flattened walk "
+            f"would look identical: {depths}")
+        # Someone is strictly further away than someone else - the
+        # property a hardcoded depth destroys.
+        assert len(set(depths.values())) >= 3, depths
+
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_each_row_carries_its_kind_and_its_measured_work(self, run, target):
+        answer = _blast(run, target)
         for row in answer["blast_tree"]:
             assert row["element_kind"], row
         costed = [r for r in answer["blast_tree"]
@@ -127,10 +156,17 @@ class TestTheDepthThatHadToBePublished:
 
 @needs_node
 class TestTheChainDrawn:
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_the_widths_are_the_published_share(self):
-        """The acceptance's mutation: uniform widths reddens."""
-        payload = _analyze(REAL)
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_the_widths_are_the_published_share(self, run, target):
+        """The acceptance's mutation: uniform widths reddens.
+
+        `UX-213`: and it now reddens on the committed fixture too. This
+        guard was pinned to the real capture, so `flex-grow: 1` passed
+        everywhere the capture was absent - which is everywhere but one
+        container. The golden chain's three shares are distinct
+        (0.43 / 0.36 / 0.21), which is all the property needs.
+        """
+        payload = _analyze(run)
         out = _render("renderCriticalPath", payload)
         detail = payload["signals"]["critical_path_detail"]
         assert len(out["boxes"]) == len(detail)
@@ -177,19 +213,19 @@ class TestTheChainDrawn:
         assert out["folded"] is None
         assert out["hidden_before"] == 0
 
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_each_box_links_to_the_section_that_explains_it(self):
-        out = _render("renderCriticalPath", _analyze(REAL))
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_each_box_links_to_the_section_that_explains_it(self, run, target):
+        out = _render("renderCriticalPath", _analyze(run))
         assert all(box["href"] == "#signals" for box in out["boxes"]), out["boxes"]
 
 
 @needs_node
 class TestTheBlastTreeDrawn:
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_the_indentation_is_the_published_depth(self):
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_the_indentation_is_the_published_depth(self, run, target):
         """The nesting is asserted against the JSON, not against the
         order rows happen to appear in."""
-        answer = _blast(REAL, "toolchain.bst")
+        answer = _blast(run, target)
         out = _render("renderBlastTree", answer)
         published = {row["element_uid"]: row["depth"] for row in answer["blast_tree"]}
         assert out["rows"], "the tree rendered nothing"
@@ -201,9 +237,9 @@ class TestTheBlastTreeDrawn:
                                         .replace("rem", ""))
             assert indent == pytest.approx(published[row["element"]] * 1.4), row
 
-    @pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
-    def test_the_kind_badges_come_from_the_declared_item_shape(self):
-        answer = _blast(REAL, "toolchain.bst")
+    @pytest.mark.parametrize("run,target", RUNS)
+    def test_the_kind_badges_come_from_the_declared_item_shape(self, run, target):
+        answer = _blast(run, target)
         out = _render("renderBlastTree", answer)
         kinds = {row["element_uid"]: row["element_kind"]
                  for row in answer["blast_tree"]}
@@ -213,6 +249,39 @@ class TestTheBlastTreeDrawn:
     def test_an_answer_with_no_tree_draws_nothing(self):
         out = _render("renderBlastTree", {"target": "x", "blast_count": 0})
         assert out["rendered"] is False
+
+
+class TestTheGuardsGuardEverywhere:
+    """`UX-213`. The defect this file carried was not a wrong assertion -
+    every assertion here was right. It was that the only place two of
+    them ran was a machine with an untracked capture on it, so the
+    mutations the `UX-206` acceptance names passed on a fresh clone.
+
+    A skip on a genuinely optional input is fine. An *acceptance* that
+    lives entirely behind one is not, and nothing said so out loud."""
+
+    def test_the_fixture_matrix_names_a_run_that_is_in_the_repository(self):
+        import subprocess
+
+        unmarked = [param for param in RUNS if not param.marks]
+        assert unmarked, (
+            "every run in the matrix is conditional, so every guard using "
+            "it can vanish at once")
+        for param in unmarked:
+            run = param.values[0]
+            tracked = subprocess.run(
+                ["git", "ls-files", "--error-unmatch", run],
+                capture_output=True, text=True)
+            assert tracked.returncode == 0, (
+                f"{run} is not tracked by git, so a fresh clone would skip "
+                f"the guards pinned to it - which is exactly UX-213")
+
+    def test_the_real_capture_is_extra_coverage_not_the_only_coverage(self):
+        """The property, stated where the next person will read it: if
+        the real-capture entry were dropped entirely, every mutation
+        guard in this file would still have somewhere to run."""
+        conditional = [param for param in RUNS if param.marks]
+        assert len(conditional) < len(RUNS)
 
 
 class TestTheRestraintHolds:

@@ -207,15 +207,28 @@ class TestTheTimeline:
 
 
 class TestTheSizeDiscipline:
-    def test_the_payload_dwarfs_the_page(self):
+    def test_the_payload_dwarfs_the_page(self, exported):
         """Direction 7's own test of whether the viewer stayed thin. At
         1,202 elements the report is 816,573 B against a 39,119 B page -
-        if that ratio ever inverts, the page has grown a framework."""
-        page = sum(os.path.getsize(os.path.join("bga/viewer", name))
-                   for name in os.listdir("bga/viewer"))
-        assert page < 80_000, (
-            f"the whole viewer is {page} B - Direction 7's rule is that the "
-            f"data, not the page, is what an export weighs")
+        if that ratio ever inverts, the page has grown a framework.
+
+        Measured on the **exported file with its data cut out**, which
+        is what the rule is about. It used to sum every file in
+        `bga/viewer/`, which counted `sql.html` and `perfetto.html` -
+        two served-only pages an export never carries - and missed that
+        a new module is page weight while a new docs page is not.
+        `UX-204` is what surfaced it: the directory crossed the ceiling
+        while the exported page was still under it.
+        """
+        html = open(exported[0], encoding="utf-8").read()
+        # Every `<script type="application/json">` block and the trace
+        # blob are *data*. What is left is the page.
+        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+                      r".*?</script>", "", html, flags=re.S)
+        assert len(page) < 80_000, (
+            f"the exported page is {len(page)} B with its data removed - "
+            f"Direction 7's rule is that the data, not the page, is what an "
+            f"export weighs")
 
     def test_the_golden_export_is_small_enough_to_attach(self, exported):
         assert exported[1]["bytes"] < 200_000, exported[1]["bytes"]

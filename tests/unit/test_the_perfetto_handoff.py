@@ -225,35 +225,71 @@ class TestThePagesSayWhatIsHappening:
         assert "not an upload" in text.lower()
 
 
+def _questions():
+    """The library as `questions.js` declares it, read through node.
+
+    Through the module rather than through `sql.html`: `UX-204` made the
+    page render the module, so a test that scrapes the page proves only
+    that the renderer ran.
+    """
+    if node is None:  # pragma: no cover - node gate lives on the class
+        pytest.skip("node is not installed")
+    script = (
+        'const q = await import("./bga/viewer/questions.js");'
+        "console.log(JSON.stringify(q.QUESTIONS.map((x) => ({"
+        "  id: x.id, title: x.title, why: x.why, category: x.category,"
+        "  rendered: q.renderedSql(x), categories: q.CATEGORIES }))));")
+    result = subprocess.run([node, "--input-type=module", "-e", script],
+                            capture_output=True, text=True, cwd=os.getcwd(),
+                            timeout=60)
+    assert result.returncode == 0, result.stderr
+    questions = json.loads(result.stdout)
+    assert questions, "the library is empty"
+    return questions
+
+
 class TestTheCannedSql:
     """Item 3: a docs page served by view, not a feature."""
 
     def test_every_snippet_is_a_select_that_parses(self):
-        import re
+        """Read from `questions.js`, which is the source since `UX-204`.
+
+        It used to read `sql.html`, where the list was written out a
+        second time; the only guard on the two agreeing compared
+        *titles*, so a changed query drifted silently. The page renders
+        from the module now, and this checks the module."""
         import sqlite3
 
-        text = open("bga/viewer/sql.html", encoding="utf-8").read()
-        snippets = re.findall(r"<pre><code>(.*?)</code></pre>", text, re.S)
-        assert len(snippets) >= 4, f"only {len(snippets)} snippets"
-        for snippet in snippets:
-            query = (snippet.replace("&gt;", ">").replace("&lt;", "<")
-                     .replace("&amp;", "&"))
-            assert query.strip().lower().startswith("select")
+        for question in _questions():
+            query = question["rendered"]
+            assert query.strip().lower().startswith("select"), question["id"]
             # PerfettoSQL is SQLite-dialect; `sqlite3.complete_statement`
             # plus an EXPLAIN against the real parser is as far as this
             # can go without trace_processor, and it does catch a typo.
-            assert sqlite3.complete_statement(query), query[:60]
+            assert sqlite3.complete_statement(query), question["id"]
 
     def test_each_one_says_what_it_answers(self):
-        import re
+        questions = _questions()
+        assert len(questions) >= 4
+        for question in questions:
+            assert question["title"].strip().endswith("?"), question["id"]
+            assert len(question["why"].strip()) > 40, question["id"]
 
-        text = open("bga/viewer/sql.html", encoding="utf-8").read()
-        blocks = re.findall(r"<h2>(.*?)</h2>\s*<p class=\"muted\">(.*?)</p>",
-                            text, re.S)
-        assert len(blocks) >= 4
-        for heading, why in blocks:
-            assert heading.strip().endswith("?"), heading
-            assert len(why.strip()) > 40, heading
+    def test_every_question_is_in_a_declared_category(self):
+        """`UX-204` item 3: the library is categorized, and a question
+        filed under a category the page does not render is a question
+        nobody sees."""
+        for question in _questions():
+            assert question["category"] in question["categories"], question["id"]
+
+    def test_the_page_renders_the_module_rather_than_a_copy(self):
+        """The drift this closes: `sql.html` carried its own copy of
+        every query."""
+        page = open("bga/viewer/sql.html", encoding="utf-8").read()
+        assert 'from "./questions.js"' in page
+        assert "<pre><code>" not in page, (
+            "sql.html has a hand-written query again - it renders the "
+            "module, or the two drift")
 
     def test_it_is_reachable_from_the_handoff_page(self, snapshot, served):
         assert _get(served(snapshot / "run") + "sql.html")[0] == 200
@@ -264,16 +300,13 @@ class TestTheCannedSql:
         """Local only, deliberately: bundling Perfetto is out of scope,
         and a CI job that downloads it would be a network dependency for
         a docs page."""
-        import re
-
         from tools.bga_timeline import render
 
         scratch = tempfile.mkdtemp()
         trace = os.path.join(scratch, "t.json")
         render(str(snapshot), trace, quiet=True)
-        text = open("bga/viewer/sql.html", encoding="utf-8").read()
-        for snippet in re.findall(r"<pre><code>(.*?)</code></pre>", text, re.S):
-            query = snippet.replace("&gt;", ">").replace("&lt;", "<")
+        for question in _questions():
+            query = question["rendered"]
             result = subprocess.run(
                 ["trace_processor_shell", "-q", "/dev/stdin", trace],
                 input=query, capture_output=True, text=True, timeout=120)

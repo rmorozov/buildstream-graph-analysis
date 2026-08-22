@@ -168,7 +168,12 @@ class TestCollapse:
 
 class TestTheExportKeepsItsFunctionality:
     def test_the_questions_module_is_the_single_source(self):
-        """`sql.html` and the export must render the same list."""
+        """`sql.html` and the export must render the same list.
+
+        This used to compare *titles* against a hand-written copy in
+        `sql.html` - which would have passed while every query drifted.
+        `UX-204` made the page render the module, so the assertion is
+        now that there is nothing left to drift *from*."""
         result = subprocess.run(
             [node, "--input-type=module", "-e",
              'const { QUESTIONS } = await import("./bga/viewer/questions.js");'
@@ -178,8 +183,11 @@ class TestTheExportKeepsItsFunctionality:
         titles = json.loads(result.stdout)
         assert len(titles) >= 4, titles
         page = open("bga/viewer/sql.html", encoding="utf-8").read()
+        assert 'from "./questions.js"' in page
         for title in titles:
-            assert title in page, f"sql.html has drifted from the module: {title}"
+            assert title not in page, (
+                f"sql.html spells out {title!r} instead of rendering the "
+                f"module - that is the copy this closed")
 
     @needs_node
     def test_the_export_carries_the_questions(self, exported, tmp_path):

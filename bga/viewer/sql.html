@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <!--
-  UX-194 item 3. A docs page served by `bga view`, not a feature: the
-  SQL engine is Perfetto's, and these are the questions that kept coming
-  up often enough to be worth writing down. Paste one into Perfetto's
-  "Query (SQL)" pane after the trace is loaded.
+  UX-194 item 3, rendered from `questions.js` since `UX-204`. A docs
+  page served by `bga view`, not a feature: the SQL engine is
+  Perfetto's, and these are the questions that kept coming up often
+  enough to be worth writing down.
+
+  The list is *not* written here. It was, and the copy drifted from the
+  module the export renders - a guard compared titles and would not have
+  caught a changed query. One source now: this page imports the same
+  module, so the page, the export and the per-finding investigate
+  buttons cannot disagree about what a question asks.
 -->
 <html lang="en">
 <head>
@@ -20,70 +26,35 @@
     then open <em>Query (SQL)</em> and paste one of these. Every bga
     timeline is a Chrome-trace event stream, so slices are what you
     query; Plane 1's element spans and Plane 2's process spans are
-    different tracks in the same trace.
+    different tracks in the same trace. A finding's
+    <em>Investigate in Perfetto</em> button opens the trace with the
+    matching query from this page attached.
   </p>
 </header>
-<main>
-
-<h2>Where did the time actually go, per element?</h2>
-<p class="muted">Plane 1's element spans, aggregated. The answer
-   <code>bga analyze</code> gives you in the Attribution table — here to
-   cross-check it, or to slice it further.</p>
-<pre><code>select name, count(*) as spans, sum(dur) / 1e9 as seconds
-from slice
-group by name
-order by seconds desc
-limit 25;</code></pre>
-
-<h2>Which elements ran the most processes?</h2>
-<p class="muted">Plane 2's lanes. A high count with low total time is a
-   process-storm — many short execs, the shape
-   <code>examples/08-process-storm</code> exists to show.</p>
-<pre><code>select t.name as lane, count(*) as processes,
-       sum(s.dur) / 1e9 as seconds
-from slice s join track t on s.track_id = t.id
-where t.name like 'native:%'
-group by lane
-order by processes desc
-limit 25;</code></pre>
-
-<h2>What is the sandbox tax here?</h2>
-<p class="muted">Time inside an element's span that no traced process
-   accounts for: staging, checkout, the sandbox itself. Compare with
-   <code>bga correlate</code>'s figure.</p>
-<pre><code>select p.name as element,
-       p.dur / 1e9 as element_seconds,
-       (p.dur - coalesce(sum(c.dur), 0)) / 1e9 as unaccounted_seconds
-from slice p
-left join slice c
-  on c.ts &gt;= p.ts and c.ts + c.dur &lt;= p.ts + p.dur and c.id != p.id
-group by p.id
-order by unaccounted_seconds desc
-limit 20;</code></pre>
-
-<h2>Where are the longest stalls?</h2>
-<p class="muted">Gaps on the element track: the build was running and
-   nothing was building. The wait-gap analysis in the report, seen
-   directly.</p>
-<pre><code>select s.name, s.ts, s.dur,
-       lead(s.ts) over (order by s.ts) - (s.ts + s.dur) as gap_after
-from slice s
-order by gap_after desc
-limit 20;</code></pre>
-
-<h2>What did one element actually execute?</h2>
-<p class="muted">Replace the name. This is the micro half of the cycle —
-   the commands inside one sandbox, longest first.</p>
-<pre><code>select s.name as command, s.dur / 1e6 as ms
-from slice s join track t on s.track_id = t.id
-where t.name = 'native:core.bst'
-order by s.dur desc
-limit 40;</code></pre>
-
-</main>
+<main id="questions"></main>
 <footer class="muted">
   <p>These grow as questions recur. The engine is Perfetto's — this page
      is a list of questions, not a feature.</p>
 </footer>
+<script type="module">
+import { renderQuestions } from "./questions.js";
+
+// The same `make` shape `app.js` uses, so one renderer serves both.
+function make(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attrs)) {
+    node.setAttribute(name, value);
+  }
+  for (const child of children) {
+    node.append(child?.nodeType ? child : String(child));
+  }
+  return node;
+}
+
+const section = renderQuestions(make);
+// The page has its own heading; the section's would be a second one.
+section.querySelector("h2")?.remove();
+document.getElementById("questions").append(section);
+</script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # UX-210: questions that know which plane they are asking
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-204 (the library these live in)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-204 (the library these live in)
 
 ## Motivation
 
@@ -62,3 +62,66 @@ The static guard reddens when any query loses its track scoping
 top 25) and `stalls` returns element-track gaps rather than
 micro-gaps to interleaved native slices — both checked against the
 same numbers in the published report.
+
+## Outcome
+
+All six queries are plane-scoped, and the trace turned out to be
+structured better than the fix assumed — so the scoping is cleaner than
+the prescription, and one of the filing's premises was wrong in a way
+that made the shipped `process-storm` query worse than described.
+
+**What the merged trace actually looks like** (measured, `examples/06`,
+871 events):
+
+| `slice.category` | count | what it is |
+| --- | --- | --- |
+| `bst-builder` | 11 | Plane 1 element spans |
+| `native-process` | 663 | Plane 2 processes |
+| `bst-invocation` | 1 | the build itself |
+
+**Two things this changed.** First, `category` is a published, semantic
+scoping channel — "which plane is this slice from" is exactly what it
+answers — so every query constrains it rather than joining `track` and
+filtering by name. Second, and the filing did not catch this: `native:`
+is a **process** name, emitted as `process_name` metadata for pids
+2..10, and those processes carry **no `thread_name` at all**. The
+existing `where t.name like 'native:%'` was therefore matching a
+*process* name against the `track` table — so `process-storm` was not
+merely polluted, it was very probably returning **nothing**, an empty
+table reading as "no process storm". The Required Fix's own
+prescription ("join `track` and exclude `native:%` lanes") would have
+inherited that mistake.
+
+**The join key is `args.element`, which both planes carry** — verified
+on real slices from each (`{"action": "build", "element":
+"toolchain.bst"}` and `{"element": "core.bst", "real_pid": 2}`). So an
+element's processes are found by the uid the report prints, not by
+parsing a span's display name (`toolchain.bst [macro-micro…/f81ed53b-
+build…log]`) or by reconstructing a lane name.
+
+Each `why` now names its plane, and `plane` is a declared field so the
+guard can check the declaration against the SQL rather than inferring
+it.
+
+Tests: 6 new guards. Five mutations, each red — including **both**
+halves of the acceptance's named `sandbox-tax` case, which needed a
+second guard: stripping the containment scoping leaves `'bst-builder'`
+elsewhere in the query, so the coarse "does this mention category"
+check stayed green while the answer went wrong. Containment by time
+alone subtracts any slice that happens to nest, including another
+element building in parallel — wrong on every real build. One round-22
+guard was updated rather than deleted: it pinned the old
+`native:<uid>` form, and its property (the uid is substituted, the
+example does not leak) is asserted against the new form.
+
+**Deviation from the Required Fix:** the "one manual run against a real
+two-plane capture" is **not** recorded, because
+`trace_processor_shell` is not installed in this environment and
+bundling Perfetto is out of scope by `UX-194`'s own decision. What was
+done instead: the trace's structure was measured directly (the table
+above, plus the process/thread layout and the args on both planes), the
+queries are checked to parse by `sqlite3.complete_statement`, and the
+existing `trace_processor`-marked test now exercises these six queries
+where the binary exists. The SQL *semantics* are therefore argued from
+the trace's measured shape rather than from an executed query, and this
+paragraph exists so nobody reads "done" as "run".

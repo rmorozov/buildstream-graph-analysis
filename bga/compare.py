@@ -162,6 +162,11 @@ class ComparisonResult:
     attribution_deltas: Dict[str, dict]
     verdict: str
     low_confidence: bool
+    # UX-201: the verdict as a value, from the same branch as the
+    # sentence. `None` means "not recorded" - a result built before this
+    # field existed, or by something other than the significance chain -
+    # and a consumer must not read that as `not_comparable`.
+    verdict_kind: Optional[str] = None
     comparability_warning: Optional[str] = None
     # UX-78: the same facts as `comparability_warning`, structured, so a
     # caller can refuse and name the check that failed rather than
@@ -241,6 +246,7 @@ class ComparisonResult:
             'candidate_confidence': self.candidate_confidence,
             'attribution_deltas': self.attribution_deltas,
             'verdict': self.verdict,
+            'verdict_kind': self.verdict_kind,
             'low_confidence': self.low_confidence,
             'comparability_warning': self.comparability_warning,
             'mismatches': self.mismatches,
@@ -693,8 +699,10 @@ def _compare_results(
         # who wants the partial numbers; what must refuse is the
         # verdict, because that is the line a user reads.
         verdict = f"not comparable ({_describe_build_failures(failed_run_details)})"
+        verdict_kind = "not_comparable"
     elif baseline_total is None or baseline_total <= 0 or delta_total_us is None:
         verdict = "not comparable (baseline has no measurable duration)"
+        verdict_kind = "not_comparable"
     else:
         # Integer-only significance check: |delta|/baseline >= 1% <=>
         # |delta|*100 >= baseline*_SIGNIFICANCE_PCT - no float division
@@ -747,16 +755,25 @@ def _compare_results(
         else:
             significant = abs(delta_total_us) * 100 >= baseline_total * _SIGNIFICANCE_PCT
             band_disputed = False
+        # UX-201: the sentence and the enum come out of the same
+        # branch, deliberately. The viewer used to style its banner by
+        # string-matching the prose, which made a reworded sentence a
+        # silent rendering change; deriving the enum anywhere else would
+        # be a second significance chain to keep in step.
         if band_disputed:
             # Not a verdict about the build: a duration the baseline set
             # itself reached cannot be evidence that something changed.
             verdict = "within the baseline set's own observed range"
+            verdict_kind = "within_observed_range"
         elif not significant:
             verdict = "no significant change"
+            verdict_kind = "no_significant_change"
         elif delta_total_us < 0:
             verdict = "improved"
+            verdict_kind = "improved"
         else:
             verdict = "regressed"
+            verdict_kind = "regressed"
 
     attribution_deltas = _attribution_deltas(
         baseline_result.attribution or {}, candidate_result.attribution or {},
@@ -776,6 +793,7 @@ def _compare_results(
         candidate_confidence=candidate_confidence,
         attribution_deltas=attribution_deltas,
         verdict=verdict,
+        verdict_kind=verdict_kind,
         low_confidence=low_confidence,
         comparability_warning=comparability_warning,
         mismatches=mismatches,

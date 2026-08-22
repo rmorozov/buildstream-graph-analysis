@@ -47,6 +47,12 @@ export function quantity(value, kind) {
     case "duration_us": return duration(value);
     case "bytes": return bytes(value);
     case "share": return `${(value * 100).toFixed(1)}%`;
+    // UX-201: already 0..100. Multiplying again is how a 42% cpu_pct
+    // rendered as "4200.0%".
+    case "percent": return `${value.toFixed(1)}%`;
+    // UX-201: and megabytes are not a byte count - `peak_rss_mb: 512`
+    // rendered as "512 B" through the `_mb`-means-bytes guess.
+    case "megabytes": return bytes(value * 1024 * 1024);
     case "seconds": return duration(value * 1e6);
     case "ratio": return `${value.toFixed(2)}×`;
     case "count": return String(value);
@@ -112,25 +118,65 @@ export function renderFindings(findings) {
   return section;
 }
 
-export function renderTable(key, rows, hint = {}) {
-  const columns = hint[COLUMNS] && hint[COLUMNS].length
-    ? hint[COLUMNS].filter((c) => rows.some((r) => c in (r ?? {})))
-    : [...new Set(rows.flatMap((r) => Object.keys(r ?? {})))];
+/**
+ * `bga:columns` v2: an entry is a name, or an object saying what the
+ * column *is*.
+ *
+ * UX-201: `renderTable` decided numeric-ness by sampling row values and
+ * the sorter guessed from the same sample, so a column of numeric-
+ * looking strings sorted as numbers and a column that should never be
+ * sorted was sortable anyway. Declared beats sampled.
+ */
+export function columnSpecs(hint, rows, node) {
+  const declared = hint[COLUMNS];
+  const present = (key) => rows.some((r) => key in (r ?? {}));
+  const itemNode = node?.items;
+  const fallback = () => [...new Set(rows.flatMap((r) => Object.keys(r ?? {})))]
+    .map((key) => ({ key }));
+  const specs = declared && declared.length
+    ? declared.map((c) => (typeof c === "string" ? { key: c } : { ...c }))
+              .filter((c) => present(c.key))
+    : fallback();
+  return specs.map((spec) => {
+    const child = childNode(itemNode, spec.key);
+    const quantityName = spec.quantity ?? hintsOf(child)[QUANTITY]
+      ?? guessQuantity(spec.key);
+    return {
+      ...spec,
+      title: spec.title ?? title(spec.key),
+      quantity: quantityName,
+      // Numeric-ness is declared by carrying a quantity, or observed
+      // only when nothing declared anything.
+      numeric: quantityName
+        ? true : rows.some((r) => typeof r?.[spec.key] === "number"),
+      sortable: spec.sortable !== false,
+      description: spec.description ?? hintsOf(child).description ?? null,
+    };
+  });
+}
+
+export function renderTable(key, rows, hint = {}, node = undefined) {
+  const specs = columnSpecs(hint, rows, node);
+  const columns = specs.map((s) => s.key);
   const table = el("table", { "data-table": key });
   const head = el("tr");
-  for (const column of columns) {
-    const numeric = rows.some((r) => typeof r?.[column] === "number");
-    head.append(el("th", { class: numeric ? "num" : null,
-                          scope: "col", "data-column": column }, title(column)));
+  for (const spec of specs) {
+    head.append(el("th", {
+      class: spec.numeric ? "num" : null,
+      scope: "col", "data-column": spec.key,
+      "data-sortable": String(spec.sortable),
+      title: spec.description ?? null,
+    }, spec.title));
   }
   table.append(el("thead", {}, head));
   const body = el("tbody");
   for (const row of rows) {
     const tr = el("tr");
-    for (const column of columns) {
+    for (const spec of specs) {
+      const column = spec.key;
       const raw = row?.[column];
       const numeric = typeof raw === "number";
-      const kind = numeric ? guessQuantity(column) : null;
+      const kind = numeric ? spec.quantity : null;
       tr.append(el("td",
         { class: numeric ? "num" : null,
           "data-column": column,
@@ -142,14 +188,17 @@ export function renderTable(key, rows, hint = {}) {
     body.append(tr);
   }
   table.append(body);
-  sortable(table);
+  sortable(table, specs);
   return el("section", { "data-section": key },
     el("h2", {}, title(key)), table);
 }
 
-function sortable(table) {
+function sortable(table, specs = []) {
   const body = table.querySelector("tbody");
   table.querySelectorAll("th").forEach((th, index) => {
+    // UX-201: a column the schema declares unsortable stays unsortable,
+    // whatever its values happen to look like.
+    if (specs[index] && specs[index].sortable === false) return;
     th.addEventListener("click", () => {
       const ascending = th.getAttribute("aria-sort") !== "ascending";
       table.querySelectorAll("th").forEach((other) =>
@@ -169,35 +218,63 @@ function sortable(table) {
   });
 }
 
-export function renderPairs(key, object, hint = {}) {
+export function renderPairs(key, object, hint = {}, node = undefined) {
   const direction = hint[DIRECTION];
   const list = el("dl", { class: "pairs" });
   for (const [name, value] of Object.entries(object)) {
-    let node;
+    // UX-201: each member resolved against *its own* schema node, not
+    // guessed from its name. `deltas` was hinted at the top level and
+    // still name-sniffed every member inside it.
+    const child = childNode(node, name);
+    const kind = quantityFor(child, name);
+    const described = hintsOf(child).description;
+    let cell;
     if (value !== null && typeof value === "object") {
-      node = el("details", {}, el("summary", {}, "object"),
+      cell = el("details", {}, el("summary", {}, "object"),
                 el("pre", {}, JSON.stringify(value, null, 2)));
     } else if (typeof value === "number" && direction) {
       // A signed change, coloured by what the schema says "better" is,
       // without this file knowing which metric it is looking at.
       const better = direction === "lower_is_better" ? value < 0 : value > 0;
-      node = el("span", {
+      cell = el("span", {
         class: `num delta ${value === 0 ? "" : better ? "better" : "worse"}`,
         "data-raw": String(value),
-      }, `${value > 0 ? "+" : ""}${quantity(value, guessQuantity(name))}`);
+      }, `${value > 0 ? "+" : ""}${quantity(value, kind)}`);
     } else if (typeof value === "number") {
-      node = el("span", { class: "num", "data-raw": String(value) },
-                quantity(value, guessQuantity(name)));
+      cell = el("span", { class: "num", "data-raw": String(value) },
+                quantity(value, kind));
     } else {
-      node = el("span", { "data-raw": value === null ? "" : String(value) },
+      cell = el("span", { "data-raw": value === null ? "" : String(value) },
                 value === null ? "—" : String(value));
     }
-    list.append(el("dt", { "data-key": name }, title(name)), el("dd", {}, node));
+    // UX-201: the schema's own `description` is the popover - the "why
+    // does this number matter" answer sourced from the contract, and
+    // thence the spec, rather than from prose written beside the
+    // renderer where it would drift.
+    const term = el("dt", { "data-key": name,
+                            title: described ?? null,
+                            "data-described": described ? "true" : null },
+                    title(name));
+    list.append(term, el("dd", {}, cell));
   }
   return el("section", { "data-section": key }, el("h2", {}, title(key)), list);
 }
 
-function verdictClass(text) {
+// UX-201: the enum decides, and the prose is a fallback for payloads
+// written before `verdict_kind` existed. The viewer used to
+// string-match the *sentence* - so rewording "improved" would have
+// silently restyled the banner, and a `compare/v1` that changed its
+// wording was a rendering change nobody would have called one.
+const VERDICT_CLASS = {
+  improved: "good",
+  regressed: "refused",
+  not_comparable: "refused",
+  no_significant_change: "",
+  within_observed_range: "warn",
+};
+
+export function verdictClass(text, kind) {
+  if (kind && kind in VERDICT_CLASS) return VERDICT_CLASS[kind];
   const value = String(text).toLowerCase();
   if (value.includes("not comparable") || value.includes("regress")) return "refused";
   if (value.includes("improve")) return "good";
@@ -212,8 +289,10 @@ export function renderVerdict(payload) {
   // why".
   const banner = [];
   if (payload.verdict) {
-    banner.push(el("div", { class: `verdict ${verdictClass(payload.verdict)}`,
-                            "data-verdict": String(payload.verdict) },
+    banner.push(el("div", {
+      class: `verdict ${verdictClass(payload.verdict, payload.verdict_kind)}`,
+      "data-verdict": String(payload.verdict),
+      "data-verdict-kind": payload.verdict_kind ?? null },
       el("h2", {}, "Verdict"), el("p", {}, String(payload.verdict))));
   }
   const outcome = payload.run_instance?.incomplete_reason
@@ -235,7 +314,7 @@ export function renderVerdict(payload) {
 
 // The generic dispatch. Note there is no `switch (key)` here: what a
 // value is rendered as follows from its *shape* and its hints.
-export function renderSection(key, value, hint = {}) {
+export function renderSection(key, value, hint = {}, node = undefined) {
   if (value === null || value === undefined) return null;
   if (hint[SEVERITY] && Array.isArray(value)) {
     return value.length ? renderFindings(value) : null;
@@ -243,13 +322,13 @@ export function renderSection(key, value, hint = {}) {
   if (Array.isArray(value)) {
     if (!value.length) return null;
     if (value.every((item) => item && typeof item === "object" && !Array.isArray(item))) {
-      return renderTable(key, value, hint);
+      return renderTable(key, value, hint, node);
     }
     return el("section", { "data-section": key }, el("h2", {}, title(key)),
               el("p", {}, el("code", {}, value.join(", "))));
   }
   if (typeof value === "object") {
-    return Object.keys(value).length ? renderPairs(key, value, hint) : null;
+    return Object.keys(value).length ? renderPairs(key, value, hint, node) : null;
   }
   return null;   // scalars belong in the summary, below
 }
@@ -273,15 +352,62 @@ export function renderSummary(payload, hints) {
             el("h2", {}, "Run"), list);
 }
 
+/**
+ * The hints on one schema node, plus the node itself so a renderer can
+ * keep walking.
+ *
+ * UX-201: hints used to be read from the *top level only*, and every
+ * nested value fell to `guessQuantity(key)` name-sniffing. The two
+ * systems demonstrably disagreed - `peak_rss_mb: 512` rendered as
+ * "512 B" and a 0-100 `cpu_pct` as "4200.0%", both measured. The schema
+ * is the authority now, at every depth; the guess is what happens when
+ * the schema says nothing, and that is a schema gap rather than a
+ * feature.
+ */
+export function hintsOf(node) {
+  const hint = {};
+  if (!node || typeof node !== "object") return hint;
+  for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION]) {
+    if (name in node) hint[name] = node[name];
+  }
+  if (node.description) hint.description = node.description;
+  return hint;
+}
+
+/** The schema node describing `key` inside `node`, or undefined. */
+export function childNode(node, key) {
+  if (!node || typeof node !== "object") return undefined;
+  if (node.properties && key in node.properties) return node.properties[key];
+  if (node.items) return node.items;
+  return undefined;
+}
+
+/**
+ * What a value should be rendered as, schema first.
+ *
+ * The one place the precedence lives, so "declared beats guessed" is a
+ * property of the code rather than of every call site remembering.
+ */
+export function quantityFor(node, key) {
+  const declared = hintsOf(node)[QUANTITY];
+  if (declared) return declared;
+  const guessed = guessQuantity(key);
+  if (guessed && typeof console !== "undefined" && globalThis.BGA_STRICT_HINTS) {
+    // Dev-mode complaint: an undeclared key the renderer had to guess
+    // about is a gap in the published schema, and the schema is what
+    // every other consumer reads.
+    console.warn(`bga: ${key} has no bga:quantity; guessed ${guessed}`);
+  }
+  return guessed;
+}
+
 export function render(payload, schema, root) {
   const hints = {};
   for (const [key, sub] of Object.entries(schema?.properties ?? {})) {
-    const hint = {};
-    for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION]) {
-      if (name in sub) hint[name] = sub[name];
-    }
+    const hint = hintsOf(sub);
     if (Object.keys(hint).length) hints[key] = hint;
   }
+  const nodes = schema?.properties ?? {};
 
   root.replaceChildren();
   for (const banner of renderVerdict(payload)) root.append(banner);
@@ -289,7 +415,7 @@ export function render(payload, schema, root) {
   if (summary) root.append(summary);
   for (const [key, value] of Object.entries(payload)) {
     if (key === "schema") continue;
-    const section = renderSection(key, value, hints[key] ?? {});
+    const section = renderSection(key, value, hints[key] ?? {}, nodes[key]);
     if (section) root.append(section);
   }
   root.setAttribute("aria-busy", "false");

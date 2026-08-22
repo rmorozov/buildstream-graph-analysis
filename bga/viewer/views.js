@@ -102,13 +102,22 @@ export function renderBand(compare) {
     "data-observed-x": geometry.observed.x.toFixed(3),
     "data-observed-width": geometry.observed.width.toFixed(3),
   });
+  // UX-212: the two rectangles differed by fill alone, and the caption
+  // was doing the work the drawing should. The extent is drawn open -
+  // a dashed outline around what the baselines *reached* - and the
+  // band solid, because the band is the claim and the extent is its
+  // context. Presentation attributes, so `filter: grayscale` cannot
+  // take them away.
   figure.append(svg("rect", {
     x: geometry.observed.x, width: geometry.observed.width,
     y: 18, height: 26, class: "observed", "data-role": "observed",
+    "data-outline": "dashed", "stroke-dasharray": "2 1.5",
+    "stroke-width": 0.6, "fill-opacity": 0.35,
   }));
   figure.append(svg("rect", {
     x: geometry.band.x, width: geometry.band.width,
     y: 24, height: 14, class: "band-strip", "data-role": "band",
+    "data-outline": "solid", "stroke-width": 0.6,
   }));
   for (const run of geometry.runs) {
     figure.append(svg("circle", {
@@ -126,26 +135,102 @@ export function renderBand(compare) {
   wrapper.setAttribute("data-section", "band");
   const heading = document.createElement("h2");
   heading.textContent = "The band";
+  // UX-209: the answer in one sentence. The long explanation is kept -
+  // nothing is removed from the page or the export - but it stops
+  // re-teaching `UX-170` at paragraph length on every render, to
+  // readers whose comparison is not even disputed.
   const caption = document.createElement("p");
   caption.className = "muted";
   caption.textContent = geometry.disputed
     ? "The candidate is outside the noise band but inside the range the "
-      + "baseline runs themselves spanned — the marker sits between the "
-      + "strip and the dots' extent. UX-170 calls this the disputed "
-      + "region, and it is why compare declines to call it a regression."
+      + "baselines themselves spanned, so compare declines to call it."
     : `The candidate is ${geometry.where}.`;
   wrapper.append(heading, figure, caption);
+  if (geometry.disputed) {
+    const why = document.createElement("details");
+    why.className = "muted";
+    why.setAttribute("data-fold", "band-why");
+    const summary = document.createElement("summary");
+    summary.textContent = "Why this is not a regression";
+    const body = document.createElement("p");
+    body.textContent =
+      "The marker sits between the strip and the dots' extent: the "
+      + "baseline set is too scattered for its own band to contain it. "
+      + "UX-170 calls this the disputed region - a set that cannot "
+      + "support the claim, rather than a run that got worse.";
+    why.append(summary, body);
+    wrapper.append(why);
+  }
   return wrapper;
 }
+
+// UX-212: a second channel for the verdict.
+//
+// The trend encoded `verdict_kind` as fill colour alone, so the one
+// chart that answers "is this project drifting" said nothing about
+// which way under `filter: grayscale`, a monochrome print, or the
+// muted palettes some themes produce. The precedent was already in
+// this function: an incomplete snapshot is a *square*, because that
+// difference survives anything.
+//
+// Shape, not colour, and named in a `data-marker` attribute so the
+// encoding is something a reader (and a guard) can read off the
+// element rather than infer from a stylesheet.
+//
+// *Which* shape is the schema's answer, not this file's: a map from
+// verdict kind to shape lives on `store/v1`'s `verdict_kind` node,
+// where it is validated to cover the vocabulary and to give no two
+// kinds the same shape. `UX-214` is the reason - a second list of
+// verdict kinds in JavaScript is a vocabulary waiting to diverge - and
+// it is why nothing here names a verdict.
+export function verdictMarkers(schema) {
+  return schema?.properties?.snapshots?.items
+    ?.properties?.verdict_kind?.["bga:markers"] ?? {};
+}
+
+export function verdictMarker(kind, markers = {}) {
+  return markers[kind] ?? "circle";
+}
+
+/** One trend point, drawn as its verdict's shape. */
+function markerPoint(marker, cx, cy, r, attrs) {
+  // `data-cy` on every marker, whatever its shape: the y position is
+  // the answer the chart gives, and a guard reading it should not have
+  // to know whether this verdict happened to draw a circle.
+  const shaped = { ...attrs, "data-marker": marker, "data-cy": cy };
+  if (marker === "circle" || marker === "circle-open") {
+    return svg("circle", {
+      cx, cy, r,
+      ...(marker === "circle-open"
+        ? { "stroke-dasharray": `${(r * 0.9).toFixed(2)} ${(r * 0.6).toFixed(2)}`,
+            "stroke-width": 0.7, "fill-opacity": 0.25 }
+        : {}),
+      ...shaped,
+    });
+  }
+  const points = marker === "triangle-up"
+    ? [[cx, cy - r * 1.25], [cx + r * 1.2, cy + r], [cx - r * 1.2, cy + r]]
+    : marker === "triangle-down"
+      ? [[cx, cy + r * 1.25], [cx + r * 1.2, cy - r], [cx - r * 1.2, cy - r]]
+      : [[cx, cy - r * 1.4], [cx + r * 1.4, cy], [cx, cy + r * 1.4],
+         [cx - r * 1.4, cy]];
+  return svg("polygon", {
+    points: points.map(([px, py]) => `${px.toFixed(2)},${py.toFixed(2)}`)
+      .join(" "),
+    ...shaped,
+  });
+}
+
 
 // -------------------------------------------------------------- trend
 //
 // `--list`, made visual. The question is "is this project drifting",
 // and the answer is a shape.
 
-export function renderTrend(store) {
+export function renderTrend(store, schema = undefined) {
   const rows = store?.snapshots ?? [];
   if (rows.length < 2) return null;
+  const markers = verdictMarkers(schema);
 
   const W = 100, H = 40;
   // UX-203: the axis is duration. It was `bytes`, so the trend
@@ -172,11 +257,13 @@ export function renderTrend(store) {
     // asked is whether this build is drifting, and the verdict is the
     // answer the rest of the tool already gives for one pair.
     const verdict = row.verdict_kind ?? "";
-    const point = svg(reason ? "rect" : "circle", reason
-      ? { x: x(index) - 1.3, y: y(row.total_duration_us ?? 0) - 1.3, width: 2.6,
-          height: 2.6, class: "trend-point incomplete",
-          "data-stamp": row.stamp, "data-incomplete": reason }
-      : { cx: x(index), cy: y(row.total_duration_us ?? 0), r: 1.3,
+    const point = reason
+      ? svg("rect", {
+          x: x(index) - 1.3, y: y(row.total_duration_us ?? 0) - 1.3, width: 2.6,
+          height: 2.6, class: "trend-point incomplete", "data-marker": "square",
+          "data-stamp": row.stamp, "data-incomplete": reason })
+      : markerPoint(verdictMarker(verdict, markers), x(index),
+                    y(row.total_duration_us ?? 0), 1.3, {
           class: `trend-point${row.alias ? " aliased" : ""}`
                  + (verdict ? ` verdict-${verdict}` : ""),
           "data-stamp": row.stamp, "data-alias": row.alias ?? "",
@@ -200,15 +287,31 @@ export function renderTrend(store) {
   wrapper.setAttribute("data-section", "store-trend");
   const heading = document.createElement("h2");
   heading.textContent = `The store (${rows.length} snapshots)`;
+  // UX-209: the shape, then one line. The reasons stay behind a fold
+  // rather than leaving the page - a reader who wants to know why a
+  // square is a square is one click away, and a reader who does not is
+  // no longer scrolling past it.
   const caption = document.createElement("p");
   caption.className = "muted";
   const incomplete = rows.filter((r) => r.incomplete_reason);
   caption.textContent = incomplete.length
-    ? `Squares are the ${incomplete.length} snapshot(s) that are not `
-      + `measurements (${[...new Set(incomplete.map((r) => r.incomplete_reason))]
-          .join(", ")}); they are on disk, so they are on the chart.`
-    : "Every snapshot here finished.";
+    ? `${rows.length} snapshots \u00b7 ${incomplete.length} not measurements`
+    : `${rows.length} snapshots \u00b7 all finished`;
   wrapper.append(heading, figure, caption);
+  if (incomplete.length) {
+    const why = document.createElement("details");
+    why.className = "muted";
+    why.setAttribute("data-fold", "trend-squares");
+    const summary = document.createElement("summary");
+    summary.textContent = "What the squares are";
+    const body = document.createElement("p");
+    body.textContent =
+      "Snapshots that are not measurements ("
+      + `${[...new Set(incomplete.map((r) => r.incomplete_reason))].join(", ")}`
+      + "); they are on disk, so they are on the chart.";
+    why.append(summary, body);
+    wrapper.append(why);
+  }
   return wrapper;
 }
 
@@ -247,6 +350,28 @@ export function renderBlastSearch(onQuery) {
   form.append(input, button);
   wrapper.append(heading, form, answer);
   return wrapper;
+}
+
+/**
+ * `UX-208` item 5: example chips, from the payload's own ranking.
+ *
+ * A search box with no examples is a box a reader has to already know
+ * the answer to use. The chips are the top blast-radius elements the
+ * report already published - not a guess, and absent when the ranking
+ * is (an empty ranking means no chips, never invented ones).
+ */
+export function blastChips(payload, onPick, make) {
+  const ranked = (payload?.signals?.top_blast_radius) || [];
+  if (!ranked.length) return null;
+  const row = make("p", { class: "blast-chips" });
+  row.append(make("span", { class: "muted" }, "Try: "));
+  for (const uid of ranked.slice(0, 4)) {
+    const chip = make("button", { type: "button", class: "chip",
+                                  "data-element": uid }, uid);
+    chip.addEventListener?.("click", () => onPick(uid));
+    row.append(chip);
+  }
+  return row;
 }
 
 export function renderBlastAnswer(result) {
@@ -378,6 +503,7 @@ export function renderOverview(payload) {
     const fold = document.createElement("details");
     fold.className = "overview-tail";
     fold.setAttribute("data-folded", String(tail.length));
+    fold.setAttribute("data-fold", "overview-tail");
     const summary = document.createElement("summary");
     summary.textContent = `${tail.length} smaller categories`;
     fold.append(summary);
@@ -474,6 +600,7 @@ export function renderEvidence(payload) {
 
   const fold = document.createElement("details");
   fold.className = "evidence-detail";
+  fold.setAttribute("data-fold", "evidence");
   const summary = document.createElement("summary");
   summary.textContent = "The numbers behind that";
   fold.append(summary);
@@ -626,6 +753,21 @@ function pathBox(entry) {
   time.className = "path-time num";
   time.textContent = seconds(entry.duration_us ?? 0);
   box.append(name, time);
+
+  // UX-208 item 1: the popover, read from the published entry. Every
+  // line here is a field - there is no fixture on which a recomputed
+  // share would pass, which is what the acceptance asks for.
+  const detail = [
+    entry.element_uid,
+    typeof entry.duration_us === "number" ? seconds(entry.duration_us) : null,
+    typeof entry.share_of_path === "number"
+      ? `${(entry.share_of_path * 100).toFixed(1)}% of the path` : null,
+    entry.element_kind ? `kind: ${entry.element_kind}` : null,
+    typeof entry.realizable_saving_us === "number"
+      ? `fixing it saves ${seconds(entry.realizable_saving_us)}` : null,
+  ].filter(Boolean).join(" \u00b7 ");
+  box.setAttribute("title", detail);
+  box.setAttribute("data-popover", detail);
   if (entry.element_kind) {
     const badge = document.createElement("span");
     badge.className = "kind";

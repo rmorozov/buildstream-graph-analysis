@@ -139,3 +139,33 @@ export function copy(value, deps = {}) {
     return Promise.resolve(false);
   }
 }
+
+/**
+ * `UX-208` item 4: a Top-N preset over a declared quantity column.
+ *
+ * Sorts by the published value and shows the first N. The badge keeps
+ * reporting the truth - `10 of 1,202` - because the preset narrows what
+ * is *shown*, it does not pretend the rest are gone.
+ */
+export function applyTopN(table, column, n) {
+  const body = table.querySelector("tbody");
+  const rows = [...body.querySelectorAll("tr")];
+  const value = (tr) => {
+    const cell = [...tr.children].find(
+      (td) => td.getAttribute("data-column") === column);
+    const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
+    return Number.isFinite(raw) ? raw : -Infinity;
+  };
+  rows.sort((a, b) => value(b) - value(a));
+  rows.forEach((tr, index) => {
+    tr.hidden = index >= n;
+    body.append(tr);
+  });
+  return Math.min(n, rows.length);
+}
+
+/** The quantity columns a Top-N preset can sort by, declared not
+ *  sampled - `UX-201`'s rule, reused. */
+export function presetColumns(specs = []) {
+  return specs.filter((spec) => spec.quantity).map((spec) => spec.key);
+}

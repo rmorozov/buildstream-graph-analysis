@@ -17,15 +17,21 @@ import { renderBand, renderTrend, renderBlastSearch,
          renderCriticalPath, renderBlastTree,
          renderDecision, INCOMPLETE } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
+import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
 import { renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
-         copy } from "./tables.js";
+         copy, applyTopN, presetColumns } from "./tables.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
 const COLUMNS = "bga:columns";
 const DIRECTION = "bga:direction";
+// UX-209: the question a section answers, and which part of the
+// argument it belongs to. UX-208: what a column's values *are*.
+const QUESTION = "bga:question";
+const RAIL = "bga:rail";
+const ROLE = "bga:role";
 
 // ---------------------------------------------------------------- format
 
@@ -83,6 +89,41 @@ export function guessQuantity(key) {
 
 export function title(key) {
   return key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
+/**
+ * `UX-209`: the heading is the question the section answers, where the
+ * schema declares one - and `title(key)` where it does not.
+ *
+ * Declared in `bga/schemas.py` rather than here, for the reason every
+ * other hint is: the text renderer and the TOC read the same field, so
+ * three surfaces cannot name one section three ways.
+ */
+export function heading(key, hint = {}) {
+  return { question: hint[QUESTION] ?? null, label: hint[QUESTION] ?? title(key),
+           subtitle: hint[QUESTION] ? key : null,
+           rail: hint[RAIL] ?? "raw" };
+}
+
+/** `UX-208`: the column that holds element uids, or null. */
+/** An element uid as an anchor fragment. Dots are legal in an `id`
+ *  but awkward in a selector, so the jump target is normalised once. */
+export function cssId(uid) {
+  return `element-${String(uid).replace(/[^\w-]+/g, "-")}`;
+}
+
+export function sectionHead(key, hint = {}) {
+  const info = heading(key, hint);
+  const node = el("h2", {}, info.label);
+  if (info.subtitle) {
+    node.append(el("span", { class: "section-key muted" }, info.subtitle));
+  }
+  return node;
+}
+
+export function elementColumn(specs = []) {
+  const found = specs.find((spec) => spec.role === "element");
+  return found ? found.key : null;
 }
 
 // ---------------------------------------------------------------- render
@@ -250,9 +291,27 @@ export function renderTable(key, rows, hint = {}, node = undefined) {
   // twelve that matter, and the page renders every row of every array
   // unconditionally - the right default for a viewer, unusable without
   // something to narrow it with.
+  // UX-208: a declared element column earns every row a generic
+  // Inspect - one affordance, no per-table code, because the *schema*
+  // says which values are element uids.
+  const uidColumn = elementColumn(specs);
+  if (uidColumn) {
+    table.setAttribute("data-element-column", uidColumn);
+    for (const tr of table.querySelectorAll("tbody tr")) {
+      const cell = [...tr.children].find(
+        (td) => td.getAttribute("data-column") === uidColumn);
+      if (!cell) continue;
+      const uid = cell.getAttribute("data-raw") || cell.textContent;
+      tr.setAttribute("data-element", uid);
+      cell.append(el("a", { class: "inspect", href: `#${cssId(uid)}`,
+                            title: `Find ${uid} elsewhere in this report` },
+                     "\u2315"));
+    }
+  }
   const tools = interrogable(table, specs, rows.length);
-  return el("section", { "data-section": key },
-    el("h2", {}, title(key)), tools, table);
+  return el("section", { "data-section": key,
+                         "data-rail": heading(key, hint).rail },
+    sectionHead(key, hint), tools, table);
 }
 
 /**
@@ -304,6 +363,28 @@ export function interrogable(table, specs, total) {
     th.append(input);
   });
 
+  // UX-208 item 4: Top-N over any column the schema declares a
+  // quantity. `Top 10` is a *preset*, not a cap - the badge still says
+  // `10 of 1,202`, because a reader who cannot see the denominator
+  // cannot tell a filtered table from a small one.
+  const presets = presetColumns(specs);
+  if (presets.length) {
+    const preset = el("select", { class: "top-n", "aria-label": "Top rows" });
+    preset.append(el("option", { value: "" }, "All rows"));
+    for (const column of presets) {
+      for (const n of [10, 25]) {
+        preset.append(el("option", { value: `${n}:${column}` },
+                         `Top ${n} by ${column}`));
+      }
+    }
+    preset.addEventListener("change", () => {
+      if (!preset.value) { refresh(); return; }
+      const [n, column] = preset.value.split(":");
+      badge.textContent = badgeText(applyTopN(table, column, Number(n)), total);
+    });
+    state.preset = preset;
+  }
+
   const copyRows = el("button", { type: "button", class: "copy-rows" },
                       "Copy shown rows");
   copyRows.addEventListener("click", () => {
@@ -321,7 +402,8 @@ export function interrogable(table, specs, total) {
     if (cell) copy(cellText(cell));
   });
 
-  return el("div", { class: "table-tools" }, box, badge, copyRows);
+  return el("div", { class: "table-tools" }, box, badge,
+                     state.preset ?? null, copyRows);
 }
 
 // What to type, in the unit the column publishes.
@@ -367,7 +449,16 @@ export function renderPairs(key, object, hint = {}, node = undefined) {
     const kind = quantityFor(child, name);
     const described = hintsOf(child).description;
     let cell;
-    if (value !== null && typeof value === "object") {
+    // UX-208: a nested array of objects is a *table*, not a JSON dump.
+    // `signals.critical_path_detail` - the list of elements the whole
+    // report is about - rendered as a `<pre>` of raw JSON, which is
+    // why nothing in it was sortable, filterable or one click from
+    // investigation. Same renderer, same declarations, one level down.
+    if (Array.isArray(value) && value.length
+        && value.every((item) => item && typeof item === "object"
+                                 && !Array.isArray(item))) {
+      cell = renderTable(name, value, hintsOf(child), child);
+    } else if (value !== null && typeof value === "object") {
       cell = el("details", {}, el("summary", {}, "object"),
                 el("pre", {}, JSON.stringify(value, null, 2)));
     } else if (typeof value === "number" && direction) {
@@ -395,7 +486,8 @@ export function renderPairs(key, object, hint = {}, node = undefined) {
                     title(name));
     list.append(term, el("dd", {}, cell));
   }
-  return el("section", { "data-section": key }, el("h2", {}, title(key)), list);
+  return el("section", { "data-section": key, "data-rail": heading(key, hint).rail },
+                        sectionHead(key, hint), list);
 }
 
 // UX-201: the enum decides, and the prose is a fallback for payloads
@@ -473,7 +565,9 @@ export function renderSection(key, value, hint = {}, node = undefined,
     if (value.every((item) => item && typeof item === "object" && !Array.isArray(item))) {
       return renderTable(key, value, hint, node);
     }
-    return el("section", { "data-section": key }, el("h2", {}, title(key)),
+    return el("section", { "data-section": key,
+                           "data-rail": heading(key, hint).rail },
+                          sectionHead(key, hint),
               el("p", {}, el("code", {}, value.join(", "))));
   }
   if (typeof value === "object") {
@@ -516,7 +610,7 @@ export function renderSummary(payload, hints) {
 export function hintsOf(node) {
   const hint = {};
   if (!node || typeof node !== "object") return hint;
-  for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION]) {
+  for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION, RAIL]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;
@@ -791,7 +885,9 @@ async function boot() {
       run.has_timeline ? (action) => decisionInvestigation(action, payload) : null);
     if (decision) root.prepend(decision);
     const store = await load("store", null).catch(() => null);
-    const trend = store && renderTrend(store);
+    // UX-212: the schema, so the trend draws the shape the *contract*
+    // assigns each verdict rather than one this page decided on.
+    const trend = store && renderTrend(store, schemas[store.schema]);
     if (trend) root.append(trend);
     // UX-199: the blast box is a *transport* - it asks the server. An
     // export is a `file://` document with no server, so the box could
@@ -834,9 +930,27 @@ async function boot() {
     const contents = toc(root, { document, controls });
     if (contents) {
       wireJumpBox(contents, root, payload);
+      // UX-211: the link that shows what I was looking at. Beside the
+      // contents, because that is where the reader already goes to
+      // reach for a section anchor.
+      const share = el("button", { type: "button", class: "copy-view" },
+                       "Copy link to this view");
+      share.addEventListener("click", () => {
+        copy(viewLink(root, location));
+        share.textContent = "\u2713 copied";
+        setTimeout(() => { share.textContent = "Copy link to this view"; }, 1200);
+      });
+      contents.append(el("p", { class: "toc-controls" }, share));
       document.body.insertBefore(contents, document.body.firstChild);
       document.body.setAttribute("data-has-toc", "true");
     }
+
+    // UX-211: the fragment last, over the finished document - it drives
+    // the controls the way a reader would, so there is no second path
+    // that can disagree with the first. A hash-free load does nothing
+    // at all here.
+    applyView(root, splitHash(location.hash).query);
+    wireViewState(root, { location, history: window.history });
   } catch (error) {
     root.replaceChildren(el("div", { class: "verdict refused" },
       el("h2", {}, "Could not load this run"),

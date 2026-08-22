@@ -1,6 +1,6 @@
 # UX-212: verdicts you can see without the palette
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-203 (the trend dots it re-encodes)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-203 (the trend dots it re-encodes)
 
 ## Motivation
 
@@ -42,3 +42,41 @@ attribute (shape or stroke, asserted from the SVG, not from
 computed style); the band's two rectangles carry distinct
 non-color presentation attributes. Mutation: collapsing the
 encodings back to fill-only reddens. Page-size guard holds.
+
+---
+
+## Outcome (round 23)
+
+**Status:** 🟢 Done.
+
+Each verdict kind draws a distinct shape — triangle down for
+`improved`, triangle up for `regressed`, a circle for
+`no_significant_change`, an open (dashed) circle for
+`within_observed_range` and a diamond for `not_comparable` — named in a
+`data-marker` attribute, so the encoding is something a reader and a
+guard read off the element rather than infer from a stylesheet. The
+band's two rectangles now differ by outline: the observed extent is
+drawn dashed, the band solid, both as presentation attributes that
+`filter: grayscale` cannot take away.
+
+**Which shape means which verdict is the schema's answer, not the
+viewer's.** The obvious implementation puts the map in `views.js`, and
+that is a second list of verdict kinds living in JavaScript — precisely
+the shape `UX-214` found and fixed one item earlier in this same round.
+The project's own guard caught it: `test_no_library_and_no_arithmetic_
+beyond_layout` bans verdict words in the viewer, and the first attempt
+tripped it. The map lives on `store/v1`'s `verdict_kind` node as
+`bga:markers`, validated where it is written to cover `VERDICT_KINDS`
+exactly, to use only shapes a renderer draws, and to give **no two kinds
+the same shape** — a map that repeats a shape is a colour-only encoding
+again, wearing a declaration. A page handed no schema draws one shape
+for everything rather than inventing an encoding of its own.
+
+One incidental fix the change forced: `data-cy` is now on every marker.
+An existing guard read the y positions off `circle` elements, and the
+first version of this item silently reduced what it could see from three
+points to two — a guard weakened by a feature, which is the failure this
+project keeps finding. The y position is published on every shape now.
+
+**Deviation from the Required Fix:** none. No new colours, no legend
+section.

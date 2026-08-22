@@ -70,6 +70,12 @@ dev = [
 # re-litigate UX-158's help formatting for nothing argcomplete does not
 # already give.
 completion = ["argcomplete>=3.0"]
+# UX-200: the everything form, so a user who wants the full experience
+# does not assemble it by hand. Deliberately the *user-facing* set:
+# `dev` is the contributor set and stays out of it - jsonschema is a
+# dev-only concern, because the runtime emits schemas and never
+# validates against them.
+all = ["buildstream>=2.0", "pyyaml>=6.0", "argcomplete>=3.0"]
 
 # Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
 # (tests/unit/test_bst_show_to_graph.py) - skipped automatically when

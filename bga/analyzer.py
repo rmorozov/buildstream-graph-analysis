@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
 
+from . import progress
 from .cache_effectiveness import compute_cache_accounting
 from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind, STRUCTURAL_ELEMENT_KINDS
 from .ingest.loader import load_all
@@ -1367,26 +1368,49 @@ class BuildEfficiencyAnalyzer:
         # attribution to render a dependency graph.
         stages = _SECTION_STAGES.get(section, _ALL_STAGES)
 
+        # UX-200: the field's report was "bga analyze in bga snapshot
+        # work for considerable several minutes, maybe progress here
+        # would be great", and the pipeline had no instrumentation at
+        # all - UX-183's five tickers all live outside it. `bga
+        # snapshot` calls analyze in-process, so stderr is still the
+        # user's terminal and these draw.
+        #
+        # Wrapped around each stage rather than threaded into it: no
+        # phase grows an `if` around its own work, and a stage a section
+        # skips draws nothing, because the ticker is inside the same
+        # branch the work is.
         # Floors (M3)
         if 'floors' in stages:
-            result.floors = self._compute_floors(graph_analysis)
-            result.floors['capacity_model_note'] = self._build_capacity_model_note()
+            with progress.ticker("analyzing: floors") as tick:
+                result.floors = self._compute_floors(graph_analysis)
+                result.floors['capacity_model_note'] = self._build_capacity_model_note()
+                tick.step()
 
-        # Attribution (M2)
+        # Attribution (M2) - `UX-42` documents this one as quadratic per
+        # gap, which is where the minutes actually go.
         if 'attribution' in stages:
-            result.attribution = self._compute_attribution(graph_analysis)
+            with progress.ticker("analyzing: attribution",
+                                 total=len(self.graph.elements) if self.graph else None) as tick:
+                result.attribution = self._compute_attribution(graph_analysis)
+                tick.step(len(self.graph.elements) if self.graph else 1)
 
         # CPU Utilization (M4)
         if 'utilisation' in stages:
-            result.utilisation = self._compute_utilization(occupancy_stats)
+            with progress.ticker("analyzing: utilisation") as tick:
+                result.utilisation = self._compute_utilization(occupancy_stats)
+                tick.step()
 
         # Advanced Diagnostics (M5)
         if 'diagnostics' in stages:
-            result.signals.update(self._compute_diagnostics(occupancy_stats, graph_analysis))
+            with progress.ticker("analyzing: diagnostics") as tick:
+                result.signals.update(self._compute_diagnostics(occupancy_stats, graph_analysis))
+                tick.step()
 
         # Structural Analysis (M6)
         if 'structural' in stages:
-            result.structural = self._compute_structural_analysis()
+            with progress.ticker("analyzing: structural") as tick:
+                result.structural = self._compute_structural_analysis()
+                tick.step()
 
         # Violations
         result.violations = self.violations
@@ -1402,9 +1426,11 @@ class BuildEfficiencyAnalyzer:
         # attribution and floors, so computing it for a narrow section
         # would reintroduce exactly the cost this gating removes.
         if 'confidence' in stages:
-            result.confidence = self._compute_confidence(
-                graph_analysis, result.attribution, result.floors
-            )
+            with progress.ticker("analyzing: confidence") as tick:
+                result.confidence = self._compute_confidence(
+                    graph_analysis, result.attribution, result.floors
+                )
+                tick.step()
 
         self.analysis_result = result
         return result

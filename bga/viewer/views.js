@@ -275,7 +275,14 @@ export function renderBlastAnswer(result) {
     dd.setAttribute("data-key", name.toLowerCase().replace(/\W+/g, "_"));
     list.append(dt, dd);
   }
-  return list;
+  // UX-206: and the same answer as a tree, under the summary that
+  // counts it. The counts say how much; the tree says what, and at what
+  // remove.
+  const tree = renderBlastTree(result);
+  if (!tree) return list;
+  const wrapper = document.createElement("div");
+  wrapper.append(list, tree);
+  return wrapper;
 }
 
 // ------------------------------------------------- UX-202: the overview
@@ -466,3 +473,157 @@ export const INCOMPLETE = {
              + "build time and Plane 2 does not, so the durations here are "
              + "not measurements.",
 };
+
+
+// ------------------------------------------------- UX-206: two graphs
+
+// No general DAG viewer. The external review and Direction 7 arrived at
+// that restraint independently: a BuildStream DAG rendering answers no
+// question anyone asks, and the temptation to build one loses to the
+// two drawings that *are* questions. Neither needs a layout algorithm -
+// one is a list with widths, the other is an indented list.
+
+/** How many of the chain's elements are drawn before the fold. */
+const PATH_HEAD = 6;
+const PATH_TAIL = 3;
+
+/**
+ * The critical path, drawn: the chain the report already prints as
+ * text, as a sequence of boxes sized by their published share.
+ *
+ * `share_of_path` is a *published field*, so no width here is computed
+ * from a duration - the same rule the overview waterfall follows, and
+ * the reason the geometry can be asserted from the payload.
+ *
+ * `UX-187`'s fold, expandable in place: a 1,202-element chain is not a
+ * drawing, and the middle is where a reader stops looking anyway.
+ */
+export function renderCriticalPath(payload) {
+  const detail = payload?.signals?.critical_path_detail;
+  if (!Array.isArray(detail) || !detail.length) return null;
+
+  const section = document.createElement("section");
+  section.setAttribute("data-section", "critical-path-drawn");
+  section.setAttribute("id", "critical-path-drawn");
+  const heading = document.createElement("h2");
+  heading.textContent = "The chain, drawn";
+  section.append(heading);
+
+  const strip = document.createElement("div");
+  strip.className = "path-strip";
+  strip.setAttribute("data-elements", String(detail.length));
+
+  const folded = detail.length > PATH_HEAD + PATH_TAIL + 1;
+  const head = folded ? detail.slice(0, PATH_HEAD) : detail;
+  const tail = folded ? detail.slice(detail.length - PATH_TAIL) : [];
+  const middle = folded ? detail.slice(PATH_HEAD, detail.length - PATH_TAIL) : [];
+
+  for (const entry of head) strip.append(pathBox(entry));
+  if (folded) {
+    const hidden = [];
+    for (const entry of middle) {
+      const box = pathBox(entry);
+      box.hidden = true;
+      hidden.push(box);
+      strip.append(box);
+    }
+    const more = document.createElement("button");
+    more.className = "path-more";
+    more.setAttribute("type", "button");
+    more.setAttribute("data-folded", String(middle.length));
+    more.textContent = `+${middle.length} more`;
+    // In place: the fold opens between the two ends rather than
+    // scrolling the reader somewhere else.
+    more.addEventListener("click", () => {
+      for (const box of hidden) box.hidden = false;
+      more.hidden = true;
+    });
+    strip.append(more);
+  }
+  for (const entry of tail) strip.append(pathBox(entry));
+  section.append(strip);
+  return section;
+}
+
+function pathBox(entry) {
+  const box = document.createElement("a");
+  box.className = "path-box";
+  box.setAttribute("data-element", entry.element_uid ?? "");
+  box.setAttribute("data-share", String(entry.share_of_path ?? 0));
+  box.setAttribute("data-duration-us", String(entry.duration_us ?? 0));
+  // The width is the published share, read not computed. `min-width`
+  // in the stylesheet keeps a 0.1% element clickable.
+  box.setAttribute("style",
+    `flex-grow: ${Math.max(0, Number(entry.share_of_path) || 0) * 1000}`);
+  // UX-199's anchors: the drawing points back at the section that
+  // explains it.
+  box.setAttribute("href", "#signals");
+  const name = document.createElement("span");
+  name.className = "path-name";
+  name.textContent = entry.element_uid ?? "";
+  const time = document.createElement("span");
+  time.className = "path-time num";
+  time.textContent = seconds(entry.duration_us ?? 0);
+  box.append(name, time);
+  if (entry.element_kind) {
+    const badge = document.createElement("span");
+    badge.className = "kind";
+    badge.textContent = entry.element_kind;
+    box.append(badge);
+  }
+  return box;
+}
+
+/**
+ * The blast answer as an indented hierarchy: direct consumers, then the
+ * closure by depth, each row with its kind badge and measured work.
+ *
+ * `blast_tree` is the payload `UX-206` assumed `blast/v1` already
+ * carried and it did not - the answer had two flat lists and no depth
+ * at all, and depth is the whole shape of a tree. It is published now
+ * (`bga/blast.py`), so this reads rather than walks a graph.
+ */
+export function renderBlastTree(payload) {
+  const tree = payload?.blast_tree;
+  if (!Array.isArray(tree) || !tree.length) return null;
+
+  const section = document.createElement("section");
+  section.setAttribute("data-section", "blast-tree");
+  section.setAttribute("id", "blast-tree");
+  const heading = document.createElement("h2");
+  heading.textContent = `What a change to ${payload.target ?? "it"} rebuilds`;
+  section.append(heading);
+
+  const list = document.createElement("div");
+  list.className = "blast-tree";
+  for (const entry of tree) {
+    const depth = Number(entry.depth) || 0;
+    const row = document.createElement("div");
+    row.className = "blast-row";
+    row.setAttribute("data-element", entry.element_uid ?? "");
+    row.setAttribute("data-depth", String(depth));
+    // Indentation is the published depth, not a position in the list.
+    row.setAttribute("style", `padding-left: ${depth * 1.4}rem`);
+    const name = document.createElement("span");
+    name.className = "blast-name";
+    name.textContent = entry.element_uid ?? "";
+    row.append(name);
+    if (entry.element_kind) {
+      const badge = document.createElement("span");
+      badge.className = "kind";
+      badge.setAttribute("data-kind", entry.element_kind);
+      badge.textContent = entry.element_kind;
+      row.append(badge);
+    }
+    if (typeof entry.measured_seconds === "number") {
+      const cost = document.createElement("span");
+      cost.className = "blast-cost num";
+      cost.setAttribute("data-raw", String(entry.measured_seconds));
+      cost.textContent = seconds(entry.measured_seconds * 1e6);
+      row.append(cost);
+    }
+    list.append(row);
+  }
+  section.append(list);
+  return section;
+}

@@ -636,9 +636,9 @@ bga view @prev --no-browser      # prints the url instead
 ```
 
 A local page over one run's published JSON. `127.0.0.1`, a port the
-kernel picks, and an allowlist of exactly four documents — nothing else
-in the run is reachable, there is no directory listing, and no write
-method is answered.
+kernel picks, and a fixed allowlist of documents — nothing else in the
+run is reachable, there is no directory listing, and no write method is
+answered.
 
 **It renders the schema, not the report.** The page asks
 `schemas.json` what each key *is* — a duration, a share, a findings
@@ -651,9 +651,9 @@ follow, and both are deliberate:
   first, where `--format json`, CI and every external consumer get it
   too.
 
-The page is three files checked into the repository
-(`bga/viewer/{index.html,app.js,style.css}`) — no bundler, no npm, no
-build step. A richer TypeScript app is a welcome *consumer* of these
+The page is a handful of files checked into the repository under
+`bga/viewer/` — HTML, one stylesheet and a few ES modules — with no
+bundler, no npm and no build step. A richer TypeScript app is a welcome *consumer* of these
 payloads rather than a replacement: the view-hints below exist so one
 can be written without this project blessing a frontend stack.
 
@@ -686,6 +686,69 @@ bga snapshot --list --format json     # store/v1, what the trend draws
 
 The text listing and this JSON render from the same rows, so the
 drawing and the terminal cannot disagree about what is on disk.
+
+### What the page leads with (`UX-202`)
+
+Above the sections, two things a list of tables could not say:
+
+- **The evidence header** — confidence and its band, Plane 2's
+  coverage, the host line, and the run's incompleteness. `UX-156`'s
+  tone: what this capture can and cannot support, stated *before* any
+  number is believed. A failed, interrupted or suspended run says so
+  here rather than in a banner floating above an otherwise ordinary
+  report.
+- **The overview waterfall** — the real duration, down through the
+  attribution gaps to the certified floors, each segment labelled with
+  its published number and linked to the section that explains it.
+
+**Every number in both is read from a published field.** Nothing is
+computed in the browser; the one division in the waterfall is a CSS
+width. A gap the JSON does not carry enters `analyze/v1` first, where
+`--format json`, CI and every other consumer get it too — which is why
+`confidence.band`, `run_instance.incomplete_reason` and
+`plane2_coverage` are fields rather than viewer logic.
+
+### Finding your way around it (`UX-199`)
+
+Every section carries an `id`, a generated table of contents sits at the
+top, sections collapse (and remember it), and a jump box finds an
+element by name. An exported report keeps all of it, plus the questions
+page inlined and the blast search box hidden — it asks a server, and an
+export does not have one.
+
+### Interrogating the tables (`UX-205`)
+
+Each table gets a filter box with a row-count badge (`12 of 1,202`) and,
+on every quantity column, a threshold typed in that column's own unit:
+
+```text
+> 5s        on a duration column
+>= 512mb    on a size column
+< 10%       on a share column
+```
+
+The unit parses because the schema *declares* what the column is — and
+the comparison runs against the published value, never the formatted
+text. A cell copies on double-click as its raw value; **Copy shown
+rows** puts the filtered rows on the clipboard as JSON that parses.
+
+Measured at 4,000 rows: 146 ms to render, 20 ms to filter. There is no
+windowed rendering, deliberately — machinery without a measured need is
+how a thin viewer stops being one.
+
+### Two drawings, and no DAG viewer (`UX-206`)
+
+- **The chain, drawn** — the critical path as a sequence of boxes whose
+  widths are the published `share_of_path`. Long chains fold in the
+  middle (`UX-187`'s fold) and open in place.
+- **The blast tree** — a blast answer as an indented hierarchy, direct
+  consumers first, then the closure by depth, each row with its kind
+  and measured work. The depth is published in `blast/v1` as
+  `blast_tree`; the page does not walk a graph.
+
+A general BuildStream DAG rendering stays deliberately unbuilt — it
+answers no question anyone asks. The argument is in
+[Direction 7](../design/directions.md).
 
 ### The report as one file (`UX-195`)
 

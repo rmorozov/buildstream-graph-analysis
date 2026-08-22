@@ -168,3 +168,48 @@ section[data-section="evidence"] .verdict { margin: .4rem 0 .8rem; }
 .investigate .query { margin: .4rem 0 0; font-size: .8rem; }
 h3.category { text-transform: capitalize; letter-spacing: .04em;
               color: var(--muted); font-size: .82rem; margin-top: 1.2rem; }
+
+/* UX-205: the tools above each table. */
+.table-tools { display: flex; align-items: center; gap: .6rem;
+               margin: .4rem 0 .3rem; flex-wrap: wrap; }
+.table-filter { font: inherit; font-size: .85rem; padding: .15rem .4rem;
+                background: var(--panel); color: inherit;
+                border: 1px solid var(--line); border-radius: 3px;
+                min-width: 12rem; }
+.table-tools .badge { font-size: .8rem; color: var(--muted); }
+.copy-rows { font: inherit; font-size: .8rem; padding: .15rem .5rem;
+             background: var(--panel); color: inherit;
+             border: 1px solid var(--line); border-radius: 3px;
+             cursor: pointer; }
+th .th-filter { display: block; width: 100%; margin-top: .2rem;
+                font: inherit; font-size: .75rem; font-weight: normal;
+                padding: .05rem .25rem; background: var(--bg); color: inherit;
+                border: 1px solid var(--line); border-radius: 2px; }
+th .th-filter.unparsed { border-color: var(--bad); }
+
+/* UX-206: the chain, drawn. A list with widths - flex-grow carries the
+   published share, so nothing here is a layout algorithm. */
+.path-strip { display: flex; gap: .25rem; align-items: stretch;
+              margin: .5rem 0; flex-wrap: wrap; }
+.path-box { flex-basis: 0; min-width: 6.5rem; padding: .35rem .5rem;
+            background: var(--panel); border: 1px solid var(--line);
+            border-radius: 3px; text-decoration: none; color: inherit;
+            display: flex; flex-direction: column; gap: .1rem; }
+.path-box:hover { border-color: var(--accent); }
+.path-name { font-size: .82rem; overflow-wrap: anywhere; }
+.path-time { font-size: .78rem; color: var(--muted); }
+.path-more { align-self: center; font: inherit; font-size: .8rem;
+             padding: .2rem .5rem; background: var(--panel); color: inherit;
+             border: 1px dashed var(--line); border-radius: 3px;
+             cursor: pointer; }
+
+/* And the blast answer as an indented hierarchy - padding is the
+   published depth. */
+.blast-tree { margin: .4rem 0; }
+.blast-row { display: flex; align-items: baseline; gap: .5rem;
+             padding-top: .1rem; padding-bottom: .1rem; font-size: .85rem; }
+.blast-name { overflow-wrap: anywhere; }
+.blast-cost { margin-left: auto; color: var(--muted); font-size: .8rem; }
+.kind { font-size: .72rem; padding: 0 .3rem; border-radius: 2px;
+        background: var(--panel); border: 1px solid var(--line);
+        color: var(--muted); }

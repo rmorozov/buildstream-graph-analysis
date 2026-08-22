@@ -23,7 +23,8 @@ from typing import Dict, List, Optional, Set
 
 from . import schemas
 from . import sources as sources_mod
-from .graph.edg import compute_element_durations, compute_reachability
+from .graph.edg import (build_element_graph, compute_element_durations,
+                       compute_reachability)
 from .ingest.loader import load_all
 
 
@@ -233,6 +234,10 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     _context, graph, _trace = load_all(run_dir)
     inventory = sources_mod.load_inventory(run_dir / "sources.json") or {}
     downstream, _upstream = compute_reachability(graph)
+    # UX-206: `downstream` is the transitive closure - every element a
+    # change reaches, at any distance. The tree needs the *immediate*
+    # consumers, or every level collapses to depth 1.
+    _predecessors, successors = build_element_graph(graph)
     kinds = {e.uid: (e.element_kind or "unknown") for e in graph.elements}
     known = set(kinds)
 
@@ -289,6 +294,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     for uid in reachable:
         by_kind[kinds.get(uid, "unknown")] = by_kind.get(kinds.get(uid, "unknown"), 0) + 1
     return {
+        "blast_tree": _by_depth(direct, reachable, successors, kinds, durations),
         "target": target,
         "resolved_as": used,
         "also_matched": [shape for shape in shapes if shape != used],
@@ -316,6 +322,46 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
         # is a different fact from "this run measured nothing".
         "measured": measure,
     }
+
+
+def _by_depth(direct, reachable, successors, kinds, durations) -> List[dict]:
+    """The closure as a hierarchy: `{element_uid, depth, element_kind,
+    measured_seconds}`, direct consumers first.
+
+    `UX-206` asked for the blast answer as an indented tree "over data
+    `blast/v1` already carries". It did not carry it: the payload had
+    two flat lists and no per-element depth, kind or cost at all. The
+    viewer could only have got the shape by walking the graph in
+    JavaScript, which is the second analysis the no-arithmetic rule
+    exists to prevent - so the shape enters the JSON here, additively
+    (`UX-190`: an addition does not bump the version).
+
+    Breadth-first, so an element reachable by two paths is listed at the
+    shorter one: the depth at which a reader first meets it, and the
+    depth at which rebuilding it actually becomes unavoidable.
+    """
+    tree: List[dict] = []
+    seen = set(direct)
+    frontier = sorted(direct)
+    depth = 0
+    while frontier:
+        for uid in frontier:
+            tree.append({
+                "element_uid": uid,
+                "depth": depth,
+                "element_kind": kinds.get(uid, "unknown"),
+                "measured_seconds": durations.get(uid),
+            })
+        nxt = []
+        for uid in frontier:
+            for child in sorted(successors.get(uid) or ()):
+                if child in seen or child not in reachable:
+                    continue
+                seen.add(child)
+                nxt.append(child)
+        frontier = nxt
+        depth += 1
+    return tree
 
 
 def _tasks_of(run_dir: Path):

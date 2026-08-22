@@ -273,6 +273,8 @@ _BLAST_REQUIRED = {
     "building_count": "integer",
     "assembling_count": "integer",
     "by_element_kind": "object",
+    # UX-206: additive - the closure keyed by depth, kind and cost.
+    "blast_tree": "array",
     "measured_seconds": "",
     "measured_elements": "integer",
     "element_count": "integer",
@@ -405,6 +407,28 @@ _BLAST_HINTS = {
     "element_count": {QUANTITY: "count"},
     "measured_elements": {QUANTITY: "count"},
     "measured_seconds": {QUANTITY: "seconds"},
+    # UX-206: the closure as a hierarchy rather than a flat list. The
+    # depth is what an indented tree needs, and deriving it in the
+    # viewer would be a graph walk in JavaScript - a second analysis.
+    "blast_tree": {
+        COLUMNS: [
+            {"key": "element_uid", "title": "Element", "sortable": True},
+            {"key": "depth", "title": "Depth", "quantity": "count",
+             "sortable": True,
+             "description": "Hops from the direct consumers. Breadth-first, "
+                            "so an element reachable by two paths is listed "
+                            "at the shorter one."},
+            {"key": "element_kind", "title": "Kind", "sortable": True},
+            {"key": "measured_seconds", "title": "Measured",
+             "quantity": "seconds", "sortable": True},
+        ],
+        "items": {
+            "properties": {
+                "depth": {QUANTITY: "count"},
+                "measured_seconds": {QUANTITY: "seconds"},
+            },
+        },
+    },
 }
 
 _STORE_REQUIRED = {

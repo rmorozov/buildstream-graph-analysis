@@ -13,10 +13,13 @@
 
 import { handOff, deepLink } from "./perfetto.js";
 import { renderBand, renderTrend, renderBlastSearch,
-         renderOverview, renderEvidence } from "./views.js";
+         renderOverview, renderEvidence,
+         renderCriticalPath, renderBlastTree } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
 import { renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
+import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
+         copy } from "./tables.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -242,9 +245,90 @@ export function renderTable(key, rows, hint = {}, node = undefined) {
   }
   table.append(body);
   sortable(table, specs);
+  // UX-205: the tools. Sorting alone cannot reduce 1,202 rows to the
+  // twelve that matter, and the page renders every row of every array
+  // unconditionally - the right default for a viewer, unusable without
+  // something to narrow it with.
+  const tools = interrogable(table, specs, rows.length);
   return el("section", { "data-section": key },
-    el("h2", {}, title(key)), table);
+    el("h2", {}, title(key)), tools, table);
 }
+
+/**
+ * The filter bar, the per-column thresholds and the copy affordances.
+ *
+ * Every comparison runs against `data-raw` - the published value - not
+ * against the formatted cell text. Comparing "1.2s" to "5s" as strings
+ * is the defect this shape exists to prevent, and `UX-201`'s column
+ * metadata is what makes `> 5s` parseable: the column declares that it
+ * is a `duration_us`, so the suffix has a meaning.
+ */
+export function interrogable(table, specs, total) {
+  const state = { text: "", thresholds: {} };
+  const badge = el("span", { class: "badge" }, badgeText(total, total));
+  const refresh = () => {
+    badge.textContent = badgeText(applyFilters(table, state), total);
+  };
+
+  const box = el("input", {
+    type: "search", class: "table-filter",
+    placeholder: "filter rows…",
+    "aria-label": "filter rows",
+  });
+  box.addEventListener("input", () => { state.text = box.value; refresh(); });
+
+  // A threshold per quantity column, in the header, where the column
+  // says what unit it is in.
+  table.querySelectorAll("th").forEach((th, index) => {
+    const spec = specs[index];
+    if (!spec || !spec.quantity) return;
+    const input = el("input", {
+      type: "text", class: "th-filter", "data-column": spec.key,
+      placeholder: PLACEHOLDER[spec.quantity] ?? "> 0",
+      "aria-label": `threshold for ${spec.title ?? spec.key}`,
+    });
+    input.addEventListener("input", () => {
+      const parsed = parseThreshold(input.value, spec.quantity);
+      // Unparseable is *no filter*, and says so: a threshold nobody can
+      // read must not silently hide every row.
+      input.className = input.value && !parsed
+        ? "th-filter unparsed" : "th-filter";
+      if (parsed) state.thresholds[spec.key] = parsed;
+      else delete state.thresholds[spec.key];
+      refresh();
+    });
+    // The header stays clickable for sorting; the input must not
+    // forward its clicks there.
+    input.addEventListener("click", (event) => event.stopPropagation?.());
+    th.append(input);
+  });
+
+  const copyRows = el("button", { type: "button", class: "copy-rows" },
+                      "Copy shown rows");
+  copyRows.addEventListener("click", () => {
+    const columns = specs.map((spec) => spec.key);
+    const shown = [...table.querySelectorAll("tbody tr")]
+      .filter((tr) => !tr.hidden)
+      .map((tr) => rowJson(tr, columns));
+    copy(`[${shown.join(",")}]`);
+  });
+
+  // Copy one cell's published value. Delegated, so 1,202 rows do not
+  // mean 1,202 listeners.
+  table.addEventListener("dblclick", (event) => {
+    const cell = event.target?.closest?.("td");
+    if (cell) copy(cellText(cell));
+  });
+
+  return el("div", { class: "table-tools" }, box, badge, copyRows);
+}
+
+// What to type, in the unit the column publishes.
+const PLACEHOLDER = {
+  duration_us: "> 5s", seconds: "> 5s", bytes: "> 10mb",
+  megabytes: "> 512mb", share: "> 10%", percent: "> 10%",
+  count: "> 10", ratio: "> 1",
+};
 
 function sortable(table, specs = []) {
   const body = table.querySelector("tbody");
@@ -658,6 +742,12 @@ async function boot() {
     // above even that - what the capture can support, before any
     // number is believed. Prepended in reverse so evidence ends up
     // first.
+    // UX-206: the chain drawn, hung off the overview's execution
+    // segment - the "where did the time go" spine, as a list with
+    // widths rather than a graph layout problem.
+    const chain = renderCriticalPath(payload);
+    if (chain) root.append(chain);
+
     const overview = renderOverview(payload);
     if (overview) root.prepend(overview);
     const evidence = renderEvidence(payload);

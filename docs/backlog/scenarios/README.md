@@ -242,6 +242,33 @@ Verification added what neither saw: two shipped views nobody can
 reach ([`UX-203`](UX-0203-the-views-nobody-can-reach.md)). Full
 narrative: [`../../audits/round-22.md`](../../audits/round-22.md).
 
+**All nine landed.** The round's shape held: every item was reproduced
+before it was fixed, and three of the filings turned out to be wrong
+about the codebase in ways worth recording. `UX-203`'s proposed
+package-data mutation was **refuted** — the files ship anyway.
+`UX-206`'s "a `<details>` tree over data `blast/v1` already carries"
+was **false** — the payload had two flat lists and no depth, so the
+depth had to enter the JSON. And `UX-204`'s library item uncovered a
+copy nobody had noticed: `sql.html` spelled out every query a second
+time, guarded only by a title comparison.
+
+Three regressions were introduced *by this round* and caught inside it,
+which is the part worth reading: `UX-202`'s two-line import
+reintroduced `UX-199`'s export defect verbatim (the line-based stripper
+matched neither half, and every export died on `ERR_INVALID_URL`
+again); `UX-204`'s reveal used `removeAttribute` against a
+property-set `hidden` and would never have shown its paste; `UX-206`'s
+first depth walk used the transitive closure and produced a flat tree.
+Each is now a property assertion rather than a mechanism test.
+
+Two measurements moved a rule rather than a number. The page-size guard
+summed a *directory*, counting two served-only pages an export never
+carries — it measures the exported file with its data blocks removed
+now. And when that honest number crossed 80,000 B, the bytes came from
+stripping comments out of the *inlined copy*: they are written for
+someone reading the repository, and an attached report carries none of
+those readers.
+
 ## UX-193..UX-197: the twenty-first audit round — the viewer argued, the field round verified (2026-08-21)
 
 Round 21 verified all ten of round 20's landings — four mutations

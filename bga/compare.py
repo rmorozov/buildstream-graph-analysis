@@ -61,6 +61,80 @@ MIN_BASELINE_RUNS = 3
 DEFAULT_BAND_K = 3.0
 
 
+# UX-201 put the sentence and the enum in one branch; UX-214 keeps that
+# true while the branch itself moves into `classify_against_band`.
+VERDICT_SENTENCES = {
+    # Not a verdict about the build: a duration the baseline set itself
+    # reached cannot be evidence that something changed.
+    "within_observed_range": "within the baseline set's own observed range",
+    "no_significant_change": "no significant change",
+    "improved": "improved",
+    "regressed": "regressed",
+}
+
+
+def widen_band(band: dict, baseline_total_us: float) -> dict:
+    """The band as the verdict is actually judged against it.
+
+    `UX-59`'s widening to the fixed percentage, plus `UX-170`'s
+    recomputation of which set edges fall outside the widened band.
+    Extracted by `UX-214` so the store's trend and `bga compare` widen
+    identically rather than one of them judging against raw edges.
+    """
+    fixed_half_width = baseline_total_us * _SIGNIFICANCE_PCT / 100
+    half_width = max(band['k'] * band['scaled_mad_us'], fixed_half_width)
+    low = band['median_us'] - half_width
+    high = band['median_us'] + half_width
+    widened = dict(band, low_us=low, high_us=high,
+                   widened_to_fixed_pct=half_width == fixed_half_width)
+    edges = [widened.get('observed_low_us'), widened.get('observed_high_us')]
+    outside = [x for x in edges if x is not None and not (low <= x <= high)]
+    widened['edges_outside_band'] = len(outside)
+    widened.pop('runs_outside_band', None)
+    widened['describes_its_own_set'] = not outside
+    return widened
+
+
+def classify_against_band(candidate_us: float, band: dict,
+                          delta_us: Optional[float] = None) -> str:
+    """**The** verdict chain, for a candidate judged against a band.
+
+    `UX-214`: there were two. `bga compare` ran significance, then
+    `UX-170`'s disputed region, then improved/regressed; the store's
+    trend classified on band edges alone and emitted `within_band` - a
+    value outside `schemas.VERDICT_KINDS` and with no disputed-region
+    branch at all. On the exact case the band view exists to teach - a
+    run below the band but inside the range the baselines themselves
+    reached - the trend coloured **improved** while `bga compare` on the
+    same pair answered `within_observed_range` and declined the claim.
+
+    `UX-203`'s log said "the colouring cannot disagree with what `bga
+    compare` would say". Only `compute_band` was shared; that sentence
+    was an over-claim, and this function is what makes it true.
+
+    Takes a band already through `widen_band`.
+    """
+    low, high = band['low_us'], band['high_us']
+    significant = not (low <= candidate_us <= high)
+    edges = [band.get('observed_low_us'), band.get('observed_high_us')]
+    outside = [x for x in edges if x is not None and not (low <= x <= high)]
+    in_observed_range = (edges[0] is not None
+                         and edges[0] <= candidate_us <= edges[1])
+    if significant and in_observed_range and bool(outside):
+        return "within_observed_range"
+    if not significant:
+        return "no_significant_change"
+    # Which *direction* is a different question from whether the band
+    # supports a claim at all, and the two callers answer it from
+    # different evidence: `bga compare` has a signed delta against a
+    # named baseline run, the store's trend has only the set. Passing
+    # `delta_us` keeps compare's meaning exactly as it was - `UX-214`
+    # unifies the band decision, deliberately not the thresholds.
+    if delta_us is not None:
+        return "improved" if delta_us < 0 else "regressed"
+    return "improved" if candidate_us < band['median_us'] else "regressed"
+
+
 def compute_band(durations_us: List[float], k: float = DEFAULT_BAND_K) -> Optional[dict]:
     """Robust noise band for a set of baseline runs: median ± k·(1.4826·MAD).
 
@@ -714,66 +788,38 @@ def _compare_results(
         # band is widened to the fixed rule when it is narrower - a set
         # of near-identical baseline runs yields a near-zero MAD, and a
         # band tighter than quantization noise would fire on everything.
-        band_disputed = False
         if baseline_band is not None:
-            fixed_half_width = baseline_total * _SIGNIFICANCE_PCT / 100
-            half_width = max(
-                baseline_band['k'] * baseline_band['scaled_mad_us'], fixed_half_width
-            )
-            low = baseline_band['median_us'] - half_width
-            high = baseline_band['median_us'] + half_width
-            baseline_band = dict(baseline_band, low_us=low, high_us=high,
-                                 widened_to_fixed_pct=half_width == fixed_half_width)
-            # UX-170: recomputed against the widened edges - widening for
-            # the fixed floor can bring a run back inside.
-            edges = [baseline_band.get('observed_low_us'),
-                     baseline_band.get('observed_high_us')]
-            outside = [x for x in edges
-                       if x is not None and not (low <= x <= high)]
-            # UX-181: named for what it is. After widening, only the
-            # set's two edges are still in hand, so this counts *edges*
-            # outside the band (0, 1 or 2) rather than runs - the
-            # boolean beside it is the load-bearing answer.
-            baseline_band['edges_outside_band'] = len(outside)
-            baseline_band.pop('runs_outside_band', None)
-            baseline_band['describes_its_own_set'] = not outside
-            significant = not (low <= candidate_total <= high)
-            # UX-170: the disputed region - outside the band, but inside
-            # the range the baseline set itself produced. A duration the
-            # baselines reached, on the commit they are *of*, is not
-            # evidence that anything changed; calling it one is how a
-            # same-commit pair got announced as `IMPROVED (-25.0%)`.
+            # UX-214: one widening, in `widen_band`. This used to be
+            # spelled out here and *not at all* in the store's trend,
+            # which judged against the raw band - the same divergence
+            # the verdict chain had, one step earlier.
             #
-            # Deliberately narrower than "refuse whenever the set is
-            # inconsistent": the pairs the band handles correctly keep
-            # their answers, and only the claim the set contradicts is
-            # withheld. Nothing here is a threshold - the region is the
-            # gap between the band and the runs that built it.
-            in_observed_range = (
-                edges[0] is not None and edges[0] <= candidate_total <= edges[1])
-            band_disputed = significant and in_observed_range and bool(outside)
+            # It still carries UX-181's `edges_outside_band` (after
+            # widening only the set's two edges are in hand, so it
+            # counts edges, not runs) and UX-170's
+            # `describes_its_own_set`.
+            baseline_band = widen_band(baseline_band, baseline_total)
+            significant = not (baseline_band['low_us'] <= candidate_total
+                               <= baseline_band['high_us'])
         else:
             significant = abs(delta_total_us) * 100 >= baseline_total * _SIGNIFICANCE_PCT
-            band_disputed = False
         # UX-201: the sentence and the enum come out of the same
         # branch, deliberately. The viewer used to style its banner by
         # string-matching the prose, which made a reworded sentence a
         # silent rendering change; deriving the enum anywhere else would
         # be a second significance chain to keep in step.
-        if band_disputed:
-            # Not a verdict about the build: a duration the baseline set
-            # itself reached cannot be evidence that something changed.
-            verdict = "within the baseline set's own observed range"
-            verdict_kind = "within_observed_range"
+        # UX-214: the kind comes from `classify_against_band`, the one
+        # function the store's trend also calls. It used to be repeated
+        # here, and the copy in `tools/bga_snapshot.py` had drifted -
+        # no disputed-region branch and a sixth value nothing declared.
+        if baseline_band is not None:
+            verdict_kind = classify_against_band(
+                candidate_total, baseline_band, delta_us=delta_total_us)
         elif not significant:
-            verdict = "no significant change"
             verdict_kind = "no_significant_change"
-        elif delta_total_us < 0:
-            verdict = "improved"
-            verdict_kind = "improved"
         else:
-            verdict = "regressed"
-            verdict_kind = "regressed"
+            verdict_kind = "improved" if delta_total_us < 0 else "regressed"
+        verdict = VERDICT_SENTENCES[verdict_kind]
 
     attribution_deltas = _attribution_deltas(
         baseline_result.attribution or {}, candidate_result.attribution or {},

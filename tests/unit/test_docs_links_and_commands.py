@@ -579,10 +579,16 @@ def _verdict_strings():
     pair gets (documented with the exit codes, not with the verdicts)
     does not join the list. Read rather than pinned as literals, so that
     renaming one reddens this guard instead of leaving two documents
-    quoting a string `bga` no longer prints."""
-    source = (REPO / "bga" / "compare.py").read_text(encoding="utf-8")
-    chain = source.split("if band_disputed:", 1)[1].split("\n    attribution_deltas", 1)[0]
-    verdicts = set(re.findall(r"verdict = \"([^\"]+)\"", chain))
+    quoting a string `bga` no longer prints.
+
+    `UX-214` moved the branch this used to scrape into
+    `classify_against_band`, and the sentences into `VERDICT_SENTENCES`
+    keyed by the same enum - which is a better source than a slice of
+    source text, and still "read rather than pinned as literals".
+    """
+    from bga.compare import VERDICT_SENTENCES
+
+    verdicts = set(VERDICT_SENTENCES.values())
     assert len(verdicts) == 4, f"the significance chain now emits {sorted(verdicts)}"
     return verdicts
 

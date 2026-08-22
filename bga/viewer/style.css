@@ -139,7 +139,12 @@ section[data-jumped="true"], [data-jumped="true"] {
    nothing. */
 .trend-point.verdict-regressed { fill: var(--bad); }
 .trend-point.verdict-improved { fill: var(--good); }
-.trend-point.verdict-within_band { fill: var(--muted); }
+/* UX-214: `within_band` was a sixth value that existed only in the
+   store's own classifier. One vocabulary now, so the two kinds a
+   band can produce beside improved/regressed are styled by their
+   published names. */
+.trend-point.verdict-no_significant_change { fill: var(--muted); }
+.trend-point.verdict-within_observed_range { fill: var(--muted); }
 
 /* UX-202: the overview waterfall. Bars are a reading of published
    numbers - the printed value beside each is the field itself. */

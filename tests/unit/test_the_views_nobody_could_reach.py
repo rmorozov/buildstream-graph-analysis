@@ -151,7 +151,9 @@ class TestTheTrendPlotsWhatItPromised:
         project, _ = _store(tmp_path, MIN_BASELINE_RUNS + 2)
         rows = store_listing(str(project))["snapshots"]
         assert rows[0]["verdict_kind"] is None, "nothing to judge the first against"
-        assert rows[-1]["verdict_kind"] in ("improved", "regressed", "within_band")
+        # `UX-214`: the store speaks one vocabulary now, and
+        # `within_band` - which only ever existed here - is gone.
+        assert rows[-1]["verdict_kind"] in schemas.VERDICT_KINDS
 
     def test_an_incomplete_run_gets_no_verdict(self, tmp_path):
         """`UX-156`/`157`/`185`: a run that did not finish is not a

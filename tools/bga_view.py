@@ -162,8 +162,19 @@ def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     will not judge, and that verdict is exactly what the viewer should
     show. So the exit code is ignored here and the document is served.
     """
+    # `UX-202`: the evidence header states what this capture can
+    # support, and Plane 2's coverage is half that answer - but
+    # `analyze` only reads Plane 2 when told to. `bga snapshot` already
+    # writes the report beside the run, so the page gets it for free
+    # wherever the store put one, and silently goes without elsewhere.
+    from bga import run_store
+
+    argv = ["analyze", run, "--format", "json"]
+    plane2 = run_store.sibling_plane2(os.path.abspath(run))
+    if plane2:
+        argv += ["--plane2", plane2]
     documents = {
-        "report.json": _capture(["analyze", run, "--format", "json"]),
+        "report.json": _capture(argv),
     }
     # `UX-203`: the comparison the user already has. `bga snapshot`
     # compares against the previous run automatically, so by the time
@@ -296,6 +307,14 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 TRACE_BUDGET_B = 4 * 1024 * 1024
 
 
+# One relative `import` statement, however its specifier list is
+# wrapped. `.*?` under `re.S` so a `{ a, b }` list broken across lines is
+# still one match - `UX-202` wrapped one and reintroduced UX-199's
+# export defect, which is why this is shared rather than written twice.
+_IMPORT_RE = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""",
+                        re.M | re.S)
+
+
 def _module_order(entry: str = "app.js") -> List[str]:
     """Every module the export must inline, dependencies first.
 
@@ -316,8 +335,7 @@ def _module_order(entry: str = "app.js") -> List[str]:
             return
         seen.add(name)
         text = open(os.path.join(ASSET_DIR, name), encoding="utf-8").read()
-        for match in re.finditer(r'^\s*import\s.*?from\s+["\']\./([\w.-]+)["\']',
-                                 text, re.M):
+        for match in re.finditer(_IMPORT_RE, text):
             walk(match.group(1))
         order.append(name)
 
@@ -329,19 +347,24 @@ def _inline_module(name: str) -> str:
     """One ES module's source, with its module syntax removed.
 
     An export opens over `file://`, where a browser refuses a relative
-    `import` - so `app.js` and `perfetto.js` are concatenated into a
-    single inline module instead. Stripping `export ` leaves plain
-    top-level declarations in one scope, and dropping the `import` line
-    is safe because what it imported is now declared above it.
+    `import` - so the modules are concatenated into a single inline
+    module instead. Stripping `export ` leaves plain top-level
+    declarations in one scope, and dropping the `import` statement is
+    safe because what it imported is now declared above it.
     """
     text = open(os.path.join(ASSET_DIR, name), encoding="utf-8").read()
-    kept = []
-    for line in text.splitlines():
-        if re.match(r"\s*import\s.*from\s+[\"']\./", line):
-            continue
-        kept.append(re.sub(r"^export\s+(?=(function|const|let|class|async)\b)",
-                           "", line))
-    return "\n".join(kept)
+    # Removed with the same expression `_module_order` walks, over the
+    # whole text rather than line by line: an `import { a, b }` list
+    # wrapped across two lines matched neither half of the old
+    # line-based test, so the statement survived into the concatenated
+    # blob and the browser died on `ERR_INVALID_URL` - `UX-199`'s defect
+    # exactly, reintroduced by reformatting one import. Blanked rather
+    # than deleted, so a line number in a stack trace still points at
+    # the right line of the original module.
+    text = _IMPORT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+    return "\n".join(
+        re.sub(r"^export\s+(?=(function|const|let|class|async)\b)", "", line)
+        for line in text.splitlines())
 
 
 def export(run: str, path: str, with_trace: bool = True) -> dict:

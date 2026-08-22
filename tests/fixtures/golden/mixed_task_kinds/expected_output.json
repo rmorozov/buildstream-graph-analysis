@@ -513,7 +513,8 @@
         },
         "ordering_violations": 0,
         "task_count": 4,
-        "run_identity_available": true
+        "run_identity_available": true,
+        "band": "high"
     },
     "violations": []
 }

@@ -104,6 +104,22 @@ class TestTheExportedPageActuallyRuns:
         # concatenation defines things after their first use.
         assert order.index("views.js") < order.index("app.js")
 
+    def test_no_import_statement_survives_the_inlining(self):
+        """A `file://` document cannot resolve `./views.js`, so one
+        surviving `import` is `ERR_INVALID_URL` and an empty report.
+
+        `UX-202` proved the old line-based strip was not enough: an
+        `import { a, b }` list wrapped across two lines matched neither
+        half of it, and every export died again - the same defect
+        `UX-199` had just fixed, reintroduced by reformatting one line.
+        This asserts the *property*, so the next reformat is caught by
+        this rather than by a browser."""
+        from tools.bga_view import _inline_module, _module_order
+
+        blob = "\n".join(_inline_module(name) for name in _module_order())
+        left = re.findall(r"^.*\bfrom\s+[\"']\./.*$", blob, re.M)
+        assert not left, f"the export still tries to import: {left}"
+
 
 class TestEverySectionCanBeLinkedTo:
     @needs_node

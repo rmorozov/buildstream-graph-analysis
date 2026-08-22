@@ -152,6 +152,13 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         context, 'cpu_budget', None
     )
     result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+    # UX-202: how much of the build Plane 2 actually saw, published
+    # rather than left in the native report. The evidence header states
+    # what a capture can support before any number is believed, and
+    # "813 processes, opens coverage 1.00" is the Plane 2 half of that
+    # answer; without it the page would have to read a second document
+    # or, worse, imply full coverage by saying nothing.
+    result.plane2_coverage = native_report.get('stream_coverage') or None
     # UX-104: the memory half of the same question. `--builders` is the
     # knob both halves are about, and advice that clears the CPU check
     # and blows the memory one is advice to build into swap - the worst

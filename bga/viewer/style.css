@@ -140,3 +140,19 @@ section[data-jumped="true"], [data-jumped="true"] {
 .trend-point.verdict-regressed { fill: var(--bad); }
 .trend-point.verdict-improved { fill: var(--good); }
 .trend-point.verdict-within_band { fill: var(--muted); }
+
+/* UX-202: the overview waterfall. Bars are a reading of published
+   numbers - the printed value beside each is the field itself. */
+.wf-row { display: grid; grid-template-columns: 13rem 1fr 6rem;
+          align-items: center; gap: .6rem; margin: .18rem 0; }
+.wf-label { font-size: .88rem; }
+.wf-track { background: var(--panel); border: 1px solid var(--line);
+            border-radius: 2px; height: .85rem; overflow: hidden; }
+.wf-fill { display: block; height: 100%; background: var(--accent);
+           opacity: .55; }
+.wf-value { text-align: right; font-size: .85rem; }
+section[data-section="evidence"] .verdict { margin: .4rem 0 .8rem; }
+@media (max-width: 40rem) {
+  .wf-row { grid-template-columns: 1fr 4.5rem; }
+  .wf-track { display: none; }
+}

@@ -228,6 +228,8 @@ _ANALYZE_OPTIONAL = {
     # version), and the guard now also validates a real capture.
     "pipeline_overhead": "object",
     "timestamp_agreement": "object",
+    # UX-202: present only when a Plane 2 report was in hand.
+    "plane2_coverage": "object",
 }
 
 # What a *full* `bga analyze --format json` of a normal run contains.
@@ -320,6 +322,34 @@ _ANALYZE_HINTS = {
                 "evidence": {"type": ["object", "null"]},
             },
             "required": ["id", "severity", "title"],
+        },
+    },
+    "confidence": {
+        "properties": {
+            "primary": {QUANTITY: "share",
+                        "description": "How much of this run's own record "
+                                       "supports the conclusions above - "
+                                       "coverage, provenance and model fit "
+                                       "combined."},
+            "band": {"description": "The score as a word, from the same "
+                                    "thresholds the report's headline uses."},
+            "coverage_score": {QUANTITY: "share"},
+            "task_coverage": {QUANTITY: "share"},
+        },
+    },
+    "plane2_coverage": {
+        "properties": {
+            "processes": {QUANTITY: "count",
+                          "description": "Processes Plane 2 saw across both "
+                                         "record streams - the hook and the "
+                                         "spine, counted once each."},
+            "opens_coverage": {QUANTITY: "share",
+                               "description": "The share of those processes "
+                                              "whose opened paths were "
+                                              "recorded; only the hook can "
+                                              "see them."},
+            "cpu_disagreement_count": {QUANTITY: "count"},
+            "exec_chains_collapsed": {QUANTITY: "count"},
         },
     },
     "utilisation": {

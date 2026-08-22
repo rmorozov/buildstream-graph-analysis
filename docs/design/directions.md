@@ -839,6 +839,54 @@ not the review, and filed with it.
 Decomposed as `UX-198`..`UX-206`; the wheel-shape guard gap (CI never
 runs an installed `bga view`) rides with the unreachable-views item.
 
+### Third iteration (argued 2026-08-22, round 23): stop adding, start compressing
+
+The second external review, taken after UX-198..206 landed, opens
+with a verdict this direction accepts in full: **stop adding major
+viewer architecture; spend the next iteration on compression and
+actionability.** Its diagnosis, confirmed against `boot()`: the page
+is functionally rich but *report-shaped* — evidence, overview,
+fourteen generic sections, drawings and tools all at one visual
+level, with the TOC and collapse compensating for density rather
+than solving prioritization. The reader has to read too much before
+knowing what deserves attention, while the answer the product is
+framed around — what should I fix first, and what is it worth —
+already exists in the published findings and renders mid-list.
+
+**The rule adopted for everything that follows:** *first screen =
+decision, everything else = evidence.* The page should show the
+smallest amount of information needed to choose the next useful
+investigation, then make that investigation one click away.
+
+**Adopted, with the house adjustment that keeps the viewer thin:**
+the decision panel's inputs — the chain-bound/scheduler-bound
+diagnosis (computed at `bga/findings.py:974`, published today only
+as prose in one finding's sentence), the opportunity split, the top
+actions — enter `analyze/v1` as a published `headline` block first,
+because a viewer that derived them would be a second analyzer. Same
+rule, third application (the band needed the compare payload, the
+blast tree needed published depth). Decomposed as `UX-207`
+(decision first), `UX-208` (every important object carries its
+investigation), `UX-209` (questions for names, a rail for the
+contents page).
+
+**Declined with the review's own argument:** the stat-card
+dashboard it warns against (§15) — bga's numbers are relational,
+and a card grid is where the relations go to die.
+
+**What the review missed, supplied by this round:** it praised the
+question library without reading the SQL — four of six canned
+queries are track-blind and answer wrongly on exactly the merged
+two-plane traces the tool is proudest of (`UX-210`); its
+remember-my-state item is `localStorage` thinking where the house
+ethos (evidence you can paste) wants view state in the link
+(`UX-211`); and it never looked at the drawings' color-only
+encodings at all (`UX-212`). Verification added what no review
+sees: the round-22 landing's named mutation guards are pinned to a
+capture that exists on one machine and skip everywhere else
+(`UX-213`), and the trend's colouring is a second verdict chain
+that re-litigates the disputed region (`UX-214`).
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -868,6 +916,7 @@ the other rounds now:
 | [20](../audits/round-20.md) | the field speaks: nine usage observations ground-truthed into ten filings, and the elision that reopened the round-trip (`UX-183`..`UX-192`) |
 | [21](../audits/round-21.md) | all ten field landings verified holding; Direction 7 argued — the viewer as a thin window onto the JSON, timelines to Perfetto (`UX-193`..`UX-197`) |
 | [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
+| [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
 
 ## Verification Log
 

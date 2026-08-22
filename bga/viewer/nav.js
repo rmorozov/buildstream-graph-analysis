@@ -13,6 +13,11 @@
 
 const COLLAPSED_KEY = "bga.collapsed";
 
+// UX-209: the rails, in the order a reader moves through them.
+// Mirrors `schemas.RAILS`; the schema decides which rail a
+// section is in, this decides what order the groups appear.
+export const RAILS = ["decide", "act", "prove", "investigate", "raw"];
+
 /** The sections the page actually rendered, in document order. */
 export function sections(root) {
   return [...(root.querySelectorAll?.("section[data-section]") ?? [])];
@@ -134,17 +139,40 @@ export function toc(root, { document: doc, controls } = {}) {
   heading.textContent = "Sections";
   nav.append(heading);
 
-  const list = doc.createElement("ul");
+  // UX-209: grouped by rail - which part of the argument a section
+  // belongs to - rather than by payload key order. Still generated from
+  // what was actually rendered: a section with no declared rail lands
+  // in `raw`, never nowhere.
+  const grouped = new Map(RAILS.map((rail) => [rail, []]));
   for (const key of keys) {
-    const item = doc.createElement("li");
-    const link = doc.createElement("a");
-    link.href = `#${key}`;
-    link.setAttribute("data-toc", key);
-    link.textContent = label(key);
-    item.append(link);
-    list.append(item);
+    const section = root.querySelector?.(`[data-section="${key}"]`)
+      ?? [...(root.children ?? [])].find(
+        (n) => n.getAttribute?.("data-section") === key);
+    const rail = section?.getAttribute?.("data-rail");
+    grouped.get(RAILS.includes(rail) ? rail : "raw").push(key);
   }
-  nav.append(list);
+
+  for (const rail of RAILS) {
+    const members = grouped.get(rail);
+    if (!members.length) continue;
+    const groupName = doc.createElement("p");
+    groupName.className = "toc-rail";
+    groupName.setAttribute("data-rail", rail);
+    groupName.textContent = rail;
+    nav.append(groupName);
+    const list = doc.createElement("ul");
+    for (const key of members) {
+      const item = doc.createElement("li");
+      const link = doc.createElement("a");
+      link.href = `#${key}`;
+      link.setAttribute("data-toc", key);
+      link.setAttribute("data-rail", rail);
+      link.textContent = label(key);
+      item.append(link);
+      list.append(item);
+    }
+    nav.append(list);
+  }
 
   if (controls) {
     const row = doc.createElement("p");

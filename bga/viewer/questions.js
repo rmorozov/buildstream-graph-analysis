@@ -167,6 +167,35 @@ export function inCategory(category) {
   return QUESTIONS.filter((question) => question.category === category);
 }
 
+/**
+ * A Copy control for one block of text, with a "\u2713 copied"
+ * acknowledgment that reverts.
+ *
+ * `make` is passed in for the same reason `renderQuestions` takes it:
+ * this renders in the served page, in `sql.html` and in the export, and
+ * none of the three should own the element factory.
+ */
+export function copyButton(make, text, deps = {}) {
+  const button = make("button", { type: "button", class: "copy-sql" });
+  button.textContent = "Copy";
+  button.setAttribute("data-copy", text);
+  button.addEventListener?.("click", () => {
+    const clipboard = deps.clipboard
+      ?? (typeof navigator !== "undefined" ? navigator.clipboard : null);
+    let wrote = false;
+    try {
+      wrote = Boolean(clipboard?.writeText?.(text));
+    } catch (error) {
+      wrote = false;
+    }
+    button.textContent = wrote ? "\u2713 copied" : "select and copy";
+    deps.setTimeout?.(() => { button.textContent = "Copy"; }, 1500)
+      ?? (typeof setTimeout !== "undefined"
+          && setTimeout(() => { button.textContent = "Copy"; }, 1500));
+  });
+  return button;
+}
+
 /** Render the questions as a page section. Used by the export and by
  *  `sql.html`, so the two cannot drift. */
 export function renderQuestions(make) {
@@ -183,9 +212,18 @@ export function renderQuestions(make) {
   for (const category of CATEGORIES) {
     const entries = inCategory(category);
     if (!entries.length) continue;
-    const label = make("h3", { class: "category" });
-    label.textContent = category;
-    section.append(label);
+    // UX-209 item 4: one `<details>` per category, collapsed - with the
+    // full SQL still in the DOM, because Ctrl-F must keep finding it
+    // and the export must keep carrying it.
+    const fold = make("details", { class: "question-group",
+                                   "data-category": category,
+                                   // UX-211: nameable, so "the query I
+                                   // had open" travels in the link.
+                                   "data-fold": `questions-${category}` });
+    const label = make("summary", { class: "category" });
+    label.textContent = `${category} (${entries.length})`;
+    fold.append(label);
+    section.append(fold);
     for (const question of entries) {
       const heading = make("h4", {});
       heading.setAttribute("data-query-id", question.id);
@@ -196,7 +234,10 @@ export function renderQuestions(make) {
       const code = make("code", {});
       code.textContent = renderedSql(question);
       block.append(code);
-      section.append(heading, why, block);
+      // UX-208 item 3: every rendered SQL block copies, with an
+      // acknowledgment - a query you have to select by hand is a query
+      // most readers retype wrongly.
+      fold.append(heading, why, block, copyButton(make, renderedSql(question)));
     }
   }
   return section;

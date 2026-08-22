@@ -219,16 +219,68 @@ class TestTheSizeDiscipline:
         a new module is page weight while a new docs page is not.
         `UX-204` is what surfaced it: the directory crossed the ceiling
         while the exported page was still under it.
+
+        **The ceiling moved in round 23, from 80,000 B, and this is
+        the arithmetic.** Rounds 22 and 23 added the decision panel,
+        the rails, the table tools, the trace context, the SQL
+        cookbook-as-data and the view state that travels in the
+        fragment. Measured after taking every byte that could honestly
+        be taken (the export now strips the stylesheet's comments the
+        same way it strips the modules', worth 1,239 B): eight modules
+        at 78,469 B comment-stripped, `style.css` at 10,765 B,
+        `index.html` at 1,433 B - 90,667 B, against 80,000. The
+        remainder is feature code, not a framework, and only a deletion
+        would bring it back under.
+
+        A ceiling alone cannot tell those apart, which is the honest
+        objection to moving one. `test_the_page_is_the_modules_and_
+        nothing_else` is the answer: it asserts the page *is* the
+        checked-in modules plus the stylesheet, so 4 KB of new feature
+        and 4 KB of vendored library stop looking alike. This number is
+        the coarse backstop behind it.
+
+        The honest counterpart, recorded rather than hidden: on
+        `examples/06` the ratio this docstring opens with is *not* what
+        the 1,202-element figure suggests - 70,754 B of data against an
+        82,386 B page, so the page dominates on a small project. The
+        ratio holds where it was claimed (a large report) and does not
+        on a small one, which is a property of small reports rather
+        than of the page.
         """
         html = open(exported[0], encoding="utf-8").read()
         # Every `<script type="application/json">` block and the trace
         # blob are *data*. What is left is the page.
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
-        assert len(page) < 80_000, (
+        assert len(page) < 96_000, (
             f"the exported page is {len(page)} B with its data removed - "
             f"Direction 7's rule is that the data, not the page, is what an "
             f"export weighs")
+
+    def test_the_page_is_the_modules_and_nothing_else(self, exported):
+        """What the ceiling is really guarding: that the page is the
+        checked-in modules plus the stylesheet, and that nothing else
+        crept into it. A ceiling alone cannot tell 4 KB of new feature
+        from 4 KB of vendored library; this can.
+        """
+        import tools.bga_view as view
+
+        html = open(exported[0], encoding="utf-8").read()
+        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+                      r".*?</script>", "", html, flags=re.S)
+        accounted = sum(len(view._inline_module(name))
+                        for name in view._module_order())
+        accounted += len(view._uncommented_css(
+            open(os.path.join(view.ASSET_DIR, "style.css"),
+                 encoding="utf-8").read()))
+        accounted += len(open(os.path.join(view.ASSET_DIR, "index.html"),
+                              encoding="utf-8").read())
+        # The export rewrites the page around those bytes, so an exact
+        # equality would be asserting the glue. Anything the modules do
+        # not account for is what this is looking for.
+        assert len(page) - accounted < 4_000, (
+            f"{len(page) - accounted} B of the page comes from neither "
+            f"the modules nor the stylesheet")
 
     def test_the_golden_export_is_small_enough_to_attach(self, exported):
         assert exported[1]["bytes"] < 200_000, exported[1]["bytes"]

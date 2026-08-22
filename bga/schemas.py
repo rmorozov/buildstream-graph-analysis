@@ -70,7 +70,38 @@ VERSION_KEY = "schema"
 # JSON Schema ignores unknown keywords, so annotated documents validate
 # exactly as before. `UX-190`'s rules apply unchanged: adding a hint is
 # an addition, changing what one *means* is a version bump.
-QUANTITY = "bga:quantity"          # how to format the number
+QUANTITY = "bga:quantity"        # how to format the number
+# UX-209: the question a section answers, so the heading, the TOC and
+# the text renderer name it the same way. Silent -> the viewer falls
+# back to `title(key)`.
+QUESTION = "bga:question"
+# UX-209: which part of the argument a section belongs to, so the TOC
+# groups by meaning rather than by payload key order.
+RAIL = "bga:rail"
+RAILS = ("decide", "act", "prove", "investigate", "raw")
+# UX-208: a column can say it holds element uids, which is what earns a
+# row its generic Inspect - declared once, no per-table code.
+ROLE = "bga:role"
+ROLES = ("element",)
+# UX-212: the verdict's *shape*. The trend encoded `verdict_kind` as
+# fill colour alone, so grayscale, a monochrome print or a colour-blind
+# reader lost the direction entirely. Declared here rather than in the
+# viewer for the reason `UX-201` gives and `UX-214` proved the cost of:
+# a second list of verdict kinds living in JavaScript is a vocabulary
+# waiting to diverge from this one.
+MARKERS = "bga:markers"
+MARKER_SHAPES = ("circle", "circle-open", "triangle-up", "triangle-down",
+                 "diamond", "square")
+# `within_observed_range` reuses the circle, opened: it is the "the set
+# cannot support the claim" answer - an undecided no-change rather than
+# a fourth direction - and the shape should say so.
+VERDICT_MARKERS = {
+    "improved": "triangle-down",
+    "regressed": "triangle-up",
+    "no_significant_change": "circle",
+    "within_observed_range": "circle-open",
+    "not_comparable": "diamond",
+}
 SEVERITY = "bga:severity"          # this array carries findings
 COLUMNS = "bga:columns"            # column order for an array of objects
 DIRECTION = "bga:direction"        # what the sign of a delta means
@@ -113,6 +144,46 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
     invisible at the point of use: the renderer falls through to its
     default and prints a raw number that looks plausible.
     """
+    # UX-209: the rail a section belongs to, closed so the TOC can be
+    # complete against it - an unknown rail would silently drop a
+    # section out of every group.
+    rail = hint.get(RAIL)
+    if rail is not None and rail not in RAILS:
+        raise ValueError(
+            f"{document}.{key}: {RAIL}={rail!r} is not one of "
+            f"{', '.join(RAILS)}")
+    question = hint.get(QUESTION)
+    if question is not None and not str(question).strip().endswith("?"):
+        raise ValueError(
+            f"{document}.{key}: {QUESTION}={question!r} is not a question")
+    # UX-212: a marker map must cover the vocabulary it claims to draw
+    # and must draw each kind differently - a map that assigns two
+    # verdicts the same shape is a colour-only encoding again, wearing
+    # a declaration.
+    markers = hint.get(MARKERS)
+    if markers is not None:
+        if not isinstance(markers, dict):
+            raise ValueError(f"{document}.{key}: {MARKERS} must be a mapping")
+        unknown = set(markers) - set(VERDICT_KINDS)
+        if unknown:
+            raise ValueError(
+                f"{document}.{key}: {MARKERS} names {sorted(unknown)}, which "
+                f"is not a verdict kind")
+        missing = set(VERDICT_KINDS) - set(markers)
+        if missing:
+            raise ValueError(
+                f"{document}.{key}: {MARKERS} has no shape for "
+                f"{sorted(missing)}")
+        bad = [shape for shape in markers.values()
+               if shape not in MARKER_SHAPES]
+        if bad:
+            raise ValueError(
+                f"{document}.{key}: {MARKERS} shape(s) {sorted(bad)} not one "
+                f"of {', '.join(MARKER_SHAPES)}")
+        if len(set(markers.values())) != len(markers):
+            raise ValueError(
+                f"{document}.{key}: {MARKERS} gives two verdict kinds the "
+                f"same shape, which is a colour-only encoding again")
     quantity = hint.get(QUANTITY)
     if quantity is not None and quantity not in QUANTITIES:
         raise ValueError(
@@ -145,6 +216,14 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
                     f"{document}.{key}.{column['key']}: quantity "
                     f"{column['quantity']!r} is not one of "
                     f"{', '.join(QUANTITIES)}")
+            # UX-208: a column may say what its values *are*, which is
+            # what earns the rows a generic Inspect. Closed, for the
+            # same reason quantities are: a role a renderer cannot act
+            # on is a promise nothing keeps.
+            if column.get("role") is not None and column["role"] not in ROLES:
+                raise ValueError(
+                    f"{document}.{key}.{column['key']}: role "
+                    f"{column['role']!r} is not one of {', '.join(ROLES)}")
 
     # UX-201: hints resolve *recursively*. The renderer walks the schema
     # node alongside the value, so a nested property carries its own
@@ -309,8 +388,64 @@ _BLAST_REQUIRED = {
 SEVERITIES = ("critical", "high", "warning", "medium", "low", "info")
 
 _ANALYZE_HINTS = {
+    "timestamp_agreement": {QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove'},
+    "run_instance": {QUESTION: 'Which capture is this?', RAIL: 'raw'},
+    "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
+    "capacity_verdict": {QUESTION: 'Was the capacity right for this build?', RAIL: 'prove'},
+    "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},
+    "structural": {QUESTION: 'What shape is this dependency graph?', RAIL: 'investigate'},
+    "occupancy": {QUESTION: 'Were the builders busy?', RAIL: 'prove'},
+    "signals": {
+        QUESTION: 'Which elements are on the chain that binds?',
+        RAIL: 'act',
+        # UX-208: the three element tables a reader lands on from the
+        # decision panel. They carry element uids, so they say so - and
+        # every row earns the same Inspect with no per-table code.
+        "properties": {
+            "critical_path_detail": {
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "element_kind", "title": "Kind", "sortable": True},
+                    {"key": "duration_us", "title": "Duration",
+                     "quantity": "duration_us", "sortable": True},
+                    {"key": "share_of_path", "title": "Share of path",
+                     "quantity": "share", "sortable": True},
+                    {"key": "realizable_saving_us", "title": "Realizable",
+                     "quantity": "duration_us", "sortable": True,
+                     "description": "What removing this element entirely "
+                                    "would take off the makespan, not off "
+                                    "the path."},
+                ],
+            },
+            "optimization_horizon": {
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "saving_us", "title": "Saving",
+                     "quantity": "duration_us", "sortable": True},
+                    {"key": "makespan_after_us", "title": "Makespan after",
+                     "quantity": "duration_us", "sortable": True},
+                    {"key": "cumulative_saving_us", "title": "Cumulative",
+                     "quantity": "duration_us", "sortable": True},
+                ],
+            },
+            "latent_heavies": {
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "duration_us", "title": "Duration",
+                     "quantity": "duration_us", "sortable": True},
+                ],
+            },
+        },
+    },
+    "attribution": {QUESTION: 'Where did the wall-clock go?', RAIL: 'act'},
+    "floors": {QUESTION: 'How much faster could this build possibly be?', RAIL: 'prove'},
     "total_duration_us": {QUANTITY: "duration_us"},
     "pipeline_overhead": {
+        QUESTION: 'What did BuildStream spend outside the elements?',
+        RAIL: 'investigate',
         COLUMNS: [
             {"key": "phase", "title": "Phase", "sortable": True},
             {"key": "elapsed_us", "title": "Elapsed",
@@ -325,6 +460,8 @@ _ANALYZE_HINTS = {
         },
     },
     "findings": {
+        QUESTION: 'What did this run conclude?',
+        RAIL: 'decide',
         SEVERITY: "severity",
         COLUMNS: ["severity", "title", "detail", "elements"],
         # The item shape, so the semantic renderer reads a declared
@@ -343,6 +480,8 @@ _ANALYZE_HINTS = {
         },
     },
     "confidence": {
+        QUESTION: 'How much of this can be believed?',
+        RAIL: 'prove',
         "properties": {
             "primary": {QUANTITY: "share",
                         "description": "How much of this run's own record "
@@ -356,6 +495,8 @@ _ANALYZE_HINTS = {
         },
     },
     "headline": {
+        QUESTION: 'What should I fix first, and what is it worth?',
+        RAIL: 'decide',
         "description": "The decision this run supports: which constraint "
                        "binds, what the opportunity is worth, and which "
                        "elements to look at first. Decided in the "
@@ -382,7 +523,7 @@ _ANALYZE_HINTS = {
                                "subtraction for a consumer to perform."},
             "top_actions": {
                 COLUMNS: [
-                    {"key": "element_uid", "title": "Element",
+                    {"key": "element_uid", "title": "Element", "role": "element",
                      "sortable": True},
                     {"key": "saving_us", "title": "Worth",
                      "quantity": "duration_us", "sortable": True},
@@ -399,6 +540,8 @@ _ANALYZE_HINTS = {
         },
     },
     "plane2_coverage": {
+        QUESTION: 'How much did Plane 2 see?',
+        RAIL: 'prove',
         "properties": {
             "processes": {QUANTITY: "count",
                           "description": "Processes Plane 2 saw across both "
@@ -414,6 +557,8 @@ _ANALYZE_HINTS = {
         },
     },
     "utilisation": {
+        QUESTION: 'What did the machine cost to run this?',
+        RAIL: 'investigate',
         "properties": {
             # The two the external review caught rendering wrongly, and
             # the reason this item exists: `_mb` name-sniffed to bytes
@@ -477,7 +622,7 @@ _BLAST_HINTS = {
     # viewer would be a graph walk in JavaScript - a second analysis.
     "blast_tree": {
         COLUMNS: [
-            {"key": "element_uid", "title": "Element", "sortable": True},
+            {"key": "element_uid", "title": "Element", "role": "element", "sortable": True},
             {"key": "depth", "title": "Depth", "quantity": "count",
              "sortable": True,
              "description": "Hops from the direct consumers. Breadth-first, "
@@ -517,7 +662,14 @@ _STORE_HINTS = {
                           # UX-214: the same closed set as `compare/v1`.
                           # These rows used to carry `within_band`, a
                           # sixth value that existed only here.
-                          "verdict_kind": {"enum": list(VERDICT_KINDS) + [None]},
+                          "verdict_kind": {
+                              "enum": list(VERDICT_KINDS) + [None],
+                              # UX-212: the shape the trend draws for
+                              # each kind. One source, validated to
+                              # cover the vocabulary and to give no two
+                              # kinds the same shape.
+                              MARKERS: VERDICT_MARKERS,
+                          },
                           "total_duration_us": {QUANTITY: "duration_us"},
                           "cache_hit_rate": {QUANTITY: "share"},
                           "bytes": {QUANTITY: "bytes"},

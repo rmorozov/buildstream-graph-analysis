@@ -716,6 +716,71 @@ element by name. An exported report keeps all of it, plus the questions
 page inlined and the blast search box hidden — it asks a server, and an
 export does not have one.
 
+### What the page opens with (`UX-207`)
+
+The first screen is a **decision**, and everything below it is the
+evidence for that decision. `analyze/v1` publishes a `headline` block —
+the diagnosis (`chain_bound`, `scheduler_bound` or `inconclusive`), the
+ratio it was decided by, what the opportunity is worth, and the three
+elements to look at first, each pointing at the finding that reasons
+about it. The panel renders that block; it derives nothing, so the
+terminal, CI and the page cannot disagree about what should be fixed
+first.
+
+### Sections named as questions, and a rail (`UX-209`)
+
+Sections are titled by the question they answer — *"Where did the
+wall-clock go?"*, *"How much faster could this build possibly be?"* —
+with the schema key kept as a muted subtitle so an anchor pasted into
+an issue still reads. The question is a schema declaration
+(`bga:question`), not a viewer table, so it reaches the text renderer
+too.
+
+The contents groups those sections into a rail rather than listing them
+in payload order:
+
+```text
+decide       what this run concluded, and what to fix first
+act          where the wall-clock went, which elements bind
+prove        the floors, the capacity verdict, what did not add up
+investigate  the graph's shape, one resource's blast radius
+raw          the capture's own identity
+```
+
+A section whose schema declares no rail lands in `raw` — never nowhere.
+
+### One click from investigation (`UX-208`)
+
+- A column can declare that it holds element uids (`role: "element"`),
+  and every row of such a table earns the same **Inspect** — jump to
+  that element elsewhere in the report, and open it in Perfetto where
+  there is a timeline. One loop in the renderer, no per-table code.
+- Critical-path boxes carry a popover with the element, its kind, its
+  duration and its share, read from the published entry.
+- Every SQL block has a **Copy** button.
+- Tables get a `Top 10 ▾` preset over any declared quantity column; the
+  badge still says `10 of 1,202`, because a reader who cannot see the
+  denominator cannot tell a filtered table from a small one.
+- The blast box opens with the payload's top-ranked targets as chips.
+
+### A link that shows what you were looking at (`UX-211`)
+
+**Copy link to this view**, beside the contents. The filter, the
+thresholds, the sort, the Top-N, the collapsed sections and the folds
+travel in the URL fragment, so what lands in the issue is the view you
+built rather than the unfiltered wall. `#floors` still means exactly
+what it meant; the state follows a `~`. The hash wins where it speaks
+and your own remembered state stands where it is silent — and it works
+from an exported `file://` report, where browser storage may not exist
+at all.
+
+### Verdicts without the palette (`UX-212`)
+
+The trend's dots differ by **shape** as well as colour — one per
+verdict kind, from a map the schema declares — and the band's noise
+strip and observed extent differ by outline. Both survive a grayscale
+print and a colour-blind reader.
+
 ### Interrogating the tables (`UX-205`)
 
 Each table gets a filter box with a row-count badge (`12 of 1,202`) and,
@@ -761,10 +826,14 @@ both modules inlined, the timeline carried as a `data:` URL. No port, no
 server, no network — it opens from a downloads folder, a CI artifact
 viewer, or an email.
 
-Measured: a real 46 s capture of `examples/06` with both planes is
-**82 KiB**; the 1,202-element synthetic run is **638 KiB**, of which the
-page itself is 6.0% — the data is what an export weighs, which is the
-point of keeping the viewer thin.
+Measured on `examples/06`'s real 46 s two-plane capture: **158 KiB**,
+of which the page is 90,611 B. Rounds 22 and 23 grew the page — the
+decision panel, the rails, the table tools, the view state — and the
+export's own comment stripping paid part of it back. On the
+1,202-element synthetic run (**638 KiB**, page 6.0%, measured in round
+21) the data still dwarfs the page by an order of magnitude, which is
+the ratio the thinness rule is about; on a small project the page is
+the larger half, which is a property of small reports.
 
 Two ceilings, both **reported and never enforced** — a report that large
 is still your report:

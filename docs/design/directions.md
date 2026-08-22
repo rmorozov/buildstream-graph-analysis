@@ -887,6 +887,21 @@ capture that exists on one machine and skip everywhere else
 (`UX-213`), and the trend's colouring is a second verdict chain
 that re-litigates the disputed region (`UX-214`).
 
+**What landing all eight cost, recorded because a proxy that moves
+is worth less than one that is explained.** Direction 7's page-size
+ceiling is a byte count standing in for "the viewer stayed thin, no
+framework". This round's features — the decision panel, the rails,
+the table tools, the trace context, the SQL cookbook as data, the
+view state in the fragment — carried the page from 62 KB past
+80,000 B and then past 90,000 B. Every recoverable byte was
+recovered (the export strips the stylesheet's comments now, as it
+already stripped the modules'); the rest is feature code, and only
+a deletion would bring it back. The ceiling moved once, to 96,000
+B, with the arithmetic in the guard's own docstring — and a second
+guard now asserts the thing the number was standing in for: the
+page *is* the checked-in modules plus the stylesheet, so 4 KB of
+new feature and 4 KB of vendored library stop looking alike.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which

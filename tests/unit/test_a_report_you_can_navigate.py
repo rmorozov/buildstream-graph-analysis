@@ -130,9 +130,18 @@ class TestEverySectionCanBeLinkedTo:
 
     @needs_node
     def test_the_contents_lists_exactly_what_was_rendered(self, exported, tmp_path):
+        """Set equality, not order: `UX-209` groups the contents by
+        rail - decide, act, prove, investigate, raw - so it no longer
+        follows payload key order, deliberately. What must never drift
+        is *which* sections it lists, which is the property this guard
+        was written for; the rail order is asserted by
+        `test_one_click_from_investigation.py`."""
         out = _boot(exported, tmp_path)
-        assert out["toc"] == [s["key"] for s in out["sections"]], (
+        rendered = [s["key"] for s in out["sections"]]
+        assert sorted(out["toc"]) == sorted(rendered), (
             "the table of contents and the document disagree")
+        assert len(out["toc"]) == len(set(out["toc"])), (
+            "a section is listed twice")
 
     def test_the_contents_is_generated_from_the_render(self):
         """Not from a hardcoded list - so a section a schema addition

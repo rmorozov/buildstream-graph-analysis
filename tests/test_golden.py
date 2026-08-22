@@ -17,7 +17,13 @@ correctness assertions here; add them to the targeted test files instead.
 
     PYTHONPATH=. python3 -m bga.cli analyze \\
         tests/fixtures/golden/mixed_task_kinds --format json --diagnostics \\
-        | python3 -m json.tool > tests/fixtures/golden/mixed_task_kinds/expected_output.json
+        | python3 -c 'import json,sys; d=json.load(sys.stdin); \\
+              d.pop("run_instance", None); print(json.dumps(d, indent=4))' \\
+        > tests/fixtures/golden/mixed_task_kinds/expected_output.json
+
+`run_instance` is dropped because `_run_analyze` below pops it from the
+actual payload before comparing - a recipe that leaves it in writes a
+snapshot this file can never match.
 
 Then re-run this file and confirm the diff you expected is the only
 change (`git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json`).

@@ -277,3 +277,192 @@ export function renderBlastAnswer(result) {
   }
   return list;
 }
+
+// ------------------------------------------------- UX-202: the overview
+//
+// "Why is my build slow" answered at the top, before the sections.
+//
+// **The rule this is built under: no viewer arithmetic.** Every number
+// below is read from a published field and rendered; none is computed
+// here. A gap the JSON does not carry enters `analyze/v1` first, where
+// the text renderer, CI and every external consumer get it too - which
+// is Direction 7's rule, and the reason the waterfall is a *reading* of
+// the report rather than a second opinion about it.
+
+// The waterfall, in the order the time is spent. Each entry names the
+// published field it reads; nothing here adds, subtracts or divides.
+const WATERFALL = [
+  { key: "untracked_head_us", label: "Before the first task", from: "attribution" },
+  { key: "execution_on_chain_us", label: "Execution on the chain", from: "attribution" },
+  { key: "dependency_wait_us", label: "Waiting on dependencies", from: "attribution" },
+  { key: "resource_wait_us", label: "Waiting on resources", from: "attribution" },
+  { key: "scheduler_wait_us", label: "Waiting on the scheduler", from: "attribution" },
+  { key: "retry_wait_us", label: "Retries", from: "attribution" },
+  { key: "idle_us", label: "Idle", from: "attribution" },
+  { key: "untracked_tail_us", label: "After the last task", from: "attribution" },
+];
+
+// The certified floors, read the same way.
+const FLOORS = [
+  { key: "t_infinity_observed", label: "T∞ (observed)" },
+  { key: "lb", label: "LB" },
+  { key: "t_c", label: "T_C" },
+  { key: "certified_headroom", label: "Certified headroom" },
+];
+
+function bar(label, value, total, extra = {}) {
+  const row = document.createElement("div");
+  row.className = "wf-row";
+  for (const [name, attr] of Object.entries(extra)) row.setAttribute(name, attr);
+  const name = document.createElement("span");
+  name.className = "wf-label";
+  name.textContent = label;
+  const track = document.createElement("span");
+  track.className = "wf-track";
+  const fill = document.createElement("span");
+  fill.className = "wf-fill";
+  // The only division in this file, and it is a *width*, not a number
+  // the reader is told: the printed value is `value` itself.
+  fill.setAttribute("style",
+    `width: ${total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0}%`);
+  track.append(fill);
+  const amount = document.createElement("span");
+  amount.className = "wf-value num";
+  amount.setAttribute("data-raw", String(value));
+  amount.textContent = seconds(value);
+  row.append(name, track, amount);
+  return row;
+}
+
+export function renderOverview(payload) {
+  const total = payload?.total_duration_us;
+  const attribution = payload?.attribution;
+  if (typeof total !== "number" || !attribution) return null;
+
+  const section = document.createElement("section");
+  section.setAttribute("data-section", "overview");
+  section.setAttribute("id", "overview");
+  const heading = document.createElement("h2");
+  heading.textContent = "Where the time went";
+  section.append(heading);
+
+  section.append(bar("Total duration", total, total,
+                     { "data-field": "total_duration_us" }));
+
+  for (const entry of WATERFALL) {
+    const value = attribution[entry.key];
+    if (typeof value !== "number" || value === 0) continue;
+    section.append(bar(entry.label, value, total, {
+      "data-field": `attribution.${entry.key}`,
+      // UX-199's anchors: each segment points at the section that
+      // explains it.
+      "data-section-link": "attribution",
+    }));
+  }
+
+  const floors = payload?.floors;
+  if (floors) {
+    const sub = document.createElement("h3");
+    sub.textContent = "And the floors underneath it";
+    section.append(sub);
+    for (const entry of FLOORS) {
+      const value = floors[entry.key];
+      if (typeof value !== "number") continue;
+      section.append(bar(entry.label, value, total, {
+        "data-field": `floors.${entry.key}`,
+        "data-section-link": "floors",
+      }));
+    }
+  }
+  return section;
+}
+
+/**
+ * What this capture can support, before any number is believed.
+ *
+ * `UX-156`'s tone, and the place the refusal banners belong: an
+ * interrupted or suspended run says so here rather than floating above
+ * a report that looks otherwise ordinary.
+ */
+export function renderEvidence(payload) {
+  const confidence = payload?.confidence ?? {};
+  const instance = payload?.run_instance ?? {};
+  const host = instance.host_manifest ?? {};
+  const reason = instance.incomplete_reason;
+
+  const rows = [];
+  if (typeof confidence.primary === "number") {
+    rows.push(["Confidence",
+               `${(confidence.primary * 100).toFixed(0)}%`
+               + (confidence.band ? ` (${confidence.band})` : ""),
+               "confidence.primary"]);
+  }
+  if (typeof confidence.task_coverage === "number") {
+    rows.push(["Task coverage",
+               `${(confidence.task_coverage * 100).toFixed(0)}%`,
+               "confidence.task_coverage"]);
+  }
+  // UX-202: Plane 2's half of "what can this capture support". Absent
+  // when `analyze` had no Plane 2 report - and absent is the honest
+  // rendering: a "0%" row would claim the hook saw nothing, when the
+  // truth is that nobody looked.
+  const plane2 = payload?.plane2_coverage;
+  if (plane2 && typeof plane2.processes === "number") {
+    rows.push(["Plane 2 coverage",
+               `${plane2.processes} processes`
+               + (typeof plane2.opens_coverage === "number"
+                  ? `, opens ${(plane2.opens_coverage * 100).toFixed(0)}%` : ""),
+               "plane2_coverage.processes"]);
+  }
+  if (host.cpu_model) {
+    rows.push(["Host",
+               [host.cpu_model, host.cpu_count && `${host.cpu_count} cpu`,
+                host.memory_mb && `${Math.round(host.memory_mb / 1024)} GiB`]
+                 .filter(Boolean).join(" · "),
+               "run_instance.host_manifest"]);
+  }
+  if (instance.started_at) {
+    rows.push(["Captured", instance.started_at, "run_instance.started_at"]);
+  }
+  if (!rows.length && !reason) return null;
+
+  const section = document.createElement("section");
+  section.setAttribute("data-section", "evidence");
+  section.setAttribute("id", "evidence");
+  const heading = document.createElement("h2");
+  heading.textContent = "What this capture supports";
+  section.append(heading);
+
+  if (reason) {
+    const banner = document.createElement("p");
+    banner.className = "verdict refused";
+    banner.setAttribute("data-incomplete", reason);
+    banner.textContent = INCOMPLETE[reason] ?? `This run is ${reason}.`;
+    section.append(banner);
+  }
+
+  const list = document.createElement("dl");
+  list.className = "pairs";
+  for (const [label, value, field] of rows) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.setAttribute("data-field", field);
+    detail.textContent = value;
+    list.append(term, detail);
+  }
+  section.append(list);
+  return section;
+}
+
+// The same three sentences the CLI banners use. One source, so the
+// page and the terminal cannot describe the same run differently.
+export const INCOMPLETE = {
+  failed: "This build failed: durations from a run that did not finish "
+          + "are not measurements.",
+  interrupted: "This capture was interrupted: durations from a run that did "
+               + "not finish are not measurements.",
+  suspended: "This capture spans a suspend: Plane 1 counts the sleep as "
+             + "build time and Plane 2 does not, so the durations here are "
+             + "not measurements.",
+};

@@ -134,6 +134,14 @@ def _run_instance(run_context, loaded_from) -> dict:
     manifest = getattr(run_context, 'host_manifest', None) if run_context else None
     if manifest:
         instance['host_manifest'] = manifest
+    # UX-202: why this run is not a measurement, if it is not - the one
+    # `UX-185` accessor, published rather than left for a consumer to
+    # re-derive from `build_outcome`. The evidence header states what
+    # the capture can support *before* any number is believed, which is
+    # `UX-156`'s tone; it needs the answer in the payload to state it.
+    reason = getattr(run_context, 'incomplete_reason', None) if run_context else None
+    if reason:
+        instance['incomplete_reason'] = reason
     return instance
 
 
@@ -1699,6 +1707,15 @@ class BuildEfficiencyAnalyzer:
             graph_analysis, attribution, floors,
         )
         self.violations.extend(new_violations)
+        # UX-202: the band beside the score. `findings.py` already
+        # derived it for its own headline; the evidence header needs it
+        # too, and a viewer computing "is 0.87 high?" would be a second
+        # copy of the thresholds. Additive, so no version bump
+        # (`UX-190`'s rule).
+        primary = confidence.get('primary')
+        if isinstance(primary, (int, float)):
+            from .findings import confidence_band
+            confidence['band'] = confidence_band(primary)
         return confidence
 
     def _compute_utilization(self, occupancy_stats: dict) -> dict:

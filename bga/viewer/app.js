@@ -12,7 +12,8 @@
 // text renderer, CI and every external consumer get it too.
 
 import { handOff, deepLink } from "./perfetto.js";
-import { renderBand, renderTrend, renderBlastSearch } from "./views.js";
+import { renderBand, renderTrend, renderBlastSearch,
+         renderOverview, renderEvidence } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
 import { renderQuestions } from "./questions.js";
 
@@ -581,6 +582,15 @@ async function boot() {
     const comparison = await load("compare", null).catch(() => null);
     const band = comparison && renderBand(comparison);
     if (band) root.prepend(band);
+
+    // UX-202: the overview above the sections, and the evidence header
+    // above even that - what the capture can support, before any
+    // number is believed. Prepended in reverse so evidence ends up
+    // first.
+    const overview = renderOverview(payload);
+    if (overview) root.prepend(overview);
+    const evidence = renderEvidence(payload);
+    if (evidence) root.prepend(evidence);
     const store = await load("store", null).catch(() => null);
     const trend = store && renderTrend(store);
     if (trend) root.append(trend);

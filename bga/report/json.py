@@ -74,6 +74,13 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section is None and getattr(result, 'capacity_verdict', None):
         data['capacity_verdict'] = result.capacity_verdict
 
+    # UX-202: Plane 2's own coverage of this build, when a Plane 2
+    # report was in hand. Absent - not zeroed - without one, for the
+    # reason `run_instance` is absent: "not looked at" and "looked at
+    # and saw nothing" are different claims.
+    if section is None and getattr(result, 'plane2_coverage', None):
+        data['plane2_coverage'] = result.plane2_coverage
+
     if section is None and hasattr(result, 'attribution') and result.attribution:
         data['attribution'] = result.attribution
         # UX-04: additive sibling key, same category_us keys as

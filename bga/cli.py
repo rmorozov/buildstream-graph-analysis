@@ -269,7 +269,8 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
     elif args.format == 'csv':
         return format_csv(result)
     return format_text(result, section=section, by_kind=by_kind,
-                       full_sections=_full_sections(args))
+                       full_sections=_full_sections(args),
+                       explain=getattr(args, 'explain', False))
 
 
 # UX-187: which long sections a `--full-*` flag un-caps, by the name the
@@ -1186,6 +1187,15 @@ def _add_common_arguments(
         '--full-sources', action='store_true',
         help='Print every shared-source row, not just the widest.'
     )
+    # UX-229: the chain behind each claim, on demand. Off by default
+    # because the report is a decision and the chain is what a reader
+    # asks for after doubting one - the same reason `--diagnostics` is
+    # opt-in.
+    subparser.add_argument(
+        '--explain', action='store_true',
+        help='Under each claim, print its evidence fields, the rule that fired '
+             'and the query that deepens it.'
+    )
 
     subparser.add_argument(
         '-f', '--format',
@@ -1213,7 +1223,7 @@ def _add_common_arguments(
         subparser.add_argument(
             '-r', '--replay',
             action='store_true',
-            help='Run deterministic replay scheduler to compute a feasible makespan (T_C) under the chosen heuristic - a counterfactual model, not a claim of scheduling optimality (Part 18).'
+            help='Replay the run under the chosen heuristic for a feasible makespan (T_C). A counterfactual model, not a claim of optimality.'
         )
 
         subparser.add_argument(
@@ -1248,7 +1258,7 @@ def _add_common_arguments(
         subparser.add_argument(
             '--allow-partial-cold',
             action='store_true',
-            help='With --cold: publish T-infinity,cold as partial=true/confidence=low when some cold-critical-path element has no resolvable historical duration, instead of reporting unavailable. No effect without --cold.'
+            help='With --cold: publish a partial, low-confidence cold floor when an element on the cold path has no historical duration, rather than none at all.'
         )
 
         subparser.add_argument(

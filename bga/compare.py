@@ -241,6 +241,11 @@ class ComparisonResult:
     # field existed, or by something other than the significance chain -
     # and a consumer must not read that as `not_comparable`.
     verdict_kind: Optional[str] = None
+    # UX-229: the candidate's headline claim and its provenance record.
+    # `None` on a result built without an analysis to read it from - a
+    # refusal, or a hand-constructed one - which is why the CI comment
+    # treats its absence as "not recorded" rather than as "no diagnosis".
+    candidate_diagnosis: Optional[dict] = None
     comparability_warning: Optional[str] = None
     # UX-78: the same facts as `comparability_warning`, structured, so a
     # caller can refuse and name the check that failed rather than
@@ -339,6 +344,13 @@ class ComparisonResult:
             'baseline_band': self.baseline_band,
             'efficiency_gate_evaluated': self.efficiency_gate_evaluated,
             'efficiency_gate_signal': self.efficiency_gate_signal,
+            # UX-229: why the *candidate run* looks the way it does -
+            # the diagnosis claim with its evidence refs, its rule and
+            # its threshold, lifted from the candidate's own
+            # `analyze/v1`. A reviewer reading the comment asks "why do
+            # you say chain-bound"; before this the answer was in a
+            # different command's output.
+            'candidate_diagnosis': self.candidate_diagnosis,
         }
 
 
@@ -733,6 +745,32 @@ def _check_run_modes(
     )
 
 
+def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
+    """UX-229: the candidate's own headline claim, with its chain.
+
+    Read out of the candidate's `analyze/v1` rather than re-derived
+    here - the same object the terminal prints and the page draws, so
+    "why do you say chain-bound" has one answer across three surfaces.
+    Imported inside the function: `bga.report.json` imports this module
+    for its comparison types, and a top-level import back would be a
+    cycle.
+    """
+    from .report.json import build_document
+
+    try:
+        document = build_document(candidate_result)
+    except Exception:                                # pragma: no cover
+        # The verdict must not cost a reader the comparison, which is
+        # this file's standing rule for every optional enrichment.
+        return None
+    headline = document.get('headline') or {}
+    if not headline.get('provenance'):
+        return None
+    return {'diagnosis': headline.get('diagnosis'),
+            'sentence': headline.get('sentence'),
+            'provenance': headline['provenance']}
+
+
 def _compare_results(
     baseline_result: AnalysisResult,
     candidate_result: AnalysisResult,
@@ -936,6 +974,7 @@ def _compare_results(
         baseline_result, candidate_result, verdict_kind)
 
     return ComparisonResult(
+        candidate_diagnosis=_candidate_diagnosis(candidate_result),
         baseline_run_id=baseline_result.run_id,
         candidate_run_id=candidate_result.run_id,
         host_comparison=host_comparison,

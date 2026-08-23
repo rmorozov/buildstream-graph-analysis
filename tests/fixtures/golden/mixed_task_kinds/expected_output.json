@@ -15,7 +15,42 @@
                 "band": "high",
                 "violation_count": 0
             },
-            "copy_text": "BGA finding: Confidence: 0.88 (high)\n  primary 88%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1"
+            "copy_text": "BGA finding: Confidence: 0.88 (high)\n  primary 88%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1",
+            "provenance": {
+                "claim": "confidence",
+                "kind": "finding",
+                "document": "analyze/v1",
+                "evidence": [
+                    {
+                        "path": "confidence.primary",
+                        "value": 0.875,
+                        "resolved": true
+                    },
+                    {
+                        "path": "confidence.coverage_score",
+                        "value": 1.0,
+                        "resolved": true
+                    },
+                    {
+                        "path": "confidence.task_coverage",
+                        "value": 1.0,
+                        "resolved": true
+                    }
+                ],
+                "rule": {
+                    "name": "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
+                    "threshold": [
+                        0.5,
+                        0.8
+                    ],
+                    "comparison": "banded",
+                    "observed_path": "confidence.primary",
+                    "sentence": "0.88 bands as high against 0.50/0.80.",
+                    "module": "bga/findings.py"
+                },
+                "trace_query": null,
+                "unpublished_inputs": []
+            }
         },
         {
             "id": "wait-category",
@@ -31,7 +66,34 @@
                 "share": 0.125,
                 "hint": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             },
-            "copy_text": "BGA finding: Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1"
+            "copy_text": "BGA finding: Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
+            "provenance": {
+                "claim": "wait-category",
+                "kind": "finding",
+                "document": "analyze/v1",
+                "evidence": [
+                    {
+                        "path": "attribution.untracked_tail_us",
+                        "value": 2000,
+                        "resolved": true
+                    },
+                    {
+                        "path": "total_duration_us",
+                        "value": 16000,
+                        "resolved": true
+                    }
+                ],
+                "rule": {
+                    "name": "OPPORTUNITY_FLOOR_PCT",
+                    "threshold": 0.01,
+                    "comparison": ">=",
+                    "observed_path": null,
+                    "sentence": "The largest non-execution category is 12.5% of wall-clock, at or above the 1% floor below which the largest of the remainder is rounding rather than an opportunity.",
+                    "module": "bga/findings.py"
+                },
+                "trace_query": "stalls",
+                "unpublished_inputs": []
+            }
         },
         {
             "id": "blast-radius-ranking",
@@ -75,7 +137,29 @@
                     }
                 }
             },
-            "copy_text": "BGA finding: Elements Most Worth Optimizing First (by blast radius):\n      1. base.bst (2 downstream elements)\n      2. lib.bst (1 downstream elements)\n      3. app.bst (0 downstream elements)\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1"
+            "copy_text": "BGA finding: Elements Most Worth Optimizing First (by blast radius):\n      1. base.bst (2 downstream elements)\n      2. lib.bst (1 downstream elements)\n      3. app.bst (0 downstream elements)\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
+            "provenance": {
+                "claim": "blast-radius-ranking",
+                "kind": "finding",
+                "document": "analyze/v1",
+                "evidence": [
+                    {
+                        "path": "headline.chain_ratio",
+                        "value": 0.875,
+                        "resolved": true
+                    }
+                ],
+                "rule": {
+                    "name": "CHAIN_BOUND_RATIO",
+                    "threshold": 0.9,
+                    "comparison": "<",
+                    "observed_path": "headline.chain_ratio",
+                    "sentence": "Who-depends-on-me is ranked only on a build the chain does not already constrain; above the threshold the ranking that matters is how long each element takes.",
+                    "module": "bga/findings.py"
+                },
+                "trace_query": "dependency-wait",
+                "unpublished_inputs": []
+            }
         },
         {
             "id": "efficiency-score",
@@ -87,7 +171,37 @@
                 "efficiency_score": 1.0,
                 "low_confidence": false
             },
-            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1"
+            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
+            "provenance": {
+                "claim": "efficiency-score",
+                "kind": "finding",
+                "document": "analyze/v1",
+                "evidence": [
+                    {
+                        "path": "floors.efficiency_score",
+                        "value": 1.0,
+                        "resolved": true
+                    },
+                    {
+                        "path": "confidence.primary",
+                        "value": 0.875,
+                        "resolved": true
+                    }
+                ],
+                "rule": {
+                    "name": "_EFFICIENCY_HIGH/_EFFICIENCY_MEDIUM",
+                    "threshold": [
+                        0.7,
+                        0.9
+                    ],
+                    "comparison": "banded",
+                    "observed_path": "floors.efficiency_score",
+                    "sentence": "1.00 is at or above 0.90 and at or above 0.70, which is what chooses the sentence beside it; the caveat below 0.8 confidence is a second rule, not this one.",
+                    "module": "bga/findings.py"
+                },
+                "trace_query": null,
+                "unpublished_inputs": []
+            }
         }
     ],
     "headline": {
@@ -101,19 +215,72 @@
             {
                 "finding_id": "blast-radius-ranking",
                 "element_uid": "base.bst",
-                "downstream_count": 2
+                "downstream_count": 2,
+                "provenance": {
+                    "claim": "blast-radius-ranking",
+                    "kind": "top_action",
+                    "document": "analyze/v1",
+                    "see": "findings[id=blast-radius-ranking].provenance",
+                    "resolved": true
+                }
             },
             {
                 "finding_id": "blast-radius-ranking",
                 "element_uid": "lib.bst",
-                "downstream_count": 1
+                "downstream_count": 1,
+                "provenance": {
+                    "claim": "blast-radius-ranking",
+                    "kind": "top_action",
+                    "document": "analyze/v1",
+                    "see": "findings[id=blast-radius-ranking].provenance",
+                    "resolved": true
+                }
             },
             {
                 "finding_id": "blast-radius-ranking",
                 "element_uid": "app.bst",
-                "downstream_count": 0
+                "downstream_count": 0,
+                "provenance": {
+                    "claim": "blast-radius-ranking",
+                    "kind": "top_action",
+                    "document": "analyze/v1",
+                    "see": "findings[id=blast-radius-ranking].provenance",
+                    "resolved": true
+                }
             }
-        ]
+        ],
+        "provenance": {
+            "claim": "diagnosis",
+            "kind": "diagnosis",
+            "document": "analyze/v1",
+            "evidence": [
+                {
+                    "path": "floors.t_infinity_observed",
+                    "value": 14000,
+                    "resolved": true
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 16000,
+                    "resolved": true
+                },
+                {
+                    "path": "headline.chain_ratio",
+                    "value": 0.875,
+                    "resolved": true
+                }
+            ],
+            "rule": {
+                "name": "CHAIN_BOUND_RATIO",
+                "threshold": 0.9,
+                "comparison": "<",
+                "observed_path": "headline.chain_ratio",
+                "sentence": "The critical path is 87.5% of wall-clock, which is < the 90% at which the chain rather than the scheduler is called the constraint - so scheduler_bound.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "element-time",
+            "unpublished_inputs": []
+        }
     },
     "next_steps": [
         {

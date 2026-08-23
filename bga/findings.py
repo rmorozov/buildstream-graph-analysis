@@ -66,6 +66,13 @@ OPPORTUNITY_FLOOR_PCT = 1.0
 # "how long do I take".
 CHAIN_BOUND_RATIO = 0.9
 
+# UX-70: at or above this share of zero-slack elements the graph is a
+# mesh of near-equal chains rather than one chain, and "optimize the top
+# element" stops being meaningful advice on its own. Named by UX-229,
+# which found it as a bare `>= 0.5` in the finding it gates: a rule
+# whose threshold has no name cannot be published as one.
+MESH_ZERO_SLACK_SHARE = 0.5
+
 # UX-207: the diagnosis as an enum, a ratio and a sentence - the three
 # things a consumer needs and none of which it should re-derive. The
 # ratio decided this before; what changed is that it is now *published*
@@ -477,7 +484,7 @@ def _time_concentration_findings(
     # UX-70: chain or mesh? This decides whether "optimize the top
     # element" is meaningful advice at all.
     density = (result.signals or {}).get('zero_slack_share')
-    if density is not None and density >= 0.5:
+    if density is not None and density >= MESH_ZERO_SLACK_SHARE:
         findings.append(_finding(
             'mesh-graph', SEVERITY_INFO,
             f"Note: {density:.0%} of elements have zero slack - this graph "

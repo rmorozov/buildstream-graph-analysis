@@ -17,7 +17,7 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
-         INCOMPLETE } from "./views.js";
+         INCOMPLETE, renderProvenance } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
@@ -234,6 +234,10 @@ export function renderFindings(findings, investigate = null, node = undefined) {
             ]))
         : null,
       renderFindingEvidence(finding.evidence, evidenceNode),
+      // UX-229: the chain behind this finding, from the published
+      // record. `views.js` draws it, so the decision panel and every
+      // finding show one shape.
+      renderProvenance(finding.provenance),
       investigate ? investigateButton(finding, investigate) : null,
       // UX-224: the finding as something you can paste. The text is
       // `findings[].copy_text`, rendered in the pipeline - this button

@@ -99,18 +99,36 @@ def resolve(document: dict, path: str):
 
 
 def _segments(path: str):
-    for part in path.split("."):
-        name, _, rest = part.partition("[")
-        if name:
-            yield name
-        while rest:
-            inside, _, rest = rest.partition("]")
-            rest = rest.lstrip("[")
-            if "=" in inside:
-                key, _, value = inside.partition("=")
+    """Scan rather than `split(".")`.
+
+    Element uids contain dots - `layer07/mod084.bst` - so a selector
+    written as `[element_uid=core.bst]` splits into nonsense the moment
+    the separator is taken literally. Found by `UX-227`, which emits
+    exactly those paths from the page.
+    """
+    name, depth, buffer = "", 0, ""
+    for char in path:
+        if depth == 0 and char == ".":
+            if name:
+                yield name
+            name = ""
+        elif depth == 0 and char == "[":
+            if name:
+                yield name
+            name, depth, buffer = "", 1, ""
+        elif depth and char == "]":
+            depth = 0
+            if "=" in buffer:
+                key, _, value = buffer.partition("=")
                 yield (key, value)
             else:
-                yield int(inside)
+                yield int(buffer)
+        elif depth:
+            buffer += char
+        else:
+            name += char
+    if name:
+        yield name
 
 
 # Which library question deepens which claim.

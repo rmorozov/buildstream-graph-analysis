@@ -652,6 +652,19 @@ a duration some build actually took.
 from this document, and nothing at all when the store mixes host
 classes — it prints the refusal instead.
 
+### Why this one is ranked first (`UX-227`)
+
+Each top action in the decision panel carries a **Why #n** fold: the
+rule that ranked it (read from that finding's `provenance` record), what
+this run measured about the element, the findings that name it, and how
+it has moved across the store.
+
+Every value in the fold carries the path it was read from in
+`data-field` — for example
+`signals.critical_path_detail[element_uid=core.bst].share_of_path` — in
+the same grammar `provenance.evidence[].path` uses. Nothing in the fold
+is derived; it is the document, gathered under one question.
+
 ### The chain behind every claim (`UX-229`)
 
 Every claim the report makes — the diagnosis, each finding, each top

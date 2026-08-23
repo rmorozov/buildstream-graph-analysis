@@ -1048,26 +1048,32 @@ async function boot() {
     // The refusal banners `renderVerdict` produced are still above even
     // this; a run that is not a measurement says so before it offers a
     // decision drawn from it.
-    const decision = renderDecision(payload,
-      run.has_timeline ? (action) => decisionInvestigation(action, payload) : null,
-      // UX-218: the clipboard helper, passed in so `views.js` keeps
-      // having no dependency on `tables.js`.
-      copy);
-    if (decision) root.prepend(decision);
-    // UX-216: one section per element the report discusses, appended
-    // after everything that names an element has been drawn - the
-    // cross-reference is read off the rendered document, so a section
-    // added later joins it with no edit here.
-    // UX-226: the store is loaded *before* the element sections now,
-    // because each one ends with what happened to that element across
-    // the snapshots. A run with no store simply gets no history block,
-    // which is the same absence a store with no slices produces.
+    // UX-226: the store is loaded before the decision panel now,
+    // because `UX-227`'s "why this one" fold ends with what happened
+    // to that element across the snapshots - and the element sections
+    // below need it for the same reason. A run with no store simply
+    // gets no history block, which is the same absence a store with no
+    // slices produces. Loading earlier moves no DOM: the panel is
+    // still prepended and the sections are still appended.
     const store = await load("store", null).catch(() => null);
     // UX-234: and what the store says about itself as a distribution.
     // A separate document rather than a key of the listing: one row
     // per snapshot and one row per host class are different shapes,
     // and a page with no aggregate simply draws no band.
     const aggregate = await load("store-aggregate", null).catch(() => null);
+    const decision = renderDecision(payload,
+      run.has_timeline ? (action) => decisionInvestigation(action, payload) : null,
+      // UX-218: the clipboard helper, passed in so `views.js` keeps
+      // having no dependency on `tables.js`.
+      copy,
+      // UX-227: the store and the schema, for the history line and the
+      // verdict shapes inside each "why this one" fold.
+      { store, schema: schemas[store?.schema] });
+    if (decision) root.prepend(decision);
+    // UX-216: one section per element the report discusses, appended
+    // after everything that names an element has been drawn - the
+    // cross-reference is read off the rendered document, so a section
+    // added later joins it with no edit here.
     for (const node of renderElementSections(payload, root, {
       quantity,
       investigate: run.has_timeline

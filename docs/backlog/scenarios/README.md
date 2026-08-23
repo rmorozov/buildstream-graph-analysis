@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-234 scenarios: **2 open**, 232 closed.
+240 scenarios: **8 open**, 232 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 40 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
-| docs | 0 | 11 |
-| guards | 0 | 31 |
+| docs | 5 | 16 |
+| guards | 1 | 32 |
 
 ## Open scenarios
 
@@ -38,6 +38,44 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-236 | [the front door is a round behind](UX-0236-the-front-door-is-a-round-behind.md) | docs | High | R1, R8 | 🔴 |
+| UX-237 | [documentation debt has no way into the backlog](UX-0237-documentation-debt-has-no-way-into-the-backlog.md) | docs | Medium | R8 | 🔴 |
+| UX-238 | [the suite is one six-minute block](UX-0238-the-suite-is-one-six-minute-block.md) | guards | High | all | 🔴 |
+| UX-239 | [the context map is from the first week](UX-0239-the-context-map-is-from-the-first-week.md) | docs | High | all | 🔴 |
+| UX-240 | [a session has no cheap entry point](UX-0240-a-session-has-no-cheap-entry-point.md) | docs | Medium | all | 🔴 |
+| UX-241 | [architecture review has no cycle](UX-0241-architecture-review-has-no-cycle.md) | docs | Medium | R8 | 🔴 |
+
+## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
+
+Round 28 landed nine filings and the round's own cost became the
+subject. Six items, all of them about how work is done here rather than
+about what the tool says:
+
+- **`UX-238`** is the lever. `pytest tests/` is `373s`; split by
+  measured per-file total, **160 files cost 18.2s** and 7 cost 159s. An
+  inner loop that runs everything spends six minutes to learn what
+  twenty seconds would say. Google's small/medium/large/enormous, with
+  the tiers assigned from the measurement.
+- **`UX-239`** — the fixing guide's context map says
+  `tests/test_e2e.py   only existing test file`. There are 220. It also
+  names one entry ritual for six different kinds of work; the user's
+  observation about *streams* is what that section is missing.
+- **`UX-236`** — `UX-233` fixed the architecture document and left the
+  front door: three commands and a flag from round 28 appear in neither
+  `README.md` nor `docs/README.md`.
+- **`UX-237`** — documentation a change needs and does not get has
+  nowhere to go. A bug becomes a tracker row; a doc gap becomes a
+  comment, or nothing.
+- **`UX-240`** — skills, scoped narrowly to the procedures that get
+  re-derived every session and are mechanical: verify, falsify,
+  measure. Not to judgment.
+- **`UX-241`** — the architecture drifted a whole axis before anyone
+  noticed. Feature audits have a cadence; documentation review does
+  not, and that asymmetry is the finding.
+
+Order: `UX-238` first — everything after it is cheaper — then `UX-239`,
+then `UX-236` and `UX-237` together, then `UX-240` on top of both, and
+`UX-241` last because it is the cycle that keeps the rest true.
 
 ## UX-227..UX-234: the twenty-seventh audit round — the map is bigger than the page (2026-08-23)
 

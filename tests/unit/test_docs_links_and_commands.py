@@ -926,9 +926,19 @@ def test_every_out_of_scope_entry_names_a_task_or_states_a_decline():
         assert entries is not None, f"{path.name} has no Out of Scope section"
         for entry in entries:
             names_task = re.search(r"UX-\d+", entry)
+            # A reason in a parenthesis, after an em-dash, after a
+            # colon - or as a following sentence, which is how most of
+            # them are actually written. The first three patterns were
+            # derived from the three bare entries UX-232 mined, and
+            # under-fit the ninth filing that used the fourth shape:
+            # eight of ten round-29 entries stated their reason in a
+            # second sentence and were reported as bare. A bare noun
+            # phrase still cannot pass - it has no second sentence to
+            # put six words in.
             gives_reason = (re.search(r"\([^)]{12,}\)", entry)
                             or re.search(r"—[^—]{12,}", entry)
-                            or re.search(r":\s+\S", entry))
+                            or re.search(r":\s+\S", entry)
+                            or re.search(r"\.\s+(?:\S+\s+){5,}\S", entry))
             if not (names_task or gives_reason):
                 unjustified.append(f"{path.name}: {entry[:70]}")
     assert unjustified == [], (

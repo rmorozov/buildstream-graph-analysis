@@ -94,6 +94,7 @@ Why it is this way. Arguments and structure, not instructions.
 |---|---|
 | [`design/architecture.md`](design/architecture.md) | the three analysis planes, how the ingestion path measures itself, and every extension beyond the spec |
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
+| [`design/roles.md`](design/roles.md) | the role model — eight roles, their contradictions, and the gap analysis |
 
 ## Contributing
 
@@ -131,6 +132,8 @@ timestamped record, not a statement of current state.
 [21](audits/round-21.md) ·
 [22](audits/round-22.md) ·
 [23](audits/round-23.md) ·
+[24](audits/round-24.md) ·
+[27](audits/round-27.md) ·
 [the original spec-compliance review](audits/spec-compliance-review.md)
 
 ## Backlog

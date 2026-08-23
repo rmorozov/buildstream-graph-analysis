@@ -19,47 +19,89 @@ by reason; at the end of the session two things are checked:
 
 * **no reason may be new.** A skip this repository has not thought about
   is a skip nobody has decided is acceptable.
-* **no single reason may account for more than a handful.** One file
-  going quiet is the signature being guarded - twenty-six tests skipping
-  for one reason is a guard file that stopped guarding, whatever the
-  reason says.
+* **no reason may account for more than it was measured at, plus one
+  file's worth.** One file going quiet is the signature being guarded -
+  twenty-six tests skipping for one reason is a guard file that stopped
+  guarding, whatever the reason says. The measured baseline is per
+  reason because it is per *environment*: a runner without `bst` skips
+  a dozen tests for one reason legitimately, and a single global cap
+  cannot tell that from a silenced file.
 
 Making `jsonschema` a hard dependency was the other option and is
 declined: it is a dev tool and stays one. The claim gets honest instead.
 """
 import collections
 
-# Every skip reason this suite is known to produce, with what each one
-# means. A reason not in here fails the session - deliberately, because
-# the point is that nobody adds a silent skip without saying so.
+# Every skip reason this suite is known to produce: what each one means,
+# and **the largest count it has been measured at**. A reason not in
+# here fails the session - deliberately, because the point is that
+# nobody adds a silent skip without saying so.
+#
+# The measured count is the repair `UX-233`'s CI run forced. The first
+# version of this table was written from one machine's skip set - a dev
+# container with `bst`, `bwrap` and a real capture in it - and CI's
+# `test` job has none of those. It skipped **82 tests across nine
+# reasons**, seven of them undeclared, and the census failed a run in
+# which nothing was wrong. A census calibrated on one environment is
+# exactly the hollow instrument this item was filed about, one level up.
+#
+# So the bound is per reason and comes from a measurement rather than
+# from a single global guess: a reason may account for what it was
+# measured at, plus `MAX_PER_REASON` of headroom. Ordinary growth in a
+# family passes; a whole file adopting the reason does not. `0` means
+# "never seen more than a handful", which is the original behaviour.
 KNOWN_SKIP_REASONS = {
-    "not a dev environment by its own account (BGA_EXPECT_DEV is unset)":
+    "not a dev environment by its own account (BGA_EXPECT_DEV is unset)": (
         "the dev-extras canary, which only asserts where the environment "
-        "claims to be a dev environment (CI sets BGA_EXPECT_DEV)",
-    "trace_processor_shell is not installed":
-        "Perfetto's shell is an optional local tool, not a dependency",
-    "node is not installed":
-        "the viewer guards need node; CI has it",
-    "jsonschema is not installed - `pip install -e '.[dev]'`":
-        "schema validation is a dev extra",
-    "buildstream is not installed":
-        "the bst-dependent guards run in the bst-* CI jobs",
+        "claims to be a dev environment (CI sets BGA_EXPECT_DEV)", 0),
+    "trace_processor_shell is not installed": (
+        "Perfetto's shell is an optional local tool, not a dependency", 0),
+    "node is not installed": (
+        "the viewer guards need node; CI has it", 0),
+    "jsonschema is not installed - `pip install -e '.[dev]'`": (
+        "schema validation is a dev extra", 0),
+    "buildstream is not installed": (
+        "the bst-dependent guards run in the bst-* CI jobs", 0),
     # UX-213's real-capture arm. These three were undeclared until the
     # census asked: they are legitimate - a guard that also runs against
     # a real capture skips that arm where the capture is absent, and its
     # committed-fixture arm still runs - but nothing had ever named
     # them, which is precisely what the census is for.
-    "no real capture here":
-        "UX-213's second arm, where examples/06's capture is absent",
-    "no real capture in this tree":
-        "UX-213's second arm, where examples/06's capture is absent",
-    "the examples/06 capture is not here":
-        "UX-213's second arm, where examples/06's capture is absent",
+    "no real capture here": (
+        "UX-213's second arm, where examples/06's capture is absent", 19),
+    "no real capture in this tree": (
+        "UX-213's second arm, where examples/06's capture is absent", 0),
+    "the examples/06 capture is not here": (
+        "UX-213's second arm, where examples/06's capture is absent", 10),
+    # The seven CI's `test` job produces and a dev container does not.
+    # Every one of them is "the tool is not installed on this runner",
+    # and every one of them has a job that *does* install it: the
+    # `bst-smoke`, `bst-tests`, `bst-examples` and `installed-capture`
+    # jobs exist so these arms run somewhere. Counts measured on the
+    # `test (3.11)` job of PR #137.
+    "bst not found on PATH": (
+        "the bst-dependent arm; the bst-* CI jobs install it and run it", 2),
+    "bst not found on PATH - see docs/spec/ingestion-pipeline.md": (
+        "the bst-dependent arm; the bst-* CI jobs install it and run it", 12),
+    "bst and/or buildstream-plugins not available - "
+    "see docs/spec/ingestion-pipeline.md": (
+        "the bst-dependent arm; the bst-* CI jobs install it and run it", 1),
+    "bst/bwrap/bga not all found on PATH - "
+    "see docs/spec/ingestion-pipeline.md": (
+        "the full-capture arm; `installed-capture` is where it runs", 2),
+    "bst/bwrap/cc not all found on PATH - "
+    "see docs/spec/ingestion-pipeline.md": (
+        "the full-capture arm; `installed-capture` is where it runs", 6),
+    "bwrap not on PATH": (
+        "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 5),
+    "bwrap/cc not both on PATH": (
+        "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 8),
 }
 
-# One file going quiet is what this exists to catch. The suite's own
-# baseline is one skip per reason; a reason that suddenly accounts for
-# dozens is a module-level marker that silenced a whole file.
+# One file going quiet is what this exists to catch, and it is also the
+# headroom each measured reason gets. The suite's own baseline is a
+# handful per reason; a reason that suddenly accounts for a file more
+# than it was measured at is a module-level marker that silenced one.
 MAX_PER_REASON = 8
 
 _SKIPS = collections.Counter()
@@ -93,12 +135,22 @@ def census_complaints(census, known=None, cap=MAX_PER_REASON):
             complaints.append(
                 f"{count} test(s) skipped for a reason this suite has never "
                 f"declared: {reason!r}. Add it to KNOWN_SKIP_REASONS in "
-                f"tests/conftest.py with what it means, or stop skipping.")
-        elif count > cap:
+                f"tests/conftest.py with what it means and what it was "
+                f"measured at, or stop skipping.")
+            continue
+        # A declared reason carries the count it was measured at; the
+        # bound is that plus one file's worth of headroom, so growth in
+        # a family passes and a file adopting the reason does not.
+        declared = known[reason]
+        measured = declared[1] if isinstance(declared, tuple) else 0
+        allowed = measured + cap
+        if count > allowed:
             complaints.append(
                 f"{count} tests skipped for one reason ({reason!r}) - more "
-                f"than {cap}. That is a whole guard file going quiet, which "
-                f"is exactly what a green run must not be able to hide.")
+                f"than the {allowed} this suite allows it "
+                f"({measured} measured + {cap} headroom). That is a whole "
+                f"guard file going quiet, which is exactly what a green run "
+                f"must not be able to hide.")
     return complaints
 
 

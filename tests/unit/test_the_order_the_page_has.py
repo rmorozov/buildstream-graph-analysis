@@ -242,8 +242,11 @@ class TestTheSkipCensus:
 
     def test_every_declared_reason_says_what_it_means(self):
         conftest = self._census()
-        for reason, meaning in conftest.KNOWN_SKIP_REASONS.items():
+        for reason, declared in conftest.KNOWN_SKIP_REASONS.items():
+            meaning, measured = declared
             assert len(meaning.split()) >= 5, (reason, meaning)
+            assert isinstance(measured, int) and measured >= 0, (
+                f"{reason}: the baseline must be a count somebody measured")
 
     def test_the_cap_is_below_the_measured_collapse(self):
         """26 is what `test_output_schemas.py` skips without jsonschema.
@@ -251,3 +254,43 @@ class TestTheSkipCensus:
         motivated this."""
         conftest = self._census()
         assert conftest.MAX_PER_REASON < 26
+
+    def test_a_measured_baseline_does_not_switch_the_cap_off(self):
+        """The repair for the CI failure is a *per-reason* baseline, not
+        an exemption. A reason measured at 19 must still complain when a
+        file's worth joins it - otherwise "declare it" becomes the way
+        to silence the census, which is the defect wearing the fix's
+        clothes."""
+        conftest = self._census()
+        known = {"an environmental absence somewhere": ("a measured arm "
+                                                        "that runs in "
+                                                        "another job", 19)}
+        assert conftest.census_complaints({"an environmental absence "
+                                           "somewhere": 19}, known) == []
+        assert conftest.census_complaints({"an environmental absence "
+                                           "somewhere": 27}, known) == []
+        complaints = conftest.census_complaints(
+            {"an environmental absence somewhere": 28}, known)
+        assert complaints, "a file's worth past the baseline stayed quiet"
+        assert "19 measured" in complaints[0]
+
+    def test_the_baselines_cover_what_a_toolless_runner_skips(self):
+        """The census was calibrated on one machine and CI failed on a
+        run in which nothing was wrong: 82 skips across nine reasons,
+        seven of them undeclared. This is that run's census, pinned."""
+        conftest = self._census()
+        measured_in_ci = {
+            "bst not found on PATH": 2,
+            "bst not found on PATH - see docs/spec/ingestion-pipeline.md": 12,
+            "bst and/or buildstream-plugins not available - "
+            "see docs/spec/ingestion-pipeline.md": 1,
+            "bst/bwrap/bga not all found on PATH - "
+            "see docs/spec/ingestion-pipeline.md": 2,
+            "bst/bwrap/cc not all found on PATH - "
+            "see docs/spec/ingestion-pipeline.md": 6,
+            "bwrap not on PATH": 5,
+            "bwrap/cc not both on PATH": 8,
+            "no real capture here": 19,
+            "the examples/06 capture is not here": 10,
+        }
+        assert conftest.census_complaints(measured_in_ci) == []

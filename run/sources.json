@@ -1,0 +1,641 @@
+{
+  "schema": "sources/v1",
+  "elements": {
+    "bootstrap/acl.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/acl",
+        "declared": "savannah:acl.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/attr.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/attr",
+        "declared": "savannah:attr.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/base-sdk/autoconf.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/autoconf/autoconf-2.73.tar.xz",
+        "declared": "ftp_gnu_org:autoconf/autoconf-2.73.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/base-sdk/autoconf2.69.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/autoconf/autoconf-2.69.tar.xz",
+        "declared": "ftp_gnu_org:autoconf/autoconf-2.69.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/base-sdk/automake.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/automake/automake-1.18.1.tar.xz",
+        "declared": "ftp_gnu_org:automake/automake-1.18.1.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/base-sdk/bison.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/bison/bison-3.8.2.tar.gz",
+        "declared": "ftp_gnu_org:bison/bison-3.8.2.tar.gz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/base-sdk/flex.bst": [
+      {
+        "kind": "tar",
+        "identity": "github_files/westes/flex/files/981163/flex-2.6.4.tar.gz",
+        "declared": "github_files:westes/flex/files/981163/flex-2.6.4.tar.gz",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/flex/flex-pie.patch",
+        "declared": "patches/flex/flex-pie.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/base-sdk/libtool.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/libtool/libtool-2.5.4.tar.xz",
+        "declared": "ftp_gnu_org:libtool/libtool-2.5.4.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/bash.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/bash",
+        "declared": "savannah:bash.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/bash/0001-bash-config.patch",
+        "declared": "patches/bash/0001-bash-config.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/build/stripper.bst": [
+      {
+        "kind": "local",
+        "identity": "files/stripper",
+        "declared": "files/stripper",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/bzip2.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "sourceware/bzip2",
+        "declared": "sourceware:bzip2.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/bzip2/soname.patch",
+        "declared": "patches/bzip2/soname.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/diffutils.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/diffutils/diffutils-3.12.tar.xz",
+        "declared": "ftp_gnu_org:diffutils/diffutils-3.12.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/findutils.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/findutils/findutils-4.11.0.tar.xz",
+        "declared": "ftp_gnu_org:findutils/findutils-4.11.0.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/findutils/no-locate.patch",
+        "declared": "patches/findutils/no-locate.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/gawk.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/gawk",
+        "declared": "savannah:gawk.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/gawk/0001-Workaround-fix-for-systems-without-MPFR-and-GMP.patch",
+        "declared": "patches/gawk/0001-Workaround-fix-for-systems-without-MPFR-and-GMP.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/gnu-config.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/config",
+        "declared": "savannah:config.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/grep.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/grep/grep-3.12.tar.xz",
+        "declared": "ftp_gnu_org:grep/grep-3.12.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/gzip.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/gzip/gzip-1.14.tar.xz",
+        "declared": "ftp_gnu_org:gzip/gzip-1.14.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "local",
+        "identity": "files/gzip/wrapper.sh",
+        "declared": "files/gzip/wrapper.sh",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/libselinux.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/SELinuxProject/selinux",
+        "declared": "github:SELinuxProject/selinux.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/libsepol.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/SELinuxProject/selinux",
+        "declared": "github:SELinuxProject/selinux.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/make.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/make/make-4.4.1.tar.lz",
+        "declared": "ftp_gnu_org:make/make-4.4.1.tar.lz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/pcre2.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/PCRE2Project/pcre2",
+        "declared": "github:PCRE2Project/pcre2.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "git_module",
+        "identity": "github/zherczeg/sljit",
+        "declared": "github:zherczeg/sljit.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/readline.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/readline",
+        "declared": "savannah:readline.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/readline/readline-disable-rpath.patch",
+        "declared": "patches/readline/readline-disable-rpath.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/sed.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/sed/sed-4.10.tar.xz",
+        "declared": "ftp_gnu_org:sed/sed-4.10.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/stripper.bst": [
+      {
+        "kind": "local",
+        "identity": "files/stripper",
+        "declared": "files/stripper",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/symlinks.bst": [
+      {
+        "kind": "local",
+        "identity": "elements/bootstrap/symlinks",
+        "declared": "elements/bootstrap/symlinks",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "bootstrap/zlib-ng.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/zlib-ng/zlib-ng",
+        "declared": "github:zlib-ng/zlib-ng.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/_private/flex-base.bst": [
+      {
+        "kind": "tar",
+        "identity": "github_files/westes/flex/files/981163/flex-2.6.4.tar.gz",
+        "declared": "github_files:westes/flex/files/981163/flex-2.6.4.tar.gz",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/flex/flex-pie.patch",
+        "declared": "patches/flex/flex-pie.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "components/_private/meson.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/mesonbuild/meson",
+        "declared": "github:mesonbuild/meson.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-build-bootstrap.bst": [
+      {
+        "kind": "local",
+        "identity": "files/python-bootstrap/build.py",
+        "declared": "files/python-bootstrap/build.py",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-build.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/pypa/build",
+        "declared": "github:pypa/build.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-flit-core.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/pypa/flit",
+        "declared": "github:pypa/flit.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/python3-flit-core/drop-lic-pattern.patch",
+        "declared": "patches/python3-flit-core/drop-lic-pattern.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-installer-bootstrap.bst": [
+      {
+        "kind": "local",
+        "identity": "files/python-bootstrap/installer.py",
+        "declared": "files/python-bootstrap/installer.py",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-installer.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/pypa/installer",
+        "declared": "github:pypa/installer.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-packaging.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/pypa/packaging",
+        "declared": "github:pypa/packaging.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-pyproject-hooks.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/pypa/pyproject-hooks",
+        "declared": "github:pypa/pyproject-hooks.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-setuptools.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/pypa/setuptools",
+        "declared": "github:pypa/setuptools.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/_private/python3-wheel.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/pypa/wheel",
+        "declared": "github:pypa/wheel.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/autoconf-archive.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/autoconf-archive/autoconf-archive-2024.10.16.tar.xz",
+        "declared": "ftp_gnu_org:autoconf-archive/autoconf-archive-2024.10.16.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/autoconf.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/autoconf/autoconf-2.73.tar.xz",
+        "declared": "ftp_gnu_org:autoconf/autoconf-2.73.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/autoconf2.69.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/autoconf/autoconf-2.69.tar.xz",
+        "declared": "ftp_gnu_org:autoconf/autoconf-2.69.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/automake.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/automake/automake-1.18.1.tar.xz",
+        "declared": "ftp_gnu_org:automake/automake-1.18.1.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/bison.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/bison",
+        "declared": "savannah:bison.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "git_module",
+        "identity": "savannah/gnulib",
+        "declared": "savannah:gnulib.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "git_module",
+        "identity": "savannah/autoconf",
+        "declared": "savannah:autoconf.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/doxygen.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/doxygen/doxygen",
+        "declared": "github:doxygen/doxygen.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/expat.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/libexpat/libexpat",
+        "declared": "github:libexpat/libexpat.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/gdbm.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/gdbm/gdbm-1.26.tar.gz",
+        "declared": "ftp_gnu_org:gdbm/gdbm-1.26.tar.gz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/gperf.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "savannah/gperf",
+        "declared": "savannah:gperf.git",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "git_repo",
+        "identity": "savannah/gnulib",
+        "declared": "savannah:gnulib.git",
+        "keying": "ref",
+        "staged_at": "gnulib"
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/gperf/disable-tests.patch",
+        "declared": "patches/gperf/disable-tests.patch",
+        "keying": "content",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/gperf/partial-doc.patch",
+        "declared": "patches/gperf/partial-doc.patch",
+        "keying": "content",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/gperf/disable-devel-makefile-paralel.patch",
+        "declared": "patches/gperf/disable-devel-makefile-paralel.patch",
+        "keying": "content",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/gperf/html-doc-reproducible-date.patch",
+        "declared": "patches/gperf/html-doc-reproducible-date.patch",
+        "keying": "content",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/gperf/man-page-reproducible-date.patch",
+        "declared": "patches/gperf/man-page-reproducible-date.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "components/help2man.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/help2man/help2man-1.49.3.tar.xz",
+        "declared": "ftp_gnu_org:help2man/help2man-1.49.3.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/icu.bst": [
+      {
+        "kind": "tar",
+        "identity": "github_files/unicode-org/icu/releases/download/release-78.3/icu4c-78.3-sources.tgz",
+        "declared": "github_files:unicode-org/icu/releases/download/release-78.3/icu4c-78.3-sources.tgz",
+        "keying": "ref",
+        "staged_at": null
+      },
+      {
+        "kind": "patch",
+        "identity": "patches/icu/icu-fix-shared-linking.patch",
+        "declared": "patches/icu/icu-fix-shared-linking.patch",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "components/libffi.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/libffi/libffi",
+        "declared": "github:libffi/libffi.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/libtool.bst": [
+      {
+        "kind": "tar",
+        "identity": "ftp_gnu_org/libtool/libtool-2.6.2.tar.xz",
+        "declared": "ftp_gnu_org:libtool/libtool-2.6.2.tar.xz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/libxml2.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "gnome/libxml2",
+        "declared": "gnome:libxml2.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/ninja.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/ninja-build/ninja",
+        "declared": "github:ninja-build/ninja.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/openssl.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/openssl/openssl",
+        "declared": "github:openssl/openssl.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/sqlite.bst": [
+      {
+        "kind": "git_repo",
+        "identity": "github/sqlite/sqlite",
+        "declared": "github:sqlite/sqlite.git",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ],
+    "components/which.bst": [
+      {
+        "kind": "tar",
+        "identity": "tar_https/carlowood.github.io/which/which-2.25.tar.gz",
+        "declared": "tar_https:carlowood.github.io/which/which-2.25.tar.gz",
+        "keying": "ref",
+        "staged_at": null
+      }
+    ]
+  },
+  "unreadable": {
+    "bootstrap/base-sdk/binary-seed-x86_64.bst": [
+      "`docker` source has none of url, path, location"
+    ],
+    "bootstrap/coreutils.bst": [
+      "`sources` is not a list"
+    ]
+  }
+}

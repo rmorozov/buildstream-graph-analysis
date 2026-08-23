@@ -1,0 +1,14 @@
+fdsdk_ref=953683fb96b82cdf6d7941c4ba9859378942f22b
+bga_ref=b44caa6580720b462468c6abd1947f67d6eb2d03
+bst_version=2.7.0
+runner_os=Linux runnervm76f27 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+nproc=4
+builders=4
+max_jobs=4
+trace_opens=true
+trace_spine=false
+capture_mode=incremental
+target=components/libxml2.bst
+mem_total_kb=16377684
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root       145G   49G   97G  34% /

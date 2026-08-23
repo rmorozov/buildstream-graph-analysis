@@ -1,0 +1,118 @@
+{
+  "trace_epsilon_us": 50000,
+  "resource_capacities": {
+    "PROCESS": 4,
+    "DOWNLOAD": 10,
+    "UPLOAD": 4
+  },
+  "max_jobs": 4,
+  "native_max_jobs": 4,
+  "native_max_jobs_source": "operator_declared",
+  "host_cpu_count": 4,
+  "host_memory_mb": 15993,
+  "host_manifest": {
+    "schema": "host/v1",
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_count": 4,
+    "memory_mb": 15993,
+    "kernel_release": "6.17.0-1022-azure",
+    "distro_id": "ubuntu 24.04",
+    "toolchain": {
+      "bst": "2.7.0",
+      "bwrap": "bubblewrap 0.9.0",
+      "buildbox-run": null,
+      "cc": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+    }
+  },
+  "wall_clock": {
+    "start_us": 1787456634132000,
+    "end_us": 1787460273319000
+  },
+  "pipeline_overhead": [
+    {
+      "phase": "Loading elements",
+      "elapsed_us": 350000
+    },
+    {
+      "phase": "Resolving elements",
+      "elapsed_us": 225000
+    },
+    {
+      "phase": "Initializing remote caches",
+      "elapsed_us": 1000
+    },
+    {
+      "phase": "Query cache",
+      "elapsed_us": 1728000
+    }
+  ],
+  "build_outcome": {
+    "failed_elements": [],
+    "failed_count": 0,
+    "interrupted": false
+  },
+  "queue_summary": {
+    "fetch": {
+      "processed": 0,
+      "skipped": 90,
+      "failed": 0
+    },
+    "build": {
+      "processed": 25,
+      "skipped": 65,
+      "failed": 0
+    }
+  },
+  "timestamp_agreement": {
+    "tasks_compared": 25,
+    "tasks_shorter_than_bst": 4,
+    "shorter_than_bst": [
+      {
+        "element": "components/ninja.bst",
+        "action": "build",
+        "span_s": 157.958,
+        "bst_elapsed_s": 158.0,
+        "shortfall_s": 0.042
+      },
+      {
+        "element": "components/openssl.bst",
+        "action": "build",
+        "span_s": 679.621,
+        "bst_elapsed_s": 680.0,
+        "shortfall_s": 0.379
+      },
+      {
+        "element": "components/_private/git-minimal.bst",
+        "action": "build",
+        "span_s": 543.65,
+        "bst_elapsed_s": 544.0,
+        "shortfall_s": 0.35
+      },
+      {
+        "element": "components/python3.bst",
+        "action": "build",
+        "span_s": 634.747,
+        "bst_elapsed_s": 635.0,
+        "shortfall_s": 0.253
+      }
+    ],
+    "worst_shortfall_s": -0.379,
+    "worst_excess_s": 1.145,
+    "note": "Each task's duration measured twice: the wrapped log's own timestamps, which are stamped when the wrapper read each line, against BuildStream's `[HH:MM:SS]` elapsed prefix, which is its own timing truncated to whole seconds. The difference is the wrapper's read-lag, and it bounds the resolution of every Plane 1 duration in this run. A task reported as shorter than BuildStream's own figure is provably short, not merely imprecise (UX-110)."
+  },
+  "run_identity": {
+    "manifest_hash": "f12a845e2327de7a0101a227aaf602b15b8b45a3cfc78185af3485d3472cace8",
+    "project_identity": ".",
+    "targets": [
+      "components/libxml2.bst"
+    ],
+    "scheduler": {
+      "builders": 4,
+      "fetchers": 10,
+      "pushers": 4,
+      "native_max_jobs": 4
+    },
+    "project_git_commit": "953683fb96b82cdf6d7941c4ba9859378942f22b",
+    "project_refs_sha256": null
+  }
+}

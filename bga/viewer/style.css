@@ -259,3 +259,26 @@ th .th-filter.unparsed { border-color: var(--bad); }
 .question-group > summary { cursor: pointer; text-transform: capitalize;
                             color: var(--muted); font-size: .85rem;
                             margin-top: .6rem; }
+
+/* UX-219: the horizon as a bar sequence. The width is the only thing
+   the drawing computes, and it is one division of two published
+   durations - `--w` is set inline from the payload. */
+ol.horizon { list-style: none; margin: 0; padding: 0; }
+.horizon-step {
+  display: grid;
+  grid-template-columns: minmax(9rem, 14rem) 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.15rem 0;
+}
+.horizon-bar {
+  display: block;
+  height: 0.75rem;
+  width: var(--w, 0%);
+  min-width: 1px;
+  background: var(--accent, #4a7ebb);
+  border-radius: 2px;
+}
+.horizon-value { font-variant-numeric: tabular-nums; }
+.horizon-entering { grid-column: 2 / -1; font-size: 0.85em; }
+.horizon-total { font-weight: 600; margin-top: 0.4rem; }

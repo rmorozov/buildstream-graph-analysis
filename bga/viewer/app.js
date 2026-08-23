@@ -12,7 +12,7 @@
 // text renderer, CI and every external consumer get it too.
 
 import { handOff, deepLink } from "./perfetto.js";
-import { renderBand, renderCulprits, renderTrend, renderBlastSearch,
+import { renderBand, renderCulprits, renderHorizon, renderTrend, renderBlastSearch,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
@@ -934,6 +934,12 @@ async function boot() {
     // widths rather than a graph layout problem.
     const chain = renderCriticalPath(payload);
     if (chain) root.append(chain);
+
+    // UX-219: the horizon as a plan rather than a five-column table.
+    // Placed with the chain, because "what is the path" and "what does
+    // fixing it buy" are the same question one step apart.
+    const horizon = renderHorizon(payload);
+    if (horizon) root.append(horizon);
 
     const overview = renderOverview(payload);
     if (overview) root.prepend(overview);

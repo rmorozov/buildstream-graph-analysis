@@ -1330,3 +1330,131 @@ function culpritRow(row) {
   item.append(name, document.createTextNode(" "), change);
   return item;
 }
+
+// UX-219: the horizon, drawn.
+//
+// `signals.optimization_horizon` has carried the whole answer, per step,
+// since long before this: the saving, the makespan that remains, and -
+// the part a table hides - which elements *enter* the critical path once
+// that step is taken. That is the honest reason the savings stop adding
+// up, and it is what makes this a plan rather than a sum.
+//
+// Every width is one published `makespan_after_us` over one published
+// total. Nothing here adds savings together or projects anything: if the
+// payload publishes three steps, the plan has three rows.
+export function renderHorizon(payload) {
+  const steps = payload?.signals?.optimization_horizon ?? [];
+  const total = payload?.total_duration_us;
+  if (!steps.length || !total) return null;
+
+  const section = document.createElement("section");
+  section.setAttribute("data-section", "horizon");
+  section.setAttribute("data-toc-label", "What if I fix these");
+  section.setAttribute("data-total-us", String(total));
+  const heading = document.createElement("h2");
+  heading.textContent = "What if I fix these";
+  section.append(heading);
+
+  const list = document.createElement("ol");
+  list.className = "horizon";
+
+  // The run as it stands, so the bars below have something to shorten.
+  list.append(horizonRow({
+    label: "now", makespanUs: total, total,
+    element: null, saving: null, entering: [],
+  }));
+
+  let taken = [];
+  for (const step of steps) {
+    taken = taken.concat([step.element_uid]);
+    list.append(horizonRow({
+      label: taken.length === 1
+        ? `fix ${step.element_uid}`
+        : `+ fix ${step.element_uid}`,
+      makespanUs: step.makespan_after_us,
+      total,
+      element: step.element_uid,
+      saving: step.saving_us,
+      entering: step.entering ?? [],
+    }));
+  }
+  section.append(list);
+
+  // The total, from the last step's own published cumulative saving.
+  // Not a sum computed here - the payload already decided what the
+  // sequence is worth, and re-adding it would be a second answer.
+  const last = steps[steps.length - 1];
+  const cumulative = last?.cumulative_saving_us;
+  if (cumulative !== null && cumulative !== undefined) {
+    const summary = document.createElement("p");
+    summary.className = "horizon-total";
+    summary.setAttribute("data-role", "horizon-total");
+    summary.setAttribute("data-cumulative-saving-us", String(cumulative));
+    summary.setAttribute("data-total-us", String(total));
+    const share = (cumulative / total) * 100;
+    summary.textContent =
+      `${steps.length} ${steps.length === 1 ? "fix" : "fixes"}`
+      + ` → ${share.toFixed(0)}% faster (${seconds(cumulative)} off ${seconds(total)})`;
+    section.append(summary);
+  }
+  return section;
+}
+
+function horizonRow({ label, makespanUs, total, element, saving, entering }) {
+  const row = document.createElement("li");
+  row.className = "horizon-step";
+  // The published value, on the element, so a guard can check the
+  // drawing against the payload without reading computed style.
+  row.setAttribute("data-makespan-after-us", String(makespanUs));
+  if (element) row.setAttribute("data-element", element);
+  if (saving !== null && saving !== undefined) {
+    row.setAttribute("data-saving-us", String(saving));
+  }
+
+  const name = document.createElement("span");
+  name.className = "horizon-label";
+  if (element) {
+    const link = document.createElement("a");
+    link.className = "element";
+    link.setAttribute("href", `#${elementAnchor(element)}`);
+    link.textContent = element;
+    name.append(document.createTextNode(label.startsWith("+") ? "+ fix " : "fix "),
+                link);
+  } else {
+    name.textContent = label;
+  }
+
+  const bar = document.createElement("span");
+  bar.className = "horizon-bar";
+  bar.setAttribute("data-role", "bar");
+  // One division, UX-202's rule: a proportion of a published total, not
+  // a quantity derived in the page.
+  bar.setAttribute("style", `--w: ${(makespanUs / total) * 100}%`);
+
+  const value = document.createElement("span");
+  value.className = "horizon-value";
+  value.textContent = seconds(makespanUs);
+
+  row.append(name, bar, value);
+
+  // What joins the critical path once this step is taken. The reason
+  // the savings stop adding up, and the reason this is a plan.
+  if (entering.length) {
+    const note = document.createElement("span");
+    note.className = "horizon-entering muted";
+    note.setAttribute("data-role", "entering");
+    note.append(document.createTextNode("→ "));
+    entering.forEach((uid, i) => {
+      if (i) note.append(document.createTextNode(", "));
+      const link = document.createElement("a");
+      link.className = "element";
+      link.setAttribute("href", `#${elementAnchor(uid)}`);
+      link.textContent = uid;
+      note.append(link);
+    });
+    note.append(document.createTextNode(
+      entering.length === 1 ? " enters the path" : " enter the path"));
+    row.append(note);
+  }
+  return row;
+}

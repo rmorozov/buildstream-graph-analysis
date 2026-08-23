@@ -1,6 +1,6 @@
 # UX-219: what if I fix these — the plan, drawn
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-207 (the top actions), UX-208 (the table it replaces)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 (the top actions), UX-208 (the table it replaces)
 
 ## Motivation
 
@@ -67,3 +67,71 @@ instead of reading `makespan_after_us` → the widths disagree with the
 payload on `examples/06`, where they differ; drop `entering` from the
 rows → the guard that the drawing names what joins the path fails.
 Page-size guard holds.
+
+## Outcome (round 26)
+
+One row per published step, plus the run as it stands so the bars have
+something to shorten. Every width is one published `makespan_after_us`
+over one published `total_duration_us` — a single division, carried on
+`data-makespan-after-us` so a guard reads the drawing against the
+payload rather than through computed style.
+
+**The committed golden fixture discriminates the width mutation on its
+own**, which is worth stating because it is why this guard is not
+decorative. At every step the published makespan differs from the naive
+`total - cumulative_saving_us`:
+
+```text
+base.bst    8000  vs 10000
+lib.bst     4000  vs  6000
+extra.bst   3000  vs  5000
+app.bst        0  vs  2000
+```
+
+A drawing that summed savings would disagree with the payload on every
+bar. That fixture also carries a real `entering` step (`lib.bst` →
+`extra.bst`), so the guard that the drawing names what joins the path is
+checked against something rather than passing over four empty lists —
+which is asserted explicitly, so emptying the fixture fails rather than
+quietly making the guard vacuous.
+
+### A mutation that could not discriminate, and what replaced it
+
+> *the total re-adds `saving_us` instead of reading `cumulative_saving_us`*
+
+Applied, everything stayed green — and it always would. In every report
+this analyzer produces, `cumulative_saving_us` **is** the running sum of
+`saving_us`; they agree by construction, so no real fixture can separate
+them. The mutation was rejected rather than counted.
+
+The property it was meant to check is real, so it is checked where the
+two *can* differ: a synthetic payload whose last `cumulative_saving_us`
+(15) disagrees with the sum of its savings (20). The page must report
+15, and the mutation reddens there. A guard that can only pass is not a
+guard, but neither is one deleted because its first mutation missed.
+
+### The size discipline, and how much of it this round spent
+
+UX-218 replaced the absolute page ceiling with composition + Direction
+7's ratio + a loose 120,000 B backstop, after the ceiling was crossed
+three rounds running. Measured after this round's two drawings:
+
+```text
+exported page with its data removed   107,533 B
+backstop                              120,000 B
+margin                                 12,467 B
+```
+
+Holding, and stated rather than assumed: the culprit strip and the
+horizon together spent a real fraction of the headroom that change
+created. The ratio guard and the composition guard both still pass.
+
+**Mutations verified red and reverted:** width from a sum of savings
+rather than the published makespan (2 guards); `entering` dropped from
+the rows (2); a bar drawn with no total to divide by (1); the total
+re-derived rather than read (1, on the separable payload).
+
+**Deviation from the Required Fix:** none. Clause 4's table stays — the
+drawing is appended in `views.js` and `app.js` never names
+`optimization_horizon`, which is asserted, so the generic schema
+dispatch still renders the table beneath with no special case.

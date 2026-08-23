@@ -111,6 +111,29 @@
             }
         ]
     },
+    "next_steps": [
+        {
+            "id": "blast-the-top-element",
+            "reason": "base.bst is the first thing to fix - this is what changing it rebuilds.",
+            "argv": [
+                "bga",
+                "blast",
+                "base.bst",
+                "<run>"
+            ],
+            "follows_from": "blast-radius-ranking"
+        },
+        {
+            "id": "sweep-the-capacity",
+            "reason": "This build is scheduler-bound - the sweep says what more builders would buy.",
+            "argv": [
+                "bga",
+                "sweep",
+                "<run>"
+            ],
+            "follows_from": "headline.diagnosis"
+        }
+    ],
     "floors": {
         "t_infinity_observed": 14000,
         "lb": 14000,

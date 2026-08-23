@@ -137,3 +137,33 @@ block; `follows_from` dropped.
 
 **Deviation from the Required Fix:** none. Nothing is executed — the
 page proposes and the reader runs.
+
+**A third guard caught it after the fact, in CI, and that is the honest
+record.** The verification above ran `pytest tests/unit`. CI runs
+`make test`, which is `pytest tests/` — four files wider, one of them
+`tests/test_golden.py`, whose committed snapshot is an exact diff of a
+full `analyze/v1` report. Adding `next_steps` to every full report made
+that snapshot stale, so the pull request went red on all four Python
+versions while the local run was green. The narrower command was the
+mistake, not the feature.
+
+Fixing it exposed the same tension `test_section_stage_gating` had
+already raised, in a place where it matters more. A next-step command
+names the run directory, so the value is a property of the machine that
+ran the analysis — exactly why `run_instance` is dropped from that
+snapshot. Regenerating naively would have committed this checkout's
+absolute path and failed on every other machine. `_run_analyze` now
+replaces the fixture path with `<run>` before comparing, and the
+regeneration recipe in the file's own docstring was rewritten to do the
+same thing, since a recipe that disagrees with the test writes a
+snapshot the test can never match.
+
+Measured, not argued. The regenerated snapshot's diff is `next_steps`
+and nothing else — 23 lines added, zero changed — so round 25 drifted
+no other field. The test passes from a second checkout at a different
+absolute path (`tar`-copied out of `git ls-files`), which is the
+condition CI actually exercises. Two mutations verified red against
+that copy: a next-step reason reworded, and `run_dir` dropped from the
+blast argv. The path is normalised; the *command* is still compared,
+including the fact that it names a run at all. Full `make test`:
+2829 passed, 3 skipped.

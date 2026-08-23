@@ -16,14 +16,17 @@ correctness assertions here; add them to the targeted test files instead.
 ## Regenerating the expected output after a deliberate behavior change
 
     PYTHONPATH=. python3 -m bga.cli analyze \\
-        tests/fixtures/golden/mixed_task_kinds --format json --diagnostics \\
+        "$PWD/tests/fixtures/golden/mixed_task_kinds" \\
+        --format json --diagnostics \\
+        | sed "s|$PWD/tests/fixtures/golden/mixed_task_kinds|<run>|g" \\
         | python3 -c 'import json,sys; d=json.load(sys.stdin); \\
               d.pop("run_instance", None); print(json.dumps(d, indent=4))' \\
         > tests/fixtures/golden/mixed_task_kinds/expected_output.json
 
-`run_instance` is dropped because `_run_analyze` below pops it from the
-actual payload before comparing - a recipe that leaves it in writes a
-snapshot this file can never match.
+The recipe passes the fixture as an *absolute* path and rewrites it to
+`<run>`, because that is exactly what `_run_analyze` below does; a recipe
+that skipped either step writes a snapshot this file can never match.
+`run_instance` is dropped for the same reason.
 
 Then re-run this file and confirm the diff you expected is the only
 change (`git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json`).
@@ -43,7 +46,13 @@ def _run_analyze(fixture_dir: Path) -> dict:
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"
-    payload = json.loads(proc.stdout)
+    # `UX-218`'s next-step commands name the run directory, because a
+    # command that did not name it would not be runnable. That makes the
+    # path a property of the machine that ran the analysis - the same
+    # reason `run_instance` is dropped below - so it is replaced with one
+    # fixed token rather than being compared. The *commands* still are:
+    # only the directory they point at is neutralised.
+    payload = json.loads(proc.stdout.replace(str(fixture_dir), "<run>"))
     # `UX-95`'s run-instance block names *which capture* this is - a
     # wall-clock stamp and the absolute path it was read from. Both are
     # properties of the machine that ran it, not of the analysis, so

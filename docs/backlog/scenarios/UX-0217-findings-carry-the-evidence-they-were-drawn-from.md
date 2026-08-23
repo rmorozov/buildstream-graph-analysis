@@ -1,6 +1,6 @@
 # UX-217: findings carry the evidence they were drawn from
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-202 (the finding renderer), UX-207 (the decision the findings support)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the finding renderer), UX-207 (the decision the findings support)
 
 ## Motivation
 
@@ -69,3 +69,57 @@ Mutations, each asserted red: drop `evidence` from the renderer → the
 evidence guard fails; render evidence by name-sniffing instead of the
 declared quantity → the units guard fails on `time-concentration`'s
 `path_us`. Page-size guard holds.
+
+---
+
+## Outcome (round 25)
+
+**Status:** 🟢 Done.
+
+`renderFindings` renders `evidence` under each finding's detail,
+through the same schema machinery as everything else. Measured on the
+golden fixture: `primary: 0.875` reads **87.5%**, `category_us: 2000`
+reads **2 ms**, `band: "high"` reads **high**.
+
+**The units are the substance, and each was checked against a rendered
+value rather than inferred from its key.** The evidence vocabulary is
+59 keys wide; `_us` is the only suffix in it safe to read
+mechanically. `primary` is a share and not a count; `cores_busy` is
+1.60 and a ratio, not a share; `envelope_mb` is 613.7 megabytes. So
+`EVIDENCE_QUANTITIES` declares 39 of them in `analyze/v1`, and the
+guard that every declared key is one a finding actually emits keeps the
+contract from rotting in the other direction.
+
+Nothing is special-cased per finding: a new finding's evidence formats
+correctly if its keys are declared, and renders raw if they are not —
+which is the honest degrade, and better than inventing a unit.
+
+**Structured evidence is left alone.** `rows`, `steps` and
+`constraints` are tables in their own right that a finding builds its
+sentence from, and the report already draws them elsewhere. Flattening
+them into a definition list would be a worse rendering, not a more
+complete one.
+
+**The fold hides pixels, not the DOM.** Above four measurements the
+block folds (`UX-209`'s rule, `data-fold`ged so `UX-211` carries it in
+the link) and the guard asserts all ten values are still present — a
+fold that costs the reader Ctrl-F is not a fold.
+
+Seven mutations, each verified red: the evidence dropped again (six
+guards); the units name-sniffed instead of read from the schema;
+`primary` losing its declared share; `category_us` declared as seconds;
+the arrays flattened in; the fold hiding values from the DOM; a
+declared key no finding emits.
+
+**One defect the work surfaced:** `renderEvidence` was already the name
+of `UX-202`'s evidence *header*. The new one is
+`renderFindingEvidence` — two different objects called evidence, and
+the import collision is what made that visible before it shipped.
+
+**Deviation from the Required Fix:** clause 3 asks for evidence keys
+naming elements or sections to become links. None of the 39 declared
+keys is an element uid or a section name — the element-shaped evidence
+(`rows`, `steps`, `latent_heavies`) is exactly the structured kind this
+item leaves to the sections that draw it, and `UX-216` already links
+every element occurrence there. Nothing was dropped; there was nothing
+of that shape to link.

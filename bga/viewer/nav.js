@@ -167,7 +167,12 @@ export function toc(root, { document: doc, controls } = {}) {
       link.href = `#${key}`;
       link.setAttribute("data-toc", key);
       link.setAttribute("data-rail", rail);
-      link.textContent = label(key);
+      // UX-216: a section may name itself. `label(key)` is the right
+      // default for a schema key and the wrong one for an element uid,
+      // which arrives already sanitised into an id.
+      const section = root.querySelector?.(`[data-section="${key}"]`);
+      link.textContent = section?.getAttribute?.("data-toc-label")
+        || label(key);
       item.append(link);
       list.append(item);
     }

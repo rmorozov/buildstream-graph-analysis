@@ -800,6 +800,40 @@ A section whose schema declares no rail lands in `raw` — never nowhere.
   denominator cannot tell a filtered table from a small one.
 - The blast box opens with the payload's top-ranked targets as chips.
 
+### Findings show their evidence (`UX-217`)
+
+Each finding renders the numbers it was drawn from, in the units the
+schema declares them in:
+
+```text
+⚠ 12.5% of wall-clock is untracked tail
+   category      untracked_tail_us
+   category_us   2 ms
+   share         12.5%
+```
+
+Those are published fields, in published units — `share: 0.125` is a
+share and renders as a percentage; `category_us: 2000` is microseconds
+and renders as a duration. A finding whose evidence key the schema does
+not describe renders it raw rather than guessing at a unit.
+
+### Everything about one element, in one place (`UX-216`)
+
+Every element the report discusses gets its own section: what it holds
+of the critical path, what a fix is worth, what it rebuilds, and —
+where Plane 2 saw it — how busy the cores were, how many jobs it asked
+for and what it peaked at. The findings that name it are there, and so
+is what joins the critical path if you fix it.
+
+Every mention of an element links to it: a table row's **Inspect**, a
+critical-path box, a finding's element list, a top action, a blast-tree
+row. A section says where else in the report the element appears, read
+from what the page actually drew.
+
+`bga view` before this shipped 19 Inspect affordances on `examples/06`
+that resolved to nothing — the anchor scheme and the ids never matched.
+The guard now resolves every one of them.
+
 ### A link that shows what you were looking at (`UX-211`)
 
 **Copy link to this view**, beside the contents. The filter, the

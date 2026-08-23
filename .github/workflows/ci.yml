@@ -40,6 +40,17 @@ jobs:
       - name: Lint
         run: make lint
 
+      # UX-238: the small tier is the inner loop's tier, and its value is
+      # that it stays fast. Nothing stops a slow test landing in it -
+      # it is the *default*, so a new file joins it silently - which is
+      # why the budget is enforced here rather than trusted. 30.6s
+      # measured; 90s is the bound, generous because the smallest large
+      # file is 15.4s on its own and one landing here should trip it
+      # long before a benchmark would. Keep in step with
+      # SMALL_TIER_BUDGET_S in tests/tiers.py.
+      - name: Test (small tier, budgeted)
+        run: timeout 90 make test-small
+
       - name: Test
         run: make test
 

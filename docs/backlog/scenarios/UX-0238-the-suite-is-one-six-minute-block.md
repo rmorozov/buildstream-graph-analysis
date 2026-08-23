@@ -1,6 +1,6 @@
 # UX-238: the suite is one six-minute block
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the maintainers, and every future session most of all | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainers, and every future session most of all | **Topic:** guards
 
 ## Motivation
 
@@ -80,3 +80,63 @@ a file listed in two tiers reddens; a file listed that does not exist
 reddens; the small tier's budget reddens when a large file is moved
 into it; `make test` still runs everything and the census still fires
 only on a full unfiltered run.
+
+## Outcome (round 29)
+
+Four tiers, assigned from the measurement in `tests/tiers.py` and
+applied by a collection hook — no test file carries a marker by hand,
+and a new file inherits `small` for free.
+
+```text
+$ time make test-small
+1985 passed, 1130 deselected in 22.07s
+real    0m22.486s
+
+$ time make test
+3112 passed, 3 skipped in 319.29s (0:05:19)
+real    5m19.728s
+```
+
+**64% of the tests in 7% of the time — a 14× faster inner loop.**
+
+### The lists are the exceptions, not the taxonomy
+
+`small` is the *default*: 160 of 220 files are in it because they are
+not in either list. That is what keeps the table honest at 60 lines
+instead of 220, and it is also its one weakness — a slow file joins the
+default tier silently. So the budget is enforced where it can be:
+`timeout 90 make test-small` in CI, with the number pinned to
+`SMALL_TIER_BUDGET_S` by a guard, because two copies of one number is
+the drift this repository fixes more often than anything else. 90s
+against 22s measured is deliberately generous: the smallest *large*
+file is 15.4s on its own, so one landing here trips the timeout long
+before a benchmark would.
+
+The timing lives in CI rather than in an assertion inside the suite. A
+test that times its own suite is the kind of guard that goes flaky and
+then gets muted; what is checkable from inside is that the two numbers
+agree, and that is what the guard does.
+
+### A guard of mine that did not discriminate
+
+`test_a_tier_run_does_not_assert_a_whole_suite_census` built a fake
+session with `markexpr` set and asserted a clean exit. Deleting the
+gate it guards left it **green**: inside a one-file test run the skip
+census is empty, so there was nothing to complain about either way. It
+plants a tally that *would* complain now, and checks both directions —
+a filtered run stays quiet, an unfiltered one still fails. Without the
+second direction the first proves nothing, because "the gate works" and
+"the gate is an off switch" look identical from one side.
+
+**Mutations verified red and reverted (6):** a listed file that does not
+exist; one file in two tiers; the collection hook stopping applying
+markers; CI budgeting a different number from the table; a tier target
+missing from the Makefile; the census forgetting it was filtered (after
+the guard was repaired to notice).
+
+**Deviation from the Required Fix:** none. No test was made faster,
+dropped or weakened — `test_process_spine.py` still costs 35.8s because
+that is the price of driving real process trees, and it now costs it
+when someone asks for it rather than on every edit.
+
+Full suite: `3112 passed, 3 skipped in 319.29s`.

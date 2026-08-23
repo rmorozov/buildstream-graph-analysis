@@ -13,7 +13,7 @@ This is the mandatory entry point for any agent (human or LLM) picking up a task
 1. Open `docs/backlog/scenarios/README.md` for active work (or `docs/backlog/progress-tracker.md` if you're specifically re-verifying the closed spec-compliance backlog). Both are compact tables, not documents to read cover-to-cover.
 2. Find the highest-priority row with status 🔴 (Not Started) or 🟡 (In Progress) whose **Depends on** column is empty or all 🟢.
 3. Open **only** that task's file. Each task file is self-contained: it tells you the exact spec/background to read, the exact source lines to open, what to change, what NOT to touch, and how to prove you're done.
-4. Do not open a second task in the same session unless the first is fully committed and verified. One task, one commit, one context budget.
+11. Do not open a second task in the same session unless the first is fully committed and verified. One task, one commit, one context budget.
 
 ## 2. Working a task
 
@@ -32,7 +32,19 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. Also run the full existing suite to confirm you didn't regress anything else:
+3. **While you work, run the tier your change touches** (`UX-238`). The suite is 3,112 tests in ~5m20s, and 64% of them are in a tier that finishes in 22 seconds:
+
+   | target | files | measured | what is in it |
+   |---|---|---|---|
+   | `make test-small` | 160 | **22s** | pure Python over in-memory fixtures — the default tier |
+   | `make test-medium` | 53 | ~3m | spawns a process or a node harness |
+   | `make test-large` | 7 | ~2.5m | scale fixtures, real process trees |
+   | `make test-fast` | 213 | ~3.5m | small + medium: everything needing no real `bst` |
+   | `pytest -m bst` | 18 | — | the enormous tier; needs a real `bst`/`bwrap` build |
+
+   Tiers come from measured per-file duration (`tests/tiers.py`), not from taste. Use them for the edit-run loop and for re-running one guard after a mutation — **not** as a substitute for the next step.
+
+4. Also run the full existing suite to confirm you didn't regress anything else:
 
    ```text
    pip install pytest   # if not already installed in this session - confirmed installable via pip

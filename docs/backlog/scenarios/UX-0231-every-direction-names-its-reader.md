@@ -1,6 +1,6 @@
 # UX-231: every direction names its reader
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** the role model (`../../design/roles.md`) | **Serves:** all roles, by making their coverage visible
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** the role model (`../../design/roles.md`) | **Serves:** all roles, by making their coverage visible | **Topic:** docs
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-227: why is this ranked first
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-207 (the ranking), UX-215 (the join), UX-216 (the element object) | **Serves:** R1, R8
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-207 (the ranking), UX-215 (the join), UX-216 (the element object) | **Serves:** R1, R8 | **Topic:** viewer
 
 ## Motivation
 

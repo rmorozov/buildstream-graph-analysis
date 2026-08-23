@@ -1,6 +1,6 @@
 # UX-234: the store speaks for more than one build
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-203 (store/v1), UX-186 (the comparability grammar), Direction 9 | **Serves:** R5, R7 — first instrumentation for the unserved half of the role model
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-203 (store/v1), UX-186 (the comparability grammar), Direction 9 | **Serves:** R5, R7 — first instrumentation for the unserved half of the role model | **Topic:** store
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-233: the architecture document meets the viewer axis
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-190 (the contracts it inventories), UX-232 (the hygiene sibling) | **Serves:** the maintainers; R8 when the big refactor is priced
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-190 (the contracts it inventories), UX-232 (the hygiene sibling) | **Serves:** the maintainers; R8 when the big refactor is priced | **Topic:** docs
 
 ## Motivation
 
@@ -35,7 +35,10 @@ the increased-cost failure the user names.
 
 ## Out of Scope
 
-- Rewriting architecture.md's existing chapters.
+- Rewriting `architecture.md`'s existing chapters — they describe
+  planes that have not changed, and a rewrite would lose the review
+  history attached to text that is still true. Two chapters are
+  *added*.
 - Documenting viewer internals beyond the architecture altitude
   (module-level truth lives in the code and its guards).
 

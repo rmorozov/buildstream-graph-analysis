@@ -1,6 +1,6 @@
 # UX-235: the order the page asserts, and the order it has
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207, UX-216, UX-221 (the guards it repairs) | **Serves:** the maintainers; R1 indirectly
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207, UX-216, UX-221 (the guards it repairs) | **Serves:** the maintainers; R1 indirectly | **Topic:** guards
 
 ## Motivation
 

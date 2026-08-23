@@ -1,6 +1,6 @@
 # UX-230: what if you could choose the fixes
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-219 (the plan drawn), UX-229 (the chains it explains) | **Serves:** R1, R8
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-219 (the plan drawn), UX-229 (the chains it explains) | **Serves:** R1, R8 | **Topic:** viewer
 
 ## Motivation
 
@@ -24,7 +24,11 @@ them — the same honesty shape as the blast box offline note.
 
 ## Out of Scope
 
-- Any client-side projection arithmetic, including "just adding".
+- Any client-side projection arithmetic, including "just adding" —
+  `UX-219` measured why: on the golden fixture the published
+  `makespan_after_us` differs from `total - cumulative_saving_us` at
+  every step, so a page that added would disagree with the payload on
+  every bar.
 - Scheduling simulation beyond what the pipeline's structural model
   already certifies (its assumptions print with every number).
 

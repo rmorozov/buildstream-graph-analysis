@@ -927,6 +927,39 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return _execute_compare_and_write(args)
 
 
+def cmd_whatif(args: argparse.Namespace) -> int:
+    """Execute `bga whatif RUN --element A --element B` (UX-230).
+
+    A question, not a gate: it exits 0 on a refusal too, because "this
+    selection cannot be projected" is the answer rather than a failure.
+    The projection itself is `bga.whatif.project`, which the viewer's
+    transport calls as well - one function, so the page and the terminal
+    cannot answer one selection two ways.
+    """
+    from bga.whatif import project, render
+
+    try:
+        run_dir = resolve_run_alias(args.run)
+    except StoreError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
+    if not Path(run_dir).is_dir():
+        print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
+        return 2
+    analyzer = BuildEfficiencyAnalyzer(verbose=getattr(args, 'verbose', False))
+    analyzer.load(Path(run_dir))
+    document = project(analyzer.analyze(Path(run_dir)), analyzer.graph,
+                       args.element or [])
+    output = (json.dumps(document, indent=2, default=str)
+              if args.format == 'json' else "\n".join(render(document)))
+    if getattr(args, 'output', None):
+        with open(args.output, 'w', encoding='utf-8') as handle:
+            handle.write(output + "\n")
+    else:
+        print(output)
+    return 0
+
+
 def cmd_blast(args: argparse.Namespace) -> int:
     """Execute `bga blast TARGET` (UX-172) - what rebuilds if I touch this.
 
@@ -1632,6 +1665,33 @@ def create_parser() -> argparse.ArgumentParser:
         '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
     )
     blast_parser.set_defaults(func=cmd_blast)
+
+    whatif_parser = subparsers.add_parser(
+        'whatif',
+        help="What would the build drop to if I fixed these?",
+        description='Project the build for a chosen set of fixes: one '
+                    'longest-path recompute with each named element zeroed, '
+                    'never a sum of their individual savings (which is wrong '
+                    'the moment two share a chain). "Fixed" means instant, '
+                    'over this run\'s measured durations - an upper bound, '
+                    'not a forecast. A question, not a gate: always exits 0.',
+    )
+    whatif_parser.add_argument(
+        'run', nargs='?', default='@last', metavar='RUN',
+        help='The run to project over; `@last` by default.'
+    )
+    whatif_parser.add_argument(
+        '--element', action='append', default=[], metavar='UID',
+        help='An element to treat as fixed. Repeatable.'
+    )
+    whatif_parser.add_argument(
+        '-f', '--format', choices=['text', 'json'], default='text',
+        help='Output format: text (human-readable), json (machine-readable).'
+    )
+    whatif_parser.add_argument(
+        '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
+    )
+    whatif_parser.set_defaults(func=cmd_whatif)
 
     cache_trend_parser = subparsers.add_parser(
         'cache-trend',

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-234 scenarios: **4 open**, 230 closed.
+234 scenarios: **3 open**, 231 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 49 |
 | contracts | 0 | 23 |
-| viewer | 1 | 40 |
+| viewer | 0 | 40 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 11 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-230 | [what if you could choose the fixes](UX-0230-what-if-you-could-choose-the-fixes.md) | viewer | Medium | R1, R8 | 🔴 |
 | UX-233 | [the architecture document meets the viewer axis](UX-0233-the-architecture-document-meets-the-viewer-axis.md) | docs | Medium | R8 | 🔴 |
 
 ## UX-227..UX-234: the twenty-seventh audit round — the map is bigger than the page (2026-08-23)

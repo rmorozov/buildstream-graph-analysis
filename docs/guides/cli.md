@@ -652,6 +652,39 @@ a duration some build actually took.
 from this document, and nothing at all when the store mixes host
 classes — it prints the refusal instead.
 
+### Choosing the fixes (`UX-230`)
+
+`bga whatif` projects the build for a set of fixes you choose:
+
+```bash
+bga whatif RUN/ --element core.bst --element lib.bst
+```
+
+```text
+What if these were fixed: core.bst, lib.bst
+  Makespan 0.014s -> 0.004s (saves 0.010s)
+  Their individual savings add up to 0.011s, which is not what they are
+  worth together (0.010s) - what one fix is worth depends on the others.
+```
+
+That last line is the whole point. **Savings do not add.** One
+longest-path recompute with every chosen element zeroed is the answer;
+summing what each is worth alone is wrong the moment two share a chain,
+and on the golden fixture the two figures already differ.
+
+"Fixed" means the element becomes instant, over this run's measured
+durations, with nothing else assumed to change — an upper bound, not a
+forecast. The convention travels in every answer. A selection with an
+element the run does not know, one with no measured duration, or an
+empty one is **refused by name** rather than projected, and a refusal
+still exits 0: it is the answer, not a failure.
+
+The page has the same thing with checkboxes. A prefix of the published
+plan is read straight from `signals.optimization_horizon`; any other
+subset is asked of the server, which runs this same projection. In an
+export there is no server, so the section shows the command instead of
+a control that cannot answer.
+
 ### Why this one is ranked first (`UX-227`)
 
 Each top action in the decision panel carries a **Why #n** fold: the

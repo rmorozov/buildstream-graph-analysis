@@ -902,6 +902,120 @@ guard now asserts the thing the number was standing in for: the
 page *is* the checked-in modules plus the stylesheet, so 4 KB of
 new feature and 4 KB of vendored library stop looking alike.
 
+## Direction 8: the provenance model — every claim carries its evidence (argued 2026-08-23, round 27)
+
+**Serves:** every role that has to trust an answer secondhand — R4's
+CI comment and R8's prioritisation case most of all; R1 directly
+([roles](roles.md)).
+
+The fourth external review's strongest idea, adopted — and it is the
+house pattern one level up. Round 24 found the relationship layer
+computed and unpublished (`correlate/v1` closed it). What remains
+unpublished is the layer above the facts: **why bga believes what it
+believes.** The headline says `execution-bound`; the attribution
+fields that fired the diagnosis, the thresholds they crossed, and the
+Perfetto query that would prove it deeper are all real — and the
+chain from claim to evidence exists nowhere a consumer can read. The
+viewer composes fragments of it (`elementFacts()` walking five report
+sources was the review's own tell), the CI comment asserts verdicts
+without their grounds, and a reader who asks "why do you say this"
+gets a document to grep rather than an answer.
+
+The fix is a published contract, not a UI: each claim — the
+diagnosis, each finding, each top action — carries its evidence as
+**references into the same payload** (field paths and the values
+read), the rule that fired, and the trace query id that deepens it:
+
+    claim → evidence (field refs) → rule → trace query → action
+
+One object, four consumers: the page renders it (and stops composing
+its own), the text renderer prints it, the CI comment cites it, and
+any future interface — an IDE panel, an LLM asked "why is this build
+slow" — reads the same chain instead of re-deriving one. That last
+consumer is the review's point and worth recording: a model that
+explains itself is the difference between an AI interface that
+paraphrases bga and one that hallucinates around it.
+
+**Challenged, against the positioning:** the review's trajectory ends
+in an investigation *workspace*, then a build-performance IDE. Both
+are renderer rearrangements, and both are declined for now with the
+argument round 24 already recorded against the drawer: panes and
+overlay machinery are the parts of a page that do not survive an
+export, a print, or a pasted anchor — and the document form is what
+makes the report evidence. The model comes first; if a workspace is
+ever worth it, it will be a cheap rearrangement of published objects
+rather than a place analysis secretly lives. The "causal graph"
+likewise: the *object* is this direction; a drawing of it is a
+deferred maybe, behind the same bar every graph has faced here.
+
+### Decomposition
+
+- `UX-229` — publish the provenance object; the anchor everything
+  else reads.
+- `UX-227` — "why is this ranked first", composed from published
+  fields today, re-plumbed onto `UX-229` when it lands.
+- `UX-228` — focus becomes an investigation mode: the evidence
+  around one element, organised, from published relations only.
+- `UX-230` — what-if selection, constrained to published or
+  server-computed projections (the review's checkbox sketch, minus
+  the client-side simulator it warned against itself).
+- Later, on top: the CI comment quoting evidence chains; the
+  explain-path for compare ("here is the chain behind this
+  regression verdict", extending `UX-221`'s culprits).
+
+## Direction 9: the team axis — from one build to the fleet (argued 2026-08-23, round 27)
+
+**Serves:** R5, R6, R7, R8 — the roles the
+[role model](roles.md) found unserved.
+
+Everything bga answers today is answered within one build, or one
+store's history of one project. That satisfies R1-R4 — and
+twenty-six rounds of serving them well is exactly why the
+presentation Pareto is exhausted there. The unserved questions live
+**across** builds:
+
+- **R5, the capacity operator:** how many concurrent builds does
+  this hardware sustain; what utilization do we actually achieve;
+  what would one more builder buy; is the cache infrastructure
+  earning its cost?
+- **R6, the CI user:** why did my verdict take 40 minutes when the
+  build took 12 — and the honest answer involves a queue bga cannot
+  currently see, because its clock starts when the build does.
+- **R7:** what is the p95 build, and is it drifting?
+- **R8:** what does build time cost the team, and what is a fix
+  worth in those terms?
+
+**The throughput-latency contradiction is the design center.** R5
+wants machines full; R6 wants queues empty; these are the same curve
+read from opposite ends. The house answer is the one the noise band
+already gave the gate-strictness contradiction: model it, publish
+both readouts, and let the argument happen over numbers. Queueing
+models need arrival rates and service-time distributions — and a
+store full of bga captures *is* a measured service-time
+distribution, per project, per host class, with resource profiles
+attached. That is the mathematical-modeling asset this direction
+builds on.
+
+**Non-goals, stated before anyone asks:** not a monitoring system,
+not a scheduler, not a dashboard product, not Perfetto-for-fleets.
+bga stays the entry point: measured facts, published contracts, a
+model with stated assumptions, and a refusal grammar for what the
+data cannot support (`UX-186`'s cross-host honesty already is this
+direction's tone).
+
+### Decomposition
+
+- `UX-234` — the aggregate contract: distributions over a store
+  (durations, variance, hit rates, resource percentiles), the
+  fact-base every R5/R7 answer stands on. The anchor.
+- Then, in argued order: the **queue seam** (a capture that can
+  record when the build was *requested*, not just started — one
+  optional timestamp, and turnaround becomes measurable end to end);
+  the **capacity model** (builders N + measured profiles →
+  utilization and wait-time distributions, assumptions printed with
+  every number); the **cost translation** (R8's units, opt-in
+  rates); and only then any presentation.
+
 ## Round 24: publish the relationship, then navigate it
 
 A third external review, evaluated the same way as the first two. Its
@@ -955,7 +1069,7 @@ deciding), the investigation is not resumable because `UX-211` carried
 the view and not the decision, and "did my fix work?" is still answered
 by opening two reports side by side.
 
-## Round 25: publish the relationship, then navigate it
+## Round 25: the first four, executed
 
 Round 24's argument, executed. Four items, in the order the audit
 recommended, and the order mattered: nothing after the first is honest
@@ -1007,40 +1121,6 @@ prevent. The acceptance is not "a command is shown" but "the command
 runs": every published `argv` is executed against the fixture. What is
 *absent* is asserted too — a chain-bound build is not told to add
 builders, a run outside a store is not told to compare.
-
-## Round history
-
-This document used to carry the findings of rounds 2-6 inline, which
-made it an argument about direction *and* a changelog. They live with
-the other rounds now:
-
-| round | what it found |
-|---|---|
-| [2](../audits/round-2.md) | scale probe — the tool at 1200 elements |
-| [3](../audits/round-3.md) | cross-checking quantities that ought to agree, and did not |
-| [4](../audits/round-4.md) | the plane seam, settled by measurement |
-| [5](../audits/round-5.md) | the structural plane against a real project's graph |
-| [6](../audits/round-6.md) | every real CI build is incremental |
-| [7](../audits/round-7.md) | plus the planning notes this document used to carry |
-| [8](../audits/round-8.md) | element attribution, 14.9% -> 86.1% |
-| [9](../audits/round-9.md) | the first real freedesktop-sdk capture |
-| [10](../audits/round-10.md) | both usage scenarios walked end to end |
-| [11](../audits/round-11.md) | round 10's fixes re-verified; verification discipline is where the defects were |
-| [12](../audits/round-12.md) | directions 3-4 re-verified; the MVP verdict: met |
-| [13](../audits/round-13.md) | round 12's fixes re-verified; the polish direction opened (`UX-125`..`UX-127`) |
-| [14](../audits/round-14.md) | the polish verified as a user; the docs read as a stranger (`UX-135`..`UX-145`) |
-| [15](../audits/round-15.md) | a real field failure the tool cannot see; the diagnosability chain filed and the fix claims re-verified (`UX-147`..`UX-154`) |
-| [16](../audits/round-16.md) | the tool meets a big project: a failed build verdicts IMPROVED, Ctrl-C destroys the trace, auto-spine bills every nested layout (`UX-156`..`UX-162`) |
-| [17](../audits/round-17.md) | all eight round-16 landings verified live and holding; the new findings are seams between verified features (`UX-163`..`UX-168`, plus `UX-169` from fixing them) |
-| [18](../audits/round-18.md) | every measured number reproduced exactly — the clean audit's tail is guards weaker than their prose; Direction 6 opened from the user's monorepo question (`UX-171`..`UX-177`) |
-| [19](../audits/round-19.md) | the source axis landed and met its own output: the printed identity does not round-trip, and one guard passes with its sorter reverted (`UX-178`..`UX-182`) |
-| [20](../audits/round-20.md) | the field speaks: nine usage observations ground-truthed into ten filings, and the elision that reopened the round-trip (`UX-183`..`UX-192`) |
-| [21](../audits/round-21.md) | all ten field landings verified holding; Direction 7 argued — the viewer as a thin window onto the JSON, timelines to Perfetto (`UX-193`..`UX-197`) |
-| [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
-| [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
-| [24](../audits/round-24.md) | the relationship layer the third external review asked for is already computed in `correlate.py` and published nowhere; round 23's own Inspect anchors resolve to nothing; three of the review's premises corrected, and the loop it did not look at filed (`UX-215`..`UX-226`) |
-| [25](../audits/round-24.md) | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
-| [26](../audits/round-24.md) | round 24's remaining eight executed: the schema learned to say what its numbers mean, `compare/v1` learned which elements changed, the store learned to remember one, and the page learned to draw a plan, focus one element and carry the reader's own marks in the link. Two task premises corrected and two mutations rejected for not discriminating (`UX-219`..`UX-226`) |
 
 ## Round 26: the eight that were left
 
@@ -1121,6 +1201,41 @@ global key to open the palette (it needs a decision about the table
 filters UX-205 put everywhere), and markdown detection for the copied
 finding (a button claiming to know what a paste target accepts would be
 guessing).
+
+## Round history
+
+This document used to carry the findings of rounds 2-6 inline, which
+made it an argument about direction *and* a changelog. They live with
+the other rounds now:
+
+| round | what it found |
+|---|---|
+| [2](../audits/round-2.md) | scale probe — the tool at 1200 elements |
+| [3](../audits/round-3.md) | cross-checking quantities that ought to agree, and did not |
+| [4](../audits/round-4.md) | the plane seam, settled by measurement |
+| [5](../audits/round-5.md) | the structural plane against a real project's graph |
+| [6](../audits/round-6.md) | every real CI build is incremental |
+| [7](../audits/round-7.md) | plus the planning notes this document used to carry |
+| [8](../audits/round-8.md) | element attribution, 14.9% -> 86.1% |
+| [9](../audits/round-9.md) | the first real freedesktop-sdk capture |
+| [10](../audits/round-10.md) | both usage scenarios walked end to end |
+| [11](../audits/round-11.md) | round 10's fixes re-verified; verification discipline is where the defects were |
+| [12](../audits/round-12.md) | directions 3-4 re-verified; the MVP verdict: met |
+| [13](../audits/round-13.md) | round 12's fixes re-verified; the polish direction opened (`UX-125`..`UX-127`) |
+| [14](../audits/round-14.md) | the polish verified as a user; the docs read as a stranger (`UX-135`..`UX-145`) |
+| [15](../audits/round-15.md) | a real field failure the tool cannot see; the diagnosability chain filed and the fix claims re-verified (`UX-147`..`UX-154`) |
+| [16](../audits/round-16.md) | the tool meets a big project: a failed build verdicts IMPROVED, Ctrl-C destroys the trace, auto-spine bills every nested layout (`UX-156`..`UX-162`) |
+| [17](../audits/round-17.md) | all eight round-16 landings verified live and holding; the new findings are seams between verified features (`UX-163`..`UX-168`, plus `UX-169` from fixing them) |
+| [18](../audits/round-18.md) | every measured number reproduced exactly — the clean audit's tail is guards weaker than their prose; Direction 6 opened from the user's monorepo question (`UX-171`..`UX-177`) |
+| [19](../audits/round-19.md) | the source axis landed and met its own output: the printed identity does not round-trip, and one guard passes with its sorter reverted (`UX-178`..`UX-182`) |
+| [20](../audits/round-20.md) | the field speaks: nine usage observations ground-truthed into ten filings, and the elision that reopened the round-trip (`UX-183`..`UX-192`) |
+| [21](../audits/round-21.md) | all ten field landings verified holding; Direction 7 argued — the viewer as a thin window onto the JSON, timelines to Perfetto (`UX-193`..`UX-197`) |
+| [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
+| [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
+| [24](../audits/round-24.md) | the relationship layer the third external review asked for is already computed in `correlate.py` and published nowhere; round 23's own Inspect anchors resolve to nothing; three of the review's premises corrected, and the loop it did not look at filed (`UX-215`..`UX-226`) |
+| [25](../audits/round-24.md) | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
+| [26](../audits/round-24.md) | round 24's remaining eight executed: the schema learned to say what its numbers mean, `compare/v1` learned which elements changed, the store learned to remember one, and the page learned to draw a plan, focus one element and carry the reader's own marks in the link. Two task premises corrected and two mutations rejected for not discriminating (`UX-219`..`UX-226`) |
+| [27](../audits/round-27.md) | twenty for twenty on the eighteen-commit landing, two hollow guards filed. The role model written: four roles served, four unserved; Direction 8 (provenance) adopted from the fourth review, its workspace declined; Direction 9 (the team axis) opened from the user's positioning (`UX-227`..`UX-235`) |
 
 ## Verification Log
 

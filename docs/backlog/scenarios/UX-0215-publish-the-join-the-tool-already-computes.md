@@ -1,6 +1,6 @@
 # UX-215: publish the join the tool already computes
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-201 (the schema vocabulary), UX-190 (outputs that say what shape they are), UX-051 (`bga correlate`)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-201 (the schema vocabulary), UX-190 (outputs that say what shape they are), UX-051 (`bga correlate`)
 
 ## Motivation
 
@@ -87,3 +87,76 @@ Mutations, each asserted red: drop `cores_busy` from the published row
 Plane 1 never declared (`declared: false`) and let it carry a
 recommendation → the `UX-66` guard fails. Without `--plane2`, the block
 is present, Plane-1-only, and says so — no error, no silent zeros.
+
+---
+
+## Outcome (round 25)
+
+**Status:** 🟢 Done.
+
+`correlate/v1` is the fifth published document. `bga correlate
+--format json` is stamped, `correlate --schema` answers instead of
+refusing, and `bga analyze --plane2` carries the same rows as
+`element_join`. Nothing about what the join *computes* changed — the
+diff is a stamp, a schema, and thirty lines of wiring.
+
+**The rows are asserted to be the join's own rows**, field for field
+against `correlate()`'s return rather than re-derived: `published
+["elements"] == direct["elements"]`. Same for the report's copy, so
+`bga analyze --plane2` and `bga correlate` cannot describe an element
+differently — the failure `UX-214` found one round earlier, in the
+verdicts, closed by construction here rather than by two code paths
+happening to agree.
+
+**A quantity had to be added, and that is the point rather than a
+detour.** `peak_rss_kb` is kilobytes; `bytes` would be wrong by 1024×
+and would have rendered 157,200 KB as "154 KB" instead of 153 MB —
+exactly the class of error `UX-201` exists to stop, one order down from
+the `peak_rss_mb` case it was written for. `kilobytes` is a declared
+quantity now, with a renderer and a threshold unit, and a guard that a
+quantity nothing renders is a promise nothing keeps.
+
+**The viewer needed no change at all.** `bga view` already passes
+`--plane2` when the store has a sibling report, so the join arrives in
+`report.json` and the schema-driven renderer draws it: measured on
+`examples/06`, an `element_join` table of 11 rows under its declared
+question, `data-element-column="element"`, and 11 Inspect affordances.
+That is `UX-193`'s dispatch paying for itself — and the reason this
+item was worth doing before any of the viewer items that follow it.
+
+**`UX-213`'s rule, one round after it was written.** The first draft of
+the guards was pinned to `examples/06`'s uncommitted capture: six of
+twelve would have skipped on a fresh checkout and in CI. They run on
+the committed golden fixture now, with a Plane 2 report built in the
+test — critical path `base.bst → lib.bst → app.bst`, `app.bst`
+deliberately unseen by Plane 2 (the degrade case) and `ghost.bst`
+deliberately undeclared (`UX-66`'s). Proven: with the capture moved
+aside, **13 pass, 6 skip, and a mutation still reddens a committed
+guard.**
+
+**A mutation that would not discriminate, and what was built instead.**
+Deleting `UX-66`'s `if entry.declared` gate left every guard green. The
+reason is real and worth recording: a Plane-2-only name never acquires
+a `saving_share`, and `_recommend` needs one — so on *that* path the
+gate is belt over braces. It is load-bearing on a different path, where
+Plane 1's `top_opportunities` names an element its own signals maps do
+not, which is the only way to hold a saving share while undeclared.
+That case is now built (`TestTheUndeclaredGateIsLoadBearing`), the
+mutation reddens it, and the non-discriminating version was rejected
+rather than counted.
+
+Nine mutations, each verified red: the stamp dropped; `--schema`
+refusing again; `peak_rss_kb` declared as `bytes`; the element role
+removed; the viewer's `kilobytes` case deleted; the report joining
+separately from the command; the block emitted empty without
+`--plane2`; unseen elements zeroed rather than left absent; the
+`UX-66` gate deleted.
+
+**Deviation from the Required Fix:** clause 4 asks for the block to be
+present without Plane 2, carrying the Plane 1 half. It is **absent**
+instead, deliberately: with one plane there is no *join*, and the Plane
+1 half is already published in `signals` — publishing it twice under a
+name that promises both planes would be the misleading option, not the
+generous one. The degrade clause is honoured *within* a row: an element
+Plane 2 never saw keeps its Plane 1 half and carries no Plane 2
+numbers. Recorded in the guard that asserts it.

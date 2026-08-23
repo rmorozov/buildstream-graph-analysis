@@ -159,6 +159,33 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
     if section in (None, 'graph') and by_kind and hasattr(result, 'element_kind_summary') and result.element_kind_summary:
         data['element_kind_summary'] = result.element_kind_summary
 
+    # UX-215: the two-plane join, in the report rather than only in a
+    # second command. Computed by the same `correlate()` the
+    # `correlate/v1` document comes from - one join, so `bga analyze
+    # --plane2` and `bga correlate` cannot describe the same element
+    # differently - and fed the finished analysis dict, which is why
+    # this runs here rather than where the Plane 2 report is read.
+    #
+    # Absent without `--plane2`, for the reason `plane2_coverage` is
+    # absent: there is no *join* with one plane, and the Plane 1 half
+    # is already published in `signals`. "Not looked at" and "looked at
+    # and saw nothing" are different claims.
+    native_report = getattr(result, 'plane2_report', None)
+    if section is None and native_report:
+        from bga.correlate import correlate as _correlate
+
+        try:
+            joined = _correlate(data, native_report)
+        except Exception:                       # pragma: no cover
+            # A join that cannot be computed must not cost the reader
+            # the analysis - `UX-83`'s rule for the Plane 2 path, and
+            # the reason `--plane2` is a warning rather than a failure
+            # everywhere else it appears.
+            joined = None
+        if joined:
+            data['element_join'] = joined.get('elements') or []
+            data['element_join_coverage'] = joined.get('coverage') or {}
+
     # UX-190: the version leads. A consumer reading the first line of a
     # streamed or truncated document sees what it is before it sees
     # anything it would have to interpret.

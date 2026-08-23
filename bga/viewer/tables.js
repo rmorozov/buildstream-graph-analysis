@@ -19,6 +19,10 @@ const UNITS = {
            gb: 1024 ** 3, g: 1024 ** 3 },
   megabytes: { b: 1 / 1024 ** 2, kb: 1 / 1024, mb: 1, m: 1,
                gb: 1024, g: 1024 },
+  // UX-215: `peak_rss_kb`. A threshold typed as `> 512mb` on a
+  // kilobyte column has to mean 524,288, not 512.
+  kilobytes: { b: 1 / 1024, kb: 1, k: 1, mb: 1024, m: 1024,
+               gb: 1024 ** 2, g: 1024 ** 2 },
   share: { "%": 0.01 },
   percent: { "%": 1 },
 };

@@ -47,6 +47,12 @@ ANALYZE = "analyze/v1"
 COMPARE = "compare/v1"
 BLAST = "blast/v1"
 STORE = "store/v1"
+# UX-215: the two-plane join, which `bga correlate --format json` has
+# emitted since UX-51 as an unversioned blob. Everything in it was
+# already computed and already correct; what it lacked was a contract,
+# so `bga view` could not serve it, CI could not gate on it and no
+# consumer could validate it.
+CORRELATE = "correlate/v1"
 
 # The key that carries the version, and the first key of every payload -
 # a consumer reading a truncated or streamed document sees it before it
@@ -113,6 +119,9 @@ QUANTITIES = (
     "duration_us",   # microseconds; render as a human duration
     "bytes",
     "megabytes",     # UX-201: `peak_rss_mb` is not a byte count
+    "kilobytes",     # UX-215: nor is `peak_rss_kb`, and calling it
+                     # `bytes` would be wrong by 1024x - which is the
+                     # exact class of error UX-201 exists to stop
     "share",         # 0..1; render as a percentage
     "percent",       # UX-201: already 0..100; do not multiply again
     "count",
@@ -318,6 +327,10 @@ _ANALYZE_OPTIONAL = {
     "timestamp_agreement": "object",
     # UX-202: present only when a Plane 2 report was in hand.
     "plane2_coverage": "object",
+    # UX-215: the two-plane join, present when `--plane2` was given.
+    # Same rows as `correlate/v1`'s `elements`, from the same function.
+    "element_join": "array",
+    "element_join_coverage": "object",
     # UX-207: what to fix first, and what it is worth.
     "headline": "object",
 }
@@ -338,6 +351,14 @@ ANALYZE_FULL_KEYS = (
     "findings", "floors", "capacity_verdict", "attribution",
     "attribution_hints", "occupancy", "signals", "structural",
     "utilisation", "confidence", "violations",
+)
+
+# UX-215: the keys a full report carries only when `--plane2` was
+# given. Kept out of `ANALYZE_FULL_KEYS` because that list is what the
+# pin asserts is *always* there, and a run with one plane is still a
+# full report.
+ANALYZE_PLANE2_KEYS = (
+    "plane2_coverage", "element_join", "element_join_coverage",
 )
 
 _COMPARE_REQUIRED = {
@@ -386,6 +407,78 @@ _BLAST_REQUIRED = {
 # hard-coded". `renderFindings` matched five field names against a
 # `findings` the schema declared as a bare array.
 SEVERITIES = ("critical", "high", "warning", "medium", "low", "info")
+
+# The element row's columns, declared once and reused for `actionable`,
+# which carries the same shape. `role: "element"` is what earns every
+# row `UX-208`'s Inspect with no per-table code.
+_JOIN_COLUMNS = [
+    {"key": "element", "title": "Element", "role": "element",
+     "sortable": True},
+    {"key": "critical_path_share", "title": "Share of path",
+     "quantity": "share", "sortable": True},
+    {"key": "potential_saving_us", "title": "Worth fixing",
+     "quantity": "duration_us", "sortable": True},
+    {"key": "blast_radius", "title": "Blast radius",
+     "quantity": "count", "sortable": True},
+    {"key": "cores_busy", "title": "Cores busy",
+     "quantity": "ratio", "sortable": True},
+    {"key": "requested_jobs", "title": "Jobs asked for",
+     "quantity": "count", "sortable": True},
+    {"key": "peak_rss_kb", "title": "Peak RSS",
+     "quantity": "kilobytes", "sortable": True},
+]
+
+_JOIN_ITEM_PROPERTIES = {
+    "element": {"type": "string"},
+    "declared": {
+        "type": "boolean",
+        "description": "Whether Plane 1's declared graph knows this "
+                       "element. False means Plane 2 produced a name "
+                       "that looks like an element and is not one "
+                       "(UX-66), and nothing may be recommended for "
+                       "it."},
+    "on_critical_path": {"type": "boolean"},
+    "critical_path_share": {
+        QUANTITY: "share",
+        "description": "This element's share of the critical path - "
+                       "what the chain is made of, which is a "
+                       "different fact from what changing it is "
+                       "worth."},
+    "potential_saving_us": {
+        QUANTITY: "duration_us",
+        "description": "What removing this element's work entirely "
+                       "would take off the makespan. Not off the path: "
+                       "the difference is whatever enters the path "
+                       "behind it."},
+    "saving_share": {QUANTITY: "share"},
+    "blast_radius": {
+        QUANTITY: "count",
+        "description": "How many elements a change here rebuilds."},
+    "cores_busy": {
+        QUANTITY: "ratio",
+        "description": "CPU-seconds per wall-second inside the "
+                       "sandbox: 1.0 is one core saturated, 4.0 is "
+                       "four. Measured by Plane 2, absent without it."},
+    "cpu_coverage": {
+        QUANTITY: "share",
+        "description": "How much of this element's wall-clock Plane 2 "
+                       "actually observed. A low coverage makes "
+                       "`cores_busy` a sample rather than a "
+                       "measurement."},
+    "requested_jobs": {
+        QUANTITY: "count",
+        "description": "The parallelism the element's own build "
+                       "commands asked for, read from the observed "
+                       "argv - not what BuildStream granted."},
+    "peak_rss_kb": {
+        QUANTITY: "kilobytes",
+        "description": "The largest single process's resident memory, "
+                       "which is what a builder count has to be "
+                       "multiplied against."},
+    "native_findings": {"type": ["array", "null"]},
+    "unused_dependencies": {"type": ["array", "null"]},
+    "recommendations": {"type": ["array", "null"]},
+}
 
 _ANALYZE_HINTS = {
     "timestamp_agreement": {QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove'},
@@ -492,6 +585,29 @@ _ANALYZE_HINTS = {
                                     "thresholds the report's headline uses."},
             "coverage_score": {QUANTITY: "share"},
             "task_coverage": {QUANTITY: "share"},
+        },
+    },
+    # UX-215: the join, rendered by the same machinery as any other
+    # table - which is the whole reason it is declared rather than
+    # special-cased. `role: "element"` earns every row UX-208's Inspect.
+    "element_join": {
+        QUESTION: 'What does each element look like from both planes?',
+        RAIL: "investigate",
+        COLUMNS: _JOIN_COLUMNS,
+        "description": "Plane 1's place in the graph beside Plane 2's "
+                       "measurement inside the sandbox, per element. "
+                       "Present only when `--plane2` supplied a report: "
+                       "there is no join with one plane.",
+        "items": {"type": "object", "properties": _JOIN_ITEM_PROPERTIES,
+                  "required": ["element", "declared"]},
+    },
+    "element_join_coverage": {
+        QUESTION: 'How much of the build did the two planes agree on?',
+        RAIL: "prove",
+        "properties": {
+            "joined_elements": {QUANTITY: "count"},
+            "plane1_elements": {QUANTITY: "count"},
+            "plane2_elements": {QUANTITY: "count"},
         },
     },
     "headline": {
@@ -677,6 +793,95 @@ _STORE_HINTS = {
                   }},
 }
 
+# UX-215: `correlate/v1`. Every key below is one `bga correlate
+# --format json` has emitted since `UX-51`; nothing here is new
+# analysis, renamed or reshaped. The document is the join, and the join
+# is the only place in this tool where "this element is on the path, is
+# worth 12.05s, and was pinned to one job on four cores" is a single
+# row.
+_CORRELATE_REQUIRED = {
+    "run_id": "string",
+    "run_instance": "object",
+    # One row per element seen by either plane - `ElementJoin`, as
+    # `bga/correlate.py` already builds it.
+    "elements": "array",
+    # The subset the join is willing to recommend on, ranked. Separate
+    # from `elements` because `UX-66`'s rule is that an element Plane 2
+    # named and Plane 1 never declared may appear, and may never carry
+    # a recommendation.
+    "actionable": "array",
+    "ranking": "object",
+    "coverage": "object",
+    "note": "string",
+}
+
+_CORRELATE_OPTIONAL = {
+    "restructuring": "array",
+    "granularity": "array",
+    "memory_envelope": "object",
+    "attribution_unreliable": "",
+    "attribution_partial": "",
+}
+
+_CORRELATE_HINTS = {
+    "elements": {
+        QUESTION: 'What does each element look like from both planes?',
+        RAIL: "investigate",
+        COLUMNS: _JOIN_COLUMNS,
+        "items": {"type": "object", "properties": _JOIN_ITEM_PROPERTIES,
+                  "required": ["element", "declared"]},
+    },
+    "actionable": {
+        QUESTION: 'Which elements is the join willing to act on?',
+        RAIL: "act",
+        COLUMNS: _JOIN_COLUMNS,
+        "items": {"type": "object", "properties": _JOIN_ITEM_PROPERTIES,
+                  "required": ["element", "declared"]},
+        "description": "Ranked by what a fix is worth. An element Plane "
+                       "2 named that Plane 1 never declared is in "
+                       "`elements` and never here.",
+    },
+    "coverage": {
+        QUESTION: 'How much of the build did the two planes agree on?',
+        RAIL: "prove",
+        "properties": {
+            "joined_elements": {QUANTITY: "count"},
+            "plane1_elements": {QUANTITY: "count"},
+            "plane2_elements": {QUANTITY: "count"},
+        },
+    },
+    "ranking": {
+        RAIL: "prove",
+        "properties": {
+            "tied_saving_us": {QUANTITY: "duration_us"},
+        },
+        "description": "The metric the ranking used, and whether it "
+                       "degenerated into a tie - a ranking everything "
+                       "ties in is not a ranking, and says so rather "
+                       "than presenting an arbitrary order.",
+    },
+    "restructuring": {
+        QUESTION: 'Which dependency edges are never read?',
+        RAIL: "act",
+    },
+    "granularity": {
+        QUESTION: 'Which elements pay more sandbox tax than they build?',
+        RAIL: "act",
+    },
+    "memory_envelope": {
+        QUESTION: 'How much memory would more builders need?',
+        RAIL: "prove",
+        "properties": {
+            "host_memory_mb": {QUANTITY: "megabytes"},
+            "builders": {QUANTITY: "count"},
+            "elements_measured": {QUANTITY: "count"},
+            "largest_element_peak_mb": {QUANTITY: "megabytes"},
+        },
+    },
+    "run_instance": {QUESTION: 'Which capture is this?', RAIL: "raw"},
+}
+
+
 _SCHEMAS = {
     ANALYZE: lambda: _document(
         ANALYZE, "bga analyze --format json",
@@ -701,6 +906,17 @@ _SCHEMAS = {
         "the closure, the split into kinds that build and kinds that "
         "assemble, and the measured cost unless --no-cost was passed.",
         hints=_BLAST_HINTS),
+    CORRELATE: lambda: _document(
+        CORRELATE, "bga correlate --format json",
+        _CORRELATE_REQUIRED,
+        "The two planes joined on element UID: for each element, what "
+        "Plane 1 knows about its place in the graph (path share, what "
+        "a fix is worth, blast radius) beside what Plane 2 measured "
+        "inside its sandbox (cores busy, jobs asked for, peak RSS, the "
+        "binary that dominated). Neither plane can say alone whether "
+        "the elements that dominate the critical path are "
+        "compute-bound or merely badly built.",
+        optional=_CORRELATE_OPTIONAL, hints=_CORRELATE_HINTS),
     STORE: lambda: _document(
         STORE, "bga snapshot --list --format json",
         _STORE_REQUIRED,

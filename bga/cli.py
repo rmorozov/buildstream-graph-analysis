@@ -1458,7 +1458,10 @@ def create_parser() -> argparse.ArgumentParser:
     floors_parser = subparsers.add_parser(
         'floors',
         help='Certified and advisory floors only.',
-        description='Report certified/advisory floors (Parts 14-17) - matches spec Part 37.1\'s "bga floors RUN [--cold] [--allow-partial-cold]".',
+        # UX-220: what a floor *is* comes from the schema, so `--help`
+        # and the report cannot end up explaining it two ways.
+        description='Report certified/advisory floors (Parts 14-17) - matches spec Part 37.1\'s "bga floors RUN [--cold] [--allow-partial-cold]". '
+                    + schemas.description(schemas.ANALYZE, 'floors'),
     )
     _add_common_arguments(floors_parser, include_cold=True)
     floors_parser.set_defaults(func=cmd_floors)

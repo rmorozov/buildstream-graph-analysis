@@ -1,6 +1,6 @@
 # UX-225: the working set travels in the link
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-211 (the fragment channel), UX-216 (the element object)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-211 (the fragment channel), UX-216 (the element object)
 
 ## Motivation
 
@@ -57,3 +57,43 @@ Mutations, each asserted red: store the marks in `localStorage` instead
 of the fragment → the no-storage round-trip fails; filter marked
 elements out of the ranking → the "still ranked, only annotated" guard
 fails. Works from an exported `file://` report. Page-size guard holds.
+
+## Outcome (round 26)
+
+The channel decision is the item, and it is asserted rather than
+described. `focus.js` contains no `localStorage`, `sessionStorage` or
+`indexedDB` — checked against the source with comments stripped first,
+because the module's own header explains at length *why* storage is the
+wrong channel here and a guard that fired on the explanation would be
+rewarding silence about the decision.
+
+A mark lands on **every occurrence** of its element, and the round-trip
+is guarded in a genuinely fresh context with nothing remembered: capture
+the query off one document, build a second from scratch, apply, and read
+the marks back off the rendered result.
+
+```text
+mk=app.bst:working,core.bst:done   →   1 working · 1 done
+```
+
+Clause 3 is guarded as an absence too. `applyMarks` annotates and never
+filters: the element count is unchanged after marking, and a marked
+element is still present. **A ranking that quietly hides what the reader
+dismissed is one they cannot check** — so the top actions and the
+horizon show the mark and keep the row.
+
+`views.js` imports nothing by design (UX-193's rule about the cycle
+between it and `app.js`), so it spells out the three-mark vocabulary
+rather than importing it. That is a duplication, so it is guarded: a
+test asserts the two lists are identical, and reddens when either
+drifts.
+
+**Mutations verified red and reverted:** filter marked elements out of
+the ranking (4 guards — this item's own second mutation); keep the marks
+in `localStorage` instead of the fragment (3 — its first); let the mark
+vocabulary in `views.js` drift from `focus.js` (2).
+
+**Deviation from the Required Fix:** none. Clause 1 says the marks are
+settable "from `UX-216`'s section and from any element occurrence"; the
+buttons are rendered on the element section, and the delegated listener
+means any occurrence that grows a control later is already wired.

@@ -135,3 +135,39 @@ re-derived rather than read (1, on the separable payload).
 drawing is appended in `views.js` and `app.js` never names
 `optimization_horizon`, which is asserted, so the generic schema
 dispatch still renders the table beneath with no special case.
+
+### The regression this item shipped, and how it was found
+
+UX-219 was committed on its own guards and a targeted selection, not on
+`make test` — the same process error that broke the golden snapshot
+earlier in this round. The full suite caught it: **six tests in
+`test_a_report_you_can_navigate.py`, and the exported page rendering
+nothing at all.**
+
+```text
+BOOTFAIL TypeError: document.createTextNode is not a function
+    at horizonRow  (inline.mjs:1079)
+    at renderHorizon (inline.mjs:1036)
+    at boot         (inline.mjs:2342)
+```
+
+That is UX-199's defect by a different route: an exception inside
+`boot()`, the catch-all banner, and a reader who gets "Could not load
+this run" instead of their report.
+
+The gap was **latent, not new**. `views.js` has called `createTextNode`
+since UX-212, in paths a golden export never reaches — they need a
+compare or a store payload. The horizon renders on every analyze report,
+so it made the incomplete part of the probe's DOM shim live.
+
+Fixed in the shim rather than by avoiding a standard DOM method: every
+browser has `createTextNode`, two call sites already depended on it, and
+leaving the model short would keep the trap set for whoever next makes
+one of those paths run. The guard is still load-bearing — pointing
+`renderHorizon` at a method the DOM really does not have reddens six
+tests.
+
+**Why my own guards missed it:** the shim in this round's new test files
+defines `createTextNode`, and the export probe's did not. A test harness
+more capable than the one the shipped artifact runs under will pass
+things the artifact cannot do.

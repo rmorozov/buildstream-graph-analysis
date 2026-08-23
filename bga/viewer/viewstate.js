@@ -23,6 +23,12 @@
 // works, and the browser's own scroll-to-id still fires for it.
 export const SEPARATOR = "~";
 
+// UX-222 and UX-225 are view state too, and the same rule applies: the
+// fragment carries them, so "here is the report, focused on the element
+// I want you to look at" and "here is where I got to" are both links.
+import { applyFocus, applyMarks, captureFocusAndMarks, clearFocus,
+         parseMarks } from "./focus.js";
+
 export function splitHash(hash = "") {
   const text = String(hash).replace(/^#/, "");
   const at = text.indexOf(SEPARATOR);
@@ -74,6 +80,8 @@ export function captureView(root) {
     .filter((node) => node.open)
     .map((node) => node.getAttribute("data-fold"));
   if (open.length) params.set("o", open.join(","));
+
+  captureFocusAndMarks(root, params);
 
   // Once the view says anything, it says what is collapsed - including
   // "nothing". Without this, a reader who expanded everything and then
@@ -156,6 +164,19 @@ export function applyView(root, query, { dispatch } = {}) {
       node.open = true;
       applied.push(`o:${node.getAttribute("data-fold")}`);
     }
+  }
+
+  // The marks first, then the focus: focus dims by element and the
+  // marks annotate by element, and applying them the other way round
+  // would have the dimming pass walk a document the marks then change.
+  if (params.has("mk")) {
+    applyMarks(root, parseMarks(params.get("mk")));
+    applied.push("mk");
+  }
+  if (params.has("focus")) {
+    const uid = params.get("focus");
+    if (uid) { applyFocus(root, uid); applied.push(`focus:${uid}`); }
+    else { clearFocus(root); }
   }
   return applied;
 }

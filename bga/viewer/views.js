@@ -1083,6 +1083,188 @@ function factText(row) {
   return String(row.value);
 }
 
+/**
+ * UX-228: focus is an investigation, not a dimmer.
+ *
+ * `UX-222` built focus as visual state - one element held, the rest
+ * dimmed, the document unharmed - and that is still exactly what it
+ * does. What the reader actually wanted was "show me the evidence
+ * about *this*", and today that evidence is in four places: the
+ * element's own section, its blast, its history, the finding that
+ * names it.
+ *
+ * So focusing also *assembles*: why it matters, what evidence exists,
+ * what it is connected to, and what to do. Every value is read from a
+ * published field and carries the path it came from, exactly as
+ * `UX-227`'s fold does - and the panel carries `data-role`, so
+ * unfocusing removes it and the document is byte-identical to
+ * never-focused.
+ *
+ * No pane, no drawer, no overlay: round 24's argument stands, and what
+ * cannot survive an export or a print does not enter the page. This is
+ * a section prepended to the document and removed again.
+ */
+export function renderInvestigation(payload, uid, options = {}) {
+  if (!payload || !uid) return null;
+  const section = document.createElement("section");
+  section.className = "investigation";
+  section.setAttribute("data-role", "focus-investigation");
+  section.setAttribute("data-section", "investigation");
+  section.setAttribute("data-element", uid);
+  const heading = document.createElement("h2");
+  heading.textContent = `Everything about ${uid}`;
+  section.append(heading);
+
+  const groups = [
+    ["why", "Why it matters", investigationWhy(payload, uid, options)],
+    ["evidence", "What evidence exists", investigationEvidence(payload, uid,
+                                                               options)],
+    ["relationships", "What it is connected to",
+     investigationRelations(payload, uid)],
+    ["actions", "What to do", investigationActions(payload, uid, options)],
+  ];
+  let any = false;
+  for (const [key, title, rows] of groups) {
+    if (!rows.length) continue;
+    any = true;
+    const group = document.createElement("div");
+    group.className = "investigation-group";
+    group.setAttribute("data-group", key);
+    const label = document.createElement("h3");
+    label.textContent = title;
+    group.append(label);
+    const list = document.createElement("dl");
+    list.className = "pairs";
+    for (const row of rows) {
+      const term = document.createElement("dt");
+      term.textContent = row.label;
+      const value = document.createElement("dd");
+      if (row.path) {
+        value.setAttribute("data-field", row.path);
+        value.setAttribute("data-raw", String(row.raw));
+      }
+      if (row.source) {
+        value.setAttribute("data-source", row.source);
+        value.setAttribute("data-present", String(row.present));
+      }
+      if (row.href) {
+        const link = document.createElement("a");
+        link.setAttribute("href", row.href);
+        link.textContent = row.text;
+        value.append(link);
+      } else {
+        value.textContent = row.text;
+      }
+      list.append(term, value);
+    }
+    group.append(list);
+    section.append(group);
+  }
+  return any ? section : null;
+}
+
+/** The measured case for this element, from the same rows UX-227 uses. */
+function investigationWhy(payload, uid, options) {
+  const facts = elementFacts(payload).get(uid);
+  const rows = (facts?.rows ?? []).map((row) => ({
+    label: row.label, path: row.path, raw: row.value, text: factText(row),
+  }));
+  for (const finding of facts?.findings ?? []) {
+    rows.push({ label: "Finding", text: finding.title ?? finding.id ?? "" });
+  }
+  return rows;
+}
+
+/**
+ * Which published documents actually carry this element - present or
+ * absent, both stated.
+ *
+ * "Plane 2 saw nothing here" and "Plane 2 was not run" are different
+ * facts, and a list that only showed what exists would collapse them.
+ */
+function investigationEvidence(payload, uid, options) {
+  const rows = [];
+  const sources = [
+    ["Critical path", `signals.critical_path_detail[element_uid=${uid}]`],
+    ["Optimization horizon",
+     `signals.optimization_horizon[element_uid=${uid}]`],
+    ["Off-path heavies", `signals.latent_heavies[element_uid=${uid}]`],
+    ["Plane 2 (sandbox)", `element_join[element=${uid}]`],
+  ];
+  for (const [label, path] of sources) {
+    const found = resolvePath(payload, path);
+    // Presence is not a value *read*, so it does not claim to be one:
+    // `data-source` names where it was looked for and `data-present`
+    // says what was there. Putting a uid in `data-raw` under a path
+    // that resolves to an object would have been a traceability claim
+    // this row cannot honour.
+    rows.push({
+      label, source: path, present: found !== undefined,
+      text: found === undefined ? "not in this document" : "yes",
+    });
+  }
+  const named = (payload.findings ?? []).filter(
+    (finding) => (finding.elements ?? []).includes(uid));
+  rows.push({ label: "Findings naming it", text: String(named.length) });
+  if (options.store) {
+    const { series, sawASliceAtAll } = elementHistory(options.store, uid);
+    rows.push({
+      label: "Store history",
+      text: series.length ? `${series.length} snapshot(s)`
+        : sawASliceAtAll ? "not watched in these runs"
+                         : "captured before history existed",
+    });
+  }
+  return rows;
+}
+
+/** Its neighbours on the chain, and how much depends on it. */
+function investigationRelations(payload, uid) {
+  const rows = [];
+  const chain = payload?.signals?.critical_path;
+  if (Array.isArray(chain)) {
+    const at = chain.indexOf(uid);
+    if (at > 0) {
+      rows.push({ label: "Waits on (chain)", path: `signals.critical_path[${at - 1}]`,
+                  raw: chain[at - 1], text: chain[at - 1],
+                  href: `#${elementAnchor(chain[at - 1])}` });
+    }
+    if (at !== -1 && at < chain.length - 1) {
+      rows.push({ label: "Blocks (chain)", path: `signals.critical_path[${at + 1}]`,
+                  raw: chain[at + 1], text: chain[at + 1],
+                  href: `#${elementAnchor(chain[at + 1])}` });
+    }
+  }
+  const downstream = resolvePath(
+    payload, `signals.blast_radius[${uid}].downstream_count`);
+  if (typeof downstream === "number") {
+    rows.push({ label: "Rebuilds if changed",
+                path: `signals.blast_radius[${uid}].downstream_count`,
+                raw: downstream, text: `${downstream} element(s)` });
+  }
+  return rows;
+}
+
+/** The things that already exist to do about it. */
+function investigationActions(payload, uid, options) {
+  const rows = [
+    { label: "Its section", href: `#${elementAnchor(uid)}`,
+      text: "open" },
+  ];
+  const step = (payload.next_steps ?? []).find(
+    (entry) => (entry.argv ?? []).includes(uid));
+  if (step) {
+    rows.push({ label: "Published next step", text: step.argv.join(" ") });
+  } else {
+    // The command a reader would type anyway, and the one the blast box
+    // runs when there is a server. Shown as text rather than as a dead
+    // control, which is `UX-194`'s rule.
+    rows.push({ label: "What rebuilds if you touch it",
+                text: `bga blast ${uid}` });
+  }
+  return rows;
+}
+
 export function renderDecision(payload, investigate = null, copy = null,
                                options = {}) {
   const headline = payload?.headline;
@@ -1312,9 +1494,13 @@ export function resolvePath(document, path) {
         return undefined;
       }
       node = node[segment];
-    } else if (typeof segment === "number") {
-      if (!Array.isArray(node)) return undefined;
-      node = node[segment];
+    } else if (segment.bracket !== undefined) {
+      // One bracket, two containers: a list takes it as an index, an
+      // object as a key. Maps keyed by element uid are why - a uid
+      // contains dots, so the dotted form cannot address one.
+      if (Array.isArray(node)) node = node[Number(segment.bracket)];
+      else if (node && typeof node === "object") node = node[segment.bracket];
+      else return undefined;
     } else {
       if (!Array.isArray(node)) return undefined;
       node = node.find((entry) => entry
@@ -1338,7 +1524,7 @@ function pathSegments(path) {
     } else if (inside !== null && char === "]") {
       const equals = inside.indexOf("=");
       segments.push(equals === -1
-        ? Number(inside)
+        ? { bracket: inside }
         : { key: inside.slice(0, equals), value: inside.slice(equals + 1) });
       inside = null;
     } else if (inside !== null) {

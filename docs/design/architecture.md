@@ -462,6 +462,68 @@ The table covers `UX-01`..`UX-76`: the additions that shaped the architecture th
 
 (`UX-08` was never filed — not a missing/lost file.)
 
+## The viewer axis (rounds 21-26)
+
+The three planes above are how `bga` *measures*. Rounds 21 onward built
+how it is *read*, and the shape is deliberately small.
+
+- **`bga view`** serves the run on `127.0.0.1` at a kernel-chosen port
+  and opens a browser at it. The server is a `ThreadingHTTPServer` with
+  a fixed document table: each url is a payload already computed by the
+  same functions the CLI calls, so nothing is analysed twice and nothing
+  is analysed differently. Two endpoints take a parameter -
+  `blast.json?target=` and `whatif.json?elements=` - and both call the
+  function their subcommand calls.
+- **The page is schema-driven.** `bga/viewer/` is hand-written ES
+  modules with no build step and no framework. Sections, columns, units
+  and hover text come from the *view-hints* the published schemas carry
+  (`bga:quantity`, `bga:question`, `bga:columns`, `bga:rail`,
+  `bga:markers`, ...), so a field that gains a description in
+  `bga/schemas.py` gains a tooltip in the page with no page edit.
+- **`--export`** inlines every served document and every module into one
+  self-contained HTML file. What cannot survive that - a live search
+  box, anything needing a server - is *hidden with the command that
+  answers it* rather than shipped as a control that always fails.
+- **The no-arithmetic boundary** is the axis's one rule, and it is the
+  reason the rest holds: **a viewer that derives a conclusion is a
+  second analyzer.** Diagnoses, rankings, verdicts, savings, next steps
+  and projections are all decided in the pipeline and read by the page.
+  Where a question needs a number the payload does not carry, the page
+  *asks the server* rather than computing it. Guards assert this
+  directly, and the discipline is what lets the terminal, the CI comment
+  and the page state one build's facts identically.
+
+The corollary is the constraint Direction 7 wanted: anything the viewer
+should show has to enter a published schema first, where the text
+renderer, CI and every external consumer get it too.
+
+## The published contracts
+
+The tool's external surface, one line each. **`--schema` is the source
+of truth** - it prints the JSON Schema from `bga/schemas.py`, which the
+renderers are built against, so nothing here is a second copy to drift.
+
+| schema | what it is | printed by |
+|---|---|---|
+| `analyze/v1` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim | `bga analyze --schema` |
+| `compare/v1` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
+| `blast/v1` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
+| `correlate/v1` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
+| `store/v1` | what the run store holds: one row per snapshot, with the alias, the verdict and why a capture is not a measurement | `bga snapshot --list --format json` |
+| `store-aggregate/v1` | that store as a distribution: min/median/p95/max/MAD per host class, and the refusal when a mix cannot be blended | `bga snapshot --aggregate --format json` |
+| `whatif/v1` | what the build would drop to for a chosen set of fixes - one projection, never a sum | `bga whatif --format json` |
+| `host/v1` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
+
+**The versioning rule**: a field rename or removal bumps the version; an
+addition does not. `additionalProperties` is true everywhere, so a
+consumer that pins a version keeps working while the tool grows.
+
+A guard (`tests/unit/test_the_documents_keep_up_with_the_contracts.py`)
+asserts this table and the spec's Part 32.5 name every schema the code
+emits, and no schema it does not. A new payload without documentation
+reddens it - which is the only mechanism this repository has found that
+keeps two hand-maintained copies of one fact together.
+
 ## Navigating the rest of the docs
 
 - **`docs/spec/specification.md`** — original design intent, full formal Part-by-Part text (invariants, data contracts, terminology). Still authoritative for anything not listed as an extension above.

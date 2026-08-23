@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-240 scenarios: **8 open**, 232 closed.
+240 scenarios: **7 open**, 233 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 5 | 16 |
-| guards | 1 | 32 |
+| guards | 0 | 32 |
 
 ## Open scenarios
 
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-236 | [the front door is a round behind](UX-0236-the-front-door-is-a-round-behind.md) | docs | High | R1, R8 | 🔴 |
 | UX-237 | [documentation debt has no way into the backlog](UX-0237-documentation-debt-has-no-way-into-the-backlog.md) | docs | Medium | R8 | 🔴 |
-| UX-238 | [the suite is one six-minute block](UX-0238-the-suite-is-one-six-minute-block.md) | guards | High | all | 🔴 |
 | UX-239 | [the context map is from the first week](UX-0239-the-context-map-is-from-the-first-week.md) | docs | High | all | 🔴 |
 | UX-240 | [a session has no cheap entry point](UX-0240-a-session-has-no-cheap-entry-point.md) | docs | Medium | all | 🔴 |
 | UX-241 | [architecture review has no cycle](UX-0241-architecture-review-has-no-cycle.md) | docs | Medium | R8 | 🔴 |

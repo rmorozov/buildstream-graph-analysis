@@ -168,6 +168,8 @@ select = ["F"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# UX-238: so `conftest.py` can import `tiers.py` beside it.
+pythonpath = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
@@ -181,4 +183,11 @@ markers = [
     # rot behind a permanently green CI. The marker is what lets the
     # `bst-tests` job assert the exact number that really ran.
     "bst: requires a real `bst` binary (and sometimes bwrap/cc) on PATH",
+    # UX-238: Google's taxonomy, assigned from measured per-file
+    # duration in `tests/tiers.py` and applied by a collection hook, so
+    # no test file carries one by hand. `bst` above is the enormous
+    # tier under the name it already had.
+    "small: pure Python over in-memory fixtures - the default tier",
+    "medium: spawns a process or a node harness, or writes a run directory",
+    "large: builds scale fixtures, streams traces, drives real process trees",
 ]

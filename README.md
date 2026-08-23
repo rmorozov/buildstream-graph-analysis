@@ -236,14 +236,14 @@ which kind of question. The three entry points:
 
 ```bash
 pip install -e '.[dev]'   # pytest + ruff; `make test`/`make lint` need this, not the base install
-make test                 # run the full suite
-make lint                 # ruff
-make dev-run              # sample report, fast smoke check
+make test-small           # 1,985 tests in 22s - the tier to run while you work
+make test                 # the whole suite, 3,112 tests in ~5m20s
+make lint                 # ruff + markdown (`make dev-run` prints a real report)
 ```
 
-Some tests need a real BuildStream and are skipped without one: add the `bst` extra and
-`buildstream-plugins`, then `pytest -m bst`. CI's `bst-tests` job does exactly this and fails
-if *any* of them is skipped — a skipped tier would otherwise read as a pass.
+Tiers come from measured per-file duration (`tests/tiers.py`, `UX-238`): `small` is the default,
+160 of 220 files for 5% of the runtime. `pytest -m bst` needs a real BuildStream, and CI's
+`bst-tests` job fails if any of that tier is skipped — a skipped tier would read as a pass.
 
 ## License
 

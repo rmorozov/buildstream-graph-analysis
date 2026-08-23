@@ -31,6 +31,36 @@ Making `jsonschema` a hard dependency was the other option and is
 declined: it is a dev tool and stays one. The claim gets honest instead.
 """
 import collections
+import pathlib
+
+import pytest
+
+from tiers import LARGE, MEDIUM
+
+# UX-238: which tier each collected test is in.
+#
+# Applied here rather than as a marker in 220 files: the tier is a
+# property of what a file *does*, the lists in `tiers.py` are the
+# exceptions, and a new file inherits `small` without anyone editing
+# anything. `bst` is left alone - it is the enormous tier under its own
+# name and the files that need it already carry it.
+_LARGE = frozenset(LARGE)
+_MEDIUM = frozenset(MEDIUM)
+
+
+def pytest_collection_modifyitems(config, items):
+    root = pathlib.Path(config.rootpath)
+    for item in items:
+        try:
+            relative = pathlib.Path(item.fspath).relative_to(root).as_posix()
+        except ValueError:                              # pragma: no cover
+            continue
+        if relative in _LARGE:
+            item.add_marker(pytest.mark.large)
+        elif relative in _MEDIUM:
+            item.add_marker(pytest.mark.medium)
+        else:
+            item.add_marker(pytest.mark.small)
 
 # Every skip reason this suite is known to produce: what each one means,
 # and **the largest count it has been measured at**. A reason not in
@@ -172,6 +202,13 @@ def pytest_sessionfinish(session, exitstatus):
     # things are found - by running it against a real absence and
     # checking the complaint actually appeared.
     if getattr(session.config.option, "keyword", None):
+        return
+    # UX-238: and neither does a *tier* run. `make test-small` filters
+    # with `-m`, which `config.args` cannot see - so without this the
+    # census would report on a third of the suite while claiming to
+    # have looked at all of it, which is the shape UX-235 exists to
+    # prevent rather than to reproduce.
+    if getattr(session.config.option, "markexpr", ""):
         return
     args = [str(a) for a in getattr(session.config, "args", [])]
     if [a.rstrip("/") for a in args] != ["tests"]:

@@ -1232,6 +1232,49 @@ def _format_invalidation_roots(churn: dict) -> List[str]:
     return lines
 
 
+# UX-221 + UX-187: how many culprit rows this report shows before naming
+# the rest. It lives here rather than in `bga/compare.py` because a cap
+# is a *rendering* concern - UX-187's own rule - and the payload carries
+# every row, ranked, however many there are.
+ELEMENT_DELTAS_SHOWN = 8
+
+
+def _format_element_deltas(comparison) -> List[str]:
+    """UX-221: the culprit rows, ranked by what moved most.
+
+    Capped here and named, per `UX-187` - the JSON carries every row.
+    Elements present in only one run are listed after the measurable
+    ones and carry no delta: a removed element read as a change from
+    zero would be the largest improvement in the run.
+    """
+    deltas = getattr(comparison, 'element_deltas', None) or {}
+    rows = deltas.get('rows') or []
+    if not rows:
+        return []
+    counts = deltas.get('counts') or {}
+    lines = ["", "Which Elements Changed:"]
+    shape = ", ".join(
+        f"{counts[name]} {name}" for name in
+        ("grew", "shrank", "appeared", "disappeared")
+        if counts.get(name))
+    if shape:
+        lines.append(f"  {shape} (per-element deltas are not noise-banded)")
+    for row in rows[:ELEMENT_DELTAS_SHOWN]:
+        if row['delta_us'] is None:
+            lines.append(
+                f"  {row['element_uid']}: {row['presence']} "
+                f"({_fmt_us(row['candidate_us'] if row['presence'] == 'appeared' else row['baseline_us'])}, "
+                f"no delta to compare)")
+        else:
+            lines.append(
+                f"  {row['element_uid']}: {_fmt_signed_us(row['delta_us'])} "
+                f"({_fmt_us(row['baseline_us'])} -> {_fmt_us(row['candidate_us'])})")
+    remaining = len(rows) - ELEMENT_DELTAS_SHOWN
+    if remaining > 0:
+        lines.append(f"  ... and {remaining} more (full list in --format json)")
+    return lines
+
+
 def format_compare_text(comparison) -> str:
     """Format a ComparisonResult (UX-01) as human-readable text. Takes
     the dataclass directly (not AnalysisResult) - this is a genuinely
@@ -1289,6 +1332,10 @@ def format_compare_text(comparison) -> str:
             f"  Judged against a noise band from {band['n']} baseline run(s): "
             f"{_fmt_us(band['low_us'])} .. {_fmt_us(band['high_us'])} - {width}"
         )
+    # UX-221: which elements the verdict is about. Directly under it,
+    # because "this got slower" and "this got slower because core.bst
+    # tripled" are one line to a reader who only ever sees the first.
+    lines.extend(_format_element_deltas(comparison))
     # UX-79: what this change added, and how much of it landed on the
     # chain. Said next to the verdict, because "the build got slower" and
     # "the build got slower *because you serialized the new work*" are

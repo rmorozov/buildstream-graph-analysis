@@ -380,6 +380,20 @@ _COMPARE_REQUIRED = {
     "mismatches": "array",
     "failed_runs": "array",
     "attribution_deltas": "object",
+    # UX-221: emitted on every comparison, so *required* rather than
+    # optional. UX-190's own guard is what said so: a key the payload
+    # always carries but the schema only permits is one a consumer could
+    # lose without any test noticing.
+    "element_deltas": "object",
+}
+
+# UX-221: `element_diff` has been emitted since UX-79 and declared by
+# nothing, so `UX-190`'s contract never covered it and `bga view` had no
+# reason to render it. Conditional - it is absent on a refusal - so it
+# is declared without being required, which is the distinction
+# `test_compares_schema_requires_every_key_it_emits` exists to force.
+_COMPARE_OPTIONAL = {
+    "element_diff": "object",
 }
 
 _BLAST_REQUIRED = {
@@ -1140,6 +1154,98 @@ _ANALYZE_HINTS = {
 }
 
 _COMPARE_HINTS = {
+    # UX-221: which elements the run's verdict is actually about.
+    "element_deltas": {
+        QUESTION: 'Which elements caused this?',
+        RAIL: 'act',
+        "description": "Every element in either run, with its duration on "
+                       "each side and the signed change. Ranked by what "
+                       "moved most. These deltas are **not banded** - "
+                       "judging one element against a set of runs is a "
+                       "question this does not answer, so a row states "
+                       "its change and the run's verdict and no more.",
+        "properties": {
+            "ranked_by": {
+                "description": "What the ordering means, so a consumer "
+                               "does not re-sort by something else and "
+                               "call it the same ranking."},
+            "banded": {
+                "description": "Always false, and published rather than "
+                               "left implicit: no per-element noise band "
+                               "exists, so no row's verdict rests on one."},
+            "counts": {
+                "description": "How many elements grew, shrank, stayed "
+                               "put, appeared and disappeared - the shape "
+                               "of the change before any single row."},
+            "rows": {
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "baseline_us", "title": "Before",
+                     "quantity": "duration_us", "sortable": True},
+                    {"key": "candidate_us", "title": "After",
+                     "quantity": "duration_us", "sortable": True},
+                    {"key": "delta_us", "title": "Change",
+                     "quantity": "duration_us", "sortable": True,
+                     "description": "Candidate minus baseline. Absent, "
+                                    "not zero, where an element is in "
+                                    "only one of the runs."},
+                    {"key": "presence", "title": "Presence",
+                     "sortable": True},
+                    {"key": "verdict_kind", "title": "Verdict",
+                     "sortable": True},
+                ],
+                DIRECTION: "lower_is_better",
+                "items": {
+                    "properties": {
+                        "baseline_us": {
+                            QUANTITY: "duration_us",
+                            "description": "What this element cost in the "
+                                           "baseline run. Absent if it did "
+                                           "not exist there."},
+                        "candidate_us": {
+                            QUANTITY: "duration_us",
+                            "description": "What it cost in the candidate "
+                                           "run. Absent if it is gone."},
+                        "delta_us": {
+                            QUANTITY: "duration_us",
+                            "description": "Candidate minus baseline, so "
+                                           "negative is faster. Absent "
+                                           "rather than zero when there is "
+                                           "nothing to subtract."},
+                        "presence": {
+                            "enum": ["both", "appeared", "disappeared"],
+                            "description": "Whether both runs had this "
+                                           "element. An element in one run "
+                                           "only has no delta at all - "
+                                           "reading it as a change from "
+                                           "zero would make a removed "
+                                           "element the run's biggest "
+                                           "improvement."},
+                        "verdict_kind": {
+                            "enum": list(VERDICT_KINDS),
+                            MARKERS: VERDICT_MARKERS,
+                            "description": "The same closed vocabulary the "
+                                           "run verdict uses. "
+                                           "`not_comparable` where there "
+                                           "is no delta; the run's own "
+                                           "kind where the run came out "
+                                           "inside its observed range, so "
+                                           "noise is never coloured as a "
+                                           "regression."},
+                    },
+                },
+            },
+        },
+    },
+    "element_diff": {
+        QUESTION: 'What did this change add or remove?',
+        RAIL: 'investigate',
+        "description": "The elements this change introduced, removed, or "
+                       "moved onto the critical path (UX-79). Complements "
+                       "`element_deltas`, which covers the elements both "
+                       "runs share.",
+    },
     # Every delta in this object is a *change*, and for every metric bga
     # compares, smaller is the improvement - duration, contention,
     # serialization. A viewer colours the sign from this without knowing
@@ -1440,7 +1546,8 @@ _SCHEMAS = {
         "Two runs, their signed deltas and the verdict - which is "
         "`improved`, `regressed`, `no significant change`, `within the "
         "baseline set's own observed range` (UX-170), or a `not "
-        "comparable (...)` refusal.", hints=_COMPARE_HINTS),
+        "comparable (...)` refusal.",
+        optional=_COMPARE_OPTIONAL, hints=_COMPARE_HINTS),
     BLAST: lambda: _document(
         BLAST, "bga blast --format json",
         _BLAST_REQUIRED,

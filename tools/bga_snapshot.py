@@ -177,10 +177,24 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--list", action="store_true",
         help="List this project's snapshots, with sizes, and exit.",
     )
+    # UX-234: the store as a distribution rather than as a list. A
+    # sibling of --list rather than a mode of it: one row per snapshot
+    # and one row per host class are different documents, and a
+    # consumer wanting the trend should not have to skip an aggregate
+    # to reach it.
+    parser.add_argument(
+        "--aggregate", action="store_true",
+        help="What a build here costs: min/median/p95 per host class, over "
+             "the runs that finished.",
+    )
+    parser.add_argument(
+        "--blend", action="store_true",
+        help="With --aggregate: mix host classes. Refused by default.",
+    )
     parser.add_argument(
         "--format", choices=("text", "json"), default="text",
-        help="`json` emits the listing as a `store/v1` document, which "
-             "`bga view` draws the store trend from. Only with --list.",
+        help="With --list or --aggregate: emit `store/v1` (or "
+             "`store-aggregate/v1`) instead of text.",
     )
     # UX-159: the store had a size warning and no way to act on it.
     # A subcommand rather than a flag, because it deletes.
@@ -202,29 +216,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--diagnose", action="store_true",
-        help='UX-146: record what the bwrap shim received and exec\'d, into the snapshot, and print a summary.'
+        help='Record what the bwrap shim received and exec\'d, and summarise it.'
     )
     parser.add_argument(
         "--no-inject", action="store_true",
-        help='UX-146: run the build with the shim installed but injecting nothing, to find out whether the argv rewrite is what breaks it.'
+        help='Install the shim but inject nothing - is the argv rewrite the problem?'
     )
     parser.add_argument(
         "--no-keep-raw", action="store_true",
-        help="UX-188: do not keep the raw Plane 2 log. It is kept gzipped by "
-             "default (8%% of its size, measured) because `bga timeline` needs "
-             "it to render Plane 2's lanes."
+        help="Drop the raw Plane 2 log. Kept gzipped by default; `bga "
+             "timeline` needs it."
     )
     parser.add_argument(
         "--inhibit", action="store_true",
-        help="UX-185: stop the machine sleeping while the build runs, via "
-             "systemd-inhibit (and gnome-session-inhibit when present). Not "
-             "the default - taking a lock on your power management uninvited "
-             "is not bga's call. A suspend is detected either way."
+        help="Stop the machine sleeping while the build runs (systemd-inhibit). "
+             "Off by default; a suspend is detected either way."
     )
     parser.add_argument(
         "--no-progress", action="store_true",
-        help="UX-183: no in-phase progress line, even on a terminal. Same "
-             "as setting BGA_NO_PROGRESS=1."
+        help="No in-phase progress line. Same as BGA_NO_PROGRESS=1."
     )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
                         help="The build to run, e.g. -- bst build all.bst.")
@@ -246,6 +256,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.aggregate:
+        return _aggregate(project, blend=args.blend,
+                          as_json=args.format == "json")
 
     if args.list:
         return _list(project, as_json=args.format == "json")
@@ -635,7 +649,7 @@ def store_listing(project: str) -> dict:
     hidden - they occupy the disk the size warning is about - but they
     carry no alias, because they are not what `@last` resolves to.
     """
-    from bga import schemas
+    from bga import schemas, store_aggregate
 
     snapshots = run_store.list_snapshots(project)
     runs = run_store.list_runs(project)
@@ -670,6 +684,16 @@ def store_listing(project: str) -> dict:
             # existed - the section says "no history" rather than
             # drawing a flat line at zero.
             "elements": (read_element_slice(path) or {}).get("elements"),
+            # UX-234: which machine measured this, as the one compact
+            # label UX-186's compared fields reduce to. The *label*
+            # rather than the manifest, because this row is drawn for
+            # every snapshot on every `bga view` and a manifest per row
+            # is a page-weight tax for a string the reader wants. A
+            # capture older than the manifest gets the "unknown host"
+            # class, which is a different claim from "the same machine
+            # as the others".
+            "host_class": store_aggregate.host_class(
+                measured.get("host_manifest")),
         })
     _mark_verdicts(rows)
     return schemas.stamp({
@@ -707,6 +731,12 @@ def _run_measurements(snapshot: str) -> dict:
     start, end = clock.get("start_us"), clock.get("end_us")
     if isinstance(start, int) and isinstance(end, int) and end >= start:
         out["total_duration_us"] = end - start
+
+    # UX-234: read here rather than in a second pass, because this is
+    # already the one small read of run-context that every row makes.
+    manifest = context.get("host_manifest")
+    if manifest:
+        out["host_manifest"] = manifest
 
     build = (context.get("queue_summary") or {}).get("build") or {}
     processed, skipped = build.get("processed"), build.get("skipped")
@@ -782,6 +812,29 @@ def _incomplete_reason(snapshot: str):
         return load_run_context(context).incomplete_reason
     except (OSError, IngestionError, json.JSONDecodeError, KeyError):
         return None
+
+
+def _aggregate(project: str, blend: bool = False,
+               as_json: bool = False) -> int:
+    """UX-234: the store as a distribution.
+
+    Exit `EXIT_CODE_MISMATCHED_RUNS` when the store mixes host classes
+    and no blended figure was asked for - `UX-186`'s grammar, and the
+    same code `bga compare` refuses a cross-host pair with, because it
+    is the same refusal: these runs do not describe one thing.
+    """
+    from bga import store_aggregate
+    from bga.cli import EXIT_CODE_MISMATCHED_RUNS
+
+    document = store_aggregate.read(project, blend=blend)
+    if as_json:
+        print(json.dumps(document, indent=2))
+    else:
+        for line in store_aggregate.render(document):
+            print(line)
+    if document.get("refusal") and not blend:
+        return EXIT_CODE_MISMATCHED_RUNS
+    return 0
 
 
 def _list(project: str, as_json: bool = False) -> int:

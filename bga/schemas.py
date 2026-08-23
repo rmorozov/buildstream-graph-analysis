@@ -47,6 +47,11 @@ ANALYZE = "analyze/v1"
 COMPARE = "compare/v1"
 BLAST = "blast/v1"
 STORE = "store/v1"
+# UX-234: the store as a distribution rather than as a list. Beside
+# `store/v1` rather than inside it: a listing is one row per snapshot
+# and this is one row per *host class*, and a consumer wanting the
+# trend should not have to skip an aggregate to reach it.
+STORE_AGGREGATE = "store-aggregate/v1"
 # UX-215: the two-plane join, which `bga correlate --format json` has
 # emitted since UX-51 as an unversioned blob. Everything in it was
 # already computed and already correct; what it lacked was a contract,
@@ -1469,6 +1474,134 @@ _STORE_REQUIRED = {
     "total_bytes": "integer",
 }
 
+_STORE_AGGREGATE_REQUIRED = {
+    "project": "string",
+    "snapshots": "integer",
+    "measured": "integer",
+    "excluded": "object",
+    "host_classes": "array",
+    # `""` rather than `"object"`: both are genuinely absent as `null`
+    # - no blend was asked for, nothing was refused - and `_document`
+    # already makes every declared type nullable, so spelling it here
+    # would nest the union.
+    "blended": "object",
+    "refusal": "object",
+}
+
+# UX-234: one distribution's shape. Declared once and referenced from
+# every figure, because a reader who has learned `duration_us` has
+# learned `cache_hit_rate` too.
+_DISTRIBUTION = {
+    "description": "A distribution over finished runs: `samples` (the "
+                   "count it was computed from), `min`, `median`, "
+                   "`p95`, `max` and `mad` (median absolute deviation, "
+                   "unscaled - the robust spread `compute_band` is "
+                   "built on, without its 1.4826 scaling or its k). "
+                   "Percentiles are nearest-rank - the value at index "
+                   "ceil(p*n)-1 of the sorted samples - so every figure "
+                   "is one a build actually took rather than a point "
+                   "between two of them. `null` below the sample floor; "
+                   "incomplete captures are excluded and counted in "
+                   "`excluded`. The description lives here rather than "
+                   "on each leaf because this object appears eight "
+                   "times, and eight copies of one paragraph is weight "
+                   "the export pays for nothing.",
+}
+
+_STORE_AGGREGATE_HINTS = {
+    "project": {"description": "The project whose store this describes."},
+    "snapshots": {QUANTITY: "count",
+                  "description": "Snapshots on disk, finished or not."},
+    "measured": {QUANTITY: "count",
+                 "description": "Of those, the ones that finished and "
+                                "recorded a duration - the only ones any "
+                                "distribution here is computed from."},
+    "excluded": {
+        "description": "What was left out and why, counted by reason. "
+                       "Published rather than dropped: \"we had nine "
+                       "runs\" and \"we had nine and threw two away\" "
+                       "are different claims (UX-156).",
+        "properties": {
+            "count": {QUANTITY: "count",
+                      "description": "Snapshots excluded from every "
+                                     "distribution."},
+            "by_reason": {"description": "How many were excluded for "
+                                         "each distinct reason."},
+        },
+    },
+    "host_classes": {
+        QUESTION: 'What does a build cost on each machine?',
+        "description": "One entry per host class - the grouping "
+                       "UX-186's compared fields already distinguish. "
+                       "Durations are never scaled across classes.",
+        "items": {
+            "properties": {
+                "host_class": {"description": "CPU model, core count and "
+                                              "memory, joined - the label "
+                                              "two runs must share to be "
+                                              "aggregated together."},
+                "host_manifest": {"description": "The full manifest of "
+                                                 "the first run in this "
+                                                 "class, or null where "
+                                                 "the captures predate "
+                                                 "it."},
+                "runs": {QUANTITY: "count",
+                         "description": "Finished runs in this class."},
+                "duration_us": _DISTRIBUTION,
+                "cache_hit_rate": _DISTRIBUTION,
+                "cores_busy": _DISTRIBUTION,
+                "peak_rss_mb": _DISTRIBUTION,
+                "stamps": {"description": "Which snapshots these are, so "
+                                          "a figure can be traced to the "
+                                          "runs behind it."},
+                "shortfall": {
+                    "description": "Present instead of a distribution "
+                                   "when the class has fewer than "
+                                   "`compare.MIN_BASELINE_RUNS` finished "
+                                   "runs. Names what is missing rather "
+                                   "than publishing a p95 of two "
+                                   "samples."},
+            },
+            "required": ["host_class", "runs"],
+        },
+    },
+    "blended": {
+        "description": "One distribution across every class. `null` "
+                       "unless the store holds a single class, or the "
+                       "caller passed --blend and took the mixed claim "
+                       "themselves.",
+        "properties": {
+            "runs": {QUANTITY: "count",
+                     "description": "Finished runs across all classes."},
+            "mixes": {QUANTITY: "count",
+                      "description": "How many host classes were mixed. "
+                                     "1 means nothing was."},
+            "duration_us": _DISTRIBUTION,
+            "cache_hit_rate": _DISTRIBUTION,
+            "cores_busy": _DISTRIBUTION,
+            "peak_rss_mb": _DISTRIBUTION,
+        },
+    },
+    "refusal": {
+        "description": "Why no blended figure is published, when none "
+                       "is. UX-186's grammar: durations are not scaled "
+                       "across machines, so a mixed distribution is a "
+                       "claim the tool declines to make on its own.",
+        "properties": {
+            "check": {"description": "Which check refused - the name a "
+                                     "caller matches on rather than the "
+                                     "prose."},
+            "classes": {QUANTITY: "count",
+                        "description": "How many host classes the store "
+                                       "holds."},
+            "sentence": {"description": "The refusal in words, naming "
+                                        "the classes and the flag that "
+                                        "overrides it."},
+        },
+    },
+}
+
+
 _STORE_HINTS = {
     "total_bytes": {QUANTITY: "bytes",
                     "description": "What the stored snapshots occupy on "
@@ -1484,6 +1617,23 @@ _STORE_HINTS = {
                             "incomplete_reason"],
                   "items": {
                       "properties": {
+                          # UX-234: the host each snapshot was measured
+                          # on, so a trend can mark a point taken on a
+                          # different machine rather than drawing it as
+                          # if the series were homogeneous.
+                          "host_class": {
+                              "description": "CPU model, core count and "
+                                             "memory of the machine this "
+                                             "snapshot was measured on, "
+                                             "as the single label "
+                                             "UX-186's compared fields "
+                                             "reduce to. The label rather "
+                                             "than the manifest: this row "
+                                             "is drawn for every snapshot "
+                                             "on every `bga view`. "
+                                             "`store-aggregate/v1` "
+                                             "carries the full manifest "
+                                             "per class."},
                           # UX-214: the same closed set as `compare/v1`.
                           # These rows used to carry `within_band`, a
                           # sixth value that existed only here.
@@ -1738,6 +1888,15 @@ _SCHEMAS = {
         "is not a measurement if it is not one. Incomplete captures are "
         "listed rather than hidden - they occupy the disk.",
         hints=_STORE_HINTS),
+    STORE_AGGREGATE: lambda: _document(
+        STORE_AGGREGATE, "bga snapshot --aggregate --format json",
+        _STORE_AGGREGATE_REQUIRED,
+        "A store as a distribution rather than as a list: what a build "
+        "of this project costs, how much it varies, what its p95 is and "
+        "what it draws, per host class. Incomplete captures are "
+        "excluded and counted; a mix of machines is refused rather than "
+        "blended, because durations are not scaled across hosts.",
+        hints=_STORE_AGGREGATE_HINTS),
 }
 
 

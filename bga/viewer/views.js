@@ -227,7 +227,8 @@ function markerPoint(marker, cx, cy, r, attrs) {
 // `--list`, made visual. The question is "is this project drifting",
 // and the answer is a shape.
 
-export function renderTrend(store, schema = undefined) {
+export function renderTrend(store, schema = undefined,
+                            aggregate = undefined) {
   const rows = store?.snapshots ?? [];
   if (rows.length < 2) return null;
   const markers = verdictMarkers(schema);
@@ -244,6 +245,24 @@ export function renderTrend(store, schema = undefined) {
     viewBox: `0 0 ${W} ${H}`, class: "trend", preserveAspectRatio: "none",
     role: "img", "data-points": rows.length,
   });
+  // UX-234: the distribution the points come from, drawn behind them.
+  // Every edge is a published figure of `store-aggregate/v1` - the page
+  // picks no percentile and computes none - and nothing is drawn at all
+  // when the store mixes host classes, because one band over two
+  // machines is exactly the blend the aggregate refuses.
+  const shape = trendDistribution(aggregate);
+  if (shape) {
+    figure.append(svg("rect", {
+      x: 0, y: y(shape.p95), width: W,
+      height: Math.max(0, y(shape.median) - y(shape.p95)),
+      class: "trend-band", "data-band": "median-p95",
+      "data-median": shape.median, "data-p95": shape.p95,
+    }));
+    figure.append(svg("line", {
+      x1: 0, x2: W, y1: y(shape.median), y2: y(shape.median),
+      class: "trend-median", "data-median": shape.median,
+    }));
+  }
   figure.append(svg("polyline", {
     points: rows.map((r, i) => `${x(i)},${y(r.total_duration_us ?? 0)}`).join(" "),
     class: "trend-line", fill: "none",
@@ -298,6 +317,17 @@ export function renderTrend(store, schema = undefined) {
     ? `${rows.length} snapshots \u00b7 ${incomplete.length} not measurements`
     : `${rows.length} snapshots \u00b7 all finished`;
   wrapper.append(heading, figure, caption);
+  // UX-234: what the band is, or why there is none. A refusal is data:
+  // a chart that silently dropped its band would read as a store with
+  // nothing to say about itself.
+  const note = distributionNote(aggregate);
+  if (note) {
+    const line = document.createElement("p");
+    line.className = "muted trend-distribution";
+    line.setAttribute("data-distribution", shape ? "median-p95" : "refused");
+    line.textContent = note;
+    wrapper.append(line);
+  }
   if (incomplete.length) {
     const why = document.createElement("details");
     why.className = "muted";
@@ -313,6 +343,34 @@ export function renderTrend(store, schema = undefined) {
     wrapper.append(why);
   }
   return wrapper;
+}
+
+/**
+ * UX-234: the one distribution a trend may draw, or null.
+ *
+ * `blended` is published only when the store holds a single host class,
+ * or when the caller passed `--blend` and took the mixed claim
+ * themselves. The page never asks, so `mixes > 1` here means somebody
+ * stated that claim on a command line, and a drawing is not the place
+ * to inherit it.
+ */
+export function trendDistribution(aggregate) {
+  const blended = aggregate?.blended;
+  if (!blended || (blended.mixes ?? 1) !== 1) return null;
+  const duration = blended.duration_us;
+  if (!duration || duration.median == null || duration.p95 == null) return null;
+  return duration;
+}
+
+/** The sentence under the trend: the distribution, or the refusal. */
+export function distributionNote(aggregate) {
+  if (!aggregate) return null;
+  const shape = trendDistribution(aggregate);
+  if (shape) {
+    return `Median ${seconds(shape.median)} \u00b7 p95 ${seconds(shape.p95)}`
+      + ` over ${shape.samples} finished run(s)`;
+  }
+  return aggregate.refusal?.sentence ?? null;
 }
 
 // ---------------------------------------------------------- blast box

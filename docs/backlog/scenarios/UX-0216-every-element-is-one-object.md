@@ -144,3 +144,12 @@ a fact recomputed rather than published; the cap removed; findings not
 reaching the section.
 
 **Deviation from the Required Fix:** none.
+
+**One deliberate behaviour change, recorded rather than absorbed.**
+`UX-206` asserted that every critical-path box links to `#signals` —
+the section that explains the drawing. They link to the *element* now:
+a reader who clicks a box asked about that element, not about the table
+it came from, and the element has a section to arrive at. The guard was
+rewritten to assert the new promise per box, against the uid each one
+draws, so a box linking to the wrong element's section is a failure
+rather than a rounding of the old rule.

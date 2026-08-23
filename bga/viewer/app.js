@@ -944,7 +944,10 @@ async function boot() {
     // this; a run that is not a measurement says so before it offers a
     // decision drawn from it.
     const decision = renderDecision(payload,
-      run.has_timeline ? (action) => decisionInvestigation(action, payload) : null);
+      run.has_timeline ? (action) => decisionInvestigation(action, payload) : null,
+      // UX-218: the clipboard helper, passed in so `views.js` keeps
+      // having no dependency on `tables.js`.
+      copy);
     if (decision) root.prepend(decision);
     // UX-216: one section per element the report discusses, appended
     // after everything that names an element has been drawn - the

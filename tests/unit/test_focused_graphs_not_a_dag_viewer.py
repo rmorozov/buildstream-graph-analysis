@@ -15,6 +15,7 @@ filing's premise that the payload already carried it was wrong.
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -214,9 +215,21 @@ class TestTheChainDrawn:
         assert out["hidden_before"] == 0
 
     @pytest.mark.parametrize("run,target", RUNS)
-    def test_each_box_links_to_the_section_that_explains_it(self, run, target):
+    def test_each_box_links_to_the_element_it_names(self, run, target):
+        """`UX-206` pointed every box at `#signals` - the section that
+        explains the drawing. `UX-216` points each one at the *element*
+        instead, deliberately: a reader who clicks a box asked about
+        that element, not about the table it came from, and the element
+        now has a section of its own to arrive at.
+
+        Asserted per box against the uid it draws, so a box linking to
+        some other element's section is a failure rather than a
+        rounding of the old promise."""
         out = _render("renderCriticalPath", _analyze(run))
-        assert all(box["href"] == "#signals" for box in out["boxes"]), out["boxes"]
+        assert out["boxes"], "the chain drew nothing"
+        for box in out["boxes"]:
+            expected = "element-" + re.sub(r"[^\w-]+", "-", box["element"])
+            assert box["href"] == f"#{expected}", box
 
 
 @needs_node

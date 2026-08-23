@@ -955,6 +955,59 @@ deciding), the investigation is not resumable because `UX-211` carried
 the view and not the decision, and "did my fix work?" is still answered
 by opening two reports side by side.
 
+## Round 25: publish the relationship, then navigate it
+
+Round 24's argument, executed. Four items, in the order the audit
+recommended, and the order mattered: nothing after the first is honest
+without it.
+
+**`UX-215` was a stamp, a schema and thirty lines of wiring**, and it
+is the one that made the rest cheap. `correlate/v1` publishes the
+`ElementJoin` that `bga/correlate.py` had been computing since `UX-51`
+and emitting unversioned. Then the viewer needed **no change at all**
+to draw it: measured on `examples/06`, an eleven-row `element_join`
+table under its declared question, with the element role earning every
+row an Inspect. That is `UX-193`'s schema dispatch paying for itself,
+five rounds after it was built — and the clearest argument yet for the
+rule that a field enters the published contract first.
+
+**`UX-216` fixed the round-23 defect and was the reason to look.**
+Nineteen Inspect affordances resolving to nothing, because the guard
+asserted the affordance *existed*. The acceptance is resolution now,
+and the fix is one expression rather than two: `cssId` delegates to
+`elementAnchor`, because a link and its target spelling drifting apart
+*is* the defect. The mutation that proves it is not renaming the anchor
+— it is duplicating the expression with a different character class,
+which is exactly how it would recur.
+
+**The drawer was declined and the reasons recorded**: overlay machinery
+is the one part of this page that would not survive an export from a
+downloads folder, a print, `filter: grayscale`, or a pasted anchor. A
+section is linkable, printable, collapsible by machinery that exists,
+and it makes the dead anchor resolve as a side effect.
+
+**A guard stopped being about the calendar.** The page-size ceiling was
+crossed by ordinary feature work in three consecutive rounds and raised
+twice. A number that moves whenever a feature lands is measuring the
+calendar, so the third time the *measurement* changed: composition (the
+page **is** the checked-in modules plus the stylesheet — the only check
+that can tell 6 KB of feature from 6 KB of vendored library),
+Direction 7's ratio at the scale the rule names (1,000 elements:
+691,401 B of data against a 97,488 B page, **7.1x**), and a loose
+structural backstop. The small fixtures invert the ratio and always
+did; that is a property of small reports, not of the viewer, and it is
+why the absolute was the wrong instrument all along.
+
+**`UX-218` is the first item aimed at the loop rather than the
+report.** `next_steps` is published, so the terminal, CI and the page
+give the same next command — and the branch that chooses it stays in
+the pipeline, because a viewer that picked the next command from
+`chain_ratio` would be the second decision-maker `UX-207` exists to
+prevent. The acceptance is not "a command is shown" but "the command
+runs": every published `argv` is executed against the fixture. What is
+*absent* is asserted too — a chain-bound build is not told to add
+builders, a run outside a store is not told to compare.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -986,6 +1039,7 @@ the other rounds now:
 | [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
 | [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
 | [24](../audits/round-24.md) | the relationship layer the third external review asked for is already computed in `correlate.py` and published nowhere; round 23's own Inspect anchors resolve to nothing; three of the review's premises corrected, and the loop it did not look at filed (`UX-215`..`UX-226`) |
+| [25](../audits/round-24.md) | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
 
 ## Verification Log
 

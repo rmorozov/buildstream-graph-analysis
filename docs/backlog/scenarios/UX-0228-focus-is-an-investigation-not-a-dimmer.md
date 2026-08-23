@@ -1,6 +1,6 @@
 # UX-228: focus is an investigation, not a dimmer
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-222 (the focus state), UX-216 (the element object), UX-227 (the explanation it reuses) | **Serves:** R1, R2
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-222 (the focus state), UX-216 (the element object), UX-227 (the explanation it reuses) | **Serves:** R1, R2 | **Topic:** viewer
 
 ## Motivation
 

@@ -416,17 +416,50 @@ def _status_marker(text):
     return next((emoji for emoji in _STATUS_EMOJI if emoji in text), None)
 
 
+# UX-232 split the backlog by liveness: open rows in README.md, closed
+# ones verbatim in closed.md. Both are the backlog, so every guard over
+# it reads both - a guard that kept looking at one file would go quiet
+# for 225 of the 234 rows the day the split landed.
+BACKLOG_FILES = ("docs/backlog/scenarios/README.md",
+                 "docs/backlog/scenarios/closed.md")
+
+
 def _table_statuses():
-    """`{item number: status cell}` from the backlog table."""
+    """`{item number: status cell}` across both backlog files.
+
+    The two tables have different shapes on purpose - the open one is an
+    index (id, title, topic, priority, serves, status), the closed one
+    keeps its full narrative - so the status cell is found by *marker*
+    rather than by column number, which is the only thing both promise.
+    """
     statuses = {}
-    path = REPO / "docs/backlog/scenarios/README.md"
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = _TABLE_ROW.match(line)
-        if not match:
+    for name in BACKLOG_FILES:
+        path = REPO / name
+        if not path.exists():
             continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        statuses[int(match.group(1))] = cells[4]
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = _TABLE_ROW.match(line)
+            if not match:
+                continue
+            cells = [cell.strip() for cell in
+                     re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+            marker = next((c for c in cells if c[:1] in "🔴🟡🟢⚪"), "")
+            statuses[int(match.group(1))] = marker
     return statuses
+
+
+def _rows_by_file():
+    """`{item number: [file, ...]}` - for the exactly-one-of-two guard."""
+    where = {}
+    for name in BACKLOG_FILES:
+        path = REPO / name
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = _TABLE_ROW.match(line)
+            if match:
+                where.setdefault(int(match.group(1)), []).append(name)
+    return where
 
 
 def _file_statuses():
@@ -781,3 +814,123 @@ def test_the_docs_explain_how_to_turn_completion_on():
         assert "bga[completion]" in text
     assert "click" in reference.lower(), (
         "the declined alternative should be recorded where a reader asks")
+
+
+def test_every_scenario_has_exactly_one_row_across_the_two_files():
+    """UX-232 clause 5: the split must not duplicate or drop a row.
+
+    A row moves from `README.md` to `closed.md` in the same commit that
+    flips its marker. Two rows means a move that copied; zero means the
+    file exists and the backlog has forgotten it (covered by
+    `test_every_task_file_has_a_row_in_the_table`, which now reads
+    both).
+    """
+    duplicated = {number: files for number, files in _rows_by_file().items()
+                  if len(files) != 1}
+    assert duplicated == {}, (
+        f"a scenario must appear in exactly one of README.md/closed.md: "
+        f"{duplicated}")
+
+
+def test_open_rows_are_in_the_readme_and_closed_rows_are_not():
+    """Liveness is what the split is *for*."""
+    misplaced = []
+    for number, files in _rows_by_file().items():
+        marker = _table_statuses().get(number, "")
+        in_readme = files == ["docs/backlog/scenarios/README.md"]
+        if marker[:1] in ("🔴", "🟡") and not in_readme:
+            misplaced.append(f"UX-{number} is {marker[:1]} but lives in closed.md")
+        if marker[:1] in ("🟢", "⚪") and in_readme:
+            misplaced.append(f"UX-{number} is {marker[:1]} but is still in README.md")
+    assert misplaced == [], misplaced
+
+
+def test_every_open_row_carries_a_topic_from_the_closed_set():
+    """UX-232 clause 3. The taxonomy is a closed set so the index can be
+    counted; a free-text topic is a second title."""
+    topics = {"capture", "analysis", "contracts", "viewer",
+              "cli", "store", "docs", "guards"}
+    path = REPO / "docs/backlog/scenarios/README.md"
+    rows = [line for line in path.read_text(encoding="utf-8").splitlines()
+            if _TABLE_ROW.match(line)]
+    assert rows, "no open rows to check"
+    bad = []
+    for line in rows:
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+        if cells[2] not in topics:
+            bad.append(f"{cells[0]}: {cells[2]!r}")
+    assert bad == [], f"topic outside the closed set {sorted(topics)}: {bad}"
+
+
+def test_the_index_counts_match_the_rows_they_index():
+    """An index that has drifted from what it indexes is worse than no
+    index - it is the two-hand-maintained-copies defect UX-131 filed,
+    one document up."""
+    path = REPO / "docs/backlog/scenarios/README.md"
+    text = path.read_text(encoding="utf-8")
+    rows = [line for line in text.splitlines() if _TABLE_ROW.match(line)]
+    claimed = re.search(r"\*\*(\d+) open\*\*", text)
+    assert claimed, "the index does not state how many are open"
+    assert int(claimed.group(1)) == len(rows), (
+        f"the index claims {claimed.group(1)} open rows and the table has "
+        f"{len(rows)}")
+    per_topic = {}
+    for line in text.splitlines():
+        match = re.match(r"^\| (\w+) \| (\d+) \| (\d+) \|$", line)
+        if match:
+            per_topic[match.group(1)] = int(match.group(2))
+    counted = {}
+    for line in rows:
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+        counted[cells[2]] = counted.get(cells[2], 0) + 1
+    for topic, number in counted.items():
+        assert per_topic.get(topic) == number, (
+            f"the index says {per_topic.get(topic)} open {topic} rows; "
+            f"the table has {number}")
+
+
+def _out_of_scope_entries(path):
+    """Each `Out of Scope` bullet, with wrapped continuations joined."""
+    text = path.read_text(encoding="utf-8")
+    if "## Out of Scope" not in text:
+        return None
+    body = text.split("## Out of Scope", 1)[1].split("\n## ", 1)[0]
+    entries, current = [], None
+    for line in body.splitlines():
+        if line.strip().startswith("- "):
+            if current:
+                entries.append(current)
+            current = line.strip()[2:]
+        elif current is not None and line.strip():
+            current += " " + line.strip()
+    if current:
+        entries.append(current)
+    return entries
+
+
+def test_every_out_of_scope_entry_names_a_task_or_states_a_decline():
+    """UX-232 clause 4: an idea parked in `Out of Scope` has been lost
+    and dug out again at least once.
+
+    Each entry either references a task id — existing or newly stubbed —
+    or says in a clause *why* it is declined. Held for filings from
+    UX-227 on; earlier ones are history, and mining them was a one-time
+    sweep rather than a rule applied backwards.
+    """
+    unjustified = []
+    for path in sorted((REPO / "docs/backlog/scenarios").glob("UX-*.md")):
+        match = _FILE_ID.match(path.name)
+        if not match or int(match.group(1)) < 227:
+            continue
+        entries = _out_of_scope_entries(path)
+        assert entries is not None, f"{path.name} has no Out of Scope section"
+        for entry in entries:
+            names_task = re.search(r"UX-\d+", entry)
+            gives_reason = (re.search(r"\([^)]{12,}\)", entry)
+                            or re.search(r"—[^—]{12,}", entry)
+                            or re.search(r":\s+\S", entry))
+            if not (names_task or gives_reason):
+                unjustified.append(f"{path.name}: {entry[:70]}")
+    assert unjustified == [], (
+        f"an Out of Scope entry must reference a task or state why it is "
+        f"declined, or the idea is lost again: {unjustified}")

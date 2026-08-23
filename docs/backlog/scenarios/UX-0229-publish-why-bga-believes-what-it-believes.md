@@ -1,6 +1,6 @@
 # UX-229: publish why bga believes what it believes
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-207 (the claims), UX-190 (the contract discipline), UX-215 (the precedent) | **Serves:** R1, R4, R8 — and every secondhand reader
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-207 (the claims), UX-190 (the contract discipline), UX-215 (the precedent) | **Serves:** R1, R4, R8 — and every secondhand reader | **Topic:** contracts
 
 ## Motivation
 

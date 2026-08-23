@@ -194,7 +194,36 @@ re-derived by reading every filing is one nobody re-derives.
 would be guesswork and a guessed role id is worse than an absent one;
 the round history already tells that story.
 
-## 11. Do not restate the code
+## 11. The backlog is split by liveness, and a row is an index entry
+
+`docs/backlog/scenarios/README.md` holds the **open** rows;
+[`closed.md`](../backlog/scenarios/closed.md) holds the closed ones,
+verbatim. A row moves in the same commit that flips its marker, and
+`UX ids are never renumbered` — they are load-bearing in task files,
+commit messages and guards.
+
+An open row is an *index entry*: id, linked title, topic, priority,
+`Serves:`, status. Its narrative lives in the task file, which is the
+only place it ever lived twice. Closed rows keep the full narrative
+they were written with — history is preserved, not rewritten.
+
+The topic is one word from a closed set — `capture`, `analysis`,
+`contracts`, `viewer`, `cli`, `store`, `docs`, `guards` — assigned
+mechanically from the task's subject. Where the mechanical answer is
+wrong, the task file settles it with a `**Topic:**` field in its header
+line, not the row.
+
+Measured before the split: 936 lines, 234 rows, 848 characters per row
+on average, and nine of them open.
+
+## 12. Every `Out of Scope` entry names a task or states a decline
+
+An idea parked in an `Out of Scope` section has been lost and dug out
+again at least once. Each entry either references a task id — existing
+or newly stubbed — or says in a clause why it is declined. A guard
+holds this for filings from `UX-227` on.
+
+## 13. Do not restate the code
 
 Explain what is *not* deducible from reading the source: why a threshold
 has the value it does, what was measured, what was rejected and why.

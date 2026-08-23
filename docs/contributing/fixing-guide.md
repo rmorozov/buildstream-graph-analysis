@@ -6,6 +6,15 @@ This is the mandatory entry point for any agent (human or LLM) picking up a task
 
 > **Two backlogs exist.** `docs/backlog/progress-tracker.md` / `docs/backlog/tasks/` is the original spec-compliance backlog - **closed**, every row 🟢 Done, kept as a historical record. `docs/backlog/scenarios/` is the active backlog (usability, optimization-workflow, and other non-spec-compliance work) - **start there** for anything new. The rest of this guide applies to either.
 
+**Three procedures here are also skills** (`UX-240`), for a session
+that would otherwise re-derive them: `.claude/skills/verify` (§3 as a
+sequence you can run), `.claude/skills/falsify` (the mutation
+discipline, with the failure modes that have cost this repository
+something), and `.claude/skills/measure` (the golden snapshot, the
+scale run, the export split, re-timing the tiers). They are entry
+points, not second copies — where a skill and this guide disagree, this
+guide is right and the skill is a bug.
+
 ---
 
 ## 1. How to pick a task

@@ -1,5 +1,9 @@
 # Post the verdict where the reviewer will read it
 
+> **R4's page** — the CI gatekeeper, who owns the regression gate
+> ([the role model](../design/roles.md)). R6 lives with its false
+> positives, which is why the band is where it is.
+>
 > **The CI owner's page** (`UX-139`). Gates, the baseline set, the
 > capture and the comment used to live in four documents and a README
 > summary; this is the sequence, in order. `bga`'s other entry point,

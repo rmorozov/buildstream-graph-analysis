@@ -215,7 +215,7 @@ docs/backlog/progress-tracker.md   closed spec-compliance backlog - archaeology 
 
 ## 6a. Which kind of session is this?
 
-Six streams run in this repository, and they do not start the same way.
+Seven streams run in this repository, and they do not start the same way.
 `§1`'s "pick the highest-priority 🔴 row" is right for two of them and
 wrong for the rest — an audit has no row until it has been done.
 
@@ -225,10 +225,11 @@ wrong for the rest — an audit has no row until it has been done.
 | **audit** | a landed range, or external feedback | a round document in `docs/audits/` + filings | every claim it makes is a pasted measurement |
 | **feature** | a 🔴 row whose Depends on is clear | code + guards + an Outcome section | §3, in full |
 | **fix** | a defect, from CI or a report | the failing case first, then the fix | the case that reproduced it is a committed guard |
-| **documentation** | a doc that is wrong, or a gap filed per `§4a.9` | the correction, in the same register | the guard that would have caught it exists, or its absence is stated |
+| **documentation** | a doc that is wrong, or a gap filed per `§3.11` | the correction, in the same register | the guard that would have caught it exists, or its absence is stated |
 | **refactor** | a measured cost — size, duplication, a budget | the change, plus before/after | the measurement moved, and no behaviour did |
+| **review** | the diff since the last row in [`architecture-review.md`](../audits/architecture-review.md) | filings, and that document's next row | every checklist item is answered with a measurement or a filing (`UX-241`) |
 
-Two rules cut across all six:
+Two rules cut across all seven:
 
 - **A stream's output is another stream's input.** Design and audit
   produce filings and no code; feature and fix consume them. If a

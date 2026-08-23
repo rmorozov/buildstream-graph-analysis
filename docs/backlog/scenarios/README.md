@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-243 scenarios: **6 open**, 237 closed.
+246 scenarios: **8 open**, 238 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 40 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
-| docs | 4 | 19 |
+| docs | 6 | 22 |
 | guards | 0 | 32 |
 
 ## Open scenarios
@@ -38,10 +38,12 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-241 | [architecture review has no cycle](UX-0241-architecture-review-has-no-cycle.md) | docs | Medium | R8 | 🔴 |
 | UX-242 | [the capacity recommendation is documented nowhere](UX-0242-the-capacity-recommendation-is-documented-nowhere.md) | docs | Medium | R1, R5 | 🔴 |
 | UX-243 | [the memory envelope reaches no reader](UX-0243-the-memory-envelope-reaches-no-reader.md) | docs | Medium | R5 | 🔴 |
 | UX-244 | [what-if's convention lives in its own docstring](UX-0244-whatifs-convention-lives-in-its-own-docstring.md) | docs | Medium | R8 | 🔴 |
+| UX-245 | [the architecture's CLI table is two commands behind](UX-0245-the-architectures-cli-table-is-two-commands-behind.md) | docs | Medium | R8 | 🔴 |
+| UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
+| UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -74,8 +76,16 @@ about what the tool says:
 Order: `UX-238` first — everything after it is cheaper — then `UX-239`,
 then `UX-236` and `UX-237` together, then `UX-240` on top of both, and
 `UX-241` last because it is the cycle that keeps the rest true.
-`UX-238`, `UX-239`, `UX-236`, `UX-237` and `UX-240` are done; their rows
-are in [closed.md](closed.md).
+All six are done; their rows are in [closed.md](closed.md).
+
+`UX-245`..`UX-247` are what `UX-241`'s **first review** found, which is
+the item working rather than a coincidence: the architecture's CLI
+table is two shipped subcommands behind, the end-to-end guide never
+reaches the command for its own last step, and the architecture's
+Verification Log is stale about its own currency.
+[`../../audits/architecture-review.md`](../../audits/architecture-review.md)
+is the round type, the checklist and the log; the cadence is a guard,
+not a memory.
 
 `UX-242`..`UX-244` were filed *by* `UX-237`'s new rule, on its first
 application: three round-28 mechanisms whose only documentation was a

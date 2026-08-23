@@ -173,7 +173,28 @@ solved.
 
 **Enforced by test.**
 
-## 10. Do not restate the code
+## 10. A direction or a filing says whose problem it solves
+
+Every `## Direction N` section carries a `**Serves:**` line under its
+heading, and every backlog filing from `UX-227` on carries `Serves:` in
+its header line, both naming role ids from
+[the role model](../design/roles.md).
+
+`Serves:` R2, R3 — the two roles a repository-shaped change is usually
+about — is a sentence, not a taxonomy exercise: name the roles and say
+in a clause why, the way Direction 8 does.
+
+Round 27 wrote the role model and found the reason for this rule: eight
+roles, four served thoroughly, four barely — and the imbalance was
+invisible for twenty-six rounds because nothing ever required a
+document to say who it was for. A gap analysis that has to be
+re-derived by reading every filing is one nobody re-derives.
+
+`UX-1`..`UX-226` are deliberately **not** retro-tagged. The archaeology
+would be guesswork and a guessed role id is worse than an absent one;
+the round history already tells that story.
+
+## 11. Do not restate the code
 
 Explain what is *not* deducible from reading the source: why a threshold
 has the value it does, what was measured, what was rejected and why.

@@ -1,5 +1,9 @@
 # Using `bga` on a real project, end to end
 
+> **R1's journey** — the local optimizer, inside the
+> edit-build-run-debug loop ([the role model](../design/roles.md)).
+> R2 reads it too, from the element sections onward.
+
 This is the long-form walkthrough: from a project you have never traced
 before to a ranked, evidenced list of what to change — and how to tell
 which of the tool's answers you can act on and which you cannot.

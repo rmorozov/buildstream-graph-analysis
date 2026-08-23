@@ -39,6 +39,8 @@ reduce to it.
 
 ## Direction 1: `bga` as a local optimization helper
 
+**Serves:** R1 above all — one person, one machine, the edit-build-compare loop — and R2, whose element cost the loop surfaces ([roles](roles.md)).
+
 **Who this is.** One person, one machine, an iterative loop: build,
 analyze, change something, rebuild, compare. `README.md` already sells
 this loop and `UX-05`'s walkthrough shows it working on a `sleep N` proxy
@@ -204,6 +206,8 @@ Every number in that block is either already computed today or is
 derivable from data already captured. None of it is currently printed.
 
 ## Direction 2: `bga` as a CI tool
+
+**Serves:** R4, whose gate this is, and R6 indirectly — every false positive a loose band waves through is a contributor's re-run ([roles](roles.md)).
 
 Three jobs, in increasing order of how hard they are and how badly the
 current design serves them.
@@ -385,6 +389,8 @@ has before writing any code.
 
 ## Direction 3: what the tool could see next (argued 2026-08-18, round 11)
 
+**Serves:** R2 and R3 — the class of question this opens is *what is inside an element* and *what shape is the graph*, which are their two questions ([roles](roles.md)).
+
 With rounds 10-11 the original two directions are substantially built:
 the local loop runs end to end from the documented commands, the
 marginal gate answers the build owner's growth rule at any project
@@ -465,6 +471,8 @@ section stays the argument.
 
 ## Direction 4: seeing every process — the static-binary blind spot (argued 2026-08-18)
 
+**Serves:** R2, whose element's real cost is exactly what a blind spot hides, and R1, who acts on the ranking that cost feeds ([roles](roles.md)).
+
 Plane 2's one deliberate, load-bearing limitation has been there since
 `UX-11` chose the mechanism: `LD_PRELOAD` fires when the dynamic linker
 loads the hook into a freshly exec'd process, so **a fully static
@@ -533,6 +541,8 @@ section stays the argument.
 
 ## Direction 5: the last inch, and the next axis (argued 2026-08-19, round 12)
 
+**Serves:** R4 — the CI comment's last inch — then R1 and R2 for the axis that follows it ([roles](roles.md)).
+
 Directions 3 and 4 are implemented. What round 12's verification says
 about where the leverage now sits, ranked:
 
@@ -585,6 +595,8 @@ about where the leverage now sits, ranked:
    EVIDENCE hedge currently reflects.
 
 ## Direction 6: the source axis — blast analysis by shared resource (argued 2026-08-20, round 18)
+
+**Serves:** R2, who owns the repository a change lands in, and R3, who owns what that change rebuilds ([roles](roles.md)).
 
 Filed from a real user request, round 18: *blast analysis doesn't take
 element kind into consideration; and in the monorepo case — one repo
@@ -667,6 +679,8 @@ would touching this cost" into "what has touching this cost this
 month" — worth filing once UX-171's inventory exists to join against.
 
 ## Direction 7: the viewer — a thin window onto the JSON (argued 2026-08-21, round 21)
+
+**Serves:** R1, R2, R3 and R4 — everyone who reads a report rather than a payload. The viewer serves no role the payloads do not; that is the whole of its thinness ([roles](roles.md)).
 
 Filed from the user's request, round 21: *"we are on the verge of
 necessity for making a viewer"* — `bga view @snapshot` serving a local

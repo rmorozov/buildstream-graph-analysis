@@ -231,6 +231,49 @@ def _element_table(comparison, never_read: Optional[dict]) -> List[str]:
     return lines
 
 
+def _why_block(comparison) -> List[str]:
+    """UX-229: the candidate run's diagnosis, with the chain behind it.
+
+    The comment states verdicts; a reviewer's first question is *why do
+    you say that*, and until this the answer lived in another command's
+    output. Cited, not re-derived: every line here is a field of the
+    published `candidate_diagnosis.provenance` record, which the
+    terminal and the page render from too - so three surfaces cannot
+    explain one claim three ways.
+
+    Folded into a `<details>` because a comment is read in a sidebar
+    and the reviewer who believes the verdict should not scroll past
+    the reason they did not ask for.
+    """
+    diagnosis = getattr(comparison, 'candidate_diagnosis', None) or {}
+    record = diagnosis.get('provenance') or {}
+    rule = record.get('rule') or {}
+    if not rule.get('sentence'):
+        return []
+    lines = ["<details><summary>Why the candidate looks like this</summary>", ""]
+    lines.append(rule['sentence'])
+    lines.append("")
+    if rule.get("name"):
+        lines.append(
+            f"Rule `{rule['name']}` = `{rule['threshold']}` "
+            f"({rule.get('module', '')}).")
+        lines.append("")
+    refs = [entry for entry in (record.get("evidence") or [])
+            if entry.get("resolved")]
+    if refs:
+        lines += ["| Field | Value |", "| --- | --- |"]
+        for entry in refs:
+            lines.append(f"| `{entry['path']}` | {entry['value']} |")
+        lines.append("")
+        lines.append(
+            f"<sub>Paths are into the candidate run's "
+            f"`{record.get('document', 'analyze/v1')}`; "
+            f"`bga analyze RUN --explain` prints the same chain.</sub>")
+        lines.append("")
+    lines += ["</details>", ""]
+    return lines
+
+
 def _cache_line(comparison) -> List[str]:
     churn = getattr(comparison, 'cache_churn', None) or {}
     if not churn.get('applicable'):
@@ -312,6 +355,7 @@ def render_ci_comment(comparison, args, native_report: Optional[dict] = None) ->
 
     lines += _element_table(comparison, _never_read_by_element(native_report))
     lines.append("")
+    lines += _why_block(comparison)
     lines += _cache_line(comparison)
     lines += ["", f"<sub>{_instance_stamp(comparison)}</sub>"]
 

@@ -342,6 +342,93 @@ _ANALYZE_OPTIONAL = {
 # rename silently shortens. `edges_outside_band` (renamed from
 # `runs_outside_band` one round before this item was filed) is the case
 # in point.
+# UX-229: the chain behind one claim. Declared once and referenced from
+# the three places a claim is published - the diagnosis, each finding
+# and each top action - because a consumer that learns to read one has
+# learned to read all three, and a second shape would be a second
+# contract to keep in step.
+_PROVENANCE = {
+    "description": "Why this claim is made: the published fields it was "
+                   "read from, the rule that fired, and the trace query "
+                   "that deepens it. References into this same document "
+                   "rather than copies, so a reader can follow them.",
+    "properties": {
+        "claim": {"description": "Which claim this explains - a finding "
+                                 "id, or `diagnosis` for the headline."},
+        "kind": {"description": "Where the claim is published: "
+                                "`diagnosis`, `finding` or `top_action`."},
+        "document": {"description": "The schema of the document every "
+                                    "path below walks. Load-bearing the "
+                                    "moment a record travels: "
+                                    "`compare/v1` carries the candidate "
+                                    "run's chain, whose paths resolve "
+                                    "against that run's `analyze/v1`."},
+        "evidence": {
+            "description": "Each field this claim was read from, as a "
+                           "path into this document and the value found "
+                           "there.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": {"description": "A path into this document: "
+                                            "dotted keys, `[i]` for a list "
+                                            "index, `[key=value]` for the "
+                                            "one list entry matching it."},
+                    "value": {"description": "What that path held when the "
+                                             "report was written."},
+                    "resolved": {"description": "False where the path did "
+                                                "not resolve - published "
+                                                "rather than dropped, so a "
+                                                "broken reference is "
+                                                "visible instead of "
+                                                "absent."},
+                },
+                "required": ["path", "resolved"],
+            },
+        },
+        "rule": {
+            "description": "What decided this claim.",
+            "properties": {
+                "name": {"description": "The constant that decided it, or "
+                                        "null where the claim has no "
+                                        "threshold - which is a different "
+                                        "statement from a threshold of "
+                                        "zero."},
+                "threshold": {"description": "That constant's value, read "
+                                             "live: change the constant and "
+                                             "this changes with it."},
+                "comparison": {"description": "How the observed value was "
+                                              "compared: `>=`, `<`, `>`, "
+                                              "`banded`, or `present` for a "
+                                              "claim with no threshold."},
+                "observed_path": {"description": "Where the compared value "
+                                                 "is published, when it is."},
+                "sentence": {"description": "The comparison in words - one "
+                                            "wording, so the terminal, the "
+                                            "page and the CI comment cannot "
+                                            "explain one claim three ways."},
+                "module": {"description": "The file the threshold is "
+                                          "defined in."},
+            },
+            "required": ["comparison", "sentence"],
+        },
+        "see": {"description": "On a top action: the path to the "
+                               "finding's record, which holds the chain. "
+                               "The action *is* a reference to that "
+                               "finding, so its provenance is one too."},
+        "trace_query": {"description": "The `questions.js` query id that "
+                                       "deepens this claim in the timeline, "
+                                       "or null where none does."},
+        "unpublished_inputs": {
+            "description": "Fields this claim was genuinely drawn from "
+                           "that this document does not carry. Named "
+                           "rather than omitted: silence would read as "
+                           "no gap."},
+    },
+    "required": ["claim", "kind", "document"],
+}
+
+
 ANALYZE_FULL_KEYS = (
     "schema", "run_id", "total_duration_us", "section", "run_instance",
     # UX-207: the decision the run supports. In this list because it is
@@ -385,6 +472,11 @@ _COMPARE_REQUIRED = {
     # always carries but the schema only permits is one a consumer could
     # lose without any test noticing.
     "element_deltas": "object",
+    # UX-229: the candidate run's headline claim with its chain. Always
+    # emitted from a real comparison - both runs are analyzed - so it is
+    # required rather than permitted, by the same rule `element_deltas`
+    # landed under one round earlier.
+    "candidate_diagnosis": "object",
 }
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
@@ -888,6 +980,7 @@ _ANALYZE_HINTS = {
                 # measured rather than guessed.
                 "evidence": {"type": ["object", "null"],
                              "properties": EVIDENCE_QUANTITIES},
+                "provenance": _PROVENANCE,
                 "copy_text": {
                     "description": "This finding as plain text: its "
                                    "title, its evidence in declared "
@@ -1029,6 +1122,7 @@ _ANALYZE_HINTS = {
                 "description": "Wall-clock beyond the critical path. "
                                "Published rather than left as a "
                                "subtraction for a consumer to perform."},
+            "provenance": _PROVENANCE,
             "top_actions": {
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element", "role": "element",
@@ -1050,6 +1144,7 @@ _ANALYZE_HINTS = {
                             "description": "Elements a change here "
                                            "rebuilds - the cost of "
                                            "touching it, beside the gain."},
+                        "provenance": _PROVENANCE,
                     },
                 },
             },

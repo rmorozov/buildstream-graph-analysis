@@ -14,31 +14,23 @@
 import { byId } from "./questions.js";
 
 /**
- * Which library question answers which finding.
+ * `UX-229` retired this file's own finding -> query table.
  *
- * Keyed by the `id` `findings.py` assigns, so a renamed finding loses
- * its button rather than silently pointing at the wrong question - and
- * the coverage guard asserts both directions: every id here names a
- * real query, and every query a finding references is on the library
- * page.
+ * It lived here, which made the page the only place that knew which
+ * question deepens which finding: the text report could not print it
+ * and the CI comment could not cite it. It is `bga/provenance.py`'s
+ * `TRACE_QUERIES` now, published per claim as
+ * `provenance.trace_query`, and this module reads that field - the
+ * same move `UX-207` made for the diagnosis.
+ *
+ * The consequence is deliberate: a payload written before `UX-229` has
+ * no provenance and gets no button, which is `UX-194`'s dead-button
+ * rule. A guessed query would be worse than none.
  */
-export const FINDING_QUERIES = {
-  // Scheduling: the finding says time was spent waiting; the query
-  // shows where the gaps are.
-  "wait-category": "stalls",
-  "capacity-recommendation": "stalls",
-  // Execution: the finding names elements; the query opens them.
-  "time-concentration": "element-time",
-  "execution-bound": "element-commands",
-  "latent-heavies": "element-commands",
-  // Dependencies: the finding is about shape, not speed.
-  "criticality": "dependency-wait",
-  "blast-radius-ranking": "dependency-wait",
-  "shared-source-blast": "dependency-wait",
-  // Resources: what the processes inside the sandbox cost.
-  "memory-envelope": "process-storm",
-  "cache-transfer-cost": "sandbox-tax",
-};
+export function queryFor(finding) {
+  const query = finding?.provenance?.trace_query;
+  return typeof query === "string" && query ? query : null;
+}
 
 /** The element a finding is about, or null. First one: the button is
  *  one question, and a question about eleven elements is none. */
@@ -75,17 +67,11 @@ export function withElement(entry, element_uid) {
 
 /** The context a finding earns, or null when no query answers it. */
 export function investigationFor(finding) {
-  const query = FINDING_QUERIES[finding?.id];
+  const query = queryFor(finding);
   if (!query) return null;
   return traceContext({
     element_uid: subjectOf(finding),
     reason: finding.title ?? finding.id,
     query,
   });
-}
-
-/** Every query id a finding can reference - the coverage guard's other
- *  direction. */
-export function referencedQueries() {
-  return [...new Set(Object.values(FINDING_QUERIES))].sort();
 }

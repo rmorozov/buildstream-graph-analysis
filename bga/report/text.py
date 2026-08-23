@@ -2,6 +2,7 @@
 from typing import List, Optional
 
 from .. import findings as findings_mod
+from .. import provenance
 from .. import schemas
 from .. import sources
 from ..findings import (compute_findings, compute_headline,
@@ -210,7 +211,8 @@ def _format_capacity_model_note(result: AnalysisResult) -> str:
     return f"  Note: {note}"
 
 
-def _format_key_findings(result: AnalysisResult) -> List[str]:
+def _format_key_findings(result: AnalysisResult,
+                         explain: bool = False) -> List[str]:
     """Synthesized "what to look at first" summary (P4-02).
 
     `UX-75`: this used to *be* the synthesis - every conclusion the tool
@@ -231,7 +233,26 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     # describe one build differently.
     headline = compute_headline(result, findings)
     lines = ["Key Findings:", f"  {headline['sentence']}"]
-    return lines + render_findings(findings) + [""]
+    if not explain:
+        return lines + render_findings(findings) + [""]
+    # UX-229: the chain, on demand. Read out of the *published*
+    # document rather than re-assembled here - `build_document` is what
+    # `--format json` serializes, so the terminal quotes the same field
+    # references, the same threshold and the same query the JSON does,
+    # and a reader can follow either one to the same place.
+    from .json import build_document
+
+    document = build_document(result)
+    lines.extend(provenance.render(
+        (document.get("headline") or {}).get("provenance") or {}, indent="    "))
+    by_id = {f.get("id"): f for f in document.get("findings") or []}
+    for finding in findings:
+        lines.append(f"{finding.get('indent', '  ')}{finding['title']}")
+        lines.extend(finding.get('detail') or [])
+        record = (by_id.get(finding.get('id')) or {}).get('provenance')
+        if record:
+            lines.extend(provenance.render(record, indent="    "))
+    return lines + [""]
 
 
 def _format_next_steps(result: AnalysisResult) -> List[str]:
@@ -503,7 +524,8 @@ def _format_blast_ranking(signals: dict) -> List[str]:
 
 
 def format_text(result: AnalysisResult, section: Optional[str] = None,
-                by_kind: bool = False, full_sections=frozenset()) -> str:
+                by_kind: bool = False, full_sections=frozenset(),
+                explain: bool = False) -> str:
     """
     Format analysis results as human-readable text.
 
@@ -514,6 +536,11 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         by_kind: Show the element_kind aggregate summary (P4-12
             Direction 3, `bga graph --by-kind`) - opt-in, since it's
             extra detail beyond the default graph section.
+        explain: Print each claim's provenance chain under it - the
+            fields it was read from, the rule that fired, and the trace
+            query that deepens it (`UX-229`). Off by default: the
+            report is a decision, and the chain is what a reader asks
+            for after doubting one.
 
     Returns:
         Formatted string suitable for terminal display
@@ -575,7 +602,7 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
     # gating: section is None). Subcommand-specific outputs (graph/
     # floors/replay/utilisation/diagnostics) stay exactly as they were.
     if section is None:
-        lines.extend(_format_key_findings(result))
+        lines.extend(_format_key_findings(result, explain=explain))
         lines.extend(_format_confidence_and_violations(result))
 
     # UX-171: with the graph, because it is a fact about the graph's

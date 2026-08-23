@@ -608,6 +608,65 @@ A section subcommand (`bga floors`, `bga graph`, …) emits the same
 naming the restriction — so a missing key can be told from a removed
 one.
 
+### The chain behind every claim (`UX-229`)
+
+Every claim the report makes — the diagnosis, each finding, each top
+action — carries a **provenance record**: the published fields it was
+read from, the rule that fired, and the trace query that deepens it.
+
+```text
+claim -> evidence (field refs) -> rule -> trace query
+```
+
+`--explain` prints the chain under each claim in the terminal:
+
+```bash
+bga analyze RUN/ --explain
+```
+
+```text
+  This build is scheduler-bound, not chain-bound: the critical path is
+  88% of wall-clock, so the time is going somewhere other than the chain.
+    why: The critical path is 87.5% of wall-clock, which is < the 90% at
+         which the chain rather than the scheduler is called the
+         constraint - so scheduler_bound.
+    rule: CHAIN_BOUND_RATIO = 0.9 (<, bga/findings.py)
+      floors.t_infinity_observed = 14000
+      total_duration_us = 16000
+      headline.chain_ratio = 0.875
+    deeper: trace query `element-time`
+```
+
+The same object is in the JSON at `headline.provenance` and
+`findings[].provenance`, and the page renders it folded under each
+claim:
+
+- `evidence[]` — each entry is a `path` **into this same document** plus
+  the `value` found there, so a reader follows the reference rather than
+  trusting the quote. Paths are dotted keys, `[i]` for a list index and
+  `[key=value]` for the one list entry matching it.
+- `rule` — the constant that decided the claim, read live: change
+  `CHAIN_BOUND_RATIO` and `rule.threshold` changes with it. `name` is
+  `null` where a claim has no threshold, which is a different statement
+  from a threshold of zero.
+- `trace_query` — the `bga timeline` question that deepens it, or
+  `null`. This mapping used to live only in the viewer.
+- `unpublished_inputs` — fields a claim was genuinely drawn from that
+  this document does not carry. Named rather than omitted: silence
+  would read as no gap.
+- `document` — which schema the paths walk. Load-bearing when a record
+  travels: `bga compare --format json` carries the candidate run's
+  chain at `candidate_diagnosis`, and its paths resolve against that
+  run's `analyze/v1`, not against the comparison.
+
+A top action's provenance is a **pointer** (`see`) at the finding's
+record, because the action is already a reference to that finding.
+
+`bga compare --format ci-comment` cites the same record in a folded
+*Why the candidate looks like this* block, so a reviewer asking "why do
+you say that" gets the answer in the comment rather than in another
+command's output.
+
 ### The two-plane join, published (`UX-215`)
 
 `bga correlate --format json` has emitted the join since `UX-51`. It

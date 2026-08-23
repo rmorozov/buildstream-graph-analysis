@@ -851,6 +851,91 @@ export function renderBlastTree(payload) {
  * No `headline`, no panel. An older payload renders the page it always
  * did rather than a box explaining what is missing.
  */
+/**
+ * UX-229: the chain behind one claim, rendered from the published
+ * record and nothing else.
+ *
+ * Every string here is a field of `provenance`: the sentence is
+ * `rule.sentence`, the threshold is `rule.threshold`, each row is an
+ * `evidence[]` entry's own `path` and `value`. The page does not
+ * compare anything, does not format a share, does not decide which
+ * rule applies - it draws the object. That is the property the
+ * no-derivation guard asserts, and it is why the record carries a
+ * sentence at all: wording the comparison here would make the terminal
+ * and the page two explanations of one claim.
+ *
+ * Folded by default. A reader who believes the finding should not have
+ * to scroll past the reason they did not ask for - `UX-209`'s rule for
+ * evidence, applied one level up.
+ */
+export function renderProvenance(provenance) {
+  if (!provenance || !provenance.rule) return null;
+  const details = document.createElement("details");
+  details.className = "provenance";
+  details.setAttribute("data-provenance", provenance.claim ?? "");
+  details.setAttribute("data-kind", provenance.kind ?? "");
+  if (provenance.trace_query) {
+    details.setAttribute("data-query", provenance.trace_query);
+  }
+  const summary = document.createElement("summary");
+  summary.textContent = "Why";
+  details.append(summary);
+
+  const why = document.createElement("p");
+  why.className = "why";
+  why.setAttribute("data-field", "provenance.rule.sentence");
+  why.textContent = provenance.rule.sentence ?? "";
+  details.append(why);
+
+  if (provenance.rule.name) {
+    const rule = document.createElement("p");
+    rule.className = "rule muted";
+    rule.setAttribute("data-rule", provenance.rule.name);
+    rule.setAttribute("data-threshold", String(provenance.rule.threshold));
+    rule.setAttribute("data-comparison", provenance.rule.comparison ?? "");
+    rule.textContent =
+      `${provenance.rule.name} = ${provenance.rule.threshold}` +
+      ` (${provenance.rule.module ?? ""})`;
+    details.append(rule);
+  }
+
+  const refs = Array.isArray(provenance.evidence) ? provenance.evidence : [];
+  if (refs.length) {
+    const list = document.createElement("dl");
+    list.className = "pairs evidence-refs";
+    for (const ref of refs) {
+      const term = document.createElement("dt");
+      term.setAttribute("data-path", ref.path ?? "");
+      const path = document.createElement("code");
+      path.textContent = ref.path ?? "";
+      term.append(path);
+      const value = document.createElement("dd");
+      value.setAttribute("data-raw", ref.value === null || ref.value === undefined
+        ? "" : String(ref.value));
+      value.setAttribute("data-resolved", String(ref.resolved !== false));
+      // An unresolved reference says so rather than rendering as a
+      // blank cell: "the path is broken" and "the field is null" are
+      // different, and the published record already distinguishes them.
+      value.textContent = ref.resolved === false
+        ? "unresolved" : String(ref.value);
+      list.append(term, value);
+    }
+    details.append(list);
+  }
+
+  const unpublished = Array.isArray(provenance.unpublished_inputs)
+    ? provenance.unpublished_inputs : [];
+  if (unpublished.length) {
+    const note = document.createElement("p");
+    note.className = "muted unpublished";
+    note.setAttribute("data-unpublished", String(unpublished.length));
+    note.textContent =
+      `Also drawn from, and not published in this document: ${unpublished.join(", ")}`;
+    details.append(note);
+  }
+  return details;
+}
+
 export function renderDecision(payload, investigate = null, copy = null) {
   const headline = payload?.headline;
   if (!headline || !headline.diagnosis) return null;
@@ -870,6 +955,12 @@ export function renderDecision(payload, investigate = null, copy = null) {
   sentence.setAttribute("data-field", "headline.sentence");
   sentence.textContent = headline.sentence ?? "";
   section.append(sentence);
+
+  // UX-229: and why. Directly under the claim it explains, folded -
+  // the panel is a decision, and the chain is what a reader opens
+  // after doubting one.
+  const chain = renderProvenance(headline.provenance);
+  if (chain) section.append(chain);
 
   // The opportunity split, both halves published. Absent stays absent -
   // a zero here would claim a measurement nobody made.

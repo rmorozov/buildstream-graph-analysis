@@ -251,6 +251,26 @@ class TestWhatWasNotMeasured:
         assert "absent — not empty" in comment
 
 
+# UX-229 added a folded "why" block, and the budget above measures the
+# wrong thing against it. The budget exists because *a comment that
+# needs scrolling gets collapsed* - and a `<details>` is one line until
+# a reviewer chooses otherwise, which is the opposite of scroll. So the
+# count is of what the sidebar shows: everything outside a fold, plus
+# one line for the fold itself.
+def _visible_lines(comment: str) -> int:
+    shown, folded = 0, False
+    for line in comment.splitlines():
+        if line.startswith("<details"):
+            folded, shown = True, shown + 1
+            continue
+        if line.startswith("</details>"):
+            folded = False
+            continue
+        if not folded:
+            shown += 1
+    return shown
+
+
 class TestThePropertiesAPipelineDependsOn:
     def test_the_marker_leads_the_comment(self, tmp_path):
         """A job greps for it to decide between editing its comment and
@@ -273,7 +293,7 @@ class TestThePropertiesAPipelineDependsOn:
         needs scrolling is a comment that gets collapsed."""
         comparison = _compare(_base(tmp_path), _grown(tmp_path, "good", serialized=False))
 
-        assert len(render_ci_comment(comparison, _args()).splitlines()) <= 40
+        assert _visible_lines(render_ci_comment(comparison, _args())) <= 40
 
     def test_a_large_addition_collapses_rather_than_scrolls(self, tmp_path):
         elements = ["root.bst"] + [f"n{i}.bst" for i in range(30)]
@@ -286,7 +306,10 @@ class TestThePropertiesAPipelineDependsOn:
         comment = render_ci_comment(comparison, _args())
 
         assert "more |" in comment
-        assert len(comment.splitlines()) <= 40
+        assert _visible_lines(comment) <= 40
+        # And the folded material cannot grow without bound either: a
+        # `<details>` a reviewer opens is still a thing they read.
+        assert len(comment.splitlines()) <= 60
 
     def test_the_run_instances_distinguish_two_pushes(self, tmp_path):
         """UX-95: two comments on two pushes carry identical identity

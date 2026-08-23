@@ -121,6 +121,15 @@ edge that cost 2.0s of critical path is not carrying anything.
   Without `--native-report` it is absent and the comment says so —
   "nothing was staged and never read" and "nobody looked" are different
   claims, and an empty column would assert the first.
+- **"Why the candidate looks like this"** (`UX-229`) is the candidate
+  run's diagnosis with the chain behind it: the fields it was read
+  from, their values, and the named threshold they were compared
+  against. Folded, because a reviewer who believes the verdict should
+  not scroll past the reason they did not ask for. It is *cited*, not
+  re-derived — the same published record `bga analyze RUN --explain`
+  prints and the page draws — so the comment and the report cannot
+  explain one build two ways. The paths in it are into the candidate
+  run's `analyze/v1`, which the block says out loud.
 - **The trailing line is the run instance** (`UX-95`), not the run
   identity. Two pushes of the same tree produce identical identity
   hashes; only the instant tells the two comments apart.

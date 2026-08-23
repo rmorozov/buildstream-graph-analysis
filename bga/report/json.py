@@ -2,14 +2,14 @@
 import json as _json
 from typing import Optional
 
-from .. import schemas
+from .. import provenance, schemas
 from ..findings import (compute_findings, compute_headline,
                         compute_next_steps, finding_copy_text)
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
 
 
-def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
+def build_document(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> dict:
     """
     Format analysis results as JSON.
 
@@ -25,7 +25,7 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             graph --by-kind`) - opt-in, same gating as the text report.
 
     Returns:
-        JSON string suitable for machine processing
+        The `analyze/v1` document as a dict, stamped with its schema.
     """
     data = {
         'run_id': result.run_id,
@@ -201,7 +201,29 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
             data['element_join'] = joined.get('elements') or []
             data['element_join_coverage'] = joined.get('coverage') or {}
 
+    # UX-229: and why every claim above is made. Last, and reading the
+    # finished dict, because provenance is *references into this
+    # document* - the paths are only checkable once the document they
+    # point into exists. Same placement, and the same reason, as the
+    # join above.
+    if section is None:
+        provenance.attach(data)
+
     # UX-190: the version leads. A consumer reading the first line of a
     # streamed or truncated document sees what it is before it sees
     # anything it would have to interpret.
-    return _json.dumps(schemas.stamp(data, schemas.ANALYZE), indent=2, default=str)
+    return schemas.stamp(data, schemas.ANALYZE)
+
+
+def format_json(result: AnalysisResult, section: Optional[str] = None,
+                by_kind: bool = False) -> str:
+    """The document, serialized.
+
+    `UX-229` split the two: the text renderer's `--explain` needs the
+    *object* so that the chain it prints is the one the JSON publishes
+    rather than a second assembly of the same fields, and a renderer
+    that had to parse its sibling's output to get there would be exactly
+    the kind of re-derivation this codebase keeps deleting.
+    """
+    return _json.dumps(build_document(result, section=section, by_kind=by_kind),
+                       indent=2, default=str)

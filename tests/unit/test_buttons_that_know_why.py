@@ -42,10 +42,18 @@ def _library():
 
 
 def _map():
-    return _node(
-        'const t = await import("./bga/viewer/trace_context.js");'
-        "console.log(JSON.stringify({ map: t.FINDING_QUERIES,"
-        "  referenced: t.referencedQueries() }));")
+    """`UX-229` moved this table to `bga/provenance.py`.
+
+    The coverage guard is the same guard and it is now the *useful*
+    one: it reads the table the pipeline publishes from and the library
+    the page ships, so it asserts across the boundary the mapping
+    crossed rather than inside the one file that used to hold both
+    halves.
+    """
+    from bga.provenance import TRACE_QUERIES
+
+    return {"map": dict(TRACE_QUERIES),
+            "referenced": sorted(set(TRACE_QUERIES.values()))}
 
 
 @needs_node
@@ -56,6 +64,7 @@ class TestTheContextTravels:
             'console.log(JSON.stringify(t.investigationFor({'
             '  id: "time-concentration",'
             '  title: "Where the time is: 4 elements are 71.9%",'
+            '  provenance: { trace_query: "element-time" },'
             '  elements: ["core.bst", "lib-b.bst"] })));')
         assert out["queryId"] == "element-time"
         assert out["element"] == "core.bst"
@@ -72,6 +81,7 @@ class TestTheContextTravels:
             'const t = await import("./bga/viewer/trace_context.js");'
             'const q = await import("./bga/viewer/questions.js");'
             'const ctx = t.investigationFor({ id: "criticality",'
+            '  provenance: { trace_query: "dependency-wait" },'
             '  title: "The chain", elements: ["core.bst"] });'
             'console.log(JSON.stringify({ ctx,'
             '  entry: q.renderedSql({ ...q.byId(ctx.queryId), example: "core.bst" }) }));')
@@ -96,7 +106,8 @@ class TestTheContextTravels:
         out = _node(
             'const t = await import("./bga/viewer/trace_context.js");'
             'console.log(JSON.stringify({ v: t.investigationFor({'
-            '  id: "confidence", title: "Confidence: 0.97", elements: [] }) }));')
+            '  id: "confidence", title: "Confidence: 0.97",'
+            '  provenance: { trace_query: null }, elements: [] }) }));')
         assert out["v"] is None
 
     def test_a_context_naming_a_query_that_does_not_exist_is_refused(self):
@@ -205,9 +216,15 @@ const investigate = __INVESTIGATE__;
 const findings = [
   { id: "time-concentration", severity: "high",
     title: "Where the time is: 4 elements are 71.9% of the path",
-    detail: [], elements: ["core.bst", "lib-b.bst"] },
+    detail: [], elements: ["core.bst", "lib-b.bst"],
+    provenance: { claim: "time-concentration", kind: "finding",
+                  trace_query: "element-time", evidence: [],
+                  rule: { comparison: "present", sentence: "because." } } },
   { id: "confidence", severity: "info", title: "Confidence: 0.97",
-    detail: [], elements: [] },
+    detail: [], elements: [],
+    provenance: { claim: "confidence", kind: "finding", trace_query: null,
+                  evidence: [],
+                  rule: { comparison: "banded", sentence: "banded." } } },
 ];
 const section = app.renderFindings(findings, investigate);
 

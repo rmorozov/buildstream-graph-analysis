@@ -407,7 +407,19 @@ const panel = views.renderDecision(payload);
 let decision = null;
 if (panel) {
   const values = {};
-  for (const dd of all(panel, (n) => n.tagName === "dd" && n.attrs["data-field"])) {
+  // UX-227 put a "why this one" fold inside each action row, and its
+  // rows carry `data-field` too - as *paths* into the payload rather
+  // than as `headline.` keys. Those are checked against their own
+  // paths in UX-227's file; what this asserts is the panel's own
+  // headline numbers, so the fold is walked past rather than merged in.
+  const inFold = new Set();
+  for (const fold of all(panel, (n) => n.className === "why-ranked")) {
+    (function mark(n) { if (!n) return; inFold.add(n);
+      (n.children ?? []).forEach(mark); })(fold);
+  }
+  for (const dd of all(panel, (n) => n.tagName === "dd"
+                                    && n.attrs["data-field"]
+                                    && !inFold.has(n))) {
     values[dd.attrs["data-field"].replace("headline.", "")] = dd.attrs["data-raw"];
   }
   decision = {

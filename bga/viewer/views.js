@@ -994,7 +994,97 @@ export function renderProvenance(provenance) {
   return details;
 }
 
-export function renderDecision(payload, investigate = null, copy = null) {
+/**
+ * UX-227: why *this* element is ranked first, as one compact answer.
+ *
+ * The page could already say `openssl.bst` is worth 522 s, sits at
+ * 18.6% of the path, has 14 consumers and moved since the last
+ * capture - in five different sections. What it could not do was say
+ * them together, as the reason. This gathers them under the question.
+ *
+ * **Gathering, not deriving.** Every row is a value read out of a
+ * published field, and carries the `path` it was read from in
+ * `data-field` - a path in the grammar `resolvePath` and
+ * `bga/provenance.py` both walk, so a reader (or a guard) follows it
+ * back into the payload rather than trusting the number. The reason
+ * the claim is ranked at all comes from `UX-229`'s provenance record,
+ * followed through the top action's `see` pointer: the composition
+ * this item was filed with is the interim, and the contract is what it
+ * reads now.
+ */
+export function renderWhyRanked(payload, action, options = {}) {
+  const uid = action?.element_uid;
+  if (!uid) return null;
+  const facts = elementFacts(payload).get(uid);
+  const record = action.provenance?.see
+    ? resolvePath(payload, action.provenance.see) : null;
+  const history = options.store
+    ? renderElementHistory(options.store, uid, options.schema ?? null) : null;
+  // `elementFacts` touches a record for every uid a source *names*, so
+  // a top action alone produces an empty one. The fold needs something
+  // to say: no facts, no rule and no history is no block, which is
+  // `UX-194`'s dead-control rule applied to an explanation.
+  const rows = facts?.rows ?? [];
+  const findings = facts?.findings ?? [];
+  if (!rows.length && !findings.length && !record && !history) return null;
+
+  const details = document.createElement("details");
+  details.className = "why-ranked";
+  details.setAttribute("data-why", uid);
+  const summary = document.createElement("summary");
+  summary.textContent = options.rank
+    ? `Why #${options.rank}` : "Why this one";
+  details.append(summary);
+
+  // The rule that ranked it, from the finding's own record.
+  if (record) {
+    const chain = renderProvenance(record);
+    if (chain) {
+      chain.setAttribute("open", "");
+      details.append(chain);
+    }
+  }
+
+  // What this run measured about it, each value beside its path.
+  if (rows.length) {
+    const list = document.createElement("dl");
+    list.className = "pairs why-facts";
+    for (const row of rows) {
+      const term = document.createElement("dt");
+      term.textContent = row.label;
+      const value = document.createElement("dd");
+      value.className = "num";
+      value.setAttribute("data-field", row.path);
+      value.setAttribute("data-raw", String(row.value));
+      value.textContent = factText(row);
+      list.append(term, value);
+    }
+    details.append(list);
+  }
+
+  // The findings that name it - references, not restatements.
+  for (const finding of findings) {
+    const line = document.createElement("p");
+    line.className = "muted why-finding";
+    line.setAttribute("data-finding", finding.id ?? "");
+    line.textContent = finding.title ?? finding.id ?? "";
+    details.append(line);
+  }
+
+  if (history) details.append(history);
+  return details;
+}
+
+/** One fact, in the unit the source declared it in. */
+function factText(row) {
+  if (row.kind === "duration_us") return seconds(row.value);
+  if (row.kind === "share") return `${(row.value * 100).toFixed(1)}%`;
+  if (row.kind === "kilobytes") return mib(row.value * 1024);
+  return String(row.value);
+}
+
+export function renderDecision(payload, investigate = null, copy = null,
+                               options = {}) {
   const headline = payload?.headline;
   if (!headline || !headline.diagnosis) return null;
 
@@ -1045,8 +1135,12 @@ export function renderDecision(payload, investigate = null, copy = null) {
   if (actions.length) {
     const list = document.createElement("ol");
     list.className = "actions";
-    for (const action of actions) {
-      list.append(actionRow(action, investigate));
+    for (const [index, action] of actions.entries()) {
+      // UX-227: the row names the element; the fold under it answers
+      // *why this one*, from the same published fields the rest of the
+      // document draws.
+      list.append(actionRow(action, investigate, renderWhyRanked(
+        payload, action, { ...options, rank: index + 1 })));
     }
     section.append(list);
   }
@@ -1107,7 +1201,7 @@ function nextStepRow(step, copy) {
   return row;
 }
 
-function actionRow(action, investigate) {
+function actionRow(action, investigate, whyBlock = null) {
   const row = document.createElement("li");
   row.className = "action";
   row.setAttribute("data-element", action.element_uid ?? "");
@@ -1151,6 +1245,7 @@ function actionRow(action, investigate) {
     const button = investigate(action);
     if (button) row.append(button);
   }
+  if (whyBlock) row.append(whyBlock);
   return row;
 }
 
@@ -1195,6 +1290,67 @@ export function elementAnchor(uid) {
  * - top actions first, then the path, then the horizon - so the
  * sections a reader meets first are the ones the decision named.
  */
+/**
+ * UX-227: walk a published path, the same grammar `bga/provenance.py`
+ * resolves.
+ *
+ * Dotted keys, `[i]` for a list index, `[key=value]` for the one list
+ * entry matching it. Two implementations of one grammar is a risk, and
+ * the guard takes it seriously: it resolves every path this page emits
+ * through *both* and compares, so a divergence is a failing test rather
+ * than a wrong number in a tooltip.
+ */
+export function resolvePath(document, path) {
+  let node = document;
+  // Scanned rather than split on ".": element uids contain dots, so
+  // `[element_uid=core.bst]` is nonsense the moment the separator is
+  // taken literally. `bga/provenance.py` had the same bug and this
+  // page is what found it.
+  for (const segment of pathSegments(String(path))) {
+    if (typeof segment === "string") {
+      if (node === null || typeof node !== "object" || !(segment in node)) {
+        return undefined;
+      }
+      node = node[segment];
+    } else if (typeof segment === "number") {
+      if (!Array.isArray(node)) return undefined;
+      node = node[segment];
+    } else {
+      if (!Array.isArray(node)) return undefined;
+      node = node.find((entry) => entry
+        && String(entry[segment.key]) === segment.value);
+    }
+    if (node === undefined) return undefined;
+  }
+  return node;
+}
+
+function pathSegments(path) {
+  const segments = [];
+  let name = "", inside = null;
+  for (const char of path) {
+    if (inside === null && char === ".") {
+      if (name) segments.push(name);
+      name = "";
+    } else if (inside === null && char === "[") {
+      if (name) segments.push(name);
+      name = ""; inside = "";
+    } else if (inside !== null && char === "]") {
+      const equals = inside.indexOf("=");
+      segments.push(equals === -1
+        ? Number(inside)
+        : { key: inside.slice(0, equals), value: inside.slice(equals + 1) });
+      inside = null;
+    } else if (inside !== null) {
+      inside += char;
+    } else {
+      name += char;
+    }
+  }
+  if (name) segments.push(name);
+  return segments;
+}
+
 export function elementFacts(payload) {
   const facts = new Map();
   const touch = (uid) => {
@@ -1218,7 +1374,14 @@ export function elementFacts(payload) {
       for (const [field, label, kind] of fields) {
         const value = entry[field];
         if (value !== null && value !== undefined) {
-          record.rows.push({ label, value, kind, field });
+          // UX-227: and *where it came from*, as a path a reader (or a
+          // guard) can walk back into the payload. Built from the
+          // source declaration rather than written per field, so a new
+          // entry in SOURCES is still one line.
+          record.rows.push({
+            label, value, kind, field,
+            path: `${array}[${idKey}=${entry[idKey]}].${field}`,
+          });
         }
       }
       if (Array.isArray(entry.entering) && entry.entering.length) {

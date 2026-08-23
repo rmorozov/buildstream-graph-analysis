@@ -360,8 +360,44 @@ class TestTheSizeDiscipline:
             f"the modules nor the stylesheet")
 
     def test_the_golden_export_is_small_enough_to_attach(self, exported):
-        assert exported[1]["bytes"] < 200_000, exported[1]["bytes"]
+        """The loose absolute backstop. It has moved five times, always
+        with a measurement, and every move has been *data* - which is
+        what the two guards around it exist to establish, because a
+        ceiling alone cannot tell a new contract from a vendored
+        framework.
+
+        `UX-234` moved it last: `store-aggregate/v1` is a sixth schema,
+        and `schemas.json` carries every schema's descriptions because
+        they are the page's hover text. Measured: the golden export went
+        198,756 -> 209,867 B, of which 9,137 B is that schema and ~700 B
+        is the aggregate document itself.
+        """
+        assert exported[1]["bytes"] < 240_000, exported[1]["bytes"]
         assert exported[1]["over_budget"] is False
+
+    def test_the_data_is_the_documents_and_the_schemas(self, exported):
+        """The backstop's other half, and the one that actually
+        discriminates: every byte of embedded data is a document the
+        page renders. A ceiling cannot tell 10 KB of new contract from
+        10 KB of embedded font; this can, and it is why raising the
+        ceiling above is a measurement rather than an argument."""
+        import json
+
+        html = open(exported[0], encoding="utf-8").read()
+        blocks = re.findall(
+            r"<script[^>]*type=\"application/json\"[^>]*>(.*?)</script>",
+            html, flags=re.S)
+        assert blocks, "no data blocks - the export stopped embedding"
+        for block in blocks:
+            # Every one parses as JSON. A blob that is not a document
+            # would land here as something else.
+            json.loads(block)
+        data = sum(len(block) for block in blocks)
+        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+                      r".*?</script>", "", html, flags=re.S)
+        assert len(html) - len(page) - data < 4_000, (
+            f"{len(html) - len(page) - data} B of embedded data is not one "
+            f"of the JSON documents the page renders")
 
     def test_a_file_over_budget_is_reported_not_refused(
             self, snapshot, tmp_path, monkeypatch):

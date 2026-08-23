@@ -608,6 +608,50 @@ A section subcommand (`bga floors`, `bga graph`, …) emits the same
 naming the restriction — so a missing key can be told from a removed
 one.
 
+### What a build here costs (`UX-234`)
+
+A store of captures is a measured distribution, and `--aggregate`
+reads it as one:
+
+```bash
+bga snapshot --aggregate                 # text
+bga snapshot --aggregate --format json   # a `store-aggregate/v1` document
+```
+
+```text
+Store: /home/you/project
+  5 measured run(s) of 6 snapshot(s)
+  1 excluded:
+    1 x interrupted
+
+  Ryzen 9 7950X · 32 cores · 64000 MB - 5 run(s)
+    Duration: min 10.0s, median 12.0s, p95 30.0s, max 30.0s (MAD 2.0s, n=5)
+```
+
+Three rules decide what it will and will not say:
+
+- **An unfinished capture is not a sample.** A failed, interrupted or
+  suspended run is excluded from every distribution and *counted* where
+  it was excluded — "we had nine runs" and "we had nine and threw two
+  away" are different claims.
+- **A mix of machines is not a distribution.** Runs are grouped by the
+  host class `UX-186`'s compared fields distinguish (CPU model, core
+  count, memory), and a blended figure across classes is refused: exit
+  6, the same code a cross-host `bga compare` refuses with. `--blend`
+  prints it anyway, which is you taking the claim rather than the tool
+  making it. A capture with no host manifest is its own class.
+- **Fewer than three finished runs define no distribution.** The class
+  publishes a shortfall naming what is missing instead of a p95 of two
+  samples.
+
+Percentiles are **nearest-rank**: for `n` sorted samples, `p` is the
+value at index `ceil(p × n) − 1`. No interpolation, so every figure is
+a duration some build actually took.
+
+`bga view`'s store trend draws the median–p95 band behind its points
+from this document, and nothing at all when the store mixes host
+classes — it prints the refusal instead.
+
 ### The chain behind every claim (`UX-229`)
 
 Every claim the report makes — the diagnosis, each finding, each top

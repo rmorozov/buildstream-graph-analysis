@@ -88,6 +88,10 @@ footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem
 .candidate { stroke: var(--fg); stroke-width: .7; }
 .band[data-disputed="true"] .candidate { stroke: var(--warn); stroke-width: 1.1; }
 .trend-line { stroke: var(--muted); stroke-width: .5; }
+/* UX-234: the median-p95 band the store's own distribution defines,
+   behind the points rather than over them. */
+.trend-band { fill: var(--accent); opacity: .12; }
+.trend-median { stroke: var(--accent); stroke-width: .3; stroke-dasharray: 2 2; }
 .trend-point { fill: var(--accent); stroke: var(--fg); }
 .trend-point.aliased { fill: var(--good); }
 .trend-point.incomplete { fill: var(--bad); }

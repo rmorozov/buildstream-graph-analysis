@@ -1063,6 +1063,11 @@ async function boot() {
     // the snapshots. A run with no store simply gets no history block,
     // which is the same absence a store with no slices produces.
     const store = await load("store", null).catch(() => null);
+    // UX-234: and what the store says about itself as a distribution.
+    // A separate document rather than a key of the listing: one row
+    // per snapshot and one row per host class are different shapes,
+    // and a page with no aggregate simply draws no band.
+    const aggregate = await load("store-aggregate", null).catch(() => null);
     for (const node of renderElementSections(payload, root, {
       quantity,
       investigate: run.has_timeline
@@ -1079,8 +1084,9 @@ async function boot() {
       root.append(node);
     }
     // UX-212: the schema, so the trend draws the shape the *contract*
-    // assigns each verdict rather than one this page decided on.
-    const trend = store && renderTrend(store, schemas[store.schema]);
+    // assigns each verdict. UX-234: and the distribution the points
+    // came from, drawn behind them from published figures only.
+    const trend = store && renderTrend(store, schemas[store.schema], aggregate);
     if (trend) root.append(trend);
     // UX-199: the blast box is a *transport* - it asks the server. An
     // export is a `file://` document with no server, so the box could

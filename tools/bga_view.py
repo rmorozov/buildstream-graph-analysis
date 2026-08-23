@@ -235,6 +235,25 @@ def store_payload(run: str) -> Optional[dict]:
         return None
 
 
+def store_aggregate_payload(store: Optional[dict]) -> Optional[dict]:
+    """`store-aggregate/v1` for a listing, or None.
+
+    Built from the listing the page is already given rather than from
+    the directory, so the trend's points and the band behind them
+    cannot describe different sets of snapshots. `blend=False`: the
+    page never asks for a mixed claim, and a chart is the last place to
+    make one silently.
+    """
+    if store is None:
+        return None
+    from bga.store_aggregate import aggregate
+
+    try:
+        return aggregate(store)
+    except OSError:
+        return None
+
+
 def blast_answer(run: str, target: str) -> dict:
     """`bga blast`'s answer for `target`, from the same function.
 
@@ -609,6 +628,14 @@ def serve(run: str, port: int = 0,
     store = store_payload(run)
     if store is not None:
         documents.setdefault("store.json", store)
+        # UX-234: and what that store says about itself as a
+        # distribution. A second document rather than a key of the
+        # listing - one row per snapshot and one row per host class are
+        # different shapes - and absent rather than empty when it
+        # cannot be built, which is the page's cue to draw no band.
+        aggregate = store_aggregate_payload(store)
+        if aggregate is not None:
+            documents.setdefault("store-aggregate.json", aggregate)
 
     blobs = {}
     trace = trace_bytes(run) if with_trace else None

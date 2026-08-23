@@ -68,7 +68,7 @@ ASSET_DIR = _asset_dir()
 
 # The only paths this server answers. Everything else is 404 - there is
 # no directory listing and no fall-through to the filesystem.
-ASSETS = ("index.html", "app.js", "style.css", "views.js",
+ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # UX-194: the Perfetto handoff and the canned-SQL page.
           "perfetto.html", "perfetto.js", "sql.html",
           # UX-199: navigation, and the questions as data so the export

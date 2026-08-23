@@ -19,6 +19,8 @@ import { renderBand, renderCulprits, renderHorizon, renderTrend, renderBlastSear
          INCOMPLETE } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
+import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
+         renderFocusBar, renderMarkSummary } from "./focus.js";
 import { renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
@@ -1039,6 +1041,10 @@ async function boot() {
     // the controls the way a reader would, so there is no second path
     // that can disagree with the first. A hash-free load does nothing
     // at all here.
+    // UX-222 and UX-225 before the fragment, so a link carrying a
+    // focus or a set of marks lands on a document whose controls are
+    // already live.
+    wireFocusAndMarks(root, document);
     applyView(root, splitHash(location.hash).query);
     wireViewState(root, { location, history: window.history });
   } catch (error) {
@@ -1050,4 +1056,70 @@ async function boot() {
 
 if (typeof document !== "undefined" && document.getElementById("report")) {
   boot();
+}
+
+
+/**
+ * UX-222 and UX-225: one delegated listener for both.
+ *
+ * Every control is a button carrying the element it acts on, so a view
+ * that renders element rows later earns the same behaviour with no
+ * second handler - the same reason `data-element` was worth putting
+ * everywhere in UX-216.
+ *
+ * Neither of these filters or re-renders anything. Focus adds
+ * `data-dimmed` and `data-unfocused`; marks add `data-mark`. The
+ * document underneath is unchanged, which is what keeps Ctrl-F, the
+ * export and the anchors honest.
+ */
+export function wireFocusAndMarks(root, doc) {
+  const refresh = () => {
+    for (const stale of [...(root.querySelectorAll?.(
+        "[data-role=focus-bar],[data-role=mark-summary]") ?? [])]) {
+      stale.parentNode?.removeChild?.(stale);
+    }
+    const uid = focusedElement(root);
+    if (uid) root.prepend?.(renderFocusBar(uid, { onClear: () => {
+      clearFocus(root); refresh(); notify();
+    }}));
+    const summary = renderMarkSummary(readMarks(root), { onClear: () => {
+      applyMarks(root, {}); refresh(); notify();
+    }});
+    if (summary) root.prepend?.(summary);
+  };
+  // The fragment listens for these already; firing one event rather
+  // than writing the hash here keeps UX-211 the only writer.
+  const notify = () => root.dispatchEvent?.(
+    new Event("change", { bubbles: true }));
+
+  root.addEventListener?.("click", (event) => {
+    const node = event.target?.closest?.("[data-focus-element],[data-mark-element]");
+    if (!node) return;
+    const focusUid = node.getAttribute("data-focus-element");
+    if (focusUid) {
+      applyFocus(root, focusedElement(root) === focusUid ? null : focusUid);
+      refresh();
+      notify();
+      return;
+    }
+    const markUid = node.getAttribute("data-mark-element");
+    const value = node.getAttribute("data-mark-value");
+    const marks = readMarks(root);
+    if (marks[markUid] === value) delete marks[markUid];
+    else marks[markUid] = value;
+    applyMarks(root, marks);
+    refresh();
+    notify();
+  });
+
+  // Escape clears the focus - and only the focus. The marks are a
+  // decision the reader made; a stray keystroke must not discard them.
+  doc?.addEventListener?.("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (!focusedElement(root)) return;
+    clearFocus(root);
+    refresh();
+    notify();
+  });
+  return refresh;
 }

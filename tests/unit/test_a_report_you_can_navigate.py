@@ -282,6 +282,21 @@ const named = {};
 const body = make("body");
 globalThis.document = {
   createElement: make, createElementNS: (_n, t) => make(t), body, title: "",
+  // UX-219: the shim was an incomplete model of the DOM, and the gap was
+  // latent rather than new - `views.js` has called `createTextNode` since
+  // UX-212, in paths a golden export never reaches (they need a compare
+  // or a store payload). The horizon renders on every analyze report, so
+  // it made the gap live: the exported page threw
+  // `document.createTextNode is not a function` inside `boot()` and the
+  // reader got the catch-all banner instead of their report - UX-199's
+  // defect, by a different route.
+  //
+  // Fixed here rather than by avoiding a standard DOM method in the
+  // viewer: every browser has it, two call sites already depended on it,
+  // and leaving the model short would keep the trap set for whoever next
+  // makes one of those paths run.
+  createTextNode: (t) => ({ nodeType: 3, textContent: String(t),
+                            attrs: {}, children: [] }),
   getElementById(id) {
     if (id.startsWith("bga-")) {
       const key = id.slice(4);

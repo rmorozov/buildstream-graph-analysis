@@ -1179,6 +1179,30 @@ function elementSection(record, places, investigate, format) {
   heading.textContent = uid;
   section.append(heading);
 
+  // UX-222 and UX-225: the two controls that act on *this* element.
+  // Plain buttons carrying the element and the intent - `app.js` wires
+  // one delegated listener at the root, so a control added to a view
+  // later needs no second handler.
+  const controls = document.createElement("p");
+  controls.className = "element-controls";
+  controls.setAttribute("data-role", "element-controls");
+  const focusButton = document.createElement("button");
+  focusButton.setAttribute("type", "button");
+  focusButton.className = "focus-this";
+  focusButton.setAttribute("data-focus-element", uid);
+  focusButton.textContent = "Focus";
+  controls.append(focusButton);
+  for (const mark of ELEMENT_MARKS) {
+    const button = document.createElement("button");
+    button.setAttribute("type", "button");
+    button.className = "mark-this";
+    button.setAttribute("data-mark-element", uid);
+    button.setAttribute("data-mark-value", mark);
+    button.textContent = ELEMENT_MARK_LABELS[mark];
+    controls.append(button);
+  }
+  section.append(controls);
+
   if (record.rows.length) {
     const list = document.createElement("dl");
     list.className = "pairs";
@@ -1248,6 +1272,14 @@ function elementSection(record, places, investigate, format) {
 // comparison, disagreeing with `bga compare` the moment either changed -
 // UX-214's failure, and the reason this was a payload item first.
 export const CULPRITS_SHOWN = 4;
+
+// UX-225's vocabulary, spelled here so `views.js` keeps importing
+// nothing. A guard asserts it is the same closed set `focus.js`
+// declares, so the two cannot drift apart in silence.
+export const ELEMENT_MARKS = ["working", "done", "aside"];
+export const ELEMENT_MARK_LABELS = {
+  working: "Working", done: "Done", aside: "Set aside",
+};
 
 export function renderCulprits(compare) {
   const deltas = compare?.element_deltas;

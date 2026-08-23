@@ -282,3 +282,28 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
 .horizon-value { font-variant-numeric: tabular-nums; }
 .horizon-entering { grid-column: 2 / -1; font-size: 0.85em; }
 .horizon-total { font-weight: 600; margin-top: 0.4rem; }
+
+/* UX-222: focus dims, never removes. The reader has to be able to see
+   what they are not looking at, and the document underneath stays
+   byte-identical so Ctrl-F and the export remain honest. */
+[data-dimmed="true"] { opacity: 0.32; }
+section[data-unfocused="true"] > *:not(h2) { display: none; }
+section[data-unfocused="true"] > h2 { opacity: 0.32; }
+.focus-bar, .mark-summary {
+  margin: 0 0 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-left: 3px solid var(--accent, #4a7ebb);
+  background: var(--muted-bg, rgba(127, 127, 127, 0.08));
+}
+.element-controls { display: flex; gap: 0.35rem; margin: 0.2rem 0 0.6rem; }
+.element-controls button { font-size: 0.85em; }
+
+/* UX-225: a mark annotates, it never hides. An element marked done is
+   still ranked and still in the horizon - a ranking that quietly drops
+   what the reader dismissed is one they cannot check. */
+[data-mark]::after {
+  content: " (" attr(data-mark) ")";
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+[data-mark="done"] { text-decoration-color: currentColor; }

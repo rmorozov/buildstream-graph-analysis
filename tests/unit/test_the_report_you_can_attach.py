@@ -232,18 +232,75 @@ class TestTheSizeDiscipline:
     """
 
     def test_the_page_is_a_backstop_away_from_where_it_is(self, exported):
-        """The loose one. 120,000 B is roughly 1.25x the current page:
-        near enough to catch a library arriving, far enough that a
-        feature landing does not move it."""
+        """The loose one, raised in round 26 and - deliberately - given
+        the instrument it was standing in for.
+
+        This number has now been crossed in rounds 23, 24, 25 and 26,
+        and raised each time. UX-218 named that failure exactly: *a
+        number that moves whenever a feature lands is measuring the
+        calendar*. The reason it kept being raised is that its stated
+        job - "crossing it means something structural happened rather
+        than that a round landed" - was one it could not actually do. A
+        byte count cannot tell a feature from a library.
+
+        Measured when round 26 crossed it:
+
+            page (data removed)   123,785 B
+              modules             109,913 B
+              style.css            12,552 B
+              index.html            1,433 B
+              accounted           123,898 B  = 100.1% of the page
+            export total          184,934 B  = 2.20% of the 8 MiB budget
+
+        Every byte is a checked-in module. Nothing crept in, the ratio
+        guard still holds at 1,000 elements, and the export is a fortieth
+        of what an attachment may weigh. So the backstop fired, someone
+        looked, and the answer was "a round landed" - four times.
+
+        Raised to 200,000 and joined by `test_no_module_looks_like_a
+        _vendored_library` below, which checks the thing this number was
+        a proxy for. If the absolute fires again it should be because
+        that one is silent and something genuinely odd is happening.
+        """
         html = open(exported[0], encoding="utf-8").read()
         # Every `<script type="application/json">` block and the trace
         # blob are *data*. What is left is the page.
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
-        assert len(page) < 120_000, (
+        assert len(page) < 200_000, (
             f"the exported page is {len(page)} B with its data removed - "
             f"that is a structural change, not a feature. Check "
-            f"`test_the_page_is_the_modules_and_nothing_else` first.")
+            f"`test_the_page_is_the_modules_and_nothing_else` and "
+            f"`test_no_module_looks_like_a_vendored_library` first.")
+
+    def test_no_module_looks_like_a_vendored_library(self):
+        """What the byte ceiling was a proxy for, measured directly.
+
+        Direction 7's rule is about what the page *is*, not how big it
+        got. Hand-written modules are line-wrapped source with comments;
+        vendored or minified code is not - it arrives as a small number
+        of enormous lines and almost no comment. That difference is
+        visible, and unlike a byte count it does not move when a feature
+        lands.
+        """
+        import tools.bga_view as view
+
+        offenders = []
+        for name in view._module_order():
+            source = open(os.path.join(view.ASSET_DIR, name),
+                          encoding="utf-8").read()
+            lines = source.splitlines() or [""]
+            longest = max(len(line) for line in lines)
+            commented = sum(1 for line in lines
+                            if line.lstrip().startswith(("//", "/*", "*")))
+            if longest > 400:
+                offenders.append(f"{name}: a {longest}-character line")
+            if len(source) > 4_000 and commented / len(lines) < 0.05:
+                offenders.append(
+                    f"{name}: {commented}/{len(lines)} commented lines")
+        assert offenders == [], (
+            f"these do not look like the hand-written modules this page is "
+            f"supposed to be: {offenders}")
 
     def test_the_data_dwarfs_the_page_on_a_report_worth_measuring(
             self, tmp_path):

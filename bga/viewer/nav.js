@@ -23,6 +23,12 @@ export function sections(root) {
   return [...(root.querySelectorAll?.("section[data-section]") ?? [])];
 }
 
+// UX-223: the anchor spelling comes from `views.js`, which imports
+// nothing - so this edge adds no cycle. UX-216 made a link and its
+// target one expression, and the palette must not reintroduce a
+// second spelling of it.
+import { elementAnchor } from "./views.js";
+
 export function label(key) {
   return key.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
@@ -231,4 +237,73 @@ export function matches(targets, query, limit = 8) {
   return targets
     .filter((t) => t.text.toLowerCase().includes(needle))
     .slice(0, limit);
+}
+
+// UX-223: the jump box, as an index over what the page can already do.
+//
+// `wireJumpBox` searched section names and element uids and scrolled to
+// the hit. Useful, and by the time a reader has typed `openssl` the page
+// knows six things they might want to do with it and offers one.
+//
+// Every row below is a link or a control that exists elsewhere in the
+// page. This is an index over affordances, not a new capability - which
+// is why it is cheap, and why it must not grow into one. No fuzzy
+// matching, no ranking heuristic, no search index: substring matching
+// over a list the page already holds is what this is.
+
+/** The published numbers for one element, or `null`. Never computed.
+ *
+ * Named for the palette rather than generically: `views.js` has an
+ * `elementFacts` of its own since UX-216, and the export flattens every
+ * module into one scope - so a second declaration of that name is a
+ * `SyntaxError` in the shipped page, which is UX-199's defect exactly.
+ */
+export function paletteFacts(payload, uid) {
+  const detail = (payload?.signals?.critical_path_detail ?? [])
+    .find((row) => row.element_uid === uid);
+  const durations = payload?.signals?.element_durations ?? {};
+  const action = (payload?.headline?.top_actions ?? [])
+    .find((row) => row.element_uid === uid);
+  const duration = detail?.duration_us ?? durations[uid] ?? null;
+  if (duration === null && !action) return null;
+  return {
+    duration_us: duration,
+    share_of_path: detail?.share_of_path ?? null,
+    saving_us: action?.saving_us ?? null,
+  };
+}
+
+/**
+ * What the palette offers for one query, in groups.
+ *
+ * `context` says which preconditions this run meets. An action whose
+ * precondition is absent is **not listed** - `UX-194`'s rule, applied
+ * to more buttons than it was written for: a Perfetto row on a run with
+ * no timeline is a dead affordance, and offering it is worse than not
+ * having it.
+ */
+export function paletteResults(targets, query, payload, context = {}, limit = 8) {
+  const hits = matches(targets, query, limit);
+  const elements = hits.filter((hit) => hit.kind === "element")
+    .map((hit) => ({ ...hit, facts: paletteFacts(payload, hit.key) }));
+  const sections = hits.filter((hit) => hit.kind === "section");
+
+  const actions = [];
+  const first = elements[0];
+  if (first) {
+    actions.push({ id: "show", label: `Show everything about ${first.key}`,
+                   element: first.key,
+                   href: `#${elementAnchor(first.key)}` });
+    actions.push({ id: "focus", label: `Focus ${first.key}`,
+                   element: first.key, focus: true });
+    if (context.hasTimeline) {
+      actions.push({ id: "perfetto", label: `Inspect ${first.key} in Perfetto`,
+                     element: first.key, investigate: true });
+    }
+    if (context.hasBlast) {
+      actions.push({ id: "blast", label: `Blast radius of ${first.key}`,
+                     element: first.key, blast: true });
+    }
+  }
+  return { elements, actions, sections };
 }

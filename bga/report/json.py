@@ -4,7 +4,7 @@ from typing import Optional
 
 from .. import schemas
 from ..findings import (compute_findings, compute_headline,
-                        compute_next_steps)
+                        compute_next_steps, finding_copy_text)
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
 
@@ -66,6 +66,14 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         # would be a second decision-maker, and the terminal and CI
         # would give different advice from the page.
         data['next_steps'] = compute_next_steps(result, data['headline'])
+        # UX-224: and the text each finding pastes as. Rendered here,
+        # not in the page: the CI comment is Python and the viewer is
+        # JavaScript, so the only honest way to have *one* renderer
+        # across that boundary is to publish the string and have the
+        # page copy it rather than word it.
+        for finding in findings or []:
+            finding['copy_text'] = finding_copy_text(
+                finding, result, data['next_steps'])
 
     if section in (None, 'floors', 'replay'):
         data['floors'] = result.floors

@@ -1266,3 +1266,85 @@ def render_findings(findings: List[dict]) -> List[str]:
 
 def findings_by_id(findings: List[dict]) -> Dict[str, dict]:
     return {f['id']: f for f in findings}
+
+
+# UX-224: a finding, as something you can paste.
+#
+# The report ends its life in a pull request, a chat message or a ticket,
+# and getting it there was manual: select the finding, lose the evidence,
+# retype the numbers, re-find the element name.
+#
+# Rendered **here**, in the pipeline, and published as
+# `findings[].copy_text` - not built in the page. `UX-115`'s CI comment
+# is Python and the viewer is JavaScript, so "one renderer" across that
+# boundary is only honest one way: the text is a published value and the
+# page copies it rather than wording it. The same reason `UX-218`'s
+# commands are decided in the pipeline.
+def _evidence_line(key: str, value):
+    """One evidence pair, in the unit the schema declares for it.
+
+    `None` for a value that has no useful plain-text form. Two things
+    the first draft got wrong and the golden fixture showed immediately:
+    a nested `blast_radius` dict rendered as 400 characters of Python
+    `repr` into the middle of a paste, and `category` and `category_us`
+    both had their label reduced to "category" - two different numbers
+    under one name is worse than an ugly one.
+    """
+    from . import schemas
+
+    if isinstance(value, (dict, list, tuple)):
+        return None
+    quantity = (schemas.EVIDENCE_QUANTITIES.get(key) or {}).get(schemas.QUANTITY)
+    # The key verbatim. "category us" reads worse than `category_us`,
+    # and a paste that names the published field is one a reader can
+    # look up.
+    label = key
+    if quantity == "duration_us" and isinstance(value, (int, float)):
+        return f"{label} {value / 1e6:.1f}s"
+    if quantity == "share" and isinstance(value, (int, float)):
+        return f"{label} {value * 100:.0f}%"
+    if quantity == "percent" and isinstance(value, (int, float)):
+        return f"{label} {value:.1f}%"
+    if quantity == "megabytes" and isinstance(value, (int, float)):
+        return f"{label} {value:.0f} MB"
+    if quantity == "seconds" and isinstance(value, (int, float)):
+        return f"{label} {value:.1f}s"
+    return f"{label} {value}"
+
+
+def finding_copy_text(finding: dict, result, next_steps=None) -> str:
+    """The plain text one finding pastes as.
+
+    Carries what a reader would otherwise retype: the title, the
+    evidence in its declared units, the elements it names, the published
+    next step, and - as importantly as the first line - the run identity.
+    `UX-178` established that the identity must round-trip; a pasted
+    finding without it is an assertion nobody can check.
+    """
+    lines = [f"BGA finding: {finding.get('title') or finding.get('id')}"]
+    for line in finding.get('detail') or []:
+        lines.append(f"  {line}")
+    for key, value in (finding.get('evidence') or {}).items():
+        line = _evidence_line(key, value)
+        if line is not None:
+            lines.append(f"  {line}")
+    elements = finding.get('elements') or []
+    if elements:
+        lines.append(f"  Elements: {', '.join(elements)}")
+
+    # UX-218's published step for this finding, where there is one. The
+    # page does not choose it and neither does this - `follows_from`
+    # already says which finding a step came out of.
+    for step in (next_steps or []):
+        if step.get('follows_from') == finding.get('id'):
+            lines.append(f"  Next: {' '.join(step.get('argv') or [])}")
+            break
+
+    run_id = getattr(result, 'run_id', None)
+    if run_id:
+        lines.append(f"  Run: {run_id}")
+    instance = getattr(result, 'run_instance', None) or {}
+    started = instance.get('started_at')
+    if started:
+        lines.append(f"  Captured: {started}")
+    return "\n".join(lines)

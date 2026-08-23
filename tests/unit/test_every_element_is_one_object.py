@@ -112,7 +112,14 @@ class TestEveryElementLinkResolves:
         out = _node(
             'const a = await import("./bga/viewer/app.js");'
             'const v = await import("./bga/viewer/views.js");'
-            'const uids = ["core.bst", "sub/dir:thing.bst", "a b.bst", "x"];'
+            # UX-235: `my_lib.bst` earns its place. The set had no
+            # underscore, and `\w` includes one while `A-Za-z0-9` does
+            # not - so `cssId` re-duplicated as `[^A-Za-z0-9-]+` differs
+            # from `[^\w-]+` on exactly that character, survived every
+            # guard here, and gave `my_lib.bst` a link that misses its
+            # own section. The probe set is the guard.
+            'const uids = ["core.bst", "sub/dir:thing.bst", "a b.bst", '
+            '"my_lib.bst", "x"];'
             'console.log(JSON.stringify(uids.map((u) => '
             '  [a.cssId(u), v.elementAnchor(u)])));')
         for link, target in out:

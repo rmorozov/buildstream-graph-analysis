@@ -1872,6 +1872,155 @@ function culpritRow(row) {
 // Every width is one published `makespan_after_us` over one published
 // total. Nothing here adds savings together or projects anything: if the
 // payload publishes three steps, the plan has three rows.
+/**
+ * UX-230: choose the fixes, and see the projected build.
+ *
+ * The interaction R8 brings to a prioritisation meeting, under the
+ * review's own warning: **this must not pretend to simulate.** A page
+ * that summed per-element savings would be wrong the moment two fixes
+ * share a chain, and `UX-219` measured exactly that on the golden
+ * fixture. So:
+ *
+ * - A **prefix of the published sequence** is already answered by the
+ *   payload: `optimization_horizon[i].makespan_after_us` is the
+ *   makespan after the first `i+1` fixes, published. That subset is
+ *   read, not computed.
+ * - **Any other subset** goes to the server, which calls the same
+ *   `bga.whatif.project` the CLI does - the transport `bga blast`
+ *   established. The page adds nothing.
+ * - **Offline** (an export, `file://`) there is no server, so the
+ *   command that answers it is shown instead of a control that cannot.
+ *   `UX-199`'s honesty shape for the blast box, applied again.
+ *
+ * There is no third path. A subset the page cannot read and cannot ask
+ * about renders the question, never a guess.
+ */
+export function renderWhatIf(payload, ask = null, options = {}) {
+  const steps = payload?.signals?.optimization_horizon ?? [];
+  if (!steps.length) return null;
+  const run = options.run ?? "RUN";
+
+  const section = document.createElement("section");
+  section.className = "whatif";
+  section.setAttribute("data-section", "whatif");
+  section.setAttribute("data-toc-label", "Choose the fixes");
+  const heading = document.createElement("h2");
+  heading.textContent = "Choose the fixes";
+  section.append(heading);
+
+  const list = document.createElement("ul");
+  list.className = "whatif-choices";
+  const chosen = new Set();
+  const boxes = [];
+  for (const step of steps) {
+    const row = document.createElement("li");
+    row.className = "whatif-choice";
+    row.setAttribute("data-element", step.element_uid);
+    const box = document.createElement("input");
+    box.setAttribute("type", "checkbox");
+    box.setAttribute("data-whatif-element", step.element_uid);
+    const label = document.createElement("label");
+    label.textContent = step.element_uid;
+    row.append(box, label);
+    list.append(row);
+    boxes.push([box, step.element_uid]);
+  }
+  section.append(list);
+
+  const answer = document.createElement("p");
+  answer.className = "whatif-answer";
+  answer.setAttribute("data-role", "whatif-answer");
+  section.append(answer);
+
+  const show = () => {
+    const selected = steps.map((step) => step.element_uid)
+                          .filter((uid) => chosen.has(uid));
+    if (!selected.length) {
+      answer.setAttribute("data-source", "none");
+      answer.removeAttribute("data-makespan-us");
+      answer.textContent = "Nothing selected.";
+      return;
+    }
+    const published = publishedPrefix(payload, selected);
+    if (published !== null) {
+      answer.setAttribute("data-source", "published");
+      answer.setAttribute("data-field",
+        `signals.optimization_horizon[${selected.length - 1}].makespan_after_us`);
+      answer.setAttribute("data-makespan-us", String(published));
+      answer.textContent =
+        `The build drops to ${seconds(published)} — published, the first `
+        + `${selected.length} step(s) of the plan.`;
+      return;
+    }
+    if (!ask) {
+      // No server: the command, not a control that cannot answer.
+      answer.setAttribute("data-source", "command");
+      answer.removeAttribute("data-makespan-us");
+      answer.textContent = whatIfCommand(run, selected);
+      return;
+    }
+    answer.setAttribute("data-source", "asking");
+    answer.textContent = "Asking bga…";
+    Promise.resolve(ask(selected)).then(
+      (document_) => {
+        const projected = document_?.projected;
+        if (!projected) {
+          answer.setAttribute("data-source", "refused");
+          answer.removeAttribute("data-makespan-us");
+          answer.textContent = (document_?.refusals ?? [])
+            .map((refusal) => refusal.sentence).join(" ")
+            || "bga declined to project this selection.";
+          return;
+        }
+        answer.setAttribute("data-source", "server");
+        answer.setAttribute("data-makespan-us",
+                            String(projected.makespan_after_us));
+        answer.textContent =
+          `The build drops to ${seconds(projected.makespan_after_us)} — `
+          + `computed by bga for this selection.`;
+      },
+      (error) => {
+        answer.setAttribute("data-source", "error");
+        answer.textContent = String(error?.message ?? error);
+      });
+  };
+
+  for (const [box, uid] of boxes) {
+    box.addEventListener?.("change", () => {
+      if (chosen.has(uid)) chosen.delete(uid);
+      else chosen.add(uid);
+      show();
+    });
+  }
+  show();
+  return section;
+}
+
+/**
+ * The published makespan for this selection, or null when the payload
+ * does not already answer it.
+ *
+ * Only a *prefix* of the sequence is published: the horizon is greedy,
+ * so step `i`'s makespan assumes steps `0..i-1` were taken. A selection
+ * that skips one is a different question and the payload does not hold
+ * its answer.
+ */
+export function publishedPrefix(payload, selected) {
+  const steps = payload?.signals?.optimization_horizon ?? [];
+  if (!selected.length || selected.length > steps.length) return null;
+  for (let i = 0; i < selected.length; i += 1) {
+    if (steps[i].element_uid !== selected[i]) return null;
+  }
+  const makespan = steps[selected.length - 1].makespan_after_us;
+  return typeof makespan === "number" ? makespan : null;
+}
+
+/** The command that answers a selection the page cannot. */
+export function whatIfCommand(run, selected) {
+  return `bga whatif ${run} `
+    + selected.map((uid) => `--element ${uid}`).join(" ");
+}
+
 export function renderHorizon(payload) {
   const steps = payload?.signals?.optimization_horizon ?? [];
   const total = payload?.total_duration_us;

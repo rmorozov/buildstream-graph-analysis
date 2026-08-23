@@ -39,6 +39,7 @@ SUBCOMMANDS = [
     "analyze", "graph", "floors", "replay", "sweep", "utilisation",
     "diagnostics", "correlate", "cache-trend", "compare", "blast",
     "extract", "capture", "snapshot", "cache-logs", "baseline", "doctor",
+    "whatif",
 ]
 
 # UX-192: the `UX-67` aliases dispatch through `tools/` rather than

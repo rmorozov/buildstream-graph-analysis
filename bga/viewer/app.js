@@ -17,7 +17,7 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
-         INCOMPLETE, renderProvenance, renderInvestigation } from "./views.js";
+         INCOMPLETE, renderProvenance, renderInvestigation, renderWhatIf } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
@@ -1034,6 +1034,21 @@ async function boot() {
     // fixing it buy" are the same question one step apart.
     const horizon = renderHorizon(payload);
     if (horizon) root.append(horizon);
+
+    // UX-230: and the same plan with checkboxes. A prefix of the
+    // published sequence is read from the payload; anything else is
+    // asked of the server, which runs the projection `bga whatif`
+    // runs. Offline there is no server, so `ask` is null and the
+    // section shows the command instead of a control that cannot
+    // answer - `UX-199`'s shape for the blast box.
+    const whatif = renderWhatIf(payload, served() ? async (elements) => {
+      const response = await fetch(
+        `whatif.json?elements=${encodeURIComponent(elements.join(","))}`);
+      const answer = await response.json();
+      if (!response.ok) throw new Error(answer.error ?? response.status);
+      return answer;
+    } : null, { run: run.name ?? "RUN" });
+    if (whatif) root.append(whatif);
 
     const overview = renderOverview(payload);
     if (overview) root.prepend(overview);

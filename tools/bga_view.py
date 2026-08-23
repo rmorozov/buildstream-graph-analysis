@@ -254,6 +254,26 @@ def store_aggregate_payload(store: Optional[dict]) -> Optional[dict]:
         return None
 
 
+def whatif_answer(run: str, elements) -> dict:
+    """`UX-230`: what the build drops to for a chosen subset.
+
+    The blast transport, again, and for the same reason: an arbitrary
+    subset is not in the payload and a page must never compute one. The
+    projection is `bga.whatif.project` - the same function `bga whatif`
+    calls, over the same analysis - so the served answer and the
+    command-line answer are the same bytes.
+    """
+    import pathlib
+
+    from bga.analyzer import BuildEfficiencyAnalyzer
+    from bga.whatif import project
+
+    directory = pathlib.Path(run)
+    analyzer = BuildEfficiencyAnalyzer()
+    analyzer.load(directory)
+    return project(analyzer.analyze(directory), analyzer.graph, list(elements))
+
+
 def blast_answer(run: str, target: str) -> dict:
     """`bga blast`'s answer for `target`, from the same function.
 
@@ -530,6 +550,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         path = raw.split("?", 1)[0].lstrip("/") or "index.html"
         if path == "blast.json":
             return self._blast(raw)
+        if path == "whatif.json":
+            return self._whatif(raw)
         if path in self.documents:
             return self._json(self.documents[path])
         if path in self.blobs:
@@ -562,6 +584,19 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             return self._json(blast_answer(self.run_root, target))
         except Exception as error:  # noqa: BLE001 - reported as data
             return self._refuse(422, f"{target}: {error}")
+
+    def _whatif(self, raw):
+        """UX-230's transport. Same shape as `_blast`: read-only, bounded,
+        and it calls the function the CLI calls."""
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(raw).query)
+        raw_elements = (query.get("elements") or [""])[0]
+        if len(raw_elements) > 4096:
+            return self._refuse(400, "too many elements")
+        elements = [uid for uid in raw_elements.split(",") if uid.strip()]
+        try:
+            return self._json(whatif_answer(self.run_root, elements))
+        except Exception as error:  # noqa: BLE001 - reported as data
+            return self._refuse(422, str(error))
 
     def _json(self, document):
         body = json.dumps(document).encode()

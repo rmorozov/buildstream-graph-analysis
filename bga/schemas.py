@@ -52,6 +52,10 @@ STORE = "store/v1"
 # and this is one row per *host class*, and a consumer wanting the
 # trend should not have to skip an aggregate to reach it.
 STORE_AGGREGATE = "store-aggregate/v1"
+# UX-230: the projected build for a chosen subset of fixes. Its own
+# document because it answers a *question a reader asked*, not a
+# property of the run - two selections over one run are two answers.
+WHATIF = "whatif/v1"
 # UX-215: the two-plane join, which `bga correlate --format json` has
 # emitted since UX-51 as an unversioned blob. Everything in it was
 # already computed and already correct; what it lacked was a contract,
@@ -431,6 +435,70 @@ _PROVENANCE = {
                            "no gap."},
     },
     "required": ["claim", "kind", "document"],
+}
+
+
+_WHATIF_REQUIRED = {
+    "run_id": "string",
+    "selected": "array",
+    "total_duration_us": "integer",
+    "convention": "string",
+    "refusals": "array",
+    "projected": "object",
+}
+
+_WHATIF_HINTS = {
+    "run_id": {"description": "The run this projection is over."},
+    "selected": {"description": "The elements the caller chose, in the "
+                                "order they were given."},
+    "total_duration_us": {
+        QUANTITY: "duration_us",
+        "description": "This run's wall-clock, for scale. The projection "
+                       "below is over the critical path, which is a "
+                       "different quantity."},
+    "convention": {"description": "What \"fixed\" means, published with "
+                                  "every answer so a figure that travels "
+                                  "keeps its assumption attached."},
+    "refusals": {
+        "description": "Why no projection is published, when none is: an "
+                       "empty selection, an element the graph does not "
+                       "know, or one with no measured duration. Each "
+                       "names the check and the elements it fired on.",
+        "items": {"properties": {
+            "check": {"description": "The name a caller matches on, "
+                                     "rather than the prose."},
+            "elements": {"description": "Which elements failed it."},
+            "sentence": {"description": "The refusal in words."},
+        }},
+    },
+    "projected": {
+        QUESTION: 'What would the build drop to?',
+        "description": "The projection, computed by the same "
+                       "`compute_joint_saving` the report's own horizon "
+                       "uses. `null` when anything was refused.",
+        "properties": {
+            "baseline_makespan_us": {
+                QUANTITY: "duration_us",
+                "description": "The critical path as this run measured it."},
+            "joint_saving_us": {
+                QUANTITY: "duration_us",
+                "description": "What the whole selection is worth "
+                               "together - a longest-path recompute with "
+                               "every chosen element zeroed, not a sum."},
+            "makespan_after_us": {
+                QUANTITY: "duration_us",
+                "description": "What the chain drops to. Published rather "
+                               "than left as a subtraction, for the "
+                               "reason `headline.scheduling_gap_us` is."},
+            "sum_of_individual_us": {
+                QUANTITY: "duration_us",
+                "description": "What each element is worth *alone*, added "
+                               "up - published as the wrong answer, "
+                               "deliberately. On a shared chain it "
+                               "differs from the joint saving, and that "
+                               "difference is why a page must never add."},
+        },
+    },
 }
 
 
@@ -1897,6 +1965,15 @@ _SCHEMAS = {
         "excluded and counted; a mix of machines is refused rather than "
         "blended, because durations are not scaled across hosts.",
         hints=_STORE_AGGREGATE_HINTS),
+    WHATIF: lambda: _document(
+        WHATIF, "bga whatif RUN --element A --element B",
+        _WHATIF_REQUIRED,
+        "What the build would drop to if a chosen set of elements were "
+        "fixed together - one longest-path recompute with each of them "
+        "zeroed, never a sum of their individual savings. Refused, with "
+        "the reason, for an empty selection or an element this run "
+        "cannot project.",
+        hints=_WHATIF_HINTS),
 }
 
 

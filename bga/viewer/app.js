@@ -17,7 +17,7 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
-         INCOMPLETE, renderProvenance } from "./views.js";
+         INCOMPLETE, renderProvenance, renderInvestigation } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
@@ -1164,7 +1164,11 @@ async function boot() {
     // UX-222 and UX-225 before the fragment, so a link carrying a
     // focus or a set of marks lands on a document whose controls are
     // already live.
-    wireFocusAndMarks(root, document);
+    // UX-228: the payload and the store go in, because focusing an
+    // element now assembles the evidence about it rather than only
+    // dimming the rest. A served page with neither still focuses -
+    // the panel is absent, not broken.
+    wireFocusAndMarks(root, document, { payload, store, schema: schemas[store?.schema] });
     applyView(root, splitHash(location.hash).query);
     wireViewState(root, { location, history: window.history });
   } catch (error) {
@@ -1192,13 +1196,25 @@ if (typeof document !== "undefined" && document.getElementById("report")) {
  * document underneath is unchanged, which is what keeps Ctrl-F, the
  * export and the anchors honest.
  */
-export function wireFocusAndMarks(root, doc) {
+export function wireFocusAndMarks(root, doc, options = {}) {
   const refresh = () => {
+    // UX-228 added a third transient node, and it joins the same
+    // removal set on purpose: everything focus adds is keyed by
+    // `data-role`, so unfocusing leaves the document byte-identical to
+    // never-focused. That property is asserted, not assumed.
     for (const stale of [...(root.querySelectorAll?.(
-        "[data-role=focus-bar],[data-role=mark-summary]") ?? [])]) {
+        "[data-role=focus-bar],[data-role=mark-summary],"
+        + "[data-role=focus-investigation]") ?? [])]) {
       stale.parentNode?.removeChild?.(stale);
     }
     const uid = focusedElement(root);
+    if (uid && options.payload) {
+      // UX-228: the evidence about this element, assembled from
+      // published objects. Prepended *under* the bar, so the reader
+      // sees what they focused and then what is known about it.
+      const investigation = renderInvestigation(options.payload, uid, options);
+      if (investigation) root.prepend?.(investigation);
+    }
     if (uid) root.prepend?.(renderFocusBar(uid, { onClear: () => {
       clearFocus(root); refresh(); notify();
     }}));

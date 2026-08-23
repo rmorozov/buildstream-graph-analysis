@@ -53,6 +53,24 @@ CACHE_RULE_MODULE = "bga/cache_effectiveness.py"
 _MISSING = object()
 
 
+class _Bracket:
+    """A `[...]` segment that is not a `key=value` selector.
+
+    Kept as text rather than parsed to an int, because what it means
+    depends on what it lands on: a list index, or a key of a map. Maps
+    keyed by element uid are the reason - a uid contains dots, so it
+    cannot be addressed through the dotted form at all.
+    """
+
+    __slots__ = ("text",)
+
+    def __init__(self, text):
+        self.text = text
+
+    def __repr__(self):                             # pragma: no cover
+        return f"[{self.text}]"
+
+
 class _Unresolved:
     """What a dangling path resolves to. Distinct from `None`, which is
     a real published value on plenty of these fields."""
@@ -85,10 +103,20 @@ def resolve(document: dict, path: str):
                  if isinstance(item, dict) and str(item.get(key)) == wanted),
                 _MISSING,
             )
-        elif isinstance(segment, int):
-            if not isinstance(node, list) or segment >= len(node):
+        elif isinstance(segment, _Bracket):
+            # One bracket, two containers. A list takes it as an index;
+            # a dict takes it as a key - which is how a map keyed by
+            # element uid becomes addressable at all, since a uid
+            # contains dots and cannot go through the dotted form.
+            if isinstance(node, list):
+                index = int(segment.text) if segment.text.lstrip("-").isdigit() \
+                    else None
+                node = (node[index] if index is not None and -len(node) <= index
+                        < len(node) else _MISSING)
+            elif isinstance(node, dict):
+                node = node.get(segment.text, _MISSING)
+            else:
                 return UNRESOLVED
-            node = node[segment]
         else:
             if not isinstance(node, dict) or segment not in node:
                 return UNRESOLVED
@@ -122,7 +150,7 @@ def _segments(path: str):
                 key, _, value = buffer.partition("=")
                 yield (key, value)
             else:
-                yield int(buffer)
+                yield _Bracket(buffer)
         elif depth:
             buffer += char
         else:

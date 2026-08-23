@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-240 scenarios: **7 open**, 233 closed.
+240 scenarios: **6 open**, 234 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 40 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
-| docs | 5 | 16 |
+| docs | 4 | 16 |
 | guards | 0 | 32 |
 
 ## Open scenarios
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-236 | [the front door is a round behind](UX-0236-the-front-door-is-a-round-behind.md) | docs | High | R1, R8 | 🔴 |
 | UX-237 | [documentation debt has no way into the backlog](UX-0237-documentation-debt-has-no-way-into-the-backlog.md) | docs | Medium | R8 | 🔴 |
-| UX-239 | [the context map is from the first week](UX-0239-the-context-map-is-from-the-first-week.md) | docs | High | all | 🔴 |
 | UX-240 | [a session has no cheap entry point](UX-0240-a-session-has-no-cheap-entry-point.md) | docs | Medium | all | 🔴 |
 | UX-241 | [architecture review has no cycle](UX-0241-architecture-review-has-no-cycle.md) | docs | Medium | R8 | 🔴 |
 
@@ -56,9 +55,9 @@ about what the tool says:
   twenty seconds would say. Google's small/medium/large/enormous, with
   the tiers assigned from the measurement.
 - **`UX-239`** — the fixing guide's context map says
-  `tests/test_e2e.py   only existing test file`. There are 220. It also
-  names one entry ritual for six different kinds of work; the user's
-  observation about *streams* is what that section is missing.
+  `tests/test_e2e.py   only existing test file`; `tests/unit/` alone
+  holds 218. It also names one entry ritual for six different kinds of
+  work; the user's observation about *streams* is what it is missing.
 - **`UX-236`** — `UX-233` fixed the architecture document and left the
   front door: three commands and a flag from round 28 appear in neither
   `README.md` nor `docs/README.md`.
@@ -75,6 +74,8 @@ about what the tool says:
 Order: `UX-238` first — everything after it is cheaper — then `UX-239`,
 then `UX-236` and `UX-237` together, then `UX-240` on top of both, and
 `UX-241` last because it is the cycle that keeps the rest true.
+`UX-238` and `UX-239` are done; their rows are in
+[closed.md](closed.md).
 
 ## UX-227..UX-234: the twenty-seventh audit round — the map is bigger than the page (2026-08-23)
 

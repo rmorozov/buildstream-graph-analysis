@@ -12,7 +12,8 @@
 // text renderer, CI and every external consumer get it too.
 
 import { handOff, deepLink } from "./perfetto.js";
-import { renderBand, renderCulprits, renderHorizon, renderTrend, renderBlastSearch,
+import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
+         renderTrend, renderBlastSearch,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
@@ -966,6 +967,11 @@ async function boot() {
     // after everything that names an element has been drawn - the
     // cross-reference is read off the rendered document, so a section
     // added later joins it with no edit here.
+    // UX-226: the store is loaded *before* the element sections now,
+    // because each one ends with what happened to that element across
+    // the snapshots. A run with no store simply gets no history block,
+    // which is the same absence a store with no slices produces.
+    const store = await load("store", null).catch(() => null);
     for (const node of renderElementSections(payload, root, {
       quantity,
       investigate: run.has_timeline
@@ -973,10 +979,14 @@ async function boot() {
                                      investigate)
         : null,
     })) {
+      if (store) {
+        const uid = node.getAttribute?.("data-element");
+        if (uid) {
+          node.append(renderElementHistory(store, uid, schemas[store.schema]));
+        }
+      }
       root.append(node);
     }
-
-    const store = await load("store", null).catch(() => null);
     // UX-212: the schema, so the trend draws the shape the *contract*
     // assigns each verdict rather than one this page decided on.
     const trend = store && renderTrend(store, schemas[store.schema]);

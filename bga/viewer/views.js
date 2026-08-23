@@ -1490,3 +1490,123 @@ function horizonRow({ label, makespanUs, total, element, saving, entering }) {
   }
   return row;
 }
+
+// UX-226: what happened to this element since last time.
+//
+// The loop ends on a question the tool could not answer: *I spent an
+// afternoon on core.bst - did it work?* Everything needed was on disk;
+// nothing was per element. `store/v1` carried whole-run durations, so
+// the trend was a whole-run trend because that is all the store
+// published.
+//
+// It publishes a bounded slice now, and this draws it. Points come
+// straight from `snapshots[].elements` - nothing here recomputes a
+// duration or infers one from a neighbour.
+export const HISTORY_POINTS_MAX = 12;
+
+export function elementHistory(store, uid) {
+  const snapshots = store?.snapshots ?? [];
+  const series = [];
+  let sawASliceAtAll = false;
+  for (const snapshot of snapshots) {
+    // `null` means "captured before UX-226"; `[]` means "analyzed, and
+    // this element was not worth watching in that run". The two are
+    // different facts and the drawing must not merge them.
+    if (!Array.isArray(snapshot.elements)) continue;
+    sawASliceAtAll = true;
+    const row = snapshot.elements.find((e) => e.element_uid === uid);
+    if (!row) continue;
+    series.push({
+      stamp: snapshot.stamp,
+      duration_us: row.duration_us,
+      on_critical_path: row.on_critical_path === true,
+      verdict_kind: snapshot.verdict_kind ?? null,
+    });
+  }
+  return { series: series.slice(-HISTORY_POINTS_MAX), sawASliceAtAll };
+}
+
+/**
+ * The sparkline and its one sentence, or the absence stated.
+ *
+ * A single point is not a trend and is drawn as a point, not a line: a
+ * line through one value is a claim about change that the data does not
+ * make.
+ */
+export function renderElementHistory(store, uid, schema = null) {
+  const { series, sawASliceAtAll } = elementHistory(store, uid);
+  const block = document.createElement("p");
+  block.className = "element-history";
+  block.setAttribute("data-role", "element-history");
+  block.setAttribute("data-element", uid);
+  block.setAttribute("data-points", String(series.length));
+
+  if (!series.length) {
+    block.setAttribute("data-history", "none");
+    block.className += " muted";
+    block.textContent = sawASliceAtAll
+      ? "No history for this element: it has not been on the critical path "
+        + "or in the top actions of an earlier run."
+      : "No history for this element: the snapshots in this store were "
+        + "captured before per-element history was recorded.";
+    return block;
+  }
+
+  block.setAttribute("data-history", "present");
+  const values = series.map((point) => point.duration_us)
+                       .filter((v) => typeof v === "number");
+  if (values.length) {
+    const high = Math.max(...values, 1);
+    const line = svg("svg", {
+      viewBox: `0 0 100 20`, class: "sparkline", preserveAspectRatio: "none",
+      role: "img", "data-role": "sparkline",
+      "data-values": values.join(","),
+    });
+    series.forEach((point, i) => {
+      if (typeof point.duration_us !== "number") return;
+      const x = series.length === 1 ? 50 : (i / (series.length - 1)) * 100;
+      const y = 18 - (point.duration_us / high) * 16;
+      line.append(svg("circle", {
+        cx: x.toFixed(2), cy: y.toFixed(2), r: 1.6,
+        class: "spark-point",
+        // UX-212's closed shape vocabulary, so a snapshot's verdict
+        // reads the same here as it does in the trend.
+        // UX-212's rule, and the first draft of this broke it: the
+        // shape comes from the *schema*, so the sparkline draws what
+        // the contract assigns each verdict rather than a second map
+        // this page keeps. `verdictMarker` falls back to a circle for
+        // a snapshot with no verdict at all.
+        "data-marker": verdictMarker(point.verdict_kind,
+                                     verdictMarkers(schema)),
+        "data-stamp": point.stamp,
+        "data-value": String(point.duration_us),
+        "data-on-path": String(point.on_critical_path),
+      }));
+    });
+    block.append(line);
+  }
+
+  // One sentence, from the first and last published values. No
+  // percentage: two points from two different builds are not a rate.
+  const sentence = document.createElement("span");
+  sentence.className = "history-sentence";
+  sentence.setAttribute("data-role", "history-sentence");
+  const first = series[0];
+  const last = series[series.length - 1];
+  if (series.length === 1) {
+    sentence.textContent = `${seconds(last.duration_us)} in one recorded run.`;
+  } else {
+    sentence.textContent =
+      `${seconds(first.duration_us)} → ${seconds(last.duration_us)}`
+      + ` over ${series.length} runs.`;
+  }
+  // The run it left the chain, when it did: that is usually the answer
+  // somebody optimising was actually looking for.
+  const left = series.find((point, i) =>
+    i > 0 && series[i - 1].on_critical_path && !point.on_critical_path);
+  if (left) {
+    sentence.textContent += ` Off the critical path since ${left.stamp}.`;
+  }
+  block.append(sentence);
+  return block;
+}

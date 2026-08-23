@@ -307,3 +307,12 @@ section[data-unfocused="true"] > h2 { opacity: 0.32; }
   opacity: 0.7;
 }
 [data-mark="done"] { text-decoration-color: currentColor; }
+
+/* UX-226: the element's own history. A single point is drawn as a
+   point - a line through one value claims a change the data does not
+   make. */
+.element-history { display: flex; align-items: center; gap: 0.5rem; }
+svg.sparkline { width: 6rem; height: 1.25rem; flex: 0 0 auto; }
+.spark-point { fill: var(--accent, #4a7ebb); }
+.spark-point[data-on-path="false"] { fill-opacity: 0.45; }
+.history-sentence { font-size: 0.9em; }

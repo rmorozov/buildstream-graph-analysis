@@ -1406,6 +1406,65 @@ _STORE_HINTS = {
                               QUANTITY: "bytes",
                               "description": "What that snapshot occupies "
                                              "on disk."},
+                          # UX-226: a *history*, not an archive. Bounded
+                          # at capture time to the elements that were
+                          # worth looking at in that run - the critical
+                          # path and the top actions - so the store does
+                          # not become a second copy of every report.
+                          "elements": {
+                              "description": "What this run cost the "
+                                             "elements worth watching: "
+                                             "the critical path and the "
+                                             "top actions, bounded. "
+                                             "`null` - not an empty list "
+                                             "- for a snapshot captured "
+                                             "before this existed, so a "
+                                             "reader is told there is no "
+                                             "history rather than shown "
+                                             "a flat line at zero.",
+                              COLUMNS: [
+                                  {"key": "element_uid", "title": "Element",
+                                   "role": "element", "sortable": True},
+                                  {"key": "duration_us", "title": "Duration",
+                                   "quantity": "duration_us", "sortable": True},
+                                  {"key": "share_of_path",
+                                   "title": "Share of path",
+                                   "quantity": "share", "sortable": True},
+                              ],
+                              "items": {
+                                  "properties": {
+                                      "duration_us": {
+                                          QUANTITY: "duration_us",
+                                          "description": "What this "
+                                                         "element cost in "
+                                                         "that run."},
+                                      "share_of_path": {
+                                          QUANTITY: "share",
+                                          "description": "Its share of "
+                                                         "that run's "
+                                                         "critical path. "
+                                                         "Absent for an "
+                                                         "element that "
+                                                         "was not on it - "
+                                                         "zero would read "
+                                                         "as on the path "
+                                                         "and costing "
+                                                         "nothing."},
+                                      "on_critical_path": {
+                                          "description": "Whether it was "
+                                                         "on the chain in "
+                                                         "that run. An "
+                                                         "element can "
+                                                         "leave the path "
+                                                         "between runs, "
+                                                         "and that is "
+                                                         "usually the "
+                                                         "answer a reader "
+                                                         "is looking "
+                                                         "for."},
+                                  },
+                              },
+                          },
                       },
                   }},
 }

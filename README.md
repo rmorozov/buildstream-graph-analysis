@@ -5,7 +5,7 @@
 - **Where did the time go?** — per-element attribution, every category summing to exactly the wall clock, not aggregate stats.
 - **How much faster could this build possibly be?** — a *proven* lower bound, not an estimate. When there is nothing to win from rescheduling, it says so, which saves you the week you would have spent tuning `--builders`.
 - **What should I fix first, and what is it actually worth?** — ranked by how much the build would really lose if that element were free, which on a dense graph is a very different number from how big it is.
-- **And then what?** — the next few fixes, what the build drops to after each, and whether their savings add — projected from the capture you already have, instead of costing you another full build per finding.
+- **And then what?** — the next few fixes, what the build drops to after each, and whether their savings add — projected from the capture you already have (`bga whatif`), instead of costing you another full build per finding.
 
 It works in three planes — one build's element schedule, the processes inside a single element's sandbox, and the per-element logs BuildStream already wrote for every build on your machine. What each one sees and costs is the table in [`docs/README.md`](docs/README.md#three-planes). **New here?** Install, then run the two commands under [Use it on your real project](#use-it-on-your-real-project); [`docs/guides/real-project.md`](docs/guides/real-project.md) is the same path at length, with real output at every step.
 
@@ -18,11 +18,10 @@ git clone --single-branch https://github.com/rmorozov/buildstream-graph-analysis
 pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
 
-Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real
-`bst` and `bubblewrap` in the same venv (`pip install -e ".[bst]"`, or your
-project's own BuildStream install; `bga[all]` is `bst` plus completion). `pip install -e .` from inside this
-checkout is the **contributor** mode, which is what `make test` and
-`make lint` expect and not what a user needs.
+Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real `bst` and `bubblewrap`
+in the same venv (`pip install -e ".[bst]"`, or your project's own BuildStream install; `bga[all]`
+is `bst` plus completion). `pip install -e .` from inside this checkout is the **contributor** mode,
+which is what `make test` and `make lint` expect and not what a user needs.
 
 Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run is accepted — is `pip install "bga[completion]"` plus one line in your shell rc: `eval "$(register-python-argcomplete bga)"` for bash/zsh, or `register-python-argcomplete --shell fish bga | source` for fish.
 
@@ -66,9 +65,9 @@ bga view @last                        # the same report, in a browser (UX-193)
 bga snapshot -- bst build <targets>   # after your change: compares against the previous run
 ```
 
-Run `bga doctor` first — it takes a second or two. Every capture environment this project has
-stood up was assembled by failure (a missing plugin, an absent compiler, `bwrap` blocked by a
-sysctl); each has a one-line remedy, cheaper to read before a thirty-minute build than after.
+Run `bga doctor` first — it takes a second or two. Every capture environment this project has stood
+up was assembled by failure (a missing plugin, an absent compiler, `bwrap` blocked by a sysctl); each
+has a one-line remedy, cheaper to read before a thirty-minute build than after.
 
 The second `snapshot` prints the analysis **and** the verdict against the first. Captures land
 in `.bga/runs/<UTC-stamp>/` under the project (gitignored), and every command taking a run
@@ -98,12 +97,11 @@ It reports a signed delta for every certified floor, both efficiency signals, an
 > **One capture is not a baseline.** Five captures of the *same* freedesktop-sdk commit,
 > nothing changed, span **33%** (3614.2s → 2712.4s) against a default significance rule of 1%.
 > So gate CI on a baseline *set* and its noise band, not on a single pair — `bga baseline`
-> assembles one from published capture refs in one command. The figures, the band those five
-> define, and where it is still not enough:
+> assembles one from published capture refs, and `bga snapshot --aggregate` says the same thing
+> about the runs you already have (min/median/p95 per host class; `--blend` to mix classes, which
+> it refuses by default). The figures, the band those five define, and where it is still not enough:
 > [`real-project.md`](docs/guides/real-project.md#step-7--change-something-then-prove-it)
 > and [`ci-comment.md`](docs/guides/ci-comment.md).
-
-The full narrative version of this — capture, read, go inside, join, act, gate — is [`docs/guides/real-project.md`](docs/guides/real-project.md).
 
 ## On a real project
 
@@ -140,9 +138,10 @@ scheduling gap, and it says which one you have first); **share of the path and w
 worth are different numbers** (`python3.bst` holds 17.7% of the chain and fixing it recovers
 3.2% of the build — on a mesh graph that gap is the norm); and it **refuses to double-count**
 (the top three are "exactly the sum of their individual savings", said because elsewhere they
-would not be). Line by line:
-[Reading the report](docs/guides/cli.md#reading-the-report); the same build walked end to end:
-[`docs/guides/real-project.md`](docs/guides/real-project.md).
+would not be). `--explain` prints the evidence, the rule and a Perfetto query behind every one of
+those claims, and `bga whatif <element>…` prices any set you pick instead of the three it ranked.
+Line by line: [Reading the report](docs/guides/cli.md#reading-the-report); the same build walked
+end to end: [`docs/guides/real-project.md`](docs/guides/real-project.md).
 
 ## Gating a CI pipeline
 
@@ -236,13 +235,13 @@ which kind of question. The three entry points:
 
 ```bash
 pip install -e '.[dev]'   # pytest + ruff; `make test`/`make lint` need this, not the base install
-make test-small           # 1,985 tests in 22s - the tier to run while you work
-make test                 # the whole suite, 3,112 tests in ~5m20s
+make test-small           # the tier to run while you work: 21s, measured
+make test                 # the whole suite: 5m11s, measured
 make lint                 # ruff + markdown (`make dev-run` prints a real report)
 ```
 
-Tiers come from measured per-file duration (`tests/tiers.py`, `UX-238`): `small` is the default,
-160 of 220 files for 5% of the runtime. `pytest -m bst` needs a real BuildStream, and CI's
+Tiers come from measured per-file duration (`tests/tiers.py`, `UX-238`), not from taste; `small` is
+the default, so a new file joins it free. `pytest -m bst` needs a real BuildStream, and CI's
 `bst-tests` job fails if any of that tier is skipped — a skipped tier would read as a pass.
 
 ## License

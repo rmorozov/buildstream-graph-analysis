@@ -233,6 +233,34 @@ the first refactor and the signature is right there.
 **Why:** this repository's own comment style already follows this rule;
 the docs should not diverge from it.
 
+## 14. A correction bigger than a sentence is a filing
+
+Rule 2 says a document states what is true now, and that when something
+changes you edit the statement. That is right when the correction is a
+sentence. When it is not — the document describes a mechanism the code
+no longer has, or describes nothing where the code grew a whole axis —
+the honest move is a backlog row, because the alternative is a session
+that started as "fix one line" quietly turning into a rewrite nobody
+reviewed.
+
+The counterpart, from the writing side, is item 11 of the
+[fixing guide](fixing-guide.md)'s Definition of Done: **documentation a
+change needs and does not get is filed before the commit lands.** Not
+filing it is not neutral — it moves the cost from the session that
+created the debt to the one that trips over it, which is the same
+asymmetry rule 2 exists to prevent.
+
+Either way the id is what makes it a decision rather than a shrug. A
+filing that says "documented later" and names no id has parked the idea
+exactly where `§12` says ideas get lost. **Enforced by test** for the
+mechanical half.
+
+**Why:** round 28 shipped three mechanisms whose only documentation was
+a docstring or a payload note — `capacity_recommendation`,
+`memory_envelope`, and `whatif`'s summing convention. Each survived
+because one person said so out loud in a review, which is not a
+process. `UX-237` filed the rule; `UX-242`..`UX-244` filed the three.
+
 ---
 
 ## Editing checklist
@@ -246,3 +274,5 @@ the docs should not diverge from it.
 - [ ] New backlog file zero-padded to four digits? (rule 9, tested)
 - [ ] Do tables render? Same cell count per row, `\|` for literal pipes
       (rule 8 — `make lint-docs`, plus the table test)
+- [ ] Did this change need documentation I am not writing? Filed, with an
+      id? (rule 14, tested)

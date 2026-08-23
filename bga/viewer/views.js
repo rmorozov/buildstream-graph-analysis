@@ -851,7 +851,7 @@ export function renderBlastTree(payload) {
  * No `headline`, no panel. An older payload renders the page it always
  * did rather than a box explaining what is missing.
  */
-export function renderDecision(payload, investigate = null) {
+export function renderDecision(payload, investigate = null, copy = null) {
   const headline = payload?.headline;
   if (!headline || !headline.diagnosis) return null;
 
@@ -901,7 +901,61 @@ export function renderDecision(payload, investigate = null) {
     }
     section.append(list);
   }
+
+  // UX-218: and what to run next. Read from `next_steps`, never
+  // derived - the branch that chose these lives in the pipeline, so
+  // the terminal, CI and this panel give the same answer.
+  const steps = Array.isArray(payload?.next_steps) ? payload.next_steps : [];
+  if (steps.length) {
+    const heading = document.createElement("h3");
+    heading.textContent = "Next";
+    section.append(heading);
+    const list = document.createElement("ol");
+    list.className = "next-steps";
+    for (const step of steps) list.append(nextStepRow(step, copy));
+    section.append(list);
+  }
   return section;
+}
+
+/**
+ * One published next step: why, and the exact command.
+ *
+ * `copy` is passed in rather than imported so this file keeps having
+ * no dependency on `tables.js` - and so a harness can drive the button
+ * without a clipboard.
+ */
+function nextStepRow(step, copy) {
+  const row = document.createElement("li");
+  row.className = "next-step";
+  row.setAttribute("data-step", step.id ?? "");
+  row.setAttribute("data-follows-from", step.follows_from ?? "");
+
+  const why = document.createElement("p");
+  why.className = "muted";
+  why.textContent = step.reason ?? "";
+  row.append(why);
+
+  const argv = Array.isArray(step.argv) ? step.argv.join(" ") : "";
+  const command = document.createElement("code");
+  command.className = "next-command";
+  command.setAttribute("data-argv", argv);
+  command.textContent = argv;
+  row.append(command);
+
+  if (copy && argv) {
+    const button = document.createElement("button");
+    button.setAttribute("type", "button");
+    button.className = "copy-step";
+    button.textContent = "Copy";
+    button.addEventListener("click", () => {
+      copy(argv);
+      button.textContent = "\u2713 copied";
+      setTimeout(() => { button.textContent = "Copy"; }, 1200);
+    });
+    row.append(button);
+  }
+  return row;
 }
 
 function actionRow(action, investigate) {

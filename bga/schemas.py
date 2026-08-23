@@ -333,6 +333,7 @@ _ANALYZE_OPTIONAL = {
     "element_join_coverage": "object",
     # UX-207: what to fix first, and what it is worth.
     "headline": "object",
+    "next_steps": "array",
 }
 
 # What a *full* `bga analyze --format json` of a normal run contains.
@@ -348,6 +349,11 @@ ANALYZE_FULL_KEYS = (
     # still publishes `inconclusive` rather than dropping the key, so a
     # consumer never has to tell "no diagnosis" from "no field".
     "headline",
+    # UX-218: what to run next. Present on every full report - a run
+    # with nothing to suggest publishes an empty list rather than
+    # dropping the key, so "no next step" and "no field" stay
+    # distinguishable.
+    "next_steps",
     "findings", "floors", "capacity_verdict", "attribution",
     "attribution_hints", "occupancy", "signals", "structural",
     "utilisation", "confidence", "violations",
@@ -650,6 +656,43 @@ _ANALYZE_HINTS = {
             "joined_elements": {QUANTITY: "count"},
             "plane1_elements": {QUANTITY: "count"},
             "plane2_elements": {QUANTITY: "count"},
+        },
+    },
+    "next_steps": {
+        QUESTION: 'What should I run next?',
+        RAIL: "decide",
+        "description": "The next commands, chosen by what this run "
+                       "measured. Decided in the pipeline rather than "
+                       "by a consumer, so the terminal, CI and the "
+                       "page cannot advise differently - and a step "
+                       "whose precondition this run does not meet is "
+                       "absent rather than offered and broken.",
+        COLUMNS: [
+            {"key": "reason", "title": "Why", "sortable": False},
+            {"key": "argv", "title": "Run", "sortable": False},
+            {"key": "follows_from", "title": "From", "sortable": False},
+        ],
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "reason": {"type": "string",
+                           "description": "Why this step, in terms of "
+                                          "the values that chose it."},
+                "argv": {"type": "array",
+                         "description": "The command, with the run and "
+                                        "the element already "
+                                        "substituted. Executable as "
+                                        "spelled."},
+                "follows_from": {"type": "string",
+                                 "description": "The finding or the "
+                                                "published field this "
+                                                "step was chosen by, so "
+                                                "the advice can be "
+                                                "checked against the "
+                                                "number behind it."},
+            },
+            "required": ["id", "reason", "argv"],
         },
     },
     "headline": {

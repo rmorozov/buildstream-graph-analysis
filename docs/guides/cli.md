@@ -800,6 +800,35 @@ A section whose schema declares no rail lands in `raw` — never nowhere.
   denominator cannot tell a filtered table from a small one.
 - The blast box opens with the payload's top-ranked targets as chips.
 
+### What to run next (`UX-218`)
+
+The report ends with the next commands, chosen by what this run
+measured, with the run path and the element already filled in:
+
+```text
+Next:
+  core.bst is the first thing to fix, worth 12.1s - this is what changing it rebuilds.
+    bga blast core.bst examples/06-…/.bga/runs/20260821T170127Z/run
+  Plane 2 measured this run, so the join can say whether core.bst is compute-bound…
+    bga correlate examples/06-…/.bga/runs/20260821T170127Z/run
+  Make the change, then capture it the same way.
+    bga snapshot examples/06-macro-micro-optimization
+  Whether it helped, judged against this store's noise.
+    bga compare @prev @last --project examples/06-macro-micro-optimization
+```
+
+Same list in `--format json` as `next_steps`, and in the page's
+decision panel with a Copy button beside each — one function, so the
+terminal, CI and the page cannot advise differently.
+
+**Which** step is right depends on the run, so it is decided in the
+pipeline rather than by whatever is reading the report. A chain-bound
+build is not told to add builders. A run outside a store is not told to
+compare against a previous one it does not have. A run with no Plane 2
+report is not told to look inside its elements. Each step names the
+published field it follows from, so the advice can be checked against
+the number behind it.
+
 ### Findings show their evidence (`UX-217`)
 
 Each finding renders the numbers it was drawn from, in the units the

@@ -29,6 +29,7 @@ keys on and what a diff between two runs joins on, so it is part of the
 contract and does not change with wording. `evidence` carries the raw
 numbers behind the sentence, so a consumer never has to parse `title`.
 """
+import os
 from typing import Dict, List, Optional
 
 from .cache_effectiveness import (
@@ -1126,6 +1127,127 @@ def compute_headline(result: AnalysisResult,
         max(0, total - t_infinity) if total and t_infinity else None)
     headline['top_actions'] = _top_actions(result, findings)
     return headline
+
+
+# UX-218: the loop, not the report.
+#
+# `capture -> analyze -> read -> change -> capture again` is where the
+# repetition lives, and after reading the decision panel the reader's
+# next action comes from a small closed set - blast the top element,
+# look inside it, measure again, compare. Every round they retype it,
+# copying the run path and the element name by hand out of a page that
+# holds both.
+#
+# The branch is the more important half. *Which* step is right depends
+# on the diagnosis, and that mapping has lived in documentation prose.
+# If the viewer encodes it the viewer becomes a second decision-maker -
+# the thing `UX-207` exists to prevent - so it is decided here, and the
+# terminal, CI and the page then give the same answer.
+#
+# No IO: every precondition below is a property of a published value.
+# A step whose precondition is absent is *not published*, which is
+# `UX-194`'s dead-button rule applied to advice rather than controls.
+
+def _store_paths(run_dir: str):
+    """`(project, in_store)` for a run directory, by shape alone.
+
+    A snapshot lives at `<project>/.bga/runs/<stamp>/run`, so the
+    project is four levels up. Read from the published path rather than
+    from the filesystem: `compute_headline` is a pure function of the
+    result and it stays one - and a path that does not have this shape
+    simply yields no store-shaped steps.
+    """
+    parts = os.path.normpath(run_dir or '').split(os.sep)
+    if len(parts) < 5 or parts[-1] != 'run' or parts[-3] != 'runs' \
+            or parts[-4] != '.bga':
+        return None, False
+    return os.sep.join(parts[:-4]) or '.', True
+
+
+def compute_next_steps(result: AnalysisResult,
+                       headline: Optional[dict] = None) -> List[dict]:
+    """The next commands, chosen by what this run measured.
+
+    Each step carries the reason it was chosen (from published values),
+    the command as an argv list with the run and element already
+    substituted, and the signal it follows from - so a reader can check
+    the advice against the number that produced it.
+    """
+    if headline is None:
+        headline = compute_headline(result)
+    # `getattr`, not attribute access: `AnalysisResult` grew
+    # `run_instance` in UX-95 and a projection or a stub may not carry
+    # it. Advice is the last thing that should be able to break a
+    # report.
+    instance = getattr(result, 'run_instance', None) or {}
+    run_dir = (instance.get('run_dir') or '').strip()
+    if not run_dir:
+        # Without a run path nothing can be spelled exactly, and a step
+        # spelled approximately is worse than no step.
+        return []
+    project, in_store = _store_paths(run_dir)
+    actions = headline.get('top_actions') or []
+    top = actions[0] if actions else None
+    steps: List[dict] = []
+
+    if top and top.get('element_uid'):
+        uid = top['element_uid']
+        worth = top.get('saving_us')
+        steps.append({
+            'id': 'blast-the-top-element',
+            'reason': (
+                f"{uid} is the first thing to fix"
+                # Same rule as the gap below: a figure that rounds to
+                # "0.0s" argues against the sentence carrying it.
+                + (f", worth {worth / 1e6:.1f}s"
+                   if worth and worth >= 100_000 else "")
+                + " - this is what changing it rebuilds."),
+            'argv': ['bga', 'blast', uid, run_dir],
+            'follows_from': top.get('finding_id') or 'headline.top_actions',
+        })
+        # The two-plane join answers "compute-bound, or badly built",
+        # and only where Plane 2 saw this run - `plane2_coverage` being
+        # published is exactly that condition.
+        if getattr(result, 'plane2_coverage', None):
+            steps.append({
+                'id': 'look-inside-the-element',
+                'reason': (
+                    f"Plane 2 measured this run, so the join can say "
+                    f"whether {uid} is compute-bound or under-parallelized."),
+                'argv': ['bga', 'correlate', run_dir],
+                'follows_from': 'plane2_coverage',
+            })
+
+    if headline.get('diagnosis') == DIAGNOSIS_SCHEDULER_BOUND:
+        gap = headline.get('scheduling_gap_us')
+        steps.append({
+            'id': 'sweep-the-capacity',
+            'reason': (
+                "This build is scheduler-bound"
+                # Only where the number would say something: a gap that
+                # rounds to "0.0s" reads as a contradiction of the
+                # sentence it is supposed to support.
+                + (f": {gap / 1e6:.1f}s of wall-clock is beyond the critical "
+                   f"path" if gap and gap >= 100_000 else "")
+                + " - the sweep says what more builders would buy."),
+            'argv': ['bga', 'sweep', run_dir],
+            'follows_from': 'headline.diagnosis',
+        })
+
+    if in_store:
+        steps.append({
+            'id': 'measure-again',
+            'reason': "Make the change, then capture it the same way.",
+            'argv': ['bga', 'snapshot', project],
+            'follows_from': 'run_instance.run_dir',
+        })
+        steps.append({
+            'id': 'compare-with-the-run-before',
+            'reason': "Whether it helped, judged against this store's noise.",
+            'argv': ['bga', 'compare', '@prev', '@last', '--project', project],
+            'follows_from': 'run_instance.run_dir',
+        })
+    return steps
 
 
 def render_findings(findings: List[dict]) -> List[str]:

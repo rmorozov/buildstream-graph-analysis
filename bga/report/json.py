@@ -3,7 +3,8 @@ import json as _json
 from typing import Optional
 
 from .. import schemas
-from ..findings import compute_findings, compute_headline
+from ..findings import (compute_findings, compute_headline,
+                        compute_next_steps)
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
 
@@ -59,6 +60,12 @@ def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: 
         # pipeline already made. Passed the findings it references so
         # the ranking is read once.
         data['headline'] = compute_headline(result, findings)
+        # UX-218: and what to run next, chosen by what this run
+        # measured. Decided here for the same reason the diagnosis is:
+        # a viewer that picked the next command from `chain_ratio`
+        # would be a second decision-maker, and the terminal and CI
+        # would give different advice from the page.
+        data['next_steps'] = compute_next_steps(result, data['headline'])
 
     if section in (None, 'floors', 'replay'):
         data['floors'] = result.floors

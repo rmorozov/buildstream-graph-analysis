@@ -1,6 +1,6 @@
 # UX-218: the next step is a command you can run
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-207 (the diagnosis it branches on), UX-126 (the loop as one command run twice)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the diagnosis it branches on), UX-126 (the loop as one command run twice)
 
 ## Motivation
 
@@ -66,3 +66,74 @@ Mutations, each asserted red: make the viewer recompute the step from
 published step and derived step disagree reddens; drop the
 precondition check → a run with no predecessor offers a compare step
 and the dead-button guard fails.
+
+---
+
+## Outcome (round 25)
+
+**Status:** 🟢 Done.
+
+`analyze/v1` publishes `next_steps`: an ordered list, each with the
+reason it was chosen (in terms of the values that chose it), the `argv`
+with the run and element already substituted, and the field it follows
+from. `bga analyze`'s text report ends with them and the decision panel
+renders them with a Copy button — **one function, so the terminal, CI
+and the page cannot advise differently**, which is the whole reason the
+branch is in the pipeline rather than the viewer.
+
+**The acceptance that matters is not "a command is shown".** `bga
+blast` with its arguments the wrong way round shows just as well. Every
+published `argv` is *executed against the fixture* and required to exit
+zero and print something; reversing `uid` and `run_dir` reddens it.
+
+**Two committed fixtures answer differently, asserted by value:**
+
+```text
+golden (scheduler-bound, outside a store, no Plane 2)
+    blast-the-top-element      bga blast base.bst tests/fixtures/…
+    sweep-the-capacity         bga sweep tests/fixtures/…
+
+examples/06 (chain-bound, in a store, Plane 2 present)
+    blast-the-top-element      bga blast core.bst examples/06/…/run
+    look-inside-the-element    bga correlate examples/06/…/run
+    measure-again              bga snapshot examples/06-…
+    compare-with-the-run-before  bga compare @prev @last --project …
+```
+
+Note what is *absent* from each: the golden run is offered no
+`measure-again` (it is not in a store) and no `look-inside` (no Plane
+2); `examples/06` is offered no capacity sweep, because more builders
+is the wrong advice for a chain-bound build. `UX-194`'s dead-button
+rule, applied to advice rather than controls — and a table that
+returned the same list for both would be no branch at all.
+
+**`compute_next_steps` stays a pure function of the result.** The
+store-shaped steps are decided by the *shape* of the published run path
+(`<project>/.bga/runs/<stamp>/run`), not by probing the filesystem, so
+the pipeline does no IO to give advice and a path that is not
+store-shaped simply yields no store-shaped steps.
+
+One thing the first draft got wrong and the fixtures caught **twice**:
+the reason rendered *"0.0s of wall-clock is beyond the critical path"*
+on the golden run (gap: 2 ms), and then *"worth 0.0s"* on the
+synthetic topologies. A figure that rounds away argues against the
+sentence carrying it, so both clauses appear only above 0.1s.
+
+**Two of the repository's own guards caught real consequences**, and
+both were right to. `test_section_stage_gating` compares a gated
+render against a full one from two different directories — and a
+next-step command *names the run*, which is what makes it runnable, so
+its existing path normaliser was extended to cover the commands rather
+than the feature weakened. And `_StubResult` in the scale tests has no
+`run_instance` at all: `compute_next_steps` reached for the attribute
+directly and raised. It uses `getattr` now — advice is the last thing
+that should be able to break a report.
+
+Eight mutations, each verified red: the argv spelled wrong; the branch
+removed; store steps offered to a run outside a store; the join step
+offered without Plane 2; the panel deriving the step instead of reading
+it; the Copy button copying the reason; the text report dropping the
+block; `follows_from` dropped.
+
+**Deviation from the Required Fix:** none. Nothing is executed — the
+page proposes and the reader runs.

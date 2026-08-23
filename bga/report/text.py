@@ -3,7 +3,8 @@ from typing import List, Optional
 
 from .. import findings as findings_mod
 from .. import sources
-from ..findings import compute_findings, compute_headline, render_findings
+from ..findings import (compute_findings, compute_headline,
+                        compute_next_steps, render_findings)
 from ..ingest.models import AnalysisResult
 from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
@@ -230,6 +231,24 @@ def _format_key_findings(result: AnalysisResult) -> List[str]:
     headline = compute_headline(result, findings)
     lines = ["Key Findings:", f"  {headline['sentence']}"]
     return lines + render_findings(findings) + [""]
+
+
+def _format_next_steps(result: AnalysisResult) -> List[str]:
+    """`UX-218`: the loop's next commands, in the terminal too.
+
+    Same list the JSON publishes and the page renders, from the same
+    function - the whole point being that the three cannot advise
+    differently. Printed last, because it is what the reader leaves
+    with.
+    """
+    steps = compute_next_steps(result)
+    if not steps:
+        return []
+    lines = ["Next:"]
+    for step in steps:
+        lines.append(f"  {step['reason']}")
+        lines.append(f"    {' '.join(step['argv'])}")
+    return lines + [""]
 
 
 def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:
@@ -982,6 +1001,12 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
 
     if section is None:
         lines.extend(_format_pipeline_overhead(result))
+
+    # UX-218: last, because it is what the reader leaves with - and
+    # inside the `section is None` gate for the same reason every other
+    # full-report block is: `bga floors` answers about floors.
+    if section is None:
+        lines.extend(_format_next_steps(result))
 
     lines.append("=" * 60)
     return "\n".join(lines)

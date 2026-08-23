@@ -281,6 +281,11 @@ class ComparisonResult:
     # an average and dilutes with project size; these two are marginal.
     element_diff: Optional[dict] = None
     marginal_efficiency: Optional[dict] = None
+    # UX-221: which elements the change actually cost, signed and
+    # ranked. `element_diff` above covers appearance and removal; this
+    # covers the elements present in both runs, which is where the
+    # answer to "because of what?" nearly always is.
+    element_deltas: Optional[dict] = None
     # UX-92: rebuilds the candidate did not earn, and the elements whose
     # own cache key changed with nothing above them changing - the roots
     # an invalidation actually started at.
@@ -326,6 +331,7 @@ class ComparisonResult:
             'mismatches': self.mismatches,
             'baseline_band_shortfall': self.baseline_band_shortfall,
             'element_diff': self.element_diff,
+            'element_deltas': self.element_deltas,
             'marginal_efficiency': self.marginal_efficiency,
             'cache_churn': self.cache_churn,
             'failed_runs': self.failed_runs,
@@ -449,6 +455,104 @@ def _element_diff(
         'candidate_element_count': len(candidate_uids),
         'baseline_path_us': sum(baseline_durations.values()),
         'candidate_path_us': sum(candidate_durations.values()),
+    }
+
+
+def _element_deltas(
+    baseline_result: AnalysisResult,
+    candidate_result: AnalysisResult,
+    run_verdict_kind: Optional[str],
+) -> dict:
+    """Which elements changed, and by how much (`UX-221`).
+
+    `bga compare` answers "this build got slower"; the next question is
+    always "because of what?", and until this the payload could not say.
+    `_element_diff` above covers the elements a change *added or
+    removed* - and, measured, those were the only two cases any element
+    appeared in `compare/v1` at all. An element present in both runs
+    whose duration tripled appeared nowhere, which is the case the
+    question is actually about.
+
+    Two orthogonal fields per row, deliberately:
+
+    `presence` is a fact about the join - `both`, `appeared`,
+    `disappeared`. `verdict_kind` is a judgement, from the closed set
+    `UX-214` fixed. An element in only one run has **no delta**, so its
+    verdict is `not_comparable` rather than a signed number: treating a
+    disappeared element as a delta from zero would read as the largest
+    improvement in the run, which is the failure this split exists to
+    prevent.
+
+    When the run as a whole declined to call the change - either
+    `no_significant_change` or `within_observed_range` - every row
+    inherits that verdict rather than being coloured improved or
+    regressed. A page that reports "no significant change" and then
+    paints five elements as regressions is contradicting itself, and the
+    run verdict is the one with a noise band behind it. The signed
+    `delta_us` is still published on every such row: the number is a
+    measurement and stands, it is the *judgement* that defers.
+
+    Per-element deltas are **not themselves banded** - judging one
+    element against a set of runs is a real statistical question and out
+    of scope here - and the schema says so where a reader will meet it.
+    """
+    declined = ('within_observed_range', 'no_significant_change')
+    baseline_durations = _element_durations(baseline_result)
+    candidate_durations = _element_durations(candidate_result)
+    inside_noise = run_verdict_kind in declined
+
+    rows = []
+    for uid in sorted(set(baseline_durations) | set(candidate_durations)):
+        before = baseline_durations.get(uid)
+        after = candidate_durations.get(uid)
+        if before is None:
+            presence, delta, verdict = 'appeared', None, 'not_comparable'
+        elif after is None:
+            presence, delta, verdict = 'disappeared', None, 'not_comparable'
+        else:
+            presence, delta = 'both', after - before
+            if inside_noise:
+                verdict = run_verdict_kind
+            elif delta > 0:
+                verdict = 'regressed'
+            elif delta < 0:
+                verdict = 'improved'
+            else:
+                verdict = 'no_significant_change'
+        rows.append({
+            'element_uid': uid,
+            'baseline_us': before,
+            'candidate_us': after,
+            'delta_us': delta,
+            'presence': presence,
+            'verdict_kind': verdict,
+        })
+
+    # Ranked by what moved most. A row with no delta cannot be ranked
+    # against one that has one, so the appeared/disappeared rows sort
+    # after the measurable ones rather than being given a stand-in
+    # magnitude - the same refusal as the verdict above.
+    rows.sort(key=lambda row: (
+        row['delta_us'] is None,
+        -abs(row['delta_us'] or 0),
+        row['element_uid'],
+    ))
+    counts = {name: 0 for name in
+              ('grew', 'shrank', 'unchanged', 'appeared', 'disappeared')}
+    for row in rows:
+        if row['presence'] != 'both':
+            counts[row['presence']] += 1
+        elif row['delta_us'] > 0:
+            counts['grew'] += 1
+        elif row['delta_us'] < 0:
+            counts['shrank'] += 1
+        else:
+            counts['unchanged'] += 1
+    return {
+        'rows': rows,
+        'counts': counts,
+        'ranked_by': 'absolute-duration-delta',
+        'banded': False,
     }
 
 
@@ -825,6 +929,11 @@ def _compare_results(
         baseline_result.attribution or {}, candidate_result.attribution or {},
         baseline_total or 0, candidate_total or 0,
     )
+    # UX-221: computed after the run verdict, because a row inside the
+    # run's own noise inherits it rather than being coloured as a
+    # regression on its own.
+    element_deltas = _element_deltas(
+        baseline_result, candidate_result, verdict_kind)
 
     return ComparisonResult(
         baseline_run_id=baseline_result.run_id,
@@ -848,6 +957,7 @@ def _compare_results(
         baseline_band=baseline_band,
         baseline_band_shortfall=baseline_band_shortfall,
         element_diff=element_diff,
+        element_deltas=element_deltas,
         marginal_efficiency=marginal_efficiency,
         cache_churn=cache_churn,
     )

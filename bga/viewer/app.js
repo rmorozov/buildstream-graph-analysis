@@ -12,7 +12,7 @@
 // text renderer, CI and every external consumer get it too.
 
 import { handOff, deepLink } from "./perfetto.js";
-import { renderBand, renderTrend, renderBlastSearch,
+import { renderBand, renderCulprits, renderTrend, renderBlastSearch,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
@@ -919,6 +919,11 @@ async function boot() {
     const comparison = await load("compare", null).catch(() => null);
     const band = comparison && renderBand(comparison);
     if (band) root.prepend(band);
+    // UX-221: and above the band, which elements put the candidate
+    // where the band says it is. Prepended after it so it ends up
+    // first: the band states the verdict, this states the cause.
+    const culprits = comparison && renderCulprits(comparison);
+    if (culprits) root.prepend(culprits);
 
     // UX-202: the overview above the sections, and the evidence header
     // above even that - what the capture can support, before any

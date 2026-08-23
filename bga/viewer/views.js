@@ -1234,3 +1234,99 @@ function elementSection(record, places, investigate, format) {
   }
   return section;
 }
+
+// UX-221: the strip that answers "because of what?".
+//
+// `renderBand` says the candidate is outside the noise band. It cannot
+// say which elements put it there, because until UX-221 the payload had
+// no per-element deltas to say it with - `compare/v1` carried whole-run
+// floors and per-*category* attribution, and the only elements in it at
+// all were the ones a change added or removed.
+//
+// Read straight off `element_deltas.rows`, in the order the payload
+// ranked them. A viewer sorting these itself would be a second
+// comparison, disagreeing with `bga compare` the moment either changed -
+// UX-214's failure, and the reason this was a payload item first.
+export const CULPRITS_SHOWN = 4;
+
+export function renderCulprits(compare) {
+  const deltas = compare?.element_deltas;
+  const rows = deltas?.rows ?? [];
+  if (!rows.length) return null;
+
+  const section = document.createElement("section");
+  section.setAttribute("data-section", "culprits");
+  section.setAttribute("data-toc-label", "Which elements changed");
+  const heading = document.createElement("h2");
+  heading.textContent = "Which elements changed";
+  section.append(heading);
+
+  // Improvements and regressions each on their own, rather than one
+  // list ordered by magnitude: a reader looking for what cost them time
+  // should not have to skip past what saved it.
+  const measurable = rows.filter((row) => row.delta_us !== null
+                                       && row.delta_us !== undefined);
+  const worse = measurable.filter((row) => row.delta_us > 0)
+                          .slice(0, CULPRITS_SHOWN);
+  const better = measurable.filter((row) => row.delta_us < 0)
+                           .slice(0, CULPRITS_SHOWN);
+  const absent = rows.filter((row) => row.presence !== "both");
+
+  for (const [label, group] of [["Cost time", worse], ["Saved time", better]]) {
+    if (!group.length) continue;
+    const list = document.createElement("ul");
+    list.className = "culprit-list";
+    list.setAttribute("data-group", label === "Cost time" ? "worse" : "better");
+    for (const row of group) list.append(culpritRow(row));
+    const title = document.createElement("h3");
+    title.textContent = label;
+    section.append(title, list);
+  }
+
+  if (absent.length) {
+    const list = document.createElement("ul");
+    list.className = "culprit-list";
+    list.setAttribute("data-group", "absent");
+    for (const row of absent.slice(0, CULPRITS_SHOWN)) list.append(culpritRow(row));
+    const title = document.createElement("h3");
+    title.textContent = "Only in one run";
+    section.append(title, list);
+  }
+
+  // The honesty line. A per-element delta is not judged against a noise
+  // band - there isn't one - and a strip that coloured rows without
+  // saying so would be claiming a verdict it cannot support.
+  const caveat = document.createElement("p");
+  caveat.className = "muted";
+  caveat.setAttribute("data-role", "not-banded");
+  caveat.textContent = deltas.banded
+    ? "Each row is judged against its own noise band."
+    : "These are raw changes, not judged against a noise band - only the "
+      + "run as a whole is.";
+  section.append(caveat);
+  return section;
+}
+
+function culpritRow(row) {
+  const item = document.createElement("li");
+  item.setAttribute("data-element", row.element_uid);
+  item.setAttribute("data-verdict-kind", row.verdict_kind);
+  item.setAttribute("data-presence", row.presence);
+  if (row.delta_us !== null && row.delta_us !== undefined) {
+    item.setAttribute("data-delta-us", String(row.delta_us));
+  }
+  const name = document.createElement("a");
+  name.className = "element";
+  name.setAttribute("href", `#${elementAnchor(row.element_uid ?? "")}`);
+  name.textContent = row.element_uid;
+  const change = document.createElement("span");
+  change.className = "culprit-change";
+  // The values are the payload's. Nothing here subtracts anything: a
+  // page computing its own delta is a second comparison.
+  change.textContent = (row.delta_us === null || row.delta_us === undefined)
+    ? `${row.presence} - no delta to compare`
+    : `${row.delta_us > 0 ? "+" : ""}${seconds(row.delta_us)}`
+      + ` (${seconds(row.baseline_us)} → ${seconds(row.candidate_us)})`;
+  item.append(name, document.createTextNode(" "), change);
+  return item;
+}

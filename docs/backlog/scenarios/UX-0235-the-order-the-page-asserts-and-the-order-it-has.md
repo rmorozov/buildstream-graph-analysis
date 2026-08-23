@@ -133,3 +133,55 @@ Full suite: 2984 passed, 3 skipped, census quiet.
 the fixing guide's Definition of Done as item 7, with both generalised
 rules — read the order the page has, and a guard that names one file
 will not see the second one.
+
+## Follow-up (round 28): the census was calibrated on one machine
+
+PR #137's `test (3.11)` job went red with **nothing wrong**: `3021
+passed, 82 skipped`, and the session failed on this item's own census.
+
+```text
+================================= skip census ==================================
+ 1 test(s) ... 'bst and/or buildstream-plugins not available - see docs/...'
+ 2 test(s) ... 'bst not found on PATH'
+12 test(s) ... 'bst not found on PATH - see docs/spec/ingestion-pipeline.md'
+ 2 test(s) ... 'bst/bwrap/bga not all found on PATH - see docs/...'
+ 6 test(s) ... 'bst/bwrap/cc not all found on PATH - see docs/...'
+ 5 test(s) ... 'bwrap not on PATH'
+ 8 test(s) ... 'bwrap/cc not both on PATH'
+19 tests skipped for one reason ('no real capture here') - more than 8.
+10 tests skipped for one reason ('the examples/06 capture is not here') - more than 8.
+```
+
+`KNOWN_SKIP_REASONS` was written from **one machine's skip set** — a dev
+container with `bst`, `bwrap` and a real capture in it. CI's `test` job
+has none of those, so seven of its nine reasons had never been declared,
+and two legitimately exceeded a global cap of 8. That is the same hollow
+shape this item was filed about, one level up: an instrument that was
+written, looked right, and had only ever been run where it could not
+find anything.
+
+**The repair is a per-reason measured baseline, not an exemption.** Each
+declared reason now carries the largest count it has been *measured* at,
+and the bound is that plus `MAX_PER_REASON` of headroom — so ordinary
+growth in a family passes and a file adopting the reason does not. A
+reason at `0` keeps the original behaviour. "Declare it" must not become
+the way to switch the census off, so a guard asserts a reason measured
+at 19 still complains at 28.
+
+**Reproduced locally rather than argued.** Symlinking every executable
+on `PATH` except `bst`/`bwrap` into a shadow directory and running the
+suite against it gives the same seven complaints from the pre-fix
+census, and green from the fixed one:
+
+```text
+pre-fix, PATH without bst/bwrap:  the same seven "never declared" lines
+post-fix, same PATH:              3061 passed, 44 skipped, census quiet
+post-fix, normal PATH:            3102 passed, 3 skipped
+```
+
+**Stated rather than implied:** the two over-cap reasons (`no real
+capture here` at 19, `the examples/06 capture is not here` at 10) need
+`examples/06`'s capture *absent*, and it is present in this container —
+so those two baselines come from CI's own log and are pinned in
+`test_the_baselines_cover_what_a_toolless_runner_skips`, not reproduced
+here. The seven PATH-driven ones were reproduced.

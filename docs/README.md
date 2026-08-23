@@ -22,7 +22,15 @@ On a real project the two commands to know first are `bga doctor`
 cannot) and `bga snapshot` (`UX-126` — the whole local loop, run twice).
 Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126).
 `bga view` (`UX-193`) opens the same report in a browser, and
-`bga view --export` writes it as one file you can attach.
+`bga view --export` writes it as one file you can attach. Three more
+answer questions the analysis alone does not: `bga whatif` prices a
+chosen set of fixes (`UX-230`), `bga analyze --explain` shows the
+evidence behind every claim (`UX-229`), and `bga snapshot --aggregate`
+speaks for the whole store rather than one run (`UX-234`). The
+section-only commands — `graph`, `floors`, `replay`, `sweep`,
+`utilisation`, `diagnostics` — are `analyze`'s own sections, printable
+on their own; `cache-trend` reads a series rather than a pair. All of
+them are in [`guides/cli.md`](guides/cli.md).
 
 Three planes of evidence, and they cost different things to obtain —
 which is why the guides pick between them rather than always saying
@@ -33,6 +41,29 @@ which is why the guides pick between them rather than always saying
 | **1** — one run's element-level log | the whole schedule, the critical path, the floors | a log; the analysis needs no live BuildStream |
 | **2** — processes inside a sandbox | what one element's own build system actually did | a real `bst` + `bwrap` build you decided to capture |
 | **3** — BuildStream's own kept logs | history: what this project keeps spending time on | nothing — `bga cache-logs` reads what is already on disk |
+
+## What it emits
+
+Every JSON document `bga` writes carries its schema id, and
+`bga --schema <id>` prints the contract — types, units, and the
+view-hints the browser report renders from (`UX-201`). Eight ids, and
+what writes each:
+
+| document | written by |
+|---|---|
+| `analyze/v1` | `bga analyze --format json` — the analysis, its findings, and why each one is believed (`UX-229`) |
+| `compare/v1` | `bga compare --format json` — the verdict, the noise band, the culprit elements |
+| `blast/v1` | `bga blast --format json` — what a change to one resource rebuilds |
+| `correlate/v1` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
+| `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
+| `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
+| `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
+| `host/v1` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
+
+A key may be added to any of these without a version bump; a rename or
+a removal bumps. The full contract table is
+[spec Part 32.5](spec/specification.md); what each command does with it
+is [`guides/cli.md`](guides/cli.md).
 
 ## Words this project uses precisely
 

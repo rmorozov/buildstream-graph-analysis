@@ -1040,6 +1040,87 @@ the other rounds now:
 | [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
 | [24](../audits/round-24.md) | the relationship layer the third external review asked for is already computed in `correlate.py` and published nowhere; round 23's own Inspect anchors resolve to nothing; three of the review's premises corrected, and the loop it did not look at filed (`UX-215`..`UX-226`) |
 | [25](../audits/round-24.md) | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
+| [26](../audits/round-24.md) | round 24's remaining eight executed: the schema learned to say what its numbers mean, `compare/v1` learned which elements changed, the store learned to remember one, and the page learned to draw a plan, focus one element and carry the reader's own marks in the link. Two task premises corrected and two mutations rejected for not discriminating (`UX-219`..`UX-226`) |
+
+## Round 26: the eight that were left
+
+Round 24 filed twelve items; round 25 took the first four. These are the
+other eight, and the pattern across them is one thing said three ways.
+
+**Twice a task file was wrong about the code, and both errors were worth
+finding.** `floors.certified_us` — named in UX-220 as "the most
+misreadable number this tool publishes" — has never existed; the
+certified floor is `floors.lb`. And UX-221 said no element appears in
+`compare/v1` anywhere, when in fact `element_diff` has carried
+*appearance and removal* since UX-79 — the two cases the file predicted
+a naive join would drop were the two already present, and the elements
+in **both** runs, which is what "because of what?" actually asks about,
+were the ones missing. An audit is a hypothesis. Reproducing it first is
+not ceremony.
+
+**Twice a mutation a task file specified could not fail.** UX-219's
+"re-add the savings instead of reading `cumulative_saving_us`" cannot
+discriminate on any real report, because the two are equal by
+construction. UX-221's "sort the strip by its own computed delta" passed
+because the four-case fixture puts exactly one element in each group and
+no assertion about the order of a one-element list can fail. Neither was
+counted. One was replaced with a synthetic payload where the two values
+differ; the other with a three-regression fixture. A mutation that
+cannot redden is not evidence, and writing it down as though it were is
+the failure this discipline exists to prevent.
+
+**Three times a guard had to change, and each change is recorded as a
+decision rather than absorbed.** UX-201's fixtures were pinned to three
+`utilisation` keys no code path emits — re-pointed at published fields
+rather than deleted, and they still catch the original renderer bug.
+UX-196's "only two custom drawings" asserted a count while its docstring
+stated the rule; it holds the named set now, which also catches a
+drawing being moved or removed. And the page-size backstop was crossed
+for the fourth round running.
+
+### The backstop, and what a number cannot measure
+
+UX-218 replaced an absolute page ceiling with composition + ratio + a
+loose absolute, having watched the old ceiling get raised twice, and
+wrote the reason down: *a number that moves whenever a feature lands is
+measuring the calendar*. Round 26 crossed the new absolute too.
+Measured at the crossing:
+
+```text
+page (data removed)   123,785 B
+  modules             109,913 B
+  style.css            12,552 B
+  index.html            1,433 B
+  accounted           123,898 B   = 100.1% of the page
+export total          184,934 B   = 2.20% of the 8 MiB attachment budget
+```
+
+Every byte is a checked-in module. So the backstop did its job — it made
+someone look — and the answer was "a round landed", for the fourth time.
+The stated purpose was to catch *something structural*, and a byte count
+cannot tell a feature from a library.
+
+It is raised to 200,000 and now stands beside a guard that measures the
+thing directly: no module may look like vendored or minified code — a
+few enormous lines, almost no comments. That guard catches a 12 KB
+minified blob which **both** the byte ceiling and the composition guard
+let through. If the absolute fires again it should be because that one
+is silent and something genuinely odd is happening.
+
+### What the round added to the loop
+
+The first five rounds of the viewer made the report readable. This one
+made it *resumable*: the horizon is a plan rather than a table, an
+element can be focused, the reader's own marks travel in the link, and
+each element carries what it cost across the snapshots. Round three of
+an optimization no longer reads exactly like round one — which was
+UX-225's complaint, and is the closing of the loop UX-126 opened.
+
+Two clauses were declined and recorded rather than quietly dropped: a
+global key to open the palette (it needs a decision about the table
+filters UX-205 put everywhere), and markdown detection for the copied
+finding (a button claiming to know what a paste target accepts would be
+guessing).
 
 ## Verification Log
 

@@ -1518,7 +1518,9 @@ Schemas:
 
 ```text
 run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the analysis shape)
-analyze/v1          compare/v1    blast/v1                    (published outputs - 32.5)
+analyze/v1          compare/v1    blast/v1      correlate/v1  (published outputs - 32.5)
+store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
+host/v1                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
 ```
 
@@ -1634,13 +1636,23 @@ version at all - so a consumer had nothing to pin, and a field rename
 in a published payload (`runs_outside_band` → `edges_outside_band`,
 round 19) reached them silently.
 
-Three outputs now self-declare, with `schema` as their first key:
+Every published output now self-declares, with `schema` as its first
+key:
 
 | output | schema | printed by |
 |---|---|---|
 | `bga analyze --format json` (and every section subcommand) | `analyze/v1` | `bga analyze --schema` |
 | `bga compare --format json` | `compare/v1` | `bga compare --schema` |
 | `bga blast --format json` | `blast/v1` | `bga blast --schema` |
+| `bga correlate --format json` | `correlate/v1` | `bga correlate --schema` |
+| `bga snapshot --list --format json` | `store/v1` | `bga analyze --schema` lists every id |
+| `bga snapshot --aggregate --format json` | `store-aggregate/v1` | as above |
+| `bga whatif --format json` | `whatif/v1` | as above |
+| the host manifest inside `run-context.json` | `host/v1` | `bga.hostinfo.collect` |
+
+The list is not maintained by hand alone: a guard asserts that every id
+`bga/schemas.py` registers appears here and in `docs/design/architecture.md`'s
+contract inventory, so a new payload cannot ship undocumented.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
 an *addition* does not. So `additionalProperties` is true in all three,

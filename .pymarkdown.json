@@ -21,6 +21,9 @@
     "correct content, disabled below with a reason each, which is the same",
     "trade every other disable here records."
   ],
+  "extensions": {
+    "front-matter": { "enabled": true, "//": "UX-240: .claude/skills/*/SKILL.md open with YAML frontmatter; without this the leading `---` reads as a setext heading and every skill fails MD022. No document under docs/ uses frontmatter, so nothing else changes." }
+  },
   "plugins": {
     "md001": { "enabled": false, "//": "UX-109: heading increment - the imported spec numbers milestones `# M1` then `### Goal`; editing a contract document's headings for a linter is the wrong trade" },
     "md003": { "enabled": false, "//": "heading style: setext vs atx, pure preference" },

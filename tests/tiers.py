@@ -6,7 +6,7 @@ below say what tends to be slow, not what decides:
 
 * **small** - pure Python over in-memory fixtures. No subprocess, no
   node, no real tool. The **default**: a file not listed below is
-  small, which is right for 160 of 220 files.
+  small, which is right for 164 of 224 files.
 * **medium** - spawns a process (the `bga` CLI, a node harness) or
   writes a run directory. Seconds, not milliseconds.
 * **large** - builds scale fixtures, streams traces, drives real

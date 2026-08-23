@@ -1,6 +1,6 @@
 # UX-224: copy a finding as something you can paste
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-217 (the evidence it carries), UX-115 (the CI comment renderer)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-217 (the evidence it carries), UX-115 (the CI comment renderer)
 
 ## Motivation
 
@@ -54,3 +54,55 @@ not by the two happening to agree today (`UX-214`'s lesson).
 Mutations, each asserted red: drop the run identity → the round-trip
 guard fails; give the copy its own wording of the conclusion → the
 one-renderer guard fails.
+
+## Outcome (round 26)
+
+Clause 2 asks for one renderer shared with `--format ci-comment`. The CI
+comment is Python and the viewer is JavaScript, so across that boundary
+"one renderer" is only honest one way: **the text is rendered in the
+pipeline and published as `findings[].copy_text`**, and the page copies
+a string rather than wording one. The same reason UX-218's commands are
+decided in the pipeline and UX-207's diagnosis is.
+
+That makes the one-renderer property checkable by reading the source, as
+the acceptance asks: `app.js` may contain `finding.copy_text` and must
+not contain the string `BGA finding:` — and neither may any other viewer
+module. A page that worded its own conclusion would fail on the words,
+not on the two happening to disagree today.
+
+`copyButton` and its `✓ copied` acknowledgment already existed from
+UX-208, so the affordance is that function meeting a published string.
+
+### Two things the golden fixture showed immediately
+
+The first draft produced text that was worse than useless:
+
+```text
+  blast radius {'base.bst': {'downstream_count': 2, 'weighted_duration_us': …
+  category untracked_tail_us
+  category 0.0s
+```
+
+A nested `blast_radius` dict rendered as 400 characters of Python
+`repr` into the middle of a paste, and `category` and `category_us` —
+two different values — were both reduced to the label `category`. Two
+numbers under one name is worse than an ugly one.
+
+Non-scalar evidence is left out now, and the label is the published key
+verbatim, so a paste names the field a reader can look up. Both are
+guarded, and both guards assert against the payload's own numbers rather
+than literal strings.
+
+The units come from `EVIDENCE_QUANTITIES` — UX-217's declaration of what
+each evidence key *is* — not from a second table here. Blanking that
+lookup reddens three guards.
+
+**Mutations verified red and reverted:** drop the run identity (1 guard
+— this task's first); give the copy its own wording in the page (1 — its
+second); make the evidence lose its declared unit (3).
+
+**Deviation from the Required Fix:** clause 3 asks for markdown "when
+the platform will take it", with the affordance saying which. Not built:
+the page cannot detect what a paste target accepts, and a button that
+claimed to know would be guessing. Plain text only, which every target
+accepts. Recorded rather than silently dropped.

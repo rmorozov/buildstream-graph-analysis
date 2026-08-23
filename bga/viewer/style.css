@@ -316,3 +316,11 @@ svg.sparkline { width: 6rem; height: 1.25rem; flex: 0 0 auto; }
 .spark-point { fill: var(--accent, #4a7ebb); }
 .spark-point[data-on-path="false"] { fill-opacity: 0.45; }
 .history-sentence { font-size: 0.9em; }
+
+/* UX-223: the palette's groups and its keyboard cursor. */
+.palette-group {
+  font-size: 0.72em; letter-spacing: 0.08em; opacity: 0.6;
+  padding: 0.3rem 0.2rem 0.1rem; list-style: none;
+}
+.palette-facts { opacity: 0.7; font-size: 0.85em; margin-left: 0.4rem; }
+.jump-hits li[data-active="true"] > button { outline: 2px solid var(--accent, #4a7ebb); }

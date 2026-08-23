@@ -18,11 +18,12 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
          INCOMPLETE } from "./views.js";
-import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
+import { anchor, collapsible, toc, jumpTargets, matches,
+         paletteResults } from "./nav.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
-import { renderQuestions } from "./questions.js";
+import { copyButton, renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, applyTopN, presetColumns } from "./tables.js";
@@ -233,7 +234,16 @@ export function renderFindings(findings, investigate = null, node = undefined) {
             ]))
         : null,
       renderFindingEvidence(finding.evidence, evidenceNode),
-      investigate ? investigateButton(finding, investigate) : null));
+      investigate ? investigateButton(finding, investigate) : null,
+      // UX-224: the finding as something you can paste. The text is
+      // `findings[].copy_text`, rendered in the pipeline - this button
+      // copies a published string and does not word anything, which is
+      // the only way one renderer can serve both a Python CI comment
+      // and a JavaScript page. Absent, not empty, on a payload that
+      // does not carry it.
+      finding.copy_text
+        ? copyButton(el, finding.copy_text)
+        : null));
   }
   return section;
 }
@@ -748,7 +758,7 @@ function safeStorage() {
 }
 
 /** Type-ahead over section names and element uids. Scrolls; never filters. */
-export function wireJumpBox(nav, root, payload) {
+export function wireJumpBox(nav, root, payload, context = {}) {
   const targets = jumpTargets(root, payload);
   const box = document.createElement("input");
   box.setAttribute("type", "search");
@@ -769,27 +779,104 @@ export function wireJumpBox(nav, root, payload) {
     setTimeout(() => node.removeAttribute("data-jumped"), 1600);
   };
 
-  box.addEventListener("input", () => {
-    const hits = matches(targets, box.value);
-    list.replaceChildren();
-    for (const hit of hits) {
-      const item = document.createElement("li");
-      const button = document.createElement("button");
-      button.textContent = hit.text;
-      button.setAttribute("data-jump", hit.key);
-      button.addEventListener("click", () => { go(hit); box.value = ""; list.replaceChildren(); });
-      item.append(button);
-      list.append(item);
+  // UX-223: the same box, offering what the page can already do with
+  // the thing being typed. `rows` is the flat keyboard order over the
+  // grouped display, so `ArrowDown` moves through what a reader sees.
+  let rows = [];
+  let active = -1;
+  const clear = () => { box.value = ""; list.replaceChildren(); rows = []; active = -1; };
+  const highlight = () => {
+    rows.forEach((row, i) => {
+      if (i === active) row.node.setAttribute("data-active", "true");
+      else row.node.removeAttribute("data-active");
+    });
+  };
+  const run = (row) => {
+    if (!row) return;
+    if (row.target) go(row.target);
+    else if (row.action) act(row.action);
+    clear();
+  };
+  const act = (action) => {
+    if (action.focus) {
+      applyFocus(root, action.element);
+      root.dispatchEvent?.(new Event("change", { bubbles: true }));
+      return;
     }
-  });
+    // Everything else is a place in the document; the affordance the
+    // action names already exists there, and this navigates to it.
+    go({ kind: "element", key: action.element });
+  };
+
+  const render = () => {
+    const groups = paletteResults(targets, box.value, payload, context);
+    list.replaceChildren();
+    rows = [];
+    active = -1;
+    for (const [name, entries] of [["ELEMENT", groups.elements],
+                                   ["ACTIONS", groups.actions],
+                                   ["SECTIONS", groups.sections]]) {
+      if (!entries.length) continue;
+      const heading = document.createElement("li");
+      heading.className = "palette-group";
+      heading.setAttribute("data-group", name);
+      heading.textContent = name;
+      list.append(heading);
+      for (const entry of entries) {
+        const item = document.createElement("li");
+        const button = document.createElement("button");
+        button.setAttribute("type", "button");
+        if (entry.kind) {
+          button.textContent = entry.text;
+          button.setAttribute("data-jump", entry.key);
+          if (entry.facts) {
+            // UX-223 clause 4: read, never recomputed.
+            const facts = document.createElement("span");
+            facts.className = "palette-facts";
+            facts.setAttribute("data-duration-us",
+                               String(entry.facts.duration_us ?? ""));
+            facts.textContent = [
+              entry.facts.duration_us !== null
+                ? quantity(entry.facts.duration_us, "duration_us") : null,
+              entry.facts.share_of_path !== null
+                ? `${(entry.facts.share_of_path * 100).toFixed(1)}% path` : null,
+              entry.facts.saving_us !== null
+                ? `saves ${quantity(entry.facts.saving_us, "duration_us")}` : null,
+            ].filter(Boolean).join(" · ");
+            button.append(facts);
+          }
+          rows.push({ node: item, target: entry });
+        } else {
+          button.textContent = entry.label;
+          button.setAttribute("data-action", entry.id);
+          button.setAttribute("data-element", entry.element);
+          rows.push({ node: item, action: entry });
+        }
+        const row = rows[rows.length - 1];
+        button.addEventListener("click", () => run(row));
+        item.append(button);
+        list.append(item);
+      }
+    }
+  };
+
+  box.addEventListener("input", render);
   box.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      if (!rows.length) return;
+      event.preventDefault?.();
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      active = (active + step + rows.length + (active < 0 ? 1 : 0)) % rows.length;
+      highlight();
+      return;
+    }
+    if (event.key === "Escape") { clear(); return; }
     if (event.key !== "Enter") return;
-    const [first] = matches(targets, box.value, 1);
-    if (first) { go(first); box.value = ""; list.replaceChildren(); }
+    run(active >= 0 ? rows[active] : rows[0]);
   });
 
   nav.append(box, list);
-  return { targets, box, list };
+  return { targets, box, list, render, rowsOf: () => rows };
 }
 
 // ------------------------------------------------------------------ boot
@@ -1031,7 +1118,14 @@ async function boot() {
       document, storage: served() ? safeStorage() : null });
     const contents = toc(root, { document, controls });
     if (contents) {
-      wireJumpBox(contents, root, payload);
+      // UX-223: which actions this run can honestly offer. UX-194's
+      // rule - an affordance whose precondition is absent is not shown
+      // at all, rather than shown and dead.
+      wireJumpBox(contents, root, payload, {
+        hasTimeline: Boolean(run.has_timeline),
+        hasBlast: location.protocol === "http:"
+               || location.protocol === "https:",
+      });
       // UX-211: the link that shows what I was looking at. Beside the
       // contents, because that is where the reader already goes to
       // reach for a section anchor.

@@ -888,6 +888,16 @@ _ANALYZE_HINTS = {
                 # measured rather than guessed.
                 "evidence": {"type": ["object", "null"],
                              "properties": EVIDENCE_QUANTITIES},
+                "copy_text": {
+                    "description": "This finding as plain text: its "
+                                   "title, its evidence in declared "
+                                   "units, the elements it names, the "
+                                   "published next step, and the run "
+                                   "identity. Rendered in the pipeline "
+                                   "so the page copies it rather than "
+                                   "wording it - a pasted finding and "
+                                   "the CI comment cannot then say the "
+                                   "same thing differently."},
             },
             "required": ["id", "severity", "title"],
         },

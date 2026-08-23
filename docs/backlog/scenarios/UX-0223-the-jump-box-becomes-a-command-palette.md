@@ -1,6 +1,6 @@
 # UX-223: the jump box becomes a command palette
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-199 (the jump box), UX-216 (the actions it offers), UX-218
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (the jump box), UX-216 (the actions it offers), UX-218
 
 ## Motivation
 
@@ -61,3 +61,54 @@ Mutations, each asserted red: drop the has-timeline check → the dead
 action appears on the no-timeline fixture; compute the shown duration
 in the palette instead of reading it → a fixture where the two differ
 reddens.
+
+## Outcome (round 26)
+
+`paletteResults` is a pure function over the list the page already
+holds, so the guards test it directly rather than through a rendered
+document. Results come back grouped — elements with their published
+numbers, actions on the current query, sections — and the rendering in
+`app.js` walks the groups into a flat keyboard order, so `ArrowDown`
+moves through what a reader sees.
+
+**Clause 3 is guarded in both directions**, which matters more than it
+sounds. A guard that only asserts "no Perfetto row on a run with no
+timeline" passes on an implementation that offers nothing at all, so
+there is a companion asserting the row *does* appear when there is a
+timeline.
+
+**Clause 4's fixture separates read from derived.** `total_duration_us`
+is 100 s while `openssl.bst` alone is 672 s, so a palette computing its
+number from the run total cannot match the payload's — the mutation this
+task names reddens three guards on it. An element off the critical path
+has `share_of_path: null`, not zero: zero would read as "on the path,
+costing nothing".
+
+### Two collisions the flattened export found
+
+The export concatenates every module into one scope. The first draft
+declared `elementFacts` in `nav.js` — and `views.js` has had one since
+UX-216 — and a `cssId` that `app.js` also declares. Both are a
+`SyntaxError` in the shipped page: **UX-199's defect, by a new route**,
+and the exported report renders nothing.
+
+Renaming to `paletteFacts` fixes the first. The second was fixed by
+*not duplicating at all*: `views.js` imports nothing, so `nav.js` can
+import `elementAnchor` from it, and the palette's link and its target
+stay one expression — which is the whole of UX-216.
+
+A general guard came out of it: **no two modules may export the same
+top-level name.** That is the class of bug, not this instance of it, and
+it is the kind a byte-count or a render test would never name.
+
+**Mutations verified red and reverted:** drop the has-timeline check (2
+guards — this task's first); compute the shown duration rather than read
+it (3 — its second); let the palette spell its own anchor (1).
+
+**Deviation from the Required Fix:** clause 2 asks for "a documented
+shortcut" to open the palette from anywhere. `Escape` closes and the
+arrows and `Enter` work as specified; a global open-key was **not**
+added, because binding a document-level key needs a decision about what
+it does inside the filter inputs UX-205 put on every table, and guessing
+that is a worse outcome than leaving the box reachable by click and by
+tab. Recorded rather than silently dropped.

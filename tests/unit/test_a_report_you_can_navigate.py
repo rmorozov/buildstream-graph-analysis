@@ -239,7 +239,14 @@ function make(tag) {
     removeAttribute(k) { delete this.attrs[k]; },
     append(...xs) { for (const x of xs) { if (x == null) continue;
       typeof x === "string" ? this.textContent += x : this.children.push(x); } },
-    prepend(...xs) { this.append(...xs); },
+    // UX-235: a real prepend. This was `this.append(...xs)`, which
+    // made the only harness that boots the real page blind to document
+    // order by construction - everything the page puts *first* landed
+    // last, so `decision` read after `evidence` and no order guard
+    // written against this probe could have meant anything.
+    prepend(...xs) { for (const x of [...xs].reverse()) { if (x == null) continue;
+      typeof x === "string" ? this.textContent = x + this.textContent
+                            : this.children.unshift(x); } },
     replaceChildren(...xs) { this.children = []; this.textContent = ""; this.append(...xs); },
     insertBefore(n) { this.children.unshift(n); },
     addEventListener(name, fn) { (this.listeners ??= {})[name] = fn; },

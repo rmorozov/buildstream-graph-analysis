@@ -172,12 +172,33 @@ class TestTheSchemaGuardsCannotVanishQuietly:
     into one `skipped` line whenever `jsonschema` was absent - measured
     in a clean venv as `collected 0 items / 1 skipped`."""
 
-    def test_the_module_collects_without_jsonschema(self):
-        source = open("tests/unit/test_output_schemas.py", encoding="utf-8").read()
-        code = [line for line in source.splitlines()
-                if not line.lstrip().startswith("#")]
-        assert not [line for line in code if "importorskip" in line], (
-            "a module-scope importorskip hides every guard in the file")
+    def test_no_test_module_collects_behind_an_importorskip(self):
+        """UX-235 generalised this from one file to all of them.
+
+        It named `tests/unit/test_output_schemas.py` and looked only
+        there, so `test_publish_the_join.py` - added in round 25 with a
+        module-scope `importorskip` on line 27 - walked straight past
+        it and hid twenty-one guards behind one import for two rounds.
+        A guard written for the instance rather than the class is how
+        the class comes back.
+
+        Module *scope* is the defect: an `importorskip` inside a test
+        skips that test, which is the correct and intended use.
+        """
+        import pathlib
+
+        offenders = []
+        for path in sorted(pathlib.Path("tests").rglob("test_*.py")):
+            for number, line in enumerate(
+                    path.read_text(encoding="utf-8").splitlines(), 1):
+                if "importorskip" not in line or line.lstrip().startswith("#"):
+                    continue
+                if line == line.lstrip():          # no indentation: module scope
+                    offenders.append(f"{path}:{number}")
+        assert offenders == [], (
+            f"a module-scope importorskip hides every guard in its file: "
+            f"{offenders}. Use a module-level `skipif` marker on the tests "
+            f"that need the import, so the rest of the file still runs.")
 
     def test_ci_declares_itself_a_dev_environment(self):
         import yaml

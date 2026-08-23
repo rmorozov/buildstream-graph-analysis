@@ -24,7 +24,20 @@ import pytest
 
 from bga import schemas
 
-jsonschema = pytest.importorskip("jsonschema")
+# UX-235: a *method*-level skip, not a module-scope `importorskip`.
+# This file shipped one in round 25 and it went unnoticed for two
+# rounds: round 21's seam-6 guard bans exactly this shape but named one
+# file to look in, so a file added later walked straight past it. The
+# guard reads every test file now. Without `jsonschema` these six
+# assertions skip and the other fifteen in this file still run.
+try:
+    import jsonschema
+except ImportError:                      # pragma: no cover - the point
+    jsonschema = None
+
+needs_jsonschema = pytest.mark.skipif(
+    jsonschema is None,
+    reason="jsonschema is not installed - `pip install -e '.[dev]'`")
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
@@ -125,6 +138,7 @@ class TestItIsTheSameJoinOnACommittedFixture:
     not where one machine's capture is. Everything here uses the golden
     run plus a Plane 2 report built in the test."""
 
+    @needs_jsonschema
     def test_the_output_validates_against_its_own_schema(self, golden_plane2):
         result = _bga(["correlate", GOLDEN, golden_plane2, "--format", "json"])
         assert result.returncode == 0, result.stderr
@@ -146,6 +160,7 @@ class TestItIsTheSameJoinOnACommittedFixture:
         assert published["elements"] == direct["elements"]
         assert published["actionable"] == direct["actionable"]
 
+    @needs_jsonschema
     def test_the_report_carries_the_same_rows_as_the_command(self, golden_plane2):
         """`UX-215` item 2. One join, so `bga analyze --plane2` and
         `bga correlate` cannot describe the same element differently -
@@ -205,6 +220,7 @@ class TestItIsTheSameJoinOnACommittedFixture:
         assert rows["ghost.bst"]["declared"] is False
         assert "ghost.bst" not in {r["element"] for r in joined["actionable"]}
 
+    @needs_jsonschema
     def test_without_plane2_the_block_is_absent_not_empty(self):
         """The `UX-202` rule, applied: "not looked at" and "looked at
         and saw nothing" are different claims, and an empty array would
@@ -232,6 +248,7 @@ class TestItIsTheSameJoin:
     """The acceptance's shape: not "the output looks right" but "the
     output *is* what the join computed"."""
 
+    @needs_jsonschema
     def test_the_output_validates_against_its_own_schema(self):
         result = _bga(["correlate", os.path.join(REAL, "run"),
                        "--format", "json"])
@@ -272,6 +289,7 @@ class TestItIsTheSameJoin:
         assert report["element_join"] == joined["elements"]
         assert report["element_join"], "the report published an empty join"
 
+    @needs_jsonschema
     def test_the_report_still_validates_with_the_join_in_it(self):
         report = json.loads(_bga(
             ["analyze", os.path.join(REAL, "run"), "--format", "json",
@@ -281,6 +299,7 @@ class TestItIsTheSameJoin:
 
 @has_capture
 class TestOnePlaneIsNotAJoin:
+    @needs_jsonschema
     def test_without_plane2_the_block_is_absent_not_empty(self):
         """The `UX-202` rule, applied: "not looked at" and "looked at
         and saw nothing" are different claims, and an empty array would

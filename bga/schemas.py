@@ -480,6 +480,42 @@ _JOIN_ITEM_PROPERTIES = {
     "recommendations": {"type": ["array", "null"]},
 }
 
+# UX-217: every unit a finding's `evidence` can be in, declared rather
+# than sniffed from the key's name. Each was checked against a rendered
+# value rather than inferred from its suffix - `primary` is 0.875 and a
+# share, `cores_busy` is 1.60 and a ratio, `envelope_mb` is 613.7 and
+# megabytes - because a guessed unit is exactly the error UX-201
+# exists to stop, and `_us` is the only suffix in this vocabulary that
+# is safe to read mechanically.
+EVIDENCE_QUANTITIES = {
+    key: {QUANTITY: "duration_us"} for key in (
+        "category_us", "certified_headroom_us", "failed_task_us",
+        "joint_saving_us", "lb_us", "path_us", "sum_of_individual_us",
+        "t_infinity_us", "transfer_us")
+}
+EVIDENCE_QUANTITIES.update({
+    key: {QUANTITY: "share"} for key in (
+        "criticality_probability", "efficiency_score", "hit_ratio",
+        "largest_wait_share", "primary", "share", "share_of_host",
+        "share_of_path", "target_closure_hit_ratio", "transfer_share",
+        "zero_slack_share")
+})
+EVIDENCE_QUANTITIES.update({
+    key: {QUANTITY: "count"} for key in (
+        "blast_count", "builders", "built_elements", "cached_elements",
+        "critical_path_cached", "direct_count", "element_count",
+        "elements_measured", "failed_count", "failed_task_count",
+        "first_builders_that_does_not_fit", "host_cpu_count",
+        "native_max_jobs", "recommended_builders", "violation_count")
+})
+EVIDENCE_QUANTITIES.update({
+    "envelope_mb": {QUANTITY: "megabytes"},
+    "host_memory_mb": {QUANTITY: "megabytes"},
+    "cores_busy": {QUANTITY: "ratio"},
+    "measured_seconds": {QUANTITY: "seconds"},
+})
+
+
 _ANALYZE_HINTS = {
     "timestamp_agreement": {QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove'},
     "run_instance": {QUESTION: 'Which capture is this?', RAIL: 'raw'},
@@ -567,7 +603,13 @@ _ANALYZE_HINTS = {
                 "title": {"type": "string"},
                 "detail": {"type": ["array", "string", "null"]},
                 "elements": {"type": ["array", "null"]},
-                "evidence": {"type": ["object", "null"]},
+                # UX-217: the numbers a finding was drawn from, and
+                # what unit each is in. `renderFindings` read the
+                # conclusion and dropped these on the floor - in a tool
+                # whose whole proposition is that its conclusions are
+                # measured rather than guessed.
+                "evidence": {"type": ["object", "null"],
+                             "properties": EVIDENCE_QUANTITIES},
             },
             "required": ["id", "severity", "title"],
         },

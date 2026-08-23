@@ -15,7 +15,8 @@ import { handOff, deepLink } from "./perfetto.js";
 import { renderBand, renderTrend, renderBlastSearch,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
-         renderDecision, INCOMPLETE } from "./views.js";
+         renderDecision, renderElementSections, elementAnchor,
+         INCOMPLETE } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches } from "./nav.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
 import { renderQuestions } from "./questions.js";
@@ -113,7 +114,11 @@ export function heading(key, hint = {}) {
 /** An element uid as an anchor fragment. Dots are legal in an `id`
  *  but awkward in a selector, so the jump target is normalised once. */
 export function cssId(uid) {
-  return `element-${String(uid).replace(/[^\w-]+/g, "-")}`;
+  // UX-216: the same spelling `views.js` gives the section it lands
+  // on. Delegated rather than duplicated - a link and its target
+  // spelling drifting apart *is* the defect this item exists to fix,
+  // and two copies of the expression is how that happens again.
+  return elementAnchor(uid);
 }
 
 export function sectionHead(key, hint = {}) {
@@ -156,9 +161,52 @@ function el(tag, attrs = {}, ...children) {
  * rule. No timeline, no buttons, rather than a row of controls that
  * error.
  */
-export function renderFindings(findings, investigate = null) {
+export const EVIDENCE_SHOWN = 4;
+
+/**
+ * `UX-217`: the numbers a finding was drawn from.
+ *
+ * Every finding has carried a structured `evidence` dict since the
+ * findings became data, and `renderFindings` read `id`, `severity`,
+ * `title`, `detail` and `elements` and dropped it. So the page showed
+ * the conclusion and hid the measurements it rests on.
+ *
+ * `node` is the schema's `evidence` node, so a key renders in its
+ * declared unit and a key nobody declared renders raw - `UX-201`'s
+ * rule one level deeper, and the reason a new finding's evidence
+ * formats correctly with no change here. A value that is not a scalar
+ * (`rows`, `steps`, `constraints` - the arrays a finding builds its
+ * sentence from) is a table in its own right and is left to the
+ * section that already draws it.
+ */
+export function renderFindingEvidence(evidence, node = undefined) {
+  const scalars = Object.entries(evidence ?? {}).filter(
+    ([, value]) => value === null || typeof value !== "object");
+  if (!scalars.length) return null;
+
+  const list = el("dl", { class: "pairs evidence" });
+  for (const [key, value] of scalars) {
+    const kind = quantityFor(childNode(node, key), key);
+    list.append(
+      el("dt", { title: hintsOf(childNode(node, key)).description ?? null },
+         title(key)),
+      el("dd", { class: typeof value === "number" ? "num" : null,
+                 "data-field": key,
+                 "data-raw": value === null ? "" : String(value) },
+         typeof value === "number" ? quantity(value, kind)
+           : value === null ? "—" : String(value)));
+  }
+  if (scalars.length <= EVIDENCE_SHOWN) return list;
+  // UX-209's fold, for the same reason: the evidence is the point, and
+  // eight rows of it above the next finding is a wall.
+  return el("details", { class: "evidence-fold", "data-fold": "evidence" },
+            el("summary", {}, `${scalars.length} measurements`), list);
+}
+
+export function renderFindings(findings, investigate = null, node = undefined) {
   const section = el("section", { "data-section": "findings" },
     el("h2", {}, `Findings (${findings.length})`));
+  const evidenceNode = childNode(node?.items, "evidence");
   for (const finding of findings) {
     const severity = String(finding.severity ?? "info").toLowerCase();
     const detail = Array.isArray(finding.detail)
@@ -170,10 +218,18 @@ export function renderFindings(findings, investigate = null) {
         el("span", { class: "badge" }, severity),
         finding.title ?? finding.id ?? ""),
       ...detail.map((line) => el("p", { class: "detail muted" }, line)),
+      // UX-216: a finding names elements; each is a link to that
+      // element's own section, and carries `data-element` so the
+      // cross-reference finds this finding from the other direction.
       finding.elements && finding.elements.length
         ? el("p", { class: "muted" },
-            el("code", {}, finding.elements.join(", ")))
+            ...finding.elements.flatMap((uid, index) => [
+              index ? ", " : "",
+              el("a", { href: `#${cssId(uid)}`, "data-element": uid },
+                 el("code", {}, uid)),
+            ]))
         : null,
+      renderFindingEvidence(finding.evidence, evidenceNode),
       investigate ? investigateButton(finding, investigate) : null));
   }
   return section;
@@ -562,7 +618,9 @@ export function renderSection(key, value, hint = {}, node = undefined,
                               investigate = null) {
   if (value === null || value === undefined) return null;
   if (hint[SEVERITY] && Array.isArray(value)) {
-    return value.length ? renderFindings(value, investigate) : null;
+    // UX-217: the schema node travels with the value, so the evidence
+    // renders in its declared units rather than by name-sniffing.
+    return value.length ? renderFindings(value, investigate, node) : null;
   }
   if (Array.isArray(value)) {
     if (!value.length) return null;
@@ -888,6 +946,20 @@ async function boot() {
     const decision = renderDecision(payload,
       run.has_timeline ? (action) => decisionInvestigation(action, payload) : null);
     if (decision) root.prepend(decision);
+    // UX-216: one section per element the report discusses, appended
+    // after everything that names an element has been drawn - the
+    // cross-reference is read off the rendered document, so a section
+    // added later joins it with no edit here.
+    for (const node of renderElementSections(payload, root, {
+      quantity,
+      investigate: run.has_timeline
+        ? (uid) => investigateButton({ title: `bga: ${uid}`, element: uid },
+                                     investigate)
+        : null,
+    })) {
+      root.append(node);
+    }
+
     const store = await load("store", null).catch(() => null);
     // UX-212: the schema, so the trend draws the shape the *contract*
     // assigns each verdict rather than one this page decided on.

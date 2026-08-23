@@ -744,8 +744,10 @@ function pathBox(entry) {
   box.setAttribute("style",
     `flex-grow: ${Math.max(0, Number(entry.share_of_path) || 0) * 1000}`);
   // UX-199's anchors: the drawing points back at the section that
-  // explains it.
-  box.setAttribute("href", "#signals");
+  // explains it. UX-216: and that is now the *element's* section
+  // rather than the whole signals block - a reader who clicks a box
+  // asked about that element, not about the table it came from.
+  box.setAttribute("href", `#${elementAnchor(entry.element_uid ?? "")}`);
   const name = document.createElement("span");
   name.className = "path-name";
   name.textContent = entry.element_uid ?? "";
@@ -807,8 +809,11 @@ export function renderBlastTree(payload) {
     row.setAttribute("data-depth", String(depth));
     // Indentation is the published depth, not a position in the list.
     row.setAttribute("style", `padding-left: ${depth * 1.4}rem`);
-    const name = document.createElement("span");
+    // UX-216: the blast tree names elements; each is a link to the
+    // element's own section where it has one.
+    const name = document.createElement("a");
     name.className = "blast-name";
+    name.setAttribute("href", `#${elementAnchor(entry.element_uid ?? "")}`);
     name.textContent = entry.element_uid ?? "";
     row.append(name);
     if (entry.element_kind) {
@@ -905,8 +910,13 @@ function actionRow(action, investigate) {
   row.setAttribute("data-element", action.element_uid ?? "");
   row.setAttribute("data-finding", action.finding_id ?? "");
 
-  const name = document.createElement("code");
-  name.textContent = action.element_uid ?? "";
+  // UX-216: the decision panel names an element; naming it and not
+  // linking it is the gap this item closes.
+  const name = document.createElement("a");
+  name.setAttribute("href", `#${elementAnchor(action.element_uid ?? "")}`);
+  const code = document.createElement("code");
+  code.textContent = action.element_uid ?? "";
+  name.append(code);
   row.append(name);
 
   if (typeof action.saving_us === "number") {
@@ -939,4 +949,234 @@ function actionRow(action, investigate) {
     if (button) row.append(button);
   }
   return row;
+}
+
+// -------------------------------------------------- the element object
+//
+// UX-216. An element uid appears in findings, the critical path, three
+// signals tables, the blast tree, the top actions and (since UX-215)
+// the two-plane join. A reader who wants "everything about core.bst"
+// reads six sections and joins them by hand.
+//
+// And UX-208 shipped the affordance for exactly this and pointed it at
+// nothing: every row's Inspect anchored at `#element-<uid>`, an id
+// nothing in the page ever set. Measured on examples/06 before this
+// landed: 19 links, 11 distinct targets, 11 of 11 unresolvable. This
+// is what they land on, which is why the fix and the object are one
+// change rather than two.
+//
+// Deliberately a *section*, not a drawer. Overlay machinery is the one
+// part of this page that would not survive an export opened from a
+// downloads folder, a print, `filter: grayscale`, or a pasted anchor -
+// and a section is linkable, printable, collapsible and foldable by
+// machinery that already exists.
+
+// How many element sections a report renders. The set below is already
+// bounded by the analysis (a path, a top-N, a findings list), but a
+// 4,000-element report can still produce a long path, and UX-187's rule
+// is that an elision names its own count.
+export const ELEMENTS_SHOWN = 24;
+
+/** The element uid an anchor fragment is spelled as. Mirrors
+ *  `app.js`'s `cssId` - the two are asserted equal by a guard, because
+ *  a link and its target spelling drifting apart is this item. */
+export function elementAnchor(uid) {
+  return `element-${String(uid).replace(/[^\w-]+/g, "-")}`;
+}
+
+/**
+ * Everything the payload says about each element it discusses.
+ *
+ * Published fields only, and no arithmetic: a value that is not in the
+ * document does not appear here. The order is the report's own ranking
+ * - top actions first, then the path, then the horizon - so the
+ * sections a reader meets first are the ones the decision named.
+ */
+export function elementFacts(payload) {
+  const facts = new Map();
+  const touch = (uid) => {
+    if (!uid) return null;
+    if (!facts.has(uid)) {
+      facts.set(uid, { element: uid, rows: [], findings: [], entering: [] });
+    }
+    return facts.get(uid);
+  };
+
+  // Where each fact comes from, declared rather than repeated: the
+  // published array, the key that names the element in it, and the
+  // fields worth showing with the quantity each is in. Adding a field
+  // is a line here, and no new code.
+  for (const [array, idKey, fields] of SOURCES) {
+    const rows = array.split(".").reduce((node, key) => node?.[key], payload);
+    for (const entry of rows ?? []) {
+      const record = facts.has(entry[idKey]) || array !== "element_join"
+        ? touch(entry[idKey]) : null;      // the join follows, never leads
+      if (!record) continue;
+      for (const [field, label, kind] of fields) {
+        const value = entry[field];
+        if (value !== null && value !== undefined) {
+          record.rows.push({ label, value, kind, field });
+        }
+      }
+      if (Array.isArray(entry.entering) && entry.entering.length) {
+        record.entering = entry.entering;
+      }
+    }
+  }
+  for (const finding of payload?.findings ?? []) {
+    for (const uid of finding.elements ?? []) {
+      const record = facts.get(uid);
+      if (record) record.findings.push(finding);
+    }
+  }
+  return facts;
+}
+
+// The report's own ranking decides the order: what the decision named
+// first, then the path, then the horizon. `element_join` (UX-215) is
+// last and never introduces an element - it is the Plane 2 half of
+// elements Plane 1 already put in play, which is what lets the section
+// answer "compute-bound, or badly built".
+const SOURCES = [
+  ["headline.top_actions", "element_uid", [
+    ["saving_us", "Worth fixing", "duration_us"],
+    ["downstream_count", "Rebuilds", "count"]]],
+  ["signals.critical_path_detail", "element_uid", [
+    ["share_of_path", "Share of path", "share"],
+    ["duration_us", "Duration", "duration_us"],
+    ["realizable_saving_us", "Realizable", "duration_us"],
+    ["element_kind", "Kind", null]]],
+  ["signals.optimization_horizon", "element_uid", [
+    ["makespan_after_us", "Makespan after", "duration_us"]]],
+  ["signals.latent_heavies", "element_uid", [
+    ["duration_us", "Duration", "duration_us"]]],
+  ["element_join", "element", [
+    ["cores_busy", "Cores busy", "ratio"],
+    ["requested_jobs", "Jobs asked for", "count"],
+    ["peak_rss_kb", "Peak RSS", "kilobytes"],
+    ["blast_radius", "Blast radius", "count"]]],
+];
+
+/**
+ * One section per element the report discusses.
+ *
+ * `where` is the cross-reference and it is read off the *rendered
+ * document* rather than from the payload: whatever else the page drew
+ * with a `data-element`, the section links back to the part of the page
+ * that drew it. So a section added later joins this list with no edit
+ * here - the property `UX-193` bought for the sections themselves.
+ */
+export function renderElementSections(payload, root, options = {}) {
+  const { investigate = null, quantity: format = (v) => String(v) } = options;
+  const facts = elementFacts(payload);
+  if (!facts.size) return [];
+
+  const places = new Map();
+  for (const node of root?.querySelectorAll?.("[data-element]") ?? []) {
+    const uid = node.getAttribute("data-element");
+    if (!uid || !facts.has(uid)) continue;
+    let owner = node.parentNode;
+    while (owner && !owner.getAttribute?.("data-section")) {
+      owner = owner.parentNode;
+    }
+    const key = owner?.getAttribute?.("data-section");
+    if (!key || key.startsWith("element-")) continue;
+    if (!places.has(uid)) places.set(uid, new Set());
+    places.get(uid).add(key);
+  }
+
+  const sections = [];
+  const all = [...facts.values()];
+  for (const record of all.slice(0, ELEMENTS_SHOWN)) {
+    sections.push(elementSection(record, places.get(record.element),
+                                 investigate, format));
+  }
+  if (all.length > ELEMENTS_SHOWN) {
+    // UX-187: an elision names its count and never pretends to be the
+    // whole list.
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.setAttribute("data-elided", String(all.length - ELEMENTS_SHOWN));
+    note.textContent =
+      `${all.length - ELEMENTS_SHOWN} more elements are named in the tables `
+      + `above and do not have their own section.`;
+    sections.push(note);
+  }
+  return sections;
+}
+
+function elementSection(record, places, investigate, format) {
+  const uid = record.element;
+  const section = document.createElement("section");
+  // `UX-199`'s invariant is that a section's id *is* its key, and this
+  // one is the sanitised spelling because a dot in an id is legal and
+  // awkward in a selector - so the key is the sanitised spelling too,
+  // rather than the two being nearly the same and drifting.
+  section.setAttribute("data-section", elementAnchor(uid));
+  section.setAttribute("data-element", uid);
+  // The id UX-208's anchors have been pointing at since round 23.
+  section.setAttribute("id", elementAnchor(uid));
+  // ...and the uid is what the contents should say, not the sanitised
+  // key mechanically de-hyphenated into "Element core bst".
+  section.setAttribute("data-toc-label", uid);
+  section.setAttribute("data-rail", "investigate");
+
+  const heading = document.createElement("h2");
+  heading.textContent = uid;
+  section.append(heading);
+
+  if (record.rows.length) {
+    const list = document.createElement("dl");
+    list.className = "pairs";
+    for (const row of record.rows) {
+      const term = document.createElement("dt");
+      term.textContent = row.label;
+      const detail = document.createElement("dd");
+      detail.setAttribute("data-field", row.field);
+      detail.setAttribute("data-raw", String(row.value));
+      detail.className = typeof row.value === "number" ? "num" : "";
+      detail.textContent = typeof row.value === "number"
+        ? format(row.value, row.kind) : String(row.value);
+      list.append(term, detail);
+    }
+    section.append(list);
+  }
+
+  if (record.entering.length) {
+    const enters = document.createElement("p");
+    enters.className = "muted";
+    enters.setAttribute("data-entering", record.entering.join(","));
+    enters.textContent =
+      `Fixing this puts ${record.entering.join(", ")} on the critical path.`;
+    section.append(enters);
+  }
+
+  for (const finding of record.findings) {
+    const line = document.createElement("p");
+    line.className = `finding-ref sev-${String(finding.severity ?? "info")
+      .toLowerCase()}`;
+    line.setAttribute("data-finding", finding.id ?? "");
+    line.textContent = finding.title ?? finding.id ?? "";
+    section.append(line);
+  }
+
+  if (places && places.size) {
+    const where = document.createElement("p");
+    where.className = "where muted";
+    where.append(document.createTextNode("Also in: "));
+    for (const key of [...places].sort()) {
+      const link = document.createElement("a");
+      link.setAttribute("href", `#${key}`);
+      link.setAttribute("data-where", key);
+      link.textContent = key.replace(/[-_]/g, " ");
+      where.append(link, document.createTextNode(" "));
+    }
+    section.append(where);
+  }
+
+  if (investigate) {
+    const button = investigate(uid);
+    if (button) section.append(button);
+  }
+  return section;
 }

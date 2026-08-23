@@ -456,7 +456,10 @@ _JOIN_ITEM_PROPERTIES = {
                        "would take off the makespan. Not off the path: "
                        "the difference is whatever enters the path "
                        "behind it."},
-    "saving_share": {QUANTITY: "share"},
+    "saving_share": {QUANTITY: "share",
+                     "description": "What fixing this element would take "
+                                    "off the run, as a share of its "
+                                    "wall-clock."},
     "blast_radius": {
         QUANTITY: "count",
         "description": "How many elements a change here rebuilds."},
@@ -493,51 +496,214 @@ _JOIN_ITEM_PROPERTIES = {
 # megabytes - because a guessed unit is exactly the error UX-201
 # exists to stop, and `_us` is the only suffix in this vocabulary that
 # is safe to read mechanically.
-EVIDENCE_QUANTITIES = {
-    key: {QUANTITY: "duration_us"} for key in (
-        "category_us", "certified_headroom_us", "failed_task_us",
-        "joint_saving_us", "lb_us", "path_us", "sum_of_individual_us",
-        "t_infinity_us", "transfer_us")
+# UX-217 declared what each evidence key *is*; UX-220 makes each say so
+# in words too. Quantity and sentence are declared together here so a key
+# cannot acquire one without the other - the completeness guard reads
+# this table, and a new key with no sentence fails it.
+_EVIDENCE_FIELDS = {
+    # Durations.
+    "category_us": ("duration_us",
+        "Wall-clock in the attribution category this finding is about."),
+    "certified_headroom_us": ("duration_us",
+        "What better scheduling alone could recover, from the certified "
+        "floor. Zero means the scheduler is not the constraint."),
+    "failed_task_us": ("duration_us",
+        "Wall-clock spent in tasks that then failed - work the run paid "
+        "for and did not keep."),
+    "joint_saving_us": ("duration_us",
+        "What fixing the named elements together is worth. Less than "
+        "their sum, because their savings overlap on the path."),
+    "lb_us": ("duration_us",
+        "The resource lower bound: no schedule of this recorded work on "
+        "these capacities finishes sooner."),
+    "path_us": ("duration_us",
+        "The critical path's duration - the chain, not the wall-clock."),
+    "sum_of_individual_us": ("duration_us",
+        "The savings added one at a time, which double-counts the "
+        "overlap. Published beside `joint_saving_us` to show the gap."),
+    "t_infinity_us": ("duration_us",
+        "The critical path with builders unlimited - the floor the "
+        "graph's shape imposes by itself."),
+    "transfer_us": ("duration_us",
+        "Wall-clock spent moving artifacts rather than building them."),
+    # Shares and ratios.
+    "criticality_probability": ("share",
+        "How often this element came out on the critical path across the "
+        "schedules considered - not a certainty that it is on it."),
+    "efficiency_score": ("share",
+        "Makespan against the certified floor. Measured against a bound "
+        "this run proved, never against an ideal build."),
+    "hit_ratio": ("share",
+        "Cache hits as a share of lookups."),
+    "largest_wait_share": ("share",
+        "The biggest single wait category, as a share of wall-clock."),
+    "primary": ("share",
+        "How much of this run's own record supports the conclusion."),
+    "share": ("share",
+        "This finding's quantity as a share of the run's wall-clock."),
+    "share_of_host": ("share",
+        "As a share of what the host offers - not of what the build "
+        "asked for."),
+    "share_of_path": ("share",
+        "As a share of the critical path - not of wall-clock."),
+    "target_closure_hit_ratio": ("share",
+        "Cache hits within the target's own dependency closure, which is "
+        "the part a change to the target can affect."),
+    "transfer_share": ("share",
+        "Artifact transfer as a share of wall-clock."),
+    "zero_slack_share": ("share",
+        "Elements with no slack, as a share of all of them - how much of "
+        "the graph sits on a critical path."),
+    # Counts.
+    "blast_count": ("count",
+        "Elements a change here rebuilds, transitively."),
+    "builders": ("count",
+        "Builder slots this run recorded. BuildStream's scheduler slots, "
+        "not host cores."),
+    "built_elements": ("count",
+        "Elements that actually built, rather than coming from cache."),
+    "cached_elements": ("count",
+        "Elements served from cache, whose recorded time is a restore "
+        "and not work."),
+    "critical_path_cached": ("count",
+        "Critical-path elements that came from cache - each one makes "
+        "the path's duration a restore time, not a build time."),
+    "direct_count": ("count",
+        "Immediate consumers only, not the transitive closure."),
+    "element_count": ("count",
+        "Elements this finding is about."),
+    "elements_measured": ("count",
+        "Elements the process capture measured, which can be fewer than "
+        "the run built."),
+    "failed_count": ("count",
+        "Elements that failed. The time they spent was paid and not "
+        "kept, so it counts against the run without building anything."),
+    "failed_task_count": ("count",
+        "Tasks that failed. Higher than the element count when a task "
+        "was retried."),
+    "first_builders_that_does_not_fit": ("count",
+        "The smallest builder count whose measured peaks would exceed "
+        "the host's memory. A bound from what was measured, not advice."),
+    "host_cpu_count": ("count",
+        "Cores the host reported. Not what the build was allowed to use."),
+    "native_max_jobs": ("count",
+        "The build system's own parallelism inside one element "
+        "(--max-jobs) - a separate axis from builder count."),
+    "recommended_builders": ("count",
+        "The builder count this run's evidence supports, bounded by "
+        "memory wherever memory was measured."),
+    "violation_count": ("count",
+        "Ordering violations in the recorded log. Each one weakens every "
+        "timing conclusion drawn from it."),
+    # Everything else.
+    "envelope_mb": ("megabytes",
+        "Peak resident memory the run would need at the recommended "
+        "builder count."),
+    "host_memory_mb": ("megabytes",
+        "Memory the host reported."),
+    "cores_busy": ("ratio",
+        "CPU-seconds per wall-second inside the element - how much "
+        "parallelism its own build actually achieved."),
+    "measured_seconds": ("seconds",
+        "Wall-clock actually measured, as opposed to estimated."),
 }
-EVIDENCE_QUANTITIES.update({
-    key: {QUANTITY: "share"} for key in (
-        "criticality_probability", "efficiency_score", "hit_ratio",
-        "largest_wait_share", "primary", "share", "share_of_host",
-        "share_of_path", "target_closure_hit_ratio", "transfer_share",
-        "zero_slack_share")
-})
-EVIDENCE_QUANTITIES.update({
-    key: {QUANTITY: "count"} for key in (
-        "blast_count", "builders", "built_elements", "cached_elements",
-        "critical_path_cached", "direct_count", "element_count",
-        "elements_measured", "failed_count", "failed_task_count",
-        "first_builders_that_does_not_fit", "host_cpu_count",
-        "native_max_jobs", "recommended_builders", "violation_count")
-})
-EVIDENCE_QUANTITIES.update({
-    "envelope_mb": {QUANTITY: "megabytes"},
-    "host_memory_mb": {QUANTITY: "megabytes"},
-    "cores_busy": {QUANTITY: "ratio"},
-    "measured_seconds": {QUANTITY: "seconds"},
-})
 
+EVIDENCE_QUANTITIES = {
+    key: {QUANTITY: quantity, "description": sentence}
+    for key, (quantity, sentence) in _EVIDENCE_FIELDS.items()
+}
 
 _ANALYZE_HINTS = {
     "timestamp_agreement": {QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove'},
     "run_instance": {QUESTION: 'Which capture is this?', RAIL: 'raw'},
     "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
-    "capacity_verdict": {QUESTION: 'Was the capacity right for this build?', RAIL: 'prove'},
+    "capacity_verdict": {
+        QUESTION: 'Was the capacity right for this build?',
+        RAIL: 'prove',
+        "description": "Whether this run's capacities suited its work - "
+                       "and whether the checks could run at all. A check "
+                       "that did not run is inert, not passing.",
+        "properties": {
+            "oversubscribed": {
+                "description": "Whether the run asked for more parallelism "
+                               "than the host could serve. False also when "
+                               "the checks did not run - read `checks_ran` "
+                               "before reading this."},
+            "undersubscribed": {
+                "description": "Whether the host could have served more "
+                               "parallelism than the run asked for. Carries "
+                               "the same caveat as `oversubscribed`."},
+            "checks_ran": {
+                "description": "Whether the inputs these checks need were "
+                               "present. When false the two verdicts above "
+                               "are silent, not negative."},
+            "skipped_inputs": {
+                "description": "The missing inputs, named - so a reader can "
+                               "supply them rather than guess why the check "
+                               "said nothing."},
+        },
+    },
     "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},
     "structural": {QUESTION: 'What shape is this dependency graph?', RAIL: 'investigate'},
-    "occupancy": {QUESTION: 'Were the builders busy?', RAIL: 'prove'},
+    "occupancy": {
+        QUESTION: 'Were the builders busy?',
+        RAIL: 'prove',
+        "description": "How busy the builder slots were across the run's "
+                       "horizon. Slot-time, not CPU time: a build of H "
+                       "seconds on N builders has N*H of it to spend.",
+        "properties": {
+            "average_concurrency": {
+                QUANTITY: "ratio",
+                "description": "Tasks running at once, averaged over the "
+                               "horizon. An average, so it hides a run "
+                               "that alternated saturation and idleness."},
+            "peak_concurrency": {
+                QUANTITY: "count",
+                "description": "The most tasks that ran at once - a high "
+                               "-water mark, reached perhaps only once."},
+            "horizon_start_us": {
+                QUANTITY: "duration_us",
+                "description": "Where this accounting starts, offset from "
+                               "the run's own zero."},
+            "horizon_end_us": {
+                QUANTITY: "duration_us",
+                "description": "Where it ends. Beyond it nothing was "
+                               "scheduled, so nothing is counted."},
+            "horizon_us": {
+                QUANTITY: "duration_us",
+                "description": "The span the ratios below divide by - the "
+                               "scheduled window, which can be shorter "
+                               "than the run's wall-clock."},
+            "idle_us": {
+                QUANTITY: "duration_us",
+                "description": "Slot-time with nothing running at all. "
+                               "More builders cannot recover this; only a "
+                               "different graph shape can."},
+            "resource_occupancy": {
+                "description": "Occupancy per resource kind, so a "
+                               "saturated fetcher is not averaged away by "
+                               "idle builders."},
+            "peak_resource_occupancy": {
+                "description": "The most in flight at once, per resource "
+                               "kind."},
+        },
+    },
     "signals": {
         QUESTION: 'Which elements are on the chain that binds?',
         RAIL: 'act',
+        "description": "The graph's own account of where the time is: "
+                       "which elements lie on the chain, what slack the "
+                       "rest have, and what fixing each in turn is worth.",
         # UX-208: the three element tables a reader lands on from the
         # decision panel. They carry element uids, so they say so - and
         # every row earns the same Inspect with no per-table code.
         "properties": {
             "critical_path_detail": {
+                "description": "The chain itself, element by element. "
+                               "The longest path through the graph as "
+                               "this run recorded it - a cached element "
+                               "on it contributes its restore, not its "
+                               "build.",
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element",
                      "role": "element", "sortable": True},
@@ -554,6 +720,11 @@ _ANALYZE_HINTS = {
                 ],
             },
             "optimization_horizon": {
+                "description": "What fixing the top elements in turn is "
+                               "worth, in order. The savings stop adding "
+                               "up because each fix lets other elements "
+                               "onto the path - which is why this is a "
+                               "sequence and not a sum.",
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element",
                      "role": "element", "sortable": True},
@@ -566,6 +737,10 @@ _ANALYZE_HINTS = {
                 ],
             },
             "latent_heavies": {
+                "description": "Heavy elements not on the path today. "
+                               "They cost nothing now and become the "
+                               "constraint once what is above them is "
+                               "fixed.",
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element",
                      "role": "element", "sortable": True},
@@ -576,8 +751,87 @@ _ANALYZE_HINTS = {
         },
     },
     "attribution": {QUESTION: 'Where did the wall-clock go?', RAIL: 'act'},
-    "floors": {QUESTION: 'How much faster could this build possibly be?', RAIL: 'prove'},
-    "total_duration_us": {QUANTITY: "duration_us"},
+    # UX-220: a floor is the number in this report most easily read as a
+    # prediction, and it is not one. Every member says what it is, what it
+    # is not, and what it rests on - and the text report reads these same
+    # sentences back out of the schema rather than keeping its own.
+    "floors": {
+        QUESTION: 'How much faster could this build possibly be?',
+        RAIL: 'prove',
+        "description": "Lower bounds this run certifies: what no schedule "
+                       "of the same recorded work could have beaten. "
+                       "Floors, not forecasts - beating one needs the "
+                       "graph or the work to change, not the scheduler.",
+        "properties": {
+            "t_infinity_observed": {
+                QUANTITY: "duration_us",
+                "description": "The critical path's duration - the floor "
+                               "the graph's shape imposes on its own, with "
+                               "builders unlimited. Observed, from this "
+                               "run's own recorded durations."},
+            "lb": {
+                QUANTITY: "duration_us",
+                "description": "The resource lower bound: no schedule of "
+                               "this run's recorded work on the capacities "
+                               "it recorded finishes sooner. A floor this "
+                               "run proves, not an estimate of a rerun."},
+            "certified_headroom": {
+                QUANTITY: "duration_us",
+                "description": "Makespan minus the lower bound - what "
+                               "scheduling alone could still recover. Zero "
+                               "means the scheduler is not the constraint."},
+            "t_c": {
+                QUANTITY: "duration_us",
+                "description": "The makespan a replay of this run's "
+                               "recorded work produces. A check on the "
+                               "model behind the floors, not a prediction."},
+            "model_slack": {
+                QUANTITY: "duration_us",
+                "description": "How far the replay sits above the lower "
+                               "bound - the model's own slack. Published "
+                               "so it cannot be mistaken for headroom."},
+            "efficiency_score": {
+                QUANTITY: "ratio",
+                "description": "Makespan against the certified floor. A "
+                               "ratio against a bound this run proved, "
+                               "never against an ideal build."},
+            "occupancy_ratio": {
+                QUANTITY: "share",
+                "description": "Slot-time used as a share of slot-time "
+                               "available. Unlike the efficiency score it "
+                               "falls when independent work is serialized."},
+            "t_infinity_cold": {
+                QUANTITY: "duration_us",
+                "description": "The critical path with cached elements "
+                               "costed at what building them would take. "
+                               "Advisory: it rests on other runs' "
+                               "durations, so it certifies nothing here."},
+            "cold_partial": {
+                "description": "Whether some elements had no duration to "
+                               "draw on, making the cold path a partial "
+                               "figure rather than a complete one."},
+            "cold_confidence": {
+                "description": "How far the cold path can be trusted - it "
+                               "is only as good as the history it drew "
+                               "its durations from."},
+            "cold_duration_sources": {
+                "description": "Where each cold duration came from, by "
+                               "tier, so the figure can be judged rather "
+                               "than taken."},
+            "cold_critical_path_duration_sources": {
+                "description": "The same provenance, narrowed to the "
+                               "elements actually on the cold path."},
+            "capacity_model_note": {
+                "description": "What these floors certify against, in "
+                               "words - and, as importantly, what they do "
+                               "not."},
+        },
+    },
+    "total_duration_us": {
+        QUANTITY: "duration_us",
+        "description": "The run's wall-clock, end to end. The denominator "
+                       "of every share in this document.",
+    },
     "pipeline_overhead": {
         QUESTION: 'What did BuildStream spend outside the elements?',
         RAIL: 'investigate',
@@ -591,7 +845,11 @@ _ANALYZE_HINTS = {
                          "description": "Time BuildStream spent outside any "
                                         "element - loading, resolving, cache "
                                         "queries."},
-            "fraction_of_horizon": {QUANTITY: "share"},
+            "fraction_of_horizon": {
+                QUANTITY: "share",
+                "description": "That time as a share of the run. Overhead "
+                               "no element can be blamed for, and no "
+                               "builder count reduces."},
         },
     },
     "findings": {
@@ -631,8 +889,16 @@ _ANALYZE_HINTS = {
                                        "combined."},
             "band": {"description": "The score as a word, from the same "
                                     "thresholds the report's headline uses."},
-            "coverage_score": {QUANTITY: "share"},
-            "task_coverage": {QUANTITY: "share"},
+            "coverage_score": {
+                QUANTITY: "share",
+                "description": "How much of the run the record accounts "
+                               "for. A high score on a thin record still "
+                               "means the record was thin."},
+            "task_coverage": {
+                QUANTITY: "share",
+                "description": "The share of tasks carrying the timings "
+                               "this analysis needs. Tasks without them "
+                               "are excluded, never assumed."},
         },
     },
     # UX-215: the join, rendered by the same machinery as any other
@@ -652,10 +918,23 @@ _ANALYZE_HINTS = {
     "element_join_coverage": {
         QUESTION: 'How much of the build did the two planes agree on?',
         RAIL: "prove",
+        "description": "How far the join reaches. The two planes see "
+                       "different things, and an element only one of them "
+                       "saw carries only that plane's fields.",
         "properties": {
-            "joined_elements": {QUANTITY: "count"},
-            "plane1_elements": {QUANTITY: "count"},
-            "plane2_elements": {QUANTITY: "count"},
+            "joined_elements": {
+                QUANTITY: "count",
+                "description": "Elements both planes saw - the only ones "
+                               "carrying a full row."},
+            "plane1_elements": {
+                QUANTITY: "count",
+                "description": "Elements the scheduling record knows. "
+                               "Everything the build ran, whether or not "
+                               "anything looked inside it."},
+            "plane2_elements": {
+                QUANTITY: "count",
+                "description": "Elements the process capture saw inside. "
+                               "Fewer whenever a capture was partial."},
         },
     },
     "next_steps": {
@@ -716,7 +995,11 @@ _ANALYZE_HINTS = {
                                   "description": "The threshold "
                                                  "`chain_ratio` is compared "
                                                  "against."},
-            "certified_headroom_us": {QUANTITY: "duration_us"},
+            "certified_headroom_us": {
+                QUANTITY: "duration_us",
+                "description": "What scheduling alone could still recover, "
+                               "repeated here from `floors` so the "
+                               "decision needs no second lookup."},
             "scheduling_gap_us": {
                 QUANTITY: "duration_us",
                 "description": "Wall-clock beyond the critical path. "
@@ -733,8 +1016,16 @@ _ANALYZE_HINTS = {
                 ],
                 "items": {
                     "properties": {
-                        "saving_us": {QUANTITY: "duration_us"},
-                        "downstream_count": {QUANTITY: "count"},
+                        "saving_us": {
+                            QUANTITY: "duration_us",
+                            "description": "What fixing this element is "
+                                           "worth on its own, before any "
+                                           "other fix moves the path."},
+                        "downstream_count": {
+                            QUANTITY: "count",
+                            "description": "Elements a change here "
+                                           "rebuilds - the cost of "
+                                           "touching it, beside the gain."},
                     },
                 },
             },
@@ -753,21 +1044,97 @@ _ANALYZE_HINTS = {
                                               "whose opened paths were "
                                               "recorded; only the hook can "
                                               "see them."},
-            "cpu_disagreement_count": {QUANTITY: "count"},
-            "exec_chains_collapsed": {QUANTITY: "count"},
+            "cpu_disagreement_count": {
+                QUANTITY: "count",
+                "description": "Processes the hook and the spine costed "
+                               "differently. Each one is a place the two "
+                               "record streams disagree, not an error."},
+            "exec_chains_collapsed": {
+                QUANTITY: "count",
+                "description": "Exec chains billed to one process rather "
+                               "than counted repeatedly - a shell that "
+                               "execs a compiler is one process, not two."},
         },
     },
     "utilisation": {
         QUESTION: 'What did the machine cost to run this?',
         RAIL: 'investigate',
+        "description": "Where the run's slot-time went, reconciled against "
+                       "the capacity it had. Slot-time again, not CPU "
+                       "time - `bga` does not measure host cores.",
         "properties": {
-            # The two the external review caught rendering wrongly, and
-            # the reason this item exists: `_mb` name-sniffed to bytes
-            # ("512 B" for 512 MB) and `_pct` to a 0..1 share
-            # ("4200.0%" for 42%).
-            "peak_rss_mb": {QUANTITY: "megabytes"},
-            "cpu_pct": {QUANTITY: "percent"},
-            "cpu_seconds": {QUANTITY: "seconds"},
+            # UX-220: these are the keys `_compute_utilization` actually
+            # emits. Until this item they were `peak_rss_mb`, `cpu_pct`
+            # and `cpu_seconds` - three names no code path has ever put
+            # in this object, so UX-201's hints described a shape that
+            # did not exist and every real member of it went unhinted.
+            # The lesson those three carried is kept where it is live:
+            # `element_join[].peak_rss_kb` is the published peak-memory
+            # field, and `megabytes` remains a declared quantity.
+            "cpu_accounting_available": {
+                "description": "Whether the run recorded enough to account "
+                               "for its slot-time at all. When false every "
+                               "figure below is absent, not zero."},
+            "effective_cpus": {
+                QUANTITY: "count",
+                "description": "The capacity this accounting divides by. "
+                               "Builder slots as recorded, not host cores."},
+            "effective_cpus_source": {
+                "description": "How that capacity was established - "
+                               "measured, declared, or assumed. An assumed "
+                               "capacity makes every share below assumed."},
+            "wall_clock_us": {
+                QUANTITY: "duration_us",
+                "description": "The span this accounting covers."},
+            "capacity_cpu_us": {
+                QUANTITY: "duration_us",
+                "description": "Slot-time available across that span - "
+                               "wall-clock times the capacity. The "
+                               "denominator of the percentages below."},
+            "buckets": {
+                "description": "Slot-time split by what it was doing: "
+                               "useful work, idleness with nothing ready, "
+                               "idleness with too little parallelism, and "
+                               "work thrown away by retry or rebuild."},
+            "total_accounted_us": {
+                QUANTITY: "duration_us",
+                "description": "The buckets summed. Compared against "
+                               "capacity to check the accounting closes."},
+            "unaccounted_us": {
+                QUANTITY: "duration_us",
+                "description": "Slot-time no bucket claimed. Non-zero here "
+                               "is a gap in the record, and it weakens "
+                               "every share this object publishes."},
+            "reconciliation_error_pct": {
+                QUANTITY: "percent",
+                "description": "That gap as a percentage. The honesty "
+                               "check on this whole object: near zero "
+                               "means the buckets really do cover it."},
+            "potential_oversubscription": {
+                "description": "Whether the evidence hints the run asked "
+                               "for more than it could get. A hint from "
+                               "this accounting, not the capacity verdict."},
+            "oversubscription_evidence": {
+                "description": "What that hint rests on, including the "
+                               "case where there was not enough to say."},
+            "max_observed_concurrency": {
+                QUANTITY: "count",
+                "description": "The most tasks seen running together in "
+                               "this accounting's own view of the run."},
+            "useful_pct": {
+                QUANTITY: "percent",
+                "description": "Slot-time that did work kept, as a share "
+                               "of capacity. Not a share of wall-clock."},
+            "idle_pct": {
+                QUANTITY: "percent",
+                "description": "Slot-time with nothing to run. Bounded "
+                               "below by the graph's shape, so it is never "
+                               "entirely recoverable."},
+            "wasted_pct": {
+                QUANTITY: "percent",
+                "description": "Slot-time spent on work that was then "
+                               "thrown away - retries and rebuilds. This "
+                               "is the recoverable share."},
         },
     },
 }
@@ -782,11 +1149,28 @@ _COMPARE_HINTS = {
         # UX-201: and each member says what it *is*. Before this, a
         # hinted section still formatted its own members by name.
         "properties": {
-            "total_duration_us": {QUANTITY: "duration_us"},
-            "contention_us": {QUANTITY: "duration_us"},
-            "serialization_us": {QUANTITY: "duration_us"},
-            "efficiency_pct": {QUANTITY: "percent"},
-            "inefficiency_ratio": {QUANTITY: "ratio"},
+            "total_duration_us": {
+                QUANTITY: "duration_us",
+                "description": "Change in wall-clock, candidate minus "
+                               "baseline. Negative is faster."},
+            "contention_us": {
+                QUANTITY: "duration_us",
+                "description": "Change in time lost waiting for a busy "
+                               "resource."},
+            "serialization_us": {
+                QUANTITY: "duration_us",
+                "description": "Change in time independent work spent "
+                               "running one after another."},
+            "efficiency_pct": {
+                QUANTITY: "percent",
+                "description": "Change in makespan against the certified "
+                               "floor. Each run is measured against its "
+                               "own floor, so this compares two ratios "
+                               "and not two durations."},
+            "inefficiency_ratio": {
+                QUANTITY: "ratio",
+                "description": "Change in the gate's ratio - the figure "
+                               "`--fail-on` thresholds are read against."},
         },
     },
     "attribution_deltas": {DIRECTION: "lower_is_better"},
@@ -811,13 +1195,33 @@ _COMPARE_HINTS = {
 }
 
 _BLAST_HINTS = {
-    "direct_count": {QUANTITY: "count"},
-    "blast_count": {QUANTITY: "count"},
-    "building_count": {QUANTITY: "count"},
-    "assembling_count": {QUANTITY: "count"},
-    "element_count": {QUANTITY: "count"},
-    "measured_elements": {QUANTITY: "count"},
-    "measured_seconds": {QUANTITY: "seconds"},
+    "direct_count": {QUANTITY: "count",
+                     "description": "Elements that depend on this one "
+                                    "directly. The first hop only."},
+    "blast_count": {QUANTITY: "count",
+                    "description": "Everything a change here rebuilds, "
+                                   "transitively - the number that makes "
+                                   "a small element expensive to touch."},
+    "building_count": {QUANTITY: "count",
+                       "description": "Of those, the ones that do real "
+                                      "build work."},
+    "assembling_count": {QUANTITY: "count",
+                         "description": "Of those, the ones that only "
+                                        "gather what is below them - they "
+                                        "rebuild, but cost little."},
+    "element_count": {QUANTITY: "count",
+                      "description": "Elements in the project, as the "
+                                     "denominator for the reach above."},
+    "measured_elements": {QUANTITY: "count",
+                          "description": "How many of the affected "
+                                         "elements have a recorded "
+                                         "duration. The rest are counted, "
+                                         "never estimated."},
+    "measured_seconds": {QUANTITY: "seconds",
+                         "description": "Recorded rebuild time below this "
+                                        "element. A sum over the measured "
+                                        "elements only, so it is a lower "
+                                        "bound on the real cost."},
     # UX-206: the closure as a hierarchy rather than a flat list. The
     # depth is what an indented tree needs, and deriving it in the
     # viewer would be a graph walk in JavaScript - a second analysis.
@@ -835,8 +1239,13 @@ _BLAST_HINTS = {
         ],
         "items": {
             "properties": {
-                "depth": {QUANTITY: "count"},
-                "measured_seconds": {QUANTITY: "seconds"},
+                "depth": {QUANTITY: "count",
+                          "description": "Hops from the direct consumers, "
+                                         "breadth-first."},
+                "measured_seconds": {QUANTITY: "seconds",
+                                     "description": "This element's own "
+                                                    "recorded duration, "
+                                                    "not its subtree's."},
             },
         },
     },
@@ -850,8 +1259,12 @@ _STORE_REQUIRED = {
 }
 
 _STORE_HINTS = {
-    "total_bytes": {QUANTITY: "bytes"},
-    "count": {QUANTITY: "count"},
+    "total_bytes": {QUANTITY: "bytes",
+                    "description": "What the stored snapshots occupy on "
+                                   "disk, together."},
+    "count": {QUANTITY: "count",
+              "description": "Snapshots held. The length of every trend "
+                             "drawn from this store."},
     # UX-203: duration leads, because "is this project drifting" is a
     # question about time. Size is still here - it is what the store
     # warning is about - but it stopped being the answer.
@@ -871,9 +1284,22 @@ _STORE_HINTS = {
                               # kinds the same shape.
                               MARKERS: VERDICT_MARKERS,
                           },
-                          "total_duration_us": {QUANTITY: "duration_us"},
-                          "cache_hit_rate": {QUANTITY: "share"},
-                          "bytes": {QUANTITY: "bytes"},
+                          "total_duration_us": {
+                              QUANTITY: "duration_us",
+                              "description": "That run's wall-clock. "
+                                             "Comparable across snapshots "
+                                             "only as far as the runs "
+                                             "themselves are comparable."},
+                          "cache_hit_rate": {
+                              QUANTITY: "share",
+                              "description": "Cache hits as a share of "
+                                             "lookups in that run - the "
+                                             "usual reason two runs of the "
+                                             "same project differ."},
+                          "bytes": {
+                              QUANTITY: "bytes",
+                              "description": "What that snapshot occupies "
+                                             "on disk."},
                       },
                   }},
 }
@@ -929,16 +1355,33 @@ _CORRELATE_HINTS = {
     "coverage": {
         QUESTION: 'How much of the build did the two planes agree on?',
         RAIL: "prove",
+        "description": "How far the join reaches. The two planes see "
+                       "different things, and an element only one of them "
+                       "saw carries only that plane's fields.",
         "properties": {
-            "joined_elements": {QUANTITY: "count"},
-            "plane1_elements": {QUANTITY: "count"},
-            "plane2_elements": {QUANTITY: "count"},
+            "joined_elements": {
+                QUANTITY: "count",
+                "description": "Elements both planes saw - the only ones "
+                               "carrying a full row."},
+            "plane1_elements": {
+                QUANTITY: "count",
+                "description": "Elements the scheduling record knows. "
+                               "Everything the build ran, whether or not "
+                               "anything looked inside it."},
+            "plane2_elements": {
+                QUANTITY: "count",
+                "description": "Elements the process capture saw inside. "
+                               "Fewer whenever a capture was partial."},
         },
     },
     "ranking": {
         RAIL: "prove",
         "properties": {
-            "tied_saving_us": {QUANTITY: "duration_us"},
+            "tied_saving_us": {
+                QUANTITY: "duration_us",
+                "description": "The saving every tied element shares. When "
+                               "the ranking degenerates this is the one "
+                               "number it has left."},
         },
         "description": "The metric the ranking used, and whether it "
                        "degenerated into a tie - a ranking everything "
@@ -957,10 +1400,24 @@ _CORRELATE_HINTS = {
         QUESTION: 'How much memory would more builders need?',
         RAIL: "prove",
         "properties": {
-            "host_memory_mb": {QUANTITY: "megabytes"},
-            "builders": {QUANTITY: "count"},
-            "elements_measured": {QUANTITY: "count"},
-            "largest_element_peak_mb": {QUANTITY: "megabytes"},
+            "host_memory_mb": {
+                QUANTITY: "megabytes",
+                "description": "Memory the host reported. The ceiling the "
+                               "envelope below is judged against."},
+            "builders": {
+                QUANTITY: "count",
+                "description": "The builder count this envelope is "
+                               "computed for."},
+            "elements_measured": {
+                QUANTITY: "count",
+                "description": "Elements whose peak memory was actually "
+                               "measured. The envelope is a bound over "
+                               "these, and says nothing about the rest."},
+            "largest_element_peak_mb": {
+                QUANTITY: "megabytes",
+                "description": "The heaviest single element measured. One "
+                               "builder must fit this no matter how few "
+                               "builders run."},
         },
     },
     "run_instance": {QUESTION: 'Which capture is this?', RAIL: "raw"},
@@ -1038,3 +1495,40 @@ def stamp(payload: dict, name: str) -> dict:
     stamped = {VERSION_KEY: name}
     stamped.update(payload)
     return stamped
+
+
+def description(document: str, path: str) -> str:
+    """The published sentence for a dotted `path` inside `document`.
+
+    `UX-220`: the schema is the one place a published number's meaning
+    is written down, and this is how everything else reads it. The text
+    report and `--help` call this rather than keeping their own wording,
+    so a reworded description cannot leave two explanations of the same
+    number in the tool.
+
+    `path` walks `properties`; a `[]` segment steps into an array's
+    `items` (`"snapshots[].bytes"`). A path that does not resolve, or
+    resolves to a node with no description, raises `KeyError` - a
+    caller asking for a sentence that does not exist is a typo, and a
+    silent one would print nothing at all.
+    """
+    node = schema(document)
+    walked = []
+    for part in path.split("."):
+        if part.endswith("[]"):
+            part, into_items = part[:-2], True
+        else:
+            into_items = False
+        node = (node.get("properties") or {}).get(part)
+        walked.append(part)
+        if node is None:
+            raise KeyError(
+                f"{document}: no such path {'.'.join(walked)!r} "
+                f"(asked for {path!r})")
+        if into_items:
+            node = node.get("items") or {}
+            walked[-1] += "[]"
+    sentence = node.get("description")
+    if not sentence:
+        raise KeyError(f"{document}: {path!r} carries no description")
+    return sentence

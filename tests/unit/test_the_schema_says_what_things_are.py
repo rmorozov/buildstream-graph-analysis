@@ -14,6 +14,19 @@ Both measured against the shipped renderer. Same class, adjacent:
 schema declared as a bare array; `renderTable` decided numeric-ness by
 sampling row values; and `verdictClass` string-matched the verdict
 *sentence*, so rewording it would have silently restyled the banner.
+
+**UX-220 moved these fixtures, and the reason matters.** The two
+wrongnesses above were reproduced against `utilisation.peak_rss_mb` and
+`utilisation.cpu_pct` — and no code path has ever put either name in
+that object. The renderer bug was real and these guards did catch it,
+but they caught it on a shape the tool does not publish, which is why
+`utilisation`'s twelve real members went unhinted for four rounds
+without anything noticing. Same assertions now, against fields a run
+actually emits: `correlate/v1`'s `memory_envelope.host_memory_mb` for
+the megabytes case and `utilisation.useful_pct` for the percent case.
+The name-sniffing reproduction below keeps the original two names
+deliberately — it asserts what `guessQuantity` does with a *name*, and
+needs no schema node at all.
 """
 import json
 import os
@@ -44,11 +57,12 @@ class TestTheTwoLiveWrongnesses:
         out = _js('''
           const { quantity, quantityFor, childNode } =
             await import("./bga/viewer/app.js");
-          const util = %s;
+          const envelope = %s;
           console.log(JSON.stringify(
-            quantity(512, quantityFor(childNode(util, "peak_rss_mb"), "peak_rss_mb"))));
+            quantity(512, quantityFor(
+              childNode(envelope, "host_memory_mb"), "host_memory_mb"))));
         ''' % json.dumps(
-            schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]))
+            schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"]))
         assert out == "512.0 MiB", out
 
     def test_a_declared_percent_is_not_multiplied_again(self):
@@ -57,14 +71,16 @@ class TestTheTwoLiveWrongnesses:
             await import("./bga/viewer/app.js");
           const util = %s;
           console.log(JSON.stringify(
-            quantity(42, quantityFor(childNode(util, "cpu_pct"), "cpu_pct"))));
+            quantity(42, quantityFor(childNode(util, "useful_pct"), "useful_pct"))));
         ''' % json.dumps(
             schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]))
         assert out == "42.0%", out
 
     def test_without_the_schema_node_the_guess_is_still_wrong(self):
-        """The reproduction, kept: this is what every nested value got
-        before the recursive walk, and it is why the walk exists."""
+        """The reproduction, kept verbatim: this is what every nested
+        value got before the recursive walk, and it is why the walk
+        exists. It asserts on *names*, so it needs no schema node and
+        was untouched when UX-220 moved the fixtures above."""
         out = _js('''
           const { quantity, guessQuantity } = await import("./bga/viewer/app.js");
           console.log(JSON.stringify([
@@ -88,8 +104,21 @@ class TestTheTwoLiveWrongnesses:
 class TestTheSchemasCarryTheNestedSemantics:
     def test_utilisation_declares_the_two(self):
         util = schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]
-        assert util["properties"]["peak_rss_mb"][schemas.QUANTITY] == "megabytes"
-        assert util["properties"]["cpu_pct"][schemas.QUANTITY] == "percent"
+        assert util["properties"]["useful_pct"][schemas.QUANTITY] == "percent"
+        envelope = schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"]
+        assert envelope["properties"]["host_memory_mb"][schemas.QUANTITY] \
+            == "megabytes"
+
+    def test_the_declared_shapes_are_ones_a_run_publishes(self):
+        """UX-220: the failure this file was pinned to for four rounds.
+
+        A quantity declared on a name nothing emits is a hint aimed at
+        nothing - it renders no value correctly, and it hides that the
+        object's real members were never hinted at all.
+        """
+        util = schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]
+        for phantom in ("peak_rss_mb", "cpu_pct", "cpu_seconds"):
+            assert phantom not in util["properties"], phantom
 
     def test_the_deltas_members_say_what_they_are(self):
         deltas = schemas.schema(schemas.COMPARE)["properties"]["deltas"]

@@ -2,6 +2,7 @@
 from typing import List, Optional
 
 from .. import findings as findings_mod
+from .. import schemas
 from .. import sources
 from ..findings import (compute_findings, compute_headline,
                         compute_next_steps, render_findings)
@@ -601,10 +602,11 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         # UX-27: the graph-shape-aware companion to the score above.
         occupancy_ratio = floors.get('occupancy_ratio')
         if occupancy_ratio is not None:
+            # UX-220: the explanation is the schema's, not a second
+            # wording kept here. This line used to carry its own.
             lines.append(
-                f"  Dispatch Occupancy:          {occupancy_ratio * 100:.1f}% of available "
-                f"slot-time used (unlike Efficiency Score, this falls when independent "
-                f"work is serialized - see UX-27)"
+                f"  Dispatch Occupancy:          {occupancy_ratio * 100:.1f}% "
+                f"({schemas.description(schemas.ANALYZE, 'floors.occupancy_ratio')})"
             )
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""

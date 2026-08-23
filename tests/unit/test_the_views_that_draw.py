@@ -291,13 +291,49 @@ class TestTheBlastEndpoint:
 
 
 class TestTheViewsStayThin:
-    def test_only_two_custom_drawings(self):
+    # Direction 7's rule is "draw only where the generic table cannot
+    # say it", and this guard used to hold a *count* of two. UX-226
+    # added a third - a per-element sparkline - and a count can only be
+    # bumped, which teaches nothing and is the same failure UX-218 found
+    # in the page-size ceiling: a number that moves when a feature lands
+    # is measuring the calendar.
+    #
+    # So the guard holds the **set**, by the function each drawing lives
+    # in, with the reason beside it. A fourth still fails; adding one
+    # means naming it here and saying what the table could not have said.
+    DRAWINGS = {
+        # A candidate's position between a noise band and the range the
+        # baselines actually spanned. In prose this took a paragraph and
+        # still read like a paradox (UX-170's disputed region).
+        "renderBand",
+        # A series of runs with a verdict shape per point. A table of
+        # the same rows cannot show the shape of a drift.
+        "renderTrend",
+        # UX-226: one element's duration across the snapshots, beside
+        # its sentence. Three rows of a table per element section, in a
+        # report with hundreds of them, is not a thing anyone reads.
+        "renderElementHistory",
+    }
+
+    def test_the_custom_drawings_are_the_ones_that_were_argued_for(self):
         """Direction 7's rule: draw only where the generic table cannot
-        say it."""
+        say it - held as a named set, not a count."""
+        import re
+
         source = open("bga/viewer/views.js", encoding="utf-8").read()
-        assert source.count('svg("svg"') == 2, (
-            "a third custom drawing appeared - is it one the generic "
-            "renderer could not have made?")
+        drawing_at = [m.start() for m in re.finditer(r'svg\("svg"', source)]
+        functions = [(m.start(), m.group(1)) for m in
+                     re.finditer(r"function\s+(\w+)", source)]
+        found = set()
+        for position in drawing_at:
+            enclosing = [name for start, name in functions if start < position]
+            assert enclosing, "a drawing outside any function"
+            found.add(enclosing[-1])
+        assert found == self.DRAWINGS, (
+            f"the set of custom drawings changed: {found ^ self.DRAWINGS}. "
+            f"Direction 7 allows a drawing where the generic table cannot "
+            f"say it - name the new one in DRAWINGS above with the reason, "
+            f"or use a table.")
 
     def test_no_library_and_no_arithmetic_beyond_layout(self):
         source = open("bga/viewer/views.js", encoding="utf-8").read()

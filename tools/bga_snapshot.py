@@ -331,6 +331,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     print()
     _analyze(run_dir, os.path.join(snapshot, PLANE2_NAME))
+    # UX-226: the small slice this snapshot contributes to the store's
+    # per-element history. Never fatal - see `write_element_slice`.
+    write_element_slice(snapshot, run_dir)
 
     if not args.no_compare and previous:
         print()
@@ -395,6 +398,108 @@ def _analyze(run_dir: str, plane2: str) -> int:
     if os.path.isfile(plane2):
         argv += ["--plane2", plane2]
     return cli_main(argv)
+
+
+# UX-226: how many elements one snapshot may remember. This is a
+# *history*, not an archive - the point is to answer "did my change to
+# core.bst help", not to keep a second copy of every report in the
+# store. The bound is on the elements that were worth looking at: the
+# critical path and the top actions of that run.
+SLICE_ELEMENTS_MAX = 24
+SLICE_NAME = "element-slice.json"
+
+
+def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
+    """Persist a bounded per-element slice beside the snapshot.
+
+    Written at capture time rather than derived at read time, and the
+    reason is `UX-203`'s: the store is read on **every** `bga view`, for
+    every snapshot, so a row that needed an analysis would put N full
+    analyses in front of a page load. The analysis has already happened
+    here - `_analyze` ran a line above - so this costs one small file.
+
+    Returns the slice, or `None` when the run could not be analyzed. A
+    snapshot with no slice is the ordinary case for anything captured
+    before this landed, and the reader is told so rather than shown a
+    flat line at zero.
+    """
+    from pathlib import Path
+
+    from bga.analyzer import BuildEfficiencyAnalyzer
+
+    try:
+        # `graph` is the narrowest section that still produces the
+        # signals this slice reads, so the second analysis is the
+        # cheapest one that can answer the question.
+        result = BuildEfficiencyAnalyzer().analyze(Path(run_dir),
+                                                   section='graph')
+    except Exception:
+        # A slice is a convenience on top of a capture that already
+        # succeeded. It must never be the thing that fails a snapshot.
+        return None
+    if result is None:
+        return None
+
+    signals = getattr(result, 'signals', None) or {}
+    durations = signals.get('element_durations') or {}
+    path = list(signals.get('critical_path') or [])
+    path_us = signals.get('critical_path_length') or 0
+    headline = getattr(result, 'headline', None) or {}
+    actions = [entry.get('element_uid')
+               for entry in (headline.get('top_actions') or [])
+               if entry.get('element_uid')]
+
+    # Path first, then whatever the top actions add: an element on the
+    # chain is the one a reader is most likely to have worked on, and
+    # the order makes the cap drop the least interesting rows.
+    wanted, seen = [], set()
+    for uid in path + actions:
+        if uid in seen:
+            continue
+        seen.add(uid)
+        wanted.append(uid)
+        if len(wanted) >= SLICE_ELEMENTS_MAX:
+            break
+
+    elements = []
+    for uid in wanted:
+        duration = durations.get(uid)
+        elements.append({
+            "element_uid": uid,
+            "duration_us": duration,
+            # A share of the path, and only for elements on it: an
+            # element off the chain has no share of it, and publishing
+            # zero would read as "on the path, costing nothing".
+            "share_of_path": (duration / path_us)
+                             if (uid in path and duration and path_us) else None,
+            "on_critical_path": uid in path,
+        })
+    payload = {
+        "elements": elements,
+        "elements_considered": len(set(path + actions)),
+        "bounded_at": SLICE_ELEMENTS_MAX,
+    }
+    try:
+        with open(os.path.join(snapshot, SLICE_NAME), "w",
+                  encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True)
+    except OSError:
+        return None
+    return payload
+
+
+def read_element_slice(snapshot: str) -> Optional[dict]:
+    """The slice, or `None` for a snapshot written before UX-226.
+
+    One small read, like `_run_measurements` beside it - the store must
+    stay cheap enough to build on every page load.
+    """
+    try:
+        with open(os.path.join(snapshot, SLICE_NAME), encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _snapshot_failed(snapshot: str) -> bool:
@@ -560,6 +665,11 @@ def store_listing(project: str) -> dict:
             # this runs for every snapshot on every `bga view`.
             "total_duration_us": measured.get("total_duration_us"),
             "cache_hit_rate": measured.get("cache_hit_rate"),
+            # UX-226: what this run cost the elements worth watching.
+            # `None`, not `[]`, for a snapshot captured before this
+            # existed - the section says "no history" rather than
+            # drawing a flat line at zero.
+            "elements": (read_element_slice(path) or {}).get("elements"),
         })
     _mark_verdicts(rows)
     return schemas.stamp({

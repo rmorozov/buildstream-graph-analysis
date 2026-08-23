@@ -588,6 +588,7 @@ key**:
 bga analyze RUN/ --format json | head -2      # "schema": "analyze/v1"
 bga compare A B --format json                 # "schema": "compare/v1"
 bga blast TARGET --format json                # "schema": "blast/v1"
+bga correlate RUN/ --format json              # "schema": "correlate/v1"
 ```
 
 `--schema` prints the JSON Schema of an output and exits 0. It needs no
@@ -606,6 +607,42 @@ A section subcommand (`bga floors`, `bga graph`, …) emits the same
 `analyze/v1` document restricted to its own keys, with a `section` key
 naming the restriction — so a missing key can be told from a removed
 one.
+
+### The two-plane join, published (`UX-215`)
+
+`bga correlate --format json` has emitted the join since `UX-51`. It
+was unversioned until round 25 — no `schema` stamp, no view-hints,
+served by nothing — so the one place where *"this element is on the
+path, is worth 12.05s, and was pinned to one job on four cores"* is a
+single row was invisible to `bga view`, to CI and to every external
+consumer. It is `correlate/v1` now, with no change to what it computes.
+
+```bash
+bga correlate @last --schema | jq '.properties.elements["bga:columns"]'
+bga correlate @last --format json | jq '.elements[] | select(.on_critical_path)'
+```
+
+One row per element, from both planes:
+
+| | |
+| --- | --- |
+| Plane 1 | `on_critical_path`, `critical_path_share`, `potential_saving_us`, `saving_share`, `blast_radius` |
+| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `peak_rss_kb`, `dominant_binary`, `serial_binary` |
+
+`bga analyze --plane2 PLANE2.json` now carries the same rows as
+`element_join`, from the same function — so the report and the command
+cannot describe an element differently. Without `--plane2` the key is
+**absent**, not empty: with one plane there is no join, and its Plane 1
+half is already in `signals`.
+
+Two refusals the document keeps rather than smoothing over:
+
+- An element Plane 2 never saw is a row with its Plane 1 half and no
+  Plane 2 numbers — not zeros, which would read as *"measured, and
+  idle"*.
+- An element Plane 2 named that Plane 1 never declared (`declared:
+  false`) is listed, because hiding it would hide a real disagreement
+  between the planes, and it never carries a recommendation (`UX-66`).
 
 ## Progress on a long run (`UX-183`)
 

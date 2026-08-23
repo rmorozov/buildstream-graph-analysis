@@ -65,6 +65,10 @@ export function quantity(value, kind) {
     // UX-201: and megabytes are not a byte count - `peak_rss_mb: 512`
     // rendered as "512 B" through the `_mb`-means-bytes guess.
     case "megabytes": return bytes(value * 1024 * 1024);
+    // UX-215: and a kilobyte count is not a byte count either. Same
+    // error one order down, and `peak_rss_kb: 157200` would have read
+    // as "154 KB" where the truth is 153 MB.
+    case "kilobytes": return bytes(value * 1024);
     case "seconds": return duration(value * 1e6);
     case "ratio": return `${value.toFixed(2)}×`;
     case "count": return String(value);
@@ -409,7 +413,7 @@ export function interrogable(table, specs, total) {
 // What to type, in the unit the column publishes.
 const PLACEHOLDER = {
   duration_us: "> 5s", seconds: "> 5s", bytes: "> 10mb",
-  megabytes: "> 512mb", share: "> 10%", percent: "> 10%",
+  megabytes: "> 512mb", kilobytes: "> 512mb", share: "> 10%", percent: "> 10%",
   count: "> 10", ratio: "> 1",
 };
 

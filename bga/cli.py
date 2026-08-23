@@ -159,6 +159,12 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # answer; without it the page would have to read a second document
     # or, worse, imply full coverage by saying nothing.
     result.plane2_coverage = native_report.get('stream_coverage') or None
+    # UX-215: the report keeps the Plane 2 report itself, so the JSON
+    # renderer can publish the per-element join from the same function
+    # `bga correlate` calls. Held rather than joined here because the
+    # join reads the finished analysis document, which does not exist
+    # yet at this point in the pipeline.
+    result.plane2_report = native_report
     # UX-104: the memory half of the same question. `--builders` is the
     # knob both halves are about, and advice that clears the CPU check
     # and blows the memory one is advice to build into swap - the worst
@@ -1081,7 +1087,11 @@ def cmd_correlate(args: argparse.Namespace) -> int:
             dependencies=getattr(getattr(analyzer, 'graph', None), 'dependencies', None),
         )
         if args.format == 'json':
-            return json.dumps(joined, indent=2)
+            # UX-215: stamped, so the document says what it is - the
+            # same treatment the other four outputs have had since
+            # UX-190, and what makes `bga view` able to serve it.
+            return json.dumps(schemas.stamp(joined, schemas.CORRELATE),
+                              indent=2)
         return format_correlation(joined)
 
     return _execute_and_write(args, produce)
@@ -1786,6 +1796,10 @@ _SCHEMA_BY_COMMAND = {
     "diagnostics": schemas.ANALYZE,
     "compare": schemas.COMPARE,
     "blast": schemas.BLAST,
+    # UX-215: the join has emitted this JSON since UX-51 and answered
+    # "correlate produces no versioned JSON output" when asked what
+    # shape it was.
+    "correlate": schemas.CORRELATE,
 }
 
 

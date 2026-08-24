@@ -1030,21 +1030,27 @@ and written up in
 [`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md)
 and [`UX-39`](../backlog/scenarios/UX-0039-ci-gate-cannot-express-inefficiency-regression.md).
 
-Step 7's `bga whatif` figures are from the same project — the run
-committed at
-`examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run`,
-so every number in that block is reproducible from a clone with no
-capture of your own:
+Step 7's `bga whatif` figures are from the same project — one
+`bga snapshot` of `examples/06-macro-micro-optimization`, committed at
+[`tests/fixtures/macro_micro/`](../../tests/fixtures/macro_micro/), so
+every number in that block is reproducible from a clone with no capture
+of your own:
 
 ```text
-$ bga whatif examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run \
-      --element core.bst
+$ bga whatif tests/fixtures/macro_micro/run --element core.bst
   Makespan 43.200s -> 31.150s (saves 12.050s)
-$ … --element codegen.bst
+$ bga whatif tests/fixtures/macro_micro/run --element codegen.bst
   Makespan 43.200s -> 43.200s (saves 0.000s)
-$ … --element core.bst --element codegen.bst
+$ bga whatif tests/fixtures/macro_micro/run --element core.bst --element codegen.bst
   Makespan 43.200s -> 24.150s (saves 19.050s)
 ```
+
+The capture itself is not in the repository and never will be —
+`bga snapshot` writes a `.gitignore` into every store it creates,
+because captures are build artifacts (`UX-126`, `UX-189`). What is
+committed is the run directory and a trimmed Plane 2 report; the
+fixture's own README says what was dropped and shows that the figures
+are identical either way.
 
 The gap this paragraph used to apologise for is closed. **A caches-off
 capture now exists** — `bootstrap/build/gcc-stage1.bst`, the whole

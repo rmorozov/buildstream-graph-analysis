@@ -1375,7 +1375,16 @@ bga analyze .bga/runs/<stamp>/run --plane2 .bga/runs/<stamp>/plane2.json
 `capacity_recommendation` intersects every constraint on the joint
 `--builders` × `--max-jobs` choice. Each one is already a measured
 number in a capture; what was missing was the sentence that puts them
-together. On `examples/06-macro-micro-optimization`:
+together. Below is one `bga snapshot` of
+`examples/06-macro-micro-optimization`, committed at
+[`tests/fixtures/macro_micro/`](../../tests/fixtures/macro_micro/) so
+you can run it from a clone:
+
+```bash
+bga analyze tests/fixtures/macro_micro/run \
+    --plane2 tests/fixtures/macro_micro/plane2.json
+```
+
 
 ```text
   Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 2, below the 4 configured - more builders contend rather than overlap here

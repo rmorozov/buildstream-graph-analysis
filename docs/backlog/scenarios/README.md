@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-263 scenarios: **13 open**, 250 closed.
+264 scenarios: **13 open**, 251 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 2 | 29 |
-| viewer | 1 | 45 |
+| viewer | 1 | 46 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
@@ -387,3 +387,13 @@ after                           0   4 distinct       3 distinct      5 distinct
   twenty-five times, so `UX-263` was a seven-file fix for a one-line
   bug. Filed, not implemented: it is a refactor, and `UX-257` is the
   larger argument it feeds.
+
+A third report followed: the Perfetto hand-off stopped working, with
+the same *"no Access-Control-Allow-Origin header is present"* shape.
+
+- **`UX-265`** — `UX-198`'s CORS grant answered the **read** and
+  nothing answered the **pre-flight**, so `BaseHTTPRequestHandler`
+  replied `501` and a browser read that as the header being missing.
+  Reproduced in Chrome 141 against two servers differing only in
+  `do_OPTIONS`; a simple `GET` works in both, which is why this sat
+  unnoticed until something made the read pre-flight.

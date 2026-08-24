@@ -568,6 +568,59 @@ class _Handler(http.server.BaseHTTPRequestHandler):
     def do_HEAD(self):                           # noqa: N802
         self.do_GET()
 
+    def do_OPTIONS(self):                        # noqa: N802 - stdlib name
+        """The CORS pre-flight for the trace blob, and nothing else.
+
+        `UX-265`: the `?url=` hand-off used to be a *simple* request -
+        a bare cross-origin `GET`, which no browser pre-flights - so
+        answering `GET` with an allow header was enough, and
+        `BaseHTTPRequestHandler` replying `501 Unsupported method` to
+        `OPTIONS` never came up. Chrome's Private Network Access
+        changed that without anything here changing: a request from a
+        **public** origin to a **local** address is pre-flighted now,
+        and the pre-flight carries `Access-Control-Request-Private-
+        Network: true`. A 501 with no allow header on it is reported to
+        the reader as *"No 'Access-Control-Allow-Origin' header is
+        present on the requested resource"*, which is the pre-flight
+        being refused rather than the read.
+
+        Scoped exactly as narrowly as the `GET` grant it precedes: the
+        trace blob only, Perfetto's origin only, `GET`/`HEAD` only.
+        Everything else answers as it did, so a pre-flight against the
+        report, the schemas or the blast endpoint is still refused.
+        """
+        path = self.path.split("?", 1)[0].lstrip("/")
+        if path not in self.blobs:
+            return self._refuse(404, f"{path}: not served")
+        if self.headers.get("Origin") != PERFETTO_ORIGIN:
+            return self._refuse(403, "pre-flight is granted to Perfetto only")
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Access-Control-Allow-Origin", PERFETTO_ORIGIN)
+        self.send_header("Access-Control-Allow-Methods", "GET, HEAD")
+        # Whatever headers the reader asked to send, echoed back. This
+        # does not widen *who* may read - the origin and the path are
+        # still the only ones granted - it only avoids guessing which
+        # headers a fetch we do not control attaches (`range`,
+        # `cache-control`, a client's own). Naming a fixed list here
+        # would make the hand-off break again the next time the other
+        # side adds one, which is exactly how this broke.
+        asked = self.headers.get("Access-Control-Request-Headers")
+        if asked:
+            self.send_header("Access-Control-Allow-Headers", asked)
+        # The header Private Network Access asks for by name. Without
+        # it the pre-flight is refused even when the origin matches.
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+        # A pre-flight per read of a possibly large trace is a round
+        # trip nobody needs; ten minutes outlives any hand-off.
+        self.send_header("Access-Control-Max-Age", "600")
+        # The answer depends on the request's `Origin`, so a cache that
+        # ignored it could serve the grant to a page that has none.
+        self.send_header("Vary", "Origin, Access-Control-Request-Headers, "
+                         "Access-Control-Request-Private-Network")
+        self.end_headers()
+
     def _blast(self, raw):
         """The one endpoint that takes a parameter. Read-only, and it
         calls the same function the CLI does."""
@@ -635,8 +688,13 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         # element names and paths live. An echo of whatever `Origin`
         # asked would be the same as `*`, so the value is a constant
         # and the request's own origin only decides whether to send it.
-        if cors and self.headers.get("Origin") == PERFETTO_ORIGIN:
-            self.send_header("Access-Control-Allow-Origin", PERFETTO_ORIGIN)
+        if cors:
+            # `Vary` whether or not the grant is issued: the response
+            # differs by `Origin`, and a cache told otherwise could hand
+            # Perfetto's grant to a page that was refused one.
+            self.send_header("Vary", "Origin")
+            if self.headers.get("Origin") == PERFETTO_ORIGIN:
+                self.send_header("Access-Control-Allow-Origin", PERFETTO_ORIGIN)
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)

@@ -477,7 +477,12 @@ how it is *read*, and the shape is deliberately small.
 - **The page obeys a policy the server sets.** Every response carries
   `default-src 'self'; frame-ancestors 'none'` and `nosniff`; the only
   cross-origin grant is `Access-Control-Allow-Origin` for Perfetto's
-  own origin, on the trace blob alone (`UX-198`). Two consequences bind
+  own origin, on the trace blob alone (`UX-198`) - together with the
+  **pre-flight** that grant needs, scoped identically (`UX-265`): the
+  blob only, Perfetto only, `GET`/`HEAD` only, plus
+  `Access-Control-Allow-Private-Network`, because a public origin
+  reading `127.0.0.1` is a transition Chrome asks about by name. Two
+  consequences bind
   the page: it may not load anything off-host, and it may not write a
   **style attribute** - a style attribute is inline style and the
   policy refuses it, which silently killed four of the viewer's width

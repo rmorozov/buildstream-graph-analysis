@@ -116,6 +116,12 @@ class TestItAgreesWithChrome:
         "moved_to_new_parent": 1,
         # `UX-235`: prepend puts the node first.
         "prepend_order": "b,i",
+        # `UX-271` made `nav.js` use a child combinator, and the shim
+        # refused it - loudly, which is the instrument working. Taught,
+        # and checked against Chrome on a case that *discriminates*:
+        # a `<b>` directly inside and a second one a level deeper.
+        "child_combinator": 1,
+        "descendant_combinator": 2,
         # An href attribute reflects into the property.
         "href_property": "#element-x",
         # Descendant selectors, which the probes use.
@@ -144,6 +150,10 @@ const link = mk("a"); link.setAttribute("href", "#element-x");
 const table = mk("table"), tbody = mk("tbody"), thead = mk("thead");
 table.append(tbody, thead); tbody.append(mk("tr")); thead.append(mk("tr"));
 
+const host = mk("div"); host.className = "a";
+const direct = mk("b"); const wrap = mk("span"); const deep = mk("b");
+host.append(direct, wrap); wrap.append(deep);
+
 console.log(JSON.stringify({
   style_width: a.getAttribute("style"),
   style_custom: b.getAttribute("style"),
@@ -155,6 +165,8 @@ console.log(JSON.stringify({
   href_property: link.href,
   tbody_tr: table.querySelectorAll("tbody tr").length,
   all_tr: table.querySelectorAll("tr").length,
+  child_combinator: host.querySelectorAll(".a > b").length,
+  descendant_combinator: host.querySelectorAll(".a b").length,
 }));
 """)
         assert out == self.CHROME, (
@@ -177,7 +189,9 @@ for (const selector of ["tr > td", "li:first-child", "a + b"]) {
 }
 console.log(JSON.stringify(Object.fromEntries(loud)));
 """)
-        assert out == {"tr > td": "threw", "li:first-child": "threw",
+        # `tr > td` is *supported* since `UX-271`; what must stay loud
+        # is the shapes that are still not implemented.
+        assert out == {"tr > td": "quiet", "li:first-child": "threw",
                        "a + b": "threw"}, out
 
     def test_it_says_what_it_cannot_do(self):

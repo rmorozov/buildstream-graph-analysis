@@ -1,6 +1,6 @@
 # UX-270: the critical path shares a section with everything else
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** R1 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 | **Topic:** viewer
 
 ## Motivation
 
@@ -37,3 +37,31 @@ it does not redesign it.
 
 The section exists, is linked from the rail, folds, and the order guard
 names its position.
+
+## Outcome
+
+**Fixed.** `critical_path_detail` is lifted out of the `signals` pair
+list and rendered as its own top-level section, immediately after the
+section it used to be a row of.
+
+```text
+parent of the section   MAIN     (was: a <dd> inside signals)
+in the table of contents yes
+duplicate section keys   none
+sections nested in cells 0        (was: 3)
+```
+
+It keeps `UX-262`'s row bound and `UX-208`'s badge; only its placement
+moved.
+
+**It was also the last of `UX-267`'s nested sections.** The
+array-of-objects cell branch called `renderTable`, which wraps its
+result in a `<section>` — so the critical path, and two others, had
+been rendering whole sections into `<dd>` elements all along. That is
+why it looked like it had its own heading, and why the reader called it
+*"quite good"*: it was accidentally already a section, in the wrong
+place in the document tree. All three now use `buildTable`.
+
+**Three mutations, three reds:** putting it back in the pair list;
+rendering it as a cell so nothing can link to it; and rendering an
+empty box for a run with no path.

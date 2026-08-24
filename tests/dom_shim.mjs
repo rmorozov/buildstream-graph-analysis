@@ -237,21 +237,43 @@ function matchesSelector(node, selector) {
 }
 
 function matchesSequence(node, selector) {
-  if (/[>+~]|::?[a-z-]+\(?/.test(selector)) {
+  // Sibling combinators and pseudo-classes are still refused rather
+  // than quietly matching nothing. The child combinator is
+  // implemented: `nav.js` uses `details.map > summary` (`UX-271`), and
+  // the shim told us so by throwing - which is the instrument doing
+  // its job, and the message asking to be taught.
+  if (/[+~]|::?[a-z-]+\(?/.test(selector)) {
     throw new Error(
       `tests/dom_shim.mjs cannot parse the selector ${JSON.stringify(selector)}`
-      + " - child/sibling combinators and pseudo-classes are not"
-      + " implemented. Teach it rather than letting it quietly match"
-      + " nothing (UX-264).");
+      + " - sibling combinators and pseudo-classes are not implemented."
+      + " Teach it rather than letting it quietly match nothing"
+      + " (UX-264).");
   }
-  const steps = selector.split(/\s+/).filter(Boolean);
+  // `["div", ">", "p"]` -> steps carrying whether each is a *direct*
+  // child of the one before it.
+  const raw = selector.replace(/\s*>\s*/g, " > ").split(/\s+/).filter(Boolean);
+  const steps = [];
+  for (const part of raw) {
+    if (part === ">") {
+      if (!steps.length) return false;
+      steps[steps.length - 1].childOf = true;
+      continue;
+    }
+    steps.push({ compound: part, childOf: false });
+  }
   if (!steps.length) return false;
-  if (!matchesCompound(node, steps[steps.length - 1])) return false;
-  // Every earlier step must match some ancestor, nearest-first.
+  const last = steps[steps.length - 1];
+  if (!matchesCompound(node, last.compound)) return false;
   let at = node._parent;
   for (let i = steps.length - 2; i >= 0; i--) {
-    while (at && !matchesCompound(at, steps[i])) at = at._parent;
-    if (!at) return false;
+    const direct = steps[i].childOf;
+    if (direct) {
+      // Exactly the parent, not any ancestor.
+      if (!at || !matchesCompound(at, steps[i].compound)) return false;
+    } else {
+      while (at && !matchesCompound(at, steps[i].compound)) at = at._parent;
+      if (!at) return false;
+    }
     at = at._parent;
   }
   return true;

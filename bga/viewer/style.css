@@ -436,3 +436,78 @@ svg.sparkline { width: 6rem; height: 1.25rem; flex: 0 0 auto; }
 }
 .palette-facts { opacity: 0.7; font-size: 0.85em; margin-left: 0.4rem; }
 .jump-hits li[data-active="true"] > button { outline: 2px solid var(--accent, #4a7ebb); }
+
+/* UX-267: a small object reads as one line of `name value` pairs, so
+   there is nothing to click. Without the separator, measured:
+   "Resource.PROCESS 4.997Resource.DOWNLOAD 0.001". */
+.inline-object .pair + .pair::before { content: " · "; color: var(--muted, #777); }
+.inline-object .pair-key { color: var(--muted, #777); }
+
+/* A folded map says what it holds. The defect was never the fold - it
+   was a summary reading "object" over a `<pre>` of raw JSON. */
+details.map > summary { cursor: pointer; }
+details.map > summary .map-count { font-weight: normal; }
+
+/* A generated map table gets its own scroll rather than the page's, and
+   `resize` so a reader who wants more can have it - the bound is a
+   default, never a ceiling (`UX-187`'s rule). */
+main .map-table {
+  display: block;
+  max-height: 20rem;
+  overflow-y: auto;
+  resize: vertical;
+}
+
+/* UX-269: a truncated cell shows that it is truncated, and the whole
+   value stays selectable once opened. */
+details.long-text > summary { cursor: pointer; }
+details.long-text .full-text { white-space: pre-wrap; margin: 0.4rem 0 0; }
+
+/* UX-271: the rail nests one level. Indented, quieter than its parent,
+   and collapsed to nothing when the section it belongs to is not the
+   one being read - so 30+ sections do not become 200 rail entries. */
+.toc .toc-sub {
+  list-style: none;
+  margin: 0.15rem 0 0.3rem 0.8rem;
+  padding: 0;
+  font-size: 0.92em;
+}
+.toc .toc-sub a { color: var(--muted, #777); }
+.toc .toc-sub .toc-more { color: var(--muted, #777); font-style: italic; }
+
+/* UX-272: identity left, actions right - one row where there is width
+   for it.
+   Measured before: the header stacks four block elements and is
+   92-184px, which is 0.1-0.2 screens of a 13-15 screen document. It is
+   sticky (`UX-255`), so every pixel is paid on every screen rather
+   than once, and that - not the document's length - is the argument
+   for tidying it. The vertical space is in the sections; `UX-267` and
+   `UX-268` are where it lives. */
+body[data-has-toc] > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name actions" "path actions" "stamp actions";
+  align-items: start;
+  column-gap: 1rem;
+}
+body[data-has-toc] > header > h1 { grid-area: name; }
+body[data-has-toc] > header > #run-path { grid-area: path; }
+body[data-has-toc] > header > #run-producer { grid-area: stamp; }
+body[data-has-toc] > header > #actions { grid-area: actions; margin: 0; }
+body[data-has-toc] > header > #actions-fallback {
+  grid-column: 1 / -1;
+  margin: .2rem 0 0;
+}
+/* Below `UX-254`'s breakpoint it stacks again: two columns in a
+   phone-width header is the same defect at a different size. */
+@media (max-width: 60rem) {
+  body[data-has-toc] > header {
+    display: block;
+  }
+  /* Stacked, the header is taller - measured 134px at 390x844 against
+     92px at 1440x900 - and `--head` is what every anchor's
+     `scroll-margin-top` reads (`UX-254`). Leaving it at the wide value
+     would land a jump under the heading at exactly the width where
+     there is least room to recover. */
+  body[data-has-toc] { --head: 9rem; }
+}

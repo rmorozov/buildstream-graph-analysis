@@ -366,13 +366,28 @@ class TestTheSizeDiscipline:
         ceiling alone cannot tell a new contract from a vendored
         framework.
 
-        `UX-234` moved it last: `store-aggregate/v1` is a sixth schema,
-        and `schemas.json` carries every schema's descriptions because
-        they are the page's hover text. Measured: the golden export went
+        `UX-234` moved it: `store-aggregate/v1` is a sixth schema, and
+        `schemas.json` carries every schema's descriptions because they
+        are the page's hover text. Measured: the golden export went
         198,756 -> 209,867 B, of which 9,137 B is that schema and ~700 B
         is the aggregate document itself.
+
+        `UX-267` moves it again, and this time the growth is **source**
+        rather than data - which is exactly the distinction the
+        companion guard below exists to establish, and it still passes.
+        Measured on the same fixture:
+
+            before round 36   232,191 B   (96.7% of the old ceiling)
+            after             239,945 B   (+7,754 B)
+
+        Of that, `app.js` grew 59,034 -> 72,773 B and `style.css`
+        20,272 -> 21,368: the renderer that turns a map into a searchable
+        table is more code than `JSON.stringify`, and the export inlines
+        the module. The ceiling was already nearly exhausted by rounds
+        that landed between `UX-234` and here, which is the real reason
+        it had to move - not this round alone.
         """
-        assert exported[1]["bytes"] < 240_000, exported[1]["bytes"]
+        assert exported[1]["bytes"] < 260_000, exported[1]["bytes"]
         assert exported[1]["over_budget"] is False
 
     def test_the_data_is_the_documents_and_the_schemas(self, exported):

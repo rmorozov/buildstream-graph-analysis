@@ -1,6 +1,6 @@
 # UX-267: every object renders as a `<details>` labelled "object"
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** R1 and R3 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 and R3 | **Topic:** viewer
 
 ## Motivation
 
@@ -99,3 +99,46 @@ sections by `querySelectorAll` at any depth. The renderer must
 guarantee it emits *cells*, never sections, and that needs more care
 than the spike gave it. Better a filed item with the measurements than
 a landed change that breaks navigation.
+
+## Outcome
+
+**Fixed**, and the second attempt landed because the first one's
+failure was diagnosed rather than worked around.
+
+**The whole fix was one function.** `renderTable` returns a
+`<section data-section=…>`, which is right for a top-level view and
+wrong for a cell. The spike called it for nested maps, so twenty-two
+sections appeared inside table cells and `nav.js` — which finds
+sections with `querySelectorAll` at any depth — listed `summary` twice,
+because `summary` is both a map key and the run's own section.
+`buildTable` is the same builder without the wrapper; `renderTable` is
+now `buildTable` in a section. Every existing caller is unchanged.
+
+Measured on the served 44-element run, in Chrome 141:
+
+```text
+                          before    after
+opaque "object" cells         34        0
+characters of <pre>       32,393        0
+document                13.8 scr  13.6 scr
+sections                      34       31
+sections inside cells          0        0
+```
+
+The document is **shorter** than before, not longer — the trap the
+spike found is avoided by keeping the fold and labelling it. Summaries
+now read `Downstream count · 44 entries`, not `object`. 22 bounded
+boxes and 45 filter inputs, so every map is searchable and none of them
+can push the page down.
+
+Small things need no click at all: an object of four or fewer scalars
+renders inline as `Average depth 0 · Peak depth 0`, and a short array
+as `import, stack, cmake`.
+
+**A guard that did not discriminate, and was fixed rather than
+counted.** Every test drove `renderStructured` directly, so restoring
+the original `<details><summary>object</summary><pre>` at the *call
+site* left all of them green — the mutation that reinstates the exact
+reported defect passed. Three guards on the wiring were added; that
+mutation now reddens three tests. Six mutations in total, all
+discriminating.

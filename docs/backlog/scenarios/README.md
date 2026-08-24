@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-272 scenarios: **14 open**, 257 closed.
+273 scenarios: **10 open**, 263 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 0 | 29 |
-| viewer | 6 | 53 |
+| viewer | 0 | 53 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
-| docs | 6 | 24 |
-| guards | 0 | 35 |
+| docs | 7 | 25 |
+| guards | 1 | 36 |
 
 ## Open scenarios
 
@@ -36,12 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-267 | [every object renders as a `<details>` labelled "object"](UX-0267-every-object-is-a-details-called-object.md) | viewer | High | R1, R3 | 🔴 |
-| UX-268 | [six of the wide maps are one table rendered six times](UX-0268-six-maps-are-one-table.md) | viewer | High | R1, R3 | 🔴 |
-| UX-269 | [a long field shows all of itself, always](UX-0269-a-long-field-shows-all-of-itself.md) | viewer | Medium | R1 | 🔴 |
-| UX-270 | [the critical path shares a section with everything else](UX-0270-the-critical-path-is-its-own-section.md) | viewer | Medium | R1 | 🔴 |
-| UX-271 | [the rail is flat, and the report has thirty sections](UX-0271-the-rail-is-flat.md) | viewer | Medium | R1 | 🔴 |
-| UX-272 | [the header is four stacked paragraphs](UX-0272-the-header-is-four-stacked-paragraphs.md) | viewer | Low | R1 | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-242 | [the capacity recommendation is documented nowhere](UX-0242-the-capacity-recommendation-is-documented-nowhere.md) | docs | Medium | R1, R5 | 🔴 |
@@ -50,6 +44,8 @@ task file, which is the only place it ever lived twice.
 | UX-245 | [the architecture's CLI table is two commands behind](UX-0245-the-architectures-cli-table-is-two-commands-behind.md) | docs | Medium | R8 | 🔴 |
 | UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
+| UX-273 | [the rule that draws a nested value lives in one task file](UX-0273-the-rule-that-draws-a-nested-value-lives-in-one-task-file.md) | docs | Medium | R8 | 🔴 |
+| UX-274 | [the context map is guarded on one half of the tree](UX-0274-the-context-map-is-guarded-on-one-half-of-the-tree.md) | guards | Medium | — | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -454,3 +450,52 @@ diagnosis.
   a third column undoes `UX-254`'s reading width.
 - **`UX-272`** — the header is 0.1-0.2 screens of a 14-screen
   document. Worth tidying, not where the space is.
+
+## UX-267..UX-272: the thirty-sixth round — the report reads (2026-08-24)
+
+The six filings from round 35, in order. Measured on a served run in
+Chrome 141 at every step.
+
+```text
+                          before    after
+opaque "object" cells         34        0
+characters of <pre>       32,393        0
+document                13.8 scr  13.6 scr
+tables                         6       23
+sections inside cells          3        0
+```
+
+- **`UX-267`** — one function was the whole fix: `renderTable` returns a
+  `<section>`, which is right for a view and wrong for a cell. `buildTable`
+  is the same builder without the wrapper, and the spike's 22 phantom
+  contents entries disappear with it. The fold stays, labelled
+  `Downstream count · 44 entries`.
+- **`UX-268`** — six folds became one 44-row, 13-column element table;
+  `wall_clock_share` says it is keyed by task.
+- **`UX-269`** — a long *value* truncates with the whole thing kept; a
+  long *explanation* does not.
+- **`UX-270`** — the critical path is its own section, and was the last
+  of the sections that had been rendering into `<dd>` elements.
+- **`UX-271`** — the rail nests one level, bounded at 8 with the
+  remainder counted. The third column stays declined, with its argument
+  beside the code that replaced it.
+- **`UX-272`** — the header is one row at 1440 and stacked at 390. The
+  measurement corrected the request: it is 0.1-0.2 screens, worth doing
+  because it is sticky. It also exposed `--head` being one value for
+  both widths, which would land an anchor 46px under the heading at
+  390px.
+
+Three guards in this round did not discriminate on first write and were
+fixed rather than counted; one of them was the eleventh instance of a
+grep finding its own argument.
+
+`UX-273` and `UX-274` are what the cadence guard's **second review**
+found when 26 rows had closed since the first
+([`../../audits/architecture-review.md`](../../audits/architecture-review.md)):
+the width-not-depth rule this round built governs every nested value in
+the report and is written down in exactly one task file, and the
+context map's guard globs `bga/` and `tools/` only, so the half naming
+`tests/` has drifted to 5 of 12 entries and every figure in it — 218
+files against 240, ~3,100 tests against 3,327, 233 closed rows against
+263 — is stale. Both harnesses this axis just built, `tests/dom_shim.mjs`
+and `tests/cdp.mjs`, are among the seven entries it does not name.

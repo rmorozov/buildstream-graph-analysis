@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-252 scenarios: **9 open**, 243 closed.
+256 scenarios: **13 open**, 243 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 49 |
 | contracts | 1 | 27 |
-| viewer | 0 | 40 |
+| viewer | 2 | 42 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
-| guards | 0 | 32 |
+| guards | 2 | 34 |
 
 ## Open scenarios
 
@@ -45,6 +45,10 @@ task file, which is the only place it ever lived twice.
 | UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 | UX-253 | [the aggregate mixes contract sets without saying so](UX-0253-the-aggregate-mixes-contract-sets-without-saying-so.md) | contracts | Medium | R5, R7 | 🔴 |
+| UX-254 | [the contents take two thirds of the first screen](UX-0254-the-contents-take-two-thirds-of-the-first-screen.md) | viewer | High | R1 | 🔴 |
+| UX-255 | [the heading is below the navigation, and says less than the footer](UX-0255-the-heading-is-below-the-navigation.md) | viewer | Medium | R1, R8 | 🔴 |
+| UX-256 | [the default open state is a policy nobody checks](UX-0256-the-default-open-state-is-a-policy-nobody-checks.md) | guards | Medium | R1 | 🔴 |
+| UX-257 | [nothing reads the page's geometry](UX-0257-nothing-reads-the-pages-geometry.md) | guards | Medium | all | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -274,3 +278,36 @@ both read what the first three built.
 
 All five are done, and `0.2.0` is the first recorded release: see
 [`../../../CHANGELOG.md`](../../../CHANGELOG.md).
+
+## UX-254..UX-257: the thirty-first round — the report you can actually read (2026-08-24)
+
+Reported from a real run after `0.2.0` merged, and **reproduced on
+`main` rather than taken on trust** — the report was current, not a
+stale export. Measured in a real browser on a 1,202-element run:
+
+```text
+viewport      nav.toc   % of screen   first content at   % of screen
+1280x800      573px     71.6%         y=701              87.6%
+1440x900      573px     63.6%         y=701              77.8%
+1920x1080     573px     53.0%         y=701              64.9%
+```
+
+- **`UX-254`** — `.toc` is `position: sticky` *in the reading column*,
+  so it both pushes content down 573px and covers 573px of every screen
+  after a scroll; its 54 flex-wrapped links inline ~24 element names,
+  which is why it looks like content; and `insertBefore(…,
+  body.firstChild)` puts it above the run identity.
+- **`UX-255`** — the heading arrives at y=630, after the navigation,
+  and carries less than the footer does.
+- **`UX-256`** — the user's "checker if everything is collapsed by
+  default". It is not, deliberately: 3 of 49 `<details>` open and all
+  12 sections open, both with reasons already written. Nothing asserts
+  either, so drift in either direction is silent.
+- **`UX-257`** — the recheck for overlap was done by hand and **cannot
+  currently be a guard**: the viewer harness is a DOM shim with no
+  layout engine, which is what let `UX-235`'s reversed document survive.
+  The instrument is the decision to argue.
+
+Order: `UX-254` first, then `UX-255` inside the layout it creates, then
+`UX-256`; `UX-257` last, because it is the argument about what can hold
+the other three.

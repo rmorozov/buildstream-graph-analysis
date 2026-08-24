@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-256 scenarios: **10 open**, 246 closed.
+261 scenarios: **15 open**, 246 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
-| analysis | 0 | 49 |
-| contracts | 1 | 27 |
-| viewer | 0 | 42 |
+| analysis | 1 | 50 |
+| contracts | 3 | 29 |
+| viewer | 2 | 44 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
@@ -46,6 +46,11 @@ task file, which is the only place it ever lived twice.
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 | UX-253 | [the aggregate mixes contract sets without saying so](UX-0253-the-aggregate-mixes-contract-sets-without-saying-so.md) | contracts | Medium | R5, R7 | 🔴 |
 | UX-257 | [nothing reads the page's geometry](UX-0257-nothing-reads-the-pages-geometry.md) | guards | Medium | all | 🔴 |
+| UX-258 | [the blast ranking tells you to optimize the base image](UX-0258-the-blast-ranking-tells-you-to-optimize-the-base-image.md) | analysis | High | R1, R3 | 🔴 |
+| UX-259 | [a blast number has no scale](UX-0259-a-blast-number-has-no-scale.md) | contracts | High | R1, R3, R8 | 🔴 |
+| UX-260 | [the other quantities that need a scale](UX-0260-the-other-quantities-that-need-a-scale.md) | contracts | Medium | R1, R2 | 🔴 |
+| UX-261 | [the first view ranks what is big, not what is worth doing](UX-0261-the-first-view-ranks-what-is-big.md) | viewer | Medium | R1 | 🔴 |
+| UX-262 | [a long critical path grows a section without bound](UX-0262-a-long-critical-path-grows-a-section-without-bound.md) | viewer | Medium | R1 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -316,3 +321,41 @@ guards hold is the *mechanism* rather than the pixels. Choosing the
 instrument — a browser in CI, or the CSS contract and a stated blind
 spot — is an argument, not an implementation, and it should be made
 rather than defaulted into.
+
+## UX-258..UX-262: the thirty-second round — a ranking says what to do (2026-08-24)
+
+Reported from a real project: the blast analysis ranks
+`linux_base_image.bst`-shaped elements first, which is true and
+useless. Reproduced and measured on a 1,202-element run, plus a
+122-deep one for the layout half.
+[Direction 11](../../design/directions.md) argues all of it.
+
+```text
+next_steps[0]  "toolchain.bst is the first thing to fix"
+toolchain.bst  downstream 1201  kind "import"  is_structural_kind TRUE
+
+blast radius distribution, 1202 elements:
+  p10 0   p50 30   p80 293   p90 465   p95 575   p99 682   p100 1201
+positions 2-12:  753 753 739 727 721 720 712 709 706 702 697
+```
+
+- **`UX-258`** — the ranking includes structural kinds. `findings.py`
+  applies the right rule one function away (`_criticality_findings`
+  excludes them, citing `UX-76`); the blast ranking never got it.
+- **`UX-259`** — `753 downstream` has no scale. It is p99.9 here and
+  unremarkable in a graph of forty thousand, and the number is what
+  travels into a ticket. Eleven entries inside an 8% spread are
+  presented as an ordered list of what to do first.
+- **`UX-260`** — where else a percentile belongs, argued per quantity
+  rather than applied everywhere. Duration, sandbox tax and process
+  count yes; share-of-path and run-level singletons no.
+- **`UX-261`** — what the first view should lead with instead: longest
+  on the critical path, then the graph's density, then what is unusual
+  for its kind.
+- **`UX-262`** — a 122-deep critical path grows the `signals` section
+  from 2.1 to **6.2 screens** on a *smaller* run, because the
+  critical-path table defaults to `All rows`.
+
+Order: `UX-258` then `UX-259` — the ranking has to be right before its
+scale is worth publishing — then `UX-261` on top of both, `UX-260`
+after, and `UX-262` independently.

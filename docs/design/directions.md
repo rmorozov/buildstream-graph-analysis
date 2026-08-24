@@ -1390,3 +1390,101 @@ different hat. What the release adds is the *changelog*: 3,549 lines of
 audit rounds and 789 lines of closed rows currently hold the "what
 landed" story, and no document answers "what changed between the thing
 I installed and the thing I have now" at all.
+
+## Direction 11: a ranking answers "what should I do", not "what is big" (argued 2026-08-24, round 32)
+
+**Serves:** R1 and R3 first — the optimizer deciding where to spend a
+day, and the graph owner who knows which of those choices the graph
+forbids — and R8, who is handed the ranking as a case for funding.
+
+The report ranks elements by blast radius and tells the reader to fix
+the top one. Measured on a 1,202-element run:
+
+```text
+next_steps[0]: "toolchain.bst is the first thing to fix - this is what
+                changing it rebuilds."
+
+toolchain.bst   downstream_count 1201   element_kind "import"
+                is_structural_kind TRUE
+```
+
+The advice is *true* and *useless*. A base image, a toolchain, a
+`host_strip_tool` has a thousand dependents **on purpose**; that is
+what makes it a base image. Telling someone to optimize it is telling
+them their graph is a graph.
+
+And the tool already knows. `is_structural_kind` is computed and
+published on the very entry it ranks first. `bga/findings.py` even
+applies the right rule one function away — `_criticality_findings`
+excludes structural kinds outright, citing `UX-76`:
+
+> *"structural elements are excluded rather than annotated here"*
+
+The blast ranking simply never got the same treatment.
+
+### The deeper problem: a number with no scale
+
+Even among the non-structural entries, the ranking implies a precision
+it does not have. The measured distribution of downstream counts:
+
+```text
+p10    0      p60     66      p95    575
+p20    1      p70    157      p99    682
+p30    4      p80    293      p100  1201
+p40   10      p90    465
+p50   30
+```
+
+Positions 2 through 12 run 753, 753, 739, 727, 721, 720, 712, 709,
+706, 702, 697 — an 8% spread across eleven elements, presented as an
+ordered list of what to do first. The honest statement is *"these
+eleven are all in the top percentile and are indistinguishable"*, and
+the way to say it is to publish the **distribution** rather than the
+rank.
+
+A percentile answers the question the raw count cannot: *is 753 a lot?*
+It is p99.9 here and would be unremarkable in a graph of forty
+thousand. The number travels; the rank does not.
+
+### Where percentiles belong, and where they do not
+
+The rule that decides: **a percentile helps when a reader cannot know
+the scale, and the population is comparable.** Blast radius qualifies —
+every element is a member and the counts span three orders of
+magnitude. Applying it everywhere would be cargo cult:
+
+| quantity | percentile? | why |
+|---|---|---|
+| blast radius (downstream count) | **yes** | three orders of magnitude, every element a member, no intuition for the scale |
+| element duration | **yes** | the same shape; "is 40s slow here?" has no answer without the distribution |
+| share of the critical path | **no** | already a percentage of a known whole — a percentile of a percentage is a second scale for one fact |
+| sandbox tax (Plane 3) | **yes**, per element | the useful question is "is this element's tax unusual", which is exactly a percentile |
+| processes per element (Plane 2) | **yes** | heavy tails; one element with 40,000 processes is the finding |
+| confidence, coverage, efficiency | **no** | single run-level numbers with no population to be a percentile of |
+
+Deciles are the right granularity: ten buckets is a shape a reader
+takes in at a glance, and finer only matters in the tail — where the
+named p95/p99 already carry it.
+
+### What the first view should rank instead
+
+The presentation follows from the same argument. "Biggest" is not a
+rubric; these are:
+
+- **Longest on the critical path** — what the build is actually waiting
+  for, which is already computed and is the honest first answer.
+- **Blast radius density** — not one element's count but the *shape*:
+  half the elements here reach 30 or fewer, the top decile reaches 465
+  or more. A graph where one element reaches everything is a different
+  problem from one where a hundred do, and the reader deserves to know
+  which they have before being handed a list.
+- **Unusual for its kind** — the outlier, which is what "worth
+  optimizing" actually means once the structural entries are set aside.
+
+### What this does not change
+
+No number moves. Structural elements stay in the payload, stay
+reachable, and stay *reported* — `UX-203` was filed because views were
+unreachable, and answering this by hiding them would trade one defect
+for an older one. What changes is that they are reported as **the
+graph's shape** rather than ranked as **the reader's next task**.

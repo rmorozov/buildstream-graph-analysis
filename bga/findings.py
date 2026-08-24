@@ -917,21 +917,120 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
     # question when the *graph* constrains the build, not when the chain
     # does.
     blast_radius = signals.get('blast_radius') or {}
-    shown = top_blast_radius[:BLAST_RADIUS_SHOWN]
-    detail = []
-    for i, elem_uid in enumerate(shown, start=1):
-        entry = blast_radius.get(elem_uid, {})
-        count = entry.get('downstream_count', 0)
-        detail.append(
-            f"    {i}. {elem_uid} ({count} downstream elements)"
-            f"{structural_kind_tag(entry)}"
-        )
-    return [_finding(
-        'blast-radius-ranking', SEVERITY_MEDIUM,
-        "Elements Most Worth Optimizing First (by blast radius):",
-        detail=detail, elements=list(shown),
-        evidence={'blast_radius': {u: blast_radius.get(u, {}) for u in shown}},
-    )]
+    distribution = signals.get('blast_radius_distribution')
+
+    # UX-258: structural elements are reported, not ranked as actions.
+    #
+    # This is `UX-76`'s rule, which `_criticality_findings` below has
+    # applied since round 12 - *"structural elements are excluded rather
+    # than annotated here"* - reaching the one ranking that skipped it.
+    # A base image, a toolchain, a `host_strip_tool` has a thousand
+    # dependents **on purpose**; "changing it rebuilds everything" is a
+    # fact about the graph, not a task. Measured on a 1,202-element run
+    # before this: `next_steps[0]` said *"toolchain.bst is the first
+    # thing to fix"* about an `import` whose own payload carried
+    # `is_structural_kind: true`.
+    #
+    # Excluded from the *ranking*, never from the payload: `UX-203` was
+    # filed because views were unreachable, and answering this by
+    # hiding them would trade one defect for an older one.
+    structural = [u for u in top_blast_radius
+                  if (blast_radius.get(u) or {}).get('is_structural_kind')]
+    actionable = [u for u in top_blast_radius
+                  if not (blast_radius.get(u) or {}).get('is_structural_kind')]
+
+    findings = []
+    shown = actionable[:BLAST_RADIUS_SHOWN]
+    if shown:
+        detail = []
+        for i, elem_uid in enumerate(shown, start=1):
+            entry = blast_radius.get(elem_uid, {})
+            count = entry.get('downstream_count', 0)
+            detail.append(
+                f"    {i}. {elem_uid} ({count} downstream elements"
+                f"{_blast_scale(count, distribution)})"
+                f"{structural_kind_tag(entry)}"
+            )
+        tie = _indistinguishable(shown, blast_radius, distribution)
+        if tie:
+            detail.append(f"    {tie}")
+        if distribution:
+            detail.append(f"    {_density_sentence(distribution)}")
+        findings.append(_finding(
+            'blast-radius-ranking', SEVERITY_MEDIUM,
+            "Elements Most Worth Optimizing First (by blast radius):",
+            detail=detail, elements=list(shown),
+            # The distribution key is *absent* when there is none, not
+            # `None`. A published null is a value a consumer has to
+            # interpret; an absent key is the shape `UX-249` settled on
+            # for "we do not have this".
+            evidence=dict(
+                {'blast_radius': {u: blast_radius.get(u, {}) for u in shown}},
+                **({'blast_radius_distribution': distribution}
+                   if distribution else {})),
+        ))
+
+    if structural:
+        # Reported, with the number, as the graph's shape.
+        named = ", ".join(
+            f"{u} ({(blast_radius.get(u) or {}).get('downstream_count', 0)} downstream)"
+            for u in structural[:BLAST_RADIUS_SHOWN])
+        findings.append(_finding(
+            'blast-radius-structural', SEVERITY_INFO,
+            f"Reaching most of the graph by design: {named} - structural "
+            f"elements ({', '.join(sorted({(blast_radius.get(u) or {}).get('element_kind', 'unknown') for u in structural}))}) "
+            f"whose dependents are the graph's shape, not a task",
+            elements=list(structural[:BLAST_RADIUS_SHOWN]),
+            evidence={'blast_radius': {u: blast_radius.get(u, {})
+                                       for u in structural[:BLAST_RADIUS_SHOWN]}},
+        ))
+    return findings
+
+
+def _blast_scale(count, distribution):
+    """` , p90+` - where this count sits in its own run.
+
+    `UX-259`: the count is what travels into a ticket and the rank is
+    what stays behind, so the scale rides with the number.
+    """
+    if not distribution or distribution.get('is_flat'):
+        return ""
+    deciles = distribution.get('deciles') or {}
+    for label in ('p99', 'p95'):
+        if count >= (distribution.get(label) or 0):
+            return f", at or above {label} of this run"
+    for p in sorted((int(k[1:]) for k in deciles), reverse=True):
+        if count >= deciles[f'p{p}']:
+            return f", at or above p{p} of this run"
+    return ", in the bottom decile of this run"
+
+
+def _indistinguishable(shown, blast_radius, distribution):
+    """Say when a rank is not a difference.
+
+    Eleven entries inside an 8% spread, presented as an ordered list of
+    what to do first, claims a precision the numbers do not have.
+    """
+    counts = [(blast_radius.get(u) or {}).get('downstream_count', 0) for u in shown]
+    counts = [c for c in counts if c]
+    if len(counts) < 2 or not distribution or distribution.get('is_flat'):
+        return ""
+    spread = (max(counts) - min(counts)) / max(counts)
+    if spread > 0.1:
+        return ""
+    return (f"these {len(counts)} are within {spread * 100:.0f}% of each other "
+            f"- the order between them is not a difference worth acting on")
+
+
+def _density_sentence(distribution):
+    """The graph's shape in one line, rather than a chart (`UX-196`)."""
+    deciles = distribution.get('deciles') or {}
+    median, ninety = deciles.get('p50'), deciles.get('p90')
+    if median is None or ninety is None:
+        return ""
+    return (f"Shape: half of this run's {distribution['n']} elements reach "
+            f"{median} or fewer, the top tenth reach {ninety} or more "
+            f"(max {distribution['max']})")
 
 
 def _criticality_findings(result: AnalysisResult) -> List[dict]:

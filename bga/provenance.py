@@ -179,6 +179,7 @@ TRACE_QUERIES = {
     # Dependencies: the finding is about shape, not speed.
     "criticality": "dependency-wait",
     "blast-radius-ranking": "dependency-wait",
+    "blast-radius-structural": "dependency-wait",
     "shared-source-blast": "dependency-wait",
     # Resources: what the processes inside the sandbox cost.
     "memory-envelope": "process-storm",
@@ -415,6 +416,14 @@ _CLAIMS = {
               "Who-depends-on-me is ranked only on a build the chain does "
               "not already constrain; above the threshold the ranking that "
               "matters is how long each element takes."), ()),
+    "blast-radius-structural": (
+        ("signals.blast_radius",),
+        _unconditional(
+            "Published when the elements with the widest reach are "
+            "structural kinds - a base image, a toolchain, a stack. Their "
+            "dependents are the graph's shape rather than a task, which is "
+            "why UX-258 reports them here instead of ranking them as work "
+            "(the rule UX-76 already applied to criticality)."), ()),
     "criticality": (
         ("signals.critical_path_length",),
         _unconditional(

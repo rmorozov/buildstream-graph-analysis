@@ -179,6 +179,50 @@ MODELLED_AXIS_CLAUSE = (
 )
 
 
+# UX-259: the deciles a blast-radius count is read against.
+#
+# Deliberately the *same* statistic `UX-234` uses for the store -
+# `store_aggregate.percentile`, nearest-rank - rather than a second
+# implementation that rounds differently. Two percentile functions in
+# one codebase is the drift this repository fixes more often than
+# anything else; the populations differ (elements within one run here,
+# runs within a store there), the arithmetic must not.
+BLAST_DISTRIBUTION_DECILES = (10, 20, 30, 40, 50, 60, 70, 80, 90)
+BLAST_DISTRIBUTION_TAIL = (95, 99)
+
+# Below this a distribution is arithmetic without meaning: deciles over
+# four elements are four numbers wearing ten labels. `UX-234`'s
+# `MIN_BASELINE_RUNS` is the precedent - refuse rather than compute.
+MIN_ELEMENTS_FOR_DISTRIBUTION = 10
+
+
+def blast_radius_distribution(counts):
+    """`{n, deciles, p95, p99, min, max}` - or a refusal, with a reason.
+
+    Returns `None` for a run too small to have a shape, so a consumer
+    can tell "no distribution" from "a flat one" - `UX-249`'s rule about
+    absence, applied to a statistic.
+    """
+    from .store_aggregate import percentile
+
+    values = sorted(int(c) for c in counts if c is not None)
+    if len(values) < MIN_ELEMENTS_FOR_DISTRIBUTION:
+        return None
+    shape = {
+        'n': len(values),
+        'min': values[0],
+        'max': values[-1],
+        'deciles': {f'p{p}': percentile(values, p)
+                    for p in BLAST_DISTRIBUTION_DECILES},
+    }
+    for p in BLAST_DISTRIBUTION_TAIL:
+        shape[f'p{p}'] = percentile(values, p)
+    # A graph where every element reaches the same number of others has
+    # no shape to describe, and ten identical buckets would imply one.
+    shape['is_flat'] = values[0] == values[-1]
+    return shape
+
+
 class BuildEfficiencyAnalyzer:
     """
     Main analyzer class implementing the bga v9 specification.
@@ -1941,6 +1985,21 @@ class BuildEfficiencyAnalyzer:
             signals['top_blast_radius'] = [
                 br.element_uid for br in diag_result.top_blast_radius_elements[:5]
             ]
+            # UX-259: the shape the counts come from. `753 downstream`
+            # is p99.9 in a graph of 1,202 and unremarkable in one of
+            # forty thousand, and the *number* is what travels into a
+            # ticket while the rank stays behind. Deciles plus the
+            # named tail, because ten buckets is a shape a reader takes
+            # in at a glance and finer only matters where p95/p99
+            # already carry it.
+            # Absent, not `null`, when the run is too small for a
+            # distribution to mean anything - the same shape `UX-249`
+            # settled on for "we do not have this", so a consumer never
+            # has to interpret a published null.
+            shape = blast_radius_distribution(
+                [br.downstream_count for br in diag_result.blast_radius])
+            if shape:
+                signals['blast_radius_distribution'] = shape
             # UX-173: which order the ranking above is in, published
             # rather than inferable - "ranked by cost" and "ranked by
             # count because nothing was measured" are different claims.

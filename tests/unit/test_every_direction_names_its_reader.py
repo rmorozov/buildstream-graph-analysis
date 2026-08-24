@@ -131,9 +131,16 @@ class TestEveryNewFilingNamesItsReader:
         R5-R8 and filed only UX-234, which serves R5 and R7.
 
         That is not a defect to fix here; it is the gap analysis
-        working. It is asserted so that the day someone files for R6,
-        this guard tells them the map moved and `roles.md` should say
-        so too.
+        working. It is asserted so that the day someone files for a
+        role, this guard tells them the map moved and `roles.md` should
+        say so too.
+
+        **It has already earned its keep once.** R3 - the graph owner -
+        was in this list until round 32, when `UX-258`/`UX-259` filed
+        against the blast ranking (whether an element reaches most of
+        the graph *by design* is a structural question, which is R3's).
+        This guard is what caught that the row in `roles.md` still
+        claimed R3 was served by round-19 work alone.
         """
         served = set()
         for path in _tagged_task_files():
@@ -144,7 +151,7 @@ class TestEveryNewFilingNamesItsReader:
                     break
         unserved = sorted(_role_ids() - served,
                           key=lambda r: int(r[1:]))
-        assert unserved == ["R3", "R6"], (
+        assert unserved == ["R6"], (
             f"the set of roles with no filing since UX-{FIRST_TAGGED} changed "
             f"to {unserved}. That is the role model earning its file - update "
             f"roles.md's table in the same commit (fixing guide, item 7).")

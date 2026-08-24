@@ -142,6 +142,25 @@ def add_host_manifest(run_context: dict) -> None:
         pass
 
 
+def add_producer(run_context: dict) -> None:
+    """UX-249: which build of `bga` wrote this run directory.
+
+    The same shape and the same best-effort rule as
+    `add_host_manifest` above, for the same reason: a run directory is
+    re-read months later by a different build, and until this landed
+    nothing in it said which build that was.
+
+    It records the whole contract set rather than the subset a run
+    directory depends on - see `bga/producer.py` for why - and it makes
+    no refusal. `UX-250` owns what to refuse on; this only has to make
+    the answer available, and a recording that arrives after the policy
+    that reads it is a policy with nothing to read.
+    """
+    from bga import producer
+
+    producer.add(run_context)
+
+
 def add_memory_capacity_fields(
     run_context: dict, memory_budget_mb: int = None, estimated_job_memory_mb: int = None,
 ) -> None:

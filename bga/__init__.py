@@ -12,7 +12,7 @@ The governing principle is:
 > **Measure what happened. Certify what cannot be improved. Label what is estimated. Never mix the three.**
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from .analyzer import BuildEfficiencyAnalyzer, analyze_run
 from .ingest import (

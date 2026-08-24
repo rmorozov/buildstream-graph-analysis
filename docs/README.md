@@ -12,6 +12,10 @@ question you have, you know which folder to open.
 | see **what was found, and when** | [`audits/`](#audits) |
 | find **what is still open** | [`backlog/`](#backlog) |
 
+What changed between the `bga` you installed and this one is
+[`CHANGELOG.md`](../CHANGELOG.md) — a release records a contract state
+rather than a date (`UX-251`).
+
 New to `bga`? The [project README](../README.md) has a 30-second start
 that needs no BuildStream. Then
 [`guides/real-project.md`](guides/real-project.md) is the end-to-end
@@ -46,7 +50,7 @@ which is why the guides pick between them rather than always saying
 
 Every JSON document `bga` writes carries its schema id, and
 `bga --schema <id>` prints the contract — types, units, and the
-view-hints the browser report renders from (`UX-201`). Eight ids, and
+view-hints the browser report renders from (`UX-201`). Nine ids, and
 what writes each:
 
 | document | written by |
@@ -59,9 +63,11 @@ what writes each:
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
 | `host/v1` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
+| `sources/v1` | `bga extract`, at `sources.json` in a run directory — every element's sources, and how each one is keyed |
 
-A key may be added to any of these without a version bump; a rename or
-a removal bumps. The full contract table is
+The last two are written into a run directory rather than printed by a
+command, so `bga --schema` does not know them. A key may be added to
+any of these without a version bump; a rename or a removal bumps. The full contract table is
 [spec Part 32.5](spec/specification.md); what each command does with it
 is [`guides/cli.md`](guides/cli.md).
 
@@ -135,6 +141,7 @@ How to work on this repository.
 |---|---|
 | [`contributing/style-guide.md`](contributing/style-guide.md) | what documentation here has to do, and the two rules that are enforced by tests |
 | [`contributing/fixing-guide.md`](contributing/fixing-guide.md) | the mandatory entry point for picking up a backlog task |
+| [`contributing/release-guide.md`](contributing/release-guide.md) | how a release is cut: the contract state it records, and the version derived from it |
 
 ## Audits
 

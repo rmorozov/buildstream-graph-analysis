@@ -67,6 +67,8 @@ import json
 import random
 from pathlib import Path
 
+from ._run_context_common import add_producer
+
 # Defaults chosen to reproduce the round-2 audit fixture exactly. Changing
 # any of them changes the numbers quoted in UX-41..UX-44's Motivation
 # sections, so they are defaults rather than hardcoded constants only so
@@ -294,32 +296,35 @@ def main():
     (args.output / "trace.json").write_text(
         json.dumps({"run_identity_hash": args.run_id, "spans": spans, "phases": []}, indent=1)
     )
-    (args.output / "run-context.json").write_text(
-        json.dumps(
-            {
-                "trace_epsilon_us": 50_000,
-                "resource_capacities": {
-                    "PROCESS": args.builders,
-                    "DOWNLOAD": 10,
-                    "UPLOAD": 4,
-                },
-                "max_jobs": args.builders,
-                "native_max_jobs": 4,
-                "native_max_jobs_source": "parsed_from_invocation",
-                "host_cpu_count": args.builders,
-                "wall_clock": {
-                    "start_us": 0,
-                    "end_us": horizon + loading_us + resolving_us,
-                },
-                "pipeline_overhead": [
-                    {"phase": "Loading elements", "elapsed_us": loading_us},
-                    {"phase": "Resolving elements", "elapsed_us": resolving_us},
-                ],
-                "run_identity": {"manifest_hash": args.run_id, "targets": ["all.bst"]},
-            },
-            indent=1,
-        )
-    )
+    run_context = {
+        "trace_epsilon_us": 50_000,
+        "resource_capacities": {
+            "PROCESS": args.builders,
+            "DOWNLOAD": 10,
+            "UPLOAD": 4,
+        },
+        "max_jobs": args.builders,
+        "native_max_jobs": 4,
+        "native_max_jobs_source": "parsed_from_invocation",
+        "host_cpu_count": args.builders,
+        "wall_clock": {
+            "start_us": 0,
+            "end_us": horizon + loading_us + resolving_us,
+        },
+        "pipeline_overhead": [
+            {"phase": "Loading elements", "elapsed_us": loading_us},
+            {"phase": "Resolving elements", "elapsed_us": resolving_us},
+        ],
+        "run_identity": {"manifest_hash": args.run_id, "targets": ["all.bst"]},
+    }
+    # UX-249: a synthetic run is still a run directory, and it is read
+    # by the same analysis path as a real one. Stamping it makes the
+    # reproducibility claim exact rather than approximately true: the
+    # tree is byte-identical *for a given `bga` version*, which is what
+    # it always was - a version that generated differently would have
+    # broken the old claim silently.
+    add_producer(run_context)
+    (args.output / "run-context.json").write_text(json.dumps(run_context, indent=1))
 
     work = sum(d for _, d in placement.values())
     print(f"Wrote {args.output}")

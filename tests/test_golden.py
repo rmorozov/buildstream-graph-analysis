@@ -20,13 +20,15 @@ correctness assertions here; add them to the targeted test files instead.
         --format json --diagnostics \\
         | sed "s|$PWD/tests/fixtures/golden/mixed_task_kinds|<run>|g" \\
         | python3 -c 'import json,sys; d=json.load(sys.stdin); \\
-              d.pop("run_instance", None); print(json.dumps(d, indent=4))' \\
+              d.pop("run_instance", None); d.pop("producer", None); \\
+              print(json.dumps(d, indent=4))' \\
         > tests/fixtures/golden/mixed_task_kinds/expected_output.json
 
 The recipe passes the fixture as an *absolute* path and rewrites it to
 `<run>`, because that is exactly what `_run_analyze` below does; a recipe
 that skipped either step writes a snapshot this file can never match.
-`run_instance` is dropped for the same reason.
+`run_instance` and `UX-249`'s `producer` stamp are dropped for the
+same reason: both name the machine or the build, not the analysis.
 
 Then re-run this file and confirm the diff you expected is the only
 change (`git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json`).
@@ -60,6 +62,14 @@ def _run_analyze(fixture_dir: Path) -> dict:
     # withheld from the report: the identity hash, which is what a
     # snapshot is about, is untouched and still compared.
     payload.pop("run_instance", None)
+    # `UX-249`'s producer stamp is a property of *which build* ran the
+    # analysis, not of the analysis. Committing it would make this file
+    # fail on the first release rather than on the first regression,
+    # which is the opposite of what a golden test is for. Dropped for
+    # exactly the reason `run_instance` is - and the drop is a
+    # measurement, not a convenience: the stamp is still asserted, by
+    # `tests/unit/test_an_artifact_says_what_wrote_it.py`.
+    payload.pop("producer", None)
     return payload
 
 

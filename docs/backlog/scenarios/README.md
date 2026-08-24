@@ -15,18 +15,18 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-251 scenarios: **13 open**, 238 closed.
+252 scenarios: **9 open**, 243 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 49 |
-| contracts | 3 | 26 |
+| contracts | 1 | 27 |
 | viewer | 0 | 40 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
-| docs | 8 | 24 |
+| docs | 6 | 24 |
 | guards | 0 | 32 |
 
 ## Open scenarios
@@ -44,11 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-245 | [the architecture's CLI table is two commands behind](UX-0245-the-architectures-cli-table-is-two-commands-behind.md) | docs | Medium | R8 | 🔴 |
 | UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
-| UX-248 | [there is no authoritative contract inventory](UX-0248-there-is-no-authoritative-contract-inventory.md) | contracts | High | R4, R8 | 🔴 |
-| UX-249 | [nothing an artifact records says which bga wrote it](UX-0249-nothing-an-artifact-records-says-which-bga-wrote-it.md) | contracts | High | R1, R7 | 🔴 |
-| UX-250 | [comparison refuses on host and mode, but not on contract movement](UX-0250-comparison-refuses-on-host-and-mode-but-not-on-contract-movement.md) | contracts | Medium | R4 | 🔴 |
-| UX-251 | [a release is a contract state, not a date](UX-0251-a-release-is-a-contract-state-not-a-date.md) | docs | High | R4, R8 | 🔴 |
-| UX-252 | [the release notes should be generated from the closed rows](UX-0252-the-release-notes-should-be-generated-from-the-closed-rows.md) | docs | Medium | R8 | 🔴 |
+| UX-253 | [the aggregate mixes contract sets without saying so](UX-0253-the-aggregate-mixes-contract-sets-without-saying-so.md) | contracts | Medium | R5, R7 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -275,3 +271,6 @@ sees. [Direction 10](../../design/directions.md) argues both.
 Order: `UX-248` first — nothing else can enumerate contracts without
 it — then `UX-249`, then `UX-251`, then `UX-250` and `UX-252`, which
 both read what the first three built.
+
+All five are done, and `0.2.0` is the first recorded release: see
+[`../../../CHANGELOG.md`](../../../CHANGELOG.md).

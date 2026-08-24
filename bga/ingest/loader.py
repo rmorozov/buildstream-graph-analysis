@@ -62,6 +62,7 @@ def load_run_context(path: Path) -> RunContext:
         pipeline_overhead=data.get('pipeline_overhead', []),
         run_identity=data.get('run_identity'),
         host_manifest=data.get('host_manifest'),
+        producer=data.get('producer'),
         build_outcome=data.get('build_outcome'),
         queue_summary=data.get('queue_summary'),
         timestamp_agreement=data.get('timestamp_agreement'),

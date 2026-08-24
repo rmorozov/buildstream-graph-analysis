@@ -155,6 +155,14 @@ class RunContext:
     # refused every baseline older than itself would be telling users to
     # throw away the ones they came with.
     host_manifest: Optional[dict] = None
+    # UX-249: which build of `bga` wrote this run directory, and the
+    # contract set it had. Same path and same rule as `host_manifest`
+    # above, for the same reason - it is a fact about *which run this
+    # is*. `None` for every capture taken before the stamp existed, and
+    # `UX-250` treats that absence as a named unknown rather than as
+    # agreement: a tool that refused every artifact older than itself
+    # would be telling users to throw away the history they came with.
+    producer: Optional[dict] = None
     # UX-54: whether the build this run describes actually succeeded -
     # not part of run-context/v9's spec-mandated schema (the spec has no
     # concept of a failed run at all), an additive extension

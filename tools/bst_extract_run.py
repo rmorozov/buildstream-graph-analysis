@@ -39,6 +39,7 @@ from .chrome_trace_to_bga_trace import (
 )
 from .bst_show_to_graph import extract_graph
 from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
+                                  add_producer,
                                   add_memory_capacity_fields)
 
 
@@ -411,6 +412,7 @@ def extract_run(
     # runs can be told apart - or told to be the same - rather than
     # compared on the assumption that they are.
     add_host_manifest(run_context)
+    add_producer(run_context)
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:

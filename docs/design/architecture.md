@@ -513,14 +513,33 @@ renderers are built against, so nothing here is a second copy to drift.
 | `store-aggregate/v1` | that store as a distribution: min/median/p95/max/MAD per host class, and the refusal when a mix cannot be blended | `bga snapshot --aggregate --format json` |
 | `whatif/v1` | what the build would drop to for a chosen set of fixes - one projection, never a sum | `bga whatif --format json` |
 | `host/v1` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
+| `sources/v1` | every element's source resources and how each is keyed - the on-disk shape `bga blast` reads | inside `sources.json` |
+
+**Every artifact says what wrote it** (`UX-249`): a `producer` block —
+tool, version, and the contract set the writing build had — rides in
+every run directory and every published `analyze/v1` document, because
+`bga` reads its own past output as input and until round 30 nothing in
+those artifacts said which build produced them. The version there is
+*provenance*; compatibility is decided per contract, which is why
+`bga compare` refuses on **contract movement** and not on a version gap
+(`UX-250`). Which contract states shipped together is
+[`CHANGELOG.md`](../../CHANGELOG.md) (`UX-251`).
 
 **The versioning rule**: a field rename or removal bumps the version; an
 addition does not. `additionalProperties` is true everywhere, so a
 consumer that pins a version keeps working while the tool grows.
 
+The last two rows are written but not printable — on-disk shapes a run
+directory carries rather than documents a subcommand emits. `--schema`
+does not know them, and `bga.contracts.unprintable()` says so.
+
 A guard (`tests/unit/test_the_documents_keep_up_with_the_contracts.py`)
-asserts this table and the spec's Part 32.5 name every schema the code
-emits, and no schema it does not. A new payload without documentation
+asserts this table and the spec's Part 32.5 name every contract in
+`bga.contracts.ids()`, and no contract that does not exist. That
+inventory is derived from the package rather than kept as a list —
+`UX-248` found `sources/v1` written to every run directory and present
+in no registry, no guard and no document, because the previous version
+unioned the registry with a single hard-coded id. A new payload without documentation
 reddens it - which is the only mechanism this repository has found that
 keeps two hand-maintained copies of one fact together.
 

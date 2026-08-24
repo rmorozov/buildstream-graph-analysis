@@ -1,6 +1,6 @@
 # UX-248: there is no authoritative contract inventory
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** R4 and R8, who pin a document; and every guard that thinks it covers "every contract" | **Topic:** contracts
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R4 and R8, who pin a document; and every guard that thinks it covers "every contract" | **Topic:** contracts
 
 ## Motivation
 
@@ -67,3 +67,73 @@ The inventory reports 9 (proving the gap against `schemas.names()`'s
 7), a stamped id added in a test fixture is reported as missing, and
 the existing `UX-233` guards go green over the full set rather than
 over 8 of it.
+
+## Outcome
+
+**Status:** 🟢 Fixed & Verified
+
+`bga/contracts.py` derives the set by walking the package for
+module-level `SCHEMA` declarations, which is the convention every
+contract outside `schemas.py` already followed. The next one is
+inventoried by *existing* rather than by someone remembering.
+
+```text
+inventory()   9 contracts
+printable()   7   (what `bga --schema` prints)
+unprintable() 2   host/v1, sources/v1 - on-disk shapes, not documents
+```
+
+### The measurement is what happened when the guards were repointed
+
+`test_the_documents_keep_up_with_the_contracts.py` and
+`test_the_front_door_is_current.py` both used
+`schemas.names() | {hostinfo.SCHEMA}`. Switching them to
+`contracts.ids()` reddened three checks immediately, all on the same
+contract:
+
+```text
+published schema(s) Part 32.5 does not list: ['sources/v1']
+published schema(s) missing from the architecture inventory: ['sources/v1']
+published schema(s) docs/README.md does not name: ['sources/v1']
+```
+
+That is the item's whole argument, run: a union with a literal covers
+the contracts someone remembered. `sources/v1` had been written to
+`sources.json` in every run directory since `UX-171` and read back by
+`load_inventory`, and appeared in no registry, no guard and no
+document. It is in all three now, with the *written but not printable*
+distinction stated rather than left for a reader to discover at a
+`--schema` refusal.
+
+### Two derivations, not one
+
+The module derives from the runtime (module `SCHEMA` constants plus the
+registry). `tests/unit/test_the_contract_inventory_is_derived.py`
+derives it a second way — scanning source text for `"<name>/vN"`
+literals — and asserts the two agree. That catches the case the runtime
+walk structurally cannot: a contract stamped by a string literal nobody
+bound to a constant.
+
+The derivation is proven to *be* a derivation rather than a list: the
+guard writes a module into the package at runtime, asserts it joins the
+inventory, deletes it, and asserts it leaves. Without the second half
+the first would pass against a cached answer.
+
+**A mutation of mine that did not discriminate.** Injecting
+`owned["legacy/v1"]` to test "the inventory names nothing the source
+does not" left the guard **green** — because the injected line is
+itself a source literal, so the scan found it. Rejected rather than
+counted; the mutation now builds the id from `chr()` calls so it exists
+at runtime and nowhere in the text. The lesson is narrow and worth
+keeping: *when a guard reads the source, a mutation written into the
+source is part of what it reads.*
+
+**Mutations verified red and reverted (4, one rejected and redone):**
+the inventory stopping its package walk (reddened three checks); an id
+in the inventory that no source stamps; a contract claiming an owner
+that is not a file; the id pattern no longer requiring a version.
+
+**Deviation from the Required Fix:** none.
+
+Small tier: `2079 passed, 1142 deselected in 26.57s`.
+Full suite: `3218 passed, 3 skipped in 360.71s`. `make lint`: clean.

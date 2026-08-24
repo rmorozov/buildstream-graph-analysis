@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-275 scenarios: **4 open**, 271 closed.
+284 scenarios: **13 open**, 271 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 1 | 30 |
-| viewer | 0 | 53 |
+| viewer | 9 | 62 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
@@ -40,6 +40,15 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 | UX-275 | [the capacity recommendation is text-only](UX-0275-the-capacity-recommendation-is-text-only.md) | contracts | Medium | R5, R7 | 🔴 |
+| UX-277 | [every table cell stringifies its own structure](UX-0277-every-table-cell-stringifies-its-own-structure.md) | viewer | High | R1, R7, R8 | 🔴 |
+| UX-278 | [the magnifier opens nothing for most elements](UX-0278-the-magnifier-opens-nothing-for-most-elements.md) | viewer | High | R1, R7 | 🔴 |
+| UX-279 | [forty-three copy controls, and no way to know what they copy](UX-0279-forty-three-copy-controls-and-no-way-to-know-what-they-copy.md) | viewer | Medium | R8 | 🔴 |
+| UX-280 | [copy as markdown](UX-0280-copy-as-markdown.md) | viewer | Medium | R8 | 🔴 |
+| UX-281 | [the satellite pages are dead ends](UX-0281-the-satellite-pages-are-dead-ends.md) | viewer | Medium | R1, R7 | 🔴 |
+| UX-282 | [the Perfetto fallback is below the button that fails](UX-0282-the-perfetto-fallback-is-below-the-button-that-fails.md) | viewer | Low | R7 | 🔴 |
+| UX-283 | [the bottleneck view names elements you cannot reach](UX-0283-the-bottleneck-view-names-elements-you-cannot-reach.md) | viewer | Medium | R1, R7 | 🔴 |
+| UX-284 | [the table tools are below the table, and scroll away](UX-0284-the-table-tools-are-below-the-table-and-scroll-away.md) | viewer | Medium | R1, R7 | 🔴 |
+| UX-285 | [the identity blocks are split, and the blast box is last](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md) | viewer | Medium | R1, R7 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -561,3 +570,70 @@ never the only place a mutation would be caught" — was written in a
 comment four other test files keep. The run is now committed as a 72 KB
 fixture and the rule is mechanical
 ([`UX-276`](UX-0276-a-guard-can-rest-on-a-path-no-clone-has.md)).
+
+## UX-277..UX-284: reported from a real report, round 38's filings (2026-08-24)
+
+Nine observations from reading the served report, measured against it
+rather than argued. Everything below is from the 1,202-element synthetic
+run (`bga gen-synthetic /tmp/scale --seed 1`) and the committed
+`macro_micro` fixture, in Chrome 141.
+
+**Three of the nine are one line.** `UX-267` built `renderStructured` —
+inline / bounded table / fold, by width — and wired it into
+`renderPairs`, which draws `<dd>` cells. It was never wired into
+`buildTable`, which draws every `<td>` in the report. That leaf
+(`bga/viewer/app.js:479`) still does `raw.join(", ")` for arrays and
+`JSON.stringify` for objects:
+
+```text
+18,415 <td> cells on the 1,202-element run
+  raw JSON cells                     6
+  joined-array cells over 60 chars  11
+  "[object Object]" cells            1
+  widest cell                   14,300 characters  (signals / leaves_detail)
+```
+
+So `leaves_detail` is 14,300 characters of JSON in one cell
+([`UX-277`](UX-0277-every-table-cell-stringifies-its-own-structure.md)),
+`CELL_TEXT_CAP` never fires because it lives on the path this one
+bypasses, and the bottleneck block's nine choke points are a string
+rather than rows — which is why the `structural` section has **zero**
+links out of it
+([`UX-283`](UX-0283-the-bottleneck-view-names-elements-you-cannot-reach.md)).
+The report's "no way to go to detailed info" is not missing data; it is
+data rendered as dead text.
+
+**The magnifier is worse than reported.** It was described as working
+only for critical-path elements; measured, the mechanism is the detail
+cap and the numbers are starker — 1,202 elements, **24** detail blocks,
+27 Inspect anchors, **2 of them resolving to nothing**
+([`UX-278`](UX-0278-the-magnifier-opens-nothing-for-most-elements.md)).
+This is `UX-208`'s dead-anchor defect returning at a scale `UX-216`'s
+fix did not cover, and the 11-element fixture cannot see it: there,
+30 anchors resolve 30 times.
+
+**Both satellite pages are dead ends**, not just `sql.html`:
+`perfetto.html`'s only internal href is `#`
+([`UX-281`](UX-0281-the-satellite-pages-are-dead-ends.md)).
+
+**Forty-three copy controls, three vocabularies, no hover text on any of
+them** — and the bare `Copy` means one thing in `decision` and another
+in `findings`
+([`UX-279`](UX-0279-forty-three-copy-controls-and-no-way-to-know-what-they-copy.md),
+[`UX-280`](UX-0280-copy-as-markdown.md)).
+
+**Every table control is `position: static`** and 28 of 43 sit below
+their own table's top, on a document 18.8 screens tall
+([`UX-284`](UX-0284-the-table-tools-are-below-the-table-and-scroll-away.md)).
+
+The Perfetto fallback line is `UX-272`'s move applied to the hand-off
+page ([`UX-282`](UX-0282-the-perfetto-fallback-is-below-the-button-that-fails.md)).
+
+**And the page's furniture is in the wrong order.** The three blocks
+that answer *which run is this* are split across the document — `summary`
+and `run_instance` at 1.3–1.6 screens, `producer` at 10.9 on the
+synthetic run and 14.0 on the fixture — while the blast control, an
+interactive question rather than a report block, is the **last** thing
+on the page at 18.5 and 19.9 screens, eighteen screens from the findings
+it would be asked about
+([`UX-285`](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md)).

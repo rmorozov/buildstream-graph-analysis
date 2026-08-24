@@ -15,18 +15,18 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-246 scenarios: **8 open**, 238 closed.
+251 scenarios: **13 open**, 238 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 49 |
-| contracts | 0 | 23 |
+| contracts | 3 | 26 |
 | viewer | 0 | 40 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
-| docs | 6 | 22 |
+| docs | 8 | 24 |
 | guards | 0 | 32 |
 
 ## Open scenarios
@@ -44,6 +44,11 @@ task file, which is the only place it ever lived twice.
 | UX-245 | [the architecture's CLI table is two commands behind](UX-0245-the-architectures-cli-table-is-two-commands-behind.md) | docs | Medium | R8 | 🔴 |
 | UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
+| UX-248 | [there is no authoritative contract inventory](UX-0248-there-is-no-authoritative-contract-inventory.md) | contracts | High | R4, R8 | 🔴 |
+| UX-249 | [nothing an artifact records says which bga wrote it](UX-0249-nothing-an-artifact-records-says-which-bga-wrote-it.md) | contracts | High | R1, R7 | 🔴 |
+| UX-250 | [comparison refuses on host and mode, but not on contract movement](UX-0250-comparison-refuses-on-host-and-mode-but-not-on-contract-movement.md) | contracts | Medium | R4 | 🔴 |
+| UX-251 | [a release is a contract state, not a date](UX-0251-a-release-is-a-contract-state-not-a-date.md) | docs | High | R4, R8 | 🔴 |
+| UX-252 | [the release notes should be generated from the closed rows](UX-0252-the-release-notes-should-be-generated-from-the-closed-rows.md) | docs | Medium | R8 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -237,3 +242,36 @@ The round's shape in one sentence each:
   a retrospective, longitudinal third plane (`UX-91`), and cache
   effectiveness — hits, churn, trends — as a first-class analysis
   (`UX-92`).
+
+## UX-248..UX-252: the thirtieth round — releases as contract states (2026-08-24)
+
+The user's observation, and it has two halves that are easy to
+conflate. **`bga` reads its own past output as input** — `@last`, the
+baseline set, `cache-trend`, `store-aggregate` — and nothing an
+artifact records says which build of the tool wrote it. And the
+"what changed since I installed this" document does not exist: the
+material is 3,549 lines of audit rounds and 789 lines of closed rows,
+all organised by when the work happened rather than by what a consumer
+sees. [Direction 10](../../design/directions.md) argues both.
+
+- **`UX-248`** is the prerequisite and the surprise: 9 contracts are
+  stamped in the code, `schemas.names()` knows 7, and **`sources/v1`
+  is in no registry and no guard at all** — while being written to
+  `sources.json` in every run directory and read back. The same
+  "a guard that names one file will not see the second" pattern
+  `UX-233` was filed against, one level up.
+- **`UX-249`** — the producer stamp. Recording only; no refusal, so
+  the record lands before the policy that reads it.
+- **`UX-250`** — the policy: refuse when a *contract the comparison
+  depends on* moved, not when the package version differs. A refusal
+  that fires on every upgrade gets switched off.
+- **`UX-251`** — `CHANGELOG.md`, and a version **derived** from the
+  contract delta with a guard on the derivation. It consumes
+  `UX-241`'s review rather than adding a second doc-sweep trigger.
+- **`UX-252`** — the notes' body is generated from the closed rows; the
+  head is written. A hand-written body would be the third copy of one
+  fact.
+
+Order: `UX-248` first — nothing else can enumerate contracts without
+it — then `UX-249`, then `UX-251`, then `UX-250` and `UX-252`, which
+both read what the first three built.

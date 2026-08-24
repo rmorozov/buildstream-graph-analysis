@@ -1262,3 +1262,131 @@ invocation in that session, recorded in
 claim about what the code does was checked against the source rather than
 inferred from output. The proposed report and CI-comment layouts are
 illustrations of intent, not implemented output.
+
+## Direction 10: releases as contract states (argued 2026-08-24, round 30)
+
+**Serves:** R4 and R8 — the two who pin something and need to know
+when it moved — and, through the store, R1 and R7, whose questions are
+answered by comparing this build against builds an *older* `bga`
+measured.
+
+`bga` is unusual among analysis tools in one way that matters here:
+**it reads its own past output as input.** `@last`/`@prev`, the
+baseline set, `cache-trend`, `store-aggregate` — every one of them
+opens artifacts written by whatever `bga` was installed at the time,
+which on a project six months old is not the one running now.
+
+Measured today:
+
+```text
+bga --version                      0.1.0     (unmoved across 29 rounds)
+git tag                            0 tags
+CHANGELOG                          none
+published contracts                9, every one at /v1, never bumped
+artifacts recording their producer  0
+```
+
+`__version__` is read in exactly one place — the `--version` string.
+It is written into nothing. A `run-context.json` from round 3 and one
+from round 29 are indistinguishable to the tool that reads them both.
+
+### The gap is a missing comparability dimension, not a missing number
+
+This repository is already strict about comparability, and strict in
+the right way: `bga compare` **refuses** two runs from different hosts
+(`UX-186`) and refuses a caches-off run against a caches-on one, with
+an exit code of its own rather than a caveat, because "these are not
+comparable" and "these are comparable and equal" must not look alike.
+
+Producer identity is the same kind of dimension and it is simply
+absent. If a later `bga` re-buckets an attribution category, renames a
+finding id, or changes how a percentile is taken, the aggregate over a
+year of stored runs silently mixes two definitions — and every existing
+refusal would pass it, because the host is the same and the mode is the
+same. That is the exact defect class the refusals exist to prevent,
+on the one axis nothing watches.
+
+So the first move is not a release process. It is: **an artifact says
+what produced it.**
+
+### Why the version must be derived from contracts, and what it is *not* for
+
+The user's instinct — base it on contract breakage or extension — is
+right, and it is right because this repository already has the
+contracts enumerated: nine schema ids, a CLI surface, a run-directory
+layout. A release does not need to invent a compatibility story; it
+needs to *record the one already implied* by those.
+
+The trap is making a single package number the load-bearing thing. It
+is a lossy summary of nine independent contracts: `whatif/v1 → v2`
+tells an `analyze/v1` consumer nothing, and if the package version were
+what they pinned, a break in a document they never read would look
+identical to one in the document they do. So:
+
+| level | answers | moves when |
+|---|---|---|
+| **contract version** (`analyze/v1`) | can my parser read this document? | that document breaks |
+| **package version** (`bga 0.2.0`) | which build produced this artifact? | every release |
+| **the release row** | which contract states shipped together? | every release |
+
+**The package version's job inside an artifact is provenance, not
+compatibility.** Compatibility is decided per contract, against the
+contract set the artifact itself recorded. That is stricter *and*
+looser than a version comparison in exactly the right places: two runs
+from `0.1.0` and `0.9.0` still compare if every contract they touch is
+unchanged, and two runs one patch apart refuse if one of them isn't.
+
+The version number is then *derived*, not chosen: the contract set at
+the last release row against the contract set now decides whether this
+is a break, an extension, or neither. A guard checks the derivation,
+because a version somebody picked by feel is a number with no meaning
+and this repository has spent twenty-nine rounds refusing those.
+
+### Where the release process should *not* go
+
+Two arguments against parts of the obvious design, both from what this
+repository has already measured.
+
+**A release must not become a second trigger for documentation review.**
+`UX-241` landed a review cadence one round ago: a stream, a checklist,
+and a guard that reddens past 25 closed rows. Adding "and also sweep
+the docs at release time" would create two mechanisms racing for one
+job — and *two hand-maintained copies of one fact drifting apart* is
+the single most-repeated defect in this backlog's history. The release
+should **consume** the review, not duplicate it: a release may only be
+cut when a review row exists at or after the previous release, and that
+review's findings are the release's documentation work. This makes the
+release cheaper, not richer, and keeps one answer to "when do we
+sweep".
+
+**The cadence must not be time-based.** There are no external consumers
+yet and nothing to deploy; a monthly release would be ceremony
+generating no information. The trigger is contract movement and a
+current review — both measurable, both already in the tree.
+
+### What a release is, then
+
+Five things, of which four are mechanical:
+
+1. a row in `CHANGELOG.md` with the contract set, the closed-row
+   marker, and the commit;
+2. a version derived from the contract delta and checked by a guard;
+3. a review row at or after the previous release (guard);
+4. notes whose **body is generated** from the closed rows since the
+   last marker — the narrative already exists there and a hand-written
+   third copy would drift — and whose **head is written**: the theme,
+   the contract delta, and what a consumer has to do about it;
+5. a tag.
+
+The one genuinely new piece of writing per release is item 4's head,
+which is a paragraph. Everything else is derivation.
+
+### What this does *not* fix
+
+The staleness the user names is real, and a release does not cure it —
+`UX-241`'s review does, and the release only refuses to proceed without
+one. Saying otherwise would be the second-trigger mistake wearing a
+different hat. What the release adds is the *changelog*: 3,549 lines of
+audit rounds and 789 lines of closed rows currently hold the "what
+landed" story, and no document answers "what changed between the thing
+I installed and the thing I have now" at all.

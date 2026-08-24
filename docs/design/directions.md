@@ -1488,3 +1488,100 @@ reachable, and stay *reported* — `UX-203` was filed because views were
 unreachable, and answering this by hiding them would trade one defect
 for an older one. What changes is that they are reported as **the
 graph's shape** rather than ranked as **the reader's next task**.
+
+## Direction 12: the report is read, not decoded (argued 2026-08-24, round 35)
+
+**Serves:** R1 first, and R3 — the two who open the page rather than the
+JSON.
+
+Reported from a real run, in nine parts. Every number below was
+measured on a served report in Chrome 141, not estimated.
+
+### What is actually wrong
+
+Two of the three pages `bga view` serves **ran nothing at all**:
+
+```text
+                   CSP violations   main children   body text
+index.html                      0              26      11,056
+sql.html                        1               0         508
+perfetto.html                   1               4         398
+```
+
+`default-src 'self'` refuses inline **script** exactly as it refuses
+inline style, and `sql.html` and `perfetto.html` each carried one.
+`UX-263` fixed the style half and checked `index.html` only. That is
+`UX-266`, and it is fixed.
+
+The rest is one line of code. Every object and every array that is not
+an array-of-objects renders as:
+
+```js
+el("details", {}, el("summary", {}, "object"),
+   el("pre", {}, JSON.stringify(value, null, 2)))
+```
+
+A summary that says `object` and a wall of raw JSON behind it. On a
+44-element run that is **34 such cells and 32,393 characters** of
+`<pre>`, the largest 8,191. It explains four separate complaints at
+once: clicking every object to find out what it is, JSON-as-string,
+unreadable arrays, and nothing searchable or bounded.
+
+### Where the reader's diagnosis is right, and where it is not
+
+**Right, and under-stated:** the collapsed-object problem. The reader
+called it *"quite inconvenient and puzzling"*; measured, one of those
+cells at 1,202 elements is ~224,000 characters behind a label that says
+nothing.
+
+**Right:** small objects belong inline as table cells, long ones behind
+a fixed height with a scroll and a search. Both are what a spike
+measured as best; the spike also found the trap — unfolding everything
+into tables took the document from 13.8 screens to **35.5**, and
+bounding rows got it only to 32.3. The fold is not the enemy. A
+summary reading `object` is. Keeping the fold and labelling it
+`Blast radius · 44 entries` gave zero raw JSON at 14.9 screens.
+
+**Challenged — depth is not the problem.** The proposal was to analyse
+JSON depth and choose representations by it. Measured, the document is
+7 levels deep and only **three nodes** live at level 7:
+
+```text
+depth   0    1    2    3    4    5   6  7
+nodes   1   19  129  500  794  229  88  3
+```
+
+The mass is at 3–4 and the pain is at **level 2**: maps with one key
+per element. A depth rule would fix almost nothing; a **width** rule
+fixes all of it. That is `UX-267`.
+
+**Challenged — a third column is the wrong shape.** A navigation column
+carrying the JSON structure would make the *document's shape* the
+organising principle, which is precisely what `UX-207` and `UX-199`
+moved away from: the page answers questions, and a JSON tree is a data
+browser. At 1440px a third column also leaves under 900px of reading
+width, undoing `UX-254`. The need behind the request is real — the rail
+is flat and the page is 30+ sections — so the answer is to make the
+**existing** rail two levels deep, not to add a column. That is
+`UX-271`.
+
+**Challenged — the header is not where the space goes.** Measured at
+1440x900 it is 92–184px, **0.1–0.2 screens** of a 13–15 screen
+document. Moving the actions right is cheap and worth doing, and it
+will not make the report meaningfully shorter; the honest framing is
+tidiness, not space. That is `UX-272`.
+
+### What nobody asked for and matters most
+
+Six of the seven wide maps in `signals` are **the same element list**
+seen through different fields — `blast_radius`, `slack`,
+`element_durations`, `downstream_count`, `criticality_probability`,
+`unweighted_depth`, all keyed by element UID, all 44 keys here and
+1,202 on a real run. They are one table with six columns, rendered six
+times as six opaque blobs.
+
+The seventh, `wall_clock_share`, is keyed by **task** —
+`app.bst|BUILD|BUILD|0` — and shares *zero* keys with the other six.
+Nothing on the page says so, and a reader comparing them is comparing
+different populations. That is `UX-268`, and it is the largest single
+readability win available.

@@ -70,7 +70,12 @@ ASSET_DIR = _asset_dir()
 # no directory listing and no fall-through to the filesystem.
 ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # UX-194: the Perfetto handoff and the canned-SQL page.
-          "perfetto.html", "perfetto.js", "sql.html",
+          # `UX-266`: each page's script is a *file*. They were inline
+          # `<script type="module">` blocks, which the server's own
+          # `default-src 'self'` refuses - `sql.html` rendered nothing
+          # and `perfetto.html`'s button had no listener.
+          "perfetto.html", "perfetto.js", "perfetto_page.js",
+          "sql.html", "sql.js",
           # UX-199: navigation, and the questions as data so the export
           # can inline what it used to strip.
           "nav.js", "questions.js",

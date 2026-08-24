@@ -192,7 +192,15 @@ class TestTheExportKeepsItsFunctionality:
         titles = json.loads(result.stdout)
         assert len(titles) >= 4, titles
         page = open("bga/viewer/sql.html", encoding="utf-8").read()
-        assert 'from "./questions.js"' in page
+        # `UX-266`: the script moved out of the page into a file,
+        # because the server's own `default-src 'self'` refuses an
+        # inline one. The property is unchanged; where it is written
+        # is not, and a guard still reading the page would pass on
+        # markup that no longer runs anything.
+        script = open("bga/viewer/sql.js", encoding="utf-8").read()
+        assert 'src="sql.js"' in page
+        assert 'from "./questions.js"' in script
+        page = page + script
         for title in titles:
             assert title not in page, (
                 f"sql.html spells out {title!r} instead of rendering the "

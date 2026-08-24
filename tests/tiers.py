@@ -55,6 +55,7 @@ LARGE = (
 )
 
 MEDIUM = (
+    "tests/unit/test_comparison_refuses_on_contract_movement.py",       #    2.1s
     "tests/unit/test_report_stays_readable_at_scale.py",             #   12.8s
     "tests/unit/test_marginal_efficiency_gate.py",                   #   11.3s
     "tests/unit/test_build_root_override_join.py",                   #    9.9s

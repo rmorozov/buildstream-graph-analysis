@@ -27,13 +27,16 @@ SPEC = REPO / "docs/spec/specification.md"
 def _published_schemas():
     """Every schema id the code stamps a document with.
 
-    From `schemas.names()` plus the ones stamped outside that registry -
-    `host/v1` is written into every run context by `hostinfo`, and a
-    reader meeting it in a payload needs it documented like any other.
+    This used to be `schemas.names()` unioned with one hard-coded id,
+    and `UX-248` measured what that costs: `sources/v1` - written to
+    `sources.json` in every run directory and read back - was in no
+    registry and therefore in no document. A union with a literal only
+    ever covers the contracts someone remembered. `contracts.ids()`
+    derives the set from the package.
     """
-    from bga import hostinfo, schemas
+    from bga import contracts
 
-    return sorted(set(schemas.names()) | {hostinfo.SCHEMA})
+    return contracts.ids()
 
 
 def test_every_published_schema_is_named_in_the_spec():

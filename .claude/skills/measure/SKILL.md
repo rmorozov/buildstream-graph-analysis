@@ -16,7 +16,7 @@ PYTHONPATH=. python3 -m bga.cli analyze \
     "$PWD/tests/fixtures/golden/mixed_task_kinds" \
     --format json --diagnostics \
   | sed "s|$PWD/tests/fixtures/golden/mixed_task_kinds|<run>|g" \
-  | python3 -c 'import json,sys; d=json.load(sys.stdin); d.pop("run_instance", None); print(json.dumps(d, indent=4))' \
+  | python3 -c 'import json,sys; d=json.load(sys.stdin); d.pop("run_instance", None); d.pop("producer", None); print(json.dumps(d, indent=4))' \
   > tests/fixtures/golden/mixed_task_kinds/expected_output.json
 git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json
 ```
@@ -24,7 +24,8 @@ git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json
 The absolute path and the `<run>` rewrite are both load-bearing —
 `tests/test_golden.py::_run_analyze` does exactly this, and a recipe
 that skips either writes a snapshot the test can never match. So is
-dropping `run_instance`. Then read the diff and confirm the change you
+dropping `run_instance` and `producer` — both name the machine or the
+build rather than the analysis. Then read the diff and confirm the change you
 intended is the *only* one.
 
 ## A run at scale, byte-reproducible

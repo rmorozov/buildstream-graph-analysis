@@ -134,6 +134,12 @@ def _run_instance(run_context, loaded_from) -> dict:
     manifest = getattr(run_context, 'host_manifest', None) if run_context else None
     if manifest:
         instance['host_manifest'] = manifest
+    # UX-249: and which build measured it. Rides with the host manifest
+    # for the same reason - `bga compare` should not have to load a
+    # second channel to answer "are these two even the same tool".
+    stamp = getattr(run_context, 'producer', None) if run_context else None
+    if stamp:
+        instance['producer'] = stamp
     # UX-202: why this run is not a measurement, if it is not - the one
     # `UX-185` accessor, published rather than left for a consumer to
     # re-derive from `build_outcome`. The evidence header states what

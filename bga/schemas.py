@@ -325,6 +325,14 @@ _ANALYZE_OPTIONAL = {
     "violations": "array",
     "capacity_verdict": "object",
     "run_instance": "object",
+    # UX-249: which build of `bga` wrote this document, and the contract
+    # set it had. An *addition*, so no version bump - UX-190's rule.
+    # Optional rather than required because a section report is not a
+    # full document and does not carry it, and because declaring it
+    # required would make every pre-UX-249 archived payload fail
+    # validation, which is the opposite of what recording provenance is
+    # for.
+    "producer": "object",
     "resource_blast": "object",
     # UX-193 found these two by serving a *real* capture: both are
     # present on every run with Plane 1 wrapper data, and absent from
@@ -504,6 +512,11 @@ _WHATIF_HINTS = {
 
 ANALYZE_FULL_KEYS = (
     "schema", "run_id", "total_duration_us", "section", "run_instance",
+    # UX-249: which build wrote this. On every full report, beside
+    # `run_instance` and for the same reason - both answer "which run,
+    # measured by what" rather than anything about the analysis. An
+    # addition, so no version bump.
+    "producer",
     # UX-207: the decision the run supports. In this list because it is
     # present on every full report - a run with nothing to diagnose
     # still publishes `inconclusive` rather than dropping the key, so a
@@ -795,6 +808,7 @@ EVIDENCE_QUANTITIES = {
 _ANALYZE_HINTS = {
     "timestamp_agreement": {QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove'},
     "run_instance": {QUESTION: 'Which capture is this?', RAIL: 'raw'},
+    "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
     "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
     "capacity_verdict": {
         QUESTION: 'Was the capacity right for this build?',

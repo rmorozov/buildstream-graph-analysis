@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .analyzer import BuildEfficiencyAnalyzer
-from . import hostinfo
+from . import hostinfo, producer
 from .cache_effectiveness import compute_cache_churn
 from .ingest.models import AnalysisResult, Element
 from .report.text import _CONFIDENCE_HIGH
@@ -885,6 +885,39 @@ def _compare_results(
         comparability_warning = (
             f"{comparability_warning}; {host_warning}" if comparability_warning
             else host_warning
+        )
+
+    # UX-250: and whether one tool measured both. The refusal is on
+    # *contract movement*, never on the version number - two runs from
+    # 0.1.0 and 0.9.0 still compare when every contract a comparison
+    # reads is unchanged, and two runs one patch apart refuse when one
+    # is not. Refusing on the version would fire on every upgrade,
+    # including the twenty-eight rounds that moved no contract at all,
+    # and a refusal that fires constantly gets switched off.
+    baseline_producer = getattr(baseline_result, 'run_instance', None) or {}
+    candidate_producer = getattr(candidate_result, 'run_instance', None) or {}
+    contract_movement = producer.comparison_movement(
+        baseline_producer, candidate_producer)
+    if contract_movement:
+        # In `mismatches`, unlike the host caveat above: a cross-host
+        # pair is still worth *looking* at, but two runs whose shared
+        # definitions changed underneath them are two different
+        # measurements wearing one set of field names.
+        mismatches.append({
+            'check': 'producer_contracts',
+            'message': ("the two runs were measured against different "
+                        "published contracts (" + ", ".join(contract_movement)
+                        + "), so their numbers do not mean the same thing"),
+        })
+    producer_note = producer.comparison_note(
+        baseline_producer, candidate_producer)
+    if producer_note and not contract_movement:
+        # A caveat, not a refusal. Every artifact written before
+        # `UX-249` is unstamped, and refusing those would make the
+        # stamp's arrival delete the history it was built to protect.
+        comparability_warning = (
+            f"{comparability_warning}; {producer_note}" if comparability_warning
+            else producer_note
         )
 
     # UX-54: a run whose build failed is not a candidate for a

@@ -57,6 +57,7 @@ import the native tracer and the trace converters on every run.
 | `bga chrome-to-trace` | `tools.chrome_trace_to_bga_trace` |
 | `bga native-to-chrome` | `tools.native_trace_to_chrome_trace` |
 | `bga cross-check` | `tools.bga_cross_check` |
+| `bga release-notes` | `tools.bga_release_notes` |
 | `bga gen-synthetic` | `tools.gen_synthetic_scale_run` |
 | `bga snapshot` | `tools.bga_snapshot` |
 | `bga doctor` | `tools.bga_doctor` |

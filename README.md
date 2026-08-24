@@ -230,6 +230,7 @@ which kind of question. The three entry points:
 | **use the tool** on a real project | [`docs/guides/real-project.md`](docs/guides/real-project.md) — capture → read → go inside → join → act → gate, with real output at every step |
 | **work on the codebase** | [`docs/design/architecture.md`](docs/design/architecture.md) — all three planes as one system, and every extension beyond the spec |
 | **look something up** | [`docs/guides/cli.md`](docs/guides/cli.md) — every command, flag and exit code |
+| **know what changed** since the build you installed | [`CHANGELOG.md`](CHANGELOG.md) — each release records a contract state, not a date |
 
 ## Development
 

@@ -2,7 +2,7 @@
 import json as _json
 from typing import Optional
 
-from .. import provenance, schemas
+from .. import producer, provenance, schemas
 from ..findings import (compute_findings, compute_headline,
                         compute_next_steps, finding_copy_text)
 from ..ingest.models import AnalysisResult
@@ -208,6 +208,13 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # join above.
     if section is None:
         provenance.attach(data)
+
+    # UX-249: which build wrote this. A published payload archived by a
+    # CI job is re-read like any stored run, and until this landed
+    # nothing in it said which `bga` produced it. The version is
+    # provenance, never a compatibility signal - the `contracts` list
+    # beside it is what a reader compares (Direction 10).
+    producer.add(data)
 
     # UX-190: the version leads. A consumer reading the first line of a
     # streamed or truncated document sees what it is before it sees

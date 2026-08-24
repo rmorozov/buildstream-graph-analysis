@@ -105,6 +105,10 @@ TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
         "tools.bga_cross_check",
         "Cross-check an analysis against other figures",
     ),
+    "release-notes": (
+        "tools.bga_release_notes",
+        "Generate a release body from the closed backlog rows",
+    ),
     "gen-synthetic": (
         "tools.gen_synthetic_scale_run",
         "Generate a synthetic run directory at a scale",

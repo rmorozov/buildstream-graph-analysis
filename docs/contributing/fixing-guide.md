@@ -145,6 +145,8 @@ bga/analyzer.py        orchestrator - wires every stage together, BuildEfficienc
 bga/findings.py        every conclusion the report draws, as data with stable ids
 bga/provenance.py      why each claim is made: evidence refs, rule, trace query (UX-229)
 bga/schemas.py         every published contract + view-hints; `--schema` prints from here
+bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
+bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
 bga/report/            text.py, json.py, csv, ci_comment.py - renderers, no analysis
 ```
 
@@ -193,6 +195,7 @@ tools/bga_view.py            the viewer's server and `--export`
 tools/bga_timeline.py        one trace, both planes
 tools/bst_baseline_set.py    assembling a baseline set from published refs
 tools/bst_show_to_graph.py, bst_rebuild_set.py, bst_checkout_cost.py,
+tools/bga_release_notes.py  a release body, generated from the closed rows (UX-252)
 tools/bga_cross_check.py, gen_synthetic_scale_run.py, chrome_trace_to_bga_trace.py,
 tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
@@ -215,7 +218,7 @@ docs/backlog/progress-tracker.md   closed spec-compliance backlog - archaeology 
 
 ## 6a. Which kind of session is this?
 
-Seven streams run in this repository, and they do not start the same way.
+Eight streams run in this repository, and they do not start the same way.
 `§1`'s "pick the highest-priority 🔴 row" is right for two of them and
 wrong for the rest — an audit has no row until it has been done.
 
@@ -228,8 +231,9 @@ wrong for the rest — an audit has no row until it has been done.
 | **documentation** | a doc that is wrong, or a gap filed per `§3.11` | the correction, in the same register | the guard that would have caught it exists, or its absence is stated |
 | **refactor** | a measured cost — size, duplication, a budget | the change, plus before/after | the measurement moved, and no behaviour did |
 | **review** | the diff since the last row in [`architecture-review.md`](../audits/architecture-review.md) | filings, and that document's next row | every checklist item is answered with a measurement or a filing (`UX-241`) |
+| **release** | a contract that moved, and a review at or after the last release | a row in [`CHANGELOG.md`](../../CHANGELOG.md), a derived version, a tag | the derivation guard is green and the head names what a consumer must do (`UX-251`) |
 
-Two rules cut across all seven:
+Two rules cut across all eight:
 
 - **A stream's output is another stream's input.** Design and audit
   produce filings and no code; feature and fix consume them. If a

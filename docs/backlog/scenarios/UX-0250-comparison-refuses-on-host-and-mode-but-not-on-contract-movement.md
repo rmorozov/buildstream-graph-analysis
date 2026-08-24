@@ -1,6 +1,6 @@
 # UX-250: comparison refuses on host and mode, but not on contract movement
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-249 (the stamp it reads) | **Serves:** R4 — whose gate must not report a definition change as a regression | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-249 (the stamp it reads) | **Serves:** R4 — whose gate must not report a definition change as a regression | **Topic:** contracts
 
 ## Motivation
 
@@ -52,3 +52,61 @@ refuse with exit 6 and name the contract; a run with no stamp compares
 with the absence named. The first two cases need a fabricated `v2`
 stamp, since no contract has yet moved — and that is the point of
 building this before the first bump rather than after.
+
+## Outcome
+
+**Status:** 🟢 Fixed & Verified
+
+`bga compare` gains contract movement as a refusal reason, reusing
+`EXIT_CODE_MISMATCHED_RUNS` (6) and the existing refusal grammar. Run
+against two real run directories:
+
+```text
+$ bga compare /tmp/cmp_a /tmp/cmp_b          # candidate rewritten to analyze/v2
+Refusing to compare these runs (producer_contracts):
+  - the two runs were measured against different published contracts
+    (analyze/v1 → analyze/v2), so their numbers do not mean the same thing
+Pass --allow-mismatch to compare anyway
+exit=6
+```
+
+**The refusal is on contract movement, never on the version.** The
+policy behaves as Direction 10 argued, measured on fabricated stamps
+because no contract has yet moved:
+
+```text
+0.1.0 vs 0.9.0, identical contracts   -> compares (a note, no refusal)
+0.2.0 vs 0.2.1, analyze/v1 → v2       -> refuses
+0.2.0 vs 0.3.0, whatif/v1 → v2        -> compares (a comparison never reads it)
+unstamped vs 0.2.0                    -> compares, absence named
+```
+
+`COMPARISON_CONTRACTS` names what a comparison actually reads. Refusing
+on every contract would make `whatif/v1` moving refuse two durations,
+and a refusal that fires constantly gets switched off — which is worth
+less than none.
+
+**A missing stamp is named, not refused.** Every artifact predating
+`UX-249` lacks one; refusing them would make the stamp's arrival delete
+the history it was built to protect. It renders as a caveat beside the
+numbers, in `comparability_warning` rather than `mismatches`, which is
+where `UX-186` put the cross-host caveat for the same reason.
+
+`--allow-mismatch` still opts back in, because a new refusal with no
+way past it is a new way to be stuck.
+
+**Mutations verified red and reverted (6):** the policy comparing
+versions instead of contracts (reddened two); the read set becoming
+every contract (reddened two); an unstamped run being refused; `compare`
+no longer acting on the movement.
+
+**Deviation from the Required Fix:** clause 2 — the store's aggregate
+and the trend reporting contract sets across many runs — is **not
+implemented**. `compare` is the two-run case and is done; the
+many-run case needs a decision about what "the minority" means when
+three contract sets are present, and guessing it here would ship a
+rule nobody argued. Filed as `UX-253` rather than left as a comment,
+per `§3.11`.
+
+Small tier: `2079 passed, 1142 deselected in 26.57s`.
+Full suite: `3218 passed, 3 skipped in 360.71s`. `make lint`: clean.

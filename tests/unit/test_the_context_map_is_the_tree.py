@@ -105,7 +105,7 @@ class TestTheStreamsAreNamed:
     and wrong for an audit, which has no row until it has been done."""
 
     STREAMS = ("design", "audit", "feature", "fix", "documentation",
-               "refactor", "review")
+               "refactor", "review", "release")
 
     def test_every_stream_this_repository_runs_is_described(self):
         text = GUIDE.read_text(encoding="utf-8")

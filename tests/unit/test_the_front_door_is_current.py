@@ -45,6 +45,7 @@ NOT_ON_THE_FRONT_DOOR = {
     "rebuild-set": "`bga blast` is the same question with an answer a reader can act on",
     "run-context": "a piece of `bga extract`, for the case where the pieces are needed",
     "timeline": "one view of a capture; `bga view` is the one the door names",
+    "release-notes": "a maintainer command; the release guide is where it is used",
 }
 
 
@@ -74,9 +75,11 @@ def _subcommands():
 
 
 def _published_schemas():
-    from bga import hostinfo, schemas
+    # `UX-248`: derived from the package, not unioned with a literal -
+    # the literal version missed `sources/v1` for nine rounds.
+    from bga import contracts
 
-    return sorted(set(schemas.names()) | {hostinfo.SCHEMA})
+    return contracts.ids()
 
 
 class TestTheDoorNamesTheTool:

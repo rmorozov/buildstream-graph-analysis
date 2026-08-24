@@ -1649,10 +1649,20 @@ key:
 | `bga snapshot --aggregate --format json` | `store-aggregate/v1` | as above |
 | `bga whatif --format json` | `whatif/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v1` | `bga.hostinfo.collect` |
+| the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
+
+The last two are **written but not printable**: they are on-disk shapes
+a run directory carries, not documents a subcommand emits, so
+`--schema` does not know them. `bga.contracts.unprintable()` names that
+difference rather than leaving a reader to discover it at a refusal.
 
 The list is not maintained by hand alone: a guard asserts that every id
-`bga/schemas.py` registers appears here and in `docs/design/architecture.md`'s
-contract inventory, so a new payload cannot ship undocumented.
+in `bga.contracts.ids()` appears here and in `docs/design/architecture.md`'s
+contract inventory, so a new payload cannot ship undocumented. The
+inventory is derived from the package rather than from a list, because
+`UX-248` measured what a list costs: `sources/v1` was written to every
+run directory for nine rounds while appearing in no registry, no guard
+and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
 an *addition* does not. So `additionalProperties` is true in all three,

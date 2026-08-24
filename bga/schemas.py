@@ -1561,6 +1561,7 @@ _STORE_AGGREGATE_REQUIRED = {
     "snapshots": "integer",
     "measured": "integer",
     "excluded": "object",
+    "contract_composition": "object",
     "host_classes": "array",
     # `""` rather than `"object"`: both are genuinely absent as `null`
     # - no blend was asked for, nothing was refused - and `_document`
@@ -1609,6 +1610,37 @@ _STORE_AGGREGATE_HINTS = {
                                      "distribution."},
             "by_reason": {"description": "How many were excluded for "
                                          "each distinct reason."},
+        },
+    },
+    "contract_composition": {
+        QUESTION: 'Were these runs written under the same definitions?',
+        "description": "Which contract sets the aggregated runs were "
+                       "produced under (UX-253). A store can hold runs "
+                       "from several builds of `bga`, and \"we "
+                       "aggregated thirty runs\" and \"we aggregated "
+                       "thirty runs written under two different "
+                       "definitions of the fields\" are different "
+                       "claims. The rule is UX-250's, applied to a set: "
+                       "what decides comparability is movement in the "
+                       "contracts this document *reads*, never the "
+                       "package version.",
+        "properties": {
+            "sets": {"description": "Each distinct contract set found, "
+                                    "with how many runs carry it, "
+                                    "commonest first."},
+            "unstamped_runs": {
+                QUANTITY: "count",
+                "description": "Runs whose producer recorded no "
+                               "contracts - every artifact predating "
+                               "UX-249. An explicit unknown, never "
+                               "read as agreement."},
+            "reads": {"description": "The contracts this document "
+                                     "itself reads. A set that moved "
+                                     "one of these makes its runs "
+                                     "unreadable here; a set that moved "
+                                     "anything else does not."},
+            "mixed": {"description": "Whether more than one contract "
+                                     "set is present."},
         },
     },
     "host_classes": {

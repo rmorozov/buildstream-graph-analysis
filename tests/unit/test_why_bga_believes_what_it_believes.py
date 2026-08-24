@@ -383,15 +383,11 @@ class TestThePageDrawsTheObject:
 
 
 _HARNESS = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", listeners: {},
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      typeof x === "string" ? this.textContent += x : this.children.push(x); } },
-  };
+  const node = _makeNode(tag);
+  return node;
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
@@ -400,7 +396,12 @@ const node = views.renderProvenance(__RECORD__);
 const text = [], paths = [], raw = [];
 (function walk(n) {
   if (!n) return;
-  if (n.textContent) text.push(n.textContent);
+  // Leaves only. A container's `textContent` is the concatenation of
+  // its descendants - true in a browser and now true here - so
+  // collecting every node counted each string again inside every
+  // ancestor, and the "text no field holds" check compared the page
+  // against a sentence nobody wrote (`UX-264`).
+  if (!(n.children ?? []).length && n.textContent) text.push(n.textContent);
   if (n.attrs["data-path"] !== undefined) paths.push(n.attrs["data-path"]);
   if (n.attrs["data-raw"] !== undefined) raw.push(n.attrs["data-raw"]);
   (n.children ?? []).forEach(walk);

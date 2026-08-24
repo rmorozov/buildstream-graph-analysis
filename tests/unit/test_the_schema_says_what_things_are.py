@@ -253,15 +253,12 @@ class TestDescriptionsAreThePopovers:
         description = overhead["properties"]["total_us"]["description"]
         out = _js('''
           const { renderPairs } = await import("./bga/viewer/app.js");
-          function make(tag) {
-            return { tagName: tag, nodeType: 1, attrs: {}, children: [],
-              textContent: "", className: "",
-              setAttribute(k, v) { this.attrs[k] = String(v); },
-              getAttribute(k) { return this.attrs[k] ?? null; },
-              append(...xs) { for (const x of xs) { if (x == null) continue;
-                typeof x === "string" ? this.textContent += x : this.children.push(x); } },
-            };
-          }
+          globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
+function make(tag) {
+  const node = _makeNode(tag);
+  return node;
+}
           globalThis.document = { createElement: make };
           const node = %s;
           const out = renderPairs("pipeline_overhead", { total_us: 1441000 }, {}, node);

@@ -283,13 +283,11 @@ class TestTheTextReportNamesWhatItLeftOut:
 # every walker here reads it, and a bare `{}` turns a missing-attribute
 # question into a TypeError three frames deep.
 _SHIM = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return { tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "",
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      typeof x === "string" ? this.textContent += x : this.children.push(x); } } };
+  const node = _makeNode(tag);
+  return node;
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         createTextNode: (t) => ({ nodeType: 3, textContent: t,

@@ -104,39 +104,59 @@ class TestThePolicyItselfStaysStrict:
 
 
 class TestTheShimAgreesWithTheBrowser:
-    """The instrument half. Measured in Chrome 141:
+    """The instrument half, after `UX-264` moved it.
+
+    This used to assert that each of seven harnesses carried its own
+    `_styleFor`. `UX-264` replaced the twenty-five copies with one
+    `tests/dom_shim.mjs`, so the property is now stated once — which is
+    the whole point of that item, and this guard following it there is
+    the evidence that the move was real rather than additive.
+
+    Measured in Chrome 141:
 
     ```text
     el.style.width = "50%"                 -> style="width: 50%;"
-    el.style.flexGrow = "428.571"          -> style="flex-grow: 428.571;"
     el.style.setProperty("--w", "18.75%")  -> style="--w: 18.75%;"
     nothing set                            -> no attribute at all
     ```
     """
 
-    SHIMS = ["test_the_first_screen_is_a_decision", "test_what_if_i_fix_these",
-             "test_focused_graphs_not_a_dag_viewer",
-             "test_every_element_is_one_object",
-             "test_one_click_from_investigation",
-             "test_a_report_you_can_navigate", "test_the_page_that_answers_why"]
+    def test_the_one_shim_reflects_style_into_the_attribute(self):
+        shim = (REPO / "tests/dom_shim.mjs").read_text(encoding="utf-8")
+        assert "styleFor" in shim, (
+            "the shared DOM shim no longer reflects `.style` writes into the "
+            "style attribute, so it reports success where a browser refuses "
+            "(UX-263)")
+        assert "node.attrs.style" in shim
 
-    @pytest.mark.parametrize("name", SHIMS)
-    def test_each_shim_reflects_style_into_the_attribute(self, name):
-        source = (REPO / "tests/unit" / f"{name}.py").read_text(encoding="utf-8")
-        assert "_styleFor" in source, (
-            f"{name}'s DOM shim does not reflect `.style` writes into the "
-            f"style attribute, so it reports success where a browser "
-            f"refuses (UX-263)")
-        # `_code`, not the raw source: the swallowing literal appears in
-        # the comment inside `_styleFor` that explains why it is gone.
-        # This guard shipped with that bug and it is the eighth time -
-        # a guard that greps finds its own argument (`UX-239`).
-        assert "style: {}" not in _code(source), (
-            f"{name} still carries the swallowing `style: {{}}`")
+    def test_no_harness_carries_the_swallowing_stub(self):
+        """`style: {}` is what swallowed every write. It must not come
+        back in any harness, nor in the shim."""
+        offenders = []
+        # The two guard files that *argue about* the stub name it in
+        # their prose, and `_code` strips JavaScript comments rather
+        # than Python docstrings. Ninth and tenth instance of a grep
+        # finding its own argument (`UX-239`); named rather than
+        # papered over with a looser pattern.
+        arguing = {"test_the_page_obeys_its_own_policy.py",
+                   "test_the_dom_shim_is_one_instrument.py"}
+        for path in sorted((REPO / "tests/unit").glob("*.py")):
+            if path.name in arguing:
+                continue
+            source = path.read_text(encoding="utf-8")
+            if "createElement" not in source:
+                continue
+            # `_code`, not the raw source: the literal appears in the
+            # comment that explains why it is gone. This guard shipped
+            # with that bug - the eighth time in this repository that a
+            # grep found its own argument (`UX-239`).
+            if "style: {}" in _code(source):
+                offenders.append(path.name)
+        assert offenders == [], f"the swallowing stub is back in: {offenders}"
 
     def test_the_serialisation_matches_what_chrome_does(self):
-        """Run the shim's own helper and compare against the strings
-        Chrome produced. Asserting the shim against itself would prove
+        """Run the shim and compare against the strings Chrome
+        produced. Asserting the shim against itself would prove
         nothing."""
         import json
         import shutil
@@ -145,23 +165,22 @@ class TestTheShimAgreesWithTheBrowser:
         node = shutil.which("node")
         if node is None:  # pragma: no cover - node is present in CI
             pytest.skip("node is not installed")
-        source = (REPO / "tests/unit/test_focused_graphs_not_a_dag_viewer.py"
-                  ).read_text(encoding="utf-8")
-        helper = source.split("function _styleFor(node) {", 1)[1]
-        helper = "function _styleFor(node) {" + helper.split("\n}\n", 1)[0] + "\n}"
-        script = helper + """
-const mk = () => { const n = {attrs: {}}; n.style = _styleFor(n); return n; };
-const a = mk(); a.style.width = "50%";
-const b = mk(); b.style.flexGrow = "428.571";
-const c = mk(); c.style.setProperty("--w", "18.75%");
-const d = mk(); d.style.width = "50%"; d.style.paddingLeft = "1rem";
-const e = mk();
+        script = """
+const { makeNode } = await import(process.env.BGA_DOM_SHIM);
+const a = makeNode("div"); a.style.width = "50%";
+const b = makeNode("div"); b.style.flexGrow = "428.571";
+const c = makeNode("div"); c.style.setProperty("--w", "18.75%");
+const d = makeNode("div"); d.style.width = "50%"; d.style.paddingLeft = "1rem";
+const e = makeNode("div");
 console.log(JSON.stringify({width: a.attrs.style, flexGrow: b.attrs.style,
-  custom: c.attrs.style, two: d.attrs.style,
-  empty: e.attrs.style ?? null}));
+  custom: c.attrs.style, two: d.attrs.style, empty: e.attrs.style ?? null}));
 """
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, timeout=60)
+        import os
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True, text=True, timeout=60,
+            env={**os.environ,
+                 "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()})
         assert done.returncode == 0, done.stderr
         assert json.loads(done.stdout) == {
             "width": "width: 50%;",

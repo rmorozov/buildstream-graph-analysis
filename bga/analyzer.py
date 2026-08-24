@@ -196,31 +196,74 @@ BLAST_DISTRIBUTION_TAIL = (95, 99)
 MIN_ELEMENTS_FOR_DISTRIBUTION = 10
 
 
-def blast_radius_distribution(counts):
-    """`{n, deciles, p95, p99, min, max}` - or a refusal, with a reason.
+# UX-260: which quantities get a distribution, and which do not.
+#
+# The rule, from Direction 11: **a percentile helps when a reader
+# cannot know the scale and the population is comparable.** Applying it
+# everywhere would be cargo cult, so the split is a decision recorded
+# here rather than whatever happened to be implemented. A `no` with no
+# argument invites the next person to add it.
+DISTRIBUTED_QUANTITIES = {
+    'blast_radius': 'spans 0..n across one graph; "753 downstream" is p99.9 '
+                    'in a 1,202-element run and unremarkable in 40,000',
+    'element_duration': 'spans orders of magnitude; "is 40s slow *here*?" '
+                        'has no answer without the population',
+    'sandbox_tax': 'the useful question is literally "is this element\'s '
+                   'sandbox tax unusual"',
+    'process_count': 'heavy tails - one element with 40,000 processes *is* '
+                     'the finding',
+}
+UNDISTRIBUTED_QUANTITIES = {
+    'share_of_critical_path': 'already a percentage of a known whole; a '
+                              'percentile of a percentage is a second scale '
+                              'for one fact',
+    'confidence': 'a run-level singleton with no population to be a '
+                  'percentile of',
+    'coverage': 'a run-level singleton with no population to be a '
+                'percentile of',
+    'efficiency_score': 'a run-level singleton with no population to be a '
+                        'percentile of',
+    'wall_clock': 'one number per run; the store aggregate (`UX-234`) is '
+                  'where its distribution across runs already lives',
+    'optimization_horizon': 'one number per run, same as wall-clock - and it is\n                             already a projection, so a percentile of it would rank\n                             guesses against each other',
+}
 
-    Returns `None` for a run too small to have a shape, so a consumer
-    can tell "no distribution" from "a flat one" - `UX-249`'s rule about
-    absence, applied to a statistic.
+
+def distribution(values):
+    """`{n, deciles, p95, p99, min, max, is_flat}` - or `None`.
+
+    Returns `None` for a population too small to have a shape, so a
+    consumer can tell "no distribution" from "a flat one" - `UX-249`'s
+    rule about absence, applied to a statistic.
+
+    One function for every quantity in `DISTRIBUTED_QUANTITIES`: the
+    populations differ (elements within a run, payers within a capture),
+    the arithmetic must not.
     """
     from .store_aggregate import percentile
 
-    values = sorted(int(c) for c in counts if c is not None)
-    if len(values) < MIN_ELEMENTS_FOR_DISTRIBUTION:
+    numbers = sorted(int(v) for v in values if v is not None)
+    if len(numbers) < MIN_ELEMENTS_FOR_DISTRIBUTION:
         return None
     shape = {
-        'n': len(values),
-        'min': values[0],
-        'max': values[-1],
-        'deciles': {f'p{p}': percentile(values, p)
+        'n': len(numbers),
+        'min': numbers[0],
+        'max': numbers[-1],
+        'deciles': {f'p{p}': percentile(numbers, p)
                     for p in BLAST_DISTRIBUTION_DECILES},
     }
     for p in BLAST_DISTRIBUTION_TAIL:
-        shape[f'p{p}'] = percentile(values, p)
-    # A graph where every element reaches the same number of others has
-    # no shape to describe, and ten identical buckets would imply one.
-    shape['is_flat'] = values[0] == values[-1]
+        shape[f'p{p}'] = percentile(numbers, p)
+    # A population where every value is the same has no shape to
+    # describe, and ten identical buckets would imply one.
+    shape['is_flat'] = numbers[0] == numbers[-1]
     return shape
+
+
+def blast_radius_distribution(counts):
+    """`UX-259`'s name for `distribution`, kept so nothing that reads it
+    has to change."""
+    return distribution(counts)
 
 
 class BuildEfficiencyAnalyzer:
@@ -1388,6 +1431,17 @@ class BuildEfficiencyAnalyzer:
                     compute_element_durations(self.normalized_tasks)
                 ),
             }
+            # UX-260: the same statistic `UX-259` gave blast radius,
+            # over the other population a reader cannot know the scale
+            # of. "Is 40s slow?" has no answer without it, and it is
+            # the question every element section raises. Published
+            # beside the durations rather than in `_compute_diagnostics`
+            # - that runs before this dict exists, which is where the
+            # first attempt put it and why it published nothing.
+            duration_shape = distribution(
+                result.signals['element_durations'].values())
+            if duration_shape:
+                result.signals['element_duration_distribution'] = duration_shape
             # UX-74: one ~60-minute capture used to yield exactly one
             # finding, on a graph where 77% of elements have zero slack -
             # so the chain re-forms the moment anything shrinks and the

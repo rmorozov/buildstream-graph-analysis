@@ -230,79 +230,12 @@ const protocol = process.env.PROTOCOL;
 const throwing = protocol.endsWith("throwing");
 const writes = [];
 
-function _styleFor(node) {
-  // A real DOM reflects `el.style.x = v` into the `style` attribute, and
-  // serialises it as `x: v;` - measured in Chrome 141, not assumed. The
-  // shims used to carry `style: {}`, which swallowed every write: the
-  // four encodings `UX-263` fixed looked set here and were refused by
-  // the browser. An instrument that cannot see the defect is how the
-  // defect shipped (`UX-235`, `UX-262`, and now this).
-  const decls = new Map();
-  const kebab = (k) => String(k).startsWith("--")
-    ? String(k) : String(k).replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
-  const flush = () => {
-    if (decls.size === 0) { delete node.attrs.style; return; }
-    node.attrs.style = [...decls].map(([k, v]) => `${k}: ${v};`).join(" ");
-  };
-  return new Proxy({
-    setProperty(name, value) { decls.set(String(name), String(value)); flush(); },
-    getPropertyValue(name) { return decls.get(String(name)) ?? ""; },
-    removeProperty(name) { decls.delete(String(name)); flush(); },
-  }, {
-    set(_t, prop, value) { decls.set(kebab(prop), String(value)); flush(); return true; },
-    get(target, prop) {
-      if (prop in target) return target[prop];
-      return decls.get(kebab(prop)) ?? "";
-    },
-  });
-}
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", hidden: true, href: "", value: "",
-    get style() { return this._style ??= _styleFor(this); },
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      typeof x === "string" ? this.textContent += x : this.children.push(x); } },
-    // UX-235: a real prepend. This was `this.append(...xs)`, which
-    // made the only harness that boots the real page blind to document
-    // order by construction - everything the page puts *first* landed
-    // last, so `decision` read after `evidence` and no order guard
-    // written against this probe could have meant anything.
-    prepend(...xs) { for (const x of [...xs].reverse()) { if (x == null) continue;
-      typeof x === "string" ? this.textContent = x + this.textContent
-                            : this.children.unshift(x); } },
-    replaceChildren(...xs) { this.children = []; this.textContent = ""; this.append(...xs); },
-    insertBefore(n) { this.children.unshift(n); },
-    addEventListener(name, fn) { (this.listeners ??= {})[name] = fn; },
-    click() { this.listeners?.click?.(); },
-    scrollIntoView() {},
-    querySelector(sel) {
-      const want = /h2/.test(sel) ? "h2" : null;
-      const find = (n) => {
-        for (const c of n.children) {
-          if (want && c.tagName === want) return c;
-          const r = find(c); if (r) return r;
-        }
-        return null;
-      };
-      return find(this);
-    },
-    querySelectorAll(sel) {
-      const out = [];
-      const wantSection = sel.includes("data-section");
-      const walk = (n) => {
-        for (const c of n.children) {
-          if (wantSection && c.attrs["data-section"]) out.push(c);
-          walk(c);
-        }
-      };
-      walk(this);
-      return out;
-    },
-  };
+  const node = _makeNode(tag);
+  node.hidden = true;
+  return node;
 }
 
 const page = fs.readFileSync(process.env.PAGE, "utf8");
@@ -353,7 +286,15 @@ globalThis.document = {
   // nothing, and is what makes the caller take its documented
   // fallback rather than crash.
   querySelector(sel) {
-    if (sel === "header") return named.__header ??= make("header");
+    if (sel === "header") {
+      // Attached to `body`, because a real page's header is. Detached,
+      // `heading.after(contents)` is a no-op - a real DOM's answer too -
+      // and `app.js` quietly took its `insertBefore` fallback instead,
+      // so this probe measured the path the page does not use
+      // (`UX-264`).
+      if (!named.__header) { named.__header = make("header"); body.append(named.__header); }
+      return named.__header;
+    }
     return body.querySelector?.(sel) ?? null;
   },
 };

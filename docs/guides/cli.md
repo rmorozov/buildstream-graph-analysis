@@ -645,6 +645,14 @@ Three rules decide what it will and will not say:
 - **Fewer than three finished runs define no distribution.** The class
   publishes a shortfall naming what is missing instead of a p95 of two
   samples.
+- **A mix of contract sets is named, not refused** (`UX-253`).
+  `contract_composition` lists each set of contracts the aggregated
+  runs were written under, commonest first, with runs carrying no
+  producer stamp counted separately as an explicit unknown. Unlike a
+  host class, two contract sets are not two populations: what decides
+  whether runs can be pooled is movement in the contracts this document
+  *reads* (`analyze/v1`, `store/v1`), never the package version — the
+  rule `bga compare` already applies to a pair.
 
 Percentiles are **nearest-rank**: for `n` sorted samples, `p` is the
 value at index `ceil(p × n) − 1`. No interpolation, so every figure is

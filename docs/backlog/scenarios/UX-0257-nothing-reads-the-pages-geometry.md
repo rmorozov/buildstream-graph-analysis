@@ -1,6 +1,6 @@
 # UX-257: nothing reads the page's geometry, so "it does not overlap" is an opinion
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-254 (the layout worth checking) | **Serves:** the maintainers; R1 through the defects it would catch | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 (the layout worth checking) | **Serves:** the maintainers; R1 through the defects it would catch | **Topic:** guards
 
 ## Motivation
 
@@ -55,3 +55,61 @@ The decision first, because it is a real trade and not obvious:
 The decision is argued and recorded; whichever instrument is chosen
 reddens on a deliberate overlap or a deliberately broken CSS contract,
 and the claims it cannot see are named in the same place.
+
+## Outcome
+
+**Decided: a real browser, and it costs nothing to add.**
+
+The trade the item posed assumed a browser meant Playwright — a package
+and a browser download, in a repository whose test dependencies are
+`pytest` and `jsonschema`. Measured rather than assumed, that premise
+is false: **node 22 has a built-in `WebSocket` and `fetch`, and the
+DevTools protocol needs nothing else.** `tests/cdp.mjs` is the entire
+client, forty lines, and `node` is already required by every viewer
+guard. The CSS-contract alternative stays where it is
+(`test_the_report_has_two_panes.py`) and is now the weaker of two
+instruments rather than the only one.
+
+The cost is a Chrome binary. `tests/browser.py` finds one by the usual
+names or `BGA_CHROME`; where there is none these guards skip, and the
+reason is **declared in `tests/conftest.py`'s census** so that "no
+browser here" is a fact the suite reports rather than a silence
+(`UX-235`).
+
+**It found something on its first run.** At 390x844 the scan reported
+32 overlapping sibling pairs. Two were real measurement errors of my
+own and worth recording, because both are the same class of defect this
+item exists to prevent:
+
+- `getBoundingClientRect()` on a **wrapped inline** element returns the
+  union of its per-line boxes — a rectangle covering text that is not
+  there. Two wrapped links reported a 141x18 overlap while touching
+  nothing. Fixed by comparing `getClientRects()` per line.
+- Out-of-flow boxes (`position: absolute`) are *placed* over other
+  boxes deliberately — a copy button over a command. Reporting those is
+  how an overlap scan gets muted.
+
+After both fixes: **zero overlaps at all three viewports**, with 20+
+boxes scanned at each, so "no overlaps" is not "nothing rendered".
+
+**What it holds**, at 1440x900, 1280x800 and 390x844 — the viewport set
+is part of the contract, and dropping the narrow one makes the suite
+blind to the sideways-scroll defect it was added for:
+
+```text
+no two siblings share pixels          (with named, reasoned exemptions)
+the heading is above the reading column, which starts in the first half-screen
+the rail is left of the text
+the document never scrolls sideways
+an anchor lands clear of the sticky heading
+```
+
+**Four mutations, four reds:** a `-30px` margin pulling sections over
+each other; `display: block` collapsing the two-pane grid; a
+`min-width: 1600px` table forcing sideways scroll; and
+`scroll-margin-top: 0` dropping the anchor under the heading.
+
+**What it cannot see**, named in the file itself: any machine with no
+Chrome; font differences, which is why every assertion is a threshold
+with slack and why screenshot baselines stay declined; and the served
+page's dynamic halves, since this loads the exported single file.

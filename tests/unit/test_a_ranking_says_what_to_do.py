@@ -165,8 +165,15 @@ class TestTheDistributionIsTheSameStatisticAsTheStore:
         """Two percentile functions in one codebase is the drift this
         repository fixes more often than anything else."""
         source = (REPO / "bga/analyzer.py").read_text(encoding="utf-8")
-        block = source.split("def blast_radius_distribution", 1)[1]
+        # `distribution`, not `blast_radius_distribution`: `UX-260`
+        # generalised the statistic to four quantities and left the
+        # blast-specific name as a wrapper. The property this guards -
+        # one percentile function - is unchanged; where it lives moved.
+        block = source.split("def distribution", 1)[1].split("\ndef ", 1)[0]
         assert "from .store_aggregate import percentile" in block, block[:400]
+        wrapper = source.split("def blast_radius_distribution", 1)[1]
+        assert "return distribution(" in wrapper.split("\ndef ", 1)[0], (
+            "blast_radius_distribution grew its own arithmetic again")
 
     def test_a_run_too_small_refuses_rather_than_computing(self):
         """Deciles over four elements are four numbers wearing ten

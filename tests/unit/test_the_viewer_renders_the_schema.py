@@ -541,30 +541,10 @@ class TestTheCommandLine:
 _RENDER_HARNESS = """
 const payload = %s, schema = %s;
 
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function makeNode(tag) {
-  const node = {
-    // `nodeType` is what `app.js`'s `el()` checks to tell a node from a
-    // string. Without it every child stringified to "[object Object]" -
-    // a shim defect, and worth keeping in mind when reading a failure
-    // here: the renderer is the shipped file, the DOM is not.
-    nodeType: 1,
-    tagName: tag, className: "", children: [], attrs: {}, text: "",
-    style: {}, dataset: {},
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    removeAttribute(k) { delete this.attrs[k]; },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    addEventListener() {},
-    append(...items) {
-      for (const item of items) {
-        if (item === null || item === undefined) continue;
-        if (typeof item === "string") this.text += item;
-        else this.children.push(item);
-      }
-    },
-    replaceChildren(...items) { this.children = []; this.text = ""; this.append(...items); },
-    querySelector() { return makeNode("tbody"); },
-    querySelectorAll() { return []; },
-  };
+  const node = _makeNode(tag);
   return node;
 }
 globalThis.document = {
@@ -580,7 +560,7 @@ const sections = [], classes = new Set(), severities = new Set();
 const columns = {};
 let text = "";
 (function walk(node) {
-  text += " " + node.text;
+  text += " " + node.textContent;
   if (node.className) String(node.className).split(/\\s+/).forEach(c => c && classes.add(c));
   if (node.attrs["data-section"]) sections.push(node.attrs["data-section"]);
   if (node.attrs["data-severity"]) severities.add(node.attrs["data-severity"]);

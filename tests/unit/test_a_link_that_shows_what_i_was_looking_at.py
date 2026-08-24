@@ -179,64 +179,12 @@ class TestTheFragmentCarriesTheView:
 
 
 _SHIM = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", hidden: false, open: false, value: "", listeners: {},
-    parentNode: null,
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
-    dispatchEvent(event) {
-      for (const fn of this.listeners[event.type] ?? []) fn(event);
-      let up = this.parentNode;
-      while (up) { for (const fn of up.listeners?.[event.type] ?? []) fn(event);
-                   up = up.parentNode; }
-      return true;
-    },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      if (typeof x === "string") { this.textContent += x; continue; }
-      const at = this.children.indexOf(x);
-      if (at !== -1) this.children.splice(at, 1);
-      x.parentNode = this; this.children.push(x); } },
-    prepend(...xs) { for (const x of [...xs].reverse()) { if (x == null) continue;
-      const at = this.children.indexOf(x);
-      if (at !== -1) this.children.splice(at, 1);
-      x.parentNode = this; this.children.unshift(x); } },
-    replaceChildren(...xs) { this.children = []; this.textContent = "";
-      this.append(...xs); },
-    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
-    querySelectorAll(sel) {
-      const match = (n, part) => {
-        const tag = part.match(/^[a-zA-Z][\\w-]*/);
-        if (tag && n.tagName !== tag[0]) return false;
-        for (const cls of part.match(/\\.[\\w-]+/g) ?? []) {
-          if (!String(n.className ?? "").split(/\\s+/).includes(cls.slice(1)))
-            return false;
-        }
-        for (const attr of part.match(/\\[[^\\]]+\\]/g) ?? []) {
-          const [, name, value] = attr.match(
-            /^\\[([\\w:-]+)(?:=["']?([^"'\\]]*)["']?)?\\]$/) ?? [];
-          if (!name) return false;
-          const held = n.getAttribute?.(name) ?? null;
-          if (held === null) return false;
-          if (value !== undefined && held !== value) return false;
-        }
-        return true;
-      };
-      let found = [this];
-      for (const part of sel.trim().split(/\\s+/)) {
-        const next = [];
-        for (const root of found) {
-          (function walk(n) { for (const c of n.children ?? []) {
-            if (match(c, part)) next.push(c); walk(c); } })(root);
-        }
-        found = next;
-      }
-      return found;
-    },
-  };
+  const node = _makeNode(tag);
+  node.open = false;
+  return node;
 }
 globalThis.Event = class { constructor(type) { this.type = type; } };
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),

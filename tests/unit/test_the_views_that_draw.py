@@ -360,24 +360,12 @@ console.log(JSON.stringify(mod.%s(%s) ?? null));
 """
 
 _RENDER_HARNESS = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function makeNode(tag, ns) {
-  return {
-    nodeType: 1, tagName: tag, ns: ns ?? null, className: "", children: [],
-    attrs: {}, text: "", textContent: "",
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener() {},
-    append(...items) {
-      for (const item of items) {
-        if (item === null || item === undefined) continue;
-        if (typeof item === "string") this.text += item;
-        else this.children.push(item);
-      }
-    },
-    prepend(...items) { this.append(...items); },
-    replaceChildren() { this.children = []; },
-  };
+  const node = _makeNode(tag);
+  node.ns = ns ?? null;
+  return node;
 }
 globalThis.document = {
   createElement: (t) => makeNode(t),

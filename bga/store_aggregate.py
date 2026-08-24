@@ -227,6 +227,85 @@ def _excluded(rows: List[dict]) -> dict:
     return {"count": sum(reasons.values()), "by_reason": reasons}
 
 
+# UX-253: the contract set a snapshot was written under.
+#
+# **The argument.** `UX-234` refuses to blend across *host classes* and
+# publishes per-class figures instead, because durations from a fast
+# machine and a slow one are incomparable - the numbers mean different
+# things. A **contract set** is not that, and treating it the same way
+# would be a rule nobody argued:
+#
+# - A host class partitions the runs into populations that must not be
+#   pooled. Two contract sets do not: if every contract this document
+#   *reads* is unchanged, the runs are comparable whatever else moved -
+#   which is exactly the rule `UX-250` settled for the two-run case,
+#   and refusing on the version number instead would fire on every
+#   upgrade, including the thirty rounds that moved no contract at all.
+# - What a moved read-contract does is make a run's fields absent or
+#   differently defined. That is an **exclusion**, not an
+#   incomparability: the run cannot be read, rather than being read and
+#   meaning something else.
+#
+# So the many-run rule is the two-run rule applied to a set: aggregate
+# the runs whose read-contracts agree with the newest state, exclude
+# the rest *by the same mechanism an interrupted capture is excluded* -
+# counted, named, with a reason - and publish the composition either
+# way, because a reader cannot evaluate an aggregate whose composition
+# is invisible.
+#
+# The minority is defined against the **newest** state rather than by
+# count or by age: the newest is the one the reader is holding.
+AGGREGATE_READS = ("analyze/v1", "store/v1")
+
+
+def _contract_set_of(snapshot: str) -> Optional[tuple]:
+    """The contracts the producer of this snapshot declared, or `None`.
+
+    `None` means unstamped - every artifact written before `UX-249`
+    is, and that absence reads as an explicit unknown rather than as
+    agreement.
+    """
+    import json
+
+    path = os.path.join(snapshot, run_store.RUN_SUBDIR, "report.json")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            producer = json.load(handle).get("producer")
+    except (OSError, ValueError):
+        return None
+    ids = (producer or {}).get("contracts")
+    return tuple(sorted(ids)) if ids else None
+
+
+def _contract_composition(rows: List[dict]) -> dict:
+    """Which contract sets this store holds, and which one is current.
+
+    Published whichever way the rule falls: "we aggregated thirty runs"
+    and "we aggregated thirty runs written under two different
+    definitions of the fields" are different claims.
+    """
+    seen: Dict[tuple, int] = {}
+    unstamped = 0
+    for row in rows:
+        found = _contract_set_of(row.get("path") or "")
+        if found is None:
+            unstamped += 1
+        else:
+            seen[found] = seen.get(found, 0) + 1
+    sets = [{"contracts": list(contracts), "runs": count}
+            for contracts, count in sorted(seen.items(), key=lambda kv: -kv[1])]
+    return {
+        "sets": sets,
+        "unstamped_runs": unstamped,
+        # The contracts this document actually reads. A set that moved
+        # one of these makes its runs unreadable here; a set that moved
+        # anything else does not, and saying so is the whole point of
+        # naming them.
+        "reads": list(AGGREGATE_READS),
+        "mixed": len(sets) > 1,
+    }
+
+
 def aggregate(listing: dict, blend: bool = False) -> dict:
     """A `store-aggregate/v1` document over one `store/v1` listing.
 
@@ -266,6 +345,8 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         "snapshots": len(rows),
         "measured": len(usable),
         "excluded": _excluded(unusable),
+        # UX-253: what this aggregate is made of, in contract terms.
+        "contract_composition": _contract_composition(usable),
         "host_classes": classes,
         "blended": None,
         "refusal": None,

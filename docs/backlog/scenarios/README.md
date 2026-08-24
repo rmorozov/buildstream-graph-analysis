@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-264 scenarios: **13 open**, 251 closed.
+264 scenarios: **8 open**, 256 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
-| contracts | 2 | 29 |
-| viewer | 1 | 46 |
+| contracts | 0 | 29 |
+| viewer | 0 | 46 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
-| guards | 2 | 35 |
+| guards | 0 | 35 |
 
 ## Open scenarios
 
@@ -44,11 +44,6 @@ task file, which is the only place it ever lived twice.
 | UX-245 | [the architecture's CLI table is two commands behind](UX-0245-the-architectures-cli-table-is-two-commands-behind.md) | docs | Medium | R8 | 🔴 |
 | UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
-| UX-253 | [the aggregate mixes contract sets without saying so](UX-0253-the-aggregate-mixes-contract-sets-without-saying-so.md) | contracts | Medium | R5, R7 | 🔴 |
-| UX-257 | [nothing reads the page's geometry](UX-0257-nothing-reads-the-pages-geometry.md) | guards | Medium | all | 🔴 |
-| UX-260 | [the other quantities that need a scale](UX-0260-the-other-quantities-that-need-a-scale.md) | contracts | Medium | R1, R2 | 🔴 |
-| UX-261 | [the first view ranks what is big, not what is worth doing](UX-0261-the-first-view-ranks-what-is-big.md) | viewer | Medium | R1 | 🔴 |
-| UX-264 | [the DOM shim is copied twenty-five times](UX-0264-the-dom-shim-is-copied-twenty-five-times.md) | guards | Medium | all | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -397,3 +392,30 @@ the same *"no Access-Control-Allow-Origin header is present"* shape.
   Reproduced in Chrome 141 against two servers differing only in
   `do_OPTIONS`; a simple `GET` works in both, which is why this sat
   unnoticed until something made the read pre-flight.
+
+## UX-253..UX-264: the thirty-fourth round — instruments and scales (2026-08-24)
+
+Five open items, taken together because two of them are the same
+argument: what the guards *measure with*.
+
+- **`UX-264`** — the DOM shim was written inline twenty-five times.
+  One `tests/dom_shim.mjs` now; the acceptance mutation reaches three
+  files where it used to need twenty-five edits. Consolidating found
+  four places the copies disagreed with a browser, including one where
+  **every guard had only ever exercised a fallback branch** because no
+  shim implemented `after`.
+- **`UX-257`** — the geometry instrument, decided and built. The
+  premise that a real browser means Playwright turned out to be false:
+  node 22's built-in `WebSocket` drives Chrome in forty lines. It found
+  two measurement errors of my own on its first run, then zero overlaps
+  at three viewports.
+- **`UX-260`** — duration, sandbox tax and process count publish
+  distributions; the `no` list keeps its arguments where the next round
+  will look.
+- **`UX-261`** — the first view leads with the longest element on the
+  critical path, and states the graph's density in one line. My first
+  density rule called a star-shaped graph "spread"; that case is now a
+  guard.
+- **`UX-253`** — an aggregate names the contract sets it mixes. The
+  rule is `UX-250`'s, applied to a set, and argued against `UX-234`'s
+  host-class precedent rather than copied from it.

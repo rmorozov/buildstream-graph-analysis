@@ -1,6 +1,6 @@
 # UX-260: the other quantities that need a scale
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-259 (the machinery and the rule) | **Serves:** R1 and R2 — "is this element unusual?" is the question both ask | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-259 (the machinery and the rule) | **Serves:** R1 and R2 — "is this element unusual?" is the question both ask | **Topic:** contracts
 
 ## Motivation
 
@@ -54,3 +54,59 @@ with an independent computation; each in the "no" column does not, and
 a guard names the split so the list is a decision rather than whatever
 was implemented; a four-element run refuses rather than publishing a
 shape.
+
+## Outcome
+
+**Fixed.** `blast_radius_distribution` became `distribution()`, and the
+three `yes` quantities publish it beside their rankings:
+
+| quantity | contract | key |
+|---|---|---|
+| element duration | `analyze/v1` | `signals.element_duration_distribution` |
+| sandbox tax | `correlate/v1` | `sandbox_tax_distribution` |
+| processes per element | `correlate/v1` | `process_count_distribution` |
+
+Each publishes only where its plane was captured, and only where the
+population is big enough — absent rather than null, `UX-249`'s rule.
+
+Measured on a 44-element synthetic run whose durations span three
+orders of magnitude:
+
+```text
+p10 2ms   p20 4ms   p30 7ms   p40 18ms   p50 44ms
+p60 136ms p70 331ms p80 1.01s p90 2.47s
+p95 3.85s p99 6.02s   n 44   min 1ms   max 6.02s   is_flat false
+```
+
+and every decile agrees with a nearest-rank computation done
+independently in the guard rather than trusted from the payload. The
+4-element golden run publishes **no** distribution, which is `UX-234`'s
+refusal rather than deciles over four numbers.
+
+**The split is a decision, not an accident.** `DISTRIBUTED_QUANTITIES`
+and `UNDISTRIBUTED_QUANTITIES` live in `bga/analyzer.py`, each entry
+carrying its argument, and guards hold both directions: every `yes`
+maps to a published key, and no `no` grew one quietly. That second
+direction is the one that rots — a quantity with no distribution and no
+recorded argument reads as an oversight, and the next round adds one.
+
+**One statistic.** `distribution()` imports `store_aggregate.percentile`
+and `correlate` imports `distribution`; a guard fails if either grows
+its own arithmetic. `blast_radius_distribution` survives as a wrapper
+so `UX-259`'s callers did not have to change — and `UX-259`'s own guard
+was updated in this commit to follow the statistic to its new home
+rather than to keep pinning a function that now only delegates.
+
+**A finding about the tax population.** `sandbox_tax.top_payers` is
+**every** payer sorted, despite the name — so a distribution over it
+describes the population rather than a truncated head. Had it been a
+top-N, the shape would have described the slice and been read as the
+whole, which is the defect `UX-259` was filed about in a different
+place.
+
+**Two implementation notes worth keeping.** The duration distribution
+first went into `_compute_diagnostics`, which runs *before*
+`element_durations` exists — it published nothing, silently, and only a
+real run showed it. And the `p10..p90` map is keyed `deciles` with
+`p95`/`p99` beside it, matching `UX-259` exactly, so a consumer that
+learned one shape has learned all four.

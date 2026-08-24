@@ -332,94 +332,11 @@ class TestTheLongExplanationsMoveBehindAFold:
 
 
 _SHIM = """
-function _styleFor(node) {
-  // A real DOM reflects `el.style.x = v` into the `style` attribute, and
-  // serialises it as `x: v;` - measured in Chrome 141, not assumed. The
-  // shims used to carry `style: {}`, which swallowed every write: the
-  // four encodings `UX-263` fixed looked set here and were refused by
-  // the browser. An instrument that cannot see the defect is how the
-  // defect shipped (`UX-235`, `UX-262`, and now this).
-  const decls = new Map();
-  const kebab = (k) => String(k).startsWith("--")
-    ? String(k) : String(k).replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
-  const flush = () => {
-    if (decls.size === 0) { delete node.attrs.style; return; }
-    node.attrs.style = [...decls].map(([k, v]) => `${k}: ${v};`).join(" ");
-  };
-  return new Proxy({
-    setProperty(name, value) { decls.set(String(name), String(value)); flush(); },
-    getPropertyValue(name) { return decls.get(String(name)) ?? ""; },
-    removeProperty(name) { decls.delete(String(name)); flush(); },
-  }, {
-    set(_t, prop, value) { decls.set(kebab(prop), String(value)); flush(); return true; },
-    get(target, prop) {
-      if (prop in target) return target[prop];
-      return decls.get(kebab(prop)) ?? "";
-    },
-  });
-}
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", hidden: false, listeners: {},
-    get style() { return this._style ??= _styleFor(this); },
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
-    // `appendChild` *moves* a node that already has a parent. A shim
-    // that pushes instead of moving turns `applyTopN`'s reorder into a
-    // duplication, and the count it reports stops meaning anything -
-    // which is how this harness first read 20 visible rows out of a
-    // Top-10.
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      if (typeof x === "string") { this.textContent += x; continue; }
-      const at = this.children.indexOf(x);
-      if (at !== -1) this.children.splice(at, 1);
-      this.children.push(x); } },
-    prepend(...xs) { for (const x of xs.reverse()) { if (x == null) continue;
-      const at = this.children.indexOf(x);
-      if (at !== -1) this.children.splice(at, 1);
-      this.children.unshift(x); } },
-    replaceChildren(...xs) { this.children = []; this.textContent = "";
-      this.append(...xs); },
-    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
-    querySelectorAll(sel) {
-      // Enough of a selector engine for what the viewer writes:
-      // `tag`, `[attr]`, `[attr="value"]`, `.class` and descendant
-      // combinations of those. A tag-only matcher silently returns
-      // nothing for `section[data-section]`, which reads as "the page
-      // rendered no sections" rather than "the harness cannot see
-      // them".
-      const match = (node, part) => {
-        const tag = part.match(/^[a-zA-Z][\\w-]*/);
-        if (tag && node.tagName !== tag[0]) return false;
-        for (const cls of part.match(/\\.[\\w-]+/g) ?? []) {
-          if (!String(node.className ?? "").split(/\\s+/)
-                .includes(cls.slice(1))) return false;
-        }
-        for (const attr of part.match(/\\[[^\\]]+\\]/g) ?? []) {
-          const [, name, value] = attr.match(
-            /^\\[([\\w:-]+)(?:=["']?([^"'\\]]*)["']?)?\\]$/) ?? [];
-          if (!name) return false;
-          const held = node.getAttribute?.(name) ?? null;
-          if (held === null) return false;
-          if (value !== undefined && held !== value) return false;
-        }
-        return true;
-      };
-      let found = [this];
-      for (const part of sel.trim().split(/\\s+/)) {
-        const next = [];
-        for (const root of found) {
-          (function walk(n) { for (const c of n.children ?? []) {
-            if (match(c, part)) next.push(c); walk(c); } })(root);
-        }
-        found = next;
-      }
-      return found;
-    },
-  };
+  const node = _makeNode(tag);
+  return node;
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
@@ -450,7 +367,13 @@ const sections = all(root, (n) => n.attrs["data-section"])
 
 const headings = all(root, (n) => n.tagName === "h2").map((n) => {
   const key = n.children.find((c) => c.className === "section-key muted");
-  return { label: n.textContent, subtitle: key ? key.textContent : null };
+  // The heading's *own* text, not the concatenation of its subtree: a
+  // real DOM's `textContent` includes the `section-key` child, so
+  // `label` used to read "Which capture is this?run_instance"
+  // (`UX-264`).
+  const own = n.children.filter((c) => c !== key)
+    .map((c) => c.textContent).join("") || n._text;
+  return { label: own, subtitle: key ? key.textContent : null };
 });
 
 const contents = nav.toc(root, { document: globalThis.document });

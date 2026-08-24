@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-256 scenarios: **13 open**, 243 closed.
+256 scenarios: **10 open**, 246 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 49 |
 | contracts | 1 | 27 |
-| viewer | 2 | 42 |
+| viewer | 0 | 42 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
-| guards | 2 | 34 |
+| guards | 1 | 34 |
 
 ## Open scenarios
 
@@ -45,9 +45,6 @@ task file, which is the only place it ever lived twice.
 | UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 | UX-253 | [the aggregate mixes contract sets without saying so](UX-0253-the-aggregate-mixes-contract-sets-without-saying-so.md) | contracts | Medium | R5, R7 | 🔴 |
-| UX-254 | [the contents take two thirds of the first screen](UX-0254-the-contents-take-two-thirds-of-the-first-screen.md) | viewer | High | R1 | 🔴 |
-| UX-255 | [the heading is below the navigation, and says less than the footer](UX-0255-the-heading-is-below-the-navigation.md) | viewer | Medium | R1, R8 | 🔴 |
-| UX-256 | [the default open state is a policy nobody checks](UX-0256-the-default-open-state-is-a-policy-nobody-checks.md) | guards | Medium | R1 | 🔴 |
 | UX-257 | [nothing reads the page's geometry](UX-0257-nothing-reads-the-pages-geometry.md) | guards | Medium | all | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
@@ -311,3 +308,11 @@ viewport      nav.toc   % of screen   first content at   % of screen
 Order: `UX-254` first, then `UX-255` inside the layout it creates, then
 `UX-256`; `UX-257` last, because it is the argument about what can hold
 the other three.
+
+`UX-254`, `UX-255` and `UX-256` are done. **`UX-257` is deliberately
+still open**: the layout it would guard now exists, the geometry is
+measured in a browser and recorded in each Outcome, and what the
+guards hold is the *mechanism* rather than the pixels. Choosing the
+instrument — a browser in CI, or the CSS contract and a stated blind
+spot — is an argument, not an implementation, and it should be made
+rather than defaulted into.

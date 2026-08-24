@@ -167,6 +167,10 @@ export function toc(root, { document: doc, controls } = {}) {
     groupName.textContent = rail;
     nav.append(groupName);
     const list = doc.createElement("ul");
+    // UX-254: the rail this list belongs to, so the stylesheet can
+    // bound the one group that grows with the run (`investigate` is
+    // one entry per focused element) without JS truncating anything.
+    list.setAttribute("data-rail", rail);
     for (const key of members) {
       const item = doc.createElement("li");
       const link = doc.createElement("a");

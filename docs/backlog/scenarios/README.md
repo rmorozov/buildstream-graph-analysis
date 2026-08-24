@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-261 scenarios: **12 open**, 249 closed.
+263 scenarios: **13 open**, 250 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 2 | 29 |
-| viewer | 1 | 44 |
+| viewer | 1 | 45 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
-| guards | 1 | 34 |
+| guards | 2 | 35 |
 
 ## Open scenarios
 
@@ -48,6 +48,7 @@ task file, which is the only place it ever lived twice.
 | UX-257 | [nothing reads the page's geometry](UX-0257-nothing-reads-the-pages-geometry.md) | guards | Medium | all | 🔴 |
 | UX-260 | [the other quantities that need a scale](UX-0260-the-other-quantities-that-need-a-scale.md) | contracts | Medium | R1, R2 | 🔴 |
 | UX-261 | [the first view ranks what is big, not what is worth doing](UX-0261-the-first-view-ranks-what-is-big.md) | viewer | Medium | R1 | 🔴 |
+| UX-264 | [the DOM shim is copied twenty-five times](UX-0264-the-dom-shim-is-copied-twenty-five-times.md) | guards | Medium | all | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -364,3 +365,25 @@ deep run's `signals` section is 2.5 screens rather than 6.2.
 asked for as brainstorms and are delivered as arguments, and the
 first view is worth rebuilding once, on top of a ranking that is
 already right, rather than twice.
+
+## UX-263..UX-264: the page's own policy refused its drawings (2026-08-24)
+
+Reported while round 32 was in validation: *"lots of errors from latest
+Chrome about applying inline style violates the following content
+security policy default-src, pointing to views.js"*. Reproduced on the
+golden run served by `bga view` itself, in Chrome 141:
+
+```text
+                       violations   wf-fill widths   path-box grow   horizon --w
+before                         15   1 distinct       1 distinct      1 distinct
+after                           0   4 distinct       3 distinct      5 distinct
+```
+
+- **`UX-263`** — a style *attribute* is inline style, so the server's
+  own `default-src 'self'` refused all four of the viewer's width
+  channels. Console noise was the symptom; four dead drawings were the
+  defect. Fixed with CSSOM rather than by relaxing the policy.
+- **`UX-264`** — the shim that could not see it is written inline
+  twenty-five times, so `UX-263` was a seven-file fix for a one-line
+  bug. Filed, not implemented: it is a refactor, and `UX-257` is the
+  larger argument it feeds.

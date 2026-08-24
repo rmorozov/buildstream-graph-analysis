@@ -513,8 +513,13 @@ function bar(label, value, total, extra = {}) {
   fill.className = "wf-fill";
   // The only division in this file, and it is a *width*, not a number
   // the reader is told: the printed value is `value` itself.
-  fill.setAttribute("style",
-    `width: ${total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0}%`);
+  // CSSOM, never `setAttribute("style", ...)`: the server sends
+  // `default-src 'self'` and a *style attribute* is inline style, so
+  // Chrome refuses to apply it and the width channel silently dies
+  // (`UX-263`). A property assignment is not inline style and is not
+  // subject to the policy.
+  fill.style.width =
+    `${total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0}%`;
   track.append(fill);
   const amount = document.createElement("span");
   amount.className = "wf-value num";
@@ -799,8 +804,8 @@ function pathBox(entry) {
   box.setAttribute("data-duration-us", String(entry.duration_us ?? 0));
   // The width is the published share, read not computed. `min-width`
   // in the stylesheet keeps a 0.1% element clickable.
-  box.setAttribute("style",
-    `flex-grow: ${Math.max(0, Number(entry.share_of_path) || 0) * 1000}`);
+  box.style.flexGrow =
+    `${Math.max(0, Number(entry.share_of_path) || 0) * 1000}`;
   // UX-199's anchors: the drawing points back at the section that
   // explains it. UX-216: and that is now the *element's* section
   // rather than the whole signals block - a reader who clicks a box
@@ -866,7 +871,7 @@ export function renderBlastTree(payload) {
     row.setAttribute("data-element", entry.element_uid ?? "");
     row.setAttribute("data-depth", String(depth));
     // Indentation is the published depth, not a position in the list.
-    row.setAttribute("style", `padding-left: ${depth * 1.4}rem`);
+    row.style.paddingLeft = `${depth * 1.4}rem`;
     // UX-216: the blast tree names elements; each is a link to the
     // element's own section where it has one.
     const name = document.createElement("a");
@@ -2108,7 +2113,9 @@ function horizonRow({ label, makespanUs, total, element, saving, entering }) {
   bar.setAttribute("data-role", "bar");
   // One division, UX-202's rule: a proportion of a published total, not
   // a quantity derived in the page.
-  bar.setAttribute("style", `--w: ${(makespanUs / total) * 100}%`);
+  // A custom property has no CSSOM alias, so `setProperty` is the
+  // only route that is not a style attribute (`UX-263`).
+  bar.style.setProperty("--w", `${(makespanUs / total) * 100}%`);
 
   const value = document.createElement("span");
   value.className = "horizon-value";

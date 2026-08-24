@@ -474,6 +474,18 @@ how it is *read*, and the shape is deliberately small.
   is analysed differently. Two endpoints take a parameter -
   `blast.json?target=` and `whatif.json?elements=` - and both call the
   function their subcommand calls.
+- **The page obeys a policy the server sets.** Every response carries
+  `default-src 'self'; frame-ancestors 'none'` and `nosniff`; the only
+  cross-origin grant is `Access-Control-Allow-Origin` for Perfetto's
+  own origin, on the trace blob alone (`UX-198`). Two consequences bind
+  the page: it may not load anything off-host, and it may not write a
+  **style attribute** - a style attribute is inline style and the
+  policy refuses it, which silently killed four of the viewer's width
+  channels until `UX-263`. Drawings set style through CSSOM
+  (`el.style.width`, `el.style.setProperty`), which the policy does not
+  cover. Relaxing it with `'unsafe-inline'` was declined: this page
+  renders element names and paths out of a build and gets attached to
+  tickets.
 - **The page is schema-driven.** `bga/viewer/` is hand-written ES
   modules with no build step and no framework. Sections, columns, units
   and hover text come from the *view-hints* the published schemas carry

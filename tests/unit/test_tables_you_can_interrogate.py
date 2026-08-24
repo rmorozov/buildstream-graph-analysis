@@ -203,8 +203,24 @@ function make(tag) {
     getAttribute(k) { return this.attrs[k] ?? null; },
     removeAttribute(k) { delete this.attrs[k]; },
     addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
+    // UX-262: a real DOM *moves* an already-parented node on append;
+    // this shim used to *copy* it. `applyTopN` reorders by re-appending
+    // every row, so a 4,000-row table read as 8,000 - and nothing
+    // noticed, because no guard counted rows after a preset until the
+    // preset became a default. Same class as UX-235's `prepend`
+    // implemented as `append`: the page was never wrong, the
+    // instrument was.
     append(...xs) { for (const x of xs) { if (x == null) continue;
-      typeof x === "string" ? this._text += x : this.children.push(x); } },
+      if (typeof x === "string") { this._text += x; continue; }
+      if (x._parent && x._parent !== this) {
+        const at = x._parent.children.indexOf(x);
+        if (at >= 0) x._parent.children.splice(at, 1);
+      } else if (x._parent === this) {
+        const at = this.children.indexOf(x);
+        if (at >= 0) this.children.splice(at, 1);
+      }
+      x._parent = this;
+      this.children.push(x); } },
     querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
     querySelectorAll(sel) {
       const parts = sel.split(/\\s+/);

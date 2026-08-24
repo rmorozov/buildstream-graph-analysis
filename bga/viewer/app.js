@@ -459,6 +459,24 @@ export function interrogable(table, specs, total) {
       const [n, column] = preset.value.split(":");
       badge.textContent = badgeText(applyTopN(table, column, Number(n)), total);
     });
+    // UX-262: a table longer than this opens bounded.
+    //
+    // `UX-187` capped the tables that grow with *element count* and
+    // this one grows with **critical-path depth**, which nobody had a
+    // run deep enough to notice. Measured at 1440x900: a 122-deep path
+    // took the `signals` section from 1884px (2.1 screens, 24 rows) to
+    // 5539px (6.2 screens, 132 rows) - on a *smaller* run.
+    //
+    // The control already existed; `All rows` being its default was
+    // the defect. The badge still says `25 of 132`, per `UX-208`'s
+    // rule that a reader who cannot see the denominator cannot tell a
+    // filtered table from a small one - so this bounds the page
+    // without hiding the size of what it bounded.
+    if (total > TABLE_OPENS_BOUNDED_ABOVE) {
+      const [column] = presets;
+      preset.value = `25:${column}`;
+      badge.textContent = badgeText(applyTopN(table, column, 25), total);
+    }
     state.preset = preset;
   }
 
@@ -815,6 +833,13 @@ export function foldOnNarrow(nav, doc) {
   // the first `apply` decided, which is correct for its width.
   narrow?.addEventListener?.("change", (event) => apply(event.matches));
 }
+
+// UX-262: above this many rows a table opens on its top 25 rather than
+// on everything. 40 is chosen against the shapes that occur: the
+// 1,202-element run's widest table is 26 rows and stays whole, and a
+// 122-deep critical path is 132 and does not. A bound that fired on
+// the ordinary case would train readers to reset it every load.
+export const TABLE_OPENS_BOUNDED_ABOVE = 40;
 
 export function wireJumpBox(nav, root, payload, context = {}) {
   const targets = jumpTargets(root, payload);

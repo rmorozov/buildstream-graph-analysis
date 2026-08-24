@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-261 scenarios: **15 open**, 246 closed.
+261 scenarios: **12 open**, 249 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
-| analysis | 1 | 50 |
-| contracts | 3 | 29 |
-| viewer | 2 | 44 |
+| analysis | 0 | 50 |
+| contracts | 2 | 29 |
+| viewer | 1 | 44 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
@@ -46,11 +46,8 @@ task file, which is the only place it ever lived twice.
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 | UX-253 | [the aggregate mixes contract sets without saying so](UX-0253-the-aggregate-mixes-contract-sets-without-saying-so.md) | contracts | Medium | R5, R7 | 🔴 |
 | UX-257 | [nothing reads the page's geometry](UX-0257-nothing-reads-the-pages-geometry.md) | guards | Medium | all | 🔴 |
-| UX-258 | [the blast ranking tells you to optimize the base image](UX-0258-the-blast-ranking-tells-you-to-optimize-the-base-image.md) | analysis | High | R1, R3 | 🔴 |
-| UX-259 | [a blast number has no scale](UX-0259-a-blast-number-has-no-scale.md) | contracts | High | R1, R3, R8 | 🔴 |
 | UX-260 | [the other quantities that need a scale](UX-0260-the-other-quantities-that-need-a-scale.md) | contracts | Medium | R1, R2 | 🔴 |
 | UX-261 | [the first view ranks what is big, not what is worth doing](UX-0261-the-first-view-ranks-what-is-big.md) | viewer | Medium | R1 | 🔴 |
-| UX-262 | [a long critical path grows a section without bound](UX-0262-a-long-critical-path-grows-a-section-without-bound.md) | viewer | Medium | R1 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -359,3 +356,11 @@ positions 2-12:  753 753 739 727 721 720 712 709 706 702 697
 Order: `UX-258` then `UX-259` — the ranking has to be right before its
 scale is worth publishing — then `UX-261` on top of both, `UX-260`
 after, and `UX-262` independently.
+
+`UX-258`, `UX-259` and `UX-262` landed in this round; `next_steps[0]`
+now reads *"layer00/mod037.bst is the first thing to fix"* and the
+deep run's `signals` section is 2.5 screens rather than 6.2.
+**`UX-260` and `UX-261` are filed and not implemented** — they were
+asked for as brainstorms and are delivered as arguments, and the
+first view is worth rebuilding once, on top of a ranking that is
+already right, rather than twice.

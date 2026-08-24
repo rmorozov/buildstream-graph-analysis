@@ -178,3 +178,57 @@ class TestTheHeadingComesFirst:
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+class TestNoSectionGrowsWithoutBound:
+    """UX-262: a table longer than the bound opens on its top rows.
+
+    `UX-187` capped the tables that grow with *element count*. This one
+    grows with **critical-path depth**, which nobody had a run deep
+    enough to notice. Measured in Chromium at 1440x900:
+
+    ```text
+    run                             signals section       rows
+    1,202 elements, shallow path      1884px  2.1 screens   24
+      482 elements, 122-deep path     5539px  6.2 screens  132   <- before
+      482 elements, 122-deep path     2292px  2.5 screens  132   <- after
+    ```
+
+    The section tripled while the run got *smaller*. As everywhere else
+    in this file, the pixels are measured by hand and what is held here
+    is the mechanism (`UX-257`).
+    """
+
+    def test_a_long_table_opens_bounded(self):
+        code = _code(APP)
+        assert "TABLE_OPENS_BOUNDED_ABOVE" in code, (
+            "nothing bounds a table's default, so depth goes straight to "
+            "the page")
+        assert "if (total > TABLE_OPENS_BOUNDED_ABOVE)" in code, code[-1500:]
+
+    def test_the_bound_clears_the_ordinary_case(self):
+        """A bound that fired on the ordinary table would train readers
+        to reset it every load. The 1,202-element run's widest table is
+        26 rows; the 122-deep path is 132."""
+        from bga.viewer import __name__ as _  # noqa: F401 - viewer is not importable
+
+        found = re.search(r"TABLE_OPENS_BOUNDED_ABOVE = (\d+)", APP)
+        assert found, "the bound is not a named constant"
+        bound = int(found.group(1))
+        assert 26 < bound < 132, (
+            f"the bound is {bound}: it must clear the 1,202-element run's "
+            f"widest table (26 rows) and catch a 122-deep critical path")
+
+    def test_the_reader_still_sees_what_they_are_not_seeing(self):
+        """`UX-208`'s rule: a reader who cannot see the denominator
+        cannot tell a filtered table from a small one. Measured after:
+        the badge reads `25 of 122`."""
+        code = _code(APP)
+        bounded = code.split("if (total > TABLE_OPENS_BOUNDED_ABOVE)", 1)[1]
+        bounded = bounded.split("\n    }", 1)[0]
+        assert "badgeText(" in bounded and "total" in bounded, bounded
+
+    def test_all_rows_is_still_reachable(self):
+        """Bounding the default must not remove the opt-out - `UX-187`
+        chose top-N *plus* an escape and it works."""
+        assert '"All rows"' in APP

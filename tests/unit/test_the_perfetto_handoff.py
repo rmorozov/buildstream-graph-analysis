@@ -559,6 +559,127 @@ class TestTheDeepLink:
             assert out["href"].startswith("https://ui.perfetto.dev/#!/?url=")
 
 
+class TestThePreFlightIsAnswered:
+    """UX-265: the grant on `GET` is not the whole hand-off.
+
+    Reported from a real project: *"perfetto handover doesn't work in
+    latest chrome ... blocked by cors policy, no access control allow
+    origin header is present on the requested resource"*.
+
+    The `GET` grant was right and had always been right. What was
+    missing is that nothing answered the **pre-flight**:
+    `BaseHTTPRequestHandler` replies `501 Unsupported method
+    ('OPTIONS')`, and a 501 carries no allow header, so a browser
+    reports it as the header being absent from the resource. Measured
+    in Chrome 141, with the trace server's allowed origin stood in by a
+    second local origin so Chrome's own CORS engine does the work:
+
+    ```text
+                       simple GET              pre-flighted GET
+    before (501)       ok 200, 415 bytes       FAILED: TypeError: Failed to fetch
+    after  (204)       ok 200, 415 bytes       ok 200, 415 bytes
+    ```
+
+    and the console line, which is the reported one word for word:
+
+    ```text
+    Access to fetch at 'http://127.0.0.1:8512/timeline.json.gz' from
+    origin 'http://127.0.0.1:8500' has been blocked by CORS policy:
+    Response to preflight request doesn't pass access control check:
+    No 'Access-Control-Allow-Origin' header is present on the requested
+    resource.
+    ```
+
+    Note the first column: a simple cross-origin `GET` works in both.
+    Whatever makes Chrome pre-flight this read - Private Network Access
+    is the documented reason a public origin fetching `127.0.0.1`
+    starts to, and it needs no change on either side to begin - the
+    read itself was never the broken half.
+    """
+
+    def _options(self, url, origin, extra=None):
+        request = urllib.request.Request(url, method="OPTIONS")
+        if origin:
+            request.add_header("Origin", origin)
+        request.add_header("Access-Control-Request-Method", "GET")
+        for name, value in (extra or {}).items():
+            request.add_header(name, value)
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                return response.status, response.headers
+        except urllib.error.HTTPError as refused:
+            return refused.code, refused.headers
+
+    def test_the_trace_answers_a_pre_flight_from_perfetto(self, snapshot, served):
+        from tools.bga_view import PERFETTO_ORIGIN, TRACE_NAME
+
+        url = served(str(snapshot / "run"))
+        status, headers = self._options(url + TRACE_NAME, PERFETTO_ORIGIN)
+        assert status == 204, status
+        assert headers.get("Access-Control-Allow-Origin") == PERFETTO_ORIGIN
+        assert "GET" in (headers.get("Access-Control-Allow-Methods") or "")
+
+    def test_it_allows_the_private_network(self, snapshot, served):
+        """`ui.perfetto.dev` is a public origin and this server is on
+        `127.0.0.1`. Chrome asks for that transition by name, and a
+        pre-flight without the answer is refused even when the origin
+        matches."""
+        from tools.bga_view import PERFETTO_ORIGIN, TRACE_NAME
+
+        url = served(str(snapshot / "run"))
+        _, headers = self._options(
+            url + TRACE_NAME, PERFETTO_ORIGIN,
+            {"Access-Control-Request-Private-Network": "true"})
+        assert headers.get("Access-Control-Allow-Private-Network") == "true"
+
+    def test_it_allows_the_headers_the_reader_asked_for(self, snapshot, served):
+        """Naming a fixed list would break the hand-off again the next
+        time the other side attaches a header. Echoing does not widen
+        *who* may read - the origin and the path are still the grant."""
+        from tools.bga_view import PERFETTO_ORIGIN, TRACE_NAME
+
+        url = served(str(snapshot / "run"))
+        _, headers = self._options(
+            url + TRACE_NAME, PERFETTO_ORIGIN,
+            {"Access-Control-Request-Headers": "range, cache-control"})
+        assert headers.get("Access-Control-Allow-Headers") == "range, cache-control"
+
+    def test_a_pre_flight_from_anyone_else_is_refused(self, snapshot, served):
+        from tools.bga_view import TRACE_NAME
+
+        url = served(str(snapshot / "run"))
+        for origin in ("https://evil.example", None):
+            status, headers = self._options(url + TRACE_NAME, origin)
+            assert status == 403, f"pre-flight granted to {origin}"
+            assert headers.get("Access-Control-Allow-Origin") is None
+
+    def test_no_other_document_answers_a_pre_flight(self, snapshot, served):
+        """The same rule the `GET` grant follows. A pre-flight that
+        succeeded here would be the first half of a cross-origin read
+        of this project's element names."""
+        from tools.bga_view import PERFETTO_ORIGIN
+
+        url = served(str(snapshot / "run"))
+        for path in ("report.json", "schemas.json", "run.json",
+                     "blast.json?target=work-a.bst"):
+            status, headers = self._options(url + path, PERFETTO_ORIGIN)
+            assert status == 404, f"{path} answered a pre-flight with {status}"
+            assert headers.get("Access-Control-Allow-Origin") is None
+
+    def test_the_answer_varies_by_origin(self, snapshot, served):
+        """Both responses differ by `Origin`, so a cache told otherwise
+        could hand Perfetto's grant to a page that was refused one."""
+        from tools.bga_view import PERFETTO_ORIGIN, TRACE_NAME
+
+        url = served(str(snapshot / "run"))
+        _, preflight = self._options(url + TRACE_NAME, PERFETTO_ORIGIN)
+        assert "Origin" in (preflight.get("Vary") or "")
+        request = urllib.request.Request(url + TRACE_NAME)
+        request.add_header("Origin", PERFETTO_ORIGIN)
+        with urllib.request.urlopen(request, timeout=10) as response:
+            assert "Origin" in (response.headers.get("Vary") or "")
+
+
 # UX-198: enough DOM to run `wireTheHandoff` for real. The question is
 # whether the fallback link is revealed, which depends on the trace's
 # protocol - `http(s):` served, `data:` exported.

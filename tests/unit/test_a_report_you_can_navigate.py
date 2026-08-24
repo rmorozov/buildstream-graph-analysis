@@ -311,6 +311,24 @@ globalThis.document = {
     }
     return named[id] ??= make("div");
   },
+  // UX-254: `document.querySelector` exists in every browser, and this
+  // model did not have it at all - so `app.js` asking for `header`
+  // threw, the boot fell into its own error path, and twelve order
+  // guards reported "Could not load this run" rather than an order.
+  //
+  // Added for the reason the `createTextNode` note above records:
+  // fixed here rather than by avoiding a standard DOM method in the
+  // viewer, because leaving the model short keeps the trap set for
+  // whoever next makes one of those paths run.
+  //
+  // It models what the page asks for and returns `null` otherwise -
+  // which is a real browser's answer for a selector that matches
+  // nothing, and is what makes the caller take its documented
+  // fallback rather than crash.
+  querySelector(sel) {
+    if (sel === "header") return named.__header ??= make("header");
+    return body.querySelector?.(sel) ?? null;
+  },
 };
 globalThis.location = { protocol: protocol.startsWith("http") ? "http:" : "file:",
                         href: "http://127.0.0.1:8000/index.html" };

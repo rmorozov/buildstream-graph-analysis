@@ -1,6 +1,6 @@
 # UX-254: the contents take two thirds of the first screen
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** R1 first — the reader who opened the report to find out what to fix | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 first — the reader who opened the report to find out what to fix | **Topic:** viewer
 
 ## Motivation
 
@@ -66,3 +66,79 @@ browser at 1280x800, 1440x900 and 1920x1080: the first content sits
 within the first screen, the rail occupies none of the reading column's
 width on wide viewports, and the single-column fallback shows no
 expanded contents. The before/after numbers are pasted.
+
+## Outcome
+
+**Status:** 🟢 Fixed & Verified
+
+Measured in Chromium on the exported page of the same 1,202-element
+run, before and after:
+
+```text
+                before                      after
+viewport        toc     first content       toc width  first content  hscroll
+1920x1080       573px   y=701 (64.9%)       12.5%      y=132 (12.2%)  no
+1440x900        573px   y=701 (77.8%)       16.7%      y=132 (14.7%)  no
+1280x800        573px   y=701 (87.6%)       18.8%      y=132 (16.5%)  no
+1024x768        573px   y=701 (91.3%)       23.4%      y=132 (17.2%)  no
+ 768x1024       573px   y=701 (68.5%)       one column, folded         no
+ 390x844        573px   y=701 (83.1%)       one column, folded         no
+```
+
+The rail is its own grid column now and scrolls on its own axis, so how
+many elements a run has stops being the page's problem. Its links are
+one per line rather than flex-wrapped, which is what stopped them
+reading as a paragraph of element names.
+
+### Three things compounded, and fixing one would not have been enough
+
+`position: sticky` **inside the reading column** cost 573px twice — once
+pushing every section down, again covering that much of every screen
+after a scroll. The `investigate` group, one link per focused element,
+is what made it 573px. And `insertBefore(contents, body.firstChild)`
+put all of it above the run's own name.
+
+### What the browser found that the report did not mention
+
+Probing at six viewports turned up two defects nobody had reported:
+
+```text
+390x844   document.scrollWidth 436 against a 390px viewport
+          -> input.table-filter min-width:12rem (192px, will not shrink)
+             plus select.top-n (229px) in one row
+          -> tables 217px wide, unclipped
+```
+
+The whole report scrolled sideways on a phone, so every line of prose
+moved with it. Fixed at the source: `min-width: min(12rem, 100%)` so
+the filter yields where there is no room, `overflow-x: auto` on tables
+so wide content scrolls inside its own box, and `minmax(0, auto)` on
+the `.pairs` grid, whose `auto` column would not shrink below a long
+element uid.
+
+### The anchor case, which is the one a reader actually hits
+
+A sticky heading means content passes beneath it — that is what sticky
+is. What must not happen is a *jump* landing under it. The heading's
+height is named once (`--head`) and both the rail's offset and every
+anchor's `scroll-margin-top` derive from it. Measured after: clicking a
+contents link leaves **0px** of the target hidden, at 1440x900 and at
+390x844.
+
+**Mutations verified red and reverted (9):** the grid losing its named
+areas; the rail no longer scrolling itself; the reading column sized
+`1fr` instead of `minmax(0, 1fr)`; the contents mounted before the
+heading again; the single-column breakpoint deleted; the anchor offset
+removed; the producer stamp removed from the heading; an unstamped run
+rendered as a version anyway; the table filter back to a width that
+will not shrink.
+
+**Deviation from the Required Fix:** none for the layout. The
+*geometry* is measured here and held by nothing — the guards check the
+mechanism (grid areas, the rail's overflow, the breakpoint, the
+offsets), because the viewer's harness has no layout engine. That is
+`UX-257`, filed before this landed and still open, and the guard file
+says so in its own docstring rather than implying more than it checks.
+
+Small tier: `2100 passed, 1142 deselected in 54.98s`.
+Full suite: `3239 passed, 3 skipped in 356.66s`. `make lint`: clean.

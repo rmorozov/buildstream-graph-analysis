@@ -762,6 +762,60 @@ function safeStorage() {
 }
 
 /** Type-ahead over section names and element uids. Scrolls; never filters. */
+/**
+ * UX-255: the heading says which build measured this run.
+ *
+ * `UX-249`'s producer stamp, rendered where a reader who screenshots
+ * the top of the page captures it. Deliberately one line: a heading
+ * that grows into a second report is `UX-254`'s defect moved upward.
+ *
+ * An unstamped run - every artifact written before `UX-249` - says so,
+ * because "we do not know which build wrote this" and "this build"
+ * must not look alike.
+ */
+export function stampHeader(doc, payload) {
+  const slot = doc.getElementById("run-producer");
+  if (!slot) return;
+  const stamp = payload?.producer;
+  const version = typeof stamp?.version === "string" ? stamp.version : null;
+  const tool = typeof stamp?.tool === "string" ? stamp.tool : "bga";
+  slot.textContent = version
+    ? `measured by ${tool} ${version}`
+    : "measured by an unrecorded build (written before bga stamped its version)";
+  slot.hidden = false;
+}
+
+/**
+ * UX-254: on a narrow viewport the rail folds to its title.
+ *
+ * The stylesheet does the hiding - this only owns the state and the
+ * click, so a browser that never matches the media query never sees a
+ * folded rail. Folded by *default* below the breakpoint, because a
+ * phone opening on a table of contents is the same defect this item is
+ * about at a different width; expanded above it, because `UX-199`'s
+ * point stands when there is room.
+ *
+ * Guarded rather than assumed: `matchMedia` is absent in the node
+ * harness the viewer guards boot the page in, and a missing browser
+ * API must not stop the page rendering.
+ */
+export function foldOnNarrow(nav, doc) {
+  const title = nav.querySelector?.(".toc-title");
+  if (!title) return;
+  const narrow = doc.defaultView?.matchMedia?.("(max-width: 60rem)");
+  const apply = (isNarrow) => {
+    nav.setAttribute("data-folded", isNarrow ? "true" : "false");
+  };
+  apply(Boolean(narrow?.matches));
+  title.addEventListener?.("click", () => {
+    apply(nav.getAttribute("data-folded") !== "true");
+  });
+  // `addEventListener` on a MediaQueryList is the modern spelling and
+  // the only one worth carrying; a browser without it keeps whatever
+  // the first `apply` decided, which is correct for its width.
+  narrow?.addEventListener?.("change", (event) => apply(event.matches));
+}
+
 export function wireJumpBox(nav, root, payload, context = {}) {
   const targets = jumpTargets(root, payload);
   const box = document.createElement("input");
@@ -994,6 +1048,12 @@ async function boot() {
     ]);
     document.getElementById("run-name").textContent = run.name ?? "bga";
     document.getElementById("run-path").textContent = run.run ?? "";
+    // UX-255: what qualifies the run, beside what names it. A report is
+    // usually read by someone it was sent to, and "which bga measured
+    // this" (UX-249) is the first thing that decides whether the rest
+    // is worth reading. Absent on a run written before the stamp
+    // existed, and absent is shown as absent rather than guessed.
+    stampHeader(document, payload);
     document.title = `bga — ${run.name ?? "report"}`;
     // UX-204: the investigate buttons exist only when there is a
     // timeline to investigate - `UX-194`'s dead-button rule, applied to
@@ -1168,8 +1228,21 @@ async function boot() {
         setTimeout(() => { share.textContent = "Copy link to this view"; }, 1200);
       });
       contents.append(el("p", { class: "toc-controls" }, share));
-      document.body.insertBefore(contents, document.body.firstChild);
+      // UX-254/UX-255: after the heading, not before it. This used to
+      // be `insertBefore(contents, document.body.firstChild)`, which
+      // put 573px of navigation above the run's own name - so the page
+      // opened on a table of contents and the reader scrolled to find
+      // out which build they were looking at. DOM order is the reading
+      // order a screen reader and a `Tab` key follow, so it is fixed
+      // here rather than only in the grid.
+      const heading = document.querySelector("header");
+      if (heading && typeof heading.after === "function") {
+        heading.after(contents);
+      } else {
+        document.body.insertBefore(contents, document.body.firstChild);
+      }
       document.body.setAttribute("data-has-toc", "true");
+      foldOnNarrow(contents, document);
     }
 
     // UX-211: the fragment last, over the finished document - it drives

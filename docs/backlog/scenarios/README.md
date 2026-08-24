@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-273 scenarios: **10 open**, 263 closed.
+274 scenarios: **4 open**, 270 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
-| contracts | 0 | 29 |
+| contracts | 1 | 30 |
 | viewer | 0 | 53 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
-| docs | 7 | 25 |
-| guards | 1 | 36 |
+| docs | 1 | 25 |
+| guards | 0 | 36 |
 
 ## Open scenarios
 
@@ -38,14 +38,8 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-242 | [the capacity recommendation is documented nowhere](UX-0242-the-capacity-recommendation-is-documented-nowhere.md) | docs | Medium | R1, R5 | 🔴 |
-| UX-243 | [the memory envelope reaches no reader](UX-0243-the-memory-envelope-reaches-no-reader.md) | docs | Medium | R5 | 🔴 |
-| UX-244 | [what-if's convention lives in its own docstring](UX-0244-whatifs-convention-lives-in-its-own-docstring.md) | docs | Medium | R8 | 🔴 |
-| UX-245 | [the architecture's CLI table is two commands behind](UX-0245-the-architectures-cli-table-is-two-commands-behind.md) | docs | Medium | R8 | 🔴 |
-| UX-246 | [the journey guide never reaches what-if](UX-0246-the-journey-guide-never-reaches-whatif.md) | docs | Medium | R1 | 🔴 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
-| UX-273 | [the rule that draws a nested value lives in one task file](UX-0273-the-rule-that-draws-a-nested-value-lives-in-one-task-file.md) | docs | Medium | R8 | 🔴 |
-| UX-274 | [the context map is guarded on one half of the tree](UX-0274-the-context-map-is-guarded-on-one-half-of-the-tree.md) | guards | Medium | — | 🔴 |
+| UX-275 | [the capacity recommendation is text-only](UX-0275-the-capacity-recommendation-is-text-only.md) | contracts | Medium | R5, R7 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -499,3 +493,57 @@ context map's guard globs `bga/` and `tools/` only, so the half naming
 files against 240, ~3,100 tests against 3,327, 233 closed rows against
 263 — is stale. Both harnesses this axis just built, `tests/dom_shim.mjs`
 and `tests/cdp.mjs`, are among the seven entries it does not name.
+
+## UX-242..UX-246 + UX-273/UX-274: the thirty-seventh round — the documentation debt, paid (2026-08-24)
+
+Everything `UX-241`'s two reviews filed, plus round 28's three
+`UX-237` instances. Seven items, no feature: this is the round the
+process asked for and the two before it deferred.
+
+Three of the seven found their own premise wrong, and each is recorded
+rather than quietly worked around:
+
+- **`UX-244`'s measurement was a false negative.** It was filed on
+  `git grep -l "upper bound, not a forecast" docs/` returning nothing.
+  The guide had carried the sentence since the commit that shipped
+  `UX-230`, hard-wrapped between `not a` and `forecast`. `git grep` is
+  line-oriented and this repository wraps prose at 72 columns, so any
+  phrase worth checking can wrap and read as absent. Every guard written
+  this round normalises whitespace before matching, and the hazard
+  recurred **twice more** inside the round — once in a `sed` mutation
+  that silently failed to apply, once in a second guide.
+- **`UX-242`'s clause 2 asked the spec to name an `analyze/v1` key that
+  does not exist.** `capacity_recommendation` is computed, rendered in
+  full by the text report, and dropped by the JSON renderer, while its
+  sibling `memory_envelope` is a published key of `correlate/v1`. The
+  guide now says so plainly and the contract gap is
+  [`UX-275`](UX-0275-the-capacity-recommendation-is-text-only.md).
+- **`UX-246` corrected `UX-244`, an hour after it landed.** The
+  architecture chapter written for `UX-244` said summing per-element
+  savings errs "in the direction that overstates". On the committed
+  `examples/06` run it *understates*: `codegen.bst` is worth 0.000s
+  alone and the pair `core.bst` + `codegen.bst` is worth 19.050s against
+  12.050s summed, because `codegen.bst` sits on the chain that becomes
+  binding the moment `core.bst` is fixed. Both directions are now
+  recorded, with a measurement each.
+
+The two guards worth keeping past this round both **recompute** rather
+than trust: the journey guide's pasted `whatif` figures and the
+capacity/memory chapter's pasted constraint lines are checked against
+what the tool produces from the committed runs today, so a pasted number
+is a claim the suite can falsify (`UX-132`). `UX-274` closes the other
+half of `UX-239`'s guard, so a new file directly under `tests/` that
+nobody names now reddens.
+
+Four mutations across the round did not discriminate and were fixed
+rather than counted — one of them a guard that matched the sentence
+*discussing* a figure instead of the pasted figure itself, which is the
+self-matching failure in its subtlest form yet.
+
+One guard reddened on the day its subject was *done* rather than when it
+broke: `test_documentation_debt_has_a_door.py` asserted that each of
+`UX-237`'s three mechanisms "has a backlog row", and read only
+`README.md` — so moving the three rows to `closed.md`, which is what
+closing them means since `UX-232` split the index at 234 rows, looked
+identical to never having filed them. It reads both halves now, and
+deleting a row from either still reddens it.

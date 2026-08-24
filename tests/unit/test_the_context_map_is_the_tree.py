@@ -30,6 +30,17 @@ GUIDE = REPO / "docs/contributing/fixing-guide.md"
 # `bga/__init__.py` is not a place anyone needs directing to.
 NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py"}
 
+# `UX-274`: the guard above globbed `bga/` and `tools/` and nothing else,
+# so the map's **Tests and docs** block was unguarded prose from the day
+# `UX-239` wrote it. Measured at review 2, it had drifted to 5 of the 12
+# entries directly under `tests/`, and the three it was missing hardest
+# were the harnesses the viewer axis had just built - `dom_shim.mjs`
+# (`UX-264`) and `cdp.mjs` + `browser.py` (`UX-257`). A session needing
+# to assert something about the page read §6, was pointed at neither, and
+# wrote its twenty-sixth inline shim, which is exactly the cost `UX-264`
+# measured and removed.
+NOT_IN_TESTS = {"tests/__pycache__"}
+
 
 def _map_text():
     """The map itself - the fenced blocks - and not the prose around it.
@@ -58,6 +69,28 @@ def _real_modules():
         if package.is_dir() and (package / "__init__.py").exists():
             modules.add(package.relative_to(REPO).as_posix() + "/")
     return modules
+
+
+def _real_test_entries():
+    """Everything directly under `tests/`, directories included.
+
+    Directly under, and not recursively: the map points at `tests/unit/`
+    on purpose - one line per guard would make §6 a second backlog index
+    - while a harness or a suite sitting at the top level is a place a
+    session needs directing to."""
+    entries = set()
+    for path in sorted((REPO / "tests").iterdir()):
+        rel = path.relative_to(REPO).as_posix()
+        if rel in NOT_IN_TESTS or path.name.startswith("."):
+            continue
+        entries.add(rel + "/" if path.is_dir() else rel)
+    return entries
+
+
+def _named(text, name):
+    """The map names an entry if it names the path or its basename."""
+    return (name in text
+            or name.rstrip("/").split("/")[-1].removesuffix(".py") in text)
 
 
 class TestTheMapNamesTheTree:
@@ -91,6 +124,45 @@ class TestTheMapNamesTheTree:
             and not (REPO / path.rstrip("/")).is_dir())
         assert stale == [], (
             f"the context map names path(s) that do not exist: {stale}")
+
+    def test_every_test_entry_is_on_the_map(self):
+        """`UX-274`: the half the guard did not cover. The two harnesses
+        this axis runs on were absent for the rounds that built them."""
+        text = _map_text()
+        missing = sorted(name for name in _real_test_entries()
+                         if not _named(text, name))
+        assert missing == [], (
+            f"entr(y/ies) directly under tests/ the context map does not "
+            f"mention: {missing}. docs/contributing/fixing-guide.md §6.")
+
+    def test_the_exemption_list_names_only_real_paths(self):
+        """An exemption for something that no longer exists silently
+        widens the check it is an exception to."""
+        unreal = sorted(name for name in NOT_IN_TESTS
+                        if not (REPO / name).exists())
+        assert unreal == [], f"exemption(s) for no such path: {unreal}"
+
+    def test_the_map_states_no_count_it_does_not_check(self):
+        """`UX-274`'s third clause. The block used to say `218 files,
+        ~3,100 tests` against 240 and 3,327, and `the 233 closed rows`
+        against 263 - three figures stated as current, read as current,
+        five rounds old. A figure nothing checks is the defect, not the
+        count, so the map states none.
+
+        Deliberately narrow: `UX-238`, `UX-264` and the rest are ids and
+        not counts, and a rule that banned digits would ban those."""
+        import re
+
+        text = _map_text()
+        # One optional adjective between the number and the noun: the
+        # first draft matched `218 files` and missed `the 233 closed
+        # rows` two lines below it, which is half a guard.
+        counted = re.findall(
+            r"(?<![\w-])[~]?[\d,]{2,}\s+(?:[a-z-]+\s+)?"
+            r"(?:files?|tests?|rows?|elements?|items?|scenarios?)\b", text)
+        assert counted == [], (
+            f"the context map states counted figure(s) nothing checks: "
+            f"{counted}. Name the thing, not how many of it there are.")
 
     def test_the_test_layout_is_not_from_the_first_week(self):
         """The specific claim that motivated this, pinned so it cannot

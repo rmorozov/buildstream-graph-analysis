@@ -1,6 +1,6 @@
 # UX-273: the rule that draws a nested value lives in one task file
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-267 | **Serves:** the maintainers, R8 | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** the maintainers, R8 | **Topic:** docs
 
 ## Motivation
 
@@ -73,3 +73,66 @@ notices.
 chapter. A reader who has read only the viewer chapter can predict
 which of the three renderings a new object-valued schema field will
 get.
+
+## Outcome — 🟢 Fixed & Verified
+
+The viewer chapter gained the value rule beside the hint rule, and the
+acceptance test passes on the phrase it named:
+
+```text
+$ git grep -n "width, not depth" -- docs/design/
+docs/design/architecture.md:561:- **A value is drawn by width, not depth** (`UX-267`, round
+```
+
+The bullet sits directly under *"The page is schema-driven"*, which is
+where the confusion was: that bullet tells a maintainer what a field is
+*called* and where it sits, and said nothing about what happens to its
+**value**. The new one covers the three renderings — inline, bounded
+table, fold — the separate rule for long text (a long **value**
+truncates with the whole thing kept; a long **explanation** does not,
+because the sentence is the point), and the one thing a reader would
+otherwise get wrong on their own:
+
+> Depth is deliberately not the criterion, and that is the whole choice:
+> a two-level object of four fields reads fine inline, and a flat one of
+> forty does not.
+
+**Clause 2 held, and is the half with teeth.** The thresholds are named
+(`OBJECT_INLINE_FIELDS`, `ARRAY_INLINE_ITEMS`, `CELL_TEXT_CAP`) and
+their values are not restated, so a later round that retunes them moves
+one number in one file. Clause 3's link to Direction 12 carries the
+argument and the before-picture, so the chapter states the rule without
+re-arguing it.
+
+**The guard** — `tests/unit/test_the_value_rule_has_a_home.py`,
+10 tests. It checks the rule is in the chapter, that all three branches
+are named, and — both directions — that every constant the rule rests on
+is named in the chapter *and* still exported by `bga/viewer/app.js`. The
+reverse direction is not decoration: a document pointing at a name the
+module has renamed is worse than one that copied the number, because it
+reads as checkable and is not.
+
+`test_the_chapter_does_not_restate_the_numbers` enforces the clause that
+made this item worth filing rather than fixing casually. It is written
+as a *threshold claim* check — `\d+ (fields|items|entries|characters)`
+matched against the exported values — rather than as a ban on the digits
+`4`, `6` and `160`, which would have fired on "round 36" and on `UX-267`
+in the same paragraph. A guard that has to be worked around is a guard
+that gets deleted.
+
+Falsified, seven mutations:
+
+```text
+M1  remove the bullet (the state review 2 found)  -> 6 of 10
+M2  drop the fold branch                          -> test_it_names_all_three_renderings
+M3  drop the depth sentence                       -> test_it_says_depth_is_not_the_criterion
+M4  name two of the three thresholds              -> names_the_constant[CELL_TEXT_CAP]
+M5  name a constant the module never exported     -> names_the_constant[CELL_TEXT_CAP]
+M6  rename CELL_TEXT_CAP in app.js                -> test_the_constant_exists[CELL_TEXT_CAP]
+M7  write "objects of 4 fields or fewer"          -> does_not_restate_the_numbers
+```
+
+M5 and M6 are the same defect approached from its two ends — the
+document drifting from the module, and the module drifting from the
+document — and they redden different tests, which is what makes the pair
+worth having rather than one of them.

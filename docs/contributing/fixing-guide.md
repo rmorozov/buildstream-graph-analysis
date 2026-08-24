@@ -204,15 +204,21 @@ tools/bst_run_context.py, _run_context_common.py
 **Tests and docs:**
 
 ```text
-tests/unit/                218 files, ~3,100 tests; one file per item, named for its claim
+tests/unit/                one file per item, named for its claim - the bulk of the suite
 tests/tiers.py             which tier each file is in, from measurement (UX-238)
 tests/conftest.py          the tier hook and the skip census (UX-235)
-tests/support/             shared harnesses · tests/fixtures/  committed run dirs
+tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
+tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
+tests/browser.py           what drives it from a test; every geometric claim goes through here
+tests/test_e2e.py          the whole pipeline on a committed run · test_golden.py  byte-for-byte
+tests/test_cli.py          argument parsing and exit codes, at the CLI boundary
+tests/test_synthetic_multi_subproject.py  the multi-project ingestion path
+tests/support/             shared helpers · tests/fixtures/  committed run dirs
 docs/spec/specification.md v9 spec, ground truth - use line ranges, never read whole file
 docs/design/architecture.md  all three planes plus the viewer axis and the contracts
 docs/design/directions.md    where the tool is going, argued · roles.md  who it answers to
 docs/backlog/scenarios/README.md   active backlog index - start here
-docs/backlog/scenarios/closed.md   the 233 closed rows, verbatim
+docs/backlog/scenarios/closed.md   every closed row, verbatim
 docs/backlog/progress-tracker.md   closed spec-compliance backlog - archaeology only
 ```
 

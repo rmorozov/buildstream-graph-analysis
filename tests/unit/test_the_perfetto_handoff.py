@@ -359,7 +359,14 @@ class TestTheCannedSql:
         """The drift this closes: `sql.html` carried its own copy of
         every query."""
         page = open("bga/viewer/sql.html", encoding="utf-8").read()
-        assert 'from "./questions.js"' in page
+        # `UX-266`: the script moved out of the page into a file,
+        # because the server's own `default-src 'self'` refuses an
+        # inline one. The property is unchanged; where it is written
+        # is not, and a guard still reading the page would pass on
+        # markup that no longer runs anything.
+        script = open("bga/viewer/sql.js", encoding="utf-8").read()
+        assert 'src="sql.js"' in page
+        assert 'from "./questions.js"' in script
         assert "<pre><code>" not in page, (
             "sql.html has a hand-written query again - it renders the "
             "module, or the two drift")
@@ -461,7 +468,14 @@ class TestThePageDoesNotOpenAnythingUninvited:
 
     def test_it_opens_from_a_click_instead(self):
         page = open("bga/viewer/perfetto.html", encoding="utf-8").read()
-        assert 'addEventListener("click"' in page
+        # `UX-266`: the script moved out of the page into a file,
+        # because the server's own `default-src 'self'` refuses an
+        # inline one. The property is unchanged; where it is written
+        # is not, and a guard still reading the page would pass on
+        # markup that no longer runs anything.
+        script = open("bga/viewer/perfetto_page.js", encoding="utf-8").read()
+        assert 'src="perfetto_page.js"' in page
+        assert 'addEventListener("click"' in script
         assert 'id="open"' in page, "there is no button to click"
 
     def test_both_modes_offer_a_way_out_when_nothing_opens(self):

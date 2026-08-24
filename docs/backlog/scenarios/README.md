@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-264 scenarios: **8 open**, 256 closed.
+272 scenarios: **14 open**, 257 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 0 | 29 |
-| viewer | 0 | 46 |
+| viewer | 6 | 53 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 6 | 24 |
@@ -36,6 +36,12 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-267 | [every object renders as a `<details>` labelled "object"](UX-0267-every-object-is-a-details-called-object.md) | viewer | High | R1, R3 | 🔴 |
+| UX-268 | [six of the wide maps are one table rendered six times](UX-0268-six-maps-are-one-table.md) | viewer | High | R1, R3 | 🔴 |
+| UX-269 | [a long field shows all of itself, always](UX-0269-a-long-field-shows-all-of-itself.md) | viewer | Medium | R1 | 🔴 |
+| UX-270 | [the critical path shares a section with everything else](UX-0270-the-critical-path-is-its-own-section.md) | viewer | Medium | R1 | 🔴 |
+| UX-271 | [the rail is flat, and the report has thirty sections](UX-0271-the-rail-is-flat.md) | viewer | Medium | R1 | 🔴 |
+| UX-272 | [the header is four stacked paragraphs](UX-0272-the-header-is-four-stacked-paragraphs.md) | viewer | Low | R1 | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-242 | [the capacity recommendation is documented nowhere](UX-0242-the-capacity-recommendation-is-documented-nowhere.md) | docs | Medium | R1, R5 | 🔴 |
@@ -419,3 +425,32 @@ argument: what the guards *measure with*.
 - **`UX-253`** — an aggregate names the contract sets it mixes. The
   rule is `UX-250`'s, applied to a set, and argued against `UX-234`'s
   host-class precedent rather than copied from it.
+
+## UX-266..UX-272: the thirty-fifth round — the report is read, not decoded (2026-08-24)
+
+Nine observations from a real run, measured in Chrome 141 before any
+were acted on. [Direction 12](../../design/directions.md) argues all of
+it, including the three where the measurement disagrees with the
+diagnosis.
+
+- **`UX-266`** — **two of the three served pages ran nothing.**
+  `default-src 'self'` refuses inline *script* as it refuses inline
+  style, and `sql.html` and `perfetto.html` each had one. `sql.html`
+  rendered zero children; `perfetto.html`'s button had no listener.
+  `UX-263` fixed the style half and checked one page. **Fixed.**
+- **`UX-267`** — one line renders every object *and every array* as
+  `<details>object</details>` over raw JSON: 34 cells and 32,393
+  characters on a 44-element run. Filed with a spike's measurements,
+  including the trap: rendering them as tables makes the document
+  **2.6x longer** unless the fold is kept and merely labelled.
+- **`UX-268`** — six of those maps are the same element list, and the
+  seventh is keyed by *task* and shares zero keys with them. Nobody
+  asked for this; it is the largest win available.
+- **`UX-269`** — field lengths, measured. A flat cap is wrong: a
+  `copy_text` paragraph and a caveat sentence want opposite treatment.
+- **`UX-270`** — the critical path gets its own section.
+- **`UX-271`** — the rail should nest, **not** become a third column:
+  a JSON tree makes the document's shape the organising principle, and
+  a third column undoes `UX-254`'s reading width.
+- **`UX-272`** — the header is 0.1-0.2 screens of a 14-screen
+  document. Worth tidying, not where the space is.

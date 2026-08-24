@@ -70,11 +70,70 @@ class TestNothingWritesAStyleAttribute:
             f"`el.style.prop = ...`, or `el.style.setProperty(...)` for a "
             f"custom property (UX-263).")
 
-    def test_the_html_carries_no_inline_style_either(self):
-        html = (VIEWER / "index.html").read_text(encoding="utf-8")
-        assert not re.search(r"<[^>]+\sstyle=", html), (
-            "index.html has an inline style attribute, which the CSP refuses "
-            "at parse time")
+    def test_no_served_page_carries_inline_style(self):
+        """Every page, not one. `UX-266`: this used to read
+        `index.html` alone, and `sql.html` was dead for rounds."""
+        offenders = {}
+        for path in sorted(VIEWER.glob("*.html")):
+            if re.search(r"<[^>]+\sstyle=", path.read_text(encoding="utf-8")):
+                offenders[path.name] = "inline style attribute"
+        assert offenders == {}, offenders
+
+
+class TestNoPageRunsAnInlineScript:
+    """UX-266: reported from a real project - *"there is a problem on
+    sql.html"*.
+
+    `default-src 'self'` refuses inline **script** exactly as it
+    refuses inline style, and two of the three served pages had one.
+    Measured in Chrome 141 against the page `bga view` serves:
+
+    ```text
+                   violations   main children   body text
+    index.html              0              26      11,056
+    sql.html                1               0         508   <- rendered nothing
+    perfetto.html           1               4         398   <- button did nothing
+    ```
+
+    `sql.html` was **completely dead**: the questions list never
+    existed. `perfetto.html` is quieter and worse - the page renders,
+    the "Open in Perfetto" button is *there*, and nothing was
+    listening to it, so `bga view --perfetto` lands on a button that
+    does nothing.
+
+    `UX-263` fixed the style half and checked `index.html` only, which
+    is why this survived it.
+    """
+
+    def test_no_served_page_has_an_inline_script(self):
+        offenders = {}
+        for path in sorted(VIEWER.glob("*.html")):
+            html = path.read_text(encoding="utf-8")
+            for match in re.finditer(r"<script(?![^>]*\ssrc=)[^>]*>", html):
+                offenders.setdefault(path.name, []).append(match.group(0))
+        assert offenders == {}, (
+            f"inline <script> in {offenders}. The server sends "
+            f"`default-src 'self'`, which refuses it - the page loads and "
+            f"does nothing at all (UX-266).")
+
+    def test_every_page_still_runs_something(self):
+        """The other direction, and the one that matters: a page with
+        no script at all would also pass the ban above. Each served
+        page names the module that drives it."""
+        expected = {"index.html": "app.js", "sql.html": "sql.js",
+                    "perfetto.html": "perfetto_page.js"}
+        for name, module in expected.items():
+            html = (VIEWER / name).read_text(encoding="utf-8")
+            assert f'src="{module}"' in html, f"{name} no longer loads {module}"
+            assert (VIEWER / module).exists(), f"{module} is not there"
+
+    def test_every_page_script_is_served(self):
+        """A module the server does not list is a 404, which is the
+        same dead page by a different route."""
+        server = (REPO / "tools/bga_view.py").read_text(encoding="utf-8")
+        assets = server.split("ASSETS = (", 1)[1].split(")", 1)[0]
+        for module in ("app.js", "sql.js", "perfetto_page.js"):
+            assert f'"{module}"' in assets, f"{module} is not in ASSETS"
 
     def test_the_drawings_still_set_the_properties_they_used_to(self):
         """The ban is only worth having if the encodings survived it. A

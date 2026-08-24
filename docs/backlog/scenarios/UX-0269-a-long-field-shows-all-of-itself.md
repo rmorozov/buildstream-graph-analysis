@@ -1,0 +1,54 @@
+# UX-269: a long field shows all of itself, always
+
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-267 | **Serves:** R1 | **Topic:** viewer
+
+## Motivation
+
+Requested: *"analysis of the length of contents of every field and
+proper measures to show truncated output by default with the
+possibility to look at the full content"*. Measured, per field, on a
+44-element run:
+
+```text
+678 chars   findings[].copy_text
+572 chars   floors.capacity_model_note
+393 chars   findings[].copy_text
+354 chars   findings[].copy_text
+334 chars   findings[].copy_text
+299 chars   findings[].copy_text
+293 chars   attribution_hints.resource_wait_us
+```
+
+Two families, and they want opposite treatment:
+
+- **`copy_text`** is a paragraph *meant* to be copied whole
+  (`UX-224`). Truncating it in the cell is right; truncating what the
+  copy button yields would break the feature.
+- **`capacity_model_note`** and the `attribution_hints` strings are
+  explanations. They are long because they are careful, and hiding
+  them by default is how a reader stops seeing the caveat on a number.
+
+So a flat character cap is the wrong instrument, and that is the point
+worth recording: the rule has to distinguish *a value that is long* from
+*a sentence that is long*.
+
+## Required Fix
+
+1. A cap on **values**, with the full text one click away and the
+   truncation visible (`…`), never silent.
+2. **Sentences the schema declares as explanation** are exempt, or the
+   report starts hiding its own caveats.
+3. The cap is a named constant with the measurement above beside it,
+   as `TABLE_OPENS_BOUNDED_ABOVE` is.
+
+## Out of Scope
+
+- `copy_text`'s payload. What the button copies is unbounded by design.
+- Wrapping and ellipsis as a purely visual effect: a reader who cannot
+  select the full text has not been given it.
+
+## Acceptance Test
+
+A 678-character cell renders truncated with its full content reachable;
+a declared explanation of the same length does not; and the copy button
+still yields the whole thing.

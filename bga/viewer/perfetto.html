@@ -31,28 +31,6 @@
     drag <a href="timeline.json.gz" download>timeline.json.gz</a> into it.
   </p>
 </main>
-<script type="module">
-import { handOff, deepLink } from "./perfetto.js";
-
-const line = document.getElementById("line");
-const deep = document.getElementById("deep");
-deep.href = deepLink(new URL("timeline.json.gz", location.href).href);
-
-// UX-198: no `go()` at script load. The previous version called it
-// here, so there was never a user gesture and default-settings Chrome
-// blocked the pop-up *every time* - the "Try again" button below it was
-// the tell that nobody read as a bug report.
-document.getElementById("open").addEventListener("click", async () => {
-  line.textContent = "Opening ui.perfetto.dev…";
-  try {
-    const { bytes } = await handOff();
-    line.textContent =
-      `Sent ${(bytes / 1024).toFixed(1)} KiB to the Perfetto tab. ` +
-      `You can close this one — and stop the server with Ctrl-C.`;
-  } catch (error) {
-    line.textContent = String(error.message ?? error);
-  }
-});
-</script>
+<script type="module" src="perfetto_page.js"></script>
 </body>
 </html>

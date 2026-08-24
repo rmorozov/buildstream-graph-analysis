@@ -44,6 +44,8 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga utilisation RUN` | CPU utilisation accounting | 30, M4 |
 | `bga diagnostics RUN` | Blast radius, criticality probability, wall-clock shares | 20–29, M5 |
 | `bga correlate RUN NATIVE_REPORT` | Joins this run with a Plane 2 native trace of the same build on element UID, and says what to fix. **Not spec-mandated**, `UX-51` | — |
+| `bga blast TARGET [RUN]` | What rebuilds if one thing changes, from whichever end the reader has it — a git url (every element sourcing that repository: the monorepo case, where one ref decides them all), a path (the elements whose `local` sources stage it), or an element name (its downstream closure). The answer says which reading it used, splits the closure into kinds that build and kinds that assemble, and prices it against the named run. A question, not a gate — always exits 0. **Not spec-mandated**, `UX-172`/`UX-173`/`UX-182` | — |
+| `bga whatif [RUN] --element UID …` | What the build drops to if those elements were fixed *together*: one longest-path recompute with each of them zeroed, never a sum of their individual savings — which is wrong the moment two of them share a chain. "Fixed" means instant over this run's measured durations, so the figure is an upper bound and not a forecast. **Not spec-mandated**, `UX-230` | — |
 | `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5); `--baseline-run`/`--band-k` compare against a baseline *set* instead of a fixed threshold. **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39`/`UX-59` | — |
 | `bga cache-trend RUN...` | Is the cache getting worse? A chronological *series*, not a pair — hit ratio, transfer seconds, churn per step, and a finding when the newest run leaves the band its trailing window describes. **Not spec-mandated**, `UX-103` | — |
 | `bga cache-logs [PROJECT_DIR\|LOG_ROOT]` | **Plane 3** — BuildStream's own persisted element logs: per-element phase breakdown, sandbox tax, configure tax, developer tax. Needs no capture, and takes the project directory a user has rather than the log root they would have to derive (`UX-127`). **Not spec-mandated**, `UX-91`/`UX-99`/`UX-101`/`UX-102` | — |
@@ -54,6 +56,8 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga wrap` / `extract` / `rebuild-set` / … | Thin aliases dispatching to the programs in `tools/`, which stay independently runnable as `python3 -m tools.<module>` — the workflow reads as one tool without merging the code. **Not spec-mandated**, `UX-67` (`bga/tools_dispatch.py`) | — |
 
 Every conclusion the text report draws is also published by `--format json` as a `findings` array, each entry with a stable `id`, a `severity` and the numbers behind it (`UX-75`). Both renderers consume the same list, so they cannot disagree, and a CI consumer keys on `id` rather than re-deriving a threshold out of the renderer.
+
+**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v1` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
 
 ## Real package structure (Plane 1)
 
@@ -376,6 +380,63 @@ The spec's invariants (full text: `docs/spec/specification.md`) remain the real 
 - **I11** determinism (same input → byte-identical output, N-run harness in `bga/validation/determinism.py`).
 - **I12** cold-floor independence from certified/measured attribution.
 
+## What a projection is, and why it is a bound (`UX-230`, `UX-74`)
+
+`bga whatif` and the page's what-if panel answer one question — *what
+would the build drop to if these were fixed together* — and the answer
+is a **bound**, not a forecast. Two things make it one, and both are
+stated in every `whatif/v1` answer (`bga/whatif.py`'s `CONVENTION`) and
+in [`../guides/cli.md`](../guides/cli.md); this is where the reasoning
+behind them lives.
+
+**"Fixed" means instant.** The projection zeroes each chosen element's
+measured duration and recomputes the longest path. A real fix that
+makes an element *faster* rather than instant lands under the figure; a
+fix that changes the graph — splitting an element, moving a dependency,
+caching a source — is not modelled at all. So the number is a ceiling
+on what the selection can be worth over this run's durations. A
+re-capture is still the ground truth.
+
+**It is one recompute, never a sum.** Whether two savings add is a
+property of *this* graph, and it is the opposite of the intuition:
+
+```text
+freedesktop-sdk capture, measured by UX-74:
+  same chain      cmake-stage1 + openssl + doxygen
+                  individually 1569.8s + 522.5s + 513.5s = 2605.8s
+                  jointly                                  2605.8s   (adds exactly)
+  different chains  cmake-stage1 + git-minimal
+                  individually 1569.8s + 547.7s          = 2117.5s
+                  jointly                                  1569.8s   (takes the maximum)
+```
+
+Being in **series** is what makes savings compose — shortening two
+links of one chain shortens the chain by both. Being **parallel** is
+what makes them not — the other chain was never binding.
+
+And summing is not merely optimistic: it is wrong in **both**
+directions. On the committed `examples/06` run, `codegen.bst` is worth
+**nothing** alone and the pair is worth more than either:
+
+```text
+$ bga whatif examples/06-…/run --element core.bst --element codegen.bst
+  Makespan 43.200s -> 24.150s (saves 19.050s)
+  Their individual savings add up to 12.050s, which is not what they are
+  worth together (19.050s) - what one fix is worth depends on the others.
+```
+
+`codegen.bst` sits on the chain that becomes binding the moment
+`core.bst` is fixed, so an element a reader would strike off the list
+today is worth seven seconds tomorrow. That is the same effect the
+optimization horizon (`UX-74`) projects forward, seen from one
+selection: what a fix is worth is a property of the set it is in, and
+no per-element table can carry it.
+
+`compute_joint_saving` (`bga/graph/edg.py`) is the one recompute, and
+`whatif/v1` publishes `sum_of_individual_us` **beside**
+`joint_saving_us` rather than instead of it, so the difference is
+visible in the payload rather than reproduced by the consumer.
+
 ## Real extensions beyond the original spec
 
 Everything below is **additive**, not a spec contradiction — each is clearly marked non-spec in its own code/docstrings.
@@ -497,6 +558,28 @@ how it is *read*, and the shape is deliberately small.
   (`bga:quantity`, `bga:question`, `bga:columns`, `bga:rail`,
   `bga:markers`, ...), so a field that gains a description in
   `bga/schemas.py` gains a tooltip in the page with no page edit.
+- **A value is drawn by width, not depth** (`UX-267`, round
+  36). The hints above decide what a field is *called* and where it
+  sits; this decides what happens to its **value**, and it applies to
+  every object- or array-valued field in every published schema without
+  a page edit. `renderStructured` picks one of three renderings by how
+  wide the value is: narrow objects and short arrays are **inlined**
+  into their cell, wider ones become a **bounded table** that scrolls
+  inside itself, and only what is wider still **folds** — labelled with
+  what it holds, never with the word "object". Long *text* is a
+  separate case: a long **value** truncates with the whole thing kept
+  behind a fold, and a long **explanation** does not truncate, because
+  the sentence is the point.
+
+  The thresholds are exported names in `bga/viewer/app.js`
+  (`OBJECT_INLINE_FIELDS`, `ARRAY_INLINE_ITEMS`, `CELL_TEXT_CAP`) rather
+  than numbers repeated here, so a later round moves them in one place.
+  Depth is deliberately not the criterion, and that is the whole
+  choice: a two-level object of four fields reads fine inline, and a
+  flat one of forty does not. The
+  argument, and what the page looked like before the rule, is
+  [Direction 12](directions.md#direction-12-the-report-is-read-not-decoded-argued-2026-08-24-round-35).
+
 - **`--export`** inlines every served document and every module into one
   self-contained HTML file. What cannot survive that - a live search
   box, anything needing a server - is *hidden with the command that

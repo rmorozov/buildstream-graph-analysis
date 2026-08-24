@@ -1359,6 +1359,124 @@ app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3
 - **Coverage is carried through.** A recommendation built on 81% of an element's processes says so (`UX-45`), and elements Plane 1 ranks that Plane 2 never traced are named rather than passed over.
 - The two planes' timelines are **not** merged and cannot be — see [`docs/design/architecture.md`](../design/architecture.md). This is a join, and is deliberately named as one.
 
+## How many builders, and what stops you
+
+Two Plane 2 numbers answer the `--builders` question, and they answer
+different halves of it. Both need a Plane 2 report for the *same* run —
+`bga snapshot` keeps one beside every capture, and `bga analyze` takes
+one with `--plane2`:
+
+```bash
+bga analyze .bga/runs/<stamp>/run --plane2 .bga/runs/<stamp>/plane2.json
+```
+
+### The capacity recommendation (`UX-116`)
+
+`capacity_recommendation` intersects every constraint on the joint
+`--builders` × `--max-jobs` choice. Each one is already a measured
+number in a capture; what was missing was the sentence that puts them
+together. On `examples/06-macro-micro-optimization`:
+
+```text
+  Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 2, below the 4 configured - more builders contend rather than overlap here
+    graph allows 2: the sweep's knee is at 2 builder(s)
+    CPU allows 9: 1.60 of 4 core(s) busy at builders=4, i.e. 0.40 core(s) per concurrent element
+    memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
+    Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core. Fix that before raising anything, then re-measure.
+```
+
+Three constraints, each with the measurement behind it, and the
+**smallest one binds**. Here it is the graph: the capacity sweep's knee
+is at 2, so the 4 builders configured are already more than this
+dependency shape can use, and adding builders would make them contend
+rather than overlap. The CPU ceiling is `host_cores × builders ÷
+cores_busy` — measured draw per concurrently-building element, not an
+assumption — and the memory ceiling comes from the envelope below.
+
+**How it is derived, and what it will not do.** One capture in, one
+recommendation out: no configuration is tried. The sweep replays the
+durations it observed and does not model contention (`UX-14`), and
+cores-busy is an average over the whole run rather than over the
+contended window — both stated in the payload's own `caveat`, because a
+recommendation that hides its shape is worse than none.
+
+**When it declines**, and this is the part worth knowing, because a
+missing recommendation looks exactly like an absent feature:
+
+| the block is absent when | because |
+|---|---|
+| no `--plane2` was given | `cores_busy` is a Plane 2 measurement and there is no Plane 1 substitute |
+| the capture recorded no host core count | the CPU ceiling is `host_cores × …`; without it there is no ceiling to state |
+| the run context has no builders value | every constraint is expressed *per builder*, so there is no baseline to move from |
+| the capacity sweep cannot run | the graph constraint is the sweep's knee; the block does not guess one |
+| Plane 2 saw no CPU at all | a recommendation resting on a missing `cores_busy` is a guess wearing a measurement's clothes |
+
+It never recommends a value it has no measurement for. `--builders`
+advice that clears the CPU check and blows the memory one is advice to
+build into swap, which is why the two are computed together and the
+binding one is named.
+
+**Where it appears.** In the text report, under the headline. It is
+**not** a key of `analyze/v1` — `bga analyze -f json` does not carry it
+(`UX-275`).
+
+### The memory envelope (`UX-104`)
+
+`memory_envelope` is what decides whether `--builders` can go up, and it
+is a published key of [`correlate/v1`](#the-two-plane-join-published-ux-215):
+
+```bash
+bga correlate @last -f json | jq .memory_envelope
+```
+
+```json
+{
+  "host_memory_mb": 16075,
+  "builders": 4,
+  "elements_measured": 9,
+  "largest_element_peak_mb": 153.5,
+  "at_observed_builders": {"builders": 4, "envelope_mb": 613.7,
+                           "share_of_host": 0.038, "fits": true},
+  "first_builders_that_does_not_fit": null
+}
+```
+
+Every figure is in **megabytes**, and `share_of_host` is a fraction of
+`host_memory_mb`. The same thing in the text report reads:
+
+```text
+  Memory: 4 builders of this shape peak at ~0.6 GB of 15.7 GB (4%); 9 would still fit at ~1.3 GB, so memory is not what binds first here
+```
+
+**What it is an envelope of.** The envelope at N builders is the sum of
+the **N largest measured per-element peaks**, as if those N elements
+built at once *and* peaked at the same instant. That is deliberately a
+concurrent peak and not a sum over the whole build: summing every
+element's peak would count memory that was never held at the same
+moment, and summing only the *observed* concurrency would answer a
+question about the run you already have rather than the one you are
+considering. Both are upper bounds, and for "is it safe to raise
+`--builders`?" an upper bound is the useful direction to be wrong in.
+
+**No safety margin is invented.** `fits` is a strict comparison against
+the host's RAM, with nothing reserved for the OS or page cache — so
+headroom below 100% is not the same as safe. A reserve would be a
+threshold picked from nothing.
+
+**It projects only as far as it measured.** `elements_measured` bounds
+the table: N builders can only be N elements building at once, and past
+the elements whose peak was measured there is nothing to sum but a
+guess. That is why the constraint line above says *"measured over 9
+element peak(s), so it says nothing above 9"* rather than reporting a
+ceiling it did not reach.
+
+**When it declines.** It is `{}` — and the line simply absent — when
+`--plane2` was not given, when Plane 2 recorded no per-element peak RSS,
+or when the capture did not record the host's RAM. The arithmetic needs
+the peaks and the host together; half of it is not an estimate, it is a
+guess. As with the recommendation above, an absent line means *this
+capture cannot answer*, not *this tool has no answer*.
+
 ## Example Workflows
 
 ### CI Marginal Gate (`--fail-on-inefficient-additions`) — `UX-79`

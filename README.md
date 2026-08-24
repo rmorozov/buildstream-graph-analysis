@@ -194,7 +194,7 @@ bga correlate @last                    # and what neither can say alone
 It answers what timing cannot: **real CPU time per element** (`getrusage`, the only genuine CPU
 measurement in `bga`) separating compute-bound from waiting; **where that CPU went**, ranked by
 time rather than invocation count; **peak memory**, which is what decides whether `--builders`
-can go up; **achieved parallelism against the `-jN` it asked for**, which is how a one-line
+can go up — published as `memory_envelope` in `correlate/v1`, in megabytes, and explained in [`cli.md`](docs/guides/cli.md#how-many-builders-and-what-stops-you); **achieved parallelism against the `-jN` it asked for**, which is how a one-line
 `notparallel: True` shows up as an element taking 3× as long as its work; and with
 `--trace-opens`, **which declared build dependencies an element never actually read** — evidence,
 never a verdict, since a runtime-only dependency is indistinguishable from an unused one.

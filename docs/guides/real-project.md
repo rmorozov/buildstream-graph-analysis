@@ -745,6 +745,61 @@ edge.
 
 ## Step 7 — change something, then prove it
 
+### Before you change anything: price the change
+
+Steps 5 and 6 tell you which elements are expensive. `bga whatif` tells
+you what fixing them is *worth*, before you spend a day on one:
+
+```bash
+bga whatif @last --element core.bst --element codegen.bst
+```
+
+```text
+What if these were fixed: core.bst, codegen.bst
+  Makespan 43.200s -> 24.150s (saves 19.050s)
+  Their individual savings add up to 12.050s, which is not what they are
+  worth together (19.050s) - what one fix is worth depends on the others.
+```
+
+That last line is why this step exists. Asked one at a time, the same
+run says `core.bst` is worth **12.050s** and `codegen.bst` is worth
+**0.000s** — nothing at all. Together they are worth **19.050s**,
+because `codegen.bst` sits on the chain that becomes binding the moment
+`core.bst` is fixed. An element you would strike off the list today is
+worth seven seconds tomorrow, and no per-element table can tell you
+that.
+
+It runs the other way too. On a build where two heavy elements sit on
+different chains, fixing both is worth no more than fixing the larger
+one — so a plan that adds their savings promises time that does not
+exist. Which of the two holds is a property of your graph, which is why
+it is computed rather than left to arithmetic.
+
+**What the number means.** "Fixed" means the element becomes instant,
+over this run's measured durations, with nothing else assumed to change
+— an **upper bound**, not a forecast. A real fix that makes the element
+merely faster lands under it; a fix that changes the graph (splitting an
+element, moving a dependency) is not modelled at all. Quote it as a
+ceiling on what the work can be worth, and then do what the rest of this
+step says: re-capture, and let `bga compare` say what actually happened.
+
+A selection naming an element this run does not know is **refused by
+name** rather than projected, and the refusal still exits 0 — it is the
+answer, not a failure:
+
+```text
+$ bga whatif @last --element nope.bst
+What if these were fixed: nope.bst
+  Refused: Not in this run's graph: nope.bst. A subset quietly missing a
+  member projects a different question from the one asked.
+```
+
+The reasoning behind the bound is in
+[`architecture.md`](../design/architecture.md); the page has the same
+projection behind checkboxes.
+
+### Then make the change
+
 Make one change, then take another snapshot — the comparison against the
 previous one is automatic:
 
@@ -974,6 +1029,22 @@ pair are from `examples/06-macro-micro-optimization`, measured locally
 and written up in
 [`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md)
 and [`UX-39`](../backlog/scenarios/UX-0039-ci-gate-cannot-express-inefficiency-regression.md).
+
+Step 7's `bga whatif` figures are from the same project — the run
+committed at
+`examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run`,
+so every number in that block is reproducible from a clone with no
+capture of your own:
+
+```text
+$ bga whatif examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run \
+      --element core.bst
+  Makespan 43.200s -> 31.150s (saves 12.050s)
+$ … --element codegen.bst
+  Makespan 43.200s -> 43.200s (saves 0.000s)
+$ … --element core.bst --element codegen.bst
+  Makespan 43.200s -> 24.150s (saves 19.050s)
+```
 
 The gap this paragraph used to apologise for is closed. **A caches-off
 capture now exists** — `bootstrap/build/gcc-stage1.bst`, the whole

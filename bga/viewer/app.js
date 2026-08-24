@@ -330,7 +330,127 @@ export function columnSpecs(hint, rows, node) {
   });
 }
 
-export function renderTable(key, rows, hint = {}, node = undefined) {
+// UX-267: how a nested value is drawn, chosen by its measured shape.
+//
+// Every object and every array that was not an array-of-objects used to
+// render as `<details><summary>object</summary><pre>{raw JSON}</pre>`.
+// One branch, four complaints: a summary that says `object` so a reader
+// clicks each one to find out what it is, a wall of `JSON.stringify`
+// behind it, arrays read as JSON, and nothing searchable or bounded.
+//
+// Measured on a served 44-element run: 34 such cells, 32,393 characters
+// of `<pre>`, the largest 8,191 - and `signals.blast_radius` scales to
+// ~224,000 characters at 1,202 elements behind a label saying `object`.
+//
+// **The rule is width, not depth.** The document is 7 levels deep and
+// three nodes live at level 7; the mass is at 3-4 and the pain is the
+// level-2 maps with one key per element (Direction 12).
+//
+// **The fold is not the defect.** A spike replaced folds with tables
+// and took the document from 13.8 screens to 35.5; row-bounding got it
+// to 32.3 and a bounded height to 20.8. Keeping the fold and labelling
+// it `Blast radius · 44 entries` gives zero raw JSON at 14.9.
+export const OBJECT_INLINE_FIELDS = 4;
+export const ARRAY_INLINE_ITEMS = 6;
+
+function isScalar(value) {
+  return value === null || typeof value !== "object";
+}
+
+/** `{k: v}` as one line - no click, because there is nothing to hide. */
+function inlineObject(value, node) {
+  const parts = [];
+  for (const [name, member] of Object.entries(value)) {
+    const kind = quantityFor(childNode(node, name), name);
+    parts.push(el("span", { class: "pair" },
+      el("span", { class: "pair-key" }, `${title(name)} `),
+      el("span", { class: typeof member === "number" ? "num" : null,
+                   "data-raw": member === null ? "" : String(member) },
+         member === null ? "—" : quantity(member, kind))));
+  }
+  return el("span", { class: "inline-object" }, ...parts);
+}
+
+/**
+ * A map as a bounded, searchable table - the table only, never a
+ * section (`buildTable`, not `renderTable`).
+ */
+function mapTable(key, rows, hint, node, nested) {
+  let declared = hint;
+  if (!nested) {
+    // A `{name: number}` map's value column has to *declare* a
+    // quantity: `presetColumns` selects on the declaration, so without
+    // this the table gets no `Top N` control and therefore no bound
+    // (`UX-262`).
+    const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key) ?? "count";
+    declared = { ...hint, [COLUMNS]: [
+      { key: "key", title: "name" },
+      { key: "value", title: title(key), quantity: measure }] };
+  }
+  const { table, tools } = buildTable(key, rows, declared, node);
+  const box = el("div", { class: "map-table", "data-bounded": "map" },
+                 tools, table);
+  return box;
+}
+
+/** A large value, folded behind a summary that says what it holds. */
+function folded(label, count, body) {
+  return el("details", { class: "map" },
+            el("summary", {},
+               el("span", { class: "map-name" }, label),
+               el("span", { class: "map-count muted" }, ` · ${count} entries`)),
+            body);
+}
+
+/**
+ * `UX-267`'s renderer. Exported so a guard can drive it directly.
+ *
+ * Returns a **cell**: never a `<section>`, because `nav.js` finds
+ * sections at any depth and one inside a table cell becomes a phantom
+ * entry in the table of contents.
+ */
+export function renderStructured(key, value, hint = {}, node = undefined) {
+  if (Array.isArray(value)) {
+    if (!value.length) return el("span", { class: "muted" }, "none");
+    if (value.every(isScalar)) {
+      if (value.length <= ARRAY_INLINE_ITEMS) {
+        return el("span", {}, value.map(String).join(", "));
+      }
+      const rows = value.map((item, at) => ({ key: String(at), value: item }));
+      return folded(title(key), value.length,
+                    mapTable(key, rows, hint, node, false));
+    }
+    const objects = value.filter((item) => item && typeof item === "object");
+    return folded(title(key), value.length,
+                  mapTable(key, objects, hint, node, true));
+  }
+  const entries = Object.entries(value);
+  if (!entries.length) return el("span", { class: "muted" }, "none");
+  if (entries.length <= OBJECT_INLINE_FIELDS
+      && entries.every(([, member]) => isScalar(member))) {
+    return inlineObject(value, node);
+  }
+  const nested = entries.every(([, member]) =>
+    member && typeof member === "object" && !Array.isArray(member));
+  const rows = entries.map(([name, member]) => (
+    nested ? { key: name, ...member } : { key: name, value: member }));
+  return folded(title(key), entries.length,
+                mapTable(key, rows, hint, node, nested));
+}
+
+/**
+ * The table and its controls, with **no section around them**.
+ *
+ * `UX-267`: `renderTable` returns a `<section data-section=…>`, which
+ * is right for a top-level view and wrong for a *cell*. A spike that
+ * rendered nested maps by calling it put twenty-two sections inside
+ * table cells; `nav.js` finds sections with `querySelectorAll` at any
+ * depth, so the table of contents listed one of them (`summary`,
+ * which is both a map key and the run's own section) twice. Splitting
+ * the builder out is the whole fix: a cell gets the table, a view gets
+ * the section.
+ */
+export function buildTable(key, rows, hint = {}, node = undefined) {
   const specs = columnSpecs(hint, rows, node);
   const columns = specs.map((s) => s.key);
   const table = el("table", { "data-table": key });
@@ -386,6 +506,12 @@ export function renderTable(key, rows, hint = {}, node = undefined) {
     }
   }
   const tools = interrogable(table, specs, rows.length);
+  return { table, tools };
+}
+
+/** One table as its own view: `buildTable`, in a section. */
+export function renderTable(key, rows, hint = {}, node = undefined) {
+  const { table, tools } = buildTable(key, rows, hint, node);
   return el("section", { "data-section": key,
                          "data-rail": heading(key, hint).rail },
     sectionHead(key, hint), tools, table);
@@ -533,10 +659,166 @@ function sortable(table, specs = []) {
   });
 }
 
+// UX-270: the critical path is a section of its own.
+//
+// Requested, and `UX-262` is the argument: this is the table that
+// grows with **path depth** rather than element count, and on a
+// 122-deep path it took the `signals` section from 2.1 screens to 6.2
+// on a *smaller* run. `UX-262` bounded its rows, which fixed the
+// height; it stayed a row inside a section named after a schema key,
+// beside a dozen unrelated quantities.
+export const LIFTED_SECTION = "critical_path_detail";
+
+export function liftedCriticalPath(signals, node) {
+  const rows = signals?.[LIFTED_SECTION];
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const child = childNode(node, LIFTED_SECTION);
+  return renderTable(LIFTED_SECTION, rows, hintsOf(child), child);
+}
+
+// UX-269: a long value is truncated; a long *sentence* is not.
+//
+// Measured per field on a 44-element run:
+//
+//   678 chars  findings[].copy_text
+//   572 chars  floors.capacity_model_note
+//   393 chars  findings[].copy_text
+//   293 chars  attribution_hints.resource_wait_us
+//
+// Two families that want opposite treatment. `copy_text` is a
+// paragraph meant to be copied whole (`UX-224`) - truncating the cell
+// is right, truncating what the button yields would break it.
+// `capacity_model_note` and the `attribution_hints` strings are
+// *explanations*: long because they are careful, and hiding them by
+// default is how a reader stops seeing the caveat on a number.
+//
+// So a flat character cap is the wrong instrument, and the split is
+// declared rather than sniffed.
+export const CELL_TEXT_CAP = 160;
+
+export const EXPLANATIONS = {
+  capacity_model_note: "the caveat on the capacity numbers - hiding it "
+    + "by default is how a reader stops seeing it",
+  resource_wait_us: "attribution_hints prose: it explains what the "
+    + "number does and does not include",
+  note: "a field named `note` is an explanation by construction",
+  sentence: "UX-220's published sentence for a number - the whole "
+    + "point is that the reader sees it without asking",
+};
+
+function isExplanation(name) {
+  return Object.prototype.hasOwnProperty.call(EXPLANATIONS, name)
+    || name.endsWith("_note") || name.endsWith("_sentence");
+}
+
+/**
+ * A long string as a truncated cell with the whole thing one click
+ * away. The `…` is visible, never silent, and the full text stays
+ * selectable - a reader who cannot select it has not been given it.
+ */
+export function renderText(name, value) {
+  const text = String(value);
+  if (text.length <= CELL_TEXT_CAP || isExplanation(name)) {
+    return el("span", { "data-raw": text }, text);
+  }
+  const head = text.slice(0, CELL_TEXT_CAP).replace(/\s+\S*$/, "");
+  return el("details", { class: "long-text", "data-raw": text },
+            el("summary", {},
+               el("span", {}, `${head}…`),
+               el("span", { class: "muted" }, ` ${text.length} chars`)),
+            el("p", { class: "full-text" }, text));
+}
+
+// UX-268: the element-keyed signals are one table, not six.
+//
+// `signals` carries seven maps that scale with the run. Six are the
+// *same element list* seen through different fields - measured on a
+// 44-element run, all six carry the identical 44 keys - and the page
+// rendered them as six separate folds, so a reader wanting "the
+// slowest element with the widest blast radius" had to open two and
+// join them by hand.
+//
+// The seventh is not the same population at all. `wall_clock_share` is
+// keyed by **task**:
+//
+//   element-keyed     app.bst
+//   wall_clock_share  app.bst|BUILD|BUILD|0
+//   union 88 keys, intersection 0
+//
+// It shares no keys with the other six, and nothing on the page said
+// so. It stays its own table and says what its key is.
+//
+// Declared rather than sniffed: a new element-keyed signal has to join
+// this list or be argued into `NOT_ELEMENT_KEYED`, and a guard fails
+// on one that does neither.
+export const ELEMENT_KEYED_SIGNALS = [
+  "element_durations", "slack", "downstream_count", "unweighted_depth",
+  "blast_radius", "criticality_probability",
+];
+
+export const NOT_ELEMENT_KEYED = {
+  wall_clock_share: "keyed by task (`element|BUILD|BUILD|0`), not by "
+    + "element - it shares zero keys with the six and pooling them "
+    + "would put two populations in one table",
+};
+
+/**
+ * One row per element, one column per element-keyed signal.
+ *
+ * Returns `null` when the run carries none of them, so a payload
+ * without the signals renders exactly as it did.
+ */
+export function elementSignalTable(signals, node) {
+  const present = ELEMENT_KEYED_SIGNALS.filter(
+    (name) => signals?.[name] && typeof signals[name] === "object");
+  if (present.length < 2) return null;
+  const byElement = new Map();
+  for (const name of present) {
+    for (const [uid, value] of Object.entries(signals[name])) {
+      const row = byElement.get(uid) ?? { element: uid };
+      // A record-valued signal (`blast_radius`) contributes its own
+      // fields; a scalar one contributes itself under its name.
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        for (const [field, member] of Object.entries(value)) {
+          if (member === null || typeof member !== "object") {
+            row[field] = member;
+          }
+        }
+      } else {
+        row[name] = value;
+      }
+      byElement.set(uid, row);
+    }
+  }
+  const rows = [...byElement.values()];
+  if (!rows.length) return null;
+  const columns = [...new Set(rows.flatMap(Object.keys))]
+    .filter((name) => name !== "element");
+  const hint = {
+    [COLUMNS]: [{ key: "element", title: "element" },
+                ...columns.map((name) => ({
+                  key: name, title: title(name),
+                  quantity: quantityFor(childNode(node, name), name)
+                    ?? guessQuantity(name) ?? "count" }))],
+    [QUESTION]: "Which element should I look at?",
+  };
+  return { rows, hint, merged: present };
+}
+
 export function renderPairs(key, object, hint = {}, node = undefined) {
   const direction = hint[DIRECTION];
   const list = el("dl", { class: "pairs" });
+  // UX-268: the element-keyed signals leave the pair list and become
+  // one table, so they are drawn once rather than six times.
+  const joined = key === "signals" ? elementSignalTable(object, node) : null;
+  const merged = new Set(joined?.merged ?? []);
   for (const [name, value] of Object.entries(object)) {
+    if (merged.has(name)) continue;
+    // UX-270: the critical path is its own section, not a row inside
+    // this one. It is also the one member that rendered a whole
+    // `<section>` into a `<dd>` - the nesting UX-267 removed
+    // everywhere else.
+    if (key === "signals" && name === LIFTED_SECTION) continue;
     // UX-201: each member resolved against *its own* schema node, not
     // guessed from its name. `deltas` was hinted at the top level and
     // still name-sniffed every member inside it.
@@ -552,10 +834,25 @@ export function renderPairs(key, object, hint = {}, node = undefined) {
     if (Array.isArray(value) && value.length
         && value.every((item) => item && typeof item === "object"
                                  && !Array.isArray(item))) {
-      cell = renderTable(name, value, hintsOf(child), child);
+      // `buildTable`, not `renderTable`: a cell must not contain a
+      // `<section>`. This was the last of them (`UX-267`) - measured,
+      // three sections still lived inside `<dd>` after the rest moved.
+      {
+        const built = buildTable(name, value, hintsOf(child), child);
+        cell = el("div", { class: "map-table", "data-bounded": "map" },
+                  built.tools, built.table);
+      }
     } else if (value !== null && typeof value === "object") {
-      cell = el("details", {}, el("summary", {}, "object"),
-                el("pre", {}, JSON.stringify(value, null, 2)));
+      cell = renderStructured(name, value, hintsOf(child), child);
+      // UX-268: a map whose keys are *not* elements says so, because
+      // the page draws it identically to the six that are and a reader
+      // comparing them would be comparing populations that share no
+      // keys at all.
+      if (NOT_ELEMENT_KEYED[name]) {
+        cell = el("span", {}, cell,
+                  el("span", { class: "muted key-note" },
+                     ` keyed by task, not by element`));
+      }
     } else if (typeof value === "number" && direction) {
       // A signed change, coloured by what the schema says "better" is,
       // without this file knowing which metric it is looking at.
@@ -567,6 +864,8 @@ export function renderPairs(key, object, hint = {}, node = undefined) {
     } else if (typeof value === "number") {
       cell = el("span", { class: "num", "data-raw": String(value) },
                 quantity(value, kind));
+    } else if (typeof value === "string") {
+      cell = renderText(name, value);
     } else {
       cell = el("span", { "data-raw": value === null ? "" : String(value) },
                 value === null ? "—" : String(value));
@@ -581,8 +880,23 @@ export function renderPairs(key, object, hint = {}, node = undefined) {
                     title(name));
     list.append(term, el("dd", {}, cell));
   }
+  const parts = [sectionHead(key, hint)];
+  if (joined) {
+    // One row per element, before the scalars - it is the thing a
+    // reader came for, and `UX-261` put the same argument to the
+    // decision block.
+    const { table, tools } = buildTable("elements", joined.rows,
+                                        joined.hint, node);
+    parts.push(el("div", { class: "map-table", "data-bounded": "map",
+                           "data-joined": joined.merged.join(",") },
+                  el("p", { class: "muted" },
+                     `One row per element, joined from `
+                     + `${joined.merged.length} signals.`),
+                  tools, table));
+  }
+  parts.push(list);
   return el("section", { "data-section": key, "data-rail": heading(key, hint).rail },
-                        sectionHead(key, hint), list);
+                        ...parts);
 }
 
 // UX-201: the enum decides, and the prose is a fallback for payloads
@@ -758,6 +1072,13 @@ export function render(payload, schema, root, investigate = null) {
     const section = renderSection(key, value, hints[key] ?? {}, nodes[key],
                                   investigate);
     if (section) root.append(section);
+    // UX-270: the run's most important list, immediately after the
+    // section it used to be a row of. `UX-262` bounded its rows and
+    // `UX-208` gave it a badge; this only moves it.
+    if (key === "signals") {
+      const lifted = liftedCriticalPath(value, nodes[key]);
+      if (lifted) root.append(lifted);
+    }
   }
   root.setAttribute("aria-busy", "false");
   return root;

@@ -29,6 +29,47 @@ export function sections(root) {
 // second spelling of it.
 import { elementAnchor } from "./views.js";
 
+/**
+ * The named things inside one section, as a nested list - or `null`.
+ *
+ * A subsection is anything the section gave a name and an anchor:
+ * today that is the folded maps `UX-267` labels. Bounded, because a
+ * section with one entry per element would put the run's size back in
+ * the rail (`UX-254` capped the one group that grows).
+ */
+export const SUBSECTIONS_SHOWN = 8;
+
+export function subsections(section, doc) {
+  const folds = [...(section?.querySelectorAll?.("details.map > summary") ?? [])];
+  if (folds.length < 2) return null;
+  const list = doc.createElement("ul");
+  list.className = "toc-sub";
+  for (const fold of folds.slice(0, SUBSECTIONS_SHOWN)) {
+    const name = fold.querySelector?.(".map-name")?.textContent
+      ?? fold.textContent;
+    const id = `${section.getAttribute("data-section")}--${
+      String(name).trim().toLowerCase().replace(/[^\w]+/g, "-")}`;
+    const target = fold.parentElement ?? fold;
+    if (!target.getAttribute?.("id")) target.setAttribute?.("id", id);
+    const item = doc.createElement("li");
+    const link = doc.createElement("a");
+    link.href = `#${target.getAttribute?.("id") ?? id}`;
+    link.setAttribute("data-toc-sub", id);
+    link.textContent = String(name).trim();
+    item.append(link);
+    list.append(item);
+  }
+  if (folds.length > SUBSECTIONS_SHOWN) {
+    const more = doc.createElement("li");
+    more.className = "toc-more muted";
+    // `UX-208`'s rule: a reader who cannot see the denominator cannot
+    // tell a bounded list from a short one.
+    more.textContent = `+${folds.length - SUBSECTIONS_SHOWN} more`;
+    list.append(more);
+  }
+  return list;
+}
+
 export function label(key) {
   return key.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
@@ -184,6 +225,19 @@ export function toc(root, { document: doc, controls } = {}) {
       link.textContent = section?.getAttribute?.("data-toc-label")
         || label(key);
       item.append(link);
+      // UX-271: one level of nesting, so the rail stops being a flat
+      // list of 30+ entries.
+      //
+      // The request was a third column carrying the JSON structure.
+      // Declined and argued in Direction 12: a structural tree makes
+      // the *document's shape* the organising principle, which
+      // `UX-207` and `UX-199` moved away from - the rail is grouped by
+      // what you are trying to do - and a third column leaves under
+      // 900px of reading width at 1440, undoing `UX-254`. What the
+      // request is actually asking for is that the rail stop being
+      // flat, and that needs no column.
+      const inner = subsections(section, doc);
+      if (inner) item.append(inner);
       list.append(item);
     }
     nav.append(list);

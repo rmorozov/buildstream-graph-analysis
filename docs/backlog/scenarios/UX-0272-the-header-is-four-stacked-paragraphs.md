@@ -1,6 +1,6 @@
 # UX-272: the header is four stacked paragraphs
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-254 | **Serves:** R1 | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 | **Serves:** R1 | **Topic:** viewer
 
 ## Motivation
 
@@ -46,3 +46,43 @@ space is in the sections; `UX-267` and `UX-268` are where it lives.
 The header is one row at 1440px and stacked at 390px, `--head` matches
 its measured height at both, and `UX-257`'s anchor guard still lands
 sections clear of it.
+
+## Outcome
+
+**Fixed as requested, and the size claim is corrected on the record.**
+
+The header is a grid: identity in the first column, actions in the
+second, one row where there is width for it. Below `UX-254`'s 60rem
+breakpoint it returns to a block, because two columns in a phone-width
+header is the same defect at a different size.
+
+```text
+            display   header height
+1440x900    grid       92px
+ 390x844    block     134px
+```
+
+**The space claim does not survive measurement, and saying so is the
+point.** 92–134px is 0.1–0.2 screens of a 13.6-screen document. This is
+worth doing because the header is *sticky* (`UX-255`), so every pixel is
+paid on every screen rather than once — not because it is where the
+report's length lives. `UX-267` and `UX-268` are where that was, and
+between them the document went from 13.8 screens with 32,393 characters
+of raw JSON to 13.6 with none.
+
+**A second defect the measurement exposed.** `--head` was a single
+`5.5rem` for both widths, and it is what every anchor's
+`scroll-margin-top` reads. At 390px the header is 134px, so a jump
+would have landed **46px under the heading** at exactly the width with
+least room to recover. The narrow breakpoint now sets `--head: 9rem`.
+
+Nothing was removed from the header: the producer stamp (`UX-255`) and
+the pop-up fallback (`UX-198`) are each there for a filed reason, and a
+guard fails if a slot disappears.
+
+**Two mutations, two reds** — the phone-width stack, and `--head`
+following the header. Both initially passed and were fixed rather than
+counted: the CSS slice read everything after the *first* breakpoint
+rather than the block, and the comment explaining `--head` contains the
+string `--head`, so deleting the rule left the grep green. Eleventh
+instance of a guard finding its own argument.

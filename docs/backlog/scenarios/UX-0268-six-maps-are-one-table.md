@@ -1,6 +1,6 @@
 # UX-268: six of the wide maps are one table rendered six times
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-267 | **Serves:** R1 and R3 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** R1 and R3 | **Topic:** viewer
 
 ## Motivation
 
@@ -61,3 +61,33 @@ The 1,202-element run renders one element table rather than six maps,
 sortable by any column, and the task-keyed share is separately labelled
 as task-keyed — with a guard that fails if a seventh element-keyed
 signal is added and does not join the table.
+
+## Outcome
+
+**Fixed.** Six folds became one table.
+
+```text
+element  Element durations  Slack  Downstream count  Unweighted depth
+         Weighted duration us  Is leaf  Risk score  Element kind
+         Is structural kind  Probability  Observed critical  Slack us
+```
+
+44 rows, 13 columns, joined from 6 signals, with the sentence *"One row
+per element, joined from 6 signals."* above it. The six separate folds
+are gone — measured, none of `Slack`, `Downstream count` or
+`Element durations` appears as its own fold any more. Tables on the
+page went 28 → 23.
+
+`wall_clock_share` stays its own table and now says
+**"keyed by task, not by element"** beside it. It shares zero keys with
+the six, and the page used to draw it identically.
+
+The membership is **declared**, not sniffed: `ELEMENT_KEYED_SIGNALS`
+lists the six and `NOT_ELEMENT_KEYED` carries the argument for the
+seventh, so a new element-keyed signal has to join one list or the
+other rather than quietly rendering as a seventh fold.
+
+**Not done:** the per-element sections `UX-216` renders still repeat
+some of these values rather than linking into the row. That is a
+smaller redundancy than the one this closes and it is stated rather
+than left to be discovered.

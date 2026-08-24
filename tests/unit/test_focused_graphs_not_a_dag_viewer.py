@@ -90,6 +90,22 @@ def _render(fn, payload, timeout=120):
         shutil.rmtree(scratch, ignore_errors=True)
 
 
+def _decl(style, name):
+    """The value of one declaration in a browser-serialised `style`.
+
+    A real DOM writes `flex-grow: 428.571;` — with the semicolon, and
+    with any other declarations beside it. The `.replace("flex-grow: ",
+    "")` this replaced read the shim's semicolon-less form and would
+    have broken on the real one, which is `UX-263`'s lesson in the
+    guard rather than in the page.
+    """
+    for part in style.split(";"):
+        key, _, value = part.partition(":")
+        if key.strip() == name:
+            return value.strip()
+    raise AssertionError(f"no `{name}` declaration in {style!r}")
+
+
 class TestTheDepthThatHadToBePublished:
     """The filing said the tree was "a `<details>` tree over data
     `blast/v1` already carries". It was not: the payload had
@@ -178,7 +194,7 @@ class TestTheChainDrawn:
             assert float(box["share"]) == published, box
             # The style carries the same number, so the *drawing* is the
             # published share rather than a coincidence in an attribute.
-            grow = float(box["style"].replace("flex-grow: ", ""))
+            grow = float(_decl(box["style"], "flex-grow"))
             assert grow == pytest.approx(published * 1000), box
             widths.add(box["style"])
         assert len(widths) > 1, "every box is the same width - nothing is drawn"
@@ -246,8 +262,8 @@ class TestTheBlastTreeDrawn:
             assert int(row["depth"]) == published[row["element"]], row
             # Indentation follows depth, so a nested row is visibly
             # nested rather than merely labelled.
-            indent = float(row["indent"].replace("padding-left: ", "")
-                                        .replace("rem", ""))
+            indent = float(_decl(row["indent"], "padding-left")
+                           .replace("rem", ""))
             assert indent == pytest.approx(published[row["element"]] * 1.4), row
 
     @pytest.mark.parametrize("run,target", RUNS)
@@ -310,10 +326,37 @@ class TestTheRestraintHolds:
 
 
 _HARNESS = """
+function _styleFor(node) {
+  // A real DOM reflects `el.style.x = v` into the `style` attribute, and
+  // serialises it as `x: v;` - measured in Chrome 141, not assumed. The
+  // shims used to carry `style: {}`, which swallowed every write: the
+  // four encodings `UX-263` fixed looked set here and were refused by
+  // the browser. An instrument that cannot see the defect is how the
+  // defect shipped (`UX-235`, `UX-262`, and now this).
+  const decls = new Map();
+  const kebab = (k) => String(k).startsWith("--")
+    ? String(k) : String(k).replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
+  const flush = () => {
+    if (decls.size === 0) { delete node.attrs.style; return; }
+    node.attrs.style = [...decls].map(([k, v]) => `${k}: ${v};`).join(" ");
+  };
+  return new Proxy({
+    setProperty(name, value) { decls.set(String(name), String(value)); flush(); },
+    getPropertyValue(name) { return decls.get(String(name)) ?? ""; },
+    removeProperty(name) { decls.delete(String(name)); flush(); },
+  }, {
+    set(_t, prop, value) { decls.set(kebab(prop), String(value)); flush(); return true; },
+    get(target, prop) {
+      if (prop in target) return target[prop];
+      return decls.get(kebab(prop)) ?? "";
+    },
+  });
+}
 function make(tag) {
   return {
     tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
     className: "", hidden: false, listeners: {},
+    get style() { return this._style ??= _styleFor(this); },
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return this.attrs[k] ?? null; },
     removeAttribute(k) { delete this.attrs[k]; },

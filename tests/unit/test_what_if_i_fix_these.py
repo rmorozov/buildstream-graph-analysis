@@ -40,9 +40,36 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
 
 _SHIM = """
+function _styleFor(node) {
+  // A real DOM reflects `el.style.x = v` into the `style` attribute, and
+  // serialises it as `x: v;` - measured in Chrome 141, not assumed. The
+  // shims used to carry `style: {}`, which swallowed every write: the
+  // four encodings `UX-263` fixed looked set here and were refused by
+  // the browser. An instrument that cannot see the defect is how the
+  // defect shipped (`UX-235`, `UX-262`, and now this).
+  const decls = new Map();
+  const kebab = (k) => String(k).startsWith("--")
+    ? String(k) : String(k).replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
+  const flush = () => {
+    if (decls.size === 0) { delete node.attrs.style; return; }
+    node.attrs.style = [...decls].map(([k, v]) => `${k}: ${v};`).join(" ");
+  };
+  return new Proxy({
+    setProperty(name, value) { decls.set(String(name), String(value)); flush(); },
+    getPropertyValue(name) { return decls.get(String(name)) ?? ""; },
+    removeProperty(name) { decls.delete(String(name)); flush(); },
+  }, {
+    set(_t, prop, value) { decls.set(kebab(prop), String(value)); flush(); return true; },
+    get(target, prop) {
+      if (prop in target) return target[prop];
+      return decls.get(kebab(prop)) ?? "";
+    },
+  });
+}
 function make(tag) {
   return { tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
     className: "",
+    get style() { return this._style ??= _styleFor(this); },
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return this.attrs[k] ?? null; },
     append(...xs) { for (const x of xs) { if (x == null) continue;
@@ -141,8 +168,9 @@ class TestEveryWidthIsAPublishedMakespan:
         """
         total = report["total_duration_us"]
         for row in drawn["rows"]:
-            assert row["style"].startswith("--w: "), row
-            drawn_pct = float(row["style"][len("--w: "):].rstrip("%"))
+            width = _decl(row["style"], "--w")
+            assert width.endswith("%"), row
+            drawn_pct = float(width.rstrip("%"))
             assert drawn_pct == pytest.approx(
                 (int(row["makespan"]) / total) * 100), row
 
@@ -276,6 +304,22 @@ class TestAbsenceStaysAbsent:
         assert self._render(
             {"total_duration_us": 1000,
              "signals": {"optimization_horizon": []}}) is True
+
+
+def _decl(style, name):
+    """The value of one declaration in a browser-serialised `style`.
+
+    A real DOM writes `flex-grow: 428.571;` — with the semicolon, and
+    with any other declarations beside it. The `.replace("flex-grow: ",
+    "")` this replaced read the shim's semicolon-less form and would
+    have broken on the real one, which is `UX-263`'s lesson in the
+    guard rather than in the page.
+    """
+    for part in style.split(";"):
+        key, _, value = part.partition(":")
+        if key.strip() == name:
+            return value.strip()
+    raise AssertionError(f"no `{name}` declaration in {style!r}")
 
 
 class TestTheTableStays:

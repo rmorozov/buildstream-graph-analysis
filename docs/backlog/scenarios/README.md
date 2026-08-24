@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-274 scenarios: **4 open**, 270 closed.
+275 scenarios: **4 open**, 271 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
-| guards | 0 | 36 |
+| guards | 0 | 37 |
 
 ## Open scenarios
 
@@ -547,3 +547,17 @@ broke: `test_documentation_debt_has_a_door.py` asserted that each of
 closing them means since `UX-232` split the index at 234 rows, looked
 identical to never having filed them. It reads both halves now, and
 deleting a row from either still reddens it.
+
+**The round's own CI caught what its guards did not.** Both new
+recompute-the-figures guards were pointed at the `bga snapshot` store
+under `examples/06-macro-micro-optimization/.bga/`, which is ignored by
+design — `bga snapshot` writes a `.gitignore` of `*` into every store it
+creates (`UX-126`, `UX-189`). The full suite passed locally three times;
+CI failed on all four Python versions with `FileNotFoundError` before an
+assertion ran. That is `UX-213`'s defect in the form its fix did not
+cover: `UX-213` made the *environment* portable and said nothing about
+the *data*, and its rule — "the real capture stays as extra coverage,
+never the only place a mutation would be caught" — was written in a
+comment four other test files keep. The run is now committed as a 72 KB
+fixture and the rule is mechanical
+([`UX-276`](UX-0276-a-guard-can-rest-on-a-path-no-clone-has.md)).

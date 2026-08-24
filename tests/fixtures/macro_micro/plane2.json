@@ -1,0 +1,1843 @@
+{
+ "binary_cost": {
+  "app.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 26
+    },
+    {
+     "binary": "sh",
+     "count": 16
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 10
+    },
+    {
+     "binary": "ld",
+     "count": 7
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 5,
+     "cpu_share": 0.7059874818608224,
+     "cpu_us": 2806661,
+     "wall_s": 2.9
+    },
+    {
+     "binary": "cmake",
+     "count": 26,
+     "cpu_share": 0.12117687512372623,
+     "cpu_us": 481740,
+     "wall_s": 5.7
+    },
+    {
+     "binary": "as",
+     "count": 5,
+     "cpu_share": 0.08708037784325084,
+     "cpu_us": 346189,
+     "wall_s": 0.4
+    },
+    {
+     "binary": "ld",
+     "count": 7,
+     "cpu_share": 0.06445209181913973,
+     "cpu_us": 256230,
+     "wall_s": 0.3
+    },
+    {
+     "binary": "make",
+     "count": 11,
+     "cpu_share": 0.0089140741907141,
+     "cpu_us": 35438,
+     "wall_s": 6.7
+    }
+   ],
+   "measured_cpu_us": 3975511,
+   "single_process_costs": []
+  },
+  "codegen.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 28
+    },
+    {
+     "binary": "sh",
+     "count": 17
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 10
+    },
+    {
+     "binary": "cc1plus",
+     "count": 6
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 6,
+     "cpu_share": 0.888291843502877,
+     "cpu_us": 12838999,
+     "wall_s": 19.8
+    },
+    {
+     "binary": "as",
+     "count": 6,
+     "cpu_share": 0.04421187772000048,
+     "cpu_us": 639020,
+     "wall_s": 1.2
+    },
+    {
+     "binary": "cmake",
+     "count": 28,
+     "cpu_share": 0.038168462323042135,
+     "cpu_us": 551671,
+     "wall_s": 14.4
+    },
+    {
+     "binary": "ld",
+     "count": 6,
+     "cpu_share": 0.008076267876018554,
+     "cpu_us": 116731,
+     "wall_s": 0.1
+    },
+    {
+     "binary": "ar",
+     "count": 1,
+     "cpu_share": 0.007692141643504012,
+     "cpu_us": 111179,
+     "wall_s": 0.2
+    }
+   ],
+   "measured_cpu_us": 14453582,
+   "single_process_costs": [
+    {
+     "binary": "ar",
+     "cpu_us": 111179,
+     "wall_s": 0.22606641099991975
+    }
+   ]
+  },
+  "core.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 32
+    },
+    {
+     "binary": "sh",
+     "count": 21
+    },
+    {
+     "binary": "c++",
+     "count": 14
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "cc1plus",
+     "count": 10
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 10,
+     "cpu_share": 0.8452333106536496,
+     "cpu_us": 13888654,
+     "wall_s": 14.4
+    },
+    {
+     "binary": "as",
+     "count": 10,
+     "cpu_share": 0.07584930141299705,
+     "cpu_us": 1246336,
+     "wall_s": 1.6
+    },
+    {
+     "binary": "cmake",
+     "count": 32,
+     "cpu_share": 0.042284688048861534,
+     "cpu_us": 694811,
+     "wall_s": 37.3
+    },
+    {
+     "binary": "ranlib",
+     "count": 1,
+     "cpu_share": 0.012682953844206396,
+     "cpu_us": 208403,
+     "wall_s": 0.4
+    },
+    {
+     "binary": "ar",
+     "count": 1,
+     "cpu_share": 0.010138914077267532,
+     "cpu_us": 166600,
+     "wall_s": 0.4
+    }
+   ],
+   "measured_cpu_us": 16431740,
+   "single_process_costs": [
+    {
+     "binary": "ranlib",
+     "cpu_us": 208403,
+     "wall_s": 0.37977525899987086
+    },
+    {
+     "binary": "ar",
+     "cpu_us": 166600,
+     "wall_s": 0.36353573800010963
+    }
+   ]
+  },
+  "lib-a.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 27
+    },
+    {
+     "binary": "sh",
+     "count": 16
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 9
+    },
+    {
+     "binary": "ld",
+     "count": 6
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 5,
+     "cpu_share": 0.776856997536268,
+     "cpu_us": 4638631,
+     "wall_s": 4.7
+    },
+    {
+     "binary": "cmake",
+     "count": 27,
+     "cpu_share": 0.08675866765209245,
+     "cpu_us": 518038,
+     "wall_s": 6.6
+    },
+    {
+     "binary": "as",
+     "count": 5,
+     "cpu_share": 0.07883523476630386,
+     "cpu_us": 470727,
+     "wall_s": 0.6
+    },
+    {
+     "binary": "ranlib",
+     "count": 1,
+     "cpu_share": 0.016072790206971235,
+     "cpu_us": 95971,
+     "wall_s": 0.2
+    },
+    {
+     "binary": "ld",
+     "count": 6,
+     "cpu_share": 0.01528481802866946,
+     "cpu_us": 91266,
+     "wall_s": 0.1
+    }
+   ],
+   "measured_cpu_us": 5971023,
+   "single_process_costs": [
+    {
+     "binary": "ranlib",
+     "cpu_us": 95971,
+     "wall_s": 0.17782029299996793
+    }
+   ]
+  },
+  "lib-b.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 27
+    },
+    {
+     "binary": "sh",
+     "count": 16
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 9
+    },
+    {
+     "binary": "ld",
+     "count": 6
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 5,
+     "cpu_share": 0.7798006256897068,
+     "cpu_us": 4897732,
+     "wall_s": 5.0
+    },
+    {
+     "binary": "cmake",
+     "count": 27,
+     "cpu_share": 0.0895361365340344,
+     "cpu_us": 562354,
+     "wall_s": 6.8
+    },
+    {
+     "binary": "as",
+     "count": 5,
+     "cpu_share": 0.07194938055954792,
+     "cpu_us": 451896,
+     "wall_s": 0.6
+    },
+    {
+     "binary": "ld",
+     "count": 6,
+     "cpu_share": 0.018282532863516755,
+     "cpu_us": 114828,
+     "wall_s": 0.1
+    },
+    {
+     "binary": "ranlib",
+     "count": 1,
+     "cpu_share": 0.014085421977538029,
+     "cpu_us": 88467,
+     "wall_s": 0.2
+    }
+   ],
+   "measured_cpu_us": 6280749,
+   "single_process_costs": [
+    {
+     "binary": "ranlib",
+     "cpu_us": 88467,
+     "wall_s": 0.19193999799995254
+    }
+   ]
+  },
+  "lib-c.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 27
+    },
+    {
+     "binary": "sh",
+     "count": 16
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 9
+    },
+    {
+     "binary": "ld",
+     "count": 6
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 5,
+     "cpu_share": 0.7743715008658052,
+     "cpu_us": 4188450,
+     "wall_s": 4.2
+    },
+    {
+     "binary": "cmake",
+     "count": 27,
+     "cpu_share": 0.09182748679106308,
+     "cpu_us": 496680,
+     "wall_s": 5.9
+    },
+    {
+     "binary": "as",
+     "count": 5,
+     "cpu_share": 0.07591223845121632,
+     "cpu_us": 410597,
+     "wall_s": 0.6
+    },
+    {
+     "binary": "ld",
+     "count": 6,
+     "cpu_share": 0.016617247549288776,
+     "cpu_us": 89880,
+     "wall_s": 0.1
+    },
+    {
+     "binary": "ranlib",
+     "count": 1,
+     "cpu_share": 0.014067161930159491,
+     "cpu_us": 76087,
+     "wall_s": 0.1
+    }
+   ],
+   "measured_cpu_us": 5408838,
+   "single_process_costs": [
+    {
+     "binary": "ranlib",
+     "cpu_us": 76087,
+     "wall_s": 0.1384266249999655
+    }
+   ]
+  },
+  "lib-d.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 27
+    },
+    {
+     "binary": "sh",
+     "count": 16
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 9
+    },
+    {
+     "binary": "ld",
+     "count": 6
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 5,
+     "cpu_share": 0.7743266366861766,
+     "cpu_us": 4283091,
+     "wall_s": 4.4
+    },
+    {
+     "binary": "cmake",
+     "count": 27,
+     "cpu_share": 0.09119866217712594,
+     "cpu_us": 504454,
+     "wall_s": 6.1
+    },
+    {
+     "binary": "as",
+     "count": 5,
+     "cpu_share": 0.07521818715961222,
+     "cpu_us": 416060,
+     "wall_s": 0.5
+    },
+    {
+     "binary": "ld",
+     "count": 6,
+     "cpu_share": 0.01786734763056202,
+     "cpu_us": 98831,
+     "wall_s": 0.1
+    },
+    {
+     "binary": "ranlib",
+     "count": 1,
+     "cpu_share": 0.015013988384443289,
+     "cpu_us": 83048,
+     "wall_s": 0.1
+    }
+   ],
+   "measured_cpu_us": 5531375,
+   "single_process_costs": [
+    {
+     "binary": "ranlib",
+     "cpu_us": 83048,
+     "wall_s": 0.1474874999998974
+    }
+   ]
+  },
+  "lib-e.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 27
+    },
+    {
+     "binary": "sh",
+     "count": 16
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 9
+    },
+    {
+     "binary": "ld",
+     "count": 6
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 5,
+     "cpu_share": 0.7822748994717622,
+     "cpu_us": 4893681,
+     "wall_s": 5.0
+    },
+    {
+     "binary": "cmake",
+     "count": 27,
+     "cpu_share": 0.08468605856574118,
+     "cpu_us": 529771,
+     "wall_s": 6.5
+    },
+    {
+     "binary": "as",
+     "count": 5,
+     "cpu_share": 0.0787730559545247,
+     "cpu_us": 492781,
+     "wall_s": 0.6
+    },
+    {
+     "binary": "ld",
+     "count": 6,
+     "cpu_share": 0.015268942509277532,
+     "cpu_us": 95518,
+     "wall_s": 0.1
+    },
+    {
+     "binary": "ranlib",
+     "count": 1,
+     "cpu_share": 0.013422627825321047,
+     "cpu_us": 83968,
+     "wall_s": 0.1
+    }
+   ],
+   "measured_cpu_us": 6255705,
+   "single_process_costs": [
+    {
+     "binary": "ranlib",
+     "cpu_us": 83968,
+     "wall_s": 0.14710590699996828
+    }
+   ]
+  },
+  "lib-f.bst": {
+   "available": true,
+   "by_count": [
+    {
+     "binary": "cmake",
+     "count": 27
+    },
+    {
+     "binary": "sh",
+     "count": 16
+    },
+    {
+     "binary": "make",
+     "count": 11
+    },
+    {
+     "binary": "c++",
+     "count": 9
+    },
+    {
+     "binary": "ld",
+     "count": 6
+    }
+   ],
+   "by_cpu": [
+    {
+     "binary": "cc1plus",
+     "count": 5,
+     "cpu_share": 0.7757818193501841,
+     "cpu_us": 4249528,
+     "wall_s": 4.4
+    },
+    {
+     "binary": "cmake",
+     "count": 27,
+     "cpu_share": 0.0959376282464142,
+     "cpu_us": 525521,
+     "wall_s": 6.1
+    },
+    {
+     "binary": "as",
+     "count": 5,
+     "cpu_share": 0.0675739027948773,
+     "cpu_us": 370152,
+     "wall_s": 0.4
+    },
+    {
+     "binary": "ld",
+     "count": 6,
+     "cpu_share": 0.017637213622562313,
+     "cpu_us": 96612,
+     "wall_s": 0.1
+    },
+    {
+     "binary": "ar",
+     "count": 1,
+     "cpu_share": 0.01368777173635239,
+     "cpu_us": 74978,
+     "wall_s": 0.1
+    }
+   ],
+   "measured_cpu_us": 5477736,
+   "single_process_costs": [
+    {
+     "binary": "ar",
+     "cpu_us": 74978,
+     "wall_s": 0.13755377899997256
+    }
+   ]
+  }
+ },
+ "by_binary": {
+  "ar": 8,
+  "as": 51,
+  "c++": 88,
+  "cc1plus": 51,
+  "cmake": 248,
+  "collect2": 37,
+  "ld": 55,
+  "make": 99,
+  "ranlib": 8,
+  "sh": 150,
+  "uname": 18
+ },
+ "by_element": {
+  "app.bst": 87,
+  "codegen.bst": 92,
+  "core.bst": 112,
+  "lib-a.bst": 87,
+  "lib-b.bst": 87,
+  "lib-c.bst": 87,
+  "lib-d.bst": 87,
+  "lib-e.bst": 87,
+  "lib-f.bst": 87
+ },
+ "configure_phase": {
+  "available": true,
+  "configure_cpu_us": 4481317,
+  "configure_share": 0.06421489078530489,
+  "note": "Configure-phase CPU is every traced process descending from a build system's configure entry point (./configure, config.status, cmake without --build/--install/-E, meson setup, the autotools generators). Classified by parentage, so a process is configure work because of what started it, not what it is called. Statically-linked processes are invisible to LD_PRELOAD and a process with no traced parent is counted as build work - both make this a floor.",
+  "per_element": {
+   "app.bst": {
+    "build_cpu_us": 3546551,
+    "build_processes": 53,
+    "configure_cpu_us": 428960,
+    "configure_processes": 34,
+    "configure_share": 0.10790059441415205,
+    "coverage": 0.8160919540229885,
+    "measured": 71,
+    "unmeasured": 16
+   },
+   "codegen.bst": {
+    "build_cpu_us": 13912217,
+    "build_processes": 57,
+    "configure_cpu_us": 541365,
+    "configure_processes": 35,
+    "configure_share": 0.03745542108523686,
+    "coverage": 0.8152173913043478,
+    "measured": 75,
+    "unmeasured": 17
+   },
+   "core.bst": {
+    "build_cpu_us": 15823555,
+    "build_processes": 77,
+    "configure_cpu_us": 608185,
+    "configure_processes": 35,
+    "configure_share": 0.03701281787564798,
+    "coverage": 0.8125,
+    "measured": 91,
+    "unmeasured": 21
+   },
+   "lib-a.bst": {
+    "build_cpu_us": 5497878,
+    "build_processes": 52,
+    "configure_cpu_us": 473145,
+    "configure_processes": 35,
+    "configure_share": 0.07924019050001985,
+    "coverage": 0.8160919540229885,
+    "measured": 71,
+    "unmeasured": 16
+   },
+   "lib-b.bst": {
+    "build_cpu_us": 5734609,
+    "build_processes": 52,
+    "configure_cpu_us": 546140,
+    "configure_processes": 35,
+    "configure_share": 0.08695459729404885,
+    "coverage": 0.8160919540229885,
+    "measured": 71,
+    "unmeasured": 16
+   },
+   "lib-c.bst": {
+    "build_cpu_us": 4957478,
+    "build_processes": 52,
+    "configure_cpu_us": 451360,
+    "configure_processes": 35,
+    "configure_share": 0.08344860763069628,
+    "coverage": 0.8160919540229885,
+    "measured": 71,
+    "unmeasured": 16
+   },
+   "lib-d.bst": {
+    "build_cpu_us": 5058390,
+    "build_processes": 52,
+    "configure_cpu_us": 472985,
+    "configure_processes": 35,
+    "configure_share": 0.08550948001175114,
+    "coverage": 0.8160919540229885,
+    "measured": 71,
+    "unmeasured": 16
+   },
+   "lib-e.bst": {
+    "build_cpu_us": 5782801,
+    "build_processes": 52,
+    "configure_cpu_us": 472904,
+    "configure_processes": 35,
+    "configure_share": 0.07559563630318246,
+    "coverage": 0.8160919540229885,
+    "measured": 71,
+    "unmeasured": 16
+   },
+   "lib-f.bst": {
+    "build_cpu_us": 4991463,
+    "build_processes": 52,
+    "configure_cpu_us": 486273,
+    "configure_processes": 35,
+    "configure_share": 0.08877262431048155,
+    "coverage": 0.8160919540229885,
+    "measured": 71,
+    "unmeasured": 16
+   }
+  },
+  "total_cpu_us": 69786259
+ },
+ "cpu_time": {
+  "available": true,
+  "measured_processes": 663,
+  "note": "Real CPU time (getrusage utime+stime) for processes that exited normally. Processes killed by a signal or replaced by exec run no destructor and are counted as unmeasured, never as zero. This is Plane 2 only - it is not wired into Plane 1's utilisation buckets, which remain slot occupancy (UX-36).",
+  "per_element": {
+   "app.bst": {
+    "children_cpu_us": 22414691,
+    "coverage": 0.8160919540229885,
+    "cpu_per_wall_second": 1.383985940933542,
+    "cpu_us": 3975511,
+    "measured": 71,
+    "unmeasured": 16,
+    "wall_span_s": 2.8725082260000363
+   },
+   "codegen.bst": {
+    "children_cpu_us": 84550020,
+    "coverage": 0.8152173913043478,
+    "cpu_per_wall_second": 2.023880676590784,
+    "cpu_us": 14453582,
+    "measured": 75,
+    "unmeasured": 17,
+    "wall_span_s": 7.141518849000022
+   },
+   "core.bst": {
+    "children_cpu_us": 96467299,
+    "coverage": 0.8125,
+    "cpu_per_wall_second": 0.897821536883907,
+    "cpu_us": 16431740,
+    "measured": 91,
+    "unmeasured": 21,
+    "wall_span_s": 18.301788634999866
+   },
+   "lib-a.bst": {
+    "children_cpu_us": 33854781,
+    "coverage": 0.8160919540229885,
+    "cpu_per_wall_second": 1.84815728083365,
+    "cpu_us": 5971023,
+    "measured": 71,
+    "unmeasured": 16,
+    "wall_span_s": 3.2307980830000815
+   },
+   "lib-b.bst": {
+    "children_cpu_us": 35560786,
+    "coverage": 0.8160919540229885,
+    "cpu_per_wall_second": 1.8597565040905266,
+    "cpu_us": 6280749,
+    "measured": 71,
+    "unmeasured": 16,
+    "wall_span_s": 3.377188887999864
+   },
+   "lib-c.bst": {
+    "children_cpu_us": 30670172,
+    "coverage": 0.8160919540229885,
+    "cpu_per_wall_second": 1.87532844194191,
+    "cpu_us": 5408838,
+    "measured": 71,
+    "unmeasured": 16,
+    "wall_span_s": 2.8842083760000605
+   },
+   "lib-d.bst": {
+    "children_cpu_us": 31377208,
+    "coverage": 0.8160919540229885,
+    "cpu_per_wall_second": 1.8472638577041063,
+    "cpu_us": 5531375,
+    "measured": 71,
+    "unmeasured": 16,
+    "wall_span_s": 2.9943610800000897
+   },
+   "lib-e.bst": {
+    "children_cpu_us": 35711941,
+    "coverage": 0.8160919540229885,
+    "cpu_per_wall_second": 1.952691290038647,
+    "cpu_us": 6255705,
+    "measured": 71,
+    "unmeasured": 16,
+    "wall_span_s": 3.2036323570000604
+   },
+   "lib-f.bst": {
+    "children_cpu_us": 30903447,
+    "coverage": 0.8160919540229885,
+    "cpu_per_wall_second": 1.801011383505328,
+    "cpu_us": 5477736,
+    "measured": 71,
+    "unmeasured": 16,
+    "wall_span_s": 3.0414777220000815
+   }
+  },
+  "spine_sourced_processes": 0,
+  "total_cpu_us": 69786259,
+  "unmeasured_processes": 150
+ },
+ "declared_vs_used": {
+  "aggregating_dependencies": [],
+  "available": true,
+  "note": "A candidate is an element/dependency pair where none of the dependency's staged files were opened. This is evidence, not a verdict: runtime-only dependencies, cached configure probes, and dependencies needed only for a directory's existence all look the same from here. Elements with no observed opens, or with a truncated read set, are reported as uncovered rather than as having unused dependencies.",
+  "opens_coverage": null,
+  "skipped": [],
+  "uncovered_elements": [],
+  "unused_candidates": [
+   {
+    "dependency": "core.bst",
+    "element": "app.bst",
+    "evidence": "0 of 5 files staged by core.bst were opened during app.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-a.bst",
+    "element": "app.bst",
+    "evidence": "0 of 5 files staged by lib-a.bst were opened during app.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-b.bst",
+    "element": "app.bst",
+    "evidence": "0 of 5 files staged by lib-b.bst were opened during app.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-c.bst",
+    "element": "app.bst",
+    "evidence": "0 of 5 files staged by lib-c.bst were opened during app.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-d.bst",
+    "element": "app.bst",
+    "evidence": "0 of 5 files staged by lib-d.bst were opened during app.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-e.bst",
+    "element": "app.bst",
+    "evidence": "0 of 5 files staged by lib-e.bst were opened during app.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-f.bst",
+    "element": "app.bst",
+    "evidence": "0 of 5 files staged by lib-f.bst were opened during app.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "codegen.bst",
+    "element": "lib-a.bst",
+    "evidence": "0 of 5 files staged by codegen.bst were opened during lib-a.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "core.bst",
+    "element": "lib-a.bst",
+    "evidence": "0 of 5 files staged by core.bst were opened during lib-a.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "codegen.bst",
+    "element": "lib-b.bst",
+    "evidence": "0 of 5 files staged by codegen.bst were opened during lib-b.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "core.bst",
+    "element": "lib-b.bst",
+    "evidence": "0 of 5 files staged by core.bst were opened during lib-b.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-a.bst",
+    "element": "lib-b.bst",
+    "evidence": "0 of 5 files staged by lib-a.bst were opened during lib-b.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "codegen.bst",
+    "element": "lib-c.bst",
+    "evidence": "0 of 5 files staged by codegen.bst were opened during lib-c.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "core.bst",
+    "element": "lib-c.bst",
+    "evidence": "0 of 5 files staged by core.bst were opened during lib-c.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-b.bst",
+    "element": "lib-c.bst",
+    "evidence": "0 of 5 files staged by lib-b.bst were opened during lib-c.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "codegen.bst",
+    "element": "lib-d.bst",
+    "evidence": "0 of 5 files staged by codegen.bst were opened during lib-d.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "core.bst",
+    "element": "lib-d.bst",
+    "evidence": "0 of 5 files staged by core.bst were opened during lib-d.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-c.bst",
+    "element": "lib-d.bst",
+    "evidence": "0 of 5 files staged by lib-c.bst were opened during lib-d.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "codegen.bst",
+    "element": "lib-e.bst",
+    "evidence": "0 of 5 files staged by codegen.bst were opened during lib-e.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "core.bst",
+    "element": "lib-e.bst",
+    "evidence": "0 of 5 files staged by core.bst were opened during lib-e.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-d.bst",
+    "element": "lib-e.bst",
+    "evidence": "0 of 5 files staged by lib-d.bst were opened during lib-e.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "codegen.bst",
+    "element": "lib-f.bst",
+    "evidence": "0 of 5 files staged by codegen.bst were opened during lib-f.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "core.bst",
+    "element": "lib-f.bst",
+    "evidence": "0 of 5 files staged by core.bst were opened during lib-f.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   },
+   {
+    "dependency": "lib-e.bst",
+    "element": "lib-f.bst",
+    "evidence": "0 of 5 files staged by lib-e.bst were opened during lib-f.bst's build",
+    "opened_files": 0,
+    "staged_files": 5
+   }
+  ],
+  "used": [
+   {
+    "dependency": "toolchain.bst",
+    "element": "app.bst",
+    "opened_files": 68,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "codegen.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "core.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "lib-a.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "lib-b.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "lib-c.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "lib-d.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "lib-e.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   },
+   {
+    "dependency": "toolchain.bst",
+    "element": "lib-f.bst",
+    "opened_files": 51,
+    "staged_files": 8369
+   }
+  ]
+ },
+ "element_attribution": {
+  "attributed_share": 1.0,
+  "largest_bucket": "core.bst",
+  "largest_bucket_processes": 112,
+  "note": null,
+  "recognized_elements": [
+   "app.bst",
+   "codegen.bst",
+   "core.bst",
+   "lib-a.bst",
+   "lib-b.bst",
+   "lib-c.bst",
+   "lib-d.bst",
+   "lib-e.bst",
+   "lib-f.bst"
+  ],
+  "recognized_processes": 813,
+  "reliable": true,
+  "tagged_processes": 813,
+  "unattributed_processes": 0,
+  "unresolved_bucket": null
+ },
+ "invocation_correlation": {
+  "ambiguous": [
+   "17702"
+  ],
+  "certain": 8,
+  "elements_in_plane1": 11,
+  "intervals_used": true,
+  "relabelled_processes": 0,
+  "resolved": {
+   "17701": "core.bst",
+   "18656": "lib-a.bst",
+   "18766": "lib-b.bst",
+   "19235": "lib-c.bst",
+   "19702": "lib-d.bst",
+   "19810": "lib-e.bst",
+   "19918": "lib-f.bst",
+   "20387": "app.bst"
+  },
+  "unmatched": []
+ },
+ "matched_count": 663,
+ "max_concurrency": 20,
+ "open_count": 150,
+ "open_records_note": "Processes with no observed exit are excluded from max_concurrency, not assumed to run indefinitely. Real cause, confirmed against this tool's own prototype run: a `sh -c '<command>'` wrapper that forks a child for the real command and then exits via `_exit()` once it completes - `_exit()` bypasses the normal exit path, so this hook's destructor never fires for the wrapper itself, even though it exited quickly and normally.",
+ "opens_captured": {
+  "app.bst": {
+   "dropped": 0,
+   "paths": 202,
+   "processes": 12,
+   "windows": 12
+  },
+  "codegen.bst": {
+   "dropped": 0,
+   "paths": 123,
+   "processes": 13,
+   "windows": 13
+  },
+  "core.bst": {
+   "dropped": 0,
+   "paths": 127,
+   "processes": 17,
+   "windows": 17
+  },
+  "lib-a.bst": {
+   "dropped": 0,
+   "paths": 122,
+   "processes": 12,
+   "windows": 12
+  },
+  "lib-b.bst": {
+   "dropped": 0,
+   "paths": 122,
+   "processes": 12,
+   "windows": 12
+  },
+  "lib-c.bst": {
+   "dropped": 0,
+   "paths": 122,
+   "processes": 12,
+   "windows": 12
+  },
+  "lib-d.bst": {
+   "dropped": 0,
+   "paths": 122,
+   "processes": 12,
+   "windows": 12
+  },
+  "lib-e.bst": {
+   "dropped": 0,
+   "paths": 122,
+   "processes": 12,
+   "windows": 12
+  },
+  "lib-f.bst": {
+   "dropped": 0,
+   "paths": 122,
+   "processes": 12,
+   "windows": 12
+  }
+ },
+ "peak_memory": {
+  "available": true,
+  "note": "Peak resident set size of the single largest process in each element (getrusage ru_maxrss at exit, KiB). A per-process peak, deliberately NOT summed across processes: two processes peaking at different moments never held the sum between them. Use it as 'no single process here exceeded this', which is what UX-21's per-job memory estimate wants.",
+  "per_element": {
+   "app.bst": {
+    "measured": 71,
+    "peak_rss_kb": 157076,
+    "unmeasured": 16
+   },
+   "codegen.bst": {
+    "measured": 75,
+    "peak_rss_kb": 156996,
+    "unmeasured": 17
+   },
+   "core.bst": {
+    "measured": 91,
+    "peak_rss_kb": 157200,
+    "unmeasured": 21
+   },
+   "lib-a.bst": {
+    "measured": 71,
+    "peak_rss_kb": 157008,
+    "unmeasured": 16
+   },
+   "lib-b.bst": {
+    "measured": 71,
+    "peak_rss_kb": 156780,
+    "unmeasured": 16
+   },
+   "lib-c.bst": {
+    "measured": 71,
+    "peak_rss_kb": 157020,
+    "unmeasured": 16
+   },
+   "lib-d.bst": {
+    "measured": 71,
+    "peak_rss_kb": 157032,
+    "unmeasured": 16
+   },
+   "lib-e.bst": {
+    "measured": 71,
+    "peak_rss_kb": 157120,
+    "unmeasured": 16
+   },
+   "lib-f.bst": {
+    "measured": 71,
+    "peak_rss_kb": 156984,
+    "unmeasured": 16
+   }
+  }
+ },
+ "per_element_parallelism": [
+  {
+   "achieved_vs_requested": 2.0,
+   "element": "core.bst",
+   "findings": [
+    "pinned_to_one_job"
+   ],
+   "mean_work_concurrency": 0.9649933760274064,
+   "peak_work_concurrency": 2,
+   "requested_jobs": 1,
+   "unclassified_binaries": {},
+   "work_process_count": 32,
+   "work_process_lifetime_s": 17.037405113000204,
+   "work_span_s": 17.65546327700008
+  },
+  {
+   "achieved_vs_requested": 1.0,
+   "element": "codegen.bst",
+   "findings": [],
+   "mean_work_concurrency": 3.245724984805866,
+   "peak_work_concurrency": 4,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 24,
+   "work_process_lifetime_s": 21.735833465999804,
+   "work_span_s": 6.696757601999934
+  },
+  {
+   "achieved_vs_requested": 0.75,
+   "element": "lib-b.bst",
+   "findings": [],
+   "mean_work_concurrency": 2.109293198775806,
+   "peak_work_concurrency": 3,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 22,
+   "work_process_lifetime_s": 6.198314628999469,
+   "work_span_s": 2.9385742259999006
+  },
+  {
+   "achieved_vs_requested": 0.75,
+   "element": "lib-e.bst",
+   "findings": [],
+   "mean_work_concurrency": 2.1791086007869307,
+   "peak_work_concurrency": 3,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 22,
+   "work_process_lifetime_s": 6.109371379000095,
+   "work_span_s": 2.8036103280001043
+  },
+  {
+   "achieved_vs_requested": 0.75,
+   "element": "lib-a.bst",
+   "findings": [],
+   "mean_work_concurrency": 2.0858481718743973,
+   "peak_work_concurrency": 3,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 22,
+   "work_process_lifetime_s": 5.819701335000218,
+   "work_span_s": 2.7900886620000165
+  },
+  {
+   "achieved_vs_requested": 0.75,
+   "element": "lib-f.bst",
+   "findings": [],
+   "mean_work_concurrency": 2.000007950975133,
+   "peak_work_concurrency": 3,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 22,
+   "work_process_lifetime_s": 5.295723566999413,
+   "work_span_s": 2.6478512569999566
+  },
+  {
+   "achieved_vs_requested": 0.75,
+   "element": "lib-d.bst",
+   "findings": [],
+   "mean_work_concurrency": 2.066014586006035,
+   "peak_work_concurrency": 3,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 22,
+   "work_process_lifetime_s": 5.360367969000208,
+   "work_span_s": 2.594545075000042
+  },
+  {
+   "achieved_vs_requested": 0.75,
+   "element": "app.bst",
+   "findings": [],
+   "mean_work_concurrency": 1.5980837559929593,
+   "peak_work_concurrency": 3,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 22,
+   "work_process_lifetime_s": 3.988417883999773,
+   "work_span_s": 2.4957502190000014
+  },
+  {
+   "achieved_vs_requested": 0.75,
+   "element": "lib-c.bst",
+   "findings": [],
+   "mean_work_concurrency": 2.152013018514376,
+   "peak_work_concurrency": 3,
+   "requested_jobs": 4,
+   "unclassified_binaries": {},
+   "work_process_count": 22,
+   "work_process_lifetime_s": 5.303498521000165,
+   "work_span_s": 2.4644360769998457
+  }
+ ],
+ "process_count": 813,
+ "redundant_operations": [
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "cmake -B_builddir -H. -GUnix Makefiles -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr -DCMAKE_INSTALL_LIBDIR:PATH=lib ",
+   "max_element_duration_s": 0.6076949339999373,
+   "occurrence_count": 9,
+   "signature": "cmake -B_builddir -H. -GUnix Makefiles -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr -DCMAKE_INSTALL_LIBDIR:PATH=lib ",
+   "total_duration_s": 4.760668569000018,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/cmake -P cmake_install.cmake ",
+   "max_element_duration_s": 0.2724184660000901,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/cmake -P cmake_install.cmake ",
+   "total_duration_s": 1.1844568520002667,
+   "worst_element": "core.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/c++ CMakeCXXCompilerId.cpp ",
+   "max_element_duration_s": 0.1871619449998434,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/c++ CMakeCXXCompilerId.cpp ",
+   "total_duration_s": 1.2855685199999698,
+   "worst_element": "codegen.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -imultiarch x86_64-linux-gnu -D_GNU_SOURCE CMakeCXXCompilerId.cpp -quiet -dumpdir a- -dumpbase CMakeCXXCompilerId.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/ccEVsjbO.s ",
+   "max_element_duration_s": 0.07305263600005674,
+   "occurrence_count": 9,
+   "signature": "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -imultiarch x86_64-linux-gnu -D_GNU_SOURCE CMakeCXXCompilerId.cpp -quiet -dumpdir a- -dumpbase CMakeCXXCompilerId.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/<tmp> ",
+   "total_duration_s": 0.4537084569999479,
+   "worst_element": "codegen.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0df0f.dir/link.txt --verbose=1 ",
+   "max_element_duration_s": 0.0655090380000729,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_<id>.dir/link.txt --verbose=1 ",
+   "total_duration_s": 0.5165492380001524,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/c++ -v CMakeFiles/cmTC_0df0f.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_0df0f ",
+   "max_element_duration_s": 0.05978151899989825,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/c++ -v CMakeFiles/cmTC_<id>.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_<id> ",
+   "total_duration_s": 0.4758623670004454,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/c++ -v -o CMakeFiles/cmTC_0df0f.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp ",
+   "max_element_duration_s": 0.03975694099995053,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/c++ -v -o CMakeFiles/cmTC_<id>.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp ",
+   "total_duration_s": 0.28431517999979405,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/c++ -Wl,--help ",
+   "max_element_duration_s": 0.02245428399987759,
+   "occurrence_count": 18,
+   "signature": "/usr/bin/c++ -Wl,--help ",
+   "total_duration_s": 0.1555338389998724,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_0df0f.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/ccFjAORz.s ",
+   "max_element_duration_s": 0.022330928999963362,
+   "occurrence_count": 9,
+   "signature": "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_<id>.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/<tmp> ",
+   "total_duration_s": 0.1628620179999416,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "as -v --64 -o CMakeFiles/cmTC_0df0f.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccFjAORz.s ",
+   "max_element_duration_s": 0.00677061200008211,
+   "occurrence_count": 9,
+   "signature": "as -v --64 -o CMakeFiles/cmTC_<id>.dir/CMakeCXXCompilerABI.cpp.o /tmp/<tmp> ",
+   "total_duration_s": 0.03294539400076246,
+   "worst_element": "app.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/cmake -E cmake_progress_start /buildstream/macro-micro-optimization-example/codegen.bst/_builddir/CMakeFiles 0 ",
+   "max_element_duration_s": 0.005036517999997159,
+   "occurrence_count": 18,
+   "signature": "/usr/bin/cmake -E cmake_progress_start <element-root>/_builddir/CMakeFiles 0 ",
+   "total_duration_s": 0.03633825399992929,
+   "worst_element": "core.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/cmake -E cmake_progress_start /buildstream/macro-micro-optimization-example/core.bst/_builddir/CMakeFiles /buildstream/macro-micro-optimization-example/core.bst/_builddir//CMakeFiles/progress.marks ",
+   "max_element_duration_s": 0.0046997849997296726,
+   "occurrence_count": 18,
+   "signature": "/usr/bin/cmake -E cmake_progress_start <element-root>/_builddir/CMakeFiles <element-root>/_builddir//CMakeFiles/progress.marks ",
+   "total_duration_s": 0.034325954999303576,
+   "worst_element": "app.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "as --64 -o /tmp/ccmUCVry.o /tmp/ccEVsjbO.s ",
+   "max_element_duration_s": 0.004427728999871761,
+   "occurrence_count": 9,
+   "signature": "as --64 -o /tmp/<tmp> /tmp/<tmp> ",
+   "total_duration_s": 0.028069287999642256,
+   "worst_element": "core.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/cmake -E cmake_echo_color --switch= --progress-dir=/buildstream/macro-micro-optimization-example/core.bst/_builddir/CMakeFiles/CMakeScratch/TryCompile-tuLtDS/CMakeFiles --progress-num=1 Building CXX object CMakeFiles/cmTC_0df0f.dir/CMakeCXXCompilerABI.cpp.o ",
+   "max_element_duration_s": 0.0024554149999858055,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/cmake -E cmake_echo_color --switch= --progress-dir=<element-root>/_builddir/CMakeFiles/CMakeScratch/TryCompile-<id>/CMakeFiles --progress-num=1 Building CXX object CMakeFiles/cmTC_<id>.dir/CMakeCXXCompilerABI.cpp.o ",
+   "total_duration_s": 0.010910093000120469,
+   "worst_element": "core.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/ld --help ",
+   "max_element_duration_s": 0.00155684499986819,
+   "occurrence_count": 18,
+   "signature": "/usr/bin/ld --help ",
+   "total_duration_s": 0.010814266999886968,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/c++ -print-sysroot ",
+   "max_element_duration_s": 0.0014655130000846839,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/c++ -print-sysroot ",
+   "total_duration_s": 0.0097338289997424,
+   "worst_element": "lib-f.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/cmake -E cmake_echo_color --switch= --cyan Install the project... ",
+   "max_element_duration_s": 0.0012220359999446373,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/cmake -E cmake_echo_color --switch= --cyan Install the project... ",
+   "total_duration_s": 0.008298033999835752,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/cmake -E cmake_echo_color --switch= --progress-dir=/buildstream/macro-micro-optimization-example/core.bst/_builddir/CMakeFiles/CMakeScratch/TryCompile-tuLtDS/CMakeFiles --progress-num=2 Linking CXX executable cmTC_0df0f ",
+   "max_element_duration_s": 0.0010723109999162261,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/cmake -E cmake_echo_color --switch= --progress-dir=<element-root>/_builddir/CMakeFiles/CMakeScratch/TryCompile-<id>/CMakeFiles --progress-num=2 Linking CXX executable cmTC_<id> ",
+   "total_duration_s": 0.007769804999725238,
+   "worst_element": "lib-b.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/uname -r ",
+   "max_element_duration_s": 0.0002880170000025828,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/uname -r ",
+   "total_duration_s": 0.001871983000455657,
+   "worst_element": "core.bst"
+  },
+  {
+   "elements": [
+    "app.bst",
+    "codegen.bst",
+    "core.bst",
+    "lib-a.bst",
+    "lib-b.bst",
+    "lib-c.bst",
+    "lib-d.bst",
+    "lib-e.bst",
+    "lib-f.bst"
+   ],
+   "example_cmd": "/usr/bin/uname -m ",
+   "max_element_duration_s": 0.00021195600015744276,
+   "occurrence_count": 9,
+   "signature": "/usr/bin/uname -m ",
+   "total_duration_s": 0.0014626270001372177,
+   "worst_element": "lib-b.bst"
+  }
+ ],
+ "redundant_operations_coverage": {
+  "excluded_element_command_blocks": 0,
+  "excluded_unresolved_only": 0,
+  "note": "Each finding's `max_element_duration_s` is an upper bound on what sharing that one operation could recover, for the single worst-affected element. They are per-signature maxima over elements that ran concurrently: they must not be summed, and on a real capture their sum exceeds the build's own duration. A signature is a finding only when it ran under 2+ *resolved* elements (UX-73); processes in the unresolved attribution bucket and each element's own top-level command block are excluded, and counted above."
+ },
+ "spine_policy": {
+  "policy": "off",
+  "sandboxes": 9,
+  "spine_traced": 0
+ },
+ "static_binary_disclaimer": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some Rust/Go tooling) ran but produced no trace entry, silently - this tool cannot detect its own absence. Treat the process list below as a lower bound, not an exhaustive trace, unless the toolchain being profiled is known to be entirely dynamically-linked (the common case for a real C/C++ gcc/clang toolchain - see docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md's Deep Experiment Findings).",
+ "static_census": {
+  "elements_at_risk": [],
+  "note": "Read from the project's own `local` sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never reaches it. A binary arriving from a remote artifact cache or produced by the build is not visible here, and a staged-but-never-exec'd static binary inflates the risk count rather than the missed-process count - this bounds what Plane 2 can miss, not what it did miss.",
+  "per_element": {
+   "all.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "app.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "codegen.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "core.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "lib-a.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "lib-b.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "lib-c.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "lib-d.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "lib-e.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "lib-f.bst": {
+    "dynamic_executables": 0,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   },
+   "toolchain.bst": {
+    "dynamic_executables": 45,
+    "own_static": [],
+    "staged_by_dependencies": {},
+    "static_count": 0,
+    "static_executables": []
+   }
+  },
+  "static_executables": []
+ },
+ "stream_coverage": {
+  "by_coverage": {
+   "hook-only": 813
+  },
+  "cpu_aggregate": null,
+  "cpu_disagreement_count": 0,
+  "cpu_disagreements": [],
+  "cpu_from_spine_only": 0,
+  "cpu_reconciled_processes": 0,
+  "exec_chains_collapsed": 9,
+  "fork_only_exits": 0,
+  "note": "Process coverage is the union of both mechanisms; opens coverage is the hook's alone, since opened paths need in-process interposition. A `spine-only` process is fully measured except for its opens. CPU time reported for a process seen by both is the spine's per-process figure, never the sum of the two - and it is the later of the two measurements, since the hook's destructor runs before the process is finished while the spine reads /proc at the kernel's exit-stop.",
+  "opens_coverage": 1.0,
+  "opens_covered_processes": 813,
+  "processes": 813,
+  "unmatched_ends": 0
+ },
+ "wall_span_s": 43.50824261999992,
+ "wrapped_command_exit_code": 0
+}

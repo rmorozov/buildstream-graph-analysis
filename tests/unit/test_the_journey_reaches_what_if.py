@@ -31,7 +31,13 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/guides/real-project.md"
 STEP = "## Step 7 — change something, then prove it"
-RUN = REPO / "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run"
+# The committed fixture, not the store `bga snapshot` writes. That store
+# carries a `.gitignore` of `*` by design (`UX-126`/`UX-189`), so the
+# first version of this guard read a path that exists only on a machine
+# that has run the build: green locally, `FileNotFoundError` in CI, on
+# every clone. `tests/fixtures/macro_micro/README.md` records what was
+# kept and what was dropped.
+RUN = REPO / "tests/fixtures/macro_micro/run"
 
 # The selections the guide projects, between the act step and the
 # appendix. Every projection line pasted anywhere in the guide has to be

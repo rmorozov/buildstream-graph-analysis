@@ -30,7 +30,10 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/guides/cli.md"
 README = REPO / "README.md"
 CHAPTER = "## How many builders, and what stops you"
-SNAPSHOT = REPO / "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z"
+# The committed fixture rather than `examples/06`'s own `.bga` store,
+# which is ignored by design (`UX-126`/`UX-189`) - see
+# `tests/fixtures/macro_micro/README.md`.
+SNAPSHOT = REPO / "tests/fixtures/macro_micro"
 
 
 def _flat(text):

@@ -1,6 +1,6 @@
 # UX-261: the first view ranks what is big, not what is worth doing
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-258, UX-259 | **Serves:** R1 — the whole point of the first screen | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-258, UX-259 | **Serves:** R1 — the whole point of the first screen | **Topic:** viewer
 
 ## Motivation
 
@@ -52,3 +52,57 @@ answer before the blast ranking, states the density in one line whose
 numbers match the published distribution, and marks both the
 structural entries and the ties. The order guard (`UX-235`'s pattern —
 read the document's own sequence) covers the new arrangement.
+
+## Outcome
+
+**Fixed.** The decision block leads with what the build is waiting for.
+
+```text
+next_steps[0]  shorten-what-the-build-waits-for
+               "mod039.bst is the longest thing on the critical path at
+                6.0s, 100% of it - the build cannot finish sooner than
+                this chain."
+               follows_from: signals.critical_path_detail
+next_steps[1]  blast-the-top-element
+```
+
+Nothing new is computed: `critical_path_detail` was already published
+and the answer was already in it, sitting below a ranking of reach.
+`_longest_on_the_path` takes the biggest entry, not the first — the
+path is in order and its first element is rarely its largest.
+
+**The shape, in one line.** `headline.graph_shape` states the density
+from `UX-259`'s distribution:
+
+```text
+1,202-element run: "Half of this graph's 1202 elements reach 30 others or
+                    fewer; the top tenth reach 465 others or more, up to
+                    1201. Reach is spread across many elements - there is
+                    no single choke point to fix."
+star-shaped run:   "Half of this graph's 44 elements reach nothing; the top
+                    tenth reach nothing, up to 42. Reach is concentrated in
+                    a few elements - most of this graph cannot cause a wide
+                    rebuild."
+```
+
+A sentence, never a chart: `UX-196`'s rule holds, and a guard checks
+the output is one line of at most three sentences so nobody quietly
+grows a histogram.
+
+**A defect in my own first draft, worth recording.** I classified
+concentration by comparing the top decile to the median. In a
+star-shaped graph — one element reaching everything, the most
+concentrated shape there is — both are **zero**, and the sentence
+called it *"spread across many elements"*. The fix compares `max`
+against the top decile instead, and the star case is now a guard. The
+first version was tested only against the spread case, which is exactly
+how a wrong rule ships looking right.
+
+A flat graph gets no sentence at all, and a run with no distribution
+gets none rather than an invented one.
+
+**Not done:** the ranked list does not yet *mark* structural and tied
+entries inline — `UX-258` and `UX-259` put both facts in the finding's
+detail and its evidence, and moving them into the table's own cells is
+a rendering change that belongs with the next viewer round rather than
+with this one. Stated here rather than left to be discovered.

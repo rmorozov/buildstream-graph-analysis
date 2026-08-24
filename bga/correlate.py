@@ -1355,6 +1355,32 @@ def find_restructuring_findings(
     )
 
 
+def _scale_of(cache_logs: Optional[dict], native_report: dict) -> dict:
+    """`UX-260`'s two distributions, each present only if its plane is.
+
+    Sandbox tax comes from Plane 3's `top_payers`, which despite the
+    name is *every* payer sorted rather than a truncated head - a
+    distribution over a top-N slice would describe the slice and be
+    read as the population.
+    """
+    from .analyzer import distribution
+
+    shapes = {}
+    payers = ((cache_logs or {}).get('sandbox_tax') or {}).get('top_payers') or []
+    tolls = [p.get('toll_us') for p in payers if p.get('toll_us') is not None]
+    tax = distribution(tolls)
+    if tax:
+        shapes['sandbox_tax_distribution'] = tax
+
+    counts = [entry.get('work_process_count')
+              for entry in (native_report or {}).get('per_element_parallelism') or []
+              if entry.get('work_process_count') is not None]
+    processes = distribution(counts)
+    if processes:
+        shapes['process_count_distribution'] = processes
+    return shapes
+
+
 def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
               cache_logs: Optional[dict] = None, dependencies=None) -> dict:
     """Join a Plane 1 analysis with a Plane 2 native report.
@@ -1487,6 +1513,13 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
         "run_id": analysis.get("run_id"),
         "run_instance": analysis.get("run_instance"),
         "elements": [vars(e) for e in joined],
+        # UX-260: the two cross-plane quantities whose scale a reader
+        # cannot know. Absent rather than null when the plane that
+        # measures them was not captured, and absent rather than
+        # invented when there are too few payers to have a shape -
+        # `UX-259`'s rule, and the same `distribution()`, so the
+        # arithmetic cannot drift from the store's or the graph's.
+        **_scale_of(cache_logs, native_report),
         "restructuring": restructuring,
         "granularity": granularity,
         "memory_envelope": memory_envelope,

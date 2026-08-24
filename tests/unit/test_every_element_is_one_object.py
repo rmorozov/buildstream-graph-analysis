@@ -230,41 +230,11 @@ globalThis.document = { createElement: (t) => make(t),
                         createTextNode: (t) => ({ nodeType: 3, textContent: t,
                                                   attrs: {}, children: [] }),
                         getElementById: () => null };
-function _styleFor(node) {
-  // A real DOM reflects `el.style.x = v` into the `style` attribute, and
-  // serialises it as `x: v;` - measured in Chrome 141, not assumed. The
-  // shims used to carry `style: {}`, which swallowed every write: the
-  // four encodings `UX-263` fixed looked set here and were refused by
-  // the browser. An instrument that cannot see the defect is how the
-  // defect shipped (`UX-235`, `UX-262`, and now this).
-  const decls = new Map();
-  const kebab = (k) => String(k).startsWith("--")
-    ? String(k) : String(k).replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
-  const flush = () => {
-    if (decls.size === 0) { delete node.attrs.style; return; }
-    node.attrs.style = [...decls].map(([k, v]) => `${k}: ${v};`).join(" ");
-  };
-  return new Proxy({
-    setProperty(name, value) { decls.set(String(name), String(value)); flush(); },
-    getPropertyValue(name) { return decls.get(String(name)) ?? ""; },
-    removeProperty(name) { decls.delete(String(name)); flush(); },
-  }, {
-    set(_t, prop, value) { decls.set(kebab(prop), String(value)); flush(); return true; },
-    get(target, prop) {
-      if (prop in target) return target[prop];
-      return decls.get(kebab(prop)) ?? "";
-    },
-  });
-}
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return { tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "",
-    get style() { return this._style ??= _styleFor(this); },
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      typeof x === "string" ? this.textContent += x : this.children.push(x); } },
-    querySelectorAll() { return []; } };
+  const node = _makeNode(tag);
+  return node;
 }
 const views = await import("./bga/viewer/views.js");
 const total = views.ELEMENTS_SHOWN + 7;
@@ -280,84 +250,12 @@ console.log(JSON.stringify({ total, shown: views.ELEMENTS_SHOWN,
 """
 
 _SHIM = """
-function _styleFor(node) {
-  // A real DOM reflects `el.style.x = v` into the `style` attribute, and
-  // serialises it as `x: v;` - measured in Chrome 141, not assumed. The
-  // shims used to carry `style: {}`, which swallowed every write: the
-  // four encodings `UX-263` fixed looked set here and were refused by
-  // the browser. An instrument that cannot see the defect is how the
-  // defect shipped (`UX-235`, `UX-262`, and now this).
-  const decls = new Map();
-  const kebab = (k) => String(k).startsWith("--")
-    ? String(k) : String(k).replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
-  const flush = () => {
-    if (decls.size === 0) { delete node.attrs.style; return; }
-    node.attrs.style = [...decls].map(([k, v]) => `${k}: ${v};`).join(" ");
-  };
-  return new Proxy({
-    setProperty(name, value) { decls.set(String(name), String(value)); flush(); },
-    getPropertyValue(name) { return decls.get(String(name)) ?? ""; },
-    removeProperty(name) { decls.delete(String(name)); flush(); },
-  }, {
-    set(_t, prop, value) { decls.set(kebab(prop), String(value)); flush(); return true; },
-    get(target, prop) {
-      if (prop in target) return target[prop];
-      return decls.get(kebab(prop)) ?? "";
-    },
-  });
-}
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", hidden: false, open: false, value: "", parentNode: null,
-    listeners: {},
-    get style() { return this._style ??= _styleFor(this); },
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      if (typeof x === "string") { this.textContent += x; continue; }
-      const at = this.children.indexOf(x);
-      if (at !== -1) this.children.splice(at, 1);
-      x.parentNode = this; this.children.push(x); } },
-    prepend(...xs) { for (const x of [...xs].reverse()) { if (x == null) continue;
-      const at = this.children.indexOf(x);
-      if (at !== -1) this.children.splice(at, 1);
-      x.parentNode = this; this.children.unshift(x); } },
-    replaceChildren(...xs) { this.children = []; this.textContent = "";
-      this.append(...xs); },
-    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
-    querySelectorAll(sel) {
-      const match = (n, part) => {
-        const tag = part.match(/^[a-zA-Z][\\w-]*/);
-        if (tag && n.tagName !== tag[0]) return false;
-        for (const cls of part.match(/\\.[\\w-]+/g) ?? []) {
-          if (!String(n.className ?? "").split(/\\s+/).includes(cls.slice(1)))
-            return false;
-        }
-        for (const attr of part.match(/\\[[^\\]]+\\]/g) ?? []) {
-          const [, name, value] = attr.match(
-            /^\\[([\\w:-]+)(?:=["']?([^"'\\]]*)["']?)?\\]$/) ?? [];
-          if (!name) return false;
-          const held = n.getAttribute?.(name) ?? null;
-          if (held === null) return false;
-          if (value !== undefined && held !== value) return false;
-        }
-        return true;
-      };
-      let found = [this];
-      for (const part of sel.trim().split(/\\s+/)) {
-        const next = [];
-        for (const root of found) {
-          (function walk(n) { for (const c of n.children ?? []) {
-            if (match(c, part)) next.push(c); walk(c); } })(root);
-        }
-        found = next;
-      }
-      return found;
-    },
-  };
+  const node = _makeNode(tag);
+  node.open = false;
+  return node;
 }
 // A text node carries `attrs` too - not because the DOM does, but
 // because every walker here reads `attrs`, and a bare `{}` turns a

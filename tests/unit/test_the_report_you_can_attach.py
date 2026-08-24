@@ -443,25 +443,10 @@ class TestTheCiWiring:
 
 
 _COMMON_SHIM = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function makeNode(tag) {
-  const node = {
-    nodeType: 1, tagName: tag, className: "", children: [], attrs: {},
-    text: "", style: {}, dataset: {}, hidden: false, textContent: "",
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    removeAttribute(k) { delete this.attrs[k]; },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    addEventListener() {},
-    append(...items) {
-      for (const item of items) {
-        if (item === null || item === undefined) continue;
-        if (typeof item === "string") this.text += item;
-        else this.children.push(item);
-      }
-    },
-    replaceChildren(...items) { this.children = []; this.text = ""; this.append(...items); },
-    querySelector() { return makeNode("tbody"); },
-    querySelectorAll() { return []; },
-  };
+  const node = _makeNode(tag);
   return node;
 }
 function collect(root) {

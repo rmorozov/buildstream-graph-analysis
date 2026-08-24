@@ -284,6 +284,17 @@
     },
     "next_steps": [
         {
+            "id": "shorten-what-the-build-waits-for",
+            "reason": "base.bst is the longest thing on the critical path, 43% of it - the build cannot finish sooner than this chain.",
+            "argv": [
+                "bga",
+                "blast",
+                "base.bst",
+                "<run>"
+            ],
+            "follows_from": "signals.critical_path_detail"
+        },
+        {
             "id": "blast-the-top-element",
             "reason": "base.bst is the first thing to fix - this is what changing it rebuilds.",
             "argv": [

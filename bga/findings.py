@@ -1232,7 +1232,50 @@ def compute_headline(result: AnalysisResult,
     headline['scheduling_gap_us'] = (
         max(0, total - t_infinity) if total and t_infinity else None)
     headline['top_actions'] = _top_actions(result, findings)
+    # UX-261: what shape this graph has, before a list of elements.
+    #
+    # A graph where one element reaches everything is a different
+    # problem from one where a hundred do, and the reader should know
+    # which they have *before* being handed a ranking. One sentence
+    # from the published distribution, never a chart - `UX-196`'s rule
+    # holds, and a decile histogram earns its place only if a sentence
+    # cannot carry the shape.
+    shape = _graph_shape(result)
+    if shape:
+        headline['graph_shape'] = shape
     return headline
+
+
+def _graph_shape(result) -> Optional[str]:
+    """`UX-259`'s distribution, said in one line - or nothing."""
+    signals = getattr(result, 'signals', None) or {}
+    shape = signals.get('blast_radius_distribution')
+    if not shape or shape.get('is_flat'):
+        return None
+    median = shape['deciles']['p50']
+    top = shape['deciles']['p90']
+    biggest = shape['max']
+
+    def reach(count):
+        return "nothing" if not count else f"{count} others"
+
+    half = (f"Half of this graph's {shape['n']} elements reach "
+            f"{reach(median)}" + ("" if not median else " or fewer"))
+    tenth = (f"the top tenth reach {reach(top)}"
+             + ("" if not top else " or more")
+             + f", up to {biggest}")
+    # Concentration is `max` against the top decile, not the top decile
+    # against the median: in a star-shaped graph both of those are zero
+    # and the first draft of this sentence called the most concentrated
+    # shape there is "spread across many elements".
+    concentrated = biggest >= 10 * max(1, top)
+    return (
+        f"{half}; {tenth}. "
+        + ("Reach is concentrated in a few elements - most of this graph "
+           "cannot cause a wide rebuild."
+           if concentrated else
+           "Reach is spread across many elements - there is no single "
+           "choke point to fix."))
 
 
 # UX-218: the loop, not the report.
@@ -1270,6 +1313,23 @@ def _store_paths(run_dir: str):
     return os.sep.join(parts[:-4]) or '.', True
 
 
+
+def _longest_on_the_path(result) -> Optional[dict]:
+    """The critical path's own biggest entry, or `None`.
+
+    `UX-261`: read from `critical_path_detail`, which the analysis
+    already publishes - this ranks nothing new, it just stops burying
+    the answer that was already there.
+    """
+    detail = (getattr(result, 'signals', None) or {}).get(
+        'critical_path_detail') or []
+    entries = [e for e in detail if e.get('element_uid')
+               and e.get('duration_us')]
+    if not entries:
+        return None
+    return max(entries, key=lambda e: e['duration_us'])
+
+
 def compute_next_steps(result: AnalysisResult,
                        headline: Optional[dict] = None) -> List[dict]:
     """The next commands, chosen by what this run measured.
@@ -1295,6 +1355,32 @@ def compute_next_steps(result: AnalysisResult,
     actions = headline.get('top_actions') or []
     top = actions[0] if actions else None
     steps: List[dict] = []
+
+    # UX-261: what the build is *waiting for*, before what is big.
+    #
+    # The ranking `UX-258` fixed is still a ranking of reach; the
+    # honest first answer is the longest element on the critical path,
+    # because that is the one whose duration the wall-clock is made of.
+    # It was already computed and already published, and it sat below a
+    # list of blast counts.
+    longest = _longest_on_the_path(result)
+    if longest:
+        share = longest.get('share_of_path')
+        steps.append({
+            'id': 'shorten-what-the-build-waits-for',
+            'reason': (
+                f"{longest['element_uid']} is the longest thing on the "
+                f"critical path"
+                # Same rule the two steps below use: a figure that
+                # rounds to "0.0s" argues against the sentence carrying
+                # it. The golden run's longest element is 6ms.
+                + (f" at {longest['duration_us'] / 1e6:.1f}s"
+                   if (longest.get('duration_us') or 0) >= 100_000 else "")
+                + (f", {share * 100:.0f}% of it" if share else "")
+                + " - the build cannot finish sooner than this chain."),
+            'argv': ['bga', 'blast', longest['element_uid'], run_dir],
+            'follows_from': 'signals.critical_path_detail',
+        })
 
     if top and top.get('element_uid'):
         uid = top['element_uid']

@@ -205,22 +205,12 @@ class TestThePageShowsTheNumbers:
 
 
 _HARNESS = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", hidden: false, open: false, parentNode: null, listeners: {},
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      if (typeof x === "string") { this.textContent += x; continue; }
-      x.parentNode = this; this.children.push(x); } },
-    prepend(...xs) { this.append(...xs); },
-    replaceChildren(...xs) { this.children = []; this.textContent = "";
-      this.append(...xs); },
-    querySelector() { return null; }, querySelectorAll() { return []; },
-  };
+  const node = _makeNode(tag);
+  node.open = false;
+  return node;
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         createTextNode: (t) => ({ nodeType: 3, textContent: t,

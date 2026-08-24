@@ -31,11 +31,22 @@ Making `jsonschema` a hard dependency was the other option and is
 declined: it is a dev tool and stays one. The claim gets honest instead.
 """
 import collections
+import os
 import pathlib
 
 import pytest
 
 from tiers import LARGE, MEDIUM
+
+# UX-264: where the one DOM shim lives, as an absolute file URL.
+#
+# The viewer harnesses run `node -e` in a subprocess, and several of
+# them do it from a `tmp_path` rather than the repository root - so a
+# relative `import "./tests/dom_shim.mjs"` resolves against whatever
+# directory that test happened to choose. Published here, inherited by
+# every subprocess, and independent of cwd.
+os.environ["BGA_DOM_SHIM"] = (
+    pathlib.Path(__file__).resolve().parent / "dom_shim.mjs").as_uri()
 
 # UX-238: which tier each collected test is in.
 #
@@ -88,6 +99,11 @@ KNOWN_SKIP_REASONS = {
         "Perfetto's shell is an optional local tool, not a dependency", 0),
     "node is not installed": (
         "the viewer guards need node; CI has it", 0),
+    # UX-257's geometry guards. Declared so that "no browser here" is
+    # a fact the census reports rather than a silence.
+    "no chrome/chromium for the geometry guards (set BGA_CHROME)": (
+        "UX-257 drives a real Chrome over CDP; where there is none, the "
+        "geometric claims are unguarded and this says so", 12),
     "jsonschema is not installed - `pip install -e '.[dev]'`": (
         "schema validation is a dev extra", 0),
     "buildstream is not installed": (

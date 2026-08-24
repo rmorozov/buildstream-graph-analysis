@@ -278,22 +278,11 @@ def _render(fn, payload):
 
 # Enough SVG-aware DOM to run the real renderers.
 _HARNESS = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  return {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "",
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    append(...xs) {
-      for (const x of xs) {
-        if (x === null || x === undefined) continue;
-        if (typeof x === "string") this.textContent += x;
-        else this.children.push(x);
-      }
-    },
-    addEventListener() {}, querySelector() { return null; },
-    querySelectorAll() { return []; },
-  };
+  const node = _makeNode(tag);
+  return node;
 }
 globalThis.document = { createElement: make, createElementNS: (_ns, t) => make(t) };
 

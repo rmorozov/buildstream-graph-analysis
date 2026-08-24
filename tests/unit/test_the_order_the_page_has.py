@@ -183,13 +183,21 @@ class TestTheProbeShimCanSeeOrderAtAll:
     """
 
     def test_the_shim_does_not_define_prepend_as_append(self):
-        source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text()
-        assert "prepend(...xs) { this.append(...xs); }" not in source, (
-            "the export probe cannot see document order again")
+        # `UX-264` moved the shim out of this harness and into one
+        # file. The property is unchanged; where it is written is not,
+        # and a guard still reading the old location would pass on a
+        # file that no longer defines `prepend` at all.
+        source = (REPO / "tests/dom_shim.mjs").read_text(encoding="utf-8")
+        assert "prepend(...items) {" in source, (
+            "the shared shim no longer defines prepend")
+        prepend = source.split("prepend(...items) {", 1)[1].split("\n    }", 1)[0]
+        assert "this.append(" not in prepend, (
+            "prepend is implemented as append again - every order guard in "
+            "this file would read a reversed document (UX-235)")
 
     def test_the_shim_unshifts(self):
-        source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text()
-        prepend = source.split("prepend(...xs)", 1)[1].split("},", 1)[0]
+        source = (REPO / "tests/dom_shim.mjs").read_text(encoding="utf-8")
+        prepend = source.split("prepend(...items) {", 1)[1].split("\n    }", 1)[0]
         assert "unshift" in prepend, prepend
 
 

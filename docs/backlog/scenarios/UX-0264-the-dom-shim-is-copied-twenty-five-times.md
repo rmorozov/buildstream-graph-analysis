@@ -1,6 +1,6 @@
 # UX-264: the DOM shim is copied twenty-five times
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-263 | **Serves:** all, through every viewer guard | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-263 | **Serves:** all, through every viewer guard | **Topic:** guards
 
 ## Motivation
 
@@ -64,3 +64,58 @@ instead of moving is the known-discriminating one — and confirm it
 reddens guards in more than one file. Today that mutation has to be
 applied 25 times to have the same reach, which is the measurement this
 item is filed on.
+
+## Outcome
+
+**Fixed.** `tests/dom_shim.mjs` is the one node factory; twenty-five
+harnesses import it through `process.env.BGA_DOM_SHIM`, published once
+in `tests/conftest.py` as an absolute file URL — several harnesses run
+node from a `tmp_path`, and the first migration failed exactly there,
+resolving `./tests/dom_shim.mjs` against whatever directory the test
+had chosen.
+
+**The acceptance test, run.** One fidelity defect in the shared file —
+`append` copying instead of moving, the known-discriminating one —
+reddens guards in **three files**:
+
+```text
+tests/unit/test_one_click_from_investigation.py
+tests/unit/test_tables_you_can_interrogate.py
+tests/unit/test_the_dom_shim_is_one_instrument.py
+```
+
+Before this, that mutation had to be applied twenty-five times to have
+the same reach.
+
+**Consolidating found four disagreements with a browser**, each of
+which had been quietly true in some subset of the copies:
+
+- **`textContent` was a plain string.** A real DOM concatenates every
+  descendant's text; the one harness that implemented it that way
+  joined with a space. Chrome 141, measured: a `<div>` holding `"a"`
+  and `<b>x</b>` reads `"ax"` — no separator. Two probes were reading a
+  container's text where they meant the leaves, and one was parsing a
+  heading's label out of a string that included its own subtitle.
+- **`href` did not reflect.** `setAttribute("href", …)` sets the
+  property in a browser; the shims left `.href` at `""`, so a probe
+  reading `n.href ?? n.attrs.href` silently took the first branch.
+- **Parent links were declared and never set.** One probe snapshots the
+  tree with `JSON.stringify`; with real parent links the tree is cyclic
+  — as it always was in a browser — so that snapshot had been of a
+  forest, not a document.
+- **A detached `<header>`.** `app.js` mounts the contents with
+  `heading.after(contents)` and falls back to `insertBefore` when
+  `after` is absent. The old shims had no `after`, so **the fallback
+  was the only path any guard had ever exercised**. Giving the shim a
+  real `after` made the fallback stop firing and the harness's
+  unattached header stop working — the guard was measuring a branch the
+  page does not take.
+
+The shim also refuses selectors it cannot parse (`tr > td`,
+`li:first-child`, `a + b`) rather than matching nothing: a selector
+that quietly matches nothing reads as "the page does not render that",
+and the guard passes.
+
+**Not done:** the shim still has no layout engine, and says so at the
+bottom of the file. That is `UX-257`, which landed in the same round
+with a real browser instead.

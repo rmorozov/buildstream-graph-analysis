@@ -190,57 +190,9 @@ class TestTheScaleThatDemandedIt:
 
 
 _SHIM = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 function make(tag) {
-  const node = {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], _text: "",
-    className: "", hidden: false, listeners: {},
-    get textContent() {
-      return this.children.length
-        ? this.children.map((c) => c.textContent).join(" ") : this._text;
-    },
-    set textContent(v) { this._text = String(v); this.children = []; },
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
-    // UX-262: a real DOM *moves* an already-parented node on append;
-    // this shim used to *copy* it. `applyTopN` reorders by re-appending
-    // every row, so a 4,000-row table read as 8,000 - and nothing
-    // noticed, because no guard counted rows after a preset until the
-    // preset became a default. Same class as UX-235's `prepend`
-    // implemented as `append`: the page was never wrong, the
-    // instrument was.
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      if (typeof x === "string") { this._text += x; continue; }
-      if (x._parent && x._parent !== this) {
-        const at = x._parent.children.indexOf(x);
-        if (at >= 0) x._parent.children.splice(at, 1);
-      } else if (x._parent === this) {
-        const at = this.children.indexOf(x);
-        if (at >= 0) this.children.splice(at, 1);
-      }
-      x._parent = this;
-      this.children.push(x); } },
-    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
-    querySelectorAll(sel) {
-      const parts = sel.split(/\\s+/);
-      let found = [this];
-      for (const part of parts) {
-        const next = [];
-        for (const root of found) {
-          (function walk(n) {
-            for (const c of n.children ?? []) {
-              if (c.tagName === part) next.push(c);
-              walk(c);
-            }
-          })(root);
-        }
-        found = next;
-      }
-      return found;
-    },
-  };
-  return node;
+  return _makeNode(tag);
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };

@@ -54,33 +54,10 @@ function walk(node, out = []) {
   for (const child of node.children ?? []) { out.push(child); walk(child, out); }
   return out;
 }
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+
 function make(tag) {
-  const node = {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", parentNode: null, listeners: {},
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      if (typeof x === "string") { this.textContent += x; continue; }
-      x.parentNode = this; this.children.push(x); } },
-    prepend(x) { if (x == null) return; x.parentNode = this;
-                 this.children.unshift(x); },
-    removeChild(x) { const i = this.children.indexOf(x);
-                     if (i >= 0) this.children.splice(i, 1); },
-    querySelectorAll(sel) { return walk(this).filter((n) => matches(n, sel)); },
-    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
-    closest(sel) { let n = this;
-      while (n) { if (matches(n, sel)) return n; n = n.parentNode; } return null; },
-    matches(sel) { return matches(this, sel); },
-    addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
-    dispatchEvent(event) {
-      let n = this;
-      while (n) { for (const fn of n.listeners?.[event.type] ?? []) {
-        fn({ ...event, target: this }); } n = n.parentNode; }
-      return true;
-    },
-  };
+  const node = _makeNode(tag);
   return node;
 }
 globalThis.Event = class { constructor(type) { this.type = type; } };
@@ -113,8 +90,13 @@ function fixture() {
   root.append(bare);
   return root;
 }
+// `_parent`/`parentElement` join the skip list because the shared shim
+// populates them the way a browser does, which makes the tree cyclic
+// (`UX-264`). The old per-file shim declared `parentNode` and never
+// set it, so this snapshot was of a forest, not the document.
 const snapshot = (root) => JSON.stringify(root, (k, v) =>
-  (k === "parentNode" || k === "listeners") ? undefined : v);
+  (k === "parentNode" || k === "parentElement" || k === "_parent"
+   || k === "listeners" || k === "_style") ? undefined : v);
 """
 
 

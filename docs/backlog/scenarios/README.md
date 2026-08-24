@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-284 scenarios: **13 open**, 271 closed.
+285 scenarios: **14 open**, 271 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 1 | 30 |
-| viewer | 9 | 62 |
+| viewer | 10 | 63 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
@@ -49,6 +49,7 @@ task file, which is the only place it ever lived twice.
 | UX-283 | [the bottleneck view names elements you cannot reach](UX-0283-the-bottleneck-view-names-elements-you-cannot-reach.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-284 | [the table tools are below the table, and scroll away](UX-0284-the-table-tools-are-below-the-table-and-scroll-away.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-285 | [the identity blocks are split, and the blast box is last](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md) | viewer | Medium | R1, R7 | 🔴 |
+| UX-286 | [the report is forty-eight fragments with no chapters](UX-0286-the-report-is-forty-eight-fragments-with-no-chapters.md) | viewer | High | R1, R7 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -637,3 +638,11 @@ interactive question rather than a report block, is the **last** thing
 on the page at 18.5 and 19.9 screens, eighteen screens from the findings
 it would be asked about
 ([`UX-285`](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md)).
+
+
+`UX-286` is what Direction 13 found when the proposal to make every
+block one screen was measured instead of argued: 0 of 48 sections are
+within a fifth of a screen of that size, 95% are under four-fifths, and
+the median is 216 pixels. Padding them would add 31.3 screens. The
+report does not have blocks that are too big — it has forty-eight that
+are too small and nothing that groups them.

@@ -1585,3 +1585,125 @@ The seventh, `wall_clock_share`, is keyed by **task** —
 Nothing on the page says so, and a reader comparing them is comparing
 different populations. That is `UX-268`, and it is the largest single
 readability win available.
+
+## Direction 13: the report has 48 fragments and no chapters (argued 2026-08-24, round 38)
+
+**Serves:** R1 first, and R7 — the two who read the page top to bottom
+before they know what they are looking for.
+
+Proposed from a real reading: *"maybe we need to review our data and try
+to group it into semantic blocks that should occupy exactly one screen?
+and transform our navigation pattern into going through several
+screens?"*
+
+Two ideas in one sentence. **The first is right and the measurement is
+stronger than the argument for it. The second is refuted by the same
+measurement**, and separating them is the whole of this direction.
+
+### What the page actually is
+
+Measured at 1440×900 in Chrome 141, on the 1,202-element synthetic run
+(`bga gen-synthetic --seed 1`) and on the committed `macro_micro`
+fixture:
+
+```text
+                              1,202-element     macro_micro
+sections                                48              39
+document                          18.8 scr        20.1 scr
+median section                    0.24 scr        0.35 scr
+smallest                          0.07 scr        0.07 scr
+largest                     1.98 (findings) 3.42 (findings)
+
+sections within 0.8–1.0 screens          0 (0%)          0 (0%)
+sections under 0.8 screens              46 (95%)        37 (94%)
+sections over one screen                 2 (4%)          2 (5%)
+```
+
+The median section is **0.24 screens — 216 pixels**. Not one section on
+either run is near a screen tall. The report is not a sequence of
+chapters; it is **48 fragments averaging a fifth of a screen**, read by
+scrolling past them.
+
+That is the defect the proposal is reacting to, and naming it that way
+is worth more than the nine items round 38 filed against symptoms of it.
+
+### Why "exactly one screen" is the wrong fix, measured
+
+Padding each section to a screen does not reduce scrolling — it
+multiplies it:
+
+```text
+document today                    18.8 scr        20.1 scr
+document at one screen/section    48.0 scr        39.0 scr
+padding introduced               +31.3 scr       +20.5 scr
+```
+
+A **2.6× longer document**, made of whitespace. The reader who found 48
+fragments tiring would find 48 screens worse.
+
+And a fixed cell cannot hold this content. Section height spans **0.07
+to 3.42 screens — a 49× range** — because the tall ones are tall for a
+reason a design cannot overrule: `findings` holds one row per finding,
+`signals` one row per element. Ten sections on each run size themselves
+from the run rather than from the layout. A one-screen grid has exactly
+two options for a table of 1,202 rows, and both are wrong: overflow the
+cell, or hide rows the reader came for.
+
+### What the grouping half buys, and what it must not cost
+
+Group the 48 into a small number of **chapters**, each answering one
+question a reader actually has — the shape `UX-207`'s decision screen
+already proves works, and `UX-271`'s rail already gestures at with one
+level of nesting. Then `UX-285`'s finding stops being a placement bug
+and becomes a chapter boundary: the three identity blocks are one
+chapter, and it belongs at the end.
+
+Navigation then moves **chapter to chapter**, which is the reader's
+instinct in the proposal at the granularity the content supports — six
+to eight destinations instead of 48, with ordinary scrolling inside
+each.
+
+Three things the page must keep, and each one refuses **pagination** as
+the mechanism:
+
+1. **`Ctrl-F` finds everything.** `UX-195`'s export is "the report you
+   can attach"; a reader who has been sent one searches it. Content
+   behind a page that has not been rendered is content the browser
+   cannot find, and no in-page search substitutes for the one every
+   reader already knows.
+2. **A link opens what it names.** `UX-211` puts view state in the
+   fragment and `UX-225` puts the working set in the link. A paginated
+   deck needs its own page coordinate, which is a second navigation
+   model layered on the one that already works.
+3. **It prints, and it reads aloud.** A ticket attachment gets printed
+   and pasted into slides; a document is one flow and a deck is not.
+
+So: **chapters, not slides.** Grouping is a change to the document's
+structure; pagination is a change to its medium, and the medium is
+load-bearing.
+
+### The challenge to the proposal, stated plainly
+
+The proposal's premise is that sections are too big to take in. Measured,
+they are the opposite — 95% are under four-fifths of a screen and the
+median is a fifth. The tiring part is not the size of each block; it is
+**how many of them there are and that nothing groups them**. A fix aimed
+at block size would have made the report longer while leaving the count
+untouched.
+
+The second challenge is that "exactly one screen" is unmeasurable on a
+page whose content is set by the run. `bga` reports 11-element and
+1,202-element builds through one renderer; any fixed geometry has to be
+wrong for one of them. The bound this repository already uses —
+`UX-187`'s cap and `UX-262`'s `Top N` — bounds *rows*, which is a
+property of the data, rather than pixels, which is a property of a
+window that varies by reader.
+
+### What follows
+
+Grouping is filed as its own item rather than argued further here.
+`UX-285` (identity blocks, blast placement) is its first instance, and
+`UX-284` (tools above their table) is the affordance that makes a long
+chapter usable. What none of them settle is what the chapters *are* —
+that is a decision about the report's argument, not its markup, and it
+wants the reader's questions in front of it rather than the section list.

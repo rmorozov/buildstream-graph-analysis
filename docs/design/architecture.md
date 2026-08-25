@@ -657,6 +657,21 @@ how it is *read*, and the shape is deliberately small.
   pages and walks every text node for JSON-shaped content outside those
   two.
 
+- **A shape draws as a shape** (`UX-303`, round 41). Two hints join the
+  vocabulary — `bga:series` for an ordered numeric array and
+  `bga:distribution` for a published percentile object — and each
+  carries the reading its control needs: the unit of one step, and the
+  key that holds the sample count. `bga/viewer/drawings.js` holds the
+  sparkline and the density strip; it imports nothing and takes its
+  formatter, so the quantity table stays in `app.js`. Under three
+  points is a sentence and no drawing. A table past the row bound
+  wears a strip built from its primary quantity column's own
+  `data-raw` values, under [`styleguide.md` §2](styleguide.md)'s
+  boundary: **a self-built strip prints no derived number** — its
+  labels are actual rows and a count of rows, and the percentile ticks
+  are geometry. That boundary is the no-arithmetic rule below, applied
+  to a drawing.
+
 - **Dark is the design surface, and a fill is not a text color**
   (`UX-304`, round 41). `bga/viewer/style.css` holds every color the
   product has: `:root` carries the dark tokens, `@media

@@ -38,7 +38,7 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
-| UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🔴 |
+| UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🟡 |
 | UX-298 | [the timeline speaks Perfetto, natively](UX-0298-the-timeline-speaks-perfetto-natively.md) | capture | High | R1, R2 | 🔴 |
 | UX-299 | [a handoff that does not carry the trace in its hands](UX-0299-a-handoff-that-does-not-carry-the-trace-in-its-hands.md) | viewer | Medium | R1 | 🔴 |
 | UX-300 | [what a two-gigabyte snapshot does to a store](UX-0300-what-a-two-gigabyte-snapshot-does-to-a-store.md) | store | Medium | R1, R5, R7 | 🔴 |

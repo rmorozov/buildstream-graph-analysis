@@ -1725,12 +1725,13 @@ async function boot() {
     // now serves the comparison against the run before this one.
     const comparison = await load("compare", null).catch(() => null);
     const band = comparison && renderBand(comparison);
-    if (band) root.prepend(band);
-    // UX-221: and above the band, which elements put the candidate
-    // where the band says it is. Prepended after it so it ends up
-    // first: the band states the verdict, this states the cause.
+    if (band) root.append(band);
+    // UX-221: and which elements put the candidate where the band says
+    // it is. The band states the verdict, this states the cause, and
+    // `chapters.js` is what puts them in that order - see the note on
+    // `renderDecision` below.
     const culprits = comparison && renderCulprits(comparison);
-    if (culprits) root.prepend(culprits);
+    if (culprits) root.append(culprits);
 
     // UX-202: the overview above the sections, and the evidence header
     // above even that - what the capture can support, before any
@@ -1764,14 +1765,24 @@ async function boot() {
     if (whatif) root.append(whatif);
 
     const overview = renderOverview(payload);
-    if (overview) root.prepend(overview);
+    if (overview) root.append(overview);
     const evidence = renderEvidence(payload);
-    if (evidence) root.prepend(evidence);
+    if (evidence) root.append(evidence);
 
     // UX-207: **first screen = decision, everything else = evidence.**
-    // Prepended last, so it lands above the status line and the
-    // overview - which is the whole point of the item: the reader knows
-    // what deserves attention before reading anything that justifies it.
+    // The reader knows what deserves attention before reading anything
+    // that justifies it.
+    //
+    // **`chapters.js` is the ordering authority** (`UX-286`, and
+    // `UX-301` for why this comment exists). It re-sorts the document
+    // after everything here has rendered: a section goes in the chapter
+    // that names it, and within a chapter in the order the chapter's
+    // own list declares. So the calls in this function are plain
+    // appends in source order and decide nothing about where a section
+    // lands - five of them used to be `prepend`, and mutating one to
+    // `append` changed the booted page not at all, which is how round
+    // 40 found this. To move a section, edit `CHAPTERS`; a second
+    // ordering mechanism here would be a mechanism nothing reads.
     //
     // The refusal banners `renderVerdict` produced are still above even
     // this; a run that is not a measurement says so before it offers a
@@ -1782,7 +1793,7 @@ async function boot() {
     // below need it for the same reason. A run with no store simply
     // gets no history block, which is the same absence a store with no
     // slices produces. Loading earlier moves no DOM: the panel is
-    // still prepended and the sections are still appended.
+    // still placed by `chapters.js` and the sections still appended.
     const store = await load("store", null).catch(() => null);
     // UX-234: and what the store says about itself as a distribution.
     // A separate document rather than a key of the listing: one row
@@ -1797,7 +1808,7 @@ async function boot() {
       // UX-227: the store and the schema, for the history line and the
       // verdict shapes inside each "why this one" fold.
       { store, schema: schemas[store?.schema] });
-    if (decision) root.prepend(decision);
+    if (decision) root.append(decision);
     // UX-216: one section per element the report discusses, appended
     // after everything that names an element has been drawn - the
     // cross-reference is read off the rendered document, so a section

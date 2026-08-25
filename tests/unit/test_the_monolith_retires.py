@@ -178,6 +178,60 @@ class TestTheAnalysisSaysWhichShapeItRead:
             assert key in source["properties"], key
 
 
+class TestTheAnswersAreKnown:
+    """Known answers, because equality is not a check here.
+
+    `summarize` is implemented as a fold, so "the fold agrees with the
+    list" is true by construction and cannot catch a change to the
+    shared arithmetic - it was measured passing against a deliberately
+    broken concurrency sweep. What discriminates is a trace small
+    enough to work out by hand.
+
+    Three matched processes: `a` [0, 2], `c` [1, 3], `b` [2, 4].
+    Two are alive together from 1 to 2 and again from 2 to 3, and the
+    tie at t=2 is the case worth writing down - `b` starts exactly as
+    `a` ends, and they are never both running. Peak is **2**, and a
+    sweep that took the start before the end at equal timestamps would
+    say 3.
+    """
+
+    @staticmethod
+    def _records():
+        def record(pid, cmd, start, end, cpu, rss):
+            return {"pid": pid, "ppid": 1, "element": "one.bst",
+                    "invocation": "inv-1", "cmd": cmd, "start_ts": start,
+                    "end_ts": end, "duration_s": end - start, "open": False,
+                    "cpu_us": cpu, "max_rss_kb": rss}
+        return [
+            record(2, "/usr/bin/cc1 -c a.c", 0.0, 2.0, 1_000_000, 4096),
+            record(3, "/usr/bin/cc1 -c c.c", 1.0, 3.0, 2_000_000, 8192),
+            record(4, "/usr/bin/as b.s", 2.0, 4.0, 500_000, 2048),
+        ]
+
+    @pytest.fixture
+    def known(self):
+        return tracer.summarize(self._records())
+
+    def test_the_peak_is_two_and_the_tie_does_not_make_it_three(self, known):
+        assert known["max_concurrency"] == 2
+
+    def test_the_cpu_is_the_sum_of_the_three(self, known):
+        cpu = known["cpu_time"]
+        assert cpu["total_cpu_us"] == 3_500_000
+        assert cpu["measured_processes"] == 3
+        # The element's span is its first start to its last end.
+        assert cpu["per_element"]["one.bst"]["wall_span_s"] == 4.0
+
+    def test_the_peak_memory_is_the_largest_process_not_the_sum(self, known):
+        assert known["peak_memory"]["per_element"]["one.bst"]["peak_rss_kb"] == 8192
+
+    def test_the_wall_span_and_the_counts(self, known):
+        assert known["wall_span_s"] == 4.0
+        assert known["process_count"] == 3
+        assert known["matched_count"] == 3 and known["open_count"] == 0
+        assert known["by_binary"] == {"cc1": 2, "as": 1}
+
+
 class TestTheFoldAndTheListAgree:
     """The migration's guard, run rather than argued.
 

@@ -112,4 +112,11 @@ so the note does not quietly go stale. The 1,202-element run is built
 from the committed generator, which is byte-reproducible from its seed:
 the run is not a tracked path, but the thing that makes it is.
 
+**Falsification:**
+
+```text
+M4 nothing is built on demand          -> 2 failed (resolution, and the note)
+M5 an empty element gets a silent block-> 1 failed (the note)
+```
+
 Tests: 9 new (`tests/unit/test_any_element_can_be_inspected.py`).

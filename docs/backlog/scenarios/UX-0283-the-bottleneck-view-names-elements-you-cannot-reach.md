@@ -90,6 +90,11 @@ exactly the element the detail cap excludes. Measured there: 7 anchors
 resolved to nothing before, 0 after — and 7 rather than the 2 `UX-278`
 was filed with, because this item added the routes that point at them.
 
+**Falsification:** removing `role: element` from the choke-point
+declaration reddens the test that says an element column declares
+itself; removing the page's reading of tuple declarations reddens the
+route count and the dead-anchor count together.
+
 **A measurement bug in an existing guard, found by this landing.**
 `test_one_click_from_investigation.py` counted a table's rows with
 `table.querySelectorAll("tbody tr")`, which returns one too many for a

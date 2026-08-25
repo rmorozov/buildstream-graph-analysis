@@ -84,8 +84,13 @@ class TestTheGuideIsRoutedTo:
     arrive from."""
 
     def test_the_docs_index_rows_it(self):
-        assert "design/styleguide.md" in INDEX.read_text(encoding="utf-8"), (
-            "the docs index does not list the visual contract")
+        """The *link target*, not the words. A row whose link was
+        repointed still reads correctly and goes nowhere - and a
+        mutation that repointed exactly that passed a clause matching
+        the display text."""
+        text = INDEX.read_text(encoding="utf-8")
+        assert "](design/styleguide.md)" in text, (
+            "the docs index does not link the visual contract")
 
     def test_the_two_style_guides_name_each_other(self):
         assert "design/styleguide.md" in DOCS.read_text(encoding="utf-8"), (

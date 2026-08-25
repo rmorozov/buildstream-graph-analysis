@@ -316,12 +316,16 @@ class TestTheGuideCarriesTheChecklistLine:
         text = guide.read_text(encoding="utf-8")
         assert "design/styleguide.md" in text, (
             "the fixing guide does not point at the visual contract")
-        assert "emphasis" in text.lower(), (
-            "the fixing guide does not carry the emphasis-budget line")
-        # And the three questions §7 names, so the line is a checklist
-        # rather than a mention.
-        for question in ("§1 table", "sentence", "budget"):
-            assert question in text.lower(), question
+        assert "conformance checklist" in text.lower(), (
+            "the fixing guide mentions the guide but sets no checklist")
+        # The three questions §7 names, in wordings that appear nowhere
+        # else in the guide - "budget" and "sentence" alone are words
+        # this document uses for other things, and a clause that
+        # matched them would pass on a checklist that had been deleted.
+        for question in ("shape in the §1 table", "sentence written",
+                         "budget kept"):
+            assert question in text.lower(), (
+                f"the checklist does not ask: {question!r}")
 
 
 if __name__ == "__main__":  # pragma: no cover

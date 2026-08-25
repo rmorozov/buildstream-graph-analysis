@@ -20,6 +20,12 @@
 </head>
 <body>
 <header>
+  <!-- UX-281: the way home. These pages are reached *from* the report,
+       are about the report, and carry its header and stylesheet - a page
+       that looks like part of a document and cannot return to it reads
+       as a different site. Named for where it goes rather than "back",
+       because the reader may have arrived from a bookmark. -->
+  <p class="home"><a href="index.html" data-home>&#8592; The build report</a></p>
   <h1>Questions worth asking in Perfetto</h1>
   <p class="muted">
     Load a timeline first (<a href="perfetto.html">hand it over</a>),

@@ -128,4 +128,24 @@ a fact about the export worth knowing — the page budget bounds *shipped*
 source, not source as written — and it is why the second form is the one
 recorded.
 
+**The split earned its keep in the same round.** Five viewer items
+(`UX-279`, `UX-280`, `UX-283`, `UX-284`, `UX-289`, `UX-292`) landed
+after this and the totals reddened while the page budget did not:
+
+```text
+                 before this round   after   delta
+  the page              162,909 B  171,388  +8,479   (modules +7,788, css +691)
+  golden data            87,563 B   90,216  +2,653   (schema descriptions)
+  golden total          250,472 B  261,604 +11,132
+```
+
+The bounds moved once, and every byte of the move is attributed: source
+here, tooltips there — which the companion guard proves is documents
+rather than payload. That attribution is the whole difference between a
+bound that moves on a measurement and one that rises whenever it is
+exceeded, which is what this item was filed about. The page budget had
+612 B of headroom left when the totals went over, so the split did
+exactly what it was built to do: source growth showed in every total and
+could not hide behind content.
+
 Tests: 3 new, replacing one; every one runs on a committed fixture.

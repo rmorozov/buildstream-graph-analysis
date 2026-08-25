@@ -1,6 +1,6 @@
 # UX-282: the Perfetto fallback is below the button that fails
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-265 | **Serves:** R7 — mid-handoff, when it did not work | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-265 | **Serves:** R7 — mid-handoff, when it did not work | **Topic:** viewer
 
 ## Motivation
 
@@ -46,3 +46,18 @@ and the same shape.
 Measured at 1440 and 390: at 1440 the fallback shares a row with the
 button; at 390 it stacks. The page's height at 1440 falls, and no
 element overlaps at either width.
+
+## Outcome
+
+🟢 Done (round 39). The button and its fallback are one row where there
+is width for it, and stacked below `UX-272`'s breakpoint — the same
+`60rem`, so this page has one responsive vocabulary rather than its own.
+
+The order inside the row is the button first: a reader who has not
+pressed it should not be offered two doors, which is item 2. The
+sentence stays conditional prose — *"Nothing opened?"* — because it only
+makes sense to somebody for whom it did not work.
+
+The manual route (open ui.perfetto.dev and drag the file in) stays where
+it was, below: it is a third resort rather than the fallback, and
+promoting both would be the same crowding at a different place.

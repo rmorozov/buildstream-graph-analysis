@@ -247,3 +247,39 @@ export function applyPreset(preset, rows, payload, key = "element") {
   return { rows: chosen, total: chosen.length,
            shown: preset.bound ? chosen.slice(0, preset.bound) : chosen };
 }
+
+// ---------------------------------------------------------------- UX-280
+
+/**
+ * The shown rows as a GitHub-flavoured Markdown table.
+ *
+ * `UX-280`: JSON pastes into a ticket as a code block a reader has to
+ * read; a table pastes as a table. Same rows, same order, same
+ * `data-raw` values - this is a second *rendering* of what
+ * `rowJson` already copies, not a second selection, so the two can
+ * never disagree about which rows were shown.
+ *
+ * Cells are escaped for the one character that would break the shape: a
+ * `|` inside a value ends the cell. Newlines cannot appear in a
+ * `data-raw` attribute value the page writes, but are collapsed anyway
+ * rather than trusted.
+ */
+export function rowsMarkdown(rows, specs) {
+  const columns = specs.map((spec) => spec.key);
+  const titles = specs.map((spec) => spec.title ?? spec.key);
+  const cell = (value) => String(value ?? "")
+    .replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
+  const lines = [
+    `| ${titles.map(cell).join(" | ")} |`,
+    `| ${specs.map((spec) => (spec.numeric ? "---:" : "---")).join(" | ")} |`,
+  ];
+  for (const tr of rows) {
+    const values = columns.map((column) => {
+      const td = [...(tr.children ?? [])].find(
+        (node) => node.getAttribute?.("data-column") === column);
+      return cell(td ? (td.getAttribute("data-raw") || td.textContent) : "");
+    });
+    lines.push(`| ${values.join(" | ")} |`);
+  }
+  return lines.join("\n");
+}

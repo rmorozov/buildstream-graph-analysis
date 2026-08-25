@@ -1,6 +1,6 @@
 # UX-280: copy as markdown
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-279 | **Serves:** R8 — whose destination is a ticket, a PR body or a chat message | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-279 | **Serves:** R8 — whose destination is a ticket, a PR body or a chat message | **Topic:** viewer
 
 ## Motivation
 
@@ -67,3 +67,25 @@ discards.
 Copying a filtered, sorted table as Markdown yields a table whose rows
 and order match the DOM, whose cells match `data-raw`, and which renders
 as a table when pasted into a Markdown document.
+
+## Outcome
+
+🟢 Done (round 39). Every table offers Markdown beside JSON.
+
+**A rendering, not a selection.** `rowsMarkdown` reads the same
+`data-raw` values from the same rows in the same order that `rowJson`
+already copies, so the two cannot disagree about what was shown — the
+guard asserts exactly that, by comparing the two outputs row for row.
+Numeric columns are right-aligned from the column's declared quantity,
+and a `|` inside a value is escaped, because one would otherwise end the
+cell and silently reshape the table.
+
+**Remembered for the reader, not in the link.** `localStorage`, which is
+where this page already keeps per-reader preferences and which `UX-211`
+draws the line at: the fragment carries what a reader *shares*, storage
+carries what they *prefer*. Both sides are wrapped, because an export
+opened from a folder may get no storage at all and a page that threw
+there would lose the report rather than the preference.
+
+Findings and commands keep their plain-text form, as the item asks: a
+finding is a sentence and a command must paste into a shell unmodified.

@@ -9,11 +9,30 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><h1>Hand the timeline to Perfetto</h1></header>
+<header>
+  <!-- UX-281: the way home. Its only internal href was `#`, so this
+       page reached nothing inside the report it is about. -->
+  <p class="home"><a href="index.html" data-home>&#8592; The build report</a></p>
+  <h1>Hand the timeline to Perfetto</h1>
+</header>
 <main id="status">
-  <p>
-    <button id="open" class="primary">Open in Perfetto</button>
-  </p>
+  <!-- UX-282: the button and its fallback are one row at wide widths
+       and stacked at narrow ones, the way `UX-272`'s header is, so the
+       page has one responsive vocabulary rather than two. The reader
+       this line exists for is mid-handoff and it has just failed; they
+       should not read three things they no longer care about to reach
+       the one they do. It stays *secondary* - a fallback, not a second
+       door - so a reader who has not pressed the button is not offered
+       two. -->
+  <div class="handoff">
+    <p class="handoff-go">
+      <button id="open" class="primary">Open in Perfetto</button>
+    </p>
+    <p class="handoff-fallback muted">
+      Nothing opened?
+      <a id="deep" href="#">open ui.perfetto.dev with this trace</a>
+    </p>
+  </div>
   <p id="line" class="muted">Ready.</p>
   <p class="muted">
     The trace is sent <strong>tab to tab</strong> and processed in your
@@ -24,11 +43,11 @@
   <p class="muted">
     <!-- UX-198: a plain link, immune to pop-up policy. Perfetto fetches
          the trace from this server itself; the server answers its
-         origin and no other. -->
-    Nothing opened? Use the direct link:
-    <a id="deep" href="#">open ui.perfetto.dev with this trace</a>
-    — or open <a href="https://ui.perfetto.dev">ui.perfetto.dev</a> and
-    drag <a href="timeline.json.gz" download>timeline.json.gz</a> into it.
+         origin and no other. The deep link moved up beside the button
+         (`UX-282`); what stays here is the manual route, which is a
+         third resort rather than the fallback. -->
+    Still nothing? Open <a href="https://ui.perfetto.dev">ui.perfetto.dev</a>
+    and drag <a href="timeline.json.gz" download>timeline.json.gz</a> into it.
   </p>
 </main>
 <script type="module" src="perfetto_page.js"></script>

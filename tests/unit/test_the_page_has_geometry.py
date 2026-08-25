@@ -237,6 +237,78 @@ class TestAnAnchorLandsWhereYouCanReadIt:
             f"#{out['id']} lands {out['hidden']}px under the sticky heading")
 
 
+class TestATableSControlsStayInReach:
+    """`UX-284`. Reported: *"the search box is buried at the bottom of
+    sections."* Measured before, on the served report:
+
+    ```text
+    filter/threshold inputs on the page            43
+    inputs whose top is *below* their table's top  28
+    inputs with `position: static`                 43 of 43
+    the jump box sits at y=1236 - below the fold at 900px
+    ```
+
+    The `position: static` half bites at every table: the 1,202-element
+    report is 18.8 screens and its longest table is taller than the
+    viewport, so filtering it meant scroll up, type, scroll down, scroll
+    up again. The control that narrows a long table has to stay in reach
+    while the reader looks at the result.
+    """
+
+    _TOOLS = """
+    (() => {
+      const tools = [...document.querySelectorAll(".table-tools")];
+      let below = 0, sticky = 0;
+      for (const box of tools) {
+        const table = box.parentElement?.querySelector("table");
+        if (!table) continue;
+        if (box.getBoundingClientRect().top
+            > table.getBoundingClientRect().top) below += 1;
+        if (getComputedStyle(box).position === "sticky") sticky += 1;
+      }
+      const jump = document.getElementById("jump");
+      return {
+        tools: tools.length,
+        below,
+        sticky,
+        jump_top: jump
+          ? Math.round(jump.getBoundingClientRect().top + window.scrollY)
+          : null,
+        viewport: window.innerHeight,
+      };
+    })()
+    """
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_no_table_hides_its_own_tools_below_itself(
+            self, browser, report, width, height):
+        out = browser.measure(report, self._TOOLS, width, height)
+        assert out["tools"] > 0, "the report drew no table tools at all"
+        assert out["below"] == 0, (
+            f"{out['below']} of {out['tools']} tool strips start below "
+            f"their table at {width}x{height}")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_every_strip_stays_while_its_table_scrolls(
+            self, browser, report, width, height):
+        """Sticky *inside the table's own scroll box*, not fixed to the
+        viewport - so two tables never both claim the same strip."""
+        out = browser.measure(report, self._TOOLS, width, height)
+        assert out["sticky"] == out["tools"], (
+            f"{out['tools'] - out['sticky']} of {out['tools']} strips are "
+            f"not sticky at {width}x{height}")
+
+    def test_the_jump_box_is_on_the_first_screen(self, browser, report):
+        """`UX-284` item 3: it is the page's coarse navigation - the
+        control a reader reaches for *before* they know which section
+        they want - and it was below thirty-odd rail entries."""
+        out = browser.measure(report, self._TOOLS, 1440, 900)
+        assert out["jump_top"] is not None, "the report has no jump box"
+        assert out["jump_top"] < out["viewport"], (
+            f"the jump box starts at {out['jump_top']}px, below the "
+            f"{out['viewport']}px fold")
+
+
 class TestTheInstrumentSaysWhatItCannotSee:
     """The half `UX-257` insisted on: whichever instrument is chosen,
     it must name the claims it does not cover."""

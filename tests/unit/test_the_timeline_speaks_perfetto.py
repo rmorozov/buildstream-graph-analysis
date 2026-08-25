@@ -59,7 +59,11 @@ def _raw(processes=6, elements=2):
     for index in range(processes):
         element = f"work-{chr(ord('a') + index % elements)}.bst"
         pid = 101 + index
-        cmd = f"cc -c file{index}.c"
+        # A handful of command lines, repeated - which is what a build
+        # looks like, and what makes interning worth having. A fixture
+        # of all-distinct names cannot tell an interned table from one
+        # that redefines every name it meets.
+        cmd = f"cc -c part{index % 3}.c"
         start = 1000.0 + index * 0.1
         lines.append(f"START pid={pid} ppid=1 ts={start:.6f} "
                      f"element={element} cmd={cmd}\n")
@@ -365,12 +369,32 @@ class TestTheTraceSaysWhatTheCaptureSaw:
     def test_the_names_are_interned_once_each(self, rendered):
         """What makes a million slices of forty commands cost forty
         strings. Every slice resolves to a name, and no name is defined
-        twice."""
+        twice - which the fixture can only show because its command
+        lines repeat."""
         names = rendered["trace"]["names"]
         assert names, "nothing was interned"
         assert len(set(names.values())) == len(names), names
-        for entry in rendered["trace"]["slices"]:
+        slices = rendered["trace"]["slices"]
+        assert len(slices) > len(names), (
+            f"{len(slices)} slices over {len(names)} names - this fixture "
+            "does not repeat a name, so it cannot show interning at all")
+        for entry in slices:
             assert entry["name"], entry
+
+    def test_one_name_is_one_definition(self, tmp_path):
+        """Directly, on the writer: the same name twice is one entry in
+        the table and one iid on the wire."""
+        path = tmp_path / "interned.perfetto-trace.gz"
+        with trackevent.TrackEventWriter(str(path)) as writer:
+            lane = writer.process_track("lane", pid=1)
+            track = writer.thread_track("thread", parent=lane, pid=1, tid=2)
+            for index in range(6):
+                writer.slice_begin(index * 10, track, "cc -c a.c")
+                writer.slice_end(index * 10 + 5, track)
+        trace = decode(path)
+        assert list(trace["names"].values()) == ["cc -c a.c"], trace["names"]
+        assert len(trace["slices"]) == 6
+        assert {entry["name"] for entry in trace["slices"]} == {"cc -c a.c"}
 
     def test_the_sequence_declares_its_incremental_state(self, rendered):
         """Interned data is per packet sequence: the first packet says

@@ -86,7 +86,13 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # UX-205: the filters, thresholds and copy helpers.
           "tables.js",
           # UX-211: the view state that travels in the fragment.
-          "viewstate.js")
+          "viewstate.js",
+          # UX-286: the chapters the document is grouped into. Left out
+          # of this tuple the page 404s on the import and renders
+          # nothing at all - measured, in Chromium, on a served run -
+          # which is why the guard over this list now follows every
+          # import from each entry module rather than naming three.
+          "chapters.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured

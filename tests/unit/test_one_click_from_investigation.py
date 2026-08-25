@@ -15,6 +15,8 @@ import contextlib
 import io
 import json
 import os
+import pathlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -139,14 +141,40 @@ class TestSectionsAreNamedAsQuestions:
                 assert h["subtitle"], "a question heading keeps its key"
 
 
+def _chapters():
+    """The chapter table, read out of `chapters.js`.
+
+    Read rather than restated: a copy here would pass while the page
+    grouped by something else entirely, which is `UX-235`'s defect in a
+    different file."""
+    source = pathlib.Path("bga/viewer/chapters.js").read_text(encoding="utf-8")
+    table = source.split("export const CHAPTERS = [", 1)[1].split("\n];", 1)[0]
+    found = re.findall(r'id:\s*"([a-z]+)",\s*\n\s*title:\s*"([^"]+)"', table)
+    assert len(found) >= 6, f"read {found} out of chapters.js"
+    return found
+
+
+def _chapter_titles():
+    return [title for _, title in _chapters()] + ["Everything else"]
+
+
+def _chapter_ids():
+    return [key for key, _ in _chapters()] + ["more"]
+
+
 @needs_node
 class TestTheRailGroupsTheContents:
-    def test_the_toc_renders_groups_in_rail_order(self):
+    def test_the_toc_renders_groups_in_chapter_order(self):
+        """`UX-286` replaced the rail's five groups with the document's
+        own chapters. The claim is unchanged - the contents is grouped,
+        in a declared order - but it is now the *page's* grouping, so
+        the list and the document cannot describe different reports."""
         out = _render(_report())
         rails = out["toc_rails"]
         assert rails, "the contents has no groups"
-        order = [r for r in schemas.RAILS if r in rails]
-        assert rails == order, f"{rails} is not rail order"
+        titles = _chapter_titles()
+        order = [title for title in titles if title in rails]
+        assert rails == order, f"{rails} is not chapter order"
 
     def test_every_rendered_section_is_in_exactly_one_group(self):
         out = _render(_report())
@@ -155,12 +183,18 @@ class TestTheRailGroupsTheContents:
         assert set(linked) == set(out["sections"]), (
             "the contents and the page disagree about what was rendered")
 
-    def test_a_section_with_no_rail_lands_in_raw(self):
-        """Not nowhere - the acceptance names this case."""
+    def test_a_section_lands_in_a_chapter_and_never_nowhere(self):
+        """Not nowhere - the acceptance names this case. `UX-286` keeps
+        it and sharpens it: the fallback is no longer a bucket called
+        `raw` but the chapter the section's published `bga:rail` names,
+        and "Everything else" holds nothing on a real run."""
         out = _render(_report())
+        ids = _chapter_ids()
         by_key = {e["key"]: e["rail"] for e in out["toc_links"]}
-        for key, rail in by_key.items():
-            assert rail in schemas.RAILS, (key, rail)
+        for key, chapter in by_key.items():
+            assert chapter in ids, (key, chapter)
+            assert chapter != "more", (
+                f"{key} is in no chapter; it fell through to Everything else")
 
 
 @needs_node

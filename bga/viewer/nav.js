@@ -18,6 +18,10 @@ const COLLAPSED_KEY = "bga.collapsed";
 // section is in, this decides what order the groups appear.
 export const RAILS = ["decide", "act", "prove", "investigate", "raw"];
 
+// UX-286: and the chapters the rail lists, which are the document's
+// grouping rather than a second one written here.
+import { CHAPTERS, UNCHAPTERED, chapterFor } from "./chapters.js";
+
 /** The sections the page actually rendered, in document order. */
 export function sections(root) {
   return [...(root.querySelectorAll?.("section[data-section]") ?? [])];
@@ -225,27 +229,45 @@ export function toc(root, { document: doc, controls } = {}) {
   heading.textContent = "Sections";
   nav.append(heading);
 
-  // UX-209: grouped by rail - which part of the argument a section
-  // belongs to - rather than by payload key order. Still generated from
-  // what was actually rendered: a section with no declared rail lands
-  // in `raw`, never nowhere.
-  const grouped = new Map(RAILS.map((rail) => [rail, []]));
+  // UX-286: grouped by chapter - the question the reader has - rather
+  // than by payload key order or by the rail. `UX-209` grouped this
+  // list by `bga:rail` and the document by nothing, so the rail's five
+  // groups described an arrangement the page did not have: `decision`,
+  // `findings` and `summary` all landed under `raw`, because they are
+  // built by the page and no schema node declares their rail. The
+  // chapters are the document's own grouping, so the list and the page
+  // agree by construction.
+  //
+  // Still generated from what was actually rendered, and the rail is
+  // still what places a section the chapter table does not name.
+  const order = [...CHAPTERS, UNCHAPTERED];
+  const grouped = new Map(order.map((chapter) => [chapter.id, []]));
   for (const key of keys) {
     const section = root.querySelector?.(`[data-section="${key}"]`)
       ?? [...(root.children ?? [])].find(
         (n) => n.getAttribute?.("data-section") === key);
-    const rail = section?.getAttribute?.("data-rail");
-    grouped.get(RAILS.includes(rail) ? rail : "raw").push(key);
+    const id = section?.getAttribute?.("data-chapter")
+      ?? chapterFor(key, section?.getAttribute?.("data-rail"));
+    grouped.get(grouped.has(id) ? id : UNCHAPTERED.id).push(key);
   }
 
-  for (const rail of RAILS) {
-    const members = grouped.get(rail);
+  for (const chapter of order) {
+    const members = grouped.get(chapter.id);
     if (!members.length) continue;
     const groupName = doc.createElement("p");
     groupName.className = "toc-rail";
-    groupName.setAttribute("data-rail", rail);
-    groupName.textContent = rail;
+    groupName.setAttribute("data-rail", chapter.id);
+    groupName.setAttribute("data-chapter", chapter.id);
+    // UX-286 item 2: navigation moves chapter to chapter, so the
+    // chapter's own name is the link to it - a reader who wants the
+    // next question does not have to aim at its first section.
+    const jump = doc.createElement("a");
+    jump.href = `#chapter-${chapter.id}`;
+    jump.setAttribute("data-toc-chapter", chapter.id);
+    jump.textContent = chapter.title;
+    groupName.append(jump);
     nav.append(groupName);
+    const rail = chapter.id;
     const list = doc.createElement("ul");
     // UX-254: the rail this list belongs to, so the stylesheet can
     // bound the one group that grows with the run (`investigate` is

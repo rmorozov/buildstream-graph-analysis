@@ -177,7 +177,7 @@ body[data-has-toc] > .toc a {
 /* The one group that grows with the run. Bounded here rather than
    truncated in JS: every link stays reachable, and the rail's own
    scroll is what absorbs the length. */
-body[data-has-toc] > .toc ul[data-rail="investigate"] {
+body[data-has-toc] > .toc ul[data-rail="elements"] {
   max-height: 12rem; overflow-y: auto;
 }
 .toc a { font-size: .88rem; text-decoration: none; }
@@ -203,8 +203,28 @@ button.collapse:hover { color: var(--fg); }
   border: 1px solid var(--line); border-radius: 3px; padding: .1rem .45rem;
 }
 
-/* Collapsed sections keep their heading; everything below it goes. */
-section[data-collapsed="true"] > *:not(h2) { display: none; }
+/* UX-286: the chapters. A rule, a name and the space a heading earns -
+   the grouping has to be visible to be navigation, and it must not cost
+   height: `.chapter` adds one heading per chapter and no padding, which
+   is the whole argument Direction 13 makes against a fixed-height
+   grid. */
+section.chapter { margin: 1.35rem 0 0; }
+section.chapter:first-of-type { margin-top: 0; }
+h2.chapter-title {
+  font-size: 1.3rem; margin: 0; padding-top: .5rem;
+  border-top: 2px solid var(--line);
+}
+/* Inside a chapter the sections need less air between them than they
+   did when nothing grouped them - the chapter boundary carries that
+   separation now. Measured: this pays for the seven chapter headings
+   and leaves the document shorter than it was, which is the acceptance
+   test's third clause. */
+section.chapter > section > h2 { margin-top: .9rem; }
+
+/* Collapsed sections keep their heading; everything below it goes.
+   Scoped to a section that names itself, so a chapter - which is also a
+   `section` - never hides the sections inside it. */
+section[data-section][data-collapsed="true"] > *:not(h2) { display: none; }
 section[data-jumped="true"], [data-jumped="true"] {
   outline: 2px solid var(--accent); outline-offset: 3px;
 }
@@ -399,8 +419,8 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
    what they are not looking at, and the document underneath stays
    byte-identical so Ctrl-F and the export remain honest. */
 [data-dimmed="true"] { opacity: 0.32; }
-section[data-unfocused="true"] > *:not(h2) { display: none; }
-section[data-unfocused="true"] > h2 { opacity: 0.32; }
+section[data-section][data-unfocused="true"] > *:not(h2) { display: none; }
+section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
 .focus-bar, .mark-summary {
   margin: 0 0 0.5rem;
   padding: 0.3rem 0.6rem;

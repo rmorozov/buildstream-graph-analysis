@@ -72,7 +72,25 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # `UX-287` was filed about. The page budget did *not* redden - it had
 # 612 B left - and the totals did, which is the split working: source
 # growth shows in every total and cannot hide behind content.
-PAGE_BUDGET_B = 180_000
+#
+# **Round 41 moved the page bound**, and this is the first time it has
+# moved since the split was drawn - which is what it is for. `UX-302`
+# added two viewer modules (`shapes.js`, the style guide's §1 dispatch
+# table as code; `rawjson.js`, the per-section "view as JSON" toggle)
+# and the CSS for the toggle: modules 158,365 -> 163,177 (+4,812),
+# stylesheet 17,428 -> 17,995 (+567). Measured either side of the
+# change, on the committed runs:
+#
+#   page          177,624 -> 183,006 B   (+5,382, all source)
+#   golden        274,979 -> 280,294 B   (+5,315)
+#   macro_micro   314,158 -> 319,473 B   (+5,315)
+#
+# The page moved by what the source moved by, on both runs, which is
+# the split doing its job: nothing here is content growth wearing a
+# page's clothes. The guard below measures the page on its own
+# synthetic snapshot, which reads 183,063 - 57 B more than the
+# committed runs, and predates this item.
+PAGE_BUDGET_B = 186_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -80,7 +98,10 @@ COMMITTED_EXPORTS = [
     # whether this file inlines the trace and whether the served page
     # copies it through itself. A number the page must not keep a second
     # copy of, so it travels in the payload.
-    ("golden", GOLDEN, 276_000),                       #  274,917 B
+    # `UX-302` moved both again, by 5,315 B: the §1 dispatch table and
+    # the "view as JSON" toggle are two new modules and their styles.
+    # Source, not content - see the split above.
+    ("golden", GOLDEN, 282_000),                       #  280,294 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -92,7 +113,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 316_000),             #  314,096 B
+    ("macro_micro", MACRO_MICRO, 322_000),             #  319,473 B
 ]
 
 
@@ -433,11 +454,11 @@ class TestTheSizeDiscipline:
 
         ```text
         run             elements     bytes      data   modules     css   other
-        golden                 4   261,604    90,216   152,424  17,135   1,829
-        macro_micro           11   299,695   128,307   152,424  17,135   1,829
+        golden                 4   280,294    97,288   163,177  17,995   1,891
+        macro_micro           11   319,473   136,467   163,177  17,995   1,891
         ```
 
-        The page is **171,388 B on every run**. That is the number a
+        The page is **183,006 B on every run**. That is the number a
         ceiling can honestly guard: it grows when *source* grows, and no
         amount of content can mask it. The totals below guard the other
         half, per fixture - so content can no longer hide behind the

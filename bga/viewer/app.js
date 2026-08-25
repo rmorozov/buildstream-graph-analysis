@@ -22,6 +22,10 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { chapters, fileInChapter } from "./chapters.js";
+// UX-302: the second of §1's two deliberate raw-JSON sites - the one
+// the reader asks for, per section, because pasting a section into an
+// issue is what people do with a report.
+import { jsonToggles, recordSource } from "./rawjson.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
@@ -30,6 +34,12 @@ import { investigationFor } from "./trace_context.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, applyTopN, presetColumns, applyPreset,
          rowsMarkdown } from "./tables.js";
+
+// UX-302: the style guide's §1 dispatch table, which decides *which*
+// control draws a structured value. The controls live here; the choice
+// between them lives there, so that "raw JSON unless deliberate" is a
+// rule with one enforcement point rather than a habit.
+import { CONTROLS, UNMAPPED, classify, noteUnmapped } from "./shapes.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -377,10 +387,6 @@ export const ARRAY_INLINE_ITEMS = 6;
 // which is what `renderText` already does for a long string.
 export const CELL_NEST_LIMIT = 2;
 
-function isScalar(value) {
-  return value === null || typeof value !== "object";
-}
-
 /** `{k: v}` as one line - no click, because there is nothing to hide. */
 function inlineObject(value, node) {
   const parts = [];
@@ -438,18 +444,33 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   const count = Array.isArray(value)
     ? value.length : Object.keys(value).length;
   if (!count) return el("span", { class: "muted" }, "none");
+  // `UX-302`: one dispatch, and it is the style guide's table. Every
+  // branch below is a row of §1 - the branch is *chosen* there and
+  // *drawn* here, so a shape the guide does not cover cannot quietly
+  // acquire a rendering by someone adding an `if` to this function.
+  const control = classify(value, {
+    columns: hintsOf(node)[COLUMNS] ?? null,
+    depth, nestLimit: CELL_NEST_LIMIT,
+    inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
+  });
   // `UX-277`: past the nesting limit a value is folded as text rather
   // than as a third table. Deliberately *not* silent - the fold carries
   // the label and the count, so the reader knows what is behind it.
-  if (depth >= CELL_NEST_LIMIT) {
+  //
+  // `UX-302` adds the second way in: a shape §1 has no row for. It gets
+  // the same fold - the reader is never shown nothing - and a console
+  // warning naming the path, because the gap is a design task and an
+  // unnoticed one stays open.
+  if (control === CONTROLS.FOLD || control === UNMAPPED) {
+    if (control === UNMAPPED) noteUnmapped(path, value);
     return folded(title(key), count,
                   el("p", { class: "full-text" }, JSON.stringify(value)));
   }
   if (Array.isArray(value)) {
-    if (value.every(isScalar)) {
-      if (value.length <= ARRAY_INLINE_ITEMS) {
-        return el("span", {}, value.map(String).join(", "));
-      }
+    if (control === CONTROLS.INLINE_LIST) {
+      return el("span", {}, value.map(String).join(", "));
+    }
+    if (control === CONTROLS.FOLDED_LIST) {
       const rows = value.map((item, at) => ({ key: String(at), value: item }));
       return folded(title(key), value.length,
                     mapTable(key, rows, hint, node, false, depth + 1, path));
@@ -473,22 +494,25 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       && Array.isArray(declared)
       && value.every((item) => item.length === declared.length)
       && declared.every((spec) => spec && typeof spec === "object" && spec.key);
+    //
+    // `UX-302`: three cases, not four. A *mixed* array - some objects,
+    // some scalars - used to fall through here and get one row shape
+    // per item; §1 has no row for it, so `classify` now returns
+    // `UNMAPPED` and it is folded above, with a warning, rather than
+    // improvised into a ragged table.
     const rows = value.map((item, at) => (
       tuple
         ? Object.fromEntries(item.map((m, i) => [declared[i].key, m]))
         : Array.isArray(item)
           ? Object.fromEntries([["key", String(at)],
                                 ...item.map((m, i) => [`#${i + 1}`, m])])
-          : (item && typeof item === "object") ? item : { key: String(at), value: item }));
+          : item));
     return folded(title(key), value.length,
                   mapTable(key, rows, tuple ? { ...hint, [COLUMNS]: declared } : hint,
                            node, true, depth + 1, path));
   }
   const entries = Object.entries(value);
-  if (entries.length <= OBJECT_INLINE_FIELDS
-      && entries.every(([, member]) => isScalar(member))) {
-    return inlineObject(value, node);
-  }
+  if (control === CONTROLS.INLINE_OBJECT) return inlineObject(value, node);
   const nested = entries.every(([, member]) =>
     member && typeof member === "object" && !Array.isArray(member));
   const rows = entries.map(([name, member]) => (
@@ -1225,13 +1249,33 @@ export function renderSection(key, value, hint = {}, node = undefined,
   }
   if (Array.isArray(value)) {
     if (!value.length) return null;
-    if (value.every((item) => item && typeof item === "object" && !Array.isArray(item))) {
+    // `UX-302`: §1 again, at section level. Three of its rows reach
+    // here and each gets its own control; the fourth outcome is a shape
+    // §1 does not name, and `renderStructured` folds and warns.
+    //
+    // The branch this replaces was `value.join(", ")` for *everything*
+    // that was not an array of objects - which is right for a short
+    // scalar array, unbounded for a long one, and for an array holding
+    // an object renders `[object Object]`: strictly less than the JSON
+    // it was meant to be better than (`UX-277` found the same leaf in a
+    // table cell).
+    const control = classify(value, {
+      severity: Boolean(hint[SEVERITY]),
+      columns: hintsOf(node)[COLUMNS] ?? null,
+      nestLimit: CELL_NEST_LIMIT,
+      inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
+    });
+    if (control === CONTROLS.TABLE
+        && value.every((item) => item && typeof item === "object"
+                                 && !Array.isArray(item))) {
       return renderTable(key, value, hint, node);
     }
+    const body = control === CONTROLS.INLINE_LIST
+      ? el("p", {}, el("code", {}, value.join(", ")))
+      : renderStructured(key, value, hint, node, 0, key);
     return el("section", { "data-section": key,
                            "data-rail": heading(key, hint).rail },
-                          sectionHead(key, hint),
-              el("p", {}, el("code", {}, value.join(", "))));
+                          sectionHead(key, hint), body);
   }
   if (typeof value === "object") {
     return Object.keys(value).length
@@ -1335,7 +1379,13 @@ export function render(payload, schema, root, investigate = null) {
     if (key === "schema") continue;
     const section = renderSection(key, value, hints[key] ?? {}, nodes[key],
                                   investigate, payload);
-    if (section) root.append(section);
+    // `UX-302`: what this section was rendered *from*, so the "view as
+    // JSON" toggle has a published value to show rather than a
+    // re-serialisation of the DOM. Only the schema-driven sections get
+    // one; a section the page composes from several places has no
+    // single payload slice, and gets no toggle rather than a misleading
+    // one.
+    if (section) root.append(recordSource(section, value));
     // UX-270: the run's most important list, immediately after the
     // section it used to be a row of. `UX-262` bounded its rows and
     // `UX-208` gave it a badge; this only moves it.
@@ -1345,7 +1395,11 @@ export function render(payload, schema, root, investigate = null) {
     }
   }
   const summary = renderSummary(payload, hints);
-  if (summary) root.append(summary);
+  if (summary) {
+    root.append(recordSource(summary, Object.fromEntries(
+      Object.entries(payload).filter(
+        ([, value]) => value === null || typeof value !== "object"))));
+  }
   root.setAttribute("aria-busy", "false");
   return root;
 }
@@ -1888,6 +1942,9 @@ async function boot() {
     // above changes; a reader who ignores all of it sees the same
     // report in the same order.
     anchor(root);
+    // UX-302: before `collapsible`, so the collapse caret ends up first
+    // in the heading - `collapsible` prepends and this appends.
+    jsonToggles(root, { document });
     const controls = collapsible(root, {
       document, storage: served() ? safeStorage() : null });
     const contents = toc(root, { document, controls });

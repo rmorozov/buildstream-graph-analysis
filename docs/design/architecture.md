@@ -639,6 +639,24 @@ how it is *read*, and the shape is deliberately small.
   argument, and what the page looked like before the rule, is
   [Direction 12](directions.md#direction-12-the-report-is-read-not-decoded-argued-2026-08-24-round-35).
 
+- **The mapping is law** (`UX-302`, round 41). The rule above is now a
+  table — round 41's style guide
+  ([`styleguide.md` §1](styleguide.md)) maps published shape (+ hint)
+  to the one control that may render it — and
+  `bga/viewer/shapes.js` is that table as code. `classify()` returns a
+  control's name; every render path asks it rather than testing shapes
+  itself, so "which control draws this" has one answer and one place to
+  read it. **Raw JSON on the page is a defect unless it is
+  deliberate**, and there are exactly two deliberate sites: `UX-277`'s
+  labelled fold, and the per-section **"view as JSON" toggle**
+  (`bga/viewer/rawjson.js`) that a reader opens to paste a section into
+  an issue — which works in the export, because that is who needs it. A
+  shape the table does not cover renders as the fold *and* warns on the
+  console naming the payload path: the gap is a design task, not an
+  improvisation. `tests/unit/test_the_mapping_is_law.py` boots the real
+  pages and walks every text node for JSON-shaped content outside those
+  two.
+
 - **`--export`** inlines every served document and every module into one
   self-contained HTML file. What cannot survive that - a live search
   box, anything needing a server - is *hidden with the command that

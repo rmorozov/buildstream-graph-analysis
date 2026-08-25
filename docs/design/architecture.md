@@ -546,7 +546,16 @@ how it is *read*, and the shape is deliberately small.
   baseline's `run-context.json` instead of re-analysing it; and the
   timeline is *offered* from a file test and rendered at the first
   request for its bytes, into a file the handler streams in fixed
-  chunks. Measured on a generated 247 MB report of a million process
+  chunks - and that file is **Perfetto's own format** (`UX-298`):
+  protobuf TrackEvent, gzipped by the writer as the packets are
+  emitted, so the render is the served file and nothing passes over it
+  twice. A `Trace` is `repeated TracePacket`, which is why it can be
+  written that way at all; the legacy Chrome JSON stays behind
+  `bga timeline --format chrome` for `chrome://tracing`. There is no
+  protobuf dependency - the wire format is varints and
+  length-delimited fields, and every field number is pinned to
+  upstream's own `.proto` by a committed fixture, because a wrong
+  number is silent. Measured on a generated 247 MB report of a million process
   records: 17.04 s and 1232.9 MB to reach the socket, against 0.04 s
   and 39.5 MB after - and viewing a 2 MB run *beside* it cost 1233.5 MB
   before and 39.8 MB after, because the aggregate used to walk into its
@@ -712,6 +721,12 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-25 (after `UX-298`), re-grounded in
+`tools/native_trace/trackevent.py`'s pinned field numbers against
+`tests/fixtures/perfetto_field_numbers.json`, and in `bga timeline`'s
+own `--format` help: the viewer axis now says which trace format the
+handoff carries, which it could not before there was a choice.
 
 Updated 2026-08-25 (after `UX-296`), re-grounded in `tools/bga_view.py`'s
 `serve`/`payloads` as they now stand, `bga/store_aggregate.py`'s row

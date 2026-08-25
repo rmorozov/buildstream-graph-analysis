@@ -139,6 +139,20 @@ export function makeNode(tag) {
       this._value = String(value);
       if (this.tagName === "option") this.attrs.value = this._value;
     },
+    // `title` reflects like `href` and `id` do - measured in the same
+    // Chromium, on a `<th>` built the way `columnSpecs` builds one:
+    //
+    //   th.title = "How many wait on it"  ->  getAttribute("title")  same
+    //
+    // Found by `UX-290`: the schema's own sentence is the column's
+    // tooltip, and a guard reading it off the attribute found nothing
+    // while a browser had it.
+    _title: "",
+    get title() { return this._title; },
+    set title(value) {
+      this._title = String(value);
+      this.attrs.title = this._title;
+    },
     _parent: null,
     parentElement: null,
     parentNode: null,

@@ -938,7 +938,118 @@ _ANALYZE_HINTS = {
         },
     },
     "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},
-    "structural": {QUESTION: 'What shape is this dependency graph?', RAIL: 'investigate'},
+    "structural": {
+        QUESTION: 'What shape is this dependency graph?',
+        RAIL: 'investigate',
+        "properties": {
+            "bottleneck": {
+                "description": "Where work funnels through one element, "
+                               "and how much waits behind it.",
+                "properties": {
+                    # UX-283: the choke points are an element table like
+                    # any other, so they earn the Inspect route and the
+                    # sort every other element table has. Before this
+                    # the whole `structural` section carried **zero**
+                    # links out of it, measured on the 1,202-element run.
+                    "choke_points": {
+                        "description": "Elements every other element is "
+                                       "either upstream or downstream of - "
+                                       "the graph's waists, ranked by how "
+                                       "much waits on them.",
+                        COLUMNS: [
+                            {"key": "element_uid", "title": "Element",
+                             "role": "element", "sortable": True},
+                            {"key": "downstream_count",
+                             "title": "Waiting on it",
+                             QUANTITY: "count", "sortable": True,
+                             "description": "How many elements are "
+                                            "downstream of this one, and "
+                                            "so cannot start until it "
+                                            "finishes."},
+                        ]},
+                    # UX-290: a tuple is described by naming its members
+                    # in order. `bga:columns` already says what an array
+                    # of *objects* holds; for an array of pairs, entry
+                    # `i` describes position `i`. Before this the page
+                    # drew them as `#1` and `#2`, which is honest about
+                    # being a position and says nothing about the
+                    # measure.
+                    "high_fanin_elements": {
+                        "description": "Elements many others depend on "
+                                       "directly, with how many.",
+                        COLUMNS: [
+                            {"key": "element_uid", "title": "Element",
+                             "role": "element", "sortable": True},
+                            {"key": "fan_in", "title": "Direct dependents",
+                             QUANTITY: "count", "sortable": True,
+                             "description": "Elements naming this one as "
+                                            "a dependency - an in-degree, "
+                                            "not a transitive count."},
+                        ]},
+                    "high_fanout_elements": {
+                        "description": "Elements that depend on many "
+                                       "others directly, with how many.",
+                        COLUMNS: [
+                            {"key": "element_uid", "title": "Element",
+                             "role": "element", "sortable": True},
+                            {"key": "fan_out", "title": "Direct dependencies",
+                             QUANTITY: "count", "sortable": True,
+                             "description": "Dependencies this element "
+                                            "names - an out-degree, not a "
+                                            "transitive count."},
+                        ]},
+                }},
+            "sensitivity": {
+                "properties": {
+                    "top_opportunities": {
+                        "description": "Elements whose duration the "
+                                       "makespan is most sensitive to.",
+                        COLUMNS: [
+                            {"key": "element_uid", "title": "Element",
+                             "role": "element", "sortable": True},
+                            {"key": "sensitivity", "title": "Sensitivity",
+                             QUANTITY: "share", "sortable": True,
+                             "description": "How much of the makespan "
+                                            "moves per unit this element "
+                                            "moves."},
+                            {"key": "saving_s", "title": "Worth fixing",
+                             QUANTITY: "seconds", "sortable": True,
+                             "description": "What the makespan would drop "
+                                            "by, in seconds, if this "
+                                            "element cost nothing."},
+                        ]},
+                }},
+            "serialization_point_risks": {
+                "items": {"properties": {
+                    "pinned_elements": {
+                        "description": "The elements pinned at this "
+                                       "serialization point, and what each "
+                                       "one was pinned to.",
+                        COLUMNS: [
+                            {"key": "element_uid", "title": "Element",
+                             "role": "element", "sortable": True},
+                            {"key": "max_jobs", "title": "Native jobs",
+                             QUANTITY: "count", "sortable": True,
+                             "description": "The parallelism this "
+                                            "element's own build system "
+                                            "was allowed."},
+                            {"key": "duration_us", "title": "Duration",
+                             QUANTITY: "duration_us", "sortable": True},
+                        ]},
+                }}},
+            "batch_opportunities": {
+                "properties": {
+                    "serialized_pairs": {
+                        "description": "Pairs that ran one after the other "
+                                       "with nothing forcing the order.",
+                        COLUMNS: [
+                            {"key": "first", "title": "Ran first",
+                             "role": "element", "sortable": True},
+                            {"key": "then", "title": "Ran after it",
+                             "role": "element", "sortable": True},
+                        ]},
+                }},
+        }},
     "occupancy": {
         QUESTION: 'Were the builders busy?',
         RAIL: 'prove',

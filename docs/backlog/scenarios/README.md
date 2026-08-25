@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-292 scenarios: **15 open**, 277 closed.
+292 scenarios: **12 open**, 280 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
-| contracts | 3 | 33 |
-| viewer | 9 | 65 |
+| contracts | 2 | 33 |
+| viewer | 7 | 65 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
@@ -40,16 +40,13 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 | UX-275 | [the capacity recommendation is text-only](UX-0275-the-capacity-recommendation-is-text-only.md) | contracts | Medium | R5, R7 | 🔴 |
-| UX-278 | [the magnifier opens nothing for most elements](UX-0278-the-magnifier-opens-nothing-for-most-elements.md) | viewer | High | R1, R7 | 🔴 |
 | UX-279 | [forty-three copy controls, and no way to know what they copy](UX-0279-forty-three-copy-controls-and-no-way-to-know-what-they-copy.md) | viewer | Medium | R8 | 🔴 |
 | UX-280 | [copy as markdown](UX-0280-copy-as-markdown.md) | viewer | Medium | R8 | 🔴 |
 | UX-281 | [the satellite pages are dead ends](UX-0281-the-satellite-pages-are-dead-ends.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-282 | [the Perfetto fallback is below the button that fails](UX-0282-the-perfetto-fallback-is-below-the-button-that-fails.md) | viewer | Low | R7 | 🔴 |
-| UX-283 | [the bottleneck view names elements you cannot reach](UX-0283-the-bottleneck-view-names-elements-you-cannot-reach.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-284 | [the table tools are below the table, and scroll away](UX-0284-the-table-tools-are-below-the-table-and-scroll-away.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-285 | [the identity blocks are split, and the blast box is last](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-286 | [the report is forty-eight fragments with no chapters](UX-0286-the-report-is-forty-eight-fragments-with-no-chapters.md) | viewer | High | R1, R7 | 🔴 |
-| UX-290 | [the schema does not describe its tuples](UX-0290-the-schema-does-not-describe-its-tuples.md) | contracts | Medium | R7, R8 | 🔴 |
 | UX-291 | [a finding carries its numbers three times](UX-0291-a-finding-carries-its-numbers-three-times.md) | contracts | Low | R5, R7 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)

@@ -1479,6 +1479,33 @@ export function elementAnchor(uid) {
 }
 
 /**
+ * The uid an anchor was spelled from, or `null`.
+ *
+ * `elementAnchor` is lossy - `layer00/mod051.bst` and
+ * `layer00-mod051-bst` sanitise alike - so the way back is to ask which
+ * uid the payload names that spells to this anchor, rather than to try
+ * to invert the spelling. Every uid the run has is a key of
+ * `element_durations`, with the other element-keyed maps as the
+ * fallback for a run that carries no durations.
+ */
+export function uidForAnchor(payload, id) {
+  if (!id || !String(id).startsWith("element-")) return null;
+  const seen = new Set();
+  const maps = ["signals.element_durations", "signals.blast_radius",
+                "signals.criticality_probability",
+                "signals.leaf_analysis.leaves_detail"];
+  for (const path of maps) {
+    const map = path.split(".").reduce((node, key) => node?.[key], payload);
+    for (const uid of Object.keys(map ?? {})) {
+      if (seen.has(uid)) continue;
+      seen.add(uid);
+      if (elementAnchor(uid) === id) return uid;
+    }
+  }
+  return null;
+}
+
+/**
  * Everything the payload says about each element it discusses.
  *
  * Published fields only, and no arithmetic: a value that is not in the
@@ -1596,6 +1623,112 @@ export function elementFacts(payload) {
     }
   }
   return facts;
+}
+
+
+// UX-278: what the payload knows about an element the ranked sources
+// above never mention.
+//
+// `SOURCES` is the report's own ranking - what the decision named, the
+// path, the horizon - so it covers the elements the report *discusses*.
+// A reader who clicks Inspect on a choke point, a leaf, or row 900 of
+// the element table is asking about an element the ranking never
+// reached. Measured on the 1,202-element run before this landed: 24
+// detail blocks for 1,202 elements, and two Inspect anchors that
+// resolved to nothing at all.
+//
+// These are the element-keyed maps every run carries. Declared the same
+// way `SOURCES` is - published path, field, label, quantity - so adding
+// one is a line and no new code, and nothing here derives: a value that
+// is not in the document does not appear.
+const ELEMENT_MAPS = [
+  ["signals.element_durations", null, "Duration", "duration_us"],
+  ["signals.slack", null, "Slack", "duration_us"],
+  ["signals.downstream_count", null, "Rebuilds", "count"],
+  ["signals.unweighted_depth", null, "Depth", "count"],
+  ["signals.blast_radius", "weighted_duration_us", "Blast radius", "duration_us"],
+  ["signals.blast_radius", "risk_score", "Risk score", "count"],
+  ["signals.blast_radius", "element_kind", "Kind", null],
+  ["signals.blast_radius", "is_leaf", "Is a leaf", null],
+  ["signals.criticality_probability", "probability", "On the path", "share"],
+  ["signals.criticality_probability", "observed_critical", "Observed critical", null],
+  ["signals.leaf_analysis.leaves_detail", "deferral_risk", "Deferral risk", null],
+  ["signals.leaf_analysis.leaves_detail", "is_potentially_deferrable",
+   "Could be deferred", null],
+];
+
+/**
+ * One element's record, whether or not the report's ranking reached it.
+ *
+ * Returns a record with no rows when the run says nothing about this
+ * element - which is a different answer from "there is no such
+ * element", and the section built from it says so rather than being
+ * absent.
+ */
+export function elementFactsFor(payload, uid) {
+  const known = elementFacts(payload).get(uid);
+  if (known) return known;
+  const record = { element: uid, rows: [], findings: [], entering: [],
+                   onDemand: true };
+  for (const [path, field, label, kind] of ELEMENT_MAPS) {
+    const map = path.split(".").reduce((node, key) => node?.[key], payload);
+    const held = map?.[uid];
+    if (held === null || held === undefined) continue;
+    const value = field === null ? held : held?.[field];
+    if (value === null || value === undefined) continue;
+    record.rows.push({
+      label, value, kind, field: field ?? path.split(".").pop(),
+      // The same walk-back grammar `UX-227` established, and a uid
+      // contains dots - so the bracket form, which `resolvePath` reads
+      // as a key on an object.
+      path: `${path}[${uid}]${field === null ? "" : `.${field}`}`,
+    });
+  }
+  for (const finding of payload?.findings ?? []) {
+    if ((finding.elements ?? []).includes(uid)) record.findings.push(finding);
+  }
+  return record;
+}
+
+/**
+ * The detail section for `uid`, built on demand if the cap excluded it.
+ *
+ * Idempotent: an element that already has a section keeps the one it
+ * has, so following the same anchor twice is not two blocks. Appended
+ * at the end of the report, where every other element section is.
+ */
+export function ensureElementSection(payload, root, uid, options = {}) {
+  if (!uid || !root) return null;
+  const id = elementAnchor(uid);
+  const existing = root.querySelector?.(`[data-section="${id}"]`)
+    ?? root.querySelector?.(`#${id}`);
+  if (existing) return existing;
+  const { investigate = null, quantity: format = (v) => String(v) } = options;
+  const record = elementFactsFor(payload, uid);
+  const places = new Set();
+  for (const node of root.querySelectorAll?.("[data-element]") ?? []) {
+    if (node.getAttribute("data-element") !== uid) continue;
+    let owner = node.parentNode;
+    while (owner && !owner.getAttribute?.("data-section")) {
+      owner = owner.parentNode;
+    }
+    const key = owner?.getAttribute?.("data-section");
+    if (key && !key.startsWith("element-")) places.add(key);
+  }
+  const section = elementSection(record, places, investigate, format);
+  section.setAttribute("data-on-demand", "true");
+  if (!record.rows.length && !record.findings.length) {
+    // UX-278 item 2: an anchor that resolves to a block saying the run
+    // knows nothing about this element, rather than to nothing at all.
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.setAttribute("data-empty-element", uid);
+    note.textContent =
+      "This run names this element but records no measurements for it.";
+    section.append(note);
+  }
+  root.append(section);
+  return section;
 }
 
 // The report's own ranking decides the order: what the decision named

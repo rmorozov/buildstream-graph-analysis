@@ -587,7 +587,7 @@ Every machine-readable output declares its own shape as its **first
 key**:
 
 ```bash
-bga analyze RUN/ --format json | head -2      # "schema": "analyze/v1"
+bga analyze RUN/ --format json | head -2      # "schema": "analyze/v2"
 bga compare A B --format json                 # "schema": "compare/v1"
 bga blast TARGET --format json                # "schema": "blast/v1"
 bga correlate RUN/ --format json              # "schema": "correlate/v1"
@@ -602,11 +602,11 @@ bga compare --schema | jq '.required'
 ```
 
 **The versioning rule**: a field rename or removal bumps the version; an
-addition does not. Pin `analyze/v1` and your consumer keeps working
+addition does not. Pin `analyze/v2` and your consumer keeps working
 while the tool grows.
 
 A section subcommand (`bga floors`, `bga graph`, …) emits the same
-`analyze/v1` document restricted to its own keys, with a `section` key
+`analyze/v2` document restricted to its own keys, with a `section` key
 naming the restriction — so a missing key can be told from a removed
 one.
 
@@ -651,7 +651,7 @@ Three rules decide what it will and will not say:
   producer stamp counted separately as an explicit unknown. Unlike a
   host class, two contract sets are not two populations: what decides
   whether runs can be pooled is movement in the contracts this document
-  *reads* (`analyze/v1`, `store/v1`), never the package version — the
+  *reads* (`analyze/v2`, `store/v1`), never the package version — the
   rule `bga compare` already applies to a pair.
 
 Percentiles are **nearest-rank**: for `n` sorted samples, `p` is the
@@ -757,7 +757,7 @@ claim:
 - `document` — which schema the paths walk. Load-bearing when a record
   travels: `bga compare --format json` carries the candidate run's
   chain at `candidate_diagnosis`, and its paths resolve against that
-  run's `analyze/v1`, not against the comparison.
+  run's `analyze/v2`, not against the comparison.
 
 A top action's provenance is a **pointer** (`see`) at the finding's
 record, because the action is already a reference to that finding.
@@ -841,7 +841,7 @@ answered.
 array, a table with these columns — and renders from that. Two things
 follow, and both are deliberate:
 
-- A field added to `analyze/v1` appears in the viewer with **no change
+- A field added to `analyze/v2` appears in the viewer with **no change
   to the viewer**.
 - Anything the viewer should show has to enter the published schema
   first, where `--format json`, CI and every external consumer get it
@@ -899,7 +899,7 @@ Above the sections, two things a list of tables could not say:
 
 **Every number in both is read from a published field.** Nothing is
 computed in the browser; the one division in the waterfall is a CSS
-width. A gap the JSON does not carry enters `analyze/v1` first, where
+width. A gap the JSON does not carry enters `analyze/v2` first, where
 `--format json`, CI and every other consumer get it too — which is why
 `confidence.band`, `run_instance.incomplete_reason` and
 `plane2_coverage` are fields rather than viewer logic.
@@ -915,7 +915,7 @@ export does not have one.
 ### What the page opens with (`UX-207`)
 
 The first screen is a **decision**, and everything below it is the
-evidence for that decision. `analyze/v1` publishes a `headline` block —
+evidence for that decision. `analyze/v2` publishes a `headline` block —
 the diagnosis (`chain_bound`, `scheduler_bound` or `inconclusive`), the
 ratio it was decided by, what the opportunity is worth, and the three
 elements to look at first, each pointing at the finding that reasons
@@ -1426,7 +1426,7 @@ build into swap, which is why the two are computed together and the
 binding one is named.
 
 **Where it appears.** In the text report, under the headline. It is
-**not** a key of `analyze/v1` — `bga analyze -f json` does not carry it
+**not** a key of `analyze/v2` — `bga analyze -f json` does not carry it
 (`UX-275`).
 
 ### The memory envelope (`UX-104`)

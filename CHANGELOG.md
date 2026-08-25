@@ -13,7 +13,7 @@ Two things a reader should know before using the numbers:
 
 - **The package version is provenance, not compatibility.** It says
   which build wrote an artifact. What decides whether your parser still
-  works is the *contract* version — `analyze/v1` — and those move
+  works is the *contract* version — `analyze/v2` — and those move
   independently. A release that bumps the package while every contract
   stays put has broken nothing you pin.
 - **Pre-1.0, `breaking` and `extending` both move MINOR**, so the row

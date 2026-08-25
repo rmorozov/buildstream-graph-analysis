@@ -556,8 +556,24 @@ how it is *read*, and the shape is deliberately small.
   modules with no build step and no framework. Sections, columns, units
   and hover text come from the *view-hints* the published schemas carry
   (`bga:quantity`, `bga:question`, `bga:columns`, `bga:rail`,
-  `bga:markers`, ...), so a field that gains a description in
-  `bga/schemas.py` gains a tooltip in the page with no page edit.
+  `bga:markers`, `bga:presets`, ...), so a field that gains a
+  description in `bga/schemas.py` gains a tooltip in the page with no
+  page edit.
+- **A view is a named filter over one table, declared not coded**
+  (`bga:presets`, `UX-289`, round 38). One element table serving every
+  question carried 13 columns on the 1,202-element run, and the
+  questions readers actually arrive with were answered by other tables
+  the payload published separately. A preset names one question and the
+  four to six columns that answer it — `{name, question, from|where,
+  columns, sort, bound}` — and every population is a **filter over a
+  published field**: `from` reads a selection the payload publishes once
+  and takes its order from it, `where` tests a column the element
+  records carry. Nothing computes a membership the payload does not
+  have, which is why `UX-288` came first. The preset travels in
+  `UX-211`'s fragment and is named in the rail, so a view is a link.
+  `PRESET_COLUMNS_MAX` bounds a view at eight columns and the schema
+  validator refuses a wider one: a table that needs more than that to
+  answer one question is not a view of the data, it is the data.
 - **A value is drawn by width, not depth** (`UX-267`, round
   36). The hints above decide what a field is *called* and where it
   sits; this decides what happens to its **value**, and it applies to

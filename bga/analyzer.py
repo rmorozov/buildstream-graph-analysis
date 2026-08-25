@@ -2322,9 +2322,26 @@ class BuildEfficiencyAnalyzer:
             )
             serialization_point_risks = [
                 {
-                    'elements': risk.elements,
-                    'element_max_jobs': risk.element_max_jobs,
-                    'element_duration_us': risk.element_duration_us,
+                    # UX-289: one record per element, not a list plus two
+                    # maps keyed by it. The three carried the same
+                    # membership three ways - `UX-288`'s defect at one
+                    # element per risk, which is why its sweep's
+                    # two-element floor did not see it - and the table
+                    # they drew was the last one on the page over eight
+                    # columns wide.
+                    # Named `pinned_elements` rather than `elements`:
+                    # the page keys a table's view state by its field
+                    # name (`UX-211`), and a second `elements` table
+                    # would have shared the joined element table's key.
+                    # Thirteen tables already share the key `value` and
+                    # that is `UX-292`; adding a fourteenth collision
+                    # while fixing a table is not a fix.
+                    'pinned_elements': [
+                        {'element_uid': uid,
+                         'max_jobs': risk.element_max_jobs.get(uid),
+                         'duration_us': risk.element_duration_us.get(uid)}
+                        for uid in risk.elements
+                    ],
                     'builders': risk.builders,
                     'governing_cores': risk.governing_cores,
                     # UX-31

@@ -1331,6 +1331,21 @@ knows how to be small — and the paths that matter never learned.
 - `UX-300` — capture-side footprint and retention: what a 2 GB
   snapshot does to a store, priced and governed.
 
+## Direction 16: the visual contract (argued 2026-08-25, round 41)
+
+**Serves:** every reader of the page; R1 first ([roles](roles.md)).
+
+The report's visual language, made a governed contract:
+[`styleguide.md`](styleguide.md). One dispatch from published shape
+to control (raw JSON only where deliberate and labeled), series and
+distributions drawn as their shape with a stated `n`, a budgeted
+emphasis system (one accent; status tones never without a non-color
+channel — the round-41 validator measurements are the argument), and
+dark as the design surface with print kept honest. The guide is
+enforced the house way — booted-page walks, token guards, a
+conformance line in the fixing guide — and amended, not bypassed,
+when a new shape appears. Decomposed as `UX-302`..`UX-306`.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -1367,6 +1382,7 @@ the other rounds now:
 | [27](../audits/round-27.md) | twenty for twenty on the eighteen-commit landing, two hollow guards filed. The role model written: four roles served, four unserved; Direction 8 (provenance) adopted from the fourth review, its workspace declined; Direction 9 (the team axis) opened from the user's positioning (`UX-227`..`UX-235`) |
 | 28-39 | the sibling's execution rounds: UX-236..295 landed, Directions 10-14 argued — recorded in each direction's section and the backlog's round sections rather than as audit files |
 | [40](../audits/round-40.md) | the field's first architectural showstopper: a 2 GB dual-plane snapshot OOMs `bga view` — every load path measured, ~95 % of the monolith unread, the streaming fix on the wrong path; Direction 15 argued (events as a Perfetto TrackEvent stream, capture computes / view serves) and the rounds 28-39 sample verified six for six (`UX-296`..`UX-301`) |
+| [41](../audits/round-41.md) | a design round while Direction 15 executes: the user's brainstorm became the visual contract (`styleguide.md`) — shape→control mapping, sparklines and density strips, a measured-and-budgeted palette (two validator failures found), dark first with print kept honest (`UX-302`..`UX-306`, Direction 16) |
 
 ## Verification Log
 

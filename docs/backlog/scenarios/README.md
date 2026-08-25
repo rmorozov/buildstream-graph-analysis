@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-300 scenarios: **10 open**, 290 closed.
+305 scenarios: **15 open**, 290 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,10 +23,10 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 2 | 52 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 3 | 70 |
+| viewer | 7 | 74 |
 | cli | 0 | 4 |
 | store | 3 | 27 |
-| docs | 2 | 28 |
+| docs | 3 | 29 |
 | guards | 0 | 39 |
 
 ## Open scenarios
@@ -44,8 +44,31 @@ task file, which is the only place it ever lived twice.
 | UX-299 | [a handoff that does not carry the trace in its hands](UX-0299-a-handoff-that-does-not-carry-the-trace-in-its-hands.md) | viewer | Medium | R1 | 🔴 |
 | UX-300 | [what a two-gigabyte snapshot does to a store](UX-0300-what-a-two-gigabyte-snapshot-does-to-a-store.md) | store | Medium | R1, R5, R7 | 🔴 |
 | UX-301 | [the ordering authority moved and left its old uniform](UX-0301-the-ordering-authority-moved-and-left-its-old-uniform.md) | viewer | Low | — | 🔴 |
+| UX-302 | [the mapping made law — no raw JSON that is not on purpose](UX-0302-the-mapping-made-law.md) | viewer | High | R1 | 🔴 |
+| UX-303 | [the shape before the rows — sparklines and density strips](UX-0303-the-shape-before-the-rows.md) | viewer | Medium | R1, R7 | 🔴 |
+| UX-304 | [dark first, with two grades of token](UX-0304-dark-first-with-two-grades-of-token.md) | viewer | Medium | R1 | 🔴 |
+| UX-305 | [emphasis is a budget, spent once per block](UX-0305-emphasis-is-a-budget.md) | viewer | Medium | R1 | 🔴 |
+| UX-306 | [the visual contract joins the tree it governs](UX-0306-the-guide-joins-the-tree.md) | docs | Low | — | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+
+## UX-302..UX-306: the forty-first round — the page gets a visual contract (2026-08-25)
+
+A design round while Direction 15 executes. The user's brainstorm —
+no raw JSON unless deliberate, sparklines widely, a distribution
+beside every long table, a pattern→control mapping, emphasis and
+color rules, dark first — became
+[`styleguide.md`](../../design/styleguide.md) and Direction 16.
+Measured before ruled: `UX-267` had already won the raw-JSON war
+except the labeled fold; the palette validator found the dark
+tokens above the mark-lightness band and an adjacent amber↔green
+CVD failure in light. Challenged where invited: dark-only became
+dark-first with a print stylesheet; the density strip's
+self-building draws the no-arithmetic line at "geometry yes,
+printed derived numbers no"; the sibling's table folds were kept —
+the missing thing was the shape of the whole, not a new mechanism.
+Filed as [`UX-302`](UX-0302-the-mapping-made-law.md)..[`UX-306`](UX-0306-the-guide-joins-the-tree.md).
+Full narrative: [`../../audits/round-41.md`](../../audits/round-41.md).
 
 ## UX-296..UX-301: the fortieth round — a snapshot bigger than RAM (2026-08-25)
 

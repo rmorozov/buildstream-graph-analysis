@@ -82,6 +82,9 @@ MEDIUM = (
     # budget is an aggregate, so each one was invisible on its own and
     # together they were 114s of the small tier's 130s. Every line below
     # carries what it measured at.
+    # UX-296's big-run fixture: a million process records written to
+    # disk, and four subprocess startups measured against it.
+    "tests/unit/test_the_view_parses_nothing.py",               #    7.6s
     "tests/unit/test_any_element_can_be_inspected.py",          #   12.3s
     "tests/unit/test_one_table_many_views.py",                  #    8.1s
     "tests/unit/test_the_report_has_chapters.py",               #    4.9s

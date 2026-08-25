@@ -140,38 +140,26 @@ def _manifest_of(snapshot: str) -> Optional[dict]:
         return None
 
 
-def _resource_profile(snapshot: str, manifest: Optional[dict]) -> dict:
-    """This run's two capacity facts from Plane 2, or an empty dict.
+def _resource_profile(row: dict) -> dict:
+    """This run's two capacity facts, off the row the listing built.
 
-    `cores_busy` comes from `correlate.summarize_plane2_capacity`, the
-    same function the capacity hint is conditioned on, so the aggregate
-    and the per-run advice cannot disagree about how busy a host was.
-    Peak RSS is a **maximum over processes**, never a sum - two
-    processes that peaked at different moments never held the total
-    between them (`UX-63`).
+    **`UX-296`: this used to `json.load` the snapshot's whole
+    `plane2.json`.** Once per snapshot, on every view of *any* run, to
+    reach two floats - measured 1.17 GB of resident memory to view a
+    2 MB neighbour of one big capture, and on a store of fewer than
+    three runs it paid that and then published null distributions
+    because there was nothing to distribute.
+
+    The numbers are unchanged and so is where they come from:
+    `correlate.resource_profile` computes them from the report's own
+    aggregates, and the capture writes them beside the report
+    (`run_store.write_resource_profile`) at the one moment it has the
+    document in memory. This reads the row.
+
+    `{}` for a snapshot captured before that sidecar existed - which
+    `_class_aggregate` names, rather than reaching for the big file.
     """
-    import json
-
-    path = os.path.join(snapshot, "plane2.json")
-    try:
-        with open(path, encoding="utf-8") as handle:
-            report = json.load(handle)
-    except (OSError, ValueError):
-        return {}
-
-    from .correlate import summarize_plane2_capacity
-
-    profile = {}
-    summary = summarize_plane2_capacity(
-        report, (manifest or {}).get("cpu_count")) or {}
-    if summary.get("cores_busy") is not None:
-        profile["cores_busy"] = summary["cores_busy"]
-    per_element = ((report.get("peak_memory") or {}).get("per_element")) or {}
-    peaks = [entry.get("peak_rss_kb") for entry in per_element.values()
-             if entry.get("peak_rss_kb")]
-    if peaks:
-        profile["peak_rss_mb"] = max(peaks) / 1024
-    return profile
+    return dict(row.get("resource") or {})
 
 
 def _class_aggregate(label: str, manifest: Optional[dict],
@@ -194,6 +182,22 @@ def _class_aggregate(label: str, manifest: Optional[dict],
              if "peak_rss_mb" in (row.get("resource") or {})]),
         "stamps": [row["stamp"] for row in rows],
     }
+    # UX-296: a class whose runs carry no capacity scalars says why, and
+    # what produces them. The old code reached into every snapshot's
+    # `plane2.json` for these; a capture written before the sidecar has
+    # them nowhere cheap, and "absent" must not read as "measured at
+    # zero" or as "this run had no Plane 2".
+    if entry["cores_busy"] is None and entry["peak_rss_mb"] is None:
+        entry["resource_shortfall"] = {
+            "have": sum(1 for row in rows if row.get("resource")),
+            "runs": len(rows),
+            "sentence": (
+                "No capacity scalars for this class: they are written "
+                "beside the Plane 2 report at capture time, and these "
+                "snapshots predate that or recorded no Plane 2. "
+                "`bga snapshot -- bst build TARGET` writes them for the "
+                "next run; nothing re-reads an old capture to find them."),
+        }
     if entry["duration_us"] is None:
         # Named, not silent. `UX-114`'s shortfall shape: what is missing
         # and how much of it, so a reader knows whether to wait for two
@@ -335,7 +339,7 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
             manifest = _manifest_of(row.get("path") or "")
             manifests[label] = manifest
         by_class.setdefault(label, []).append(dict(
-            row, resource=_resource_profile(row.get("path") or "", manifest)))
+            row, resource=_resource_profile(row)))
 
     classes = [_class_aggregate(label, manifests[label], by_class[label])
                for label in sorted(by_class)]

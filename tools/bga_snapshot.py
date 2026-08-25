@@ -344,7 +344,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return build_exit or 1
 
     print()
-    _analyze(run_dir, os.path.join(snapshot, PLANE2_NAME))
+    _analyze(run_dir, os.path.join(snapshot, PLANE2_NAME),
+             publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME))
     # UX-226: the small slice this snapshot contributes to the store's
     # per-element history. Never fatal - see `write_element_slice`.
     write_element_slice(snapshot, run_dir)
@@ -405,13 +406,52 @@ def _sticky_config(project: str, args: argparse.Namespace) -> dict:
     return config
 
 
-def _analyze(run_dir: str, plane2: str) -> int:
-    from bga.cli import main as cli_main
+def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None) -> int:
+    """Print the report, and publish the same analysis as JSON.
 
+    `UX-296`: **capture computes, view serves.** `bga view` used to
+    re-run this analysis on every page load, which re-parsed the Plane 2
+    report - measured 2.9x bytes-to-RAM, ~4.3 GB and ~30 s at the field
+    capture's size, twice, before the server bound its socket. The
+    analysis happens once, here, where the user is already waiting for a
+    build; the page reads what it wrote.
+
+    One analysis, two renderings (`cli.analyzed`), so publishing costs a
+    `json.dumps` rather than a second pass. Falls back to the plain CLI
+    path if anything about the seam is unavailable - a snapshot whose
+    payload was not published is the ordinary older case, and `bga view`
+    still renders it.
+    """
     argv = ["analyze", run_dir]
     if os.path.isfile(plane2):
         argv += ["--plane2", plane2]
-    return cli_main(argv)
+
+    if publish_to is None:
+        from bga.cli import main as cli_main
+        return cli_main(argv)
+
+    from bga.cli import analyzed, create_parser
+    from bga.report.json import format_json
+    from bga.report.text import format_text
+
+    try:
+        args = create_parser().parse_args(argv)
+        result = analyzed(args, None)
+    except SystemExit:
+        raise
+    except Exception:
+        from bga.cli import main as cli_main
+        return cli_main(argv)
+
+    print(format_text(result))
+    try:
+        with open(publish_to, "w", encoding="utf-8") as handle:
+            handle.write(format_json(result))
+    except OSError:
+        # A published payload is a convenience on top of a capture that
+        # already succeeded, the rule `write_element_slice` follows.
+        pass
+    return 0
 
 
 # UX-226: how many elements one snapshot may remember. This is a
@@ -685,6 +725,11 @@ def store_listing(project: str) -> dict:
             # existed - the section says "no history" rather than
             # drawing a flat line at zero.
             "elements": (read_element_slice(path) or {}).get("elements"),
+            # UX-296: the capacity scalars, read from the small file the
+            # capture wrote beside its report. `{}` for a snapshot older
+            # than that sidecar - the aggregate names the command that
+            # produces one rather than parsing 1.5 GB to find out.
+            "resource": run_store.read_resource_profile(path),
             # UX-234: which machine measured this, as the one compact
             # label UX-186's compared fields reduce to. The *label*
             # rather than the manifest, because this row is drawn for

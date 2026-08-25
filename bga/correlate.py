@@ -918,6 +918,42 @@ def summarize_plane2_capacity(
     }
 
 
+def resource_profile(native_report: dict) -> dict:
+    """The two capacity scalars a store row carries, from aggregates only.
+
+    `UX-296`. These were derived at *read* time by parsing every
+    snapshot's whole `plane2.json` - measured 1.17 GB of RSS to view a
+    2 MB neighbour, because the store aggregate re-parsed each monolith
+    to reach exactly these two numbers. Both come out of sections the
+    capture already computes:
+
+    - `cores_busy` from `cpu_time.per_element` against `wall_span_s`,
+      by the same function the per-run capacity advice is conditioned
+      on, so the aggregate and the advice cannot disagree;
+    - peak RSS as a **maximum over processes**, never a sum - two
+      processes that peaked at different moments never held the total
+      between them (`UX-63`).
+
+    Neither reads `processes`, which is the 95% of the document nobody
+    consumes (`UX-297`) - so a capture can write this beside its report
+    and no reader ever has to open the big file again.
+
+    Empty when the report cannot answer, which is the same absence a
+    capture predating this leaves.
+    """
+    summary = summarize_plane2_capacity(native_report) or {}
+    profile = {}
+    if summary.get("cores_busy") is not None:
+        profile["cores_busy"] = summary["cores_busy"]
+    per_element = ((native_report.get("peak_memory") or {})
+                   .get("per_element")) or {}
+    peaks = [entry.get("peak_rss_kb") for entry in per_element.values()
+             if entry.get("peak_rss_kb")]
+    if peaks:
+        profile["peak_rss_mb"] = max(peaks) / 1024
+    return profile
+
+
 # UX-116: how far the sweep is run when the joint recommendation needs a
 # knee. The sweep's own default is "one configuration per task", which on
 # a 1200-element project is 1200 replays to answer a question about a

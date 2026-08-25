@@ -174,6 +174,73 @@ def predecessor(run: str) -> Optional[str]:
     return earlier[-1] if earlier else None
 
 
+# UX-296: how large a Plane 2 report this command will parse when the
+# capture published no analysis of its own.
+#
+# The measurement that sets it: one `json.load` of the monolith costs a
+# measured **2.9x its bytes** in resident memory. 64 MB of report is
+# therefore ~186 MB of transient RSS - the most an interactive command
+# should take without being asked, and two orders of magnitude below the
+# field capture that started this (1.5 GB of report, ~4.3 GB of RAM,
+# ~30 s, twice, before the socket existed). Above it the page renders
+# without Plane 2 and says which command publishes the payload; it does
+# not quietly spend the memory, and it does not quietly drop the plane.
+PLANE2_VIEW_MAX_BYTES = 64 * 1024 * 1024
+
+
+def published_analysis(run: str) -> Optional[dict]:
+    """The analysis this run's capture published, or None.
+
+    `UX-296`, Direction 15's first rule: **capture computes, view
+    serves.** `bga snapshot` writes `analyze.json` beside the run from
+    the analysis it already ran, so a page load reads a small document
+    rather than re-deriving one - which meant re-parsing the Plane 2
+    report on every view.
+    """
+    from bga import run_store
+
+    path = os.path.join(os.path.dirname(os.path.abspath(run)),
+                        run_store.ANALYSIS_NAME)
+    try:
+        with open(path, encoding="utf-8") as handle:
+            document = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    return document if isinstance(document, dict) else None
+
+
+def _analyze_now(run: str) -> dict:
+    """Analyze a run whose capture published nothing - the older case.
+
+    Plane 2 joins that analysis only when its report is small enough to
+    parse here (`PLANE2_VIEW_MAX_BYTES`). Above the bound the page is
+    rendered from Plane 1 and told what to run, which is the choice
+    `UX-194` made for a dead button: an affordance whose precondition is
+    absent is named, not silently exercised.
+    """
+    from bga import run_store
+
+    argv = ["analyze", run, "--format", "json"]
+    plane2 = run_store.sibling_plane2(os.path.abspath(run))
+    if plane2:
+        try:
+            size = os.path.getsize(plane2)
+        except OSError:
+            size = 0
+        if size <= PLANE2_VIEW_MAX_BYTES:
+            argv += ["--plane2", plane2]
+        else:
+            print(
+                f"Plane 2 is {run_store.human_bytes(size)} and this run "
+                f"published no analysis, so the report is rendered from "
+                f"Plane 1 alone - parsing it here costs about "
+                f"{run_store.human_bytes(int(size * 2.9))} of memory "
+                f"(UX-296). `bga snapshot -- bst build TARGET` publishes "
+                f"an analysis that carries both planes.",
+                file=sys.stderr)
+    return _capture(argv)
+
+
 def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     """Everything the page renders, keyed by the url it is served at.
 
@@ -186,15 +253,8 @@ def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     # `analyze` only reads Plane 2 when told to. `bga snapshot` already
     # writes the report beside the run, so the page gets it for free
     # wherever the store put one, and silently goes without elsewhere.
-    from bga import run_store
 
-    argv = ["analyze", run, "--format", "json"]
-    plane2 = run_store.sibling_plane2(os.path.abspath(run))
-    if plane2:
-        argv += ["--plane2", plane2]
-    documents = {
-        "report.json": _capture(argv),
-    }
+    documents = {"report.json": published_analysis(run) or _analyze_now(run)}
     # `UX-203`: the comparison the user already has. `bga snapshot`
     # compares against the previous run automatically, so by the time
     # anyone runs `bga view` the answer usually exists - it was just
@@ -306,14 +366,35 @@ def blast_answer(run: str, target: str) -> dict:
         blast(run, target, project_dir=project, measure=False), schemas.BLAST)
 
 
-def trace_bytes(run: str) -> Optional[bytes]:
-    """`UX-188`'s merged timeline for this run, gzipped, or None.
+def has_timeline(run: str) -> bool:
+    """Could this run produce a timeline, without producing one?
 
-    `run` is the run directory; `bga timeline` renders the *snapshot*
-    that contains it, because the wrapped `build.log` and the raw Plane
-    2 log live one level up. A run that is not inside a snapshot - an
-    extracted directory, a fetched capture - simply has no timeline, and
-    that is not an error.
+    `UX-296`. The page needs the answer to decide whether to offer the
+    Perfetto button (`UX-194`: a dead affordance is worse than none),
+    and *building* the timeline to find out is what made startup O(the
+    trace) - the merge read a 4.7 GB decompressed log as one string, at
+    a measured 6.3x amplification, immediately before the server bound
+    its socket.
+
+    The precondition is a file test: `bga timeline` renders a snapshot,
+    and a snapshot with no `build.log` has no timeline. Everything
+    beyond that - a raw log that turns out to have no anchor element -
+    is discovered when the bytes are actually asked for, and the handler
+    answers 404 rather than the page lying about it up front.
+    """
+    from .bga_timeline import WRAPPED_LOG_NAME
+
+    snapshot = os.path.dirname(os.path.abspath(run))
+    return os.path.isfile(os.path.join(snapshot, WRAPPED_LOG_NAME))
+
+
+def trace_file(run: str, destination: str) -> Optional[str]:
+    """Render this run's timeline to `destination`, gzipped. Path or None.
+
+    `UX-296`: to a **file**, never to a `bytes` in the server's memory,
+    and compressed in fixed-size chunks rather than in one call - the
+    whole point is that the largest artifact this tool handles never has
+    to fit in RAM twice.
     """
     from .bga_timeline import render
 
@@ -322,9 +403,32 @@ def trace_bytes(run: str) -> Optional[bytes]:
     try:
         rendered = os.path.join(scratch, "timeline.json")
         render(snapshot, rendered, quiet=True)
-        with open(rendered, "rb") as handle:
-            return gzip.compress(handle.read(), 6)
+        with open(rendered, "rb") as source, \
+                gzip.open(destination, "wb", compresslevel=6) as out:
+            shutil.copyfileobj(source, out, length=1024 * 1024)
+        return destination
     except (FileNotFoundError, RuntimeError, OSError):
+        return None
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
+def trace_bytes(run: str) -> Optional[bytes]:
+    """The timeline as bytes - for `--export`, which inlines it.
+
+    Still whole-file, because an export *is* one file by definition
+    (`UX-195`); `UX-299` is where a capture too large to inline stops
+    being inlined. The **serving** path no longer uses this
+    (`trace_file` above), which is where the memory ceiling lives.
+    """
+    scratch = tempfile.mkdtemp(prefix="bga-view-")
+    try:
+        rendered = trace_file(run, os.path.join(scratch, "timeline.json.gz"))
+        if rendered is None:
+            return None
+        with open(rendered, "rb") as handle:
+            return handle.read()
+    except OSError:
         return None
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
@@ -572,6 +676,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             # transparently-decoding fetch would undo the win.
             return self._send(200, "application/gzip", self.blobs[path],
                               cors=True)
+        if path == TRACE_NAME and getattr(self, "trace_run", None):
+            return self._trace()
         if path in ASSETS:
             return self._asset(path)
         self._refuse(404, f"{path}: not served")
@@ -601,7 +707,17 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         report, the schemas or the blast endpoint is still refused.
         """
         path = self.path.split("?", 1)[0].lstrip("/")
-        if path not in self.blobs:
+        # UX-296: the trace is no longer a blob held in memory - it is
+        # rendered when it is first asked for - so "is this the trace"
+        # is asked of what the server *offers*, not of what it has
+        # already built. Pre-flighting it must not build it: a
+        # pre-flight is a question about policy, and answering it by
+        # rendering gigabytes would put the whole cost back on the path
+        # this item took it off.
+        offered = self.path is not None and (
+            path in self.blobs
+            or (path == TRACE_NAME and getattr(self, "trace_run", None)))
+        if not offered:
             return self._refuse(404, f"{path}: not served")
         if self.headers.get("Origin") != PERFETTO_ORIGIN:
             return self._refuse(403, "pre-flight is granted to Perfetto only")
@@ -666,6 +782,44 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         body = json.dumps(document).encode()
         self._send(200, "application/json; charset=utf-8", body)
 
+    def _trace(self):
+        """The merged timeline, rendered on first request and streamed.
+
+        `UX-296`. Two rules, and the second is the one that matters at
+        scale: it is built **here** rather than at startup, so a page
+        that nobody asks a timeline of never pays for one; and it is
+        sent from a **file in fixed-size chunks**, so the largest
+        artifact this tool produces is never a `bytes` in the server's
+        address space.
+
+        Rendered once per server - the lock is what stops two tabs
+        rendering the same gigabytes twice - and a render that fails
+        answers 404 with what would have produced it, rather than
+        pretending the button was never offered.
+        """
+        cls = type(self)
+        with cls.trace_lock:
+            if cls.trace_path is None:
+                if cls.trace_scratch is None:
+                    cls.trace_scratch = tempfile.mkdtemp(prefix="bga-serve-")
+                cls.trace_path = trace_file(
+                    cls.trace_run,
+                    os.path.join(cls.trace_scratch, TRACE_NAME)) or ""
+        if not cls.trace_path:
+            return self._refuse(
+                404, f"{TRACE_NAME}: this snapshot has a build log but no "
+                     f"timeline could be rendered from it - `bga timeline "
+                     f"{os.path.dirname(cls.trace_run)}` says why")
+        try:
+            size = os.path.getsize(cls.trace_path)
+            handle = open(cls.trace_path, "rb")
+        except OSError as error:
+            return self._refuse(404, f"{TRACE_NAME}: {error}")
+        with handle:
+            self._begin(200, "application/gzip", size, cors=True)
+            if self.command != "HEAD":
+                shutil.copyfileobj(handle, self.wfile, length=256 * 1024)
+
     def _asset(self, name):
         # `name` is already known to be in `ASSETS`, so this cannot be
         # traversed; the realpath check is belt and braces against a
@@ -684,9 +838,20 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self._send(200, f"{kind}; charset=utf-8", body)
 
     def _send(self, code, kind, body, cors=False):
+        self._begin(code, kind, len(body), cors=cors)
+        if body and self.command != "HEAD":
+            self.wfile.write(body)
+
+    def _begin(self, code, kind, length, cors=False):
+        """The headers, without a body in hand.
+
+        `UX-296`: the trace is streamed from a file, so its response has
+        a length before it has bytes. Every header `_send` sets is set
+        here, once, so the two cannot drift about the policy.
+        """
         self.send_response(code)
         self.send_header("Content-Type", kind)
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Length", str(length))
         # A local viewer has no business being framed or sniffed.
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy",
@@ -707,8 +872,6 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             if self.headers.get("Origin") == PERFETTO_ORIGIN:
                 self.send_header("Access-Control-Allow-Origin", PERFETTO_ORIGIN)
         self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(body)
 
     def _refuse(self, code, why):
         self._send(code, "application/json; charset=utf-8",
@@ -741,21 +904,26 @@ def serve(run: str, port: int = 0,
         if aggregate is not None:
             documents.setdefault("store-aggregate.json", aggregate)
 
-    blobs = {}
-    trace = trace_bytes(run) if with_trace else None
-    if trace is not None:
-        blobs[TRACE_NAME] = trace
+    # UX-296: the timeline is *not* built here. Startup asks whether one
+    # could exist - a file test - and the first request for the bytes is
+    # what renders them, into a file the handler streams. Building it
+    # here is what put a 30 GB projected read between the user and the
+    # socket on the field capture.
+    offered = bool(with_trace) and has_timeline(run)
 
     documents.setdefault("run.json", {
         "run": os.path.abspath(run),
         "name": os.path.basename(os.path.abspath(run)),
         # So the page can offer the button only when there is something
         # behind it - a dead "Open in Perfetto" is worse than none.
-        "has_timeline": TRACE_NAME in blobs,
+        "has_timeline": offered,
     })
 
     handler = type("_BoundHandler", (_Handler,),
-                   {"documents": documents, "blobs": blobs,
+                   {"documents": documents, "blobs": {},
+                    "trace_run": os.path.abspath(run) if offered else None,
+                    "trace_scratch": None, "trace_path": None,
+                    "trace_lock": threading.Lock(),
                     "run_root": os.path.abspath(run)})
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
     return httpd, f"http://127.0.0.1:{httpd.server_address[1]}/"
@@ -842,7 +1010,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     landing = url + ("perfetto.html" if args.perfetto else "")
-    if args.perfetto and not httpd.RequestHandlerClass.blobs:
+    # UX-296: what the server *offers*, not what it has already built -
+    # the timeline is rendered when Perfetto fetches it, and asking for
+    # `--perfetto` is exactly the case where that happens a moment later.
+    if args.perfetto and not (httpd.RequestHandlerClass.blobs
+                              or httpd.RequestHandlerClass.trace_run):
         print("Error: this run has no timeline to hand over. `bga snapshot` "
               "keeps the raw Plane 2 log by default; a capture taken with "
               "--no-keep-raw, or before UX-188, has only the processed "

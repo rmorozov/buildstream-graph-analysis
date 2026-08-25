@@ -1522,6 +1522,7 @@ analyze/v2          compare/v1    blast/v1      correlate/v1  (published outputs
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
 host/v1                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
+plane2/v2           plane2/v1                                 (the Plane 2 report - UX-297)
 ```
 
 ---
@@ -1650,11 +1651,21 @@ key:
 | `bga whatif --format json` | `whatif/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v1` | `bga.hostinfo.collect` |
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
+| the Plane 2 report at `plane2.json` beside a run | `plane2/v2` | `bga.plane2` |
+| the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
 
-The last two are **written but not printable**: they are on-disk shapes
-a run directory carries, not documents a subcommand emits, so
+The last four are **written but not printable**: they are on-disk
+shapes a run directory carries, not documents a subcommand emits, so
 `--schema` does not know them. `bga.contracts.unprintable()` names that
 difference rather than leaving a reader to discover it at a refusal.
+
+`plane2/v1` is a fifth kind again: **read and never written**
+(`UX-297`). Every capture taken before that item embedded its whole
+per-process record list in the report - 99.9% of the document on a
+200,000-process trace, and read by nothing - and those stores still
+analyze. `bga.contracts.superseded()` names the shapes a release still
+opens, because what a release *supports* and what it *emits* are
+different facts a consumer needs separately.
 
 The list is not maintained by hand alone: a guard asserts that every id
 in `bga.contracts.ids()` appears here and in `docs/design/architecture.md`'s

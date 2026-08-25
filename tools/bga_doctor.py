@@ -831,10 +831,15 @@ def check_capture_chain(project_dir: Optional[str] = None) -> List[dict]:
                        "sandbox. Send the diagnostics record."))
             return findings
 
-        by_coverage = {}
-        for record in report.get("processes") or []:
-            key = record.get("coverage") or "unknown"
-            by_coverage[key] = by_coverage.get(key, 0) + 1
+        # `UX-297`: read from the report's own coverage census rather
+        # than by walking a per-process record list. `summarize` has
+        # counted these three classes since `UX-107` and publishes them
+        # as `stream_coverage.by_coverage`; the walk was a second
+        # implementation of the same tally over the 99.9% of the
+        # document that no longer exists. A legacy monolith still
+        # answers, because it carries the same census.
+        by_coverage = dict(
+            (report.get("stream_coverage") or {}).get("by_coverage") or {})
         hook_seen = sum(count for key, count in by_coverage.items() if "hook" in key)
         summary = ", ".join(f"{count} {key}" for key, count in sorted(by_coverage.items()))
         if not hook_seen:

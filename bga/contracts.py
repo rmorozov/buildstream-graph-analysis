@@ -43,6 +43,13 @@ CONTRACT_ID = re.compile(r"^[a-z][a-z0-9-]*/v\d+$")
 # second declaration somewhere central.
 _DECLARATION = "SCHEMA"
 
+# `UX-297`: and the shapes a module still *reads* but no longer writes.
+# A retired id is not a curiosity - an old store is full of files
+# stamped with one, and the release that can read them has to be able
+# to say so. Declared as a module-level tuple beside `SCHEMA`, by the
+# module that owns the shape.
+_RETIRED = "SUPERSEDED"
+
 
 def _declared_in_modules() -> Dict[str, str]:
     """`{contract id: owning module}` from the package itself.
@@ -63,6 +70,9 @@ def _declared_in_modules() -> Dict[str, str]:
         declared = getattr(loaded, _DECLARATION, None)
         if isinstance(declared, str) and CONTRACT_ID.match(declared):
             found[declared] = name
+        for retired in getattr(loaded, _RETIRED, ()) or ():
+            if isinstance(retired, str) and CONTRACT_ID.match(retired):
+                found.setdefault(retired, name)
     return found
 
 
@@ -99,6 +109,32 @@ def printable() -> List[str]:
     from . import schemas
 
     return sorted(schemas.names())
+
+
+def superseded() -> List[str]:
+    """Contracts this tool reads and no longer writes.
+
+    `UX-297` retired the Plane 2 monolith. Every capture in an existing
+    store is stamped with the shape it retired, and the reader still
+    consumes it - so the id is part of what a release supports, not
+    part of what it emits, and those are different facts a consumer
+    needs separately.
+    """
+    import importlib
+    import pkgutil
+
+    import bga
+
+    retired = set()
+    for module in pkgutil.iter_modules(bga.__path__):
+        try:
+            loaded = importlib.import_module(f"bga.{module.name}")
+        except Exception:  # pragma: no cover - see `_declared_in_modules`
+            continue
+        for name in getattr(loaded, _RETIRED, ()) or ():
+            if isinstance(name, str) and CONTRACT_ID.match(name):
+                retired.add(name)
+    return sorted(retired)
 
 
 def unprintable() -> List[str]:

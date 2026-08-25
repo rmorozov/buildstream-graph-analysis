@@ -252,10 +252,17 @@ def main(argv=None, quiet=False) -> int:
     # purpose per this module's own docstring; avoids importing
     # bst_native_build_tracer's argparse/subprocess-heavy CLI machinery
     # just to reuse its two pure parsing functions.
-    from .bst_native_build_tracer import pair_events, parse_trace_log
+    from .bst_native_build_tracer import load_records
 
-    with open(args.raw_log, "r", encoding="utf-8", errors="ignore") as f:
-        records = pair_events(parse_trace_log(f.read()))
+    # UX-297: the handle, not `handle.read()`. `UX-168` streamed the
+    # tracer's own parse and this converter kept the whole-file read it
+    # was written to remove - measured at a 6.3x amplification, which
+    # on the field's 400 MB decompressed log is ~30 GB and is the read
+    # `UX-296` had to move off the startup path rather than fix.
+    # `merge=False`: the rows this converter has always drawn. The
+    # two-stream join is a change to what the timeline *shows*,
+    # which belongs to `UX-298` and not to a memory item.
+    records = load_records(args.raw_log, merge=False)
 
     # UX-188: "Wrote 0 trace events", exit 0, from a non-empty file is a
     # refusal wearing a success. The usual cause is the right *idea* and

@@ -159,6 +159,16 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # answer; without it the page would have to read a second document
     # or, worse, imply full coverage by saying nothing.
     result.plane2_coverage = native_report.get('stream_coverage') or None
+    # UX-297: and which shape of report that coverage came out of. Both
+    # shapes publish the same numbers - the equality is the migration's
+    # guard - so this does not qualify the answer; it says why the file
+    # is the size it is, which is the question a user of a 1.5 GB
+    # capture actually has.
+    if result.plane2_coverage:
+        from bga import plane2 as plane2_shape
+
+        result.plane2_coverage = dict(
+            result.plane2_coverage, source=plane2_shape.provenance(native_report))
     # UX-215: the report keeps the Plane 2 report itself, so the JSON
     # renderer can publish the per-element join from the same function
     # `bga correlate` calls. Held rather than joined here because the
@@ -380,11 +390,20 @@ def _memory_envelope_delta(args: argparse.Namespace) -> dict:
     from bga.ingest.loader import load_all
 
     envelopes = {}
+    native_report = None
     for label, plane2_path, run_dir in (
         ('baseline', baseline_path, args.baseline),
         ('candidate', candidate_path, args.candidate),
     ):
         try:
+            # UX-297: released *before* the next one is parsed, not
+            # after. Rebinding the name on the assignment looks
+            # sequential and is not - the previous report stays alive
+            # for the whole of the next `json.load`, which is how a
+            # store of legacy monoliths came to cost a measured 1.7x a
+            # single parse right here, on the machine that had just
+            # finished the build.
+            native_report = None
             with open(plane2_path, 'r', encoding='utf-8') as handle:
                 native_report = json.load(handle)
             run_context, _graph, _trace = load_all(Path(run_dir))

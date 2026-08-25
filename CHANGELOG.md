@@ -58,7 +58,7 @@ stale about its currency (`UX-247`). They are named here rather than
 left in the backlog alone, so "we knew" is on the record.
 
 ```text state
-contracts: analyze/v2 blast/v1 compare/v1 correlate/v1 host/v1 sources/v1 store-aggregate/v1 store/v1 whatif/v1
+contracts: analyze/v2 blast/v1 compare/v1 correlate/v1 host/v1 plane2/v1 plane2/v2 sources/v1 store-aggregate/v1 store/v1 whatif/v1
 commands: analyze baseline blast cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```
 

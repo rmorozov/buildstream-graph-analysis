@@ -16,7 +16,11 @@ import pytest
 
 from tools.bst_native_build_tracer import (
     COVERAGE_SPINE_ONLY,
-    load_and_summarize,
+    # `UX-297`: the per-process rows live in the raw log now, not in the
+    # report - which carries the reductions over them. This file is one
+    # of the two callers that genuinely wants the rows, because it
+    # checks them against arithmetic.
+    load_records,
 )
 
 BST_AVAILABLE = shutil.which("bst") is not None
@@ -67,13 +71,12 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
             project, ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
             str(raw), wrapped_log_path=str(plane1), trace_spine=True,
         )
-        report = load_and_summarize(str(raw))
+        records = load_records(str(raw))
     finally:
         os.environ.clear()
         os.environ.update(previous)
 
     assert code == 0
-    records = report["processes"]
     assert records, "the spine saw nothing on a build that ran 8 real commands"
     assert {r["coverage"] for r in records} == {COVERAGE_SPINE_ONLY}
 
@@ -139,7 +142,7 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
             project, ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
             str(raw), wrapped_log_path=str(plane1), trace_spine=True,
         )
-        report = load_and_summarize(str(raw))
+        records = load_records(str(raw))
     finally:
         os.environ.clear()
         os.environ.update(previous)
@@ -152,7 +155,7 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
     assert spans, "Plane 1 produced no build spans from the wrapped log"
 
     by_element = {}
-    for record in report["processes"]:
+    for record in records:
         if record["end_ts"] is None:
             continue
         window = by_element.setdefault(

@@ -54,7 +54,23 @@ class TestTheInventoryIsComplete:
         assert len(contracts.ids()) > len(contracts.printable()), (
             "the inventory has stopped covering anything the registry "
             "does not; either a contract was lost or one was promoted")
-        assert contracts.unprintable() == ["host/v1", "sources/v1"]
+        assert contracts.unprintable() == [
+            "host/v1", "plane2/v1", "plane2/v2", "sources/v1"]
+
+    def test_a_retired_shape_is_inventoried_as_one(self):
+        """`UX-297`: the Plane 2 monolith is read and never written.
+
+        Every capture in an existing store is stamped with it, and the
+        reader still consumes it - so leaving it out of the inventory
+        would repeat this item's own defect one version later: a shape
+        the tool depends on, in no registry. Being *supported* and being
+        *emitted* are different facts, and `superseded()` is the one
+        that says which."""
+        from bga import contracts
+
+        assert contracts.superseded() == ["plane2/v1"]
+        assert "plane2/v1" in contracts.ids()
+        assert "plane2/v1" not in contracts.printable()
 
     def test_every_id_in_the_source_is_in_the_inventory(self):
         """The direction that failed before `UX-248`: a contract

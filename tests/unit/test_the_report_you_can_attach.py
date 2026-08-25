@@ -76,7 +76,12 @@ PAGE_BUDGET_B = 180_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     ("golden", GOLDEN, 272_000),
-    ("macro_micro", MACRO_MICRO, 310_000),
+    # `UX-297` moved this one by 385 B: the two-plane run now publishes
+    # `plane2_coverage.source`, which says which shape of Plane 2 report
+    # served its numbers and what that costs to open. A sentence a
+    # reader of a gigabyte capture needs, and the bound is restated
+    # rather than the sentence trimmed to fit a number nobody argued.
+    ("macro_micro", MACRO_MICRO, 311_000),
 ]
 
 

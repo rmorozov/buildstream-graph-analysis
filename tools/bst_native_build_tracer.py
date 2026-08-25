@@ -63,6 +63,7 @@ reports the per-process picture: who ran, for how long, at what concurrency.
 Full background: docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md
 """
 import argparse
+import array
 import atexit
 import contextlib
 import errno
@@ -81,6 +82,9 @@ from typing import Dict, List, Optional, Set, Tuple
 
 
 from bga import progress
+# `UX-297`: the report's contract, owned by the module that describes the
+# shape rather than by the writer - which is how `bga.contracts` finds it.
+from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
@@ -1699,21 +1703,41 @@ def detect_redundant_operations(records: List[dict]) -> Tuple[List[dict], dict]:
     unresolved-only" is itself a signal - it rises when attribution gets
     worse, and a silently shorter list reads as a cleaner build.
     """
-    by_signature: Dict[str, List[dict]] = defaultdict(list)
-    # Signatures seen under a non-element bucket, so a finding that
-    # disappears for lack of a *second* resolved element can be counted
-    # rather than silently dropped.
-    unresolved_signatures: Dict[str, set] = defaultdict(set)
-    excluded_command_blocks = 0
-    for r in records:
+    state = _RedundantOperations()
+    for record in records:
+        state.add(record)
+    return state.finish()
+
+
+class _RedundantOperations:
+    """`detect_redundant_operations`, one record at a time.
+
+    `UX-297`: a signature's finding needs its element set, its
+    occurrence count, the per-element duration sums and the first
+    command line seen under it - all of which fold. The occurrences
+    themselves were only ever read for those four things, and a real
+    build has orders of magnitude fewer distinct signatures than
+    processes.
+    """
+
+    def __init__(self):
+        self.by_signature: Dict[str, dict] = {}
+        # Signatures seen under a non-element bucket, so a finding that
+        # disappears for lack of a *second* resolved element can be
+        # counted rather than silently dropped.
+        self.unresolved_signatures: Dict[str, set] = defaultdict(set)
+        self.excluded_command_blocks = 0
+
+    def add(self, r):
         if r["open"] or r["element"] == "unknown":
-            continue
+            return
         if _is_element_command_block(r):
-            excluded_command_blocks += 1
-            continue
+            self.excluded_command_blocks += 1
+            return
         if not _is_element_name(r["element"]):
-            unresolved_signatures[normalize_cmd_signature(r["cmd"])].add(r["element"])
-            continue
+            self.unresolved_signatures[
+                normalize_cmd_signature(r["cmd"])].add(r["element"])
+            return
         if _is_element_build_driver(r["cmd"]):
             # UX-37: every element runs `make -f Makefile -jN` and
             # `cmake --build ...`, so those signatures are identical
@@ -1726,72 +1750,88 @@ def detect_redundant_operations(records: List[dict]) -> Tuple[List[dict], dict]:
             # compiler-probe invocations are deliberately kept: those
             # really do repeat the same work per element, and are what
             # UX-23 was built to find.
-            continue
-        by_signature[normalize_cmd_signature(r["cmd"])].append(r)
+            return
+        signature = normalize_cmd_signature(r["cmd"])
+        entry = self.by_signature.get(signature)
+        if entry is None:
+            # A four-slot list, not a dict of four keys. Most signatures
+            # on a real capture occur once - a compile of one file -
+            # and a per-signature dict costs several times what the
+            # record it replaced did, which turns a memory fix into a
+            # memory regression at the scale this item is about.
+            entry = self.by_signature[signature] = [0, 0.0, r["cmd"], {}]
+        entry[0] += 1
+        entry[1] += r["duration_s"]
+        per_element = entry[3]
+        per_element[r["element"]] = per_element.get(
+            r["element"], 0.0) + r["duration_s"]
 
-    findings = []
-    excluded_unresolved_only = 0
-    for signature, occurrences in by_signature.items():
-        elements = sorted({r["element"] for r in occurrences})
-        if len(elements) < 2:
-            # UX-73: it would have been a finding only by counting an
-            # unresolved bucket as a second element. Counted, because a
-            # list that simply got shorter reads as a cleaner build.
-            if len(elements) + len(unresolved_signatures.get(signature, ())) >= 2:
-                excluded_unresolved_only += 1
-            continue
-        # UX-37: `total_duration_s` sums process time across elements
-        # BuildStream dispatched *concurrently*, so it is not time the
-        # build would get back. Eliminating all but one occurrence still
-        # leaves the one that has to run somewhere, and the elements ran
-        # side by side - so the wall-clock-relevant figure is what the
-        # single worst-affected element paid, not the sum. Both are
-        # reported, each labelled for what it is; the sum stays because
-        # it is the honest "total machine time spent on this" number.
-        per_element_duration: Dict[str, float] = defaultdict(float)
-        for r in occurrences:
-            per_element_duration[r["element"]] += r["duration_s"]
-        worst_element = max(per_element_duration, key=lambda e: per_element_duration[e])
-        findings.append({
-            "signature": signature,
-            "elements": elements,
-            "occurrence_count": len(occurrences),
-            "total_duration_s": sum(r["duration_s"] for r in occurrences),
-            # UX-37: an upper bound on recoverable wall-clock, not a
-            # promise - sharing this work would still cost whatever the
-            # shared version costs, and these elements overlapped.
-            "max_element_duration_s": per_element_duration[worst_element],
-            "worst_element": worst_element,
-            "example_cmd": occurrences[0]["cmd"],
-        })
-    # A signature seen *only* under unresolved buckets never reached the
-    # loop above, so it is counted here.
-    excluded_unresolved_only += sum(
-        1 for signature, buckets in unresolved_signatures.items()
-        if signature not in by_signature and len(buckets) >= 2
-    )
-    coverage = {
-        "excluded_unresolved_only": excluded_unresolved_only,
-        "excluded_element_command_blocks": excluded_command_blocks,
-        "note": (
-            "Each finding's `max_element_duration_s` is an upper bound on what "
-            "sharing that one operation could recover, for the single "
-            "worst-affected element. They are per-signature maxima over "
-            "elements that ran concurrently: they must not be summed, and on a "
-            "real capture their sum exceeds the build's own duration. A "
-            "signature is a finding only when it ran under 2+ *resolved* "
-            "elements (UX-73); processes in the unresolved attribution bucket "
-            "and each element's own top-level command block are excluded, and "
-            "counted above."
-        ),
-    }
-    # Ranked by the wall-clock-relevant figure, not by the sum: a
-    # 6x-repeated 50ms probe across six concurrent elements is not a
-    # bigger finding than a 2x-repeated 5s codegen step.
-    return (
-        sorted(findings, key=lambda f: -f["max_element_duration_s"]),
-        coverage,
-    )
+    def finish(self):
+        by_signature = self.by_signature
+        unresolved_signatures = self.unresolved_signatures
+        excluded_command_blocks = self.excluded_command_blocks
+        findings = []
+        excluded_unresolved_only = 0
+        for signature, occurrence in by_signature.items():
+            count, total_duration_s, example_cmd, per_element_duration = occurrence
+            elements = sorted(per_element_duration)
+            if len(elements) < 2:
+                # UX-73: it would have been a finding only by counting an
+                # unresolved bucket as a second element. Counted, because a
+                # list that simply got shorter reads as a cleaner build.
+                if len(elements) + len(unresolved_signatures.get(signature, ())) >= 2:
+                    excluded_unresolved_only += 1
+                continue
+            # UX-37: `total_duration_s` sums process time across elements
+            # BuildStream dispatched *concurrently*, so it is not time the
+            # build would get back. Eliminating all but one occurrence still
+            # leaves the one that has to run somewhere, and the elements ran
+            # side by side - so the wall-clock-relevant figure is what the
+            # single worst-affected element paid, not the sum. Both are
+            # reported, each labelled for what it is; the sum stays because
+            # it is the honest "total machine time spent on this" number.
+            worst_element = max(per_element_duration,
+                                key=lambda e: per_element_duration[e])
+            findings.append({
+                "signature": signature,
+                "elements": elements,
+                "occurrence_count": count,
+                "total_duration_s": total_duration_s,
+                # UX-37: an upper bound on recoverable wall-clock, not a
+                # promise - sharing this work would still cost whatever the
+                # shared version costs, and these elements overlapped.
+                "max_element_duration_s": per_element_duration[worst_element],
+                "worst_element": worst_element,
+                "example_cmd": example_cmd,
+            })
+        # A signature seen *only* under unresolved buckets never reached the
+        # loop above, so it is counted here.
+        excluded_unresolved_only += sum(
+            1 for signature, buckets in unresolved_signatures.items()
+            if signature not in by_signature and len(buckets) >= 2
+        )
+        coverage = {
+            "excluded_unresolved_only": excluded_unresolved_only,
+            "excluded_element_command_blocks": excluded_command_blocks,
+            "note": (
+                "Each finding's `max_element_duration_s` is an upper bound on what "
+                "sharing that one operation could recover, for the single "
+                "worst-affected element. They are per-signature maxima over "
+                "elements that ran concurrently: they must not be summed, and on a "
+                "real capture their sum exceeds the build's own duration. A "
+                "signature is a finding only when it ran under 2+ *resolved* "
+                "elements (UX-73); processes in the unresolved attribution bucket "
+                "and each element's own top-level command block are excluded, and "
+                "counted above."
+            ),
+        }
+        # Ranked by the wall-clock-relevant figure, not by the sum: a
+        # 6x-repeated 50ms probe across six concurrent elements is not a
+        # bigger finding than a 2x-repeated 5s codegen step.
+        return (
+            sorted(findings, key=lambda f: -f["max_element_duration_s"]),
+            coverage,
+        )
 
 
 # UX-32: which traced binaries are doing the real work, and which are
@@ -1881,80 +1921,111 @@ def compute_per_element_parallelism(records: List[dict]) -> List[dict]:
     Only matched records (real start *and* end observed) participate, for
     the same reason `compute_max_concurrency` excludes open ones.
     """
-    by_element: Dict[str, List[dict]] = defaultdict(list)
-    for r in records:
-        if r["open"] or r["end_ts"] is None:
-            continue
-        by_element[r["element"]].append(r)
+    state = _PerElementParallelism()
+    for record in records:
+        state.add(record)
+    return state.finish()
 
-    profiles = []
-    for element, element_records in by_element.items():
-        work_intervals = []
-        unclassified: Dict[str, int] = {}
-        requested_jobs = None
-        for r in element_records:
-            name = _binary_name(r["cmd"])
-            kind = classify_binary(name)
-            if kind == "work":
-                work_intervals.append((r["start_ts"], r["end_ts"]))
-            elif kind == "unclassified":
-                unclassified[name] = unclassified.get(name, 0) + 1
-            if name in ("make", "gmake", "ninja"):
-                match = _REQUESTED_JOBS_RE.search(r["cmd"])
-                if match:
-                    # Highest wins: an element can run several `make`
-                    # invocations (configure probes, install), and the
-                    # real build one is the one that asked for the most.
-                    value = int(match.group(1))
-                    requested_jobs = value if requested_jobs is None else max(requested_jobs, value)
-        profile = _concurrency_profile(work_intervals)
-        profiles.append({
-            "element": element,
-            "work_process_count": len(work_intervals),
-            "peak_work_concurrency": profile["peak"],
-            "mean_work_concurrency": profile["mean"],
-            "work_span_s": profile["span_s"],
-            "work_process_lifetime_s": profile["total_lifetime_s"],
-            "requested_jobs": requested_jobs,
-            # Deliberately None rather than a guess when either half is
-            # unknown. Note this is NOT on its own the finding: an
-            # element pinned to `-j1` achieves 100% (or more, since a
-            # gcc driver pipelines cc1plus into as) of what it asked for
-            # while being exactly the problem. See `findings` below.
-            "achieved_vs_requested": (
-                profile["peak"] / requested_jobs
-                if requested_jobs else None
-            ),
-            "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
-        })
-    # Two distinct real findings, decided across the whole trace rather
-    # than per element in isolation:
-    #
-    #  - `pinned_to_one_job`: this element asked for `-j1` while other
-    #    elements in the same build asked for more. That is the
-    #    `notparallel: True` case (UX-31), and it is invisible to any
-    #    achieved-vs-requested ratio, because an element pinned to one
-    #    job gets exactly what it asked for.
-    #  - `underachieved_requested_jobs`: this element asked for real
-    #    parallelism and got essentially none - a serializing Makefile, a
-    #    dependency chain inside the element, or contention.
-    peak_requested = max(
-        (p["requested_jobs"] for p in profiles if p["requested_jobs"] is not None),
-        default=None,
-    )
-    for profile in profiles:
-        requested = profile["requested_jobs"]
-        findings = []
-        if requested == 1 and peak_requested is not None and peak_requested > 1:
-            findings.append("pinned_to_one_job")
-        elif (
-            requested is not None and requested > 1
-            and profile["peak_work_concurrency"] < requested * _UNDERPARALLEL_RATIO
-        ):
-            findings.append("underachieved_requested_jobs")
-        profile["findings"] = findings
-    profiles.sort(key=lambda p: -p["work_span_s"])
-    return profiles
+
+class _PerElementParallelism:
+    """`compute_per_element_parallelism`, one record at a time.
+
+    `UX-297`: what a profile needs from a work process is its two
+    timestamps, so those go into per-element `array('d')`s as the
+    stream passes; the binary name and the `-jN` are reduced on arrival
+    and the command line is not kept. Same arithmetic, same order - the
+    elements are profiled in the order the trace first named them,
+    which is what the list-based version did with its `defaultdict`.
+    """
+
+    def __init__(self):
+        self.starts: Dict[str, array.array] = {}
+        self.ends: Dict[str, array.array] = {}
+        self.unclassified: Dict[str, Dict[str, int]] = {}
+        self.requested: Dict[str, Optional[int]] = {}
+
+    def add(self, r):
+        if r["open"] or r["end_ts"] is None:
+            return
+        element = r["element"]
+        if element not in self.starts:
+            self.starts[element] = array.array("d")
+            self.ends[element] = array.array("d")
+            self.unclassified[element] = {}
+            self.requested[element] = None
+        name = _binary_name(r["cmd"])
+        kind = classify_binary(name)
+        if kind == "work":
+            self.starts[element].append(r["start_ts"])
+            self.ends[element].append(r["end_ts"])
+        elif kind == "unclassified":
+            counts = self.unclassified[element]
+            counts[name] = counts.get(name, 0) + 1
+        if name in ("make", "gmake", "ninja"):
+            match = _REQUESTED_JOBS_RE.search(r["cmd"])
+            if match:
+                # Highest wins: an element can run several `make`
+                # invocations (configure probes, install), and the
+                # real build one is the one that asked for the most.
+                value = int(match.group(1))
+                current = self.requested[element]
+                self.requested[element] = (
+                    value if current is None else max(current, value))
+
+    def finish(self):
+        profiles = []
+        for element in self.starts:
+            work_intervals = list(zip(self.starts[element], self.ends[element]))
+            unclassified = self.unclassified[element]
+            requested_jobs = self.requested[element]
+            profile = _concurrency_profile(work_intervals)
+            profiles.append({
+                "element": element,
+                "work_process_count": len(work_intervals),
+                "peak_work_concurrency": profile["peak"],
+                "mean_work_concurrency": profile["mean"],
+                "work_span_s": profile["span_s"],
+                "work_process_lifetime_s": profile["total_lifetime_s"],
+                "requested_jobs": requested_jobs,
+                # Deliberately None rather than a guess when either half is
+                # unknown. Note this is NOT on its own the finding: an
+                # element pinned to `-j1` achieves 100% (or more, since a
+                # gcc driver pipelines cc1plus into as) of what it asked for
+                # while being exactly the problem. See `findings` below.
+                "achieved_vs_requested": (
+                    profile["peak"] / requested_jobs
+                    if requested_jobs else None
+                ),
+                "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
+            })
+        # Two distinct real findings, decided across the whole trace rather
+        # than per element in isolation:
+        #
+        #  - `pinned_to_one_job`: this element asked for `-j1` while other
+        #    elements in the same build asked for more. That is the
+        #    `notparallel: True` case (UX-31), and it is invisible to any
+        #    achieved-vs-requested ratio, because an element pinned to one
+        #    job gets exactly what it asked for.
+        #  - `underachieved_requested_jobs`: this element asked for real
+        #    parallelism and got essentially none - a serializing Makefile, a
+        #    dependency chain inside the element, or contention.
+        peak_requested = max(
+            (p["requested_jobs"] for p in profiles if p["requested_jobs"] is not None),
+            default=None,
+        )
+        for profile in profiles:
+            requested = profile["requested_jobs"]
+            findings = []
+            if requested == 1 and peak_requested is not None and peak_requested > 1:
+                findings.append("pinned_to_one_job")
+            elif (
+                requested is not None and requested > 1
+                and profile["peak_work_concurrency"] < requested * _UNDERPARALLEL_RATIO
+            ):
+                findings.append("underachieved_requested_jobs")
+            profile["findings"] = findings
+        profiles.sort(key=lambda p: -p["work_span_s"])
+        return profiles
 
 
 def assess_element_attribution(by_element: Dict[str, int]) -> dict:
@@ -2066,20 +2137,59 @@ def compute_max_concurrency(records: List[dict]) -> int:
     max_concurrency of 24 for a real `-j4` build, an obviously inflated,
     physically implausible number. Excluding them instead makes this
     figure a real, honest lower bound rather than a false one."""
-    matched = [r for r in records if not r["open"]]
-    if not matched:
-        return 0
-    points = []
-    for r in matched:
-        points.append((r["start_ts"], 1))
-        points.append((r["end_ts"], -1))
-    points.sort(key=lambda p: (p[0], p[1]))  # ends (-1) before starts (+1) at equal ts
-    current = 0
-    peak = 0
-    for _ts, delta in points:
-        current += delta
-        peak = max(peak, current)
-    return peak
+    state = _MaxConcurrency()
+    for record in records:
+        state.add(record)
+    return state.finish()
+
+
+class _MaxConcurrency:
+    """`compute_max_concurrency`, one record at a time.
+
+    `UX-297`: the sweep needs two timestamps per matched process and
+    nothing else, so it keeps two `array('d')` - 16 bytes a process
+    against the ~1.2 kB the record itself costs - and never holds the
+    records.
+    """
+
+    def __init__(self):
+        self.starts = array.array("d")
+        self.ends = array.array("d")
+
+    def add(self, record):
+        if record["open"]:
+            return
+        self.starts.append(record["start_ts"])
+        self.ends.append(record["end_ts"])
+
+    def finish(self):
+        """The same sweep, walked over two sorted arrays.
+
+        The list-of-points version built one tuple per endpoint - two
+        per process, ~29 MB on a 200,000-process trace, allocated at
+        the exact moment the aggregates are all live. Two sorted arrays
+        and two cursors give the identical answer with no allocation
+        past the sort: an end at the same timestamp as a start is taken
+        first, which is what `sort(key=(ts, delta))` did with `-1`
+        ordering before `+1`.
+        """
+        if not self.starts:
+            return 0
+        starts = sorted(self.starts)
+        ends = sorted(self.ends)
+        current = peak = 0
+        opened = closed = 0
+        total_starts, total_ends = len(starts), len(ends)
+        while opened < total_starts:
+            if closed < total_ends and ends[closed] <= starts[opened]:
+                current -= 1
+                closed += 1
+            else:
+                current += 1
+                opened += 1
+                if current > peak:
+                    peak = current
+        return peak
 
 
 # UX-105: the four bytes that start every ELF file, and the program
@@ -2649,12 +2759,23 @@ def compute_element_opens_coverage(records: List[dict]) -> Dict[str, dict]:
     did. With the spine on, `spine-only` is a process the hook provably
     never entered, so the share stops being an assumption.
     """
-    if not any(r.get("coverage") in (COVERAGE_BOTH, COVERAGE_SPINE_ONLY)
-               for r in records):
-        return {}
-    coverage: Dict[str, dict] = {}
+    state = _ElementOpensCoverage()
     for record in records:
-        entry = coverage.setdefault(
+        state.add(record)
+    return state.finish()
+
+
+class _ElementOpensCoverage:
+    """`compute_element_opens_coverage`, one record at a time. `UX-297`."""
+
+    def __init__(self):
+        self.coverage: Dict[str, dict] = {}
+        self.saw_spine = False
+
+    def add(self, record):
+        if record.get("coverage") in (COVERAGE_BOTH, COVERAGE_SPINE_ONLY):
+            self.saw_spine = True
+        entry = self.coverage.setdefault(
             record.get("element") or "unknown",
             {"processes": 0, "opens_covered": 0, "spine_only": 0},
         )
@@ -2663,9 +2784,13 @@ def compute_element_opens_coverage(records: List[dict]) -> Dict[str, dict]:
             entry["spine_only"] += 1
         else:
             entry["opens_covered"] += 1
-    for entry in coverage.values():
-        entry["opens_coverage"] = entry["opens_covered"] / entry["processes"]
-    return coverage
+
+    def finish(self):
+        if not self.saw_spine:
+            return {}
+        for entry in self.coverage.values():
+            entry["opens_coverage"] = entry["opens_covered"] / entry["processes"]
+        return self.coverage
 
 
 def compute_declared_vs_used(
@@ -2924,24 +3049,38 @@ def sandbox_durations(records: List[dict]) -> Dict[str, float]:
     but it errs toward accepting a containment, so it is stated rather
     than assumed away.
     """
-    first: Dict[str, float] = {}
-    last: Dict[str, float] = {}
+    state = _SandboxDurations()
     for record in records:
+        state.add(record)
+    return state.finish()
+
+
+class _SandboxDurations:
+    """`sandbox_durations`, one record at a time. `UX-297`."""
+
+    def __init__(self):
+        self.first: Dict[str, float] = {}
+        self.last: Dict[str, float] = {}
+
+    def add(self, record):
         key = record.get("invocation")
         if key is None:
-            continue
+            return
         key = str(key)
         start_ts = record.get("start_ts")
         if start_ts is not None:
-            first[key] = min(first.get(key, start_ts), start_ts)
+            self.first[key] = min(self.first.get(key, start_ts), start_ts)
         end_ts = record.get("end_ts")
         if end_ts is not None:
-            last[key] = max(last.get(key, end_ts), end_ts)
-    return {
-        key: last[key] - first[key]
-        for key in first.keys() & last.keys()
-        if last[key] >= first[key]
-    }
+            self.last[key] = max(self.last.get(key, end_ts), end_ts)
+
+    def finish(self):
+        first, last = self.first, self.last
+        return {
+            key: last[key] - first[key]
+            for key in first.keys() & last.keys()
+            if last[key] >= first[key]
+        }
 
 
 def correlate_invocations(
@@ -3081,13 +3220,24 @@ def compute_binary_cost(records: List[dict], top_n: int = 5) -> dict:
     A single-process finding is called out separately, since one process
     holding N seconds cannot be parallelised away while N processes can.
     """
-    per_element: Dict[str, dict] = {}
+    state = _BinaryCost()
     for record in records:
+        state.add(record)
+    return state.finish(top_n=top_n)
+
+
+class _BinaryCost:
+    """`compute_binary_cost`, one record at a time. `UX-297`."""
+
+    def __init__(self):
+        self.per_element: Dict[str, dict] = {}
+
+    def add(self, record):
         element = record.get("element")
         if not element:
-            continue
+            return
         binary = os.path.basename((record.get("cmd") or "").split(" ")[0]) or "unknown"
-        entry = per_element.setdefault(element, {})
+        entry = self.per_element.setdefault(element, {})
         stat = entry.setdefault(
             binary, {"count": 0, "cpu_us": 0, "wall_s": 0.0, "measured": 0}
         )
@@ -3098,41 +3248,42 @@ def compute_binary_cost(records: List[dict], top_n: int = 5) -> dict:
         if record.get("duration_s") is not None:
             stat["wall_s"] += record["duration_s"]
 
-    result: Dict[str, dict] = {}
-    for element, binaries in per_element.items():
-        by_cpu = sorted(binaries.items(), key=lambda kv: -kv[1]["cpu_us"])
-        measured_cpu = sum(v["cpu_us"] for v in binaries.values())
-        if not measured_cpu:
-            # UX-45's rule: no CPU coverage means say so, never fall back
-            # to ranking by count while looking like a cost ranking.
-            result[element] = {
-                "available": False,
-                "note": "no CPU time was measured for this element's processes",
-            }
-            continue
-        serial = [
-            {"binary": b, "cpu_us": v["cpu_us"], "wall_s": v["wall_s"]}
-            for b, v in by_cpu[:top_n]
-            if v["count"] == 1 and v["wall_s"] > 0
-        ]
-        result[element] = {
-            "available": True,
-            "measured_cpu_us": measured_cpu,
-            "by_cpu": [
-                {"binary": b, "count": v["count"], "cpu_us": v["cpu_us"],
-                 "wall_s": round(v["wall_s"], 1),
-                 "cpu_share": v["cpu_us"] / measured_cpu}
+    def finish(self, top_n: int = 5):
+        result: Dict[str, dict] = {}
+        for element, binaries in self.per_element.items():
+            by_cpu = sorted(binaries.items(), key=lambda kv: -kv[1]["cpu_us"])
+            measured_cpu = sum(v["cpu_us"] for v in binaries.values())
+            if not measured_cpu:
+                # UX-45's rule: no CPU coverage means say so, never fall back
+                # to ranking by count while looking like a cost ranking.
+                result[element] = {
+                    "available": False,
+                    "note": "no CPU time was measured for this element's processes",
+                }
+                continue
+            serial = [
+                {"binary": b, "cpu_us": v["cpu_us"], "wall_s": v["wall_s"]}
                 for b, v in by_cpu[:top_n]
-            ],
-            "by_count": [
-                {"binary": b, "count": v["count"]}
-                for b, v in sorted(binaries.items(), key=lambda kv: -kv[1]["count"])[:top_n]
-            ],
-            # UX-69: one process holding real wall time cannot be
-            # parallelised away - a different fix from N processes.
-            "single_process_costs": serial,
-        }
-    return result
+                if v["count"] == 1 and v["wall_s"] > 0
+            ]
+            result[element] = {
+                "available": True,
+                "measured_cpu_us": measured_cpu,
+                "by_cpu": [
+                    {"binary": b, "count": v["count"], "cpu_us": v["cpu_us"],
+                     "wall_s": round(v["wall_s"], 1),
+                     "cpu_share": v["cpu_us"] / measured_cpu}
+                    for b, v in by_cpu[:top_n]
+                ],
+                "by_count": [
+                    {"binary": b, "count": v["count"]}
+                    for b, v in sorted(binaries.items(), key=lambda kv: -kv[1]["count"])[:top_n]
+                ],
+                # UX-69: one process holding real wall time cannot be
+                # parallelised away - a different fix from N processes.
+                "single_process_costs": serial,
+            }
+        return result
 
 
 def compute_peak_memory(records: List[dict]) -> dict:
@@ -3158,9 +3309,20 @@ def compute_peak_memory(records: List[dict]) -> dict:
     a process killed by a signal or replaced by `exec` runs no destructor
     and contributes nothing.
     """
-    per_element: Dict[str, dict] = {}
+    state = _PeakMemory()
     for record in records:
-        entry = per_element.setdefault(
+        state.add(record)
+    return state.finish()
+
+
+class _PeakMemory:
+    """`compute_peak_memory`, one record at a time. `UX-297`."""
+
+    def __init__(self):
+        self.per_element: Dict[str, dict] = {}
+
+    def add(self, record):
+        entry = self.per_element.setdefault(
             record["element"],
             {"peak_rss_kb": None, "measured": 0, "unmeasured": 0},
         )
@@ -3170,24 +3332,27 @@ def compute_peak_memory(records: List[dict]) -> dict:
             entry["peak_rss_kb"] = max(current or 0, record["max_rss_kb"])
         else:
             entry["unmeasured"] += 1
-    measured_total = sum(e["measured"] for e in per_element.values())
-    if measured_total == 0:
+
+    def finish(self):
+        per_element = self.per_element
+        measured_total = sum(e["measured"] for e in per_element.values())
+        if measured_total == 0:
+            return {
+                "available": False,
+                "note": "no process reported a peak RSS - either the hook predates "
+                        "UX-63 or every traced process was killed before its "
+                        "destructor ran",
+            }
         return {
-            "available": False,
-            "note": "no process reported a peak RSS - either the hook predates "
-                    "UX-63 or every traced process was killed before its "
-                    "destructor ran",
+            "available": True,
+            "per_element": {k: per_element[k] for k in sorted(per_element)},
+            "note": "Peak resident set size of the single largest process in each "
+                    "element (getrusage ru_maxrss at exit, KiB). A per-process "
+                    "peak, deliberately NOT summed across processes: two "
+                    "processes peaking at different moments never held the sum "
+                    "between them. Use it as 'no single process here exceeded "
+                    "this', which is what UX-21's per-job memory estimate wants.",
         }
-    return {
-        "available": True,
-        "per_element": {k: per_element[k] for k in sorted(per_element)},
-        "note": "Peak resident set size of the single largest process in each "
-                "element (getrusage ru_maxrss at exit, KiB). A per-process "
-                "peak, deliberately NOT summed across processes: two "
-                "processes peaking at different moments never held the sum "
-                "between them. Use it as 'no single process here exceeded "
-                "this', which is what UX-21's per-job memory estimate wants.",
-    }
 
 
 def compute_cpu_time(records: List[dict]) -> dict:
@@ -3215,10 +3380,31 @@ def compute_cpu_time(records: List[dict]) -> dict:
     published for the wrappers (`make`, `sh`) whose own self time is
     near zero and whose subtree cost is the interesting figure.
     """
-    per_element: Dict[str, dict] = {}
+    state = _CpuTime()
     for record in records:
-        entry = per_element.setdefault(
-            record["element"],
+        state.add(record)
+    return state.finish()
+
+
+class _CpuTime:
+    """`compute_cpu_time`, one record at a time.
+
+    `UX-297`: the per-element wall span used to be a second pass that
+    re-scanned **every** record once per element - O(elements x
+    processes), and 2.0 s of the 9.4 s an extraction spent on a
+    200,000-process trace. The same span is a running min and max over
+    the records that have an end, which is what it always meant.
+    """
+
+    def __init__(self):
+        self.per_element: Dict[str, dict] = {}
+        self.spans: Dict[str, list] = {}
+        self.spine_sourced = 0
+
+    def add(self, record):
+        element = record["element"]
+        entry = self.per_element.setdefault(
+            element,
             {"cpu_us": 0, "children_cpu_us": 0, "measured": 0, "unmeasured": 0,
              "wall_span_s": None},
         )
@@ -3228,68 +3414,72 @@ def compute_cpu_time(records: List[dict]) -> dict:
             entry["measured"] += 1
         else:
             entry["unmeasured"] += 1
+        if record.get("cpu_source") == "spine":
+            self.spine_sourced += 1
+        if record["end_ts"] is not None:
+            span = self.spans.get(element)
+            if span is None:
+                self.spans[element] = [record["start_ts"], record["end_ts"]]
+            else:
+                span[0] = min(span[0], record["start_ts"])
+                span[1] = max(span[1], record["end_ts"])
 
-    for element, entry in per_element.items():
-        spans = [
-            r for r in records
-            if r["element"] == element and r["end_ts"] is not None
-        ]
-        if spans:
-            entry["wall_span_s"] = max(r["end_ts"] for r in spans) - min(
-                r["start_ts"] for r in spans
-            )
-        total = entry["measured"] + entry["unmeasured"]
-        entry["coverage"] = entry["measured"] / total if total else 0.0
-        # The question the micro-optimization half of the walkthrough
-        # could not answer: was this element's build CPU-bound, or was
-        # it waiting? Only meaningful where something was measured.
-        if entry["wall_span_s"] and entry["measured"]:
-            entry["cpu_per_wall_second"] = (entry["cpu_us"] / 1e6) / entry["wall_span_s"]
-        else:
-            entry["cpu_per_wall_second"] = None
+    def finish(self):
+        per_element = self.per_element
+        for element, entry in per_element.items():
+            span = self.spans.get(element)
+            if span is not None:
+                entry["wall_span_s"] = span[1] - span[0]
+            total = entry["measured"] + entry["unmeasured"]
+            entry["coverage"] = entry["measured"] / total if total else 0.0
+            # The question the micro-optimization half of the walkthrough
+            # could not answer: was this element's build CPU-bound, or was
+            # it waiting? Only meaningful where something was measured.
+            if entry["wall_span_s"] and entry["measured"]:
+                entry["cpu_per_wall_second"] = (entry["cpu_us"] / 1e6) / entry["wall_span_s"]
+            else:
+                entry["cpu_per_wall_second"] = None
 
-    measured_total = sum(e["measured"] for e in per_element.values())
-    unmeasured_total = sum(e["unmeasured"] for e in per_element.values())
-    # UX-108: which mechanism actually produced the seconds above. With
-    # the spine on, a process the hook never entered carries
-    # `/proc/<pid>/stat`'s tick-truncated figure instead, and a note
-    # naming only `getrusage` would describe a measurement this report
-    # did not make. Zero on every capture taken without the spine, which
-    # is what keeps their reports word-for-word what they were.
-    spine_sourced = sum(
-        1 for record in records if record.get("cpu_source") == "spine"
-    )
-    return {
-        "available": measured_total > 0,
-        "measured_processes": measured_total,
-        "unmeasured_processes": unmeasured_total,
-        "total_cpu_us": sum(e["cpu_us"] for e in per_element.values()),
-        "per_element": dict(
-            sorted(per_element.items(), key=lambda kv: -kv[1]["cpu_us"])
-        ),
-        # UX-108: which mechanism actually produced the seconds above.
-        # With the spine on, a process the hook never entered carries
+        measured_total = sum(e["measured"] for e in per_element.values())
+        unmeasured_total = sum(e["unmeasured"] for e in per_element.values())
+        # UX-108: which mechanism actually produced the seconds above. With
+        # the spine on, a process the hook never entered carries
         # `/proc/<pid>/stat`'s tick-truncated figure instead, and a note
-        # naming only `getrusage` would be describing a measurement this
-        # report did not make.
-        "spine_sourced_processes": spine_sourced,
-        "note": (
-            "Real CPU time (getrusage utime+stime) for processes that exited "
-            "normally. "
-            + ("Where only the ptrace spine reached a process, the figure is "
-               "`/proc/<pid>/stat` read at its exit-stop instead, truncated to "
-               "whole 10ms ticks - so a short static process reads as zero "
-               "(UX-107). " if spine_sourced else "")
-            + "Processes killed by a signal or replaced by exec run no "
-            "destructor and are counted as unmeasured, never as zero. This is "
-            "Plane 2 only - it is not wired into Plane 1's utilisation buckets, "
-            "which remain slot occupancy (UX-36)."
-        ) if measured_total else (
-            "No CPU time in this trace - captured with a hook built before UX-45, "
-            "or every process exited abnormally. Reported as unavailable rather "
-            "than as zero."
-        ),
-    }
+        # naming only `getrusage` would describe a measurement this report
+        # did not make. Zero on every capture taken without the spine, which
+        # is what keeps their reports word-for-word what they were.
+        spine_sourced = self.spine_sourced
+        return {
+            "available": measured_total > 0,
+            "measured_processes": measured_total,
+            "unmeasured_processes": unmeasured_total,
+            "total_cpu_us": sum(e["cpu_us"] for e in per_element.values()),
+            "per_element": dict(
+                sorted(per_element.items(), key=lambda kv: -kv[1]["cpu_us"])
+            ),
+            # UX-108: which mechanism actually produced the seconds above.
+            # With the spine on, a process the hook never entered carries
+            # `/proc/<pid>/stat`'s tick-truncated figure instead, and a note
+            # naming only `getrusage` would be describing a measurement this
+            # report did not make.
+            "spine_sourced_processes": spine_sourced,
+            "note": (
+                "Real CPU time (getrusage utime+stime) for processes that exited "
+                "normally. "
+                + ("Where only the ptrace spine reached a process, the figure is "
+                   "`/proc/<pid>/stat` read at its exit-stop instead, truncated to "
+                   "whole 10ms ticks - so a short static process reads as zero "
+                   "(UX-107). " if spine_sourced else "")
+                + "Processes killed by a signal or replaced by exec run no "
+                "destructor and are counted as unmeasured, never as zero. This is "
+                "Plane 2 only - it is not wired into Plane 1's utilisation buckets, "
+                "which remain slot occupancy (UX-36)."
+            ) if measured_total else (
+                "No CPU time in this trace - captured with a hook built before UX-45, "
+                "or every process exited abnormally. Reported as unavailable rather "
+                "than as zero."
+            ),
+        }
 
 
 # UX-102: what a *configure* invocation looks like. Matched against the
@@ -3396,68 +3586,159 @@ def classify_configure_phase(records: List[dict]) -> dict:
     to the element name), because pids are namespaced per sandbox and
     collide freely across them - the same defect `pair_events` documents.
     """
-    by_key: Dict[Tuple[str, int], dict] = {}
+    state = _ConfigurePhase()
     for record in records:
-        sandbox = record.get("invocation") or record.get("element")
-        by_key[(sandbox, record["pid"])] = record
+        state.add(record)
+    return state.finish()
 
-    def _is_configure(record: dict) -> bool:
+
+class _ConfigurePhase:
+    """`classify_configure_phase`, one record at a time.
+
+    `UX-297`, and the only aggregate here that cannot be a per-element
+    fold: a process is configure work because of *what started it*, so
+    the classification needs the whole sandbox's parentage before any
+    record can be classified. Two passes, then - but over the four
+    things the walk reads rather than over the records.
+
+    What is kept per process: its sandbox and pid (as one integer key),
+    its parent's pid, whether its own command line is a configure root,
+    which element it billed to, and its CPU time. The command line
+    itself - the bulk of a record - is reduced to a boolean on arrival
+    and dropped. The ancestor walk is unchanged, so the classification
+    is the one this function has always made.
+    """
+
+    _NO_CPU = -1
+
+    def __init__(self):
+        # `(sandbox, pid) -> ppid`, keyed by one integer rather than by
+        # a tuple: a tuple key costs its own object per process, which
+        # on the traces this item is about is tens of megabytes of
+        # nothing. Sandboxes are numbered as they are met and the pid
+        # occupies the low bits. Last writer wins, exactly as the record
+        # map this replaces did - a sandbox that recycles a pid leaves
+        # the later process as that key's occupant, and changing that
+        # here would change the classification.
+        self.parent: Dict[int, int] = {}
+        # The subset of those keys whose own command line is a
+        # configure entry point. A set, because on most builds it is
+        # nearly empty.
+        self.roots = set()
+        self.sandbox_ids: Dict[str, int] = {}
+        # Both of the above are built in `finish`, from the rows, not as
+        # the stream arrives. Measured: the parent map is ~100 bytes a
+        # process, and building it during the fold puts it beside the
+        # records that have not been released yet. The rows cost a
+        # quarter of that, and by the time they are turned into a map
+        # the records are gone.
+        # One compact row per record, in arrival order.
+        self.rows_sandbox = array.array("i")
+        self.rows_pid = array.array("q")
+        self.rows_ppid = array.array("q")
+        self.rows_root = bytearray()
+        self.elements: List[str] = []
+        self.cpu = array.array("q")
+
+    _NO_PARENT = -1
+    _PID_BITS = 32
+
+    def _key(self, sandbox_id: int, pid: int) -> int:
+        return (sandbox_id << self._PID_BITS) | (pid & 0xFFFFFFFF)
+
+    def add(self, record):
         sandbox = record.get("invocation") or record.get("element")
-        seen = set()
-        current = record
+        sandbox_id = self.sandbox_ids.get(sandbox)
+        if sandbox_id is None:
+            sandbox_id = self.sandbox_ids[sandbox] = len(self.sandbox_ids)
+        pid = record["pid"]
+        ppid = record.get("ppid")
+        root = is_configure_root(record["cmd"])
+        self.rows_sandbox.append(sandbox_id)
+        self.rows_pid.append(pid)
+        self.rows_ppid.append(self._NO_PARENT if ppid is None else ppid)
+        self.rows_root.append(1 if root else 0)
+        self.elements.append(record["element"])
+        self.cpu.append(record["cpu_us"] if "cpu_us" in record else self._NO_CPU)
+
+    def _is_configure(self, sandbox_id, pid, ppid, own_root) -> bool:
+        """The walk `classify_configure_phase` has always made, over the
+        parent map rather than over the records."""
+        if own_root:
+            return True
+        seen = {self._key(sandbox_id, pid)}
+        current = None if ppid == self._NO_PARENT else ppid
         while current is not None:
-            key = (sandbox, current["pid"])
-            if key in seen:  # defensive: a pid cycle is not possible, but cheap to refuse
-                return False
+            key = self._key(sandbox_id, current)
+            if key in seen:  # defensive: a pid cycle is not possible,
+                return False  # but cheap to refuse
             seen.add(key)
-            if is_configure_root(current["cmd"]):
+            if key not in self.parent:
+                return False
+            if key in self.roots:
                 return True
-            current = by_key.get((sandbox, current.get("ppid")))
+            parent_pid = self.parent[key]
+            current = None if parent_pid == self._NO_PARENT else parent_pid
         return False
 
-    per_element: Dict[str, dict] = {}
-    for record in records:
-        entry = per_element.setdefault(record["element"], {
-            "configure_cpu_us": 0, "build_cpu_us": 0,
-            "configure_processes": 0, "build_processes": 0,
-            "measured": 0, "unmeasured": 0,
-        })
-        configure = _is_configure(record)
-        entry["configure_processes" if configure else "build_processes"] += 1
-        if "cpu_us" in record:
-            entry["measured"] += 1
-            entry["configure_cpu_us" if configure else "build_cpu_us"] += record["cpu_us"]
-        else:
-            entry["unmeasured"] += 1
+    def finish(self):
+        # The parent map, last-writer-wins in arrival order - the same
+        # rule the record map this replaces followed, and the reason a
+        # sandbox that recycles a pid classifies the way it always did.
+        for index in range(len(self.rows_pid)):
+            key = self._key(self.rows_sandbox[index], self.rows_pid[index])
+            self.parent[key] = self.rows_ppid[index]
+            if self.rows_root[index]:
+                self.roots.add(key)
+            else:
+                self.roots.discard(key)
 
-    for entry in per_element.values():
-        total_cpu = entry["configure_cpu_us"] + entry["build_cpu_us"]
-        entry["configure_share"] = (
-            entry["configure_cpu_us"] / total_cpu if total_cpu else None
-        )
-        total_processes = entry["configure_processes"] + entry["build_processes"]
-        entry["coverage"] = entry["measured"] / total_processes if total_processes else 0.0
+        per_element: Dict[str, dict] = {}
+        for index, element in enumerate(self.elements):
+            entry = per_element.setdefault(element, {
+                "configure_cpu_us": 0, "build_cpu_us": 0,
+                "configure_processes": 0, "build_processes": 0,
+                "measured": 0, "unmeasured": 0,
+            })
+            configure = self._is_configure(
+                self.rows_sandbox[index], self.rows_pid[index],
+                self.rows_ppid[index], self.rows_root[index])
+            entry["configure_processes" if configure else "build_processes"] += 1
+            cpu = self.cpu[index]
+            if cpu != self._NO_CPU:
+                entry["measured"] += 1
+                entry["configure_cpu_us" if configure else "build_cpu_us"] += cpu
+            else:
+                entry["unmeasured"] += 1
 
-    configure_total = sum(e["configure_cpu_us"] for e in per_element.values())
-    cpu_total = configure_total + sum(e["build_cpu_us"] for e in per_element.values())
-    return {
-        "available": bool(per_element),
-        "configure_cpu_us": configure_total,
-        "total_cpu_us": cpu_total,
-        "configure_share": configure_total / cpu_total if cpu_total else None,
-        "per_element": dict(sorted(
-            per_element.items(), key=lambda kv: -kv[1]["configure_cpu_us"],
-        )),
-        "note": (
-            "Configure-phase CPU is every traced process descending from a build "
-            "system's configure entry point (./configure, config.status, cmake "
-            "without --build/--install/-E, meson setup, the autotools generators). "
-            "Classified by parentage, so a process is configure work because of "
-            "what started it, not what it is called. Statically-linked processes "
-            "are invisible to LD_PRELOAD and a process with no traced parent is "
-            "counted as build work - both make this a floor."
-        ),
-    }
+        for entry in per_element.values():
+            total_cpu = entry["configure_cpu_us"] + entry["build_cpu_us"]
+            entry["configure_share"] = (
+                entry["configure_cpu_us"] / total_cpu if total_cpu else None
+            )
+            total_processes = entry["configure_processes"] + entry["build_processes"]
+            entry["coverage"] = entry["measured"] / total_processes if total_processes else 0.0
+
+        configure_total = sum(e["configure_cpu_us"] for e in per_element.values())
+        cpu_total = configure_total + sum(e["build_cpu_us"] for e in per_element.values())
+        return {
+            "available": bool(per_element),
+            "configure_cpu_us": configure_total,
+            "total_cpu_us": cpu_total,
+            "configure_share": configure_total / cpu_total if cpu_total else None,
+            "per_element": dict(sorted(
+                per_element.items(), key=lambda kv: -kv[1]["configure_cpu_us"],
+            )),
+            "note": (
+                "Configure-phase CPU is every traced process descending from a build "
+                "system's configure entry point (./configure, config.status, cmake "
+                "without --build/--install/-E, meson setup, the autotools generators). "
+                "Classified by parentage, so a process is configure work because of "
+                "what started it, not what it is called. Statically-linked processes "
+                "are invisible to LD_PRELOAD and a process with no traced parent is "
+                "counted as build work - both make this a floor."
+            ),
+        }
 
 
 # UX-107: how far the two mechanisms' CPU figures may differ before the
@@ -3495,91 +3776,119 @@ def compute_stream_coverage(records: List[dict],
     is averaged, because averaging two measurements hides the fact that
     they differed.
     """
-    if not records:
-        return {}
-    counts: Dict[str, int] = {}
+    state = _StreamCoverage()
     for record in records:
-        counts[record.get("coverage", COVERAGE_HOOK_ONLY)] = counts.get(
-            record.get("coverage", COVERAGE_HOOK_ONLY), 0,
-        ) + 1
-    opens_covered = counts.get(COVERAGE_BOTH, 0) + counts.get(COVERAGE_HOOK_ONLY, 0)
-    disagreements = []
-    for record in records:
+        state.add(record)
+    return state.finish(fork_only_exits=fork_only_exits,
+                        unmatched_ends=unmatched_ends)
+
+
+class _StreamCoverage:
+    """`compute_stream_coverage`, one record at a time.
+
+    `UX-297`: every figure here is a counter except the CPU
+    disagreements, and those are the records where the two mechanisms
+    differ by more than a few clock ticks - a handful on a real capture,
+    and the only place a command line is kept.
+    """
+
+    def __init__(self):
+        self.records = 0
+        self.counts: Dict[str, int] = {}
+        self.disagreements: List[dict] = []
+        self.reconciled = 0
+        self.spine_total = 0
+        self.hook_total = 0
+        self.cpu_from_spine_only = 0
+        self.exec_chains_collapsed = 0
+
+    def add(self, record):
+        self.records += 1
+        coverage = record.get("coverage", COVERAGE_HOOK_ONLY)
+        self.counts[coverage] = self.counts.get(coverage, 0) + 1
+        if record.get("cpu_source") == "spine":
+            self.cpu_from_spine_only += 1
+        if record.get("exec_chain", 1) > 1:
+            self.exec_chains_collapsed += 1
         if "hook_cpu_us" not in record or "spine_cpu_us" not in record:
-            continue
+            return
+        self.reconciled += 1
+        self.spine_total += record["spine_cpu_us"]
+        self.hook_total += record["hook_cpu_us"]
         delta = abs(record["hook_cpu_us"] - record["spine_cpu_us"])
         if delta > CPU_RECONCILIATION_TOLERANCE_US:
-            disagreements.append({
+            self.disagreements.append({
                 "pid": record["pid"], "element": record["element"],
                 "spine_cpu_us": record["spine_cpu_us"],
                 "hook_cpu_us": record["hook_cpu_us"],
                 "delta_us": delta, "cmd": record["cmd"][:120],
             })
-    disagreements.sort(key=lambda entry: -entry["delta_us"])
+
+    def finish(self, fork_only_exits: int = 0, unmatched_ends: int = 0):
+        if not self.records:
+            return {}
+        counts = self.counts
+        opens_covered = counts.get(COVERAGE_BOTH, 0) + counts.get(
+            COVERAGE_HOOK_ONLY, 0)
+        disagreements = self.disagreements
+        disagreements.sort(key=lambda entry: -entry["delta_us"])
     # The per-process check above cannot see a *systematic* difference:
     # 663 pairs each within one clock tick still summed to 58.47s against
     # 54.14s on a real examples/06 capture - a 7.4% aggregate gap, and
     # every pair individually "agreeing". Measured on the same
     # population the per-process check ran on, because a total over one
     # set compared with a total over another measures the sets.
-    reconciled = [r for r in records if "hook_cpu_us" in r and "spine_cpu_us" in r]
-    aggregate = None
-    if reconciled:
-        spine_total = sum(r["spine_cpu_us"] for r in reconciled)
-        hook_total = sum(r["hook_cpu_us"] for r in reconciled)
-        aggregate = {
-            "processes": len(reconciled),
-            "spine_cpu_us": spine_total,
-            "hook_cpu_us": hook_total,
-            "delta_us": spine_total - hook_total,
-            # Against the hook's total, because that is the figure the
-            # merged model uses - a percentage of the number nobody
-            # consumes measures nothing a reader can act on.
-            "delta_pct": (
-                (spine_total - hook_total) / hook_total * 100 if hook_total else 0.0
-            ),
-        }
-    return {
-        "processes": len(records),
-        "by_coverage": dict(sorted(counts.items())),
-        # Opened paths need the hook. This is the share of processes any
-        # opens-based finding (`UX-46`'s declared-vs-used) can speak
-        # about at all - published because the alternative is a finding
-        # that reads as "no unused dependencies" when it means "nobody
-        # could look".
-        "opens_covered_processes": opens_covered,
-        "opens_coverage": opens_covered / len(records),
-        "cpu_reconciled_processes": sum(
-            1 for record in records if "hook_cpu_us" in record
-        ),
-        # UX-107: how many processes' CPU time is a tick-truncated
-        # figure because no finer one exists for them. Published because
-        # a static-heavy build's CPU total is materially low and the
-        # report must say so rather than let the number pass as exact.
-        "cpu_from_spine_only": sum(
-            1 for record in records if record.get("cpu_source") == "spine"
-        ),
-        # UX-123: pids that ran more than one image. Collapsed into one
-        # record each, because the kernel's CPU and RSS figures are
-        # per-pid and cumulative across execs - published so a reader can
-        # see the collapse rather than wonder where the records went.
-        "exec_chains_collapsed": sum(
-            1 for record in records if record.get("exec_chain", 1) > 1
-        ),
-        # UX-123: exits recorded for pids that never exec'd - a
-        # fork-without-exec child is the same program as its parent and
-        # wears its cmdline, so it is not a process to list. Dropped, and
-        # said so.
-        "fork_only_exits": fork_only_exits,
-        # UX-133: an END with no START that the *hook* produced. Only the
-        # spine can see a fork-without-exec exit, so a hook orphan is a
-        # truncated log or a lost START - a different fact, and one the
-        # old single count asserted was something it is not.
-        "unmatched_ends": unmatched_ends,
-        "cpu_disagreements": disagreements[:8],
-        "cpu_disagreement_count": len(disagreements),
-        "cpu_aggregate": aggregate,
-        "note": (
+        aggregate = None
+        if self.reconciled:
+            spine_total = self.spine_total
+            hook_total = self.hook_total
+            aggregate = {
+                "processes": self.reconciled,
+                "spine_cpu_us": spine_total,
+                "hook_cpu_us": hook_total,
+                "delta_us": spine_total - hook_total,
+                # Against the hook's total, because that is the figure the
+                # merged model uses - a percentage of the number nobody
+                # consumes measures nothing a reader can act on.
+                "delta_pct": (
+                    (spine_total - hook_total) / hook_total * 100 if hook_total else 0.0
+                ),
+            }
+        return {
+            "processes": self.records,
+            "by_coverage": dict(sorted(counts.items())),
+            # Opened paths need the hook. This is the share of processes any
+            # opens-based finding (`UX-46`'s declared-vs-used) can speak
+            # about at all - published because the alternative is a finding
+            # that reads as "no unused dependencies" when it means "nobody
+            # could look".
+            "opens_covered_processes": opens_covered,
+            "opens_coverage": opens_covered / self.records,
+            "cpu_reconciled_processes": self.reconciled,
+            # UX-107: how many processes' CPU time is a tick-truncated
+            # figure because no finer one exists for them. Published because
+            # a static-heavy build's CPU total is materially low and the
+            # report must say so rather than let the number pass as exact.
+            "cpu_from_spine_only": self.cpu_from_spine_only,
+            # UX-123: pids that ran more than one image. Collapsed into one
+            # record each, because the kernel's CPU and RSS figures are
+            # per-pid and cumulative across execs - published so a reader can
+            # see the collapse rather than wonder where the records went.
+            "exec_chains_collapsed": self.exec_chains_collapsed,
+            # UX-123: exits recorded for pids that never exec'd - a
+            # fork-without-exec child is the same program as its parent and
+            # wears its cmdline, so it is not a process to list. Dropped, and
+            # said so.
+            "fork_only_exits": fork_only_exits,
+            # UX-133: an END with no START that the *hook* produced. Only the
+            # spine can see a fork-without-exec exit, so a hook orphan is a
+            # truncated log or a lost START - a different fact, and one the
+            # old single count asserted was something it is not.
+            "unmatched_ends": unmatched_ends,
+            "cpu_disagreements": disagreements[:8],
+            "cpu_disagreement_count": len(disagreements),
+            "cpu_aggregate": aggregate,
+            "note": (
             "Process coverage is the union of both mechanisms; opens coverage is the "
             "hook's alone, since opened paths need in-process interposition. A "
             "`spine-only` process is fully measured except for its opens. CPU time "
@@ -3587,28 +3896,128 @@ def compute_stream_coverage(records: List[dict],
             "never the sum of the two - and it is the later of the two "
             "measurements, since the hook's destructor runs before the process is "
             "finished while the spine reads /proc at the kernel's exit-stop."
-        ),
-    }
+            ),
+        }
+
+
+class Plane2Fold:
+    """Every Plane 2 aggregate, folded from a record stream.
+
+    `UX-297`, Direction 15's rules 2 and 5. `summarize` used to take the
+    whole record list and hand it to ten functions that each walked it
+    again; the list itself was then embedded in the report. Measured on
+    a 200,000-process trace, holding it cost 204 MB of a 267 MB
+    extraction, and at the field's 2.7 M processes the same list is
+    ~2.9 GB - allocated on the machine that has just finished the build.
+
+    Each aggregate is the same computation, split into `add` and
+    `finish`. `summarize(records)` folds a list and is byte-identical by
+    construction, so every existing caller and every existing guard is
+    the migration's equality check; `load_and_summarize` folds the
+    stream and never builds the list at all.
+
+    What is still O(processes) is named rather than hidden: the
+    concurrency sweeps keep two `array('d')` of timestamps (16 bytes a
+    process against ~1.2 kB for the record), and the configure
+    classifier keeps a parent map, because a process is configure work
+    because of what started it and that cannot be known until the
+    sandbox is complete.
+    """
+
+    def __init__(self, resolved: Optional[Dict[str, str]] = None):
+        # `UX-56`'s correction, applied as each record arrives rather
+        # than by a second pass that rewrites the list in place - there
+        # is no list to rewrite. Every aggregate is keyed on the element
+        # name, so the correction has to happen before the fold, not
+        # after it.
+        self.resolved = resolved or {}
+        self.relabelled = 0
+        self.count = 0
+        self.matched = 0
+        self.open_records = 0
+        self.by_binary: Dict[str, int] = {}
+        self.by_element: Dict[str, int] = {}
+        self.wall_start = None
+        self.wall_end = None
+        self.concurrency = _MaxConcurrency()
+        self.cpu_time = _CpuTime()
+        self.configure = _ConfigurePhase()
+        self.peak_memory = _PeakMemory()
+        self.binary_cost = _BinaryCost()
+        self.parallelism = _PerElementParallelism()
+        self.redundancy = _RedundantOperations()
+        self.coverage = _StreamCoverage()
+        self.opens_coverage = _ElementOpensCoverage()
+        self.sandboxes = _SandboxDurations()
+
+    def add(self, record: dict) -> None:
+        element = self.resolved.get(str(record.get("invocation")))
+        if element and record.get("element") != element:
+            record["element"] = element
+            self.relabelled += 1
+        self.count += 1
+        if record["open"]:
+            self.open_records += 1
+        else:
+            self.matched += 1
+        name = _binary_name(record["cmd"])
+        self.by_binary[name] = self.by_binary.get(name, 0) + 1
+        self.by_element[record["element"]] = self.by_element.get(
+            record["element"], 0) + 1
+        start = record["start_ts"]
+        end = record["end_ts"] if record["end_ts"] is not None else start
+        self.wall_start = start if self.wall_start is None else min(
+            self.wall_start, start)
+        self.wall_end = end if self.wall_end is None else max(self.wall_end, end)
+        self.concurrency.add(record)
+        self.cpu_time.add(record)
+        self.configure.add(record)
+        self.peak_memory.add(record)
+        self.binary_cost.add(record)
+        self.parallelism.add(record)
+        self.redundancy.add(record)
+        self.coverage.add(record)
+        self.opens_coverage.add(record)
+        self.sandboxes.add(record)
+
+    def report(self, correlation: Optional[dict] = None,
+               fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
+        return _summarize_folded(self, correlation=correlation,
+                                 fork_only_exits=fork_only_exits,
+                                 unmatched_ends=unmatched_ends)
 
 
 def summarize(records: List[dict], correlation: Optional[dict] = None,
               fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
-    matched = [r for r in records if not r["open"]]
-    open_records = [r for r in records if r["open"]]
-    by_binary: Dict[str, int] = {}
-    for r in records:
-        name = _binary_name(r["cmd"])
-        by_binary[name] = by_binary.get(name, 0) + 1
-    by_element: Dict[str, int] = {}
-    for r in records:
-        by_element[r["element"]] = by_element.get(r["element"], 0) + 1
-    wall_start = min((r["start_ts"] for r in records), default=None)
-    wall_end = max((r["end_ts"] if r["end_ts"] is not None else r["start_ts"] for r in records), default=None)
-    redundant_operations, redundant_coverage = detect_redundant_operations(records)
+    """The report over a record list. `UX-297`: a fold with the list
+    poured into it, so the list-based and streaming paths cannot
+    disagree - they are one code path with two callers."""
+    fold = Plane2Fold()
+    for record in records:
+        fold.add(record)
+    return fold.report(correlation=correlation,
+                       fork_only_exits=fork_only_exits,
+                       unmatched_ends=unmatched_ends)
+
+
+def _summarize_folded(fold: "Plane2Fold", correlation: Optional[dict] = None,
+                      fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
+    by_binary = fold.by_binary
+    by_element = fold.by_element
+    wall_start, wall_end = fold.wall_start, fold.wall_end
+    open_records = fold.open_records
+    redundant_operations, redundant_coverage = fold.redundancy.finish()
     return {
-        "process_count": len(records),
-        "matched_count": len(matched),
-        "open_count": len(open_records),
+        # `UX-297`: the shape this document is. Every report written
+        # before this item carried the whole per-process record list
+        # under `"processes"` and no stamp; every report written after
+        # carries the aggregates alone and this one. A reader that has
+        # to tell them apart has a field to read rather than a key to
+        # guess from.
+        "schema": PLANE2_SCHEMA,
+        "process_count": fold.count,
+        "matched_count": fold.matched,
+        "open_count": open_records,
         "open_records_note": (
             "Processes with no observed exit are excluded from max_concurrency, not "
             "assumed to run indefinitely. Real cause, confirmed against this tool's own "
@@ -3624,19 +4033,19 @@ def summarize(records: List[dict], correlation: Optional[dict] = None,
         # UX-56: how the names above were arrived at, when a
         # correlation ran. Absent when it did not.
         "invocation_correlation": correlation,
-        "max_concurrency": compute_max_concurrency(records),
+        "max_concurrency": fold.concurrency.finish(),
         # UX-45: real, kernel-measured CPU time per element.
-        "cpu_time": compute_cpu_time(records),
+        "cpu_time": fold.cpu_time.finish(),
         # UX-102: of that CPU, how much was the build system working out
         # how to build rather than building.
-        "configure_phase": classify_configure_phase(records),
-        "peak_memory": compute_peak_memory(records),
+        "configure_phase": fold.configure.finish(),
+        "peak_memory": fold.peak_memory.finish(),
         # UX-69: where the time went inside each element, not how many
         # times something ran.
-        "binary_cost": compute_binary_cost(records),
+        "binary_cost": fold.binary_cost.finish(),
         # UX-32: per-element achieved parallelism - the question this
         # plane exists to answer. See compute_per_element_parallelism.
-        "per_element_parallelism": compute_per_element_parallelism(records),
+        "per_element_parallelism": fold.parallelism.finish(),
         "wall_span_s": (wall_end - wall_start) if wall_start is not None and wall_end is not None else None,
         "redundant_operations": redundant_operations,
         # UX-73: additive sibling key - what the list above excluded and
@@ -3645,13 +4054,11 @@ def summarize(records: List[dict], correlation: Optional[dict] = None,
         # `attribution_hints` uses, so an existing consumer of
         # `redundant_operations` sees no change.
         "redundant_operations_coverage": redundant_coverage,
-        "processes": records,
         "static_binary_disclaimer": STATIC_BINARY_DISCLAIMER,
         # UX-107: which mechanism saw each process, as counts rather
         # than as a footnote.
-        "stream_coverage": compute_stream_coverage(
-            records, fork_only_exits=fork_only_exits,
-            unmatched_ends=unmatched_ends),
+        "stream_coverage": fold.coverage.finish(
+            fork_only_exits=fork_only_exits, unmatched_ends=unmatched_ends),
     }
 
 
@@ -3659,7 +4066,14 @@ def summarize(records: List[dict], correlation: Optional[dict] = None,
 # previously-saved JSON *report* being handed to `report`, which
 # otherwise parses as zero trace lines and prints a confident, wrong
 # "Processes traced: 0" with exit 0.
-_REPORT_MARKER_KEYS = frozenset({"process_count", "matched_count", "by_binary", "processes"})
+#
+# `UX-297` took `processes` out of that set along with the list itself.
+# The remaining four are still emitted by every report this tool has
+# ever written, so a legacy monolith is recognized by exactly the same
+# rule as a new aggregates-only report - which is what keeps an old
+# store readable.
+_REPORT_MARKER_KEYS = frozenset({"process_count", "matched_count", "by_binary",
+                                 "by_element"})
 
 
 class EmptyTraceError(TraceError):
@@ -3687,6 +4101,33 @@ def load_saved_report(path: str) -> Optional[dict]:
     if isinstance(data, dict) and _REPORT_MARKER_KEYS.issubset(data.keys()):
         return data
     return None
+
+
+def load_records(raw_log_path: str, merge: bool = True) -> List[dict]:
+    """Every process record a raw trace log holds.
+
+    `UX-297` took the record list out of the report, so the log it came
+    from is where it lives - which is what a snapshot keeps anyway
+    (`plane2.log.gz`) and what the timeline is already rendered from.
+    This is the one call that rebuilds it, for the consumers that
+    genuinely need per-process rows: the trace converter, and a
+    ground-truth test checking records against arithmetic.
+
+    Deliberately **not** on any `bga view` or `bga analyze` path. Every
+    published number is a per-element reduction, and reading the rows
+    to reach one is the defect this item is about.
+
+    `merge=False` returns the paired rows without `UX-107`'s two-stream
+    join, which is what the trace converter has always drawn: one bar
+    per *record*, so a dynamically-linked process seen by both the hook
+    and the spine gets two. Whether the timeline should draw the merged
+    process instead is a real question and `UX-298`'s, not this item's -
+    changing it here would have been a silent edit to what the timeline
+    shows, under a change about memory.
+    """
+    with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as handle:
+        records = pair_events(parse_trace_lines(handle), consume=True)
+    return merge_record_streams(records) if merge else records
 
 
 def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
@@ -3774,13 +4215,24 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
         correlation = correlate_invocations(
             invocations, spans, durations=sandbox_durations(records)
         )
-        correlation["relabelled_processes"] = apply_correlation(
-            records, correlation["resolved"]
-        )
         correlation["elements_in_plane1"] = len(spans)
-    report = summarize(records, correlation=correlation,
-                       fork_only_exits=fork_only_exits,
-                       unmatched_ends=unmatched_ends)
+
+    # UX-297: fold the records into the aggregates and drop each one as
+    # it is folded, rather than holding the whole list through ten
+    # functions that each walked it again - and through the `by_key`
+    # and `by_signature` maps those functions built beside it.
+    # `UX-56`'s relabelling happens on the way in for the same reason:
+    # there is no list left to rewrite afterwards.
+    fold = Plane2Fold(resolved=(correlation or {}).get("resolved"))
+    for index in range(len(records)):
+        fold.add(records[index])
+        records[index] = None
+    del records
+    if correlation is not None:
+        correlation["relabelled_processes"] = fold.relabelled
+    report = fold.report(correlation=correlation,
+                         fork_only_exits=fork_only_exits,
+                         unmatched_ends=unmatched_ends)
     if spine_policy:
         report["spine_policy"] = spine_policy
 
@@ -3809,7 +4261,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # those in would report nine fully-traced elements as "may be built
     # entirely by statically-linked processes" - a wrong reason where
     # there had been no claim at all. Measured on `examples/06`.
-    element_coverage = compute_element_opens_coverage(records)
+    element_coverage = fold.opens_coverage.finish()
     unmeasured = {
         element for element, entry in element_coverage.items()
         if element != "unknown" and not entry["opens_covered"]

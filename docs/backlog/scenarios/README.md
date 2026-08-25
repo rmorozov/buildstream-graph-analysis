@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-290 scenarios: **18 open**, 272 closed.
+290 scenarios: **17 open**, 273 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
-| contracts | 4 | 33 |
+| contracts | 3 | 33 |
 | viewer | 10 | 64 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
@@ -50,7 +50,6 @@ task file, which is the only place it ever lived twice.
 | UX-285 | [the identity blocks are split, and the blast box is last](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-286 | [the report is forty-eight fragments with no chapters](UX-0286-the-report-is-forty-eight-fragments-with-no-chapters.md) | viewer | High | R1, R7 | 🔴 |
 | UX-287 | [the export ceiling is measured on a four-element run](UX-0287-the-export-ceiling-is-measured-on-a-four-element-run.md) | guards | High | R8 | 🔴 |
-| UX-288 | [the contract publishes membership three ways](UX-0288-the-contract-publishes-membership-three-ways.md) | contracts | High | R5, R7 | 🔴 |
 | UX-289 | [one element table, many presets](UX-0289-one-element-table-many-presets.md) | viewer | High | R1, R7 | 🔴 |
 | UX-290 | [the schema does not describe its tuples](UX-0290-the-schema-does-not-describe-its-tuples.md) | contracts | Medium | R7, R8 | 🔴 |
 | UX-291 | [a finding carries its numbers three times](UX-0291-a-finding-carries-its-numbers-three-times.md) | contracts | Low | R5, R7 | 🔴 |

@@ -491,11 +491,12 @@ buy nothing beyond what completion already gives. Recorded as considered
 and declined, revisitable if argcomplete cannot complete something users
 need.
 
-## `bga timeline` — one trace, both planes (`UX-188`)
+## `bga timeline` — one trace, both planes (`UX-188`, `UX-298`)
 
 ```bash
-bga timeline @last              # -> <snapshot>/timeline.json
-bga timeline @last -o /tmp/t.json --anchor-element components/openssl.bst
+bga timeline @last              # -> <snapshot>/timeline.perfetto-trace.gz
+bga timeline @last --format chrome          # -> <snapshot>/timeline.json
+bga timeline @last -o /tmp/t.gz --anchor-element components/openssl.bst
 ```
 
 Plane 1's element schedule always; Plane 2's process lanes underneath it
@@ -503,11 +504,23 @@ when the snapshot kept its raw trace log — which `bga snapshot` does by
 default (gzipped, **8% of its size**, measured on two real captures).
 `--no-keep-raw` opts out.
 
-Open the result with [Perfetto](https://ui.perfetto.dev) or
-`chrome://tracing`. The two planes are aligned on one element that
-appears in both; without `--anchor-element` that is the longest-running
-element Plane 2 traced, whose span is least sensitive to a small
-alignment error.
+**The default is Perfetto's own format** (`UX-298`): protobuf
+TrackEvent, gzipped, written packet by packet as the records are paired
+rather than assembled in memory. That is what [Perfetto](https://ui.perfetto.dev)
+and `trace_processor` read natively, and it is a stream — a capture too
+big to hold is no longer a capture too big to render. Measured on a
+40,000-process trace: 4.83 MB of packets, 1.14 MB gzipped, and bytes on
+disk 10,000 slices before the writer closes.
+
+`--format chrome` writes the legacy JSON instead, for `chrome://tracing`
+and for a pipeline that already parses it. Both read the same two logs
+and align on the same anchor, so the choice is about what will open the
+file, not about what is in it.
+
+The two planes are aligned on one element that appears in both; without
+`--anchor-element` that is the longest-running element **both planes
+know** — Plane 2's longest alone can name one Plane 1 never built, and
+the merge then refuses a question that should not have been asked.
 
 Without a raw log it renders Plane 1 and **says what is missing** rather
 than silently producing half a timeline.

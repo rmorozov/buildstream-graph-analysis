@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-305 scenarios: **14 open**, 291 closed.
+305 scenarios: **13 open**, 292 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 52 |
+| capture | 1 | 52 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
 | viewer | 6 | 74 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
 | UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🟡 |
-| UX-298 | [the timeline speaks Perfetto, natively](UX-0298-the-timeline-speaks-perfetto-natively.md) | capture | High | R1, R2 | 🔴 |
 | UX-299 | [a handoff that does not carry the trace in its hands](UX-0299-a-handoff-that-does-not-carry-the-trace-in-its-hands.md) | viewer | Medium | R1 | 🔴 |
 | UX-300 | [what a two-gigabyte snapshot does to a store](UX-0300-what-a-two-gigabyte-snapshot-does-to-a-store.md) | store | Medium | R1, R5, R7 | 🔴 |
 | UX-301 | [the ordering authority moved and left its old uniform](UX-0301-the-ordering-authority-moved-and-left-its-old-uniform.md) | viewer | Low | — | 🔴 |

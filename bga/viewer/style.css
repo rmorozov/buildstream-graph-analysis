@@ -69,6 +69,11 @@
   --bad-mark: #db6868;
   --good-mark: #4dae6b;
   --accent-mark: #6c97d9;
+  /* UX-305: a wash, not a colour - the one surface that sits between
+     `--bg` and `--panel`. It was `rgba(127,127,127,0.08)` written into
+     a `var()` fallback for a token nothing declared, which is a colour
+     with no name and no job (§4.5). */
+  --muted-bg: #232323;
 }
 
 /* The override. `prefers-color-scheme: light` also matches a reader
@@ -82,6 +87,7 @@
     --warn: #9a6400; --bad: #aa1111; --good: #176b2c; --accent: #2b5797;
     --warn-mark: #9a6400; --bad-mark: #aa1111;
     --good-mark: #176b2c; --accent-mark: #2b5797;
+    --muted-bg: #f2f2f2;
   }
 }
 
@@ -97,6 +103,7 @@
     --warn: #9a6400; --bad: #aa1111; --good: #176b2c; --accent: #2b5797;
     --warn-mark: #9a6400; --bad-mark: #aa1111;
     --good-mark: #176b2c; --accent-mark: #2b5797;
+    --muted-bg: #f2f2f2;
   }
   body { background: #fff; }
   /* The rail is navigation; paper has none. */
@@ -192,8 +199,14 @@ th[aria-sort="ascending"]::after { content: " ▲"; }
 th[aria-sort="descending"]::after { content: " ▼"; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
-.delta.better { color: var(--good); }
-.delta.worse { color: var(--bad); }
+/* UX-305 (styleguide §4.4): **text wears ink, never status tone.**
+   These two set the *value's* colour, which is the rule's own example
+   of what not to do - so the number stays ink and the tone moves to
+   the marker beside it, which is also §4.3's non-colour channel and
+   `UX-212`'s vocabulary. */
+.delta-mark { margin-right: .2rem; font-variant-numeric: normal; }
+.delta-mark[data-direction="better"] { color: var(--good); }
+.delta-mark[data-direction="worse"] { color: var(--bad); }
 
 /* `minmax(0, auto)` rather than `auto`: a grid column sized `auto` takes
    its widest item's intrinsic width and will not shrink below it, so a
@@ -497,7 +510,11 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
   height: 0.75rem;
   width: var(--w, 0%);
   min-width: 1px;
-  background: var(--accent, #4a7ebb);
+  /* UX-305: a bar is a *fill*, so it wears the mark grade. This read
+     `var(--accent, #4a7ebb)` and the fallback hid it from UX-304's
+     guard - which is the argument against colour-valued fallbacks in
+     one line. */
+  background: var(--accent-mark);
   border-radius: 2px;
 }
 .horizon-value { font-variant-numeric: tabular-nums; }
@@ -513,8 +530,8 @@ section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
 .focus-bar, .mark-summary {
   margin: 0 0 0.5rem;
   padding: 0.3rem 0.6rem;
-  border-left: 3px solid var(--accent, #4a7ebb);
-  background: var(--muted-bg, rgba(127, 127, 127, 0.08));
+  border-left: 3px solid var(--accent);
+  background: var(--muted-bg);
 }
 .element-controls { display: flex; gap: 0.35rem; margin: 0.2rem 0 0.6rem; }
 .element-controls button { font-size: 0.85em; }
@@ -532,9 +549,13 @@ section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
 /* UX-226: the element's own history. A single point is drawn as a
    point - a line through one value claims a change the data does not
    make. */
+/* UX-305: `svg.sparkline` and `.spark-point` were declared here *and*
+   in UX-303's block below, and the two disagreed about width and about
+   which grade of token fills a point. Two rules for one class is a
+   rule nobody can predict; the geometry and the fill live once, with
+   §2's drawings, and this keeps only what is about the *history*
+   block. */
 .element-history { display: flex; align-items: center; gap: 0.5rem; }
-svg.sparkline { width: 6rem; height: 1.25rem; flex: 0 0 auto; }
-.spark-point { fill: var(--accent, #4a7ebb); }
 .spark-point[data-on-path="false"] { fill-opacity: 0.45; }
 .history-sentence { font-size: 0.9em; }
 
@@ -544,13 +565,13 @@ svg.sparkline { width: 6rem; height: 1.25rem; flex: 0 0 auto; }
   padding: 0.3rem 0.2rem 0.1rem; list-style: none;
 }
 .palette-facts { opacity: 0.7; font-size: 0.85em; margin-left: 0.4rem; }
-.jump-hits li[data-active="true"] > button { outline: 2px solid var(--accent, #4a7ebb); }
+.jump-hits li[data-active="true"] > button { outline: 2px solid var(--accent); }
 
 /* UX-267: a small object reads as one line of `name value` pairs, so
    there is nothing to click. Without the separator, measured:
    "Resource.PROCESS 4.997Resource.DOWNLOAD 0.001". */
-.inline-object .pair + .pair::before { content: " · "; color: var(--muted, #777); }
-.inline-object .pair-key { color: var(--muted, #777); }
+.inline-object .pair + .pair::before { content: " · "; color: var(--muted); }
+.inline-object .pair-key { color: var(--muted); }
 
 /* A folded map says what it holds. The defect was never the fold - it
    was a summary reading "object" over a `<pre>` of raw JSON. */
@@ -581,8 +602,8 @@ details.long-text .full-text { white-space: pre-wrap; margin: 0.4rem 0 0; }
   padding: 0;
   font-size: 0.92em;
 }
-.toc .toc-sub a { color: var(--muted, #777); }
-.toc .toc-sub .toc-more { color: var(--muted, #777); font-style: italic; }
+.toc .toc-sub a { color: var(--muted); }
+.toc .toc-sub .toc-more { color: var(--muted); font-style: italic; }
 
 /* UX-272: identity left, actions right - one row where there is width
    for it.
@@ -688,7 +709,7 @@ button.json-toggle:hover { color: var(--fg); }
   margin: .5rem 0 0;
   max-height: 24rem; overflow: auto;
   font-size: .78rem; line-height: 1.4;
-  background: var(--panel, transparent);
+  background: var(--panel);
   border: 1px solid var(--line); border-radius: 3px; padding: .5rem;
   white-space: pre-wrap; word-break: break-word;
 }

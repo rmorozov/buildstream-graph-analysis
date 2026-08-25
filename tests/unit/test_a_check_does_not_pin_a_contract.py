@@ -121,6 +121,12 @@ class TestNoCheckPinsAContractTheToolMoved:
         assert _pins("          # went red when analyze/v1 became v2") == set()
         assert _pins("  # analyze/v1\n  assert x=='analyze/v1'") == {
             "analyze/v1"}, "stripping comments must not strip the code too"
+        # A line that *runs* and carries a trailing comment is code. The
+        # rule has to be "the line starts with `#`", not "the line
+        # contains one" - measured: the contains-form left every test
+        # here green while hiding any pin written with a note after it.
+        assert _pins("  assert x=='analyze/v1'  # the contract") == {
+            "analyze/v1"}
 
     def test_it_does_not_flag_what_is_not_a_contract(self):
         """`actions/checkout@v4` and `python/v3` are not this tool's

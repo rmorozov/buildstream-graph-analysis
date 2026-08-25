@@ -273,9 +273,13 @@ class TestStatusToneIsNeverAlone:
             "data-severity, printed in the badge",
         '.finding[data-severity="info"], .finding[data-severity="low"]':
             "data-severity, printed in the badge",
-        # The sign is in the text: `+3.2s` / `-1.1s`.
-        ".delta.better": "the signed value",
-        ".delta.worse": "the signed value",
+        # `UX-305`: the tone moved off the value and onto the marker
+        # beside it (§4.4). The glyph is the channel, and the value
+        # still carries its sign.
+        '.delta-mark[data-direction="better"]': "the marker glyph, and "
+                                                "the signed value",
+        '.delta-mark[data-direction="worse"]': "the marker glyph, and "
+                                               "the signed value",
         # `UX-212`'s markers, from the schema.
         ".trend-point.aliased": "data-marker",
         ".trend-point.incomplete": "data-marker",
@@ -352,11 +356,16 @@ const text = (n) => !n ? "" : ((n.children ?? []).length
 
 const toned = all(findings, (n) => (n.attrs.class || "").includes("finding")
                                    && n.attrs["data-severity"]);
-const deltas = all(deltasBlock, (n) => (n.attrs.class || "").includes("delta"));
+// The value cells, not the markers inside them.
+const deltas = all(deltasBlock, (n) =>
+  (n.attrs.class || "").split(/\s+/).includes("delta"));
+const marks = all(deltasBlock, (n) => n.attrs["data-direction"])
+  .map((n) => [n.attrs["data-direction"], text(n)]);
 console.log(JSON.stringify({
   findings: toned.map((n) => ({ severity: n.attrs["data-severity"],
                                 text: text(n) })),
   deltas: deltas.map((n) => text(n)),
+  marks,
 }));
 """
 
@@ -385,11 +394,16 @@ class TestTheChannelsAreOnThePage:
                 f"severity {finding['severity']!r} is a border colour and "
                 f"nothing else in: {finding['text'][:120]!r}")
 
-    def test_a_delta_carries_its_sign(self, rendered):
+    def test_a_delta_carries_its_sign_and_its_marker(self, rendered):
+        """Two channels, neither of them colour: the sign in the value,
+        and `UX-212`'s glyph on the marker beside it."""
         assert rendered["deltas"], "no delta cells rendered"
-        signs = {value.strip()[0] for value in rendered["deltas"] if value.strip()}
-        assert signs <= {"+", "-", "−"} and len(signs) == 2, (
+        signs = {value.replace("\u25be", "").replace("\u25b4", "").strip()[0]
+                 for value in rendered["deltas"] if value.strip()}
+        assert signs == {"+", "-"}, (
             f"a delta's direction is colour only: {rendered['deltas']}")
+        assert dict(rendered["marks"]) == {"better": "\u25be",
+                                           "worse": "\u25b4"}, rendered["marks"]
 
 
 if __name__ == "__main__":  # pragma: no cover

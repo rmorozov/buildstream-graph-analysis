@@ -1240,10 +1240,18 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       // A signed change, coloured by what the schema says "better" is,
       // without this file knowing which metric it is looking at.
       const better = direction === "lower_is_better" ? value < 0 : value > 0;
+      const way = value === 0 ? "" : better ? "better" : "worse";
+      // `UX-305` (styleguide §4.4): the *value* stays ink and the tone
+      // moves to a marker beside it. Colouring the number was the
+      // rule's own example of what not to do, and the marker is also
+      // §4.3's non-colour channel - `UX-212`'s triangles, which is the
+      // vocabulary the trend and the history already use.
       cell = el("span", {
-        class: `num delta ${value === 0 ? "" : better ? "better" : "worse"}`,
-        "data-raw": String(value),
-      }, `${value > 0 ? "+" : ""}${quantity(value, kind)}`);
+        class: `num delta ${way}`, "data-raw": String(value),
+      }, way ? el("span", { class: "delta-mark", "data-direction": way,
+                            "aria-hidden": "true" },
+                  better ? "\u25be" : "\u25b4") : null,
+         `${value > 0 ? "+" : ""}${quantity(value, kind)}`);
     } else if (typeof value === "number") {
       cell = el("span", { class: "num", "data-raw": String(value) },
                 quantity(value, kind));

@@ -32,6 +32,7 @@ guide is right and the skill is a bug.
 3. Read *only* the cited source file/line range before editing.
 4. Implement the minimal fix described. If the task references a `# Simplified`, `# Would need...`, `# TODO`, `pass`, or hardcoded `return False`/`return True`/`None` placeholder, that placeholder must be replaced with real logic — not left in place with a comment removed.
 5. Stay inside the task's declared scope. If you notice an unrelated bug while working, **do not fix it inline** — add a new row to the tracker you're working from (status 🔴, brief note, no task file needed yet) and leave it for a future session. Scope creep is what causes low-context sessions to run out of budget before finishing the one thing they started.
+6. **Touching the web report? Run the conformance checklist before you commit** (`UX-305`, [`docs/design/styleguide.md`](../design/styleguide.md) §7). Three questions, and each has a rule behind it: **is the shape in the §1 table?** (a shape it does not cover is a design task — it lands in the guide with its control, then in the code); **is the sentence written?** (a drawing owes its reader one sentence and its `n`); **is the budget kept?** (one emphasized element per block, one accent, status tone never on text and never alone). A section that cannot answer all three either changes or amends the guide — and the guards in `test_the_mapping_is_law.py`, `test_the_palette_is_validated.py`, `test_the_shape_before_the_rows.py` and `test_emphasis_is_a_budget.py` will say which.
 6. Never delete, weaken, or skip an existing test to make your change pass. If an existing test's expectation was actually wrong per spec, fixing the test is in-scope only if the task file says so explicitly.
 
 ## 3. Definition of Done — mandatory verification
@@ -181,6 +182,12 @@ bga/viewer/focus.js    focus and marks (UX-222/225/228)
 bga/viewer/tables.js   sortable/filterable tables · viewstate.js  URL state
 bga/viewer/questions.js  the Perfetto query library · trace_context.js  the handoff
 bga/viewer/perfetto.js   the deep link · style.css, index.html
+bga/viewer/chapters.js   the ordering authority: which chapter a section
+                         is in, and in what order (UX-286/UX-301)
+bga/viewer/shapes.js     the styleguide §1 dispatch table as code -
+                         published shape + hint -> the one control (UX-302)
+bga/viewer/rawjson.js    the per-section "view as JSON" toggle (UX-302)
+bga/viewer/drawings.js   the sparkline and the density strips (UX-303)
 ```
 
 **Capture and the tools** — everything a build actually runs through:

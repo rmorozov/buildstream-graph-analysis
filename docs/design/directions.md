@@ -1708,6 +1708,14 @@ chapter usable. What none of them settle is what the chapters *are* —
 that is a decision about the report's argument, not its markup, and it
 wants the reader's questions in front of it rather than the section list.
 
+**Settled by `UX-286`** (round 39): seven chapters, each named for a
+question the reader has, with the sections whose published
+`bga:question` is a spelling of that question. The reader's questions
+were in front of it after all — the schema had been publishing them
+since `UX-209`. Measured after: the document is 18.10 screens where it
+was 18.51, so the grouping cost no height, and `UX-285`'s placement
+passes became chapter boundaries and were deleted.
+
 ## Direction 14: the same elements, drawn nineteen times (argued 2026-08-24, round 39)
 
 **Serves:** R1 and R7 first — and every open viewer item, because most

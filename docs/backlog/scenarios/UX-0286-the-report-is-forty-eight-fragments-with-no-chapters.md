@@ -1,6 +1,6 @@
 # UX-286: the report is forty-eight fragments with no chapters
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-285 | **Serves:** R1 and R7 — reading top to bottom before they know what they want | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-285 | **Serves:** R1 and R7 — reading top to bottom before they know what they want | **Topic:** viewer
 
 ## Motivation
 
@@ -67,3 +67,124 @@ that reads well.
 The rail lists between six and eight chapters. Every section belongs to
 exactly one, asserted by a guard. The document is no taller than it is
 today — grouping adds structure, not height — measured on both runs.
+
+## Outcome
+
+🟢 **Done.** Seven chapters, each named for a question a reader has.
+
+```text
+chapter                                       sections (1,202 / fixture)
+What should I do?                                    6 / 6
+What if I change this?                               2 / 2   (3 with an inventory)
+What changed since last time?                        - / -   (needs a comparison)
+Where did the time go?                               7 / 6
+Was the machine used well?                           4 / 4
+Which elements, and how do they connect?            25 / 5
+How much of this can I believe?                      1 / 1
+Which run is this?                                   3 / 3
+```
+
+Seven drawn on both runs, and eight declared: the comparison chapter is
+absent on a run with nothing to compare against rather than empty. Both
+counts sit inside the acceptance test's six-to-eight.
+
+**What decided the chapters.** The reader's questions, which the schema
+already publishes: every payload section carries a `bga:question`, and
+`findings` ("What did this run conclude?"), `headline` ("What should I
+fix first, and what is it worth?") and `next_steps` ("What should I run
+next?") are three spellings of *what should I do*. They are one chapter.
+
+**Why the table is in the viewer and not the schema.** Measured, nine of
+the forty-eight sections on the synthetic run are built by the page and
+published by no contract at all — the decision panel, the drawn critical
+path, the blast box, the element blocks:
+
+```text
+rail declared on the rendered sections, before this landed
+-              9 sections   decision, evidence, overview, findings, blast,
+                            critical-path-drawn, horizon, whatif, summary
+decide         2            headline, next_steps
+act            2            attribution, signals
+prove          4            floors, capacity_verdict, occupancy, confidence
+investigate   27            structural, utilisation, pipeline_overhead, element-*
+raw            4            attribution_hints, critical_path_detail,
+                            run_instance, producer
+```
+
+A hint can only name sections the schema has, so a chaptering that lived
+beside `bga:question` would leave a fifth of the document unassigned.
+The published `bga:rail` is the *fallback* instead: a payload key added
+later lands in the chapter its rail already names, and only a section
+with neither an entry nor a rail reaches "Everything else" — which is
+empty on both runs, and guarded to be.
+
+**Item 2, the rail.** It lists the seven chapters, each a link to the
+chapter itself, with its sections nested underneath (7 chapter links +
+48 section links at scale; 7 + 27 on the fixture). This also fixed a
+disagreement nobody had noticed: `UX-209` grouped the rail by
+`bga:rail`, and the nine page-built sections have none — so `decision`,
+`findings` and `summary` were all listed under **raw**. The rail and the
+document now use one grouping by construction.
+
+**Item 3, and the acceptance's third clause: no height.**
+
+```text
+                        before      after
+1,202-element run       18.51 scr   18.10 scr
+macro_micro             11.00       10.99
+macro_micro + inventory 11.91       11.89
+golden export, 1440x900 11.32       11.29
+```
+
+The document is *shorter*. Seven chapter headings cost 2.3–2.9% of the
+page, and they are paid for by the space the sections no longer need
+between them — inside a chapter the boundary carries that separation, so
+`section > h2` drops from a 2rem top margin to 0.9rem. Direction 13's
+refused alternative is guarded too: section heights still span 16× on
+the fixture and 42× on a phone, so a layout that equalised them would
+redden a test rather than pass as "chapters".
+
+**Item 4, the order guard.** `test_the_report_has_chapters.py`, reading
+the booted export's own document — which chapter each section is in,
+that the chapters come in the declared order, that nothing sits beside
+them, and that a block `UX-278` builds when an anchor is followed joins
+its chapter instead of landing under the identity block.
+
+**`UX-285` is now a chapter boundary rather than two placement passes.**
+That item shipped `placeIdentityLast` and `placeBlast` a day earlier;
+both are deleted. The identity closes the page because its chapter is
+last, and the blast control sits beside `resource_blast` because the
+chapter declares that order — measured after the change: identity at
+97–99% of the scale run and 95–98% of the fixture, blast at 24% and 31%,
+0.99 and 0.94 screens after the end of `findings`. Every guard `UX-285`
+landed still passes, unchanged, against the new mechanism.
+
+**A defect this item introduced and the guard that would not have caught
+it.** `chapters.js` was not in the server's `ASSETS` tuple, so the
+served page 404'd on the import, `boot` never ran, and the report was
+the word "Loading…" in a real browser. The guard on that list named
+`app.js`, `sql.js` and `perfetto_page.js` — the three entry points,
+which are the part of a module graph that cannot go wrong. It now
+follows every import from each entry and asserts the traversal reached
+at least eight modules, so an import regex that matched nothing would
+redden rather than pass.
+
+**Falsification.** Eight mutations, each asserted to have landed:
+
+```text
+C1  boot never groups                          7 chapter guards red
+C2  the identity chapter is declared first      8 red across two files
+C3  two chapters folded into one (five left)    the count guard red
+C4  `producer` loses its entry and its rail     5 red - it reaches
+                                                "Everything else"
+C5  fileInChapter does nothing                  the late-block guard red
+C6  chapters get `min-height: 100vh`            the padding guard red
+C7  chapters.js removed from ASSETS             the module-graph guard red
+C8  every section gets `min-height: 100vh`      the 49x-range guard red
+    (Direction 13's refused proposal)
+```
+
+**C1 first ran green on four of eleven guards**, because a page with no
+chapters at all has no chapters to be wrong about: three tests iterated
+over an empty list and passed. They assert the page drew some now — the
+same vacuous-pass hole `UX-288`'s populations had, in a different shape.

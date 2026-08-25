@@ -194,3 +194,20 @@ down. It names them by `UX-292`'s `data-table` path now
 structural.sensitivity.top_opportunities`), which is both stable under a
 move and legible in the failure message — M8 confirms it still catches
 a real duplication.
+
+### Superseded a day later, and unchanged
+
+`UX-286` grouped the report into chapters in the same round. The
+identity blocks are one chapter ("Which run is this?") and it is the
+last; the blast control is in "What if I change this?", whose declared
+order puts it directly after `resource_blast`. Both placement passes
+this item shipped — `placeIdentityLast` and `placeBlast` — are deleted,
+because two mechanisms deciding one order is how a page ends up with an
+order nobody can predict.
+
+Every outcome above still holds, measured after that change: identity at
+97–99% of the 1,202-element run and 95–98% of the fixture, blast at 24%
+and 31%, 0.99 and 0.94 screens after the end of `findings`. Every guard
+this item landed still passes against the new mechanism — the guards
+assert what the page *is*, which is why they survived the mechanism
+under them being replaced.

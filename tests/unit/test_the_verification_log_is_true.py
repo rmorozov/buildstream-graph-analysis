@@ -35,6 +35,42 @@ HEADING = "## Verification Log"
 
 NO_HISTORY = "the clone has no history for this file (a shallow checkout)"
 
+# UX-306 follow-up, found by this guard failing on PR #155 for a reason
+# that was not the document's. `actions/checkout@v4` clones at depth 1,
+# and in a one-commit clone `git log -1 -- <path>` does not report "when
+# this file last changed" - it reports **the single commit**, whatever
+# it touched. On a pull request that commit is the merge commit GitHub
+# builds at request time, so the comparison below was
+#
+#     the date the log claims   vs   the date CI built its checkout
+#
+# which is a clock, not a history. It passed for as long as every log
+# entry happened to be written the same UTC day CI ran, and failed the
+# first time a PR's merge commit landed on the next one - reporting a
+# document as stale that was not.
+#
+# Reproduced before this line was written: `git clone --depth 1` of this
+# repository, then `git log -1 --date=short -- docs/design/architecture.md`
+# returns the head commit even when that commit does not touch the file.
+#
+# The skip above was written for exactly this case and never fired,
+# because a depth-1 clone answers the question rather than failing it.
+#
+# **`--is-shallow-repository` is not the predicate**, and reaching for
+# it first was wrong: this repository is normally worked in a *grafted*
+# clone that is shallow and still carries hundreds of commits, five of
+# them touching this document. Skipping on shallowness would have
+# turned the guard off where it works, which is a guard deleted rather
+# than repaired.
+#
+# The exact question is narrower: **is the commit git reported the
+# graft boundary?** At the boundary git cannot tell "changed here" from
+# "already present when history was cut", so its answer is not one; one
+# commit deeper it is. `.git/shallow` lists those boundary commits, and
+# comparing against it separates the depth-1 checkout (reported commit
+# *is* the boundary) from the grafted working clone (reported commit is
+# `5e55452`, well inside the history it has).
+
 
 def _claimed():
     """The date the log claims, and the item it credits."""
@@ -58,14 +94,36 @@ def stale(claimed, last):
     return claimed < last
 
 
+def _graft_boundary():
+    """The commits where a shallow clone's history was cut, if any."""
+    done = subprocess.run(["git", "rev-parse", "--git-dir"],
+                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    if done.returncode != 0:
+        return set()
+    shallow = pathlib.Path(REPO, done.stdout.strip(), "shallow")
+    if not shallow.exists():
+        return set()
+    return {line.strip() for line in
+            shallow.read_text(encoding="utf-8").splitlines() if line.strip()}
+
+
 def _last_commit():
-    """When git last recorded a change to this document."""
+    """When git last recorded a change to this document, or `None`.
+
+    `None` where the clone cannot answer - no history at all, and the
+    case the note above documents: the newest commit touching the file
+    *is* the graft boundary, where "changed here" and "already present
+    when history was cut" look identical.
+    """
     done = subprocess.run(
-        ["git", "log", "-1", "--date=short", "--format=%ad", "--", str(DOC)],
+        ["git", "log", "-1", "--date=short", "--format=%ad %H", "--", str(DOC)],
         capture_output=True, text=True, cwd=REPO, timeout=60)
     if done.returncode != 0 or not done.stdout.strip():
         return None
-    return datetime.date.fromisoformat(done.stdout.strip())
+    when, _, sha = done.stdout.strip().partition(" ")
+    if sha.strip() in _graft_boundary():
+        return None
+    return datetime.date.fromisoformat(when)
 
 
 class TestTheLogIsNotStaleAboutItself:

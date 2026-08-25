@@ -772,6 +772,17 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
+Updated 2026-08-25 (after `UX-306`), re-grounded in the three viewer
+bullets round 41 added and in the guards that hold them:
+`bga/viewer/shapes.js` against `docs/design/styleguide.md` §1 and
+`tests/unit/test_the_mapping_is_law.py`; `bga/viewer/style.css`'s two
+token grades against `tests/palette.py`'s measured bands; and
+`bga/viewer/drawings.js` against §2's boundary on what a self-built
+strip may print. The viewer axis now says what a value renders as,
+what may be coloured and what a drawing owes its reader — three
+questions this document could not answer before there was a contract
+to answer them from.
+
 Updated 2026-08-25 (after `UX-298`), re-grounded in
 `tools/native_trace/trackevent.py`'s pinned field numbers against
 `tests/fixtures/perfetto_field_numbers.json`, and in `bga timeline`'s

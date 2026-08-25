@@ -61,11 +61,14 @@ def test_pre_ux45_trace_reports_unavailable_not_zero():
 
 
 def test_pre_ux45_trace_still_parses_everything_else():
-    report = summarize(pair_events(parse_trace_log(OLD)))
+    # `UX-297`: the record is asserted where it now lives - the parse -
+    # rather than in the report, which publishes the reductions over it.
+    records = pair_events(parse_trace_log(OLD))
+    report = summarize(records)
 
     assert report["process_count"] == 1
-    assert report["processes"][0]["cmd"] == "cc1plus -c a.cpp"
-    assert "cpu_us" not in report["processes"][0]
+    assert records[0]["cmd"] == "cc1plus -c a.cpp"
+    assert "cpu_us" not in records[0]
 
 
 def test_per_element_totals_and_coverage():

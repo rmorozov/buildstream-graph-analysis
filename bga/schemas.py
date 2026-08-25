@@ -1626,6 +1626,30 @@ _ANALYZE_HINTS = {
                 "description": "Exec chains billed to one process rather "
                                "than counted repeatedly - a shell that "
                                "execs a compiler is one process, not two."},
+            # UX-297: which shape of Plane 2 report served these
+            # numbers. Not a qualifier on them - both shapes publish
+            # the same aggregates - but the answer to "why is this
+            # capture's report a gigabyte".
+            "source": {
+                "description": "Which Plane 2 report shape this run's "
+                               "numbers came from. `plane2/v2` carries "
+                               "per-element aggregates only; the "
+                               "unstamped `plane2/v1` a capture before "
+                               "`UX-297` wrote also embeds every "
+                               "per-process record, which no published "
+                               "number reads.",
+                "properties": {
+                    "schema": {"description": "The report's contract id."},
+                    "records_embedded": {
+                        "description": "Whether the file still carries the "
+                                       "per-process record list."},
+                    "records": {QUANTITY: "count",
+                                "description": "How many records it carries; "
+                                               "zero for `plane2/v2`."},
+                    "note": {"description": "What that means for this run, "
+                                            "in a sentence."},
+                },
+            },
         },
     },
     "utilisation": {

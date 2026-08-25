@@ -664,6 +664,8 @@ renderers are built against, so nothing here is a second copy to drift.
 | `whatif/v1` | what the build would drop to for a chosen set of fixes - one projection, never a sum | `bga whatif --format json` |
 | `host/v1` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
 | `sources/v1` | every element's source resources and how each is keyed - the on-disk shape `bga blast` reads | inside `sources.json` |
+| `plane2/v2` | Plane 2's report: the per-element reductions a capture computed, and nothing else (`UX-297`) | at `plane2.json` beside a run |
+| `plane2/v1` | the same reductions plus every per-process record - the shape a capture before `UX-297` wrote. Read, never written | as above, in an older store |
 
 **Every artifact says what wrote it** (`UX-249`): a `producer` block —
 tool, version, and the contract set the writing build had — rides in
@@ -679,9 +681,12 @@ those artifacts said which build produced them. The version there is
 addition does not. `additionalProperties` is true everywhere, so a
 consumer that pins a version keeps working while the tool grows.
 
-The last two rows are written but not printable — on-disk shapes a run
+The last four rows are written but not printable — on-disk shapes a run
 directory carries rather than documents a subcommand emits. `--schema`
 does not know them, and `bga.contracts.unprintable()` says so.
+`plane2/v1` goes one further: it is read and never written, which
+`bga.contracts.superseded()` names, because a store full of captures
+taken before `UX-297` still has to analyze.
 
 A guard (`tests/unit/test_the_documents_keep_up_with_the_contracts.py`)
 asserts this table and the spec's Part 32.5 name every contract in

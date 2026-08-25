@@ -169,9 +169,21 @@ jobs:
           curl -fsS "${URL}report.json" > /tmp/report.json
           grep -q "bga-report\|id=\"report\"" /tmp/index.html
           grep -q "renderSection\|bga:quantity" /tmp/app.js
+          # UX-293: the expected contract is *read from the tree*, not
+          # pinned here. This step asserted the contract literally and
+          # went red the moment `UX-288` bumped it - a check failing
+          # because the thing it checks was deliberately changed, in the
+          # one file the suite does not scan. What this step is for is
+          # that an installed wheel serves its assets and a real
+          # payload; the version literal was never the point.
+          EXPECTED=$(python -c "import re,pathlib; \
+            print(re.search(r'^ANALYZE = \"([^\"]+)\"', \
+              pathlib.Path('$GITHUB_WORKSPACE/bga/schemas.py').read_text(), \
+              re.M).group(1))")
           python -c "import json,sys; d=json.load(open('/tmp/report.json')); \
-            assert d['schema']=='analyze/v1', d.get('schema'); \
-            print('served analyze/v1 from the installed wheel')"
+            assert d['schema']==sys.argv[1], (d.get('schema'), sys.argv[1]); \
+            assert d.get('signals'), 'the payload has no signals'; \
+            print('served', sys.argv[1], 'from the installed wheel')" "$EXPECTED"
 
       - name: The wheel owns exactly one top-level name
         # UX-94: `UX-77` made the aliases work by packaging `tools*`,

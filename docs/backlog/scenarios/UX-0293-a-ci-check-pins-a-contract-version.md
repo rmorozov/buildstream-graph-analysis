@@ -87,9 +87,15 @@ tool does not currently declare. Falsified:
 
 ```text
 M1 the workflow pins analyze/v1 again   -> 1 failed  (the real defect)
-M2 the sweep stops reading .yml         -> 2 failed  (it looked nowhere)
+M2 the sweep stops reading .yml         -> 1 failed  (it looked nowhere)
 M3 the step hardcodes EXPECTED again    -> 1 failed
+M4 comment stripping becomes "contains" -> 1 failed
 ```
+
+M4 did not discriminate at first: the case pinning "a comment is not a
+pin" put the comment on its own line, so dropping every line *containing*
+a `#` still left the code line standing. A pin written with a note after
+it would have been invisible. The case now carries one.
 
 **The thirteenth self-matching guard.** The first draft failed on the
 comment written by this fix — the sentence saying the step *used to*

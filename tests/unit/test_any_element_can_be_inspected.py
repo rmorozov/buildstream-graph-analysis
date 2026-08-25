@@ -17,10 +17,17 @@ macro_micro (11)          11            11       52            0           0
 synthetic  (1,202)     1,202            24       53            7           0
 ```
 
-Seven dead anchors, not the two `UX-278` was filed with: `UX-283` gave
-the structural block its Inspect route in the same round, so more of the
-page now points at elements the ranking never reached. All seven are
-built on demand and none is unresolvable.
+Seven dead anchors at the moment of measuring, not the two `UX-278` was
+filed with: `UX-283` gave the structural block its Inspect route in the
+same round, so more of the page points at elements the ranking never
+reached. All of them are built on demand and none is unresolvable.
+
+**That 7 is not what this file guards.** It is a property of how the
+report's ranking overlaps the anchors the page happens to draw, and it
+moves - it did, between an isolated run of this file and a full-suite
+one. What is guarded instead is a *named* element that is outside the
+cap: the first element of the run's own table that has no eager block,
+asked for by name, gets one.
 
 The 1,202-element run is generated rather than committed (`UX-189`), so
 this file **builds it** from the committed generator, which is
@@ -101,7 +108,13 @@ for (const href of dead) {
 // And an element the page names nowhere near the top: the last key of
 // the run's own element table, which no ranking reaches.
 const every = Object.keys(payload.signals?.element_durations ?? {});
-const deep = every[every.length - 1];
+// The first element the cap left without a block. Chosen by asking the
+// rendered document rather than by position: the *last* key of the
+// table is `all.bst`, the run's own target, which is in the eager set
+// on every run - so "the last one" was not the element outside the cap
+// it was meant to be.
+const deep = every.find((uid) => !before.has(views.elementAnchor(uid))) ?? null;
+const deepBefore = deep ? before.has(views.elementAnchor(deep)) : null;
 const deepSection = deep
   ? views.ensureElementSection(payload, root, deep, {}) : null;
 const deepRows = deepSection
@@ -122,6 +135,7 @@ console.log(JSON.stringify({
   dead_after: anchors.filter((h) => !after.has(h.slice(1))).length,
   unresolvable,
   deep_element: deep,
+  deep_had_a_block_before: deepBefore,
   deep_rows: deepRows,
   deep_is_idempotent: twice === deepSection && duplicates === 1,
   empty_note: deepSection
@@ -166,11 +180,24 @@ class TestAtScale:
             f"{drawn['eager_blocks']} blocks for {drawn['elements']} elements "
             f"- the cap is not capping, so this run cannot see the defect")
 
-    def test_the_page_ships_with_dead_anchors_before_they_are_followed(
-            self, scale):
-        """The defect, still present as a *state*: the cap is right and
-        stays. What changed is that following one resolves."""
-        assert _follow(scale)["dead_before"] > 0
+    def test_the_cap_leaves_elements_with_no_block_of_their_own(self, scale):
+        """The state the cap creates, and it is right (`UX-187`): most
+        elements have no eager block. What changed is that asking for
+        one gets it.
+
+        Asserted about a *named* element rather than about the count of
+        dead anchors. That count is a property of how the report's
+        ranking happens to overlap the anchors the page draws - measured
+        at 7 in isolation, and it moved under a full-suite run - so a
+        guard resting on it would be measuring the ranking rather than
+        this item. The last element of the run's own table is outside
+        the cap by construction.
+        """
+        drawn = _follow(scale)
+        assert drawn["deep_element"], (
+            "every element already has a block, so this run cannot exercise "
+            "the on-demand path at all")
+        assert drawn["deep_had_a_block_before"] is False
 
     def test_following_every_dead_anchor_resolves_it(self, scale):
         drawn = _follow(scale)
@@ -183,7 +210,7 @@ class TestAtScale:
         """The other 1,178. The last key of the element table is not on
         the path, not a top action and not a finding - and it opens."""
         drawn = _follow(scale)
-        assert drawn["deep_element"], "the run names no elements"
+        assert drawn["deep_element"], "no element is outside the cap"
         assert drawn["deep_rows"] >= 3, (
             f"{drawn['deep_element']} opened with {drawn['deep_rows']} facts")
         assert drawn["empty_note"] == 0, (

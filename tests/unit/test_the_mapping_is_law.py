@@ -9,7 +9,7 @@ function every render path asks, the deliberate escapes *named*, and a
 guard that reads the booted page rather than the source.
 
 **What the booted pages measure**, walking every element's own text for
-`{"`- or `[{`-shaped content:
+JSON-shaped content (`{` then a quote, or `[` then a brace):
 
 ```text
                     nodes  with text  sections  toggles  raw-JSON text
@@ -92,25 +92,33 @@ function dump(n) {
 
 // Every element's *own* text, with the chain that holds it - so the
 // allowlist is a question about ancestors rather than about the text.
-const RAW_JSON = /\{"|\[\{/;
+// Compact *and* pretty-printed: the fold stringifies without
+// indent and the toggle with, and both are raw JSON on the page.
+const RAW_JSON = /\{\s*"|\[\s*\{/;
 function allowed(chain) {
   return chain.some((n) => n.attrs?.["data-raw-json"] !== undefined
                         || (n.attrs?.class || "").includes("full-text"));
 }
-const leaks = [];
-let nodes = 0, texted = 0;
-(function walk(n, chain) {
-  nodes += 1;
-  const here = [...chain, n];
-  if (n._text) {
-    texted += 1;
-    if (RAW_JSON.test(n._text)) {
-      leaks.push({ tag: n.tagName, allowed: allowed(here),
-                   text: String(n._text).slice(0, 200) });
+function sweep() {
+  const leaks = [];
+  let nodes = 0, texted = 0;
+  (function walk(n, chain) {
+    nodes += 1;
+    const here = [...chain, n];
+    if (n._text) {
+      texted += 1;
+      if (RAW_JSON.test(n._text)) {
+        leaks.push({ tag: n.tagName, allowed: allowed(here),
+                     text: String(n._text).slice(0, 200) });
+      }
     }
-  }
-  for (const c of n.children ?? []) walk(c, here);
-})(root, []);
+    for (const c of n.children ?? []) walk(c, here);
+  })(root, []);
+  return { leaks, nodes, texted };
+}
+
+// Closed: what the reader first sees.
+const { leaks, nodes, texted } = sweep();
 
 const toggles = [];
 (function find(n) {
@@ -119,6 +127,16 @@ const toggles = [];
     find(c);
   }
 })(root);
+
+// And open: every "view as JSON" showing. This is the sweep that
+// exercises the *allowlist* rather than an empty page - with all of
+// them open the document is full of raw JSON, and every byte of it has
+// to be under `data-raw-json` or the walk is reporting zero because
+// there was nothing to find.
+for (const button of toggles) button.click();
+const opened = sweep();
+for (const button of toggles) button.click();
+const closedAgain = sweep();
 
 // The round trip: shown, hidden, and the section byte-identical to how
 // it started.
@@ -171,7 +189,7 @@ const sections = [];
 })(root);
 
 console.log(JSON.stringify({
-  leaks, nodes, texted, sections,
+  leaks, nodes, texted, sections, opened, closedAgain,
   toggles: toggles.map((b) => b.attrs["data-json-toggle"]), trip,
   error: failure,
 }));
@@ -236,6 +254,36 @@ class TestNoRawJsonOutsideTheTwoControls:
             f"fold and the JSON toggle: "
             + "; ".join(f"<{leak['tag']}> {leak['text'][:80]!r}"
                         for leak in leaks[:5]))
+
+    @pytest.mark.parametrize("page", ["golden", "macro_micro"])
+    def test_with_every_toggle_open_it_is_all_labeled(self, booted, page):
+        """The clause that exercises the allowlist.
+
+        Closed, the page holds no raw JSON at all - so the first clause
+        would pass even if the allowlist forgave nothing, and it did:
+        removing `data-raw-json` from the toggle's box left the whole
+        file green. With every toggle open the document is *full* of
+        raw JSON, and all of it must be under that attribute.
+        """
+        opened = booted[page]["opened"]
+        assert opened["leaks"], (
+            "no raw JSON with every toggle open - the toggles did not "
+            "open, and this clause is asserting nothing")
+        loose = [leak for leak in opened["leaks"] if not leak["allowed"]]
+        assert not loose, (
+            f"{page}: {len(loose)} of {len(opened['leaks'])} raw-JSON text "
+            f"nodes are outside `data-raw-json`: "
+            + "; ".join(f"<{leak['tag']}> {leak['text'][:60]!r}"
+                        for leak in loose[:3]))
+
+    @pytest.mark.parametrize("page", ["golden", "macro_micro"])
+    def test_closing_them_all_puts_the_page_back(self, booted, page):
+        """Round-trip over *every* section, not just the first."""
+        again = booted[page]["closedAgain"]
+        assert not [leak for leak in again["leaks"] if not leak["allowed"]]
+        assert again["nodes"] == booted[page]["nodes"], (
+            f"{page}: {again['nodes']} nodes after closing every toggle, "
+            f"{booted[page]['nodes']} before")
 
     @pytest.mark.parametrize("page,least_nodes,least_texted",
                              [("golden", 1500, 800),

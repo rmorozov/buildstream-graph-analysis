@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-286 scenarios: **14 open**, 272 closed.
+289 scenarios: **17 open**, 272 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
-| contracts | 1 | 30 |
-| viewer | 9 | 63 |
+| contracts | 3 | 32 |
+| viewer | 10 | 64 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
@@ -50,6 +50,9 @@ task file, which is the only place it ever lived twice.
 | UX-285 | [the identity blocks are split, and the blast box is last](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-286 | [the report is forty-eight fragments with no chapters](UX-0286-the-report-is-forty-eight-fragments-with-no-chapters.md) | viewer | High | R1, R7 | 🔴 |
 | UX-287 | [the export ceiling is measured on a four-element run](UX-0287-the-export-ceiling-is-measured-on-a-four-element-run.md) | guards | High | R8 | 🔴 |
+| UX-288 | [the contract publishes membership three ways](UX-0288-the-contract-publishes-membership-three-ways.md) | contracts | High | R5, R7 | 🔴 |
+| UX-289 | [one element table, many presets](UX-0289-one-element-table-many-presets.md) | viewer | High | R1, R7 | 🔴 |
+| UX-290 | [the schema does not describe its tuples](UX-0290-the-schema-does-not-describe-its-tuples.md) | contracts | Medium | R7, R8 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -646,3 +649,15 @@ within a fifth of a screen of that size, 95% are under four-fifths, and
 the median is 216 pixels. Padding them would add 31.3 screens. The
 report does not have blocks that are too big — it has forty-eight that
 are too small and nothing that groups them.
+
+
+`UX-288`..`UX-290` are what Direction 14 found when "the critical path
+is shown three times" was measured instead of agreed with. The page
+draws **19 element tables over 13 distinct populations**, seven pairs at
+100% overlap — but the duplication is in `analyze/v1`, which publishes
+the same leaf membership three times and the same critical path twice,
+each a subset of the one 1,202-row element table. The page is faithful;
+it renders every copy it is given. So the contract is deduplicated first
+(`UX-288`) and the page's nineteen tables become presets over one
+(`UX-289`) — which makes `UX-283`, `UX-284`, `UX-286` and `UX-278`
+smaller rather than larger.

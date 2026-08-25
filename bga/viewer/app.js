@@ -448,10 +448,16 @@ export function renderStructured(key, value, hint = {}, node = undefined,
     // reach `Array.prototype.toString` twice and render `app.bst,8,
     // lib-b.bst,4`. It is a table of positional columns, which is what
     // the payload means by it.
+    // Positional members get positional names. `c0`/`c1` read as codes
+    // a reader might look up; `#1`/`#2` read as what they are - the
+    // first and second member of a tuple the schema does not describe.
+    // Measured after the first draft shipped: `C0` and `C1` were 16 of
+    // the page's column headers, tied with `Key` for least informative.
+    // Naming them properly needs the schema to declare them (`UX-290`).
     const rows = value.map((item, at) => (
       Array.isArray(item)
         ? Object.fromEntries([["key", String(at)],
-                              ...item.map((m, i) => [`c${i}`, m])])
+                              ...item.map((m, i) => [`#${i + 1}`, m])])
         : (item && typeof item === "object") ? item : { key: String(at), value: item }));
     return folded(title(key), value.length,
                   mapTable(key, rows, hint, node, true, depth + 1));

@@ -1707,3 +1707,146 @@ Grouping is filed as its own item rather than argued further here.
 chapter usable. What none of them settle is what the chapters *are* —
 that is a decision about the report's argument, not its markup, and it
 wants the reader's questions in front of it rather than the section list.
+
+## Direction 14: the same elements, drawn nineteen times (argued 2026-08-24, round 39)
+
+**Serves:** R1 and R7 first — and every open viewer item, because most
+of them get smaller if this lands first.
+
+Proposed from a real reading: *"we have critical path shown three times
+with a slightly different set of columns, and one time in form of
+blocks. There definitely other duplications … almost all current open
+tasks can be made significantly easier if we firstly deduplicate
+information, then think of making tables with presets for default
+filters."*
+
+Measured, and the proposal understates it.
+
+### What the page draws
+
+On the 1,202-element synthetic run, every table that names elements,
+with its column count and the set of element uids it holds:
+
+```text
+19 tables name elements.  They draw 13 distinct populations.
+
+overlap  shared  A                                    B
+   100%      14  signals/critical_path         [2c]   critical_path_detail  [5c]
+   100%     135  signals/leaf_analysis         [8c]   signals/value         [2c]
+   100%     135  signals/leaf_analysis         [8c]   signals/value         [4c]
+   100%     135  signals/leaf_analysis         [8c]   structural/deferrability [6c]
+   100%     135  signals/value                 [2c]   signals/value         [4c]
+   100%     135  signals/value                 [2c]   structural/deferrability [6c]
+   100%     135  signals/value                 [4c]   structural/deferrability [6c]
+    94%     127  signals/leaf_analysis         [8c]   structural/value      [2c]
+```
+
+The critical path is two tables of the same fourteen elements, plus the
+drawing — the reported three. **The leaf population is worse: 135
+elements, drawn four times, every pair at 100% overlap.**
+
+### Where the duplication actually is
+
+Not in the page. In the contract:
+
+```text
+signals.leaf_analysis.leaves                    135 uids
+signals.leaf_analysis.leaves_detail             135 uids   identical to leaves: True
+structural.deferrability.{deferrable,non_}      135 uids   identical to leaves: True
+
+signals.critical_path                            14 uids
+signals.critical_path_detail                     14 uids   identical: True
+
+signals.element_durations                     1,202 uids
+   critical path is a subset of it:  True
+   leaves       is a subset of it:  True
+```
+
+`analyze/v1` publishes the **same element membership three times** for
+leaves and twice for the critical path, and every one of those
+populations is a subset of the one 1,202-row element table. The page is
+faithful; it renders every copy it is given.
+
+That is the finding, and it moves the work: this is a **contract**
+question first and a rendering question second. Deduplicating the page
+while the payload still publishes three copies would put the page and
+the payload into disagreement, which is the one thing the viewer axis
+has refused since `UX-193`.
+
+### An honest cost of round 38's own fix
+
+Two of the four leaf renderings are nested tables that **`UX-277`
+created**. Before it, `leaves` and `leaves_detail` were two stringified
+cells — the same duplication, one line each. `UX-277` was right and it
+made this duplication expensive: two 136-row tables where there were
+two strings.
+
+The rule holds — a value should be drawn by its shape — and it exposed
+that the shape is published twice. That is what a good fix does; it is
+also why this direction is filed immediately rather than after the
+remaining round-38 items.
+
+### The shape of the fix
+
+**Membership is a column, not a list.** An element record carries
+`is_leaf`, `on_critical_path`, `path_index`, `is_choke_point`. Then a
+"list" is a *filter* over the one element table, and there is exactly
+one place any element's facts live. The pattern already exists —
+`signals.blast_radius` carries `is_leaf` per element today — it is just
+not the pattern the lists use.
+
+**A preset is a named (filter, columns, sort, bound).** "Critical path"
+is `on_critical_path`, ordered by `path_index`, showing duration and
+share. "Leaves" is `is_leaf`. "Latent heavies" is a sort and a bound.
+The page has bounds (`UX-262`'s `Top N`) and filters (`UX-205`) already
+and **zero named presets** — measured. The controls exist; what is
+missing is the naming that turns them into views.
+
+This is why it makes the open items smaller rather than larger:
+
+- `UX-286`'s chapters have fewer things to group — 13 populations rather
+  than 19 tables.
+- `UX-283`'s choke points become a preset over a table that already has
+  Inspect, sort and filter, rather than a new table.
+- `UX-278`'s magnifier has one row per element to point at.
+- `UX-284`'s tools are attached to one table rather than nineteen.
+
+### Brainstorm, marked by what is measured
+
+Measured, worth doing:
+
+1. **Column headers are mostly placeholders.** Across 41 tables the
+   commonest headers are `name` (36), `Value` (20), `Key` (10). A reader
+   scanning for a column name mostly finds a word that names its
+   position in a map. Presets fix most of this by giving a table a
+   subject; the rest wants schema declarations.
+2. **The widest table is 13 columns.** Presets are also how that becomes
+   readable: four to five columns per view rather than thirteen for all
+   of them.
+3. **`#1`/`#2` for tuple members**, shipped this round after the first
+   draft emitted `C0`/`C1` — 16 headers that read as codes. The real fix
+   is for the schema to describe those arrays (`UX-290`).
+
+Measured and **not** a problem, recorded so it is not proposed again:
+
+4. **Empty sections.** One of 48 is near-empty, and it is the blast
+   control, which is correct. There is no dead-section problem.
+
+Unmeasured, and therefore proposals rather than findings:
+
+5. **A distribution as one cell.** The percentile maps (`p10`…`p90`)
+   are nine columns of one shape. A sparkline drawn from published
+   percentiles is rendering, not deriving, so Direction 7's boundary
+   permits it — but whether it reads better than nine numbers has not
+   been tested.
+6. **Sticky column headers** on tables taller than the viewport, beside
+   `UX-284`'s sticky tools.
+7. **One vocabulary for "what this is about".** A reader currently meets
+   `element_uid`, `element`, `key` and `name` for the same thing in four
+   tables.
+
+### What follows
+
+Filed as `UX-288` (the contract publishes membership three ways) and
+`UX-289` (one element table, many presets), in that order, because the
+second is unsafe before the first.

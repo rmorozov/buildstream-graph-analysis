@@ -15,17 +15,17 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-294 scenarios: **4 open**, 290 closed.
+300 scenarios: **10 open**, 290 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 50 |
+| capture | 2 | 52 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 0 | 67 |
+| viewer | 3 | 70 |
 | cli | 0 | 4 |
-| store | 2 | 26 |
+| store | 3 | 27 |
 | docs | 2 | 28 |
 | guards | 0 | 39 |
 
@@ -38,8 +38,37 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
+| UX-296 | [the view that parses nothing](UX-0296-the-view-that-parses-nothing.md) | viewer | High | R1, R2 | 🔴 |
+| UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🔴 |
+| UX-298 | [the timeline speaks Perfetto, natively](UX-0298-the-timeline-speaks-perfetto-natively.md) | capture | High | R1, R2 | 🔴 |
+| UX-299 | [a handoff that does not carry the trace in its hands](UX-0299-a-handoff-that-does-not-carry-the-trace-in-its-hands.md) | viewer | Medium | R1 | 🔴 |
+| UX-300 | [what a two-gigabyte snapshot does to a store](UX-0300-what-a-two-gigabyte-snapshot-does-to-a-store.md) | store | Medium | R1, R5, R7 | 🔴 |
+| UX-301 | [the ordering authority moved and left its old uniform](UX-0301-the-ordering-authority-moved-and-left-its-old-uniform.md) | viewer | Low | — | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+
+## UX-296..UX-301: the fortieth round — a snapshot bigger than RAM (2026-08-25)
+
+The field showstopper: a real dual-plane capture at ~2 GB
+(`plane2.json` 1.5 GB), on which `bga view` freezes and dies of
+memory. Round 40 reproduced it synthetically and measured every
+load path: the monolith parses at 2.9× bytes-to-RAM and the view
+pays it twice before the socket exists; the store walk re-parses
+every snapshot for two scalars; the merge step reads the
+decompressed raw log as one string at 6.3× — ~30 GB projected. Two
+architecture facts: ~95 % of the monolith is a `"processes"` list
+no production reader consumes, and `UX-168`'s streaming fix never
+reached the converter the view calls. The user's proposal — adopt
+Perfetto's protobuf trace format — became Direction 15 with seven
+rules (capture computes/view serves; events are a stream; the
+artifact is TrackEvent via a stdlib emitter; aggregates not
+events; the handoff inverts to the deep link; RAM is a guarded
+budget), decomposed as
+[`UX-296`](UX-0296-the-view-that-parses-nothing.md)..[`UX-300`](UX-0300-what-a-two-gigabyte-snapshot-does-to-a-store.md).
+The sampled verification of rounds 28-39 returned six for six with
+one superseded acceptance filed as
+[`UX-301`](UX-0301-the-ordering-authority-moved-and-left-its-old-uniform.md).
+Full narrative: [`../../audits/round-40.md`](../../audits/round-40.md).
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 

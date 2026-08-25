@@ -172,6 +172,7 @@ timestamped record, not a statement of current state.
 [23](audits/round-23.md) ·
 [24](audits/round-24.md) ·
 [27](audits/round-27.md) ·
+[40](audits/round-40.md) ·
 [the original spec-compliance review](audits/spec-compliance-review.md)
 
 ## Backlog

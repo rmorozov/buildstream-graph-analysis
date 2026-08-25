@@ -495,7 +495,11 @@ _PROVENANCE = {
         "evidence": {
             "description": "Each field this claim was read from, as a "
                            "path into this document and the value found "
-                           "there.",
+                           "there. A quotation, not a second publication: "
+                           "where this names a quantity the finding's own "
+                           "`evidence` also carries, the finding's is the "
+                           "one to believe, and a guard holds the two "
+                           "equal (UX-291).",
             "items": {
                 "type": "object",
                 "properties": {
@@ -941,7 +945,13 @@ _ANALYZE_HINTS = {
                                "recovered from the log (`UX-29`). Null when "
                                "the log did not record it, which is a "
                                "different claim from 1."},
-            "host_cpu_count": {QUANTITY: "count"},
+            "host_cpu_count": {
+                QUANTITY: "count",
+                "description": "Cores the host reported. The ceiling the "
+                               "CPU constraint is computed against, and "
+                               "the reason a recommendation is about this "
+                               "machine rather than about the graph "
+                               "alone."},
             "cores_busy": {
                 QUANTITY: "count",
                 "description": "Cores drawn on average across the whole "
@@ -1407,6 +1417,20 @@ _ANALYZE_HINTS = {
                 # conclusion and dropped these on the floor - in a tool
                 # whose whole proposition is that its conclusions are
                 # measured rather than guessed.
+                # UX-291: **this is the carrier a consumer should
+                # believe.** A number here may also appear in
+                # `provenance.evidence[].value` (a quotation of the
+                # document at a path) and inside `copy_text` (a
+                # rendering for a human). The three are written in one
+                # pass from these values and a guard holds them equal;
+                # where a consumer must pick one, it is this.
+                #
+                # Not a projection over `provenance.evidence`, which was
+                # the other candidate: measured on the `macro_micro`
+                # run, 14 of the finding evidence entries have a
+                # citation and the rest are derived ratios with no
+                # published path, so a projection would have to drop
+                # numbers or invent paths for them.
                 "evidence": {"type": ["object", "null"],
                              "properties": EVIDENCE_QUANTITIES},
                 "provenance": _PROVENANCE,

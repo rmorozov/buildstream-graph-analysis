@@ -59,6 +59,67 @@ would have caught it; a bound at it would only just have.
 |---|---|---|---|---|
 | 1 | 2026-08-23 | 237 | `2818a06` | `UX-245`, `UX-246`, `UX-247` |
 | 2 | 2026-08-24 | 263 | `b17d741` | `UX-273`, `UX-274` |
+| 3 | 2026-08-25 | 290 | `011dbd6` | `UX-294`, `UX-295` |
+
+### Review 3 — 2026-08-25
+
+Twenty-seven rows closed since review 2, which is what tripped the
+cadence. Run against `docs/design/architecture.md`, the three guides
+and the seven published contracts.
+
+**1. Does the code still do what it says?** The CLI table checked
+against `cli.create_parser()`: twelve subcommands, twelve rows, plus
+the alias row `UX-67` added — no drift. The viewer section checked
+against `bga/viewer/`: the schema-driven claim, the width rule and the
+presets are all still what the modules do, and the chapters `UX-286`
+added were missing from it and were written in by `UX-247` the same
+day.
+
+**2. Does every published contract have a home?**
+
+```text
+contract              named in architecture.md   named in a guide
+analyze/v2                     4                        2
+blast/v1                       1                        1
+compare/v1                     1                        1
+correlate/v1                   1                        1
+store-aggregate/v1             1                        1
+store/v1                       1                        1
+whatif/v1                      3                        0
+```
+
+Six of seven are reachable from a guide. `whatif/v1` is not — the
+*command* is documented in two guides and the *contract* in none, so a
+consumer holding a payload stamped with it has nowhere to look. Filed
+as `UX-295`.
+
+**3. Is any figure invalidated?** One, and it was this round's own:
+`UX-285` and `UX-286` recorded their after-measurements against
+"macro_micro" when the export measured was the golden
+`mixed_task_kinds` fixture. Corrected in place, with a note in `UX-285`
+saying so — the two fixtures are different documents and a reader
+comparing rounds would have been comparing two runs.
+
+Direction 13's own figures (48 sections, 18.8 and 20.1 screens) are
+*not* invalidated: they are dated round-38 measurements and the round
+that moved them is named beside them.
+
+**4. What shipped since the last review that no document names?** The
+inventories: `bga --help` (twelve subcommands, nineteen aliases),
+`schemas.names()` (seven contracts) and the twenty-seven closed rows.
+The commands and contracts are covered. The **modules are not** — the
+architecture names `app.js` and `chapters.js` and none of the other
+ten viewer modules, including the 2,411-line `views.js` that draws
+every section. Filed as `UX-294`.
+
+**5. Does each document's "last updated" claim match reality?**
+`architecture.md` claims 2026-08-25 and was last changed 2026-08-25.
+It is still the only document making the claim, which is what `UX-247`
+recorded — and that clause is now guarded rather than checked by hand,
+which is why this review could answer it in one command.
+
+**No code was written in this review.** `UX-294` and `UX-295` are the
+output, plus this row.
 
 ### Review 1 — 2026-08-23
 

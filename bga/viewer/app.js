@@ -81,7 +81,12 @@ export function quantity(value, kind) {
     case "kilobytes": return bytes(value * 1024);
     case "seconds": return duration(value * 1e6);
     case "ratio": return `${value.toFixed(2)}×`;
-    case "count": return String(value);
+    // UX-275: a count is usually whole and renders as itself. The
+    // first fractional one published - `cores_busy`, an average over
+    // the run - arrived as "1.603977885512677" on the page, fifteen
+    // digits of a number measured to two. Whole counts are untouched.
+    case "count": return Number.isInteger(value) ? String(value)
+      : String(Math.round(value * 100) / 100);
     default:
       return typeof value === "number"
         ? String(Math.round(value * 1000) / 1000) : String(value);

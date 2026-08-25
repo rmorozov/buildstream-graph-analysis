@@ -319,7 +319,7 @@ class TestTheDocumentEndsWithItsIdentity:
     and on the 1,202-element run before it landed:
 
     ```text
-                          1,202-element        macro_micro
+                          1,202-element        golden fixture
     summary                 screen 10.5        screen  8.26
     run_instance                   10.69               8.45
     producer                       10.83               8.56

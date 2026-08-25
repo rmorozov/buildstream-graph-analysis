@@ -131,8 +131,8 @@ document now use one grouping by construction.
 ```text
                         before      after
 1,202-element run       18.51 scr   18.10 scr
-macro_micro             11.00       10.99
-macro_micro + inventory 11.91       11.89
+golden mixed_task_kinds 11.00       10.99
+golden + a source inv.  11.91       11.89
 golden export, 1440x900 11.32       11.29
 ```
 

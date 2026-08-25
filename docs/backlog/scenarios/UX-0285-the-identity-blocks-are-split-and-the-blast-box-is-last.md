@@ -89,7 +89,7 @@ when a block is moved out of sequence.
 **The identity closes the document.**
 
 ```text
-                  1,202-element run          macro_micro fixture
+                  1,202-element run       golden mixed_task_kinds
               before        after         before        after
 summary        10.50        17.86          8.26        10.39
 run_instance   10.69        18.06          8.45        10.58
@@ -111,7 +111,7 @@ sections with anchors and `toc` reads the document it is given).
 **The blast control sits with the findings.**
 
 ```text
-                        1,202-element run    macro_micro
+                        1,202-element run    golden fixture
 blast, before             18.27 of 18.51     10.76 of 11.00
 blast, after               4.32              3.35
                           (23% of it)       (30%)
@@ -211,3 +211,13 @@ and 31%, 0.99 and 0.94 screens after the end of `findings`. Every guard
 this item landed still passes against the new mechanism — the guards
 assert what the page *is*, which is why they survived the mechanism
 under them being replaced.
+
+### One label corrected
+
+The "after" columns above were measured on the exported **golden
+`mixed_task_kinds`** fixture, and were first written as `macro_micro`.
+They are the same measurements; the run they name is not the one this
+item was filed against, which carries a Plane 2 report and is a
+different document. Review 3 caught it, and it is corrected rather than
+left to look like a comparison across rounds. The 1,202-element figures
+are unaffected.

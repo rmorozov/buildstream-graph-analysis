@@ -1,6 +1,6 @@
 # UX-285: the identity blocks are split, and the blast box is last
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-207 | **Serves:** R1 and R7 — reading top-down, and asking a question mid-read | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 | **Serves:** R1 and R7 — reading top-down, and asking a question mid-read | **Topic:** viewer
 
 ## Motivation
 
@@ -81,3 +81,116 @@ On both the 1,202-element run and the fixture: the three identity blocks
 are consecutive and in the last third; the blast control is above the
 midpoint and within two screens of `findings`. The order guard reddens
 when a block is moved out of sequence.
+
+## Outcome
+
+🟢 **Done.** Measured in Chromium on both runs, before and after.
+
+**The identity closes the document.**
+
+```text
+                  1,202-element run          macro_micro fixture
+              before        after         before        after
+summary        10.50        17.86          8.26        10.39
+run_instance   10.69        18.06          8.45        10.58
+producer       10.83        18.20          8.56        10.69
+document       18.51        18.51         11.00        11.00
+             (57% of it)  (96% of it)   (75%)        (94%)
+```
+
+Adjacent already, on both runs, once the three moved together: gaps of
+0.04 and 0.03 screens. `placeIdentityLast` is called from `boot` rather
+than from `render`, because `UX-216`'s element sections, the trend and
+the inlined questions are all appended after `render` returns — ordering
+inside `render` means "last of the payload" and leaves twenty-five
+detail blocks below the block that is supposed to close the page.
+
+The rail still reaches them in one action (item 2, unchanged: they are
+sections with anchors and `toc` reads the document it is given).
+
+**The blast control sits with the findings.**
+
+```text
+                        1,202-element run    macro_micro
+blast, before             18.27 of 18.51     10.76 of 11.00
+blast, after               4.32              3.35
+                          (23% of it)       (30%)
+findings                   1.36              1.31
+```
+
+After `next_steps` rather than after `findings` itself: `findings`,
+`headline` and `next_steps` are one narrative in the payload's own
+order, and `next_steps` is where these runs print `bga blast <target>`
+as the command to run — the control does that without the terminal, so
+it sits under the line that names it.
+
+**The pair the item could not check when it was filed.** Both runs
+measured lacked a source inventory, so `resource_blast` was absent and
+"the control sits beside the table" was unfalsifiable. Adding a
+`sources/v1` file with one monorepo behind three of the four elements
+produces the table, and the pair reads together:
+
+```text
+findings   index  4/28   1.31 - 2.70
+resource_blast    8/28   4.22 - 4.63
+blast             9/28   4.66 - 4.73     0.03 screens below the table
+```
+
+`_boot_order` gained an `inventory` argument for this, so the guard
+exercises it rather than a description of it.
+
+**One deviation from the Acceptance Test, recorded rather than
+smoothed.** *"within two screens of `findings`"* holds at 1440×900
+(0.92) and 1280×800 (1.03) measured from the end of `findings`, and
+**not** at 390×844, where it is 2.16:
+
+```text
+             document   findings   headline   next_steps    gap
+1440x900       11.32       1.12       0.50        0.31      0.92
+1280x800       12.79       1.26       0.56        0.35      1.03
+ 390x844       20.49       1.55       0.93        1.11      2.16
+```
+
+On a phone the diagnosis alone is 2.04 screens, so no placement that
+keeps `findings → headline → next_steps` together can meet two screens
+there. The width-independent clause is guarded instead: nothing but that
+narrative separates the finding from the control, at every viewport.
+
+**Item 4, the order guard.** In `test_the_order_the_page_has.py`,
+reusing `UX-235`'s harness — the booted export's own child sequence,
+never a literal rebuilt from source order — plus four screen-position
+guards in `test_the_page_has_geometry.py`.
+
+**Falsification.** Eight mutations, each asserted to have landed before
+the result was read:
+
+```text
+M1  boot never calls placeIdentityLast          3 order guards red
+M2  the blast block is appended, not placed     3 order guards red
+M3  BLAST_ANCHORS prefers next_steps to the     2 order guards red
+    resource_blast table
+M4  IDENTITY_SECTIONS declared in reverse       2 order guards red
+M5  the placement moves back inside render()    14 geometry checks GREEN
+M6  no placement at all (the filed defect)      6 geometry guards red
+M7  the blast block appended again              8 geometry guards red
+M8  two published fields carry one population   the clash guard red
+```
+
+**M5 is why there is a fifth geometry guard.** The mutation that
+reproduces this item's defect on a long run left every geometry check
+green on the fixture, because four element sections and a trend are only
+a quarter of an eleven-screen page — the *pre-change* report already put
+`summary` at 75%, which satisfies "in the last third". The clause that
+discriminates is the pixel one: nothing at all is drawn below the
+identity group. The weak clause stays, because it is this item's own
+wording, and its docstring says it is weak.
+
+**One guard elsewhere was wrong about what it measured.**
+`test_no_two_tables_carry_the_same_elements` named its tables by
+*position* (`structural#31 and structural#29`), so moving two sections
+reddened it with the identical pair still identical, five tables further
+down. It names them by `UX-292`'s `data-table` path now
+(`structural.batch_opportunities.serialized_pairs and
+structural.sensitivity.top_opportunities`), which is both stable under a
+move and legible in the failure message — M8 confirms it still catches
+a real duplication.

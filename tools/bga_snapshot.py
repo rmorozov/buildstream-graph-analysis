@@ -212,8 +212,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--max-store", type=str, default=None, metavar="SIZE",
-        help="With --prune: delete oldest-first until the store is under "
-             "SIZE (`2G`, `500M`, bytes). Never @last or @prev.",
+        help="With --prune: keep the store under SIZE (`2G`), oldest first.",
     )
     parser.add_argument(
         "--dry-run", action="store_true",

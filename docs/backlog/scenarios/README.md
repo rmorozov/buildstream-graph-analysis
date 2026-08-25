@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-305 scenarios: **10 open**, 295 closed.
+305 scenarios: **9 open**, 296 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 52 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 4 | 74 |
+| viewer | 3 | 74 |
 | cli | 0 | 4 |
 | store | 2 | 27 |
 | docs | 3 | 29 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
 | UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🟡 |
-| UX-302 | [the mapping made law — no raw JSON that is not on purpose](UX-0302-the-mapping-made-law.md) | viewer | High | R1 | 🔴 |
 | UX-303 | [the shape before the rows — sparklines and density strips](UX-0303-the-shape-before-the-rows.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-304 | [dark first, with two grades of token](UX-0304-dark-first-with-two-grades-of-token.md) | viewer | Medium | R1 | 🔴 |
 | UX-305 | [emphasis is a budget, spent once per block](UX-0305-emphasis-is-a-budget.md) | viewer | Medium | R1 | 🔴 |

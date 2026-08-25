@@ -182,6 +182,33 @@ class TestStartupDoesNotPayForWhatItServes:
         assert [p for p in out["opened"]
                 if os.path.basename(p) == "plane2.json"] == [], out["opened"]
 
+    def test_the_published_analysis_is_what_gets_served(self, store):
+        """Direction 15's first rule, end to end: what the capture wrote
+        is what the page renders.
+
+        `bga snapshot` publishes `analyze.json` from the analysis it
+        already ran; a view that re-derived it would be re-parsing the
+        Plane 2 report on every page load, which is the defect. The
+        marker here is a value no analysis would produce, so a payload
+        that came from anywhere else fails this rather than looking
+        plausible.
+        """
+        snapshot = store / ".bga/runs" / BIG_STAMP
+        published = {"schema": "analyze/v2", "run_id": "published-by-capture",
+                     "total_duration_us": 1234, "section": None}
+        (snapshot / "analyze.json").write_text(json.dumps(published),
+                                               encoding="utf-8")
+        try:
+            from tools.bga_view import payloads
+            served = payloads(str(snapshot / "run"))["report.json"]
+            assert served["run_id"] == "published-by-capture", served
+            out = _startup(snapshot / "run")
+            assert [p for p in out["opened"]
+                    if os.path.basename(p) == "plane2.json"] == [], out["opened"]
+            assert out["peak_rss_mb"] < RSS_CEILING_MB, out
+        finally:
+            (snapshot / "analyze.json").unlink()
+
     def test_the_timeline_is_offered_without_being_built(self, store):
         """`UX-194`'s rule (offer only what exists) met `UX-296`'s
         (build nothing at startup): the button is offered from a file

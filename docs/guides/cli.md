@@ -167,7 +167,7 @@ it did not do.
 | `--list` | List this project's snapshots with their sizes, showing which are `@last`/`@prev` |
 | `--no-compare` | Take the snapshot and report on it; skip the comparison |
 | `--project PATH` | Snapshot a project other than the enclosing one |
-| `prune --keep N` / `--older-than DAYS` | Delete old snapshots; `--dry-run` says what would go |
+| `prune --keep N` / `--older-than DAYS` / `--max-store SIZE` | Delete old snapshots; `--dry-run` says what would go |
 
 `bga snapshot` exits with **the wrapped build's own exit code**. A
 failed build is not a successful snapshot; equally, a comparison verdict
@@ -175,11 +175,29 @@ does not change the exit code — the CI gates live on `bga compare`
 (`--fail-on-regression` and friends), which is what CI should call.
 
 Snapshots are build artifacts and `.bga/runs` entries can be deleted at
-any time. `bga` warns once the store passes 2 GB and prunes on request;
-what `prune` will never delete is `@last`, `@prev`, and — when both of
+any time. Every capture now **says what it weighed and what the store
+holds** (`UX-300`), and `bga` still warns once the store passes 2 GB.
+What `prune` will never delete is `@last`, `@prev`, and — when both of
 those record builds that did not finish — the newest *healthy* run,
 because that is the baseline the next comparison walks back to
-(`UX-167`). See [the real-project
+(`UX-167`).
+
+```bash
+bga snapshot prune --max-store 20G --dry-run   # oldest-first, under a budget
+```
+
+`--max-store` is the question a disk actually asks. Age and count are
+proxies for it: a nightly capture that grew from 4 MB to 2 GB makes
+`--keep 5` mean something different every month, and `--max-store 20G`
+means the same thing forever. Combined with the others it is the
+stricter of the two, never an override, and a store it cannot reach
+without deleting `@last`/`@prev` says so rather than emptying itself.
+
+`bga snapshot --aggregate` reports what the store weighs as a
+distribution — the median capture against the p95 is what names the run
+worth looking at — and its total counts *every* snapshot, including
+captures excluded from the timing distributions for failing: a failed
+run is not a sample, and still occupies its disk. See [the real-project
 guide](real-project.md) for the store at big-project scale.
 
 ### The same job in CI

@@ -1402,6 +1402,26 @@ rather than overlap. The CPU ceiling is `host_cores × builders ÷
 cores_busy` — measured draw per concurrently-building element, not an
 assumption — and the memory ceiling comes from the envelope below.
 
+**Reading it as data.** The block is a key of `analyze/v2`, so a CI job
+asks for it the same way it asks for anything else:
+
+```bash
+bga analyze tests/fixtures/macro_micro/run \
+    --plane2 tests/fixtures/macro_micro/plane2.json --format json \
+  | jq '.capacity_recommendation | {binding_constraint, recommended_builders}'
+```
+
+```json
+{
+  "binding_constraint": "graph",
+  "recommended_builders": 2
+}
+```
+
+Absent, not empty, when the block declines — the table below says when
+that is. Read `caveat` before acting on `recommended_builders`: it is a
+hypothesis to time, not a setting to apply.
+
 **How it is derived, and what it will not do.** One capture in, one
 recommendation out: no configuration is tried. The sweep replays the
 durations it observed and does not model contention (`UX-14`), and

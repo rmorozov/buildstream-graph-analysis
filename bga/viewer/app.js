@@ -353,6 +353,20 @@ export function columnSpecs(hint, rows, node) {
 export const OBJECT_INLINE_FIELDS = 4;
 export const ARRAY_INLINE_ITEMS = 6;
 
+// `UX-277`: how far the rule recurses *inside a cell*.
+//
+// The rule is width, not depth - but that governs which of the three
+// renderings a value gets, not how many tables may nest inside one
+// another. A table cell holding a table holding a table is three sets
+// of column headers and three sets of tools for one value, and the
+// document this page renders is seven levels deep.
+//
+// Two is where it stops: a cell may hold a table, and that table's
+// cells may hold one more. Past that the value is folded as text -
+// still labelled, still bounded, still one click from the whole thing,
+// which is what `renderText` already does for a long string.
+export const CELL_NEST_LIMIT = 2;
+
 function isScalar(value) {
   return value === null || typeof value !== "object";
 }
@@ -375,7 +389,7 @@ function inlineObject(value, node) {
  * A map as a bounded, searchable table - the table only, never a
  * section (`buildTable`, not `renderTable`).
  */
-function mapTable(key, rows, hint, node, nested) {
+function mapTable(key, rows, hint, node, nested, depth = 0) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a
@@ -387,7 +401,7 @@ function mapTable(key, rows, hint, node, nested) {
       { key: "key", title: "name" },
       { key: "value", title: title(key), quantity: measure }] };
   }
-  const { table, tools } = buildTable(key, rows, declared, node);
+  const { table, tools } = buildTable(key, rows, declared, node, depth);
   const box = el("div", { class: "map-table", "data-bounded": "map" },
                  tools, table);
   return box;
@@ -409,23 +423,40 @@ function folded(label, count, body) {
  * sections at any depth and one inside a table cell becomes a phantom
  * entry in the table of contents.
  */
-export function renderStructured(key, value, hint = {}, node = undefined) {
+export function renderStructured(key, value, hint = {}, node = undefined,
+                                 depth = 0) {
+  const count = Array.isArray(value)
+    ? value.length : Object.keys(value).length;
+  if (!count) return el("span", { class: "muted" }, "none");
+  // `UX-277`: past the nesting limit a value is folded as text rather
+  // than as a third table. Deliberately *not* silent - the fold carries
+  // the label and the count, so the reader knows what is behind it.
+  if (depth >= CELL_NEST_LIMIT) {
+    return folded(title(key), count,
+                  el("p", { class: "full-text" }, JSON.stringify(value)));
+  }
   if (Array.isArray(value)) {
-    if (!value.length) return el("span", { class: "muted" }, "none");
     if (value.every(isScalar)) {
       if (value.length <= ARRAY_INLINE_ITEMS) {
         return el("span", {}, value.map(String).join(", "));
       }
       const rows = value.map((item, at) => ({ key: String(at), value: item }));
       return folded(title(key), value.length,
-                    mapTable(key, rows, hint, node, false));
+                    mapTable(key, rows, hint, node, false, depth + 1));
     }
-    const objects = value.filter((item) => item && typeof item === "object");
+    // `UX-277`: an array of *arrays* - `[["app.bst", 8], …]` - used to
+    // reach `Array.prototype.toString` twice and render `app.bst,8,
+    // lib-b.bst,4`. It is a table of positional columns, which is what
+    // the payload means by it.
+    const rows = value.map((item, at) => (
+      Array.isArray(item)
+        ? Object.fromEntries([["key", String(at)],
+                              ...item.map((m, i) => [`c${i}`, m])])
+        : (item && typeof item === "object") ? item : { key: String(at), value: item }));
     return folded(title(key), value.length,
-                  mapTable(key, objects, hint, node, true));
+                  mapTable(key, rows, hint, node, true, depth + 1));
   }
   const entries = Object.entries(value);
-  if (!entries.length) return el("span", { class: "muted" }, "none");
   if (entries.length <= OBJECT_INLINE_FIELDS
       && entries.every(([, member]) => isScalar(member))) {
     return inlineObject(value, node);
@@ -435,7 +466,7 @@ export function renderStructured(key, value, hint = {}, node = undefined) {
   const rows = entries.map(([name, member]) => (
     nested ? { key: name, ...member } : { key: name, value: member }));
   return folded(title(key), entries.length,
-                mapTable(key, rows, hint, node, nested));
+                mapTable(key, rows, hint, node, nested, depth + 1));
 }
 
 /**
@@ -450,7 +481,8 @@ export function renderStructured(key, value, hint = {}, node = undefined) {
  * the builder out is the whole fix: a cell gets the table, a view gets
  * the section.
  */
-export function buildTable(key, rows, hint = {}, node = undefined) {
+export function buildTable(key, rows, hint = {}, node = undefined,
+                           depth = 0) {
   const specs = columnSpecs(hint, rows, node);
   const columns = specs.map((s) => s.key);
   const table = el("table", { "data-table": key });
@@ -472,13 +504,32 @@ export function buildTable(key, rows, hint = {}, node = undefined) {
       const raw = row?.[column];
       const numeric = typeof raw === "number";
       const kind = numeric ? spec.quantity : null;
+      // `UX-277`: the leaf every `<td>` in the report goes through.
+      //
+      // `UX-267` built `renderStructured` and wired it into
+      // `renderPairs`, which draws `<dd>` cells. This was never wired
+      // to it, so the rule governed one cell type and stopped dead at
+      // the other. Measured on the 1,202-element run before the fix:
+      // 6 cells of raw JSON, 11 joined arrays over 60 characters, one
+      // `[object Object]`, and a widest cell of 14,300 characters -
+      // `signals.leaves_detail`, which `CELL_TEXT_CAP` never saw
+      // because the cap lives on the path this one bypassed.
+      //
+      // `data-raw` keeps the *unrendered* value, because sorting,
+      // filtering and `Copy shown rows` read it and must never start
+      // reading markup.
+      const structural = raw !== null && typeof raw === "object";
       tr.append(el("td",
         { class: numeric ? "num" : null,
           "data-column": column,
-          "data-raw": raw === undefined || raw === null ? "" : String(raw) },
-        Array.isArray(raw) ? raw.join(", ")
-          : (raw && typeof raw === "object") ? JSON.stringify(raw)
-          : numeric ? quantity(raw, kind) : (raw ?? "—")));
+          "data-raw": raw === undefined || raw === null ? ""
+            : structural ? JSON.stringify(raw) : String(raw) },
+        structural
+          ? renderStructured(column, raw, hintsOf(childNode(node, column)),
+                             childNode(node, column), depth)
+          : numeric ? quantity(raw, kind)
+          : typeof raw === "string" ? renderText(column, raw)
+          : (raw ?? "—")));
     }
     body.append(tr);
   }

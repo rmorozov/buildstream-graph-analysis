@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-285 scenarios: **14 open**, 271 closed.
+286 scenarios: **14 open**, 272 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 1 | 30 |
-| viewer | 10 | 63 |
+| viewer | 9 | 63 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
-| guards | 0 | 37 |
+| guards | 1 | 38 |
 
 ## Open scenarios
 
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-247 | [the architecture's verification log is stale about itself](UX-0247-the-architectures-verification-log-is-stale-about-itself.md) | docs | Low | — | 🔴 |
 | UX-275 | [the capacity recommendation is text-only](UX-0275-the-capacity-recommendation-is-text-only.md) | contracts | Medium | R5, R7 | 🔴 |
-| UX-277 | [every table cell stringifies its own structure](UX-0277-every-table-cell-stringifies-its-own-structure.md) | viewer | High | R1, R7, R8 | 🔴 |
 | UX-278 | [the magnifier opens nothing for most elements](UX-0278-the-magnifier-opens-nothing-for-most-elements.md) | viewer | High | R1, R7 | 🔴 |
 | UX-279 | [forty-three copy controls, and no way to know what they copy](UX-0279-forty-three-copy-controls-and-no-way-to-know-what-they-copy.md) | viewer | Medium | R8 | 🔴 |
 | UX-280 | [copy as markdown](UX-0280-copy-as-markdown.md) | viewer | Medium | R8 | 🔴 |
@@ -50,6 +49,7 @@ task file, which is the only place it ever lived twice.
 | UX-284 | [the table tools are below the table, and scroll away](UX-0284-the-table-tools-are-below-the-table-and-scroll-away.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-285 | [the identity blocks are split, and the blast box is last](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-286 | [the report is forty-eight fragments with no chapters](UX-0286-the-report-is-forty-eight-fragments-with-no-chapters.md) | viewer | High | R1, R7 | 🔴 |
+| UX-287 | [the export ceiling is measured on a four-element run](UX-0287-the-export-ceiling-is-measured-on-a-four-element-run.md) | guards | High | R8 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 

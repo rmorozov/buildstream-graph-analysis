@@ -20,8 +20,8 @@ report, 1,000,000 records):
 
 ```text
                                  before (round 39)        after
-view the big run itself       15.48 s   1235.9 MB    0.04 s   39.5 MB
-view its 2 MB neighbour        8.18 s   1233.1 MB    0.06 s   39.7 MB
+view the big run itself       17.04 s   1232.9 MB    0.04 s   39.5 MB
+view its 2 MB neighbour        8.79 s   1233.5 MB    0.06 s   39.8 MB
 ```
 
 The neighbour is the one that shows the shape of the defect: viewing a
@@ -37,7 +37,10 @@ allocator without admitting a parse. `SECONDS_CEILING` is 20: the
 before-figure at this size measured 15.5-17.6 s across runs and the
 after-figure 0.04-0.23 s (the spread is the cold import of the
 analysis modules, not the work), and CI runners are slower than this
-container - the bound is a *regression* alarm, not a benchmark.
+container - the bound is a *regression* alarm, not a benchmark. Both
+were measured against a worktree at the pre-change commit, sharing one
+generated fixture with the tree here, so the two columns differ in the
+code and in nothing else.
 """
 import json
 import os
@@ -116,10 +119,28 @@ def store(tmp_path_factory):
     return root
 
 
+# `VmHWM`, not `getrusage`. Measured here: a parent holding 411 MB
+# spawns a child that allocates 10 MB, and the child's
+# `ru_maxrss` reads **411.4 MB** while its `VmHWM` reads 10.5 MB -
+# `signal->maxrss` survives `execve`, so the figure is the larger of
+# the two processes. It only ever inflates, so it cannot hide a
+# regression, but it made this guard fail whenever the pytest process
+# that spawned it happened to be large: green run alone, red inside the
+# suite at 317.9 MB, having done 13 ms of work. `VmHWM` is the current
+# `mm`'s high-water mark, which `execve` resets, so it is this
+# process's own.
 _MEASURE = textwrap.dedent("""
     import json, os, resource, sys, time
     sys.path.insert(0, %(repo)r)
     from tools.bga_view import serve
+    def peak_mb():
+        try:
+            for line in open("/proc/self/status"):
+                if line.startswith("VmHWM:"):
+                    return int(line.split()[1]) / 1024
+        except OSError:
+            pass
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
     opened = []
     real_open = open
     def watched(path, *args, **kwargs):
@@ -134,7 +155,7 @@ _MEASURE = textwrap.dedent("""
     httpd.server_close()
     print(json.dumps({
         "seconds": elapsed,
-        "peak_rss_mb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+        "peak_rss_mb": peak_mb(),
         "opened": opened,
     }))
 """)

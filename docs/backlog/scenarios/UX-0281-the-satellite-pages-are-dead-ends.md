@@ -1,6 +1,6 @@
 # UX-281: the satellite pages are dead ends
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-199 | **Serves:** R1 and R7 — who follow a link and then want back | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 | **Serves:** R1 and R7 — who follow a link and then want back | **Topic:** viewer
 
 ## Motivation
 
@@ -61,3 +61,20 @@ these two pages are outside it.
 From `sql.html` and from `perfetto.html`, one click reaches the report,
 served and exported. Adding a page to the served set without a backlink
 reddens the guard.
+
+## Outcome
+
+🟢 Done (round 39). Both satellite pages carry a link home, in the same
+place on each, above the heading — so it is the first thing in reading
+order for a reader who wants out.
+
+It reads *"← The build report"* rather than "back": the reader may have
+arrived from a bookmark, and the browser already has a Back button.
+
+**The guard runs over the served set**, read from `bga_view.ASSETS`
+rather than from a list here, so a page added later is covered by
+construction — and a test asserts the sweep really is reading that table
+and finding more than one page, because a sweep that looks nowhere and
+one that finds nothing pass alike. The other direction is guarded too:
+the report still links out to the questions, so this cannot be satisfied
+by cutting the links that made the satellites reachable.

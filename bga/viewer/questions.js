@@ -175,10 +175,18 @@ export function inCategory(category) {
  * this renders in the served page, in `sql.html` and in the export, and
  * none of the three should own the element factory.
  */
-export function copyButton(make, text, deps = {}) {
+export function copyButton(make, text, deps = {}, noun = "query") {
+  // UX-279: what it copies, not that it copies. One function draws two
+  // different controls - the SQL a question renders, and a finding's
+  // pasteable text - and both read `Copy`, which is the ambiguity the
+  // item was reported for. The noun is the caller's, because only the
+  // caller knows what it handed over.
   const button = make("button", { type: "button", class: "copy-sql" });
-  button.textContent = "Copy";
+  const label = `Copy ${noun}`;
+  button.textContent = label;
   button.setAttribute("data-copy", text);
+  button.setAttribute("data-copies", noun);
+  button.title = `Copy this ${noun} to the clipboard`;
   button.addEventListener?.("click", () => {
     const clipboard = deps.clipboard
       ?? (typeof navigator !== "undefined" ? navigator.clipboard : null);
@@ -189,9 +197,9 @@ export function copyButton(make, text, deps = {}) {
       wrote = false;
     }
     button.textContent = wrote ? "\u2713 copied" : "select and copy";
-    deps.setTimeout?.(() => { button.textContent = "Copy"; }, 1500)
+    deps.setTimeout?.(() => { button.textContent = label; }, 1500)
       ?? (typeof setTimeout !== "undefined"
-          && setTimeout(() => { button.textContent = "Copy"; }, 1500));
+          && setTimeout(() => { button.textContent = label; }, 1500));
   });
   return button;
 }

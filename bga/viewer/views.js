@@ -1386,11 +1386,14 @@ function nextStepRow(step, copy) {
     const button = document.createElement("button");
     button.setAttribute("type", "button");
     button.className = "copy-step";
-    button.textContent = "Copy";
+    // UX-279: a command, and it says so - this one pastes into a shell.
+    button.textContent = "Copy command";
+    button.title = "Copy this command to the clipboard, ready to run";
+    button.setAttribute("data-copies", "command");
     button.addEventListener("click", () => {
       copy(argv);
       button.textContent = "\u2713 copied";
-      setTimeout(() => { button.textContent = "Copy"; }, 1200);
+      setTimeout(() => { button.textContent = "Copy command"; }, 1200);
     });
     row.append(button);
   }

@@ -511,3 +511,55 @@ body[data-has-toc] > header > #actions-fallback {
      there is least room to recover. */
   body[data-has-toc] { --head: 9rem; }
 }
+
+/* UX-281: the way home, on every satellite page. Small and quiet - it
+   is navigation, not the page's subject - and above the heading, so it
+   is the first thing in reading order for a reader who wants out. */
+header > .home {
+  margin: 0 0 .25rem;
+  font-size: .85rem;
+}
+header > .home a { text-decoration: none; }
+header > .home a:hover { text-decoration: underline; }
+
+/* UX-282: the hand-off and its fallback are one row where there is
+   width for it, the way `UX-272`'s header is, and at the same
+   breakpoint - so this page has one responsive vocabulary rather than
+   its own. The reader this fallback exists for is mid-handoff and has
+   just watched it fail; a column puts three paragraphs they no longer
+   care about between them and the one they do. */
+.handoff {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 1rem;
+}
+.handoff > .handoff-go { grid-area: 1 / 1; margin: 0; }
+.handoff > .handoff-fallback { grid-area: 1 / 2; margin: 0; }
+@media (max-width: 60rem) {
+  .handoff { display: block; }
+  .handoff > .handoff-fallback { margin: .4rem 0 0; }
+}
+
+/* UX-284: while a table is the thing on screen, its tools stay on
+   screen.
+   `UX-205` put the tools above each table and `.map-table` gives a
+   generated table its own scroll box (`UX-187`) - so sticky *inside
+   that box* is the right scope: the tools of the table you are
+   scrolling stay put, and two tables never both claim the same strip
+   of viewport. Fixed-to-viewport was considered and declined for
+   exactly that reason, and because an 18.8-screen report has many
+   tables.
+   The background is opaque because rows scroll underneath it. */
+.table-tools {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  margin-top: 0;
+  padding: .3rem 0;
+}
+/* A section's tools sit under the sticky header rather than at the top
+   of the viewport, where the header would cover them (`UX-255` made the
+   header sticky, and `--head` is what every anchor already reads). */
+section > .table-tools { top: var(--head, 5.5rem); }

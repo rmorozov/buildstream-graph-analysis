@@ -51,19 +51,32 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # different reasons. Each is a measurement plus headroom, and each says
 # which run it is a bound *for*.
 #
-#   the page      162,909 B on every run (modules 144,636 + css 16,444
+#   the page      171,388 B on every run (modules 152,424 + css 17,135
 #                 + 1,829 of scaffolding) - grows with source
-#   golden   (4)  250,472 B   -> of which data 87,563
-#   macro_micro (11) 288,404 B -> of which data 125,495
+#   golden   (4)  261,604 B   -> of which data 90,216
+#   macro_micro (11) 299,695 B -> of which data 128,307
 #
-# The synthetic 1,202-element run exports at 1,063,807 B and is not
+# The synthetic 1,202-element run exports at ~1.07 MB and is not
 # committed (`UX-189`), so it is measured in the Outcome rather than
 # guarded here.
-PAGE_BUDGET_B = 172_000
+#
+# **The bounds moved once, and the split is what made that legible.**
+# Round 39's viewer work (`UX-279`, `UX-280`, `UX-283`, `UX-284`,
+# `UX-289`, `UX-292`) took the page 162,909 -> 171,388 B: modules
+# +7,788, stylesheet +691. The data grew +2,653 in the same round, all
+# of it schema descriptions the page shows as tooltips - which the
+# companion guard below proves is documents rather than payload.
+#
+# That attribution is the difference between a bound that moves on a
+# measurement and one that rises whenever it is exceeded, which is what
+# `UX-287` was filed about. The page budget did *not* redden - it had
+# 612 B left - and the totals did, which is the split working: source
+# growth shows in every total and cannot hide behind content.
+PAGE_BUDGET_B = 180_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
-    ("golden", GOLDEN, 260_000),
-    ("macro_micro", MACRO_MICRO, 300_000),
+    ("golden", GOLDEN, 272_000),
+    ("macro_micro", MACRO_MICRO, 310_000),
 ]
 
 
@@ -401,12 +414,11 @@ class TestTheSizeDiscipline:
 
         ```text
         run             elements     bytes      data   modules     css   other
-        golden                 4   250,472    87,563   144,636  16,444   1,829
-        macro_micro           11   288,404   125,495   144,636  16,444   1,829
-        synthetic          1,202 1,063,807   900,898   144,636  16,444   1,829
+        golden                 4   261,604    90,216   152,424  17,135   1,829
+        macro_micro           11   299,695   128,307   152,424  17,135   1,829
         ```
 
-        The page is **162,909 B on every run**. That is the number a
+        The page is **171,388 B on every run**. That is the number a
         ceiling can honestly guard: it grows when *source* grows, and no
         amount of content can mask it. The totals below guard the other
         half, per fixture - so content can no longer hide behind the

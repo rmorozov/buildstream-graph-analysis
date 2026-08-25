@@ -27,7 +27,8 @@ import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
 import { copyButton, renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
-         copy, applyTopN, presetColumns, applyPreset } from "./tables.js";
+         copy, applyTopN, presetColumns, applyPreset,
+         rowsMarkdown } from "./tables.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -249,7 +250,7 @@ export function renderFindings(findings, investigate = null, node = undefined) {
       // and a JavaScript page. Absent, not empty, on a payload that
       // does not carry it.
       finding.copy_text
-        ? copyButton(el, finding.copy_text)
+        ? copyButton(el, finding.copy_text, {}, "finding")
         : null));
   }
   return section;
@@ -694,15 +695,52 @@ export function interrogable(table, specs, total) {
     state.preset = preset;
   }
 
-  const copyRows = el("button", { type: "button", class: "copy-rows" },
-                      "Copy shown rows");
-  copyRows.addEventListener("click", () => {
-    const columns = specs.map((spec) => spec.key);
-    const shown = [...table.querySelectorAll("tbody tr")]
-      .filter((tr) => !tr.hidden)
-      .map((tr) => rowJson(tr, columns));
-    copy(`[${shown.join(",")}]`);
+  // UX-279: the noun, not the verb, and the count rather than a
+  // promise. Measured on the served report when this was filed: 43 copy
+  // controls, three vocabularies, `Copy` fourteen times over two
+  // different payloads, and not one `title` or `aria-label` among them.
+  // "Copy shown rows" is a promise; `Copy 12 rows` is a number a reader
+  // can check against the badge beside it.
+  //
+  // UX-280: and in which form. JSON pastes into a ticket as a code
+  // block somebody has to read; Markdown pastes as a table. The choice
+  // is remembered, because a reader pasting ten tables into one ticket
+  // should choose once - `localStorage`, which is where this page
+  // already remembers per-reader preferences, and which failing is not
+  // allowed to take the report down with it.
+  const shownRows = () => [...table.querySelectorAll("tbody tr")]
+    .filter((tr) => !tr.hidden);
+  const asMarkdown = el("label", { class: "copy-as" },
+    el("input", { type: "checkbox", class: "copy-markdown" }),
+    " as Markdown");
+  const markdownBox = asMarkdown.querySelector("input");
+  const remembered = readCopyFormat();
+  if (markdownBox && remembered === "markdown") markdownBox.checked = true;
+  markdownBox?.addEventListener?.("change", () => {
+    writeCopyFormat(markdownBox.checked ? "markdown" : "json");
+    label();
   });
+
+  const copyRows = el("button", { type: "button", class: "copy-rows" });
+  const label = () => {
+    const n = shownRows().length;
+    const form = markdownBox?.checked ? "Markdown" : "JSON";
+    const rows = `${n.toLocaleString("en-US")} row${n === 1 ? "" : "s"}`;
+    copyRows.textContent = `Copy ${rows}`;
+    copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
+      + `with their published values`;
+  };
+  label();
+  copyRows.addEventListener("click", () => {
+    const rows = shownRows();
+    copy(markdownBox?.checked
+      ? rowsMarkdown(rows, specs)
+      : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key))).join(",")}]`);
+  });
+  // The count follows the filter, the threshold, the sort and the
+  // bound - all of which go through `refresh` or the preset - so it is
+  // recomputed on any input rather than only when the table is built.
+  table.parentNode?.addEventListener?.("input", label);
 
   // Copy one cell's published value. Delegated, so 1,202 rows do not
   // mean 1,202 listeners.
@@ -711,8 +749,39 @@ export function interrogable(table, specs, total) {
     if (cell) copy(cellText(cell));
   });
 
-  return el("div", { class: "table-tools" }, box, badge,
-                     state.preset ?? null, copyRows);
+  const tools = el("div", { class: "table-tools" }, box, badge,
+                            state.preset ?? null, copyRows, asMarkdown);
+  // The badge and the count are the same claim; refresh both together.
+  tools.addEventListener?.("input", label);
+  tools.addEventListener?.("change", label);
+  return tools;
+}
+
+// UX-280: which form the reader last chose, remembered for them alone.
+//
+// `localStorage` is the right channel and `UX-211` says why: it
+// remembers for *me*, on *this* browser, and it is not part of the link
+// anybody pastes. An export opened from `file://` may get no storage at
+// all, and a page that threw there would lose the report rather than
+// the preference - so both sides are guarded and the default is what
+// the page did before.
+const COPY_FORMAT_KEY = "bga.copy-format";
+
+export function readCopyFormat() {
+  try {
+    return safeStorage()?.getItem(COPY_FORMAT_KEY) === "markdown"
+      ? "markdown" : "json";
+  } catch (error) {
+    return "json";
+  }
+}
+
+export function writeCopyFormat(format) {
+  try {
+    safeStorage()?.setItem(COPY_FORMAT_KEY, format);
+  } catch (error) {
+    /* a private window, blocked site data, an export from a folder */
+  }
 }
 
 // What to type, in the unit the column publishes.
@@ -1470,7 +1539,15 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     run(active >= 0 ? rows[active] : rows[0]);
   });
 
-  nav.append(box, list);
+  // UX-284 item 3: at the top of the rail, not after the section list.
+  // The jump box is the page's *coarse* navigation - the control a
+  // reader reaches for before they know which section they want - and
+  // appending it put it below thirty-odd entries, measured at y=1236 on
+  // an 18.8-screen report whose first screen ends at 900.
+  const title = nav.querySelector?.(".toc-title");
+  if (title && typeof title.after === "function") title.after(box, list);
+  else nav.prepend?.(list) ?? nav.append(box, list);
+  if (!box.parentNode) nav.prepend(box, list);
   return { targets, box, list, render, rowsOf: () => rows };
 }
 

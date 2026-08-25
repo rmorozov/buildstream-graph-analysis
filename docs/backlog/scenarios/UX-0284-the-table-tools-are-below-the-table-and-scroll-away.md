@@ -1,6 +1,6 @@
 # UX-284: the table tools are below the table, and scroll away
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-205 | **Serves:** R1 and R7 — filtering a table taller than the screen | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-205 | **Serves:** R1 and R7 — filtering a table taller than the screen | **Topic:** viewer
 
 ## Motivation
 
@@ -57,3 +57,33 @@ to stay in reach while the reader looks at the result.
 Measured at 1440×900 on the 1,202-element run: every table's tools have
 a top no greater than their table's, and scrolling a table taller than
 the viewport leaves its tools visible. No two tables' tools overlap.
+
+## Outcome
+
+🟢 Done (round 39). Measured in Chromium at three viewports, before and
+after:
+
+```text
+                                 before        after
+  tool strips below their table   28 of 43      0 of 24
+  strips with position: sticky     0 of 43     24 of 24
+  jump box top (1440x900)            1236px       171px   (fold at 900)
+```
+
+**Sticky inside the table's own scroll box**, not fixed to the viewport.
+`.map-table` already gives a generated table its own scroll (`UX-187`),
+which is the right scope: the tools of the table you are scrolling stay
+put, and two tables never both claim the same strip. Fixed-to-viewport
+was declined for exactly that reason — an 18.8-screen report has many
+tables. A section-level strip sits under the sticky header instead,
+reading the `--head` variable every anchor already uses.
+
+**The jump box moved to the top of the rail.** It is the page's *coarse*
+navigation — the control a reader reaches for before they know which
+section they want — and appending it had put it below thirty-odd
+entries.
+
+**Document order was already right** and is now guarded: every renderer
+that draws a table emits its tools first, including the nested ones
+inside cells. That is what a screen reader and the `Tab` key follow, so
+it is checked in the DOM guard rather than only in the browser one.

@@ -225,13 +225,16 @@ class TestTheReportHasChapters:
         unclassified reddens this instead of appearing at the foot of
         the document under a heading that says nothing."""
         out = _boot_chapters()
+        assert out["chapters"], "the page drew no chapters; nothing checked"
         more = [c for c in out["chapters"] if c["id"] == "more"]
         assert more == [], f"Everything else holds {more[0]['members']}"
 
     def test_each_chapter_is_a_named_landmark(self):
         """Item 2's other half: navigation moves chapter to chapter, and
         a chapter you cannot address is not a destination."""
-        for chapter in _boot_chapters()["chapters"]:
+        drawn = _boot_chapters()["chapters"]
+        assert drawn, "the page drew no chapters; nothing checked"
+        for chapter in drawn:
             assert chapter["title"], chapter
             assert chapter["id_attr"] == f"chapter-{chapter['id']}", chapter
             assert chapter["role"] == "region", chapter
@@ -243,6 +246,7 @@ class TestTheReportHasChapters:
         out = _boot_chapters()
         declared = [key for key, _ in _table()]
         drawn = [chapter["id"] for chapter in out["chapters"]]
+        assert drawn, "the page drew no chapters; nothing checked"
         assert drawn == [key for key in declared if key in drawn], drawn
 
     def test_the_identity_chapter_closes_the_document(self):

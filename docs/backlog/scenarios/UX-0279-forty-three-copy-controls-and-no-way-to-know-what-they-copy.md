@@ -82,6 +82,15 @@ the filter, the threshold, the sort and the bound because it is
 recomputed on any input to the strip. Singular and plural, since `Copy 1
 rows` is the kind of detail that makes a page feel unmaintained.
 
+**A guard that agreed with itself, and the fix.** The first version
+grouped labels by the kind each control *declares*, which is satisfied
+by a control declaring the wrong kind: reverting the finding button to
+the default noun left every test green, because the label and the
+declaration moved together. The rule with teeth checks the label against
+the **payload the control carries** — a finding's pasteable text is
+stamped (`UX-224`), so anything so stamped must say `finding` and
+nothing else may.
+
 **One vocabulary, guarded as a rule**: no label may cover two different
 payload kinds. That catches a regression rather than a wording choice —
 the exact failure this was reported for.

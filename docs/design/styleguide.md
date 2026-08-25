@@ -30,6 +30,7 @@ side is the only control that may render it.
 | boolean / nullable presence | a sentence | "not captured" ≠ "zero" — absence is stated, never drawn |
 | scalar + `description` | value + popover | the schema's sentence, on demand |
 | array of objects | table (§3) | declared columns; distribution strip when §2 applies |
+| array of arrays | table of positional columns | `UX-290`; declared `bga:columns` name them, otherwise `#1`/`#2` |
 | short scalar array (≤ inline cap) | inline `code` list | existing rule, kept |
 | long scalar array | count + folded list | count visible, fold labeled |
 | object map, one key per element | table of key/value rows | Direction 12's rule — never a `<pre>` |
@@ -39,14 +40,26 @@ side is the only control that may render it.
 | signed delta + `bga:direction` | signed value, tone by direction | existing, kept |
 | severity list (`bga:severity`) | findings blocks | existing, kept |
 | verdict + `verdict_kind` | banner, tone from enum | existing, kept |
-| anything past the nesting cap | **the labeled fold** — count + label + JSON behind a click | the *one* deliberate raw-JSON site (`UX-277`), kept as the escape hatch |
+| anything past the nesting cap | **the labeled fold** — count + label + JSON behind a click | the first of the two deliberate raw-JSON sites (`UX-277`), kept as the escape hatch |
 | a section, on request | "view as JSON" toggle | deliberate, per section, for debugging and issue-pasting — this is the "on purpose" the rule allows |
+| a **mixed** array (objects and scalars together) | *no control* — the labeled fold, and a console warning | `UX-302`: deliberately not a row. The old code improvised one, and rendered `[object Object], 2` |
 
 Two consequences. A schema addition whose shape is in this table
 renders correctly with **zero viewer changes** — that property
 (UX-193) is the reason the mapping is by shape, not by key. And a
 shape *not* in this table is a design task, not an improvisation:
 it lands here first, with its control, then in the code.
+
+**Where the table lives** (`UX-302`). `bga/viewer/shapes.js` is this
+table as code: `classify(value, …)` returns the control's name, and
+every render path asks it rather than testing shapes itself. A shape
+it cannot place returns `UNMAPPED`, which renders as the labeled fold
+*and* warns on the console naming the payload path — the gap is
+visible without the reader being shown nothing. The two deliberate
+raw-JSON sites are the fold's `<p class="full-text">` and the
+per-section "view as JSON" toggle's `data-raw-json`;
+`tests/unit/test_the_mapping_is_law.py` boots the golden and
+`macro_micro` pages, walks every text node, and fails on a third.
 
 ## 2. Sparklines and density strips
 

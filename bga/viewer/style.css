@@ -583,3 +583,23 @@ header > .home a:hover { text-decoration: underline; }
    of the viewport, where the header would cover them (`UX-255` made the
    header sticky, and `--head` is what every anchor already reads). */
 section > .table-tools { top: var(--head, 5.5rem); }
+
+/* UX-302: the "view as JSON" toggle - §1's second deliberate raw-JSON
+   site, and the only one the reader opens on purpose. Quiet in the
+   heading (it is a debugging affordance, not a finding) and monospace
+   when open, because what it shows is meant to be pasted. */
+button.json-toggle {
+  font: inherit; font-size: .74rem; cursor: pointer;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 3px;
+  padding: 0 .35rem; margin-left: .5rem; vertical-align: middle;
+}
+button.json-toggle:hover { color: var(--fg); }
+.section-json pre {
+  margin: .5rem 0 0;
+  max-height: 24rem; overflow: auto;
+  font-size: .78rem; line-height: 1.4;
+  background: var(--panel, transparent);
+  border: 1px solid var(--line); border-radius: 3px; padding: .5rem;
+  white-space: pre-wrap; word-break: break-word;
+}

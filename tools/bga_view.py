@@ -91,7 +91,13 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # nothing at all - measured, in Chromium, on a served run -
           # which is why the guard over this list now follows every
           # import from each entry module rather than naming three.
-          "chapters.js")
+          "chapters.js",
+          # UX-302: the style guide's §1 dispatch table, and the "view
+          # as JSON" toggle that is one of its two deliberate raw-JSON
+          # sites. Served as well as inlined: a served page imports
+          # these by URL, and a module missing from this tuple 404s and
+          # takes the whole boot with it.
+          "shapes.js", "rawjson.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured

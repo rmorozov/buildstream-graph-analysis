@@ -1,21 +1,107 @@
 /* UX-193. Plain CSS, no preprocessor, no framework. */
+
+/* UX-304: **dark first**, and two grades of token.
+ *
+ * The page was designed light-first with a dark media override, and
+ * the reader who asked for the report is a dark-theme reader - so the
+ * surface that was never tuned is the one being read. Round 41 ran the
+ * palette validator and found what an untuned override looks like:
+ * **three of the four dark status tokens sat above the mark-lightness
+ * band**, text-grade colors doing fill work in every bar, band and
+ * dot. `:root` carries the dark set now; light is the override.
+ *
+ * **The band, written down** - it was a number in a transcript and is
+ * a rule here, reproduced by `tests/palette.py` and pinned by
+ * `tests/unit/test_the_palette_is_validated.py`:
+ *
+ *   text-grade   >= 4.5:1 against its own surface   (WCAG 1.4.3)
+ *   mark-grade   >=   3:1 against its own surface   (WCAG 1.4.11)
+ *                and L* inside the band for that surface:
+ *                    dark surface   L* 45..70
+ *                    light surface  L* 35..60
+ *
+ * The band's floor is what keeps a fill visible; its ceiling is what
+ * keeps a fill from reading as text, which is the failure round 41
+ * measured. Validated on the values below (L*, then contrast against
+ * that theme's `--bg`):
+ *
+ *   dark    --warn-mark   #c5922f   63.9   6.49     was #d9a441  70.7
+ *           --bad-mark    #db6868   58.0   5.34     was #e06c6c  59.6
+ *           --good-mark   #4dae6b   64.1   6.53     was #6fcf8a  76.0
+ *           --accent-mark #6c97d9   61.9   6.09     was #8ab4f8  72.8
+ *   light   --warn-mark   #9a6400   47.0   5.00     already in band
+ *           --bad-mark    #aa1111   36.0   7.51     already in band
+ *           --good-mark   #176b2c   39.4   6.61     already in band
+ *           --accent-mark #2b5797   37.0   7.21     already in band
+ *
+ * The light marks needed no change, which is the point of validating
+ * per surface rather than flipping one palette into the other: the
+ * light set had been looked at and the dark set had not.
+ *
+ * **Text-grade tokens keep their old values in both themes.** Nothing
+ * semantic moved - good is still green - and no text got darker or
+ * lighter. What changed is that fills stopped borrowing the text
+ * color, which is why the split exists.
+ *
+ * **Status tone is never alone** (styleguide §4.3): every use of these
+ * four carries a shape, marker or label in the same element. The CVD
+ * numbers are why - on this palette, `warn`/`good` separate by ΔE2000
+ * 6.5 under protanopia in light mode and `good`/`accent` by 2.4 under
+ * tritanopia in dark. No ordering of four status hues passes as
+ * adjacent categorical marks, so the guide forbids relying on one.
+ *
+ * A new color is a token with a stated job, in this file, or it does
+ * not exist: no hex literal lives outside this stylesheet, and a guard
+ * holds that. */
 :root {
-  --fg: #1a1a1a;
-  --muted: #666;
-  --line: #e2e2e2;
-  --bg: #fff;
-  --panel: #fafafa;
-  --warn: #9a6400;
-  --bad: #a11;
-  --good: #176b2c;
-  --accent: #2b5797;
+  --fg: #e6e6e6;
+  --muted: #9a9a9a;
+  --line: #333;
+  --bg: #161616;
+  --panel: #1e1e1e;
+  /* text-grade: read, not filled */
+  --warn: #d9a441;
+  --bad: #e06c6c;
+  --good: #6fcf8a;
+  --accent: #8ab4f8;
+  /* mark-grade: filled, not read */
+  --warn-mark: #c5922f;
+  --bad-mark: #db6868;
+  --good-mark: #4dae6b;
+  --accent-mark: #6c97d9;
 }
-@media (prefers-color-scheme: dark) {
+
+/* The override. `prefers-color-scheme: light` also matches a reader
+ * who has expressed no preference, so an unset browser gets exactly
+ * the page it got before this item - the base moved, the default did
+ * not. Same token names, same jobs, different values (styleguide §5). */
+@media (prefers-color-scheme: light) {
   :root {
-    --fg: #e6e6e6; --muted: #9a9a9a; --line: #333; --bg: #161616;
-    --panel: #1e1e1e; --warn: #d9a441; --bad: #e06c6c;
-    --good: #6fcf8a; --accent: #8ab4f8;
+    --fg: #1a1a1a; --muted: #666; --line: #e2e2e2; --bg: #fff;
+    --panel: #fafafa;
+    --warn: #9a6400; --bad: #aa1111; --good: #176b2c; --accent: #2b5797;
+    --warn-mark: #9a6400; --bad-mark: #aa1111;
+    --good-mark: #176b2c; --accent-mark: #2b5797;
   }
+}
+
+/* Dark-*first*, not dark-only. The export is attached, opened on
+ * machines nobody chose, and printed - and a dark page prints as a
+ * black rectangle or as nothing, depending on the driver. Print gets
+ * the light tokens on white, and the drawings survive because none of
+ * them relies on color alone (§4.3). */
+@media print {
+  :root {
+    --fg: #1a1a1a; --muted: #666; --line: #e2e2e2; --bg: #fff;
+    --panel: #fafafa;
+    --warn: #9a6400; --bad: #aa1111; --good: #176b2c; --accent: #2b5797;
+    --warn-mark: #9a6400; --bad-mark: #aa1111;
+    --good-mark: #176b2c; --accent-mark: #2b5797;
+  }
+  body { background: #fff; }
+  /* The rail is navigation; paper has none. */
+  nav.toc, .jump-hits, #jump { display: none; }
+  details { break-inside: avoid; }
 }
 * { box-sizing: border-box; }
 body {
@@ -129,18 +215,18 @@ footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem
 /* UX-212: the outline is the channel that survives grayscale; the
    fill is what it looks like in colour. */
 .observed { fill: var(--line); opacity: .55; stroke: var(--fg); }
-.band-strip { fill: var(--accent); opacity: .28; stroke: var(--fg); }
+.band-strip { fill: var(--accent-mark); opacity: .28; stroke: var(--fg); }
 .baseline-dot { fill: var(--muted); }
 .candidate { stroke: var(--fg); stroke-width: .7; }
-.band[data-disputed="true"] .candidate { stroke: var(--warn); stroke-width: 1.1; }
+.band[data-disputed="true"] .candidate { stroke: var(--warn-mark); stroke-width: 1.1; }
 .trend-line { stroke: var(--muted); stroke-width: .5; }
 /* UX-234: the median-p95 band the store's own distribution defines,
    behind the points rather than over them. */
-.trend-band { fill: var(--accent); opacity: .12; }
-.trend-median { stroke: var(--accent); stroke-width: .3; stroke-dasharray: 2 2; }
-.trend-point { fill: var(--accent); stroke: var(--fg); }
-.trend-point.aliased { fill: var(--good); }
-.trend-point.incomplete { fill: var(--bad); }
+.trend-band { fill: var(--accent-mark); opacity: .12; }
+.trend-median { stroke: var(--accent-mark); stroke-width: .3; stroke-dasharray: 2 2; }
+.trend-point { fill: var(--accent-mark); stroke: var(--fg); }
+.trend-point.aliased { fill: var(--good-mark); }
+.trend-point.incomplete { fill: var(--bad-mark); }
 [data-role="blast-form"] { display: flex; gap: .5rem; margin: .5rem 0; }
 [data-role="blast-form"] input { flex: 1 1 auto; padding: .3rem .5rem;
   border: 1px solid var(--line); border-radius: 3px;
@@ -231,8 +317,8 @@ section[data-jumped="true"], [data-jumped="true"] {
 
 /* UX-203: the trend's dots, coloured by the verdict rather than by
    nothing. */
-.trend-point.verdict-regressed { fill: var(--bad); }
-.trend-point.verdict-improved { fill: var(--good); }
+.trend-point.verdict-regressed { fill: var(--bad-mark); }
+.trend-point.verdict-improved { fill: var(--good-mark); }
 /* UX-214: `within_band` was a sixth value that existed only in the
    store's own classifier. One vocabulary now, so the two kinds a
    band can produce beside improved/regressed are styled by their
@@ -247,7 +333,7 @@ section[data-jumped="true"], [data-jumped="true"] {
 .wf-label { font-size: .88rem; }
 .wf-track { background: var(--panel); border: 1px solid var(--line);
             border-radius: 2px; height: .85rem; overflow: hidden; }
-.wf-fill { display: block; height: 100%; background: var(--accent);
+.wf-fill { display: block; height: 100%; background: var(--accent-mark);
            opacity: .55; }
 .wf-value { text-align: right; font-size: .85rem; }
 section[data-section="evidence"] .verdict { margin: .4rem 0 .8rem; }
@@ -323,7 +409,10 @@ th .th-filter { display: block; width: 100%; margin-top: .2rem;
                 font: inherit; font-size: .75rem; font-weight: normal;
                 padding: .05rem .25rem; background: var(--bg); color: inherit;
                 border: 1px solid var(--line); border-radius: 2px; }
-th .th-filter.unparsed { border-color: var(--bad); }
+/* UX-304: the tone is not the signal - `border-style` is the shape
+   that carries it without color (styleguide §4.3), and `aria-invalid`
+   carries it without sight. */
+th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 
 /* UX-206: the chain, drawn. A list with widths - flex-grow carries the
    published share, so nothing here is a layout algorithm. */

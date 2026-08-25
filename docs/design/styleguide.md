@@ -165,6 +165,21 @@ boundaries, challenged and kept deliberately:
   themes differ in values, never in structure — and mark-grade
   tokens are validated per surface, not flipped automatically.
 
+**Where the tokens live, and how to re-run the validation**
+(`UX-304`). `bga/viewer/style.css` holds every color the product
+has — `:root` is the dark set, `@media (prefers-color-scheme: light)`
+the override (it also matches a reader who expressed no preference,
+so an unset browser is unchanged), and `@media print` the light
+tokens on white. `tests/palette.py` is the validator: WCAG luminance
+and contrast, CIE L*, ΔE2000, and the Viénot/Brettel/Mollon
+dichromat projection, no dependencies.
+`tests/unit/test_the_palette_is_validated.py` runs it and pins the
+bands — mark-grade at ≥3:1 and L* 45–70 on dark, 35–60 on light;
+text-grade at ≥4.5:1 — checks that fills name mark tokens and text
+names text tokens, refuses a hex literal anywhere outside the
+stylesheet, and holds every status-toned rule against a list naming
+its non-color channel.
+
 ## 6. What a drawing owes its reader
 
 Every visual element on the page carries, in order: **its answer as

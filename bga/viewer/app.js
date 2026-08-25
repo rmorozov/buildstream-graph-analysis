@@ -673,8 +673,22 @@ export function interrogable(table, specs, total) {
       const parsed = parseThreshold(input.value, spec.quantity);
       // Unparseable is *no filter*, and says so: a threshold nobody can
       // read must not silently hide every row.
-      input.className = input.value && !parsed
-        ? "th-filter unparsed" : "th-filter";
+      //
+      // `UX-304`: and it says so in more than one channel. A red border
+      // was the whole signal, which is styleguide §4.3's defect - a
+      // status tone alone. The border also goes dashed (a shape), and
+      // `aria-invalid` plus a `title` carry it to a reader who is not
+      // looking at borders at all.
+      const bad = Boolean(input.value) && !parsed;
+      input.className = bad ? "th-filter unparsed" : "th-filter";
+      input.setAttribute("aria-invalid", String(bad));
+      if (bad) {
+        input.setAttribute(
+          "title", `"${input.value}" is not a threshold this column can `
+                   + `read, so no filter is applied`);
+      } else {
+        input.removeAttribute("title");
+      }
       if (parsed) state.thresholds[spec.key] = parsed;
       else delete state.thresholds[spec.key];
       refresh();

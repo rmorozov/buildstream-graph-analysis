@@ -211,6 +211,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="With --prune: delete snapshots older than DAYS.",
     )
     parser.add_argument(
+        "--max-store", type=str, default=None, metavar="SIZE",
+        help="With --prune: delete oldest-first until the store is under "
+             "SIZE (`2G`, `500M`, bytes). Never @last or @prev.",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="With --prune: say what would go, delete nothing.",
     )
@@ -280,15 +285,28 @@ def main(argv: Optional[List[str]] = None) -> int:
         prune_parser.add_argument("--older-than", type=float,
                                   default=args.older_than, metavar="DAYS",
                                   help="Delete snapshots older than DAYS.")
+        prune_parser.add_argument("--max-store", type=str,
+                                  default=args.max_store, metavar="SIZE",
+                                  help="Delete oldest-first until the store "
+                                       "is under SIZE (`2G`, `500M`).")
         prune_parser.add_argument("--dry-run", action="store_true",
                                   default=args.dry_run,
                                   help="Say what would go, delete nothing.")
         pruned = prune_parser.parse_args(rest)
-        if pruned.keep is None and pruned.older_than is None:
-            print("Error: prune needs --keep N and/or --older-than DAYS. "
-                  "Nothing was deleted.", file=sys.stderr)
+        if (pruned.keep is None and pruned.older_than is None
+                and pruned.max_store is None):
+            print("Error: prune needs --keep N, --older-than DAYS and/or "
+                  "--max-store SIZE. Nothing was deleted.", file=sys.stderr)
             return 2
-        return _prune(project, pruned.keep, pruned.older_than, pruned.dry_run)
+        budget = None
+        if pruned.max_store is not None:
+            try:
+                budget = parse_size(pruned.max_store)
+            except ValueError as error:
+                print(f"Error: {error}", file=sys.stderr)
+                return 2
+        return _prune(project, pruned.keep, pruned.older_than, pruned.dry_run,
+                      max_store=budget)
 
     command = [token for token in args.cmd if token != "--"]
     if not command:
@@ -362,6 +380,7 @@ def main(argv: Optional[List[str]] = None) -> int:
               "and run the same command again, and the comparison against it "
               "is automatic.")
 
+    _say_what_it_weighs(snapshot, project)
     _warn_if_large(project)
     # The build's own status is the answer, as everywhere else here: a
     # failed build must not look like a successful snapshot.
@@ -946,13 +965,66 @@ def _protected(project: str) -> set:
     return keep
 
 
+_SIZE_SUFFIXES = {"": 1, "K": 1024, "M": 1024 ** 2, "G": 1024 ** 3,
+                  "T": 1024 ** 4}
+
+
+def parse_size(text: str) -> int:
+    """`"2G"` -> bytes. `UX-300`'s `--max-store`.
+
+    Binary multiples, which is what `human_bytes` prints, so a figure
+    read off one command can be typed into the other. A bare number is
+    bytes.
+    """
+    cleaned = text.strip().upper().rstrip("B")
+    suffix = cleaned[-1:] if cleaned[-1:] in _SIZE_SUFFIXES else ""
+    number = cleaned[:len(cleaned) - len(suffix)] if suffix else cleaned
+    try:
+        value = float(number)
+    except ValueError:
+        raise ValueError(
+            f"{text!r} is not a size. Write bytes, or a number with K, M, G "
+            f"or T - `--max-store 2G`.") from None
+    if value < 0:
+        raise ValueError(f"{text!r} is negative; a store cannot be.")
+    return int(value * _SIZE_SUFFIXES[suffix])
+
+
+def over_budget(snapshots: List[str], budget: int, protected: set,
+                size_of) -> List[str]:
+    """The oldest snapshots to delete to bring a store under `budget`.
+
+    `UX-300`. The keep-set is not negotiable - `@last` and `@prev` are
+    what the next comparison reads - so the budget is met out of what
+    is left, oldest first, and a store whose protected snapshots alone
+    exceed it is reported rather than emptied. Pricing, not policy:
+    this returns a list, and the caller is the one that deletes.
+    """
+    total = sum(size_of(path) for path in snapshots)
+    doomed = []
+    for path in snapshots:            # oldest first, as the store lists them
+        if total <= budget:
+            break
+        if path in protected:
+            continue
+        doomed.append(path)
+        total -= size_of(path)
+    return doomed
+
+
 def _prune(project: str, keep: Optional[int], older_than: Optional[float],
-           dry_run: bool) -> int:
-    """Delete snapshots by age or count, never the ones still referred to.
+           dry_run: bool, max_store: Optional[int] = None) -> int:
+    """Delete snapshots by age, count or total size, never the ones
+    still referred to.
 
     `UX-159` item 3. The store had exactly one management affordance - a
     note at 2 GB advising hand-deletion - and no command that deletes
     anything.
+
+    `UX-300` added the third question. Age and count are proxies for the
+    one a disk actually asks: a nightly capture that grew from 4 MB to
+    2 GB makes `--keep 5` mean something different every month, and
+    `--max-store 20G` means the same thing forever.
     """
     snapshots = run_store.list_snapshots(project)
     if not snapshots:
@@ -974,12 +1046,26 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
     if older_than is not None:
         cutoff = time.time() - older_than * 86400
         doomed.extend(s for s in live if os.path.getmtime(s) < cutoff)
+    if max_store is not None:
+        # Applied to what the other rules leave, so `--keep 5
+        # --max-store 20G` means "the newest five, and under 20 GiB" -
+        # the stricter of the two, not the second overruling the first.
+        surviving = [s for s in snapshots if s not in set(doomed)]
+        doomed.extend(over_budget(surviving, max_store, protected,
+                                  run_store.snapshot_size_bytes))
     doomed = [s for s in dict.fromkeys(doomed) if s not in protected]
 
     skipped = [s for s in snapshots if s in protected]
     if not doomed:
         print(f"Nothing to prune: {len(snapshots)} snapshot(s), "
               f"{len(skipped)} of them still referred to by @last/@prev.")
+        if max_store is not None:
+            held = run_store.store_size_bytes(project)
+            print(f"  {run_store.human_bytes(held)} on disk, "
+                  f"{'over' if held > max_store else 'within'} the "
+                  f"{run_store.human_bytes(max_store)} asked for."
+                  + (" Everything above it is protected by @last/@prev."
+                     if held > max_store else ""))
         return 0
 
     freed = 0
@@ -993,6 +1079,19 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
             shutil.rmtree(path, ignore_errors=True)
     print(f"{'would free' if dry_run else 'freed'} "
           f"{run_store.human_bytes(freed)} from {run_store.runs_dir(project)}")
+    if max_store is not None:
+        # What the budget leaves, said plainly: a run still over it
+        # after deleting everything deletable is a fact the caller
+        # needs, not a silent partial success.
+        remaining = sum(run_store.snapshot_size_bytes(path)
+                        for path in snapshots if path not in set(doomed))
+        print(f"  {run_store.human_bytes(remaining)} would remain"
+              if dry_run else
+              f"  {run_store.human_bytes(remaining)} remains")
+        if remaining > max_store:
+            print(f"  still over the {run_store.human_bytes(max_store)} "
+                  f"asked for - what is left is protected by @last/@prev, "
+                  f"which the next comparison reads.")
     if husk_count:
         # Counted separately because they are a different thing: not old
         # captures, but captures that never produced anything.
@@ -1007,6 +1106,52 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
 # deletes what they do not want, and a size warning is enough (UX-126's
 # Out of Scope says so explicitly).
 _SIZE_WARN_BYTES = 2 * 1024 * 1024 * 1024
+
+
+def _say_what_it_weighs(snapshot: str, project: str) -> None:
+    """What this capture cost on disk, and what the store now holds.
+
+    `UX-300`. A field snapshot reached ~2 GB and nothing on the capture
+    path said so: the size was discoverable by `bga snapshot --list`,
+    which is a command you run *after* you have wondered. Five nightly
+    captures are a quota incident scheduled in advance, and the first
+    thing that makes it visible is the capture saying what it just
+    wrote.
+
+    Always, not only past a threshold. A number every time is what lets
+    a reader notice the run that grew; a warning that fires once at
+    2 GB tells them only that they are already there - which is the
+    shape `_warn_if_large` keeps, one line further down, because "you
+    are past the point where this matters" is a different sentence from
+    "this one cost 4.7 MB".
+    """
+    try:
+        size = run_store.snapshot_size_bytes(snapshot, use_cache=False)
+        total = run_store.store_size_bytes(project)
+        count = len(run_store.list_snapshots(project))
+    except OSError:
+        return
+    print(f"\nThis snapshot: {run_store.human_bytes(size)}. "
+          f"{run_store.runs_dir(project)}: "
+          f"{run_store.human_bytes(total)} over {count} snapshot(s).",
+          file=sys.stderr)
+    raw = os.path.join(snapshot, RAW_LOG_NAME)
+    if os.path.isfile(raw) and size:
+        share = os.path.getsize(raw) / size
+        if share >= 0.5:
+            # UX-300 re-measured `UX-188`'s ratio at scale and found the
+            # ratio unchanged (9.0% of the uncompressed log at 200,000
+            # processes, against 8-12% then) while its *meaning* moved:
+            # `UX-297` took the per-process records out of the report,
+            # so the raw log is no longer a fraction of a snapshot
+            # beside a large report - it is the snapshot. Said out loud
+            # because `--no-keep-raw` looks like a small saving and is
+            # now the whole one, at the price of a run whose timeline
+            # can never be rendered again.
+            print(f"  {share * 100:.0f}% of that is the raw Plane 2 log, "
+                  f"which is what the timeline is rendered from. "
+                  f"`--no-keep-raw` drops it and the timeline with it.",
+                  file=sys.stderr)
 
 
 def _warn_if_large(project: str) -> None:

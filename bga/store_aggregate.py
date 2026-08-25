@@ -180,6 +180,16 @@ def _class_aggregate(label: str, manifest: Optional[dict],
         "peak_rss_mb": distribution(
             [row["resource"]["peak_rss_mb"] for row in rows
              if "peak_rss_mb" in (row.get("resource") or {})]),
+        # UX-300: what these runs cost on disk. The rows have carried
+        # `bytes` since `UX-159` and nothing read them, so a store whose
+        # snapshots grew from kilobytes to gigabytes said nothing about
+        # it here - the one place that reads a whole store at once.
+        # A distribution rather than a total alone, because "the median
+        # capture is 4.7 MB and the p95 is 2.1 GB" is the reading that
+        # names the run worth looking at.
+        "snapshot_bytes": distribution(
+            [row["bytes"] for row in rows if row.get("bytes")]),
+        "total_bytes": sum(row.get("bytes") or 0 for row in rows),
         "stamps": [row["stamp"] for row in rows],
     }
     # UX-296: a class whose runs carry no capacity scalars says why, and
@@ -352,6 +362,24 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         # UX-253: what this aggregate is made of, in contract terms.
         "contract_composition": _contract_composition(usable),
         "host_classes": classes,
+        # UX-300: what the whole store weighs, at the document level and
+        # not inside `blended`. Every other blended figure is refused
+        # across host classes because a duration measured on two
+        # machines is two populations (`UX-186`); a byte is a byte, and
+        # a reader asking what their disk is holding must not have to
+        # pass `--blend` to be told. Over **every** snapshot, including
+        # the ones excluded from the distributions - a failed capture
+        # is not a sample but it is still on the disk.
+        "store_bytes": {
+            "total": sum(row.get("bytes") or 0 for row in rows),
+            "snapshots": len(rows),
+            "measured_total": sum(row.get("bytes") or 0 for row in usable),
+            "note": "Bytes on disk under `.bga/runs`, over every snapshot "
+                    "this store holds - a capture excluded from the "
+                    "distributions above for failing or being interrupted "
+                    "still occupies its disk. `bga snapshot prune` says "
+                    "what deleting would recover.",
+        },
         "blended": None,
         "refusal": None,
     }
@@ -378,7 +406,8 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         # and there is nothing to refuse.
         document["blended"] = dict(
             {k: classes[0][k] for k in
-             ("duration_us", "cache_hit_rate", "cores_busy", "peak_rss_mb")},
+             ("duration_us", "cache_hit_rate", "cores_busy", "peak_rss_mb",
+              "snapshot_bytes", "total_bytes")},
             runs=classes[0]["runs"], mixes=1)
     return schemas.stamp(document, schemas.STORE_AGGREGATE)
 
@@ -398,15 +427,30 @@ def _blended(by_class: Dict[str, List[dict]]) -> dict:
         "peak_rss_mb": distribution(
             [row["resource"]["peak_rss_mb"] for row in every
              if "peak_rss_mb" in (row.get("resource") or {})]),
+        # UX-300: disk is the one figure that *does* blend across host
+        # classes without lying. A duration measured on two machines is
+        # two populations (`UX-186`); a byte is a byte, and the question
+        # "what does this store weigh" has one answer whatever built it.
+        "snapshot_bytes": distribution(
+            [row["bytes"] for row in every if row.get("bytes")]),
+        "total_bytes": sum(row.get("bytes") or 0 for row in every),
     }
 
 
 def render(document: dict) -> List[str]:
     """The aggregate as text. One renderer, so `--aggregate` and
     `--aggregate --format json` cannot describe one store two ways."""
+    from .run_store import human_bytes
+
     lines = [f"Store: {document.get('project')}",
              f"  {document['measured']} measured run(s) of "
              f"{document['snapshots']} snapshot(s)"]
+    # UX-300: what it weighs, on the second line, because a store that
+    # has quietly reached tens of gigabytes is a fact about the machine
+    # before it is a fact about any build.
+    store_bytes = document.get("store_bytes") or {}
+    if store_bytes.get("total"):
+        lines.append(f"  {human_bytes(store_bytes['total'])} on disk")
     excluded = document.get("excluded") or {}
     if excluded.get("count"):
         lines.append(f"  {excluded['count']} excluded:")
@@ -435,6 +479,10 @@ _FIGURES = (
     ("cache_hit_rate", "Cache hit rate", 0.01, "%"),
     ("cores_busy", "Cores busy", 1, ""),
     ("peak_rss_mb", "Peak RSS", 1, " MB"),
+    # UX-300: in MiB, beside the other per-run figures, because the
+    # question "which capture is the big one" is answered by a p95
+    # against a median and not by a total.
+    ("snapshot_bytes", "Snapshot size", 1024 ** 2, " MiB"),
 )
 
 

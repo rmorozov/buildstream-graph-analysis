@@ -465,6 +465,26 @@ def schemas_payload() -> dict:
 EXPORT_BUDGET_B = 8 * 1024 * 1024
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
+#
+# `UX-299` made this **one** threshold with one explanation, because the
+# two questions it answers are the same question. Above it, a trace
+# stops being something to *carry*:
+#
+#   - the export stops inlining it, because a `data:` URL of gigabytes
+#     is not an attachment anyone can open; and
+#   - the served page stops posting it tab to tab, because that
+#     transport copies the bytes at least twice inside the report tab -
+#     `arrayBuffer()` materialises the whole response, `postMessage`
+#     structured-clones it - before Perfetto decompresses a third copy
+#     in its own. The `?url=` deep link has none of those copies:
+#     Perfetto fetches from this server itself.
+#
+# 4 MiB compressed is where that lands. Measured compression on real
+# traces runs 4.2x (`UX-298`'s 40,000-process fixture) to 11x
+# (`UX-198`'s capture of `examples/06`), so 4 MiB is ~17-45 MiB
+# decompressed and ~25-55 MiB across the two tabs at the conservative
+# end - comfortable. It is also the number a mail client will still
+# take, which is the export half of the same constant.
 TRACE_BUDGET_B = 4 * 1024 * 1024
 
 
@@ -601,8 +621,26 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
         omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
                    f"compressed, over this export's "
                    f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
+        # UX-299: and what to do instead, because "the timeline is not
+        # in this file" is a dead end without it. The blast box's
+        # honesty pattern: name the command that produces what the page
+        # cannot carry.
+        documents["run"]["timeline_recipe"] = {
+            "command": f"bga view {os.path.dirname(os.path.abspath(run))} "
+                       f"--perfetto",
+            "note": "That serves this run and hands the timeline to "
+                    "Perfetto over a deep link, which streams it from the "
+                    "server instead of copying it through the page. "
+                    "`bga timeline` writes the same trace to a file if "
+                    "you would rather open it yourself.",
+        }
         trace = None
     documents["run"]["has_timeline"] = trace is not None
+    # UX-299: the threshold travels with the payload rather than being
+    # written down twice. The page applies the same number to the same
+    # decision on the served side, where the size is only knowable once
+    # the trace has been rendered.
+    documents["run"]["trace_inline_max_bytes"] = TRACE_BUDGET_B
     if omitted:
         documents["run"]["timeline_omitted"] = omitted
 
@@ -916,6 +954,12 @@ def serve(run: str, port: int = 0,
         # So the page can offer the button only when there is something
         # behind it - a dead "Open in Perfetto" is worse than none.
         "has_timeline": offered,
+        # UX-299: the threshold above which the trace is fetched by
+        # Perfetto rather than copied through this page. The *size* is
+        # not here, and cannot be: knowing it means rendering the
+        # trace, which `UX-296` moved off the startup path. The page
+        # asks for the headers when the user asks for the timeline.
+        "trace_inline_max_bytes": TRACE_BUDGET_B,
     })
 
     handler = type("_BoundHandler", (_Handler,),

@@ -1216,6 +1216,121 @@ filters UX-205 put everywhere), and markdown detection for the copied
 finding (a button claiming to know what a paste target accepts would be
 guessing).
 
+## Direction 15: a snapshot bigger than RAM (argued 2026-08-25, round 40)
+
+**Serves:** R1 and R2 first — the field user this round's showstopper
+hit — and R5 structurally, since fleet-scale capture is this problem
+multiplied ([roles](roles.md)).
+
+The field report that opens the axis: a real project's dual-plane
+snapshot produced a **~2 GB run directory** — `plane2.json` at
+1.5 GB, the raw Plane 2 log another 400 MB gzipped — and `bga view`
+on it **runs out of memory** near server start, after a long freeze
+in parsing. This is not a defect in a feature; it is the storage
+architecture meeting its ceiling. Every event this tool has ever
+processed has travelled as one JSON document, parsed whole into
+Python objects — and a JSON array's bytes multiply several-fold in
+RAM as objects. At example scale that was invisible. At field scale
+it is a showstopper, and it was always going to be: **the format was
+the decision, made implicitly, at thirty events.**
+
+Round 40 reproduced it at scale and measured every path (the full
+table is in [round 40](../audits/round-40.md)). The verdict in one
+paragraph: `bga view`'s startup serially runs **every whole-file
+load path in the codebase** before the socket binds — a 2.9×
+bytes-to-RAM `json.load` of the monolith for the report, a second
+full parse of *every store snapshot's* monolith for two scalars, a
+per-historical-run re-analysis for the band, and then a merge step
+that decompresses the raw log to ~4.7 GB of disk and reads it as
+one string at a measured 6.3× amplification — ~30 GB projected,
+immediately before the server is constructed. Two facts sharpen it
+from "big files are big" into an architecture finding: **~95 % of
+the monolith is dead weight** (the embedded per-process record
+list has no production reader — every consumer reads the small
+aggregates beside it), and **the streaming fix already exists on
+the wrong path** (`UX-168` taught the capture-time tracer to
+stream and consume; the converter `bga view` actually calls still
+does `pair_events(parse_trace_log(f.read()))`). The scale axis is
+this project's oldest pattern in a third costume: the analysis
+knows how to be small — and the paths that matter never learned.
+
+### The rules the redesign is built under
+
+1. **Capture computes; view serves.** `UX-226` decided a history
+   slice is written at capture time because view-time analysis
+   multiplies by the store. That decision, promoted to an
+   architecture rule: nothing on the `bga view` path may do
+   O(events) work — the viewer process opens large artifacts only to
+   stream bytes to a socket. If a capture predates its artifacts,
+   the page says which command to run; it does not run it.
+2. **Events are a stream, not a document.** Any artifact whose size
+   is O(events) must be writable and readable without materializing
+   the whole: written incrementally at capture, read incrementally
+   or not at all. One JSON array of two million objects satisfies
+   neither and is retired from the event path.
+3. **The event artifact is Perfetto's format.** Adopted, from the
+   user's proposal, with the argument made explicit: the deep half
+   of every event question is already answered by handing the trace
+   to Perfetto, so the event artifact should *be* the interchange —
+   protobuf TrackEvent (`Trace` = a stream of `TracePacket`s;
+   `TrackDescriptor` per lane with uuid/parent for the two planes'
+   hierarchy; `TYPE_SLICE_BEGIN/END` with interned names;
+   `TYPE_COUNTER` for the resource series). Appendable
+   packet-by-packet, so it streams and gzips on the fly; varints and
+   interning make it several-fold smaller than the JSON it replaces;
+   and `trace_processor` can query it later if an analysis ever
+   needs to — without bga growing a query engine.
+4. **No new dependency for it.** The protobuf wire format is varints
+   and length-delimited fields; a TrackEvent emitter is a small
+   single module in the standard library, with field numbers pinned
+   as named constants. Correctness is held the house way: a golden
+   trace opened in Perfetto once with the result recorded, digest
+   stability guarded, and a round-trip check in CI where
+   `trace_processor` is available — never by trusting the writer.
+5. **Analysis reads aggregates, not events.** `correlate`, the
+   census and every published number already reduce events to
+   per-element figures; the reduction happens **once, at capture**,
+   streamed over the events, and lands in small JSON beside the
+   trace (`element_join`, the history slice — the pattern exists).
+   The published contracts stay JSON: kilobyte documents were never
+   the problem, and every consumer keeps its round-trip guard.
+6. **The handoff streams too.** Tab-to-tab postMessage carries the
+   whole trace through browser memory — right at 25 KB, absurd at
+   1.5 GB. Above a size threshold the `?url=` deep link is the
+   default (Perfetto fetches and streams it), and the export stops
+   inlining the trace as a `data:` URL, carrying the command and
+   link instead — the blast-box honesty pattern at gigabyte scale.
+7. **Memory is a guarded budget.** A generated big-run fixture
+   (order of 10^6 events, never committed) with peak-RSS and
+   startup ceilings on the capture, analyze and view paths — the
+   page-size lesson applied to RAM: instruments with argued
+   numbers, so scale regressions redden instead of shipping.
+
+### What is deliberately not adopted
+
+- **SQLite / DuckDB as the store** — a query engine inside the tool
+  whose positioning is to hand queries to Perfetto's.
+- **Parquet/Arrow** — a dependency for columnar analytics no
+  analysis runs.
+- **The protobuf library** — the wire format needed here is a page
+  of code; a dependency would buy generated classes nobody else
+  uses.
+- **Converting the small contracts** — `analyze/v2` and its
+  siblings are the tool's public interface, human-inspectable and
+  guard-covered; their scale is bounded by elements, not events.
+
+### Decomposition
+
+- `UX-296` — stop the bleeding: the view path stops parsing runs
+  (the measured sites), with the RSS guard that keeps it stopped.
+- `UX-297` — extraction streams, and the plane2 monolith retires:
+  events reduced at capture into per-element aggregates plus the
+  trace artifact; legacy runs stay readable behind one interface.
+- `UX-298` — the TrackEvent emitter and the timeline that uses it.
+- `UX-299` — the handoff and the export at scale.
+- `UX-300` — capture-side footprint and retention: what a 2 GB
+  snapshot does to a store, priced and governed.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -1250,6 +1365,8 @@ the other rounds now:
 | [25](../audits/round-24.md) | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
 | [26](../audits/round-24.md) | round 24's remaining eight executed: the schema learned to say what its numbers mean, `compare/v1` learned which elements changed, the store learned to remember one, and the page learned to draw a plan, focus one element and carry the reader's own marks in the link. Two task premises corrected and two mutations rejected for not discriminating (`UX-219`..`UX-226`) |
 | [27](../audits/round-27.md) | twenty for twenty on the eighteen-commit landing, two hollow guards filed. The role model written: four roles served, four unserved; Direction 8 (provenance) adopted from the fourth review, its workspace declined; Direction 9 (the team axis) opened from the user's positioning (`UX-227`..`UX-235`) |
+| 28-39 | the sibling's execution rounds: UX-236..295 landed, Directions 10-14 argued — recorded in each direction's section and the backlog's round sections rather than as audit files |
+| [40](../audits/round-40.md) | the field's first architectural showstopper: a 2 GB dual-plane snapshot OOMs `bga view` — every load path measured, ~95 % of the monolith unread, the streaming fix on the wrong path; Direction 15 argued (events as a Perfetto TrackEvent stream, capture computes / view serves) and the rounds 28-39 sample verified six for six (`UX-296`..`UX-301`) |
 
 ## Verification Log
 

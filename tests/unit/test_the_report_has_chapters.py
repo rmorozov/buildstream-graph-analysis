@@ -287,6 +287,25 @@ class TestASectionTheTableDoesNotName:
                 for box in out for member in box["members"]}
         assert home["newcomer"] == "believe", home
 
+    def test_the_two_capacity_blocks_share_a_chapter(self):
+        """`UX-275` published `capacity_recommendation`, which answers
+        "what should the capacity be" beside `capacity_verdict`'s "was
+        the capacity right".
+
+        They would not meet on their published rails alone - `act` files
+        one under "Where did the time go?" and `prove` files the other
+        under "How much of this can I believe?" - so the pairing is a
+        table entry, and this is what holds it. Checked here rather than
+        on the booted export because the recommendation needs a Plane 2
+        report the golden fixture does not carry.
+        """
+        out = _group([["capacity_verdict", "prove"],
+                      ["capacity_recommendation", "act"]])
+        home = {member: box["chapter"]
+                for box in out for member in box["members"]}
+        assert home["capacity_recommendation"] == home["capacity_verdict"], home
+        assert home["capacity_verdict"] == "machine", home
+
     def test_an_unknown_section_with_no_rail_is_visible_not_lost(self):
         out = _group([["findings", "decide"], ["newcomer", None]])
         home = {member: box["chapter"]

@@ -90,6 +90,27 @@ class TestTheTwoLiveWrongnesses:
         ''')
         assert out == ["512 B", "4200.0%"]
 
+    def test_a_fractional_count_is_a_measurement_not_a_float_dump(self):
+        """`UX-275` published the first one. `cores_busy` is an average
+        over the run, and it arrived on the page as
+        "1.603977885512677" - fifteen digits of a number measured to
+        two. Whole counts, which are all the others, are untouched."""
+        out = _js('''
+          const { quantity, quantityFor, childNode } =
+            await import("./bga/viewer/app.js");
+          const block = %s;
+          console.log(JSON.stringify([
+            quantity(1.603977885512677,
+                     quantityFor(childNode(block, "cores_busy"),
+                                 "cores_busy")),
+            quantity(4, quantityFor(childNode(block, "builders"),
+                                    "builders")),
+          ]));
+        ''' % json.dumps(
+            schemas.schema(schemas.ANALYZE)["properties"]
+            ["capacity_recommendation"]))
+        assert out == ["1.6", "4"], out
+
     def test_declared_beats_guessed(self):
         out = _js('''
           const { quantityFor } = await import("./bga/viewer/app.js");

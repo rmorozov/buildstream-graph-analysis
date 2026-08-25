@@ -167,19 +167,19 @@ class TestTheVersionIsDerived:
     breaks is a derivation nobody has ever seen work.
     """
 
-    BASE = {"contracts": ["analyze/v1", "store/v1"],
+    BASE = {"contracts": ["analyze/v2", "store/v1"],
             "commands": ["analyze", "compare"]}
 
     def test_an_unchanged_state_is_a_patch(self):
         assert derive(self.BASE, dict(self.BASE)) == "patch"
 
     def test_a_bumped_contract_is_breaking(self):
-        after = {"contracts": ["analyze/v2", "store/v1"],
+        after = {"contracts": ["analyze/v3", "store/v1"],
                  "commands": self.BASE["commands"]}
         assert derive(self.BASE, after) == "breaking"
 
     def test_a_removed_contract_is_breaking(self):
-        after = {"contracts": ["analyze/v1"], "commands": self.BASE["commands"]}
+        after = {"contracts": ["analyze/v2"], "commands": self.BASE["commands"]}
         assert derive(self.BASE, after) == "breaking"
 
     def test_a_removed_command_is_breaking(self):
@@ -187,7 +187,7 @@ class TestTheVersionIsDerived:
         assert derive(self.BASE, after) == "breaking"
 
     def test_a_new_contract_is_extending(self):
-        after = {"contracts": ["analyze/v1", "store/v1", "whatif/v1"],
+        after = {"contracts": ["analyze/v2", "store/v1", "whatif/v1"],
                  "commands": self.BASE["commands"]}
         assert derive(self.BASE, after) == "extending"
 
@@ -199,7 +199,7 @@ class TestTheVersionIsDerived:
     def test_breaking_wins_over_extending(self):
         """A release that both adds and breaks is breaking. The reader
         this protects is the one who upgrades for the new thing."""
-        after = {"contracts": ["analyze/v2", "store/v1", "whatif/v1"],
+        after = {"contracts": ["analyze/v3", "store/v1", "whatif/v1"],
                  "commands": ["analyze", "compare", "blast"]}
         assert derive(self.BASE, after) == "breaking"
 

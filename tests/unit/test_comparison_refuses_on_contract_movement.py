@@ -33,7 +33,7 @@ def _stamp(version, contracts):
                          "contracts": list(contracts)}}
 
 
-BASE = ["analyze/v1", "compare/v1", "host/v1", "store/v1", "whatif/v1"]
+BASE = ["analyze/v2", "compare/v1", "host/v1", "store/v1", "whatif/v1"]
 
 
 class TestThePolicyIsAboutContractsNotVersions:
@@ -48,10 +48,10 @@ class TestThePolicyIsAboutContractsNotVersions:
     def test_one_patch_apart_with_a_moved_contract_refuses(self):
         from bga import producer
 
-        moved = ["analyze/v2"] + BASE[1:]
+        moved = ["analyze/v3"] + BASE[1:]
         assert producer.comparison_movement(
             _stamp("0.2.0", BASE), _stamp("0.2.1", moved)) == [
-                "analyze/v1 → analyze/v2"]
+                "analyze/v2 → analyze/v3"]
 
     def test_a_contract_a_comparison_never_reads_does_not_refuse(self):
         """`whatif/v1` moving does not make two durations incomparable.
@@ -65,7 +65,7 @@ class TestThePolicyIsAboutContractsNotVersions:
     def test_the_read_set_is_named_rather_than_everything(self):
         from bga import producer
 
-        assert "analyze/v1" in producer.COMPARISON_CONTRACTS
+        assert "analyze/v2" in producer.COMPARISON_CONTRACTS
         assert "whatif/v1" not in producer.COMPARISON_CONTRACTS
 
     def test_several_moved_contracts_are_all_named(self):
@@ -73,10 +73,10 @@ class TestThePolicyIsAboutContractsNotVersions:
         the other two."""
         from bga import producer
 
-        moved = ["analyze/v2", "compare/v3", "host/v1", "store/v1", "whatif/v1"]
+        moved = ["analyze/v3", "compare/v3", "host/v1", "store/v1", "whatif/v1"]
         assert producer.comparison_movement(
             _stamp("0.2.0", BASE), _stamp("1.0.0", moved)) == [
-                "analyze/v1 → analyze/v2", "compare/v1 → compare/v3"]
+                "analyze/v2 → analyze/v3", "compare/v1 → compare/v3"]
 
 
 class TestAMissingStampIsNamedNotRefused:
@@ -146,7 +146,7 @@ class TestTheRefusalReachesTheCommandLine:
         data = json.loads(context.read_text())
         data["producer"]["version"] = "0.2.1"
         data["producer"]["contracts"] = [
-            name.replace("analyze/v1", "analyze/v2")
+            name.replace("analyze/v2", "analyze/v3")
             for name in data["producer"]["contracts"]]
         context.write_text(json.dumps(data, indent=1))
 
@@ -155,7 +155,7 @@ class TestTheRefusalReachesTheCommandLine:
         # The refusal goes to stderr, where every other `UX-78` refusal
         # goes: a caller piping stdout to a JSON parser gets an empty
         # document and a non-zero exit, not a half-parsed report.
-        assert "analyze/v1 → analyze/v2" in out.stderr, (
+        assert "analyze/v2 → analyze/v3" in out.stderr, (
             f"the refusal does not name the contract that moved: {out.stderr}")
         assert "producer_contracts" in out.stderr
 
@@ -166,7 +166,7 @@ class TestTheRefusalReachesTheCommandLine:
         context = candidate / "run-context.json"
         data = json.loads(context.read_text())
         data["producer"]["contracts"] = [
-            name.replace("analyze/v1", "analyze/v2")
+            name.replace("analyze/v2", "analyze/v3")
             for name in data["producer"]["contracts"]]
         context.write_text(json.dumps(data, indent=1))
 

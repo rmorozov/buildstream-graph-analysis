@@ -63,6 +63,8 @@ import sys
 from collections import defaultdict
 from typing import Dict, List
 
+from bga import schemas as _schemas
+
 
 def _load(run_dir: str):
     with open(f"{run_dir}/graph.json", encoding="utf-8") as handle:
@@ -172,7 +174,7 @@ def run(run_dir: str, analysis: dict) -> int:
     if structural and signals:
         check("metrics.critical_path_length vs len(signals.critical_path)",
               structural["metrics"]["critical_path_length"],
-              len(signals["critical_path"]))
+              len(_schemas.critical_path_uids(signals)))
         check("sensitivity.critical_path_us vs floors.t_infinity_observed",
               structural["sensitivity"]["critical_path_us"],
               floors["t_infinity_observed"])
@@ -183,7 +185,8 @@ def run(run_dir: str, analysis: dict) -> int:
               longest_path_us(graph, build_durations), floors["t_infinity_observed"])
         if signals:
             check("BUILD durations along the reported critical path vs t_infinity",
-                  sum(build_durations[e] for e in signals["critical_path"]),
+                  sum(build_durations[e]
+                      for e in _schemas.critical_path_uids(signals)),
                   floors["t_infinity_observed"])
     if analysis.get("attribution"):
         check("sum(attribution categories) vs total_duration_us",

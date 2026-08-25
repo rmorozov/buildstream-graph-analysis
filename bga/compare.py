@@ -12,6 +12,8 @@ even the same project.
 import logging
 import statistics
 from dataclasses import dataclass, field
+
+from . import schemas
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -432,10 +434,10 @@ def _element_diff(
     baseline_uids = {e.uid for e in baseline_elements}
     candidate_uids = {e.uid for e in candidate_elements}
     baseline_path = set(
-        (getattr(baseline_result, 'signals', None) or {}).get('critical_path') or []
+        schemas.critical_path_uids(getattr(baseline_result, 'signals', None) or {})
     )
     candidate_path = set(
-        (getattr(candidate_result, 'signals', None) or {}).get('critical_path') or []
+        schemas.critical_path_uids(getattr(candidate_result, 'signals', None) or {})
     )
     candidate_durations = _element_durations(candidate_result)
     baseline_durations = _element_durations(baseline_result)

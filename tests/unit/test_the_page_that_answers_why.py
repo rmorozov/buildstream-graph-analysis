@@ -2,7 +2,7 @@
 
 Two pieces, and one rule holding both together: **no viewer
 arithmetic.** Every number the overview shows is read from a published
-field. A gap the JSON does not carry enters `analyze/v1` first, where
+field. A gap the JSON does not carry enters `analyze/v2` first, where
 the text renderer, CI and every external consumer get it too — which is
 Direction 7's rule, and what makes the waterfall a *reading* of the
 report rather than a second opinion about it.
@@ -141,7 +141,7 @@ class TestTheEvidenceHeader:
 
     def test_plane2_coverage_is_stated_when_plane_2_was_there(self):
         """The Required Fix asks for `stream_coverage` in this header.
-        It lives in the Plane 2 report, so it had to reach `analyze/v1`
+        It lives in the Plane 2 report, so it had to reach `analyze/v2`
         first - the same additive route the band took."""
         payload = _report()
         payload["plane2_coverage"] = {"processes": 813, "opens_coverage": 1.0}

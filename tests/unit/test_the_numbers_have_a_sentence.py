@@ -109,7 +109,7 @@ class TestTheSchemaDescribesWhatIsPublished:
         assert declared, f"{section} declares no members at all"
         phantom = sorted(declared - set(payload))
         assert phantom == [], (
-            f"analyze/v1.{section} describes {phantom}, which this run does "
+            f"analyze/v2.{section} describes {phantom}, which this run does "
             f"not publish - a sentence about a field nobody emits")
 
     @pytest.mark.parametrize("section", [
@@ -119,7 +119,7 @@ class TestTheSchemaDescribesWhatIsPublished:
         properties = (schemas.schema(schemas.ANALYZE)["properties"][section]
                       .get("properties") or {})
         mute = sorted(k for k in payload if not properties.get(k, {}).get("description"))
-        assert mute == [], f"analyze/v1.{section}: undescribed members {mute}"
+        assert mute == [], f"analyze/v2.{section}: undescribed members {mute}"
 
 
 class TestTheSentencesHaveOneHome:

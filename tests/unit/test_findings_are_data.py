@@ -35,7 +35,6 @@ def _real_shaped_result():
         total_duration_us=3_587_600_000,
         confidence={"primary": 1.0, "run_mode": "incremental"},
         signals={
-            "critical_path": ["a.bst", "b.bst"],
             "critical_path_detail": [
                 _element("components/_private/cmake-stage1.bst", 1_569_800_000,
                          0.435, 1_569_800_000),

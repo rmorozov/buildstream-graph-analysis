@@ -1226,16 +1226,25 @@ function investigationEvidence(payload, uid, options) {
 /** Its neighbours on the chain, and how much depends on it. */
 function investigationRelations(payload, uid) {
   const rows = [];
-  const chain = payload?.signals?.critical_path;
-  if (Array.isArray(chain)) {
+  // `UX-288`: the chain comes from `critical_path_detail`, which is now
+  // the one place the path is published. The evidence `path` each row
+  // carries has to name a field that *resolves* in the payload -
+  // provenance is checkable or it is decoration (`UX-229`) - so it
+  // cites the detail entry rather than the bare list that used to
+  // duplicate it.
+  const detail = payload?.signals?.critical_path_detail;
+  const chain = Array.isArray(detail)
+    ? detail.map((entry) => entry?.element_uid) : null;
+  if (chain) {
     const at = chain.indexOf(uid);
+    const cite = (i) => `signals.critical_path_detail[${i}].element_uid`;
     if (at > 0) {
-      rows.push({ label: "Waits on (chain)", path: `signals.critical_path[${at - 1}]`,
+      rows.push({ label: "Waits on (chain)", path: cite(at - 1),
                   raw: chain[at - 1], text: chain[at - 1],
                   href: `#${elementAnchor(chain[at - 1])}` });
     }
     if (at !== -1 && at < chain.length - 1) {
-      rows.push({ label: "Blocks (chain)", path: `signals.critical_path[${at + 1}]`,
+      rows.push({ label: "Blocks (chain)", path: cite(at + 1),
                   raw: chain[at + 1], text: chain[at + 1],
                   href: `#${elementAnchor(chain[at + 1])}` });
     }

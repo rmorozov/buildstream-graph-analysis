@@ -456,7 +456,8 @@ def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
 
     signals = getattr(result, 'signals', None) or {}
     durations = signals.get('element_durations') or {}
-    path = list(signals.get('critical_path') or [])
+    from bga import schemas as _schemas
+    path = list(_schemas.critical_path_uids(signals))
     path_us = signals.get('critical_path_length') or 0
     headline = getattr(result, 'headline', None) or {}
     actions = [entry.get('element_uid')

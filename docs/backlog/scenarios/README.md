@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-289 scenarios: **17 open**, 272 closed.
+290 scenarios: **18 open**, 272 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
-| contracts | 3 | 32 |
+| contracts | 4 | 33 |
 | viewer | 10 | 64 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
@@ -53,6 +53,7 @@ task file, which is the only place it ever lived twice.
 | UX-288 | [the contract publishes membership three ways](UX-0288-the-contract-publishes-membership-three-ways.md) | contracts | High | R5, R7 | 🔴 |
 | UX-289 | [one element table, many presets](UX-0289-one-element-table-many-presets.md) | viewer | High | R1, R7 | 🔴 |
 | UX-290 | [the schema does not describe its tuples](UX-0290-the-schema-does-not-describe-its-tuples.md) | contracts | Medium | R7, R8 | 🔴 |
+| UX-291 | [a finding carries its numbers three times](UX-0291-a-finding-carries-its-numbers-three-times.md) | contracts | Low | R5, R7 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 
@@ -660,4 +661,8 @@ each a subset of the one 1,202-row element table. The page is faithful;
 it renders every copy it is given. So the contract is deduplicated first
 (`UX-288`) and the page's nineteen tables become presets over one
 (`UX-289`) — which makes `UX-283`, `UX-284`, `UX-286` and `UX-278`
-smaller rather than larger.
+smaller rather than larger. `UX-291` is what `UX-288`'s guard found
+one level down while it was being written: a finding carries each of its
+numbers in up to three places — `evidence`, `provenance.evidence[].value`
+and `copy_text` — each for a stated reason, and with no rule saying they
+must agree.

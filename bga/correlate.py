@@ -40,6 +40,7 @@ it builds"**.
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+from . import schemas
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 
 
@@ -187,7 +188,7 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
     structural = analysis.get("structural") or {}
     signals = analysis.get("signals") or {}
     sensitivity = structural.get("sensitivity") or {}
-    critical_path = list(signals.get("critical_path") or [])
+    critical_path = list(schemas.critical_path_uids(signals))
     critical_path_us = sensitivity.get("critical_path_us") or 0
     total_us = analysis.get("total_duration_us") or 0
 
@@ -266,7 +267,7 @@ def _declared_elements(analysis: dict) -> set:
         value = signals.get(key)
         if isinstance(value, dict):
             known |= set(value)
-    known |= set(signals.get("critical_path") or [])
+    known |= set(schemas.critical_path_uids(signals))
     for entry in signals.get("critical_path_detail") or []:
         uid = entry.get("element_uid")
         if uid:
@@ -361,7 +362,7 @@ def _unread_gating_edges(analysis: dict, native_report: dict) -> List[tuple]:
     consumer, so the graph edge runs `dependency -> element`.
     """
     declared = native_report.get("declared_vs_used") or {}
-    on_path = set((analysis.get("signals") or {}).get("critical_path") or [])
+    on_path = set(schemas.critical_path_uids(analysis.get("signals") or {}))
     known = _declared_elements(analysis)
     edges = []
     for entry in declared.get("unused_candidates") or []:
@@ -1269,7 +1270,7 @@ def _project_with_reduced_durations(tasks, run_context, reductions) -> Optional[
 def _split_candidates(analysis, native_report) -> List[dict]:
     signals = analysis.get('signals') or {}
     durations = signals.get('element_durations') or {}
-    path = signals.get('critical_path') or []
+    path = schemas.critical_path_uids(signals)
     horizon = (analysis.get('floors') or {}).get('t_infinity_observed') or 0
     if not path or not horizon:
         return []

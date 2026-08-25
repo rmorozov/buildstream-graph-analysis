@@ -27,7 +27,8 @@ GOLDEN_RUN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds
 def _analysis(critical_path=(), opportunities=(), critical_path_us=20_000_000, blast=None):
     return {
         "signals": {
-            "critical_path": list(critical_path),
+            "critical_path_detail": [{"element_uid": u}
+                                     for u in critical_path],
             "blast_radius": blast or {},
         },
         "structural": {

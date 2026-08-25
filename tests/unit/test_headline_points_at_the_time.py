@@ -28,7 +28,6 @@ def _result(*, attribution, floors, path_detail, total_us, blast=None):
         total_duration_us=total_us,
         confidence={"primary": 1.0},
         signals={
-            "critical_path": [d["element_uid"] for d in path_detail],
             "critical_path_detail": path_detail,
             "top_blast_radius": list(blast or {}),
             "blast_radius": blast or {},

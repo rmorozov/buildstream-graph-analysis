@@ -57,7 +57,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 
 Every conclusion the text report draws is also published by `--format json` as a `findings` array, each entry with a stable `id`, a `severity` and the numbers behind it (`UX-75`). Both renderers consume the same list, so they cannot disagree, and a CI consumer keys on `id` rather than re-deriving a threshold out of the renderer.
 
-**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v1` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
+**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v2` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
 
 ## Real package structure (Plane 1)
 
@@ -605,7 +605,7 @@ renderers are built against, so nothing here is a second copy to drift.
 
 | schema | what it is | printed by |
 |---|---|---|
-| `analyze/v1` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim | `bga analyze --schema` |
+| `analyze/v2` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim. **v2** (`UX-288`) removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists; the leaf's `deferral_risk` is published in their place | `bga analyze --schema` |
 | `compare/v1` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
 | `blast/v1` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
 | `correlate/v1` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
@@ -617,7 +617,7 @@ renderers are built against, so nothing here is a second copy to drift.
 
 **Every artifact says what wrote it** (`UX-249`): a `producer` block —
 tool, version, and the contract set the writing build had — rides in
-every run directory and every published `analyze/v1` document, because
+every run directory and every published `analyze/v2` document, because
 `bga` reads its own past output as input and until round 30 nothing in
 those artifacts said which build produced them. The version there is
 *provenance*; compatibility is decided per contract, which is why

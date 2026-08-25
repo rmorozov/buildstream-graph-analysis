@@ -159,7 +159,7 @@ class TestThePageReadsAsksOrSaysTheCommand:
 
 def _report_with_horizon():
     return {
-        "schema": "analyze/v1",
+        "schema": "analyze/v2",
         "total_duration_us": 10_000,
         "signals": {"optimization_horizon": [
             {"element_uid": "a.bst", "saving_us": 6_000,

@@ -24,6 +24,10 @@ def _confidence(graph, critical_path=None, dominators=None, normalized_tasks=Non
         violations=[],
         attribution_segments=[],
         graph_analysis={
+            # `graph_analysis` is the analyzer's *internal* dict, not the
+            # published signals - `UX-288` removed the published
+            # `signals.critical_path`, not this one, and the invariants
+            # read this list directly.
             "critical_path": critical_path or [],
             "dominators": dominators if dominators is not None else {e.uid: [] for e in graph.elements},
         },

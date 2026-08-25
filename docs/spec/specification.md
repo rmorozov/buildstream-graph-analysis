@@ -1518,7 +1518,7 @@ Schemas:
 
 ```text
 run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the analysis shape)
-analyze/v1          compare/v1    blast/v1      correlate/v1  (published outputs - 32.5)
+analyze/v2          compare/v1    blast/v1      correlate/v1  (published outputs - 32.5)
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
 host/v1                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
@@ -1641,7 +1641,7 @@ key:
 
 | output | schema | printed by |
 |---|---|---|
-| `bga analyze --format json` (and every section subcommand) | `analyze/v1` | `bga analyze --schema` |
+| `bga analyze --format json` (and every section subcommand) | `analyze/v2` | `bga analyze --schema` |
 | `bga compare --format json` | `compare/v1` | `bga compare --schema` |
 | `bga blast --format json` | `blast/v1` | `bga blast --schema` |
 | `bga correlate --format json` | `correlate/v1` | `bga correlate --schema` |
@@ -1666,7 +1666,7 @@ and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
 an *addition* does not. So `additionalProperties` is true in all three,
-and a consumer that pins `analyze/v1` keeps working while the tool
+and a consumer that pins `analyze/v2` keeps working while the tool
 grows.
 
 The schemas live in one place, `bga/schemas.py`, which the renderers

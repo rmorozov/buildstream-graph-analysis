@@ -43,7 +43,12 @@ from typing import Dict, List
 # imports this module.
 from .findings import DIAGNOSES
 
-ANALYZE = "analyze/v1"
+# UX-288: v2. Three fields were **removed** - `signals.critical_path`,
+# `signals.leaf_analysis.leaves` and `structural.deferrability`'s two
+# uid lists - each of which republished element membership already
+# published beside it. The versioning rule below is explicit that a
+# removal moves the version, and this is the case it was written for.
+ANALYZE = "analyze/v2"
 COMPARE = "compare/v1"
 BLAST = "blast/v1"
 STORE = "store/v1"
@@ -2036,6 +2041,44 @@ def schema(name: str) -> dict:
         raise KeyError(
             f"unknown schema {name!r} - this tool produces "
             f"{', '.join(names())}") from None
+
+
+def critical_path_uids(signals: dict) -> list:
+    """The run's critical path, in order, from the one place it lives.
+
+    `UX-288`: `signals.critical_path` used to publish exactly this and
+    `signals.critical_path_detail` published it again with columns -
+    measured identical, order included, on the 1,202-element run. The
+    bare list is gone and this is the projection every reader that
+    wanted it now shares, so "the path" has one definition rather than
+    two that could drift.
+    """
+    signals = signals or {}
+    detail = signals.get('critical_path_detail') or []
+    if detail:
+        return [entry.get('element_uid') for entry in detail
+                if isinstance(entry, dict) and entry.get('element_uid')]
+    # An `analyze/v1` document, or a run directory written by one. `bga`
+    # reads its own past output (`UX-249`) and `bga compare` reads two
+    # runs at once, so a v2 reader that could not read a v1 path would
+    # break the loop this tool exists for. The bare list is gone from
+    # what v2 *writes*; it is still understood when read.
+    return list(signals.get('critical_path') or [])
+
+
+def choke_point_uids(bottleneck: dict) -> list:
+    """The graph's choke points, ranked, from the one place they live.
+
+    `UX-288`: `structural.bottleneck` published `choke_points` (ranked
+    uids) and `choke_point_impact` (the same uids, valued) - one
+    membership twice, nine elements each on the macro/micro run. `v2`
+    publishes one ordered list of records; this reads either that or an
+    `analyze/v1` document's bare list, for the same reason
+    `critical_path_uids` does.
+    """
+    entries = (bottleneck or {}).get('choke_points') or []
+    return [entry.get('element_uid') if isinstance(entry, dict) else entry
+            for entry in entries]
 
 
 def stamp(payload: dict, name: str) -> dict:

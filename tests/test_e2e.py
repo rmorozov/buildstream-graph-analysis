@@ -94,8 +94,8 @@ def test_basic_analysis():
         
         # Verify critical path in signals
         assert result.signals is not None
-        assert "critical_path" in result.signals
-        assert len(result.signals["critical_path"]) > 0
+        assert "critical_path_detail" in result.signals
+        assert len(result.signals["critical_path_detail"]) > 0
         
         # Verify attribution
         assert result.attribution is not None
@@ -103,7 +103,9 @@ def test_basic_analysis():
         assert "dependency_wait_us" in result.attribution
         
         print(f"  ✓ Floors: {result.floors}")
-        print(f"  ✓ Critical path length: {len(result.signals['critical_path'])}")
+        from bga import schemas as _s
+        print(f"  ✓ Critical path length: "
+              f"{len(_s.critical_path_uids(result.signals))}")
         print(f"  ✓ Attribution: {result.attribution}")
         print("  PASSED\n")
 

@@ -51,7 +51,6 @@ def _long_path_result():
         _detail("all.bst", 0, 0.0, kind="stack", structural=True),
     ]
     return _Result(signals={
-        "critical_path": path,
         "critical_path_length": len(path),
         "critical_path_detail": detail,
     })
@@ -81,7 +80,6 @@ def test_structural_elements_on_the_path_are_tagged_not_hidden():
 def test_short_critical_path_keeps_the_one_line_arrow_form():
     path = ["core.bst", "lib-a.bst", "app.bst"]
     result = _Result(signals={
-        "critical_path": path,
         "critical_path_length": len(path),
         "critical_path_detail": [_detail(uid, 1_000_000, 0.33) for uid in path],
     })

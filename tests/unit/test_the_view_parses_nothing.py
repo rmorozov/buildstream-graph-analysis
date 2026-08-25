@@ -20,8 +20,8 @@ report, 1,000,000 records):
 
 ```text
                                  before (round 39)        after
-view the big run itself       17.55 s   1235.5 MB    0.23 s   39.5 MB
-view its 2 MB neighbour        9.37 s   1233.3 MB    0.27 s   39.6 MB
+view the big run itself       15.48 s   1235.9 MB    0.04 s   39.5 MB
+view its 2 MB neighbour        8.18 s   1233.1 MB    0.06 s   39.7 MB
 ```
 
 The neighbour is the one that shows the shape of the defect: viewing a
@@ -34,9 +34,10 @@ report is 247 MB on disk, and 2.9x bytes-to-RAM means a single parse of
 it would cost ~700 MB - so any ceiling between "what we use" and "one
 parse" discriminates, and 250 leaves headroom for a slower machine's
 allocator without admitting a parse. `SECONDS_CEILING` is 20: the
-before-figure at this size is 17.55 s and the after-figure is 0.23 s,
-and CI runners are slower than this container - the bound is a
-*regression* alarm, not a benchmark.
+before-figure at this size measured 15.5-17.6 s across runs and the
+after-figure 0.04-0.23 s (the spread is the cold import of the
+analysis modules, not the work), and CI runners are slower than this
+container - the bound is a *regression* alarm, not a benchmark.
 """
 import json
 import os

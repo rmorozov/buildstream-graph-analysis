@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-306 scenarios: **9 open**, 297 closed.
+306 scenarios: **8 open**, 298 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 52 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 3 | 75 |
+| viewer | 2 | 75 |
 | cli | 0 | 4 |
 | store | 2 | 27 |
 | docs | 3 | 29 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
 | UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🟡 |
-| UX-303 | [the shape before the rows — sparklines and density strips](UX-0303-the-shape-before-the-rows.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-305 | [emphasis is a budget, spent once per block](UX-0305-emphasis-is-a-budget.md) | viewer | Medium | R1 | 🔴 |
 | UX-307 | [the export ships the source commentary](UX-0307-the-export-ships-the-source-comments.md) | viewer | Medium | R1 | 🔴 |
 | UX-306 | [the visual contract joins the tree it governs](UX-0306-the-guide-joins-the-tree.md) | docs | Low | — | 🔴 |

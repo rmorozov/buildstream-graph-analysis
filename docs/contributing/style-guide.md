@@ -16,6 +16,16 @@ Two of them are enforced by
 [`tests/unit/test_docs_links_and_commands.py`](../../tests/unit/test_docs_links_and_commands.py).
 The rest are read by people.
 
+**Scope, and its sibling** (`UX-306`). This guide governs the
+**documents**. The **web report** has its own contract —
+[`docs/design/styleguide.md`](../design/styleguide.md), round 41 —
+which governs what a published value renders as, what may be
+coloured, what earns emphasis, and what a drawing owes its reader.
+The two do not overlap: nothing here decides a pixel, and nothing
+there decides a paragraph. If you are changing `bga/viewer/`, that
+is the guide you want, and the fixing guide's §2 item 6 is the
+checklist.
+
 ---
 
 ## 1. One document, one job

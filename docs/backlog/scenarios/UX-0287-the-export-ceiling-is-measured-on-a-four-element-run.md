@@ -104,10 +104,22 @@ somebody wrote it down, which is exactly why it had moved five times.
 counted:**
 
 ```text
-M1 pad app.js with 20 KB of *comments*  -> page budget unmoved  <- see below
-M1'pad app.js with 20 KB of *code*      -> 1 failed  (page budget)
-M2 macro_micro's bound set to 280,000   -> 1 failed  (its own row)
+M1  pad app.js with 20 KB of *comments*  -> nothing moved      <- see below
+M1' pad app.js with 20 KB of *code*      -> 4 failed
+M2  macro_micro's bound set to 280,000   -> 1 failed, its row only
+M3  the page's cost made run-dependent   -> the split's own test
+M4  `_embedded` returns 0                -> 2 failed, both halves
 ```
+
+M1' reddens four rather than one, and that is the structure working
+rather than noise: source growth shows in the page budget *and* in every
+total, because a total is the page plus its content. M2 moves one row
+and nothing else, which is the other half of the same claim - content
+growth is now attributable to the run it happened on.
+
+M4 is the check on the split itself: if `_embedded` stopped finding the
+embedded documents, "the page" would silently become "the whole file",
+and both the budget and the run-independence test say so.
 
 M1 as first written proved nothing: `bga_view.py`'s `_uncommented` strips
 whole-line comments when it inlines a module, so twenty thousand bytes

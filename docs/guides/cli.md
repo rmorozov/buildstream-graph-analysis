@@ -1125,9 +1125,20 @@ bga view --perfetto      # skip the report, hand the timeline straight over
 ```
 
 `bga view`'s page carries an **Open timeline in Perfetto** button when
-the run has one, and `--perfetto` goes there directly. Either way the
+the run has one, and `--perfetto` goes there directly. Below 4 MiB the
 trace crosses **tab to tab**: the page opens `ui.perfetto.dev`, pings
 until it answers, and `postMessage`s the bytes.
+
+**Above 4 MiB compressed, Perfetto fetches it instead** (`UX-299`).
+Carrying the trace costs at least two copies of it inside the report
+tab — `arrayBuffer()` materialises the whole response and `postMessage`
+structured-clones it — before Perfetto decompresses a third in its own;
+the `?url=` deep link has none of them. The page finds out which case
+it is in with a `HEAD` at the moment you click, because knowing the
+size any earlier would mean rendering the trace, which is exactly what
+`bga view`'s startup no longer does. The same 4 MiB decides whether
+`--export` inlines the trace: above it the exported page says the
+trace's size and carries this command instead of the bytes.
 
 **Nothing is uploaded.** It looks exactly like an upload — a public URL
 opens and your build data appears in it — so it is worth saying plainly:

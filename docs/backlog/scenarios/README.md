@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-305 scenarios: **13 open**, 292 closed.
+305 scenarios: **12 open**, 293 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 52 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 6 | 74 |
+| viewer | 5 | 74 |
 | cli | 0 | 4 |
 | store | 3 | 27 |
 | docs | 3 | 29 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
 | UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🟡 |
-| UX-299 | [a handoff that does not carry the trace in its hands](UX-0299-a-handoff-that-does-not-carry-the-trace-in-its-hands.md) | viewer | Medium | R1 | 🔴 |
 | UX-300 | [what a two-gigabyte snapshot does to a store](UX-0300-what-a-two-gigabyte-snapshot-does-to-a-store.md) | store | Medium | R1, R5, R7 | 🔴 |
 | UX-301 | [the ordering authority moved and left its old uniform](UX-0301-the-ordering-authority-moved-and-left-its-old-uniform.md) | viewer | Low | — | 🔴 |
 | UX-302 | [the mapping made law — no raw JSON that is not on purpose](UX-0302-the-mapping-made-law.md) | viewer | High | R1 | 🔴 |

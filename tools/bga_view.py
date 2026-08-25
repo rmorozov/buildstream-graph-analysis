@@ -97,7 +97,11 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # sites. Served as well as inlined: a served page imports
           # these by URL, and a module missing from this tuple 404s and
           # takes the whole boot with it.
-          "shapes.js", "rawjson.js")
+          "shapes.js", "rawjson.js",
+          # UX-303: §2's two drawings, which import nothing and take
+          # their formatter - so they are a module of their own rather
+          # than more of `views.js`.
+          "drawings.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured

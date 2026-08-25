@@ -40,11 +40,19 @@ import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
 // between them lives there, so that "raw JSON unless deliberate" is a
 // rule with one enforcement point rather than a habit.
 import { CONTROLS, UNMAPPED, classify, noteUnmapped } from "./shapes.js";
+// UX-303: §2's two drawings. They import nothing and take their
+// formatter, so the quantity table stays here and the geometry stays
+// there.
+import { sparkline, strip, columnStrip } from "./drawings.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
 const COLUMNS = "bga:columns";
 const DIRECTION = "bga:direction";
+// UX-303: the two hints §2 introduces. A value draws as a shape because
+// a schema declared it one, never because it looked numeric.
+const SERIES = "bga:series";
+const DISTRIBUTION = "bga:distribution";
 // UX-209: the question a section answers, and which part of the
 // argument it belongs to. UX-208: what a column's values *are*.
 const QUESTION = "bga:question";
@@ -448,11 +456,29 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   // branch below is a row of §1 - the branch is *chosen* there and
   // *drawn* here, so a shape the guide does not cover cannot quietly
   // acquire a rendering by someone adding an `if` to this function.
+  const declared = hintsOf(node);
   const control = classify(value, {
-    columns: hintsOf(node)[COLUMNS] ?? null,
+    columns: declared[COLUMNS] ?? null,
+    series: declared[SERIES] ?? null,
+    distribution: declared[DISTRIBUTION] ?? null,
     depth, nestLimit: CELL_NEST_LIMIT,
     inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
   });
+  // `UX-303`: a series and a distribution draw as their shape, at any
+  // depth - the nesting cap is about tables inside tables, and a
+  // sparkline is one element wide however deep it sits.
+  if (control === CONTROLS.SPARKLINE) {
+    return sparkline(value, {
+      unit: String(declared[SERIES]),
+      format: (n) => quantity(n, quantityFor(node, key)),
+    });
+  }
+  if (control === CONTROLS.DENSITY_STRIP) {
+    return strip(value, {
+      countKey: String(declared[DISTRIBUTION]),
+      format: (n) => quantity(n, quantityFor(node, key)),
+    });
+  }
   // `UX-277`: past the nesting limit a value is folded as text rather
   // than as a third table. Deliberately *not* silent - the fold carries
   // the label and the count, so the reader knows what is behind it.
@@ -793,12 +819,95 @@ export function interrogable(table, specs, total) {
     if (cell) copy(cellText(cell));
   });
 
+  // UX-303 (styleguide §2): the shape of the column before its rows.
+  //
+  // A table longer than the bound is a table nobody reads to the end,
+  // and its primary quantity's *distribution* is the thing a reader
+  // wants before scrolling - "is the top row an outlier or the top of
+  // a ramp" is one glance, or twelve scrolls.
+  //
+  // Built from the column's own `data-raw` values, which is a reading
+  // of published values in the way sorting is. The boundary §2 draws
+  // and `columnStrip` keeps: **a self-built strip prints no derived
+  // number.** Its labels are the smallest and largest *rows* and a
+  // count of rows; the p50 and p95 ticks are positions and nothing
+  // else. A percentile worth printing enters the payload first.
+  const shape = distributionStrip(table, specs, total, state, refresh);
+
   const tools = el("div", { class: "table-tools" }, box, badge,
-                            state.preset ?? null, copyRows, asMarkdown);
+                            state.preset ?? null, copyRows, asMarkdown,
+                            shape);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);
   tools.addEventListener?.("change", label);
   return tools;
+}
+
+/**
+ * The density strip for a long table's primary quantity column, or
+ * `null` when the table is short or has no quantity to have a shape.
+ *
+ * Clicking it sets that column's threshold to the **nearest actual row
+ * value** - a published number, never the position the click landed
+ * on, which would be a derived figure entering the page through a
+ * mouse. Served only: an export is a file, and `UX-194`'s rule is that
+ * an affordance whose precondition is absent is not shown as a dead
+ * one. The strip itself renders in both, because the *shape* is the
+ * point and the click is a convenience.
+ */
+function distributionStrip(table, specs, total, state, refresh) {
+  if (total <= TABLE_OPENS_BOUNDED_ABOVE) return null;
+  const spec = specs.find((s) => s && s.quantity && s.numeric !== false);
+  if (!spec) return null;
+  // The column key, not `cssId`: that normalises an *element uid* into
+  // an anchor, and a column key is already a schema identifier.
+  const raw = [...table.querySelectorAll(`td[data-column="${spec.key}"]`)]
+    .map((td) => Number(td.getAttribute("data-raw")))
+    .filter((n) => Number.isFinite(n));
+  if (!raw.length) return null;
+
+  const drawn = columnStrip(raw, {
+    format: (n) => quantity(n, spec.quantity),
+    label: `${spec.title ?? title(spec.key)} across all ${
+      total.toLocaleString("en-US")} rows`,
+  });
+  drawn.setAttribute("data-column", spec.key);
+  drawn.setAttribute("data-interactive", String(served()));
+  if (!served()) return drawn;
+
+  const sorted = raw.slice().sort((a, b) => a - b);
+  const svg = drawn.querySelector?.("svg");
+  svg?.addEventListener?.("click", (event) => {
+    // Where in the range the click landed, as a fraction. A shim and a
+    // browser both give `offsetX`/`clientWidth`; without them the
+    // click simply does nothing rather than guessing a threshold.
+    const width = event?.currentTarget?.clientWidth;
+    if (!width) return;
+    const fraction = Math.min(1, Math.max(0, (event.offsetX ?? 0) / width));
+    const low = sorted[0];
+    const high = sorted[sorted.length - 1];
+    const wanted = low + fraction * (high - low);
+    // The nearest value a row actually has, so the threshold is a
+    // published number.
+    const chosen = sorted.reduce((best, value) =>
+      Math.abs(value - wanted) < Math.abs(best - wanted) ? value : best,
+      sorted[0]);
+    const input = table.querySelector(
+      `.th-filter[data-column="${spec.key}"]`);
+    if (!input) return;
+    // Raw units, no suffix - `parseThreshold` reads a bare number as
+    // the published one, so this round-trips exactly rather than
+    // through a formatted string.
+    input.value = `>= ${chosen}`;
+    input.dispatchEvent?.(new Event("input", { bubbles: true }));
+    if (!input.listeners?.input?.length) {
+      // A shim with no bubbling: set the state directly so the guard
+      // measures the filter rather than the event system.
+      state.thresholds[spec.key] = { op: ">=", value: chosen };
+      refresh();
+    }
+  });
+  return drawn;
 }
 
 // UX-280: which form the reader last chose, remembered for them alone.
@@ -1276,6 +1385,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
     const control = classify(value, {
       severity: Boolean(hint[SEVERITY]),
       columns: hintsOf(node)[COLUMNS] ?? null,
+      series: hintsOf(node)[SERIES] ?? hint[SERIES] ?? null,
       nestLimit: CELL_NEST_LIMIT,
       inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
     });
@@ -1292,6 +1402,20 @@ export function renderSection(key, value, hint = {}, node = undefined,
                           sectionHead(key, hint), body);
   }
   if (typeof value === "object") {
+    // `UX-303`: a section whose whole value is a published distribution
+    // is the strip and its sentence, not a definition list of five
+    // percentiles - which is what §2 means by "its shape first".
+    if ((hintsOf(node)[DISTRIBUTION] ?? hint[DISTRIBUTION])
+        && Object.keys(value).length) {
+      return el("section", { "data-section": key,
+                             "data-rail": heading(key, hint).rail },
+                sectionHead(key, hint),
+                strip(value, {
+                  countKey: String(hintsOf(node)[DISTRIBUTION]
+                                   ?? hint[DISTRIBUTION]),
+                  format: (n) => quantity(n, quantityFor(node, key)),
+                }));
+    }
     return Object.keys(value).length
       // UX-289: the whole document, because a preset's population is a
       // selection published elsewhere in it - `structural.bottleneck`
@@ -1337,7 +1461,7 @@ export function hintsOf(node) {
   const hint = {};
   if (!node || typeof node !== "object") return hint;
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
-                      RAIL, PRESETS]) {
+                      RAIL, PRESETS, SERIES, DISTRIBUTION]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;
@@ -1422,6 +1546,12 @@ export function render(payload, schema, root, investigate = null) {
 // UX-199: a served page can ask the server; an export cannot. One
 // predicate, so the two modes cannot disagree about which they are.
 export function served() {
+  // `UX-303`: guarded, because this is now asked while a *table* is
+  // being built rather than only during boot. A page always has a
+  // `location`; a harness driving `buildTable` directly need not, and
+  // a throw here would take the whole render down - `UX-199`'s defect
+  // by a new route. No location is not a server.
+  if (typeof location === "undefined" || !location) return false;
   return /^https?:$/.test(location.protocol);
 }
 

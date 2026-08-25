@@ -112,6 +112,17 @@ so the note does not quietly go stale. The 1,202-element run is built
 from the committed generator, which is byte-reproducible from its seed:
 the run is not a tracked path, but the thing that makes it is.
 
+**A guard that rested on a moving number, corrected.** The first version
+asserted "the page ships with dead anchors" — 7 of them — and that count
+is a property of how the report's ranking overlaps the anchors the page
+draws. It held in isolation and moved under a full-suite run, which is
+the signature of a guard measuring the wrong thing. It asks about a
+named element outside the cap now. The second attempt at naming one was
+also wrong: the *last* key of the element table is `all.bst`, the run's
+own target, which is in the eager set on every run — so the element is
+chosen by asking the rendered document which one has no block, not by
+position.
+
 **Falsification:**
 
 ```text

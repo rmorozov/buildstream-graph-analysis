@@ -55,6 +55,16 @@ def _code(source):
     return re.sub(r"^\s*//.*$", "", without_block, flags=re.M)
 
 
+_ENTRY_MODULES = ("app.js", "sql.js", "perfetto_page.js")
+
+
+def _imports(path):
+    """The viewer modules one module imports, by relative path."""
+    import re
+    source = path.read_text(encoding="utf-8")
+    return re.findall(r'from\s+"\./([A-Za-z0-9_]+\.js)"', source)
+
+
 class TestNothingWritesAStyleAttribute:
     def test_no_viewer_module_sets_style_as_an_attribute(self):
         offenders = {}
@@ -129,11 +139,31 @@ class TestNoPageRunsAnInlineScript:
 
     def test_every_page_script_is_served(self):
         """A module the server does not list is a 404, which is the
-        same dead page by a different route."""
+        same dead page by a different route.
+
+        **Every module each page imports, not just the three it loads
+        directly.** This named `app.js`, `sql.js` and
+        `perfetto_page.js`, and passed while `UX-286`'s `chapters.js` -
+        imported by `app.js` and by `nav.js` - was missing from
+        `ASSETS`: the served page 404'd on the import, `boot` never
+        ran, and the report was the word "Loading…" in a real browser.
+        A guard that checks the entry points of a module graph checks
+        the one part of it that cannot go wrong."""
         server = (REPO / "tools/bga_view.py").read_text(encoding="utf-8")
         assets = server.split("ASSETS = (", 1)[1].split(")", 1)[0]
-        for module in ("app.js", "sql.js", "perfetto_page.js"):
-            assert f'"{module}"' in assets, f"{module} is not in ASSETS"
+        wanted, seen = list(_ENTRY_MODULES), set()
+        while wanted:
+            module = wanted.pop()
+            if module in seen:
+                continue
+            seen.add(module)
+            assert f'"{module}"' in assets, (
+                f"{module} is imported by a served page and is not in "
+                f"ASSETS - the browser 404s on it and the page dies")
+            wanted.extend(_imports(VIEWER / module))
+        # The traversal has to have gone somewhere: an import regex that
+        # matched nothing would leave this checking three names.
+        assert len(seen) >= 8, f"only reached {sorted(seen)}"
 
     def test_the_drawings_still_set_the_properties_they_used_to(self):
         """The ban is only worth having if the encodings survived it. A

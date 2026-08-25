@@ -21,6 +21,7 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          INCOMPLETE, renderProvenance, renderInvestigation, renderWhatIf } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
+import { chapters, fileInChapter } from "./chapters.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
@@ -1315,83 +1316,6 @@ export function quantityFor(node, key) {
   return guessed;
 }
 
-// UX-285: which sections are *identity* rather than analysis, in the
-// order they should read. Declared rather than sniffed, for the reason
-// `UX-268`'s list is: a section added later joins this list or it is
-// analysis, and `test_the_page_reads_in_the_order_it_should` names the
-// sequence, so moving one reddens something.
-export const IDENTITY_SECTIONS = ["summary", "run_instance", "producer",
-                                  "timestamp_agreement"];
-
-/**
- * UX-285: the identity is reference, and reference goes last.
- *
- * `summary` ("Run"), `run_instance` and `producer` answer one question
- * - which run is this, on what host, written by what - and they were
- * split across the document: measured at screens 1.4, 1.6 and 10.9 of
- * an 18.8-screen report, so a reader checking provenance answered it
- * from two blocks and met the third two-thirds of the way down. They
- * are adjacent now, and low, because `UX-207` earned the first screen
- * for the *decision* and these are the clearest thing on the page that
- * is not one. The rail still reaches them in one action, which is what
- * the item's second clause asks.
- *
- * A move rather than an order-at-append, and called from `boot` rather
- * than from `render`: the element sections (`UX-216`), the trend and
- * the inlined questions are all appended after `render` returns, so
- * ordering inside `render` would mean "last of the payload" and leave
- * twenty-five detail blocks below the thing that closes the document.
- * `render` alone returns the payload's own order; `boot` assembles the
- * page, and this is part of assembling it.
- */
-export function placeIdentityLast(root) {
-  for (const key of IDENTITY_SECTIONS) {
-    for (const section of root.querySelectorAll(`[data-section="${key}"]`)) {
-      if (section.parentNode === root) root.append(section);
-    }
-  }
-  return root;
-}
-
-/**
- * UX-285: the blast control belongs beside the question it answers.
- *
- * It is not a report block but an interactive query - "what rebuilds if
- * I touch this?" - and it shipped as the last thing on the page: screen
- * 18.3 of 18.5, below twenty-five element blocks, seventeen screens
- * from the findings that provoke the question.
- *
- * The first of these that the run has, in this order:
- *
- * - `resource_blast`, the published table the control's answers belong
- *   beside - a run with a source inventory has one, and then the
- *   shared-resource table and the query over it read together;
- * - `next_steps`, which for these runs prints `bga blast <target>` as
- *   the command to run - the control does that without the terminal,
- *   so it sits directly under the instruction to do it;
- * - `findings`, the block that provokes the question at all.
- *
- * `next_steps` before `findings` because `findings`, `headline` and
- * `next_steps` are one narrative in the payload's own order, and a
- * query control wedged between the finding and its diagnosis reads as
- * an interruption. After the narrative is still within two screens of
- * it - measured, in the item's Outcome.
- */
-export const BLAST_ANCHORS = ["resource_blast", "next_steps", "findings"];
-
-export function placeBlast(root, node) {
-  for (const key of BLAST_ANCHORS) {
-    const beside = root.querySelector(`[data-section="${key}"]`);
-    if (beside && beside.parentNode === root
-        && typeof beside.after === "function") {
-      beside.after(node);
-      return node;
-    }
-  }
-  root.append(node);
-  return node;
-}
-
 export function render(payload, schema, root, investigate = null) {
   const hints = {};
   for (const [key, sub] of Object.entries(schema?.properties ?? {})) {
@@ -1867,7 +1791,7 @@ async function boot() {
     // UX-285: and placed beside `resource_blast`/`findings` rather than
     // appended, so the control sits where the question is asked.
     if (served()) {
-      placeBlast(root, renderBlastSearch(async (target) => {
+      root.append(renderBlastSearch(async (target) => {
         const response = await fetch(
           `blast.json?target=${encodeURIComponent(target)}`);
         const answer = await response.json();
@@ -1881,10 +1805,9 @@ async function boot() {
           "Not available in an exported report - the search asks the "
           + "server, and there is not one here. Run "),
         el("p", {}, el("code", {}, "bga blast <target> <run>")));
-      // The note stands in the control's slot, not at the foot of the
-      // page: a reader who exported the report looks for the answer
-      // where the served page offers to compute it.
-      placeBlast(root, note);
+      // UX-286 files it beside `resource_blast` in "What if I change
+      // this?", which is where the served page offers to compute it.
+      root.append(note);
     }
 
     // UX-199: the export used to strip the link to the questions page
@@ -1897,11 +1820,20 @@ async function boot() {
     // the run whose user would spend a minute wondering what broke.
     if (run.has_timeline) wireTheHandoff();
 
-    // UX-285: and the identity group to the foot, now that everything
-    // appended after `render` has landed - the element sections
-    // (`UX-216`), the trend, the inlined questions. `render` already
-    // put them last of the payload; this puts them last of the page.
-    placeIdentityLast(root);
+    // UX-286: the chapters, over everything that has been appended -
+    // the element sections (`UX-216`), the trend, the inlined
+    // questions. Grouping is the last thing done to the document and
+    // the first thing the rail reads, so the `toc` below lists
+    // chapters rather than thirty-one fragments.
+    //
+    // This is also what puts `UX-285`'s identity blocks at the foot and
+    // the blast control beside `resource_blast`: they are chapters
+    // ("Which run is this?", "What if I change this?") and the table
+    // declares their order. That item shipped `placeIdentityLast` and
+    // `placeBlast` a day earlier; both are gone, because two mechanisms
+    // deciding one order is how a page ends up with an order nobody can
+    // predict.
+    chapters(root, document);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing
     // above changes; a reader who ignores all of it sees the same
@@ -1976,8 +1908,13 @@ async function boot() {
       if (!id || !id.startsWith("element-")) return null;
       if (root.querySelector(`[data-section="${id}"]`)) return null;
       const uid = uidForAnchor(payload, id);
-      return uid ? ensureElementSection(payload, root, uid, elementOptions)
-                 : null;
+      if (!uid) return null;
+      const built = ensureElementSection(payload, root, uid, elementOptions);
+      // UX-286: into its chapter, not onto the end of the document.
+      // `UX-278` builds this block when the anchor is followed, which
+      // is long after `boot` grouped everything - appended to the root
+      // it would land below the chapter that closes the page.
+      return built ? fileInChapter(root, built, document) : built;
     };
     root.addEventListener("click", (event) => {
       const link = event?.target?.closest?.("a.inspect");

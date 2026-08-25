@@ -472,6 +472,93 @@ class TestTheDocumentEndsWithItsIdentity:
             f"{width}x{height}")
 
 
+@needs_node
+@needs_browser
+class TestChaptersCostNoHeight:
+    """`UX-286`'s third clause, and Direction 13's refusal of the other
+    half of the proposal it came from.
+
+    Grouping was accepted on the argument that it adds structure and not
+    height; padding each section to one screen was refused on the
+    measurement that it adds 31.3 screens of whitespace to the synthetic
+    run. Both halves are checked here, because "chapters" implemented as
+    a fixed grid would satisfy every other guard in the suite.
+
+    Measured on the exported golden report after this landed:
+
+    ```text
+                    document   headings   heading cost   section heights
+    1440x900          11.29      0.33 scr      2.9%      0.07 - 1.17 (16x)
+    1280x800          12.76      0.37         2.9%       0.08 - 1.31 (16x)
+     390x844          20.58      0.47         2.3%       0.08 - 3.20 (42x)
+    ```
+
+    The document was 11.32 screens before the chapters and 11.29 after:
+    the seven headings are paid for by the space the sections no longer
+    need between them, which is the whole claim.
+    """
+
+    _COST = """
+    (() => {
+      const vh = window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      const titles = [...document.querySelectorAll("h2.chapter-title")];
+      const heads = titles.reduce(
+        (sum, n) => sum + n.getBoundingClientRect().height, 0);
+      const chapters = [...document.querySelectorAll("section.chapter")]
+        .map((box) => {
+          const own = box.getBoundingClientRect().height;
+          const inner = [...box.querySelectorAll("section[data-section]")]
+            .reduce((sum, n) => sum + n.getBoundingClientRect().height, 0);
+          return { id: box.dataset.chapter, slack: (own - inner) / vh };
+        });
+      const heights = [...document.querySelectorAll("main section[data-section]")]
+        .map((s) => s.getBoundingClientRect().height / vh);
+      return { total: total / vh, headings: heads / vh, chapters,
+               tallest: Math.max(...heights), shortest: Math.min(...heights),
+               sections: heights.length };
+    })()
+    """
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_the_headings_cost_a_twentieth_of_the_document_at_most(
+            self, browser, report, width, height):
+        out = browser.measure(report, self._COST, width, height)
+        assert out["chapters"], "the page drew no chapters"
+        share = out["headings"] / out["total"]
+        assert share <= 0.05, (
+            f"the chapter headings are {100 * share:.1f}% of the document "
+            f"at {width}x{height}")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_no_chapter_pads_its_sections(self, browser, report,
+                                          width, height):
+        """A chapter is as tall as what is in it. The difference between
+        a chapter's height and the sum of its sections is its heading
+        and the margins around it - a quarter-screen of slack, not the
+        several screens a fixed-height grid would introduce."""
+        out = browser.measure(report, self._COST, width, height)
+        padded = {chapter["id"]: round(chapter["slack"], 2)
+                  for chapter in out["chapters"] if chapter["slack"] > 0.25}
+        assert padded == {}, (
+            f"{padded} screens of chapter beyond their sections at "
+            f"{width}x{height}")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_the_sections_are_still_as_tall_as_their_content(
+            self, browser, report, width, height):
+        """Direction 13's refusal, guarded: section height spans a 49x
+        range across the two runs because ten sections on each size
+        themselves from the run. A layout that equalised them would
+        read as "chapters" and be the change the measurement refused."""
+        out = browser.measure(report, self._COST, width, height)
+        assert out["sections"] >= 10, out["sections"]
+        spread = out["tallest"] / max(out["shortest"], 0.001)
+        assert spread >= 8, (
+            f"the tallest section is only {spread:.1f}x the shortest at "
+            f"{width}x{height} - something is equalising them")
+
+
 class TestTheInstrumentSaysWhatItCannotSee:
     """The half `UX-257` insisted on: whichever instrument is chosen,
     it must name the claims it does not cover."""

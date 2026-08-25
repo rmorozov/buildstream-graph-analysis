@@ -1,6 +1,6 @@
 # UX-291: a finding carries its numbers three times
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-288 | **Serves:** R5 and R7 — the payload consumers | **Topic:** contracts
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-288 | **Serves:** R5 and R7 — the payload consumers | **Topic:** contracts
 
 ## Motivation
 
@@ -87,3 +87,60 @@ it:
 For every finding on a real run, each number appears in one carrier or
 in carriers a guard proves agree, and the contract document names which
 one a consumer should believe.
+
+## Outcome
+
+🟢 **Done.** Three carriers, one authority, and a guard that holds them
+together.
+
+**Item 1, the decision: the finding's own `evidence` is what a consumer
+should believe.** Not a projection over `provenance.evidence`, which was
+the other branch — measured on the `macro_micro` run with both planes:
+
+```text
+provenance citations that resolve                      27
+citations quoting the live document                    27  (100%)
+evidence entries a citation also names                 14
+those that agree                                       14  (100%)
+```
+
+Fourteen of the finding evidence entries have a citation at all; the
+rest are derived ratios and shares with no published path. A projection
+would have had to drop numbers a consumer reads today or invent paths
+for them, so the two carriers stay independent by design, with the
+finding's own `evidence` named as the one that wins.
+
+That decision is written where a consumer meets it — the published
+schema, which `bga analyze --schema` prints: `provenance.evidence` is
+described as *"A quotation, not a second publication: where this names a
+quantity the finding's own `evidence` also carries, the finding's is the
+one to believe"*, and the finding's `evidence` node carries the
+counterpart and the measurement that decided it.
+
+**Item 2.** `copy_text` is untouched, and a guard asserts it is still
+declared a rendering rather than a third source of truth — closing this
+item by breaking `UX-224` would not be closing it.
+
+**Item 3, the guard.** `test_a_number_has_one_carrier.py`: every pair
+the two carriers both name agrees, every citation still quotes the live
+document, and the `joint-saving` finding still carries the same numbers
+and elements as `signals.joint_saving`, which is the one place the item
+found a whole signal restated.
+
+Two things it also picked up: the pair count is asserted (≥10 on the
+two-plane run, ≥2 on the golden fixture), so a release that stopped
+citing anything cannot leave the check green over an empty list — the
+vacuous-pass shape `UX-288`'s M1 had; and `UX-229`'s quotation rule now
+runs over the two-plane document as well, where it had only ever seen
+the golden and synthetic runs, neither of which carries a Plane 2
+report.
+
+**Falsification.** Four mutations, each asserted to have landed:
+
+```text
+Q1  a finding's evidence value drifts from its citation      1 guard red
+Q2  every citation quotes a value one higher than the        3 red
+    document holds
+Q3  the joint-saving finding stops matching its signal       2 red
+Q4  the contract stops saying which carrier wins             1 red
+```

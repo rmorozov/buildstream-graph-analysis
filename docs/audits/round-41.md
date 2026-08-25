@@ -62,6 +62,31 @@ and its n); enforcement (§7).
 emphasis budget and the conformance pass), `UX-306` (the guide
 wired into the tree). Direction 16 records the contract's place.
 
+## Landed
+
+All five items shipped in the order above (`UX-302`, `UX-304`,
+`UX-303`, `UX-305`, `UX-306`), each with its falsification round in
+its own log. Three things the round turned up that the filings did
+not predict, recorded here because they are the round's real
+findings:
+
+- **A guard from one item caught the next.** `UX-304`'s §4.3 check
+  reddened on `UX-303`'s first draft, which coloured a sparkline's
+  peak and a p95 tick amber. It was right — a peak is a position and
+  a percentile is not a verdict — and they are told apart by size and
+  dash instead.
+- **A `var()` fallback is a second palette, and it hides the first.**
+  `UX-305`'s pass found `var(--accent, #4a7ebb)` eight times;
+  `.horizon-bar` had been filling with a text-grade token straight
+  through `UX-304`'s guard, because the guard matched `var(--accent)`
+  and the fallback was not that string. Removing the fallbacks made
+  the existing guard fire.
+- **The export ships the source commentary.** `UX-303` took the page
+  from 183 KB to 197 KB and tripped `UX-287`'s data-dwarfs-the-page
+  ratio at 3.90x. 175 KB of the 196 KB page is commented JavaScript,
+  because `--export` inlines modules verbatim. Filed as `UX-307`
+  rather than absorbed.
+
 ## Standing
 
 Direction 15 outranks all of this — the user cannot open their

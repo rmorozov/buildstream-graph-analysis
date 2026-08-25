@@ -158,12 +158,37 @@ class TestTheTableCoversTheFindings:
         assert record["rule"]["threshold"] == 0.5
 
     def test_a_claim_drawn_from_unpublished_fields_says_so(self):
-        """`capacity_recommendation` and `memory_envelope` are computed,
-        are what their findings assert, and reach no consumer. Naming
-        them is the honest shape - silence would read as no gap."""
-        for claim in ("capacity-recommendation", "memory-envelope"):
-            record = provenance.record({"id": claim}, claim, "finding", {})
-            assert record["unpublished_inputs"], claim
+        """`memory_envelope` is computed, is what its finding asserts,
+        and reaches no consumer of this document. Naming it is the
+        honest shape - silence would read as no gap.
+
+        `capacity_recommendation` was the other one until `UX-275`
+        published it; it is checked below instead, from the other
+        direction."""
+        record = provenance.record(
+            {"id": "memory-envelope"}, "memory-envelope", "finding", {})
+        assert record["unpublished_inputs"]
+
+    def test_a_claim_whose_fields_were_published_cites_them(self):
+        """`UX-275`. The gap closing has to be visible here, or the
+        label outlives the defect: a chain that still says "computed,
+        not published" about a field a consumer can now read is a lie
+        that reads as candour."""
+        payload = {"capacity_recommendation": {
+            "builders": 4,
+            "binding_constraint": "graph",
+            "recommended_builders": 2,
+            "cores_busy": 1.6}}
+        record = provenance.record({"id": "capacity-recommendation"},
+                                   "capacity-recommendation", "finding",
+                                   payload)
+        assert record["unpublished_inputs"] == []
+        cited = {entry["path"]: entry for entry in record["evidence"]}
+        assert cited["capacity_recommendation.binding_constraint"]["value"] \
+            == "graph"
+        assert cited["capacity_recommendation.recommended_builders"][
+            "resolved"], cited
+        assert all(entry["resolved"] for entry in record["evidence"]), record
 
 
 class TestATopActionPointsRatherThanCopies:

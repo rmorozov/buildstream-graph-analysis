@@ -95,6 +95,19 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and getattr(result, 'capacity_verdict', None):
         data['capacity_verdict'] = result.capacity_verdict
 
+    # UX-275: and what the capacity *should* be. Computed since UX-116,
+    # rendered in full by the text report, and dropped here - so the
+    # tool's answer to the question this backlog opened with (`UX-09`:
+    # what should `--builders` and `--max-jobs` be, and which constraint
+    # is the reason) was reachable only by a human reading a terminal,
+    # and a CI job that wanted it had to parse prose.
+    #
+    # Absent rather than empty without `--plane2`, like `run_instance`:
+    # the recommendation rests on measured cores-busy, and "not measured"
+    # must not render as "no constraint".
+    if section is None and getattr(result, 'capacity_recommendation', None):
+        data['capacity_recommendation'] = result.capacity_recommendation
+
     # UX-202: Plane 2's own coverage of this build, when a Plane 2
     # report was in hand. Absent - not zeroed - without one, for the
     # reason `run_instance` is absent: "not looked at" and "looked at

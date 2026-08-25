@@ -302,11 +302,14 @@ def _mesh_rule(claim, document):
 # wrong one on every run but the one it was written against.
 #
 # `unpublished` names fields a claim was genuinely drawn from that the
-# `analyze/v1` document does not carry. It is deliberately not empty:
-# `capacity_recommendation` and `memory_envelope` are computed, are what
-# their findings assert, and reach no consumer. Naming them is the
-# honest shape - a reference that resolved to nothing would read as a
-# published field, and silence would read as no gap at all.
+# analyze document does not carry. It is deliberately not empty:
+# `memory_envelope` is computed, is what its finding asserts, and
+# reaches no consumer of this document. Naming it is the honest shape -
+# a reference that resolved to nothing would read as a published field,
+# and silence would read as no gap at all.
+#
+# `UX-275` emptied the other one: `capacity_recommendation` is published
+# now, so its paths moved up into the evidence they always were.
 _CLAIMS = {
     "diagnosis": (
         ("floors.t_infinity_observed", "total_duration_us",
@@ -368,14 +371,25 @@ _CLAIMS = {
          "memory_envelope.host_memory_mb",
          "memory_envelope.first_builders_that_does_not_fit")),
     "capacity-recommendation": (
-        ("occupancy.builders",),
+        # UX-275: these resolve now. The block was computed, rendered by
+        # the text report and dropped by the JSON renderer, so the four
+        # fields this finding asserts were listed below as *unpublished*
+        # - an honest label for a real gap, and the gap is closed. They
+        # are evidence like any other citation, and the `unpublished`
+        # tuple is empty rather than carrying paths that resolve.
+        # `occupancy.builders` until UX-275, which never resolved: the
+        # occupancy block publishes concurrency and idle time and has
+        # never carried a builder count. The recommendation does, and
+        # now that the recommendation is published the citation can
+        # point at a field a reader can actually open.
+        ("capacity_recommendation.builders",
+         "capacity_recommendation.binding_constraint",
+         "capacity_recommendation.recommended_builders",
+         "capacity_recommendation.cores_busy"),
         _unconditional(
             "Published whenever the four constraints could be intersected; "
             "which one binds is the finding's own `evidence`."),
-        ("capacity_recommendation.binding_constraint",
-         "capacity_recommendation.recommended_builders",
-         "capacity_recommendation.cores_busy",
-         "capacity_recommendation.constraints")),
+        ()),
     "execution-bound": (
         ("total_duration_us",),
         _rule("OPPORTUNITY_FLOOR_PCT", _findings.OPPORTUNITY_FLOOR_PCT / 100,

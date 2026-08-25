@@ -77,7 +77,12 @@ export const CHAPTERS = [
   {
     id: "machine",
     title: "Was the machine used well?",
-    sections: ["occupancy", "utilisation", "floors", "capacity_verdict"],
+    // `UX-275` published `capacity_recommendation` into this document,
+    // and an unchaptered section is one the guard reddens on - which is
+    // what put it here rather than at the foot of the page under
+    // "Everything else".
+    sections: ["occupancy", "utilisation", "floors", "capacity_verdict",
+               "capacity_recommendation"],
   },
   {
     id: "elements",

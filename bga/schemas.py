@@ -425,6 +425,17 @@ _ANALYZE_OPTIONAL = {
     "confidence": "object",
     "violations": "array",
     "capacity_verdict": "object",
+    # UX-275: and what the capacity *should* be, which is the question
+    # `UX-09` opened this backlog with. Present only when `--plane2` was
+    # given, because the recommendation rests on measured cores-busy and
+    # a host core count; an addition, so no version bump (`UX-190`).
+    #
+    # Here rather than beside `memory_envelope` in `correlate/v1`: that
+    # document is the per-element join, one row per element, and a
+    # run-level recommendation is not a row of it. This one intersects
+    # the Plane 1 sweep with Plane 2's draw, and `capacity_verdict` -
+    # "was the capacity right?" - is already here for it to sit beside.
+    "capacity_recommendation": "object",
     "run_instance": "object",
     # UX-249: which build of `bga` wrote this document, and the contract
     # set it had. An *addition*, so no version bump - UX-190's rule.
@@ -911,6 +922,77 @@ _ANALYZE_HINTS = {
     "run_instance": {QUESTION: 'Which capture is this?', RAIL: 'raw'},
     "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
     "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
+    "capacity_recommendation": {
+        QUESTION: 'What should the capacity be, and what decides it?',
+        RAIL: 'act',
+        "description": "The four constraints on `--builders` intersected: "
+                       "what the graph can use, what the host's cores can "
+                       "feed, what its memory can hold, and what was "
+                       "actually set. The smallest is the one that binds, "
+                       "and it is the only one worth acting on.",
+        "properties": {
+            "builders": {
+                QUANTITY: "count",
+                "description": "The builder count this run was given - what "
+                               "everything below is measured at."},
+            "native_max_jobs": {
+                QUANTITY: "count",
+                "description": "The `-j` each element's own build used, "
+                               "recovered from the log (`UX-29`). Null when "
+                               "the log did not record it, which is a "
+                               "different claim from 1."},
+            "host_cpu_count": {QUANTITY: "count"},
+            "cores_busy": {
+                QUANTITY: "count",
+                "description": "Cores drawn on average across the whole "
+                               "run, from Plane 2. An average, not a peak: "
+                               "during the parallel stretch each element "
+                               "draws more, so the CPU ceiling below is "
+                               "optimistic."},
+            "constraints": {
+                "description": "One record per ceiling that could be "
+                               "measured. A constraint with no measurement "
+                               "behind it is absent rather than infinite.",
+                COLUMNS: [
+                    {"key": "name", "title": "Constraint", "sortable": True,
+                     "description": "`graph`, `CPU` or `memory` - which of "
+                                    "the four inputs this ceiling comes "
+                                    "from."},
+                    {"key": "allows", "title": "Builders it allows",
+                     QUANTITY: "count", "sortable": True},
+                    {"key": "reason", "title": "Why",
+                     "description": "The measurement this ceiling was read "
+                                    "off, in the units it was measured in."},
+                ]},
+            "binding_constraint": {
+                "description": "The name of the smallest constraint. This "
+                               "is the one that changes what to do: a knee "
+                               "at 5 on a host already 85% drawn is not "
+                               "'raise builders to 5'."},
+            "recommended_builders": {
+                QUANTITY: "count",
+                "description": "What the binding constraint allows. A "
+                               "hypothesis to time, not a setting to "
+                               "apply - see `caveat`."},
+            "change": {
+                QUANTITY: "count",
+                "description": "`recommended_builders` minus `builders`, "
+                               "signed - negative means the run asked for "
+                               "more than something can serve."},
+            "pinned_elements": {
+                "description": "Elements whose own build pinned itself to "
+                               "one core, from Plane 2. Free capacity these "
+                               "leave is capacity no builder count can "
+                               "use."},
+            "caveat": {
+                "description": "What this recommendation is not. Read it "
+                               "before acting: the sweep replays observed "
+                               "durations and does not model contention "
+                               "(`UX-14`), and one capture went in. A "
+                               "consumer that drops this sentence is left "
+                               "with a number that looks like a setting."},
+        },
+    },
     "capacity_verdict": {
         QUESTION: 'Was the capacity right for this build?',
         RAIL: 'prove',

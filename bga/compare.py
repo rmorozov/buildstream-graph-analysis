@@ -1037,6 +1037,23 @@ def _compare_results(
     )
 
 
+def _band_sample(run_dir: Path):
+    """One baseline run's context, for the band - and nothing else.
+
+    `UX-296`. The band needs a duration and a `run_mode`; both are
+    properties of `RunContext`, which is one small JSON file. Loading
+    the run's graph and trace to reach them was the read that made a
+    page load O(store), and on a capture whose trace is gigabytes it is
+    the read that never returns.
+    """
+    from .ingest.loader import load_run_context
+
+    path = Path(run_dir) / 'run-context.json'
+    if not path.exists():
+        path = Path(run_dir) / 'run_context.json'
+    return load_run_context(path)
+
+
 def compare_runs(baseline_dir: Path, candidate_dir: Path,
                  baseline_runs: Optional[List[Path]] = None,
                  band_k: float = DEFAULT_BAND_K,
@@ -1068,10 +1085,23 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
         candidate_mode = (candidate_result.confidence or {}).get('run_mode')
         durations = []
         for run_dir in baseline_runs:
-            analyzer = BuildEfficiencyAnalyzer(**analyzer_kwargs)
-            analyzer.load(run_dir)
-            result = analyzer.analyze()
-            mode = (result.confidence or {}).get('run_mode')
+            # UX-296: a band sample is a duration and the kind of run it
+            # came from, and `run-context.json` carries both - the wall
+            # clock the analysis reports as `total_duration_us`, and the
+            # cached-element count `run_mode` is derived from. This ran
+            # a **full analysis per sample** instead, which put N trace
+            # parses in front of every `bga view` of a store; on the
+            # field's 2 GB capture that is the page load that never
+            # finishes. Measured equal on both committed fixtures: the
+            # wall span is `total_duration_us` to the microsecond
+            # (46,133,000 and 16,000).
+            #
+            # A run whose context cannot be read is refused rather than
+            # skipped, because a band that silently dropped a sample
+            # would narrow itself and report a tighter noise floor than
+            # the store supports.
+            context = _band_sample(run_dir)
+            mode = context.run_mode
             if candidate_mode not in (None, 'unknown') and mode not in (None, 'unknown') \
                     and mode != candidate_mode:
                 raise RunsNotComparableError(
@@ -1079,7 +1109,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
                     f"{candidate_mode} - a noise band may only be built from runs of "
                     "the same kind (UX-55)"
                 )
-            durations.append(result.total_duration_us)
+            durations.append(context.wall_clock_us)
         band = compute_band(durations, k=band_k)
         if band is None:
             # UX-81: name what is missing. The capture infrastructure

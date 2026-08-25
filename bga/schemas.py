@@ -2041,6 +2041,15 @@ _STORE_AGGREGATE_HINTS = {
                                    "runs. Names what is missing rather "
                                    "than publishing a p95 of two "
                                    "samples."},
+                "resource_shortfall": {
+                    "description": "Present instead of `cores_busy` and "
+                                   "`peak_rss_mb` when no run in this "
+                                   "class carries them. UX-296: the "
+                                   "scalars are written beside the "
+                                   "Plane 2 report at capture time, so a "
+                                   "snapshot older than that sidecar has "
+                                   "none - and no reader parses a "
+                                   "gigabyte of capture to find out."},
             },
             "required": ["host_class", "runs"],
         },

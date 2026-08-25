@@ -238,6 +238,26 @@ def _capacity_recommendation(analyzer, result, context) -> dict:
     )
 
 
+def analyzed(args: argparse.Namespace, section: Optional[str] = None):
+    """The analysis pipeline, once, without rendering it.
+
+    Split out for `UX-296`: `bga snapshot` publishes the JSON payload
+    beside the run so that `bga view` never re-derives it, and it must
+    not pay for a second analysis to do that - on the field capture
+    that is a second 30-second, 4.3 GB pass over the same Plane 2
+    document. One analysis, two renderings.
+    """
+    run_dir = Path(args.directory)
+    analyzer = _make_analyzer(args)
+    # UX-47: tell the pipeline which section is going to be rendered so
+    # it can skip stages this section does not consume. `analyze` passes
+    # None and is unaffected.
+    result = analyzer.analyze(run_dir, section=section)
+    _attach_plane2_capacity(args, analyzer, result)
+    _attach_resource_blast(run_dir, analyzer, result)
+    return result
+
+
 def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -> str:
     """Run the full analysis pipeline and format one report section (or
     the full report when section is None). This is the single pipeline
@@ -247,18 +267,10 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
     re-deriving shared pipeline stages (ingestion, normalization, graph
     construction) once per subcommand.
     """
-    run_dir = Path(args.directory)
-
     if getattr(args, 'allow_partial_cold', False) and not getattr(args, 'cold', False):
         logger.warning("--allow-partial-cold has no effect without --cold; ignoring")
 
-    analyzer = _make_analyzer(args)
-    # UX-47: tell the pipeline which section is going to be rendered so
-    # it can skip stages this section does not consume. `analyze` passes
-    # None and is unaffected.
-    result = analyzer.analyze(run_dir, section=section)
-    _attach_plane2_capacity(args, analyzer, result)
-    _attach_resource_blast(run_dir, analyzer, result)
+    result = analyzed(args, section)
     by_kind = getattr(args, 'by_kind', False)
 
     if args.format == 'json':

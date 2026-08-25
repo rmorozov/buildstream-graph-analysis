@@ -5307,6 +5307,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             report["wrapped_command_exit_code"] = returncode
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
+            # UX-296: and the two capacity scalars the store's aggregate
+            # needs, beside it. Written here because here is the one
+            # moment the report is already in memory - every reader that
+            # wanted them used to parse the whole document again, once
+            # per snapshot, on every page load.
+            from bga.run_store import RESOURCE_NAME, write_resource_profile
+            write_resource_profile(
+                os.path.join(os.path.dirname(os.path.abspath(args.output)),
+                             RESOURCE_NAME),
+                report)
             if args.run_dir:
                 # Best-effort, and after the report is on disk: a build that
                 # failed early produces a log with no `Targets:` line, and

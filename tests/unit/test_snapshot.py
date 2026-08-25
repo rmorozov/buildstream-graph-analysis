@@ -147,7 +147,7 @@ class TestTheLoop:
     def test_the_first_run_says_what_makes_the_second_one_useful(
             self, project, recorded, monkeypatch, capsys):
         monkeypatch.chdir(project)
-        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a: 0)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
 
         assert main(["--", "bst", "build", "all.bst"]) == 0
 
@@ -156,7 +156,7 @@ class TestTheLoop:
     def test_the_second_run_compares_against_the_first(
             self, project, recorded, monkeypatch, capsys):
         monkeypatch.chdir(project)
-        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a: 0)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
         compared = []
         monkeypatch.setattr(bga_snapshot, "_compare",
                             lambda base, cand: compared.append((base, cand)) or 0)
@@ -173,7 +173,7 @@ class TestTheLoop:
         """Off-by-one waiting to happen: list the store *after* the
         capture and the new run is its own baseline."""
         monkeypatch.chdir(project)
-        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a: 0)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
         compared = []
         monkeypatch.setattr(bga_snapshot, "_compare",
                             lambda base, cand: compared.append((base, cand)) or 0)
@@ -187,7 +187,7 @@ class TestTheLoop:
     def test_no_compare_takes_the_snapshot_and_stops(
             self, project, recorded, monkeypatch):
         monkeypatch.chdir(project)
-        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a: 0)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
         monkeypatch.setattr(bga_snapshot, "_compare",
                             lambda *a: pytest.fail("compared anyway"))
 
@@ -200,7 +200,7 @@ class TestTheLoop:
         mistake this item exists to remove, and the store is the only
         thing that knows which is which."""
         monkeypatch.chdir(project)
-        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a: 0)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
         seen = []
         monkeypatch.setattr("bga.cli.main", lambda argv: seen.append(argv) or 0)
 
@@ -219,7 +219,7 @@ class TestTheAnswerIsTheBuildsAnswer:
     def test_a_failed_build_is_not_a_successful_snapshot(
             self, project, recorded, monkeypatch):
         monkeypatch.chdir(project)
-        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a: 0)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
         import tools.bst_native_build_tracer as tracer
         tracer.main.returncode = 255
 

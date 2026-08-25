@@ -81,6 +81,20 @@ def runs_dir(project: str) -> str:
 RUN_SUBDIR = "run"
 PLANE2_NAME = "plane2.json"
 
+# UX-296: the two capacity scalars, written beside the Plane 2 report by
+# the capture that already had them in hand. The store aggregate used to
+# reach them by parsing every snapshot's whole `plane2.json` on every
+# view of any run - measured 1.17 GB of RSS to view a 2 MB neighbour.
+# Nothing on a read path may open the big file for them again.
+RESOURCE_NAME = "plane2-resource.json"
+
+# UX-296: the analysis this snapshot published, written by the capture
+# that already ran it. `bga view` renders this rather than re-deriving
+# it - re-deriving means parsing the Plane 2 monolith again, which on
+# the field capture is 4.3 GB and thirty seconds before the socket even
+# exists.
+ANALYSIS_NAME = "analyze.json"
+
 # UX-155: bga's own scratch — the shim it puts on `$PATH`, the compiled
 # hook and spine, and the unnamed intermediate logs. Project-local for
 # the same reason the runs are: `TMPDIR` is inherited by every service
@@ -179,6 +193,51 @@ def resolve_plane2(token: str, start: Optional[str] = None) -> str:
             f"Name a different snapshot, or pass the report's path."
         )
     return plane2
+
+
+def read_resource_profile(snapshot: str) -> dict:
+    """The capacity scalars a capture recorded beside its report.
+
+    `UX-296`. One small read, the shape `read_element_slice` already
+    uses: the store is built on every `bga view`, for every snapshot, so
+    anything a row needs has to be a file the size of the answer.
+
+    `{}` for a capture written before this existed - which is a
+    different claim from "this run had no Plane 2", and the aggregate
+    says which by naming the command that would produce it.
+    """
+    import json
+
+    try:
+        with open(os.path.join(snapshot, RESOURCE_NAME),
+                  encoding="utf-8") as handle:
+            profile = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    return profile if isinstance(profile, dict) else {}
+
+
+def write_resource_profile(destination: str, native_report: dict) -> dict:
+    """Record those scalars beside a Plane 2 report just written.
+
+    Takes the report **in memory** - the caller has it because it just
+    built it - so this costs one small write and no parse at all.
+    """
+    import json
+
+    from .correlate import resource_profile
+
+    profile = resource_profile(native_report or {})
+    if not profile:
+        return {}
+    try:
+        with open(destination, "w", encoding="utf-8") as handle:
+            json.dump(profile, handle, indent=2, sort_keys=True)
+    except OSError:
+        # A sidecar is a convenience on top of a capture that already
+        # succeeded, the same rule `write_element_slice` follows.
+        return {}
+    return profile
 
 
 def sibling_plane2(run_dir: str) -> Optional[str]:

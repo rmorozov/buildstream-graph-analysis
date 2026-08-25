@@ -530,11 +530,29 @@ how it is *read*, and the shape is deliberately small.
 
 - **`bga view`** serves the run on `127.0.0.1` at a kernel-chosen port
   and opens a browser at it. The server is a `ThreadingHTTPServer` with
-  a fixed document table: each url is a payload already computed by the
-  same functions the CLI calls, so nothing is analysed twice and nothing
-  is analysed differently. Two endpoints take a parameter -
-  `blast.json?target=` and `whatif.json?elements=` - and both call the
-  function their subcommand calls.
+  a fixed document table: each url is a payload computed by the same
+  functions the CLI calls, so nothing is analysed differently. Two
+  endpoints take a parameter - `blast.json?target=` and
+  `whatif.json?elements=` - and both call the function their subcommand
+  calls.
+- **Startup computes nothing large** (`UX-296`, Direction 15's first
+  rule: *capture computes, view serves*). Nothing on the path to the
+  socket may do O(events) work, and a large artifact is opened only to
+  stream its bytes. So the report is the analysis `bga snapshot`
+  already ran and published beside the run (`analyze.json`); the store
+  aggregate reads the capacity scalars from the store row, written at
+  capture time (`plane2-resource.json`), rather than re-parsing every
+  snapshot's Plane 2 report for two floats; the noise band reads each
+  baseline's `run-context.json` instead of re-analysing it; and the
+  timeline is *offered* from a file test and rendered at the first
+  request for its bytes, into a file the handler streams in fixed
+  chunks. Measured on a generated 247 MB report of a million process
+  records: 17.04 s and 1232.9 MB to reach the socket, against 0.04 s
+  and 39.5 MB after - and viewing a 2 MB run *beside* it cost 1233.5 MB
+  before and 39.8 MB after, because the aggregate used to walk into its
+  neighbour's monolith. A run whose capture published no analysis is
+  still analysed here from Plane 1; its Plane 2 report is refused above
+  a size bound with the sentence naming the command that publishes one.
 - **The page obeys a policy the server sets.** Every response carries
   `default-src 'self'; frame-ancestors 'none'` and `nosniff`; the only
   cross-origin grant is `Access-Control-Allow-Origin` for Perfetto's
@@ -689,6 +707,13 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-25 (after `UX-296`), re-grounded in `tools/bga_view.py`'s
+`serve`/`payloads` as they now stand, `bga/store_aggregate.py`'s row
+build, and the startup measurements in
+`tests/unit/test_the_view_parses_nothing.py`: the viewer axis gained the
+rule that startup computes nothing large, which is the first thing
+Direction 15 asks for and the one the field capture broke.
 
 Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
 module list, the published schema `bga analyze --schema` prints, and

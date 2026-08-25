@@ -1037,21 +1037,43 @@ def _compare_results(
     )
 
 
-def _band_sample(run_dir: Path):
-    """One baseline run's context, for the band - and nothing else.
+def _band_sample(run_dir: Path, analyzer_kwargs: dict):
+    """One baseline run's `(run_mode, duration_us)`, as cheaply as it
+    can be had.
 
-    `UX-296`. The band needs a duration and a `run_mode`; both are
-    properties of `RunContext`, which is one small JSON file. Loading
-    the run's graph and trace to reach them was the read that made a
-    page load O(store), and on a capture whose trace is gigabytes it is
-    the read that never returns.
+    `UX-296`. The band needs those two numbers and nothing else, and a
+    captured run carries both in `run-context.json`, which is one small
+    file: `run_mode` is what `confidence.run_mode` is derived from
+    (`validation/invariants.py`), and the wall span is what the
+    analysis reports as `total_duration_us` - measured equal to the
+    microsecond on both committed fixtures (46,133,000 and 16,000).
+    Loading the run's graph and trace to reach them was the read that
+    made a page load O(store), and on a capture whose trace is
+    gigabytes it is the read that never returns.
+
+    **The fallback is not optional.** Where a run records no wall
+    clock - a synthetic fixture, or a log the reconstruction could not
+    bound - `total_duration_us` is the *task horizon*, computed from
+    the trace, and there is no cheap way to it. Such a run is analysed
+    the old way rather than contributed to the band as `None`, which
+    would have made a band over any such sample a `TypeError`.
     """
     from .ingest.loader import load_run_context
 
     path = Path(run_dir) / 'run-context.json'
     if not path.exists():
         path = Path(run_dir) / 'run_context.json'
-    return load_run_context(path)
+    try:
+        context = load_run_context(path)
+    except (OSError, ValueError):
+        context = None
+    if context is not None and context.wall_clock_us is not None:
+        return context.run_mode, context.wall_clock_us
+
+    analyzer = BuildEfficiencyAnalyzer(**analyzer_kwargs)
+    analyzer.load(run_dir)
+    result = analyzer.analyze()
+    return (result.confidence or {}).get('run_mode'), result.total_duration_us
 
 
 def compare_runs(baseline_dir: Path, candidate_dir: Path,
@@ -1100,8 +1122,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
             # skipped, because a band that silently dropped a sample
             # would narrow itself and report a tighter noise floor than
             # the store supports.
-            context = _band_sample(run_dir)
-            mode = context.run_mode
+            mode, duration = _band_sample(run_dir, analyzer_kwargs)
             if candidate_mode not in (None, 'unknown') and mode not in (None, 'unknown') \
                     and mode != candidate_mode:
                 raise RunsNotComparableError(
@@ -1109,7 +1130,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
                     f"{candidate_mode} - a noise band may only be built from runs of "
                     "the same kind (UX-55)"
                 )
-            durations.append(context.wall_clock_us)
+            durations.append(duration)
         band = compute_band(durations, k=band_k)
         if band is None:
             # UX-81: name what is missing. The capture infrastructure

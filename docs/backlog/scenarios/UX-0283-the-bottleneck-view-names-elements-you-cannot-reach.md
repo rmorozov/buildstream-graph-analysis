@@ -1,6 +1,6 @@
 # UX-283: the bottleneck view names elements you cannot reach
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-277 | **Serves:** R1 and R7 — who found the choke point and now want it | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-277 | **Serves:** R1 and R7 — who found the choke point and now want it | **Topic:** viewer
 
 ## Motivation
 
@@ -63,3 +63,50 @@ about what the block should say, not just how it should be drawn.
 On the 1,202-element run the `structural` section carries element links,
 its choke-point table sorts by impact, and one click from a choke point
 reaches that element's detail block.
+
+## Outcome
+
+🟢 Done (round 39). The section has routes out of it.
+
+```text
+links out of the `structural` section     before      after
+  macro_micro (11 elements)                    0         33
+  synthetic  (1,202 elements)                  0         26
+```
+
+**Item 1** — `choke_points` and `choke_point_impact` became one table in
+`UX-288`; this gives it the declaration that earns the Inspect route and
+the sort. `UX-208`'s affordance is driven by `role: element` in the
+schema, which is why the block had none: nothing had declared it.
+
+**Item 2** — `high_fanin_elements` and `high_fanout_elements` are tables
+with named columns (`Direct dependents`, `Direct dependencies`) rather
+than flattened pairs. That is `UX-290`, done in the same commit because
+it is the same declaration.
+
+**Item 3** — one click from a choke point now reaches that element's
+detail, which needed `UX-278`: a choke point at 1,202 elements is
+exactly the element the detail cap excludes. Measured there: 7 anchors
+resolved to nothing before, 0 after — and 7 rather than the 2 `UX-278`
+was filed with, because this item added the routes that point at them.
+
+**A measurement bug in an existing guard, found by this landing.**
+`test_one_click_from_investigation.py` counted a table's rows with
+`table.querySelectorAll("tbody tr")`, which returns one too many for a
+*nested* table: CSS descendant matching is not scoped to the element the
+query was called on, so an inner header row matches through the **outer**
+table's tbody. Measured in Chromium and in the shim, which agree exactly:
+
+```text
+inner table, 1 header row + 3 body rows
+  inner.querySelectorAll("tbody tr")   4    in both
+  inner.querySelectorAll("tr")         4    in both
+```
+
+The shim was right and the guard's assumption was wrong; it had simply
+never mattered, because no nested table had declared an element column
+before. The count is scoped to the table's own `tbody` now.
+
+`resource_contention` stays out of scope: it is empty on every run
+measured, renders as "none", and nothing can be claimed about it without
+a run that fills it.

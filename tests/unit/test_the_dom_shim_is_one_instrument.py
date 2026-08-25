@@ -140,6 +140,9 @@ class TestItAgreesWithChrome:
         "a_href_attribute": "#element-x",
         "div_id_attribute": "an-id",
         "input_value_attribute": None,
+        # `UX-290`: and `title`, which is how a column carries the
+        # schema's own sentence.
+        "th_title_attribute": "How many wait on it",
         # Descendant selectors, which the probes use.
         "tbody_tr": 1,
         "all_tr": 2,
@@ -167,6 +170,7 @@ const opt = mk("option"); opt.value = "Critical path";
 const written = mk("a"); written.href = "#element-x";
 const typed = mk("input"); typed.value = "typed";
 const named = mk("div"); named.id = "an-id";
+const titled = mk("th"); titled.title = "How many wait on it";
 
 const table = mk("table"), tbody = mk("tbody"), thead = mk("thead");
 table.append(tbody, thead); tbody.append(mk("tr")); thead.append(mk("tr"));
@@ -187,6 +191,7 @@ console.log(JSON.stringify({
   option_value_attribute: opt.getAttribute("value"),
   a_href_attribute: written.getAttribute("href"),
   div_id_attribute: named.getAttribute("id"),
+  th_title_attribute: titled.getAttribute("title"),
   input_value_attribute: typed.getAttribute("value"),
   tbody_tr: table.querySelectorAll("tbody tr").length,
   all_tr: table.querySelectorAll("tr").length,

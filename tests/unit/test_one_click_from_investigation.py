@@ -395,12 +395,36 @@ const popovers = chain
 console.log(JSON.stringify({
   sections, headings, toc_rails: tocRails, toc_links: tocLinks, popovers,
   inspect_rows: all(root, (n) => n.className === "inspect").length,
-  tables: all(root, (n) => n.tagName === "table").map((n) => ({
-    key: n.attrs["data-table"],
-    element_column: n.attrs["data-element-column"] ?? null,
-    rows: n.querySelectorAll("tbody tr").length,
-    inspect: all(n, (c) => c.className === "inspect").length,
-  })),
+  // This table's own body rows and its own Inspect anchors.
+  //
+  // `n.querySelectorAll("tbody tr")` counts one too many for a *nested*
+  // table: CSS descendant matching is not scoped to the element the
+  // query was called on, so the inner header row matches `tbody tr`
+  // through the **outer** table's tbody. Measured in Chromium and in
+  // the shim, which agree exactly - an inner table with 1 header row
+  // and 3 body rows answers 4 to `inner.querySelectorAll("tbody tr")`
+  // in both. `UX-283` is what surfaced it, by declaring an element
+  // column on a nested table for the first time.
+  tables: all(root, (n) => n.tagName === "table").map((n) => {
+    const own = (child) => {
+      let at = child.parentNode;
+      while (at && at !== n) {
+        if (at.tagName === "table") return false;
+        at = at.parentNode;
+      }
+      return at === n;
+    };
+    return {
+      key: n.attrs["data-table"],
+      element_column: n.attrs["data-element-column"] ?? null,
+      // A body row of *this* table: its parent is a `tbody` and that
+      // tbody's parent is this table. The selector alone cannot say so.
+      rows: n.querySelectorAll("tr").filter(
+        (r) => r.parentNode?.tagName === "tbody"
+               && r.parentNode.parentNode === n).length,
+      inspect: all(n, (c) => c.className === "inspect").filter(own).length,
+    };
+  }),
 }));
 """
 

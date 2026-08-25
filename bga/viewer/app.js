@@ -17,6 +17,7 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderOverview, renderEvidence,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
+         ensureElementSection, uidForAnchor,
          INCOMPLETE, renderProvenance, renderInvestigation, renderWhatIf } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
@@ -450,19 +451,31 @@ export function renderStructured(key, value, hint = {}, node = undefined,
     // reach `Array.prototype.toString` twice and render `app.bst,8,
     // lib-b.bst,4`. It is a table of positional columns, which is what
     // the payload means by it.
-    // Positional members get positional names. `c0`/`c1` read as codes
-    // a reader might look up; `#1`/`#2` read as what they are - the
-    // first and second member of a tuple the schema does not describe.
-    // Measured after the first draft shipped: `C0` and `C1` were 16 of
-    // the page's column headers, tied with `Key` for least informative.
-    // Naming them properly needs the schema to declare them (`UX-290`).
+    // Positional members get positional names - unless the schema
+    // says what they are.
+    //
+    // `UX-290`: `bga:columns` already declares what an array of
+    // *objects* holds; for an array of pairs, entry `i` describes
+    // position `i`, which needs no new vocabulary. Where the schema
+    // declares them the tuple becomes named columns (and the index
+    // column goes, because the element is the identity); where it does
+    // not, the fallback stays `#1`/`#2` - honest about being a
+    // position, which `C0`/`C1` were not.
+    const declared = hintsOf(node)[COLUMNS];
+    const tuple = value.every(Array.isArray)
+      && Array.isArray(declared)
+      && value.every((item) => item.length === declared.length)
+      && declared.every((spec) => spec && typeof spec === "object" && spec.key);
     const rows = value.map((item, at) => (
-      Array.isArray(item)
-        ? Object.fromEntries([["key", String(at)],
-                              ...item.map((m, i) => [`#${i + 1}`, m])])
-        : (item && typeof item === "object") ? item : { key: String(at), value: item }));
+      tuple
+        ? Object.fromEntries(item.map((m, i) => [declared[i].key, m]))
+        : Array.isArray(item)
+          ? Object.fromEntries([["key", String(at)],
+                                ...item.map((m, i) => [`#${i + 1}`, m])])
+          : (item && typeof item === "object") ? item : { key: String(at), value: item }));
     return folded(title(key), value.length,
-                  mapTable(key, rows, hint, node, true, depth + 1, path));
+                  mapTable(key, rows, tuple ? { ...hint, [COLUMNS]: declared } : hint,
+                           node, true, depth + 1, path));
   }
   const entries = Object.entries(value);
   if (entries.length <= OBJECT_INLINE_FIELDS
@@ -533,14 +546,23 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       // filtering and `Copy shown rows` read it and must never start
       // reading markup.
       const structural = raw !== null && typeof raw === "object";
+      // UX-290: a map table's rows are `{key, value}`, so the schema
+      // node describing a cell is the one for the *row*, not the one
+      // for a column literally called `value`. Resolving by column
+      // meant every declaration under an object-valued field was
+      // unreachable: the choke-point columns were declared and the page
+      // still drew `Element uid` / `Downstream count` from the raw
+      // field names, because it looked up `bottleneck.properties.value`.
+      const describes = column === "value" && row?.key !== undefined
+        ? String(row.key) : column;
+      const child = childNode(node, describes);
       tr.append(el("td",
         { class: numeric ? "num" : null,
           "data-column": column,
           "data-raw": raw === undefined || raw === null ? ""
             : structural ? JSON.stringify(raw) : String(raw) },
         structural
-          ? renderStructured(column, raw, hintsOf(childNode(node, column)),
-                             childNode(node, column), depth,
+          ? renderStructured(describes, raw, hintsOf(child), child, depth,
                              `${key}.${rowId}`)
           : numeric ? quantity(raw, kind)
           : typeof raw === "string" ? renderText(column, raw)
@@ -1193,7 +1215,15 @@ export function hintsOf(node) {
 export function childNode(node, key) {
   if (!node || typeof node !== "object") return undefined;
   if (node.properties && key in node.properties) return node.properties[key];
-  if (node.items) return node.items;
+  // UX-290: an array's item schema, and then the item's own field if it
+  // has one. Returning `items` whole meant a column of a record array
+  // resolved to the record rather than to the column, so a declaration
+  // on `serialization_point_risks[].pinned_elements` was unreachable
+  // while an identical one a level up resolved fine.
+  if (node.items) {
+    const inside = node.items.properties?.[key];
+    return inside ?? node.items;
+  }
   return undefined;
 }
 
@@ -1751,6 +1781,51 @@ async function boot() {
       document.body.setAttribute("data-has-toc", "true");
       foldOnNarrow(contents, document);
     }
+
+    // UX-278: any element the page can name can be inspected.
+    //
+    // The detail sections above are capped (`UX-187`), and the cap is
+    // right - rendering 1,202 blocks eagerly is what it exists to
+    // prevent. What was wrong is that an Inspect anchor pointing past
+    // the cap resolved to nothing: measured on the 1,202-element run,
+    // 24 blocks for 1,202 elements and two anchors that consumed the
+    // click and did nothing. A missing magnifier says "not here"; a
+    // dead one says the page is broken.
+    //
+    // So the block is built when the anchor is followed, from the
+    // payload the page already holds - no request, no second analyzer,
+    // and Direction 7's boundary untouched, because it renders
+    // published values rather than deriving any.
+    //
+    // Two ways in, because a reader arrives both ways: a click on an
+    // Inspect anchor inside the report, and a pasted `#element-…` on a
+    // fresh load or a `hashchange`.
+    const elementOptions = {
+      quantity,
+      investigate: run.has_timeline
+        ? (uid) => investigateButton({ title: `bga: ${uid}`, element: uid },
+                                     investigate)
+        : null,
+    };
+    const openElement = (id) => {
+      if (!id || !id.startsWith("element-")) return null;
+      if (root.querySelector(`[data-section="${id}"]`)) return null;
+      const uid = uidForAnchor(payload, id);
+      return uid ? ensureElementSection(payload, root, uid, elementOptions)
+                 : null;
+    };
+    root.addEventListener("click", (event) => {
+      const link = event?.target?.closest?.("a.inspect");
+      const href = link?.getAttribute?.("href") ?? "";
+      if (href.startsWith("#")) openElement(href.slice(1));
+    });
+    window.addEventListener?.("hashchange", () => {
+      const built = openElement(splitHash(location.hash).anchor);
+      // The browser has already decided there was nothing to scroll to,
+      // so the section it just missed has to say where it is.
+      built?.scrollIntoView?.();
+    });
+    openElement(splitHash(location.hash).anchor);
 
     // UX-211: the fragment last, over the finished document - it drives
     // the controls the way a reader would, so there is no second path

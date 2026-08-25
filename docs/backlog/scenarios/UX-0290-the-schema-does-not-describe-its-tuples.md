@@ -1,6 +1,6 @@
 # UX-290: the schema does not describe its tuples
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-201 | **Serves:** R7 and R8 — reading a column header | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 | **Serves:** R7 and R8 — reading a column header | **Topic:** contracts
 
 ## Motivation
 
@@ -54,3 +54,56 @@ nothing describes them.
 No column header on the served report reads `#1`, `#2`, `C0` or `Key`.
 Every column in the `structural` section has a title from the schema,
 and a field gaining a description gains a tooltip with no page edit.
+
+## Outcome
+
+🟢 Done (round 39). The tuple-valued fields declare their members, and
+the page reads the declaration.
+
+**A tuple is described by naming its members in order.** `bga:columns`
+already says what an array of *objects* holds; for an array of pairs,
+entry `i` describes position `i` — no new vocabulary, and the fallback
+stays `#1`/`#2` where nothing is declared. Declared: `bottleneck`'s
+`choke_points`, `high_fanin_elements` and `high_fanout_elements`,
+`sensitivity.top_opportunities`, `batch_opportunities.serialized_pairs`
+and `serialization_point_risks[].pinned_elements`.
+
+```text
+structural section              before                     after
+  positional headers      #1, #2, #3, Key            0
+  column titles           Element uid, Duration us   Element, Duration,
+                          C0-style position names    Waiting on it,
+                                                     Direct dependents,
+                                                     Direct dependencies,
+                                                     Sensitivity, Worth
+                                                     fixing, Ran first,
+                                                     Ran after it, Native
+                                                     jobs
+```
+
+**Two lookup bugs found on the way, and neither was in the schema.**
+Declaring the columns changed nothing at first, twice over:
+
+1. A map table's rows are `{key, value}`, so the page resolved a cell's
+   schema node by the column name — literally `value` — and looked for
+   `bottleneck.properties.value`. Every declaration under an
+   object-valued field was unreachable. The node is the one for the
+   **row** now.
+2. `childNode` on an array node returned `items` whole, so a column of a
+   record array resolved to the record rather than to the column. A
+   declaration on `serialization_point_risks[].pinned_elements` was
+   unreachable while an identical one a level up resolved fine.
+
+**And a third, in the instrument.** The schema's sentence becomes the
+column's `title`, and the guard reading it back found nothing: the DOM
+shim reflected attribute → property and not the reverse for `title`,
+the same gap `UX-289` fixed for `href`, `id` and `value`. Measured in
+Chromium and pinned:
+
+```text
+th.title = "How many wait on it"  ->  getAttribute("title")  same
+```
+
+Tests: 8 new (`tests/unit/test_the_structural_block_is_reachable.py`,
+shared with `UX-283`), one more pinned behaviour in the shim's agreement
+test.

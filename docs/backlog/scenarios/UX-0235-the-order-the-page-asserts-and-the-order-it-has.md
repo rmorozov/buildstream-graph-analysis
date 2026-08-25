@@ -185,3 +185,24 @@ capture here` at 19, `the examples/06 capture is not here` at 10) need
 so those two baselines come from CI's own log and are pinned in
 `test_the_baselines_cover_what_a_toolless_runner_skips`, not reproduced
 here. The seven PATH-driven ones were reproduced.
+
+## Superseded, in part (2026-08-25, `UX-301`)
+
+**The acceptance mutation named above no longer discriminates.** This
+item's own reproduction was `root.prepend(decision)` mutated to
+`append`; round 40 ran it and the booted page did not change - because
+`UX-286`'s chapter pass had become the ordering authority in the
+meantime. `bga/viewer/chapters.js` re-sorts the document after every
+renderer has run: a section lands in the chapter that names it, and
+within a chapter in the order that chapter's list declares. Insertion
+order in `boot()` decides nothing.
+
+**What discriminates now:** mutating the chapter table - reordering a
+`sections:` list, or removing an entry - which reddens the clauses in
+`test_the_report_has_chapters.py`.
+
+This item's own guards are untouched and still right: they read the
+booted document's child sequence rather than restating it, which is the
+lesson that outlived the mechanism. `UX-301` removed the five dead
+`prepend` calls and measured the booted order identical before and
+after.

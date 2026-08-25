@@ -309,6 +309,136 @@ class TestATableSControlsStayInReach:
             f"{out['viewport']}px fold")
 
 
+@needs_node
+@needs_browser
+class TestTheDocumentEndsWithItsIdentity:
+    """`UX-285`, in screens rather than in DOM order.
+
+    `test_the_order_the_page_has.py` guards the sequence; this guards
+    what the sequence was *for*. Measured on the exported golden report
+    and on the 1,202-element run before it landed:
+
+    ```text
+                          1,202-element        macro_micro
+    summary                 screen 10.5        screen  8.26
+    run_instance                   10.69               8.45
+    producer                       10.83               8.56
+    document height                18.51              11.0
+    blast                          18.27              10.76
+    findings                        1.36               1.31
+    ```
+
+    Two blocks near the top, the third seven screens later, and an
+    interactive query at the very foot of the page.
+    """
+
+    _WHERE = """
+    (() => {
+      const vh = window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      const box = (name) => {
+        const n = document.querySelector(`main section[data-section="${name}"]`);
+        if (!n) return null;
+        const r = n.getBoundingClientRect();
+        return {top: r.top + window.scrollY, bottom: r.bottom + window.scrollY};
+      };
+      const out = {total, vh};
+      for (const key of ["summary", "run_instance", "producer", "findings",
+                         "headline", "next_steps", "blast-offline"])
+        out[key] = box(key);
+      return out;
+    })()
+    """
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_the_identity_sits_in_the_last_third(self, browser, report,
+                                                 width, height):
+        """The acceptance test's first clause. Read as a fraction of the
+        document rather than in screens, because the same three blocks
+        are 96% of an 18-screen report and 94% of an 11-screen one."""
+        out = browser.measure(report, self._WHERE, width, height)
+        for key in ("summary", "run_instance", "producer"):
+            assert out[key], f"{key} did not render; nothing measured"
+        start = out["summary"]["top"] / out["total"]
+        assert start >= 2 / 3, (
+            f"the identity group starts at {100 * start:.0f}% of the "
+            f"document at {width}x{height}, not in the last third")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_the_identity_blocks_are_adjacent(self, browser, report,
+                                              width, height):
+        """"Adjacent" as the reader meets it: no gap wider than a
+        quarter-screen between the three of them. The DOM-order guard
+        says nothing sits between; this says nothing *looks* like it
+        does."""
+        out = browser.measure(report, self._WHERE, width, height)
+        gaps = [(out["run_instance"]["top"] - out["summary"]["bottom"]) / out["vh"],
+                (out["producer"]["top"] - out["run_instance"]["bottom"]) / out["vh"]]
+        assert max(gaps) <= 0.25, (
+            f"identity blocks {max(gaps):.2f} screens apart at "
+            f"{width}x{height}")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_the_blast_control_is_above_the_midpoint(self, browser, report,
+                                                     width, height):
+        out = browser.measure(report, self._WHERE, width, height)
+        assert out["blast-offline"], "the export drew no blast block"
+        at = out["blast-offline"]["top"] / out["total"]
+        assert at < 0.5, (
+            f"the blast block sits at {100 * at:.0f}% of the document at "
+            f"{width}x{height}")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS[:2])
+    def test_the_blast_control_is_within_two_screens_of_the_findings(
+            self, browser, report, width, height):
+        """The acceptance test's second clause, measured from the *end*
+        of `findings` - the scroll a reader actually makes. Top-to-top
+        is 2.96 screens on the 1,202-element run for a reason that is
+        not a defect: `findings` is itself 1.98 screens tall there, so
+        nothing outside it can be within two screens of its top.
+
+        **The two desktop viewports, not all three.** On the 390x844
+        phone the same page measures 2.16 screens, and the two screens
+        cannot be met by any placement that keeps the diagnosis
+        together: `headline` and `next_steps` reflow to 0.93 and 1.11
+        screens there, so the narrative alone is 2.04. The clause that
+        does hold at every width is the one below - nothing but that
+        narrative separates them.
+
+        ```text
+                     document   findings   headline   next_steps    gap
+        1440x900       11.32       1.12       0.50        0.31      0.92
+        1280x800       12.79       1.26       0.56        0.35      1.03
+         390x844       20.49       1.55       0.93        1.11      2.16
+        ```
+        """
+        out = browser.measure(report, self._WHERE, width, height)
+        gap = (out["blast-offline"]["top"] - out["findings"]["bottom"]) / out["vh"]
+        assert gap <= 2.0, (
+            f"{gap:.2f} screens between the end of the findings and the "
+            f"blast block at {width}x{height}")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_only_the_diagnosis_separates_them(self, browser, report,
+                                               width, height):
+        """The width-independent form of the clause above, and the one
+        that says what "near findings" means: the only thing between the
+        finding and the control is `headline` and `next_steps` - the two
+        blocks that turn the finding into a diagnosis and name
+        `bga blast` as the command to run. A block inserted between them
+        widens this gap beyond what those two occupy, at any width."""
+        out = browser.measure(report, self._WHERE, width, height)
+        gap = out["blast-offline"]["top"] - out["findings"]["bottom"]
+        narrative = out["headline"]["bottom"] - out["headline"]["top"] \
+            + out["next_steps"]["bottom"] - out["next_steps"]["top"]
+        # A quarter-screen of slack for the margins between four blocks;
+        # measured at 0.05-0.12 screens across the three viewports.
+        assert gap <= narrative + 0.25 * out["vh"], (
+            f"{(gap - narrative) / out['vh']:.2f} screens beyond the "
+            f"diagnosis between the findings and the blast block at "
+            f"{width}x{height}")
+
+
 class TestTheInstrumentSaysWhatItCannotSee:
     """The half `UX-257` insisted on: whichever instrument is chosen,
     it must name the claims it does not cover."""

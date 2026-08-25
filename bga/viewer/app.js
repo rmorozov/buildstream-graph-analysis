@@ -1315,6 +1315,83 @@ export function quantityFor(node, key) {
   return guessed;
 }
 
+// UX-285: which sections are *identity* rather than analysis, in the
+// order they should read. Declared rather than sniffed, for the reason
+// `UX-268`'s list is: a section added later joins this list or it is
+// analysis, and `test_the_page_reads_in_the_order_it_should` names the
+// sequence, so moving one reddens something.
+export const IDENTITY_SECTIONS = ["summary", "run_instance", "producer",
+                                  "timestamp_agreement"];
+
+/**
+ * UX-285: the identity is reference, and reference goes last.
+ *
+ * `summary` ("Run"), `run_instance` and `producer` answer one question
+ * - which run is this, on what host, written by what - and they were
+ * split across the document: measured at screens 1.4, 1.6 and 10.9 of
+ * an 18.8-screen report, so a reader checking provenance answered it
+ * from two blocks and met the third two-thirds of the way down. They
+ * are adjacent now, and low, because `UX-207` earned the first screen
+ * for the *decision* and these are the clearest thing on the page that
+ * is not one. The rail still reaches them in one action, which is what
+ * the item's second clause asks.
+ *
+ * A move rather than an order-at-append, and called from `boot` rather
+ * than from `render`: the element sections (`UX-216`), the trend and
+ * the inlined questions are all appended after `render` returns, so
+ * ordering inside `render` would mean "last of the payload" and leave
+ * twenty-five detail blocks below the thing that closes the document.
+ * `render` alone returns the payload's own order; `boot` assembles the
+ * page, and this is part of assembling it.
+ */
+export function placeIdentityLast(root) {
+  for (const key of IDENTITY_SECTIONS) {
+    for (const section of root.querySelectorAll(`[data-section="${key}"]`)) {
+      if (section.parentNode === root) root.append(section);
+    }
+  }
+  return root;
+}
+
+/**
+ * UX-285: the blast control belongs beside the question it answers.
+ *
+ * It is not a report block but an interactive query - "what rebuilds if
+ * I touch this?" - and it shipped as the last thing on the page: screen
+ * 18.3 of 18.5, below twenty-five element blocks, seventeen screens
+ * from the findings that provoke the question.
+ *
+ * The first of these that the run has, in this order:
+ *
+ * - `resource_blast`, the published table the control's answers belong
+ *   beside - a run with a source inventory has one, and then the
+ *   shared-resource table and the query over it read together;
+ * - `next_steps`, which for these runs prints `bga blast <target>` as
+ *   the command to run - the control does that without the terminal,
+ *   so it sits directly under the instruction to do it;
+ * - `findings`, the block that provokes the question at all.
+ *
+ * `next_steps` before `findings` because `findings`, `headline` and
+ * `next_steps` are one narrative in the payload's own order, and a
+ * query control wedged between the finding and its diagnosis reads as
+ * an interruption. After the narrative is still within two screens of
+ * it - measured, in the item's Outcome.
+ */
+export const BLAST_ANCHORS = ["resource_blast", "next_steps", "findings"];
+
+export function placeBlast(root, node) {
+  for (const key of BLAST_ANCHORS) {
+    const beside = root.querySelector(`[data-section="${key}"]`);
+    if (beside && beside.parentNode === root
+        && typeof beside.after === "function") {
+      beside.after(node);
+      return node;
+    }
+  }
+  root.append(node);
+  return node;
+}
+
 export function render(payload, schema, root, investigate = null) {
   const hints = {};
   for (const [key, sub] of Object.entries(schema?.properties ?? {})) {
@@ -1325,8 +1402,6 @@ export function render(payload, schema, root, investigate = null) {
 
   root.replaceChildren();
   for (const banner of renderVerdict(payload)) root.append(banner);
-  const summary = renderSummary(payload, hints);
-  if (summary) root.append(summary);
   for (const [key, value] of Object.entries(payload)) {
     if (key === "schema") continue;
     const section = renderSection(key, value, hints[key] ?? {}, nodes[key],
@@ -1340,6 +1415,8 @@ export function render(payload, schema, root, investigate = null) {
       if (lifted) root.append(lifted);
     }
   }
+  const summary = renderSummary(payload, hints);
+  if (summary) root.append(summary);
   root.setAttribute("aria-busy", "false");
   return root;
 }
@@ -1787,8 +1864,10 @@ async function boot() {
     // export is a `file://` document with no server, so the box could
     // never answer there and shipped as a control that always errors.
     // Hidden in that mode, with the command to run instead.
+    // UX-285: and placed beside `resource_blast`/`findings` rather than
+    // appended, so the control sits where the question is asked.
     if (served()) {
-      root.append(renderBlastSearch(async (target) => {
+      placeBlast(root, renderBlastSearch(async (target) => {
         const response = await fetch(
           `blast.json?target=${encodeURIComponent(target)}`);
         const answer = await response.json();
@@ -1802,7 +1881,10 @@ async function boot() {
           "Not available in an exported report - the search asks the "
           + "server, and there is not one here. Run "),
         el("p", {}, el("code", {}, "bga blast <target> <run>")));
-      root.append(note);
+      // The note stands in the control's slot, not at the foot of the
+      // page: a reader who exported the report looks for the answer
+      // where the served page offers to compute it.
+      placeBlast(root, note);
     }
 
     // UX-199: the export used to strip the link to the questions page
@@ -1814,6 +1896,12 @@ async function boot() {
     // worse than no button - the run that has no Plane 2 log is exactly
     // the run whose user would spend a minute wondering what broke.
     if (run.has_timeline) wireTheHandoff();
+
+    // UX-285: and the identity group to the foot, now that everything
+    // appended after `render` has landed - the element sections
+    // (`UX-216`), the trend, the inlined questions. `render` already
+    // put them last of the payload; this puts them last of the page.
+    placeIdentityLast(root);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing
     // above changes; a reader who ignores all of it sees the same

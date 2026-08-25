@@ -174,7 +174,36 @@ is named as an exact expectation rather than filtered out by a rule, so
 a real duplication changes the list and reddens the guard — and a second
 test asserts the two fields are still two different values.
 
-Tests: 18 new (`tests/unit/test_one_table_many_views.py`), 4 new pinned
+**Falsification, and the two guard defects it found.** Eight mutations,
+each asserted to land before the suite was trusted:
+
+```text
+M1 a view ignores its declared columns        -> 1 failed  (width)
+M2 a `from` view re-sorts the payload's order -> 1 failed  (published order)
+M3 an unsupported view is offered empty       -> 0 failed  <- non-discriminating
+M4 the fragment stops carrying the view       -> 1 failed
+M5 the rail stops naming the views            -> 1 failed
+M6 the page names a view of its own           -> 1 failed
+M7 the serialization table triples again      -> 1 failed  (width)
+M8 PRESET_COLUMNS_MAX = 40                    -> 0 failed  <- non-discriminating
+```
+
+Both were fixed rather than counted.
+
+**M3** passed because an absent *selection* is refused where the path is
+resolved, so a run with no choke points never reaches the "no rows"
+check — the `where` half of the rule had no case. A run whose leaves are
+all cleared now covers it.
+
+**M8** passed because every column test measured against the constant it
+was checking: `len(columns) <= schemas.PRESET_COLUMNS_MAX` is true for
+any bound, and the refusal case built `PRESET_COLUMNS_MAX + 1` columns
+so it kept raising however far the constant moved. The bound is stated
+in the guard as a literal now, with a second test pinning the module to
+it — the same fix `UX-277`'s nesting guard needed one round back, and
+the same defect.
+
+Tests: 20 new (`tests/unit/test_one_table_many_views.py`), 4 new pinned
 behaviours in the shim's agreement test. Every guard runs on
 `tests/fixtures/macro_micro/run`, which is committed — `UX-276`'s rule,
 applied from the start.

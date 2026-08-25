@@ -1,6 +1,6 @@
 # UX-92: cache effectiveness — hits, misses, churn, trends — is invisible to the tool
 
-**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is deferred on evidence | **Depends on:** UX-55 (done), UX-81 (history to trend over)
+**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is deferred on evidence (re-checked at n=6 on 2026-08-25: still zero spread, still one commit) | **Depends on:** UX-55 (done), UX-81 (history to trend over)
 
 ## Motivation
 
@@ -246,3 +246,36 @@ stop going stale silently.
 Still deferred. The next thing that would change the answer is the
 first scheduled capture of a *different* commit, which `UX-96`'s
 crons produce without a human — see that item for when they first fire.
+
+## Re-checked 2026-08-25 (round 39): still deferred, at n=6
+
+The history has grown by one — the first capture the *schedule*
+produced rather than a person (`32615919649`, 2026-08-23, the weekly
+incremental cron). All six fetched and re-run rather than assumed:
+
+```text
+run                             hit  built  cached     xfer  /artifact   churn
+32064333551/run                 72%     25      65        -          -       -
+32113933158/run                 72%     25      65        -          -   0+25r
+32122941503/run                 72%     25      65        -          -   0+25r
+32177690506/run                 72%     25      65        -          -   0+25r
+32223468993/run                 72%     25      65        -          -   0+25r
+32615919649/run                 72%     25      65        -          -   0+25r
+```
+
+**Zero spread across six runs**, unchanged from n=5: same hit ratio,
+same built/cached split, no churn beyond the workflow's own cut set, and
+still no transfer at all. And unchanged for the same reason — every one
+of the six is the same freedesktop-sdk commit `953683fb`
+(`git ls-remote` lists no other), so the sample has no variation to gate
+on. A gate needs history across *different* commits and there is none.
+
+The wall-clock figure moves slightly and in the same direction: six
+runs at 3614.22, 3434.43, 3405.78, 2712.39, 3261.22, 3639.19 seconds —
+a spread of **34.2% of the minimum** (10.2% coefficient of variation),
+against 33.2% at n=5. Runs that differ in nothing still vary by a third
+of their own duration on shared runners.
+
+Still deferred, and now with a date attached: the first capture of a
+different commit will not come from this schedule at all — see
+`UX-96`'s own re-check for where the cold cron stands.

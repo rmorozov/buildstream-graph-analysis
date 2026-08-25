@@ -58,12 +58,22 @@ def _probe_source():
     return source.split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0]
 
 
-def _boot_order(compare=None):
-    """Section keys in the order the booted page actually holds them."""
+def _boot_order(compare=None, inventory=None):
+    """Section keys in the order the booted page actually holds them.
+
+    `inventory` writes a `sources/v1` file into the run before it is
+    analysed, which is the one way to make `resource_blast` render: the
+    golden fixture carries no source inventory, so the section - and
+    `UX-285`'s "the control sits beside the table" clause - is
+    unobservable without one.
+    """
     tmp = Path(tempfile.mkdtemp())
     run = tmp / "run"
     shutil.copytree(GOLDEN, run)
     os.remove(run / "expected_output.json")
+    if inventory is not None:
+        (run / "sources.json").write_text(json.dumps(inventory),
+                                          encoding="utf-8")
 
     import tools.bga_view as view
 
@@ -302,3 +312,122 @@ class TestTheSkipCensus:
             "the examples/06 capture is not here": 10,
         }
         assert conftest.census_complaints(measured_in_ci) == []
+
+
+# UX-285: the sequence the page should read in, named here rather than
+# derived from the document - a guard that read the order off the thing
+# it is checking would pass on any order at all. Sections between two
+# landmarks are free to appear; the landmarks themselves must keep this
+# relative order.
+#
+#   the decision, then its evidence           UX-207
+#   the diagnosis narrative                   findings -> headline -> next_steps
+#   the query the narrative provokes          UX-285 item 3
+#   the analysis                              signals, structural, ...
+#   the identity, last                        UX-285 item 1
+INTENDED_ORDER = ["decision", "evidence", "overview",
+                  "findings", "headline", "next_steps", "blast-offline",
+                  "signals", "structural",
+                  "summary", "run_instance", "producer"]
+
+# What a run with a shared git repository has in it. Four elements, one
+# monorepo behind three of them - `examples/06`'s shape, small enough to
+# write out and real enough for `resource_blast` to produce a row.
+SHARED_MONOREPO = {
+    "schema": "sources/v1",
+    "elements": {
+        "lib.bst": [{"kind": "git", "identity": "example.com/org/mono",
+                     "keying": "ref", "staged_at": "src/lib"}],
+        "app.bst": [{"kind": "git", "identity": "example.com/org/mono",
+                     "keying": "ref", "staged_at": "src/app"}],
+        "extra.bst": [{"kind": "git", "identity": "example.com/org/mono",
+                       "keying": "ref", "staged_at": "src/extra"}],
+        "base.bst": [{"kind": "local", "identity": "files/base",
+                      "keying": "content"}],
+    },
+    "unreadable": {},
+}
+
+
+@needs_node
+class TestThePageReadsInTheOrderItShould:
+    """UX-285's fourth clause: the order is asserted, not incidental.
+
+    The classes above guard the order the page *claims* - `UX-207`'s
+    promise, `UX-221`'s strip above its band. This guards the order it
+    should have, and it is the same instrument: the booted export's own
+    child sequence, never a literal rebuilt from source order.
+
+    What was measured before this landed, in Chromium, on the 1,202
+    element run and the fixture:
+
+    ```text
+                        1,202-element        macro_micro
+    summary               screen  10.5        screen  8.26
+    run_instance                  10.69               8.45
+    producer                      10.83               8.56
+    blast                         18.27 of 18.5      10.76 of 11
+    findings                       1.36               1.31
+    ```
+
+    Three identity blocks that answer one question, split by seven
+    screens from the third, and a control a reader reaches for while
+    reading a finding sitting seventeen screens below every finding.
+    """
+
+    def test_every_landmark_is_on_the_page(self):
+        """Otherwise the subsequence check below passes over absences -
+        an order guard whose sections are all missing is green."""
+        order = _boot_order()
+        missing = [key for key in INTENDED_ORDER if key not in order]
+        assert missing == [], f"{missing} never rendered; order unchecked"
+
+    def test_the_landmarks_come_in_the_intended_order(self):
+        order = _boot_order()
+        assert [key for key in order if key in INTENDED_ORDER] == INTENDED_ORDER
+
+    def test_the_identity_group_closes_the_document(self):
+        """Item 1: adjacent, and low. Not merely "in this order" - the
+        last three sections of the page, with nothing between them."""
+        order = _boot_order()
+        assert order[-3:] == ["summary", "run_instance", "producer"], order[-6:]
+
+    def test_the_element_sections_sit_above_the_identity(self):
+        """`UX-216` appends one section per element *after* `render`
+        returns, which is why `placeIdentityLast` runs a second time in
+        `boot`. Without that second call the identity is last of the
+        payload and twenty-five detail blocks sit below it."""
+        order = _boot_order()
+        elements = [at for at, key in enumerate(order)
+                    if key.startswith("element-")]
+        assert elements, "no element sections rendered; nothing checked"
+        assert max(elements) < order.index("summary"), order[-8:]
+
+    def test_the_blast_control_sits_with_the_findings(self):
+        """Item 3. `next_steps` rather than `findings` itself, because
+        `findings`, `headline` and `next_steps` are one narrative in the
+        payload's own order and the control belongs after it, not wedged
+        inside it - and `next_steps` is where the run prints
+        `bga blast <target>` as the command to run."""
+        order = _boot_order()
+        assert order.index("blast-offline") == order.index("next_steps") + 1, (
+            order[:10])
+
+    def test_the_control_sits_beside_the_table_when_there_is_one(self):
+        """The clause the item could not check when it was filed: both
+        runs measured lacked a source inventory, so `resource_blast` was
+        absent from the page and "the pair sits together" was unfalsifiable.
+        This run has one."""
+        order = _boot_order(inventory=SHARED_MONOREPO)
+        assert "resource_blast" in order, (
+            "the inventory produced no table; the pair is unchecked")
+        assert order.index("blast-offline") == order.index("resource_blast") + 1, (
+            order[:12])
+
+    def test_the_table_displaces_next_steps_as_the_anchor(self):
+        """Not a restatement of the two above: it is the *preference*
+        that matters. With a table present the control leaves the
+        `next_steps` slot it takes without one."""
+        order = _boot_order(inventory=SHARED_MONOREPO)
+        assert order.index("blast-offline") > order.index("next_steps") + 1, (
+            order[:12])

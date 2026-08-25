@@ -62,7 +62,10 @@ PUBLISHED_VIEWS = {
 # The one pair of tables that draw the same elements on this fixture and
 # not on the 1,202-element run - see
 # `test_no_two_tables_carry_the_same_elements` for the measurement.
-KNOWN_COINCIDENCE = ["structural#31 and structural#29 (5)"]
+# UX-285: by `data-table` path rather than by position, so it names the
+# two tables the docstring names and survives a section moving.
+KNOWN_COINCIDENCE = ["structural.batch_opportunities.serialized_pairs and "
+                     "structural.sensitivity.top_opportunities (5)"]
 
 # The bound, stated here rather than read from `schemas`. Reading the
 # constant and asserting against it is the mutation that passes:
@@ -374,7 +377,12 @@ class TestThePageDrawsThem:
             members = frozenset(table["population"])
             if len(members) < 2:
                 continue
-            name = f"{table['section']}#{at}"
+            # UX-292's `data-table` path, not the position: naming a
+            # table by its index made this guard read as a claim about
+            # *ordering* - `UX-285` moved two sections and reddened it
+            # with the identical pair still identical, five tables
+            # further down the page. The path is what the table is.
+            name = table["key"] or f"{table['section']}#{at}"
             for other, seen in pops.items():
                 if seen == members:
                     clashes.append(f"{name} and {other} ({len(members)})")

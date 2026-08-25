@@ -35,8 +35,8 @@ side is the only control that may render it.
 | long scalar array | count + folded list | count visible, fold labeled |
 | object map, one key per element | table of key/value rows | Direction 12's rule — never a `<pre>` |
 | small keyed object | definition list | the `pairs` pattern |
-| ordered numeric series (`bga:series`) | **sparkline + one sentence** | §2; new hint, this guide introduces it |
-| percentile/distribution object (`bga:distribution`) | **density strip + stated n** | §2; new hint |
+| ordered numeric series (`bga:series`) | **sparkline + one sentence** | §2; the hint's value names the unit of one step, so the sentence can say it (`UX-303`) |
+| percentile/distribution object (`bga:distribution`) | **density strip + stated n** | §2; the hint's value names the key holding the sample count (`UX-303`) |
 | signed delta + `bga:direction` | signed value, tone by direction | existing, kept |
 | severity list (`bga:severity`) | findings blocks | existing, kept |
 | verdict + `verdict_kind` | banner, tone from enum | existing, kept |
@@ -49,6 +49,13 @@ renders correctly with **zero viewer changes** — that property
 (UX-193) is the reason the mapping is by shape, not by key. And a
 shape *not* in this table is a design task, not an improvisation:
 it lands here first, with its control, then in the code.
+
+**Where the drawings live** (`UX-303`). `bga/viewer/drawings.js`
+holds §2's two controls — `sparkline()` and the two strips — and it
+imports nothing and takes its formatter, so a guard can drive it with
+no page. `bga:series` and `bga:distribution` are declared in
+`bga/schemas.py`; `tests/unit/test_the_shape_before_the_rows.py`
+asserts every drawing's geometry against the values it was handed.
 
 **Where the table lives** (`UX-302`). `bga/viewer/shapes.js` is this
 table as code: `classify(value, …)` returns the control's name, and

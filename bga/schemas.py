@@ -126,6 +126,36 @@ SEVERITY = "bga:severity"          # this array carries findings
 COLUMNS = "bga:columns"            # column order for an array of objects
 DIRECTION = "bga:direction"        # what the sign of a delta means
 
+# UX-303 (styleguide §2): a value that *is* a shape renders as its
+# shape first and its numbers second.
+#
+# Two hints, and each names the reading its control needs so that no
+# renderer has to guess:
+#
+# `bga:series` — an **ordered numeric array**. The order is the axis;
+# the hint's value says what one step along it is (`"snapshot"`,
+# `"level"`, `"run"`), because the sentence beside the drawing has to
+# name the unit and a viewer must not invent one. Fewer than
+# `SERIES_MIN_POINTS` values is a sentence rather than a drawing: two
+# points joined by a line is a claim about a trend that two points
+# cannot make (`UX-226`'s rule, now global).
+#
+# `bga:distribution` — an **object publishing percentiles over a
+# population**. Its value names the key holding the sample count, and
+# the renderer reads `min`, the median (`median` or `deciles.p50`),
+# `p95` and `max`. Two shapes in this repository publish that:
+# `store-aggregate/v1`'s `{samples, min, median, p95, max, mad}` and
+# `analyze/v2`'s `{n, min, max, deciles, p95, p99, is_flat}`. Declaring
+# where the count lives is what lets one control draw both, and `n` is
+# always printed - a strip without its population is a picture of an
+# opinion.
+SERIES = "bga:series"
+DISTRIBUTION = "bga:distribution"
+# Below this a series is a sentence. Stated here because the page and
+# the guards must agree on it, and `UX-273`'s rule is that a threshold
+# lives in one place.
+SERIES_MIN_POINTS = 3
+
 # UX-289: a named view over a table - which rows, which columns, in
 # what order, how many.
 #
@@ -1034,6 +1064,25 @@ _ANALYZE_HINTS = {
         QUESTION: 'What shape is this dependency graph?',
         RAIL: 'investigate',
         "properties": {
+            # UX-303: the graph's width, level by level - an ordered
+            # numeric array whose order *is* the axis, which is what
+            # `bga:series` says. Drawn as a sparkline with the sentence
+            # beside it naming the unit this hint declares; below three
+            # levels it is a sentence and no drawing, because two
+            # points joined by a line claim a trend two points cannot
+            # make.
+            "parallelism": {
+                "properties": {
+                    "width_at_level": {
+                        SERIES: "level",
+                        "description": "How many elements sit at each "
+                                       "depth of the graph, from the "
+                                       "roots down. The shape of this "
+                                       "series is the shape of what can "
+                                       "run at once.",
+                    },
+                },
+            },
             "bottleneck": {
                 "description": "Where work funnels through one element, "
                                "and how much waits behind it.",
@@ -1243,6 +1292,25 @@ _ANALYZE_HINTS = {
         # decision panel. They carry element uids, so they say so - and
         # every row earns the same Inspect with no per-table code.
         "properties": {
+            # UX-303: the two populations `UX-260` publishes a shape
+            # for. Both are `{n, min, max, deciles, p95, p99, is_flat}`,
+            # so the hint names `n` as the count and one control draws
+            # them and the store aggregate's `samples` shape alike.
+            "element_duration_distribution": {
+                DISTRIBUTION: "n", QUANTITY: "duration_us",
+                "description": "How this run's element durations are "
+                               "spread. The answer to \"is 40s slow "
+                               "*here*?\", which has none without the "
+                               "population. Nearest-rank percentiles, "
+                               "`null` below the sample floor.",
+            },
+            "blast_radius_distribution": {
+                DISTRIBUTION: "n", QUANTITY: "count",
+                "description": "How many elements sit downstream of "
+                               "each, spread across this graph. \"753 "
+                               "downstream\" is p99.9 in a 1,202-element "
+                               "run and unremarkable in 40,000.",
+            },
             "critical_path_detail": {
                 "description": "The chain itself, element by element. "
                                "The longest path through the graph as "
@@ -1966,6 +2034,11 @@ _STORE_AGGREGATE_REQUIRED = {
 # every figure, because a reader who has learned `duration_us` has
 # learned `cache_hit_rate` too.
 _DISTRIBUTION = {
+    # UX-303: and this *is* a distribution, so it draws as one. The
+    # hint names where the sample count lives, which is what lets the
+    # density strip read this shape and `analyze/v2`'s (which counts in
+    # `n`) with one control.
+    DISTRIBUTION: "samples",
     "description": "A distribution over finished runs: `samples` (the "
                    "count it was computed from), `min`, `median`, "
                    "`p95`, `max` and `mad` (median absolute deviation, "

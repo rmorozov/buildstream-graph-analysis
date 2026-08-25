@@ -79,6 +79,10 @@ ALLOWED_TO_OVERLAP = {
               "the reading column as it scrolls",
     ".toc": "the rail is a fixed column beside the text, and folds over "
             "it at narrow widths by design (UX-254's breakpoint)",
+    "svg": "inside a drawing, marks sit *on* the line they mark - "
+           "UX-303's sparkline puts a circle at each endpoint and at the "
+           "peak, and a scan that called that an overlap would be asking "
+           "for a chart whose points float beside their own curve",
 }
 
 _OVERLAP_SCAN = """

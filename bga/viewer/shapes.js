@@ -34,6 +34,11 @@ export const CONTROLS = Object.freeze({
   TUPLE_TABLE: "table of positional columns",
   MAP_TABLE: "table of key/value rows",
   FINDINGS: "findings blocks",
+  // UX-303: §2's two drawings. Declared, never guessed: a value is a
+  // series or a distribution because a schema said so, which is what
+  // keeps "draw this as a shape" from becoming "this looked numeric".
+  SPARKLINE: "sparkline + one sentence",
+  DENSITY_STRIP: "density strip + stated n",
   FOLD: "the labeled fold",
 });
 
@@ -61,13 +66,20 @@ const isPlainObject = (value) =>
  * the fold is a bound on nesting rather than a reading of the value.
  */
 export function classify(value, {
-  severity = false, columns = null, depth = 0,
+  severity = false, columns = null, depth = 0, series = null,
+  distribution = null,
   nestLimit = Infinity, inlineFields = 4, inlineItems = 6,
 } = {}) {
   if (isScalar(value)) return UNMAPPED;          // scalars are §1's top rows,
                                                  // drawn by the summary and
                                                  // the cell renderer, not here
   if (severity && Array.isArray(value)) return CONTROLS.FINDINGS;
+  // `UX-303`: a declared shape outranks the measured one, and only
+  // where the declaration fits what is actually there - a
+  // `bga:distribution` on an array is a schema bug, and drawing a
+  // strip anyway would hide it.
+  if (series && Array.isArray(value)) return CONTROLS.SPARKLINE;
+  if (distribution && isPlainObject(value)) return CONTROLS.DENSITY_STRIP;
   if (depth >= nestLimit) return CONTROLS.FOLD;
 
   if (Array.isArray(value)) {

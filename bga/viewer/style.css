@@ -692,3 +692,37 @@ button.json-toggle:hover { color: var(--fg); }
   border: 1px solid var(--line); border-radius: 3px; padding: .5rem;
   white-space: pre-wrap; word-break: break-word;
 }
+
+/* UX-303 (styleguide §2): a series and a distribution draw as their
+   shape first. Word-sized geometry, no axes, no grid - the sentence
+   beside the drawing is what carries the numbers, so the drawing is
+   free to be small. Mark-grade tokens throughout (§4.5): these are
+   fills and strokes, not text. */
+.series, .density {
+  display: flex; align-items: center; gap: .5rem;
+  flex-wrap: wrap; margin: .3rem 0;
+}
+.series-label, .density-label {
+  font-size: .78rem; color: var(--muted);
+}
+.sparkline { width: 7rem; height: 1.4rem; flex: none; }
+.spark-line { stroke: var(--accent-mark); stroke-width: 1.2; }
+.spark-point { fill: var(--accent-mark); stroke: var(--bg); stroke-width: .4; }
+/* The peak is not a *status* - it is a position - so it is told apart
+   by size and a ring rather than by a status tone (§4.3 reserves those,
+   and §4.2 allows one accent). */
+.spark-point[data-mark="peak"] { r: 2.2; stroke-width: .8; }
+.series-sentence, .density-sentence {
+  font-size: .82rem; font-variant-numeric: tabular-nums;
+}
+.density-strip { width: 9rem; height: .9rem; flex: none; }
+.density-range { fill: var(--line); }
+.density-end { stroke: var(--fg); stroke-width: 1; }
+.density-tick { stroke: var(--accent-mark); stroke-width: 1.4; }
+/* p50 and p95 are two positions on one axis, so they differ by dash
+   rather than by hue - a percentile is not a verdict. */
+.density-tick.density-p95 { stroke-dasharray: 1.5 1.5; }
+/* Served only: an export's strip is a picture, and a cursor promising
+   a click that does nothing is `UX-194`'s dead affordance. */
+.density[data-interactive="true"] .density-strip { cursor: pointer; }
+.table-tools .density { width: 100%; }

@@ -11,7 +11,7 @@
 // viewer should show has to enter the published schema first, where the
 // text renderer, CI and every external consumer get it too.
 
-import { handOff, deepLink } from "./perfetto.js";
+import { handOff, deepLink, tracedSize, openTab } from "./perfetto.js";
 import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderTrend, renderBlastSearch,
          renderOverview, renderEvidence,
@@ -1560,7 +1560,12 @@ export function wireJumpBox(nav, root, payload, context = {}) {
 // ------------------------------------------------------------------ boot
 
 
-export function wireTheHandoff() {
+/**
+ * `run` is the `run.json` payload: `UX-299` publishes the size
+ * threshold in it, so the page applies the server's number rather than
+ * keeping a second copy of it.
+ */
+export function wireTheHandoff(run = {}) {
   const actions = document.getElementById("actions");
   const button = document.getElementById("perfetto");
   const status = document.getElementById("handoff");
@@ -1582,15 +1587,43 @@ export function wireTheHandoff() {
     fallback.parentElement.hidden = false;
   }
 
+  // UX-299: the threshold above which the trace is fetched by Perfetto
+  // rather than copied through this page. Published by the server so
+  // there is one number with one explanation, not two copies of it.
+  const inlineMax = Number(run?.trace_inline_max_bytes ?? Infinity);
+
   button.addEventListener("click", async () => {
     status.textContent = "opening ui.perfetto.dev — sent tab to tab, not uploaded…";
     // `handOff` opens the tab before its first `await` (UX-198), so
     // this must call it without one - no `await` may come first in
     // this handler, or the click's activation is gone before the open.
+    // The same rule applies to the deep-link path below: the tab is
+    // opened here, synchronously, and only then is the size asked for.
+    const tab = served ? openTab({}) : null;
     try {
-      const { bytes } = await handOff(url);
+      if (tab) {
+        // UX-299: a `HEAD`, which reads no trace bytes at all. Over the
+        // threshold, the deep link is the transport: Perfetto fetches
+        // from this server itself, so nothing is materialised in this
+        // page and nothing is structured-cloned across the boundary.
+        const size = await tracedSize(url, {});
+        if (size !== null && size > inlineMax) {
+          tab.location = deepLink(absolute.href);
+          status.textContent =
+            `${(size / 1048576).toFixed(1)} MiB — over the ` +
+            `${(inlineMax / 1048576).toFixed(0)} MiB this page will copy, ` +
+            `so Perfetto is fetching it from here directly.`;
+          return;
+        }
+      }
+      // The tab opened above is handed over rather than closed and
+      // reopened: a second `window.open` after an `await` is the
+      // pop-up a browser blocks (`UX-198`).
+      const { bytes } = await handOff(url, "bga timeline",
+                                      tab ? { tab } : {});
       status.textContent = `sent ${(bytes / 1024).toFixed(1)} KiB`;
     } catch (error) {
+      tab?.close?.();
       status.textContent = String(error.message ?? error);
     }
   });
@@ -1823,7 +1856,7 @@ async function boot() {
     // UX-194: only when there is a timeline behind it. A dead button is
     // worse than no button - the run that has no Plane 2 log is exactly
     // the run whose user would spend a minute wondering what broke.
-    if (run.has_timeline) wireTheHandoff();
+    if (run.has_timeline) wireTheHandoff(run);
 
     // UX-286: the chapters, over everything that has been appended -
     // the element sections (`UX-216`), the trend, the inlined

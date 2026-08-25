@@ -75,13 +75,19 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 PAGE_BUDGET_B = 180_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
-    ("golden", GOLDEN, 272_000),
-    # `UX-297` moved this one by 385 B: the two-plane run now publishes
-    # `plane2_coverage.source`, which says which shape of Plane 2 report
-    # served its numbers and what that costs to open. A sentence a
-    # reader of a gigabyte capture needs, and the bound is restated
-    # rather than the sentence trimmed to fit a number nobody argued.
-    ("macro_micro", MACRO_MICRO, 311_000),
+    # `UX-299` moved both of these by ~300 B: `run.json` now publishes
+    # `trace_inline_max_bytes`, the one threshold that decides both
+    # whether this file inlines the trace and whether the served page
+    # copies it through itself. A number the page must not keep a second
+    # copy of, so it travels in the payload.
+    ("golden", GOLDEN, 273_000),                       #  272,302 B
+    # `UX-297` moved this one by 385 B before that: the two-plane run
+    # publishes `plane2_coverage.source`, which says which shape of
+    # Plane 2 report served its numbers and what that costs to open. A
+    # sentence a reader of a gigabyte capture needs, and the bound is
+    # restated rather than the sentence trimmed to fit a number nobody
+    # argued.
+    ("macro_micro", MACRO_MICRO, 312_000),             #  311,481 B
 ]
 
 

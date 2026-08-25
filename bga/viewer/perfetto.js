@@ -148,10 +148,41 @@ export function openInPerfetto(buffer, title, deps = {}) {
  * synchronously inside the caller's click handler - which is exactly
  * the window activation covers.
  */
+/**
+ * How big the served trace is, without reading a byte of it.
+ *
+ * `UX-299`. The transport has to be chosen by size, and the size is not
+ * knowable at page load: finding it means rendering the trace, which
+ * `UX-296` deliberately moved off the startup path. A `HEAD` asks the
+ * server for the headers alone - the render happens once and is reused
+ * by whichever transport wins - and `Content-Length` is the answer.
+ *
+ * `null` when the server does not say. An unknown size is treated as
+ * small, because the alternative is refusing the transport that works
+ * today for every capture that fits.
+ */
+export async function tracedSize(url, deps = {}) {
+  const fetchIt = deps.fetch ?? ((u, init) => fetch(u, init));
+  try {
+    const response = await fetchIt(url, { method: "HEAD" });
+    if (!response.ok) return null;
+    const length = response.headers?.get?.("content-length");
+    return length === null || length === undefined ? null : Number(length);
+  } catch (error) {
+    return null;
+  }
+}
+
 export async function handOff(url = "timeline.json.gz", title = "bga timeline",
                               deps = {}) {
   const fetchIt = deps.fetch ?? ((u) => fetch(u));
-  const tab = openTab(deps);
+  // `UX-299`: a caller that has already opened the tab passes it in.
+  // The window may only be opened while the click's transient
+  // activation holds - before the first `await` - so a caller that has
+  // to measure the trace first opens once and hands the tab over,
+  // rather than opening a second one after the size is known and
+  // having the browser block it.
+  const tab = deps.tab ?? openTab(deps);
   let response;
   try {
     response = await fetchIt(url);

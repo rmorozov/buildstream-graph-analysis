@@ -7,6 +7,14 @@ emphasis, and what a drawing owes its reader. It exists for the same
 reason the schemas do — so that consistency is a property of rules,
 not of whoever wrote the last section.
 
+**Scope, and its sibling** (`UX-306`). This document governs the
+**web report**. The repository's *documents* have their own guide —
+[`contributing/style-guide.md`](../contributing/style-guide.md) —
+and the two do not overlap: nothing here decides a paragraph, and
+nothing there decides a pixel. The checklist that routes a change to
+whichever applies is item 6 of
+[`contributing/fixing-guide.md`](../contributing/fixing-guide.md) §2.
+
 Two standing constraints inherited from Direction 7 and never
 suspended here: **the schema decides what things are** (a control is
 chosen by declared shape and hints, not by which section is being
@@ -67,6 +75,38 @@ raw-JSON sites are the fold's `<p class="full-text">` and the
 per-section "view as JSON" toggle's `data-raw-json`;
 `tests/unit/test_the_mapping_is_law.py` boots the golden and
 `macro_micro` pages, walks every text node, and fails on a third.
+
+## 1a. The hint vocabulary
+
+Eleven hints, and this table is the one place they are all written
+down (`UX-306`). Each names what a schema *declares* about a value;
+§1 above is what the page does with it. A hint the schemas emit and
+this table does not name is a hint whose meaning lives only in code,
+which is the drift `UX-214` and `UX-273` both exist to prevent —
+`tests/unit/test_the_contract_names_its_vocabulary.py` holds the two
+sets equal in both directions.
+
+| hint | what the schema declares | read by |
+|---|---|---|
+| `bga:quantity` | the unit a number is in, so it formats and a threshold parses | every value, every column, `parseThreshold` |
+| `bga:question` | the question a section answers, in the reader's words | the heading, the rail, the chapter table |
+| `bga:rail` | which part of the argument a section belongs to | the rail's fallback grouping (`chapters.js` decides first) |
+| `bga:role` | that a column holds element uids | the generic Inspect link on every row |
+| `bga:markers` | the shape vocabulary a verdict enum draws with | the trend, the history sparkline (§4.3's non-colour channel) |
+| `bga:severity` | that an array carries findings | the findings blocks |
+| `bga:columns` | which columns an array of objects has, in what order | every table, and `UX-290`'s named tuples |
+| `bga:direction` | what the sign of a delta means | the delta's marker and tone |
+| `bga:presets` | a named view over one table — rows, columns, order, bound | the view selector and the rail's sub-entries |
+| `bga:series` | that an array is an ordered series, and the unit of one step | the sparkline and its sentence (§2) |
+| `bga:distribution` | that an object publishes percentiles, and where it counts | the density strip and its stated `n` (§2) |
+
+Two properties this table is here to keep. **A hint is a declaration,
+never a guess**: the page reads what the schema says a value is and
+falls back to name-sniffing only where the schema says nothing, which
+is a schema gap rather than a feature (`UX-201`). And **a vocabulary
+kept twice diverges**: the shapes, the rails and the verdict markers
+are all declared in `bga/schemas.py` and read by the viewer, never
+re-listed in JavaScript.
 
 ## 2. Sparklines and density strips
 

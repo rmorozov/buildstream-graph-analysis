@@ -1,6 +1,6 @@
 # UX-96: the baseline set exists, but assembling it is a scavenger hunt
 
-**Priority:** Medium | **Status:** 🟡 In Progress — the helper ships and is verified against the real refs; the second acceptance clause is a schedule that has not fired yet | **Depends on:** UX-81 (done)
+**Priority:** Medium | **Status:** 🟡 In Progress — the helper ships and is verified against the real refs; the second acceptance clause is a schedule whose first cold firing is 2026-09-01 (re-checked 2026-08-25 against the Actions ledger) | **Depends on:** UX-81 (done)
 
 ## Motivation
 
@@ -201,3 +201,35 @@ tooling failure:
 Nothing to change in the workflow. Re-check after 2026-09-01 by
 filtering the ledger on `event: schedule`; the item closes when a
 `*-cold-*` capture ref exists whose run id belongs to a scheduled run.
+
+## Re-checked 2026-08-25 (round 39): the schedule has fired once, and not the cold one
+
+The second acceptance clause is *"after two scheduled cycles, at least
+one cold capture exists that no human dispatched (verify from the
+Actions ledger)"*. Verified from the ledger rather than from the
+workflow file:
+
+```text
+scheduled runs of real-project-capture.yml           1
+  32615919649  2026-08-23 03:40Z  schedule  success  (weekly, incremental)
+
+workflow_dispatch runs                               7
+  32133112003  2026-08-18 11:43Z  dispatch  success  (the only cold capture)
+
+capture refs on the remote
+  captures/fdsdk/953683fb-cold-b4j4-32133112003            <- human-dispatched
+  captures/fdsdk/953683fb-incremental-b4j4-32064333551
+  ...  32113933158, 32122941503, 32177690506, 32223468993
+  captures/fdsdk/953683fb-incremental-b4j4-32615919649     <- the schedule's
+```
+
+So: the weekly incremental cron has produced its first unattended
+capture, and the **cold** cron has not fired at all. It cannot have —
+`0 4 1 * *` fires on the first of the month and it landed in the
+workflow on 2026-08-18 (`4301aff`), so its first firing is
+**2026-09-01**, and the clause's "two cycles" is 2026-10-01.
+
+Nothing to do and nothing to fix: item 1 shipped and is verified, item 2
+is a schedule that exists and is correct, and the clause is a
+measurement that time has not yet taken. Left 🟡 rather than closed,
+because a clause that has not been checked is not a clause that passed.

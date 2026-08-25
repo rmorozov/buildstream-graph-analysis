@@ -104,6 +104,14 @@ Chromium and pinned:
 th.title = "How many wait on it"  ->  getAttribute("title")  same
 ```
 
+**Falsification:**
+
+```text
+M2 the page stops reading tuple declarations -> 2 failed
+M3 a cell resolves its schema by column again-> 4 failed (headers, tooltips,
+                                                 routes, dead anchors)
+```
+
 Tests: 8 new (`tests/unit/test_the_structural_block_is_reachable.py`,
 shared with `UX-283`), one more pinned behaviour in the shim's agreement
 test.

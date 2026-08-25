@@ -346,16 +346,49 @@ class TestTheDocumentEndsWithItsIdentity:
       for (const key of ["summary", "run_instance", "producer", "findings",
                          "headline", "next_steps", "blast-offline"])
         out[key] = box(key);
+      // Everything below the identity group, by pixel rather than by
+      // DOM order - the two agree on a page laid out in one column,
+      // and disagreeing is itself worth knowing.
+      const producer = out["producer"];
+      out.below = producer === null ? [] :
+        [...document.querySelectorAll("main section[data-section]")]
+          .filter((n) => n.getBoundingClientRect().bottom + window.scrollY
+                         > producer.bottom + 1)
+          .map((n) => n.dataset.section);
       return out;
     })()
     """
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
+    def test_nothing_is_drawn_below_the_identity(self, browser, report,
+                                                 width, height):
+        """"Closes the document", in pixels.
+
+        This is the clause that catches the mutation, and the one below
+        is not: moving the placement back inside `render` - so the
+        identity sits last of the *payload* and above twenty-five
+        element blocks - leaves "in the last third" green on this
+        fixture, because four element sections and a trend are only a
+        quarter of an eleven-screen page. Fourteen geometry checks
+        passed under exactly that mutation before this one existed."""
+        out = browser.measure(report, self._WHERE, width, height)
+        assert out["producer"], "producer did not render; nothing measured"
+        assert out["below"] == [], (
+            f"{out['below']} are drawn below the identity group at "
+            f"{width}x{height}")
+
+    @pytest.mark.parametrize("width,height", VIEWPORTS)
     def test_the_identity_sits_in_the_last_third(self, browser, report,
                                                  width, height):
-        """The acceptance test's first clause. Read as a fraction of the
-        document rather than in screens, because the same three blocks
-        are 96% of an 18-screen report and 94% of an 11-screen one."""
+        """The acceptance test's first clause, read as a fraction of the
+        document because the same three blocks are 96% of an 18-screen
+        report and 94% of an 11-screen one.
+
+        Weak on this fixture, and recorded as weak: the *pre-change*
+        page put `summary` at 75% of the golden report, which already
+        satisfies "the last third". It is the item's own wording and it
+        is checked; what it does not do is catch a regression on a
+        short run. The clause above does."""
         out = browser.measure(report, self._WHERE, width, height)
         for key in ("summary", "run_instance", "producer"):
             assert out[key], f"{key} did not render; nothing measured"

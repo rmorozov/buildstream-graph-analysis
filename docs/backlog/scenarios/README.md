@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-292 scenarios: **17 open**, 275 closed.
+292 scenarios: **16 open**, 276 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 50 |
 | analysis | 0 | 50 |
 | contracts | 3 | 33 |
-| viewer | 10 | 65 |
+| viewer | 9 | 65 |
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
@@ -52,7 +52,6 @@ task file, which is the only place it ever lived twice.
 | UX-287 | [the export ceiling is measured on a four-element run](UX-0287-the-export-ceiling-is-measured-on-a-four-element-run.md) | guards | High | R8 | 🔴 |
 | UX-290 | [the schema does not describe its tuples](UX-0290-the-schema-does-not-describe-its-tuples.md) | contracts | Medium | R7, R8 | 🔴 |
 | UX-291 | [a finding carries its numbers three times](UX-0291-a-finding-carries-its-numbers-three-times.md) | contracts | Low | R5, R7 | 🔴 |
-| UX-292 | [thirteen tables share one view-state key](UX-0292-thirteen-tables-share-one-view-state-key.md) | viewer | Medium | R1, R7 | 🔴 |
 
 ## UX-236..UX-241: the twenty-ninth round — the process, measured (2026-08-23)
 

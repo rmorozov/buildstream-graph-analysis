@@ -391,7 +391,7 @@ function inlineObject(value, node) {
  * A map as a bounded, searchable table - the table only, never a
  * section (`buildTable`, not `renderTable`).
  */
-function mapTable(key, rows, hint, node, nested, depth = 0) {
+function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a
@@ -403,7 +403,7 @@ function mapTable(key, rows, hint, node, nested, depth = 0) {
       { key: "key", title: "name" },
       { key: "value", title: title(key), quantity: measure }] };
   }
-  const { table, tools } = buildTable(key, rows, declared, node, depth);
+  const { table, tools } = buildTable(path, rows, declared, node, depth);
   const box = el("div", { class: "map-table", "data-bounded": "map" },
                  tools, table);
   return box;
@@ -426,7 +426,7 @@ function folded(label, count, body) {
  * entry in the table of contents.
  */
 export function renderStructured(key, value, hint = {}, node = undefined,
-                                 depth = 0) {
+                                 depth = 0, path = key) {
   const count = Array.isArray(value)
     ? value.length : Object.keys(value).length;
   if (!count) return el("span", { class: "muted" }, "none");
@@ -444,7 +444,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       }
       const rows = value.map((item, at) => ({ key: String(at), value: item }));
       return folded(title(key), value.length,
-                    mapTable(key, rows, hint, node, false, depth + 1));
+                    mapTable(key, rows, hint, node, false, depth + 1, path));
     }
     // `UX-277`: an array of *arrays* - `[["app.bst", 8], …]` - used to
     // reach `Array.prototype.toString` twice and render `app.bst,8,
@@ -462,7 +462,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
                               ...item.map((m, i) => [`#${i + 1}`, m])])
         : (item && typeof item === "object") ? item : { key: String(at), value: item }));
     return folded(title(key), value.length,
-                  mapTable(key, rows, hint, node, true, depth + 1));
+                  mapTable(key, rows, hint, node, true, depth + 1, path));
   }
   const entries = Object.entries(value);
   if (entries.length <= OBJECT_INLINE_FIELDS
@@ -474,7 +474,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   const rows = entries.map(([name, member]) => (
     nested ? { key: name, ...member } : { key: name, value: member }));
   return folded(title(key), entries.length,
-                mapTable(key, rows, hint, node, nested, depth + 1));
+                mapTable(key, rows, hint, node, nested, depth + 1, path));
 }
 
 /**
@@ -505,7 +505,13 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   }
   table.append(el("thead", {}, head));
   const body = el("tbody");
-  for (const row of rows) {
+  for (const [at, row] of rows.entries()) {
+    // UX-292: which row this is, for the view-state key of any table
+    // nested inside it. A map table's cells are all in a column called
+    // `value`, so the column alone named three tables the same thing.
+    // The row's own key is what tells them apart, and it is the name a
+    // reader would use for the thing they filtered.
+    const rowId = row?.key ?? row?.element_uid ?? String(at);
     const tr = el("tr");
     for (const spec of specs) {
       const column = spec.key;
@@ -534,7 +540,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
             : structural ? JSON.stringify(raw) : String(raw) },
         structural
           ? renderStructured(column, raw, hintsOf(childNode(node, column)),
-                             childNode(node, column), depth)
+                             childNode(node, column), depth,
+                             `${key}.${rowId}`)
           : numeric ? quantity(raw, kind)
           : typeof raw === "string" ? renderText(column, raw)
           : (raw ?? "—")));
@@ -974,7 +981,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                   built.tools, built.table);
       }
     } else if (value !== null && typeof value === "object") {
-      cell = renderStructured(name, value, hintsOf(child), child);
+      cell = renderStructured(name, value, hintsOf(child), child, 0,
+                              `${key}.${name}`);
       // UX-268: a map whose keys are *not* elements says so, because
       // the page draws it identically to the six that are and a reader
       // comparing them would be comparing populations that share no

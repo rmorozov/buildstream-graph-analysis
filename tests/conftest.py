@@ -104,6 +104,12 @@ KNOWN_SKIP_REASONS = {
     "no chrome/chromium for the geometry guards (set BGA_CHROME)": (
         "UX-257 drives a real Chrome over CDP; where there is none, the "
         "geometric claims are unguarded and this says so", 12),
+    # UX-247's freshness guard reads `git log` for one document. A
+    # shallow checkout has no commit that touched it, and "we could not
+    # check" must not read as "checked and found nothing".
+    "the clone has no history for this file (a shallow checkout)": (
+        "UX-247 compares a document's own Verification Log date against "
+        "when git last changed it; a depth-1 clone cannot answer that", 0),
     "jsonschema is not installed - `pip install -e '.[dev]'`": (
         "schema validation is a dev extra", 0),
     "buildstream is not installed": (

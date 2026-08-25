@@ -574,6 +574,22 @@ how it is *read*, and the shape is deliberately small.
   `PRESET_COLUMNS_MAX` bounds a view at eight columns and the schema
   validator refuses a wider one: a table that needs more than that to
   answer one question is not a view of the data, it is the data.
+- **The document has chapters** (`UX-286`, round 39). Forty-eight
+  sections averaging 0.24 screens, grouped by nothing, made the fragment
+  the reader's only unit of navigation. `bga/viewer/chapters.js` groups
+  them into seven chapters, each named for a question the reader has -
+  and the sections that answer it are the ones whose published
+  `bga:question` is a spelling of that question. The table is in the
+  viewer rather than the schema because nine of the forty-eight sections
+  are built by the page and published by no contract; `bga:rail` is the
+  fallback, so a payload key added later lands in the chapter its rail
+  already names. The rail lists the chapters and nests the sections
+  under them, which is the same grouping the document has. Grouping cost
+  no height: 18.51 screens to 18.10 on the 1,202-element run, because
+  the chapter boundary carries separation the sections no longer need
+  between them. Padding every section to one screen was refused on the
+  measurement that it adds 31.3 screens of whitespace
+  ([Direction 13](directions.md#direction-13-the-report-has-48-fragments-and-no-chapters-argued-2026-08-24-round-38)).
 - **A value is drawn by width, not depth** (`UX-267`, round
   36). The hints above decide what a field is *called* and where it
   sits; this decides what happens to its **value**, and it applies to
@@ -673,6 +689,16 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
+module list, the published schema `bga analyze --schema` prints, and
+`docs/backlog/scenarios/closed.md`'s round-38 and round-39 rows: the
+viewer axis gained the chapters `UX-286` groups the document into, and
+the contracts table's `analyze/v2` row is checked against the keys the
+schema declares - which `UX-275` added one to. The date on this line is
+guarded (`UX-247`): a commit that changes this document's prose without
+re-grounding it reddens
+`tests/unit/test_the_verification_log_is_true.py`.
 
 Updated 2026-08-18 (after `UX-76`), re-grounded in `bga/cli.py`'s real subparser definitions, the current `bga/` and `tools/` directory listings, and `docs/backlog/scenarios/README.md`'s backlog table re-read in full: the extensions table gained `UX-41`–`UX-76`, the Plane 2 and join sections gained what rounds 7–10 measured, and the package listing gained `findings.py`/`correlate.py`/`tools_dispatch.py`. Every figure quoted is from the capture published as `5eda28a` or from the task file that measured it.
 

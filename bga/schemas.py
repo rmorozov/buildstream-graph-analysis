@@ -1953,6 +1953,7 @@ _STORE_AGGREGATE_REQUIRED = {
     "excluded": "object",
     "contract_composition": "object",
     "host_classes": "array",
+    "store_bytes": "object",
     # `""` rather than `"object"`: both are genuinely absent as `null`
     # - no blend was asked for, nothing was refused - and `_document`
     # already makes every declared type nullable, so spelling it here
@@ -2055,6 +2056,11 @@ _STORE_AGGREGATE_HINTS = {
                 "cache_hit_rate": _DISTRIBUTION,
                 "cores_busy": _DISTRIBUTION,
                 "peak_rss_mb": _DISTRIBUTION,
+                "snapshot_bytes": _DISTRIBUTION,
+                "total_bytes": {QUANTITY: "bytes",
+                                "description": "What this class's "
+                                               "snapshots weigh on disk, "
+                                               "summed."},
                 "stamps": {"description": "Which snapshots these are, so "
                                           "a figure can be traced to the "
                                           "runs behind it."},
@@ -2093,6 +2099,39 @@ _STORE_AGGREGATE_HINTS = {
             "cache_hit_rate": _DISTRIBUTION,
             "cores_busy": _DISTRIBUTION,
             "peak_rss_mb": _DISTRIBUTION,
+            "snapshot_bytes": _DISTRIBUTION,
+            "total_bytes": {QUANTITY: "bytes",
+                            "description": "What every class's snapshots "
+                                           "weigh on disk, summed."},
+        },
+    },
+    "store_bytes": {
+        QUESTION: "What is this store costing me?",
+        RAIL: "raw",
+        "description": "What `.bga/runs` weighs. UX-300: published at "
+                       "the document level rather than inside `blended`, "
+                       "because a duration measured on two machines is "
+                       "two populations and a byte is a byte - a reader "
+                       "asking what their disk holds should not have to "
+                       "pass --blend to be told.",
+        "properties": {
+            "total": {QUANTITY: "bytes",
+                      "description": "Every snapshot this store holds, "
+                                     "including the ones excluded from "
+                                     "the distributions: a capture that "
+                                     "failed is not a sample, and still "
+                                     "occupies its disk."},
+            "snapshots": {QUANTITY: "count",
+                          "description": "How many snapshots that total "
+                                         "is spread over, finished or "
+                                         "not."},
+            "measured_total": {QUANTITY: "bytes",
+                               "description": "The subset that did "
+                                              "finish - what the "
+                                              "distributions above are "
+                                              "computed over."},
+            "note": {"description": "What the figures mean, and what "
+                                    "recovers the space."},
         },
     },
     "refusal": {

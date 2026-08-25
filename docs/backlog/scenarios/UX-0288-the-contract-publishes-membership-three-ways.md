@@ -40,16 +40,25 @@ a field on the element record, rather than as a list beside it.
 
 ## Required Fix
 
-1. Membership is a field on the element record — `is_leaf`,
-   `on_critical_path`, `path_index`, `is_choke_point` — not a list
-   published beside the records.
-2. The lists that remain are derived at the edge (the text renderer,
-   the CI comment) rather than published, or are published once with the
-   others referring to it.
-3. `analyze/v1`'s version moves if a field is removed rather than added.
+1. The two exact duplicates go: `signals.critical_path` (identical to
+   `critical_path_detail`'s uids, in order) and `leaf_analysis.leaves`
+   (identical to `leaves_detail`'s keys). Each is a list whose content
+   is already published beside it.
+2. `structural.deferrability`'s two uid lists are **not** an exact
+   duplicate — measured, they partition the leaves by a duration-risk
+   rule that disagrees with `is_potentially_deferrable` by design (8
+   against 134 on the 1,202-element run). The dedup there is to publish
+   the **per-leaf `deferral_risk`** the code already computes and
+   currently drops (`risk_keys=0` in the payload), so the lists become
+   filters over a field rather than a third copy of the membership.
+3. Membership becomes a field where a list is genuinely a predicate over
+   the elements — `is_leaf`, `on_critical_path`, `path_index` — rather
+   than a list published beside the records.
+4. `analyze/v1`'s version moves, because fields are removed rather than
+   added.
    The versioning rule is in `architecture.md`; this is exactly the case
    it was written for.
-4. A guard that no two published fields carry the same element set. It
+5. A guard that no two published fields carry the same element set. It
    is a cheap check and it is the one nothing currently makes.
 
 ## Out of Scope

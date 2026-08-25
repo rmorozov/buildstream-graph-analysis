@@ -7,6 +7,8 @@ Orchestrates the complete analysis pipeline as specified in the v9 specification
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+
+from .structural.models import deferral_risk_for
 from typing import Optional, Tuple, Dict, List, Set
 from collections import defaultdict
 
@@ -1400,7 +1402,9 @@ class BuildEfficiencyAnalyzer:
         if self.graph:
             graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
             result.signals = {
-                'critical_path': graph_analysis['critical_path'],
+                # UX-288: `critical_path` is gone - it was exactly the
+                # uids of `critical_path_detail`, in the same order.
+                # The detail carries the path and everything about it.
                 'critical_path_length': graph_analysis['critical_path_length'],
                 'critical_path_detail': self._build_critical_path_detail(
                     graph_analysis['critical_path']
@@ -2005,6 +2009,9 @@ class BuildEfficiencyAnalyzer:
         # Convert to signals dict format
         signals = {}
         kind_by_uid = self._element_kind_lookup()
+        # UX-288: one task per element, for the deferral-risk rule.
+        _task_by_uid = {t.task_key.element_uid: t
+                        for t in self.normalized_tasks}
         
         # Wall-clock share (Part 20)
         if diag_result.wall_clock_shares:
@@ -2090,10 +2097,11 @@ class BuildEfficiencyAnalyzer:
         
         # Leaf analysis (Part 24)
         if diag_result.leaf_analysis:
+            # UX-288: `leaves` is gone. It was exactly `leaves_detail`'s
+            # keys - measured identical on the 1,202-element run - and a
+            # consumer meeting both had nothing telling it which was
+            # authoritative if they ever disagreed.
             signals['leaf_analysis'] = {
-                'leaves': [
-                    la.element_uid for la in diag_result.leaf_analysis if la.is_leaf
-                ],
                 'deferrable_count': len(diag_result.deferrable_leaves),
                 # P4-12 Direction 2 / P4-15 Direction 2 (linked - see
                 # docs/backlog/tasks/P4-12-element-kind-based-heuristics.md's
@@ -2108,6 +2116,38 @@ class BuildEfficiencyAnalyzer:
                         'element_kind': kind_by_uid.get(la.element_uid, 'unknown'),
                         'is_structural_kind': kind_by_uid.get(la.element_uid) in STRUCTURAL_ELEMENT_KINDS,
                         'is_potentially_deferrable': la.is_potentially_deferrable,
+                        # UX-288: the structural analyzer's duration-risk
+                        # verdict for this leaf, which it has always
+                        # computed and never published (`deferral_risk`
+                        # reached the payload with zero keys). It is a
+                        # *different* judgement from
+                        # `is_potentially_deferrable`, which is a graph
+                        # fact: measured on the 1,202-element run they
+                        # disagree 8 against 134, by design. Publishing
+                        # it here is what lets `structural.deferrability`
+                        # stop republishing the leaf membership.
+                        # UX-288: the structural analyzer's risk verdict,
+                        # from the rule both stages share
+                        # (`structural.models.deferral_risk_for`). It is a
+                        # *different* judgement from
+                        # `is_potentially_deferrable` above, which is a
+                        # graph fact: measured on the 1,202-element run
+                        # they disagree 8 against 134, by design. One asks
+                        # "could this be deferred at all", the other "is
+                        # it cheap enough to be worth it".
+                        #
+                        # Applied here rather than joined from the
+                        # structural stage, because reaching across made
+                        # the answer depend on which sections were asked
+                        # for - `--section diagnostics` produced `None`
+                        # where a full run produced `medium`, for the same
+                        # leaf of the same run. `test_section_stage_gating`
+                        # caught it.
+                        'deferral_risk': deferral_risk_for(
+                            getattr(_task_by_uid.get(la.element_uid), 'kind',
+                                    'BUILD'),
+                            getattr(_task_by_uid.get(la.element_uid),
+                                    'dur_us', None)),
                     }
                     for la in diag_result.leaf_analysis if la.is_leaf
                 },
@@ -2179,6 +2219,10 @@ class BuildEfficiencyAnalyzer:
 
         # Run full structural analysis
         result = structural_analyzer.run_full_analysis(historical_runs=None)
+        # UX-288: stashed the way `_diagnostics_result` is, so
+        # `_join_deferral_risk` can reach the per-leaf risk verdict this
+        # analyzer computes and the payload used to drop.
+        self._structural_result = result
 
         # Stack-consolidation advisory (P4-15 Direction 1, non-spec
         # additive signal) - purely structural, no timing data used or
@@ -2308,8 +2352,18 @@ class BuildEfficiencyAnalyzer:
                 'serialization_ratio': result.metrics.serialization_ratio,
             },
             'bottleneck': {
-                'choke_points': result.bottleneck.choke_points,
-                'choke_point_impact': result.bottleneck.choke_point_impact,
+                # UX-288: `choke_points` (ranked uids) and
+                # `choke_point_impact` (the same uids, valued) published
+                # one membership twice - nine elements each, identical,
+                # on the macro/micro run. One ordered list of records
+                # carries the rank *and* the value, which is the shape
+                # `critical_path_detail` already uses.
+                'choke_points': [
+                    {'element_uid': uid,
+                     'downstream_count':
+                         result.bottleneck.choke_point_impact.get(uid)}
+                    for uid in result.bottleneck.choke_points
+                ],
                 'resource_contention': result.bottleneck.resource_contention,
                 'longest_serial_chain': result.bottleneck.longest_serial_chain,
                 'serial_chain_length': result.bottleneck.serial_chain_length,
@@ -2339,9 +2393,14 @@ class BuildEfficiencyAnalyzer:
             },
             'batch_opportunities': batch_opportunities,
             'serialization_point_risks': serialization_point_risks,
+            # UX-288: the two uid lists are gone. Their union was the
+            # leaf population, published for the third time; the split
+            # itself now travels as `deferral_risk` on each leaf in
+            # `signals.leaf_analysis.leaves_detail`, so the partition is
+            # still readable and the membership is published once.
+            # `recommended_deferrals` stays: it is a *subset* chosen by a
+            # further rule, not a partition of everything.
             'deferrability': {
-                'deferrable_leaves': result.deferrability.deferrable_leaves,
-                'non_deferrable_leaves': result.deferrability.non_deferrable_leaves,
                 'recommended_deferrals': result.deferrability.recommended_deferrals,
                 'total_deferrable_work_us': result.deferrability.total_deferrable_work_us,
             },
@@ -2385,8 +2444,9 @@ class BuildEfficiencyAnalyzer:
             "CRITICAL PATH",
         ]
         
-        if result.signals and 'critical_path' in result.signals:
-            critical_path = result.signals['critical_path']
+        if result.signals and result.signals.get('critical_path_detail'):
+            from . import schemas
+            critical_path = schemas.critical_path_uids(result.signals)
             lines.append(f"  Length: {len(critical_path)} elements")
             if critical_path:
                 lines.append(f"  Elements: {' -> '.join(critical_path[:5])}")

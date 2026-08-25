@@ -159,5 +159,5 @@ def test_critical_path_length_agrees_with_the_named_path(tmp_path, topology_name
     data = json.loads(format_json(result))
 
     assert data["structural"]["metrics"]["critical_path_length"] == len(
-        data["signals"]["critical_path"]
+        [e["element_uid"] for e in data["signals"]["critical_path_detail"]]
     )

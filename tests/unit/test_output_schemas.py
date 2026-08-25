@@ -269,7 +269,7 @@ class TestTheSchemasThemselves:
     def test_an_unknown_name_names_the_ones_that_exist(self):
         with pytest.raises(KeyError) as caught:
             schemas.schema("analyze/v99")
-        assert "analyze/v1" in str(caught.value)
+        assert "analyze/v2" in str(caught.value)
 
     def test_stamp_does_not_mutate_its_argument(self):
         payload = {"run_id": "x"}

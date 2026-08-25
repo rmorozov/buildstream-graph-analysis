@@ -1767,6 +1767,28 @@ leaves and twice for the critical path, and every one of those
 populations is a subset of the one 1,202-row element table. The page is
 faithful; it renders every copy it is given.
 
+**Corrected after this was first written.** Two of the three are exact
+duplicates and the third is not:
+
+```text
+leaf_analysis.leaves == keys(leaves_detail)                    True
+signals.critical_path == uids of critical_path_detail          True  (order too)
+deferrability's lists derivable from a published field          False
+```
+
+`structural.deferrability` splits the leaves by a **duration-risk rule**
+(under a second is deferrable), which is different information from
+`leaves_detail.is_potentially_deferrable`, a graph fact. On the
+1,202-element run the two disagree by design: 8 against 134. So the
+partition is real and only the *membership* is the third copy.
+
+Worse, the field that would make the lists derivable is computed and
+**thrown away**: `structural/analyzer.py` builds `deferral_risk` per
+leaf and the payload publishes `risk_keys=0` of it. The dedup there is
+to publish the per-leaf risk and let the lists become filters — which
+removes a copy of the membership while *adding* information the tool
+already has.
+
 That is the finding, and it moves the work: this is a **contract**
 question first and a rendering question second. Deduplicating the page
 while the payload still publishes three copies would put the page and

@@ -255,7 +255,7 @@ def _excluded(rows: List[dict]) -> dict:
 #
 # The minority is defined against the **newest** state rather than by
 # count or by age: the newest is the one the reader is holding.
-AGGREGATE_READS = ("analyze/v1", "store/v1")
+AGGREGATE_READS = ("analyze/v2", "store/v1")   # UX-288
 
 
 def _contract_set_of(snapshot: str) -> Optional[tuple]:

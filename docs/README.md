@@ -55,7 +55,7 @@ what writes each:
 
 | document | written by |
 |---|---|
-| `analyze/v1` | `bga analyze --format json` — the analysis, its findings, and why each one is believed (`UX-229`) |
+| `analyze/v2` | `bga analyze --format json` — the analysis, its findings, and why each one is believed (`UX-229`) |
 | `compare/v1` | `bga compare --format json` — the verdict, the noise band, the culprit elements |
 | `blast/v1` | `bga blast --format json` — what a change to one resource rebuilds |
 | `correlate/v1` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |

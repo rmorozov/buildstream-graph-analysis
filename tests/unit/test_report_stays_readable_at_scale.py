@@ -143,7 +143,9 @@ class TestJsonNeverTruncates:
     def test_the_whole_path_is_in_the_json(self, deep_run):
         payload = json.loads(
             _bga(["analyze", deep_run, "--format", "json"]).stdout)
-        path = payload["signals"]["critical_path"]
+        # `UX-288`: the path lives in `critical_path_detail` now,
+        # which is the one place it is published.
+        path = payload["signals"]["critical_path_detail"]
         assert len(path) > 300, f"the JSON path is {len(path)} elements"
 
     def test_the_flag_does_not_change_the_json(self, deep_run):

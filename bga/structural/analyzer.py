@@ -97,6 +97,7 @@ from bga.structural.models import (
     DeferrabilityResult,
     HistoricalTrend,
     StructuralAnalysisResult,
+    deferral_risk_for,
 )
 
 
@@ -492,22 +493,15 @@ class StructuralAnalyzer:
             # Heuristic: leaves with short duration are good deferral candidates
             duration = task.dur_us
             
-            # Risk assessment based on element kind
+            # UX-288: one rule, in `models.deferral_risk_for`, because
+            # the leaf record publishes it too and two copies would be
+            # two answers waiting to disagree.
             kind = getattr(task, 'kind', 'BUILD')
-            if kind in ['TEST', 'INTEGRATION_TEST']:
-                risk = 'low'
-                deferrable.append(leaf)
-                deferral_savings[leaf] = duration
-            elif kind in ['BENCHMARK', 'ANALYSIS']:
-                risk = 'low'
-                deferrable.append(leaf)
-                deferral_savings[leaf] = duration
-            elif duration < 1_000_000:  # Less than 1 second
-                risk = 'medium'
+            risk = deferral_risk_for(kind, duration)
+            if risk in ('low', 'medium'):
                 deferrable.append(leaf)
                 deferral_savings[leaf] = duration
             else:
-                risk = 'high'
                 non_deferrable.append(leaf)
             
             deferral_risk[leaf] = risk

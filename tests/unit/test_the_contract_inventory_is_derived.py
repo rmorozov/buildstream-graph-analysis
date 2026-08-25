@@ -90,7 +90,7 @@ class TestTheInventoryIsComplete:
         can record a state of."""
         from bga import contracts
 
-        assert contracts.CONTRACT_ID.match("analyze/v1")
+        assert contracts.CONTRACT_ID.match("analyze/v2")
         assert contracts.CONTRACT_ID.match("store-aggregate/v12")
         assert not contracts.CONTRACT_ID.match("analyze")
         assert not contracts.CONTRACT_ID.match("analyze/v")

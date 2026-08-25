@@ -116,7 +116,7 @@ class TestItNeedsNothingButItself:
         import tools.bga_view as view
 
         monkeypatch.setattr(view, "payloads", lambda run: {
-            "report.json": {"schema": "analyze/v1", "section": None,
+            "report.json": {"schema": "analyze/v2", "section": None,
                             "run_id": "a</script><script>alert(1)</script>",
                             "total_duration_us": 1}})
         path = tmp_path / "r.html"

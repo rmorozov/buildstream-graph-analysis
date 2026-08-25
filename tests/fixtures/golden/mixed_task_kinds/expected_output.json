@@ -1,5 +1,5 @@
 {
-    "schema": "analyze/v1",
+    "schema": "analyze/v2",
     "run_id": "golden-fixture-manifest-hash-v1",
     "total_duration_us": 16000,
     "section": null,
@@ -19,7 +19,7 @@
             "provenance": {
                 "claim": "confidence",
                 "kind": "finding",
-                "document": "analyze/v1",
+                "document": "analyze/v2",
                 "evidence": [
                     {
                         "path": "confidence.primary",
@@ -70,7 +70,7 @@
             "provenance": {
                 "claim": "wait-category",
                 "kind": "finding",
-                "document": "analyze/v1",
+                "document": "analyze/v2",
                 "evidence": [
                     {
                         "path": "attribution.untracked_tail_us",
@@ -141,7 +141,7 @@
             "provenance": {
                 "claim": "blast-radius-ranking",
                 "kind": "finding",
-                "document": "analyze/v1",
+                "document": "analyze/v2",
                 "evidence": [
                     {
                         "path": "headline.chain_ratio",
@@ -175,7 +175,7 @@
             "provenance": {
                 "claim": "efficiency-score",
                 "kind": "finding",
-                "document": "analyze/v1",
+                "document": "analyze/v2",
                 "evidence": [
                     {
                         "path": "floors.efficiency_score",
@@ -219,7 +219,7 @@
                 "provenance": {
                     "claim": "blast-radius-ranking",
                     "kind": "top_action",
-                    "document": "analyze/v1",
+                    "document": "analyze/v2",
                     "see": "findings[id=blast-radius-ranking].provenance",
                     "resolved": true
                 }
@@ -231,7 +231,7 @@
                 "provenance": {
                     "claim": "blast-radius-ranking",
                     "kind": "top_action",
-                    "document": "analyze/v1",
+                    "document": "analyze/v2",
                     "see": "findings[id=blast-radius-ranking].provenance",
                     "resolved": true
                 }
@@ -243,7 +243,7 @@
                 "provenance": {
                     "claim": "blast-radius-ranking",
                     "kind": "top_action",
-                    "document": "analyze/v1",
+                    "document": "analyze/v2",
                     "see": "findings[id=blast-radius-ranking].provenance",
                     "resolved": true
                 }
@@ -252,7 +252,7 @@
         "provenance": {
             "claim": "diagnosis",
             "kind": "diagnosis",
-            "document": "analyze/v1",
+            "document": "analyze/v2",
             "evidence": [
                 {
                     "path": "floors.t_infinity_observed",
@@ -377,11 +377,6 @@
         }
     },
     "signals": {
-        "critical_path": [
-            "base.bst",
-            "lib.bst",
-            "app.bst"
-        ],
         "critical_path_length": 14000,
         "critical_path_detail": [
             {
@@ -571,21 +566,19 @@
             "fraction": 0.2857142857142857
         },
         "leaf_analysis": {
-            "leaves": [
-                "app.bst",
-                "extra.bst"
-            ],
             "deferrable_count": 1,
             "leaves_detail": {
                 "app.bst": {
                     "element_kind": "unknown",
                     "is_structural_kind": false,
-                    "is_potentially_deferrable": false
+                    "is_potentially_deferrable": false,
+                    "deferral_risk": "medium"
                 },
                 "extra.bst": {
                     "element_kind": "unknown",
                     "is_structural_kind": false,
-                    "is_potentially_deferrable": true
+                    "is_potentially_deferrable": true,
+                    "deferral_risk": "medium"
                 }
             }
         }
@@ -606,7 +599,6 @@
         },
         "bottleneck": {
             "choke_points": [],
-            "choke_point_impact": {},
             "resource_contention": {},
             "longest_serial_chain": [
                 "base.bst",
@@ -676,11 +668,6 @@
         },
         "serialization_point_risks": [],
         "deferrability": {
-            "deferrable_leaves": [
-                "app.bst",
-                "extra.bst"
-            ],
-            "non_deferrable_leaves": [],
             "recommended_deferrals": [],
             "total_deferrable_work_us": 7000
         },

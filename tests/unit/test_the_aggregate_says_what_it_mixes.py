@@ -62,12 +62,12 @@ class TestTheCompositionIsPublished:
     def test_one_contract_set_says_so(self, tmp_path):
         from bga.store_aggregate import _contract_composition
 
-        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v1", "store/v1"])
+        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v2", "store/v1"])
                 for i in range(3)]
         out = _contract_composition(rows)
         assert out["mixed"] is False
         assert out["sets"] == [
-            {"contracts": ["analyze/v1", "store/v1"], "runs": 3}]
+            {"contracts": ["analyze/v2", "store/v1"], "runs": 3}]
         assert out["unstamped_runs"] == 0
 
     def test_two_contract_sets_are_both_named(self, tmp_path):
@@ -75,7 +75,7 @@ class TestTheCompositionIsPublished:
         otherwise never see."""
         from bga.store_aggregate import _contract_composition
 
-        rows = [_snapshot(tmp_path, f"old{i}", ["analyze/v1"]) for i in range(2)]
+        rows = [_snapshot(tmp_path, f"old{i}", ["analyze/v2"]) for i in range(2)]
         rows += [_snapshot(tmp_path, f"new{i}", ["analyze/v2", "store/v1"])
                  for i in range(7)]
         out = _contract_composition(rows)
@@ -92,7 +92,7 @@ class TestTheCompositionIsPublished:
         from bga.store_aggregate import _contract_composition
 
         rows = [_snapshot(tmp_path, "a", None),
-                _snapshot(tmp_path, "b", ["analyze/v1"])]
+                _snapshot(tmp_path, "b", ["analyze/v2"])]
         out = _contract_composition(rows)
         assert out["unstamped_runs"] == 1
         assert out["mixed"] is False, (
@@ -107,7 +107,7 @@ class TestTheCompositionIsPublished:
 
         out = _contract_composition([])
         assert out["reads"] == list(AGGREGATE_READS)
-        assert "analyze/v1" in out["reads"]
+        assert "analyze/v2" in out["reads"]
         assert "whatif/v1" not in out["reads"]
 
 
@@ -115,7 +115,7 @@ class TestItRidesWithTheDocument:
     def test_the_aggregate_carries_the_composition(self, tmp_path):
         from bga.store_aggregate import aggregate
 
-        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v1", "store/v1"],
+        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v2", "store/v1"],
                           duration_us=1_000_000 + i)
                 for i in range(3)]
         document = aggregate({"project": "p", "snapshots": rows})

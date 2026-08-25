@@ -165,7 +165,8 @@ def test_structural_max_depth_matches_graph_module(result):
 def test_critical_path_ends_at_app(result):
     """app.bst is the sole requested target and nothing depends on it, so
     it must be the terminal node of the observed critical path."""
-    critical_path = result.signals["critical_path"]
+    from bga import schemas as _s
+    critical_path = _s.critical_path_uids(result.signals)
     assert isinstance(critical_path, list)
     assert len(critical_path) >= 1
     assert critical_path[-1] == "app.bst"

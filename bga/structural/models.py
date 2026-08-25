@@ -216,3 +216,34 @@ class StructuralAnalysisResult:
     
     # Summary
     summary: Dict[str, Any] = field(default_factory=dict)
+
+
+# UX-288: the deferral-risk rule, extracted so it has one home.
+#
+# It used to live inside `StructuralAnalyzer.analyze_deferrability` and
+# produced `deferral_risk`, which the payload dropped. Publishing it per
+# leaf meant the diagnostics stage needed it - and reaching across to
+# the structural stage made the answer depend on which sections were
+# requested: `--section diagnostics` produced `None` where a full run
+# produced `medium`, for the same leaf of the same run.
+#
+# `tests/unit/test_section_stage_gating.py` caught that, which is what
+# it is for. The rule reads only the task's kind and duration, so both
+# stages can apply it without either depending on the other.
+DEFERRAL_TEST_KINDS = ('TEST', 'INTEGRATION_TEST')
+DEFERRAL_BATCH_KINDS = ('BENCHMARK', 'ANALYSIS')
+DEFERRAL_SHORT_US = 1_000_000
+
+
+def deferral_risk_for(kind, duration_us):
+    """`low` / `medium` / `high` for one leaf, or `None` with no task.
+
+    `low` - a kind whose work is not on anyone's path anyway.
+    `medium` - short enough that deferring it costs little.
+    `high` - long enough that deferring it moves real work later.
+    """
+    if duration_us is None:
+        return None
+    if kind in DEFERRAL_TEST_KINDS or kind in DEFERRAL_BATCH_KINDS:
+        return 'low'
+    return 'medium' if duration_us < DEFERRAL_SHORT_US else 'high'

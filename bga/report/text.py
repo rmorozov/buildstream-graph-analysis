@@ -682,8 +682,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
     # task_key.element_name, so this block never actually fired for any
     # input - a pre-existing dead-code bug, fixed here since P1-14's new
     # `graph` subcommand's whole purpose depends on this content existing.
-    if section in (None, 'graph') and hasattr(result, 'signals') and result.signals.get('critical_path'):
-        critical_path = result.signals['critical_path']
+    if section in (None, 'graph') and hasattr(result, 'signals') \
+            and schemas.critical_path_uids(result.signals):
+        critical_path = schemas.critical_path_uids(result.signals)
         lines.append(f"Critical Path Length: {len(critical_path)} elements")
         # UX-33: the path is always printed now. It used to be withheld
         # above 5 elements, which suppressed it exactly when a reader
@@ -867,7 +868,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                     f"Edges: {metrics.get('num_edges', 0)}, "
                     f"Max Depth: {metrics.get('max_depth', 0)}"
                 )
-            choke_points = bottleneck.get('choke_points') or []
+            # UX-288: records in `analyze/v2`, bare uids in a v1
+            # document - `schemas` knows both, this line reads names.
+            choke_points = schemas.choke_point_uids(bottleneck)
             if choke_points:
                 # UX-33: name them. `Bottlenecks Identified: 5` with the
                 # names only in the JSON was, on a real mis-shaped

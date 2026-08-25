@@ -45,7 +45,7 @@ from .cache_effectiveness import (HEALTHY_HIT_RATIO, POOR_HIT_RATIO,
 # The module every threshold below is defined in, published so a record
 # names where to go and change it rather than only what it is called.
 # Which published document every `evidence[].path` below walks.
-ANALYZE_DOCUMENT = "analyze/v1"
+ANALYZE_DOCUMENT = "analyze/v2"   # UX-288
 
 RULE_MODULE = "bga/findings.py"
 CACHE_RULE_MODULE = "bga/cache_effectiveness.py"

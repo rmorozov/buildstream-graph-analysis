@@ -766,7 +766,7 @@ def test_the_fixing_guide_names_the_output_versioning_rule():
     guide = (REPO / "docs" / "contributing" / "fixing-guide.md").read_text(
         encoding="utf-8")
 
-    assert "analyze/v1" in guide
+    assert "analyze/v2" in guide
     assert "bump" in guide.lower()
     assert "additionalProperties" in guide, (
         "the rule's other half - an addition is not a breaking change")

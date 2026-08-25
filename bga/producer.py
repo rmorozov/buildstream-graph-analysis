@@ -122,7 +122,7 @@ def describe(artifact: Optional[dict]) -> str:
 # durations incomparable. Named rather than "every contract", because
 # refusing on everything is how a refusal that fires constantly gets
 # switched off, and a switched-off refusal is worth less than none.
-COMPARISON_CONTRACTS = ("analyze/v1", "compare/v1", "host/v1")
+COMPARISON_CONTRACTS = ("analyze/v2", "compare/v1", "host/v1")   # UX-288
 
 
 def _by_name(names):

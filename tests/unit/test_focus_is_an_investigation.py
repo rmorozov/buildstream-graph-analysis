@@ -57,13 +57,13 @@ class TestTheEvidenceIsAssembled:
                             .replace("__STORE__", json.dumps(store)))
 
     def test_the_four_groups_the_item_names(self, payload):
-        out = self._panel(payload, payload["signals"]["critical_path"][0])
+        out = self._panel(payload, payload["signals"]["critical_path_detail"][0]["element_uid"])
         assert out["groups"] == ["why", "evidence", "relationships", "actions"]
 
     def test_every_value_resolves_to_the_field_it_cites(self, payload):
         wrong = []
         for row in self._panel(payload,
-                               payload["signals"]["critical_path"][0])["rows"]:
+                               payload["signals"]["critical_path_detail"][0]["element_uid"])["rows"]:
             if not row["field"]:
                 continue
             found = provenance.resolve(payload, row["field"])
@@ -75,7 +75,7 @@ class TestTheEvidenceIsAssembled:
         assert wrong == [], wrong
 
     def test_the_chain_neighbours_are_the_published_order(self, payload):
-        chain = payload["signals"]["critical_path"]
+        chain = [e["element_uid"] for e in payload["signals"]["critical_path_detail"]]
         assert len(chain) >= 3, chain
         out = self._panel(payload, chain[1])
         relations = {row["label"]: row["text"] for row in out["rows"]
@@ -86,7 +86,7 @@ class TestTheEvidenceIsAssembled:
     def test_an_absent_plane_says_so_rather_than_going_quiet(self, payload):
         """"Plane 2 saw nothing" and "Plane 2 was not run" are
         different facts; a list of only what exists collapses them."""
-        out = self._panel(payload, payload["signals"]["critical_path"][0])
+        out = self._panel(payload, payload["signals"]["critical_path_detail"][0]["element_uid"])
         evidence = {row["label"]: row["text"] for row in out["rows"]
                     if row["group"] == "evidence"}
         assert evidence["Plane 2 (sandbox)"] == "not in this document"
@@ -108,7 +108,7 @@ class TestTheEvidenceIsAssembled:
         means absent - checked against the payload rather than trusted,
         so a row cannot say "yes" about a document it is not in."""
         for row in self._panel(payload,
-                               payload["signals"]["critical_path"][0])["rows"]:
+                               payload["signals"]["critical_path_detail"][0]["element_uid"])["rows"]:
             if not row["source"]:
                 continue
             found = provenance.resolve(payload, row["source"])
@@ -234,14 +234,14 @@ const payload = __PAYLOAD__;
 const root = make("main");
 const child = make("section");
 child.setAttribute("data-section", "x");
-child.setAttribute("data-element", payload.signals.critical_path[0]);
+child.setAttribute("data-element", payload.signals.critical_path_detail[0].element_uid);
 root.append(child);
 const serialise = (n) => JSON.stringify({
   tag: n.tagName, attrs: n.attrs,
   children: (n.children ?? []).map(serialise) });
 const before = serialise(root);
 const refresh = app.wireFocusAndMarks(root, null, { payload });
-focus.applyFocus(root, payload.signals.critical_path[0]);
+focus.applyFocus(root, payload.signals.critical_path_detail[0].element_uid);
 refresh();
 const during = serialise(root);
 const roles = root.children.filter((c) => c.attrs["data-role"])

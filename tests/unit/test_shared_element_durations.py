@@ -123,7 +123,8 @@ def test_sensitivity_critical_path_agrees_with_t_infinity(multi_kind_report):
 
 def test_critical_path_length_agrees_with_the_named_path(multi_kind_report):
     assert multi_kind_report["structural"]["metrics"]["critical_path_length"] == len(
-        multi_kind_report["signals"]["critical_path"]
+        [e["element_uid"]
+         for e in multi_kind_report["signals"]["critical_path_detail"]]
     )
 
 

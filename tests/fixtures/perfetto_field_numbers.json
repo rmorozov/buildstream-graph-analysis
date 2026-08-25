@@ -1,0 +1,91 @@
+{
+  "files": {
+    "interned_data.proto": {
+      "numbers": {
+        "InternedData": {
+          "event_names": 2
+        }
+      },
+      "sha256": "367b0b05337a04c5eedbabfe9402d103af056235e946f6c2ff0064b835cf3535"
+    },
+    "process_descriptor.proto": {
+      "numbers": {
+        "ProcessDescriptor": {
+          "pid": 1,
+          "process_name": 6
+        }
+      },
+      "sha256": "04180948ef49be22cac80f3abc95acb4b97903d5c2c14ea2adc6548391fb7c97"
+    },
+    "thread_descriptor.proto": {
+      "numbers": {
+        "ThreadDescriptor": {
+          "pid": 1,
+          "thread_name": 5,
+          "tid": 2
+        }
+      },
+      "sha256": "ae6f712bd1951cdef7fdaa190a68dbc8753c14fac7e5867d104f3627d9f7d625"
+    },
+    "trace.proto": {
+      "numbers": {
+        "Trace": {
+          "packet": 1
+        }
+      },
+      "sha256": "e9f9af3a0feb7ed1214aa0e075c50568c1fc4f825d1022b20e0f4df3e17cd264"
+    },
+    "trace_packet.proto": {
+      "numbers": {
+        "SequenceFlags": {
+          "SEQ_INCREMENTAL_STATE_CLEARED": 1,
+          "SEQ_NEEDS_INCREMENTAL_STATE": 2
+        },
+        "TracePacket": {
+          "interned_data": 12,
+          "sequence_flags": 13,
+          "timestamp": 8,
+          "track_descriptor": 60,
+          "track_event": 11,
+          "trusted_packet_sequence_id": 10
+        }
+      },
+      "sha256": "873de5e3d48b0e4a745bb1bd0bd893c44d1e3c108e0eff48cd8a812ecf11a6a4"
+    },
+    "track_descriptor.proto": {
+      "numbers": {
+        "TrackDescriptor": {
+          "name": 2,
+          "parent_uuid": 5,
+          "process": 3,
+          "thread": 4,
+          "uuid": 1
+        }
+      },
+      "sha256": "3e46a7df6b7aa1efbd5a8f6cb57c4f81fd5cdde3ee5d2762a07e628c72bd01e6"
+    },
+    "track_event.proto": {
+      "numbers": {
+        "EventName": {
+          "iid": 1,
+          "name": 2
+        },
+        "TrackEvent": {
+          "category_iids": 3,
+          "counter_value": 30,
+          "name_iid": 10,
+          "track_uuid": 11,
+          "type": 9
+        },
+        "Type": {
+          "TYPE_COUNTER": 4,
+          "TYPE_INSTANT": 3,
+          "TYPE_SLICE_BEGIN": 1,
+          "TYPE_SLICE_END": 2
+        }
+      },
+      "sha256": "c99a6aaa72fec1afa7b1450e7d9461ee5a9ba02f46176eeffa1869a18d6a94ff"
+    }
+  },
+  "source": "https://github.com/google/perfetto protos/perfetto/trace/"
+}

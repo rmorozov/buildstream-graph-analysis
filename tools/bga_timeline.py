@@ -49,6 +49,25 @@ RAW_LOG_NAME = "plane2.log.gz"
 WRAPPED_LOG_NAME = "build.log"
 RUN_SUBDIR = "run"
 
+# `UX-298`: the two shapes this command can write. TrackEvent is
+# Perfetto's own - a stream of packets, written as the records arrive
+# and gzipped on the way out - and it is the default because it is what
+# the tool the events are for reads natively. Chrome JSON stays for
+# `chrome://tracing` and for anyone whose pipeline already parses it;
+# it is the compatibility path, not the current one.
+FORMAT_TRACKEVENT = "trackevent"
+FORMAT_CHROME = "chrome"
+FORMATS = (FORMAT_TRACKEVENT, FORMAT_CHROME)
+
+DEFAULT_OUTPUT = {
+    FORMAT_TRACKEVENT: "timeline.perfetto-trace.gz",
+    FORMAT_CHROME: "timeline.json",
+}
+
+# Perfetto counts in nanoseconds; both planes here count in
+# microseconds, and Plane 2 in seconds before that.
+NS_PER_US = 1000
+
 
 def _raw_log(snapshot: str) -> Optional[str]:
     """The snapshot's raw Plane 2 log, compressed or not."""
@@ -89,17 +108,192 @@ def pick_anchor(raw_log: str) -> Optional[str]:
     return max(spans, key=spans.get) if spans else None
 
 
+def element_spans(raw_log: str) -> dict:
+    """One streaming pass over the raw log: per element, the longest
+    single process and the earliest start.
+
+    `UX-298`. Both numbers the merge needs come out of the same walk -
+    the anchor is the element with the longest traced process
+    (`pick_anchor`'s rule, unchanged), and the offset needs that
+    element's earliest monotonic start. Doing it once means the log is
+    read twice rather than three times, and nothing is held but one
+    entry per element.
+    """
+    from .bst_native_build_tracer import pair_events, parse_trace_lines
+
+    spans = {}
+    with _open_raw(raw_log) as handle:
+        for record in pair_events(parse_trace_lines(handle), consume=True):
+            element = record.get("element")
+            if not element or element == "unknown":
+                continue
+            start, end = record.get("start_ts"), record.get("end_ts")
+            if start is None or end is None:
+                continue
+            entry = spans.get(element)
+            if entry is None:
+                spans[element] = {"longest": end - start, "earliest": start}
+            else:
+                entry["longest"] = max(entry["longest"], end - start)
+                entry["earliest"] = min(entry["earliest"], start)
+    return spans
+
+
+def plane1_elements(plane1_events) -> set:
+    """The elements Plane 1 recorded a builder task for.
+
+    `UX-298`: the anchor has to be in **both** planes, and picking it
+    from Plane 2 alone can name one Plane 1 never built - a capture
+    whose heaviest traced element was, say, a subproject built in an
+    earlier run. The merge then refuses with `no Plane 1 'bst-builder' B
+    event found`, which is a correct refusal to a question that should
+    not have been asked. Found by this item's own streaming fixture, on
+    a shape the two-element fixtures could not produce.
+    """
+    return {
+        (event.get("args") or {}).get("element")
+        for event in plane1_events
+        if event.get("ph") == "B" and event.get("cat") == "bst-builder"
+    } - {None}
+
+
+def choose_anchor(spans, plane1_events) -> Optional[str]:
+    """The longest-traced element that **both** planes know.
+
+    Longest, for `pick_anchor`'s reason: a fixed error in the offset is
+    the smallest share of the longest span. Shared, because an anchor
+    only one plane has is not an anchor. Falls back to the longest
+    overall when the two planes name nothing in common, so a capture
+    that used to render still renders and fails the same way it did.
+    """
+    if not spans:
+        return None
+    shared = spans.keys() & plane1_elements(plane1_events)
+    candidates = shared or spans.keys()
+    return max(candidates, key=lambda name: spans[name]["longest"])
+
+
+def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
+    """Plane 2's monotonic clock, placed on Plane 1's wall clock.
+
+    The same single anchor point `native_trace_to_chrome_trace` uses -
+    the anchor element's Plane 1 **build** task against its earliest
+    Plane 2 process - reached through that module so the two formats
+    cannot drift apart on the one number that decides whether the
+    planes line up.
+    """
+    from .native_trace_to_chrome_trace import compute_clock_offset_us
+
+    earliest = spans[anchor_element]["earliest"]
+    return compute_clock_offset_us(
+        plane1_events,
+        [{"element": anchor_element, "start_ts": earliest}],
+        anchor_element)
+
+
+def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output):
+    """The trace, packet by packet, never held.
+
+    Plane 1 is a handful of tasks and goes in first from the list the
+    converter already built. Plane 2 is streamed: a record becomes a
+    slice the moment it is paired, and the only thing that grows is one
+    entry per `(element, pid)` lane - which is the same cardinality the
+    Chrome converter's `tid` had, and is named here rather than left to
+    be discovered.
+    """
+    from .bst_native_build_tracer import pair_events, parse_trace_lines
+    from .native_trace.trackevent import TrackEventWriter
+
+    offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
+                 if anchor_element else 0.0)
+
+    with TrackEventWriter(output) as trace:
+        # Plane 1: one lane, one thread track per task tid, which is
+        # the convention `bst_log_to_chrome_trace` already writes.
+        plane1_track = trace.process_track("Plane 1: BuildStream", pid=1)
+        threads = {}
+        names = {}
+        for event in plane1_events:
+            phase = event.get("ph")
+            if phase == "M" and event.get("name") == "thread_name":
+                names[event.get("tid")] = (event.get("args") or {}).get("name")
+            if phase not in ("B", "E"):
+                continue
+            tid = event.get("tid", 0)
+            track = threads.get(tid)
+            if track is None:
+                track = threads[tid] = trace.thread_track(
+                    names.get(tid) or f"tid {tid}", parent=plane1_track,
+                    pid=1, tid=tid)
+            timestamp = int(round(event["ts"] * NS_PER_US))
+            if phase == "B":
+                trace.slice_begin(timestamp, track, event.get("name") or "task")
+            else:
+                trace.slice_end(timestamp, track)
+
+        if not raw_log:
+            return trace.packets, trace.slices, trace.tracks
+
+        # Plane 2: one process lane per element, one thread lane per
+        # traced pid inside it.
+        element_pid = {element: index + 2
+                       for index, element in enumerate(sorted(spans))}
+        lanes = {}
+        with _open_raw(raw_log) as handle:
+            for record in pair_events(parse_trace_lines(handle), consume=True):
+                element = record.get("element") or "unknown"
+                pid = element_pid.get(element)
+                if pid is None:
+                    pid = element_pid[element] = len(element_pid) + 2
+                lane = lanes.get(element)
+                if lane is None:
+                    lane = lanes[element] = {
+                        "track": trace.process_track(f"native: {element}",
+                                                     pid=pid),
+                        "threads": {},
+                    }
+                thread = lane["threads"].get(record["pid"])
+                if thread is None:
+                    thread = lane["threads"][record["pid"]] = trace.thread_track(
+                        f"pid {record['pid']}", parent=lane["track"],
+                        pid=pid, tid=record["pid"])
+                start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US
+                                     + offset_us * NS_PER_US))
+                name = (record.get("cmd") or "")[:120] or "process"
+                if record["open"] or record["end_ts"] is None:
+                    # No observed exit. An instant, never a zero-width
+                    # bar and never a fabricated end (`UX-188`).
+                    trace.instant(start_ns, thread, f"{name} (no observed exit)")
+                    continue
+                end_ns = int(round(record["end_ts"] * 1e6 * NS_PER_US
+                                   + offset_us * NS_PER_US))
+                trace.slice_begin(start_ns, thread, name)
+                trace.slice_end(max(end_ns, start_ns), thread)
+        return trace.packets, trace.slices, trace.tracks
+
+
 def render(snapshot: str, output: str,
-           anchor_element: Optional[str] = None, quiet: bool = False) -> dict:
+           anchor_element: Optional[str] = None, quiet: bool = False,
+           fmt: str = FORMAT_TRACKEVENT) -> dict:
     """Write the timeline. Returns what went into it, for the caller to say.
 
     `quiet` for a caller rendering into a scratch path it will delete -
     `bga view`, which serves the bytes rather than the file. Without it
     the converters name a path that is gone by the time anyone reads
     the line (`UX-197` item 2, and `UX-194` for this second caller).
+
+    `fmt` is `UX-298`: `trackevent` writes Perfetto's own format as a
+    stream of packets, `chrome` writes the legacy JSON the two
+    converters have always produced. Both read the same two logs and
+    align on the same anchor, so the choice is a matter of what will
+    open the file, not of what is in it.
     """
     from .bst_log_to_chrome_trace import main as plane1_main
     from .native_trace_to_chrome_trace import main as merge_main
+
+    if fmt not in FORMATS:
+        raise ValueError(f"unknown timeline format {fmt!r}; "
+                         f"expected one of {', '.join(FORMATS)}")
 
     wrapped = os.path.join(snapshot, WRAPPED_LOG_NAME)
     if not os.path.exists(wrapped):
@@ -119,16 +313,34 @@ def render(snapshot: str, output: str,
             raise RuntimeError(f"rendering Plane 1 failed (exit {code})")
 
         raw = _raw_log(snapshot)
+        with open(plane1, "r", encoding="utf-8") as handle:
+            plane1_events = json.load(handle)
+        spans = element_spans(raw) if raw else {}
+        anchor = anchor_element or choose_anchor(spans, plane1_events)
+
+        if fmt == FORMAT_TRACKEVENT:
+            packets, slices, tracks = _write_trackevent(
+                plane1_events, raw if anchor else None, spans, anchor, output)
+            result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
+                      "anchor": anchor, "raw_log": raw, "format": fmt,
+                      "packets": packets, "slices": slices, "tracks": tracks}
+            if raw and not anchor:
+                result["omitted"] = (
+                    "the Plane 2 capture attributes no span to an element, so "
+                    "there is nothing to align the two planes on")
+            return result
+
         if raw is None:
             shutil.copyfile(plane1, output)
-            return {"planes": ["1"], "anchor": None, "raw_log": None}
+            return {"planes": ["1"], "anchor": None, "raw_log": None,
+                    "format": fmt}
 
-        anchor = anchor_element or pick_anchor(raw)
         if anchor is None:
             # A raw log with no element-attributed span: the merge has
             # nothing to align on, so Plane 1 alone is the honest output.
             shutil.copyfile(plane1, output)
             return {"planes": ["1"], "anchor": None, "raw_log": raw,
+                    "format": fmt,
                     "omitted": "the Plane 2 capture attributes no span to an "
                                "element, so there is nothing to align the two "
                                "planes on"}
@@ -144,7 +356,8 @@ def render(snapshot: str, output: str,
                            "--anchor-element", anchor], quiet=quiet)
         if code:
             raise RuntimeError(f"merging Plane 2 failed (exit {code})")
-        return {"planes": ["1", "2"], "anchor": anchor, "raw_log": raw}
+        return {"planes": ["1", "2"], "anchor": anchor, "raw_log": raw,
+                "format": fmt}
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -162,8 +375,18 @@ def describe(result: dict, output: str) -> str:
                 or "this snapshot kept no raw trace log. `bga snapshot` keeps "
                    "one by default; a capture taken with --no-keep-raw, or "
                    "before UX-188, has only the processed report."))
-    lines.append("  Open it with Perfetto (https://ui.perfetto.dev) or "
-                 "chrome://tracing.")
+    if result.get("format") == FORMAT_CHROME:
+        lines.append("  Open it with Perfetto (https://ui.perfetto.dev) or "
+                     "chrome://tracing.")
+    else:
+        # `chrome://tracing` is deliberately not offered here: it reads
+        # the JSON shape, not this one, and naming a viewer that will
+        # refuse the file is the kind of dead offer `UX-194` fixed.
+        lines.append(f"  {result.get('slices', 0)} slices on "
+                     f"{result.get('tracks', 0)} tracks. Open it with "
+                     "Perfetto (https://ui.perfetto.dev), which reads this "
+                     "format natively; `bga timeline --format chrome` writes "
+                     "the legacy JSON for chrome://tracing.")
     return "\n".join(lines)
 
 
@@ -186,6 +409,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--anchor-element", default=None, metavar="ELEMENT",
         help="Align the two planes on this element instead of the "
              "longest-running one Plane 2 traced.")
+    parser.add_argument(
+        "--format", default=FORMAT_TRACKEVENT, choices=list(FORMATS),
+        help="`trackevent` (the default) writes Perfetto's own protobuf "
+             "trace, gzipped and written as a stream. `chrome` writes the "
+             "legacy Chrome JSON, for `chrome://tracing` and for a pipeline "
+             "that already parses it (UX-298).")
     args = parser.parse_args(argv)
 
     from bga import run_store
@@ -201,9 +430,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Error: {error}", file=sys.stderr)
         return 2
 
-    output = args.output or os.path.join(snapshot, "timeline.json")
+    output = args.output or os.path.join(snapshot, DEFAULT_OUTPUT[args.format])
     try:
-        result = render(snapshot, output, anchor_element=args.anchor_element)
+        result = render(snapshot, output, anchor_element=args.anchor_element,
+                        fmt=args.format)
     except (FileNotFoundError, RuntimeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2

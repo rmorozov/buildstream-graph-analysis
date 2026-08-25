@@ -85,6 +85,9 @@ MEDIUM = (
     # UX-296's big-run fixture: a million process records written to
     # disk, and four subprocess startups measured against it.
     "tests/unit/test_the_view_parses_nothing.py",               #    7.6s
+    # UX-298's emitter: a 40,000-process trace written twice, once for
+    # the ceiling and once for the bytes-before-close clause.
+    "tests/unit/test_the_timeline_speaks_perfetto.py",           #    6.0s
     "tests/unit/test_any_element_can_be_inspected.py",          #   12.3s
     "tests/unit/test_one_table_many_views.py",                  #    8.1s
     "tests/unit/test_the_report_has_chapters.py",               #    4.9s

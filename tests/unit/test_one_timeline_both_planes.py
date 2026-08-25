@@ -152,11 +152,15 @@ class TestSnapshotsKeepTheRawLog:
 
 class TestTheOneCommand:
     def test_it_renders_both_planes(self, tmp_path):
-        from tools.bga_timeline import render
+        """`UX-298` made TrackEvent the default; this file's claims are
+        about the Chrome shape, which is now the compatibility path, so
+        it asks for it by name. That both planes reach the *default*
+        format is `test_the_timeline_speaks_perfetto.py`'s clause."""
+        from tools.bga_timeline import FORMAT_CHROME, render
 
         snapshot = _snapshot(tmp_path)
         out = tmp_path / "timeline.json"
-        result = render(str(snapshot), str(out))
+        result = render(str(snapshot), str(out), fmt=FORMAT_CHROME)
 
         assert result["planes"] == ["1", "2"]
         assert result["anchor"] == "work-a.bst"
@@ -177,11 +181,11 @@ class TestTheOneCommand:
 
     def test_without_a_raw_log_it_renders_plane_1_and_says_what_is_missing(
             self, tmp_path):
-        from tools.bga_timeline import describe, render
+        from tools.bga_timeline import FORMAT_CHROME, describe, render
 
         snapshot = _snapshot(tmp_path, with_raw=False)
         out = tmp_path / "timeline.json"
-        result = render(str(snapshot), str(out))
+        result = render(str(snapshot), str(out), fmt=FORMAT_CHROME)
 
         assert result["planes"] == ["1"]
         assert json.loads(out.read_text()), "Plane 1 should still render"

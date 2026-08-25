@@ -126,6 +126,46 @@ SEVERITY = "bga:severity"          # this array carries findings
 COLUMNS = "bga:columns"            # column order for an array of objects
 DIRECTION = "bga:direction"        # what the sign of a delta means
 
+# UX-289: a named view over a table - which rows, which columns, in
+# what order, how many.
+#
+# The page had bounds (`UX-262`'s `Top N`) and filters (`UX-205`) and
+# **zero named presets**: measured on the 1,202-element run, no element
+# on the page carried a preset role. The controls existed; nothing named
+# what a reader would use them for, so "the critical path" was a table
+# the payload published separately rather than a view of the one table
+# every element is already in.
+#
+# Declared here rather than in the viewer for `UX-201`'s reason: a
+# second list of views living in JavaScript is a vocabulary waiting to
+# diverge from the payload it draws.
+#
+# A preset is `{name, question?, from?|where?, columns, sort?, bound?}`:
+#
+#   from    a dotted path to a published *selection* - an ordered list
+#           of records naming an element each, or a map keyed by
+#           element. The rows are that selection, in the order it is
+#           published, which is how "the critical path" keeps its order
+#           without the page knowing what a critical path is.
+#   where   `{column, equals}` - a predicate over a column of the table
+#           itself, for a membership the records already carry.
+#   columns which columns this view shows, in order. This is the half
+#           that makes the table readable: one table serving every
+#           question carried 13 columns on the 1,202-element run, and a
+#           reader asking one question wants four.
+#   sort    `{column, direction}`; `bound` an opening row cap.
+#
+# `from` and `where` are alternatives, never both: two ways of saying
+# which rows would be two answers to one question, which is the defect
+# `UX-288` had just finished removing from the payload.
+PRESETS = "bga:presets"
+PRESET_DIRECTIONS = ("asc", "desc")
+# The acceptance bound `UX-289` was filed with: a table that needs more
+# than this to answer one question is not a view of the data, it is the
+# data. Measured before: the element table carried 13 columns because
+# one table had to serve every question.
+PRESET_COLUMNS_MAX = 8
+
 # The closed set of quantities. Closed deliberately: an open vocabulary
 # is one a renderer cannot be complete against, and a renderer that
 # silently falls back to "print the raw number" is what this replaces.
@@ -207,6 +247,62 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
             raise ValueError(
                 f"{document}.{key}: {MARKERS} gives two verdict kinds the "
                 f"same shape, which is a colour-only encoding again")
+    # UX-289: a preset a renderer could not act on is worse than none -
+    # it names a view in the rail and then draws the unfiltered wall.
+    presets = hint.get(PRESETS)
+    if presets is not None:
+        if not isinstance(presets, (list, tuple)) or not presets:
+            raise ValueError(
+                f"{document}.{key}: {PRESETS} must be a non-empty list")
+        names = []
+        for preset in presets:
+            if not isinstance(preset, dict):
+                raise ValueError(f"{document}.{key}: {PRESETS} entry is not a "
+                                 f"mapping: {preset!r}")
+            name = preset.get("name")
+            if not name or not isinstance(name, str):
+                raise ValueError(
+                    f"{document}.{key}: {PRESETS} entry has no name")
+            names.append(name)
+            if "from" in preset and "where" in preset:
+                raise ValueError(
+                    f"{document}.{key}: preset {name!r} says both `from` and "
+                    f"`where` - two ways of choosing rows are two answers")
+            where = preset.get("where")
+            if where is not None and (not isinstance(where, dict)
+                                      or "column" not in where
+                                      or "equals" not in where):
+                raise ValueError(
+                    f"{document}.{key}: preset {name!r} `where` must be "
+                    f"{{column, equals}}")
+            columns = preset.get("columns")
+            if not columns or not isinstance(columns, (list, tuple)):
+                raise ValueError(
+                    f"{document}.{key}: preset {name!r} names no columns")
+            if len(columns) > PRESET_COLUMNS_MAX:
+                raise ValueError(
+                    f"{document}.{key}: preset {name!r} shows {len(columns)} "
+                    f"columns; the point of a preset is that it shows fewer "
+                    f"than {PRESET_COLUMNS_MAX}")
+            sort = preset.get("sort")
+            if sort is not None:
+                if not isinstance(sort, dict) or "column" not in sort:
+                    raise ValueError(
+                        f"{document}.{key}: preset {name!r} `sort` must name "
+                        f"a column")
+                if sort.get("direction", "desc") not in PRESET_DIRECTIONS:
+                    raise ValueError(
+                        f"{document}.{key}: preset {name!r} sorts "
+                        f"{sort.get('direction')!r}, not one of "
+                        f"{', '.join(PRESET_DIRECTIONS)}")
+            question = preset.get("question")
+            if question is not None and not str(question).strip().endswith("?"):
+                raise ValueError(
+                    f"{document}.{key}: preset {name!r} question "
+                    f"{question!r} is not a question")
+        if len(set(names)) != len(names):
+            raise ValueError(
+                f"{document}.{key}: two presets share a name: {names}")
     quantity = hint.get(QUANTITY)
     if quantity is not None and quantity not in QUANTITIES:
         raise ValueError(
@@ -889,6 +985,54 @@ _ANALYZE_HINTS = {
     "signals": {
         QUESTION: 'Which elements are on the chain that binds?',
         RAIL: 'act',
+        # UX-289: the views over the one element table.
+        #
+        # `UX-268` joined the six element-keyed signals into one row per
+        # element, and that table then had to serve every question at
+        # once - 13 columns on the 1,202-element run. These name the
+        # questions a reader actually arrives with, and each shows the
+        # four to six columns that answer one.
+        #
+        # Every population here is a **filter over a published field**,
+        # which is what `UX-288` made possible: `from` reads a selection
+        # the payload already publishes once (and takes its order from
+        # it), `where` tests a column the element records already carry.
+        # Nothing here computes a membership the payload does not have -
+        # Direction 7's boundary, and the reason `UX-288` came first.
+        PRESETS: [
+            {"name": "All elements",
+             "question": "Which element should I look at?",
+             "columns": ["element", "element_durations", "downstream_count",
+                         "is_leaf", "observed_critical", "element_kind"],
+             "sort": {"column": "element_durations", "direction": "desc"},
+             "bound": 25},
+            {"name": "Critical path",
+             "question": "Which elements are on the chain that binds?",
+             # In the order the chain runs, which is the order the
+             # selection is published in - the page does not need to know
+             # what a critical path is to draw it in the right order.
+             "from": "signals.critical_path_detail",
+             "columns": ["element", "element_durations", "slack",
+                         "element_kind", "probability"]},
+            {"name": "Leaves",
+             "question": "What could be deferred?",
+             "where": {"column": "is_leaf", "equals": True},
+             "columns": ["element", "element_durations", "downstream_count",
+                         "element_kind", "is_structural_kind"],
+             "sort": {"column": "element_durations", "direction": "desc"}},
+            {"name": "Choke points",
+             "question": "What does everything wait on?",
+             "from": "structural.bottleneck.choke_points",
+             "columns": ["element", "element_durations", "downstream_count",
+                         "weighted_duration_us", "element_kind"]},
+            {"name": "Latent heavies",
+             "question": "What is big and off the chain?",
+             "where": {"column": "observed_critical", "equals": False},
+             "columns": ["element", "element_durations", "slack",
+                         "downstream_count", "risk_score"],
+             "sort": {"column": "element_durations", "direction": "desc"},
+             "bound": 25},
+        ],
         "description": "The graph's own account of where the time is: "
                        "which elements lie on the chain, what slack the "
                        "rest have, and what fixing each in turn is worth.",

@@ -107,9 +107,38 @@ export function makeNode(tag) {
       this.attrs.class = this._className;
     },
     hidden: false,
-    href: "",
-    value: "",
-    id: "",
+    // A browser reflects these *both* ways: writing the property writes
+    // the content attribute. The shim reflected only attribute ->
+    // property, so a node built by setting `.href` or `.value` read
+    // `getAttribute(...) === null` here and the URL in a browser.
+    //
+    // Measured in the Chromium this repository drives (`UX-289`, which
+    // is where two reads returned null against a page a browser
+    // answers):
+    //
+    //   option.value = "Critical path"  ->  getAttribute("value")  "Critical path"
+    //   a.href       = "#element-x"     ->  getAttribute("href")   "#element-x"
+    //   div.id       = "an-id"          ->  getAttribute("id")     "an-id"
+    //   input.value  = "typed"          ->  getAttribute("value")  null
+    //
+    // `<input>` is the exception and it is not an accident: its `value`
+    // is the *current* value, which is why a form reset restores the
+    // attribute rather than the property. `<option>` reflects. Pinning
+    // both in `test_the_dom_shim_is_one_instrument.py`, because a shim
+    // that reflected `<input>` too would be wrong in the other
+    // direction.
+    _href: "",
+    get href() { return this._href; },
+    set href(value) { this._href = String(value); this.attrs.href = this._href; },
+    _id: "",
+    get id() { return this._id; },
+    set id(value) { this._id = String(value); this.attrs.id = this._id; },
+    _value: "",
+    get value() { return this._value; },
+    set value(value) {
+      this._value = String(value);
+      if (this.tagName === "option") this.attrs.value = this._value;
+    },
     _parent: null,
     parentElement: null,
     parentNode: null,

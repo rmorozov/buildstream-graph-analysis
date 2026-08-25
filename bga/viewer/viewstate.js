@@ -58,6 +58,15 @@ export function captureView(root) {
     .map((s) => s.getAttribute("data-section"));
   if (collapsed.length) params.set("c", collapsed.join(","));
 
+  // UX-289: which named view the reader is in. Captured before the
+  // per-table controls because choosing a view rebuilds them - "here is
+  // the critical path" is the link this whole item exists to make, and
+  // it has to survive being pasted.
+  for (const select of root.querySelectorAll?.("select.preset-view") ?? []) {
+    const key = select.getAttribute("data-table");
+    if (key && select.value) params.set(`v.${key}`, select.value);
+  }
+
   for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
     const key = table.getAttribute("data-table");
     const tools = table.parentNode?.querySelector?.(".table-tools");
@@ -124,6 +133,27 @@ export function applyView(root, query, { dispatch } = {}) {
       const isShut = section.getAttribute("data-collapsed") === "true";
       if (button && shut !== isShut) { fire(button, "click"); applied.push(`c:${key}`); }
     }
+  }
+
+  // UX-289: the view first. It replaces the table and its tools, so a
+  // filter applied before it would be applied to a table that is about
+  // to be thrown away.
+  for (const select of root.querySelectorAll?.("select.preset-view") ?? []) {
+    const key = select.getAttribute("data-table");
+    const want = params.get(`v.${key}`);
+    if (!want || select.value === want) continue;
+    // By property, not by attribute: `<option>`'s `value` is the one
+    // IDL attribute in this page that is not a plain reflection, and a
+    // check that read `getAttribute("value")` silently matched nothing.
+    const offered = [...(select.children ?? [])].some(
+      (option) => option.value === want);
+    // A view this run does not offer is *not* applied - a link from a
+    // run that had choke points must not silently land on a different
+    // view of a run that has none.
+    if (!offered) continue;
+    select.value = want;
+    fire(select, "change");
+    applied.push(`v:${key}`);
   }
 
   for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {

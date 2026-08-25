@@ -39,7 +39,46 @@ import { elementAnchor } from "./views.js";
  */
 export const SUBSECTIONS_SHOWN = 8;
 
+/**
+ * UX-289: the named views a section offers, as rail entries.
+ *
+ * "Reachable from the rail and from a link" is one requirement, not
+ * two: the entry's `href` is `UX-211`'s fragment for that view, so it
+ * is the link a reader copies, and the click applies it live rather
+ * than waiting for a reload - the page reads the fragment once, at
+ * load, and a rail that needed a reload to work would be a rail that
+ * does not work.
+ */
+function viewEntries(section, doc) {
+  const select = section?.querySelector?.("select.preset-view");
+  const options = [...(select?.children ?? [])];
+  if (options.length < 2) return null;
+  const table = select.getAttribute?.("data-table") ?? "elements";
+  const key = section.getAttribute("data-section");
+  const list = doc.createElement("ul");
+  list.className = "toc-sub";
+  for (const option of options) {
+    const name = option.value;
+    if (!name) continue;
+    const item = doc.createElement("li");
+    const link = doc.createElement("a");
+    link.href = `#${key}~v.${table}=${encodeURIComponent(name)}`;
+    link.setAttribute("data-toc-view", name);
+    link.textContent = name;
+    link.addEventListener?.("click", () => {
+      if (select.value === name) return;
+      select.value = name;
+      select.dispatchEvent?.(new Event("change", { bubbles: true }));
+    });
+    item.append(link);
+    list.append(item);
+  }
+  return list;
+}
+
 export function subsections(section, doc) {
+  const views = viewEntries(section, doc);
+  if (views) return views;
   const folds = [...(section?.querySelectorAll?.("details.map > summary") ?? [])];
   if (folds.length < 2) return null;
   const list = doc.createElement("ul");

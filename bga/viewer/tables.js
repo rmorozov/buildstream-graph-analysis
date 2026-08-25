@@ -173,3 +173,77 @@ export function applyTopN(table, column, n) {
 export function presetColumns(specs = []) {
   return specs.filter((spec) => spec.quantity).map((spec) => spec.key);
 }
+
+// ---------------------------------------------------------------- UX-289
+
+/**
+ * The elements a published *selection* names, in the order it names them.
+ *
+ * `UX-288` left every selection published exactly once and in one shape:
+ * an ordered list of records that name an element each
+ * (`critical_path_detail`, `choke_points`), or a map keyed by element
+ * (`leaves_detail`). This reads either, and the order it returns is the
+ * order the payload published - which is how "the critical path" is
+ * drawn in path order without the page knowing what a critical path is.
+ *
+ * Returns `null` for a path the payload does not carry, so a preset over
+ * an absent selection can be dropped rather than drawn empty.
+ */
+export function selectionAt(payload, path) {
+  let at = payload;
+  for (const step of String(path).split(".")) {
+    if (!at || typeof at !== "object") return null;
+    at = at[step];
+  }
+  if (Array.isArray(at)) {
+    const uids = at
+      .map((entry) => (entry && typeof entry === "object"
+                       ? entry.element_uid : entry))
+      .filter((uid) => typeof uid === "string");
+    return uids.length === at.length && uids.length ? uids : null;
+  }
+  if (at && typeof at === "object") {
+    const keys = Object.keys(at);
+    return keys.length ? keys : null;
+  }
+  return null;
+}
+
+/**
+ * One preset resolved against a run: which rows, in which order.
+ *
+ * Returns `null` when this run cannot support the preset - an absent
+ * selection, or a filter nothing matches. A named view that draws no
+ * rows is worse than one that is not offered: it reads as "there are
+ * none of these" when the truth is "this run does not carry that".
+ */
+export function applyPreset(preset, rows, payload, key = "element") {
+  if (!preset) return null;
+  let chosen;
+  if (preset.from) {
+    const order = selectionAt(payload, preset.from);
+    if (!order) return null;
+    const byUid = new Map(rows.map((row) => [row[key], row]));
+    chosen = order.map((uid) => byUid.get(uid)).filter(Boolean);
+  } else if (preset.where) {
+    chosen = rows.filter((row) => row[preset.where.column]
+                                  === preset.where.equals);
+  } else {
+    chosen = [...rows];
+  }
+  if (!chosen.length) return null;
+  // A `from` preset is already in the order the payload published it in,
+  // and re-sorting it would throw that away - so `sort` only applies
+  // where the rows had no order of their own.
+  const sort = preset.sort;
+  if (sort && !preset.from) {
+    const sign = (sort.direction ?? "desc") === "asc" ? 1 : -1;
+    const of = (row) => {
+      const value = row?.[sort.column];
+      return typeof value === "number" ? value : -Infinity;
+    };
+    chosen.sort((a, b) => sign * (of(a) - of(b)));
+  }
+  return { rows: chosen, total: chosen.length,
+           shown: preset.bound ? chosen.slice(0, preset.bound) : chosen };
+}

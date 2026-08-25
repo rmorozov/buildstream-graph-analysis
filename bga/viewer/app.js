@@ -26,7 +26,7 @@ import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
 import { copyButton, renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
-         copy, applyTopN, presetColumns } from "./tables.js";
+         copy, applyTopN, presetColumns, applyPreset } from "./tables.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -35,6 +35,8 @@ const DIRECTION = "bga:direction";
 // UX-209: the question a section answers, and which part of the
 // argument it belongs to. UX-208: what a column's values *are*.
 const QUESTION = "bga:question";
+// UX-289: the named views over a table, declared in the schema.
+const PRESETS = "bga:presets";
 const RAIL = "bga:rail";
 const ROLE = "bga:role";
 
@@ -862,7 +864,79 @@ export function elementSignalTable(signals, node) {
   return { rows, hint, merged: present };
 }
 
-export function renderPairs(key, object, hint = {}, node = undefined) {
+/**
+ * UX-289: one element table, drawn as the view a reader asked for.
+ *
+ * The page had bounds and filters and **zero named presets** - measured
+ * on the 1,202-element run, no element carried a preset role. So a
+ * reader wanting "the critical path" got it as a separate table the
+ * payload published separately, and the one table every element is
+ * already in had to carry 13 columns because it served every question
+ * at once.
+ *
+ * Each view names its own columns, so the width is a property of the
+ * question rather than of the union of all of them. The selector is a
+ * `<select>` for the reason `UX-262`'s Top-N is: it is the control the
+ * page already teaches, and it round-trips through `UX-211`'s fragment
+ * with no new vocabulary.
+ *
+ * A preset this run cannot support is **not offered** rather than
+ * offered empty: "there are no choke points" and "this run does not
+ * carry choke points" are different claims, and a view that draws zero
+ * rows makes them look alike.
+ */
+export function presetTable(key, rows, presets, hint, node, payload) {
+  const usable = (presets ?? [])
+    .map((preset) => ({ preset, view: applyPreset(preset, rows, payload) }))
+    .filter((entry) => entry.view);
+  if (usable.length < 2) return null;
+
+  const slot = el("div", { class: "preset-table", "data-presets":
+                           usable.map((e) => e.preset.name).join("|") });
+  const select = el("select", { class: "preset-view",
+                                "data-table": key,
+                                "aria-label": "View" });
+  for (const { preset, view } of usable) {
+    select.append(el("option", { value: preset.name, title: preset.question ?? null },
+                     `${preset.name} (${view.total})`));
+  }
+  const body = el("div", { class: "preset-body" });
+
+  const draw = (name) => {
+    const entry = usable.find((e) => e.preset.name === name) ?? usable[0];
+    const { preset, view } = entry;
+    // The columns this view shows, in the order it names them - and
+    // only the ones the run actually carries, so a preset naming a
+    // column an older payload lacks degrades to the columns it has
+    // rather than to a wall of empty cells.
+    const present = new Set(rows.flatMap(Object.keys));
+    const columns = preset.columns.filter((column) => present.has(column));
+    const viewHint = {
+      ...hint,
+      [COLUMNS]: (hint[COLUMNS] ?? []).filter(
+        (spec) => columns.includes(typeof spec === "string" ? spec : spec.key)),
+      [QUESTION]: preset.question ?? hint[QUESTION],
+    };
+    const built = buildTable("elements", view.shown, viewHint, node);
+    built.table.setAttribute("data-preset", preset.name);
+    body.replaceChildren(
+      el("p", { class: "muted" },
+         preset.question ? `${preset.question} ` : "",
+         `${view.shown.length} of ${rows.length} elements`
+         + (view.total > view.shown.length
+            ? `, the first ${view.shown.length} of ${view.total}` : "")),
+      built.tools, built.table);
+  };
+  select.addEventListener("change", () => draw(select.value));
+  draw(usable[0].preset.name);
+  slot.append(el("div", { class: "preset-bar" },
+                 el("label", { class: "preset-label" }, "View: "), select),
+              body);
+  return { node: slot, select, draw, presets: usable.map((e) => e.preset) };
+}
+
+export function renderPairs(key, object, hint = {}, node = undefined,
+                            payload = undefined) {
   const direction = hint[DIRECTION];
   const list = el("dl", { class: "pairs" });
   // UX-268: the element-keyed signals leave the pair list and become
@@ -942,14 +1016,30 @@ export function renderPairs(key, object, hint = {}, node = undefined) {
     // One row per element, before the scalars - it is the thing a
     // reader came for, and `UX-261` put the same argument to the
     // decision block.
-    const { table, tools } = buildTable("elements", joined.rows,
-                                        joined.hint, node);
-    parts.push(el("div", { class: "map-table", "data-bounded": "map",
-                           "data-joined": joined.merged.join(",") },
-                  el("p", { class: "muted" },
-                     `One row per element, joined from `
-                     + `${joined.merged.length} signals.`),
-                  tools, table));
+    //
+    // UX-289: as the *view* the reader asked for, where the schema
+    // declares views over it. The unfiltered union is still one of
+    // them ("All elements"), so nothing became unreachable - it stopped
+    // being the only thing on offer.
+    const views = presetTable("elements", joined.rows, hint[PRESETS],
+                              joined.hint, node, payload);
+    if (views) {
+      parts.push(el("div", { class: "map-table", "data-bounded": "map",
+                             "data-joined": joined.merged.join(",") },
+                    el("p", { class: "muted" },
+                       `One row per element, joined from `
+                       + `${joined.merged.length} signals.`),
+                    views.node));
+    } else {
+      const { table, tools } = buildTable("elements", joined.rows,
+                                          joined.hint, node);
+      parts.push(el("div", { class: "map-table", "data-bounded": "map",
+                             "data-joined": joined.merged.join(",") },
+                    el("p", { class: "muted" },
+                       `One row per element, joined from `
+                       + `${joined.merged.length} signals.`),
+                    tools, table));
+    }
   }
   parts.push(list);
   return el("section", { "data-section": key, "data-rail": heading(key, hint).rail },
@@ -1021,7 +1111,7 @@ export function renderVerdict(payload) {
 // The generic dispatch. Note there is no `switch (key)` here: what a
 // value is rendered as follows from its *shape* and its hints.
 export function renderSection(key, value, hint = {}, node = undefined,
-                              investigate = null) {
+                              investigate = null, payload = undefined) {
   if (value === null || value === undefined) return null;
   if (hint[SEVERITY] && Array.isArray(value)) {
     // UX-217: the schema node travels with the value, so the evidence
@@ -1039,7 +1129,12 @@ export function renderSection(key, value, hint = {}, node = undefined,
               el("p", {}, el("code", {}, value.join(", "))));
   }
   if (typeof value === "object") {
-    return Object.keys(value).length ? renderPairs(key, value, hint, node) : null;
+    return Object.keys(value).length
+      // UX-289: the whole document, because a preset's population is a
+      // selection published elsewhere in it - `structural.bottleneck`
+      // for the choke points. The section renders its own value; the
+      // payload is only ever read for a declared `from` path.
+      ? renderPairs(key, value, hint, node, payload) : null;
   }
   return null;   // scalars belong in the summary, below
 }
@@ -1078,7 +1173,8 @@ export function renderSummary(payload, hints) {
 export function hintsOf(node) {
   const hint = {};
   if (!node || typeof node !== "object") return hint;
-  for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION, RAIL]) {
+  for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
+                      RAIL, PRESETS]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;
@@ -1127,7 +1223,7 @@ export function render(payload, schema, root, investigate = null) {
   for (const [key, value] of Object.entries(payload)) {
     if (key === "schema") continue;
     const section = renderSection(key, value, hints[key] ?? {}, nodes[key],
-                                  investigate);
+                                  investigate, payload);
     if (section) root.append(section);
     // UX-270: the run's most important list, immediately after the
     // section it used to be a row of. `UX-262` bounded its rows and

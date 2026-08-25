@@ -98,10 +98,13 @@ class TestThereIsOnlyOneShim:
 
 @needs_node
 class TestItAgreesWithChrome:
-    """Measured in Chrome 141, then pinned here.
+    """Measured in a real browser, then pinned here.
 
     These are the behaviours the guards actually depend on, and each
-    one is a place a previous shim was wrong.
+    one is a place a previous shim was wrong. The first block was
+    measured in Chrome 141; the reflection block below in Chromium
+    141.0.7390.37, with the same driver (`tests/browser.py`) against a
+    blank page.
     """
 
     CHROME = {
@@ -124,6 +127,19 @@ class TestItAgreesWithChrome:
         "descendant_combinator": 2,
         # An href attribute reflects into the property.
         "href_property": "#element-x",
+        # `UX-289`: and the *other* direction. Writing the property
+        # writes the content attribute - except on `<input>`, whose
+        # `value` is the current value rather than the default, which is
+        # why a form reset restores the attribute and not the property.
+        # The shim reflected only attribute -> property, so a node built
+        # by setting `.value` or `.href` read `null` from
+        # `getAttribute` here and the real thing in a browser; two reads
+        # in `UX-289` were written against the browser and found nothing
+        # in the harness.
+        "option_value_attribute": "Critical path",
+        "a_href_attribute": "#element-x",
+        "div_id_attribute": "an-id",
+        "input_value_attribute": None,
         # Descendant selectors, which the probes use.
         "tbody_tr": 1,
         "all_tr": 2,
@@ -147,6 +163,11 @@ const p = mk("div"); p.append(mk("i")); p.prepend(mk("b"));
 
 const link = mk("a"); link.setAttribute("href", "#element-x");
 
+const opt = mk("option"); opt.value = "Critical path";
+const written = mk("a"); written.href = "#element-x";
+const typed = mk("input"); typed.value = "typed";
+const named = mk("div"); named.id = "an-id";
+
 const table = mk("table"), tbody = mk("tbody"), thead = mk("thead");
 table.append(tbody, thead); tbody.append(mk("tr")); thead.append(mk("tr"));
 
@@ -163,6 +184,10 @@ console.log(JSON.stringify({
   moved_to_new_parent: newParent.children.length,
   prepend_order: p.children.map((n) => n.tagName).join(","),
   href_property: link.href,
+  option_value_attribute: opt.getAttribute("value"),
+  a_href_attribute: written.getAttribute("href"),
+  div_id_attribute: named.getAttribute("id"),
+  input_value_attribute: typed.getAttribute("value"),
   tbody_tr: table.querySelectorAll("tbody tr").length,
   all_tr: table.querySelectorAll("tr").length,
   child_combinator: host.querySelectorAll(".a > b").length,

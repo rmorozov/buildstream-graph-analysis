@@ -76,7 +76,11 @@ def test_a_pinned_element_fires_through_the_real_call_site(tmp_path):
 
     risks = result.structural["serialization_point_risks"]
     assert len(risks) == 1
-    assert risks[0]["elements"] == ["core.bst"]
+    # UX-289: one record per element, carrying the two numbers that
+    # used to be published as separate maps keyed by the same uid.
+    assert [e["element_uid"]
+            for e in risks[0]["pinned_elements"]] == ["core.bst"]
+    assert risks[0]["pinned_elements"][0]["max_jobs"] == 1
     assert risks[0]["notparallel"] is True
     assert risks[0]["typical_max_jobs"] == 4
 

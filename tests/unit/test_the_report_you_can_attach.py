@@ -25,6 +25,7 @@ import base64
 import gzip
 import json
 import os
+import pathlib
 import re
 import shutil
 import subprocess
@@ -44,6 +45,33 @@ _WRAPPED = """[wrapper][2026-08-21 12:00:00,000] INFO: Executing command: bst bu
 _RAW = """START pid=101 ppid=1 ts=1000.000000 element=work-a.bst cmd=cc -c main.c
 END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 """
+
+
+# UX-287: two bounds, because an export has two halves that grow for
+# different reasons. Each is a measurement plus headroom, and each says
+# which run it is a bound *for*.
+#
+#   the page      162,909 B on every run (modules 144,636 + css 16,444
+#                 + 1,829 of scaffolding) - grows with source
+#   golden   (4)  250,472 B   -> of which data 87,563
+#   macro_micro (11) 288,404 B -> of which data 125,495
+#
+# The synthetic 1,202-element run exports at 1,063,807 B and is not
+# committed (`UX-189`), so it is measured in the Outcome rather than
+# guarded here.
+PAGE_BUDGET_B = 172_000
+MACRO_MICRO = "tests/fixtures/macro_micro/run"
+COMMITTED_EXPORTS = [
+    ("golden", GOLDEN, 260_000),
+    ("macro_micro", MACRO_MICRO, 300_000),
+]
+
+
+def _embedded(path):
+    """The bytes of documents the page carries, so the rest is the page."""
+    text = pathlib.Path(path).read_text(encoding="utf-8")
+    return sum(len(found) for found in re.findall(
+        r'<script type="application/json"[^>]*>(.*?)</script>', text, re.S))
 
 
 @pytest.fixture
@@ -359,36 +387,70 @@ class TestTheSizeDiscipline:
             f"{len(page) - accounted} B of the page comes from neither "
             f"the modules nor the stylesheet")
 
-    def test_the_golden_export_is_small_enough_to_attach(self, exported):
-        """The loose absolute backstop. It has moved five times, always
-        with a measurement, and every move has been *data* - which is
-        what the two guards around it exist to establish, because a
-        ceiling alone cannot tell a new contract from a vendored
-        framework.
+    def test_the_page_itself_stays_within_its_budget(self, exported):
+        """`UX-287`: the half of the size a run cannot change.
 
-        `UX-234` moved it: `store-aggregate/v1` is a sixth schema, and
-        `schemas.json` carries every schema's descriptions because they
-        are the page's hover text. Measured: the golden export went
-        198,756 -> 209,867 B, of which 9,137 B is that schema and ~700 B
-        is the aggregate document itself.
+        The old backstop asserted a single constant against the golden
+        export and had moved five times, always to accommodate the run
+        it was measured against - a bound that rises whenever it is
+        exceeded is a record, not a limit. Worse, it was measured on a
+        **four-element** run, so it bounded the one quantity that barely
+        varies while the quantity it was named for went unwatched.
 
-        `UX-267` moves it again, and this time the growth is **source**
-        rather than data - which is exactly the distinction the
-        companion guard below exists to establish, and it still passes.
-        Measured on the same fixture:
+        Measured across all three runs this repository can produce:
 
-            before round 36   232,191 B   (96.7% of the old ceiling)
-            after             239,945 B   (+7,754 B)
+        ```text
+        run             elements     bytes      data   modules     css   other
+        golden                 4   250,472    87,563   144,636  16,444   1,829
+        macro_micro           11   288,404   125,495   144,636  16,444   1,829
+        synthetic          1,202 1,063,807   900,898   144,636  16,444   1,829
+        ```
 
-        Of that, `app.js` grew 59,034 -> 72,773 B and `style.css`
-        20,272 -> 21,368: the renderer that turns a map into a searchable
-        table is more code than `JSON.stringify`, and the export inlines
-        the module. The ceiling was already nearly exhausted by rounds
-        that landed between `UX-234` and here, which is the real reason
-        it had to move - not this round alone.
+        The page is **162,909 B on every run**. That is the number a
+        ceiling can honestly guard: it grows when *source* grows, and no
+        amount of content can mask it. The totals below guard the other
+        half, per fixture - so content can no longer hide behind the
+        page, nor the page behind content.
         """
-        assert exported[1]["bytes"] < 260_000, exported[1]["bytes"]
-        assert exported[1]["over_budget"] is False
+        page = exported[1]["bytes"] - _embedded(exported[0])
+        assert page < PAGE_BUDGET_B, f"the page itself is {page} B"
+
+    def test_the_page_costs_the_same_whatever_the_run(self, tmp_path):
+        """What justifies splitting the bound in two. If the page's cost
+        varied with the run, "the page" would not be a thing to bound
+        separately and this whole structure would be wrong."""
+        from tools.bga_view import export
+
+        fixed = {}
+        for label, run in (("golden", GOLDEN), ("macro_micro", MACRO_MICRO)):
+            path = tmp_path / f"{label}.html"
+            result = export(str(run), str(path))
+            fixed[label] = result["bytes"] - _embedded(path)
+        assert len(set(fixed.values())) == 1, (
+            f"the page is not run-independent: {fixed}")
+
+    @pytest.mark.parametrize("label,run,bound", COMMITTED_EXPORTS)
+    def test_each_committed_run_exports_within_its_stated_bound(
+            self, label, run, bound, tmp_path):
+        """`UX-287`'s acceptance: the bound is asserted against a run
+        whose size is representative, and it is stated *for that run*.
+
+        **The decision the item asked for**, since the 11-element export
+        is 288,404 B and the old ceiling was 260,000: the export is not
+        too big. A self-contained HTML report at 288 KB - or at 1.04 MB
+        for 1,202 elements - is well inside what a ticket or a mail
+        client takes, and `tools/bga_view.py`'s own `EXPORT_BUDGET_B` of
+        8 MiB is the limit that reflects the use. The old number was not
+        a judgement about attachments; it was the size of a four-element
+        run at the moment somebody wrote it down.
+        """
+        from tools.bga_view import export
+
+        path = tmp_path / f"{label}.html"
+        result = export(str(run), str(path))
+        assert result["bytes"] < bound, (
+            f"{label} exports {result['bytes']} B, over its stated {bound} B")
+        assert result["over_budget"] is False
 
     def test_the_data_is_the_documents_and_the_schemas(self, exported):
         """The backstop's other half, and the one that actually

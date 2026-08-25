@@ -1,6 +1,6 @@
 # UX-287: the export ceiling is measured on a four-element run
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-195 | **Serves:** R8 — who attaches the file to a ticket | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-195 | **Serves:** R8 — who attaches the file to a ticket | **Topic:** guards
 
 ## Motivation
 
@@ -65,3 +65,55 @@ for four.
 The ceiling is asserted against the 11-element fixture and reddens at
 its current 280,836 bytes until a decision is recorded. Adding content
 to a run that pushes an export past its stated bound reddens the guard.
+
+## Outcome
+
+🟢 Done (round 39). The ceiling is two bounds now, because an export has
+two halves that grow for different reasons.
+
+**Measured across every run this repository can produce:**
+
+```text
+run             elements     bytes      data   modules     css   other
+golden                 4   250,472    87,563   144,636  16,444   1,829
+macro_micro           11   288,404   125,495   144,636  16,444   1,829
+synthetic          1,202 1,063,807   900,898   144,636  16,444   1,829
+```
+
+**The page is 162,909 B on every run.** That is the number a ceiling can
+honestly guard: it grows when *source* grows, and no amount of content
+can mask it. `PAGE_BUDGET_B = 172_000` bounds it, and a second test
+asserts the page really is run-independent — which is what justifies
+splitting the bound at all.
+
+**Each committed fixture has its own total**, stated for the run it
+applies to: golden 260,000 (at 250,472) and macro_micro 300,000 (at
+288,404). Content can no longer hide behind the page, nor the page
+behind content. The 1,202-element run is generated rather than committed
+(`UX-189`), so it is measured here rather than guarded.
+
+**The decision item 3 asked for: the export is not too big.** A
+self-contained HTML report at 288 KB — or 1.04 MB at 1,202 elements — is
+well inside what a ticket or a mail client takes, and
+`tools/bga_view.py`'s own `EXPORT_BUDGET_B` of 8 MiB is the bound that
+reflects the actual use. The old 260,000 was never a judgement about
+attachments; it was the size of a four-element run at the moment
+somebody wrote it down, which is exactly why it had moved five times.
+
+**Falsification, and a non-discriminating mutation fixed rather than
+counted:**
+
+```text
+M1 pad app.js with 20 KB of *comments*  -> page budget unmoved  <- see below
+M1'pad app.js with 20 KB of *code*      -> 1 failed  (page budget)
+M2 macro_micro's bound set to 280,000   -> 1 failed  (its own row)
+```
+
+M1 as first written proved nothing: `bga_view.py`'s `_uncommented` strips
+whole-line comments when it inlines a module, so twenty thousand bytes
+of comment never reach the export. The mutation had to be code. That is
+a fact about the export worth knowing — the page budget bounds *shipped*
+source, not source as written — and it is why the second form is the one
+recorded.
+
+Tests: 3 new, replacing one; every one runs on a committed fixture.

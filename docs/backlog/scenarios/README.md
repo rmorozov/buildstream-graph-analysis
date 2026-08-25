@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-292 scenarios: **16 open**, 276 closed.
+292 scenarios: **15 open**, 277 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 4 |
 | store | 2 | 26 |
 | docs | 1 | 25 |
-| guards | 1 | 39 |
+| guards | 0 | 39 |
 
 ## Open scenarios
 
@@ -49,7 +49,6 @@ task file, which is the only place it ever lived twice.
 | UX-284 | [the table tools are below the table, and scroll away](UX-0284-the-table-tools-are-below-the-table-and-scroll-away.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-285 | [the identity blocks are split, and the blast box is last](UX-0285-the-identity-blocks-are-split-and-the-blast-box-is-last.md) | viewer | Medium | R1, R7 | 🔴 |
 | UX-286 | [the report is forty-eight fragments with no chapters](UX-0286-the-report-is-forty-eight-fragments-with-no-chapters.md) | viewer | High | R1, R7 | 🔴 |
-| UX-287 | [the export ceiling is measured on a four-element run](UX-0287-the-export-ceiling-is-measured-on-a-four-element-run.md) | guards | High | R8 | 🔴 |
 | UX-290 | [the schema does not describe its tuples](UX-0290-the-schema-does-not-describe-its-tuples.md) | contracts | Medium | R7, R8 | 🔴 |
 | UX-291 | [a finding carries its numbers three times](UX-0291-a-finding-carries-its-numbers-three-times.md) | contracts | Low | R5, R7 | 🔴 |
 

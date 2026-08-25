@@ -104,6 +104,9 @@ console.log(JSON.stringify({
     title: b.getAttribute("title"),
     copies: b.getAttribute("data-copies"),
     cls: b.attrs.class ?? "",
+    // What it would actually put on the clipboard, where the control
+    // carries it. This is what the label is a claim *about*.
+    payload: (b.getAttribute("data-copy") ?? "").slice(0, 40),
   })),
   strips,
   markdown_boxes: root.querySelectorAll("input.copy-markdown").length,
@@ -167,6 +170,28 @@ class TestEveryCopyControlNamesItsNoun:
             [c["label"] for c in rows])
         assert not any("shown rows" == c["label"].lower().replace("copy ", "")
                        for c in rows)
+
+    def test_the_label_matches_what_the_control_actually_copies(self, payload):
+        """The rule with teeth. Grouping labels by a declared kind is
+        satisfied by a control that declares the *wrong* kind - measured:
+        reverting the finding button to the default noun left every other
+        test here green, because it then agreed with itself. This checks
+        the label against the payload the control carries.
+
+        A finding's pasteable text is stamped (`UX-224`); anything so
+        stamped must say `finding`, and nothing else may.
+        """
+        drawn = _page(payload)
+        wrong = [c["label"] for c in drawn["controls"]
+                 if c["payload"].startswith("BGA finding")
+                 and "finding" not in c["label"].lower()]
+        assert wrong == [], (
+            f"control(s) copying a finding and saying {wrong}")
+        stolen = [c["label"] for c in drawn["controls"]
+                  if "finding" in c["label"].lower() and c["payload"]
+                  and not c["payload"].startswith("BGA finding")]
+        assert stolen == [], (
+            f"control(s) saying `finding` and copying something else: {stolen}")
 
     def test_two_controls_that_copy_different_things_read_differently(
             self, payload):

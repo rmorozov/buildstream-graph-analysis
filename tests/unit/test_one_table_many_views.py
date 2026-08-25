@@ -64,6 +64,13 @@ PUBLISHED_VIEWS = {
 # `test_no_two_tables_carry_the_same_elements` for the measurement.
 KNOWN_COINCIDENCE = ["structural#31 and structural#29 (5)"]
 
+# The bound, stated here rather than read from `schemas`. Reading the
+# constant and asserting against it is the mutation that passes:
+# `PRESET_COLUMNS_MAX = 40` left all eighteen of these green, because
+# every one of them measured against the number it was checking. Same
+# defect `UX-277` had to fix in its own nesting guard, one round back.
+VIEW_COLUMNS_BOUND = 8
+
 
 def _presets():
     return schemas.schema(schemas.ANALYZE)["properties"]["signals"][
@@ -228,18 +235,24 @@ class TestThePresetsAreDeclaredNotCoded:
 
     def test_every_view_shows_fewer_columns_than_the_union(self):
         for preset in _presets():
-            assert len(preset["columns"]) <= schemas.PRESET_COLUMNS_MAX, (
+            assert len(preset["columns"]) <= VIEW_COLUMNS_BOUND, (
                 f"{preset['name']} shows {len(preset['columns'])} columns")
 
+    def test_the_module_is_pinned_to_the_bound(self):
+        """The other half of stating it here: if the schema's own
+        constant moves, that is a decision, and this is where it is
+        made rather than absorbed."""
+        assert schemas.PRESET_COLUMNS_MAX == VIEW_COLUMNS_BOUND
+
     def test_a_preset_that_names_too_many_columns_is_refused(self):
-        """The bound is the point of the item, so it is checked rather
-        than trusted - `PRESET_COLUMNS_MAX` reading 40 must not be a
-        silent no-op."""
+        """The bound is the point of the item, so the refusal is
+        exercised at a fixed width rather than at `PRESET_COLUMNS_MAX +
+        1` - which would keep raising however far the constant moved."""
         with pytest.raises(ValueError, match="columns"):
             schemas._check_hint("analyze/v2", "signals", {
                 schemas.PRESETS: [{"name": "wide", "columns":
                                    [f"c{n}" for n in
-                                    range(schemas.PRESET_COLUMNS_MAX + 1)]}]})
+                                    range(VIEW_COLUMNS_BOUND + 1)]}]})
 
     def test_a_preset_choosing_rows_two_ways_is_refused(self):
         with pytest.raises(ValueError, match="two answers"):
@@ -318,7 +331,7 @@ class TestThePageDrawsThem:
         table beside it is not has moved the problem."""
         wide = {f"{t['section']}[{t['preset'] or ''}]": t["columns"]
                 for t in _page(payload)["tables"]
-                if t["columns"] > schemas.PRESET_COLUMNS_MAX}
+                if t["columns"] > VIEW_COLUMNS_BOUND}
         assert wide == {}, f"table(s) wider than eight columns: {wide}"
 
     def test_the_element_table_is_drawn_once(self, payload):
@@ -416,6 +429,19 @@ class TestAViewTravelsInTheLink:
         assert "Choke points" not in drawn["offered"], drawn["offered"]
         assert "Critical path" in drawn["offered"], (
             "removing one selection took the others with it")
+
+    def test_a_view_whose_filter_matches_nothing_is_not_offered(self, payload):
+        """The `where` half of the rule above, and it needs its own case:
+        an absent *selection* is refused where the path is resolved, so a
+        run with no choke points never reaches the "no rows" check at
+        all. Removing that check left all eighteen of these green until
+        this was added - a line no test could redden."""
+        without = json.loads(json.dumps(payload))
+        for record in (without["signals"].get("blast_radius") or {}).values():
+            record["is_leaf"] = False
+        drawn = _page(without)
+        assert "Leaves" not in drawn["offered"], drawn["offered"]
+        assert "All elements" in drawn["offered"]
 
     def test_a_link_to_a_view_this_run_lacks_is_ignored(self, payload):
         """The other half: a fragment from a run that had choke points,

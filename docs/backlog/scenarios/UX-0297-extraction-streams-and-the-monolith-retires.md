@@ -1,6 +1,6 @@
 # UX-297: extraction streams, and the monolith retires
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** Direction 15, UX-298 (the trace it writes beside), UX-215 (the aggregate pattern) | **Serves:** R1, R2 | **Topic:** capture
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** Direction 15, UX-298 (the trace it writes beside), UX-215 (the aggregate pattern) | **Serves:** R1, R2 | **Topic:** capture
 
 ## Motivation
 
@@ -58,3 +58,111 @@ byte-match the legacy path's numbers on the same small fixtures
 (golden equality); no `plane2.json` is written for a new capture;
 a legacy run still analyzes with identical output; mutation:
 buffering the whole event list again reddens the RSS guard.
+
+## Progress (2026-08-25)
+
+🟡 **Partly done.** The read side of this item landed and is measured;
+the streaming clause did not, and the measurement below says why
+rather than leaving it as an omission.
+
+**What the monolith cost, and what it costs now.** Measured on a
+generated 200,000-process trace, the same file extracted by a worktree
+at the pre-change commit and by this tree:
+
+```text
+                              before (round 39)          after
+plane2.json on disk               69,641,647 B         43,879 B
+  the record list's share of it          99.94%              0%
+extract it and write it                  12.4 s           8.1 s
+peak RSS of that                        267 MB          287 MB
+```
+
+The 1,587x is the whole item's premise, confirmed: nothing read the
+records. `correlate`, `analyze` and the store aggregate all read the
+per-element reductions sitting beside them, and the repository's own
+two-plane fixture has carried no `processes` key for many rounds while
+every asserted number was computed from it.
+
+**Landed.**
+
+1. *The record list left the report.* `summarize` publishes the
+   reductions and stamps them `plane2/v2`. The records live in the raw
+   trace log the snapshot keeps - which is what the timeline is
+   rendered from - and `load_records` is the one call that rebuilds
+   them, for the trace converter and for the ground-truth test that
+   checks records against arithmetic.
+2. *Every aggregate became an accumulator.* Ten functions were split
+   into `add` and `finish`, and `summarize(records)` is a fold with
+   the list poured into it - one code path, two callers. Verified
+   byte-identical against the pre-change tree on two generated traces,
+   the second exercising both record streams, a configure subtree,
+   unresolved buckets, open records and CPU disagreements; and by the
+   3,600-test suite, which asserts a great many of these numbers
+   directly.
+3. *`compute_cpu_time` stopped rescanning.* Its per-element wall span
+   re-walked every record once per element - O(elements x processes),
+   and 2.0 s of the 9.4 s an extraction spent on this trace. It is a
+   running min and max now, which is where most of the 35% went.
+4. *The auto-compare releases before it parses.* Rebinding a name
+   looks sequential and is not: the previous report stayed alive for
+   the whole of the next `json.load`, which is the measured 1.7x.
+5. *Reading is one interface.* A capture from before this item is
+   recognised by the same rule and read the same way; the analysis
+   publishes `plane2_coverage.source` saying which shape served its
+   numbers, because both publish the same aggregates and the
+   difference a reader needs is why the file is the size it is.
+   `bga.contracts.superseded()` names a shape a release reads and
+   never writes, which is what an existing store is full of.
+6. *Two smaller reads on the way past.* The trace converter streams
+   its raw log instead of reading it whole (`UX-168`'s fix had never
+   reached it), and `bga doctor` reads the coverage census the report
+   already publishes rather than re-tallying the records.
+
+**Not landed, and why.** *Extraction is not O(elements) yet, and peak
+RSS went up 7%.* Measured inside one extraction of the same trace:
+
+```text
+after parsing            247 MB resident
+after pairing            249 MB
+after folding            271 MB      (the records are freed as they fold)
+```
+
+The peak is set **before the fold begins**. `pair_events` sorts the
+whole event list by timestamp, because the raw log is only
+approximately ordered - concurrent writers interleave - and pairing a
+START with its own END needs order. So the event list is materialized
+whatever the aggregates do, and the fold's own state (~22 MB here, in
+timestamps and parentage the algorithms genuinely need) now sits above
+that floor instead of the record-holding intermediates that used to.
+
+Removing the floor needs the capture to write something consumable in
+order, which is exactly what `UX-298` is - and which is why this
+item's own header lists it as a dependency. The RSS-ceiling clause of
+the acceptance test moves there with it.
+
+**Also deviated, recorded.** The acceptance test says *no `plane2.json`
+is written for a new capture*. One still is: the same path, the same
+name, 1,587x smaller and stamped with its shape. Renaming the artifact
+would have moved every reader, every `--plane2` argument, the store
+layout and the documentation for no measured gain, and "the file that
+was 1.5 GB is now 44 KB" is the fix; "the file has a different name"
+is not.
+
+**Falsification.** Six mutations against the committed tree:
+
+```text
+M1  the record list comes back                       1 guard red
+M2  the concurrency sweep ties the other way         passed - see below
+M3  the provenance always says aggregates-only       1 red
+M4  the fold stops relabelling                       1 red
+M5  the new shape wears the retired id               1 red
+M6  the payload stops saying which shape served it   1 red
+```
+
+M2 is the one worth keeping. The guard's equality clause - the fold
+against the list - is true *by construction*, because `summarize` is
+the fold; it passed against a deliberately broken sweep. Four
+known-answer clauses over three hand-worked processes replace the
+argument with an answer, and the tie is the case written down: one
+process starts exactly as another ends, they are never both running,
+the peak is 2, and the mutation says 3. M2 reddens now.

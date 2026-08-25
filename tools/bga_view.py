@@ -26,7 +26,6 @@ or a `..` cannot walk out.
 import argparse
 import base64
 import contextlib
-import gzip
 import http.server
 import io
 import json
@@ -395,22 +394,22 @@ def trace_file(run: str, destination: str) -> Optional[str]:
     and compressed in fixed-size chunks rather than in one call - the
     whole point is that the largest artifact this tool handles never has
     to fit in RAM twice.
+
+    `UX-298`: and in Perfetto's own format, which the writer gzips as it
+    goes - so the render *is* the served file and there is no second
+    pass over it at all. The blob is still `application/gzip` and
+    Perfetto still decompresses it on arrival; what changed is that what
+    comes out is the format it reads natively rather than the JSON it
+    tolerates.
     """
     from .bga_timeline import render
 
     snapshot = os.path.dirname(os.path.abspath(run))
-    scratch = tempfile.mkdtemp(prefix="bga-view-")
     try:
-        rendered = os.path.join(scratch, "timeline.json")
-        render(snapshot, rendered, quiet=True)
-        with open(rendered, "rb") as source, \
-                gzip.open(destination, "wb", compresslevel=6) as out:
-            shutil.copyfileobj(source, out, length=1024 * 1024)
+        render(snapshot, destination, quiet=True)
         return destination
     except (FileNotFoundError, RuntimeError, OSError):
         return None
-    finally:
-        shutil.rmtree(scratch, ignore_errors=True)
 
 
 def trace_bytes(run: str) -> Optional[bytes]:

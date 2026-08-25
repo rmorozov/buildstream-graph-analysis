@@ -221,7 +221,10 @@ class TestTheTimeline:
         block = re.search(r'id="bga-trace">"(data:application/gzip;base64,'
                           r'([A-Za-z0-9+/=]+))"', text)
         assert block, "no inline trace"
-        assert gzip.decompress(base64.b64decode(block.group(2)))[:1] == b"["
+        # `UX-298`: a Perfetto trace, not a JSON array. `Trace` is
+        # `repeated TracePacket packet = 1`, so the first byte of the
+        # stream is that field's tag - `(1 << 3) | 2`.
+        assert gzip.decompress(base64.b64decode(block.group(2)))[:1] == b"\x0a"
         assert exported[1]["has_timeline"] is True
 
     def test_a_run_without_one_says_so_rather_than_shipping_a_dead_button(

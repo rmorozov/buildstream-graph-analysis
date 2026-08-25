@@ -657,6 +657,23 @@ how it is *read*, and the shape is deliberately small.
   pages and walks every text node for JSON-shaped content outside those
   two.
 
+- **Dark is the design surface, and a fill is not a text color**
+  (`UX-304`, round 41). `bga/viewer/style.css` holds every color the
+  product has: `:root` carries the dark tokens, `@media
+  (prefers-color-scheme: light)` is the override — it also matches a
+  reader who expressed no preference, so an unset browser is unchanged
+  — and `@media print` renders light on white, because an export is
+  attached and printed. Tokens come in two grades: **text-grade**
+  (≥4.5:1 against its surface, for reading) and **mark-grade** (≥3:1
+  and inside the surface's lightness band, for filling). The split
+  exists because the dark set had never been validated and three of
+  its four status colors were text-grade doing fill work.
+  `tests/palette.py` is the validator — WCAG contrast, CIE L\*, ΔE2000,
+  dichromat simulation, no dependency — and the guard pins the bands,
+  refuses a hex literal outside the stylesheet, and holds every
+  status-toned rule against a list naming its non-color channel
+  ([`styleguide.md` §4-5](styleguide.md)).
+
 - **`--export`** inlines every served document and every module into one
   self-contained HTML file. What cannot survive that - a live search
   box, anything needing a server - is *hidden with the command that

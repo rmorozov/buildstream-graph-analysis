@@ -90,14 +90,18 @@ class TestTheServedTrace:
         _, _, body = _get(served(snapshot / "run") + TRACE_NAME)
         scratch = tempfile.mkdtemp()
         try:
-            direct = os.path.join(scratch, "t.json")
+            direct = os.path.join(scratch, "t.perfetto-trace.gz")
             render(str(snapshot), direct, quiet=True)
             expected = open(direct, "rb").read()
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
 
+        # `UX-298`: both sides are gzipped now - the writer compresses
+        # as it emits - so the comparison is of the *streams*. A gzip
+        # header carries a modification time, and comparing the wrappers
+        # would fail on a clock rather than on a difference.
         assert hashlib.sha256(gzip.decompress(body)).hexdigest() == \
-            hashlib.sha256(expected).hexdigest()
+            hashlib.sha256(gzip.decompress(expected)).hexdigest()
 
     def test_it_is_served_gzipped_and_stays_that_way(self, snapshot, served):
         """Not `Content-Encoding: gzip`: the page hands the *compressed*

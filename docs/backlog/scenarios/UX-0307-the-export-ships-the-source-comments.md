@@ -27,6 +27,38 @@ growth is real work — `UX-289`'s presets, `UX-302`'s dispatch and
 toggle, `UX-303`'s drawings — and roughly two thirds of what each
 of those adds is prose.
 
+## Correction (`UX-320`, round 44): the premise above is wrong
+
+The conformance pass measured the exported page and found that
+`_inline_module` **already strips comments** — `_uncommented` in
+`tools/bga_view.py` has dropped whole-line and block comments from the
+inlined copy since `UX-205`, and its own docstring records the
+79,180 → 52,870 B it bought. So "175 KB of the 196 KB page is commented
+JavaScript" was never true of the *export*; it is true of the
+repository, which is a different file.
+
+Measured on the round-44 export of the 1,000-element run:
+
+```text
+page     223,276 B
+  js     198,058 B   89%   trailing `//` on code lines ~114 B
+  css     22,247 B   10%
+  rest     2,971 B
+data     764,900 B   3.43x
+```
+
+The page is **code**. What this item has left is those ~114 bytes and
+whatever a real minifier would buy — and a minifier is the thing the
+Required Fix below explicitly declines, for reasons that still hold.
+
+**So the item stands, at a tenth of its stated size, and its motivation
+is corrected rather than its status changed.** The ratio guard has now
+been restated twice (4x → 3.5x → 3.3x) against a cause that was
+misattributed both times: the real one is that the viewer grows
+features while the synthetic run's data does not grow with it. A round
+that wants the page smaller should start from the measurement above and
+decide whether the ratio is the right instrument at all.
+
 ## Required Fix
 
 `_inline_module` strips comments from the copy it inlines. The

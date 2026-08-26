@@ -785,8 +785,11 @@ export const INCOMPLETE = {
 // UX-207: how many attribution bars stay unfolded.
 const OVERVIEW_SHOWN = 4;
 
-const PATH_HEAD = 6;
-const PATH_TAIL = 3;
+// `UX-319`: exported, because the chain has **two** surfaces - this
+// drawing and the element listing `app.js` lifts into its own section -
+// and one chain folded at two different places would be two chains.
+export const PATH_HEAD = 6;
+export const PATH_TAIL = 3;
 
 /**
  * The critical path, drawn: the chain the report already prints as

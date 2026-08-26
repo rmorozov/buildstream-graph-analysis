@@ -19,7 +19,8 @@ import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderCriticalPath, renderBlastTree,
          renderDecision, renderElementSections, elementAnchor,
          ensureElementSection, uidForAnchor,
-         INCOMPLETE, renderProvenance, renderInvestigation, renderWhatIf } from "./views.js";
+         INCOMPLETE, renderProvenance, renderInvestigation, renderWhatIf,
+         PATH_HEAD, PATH_TAIL } from "./views.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { chapters, fileInChapter } from "./chapters.js";
@@ -730,7 +731,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
  * the section.
  */
 export function buildTable(key, rows, hint = {}, node = undefined,
-                           depth = 0) {
+                           depth = 0, options = {}) {
   const specs = columnSpecs(hint, rows, node);
   const columns = specs.map((s) => s.key);
   const table = el("table", { "data-table": key });
@@ -820,13 +821,60 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                      "\u2315"));
     }
   }
+  // `UX-319` (styleguide §3a.1 + `UX-187`): an **ordered** listing folds
+  // head-and-tail, not top-N.
+  //
+  // `UX-262`'s Top-N is a *rank* bound - "the 25 biggest" - and that is
+  // the right bound for a population. A path is not a population: its
+  // meaning is its order, and the 25 longest steps of a 122-step chain
+  // are not the chain. `UX-187` taught the text report to fold the
+  // chain's middle and `UX-196` taught the drawing to; this is the
+  // third surface, folded by the same two numbers.
+  if (options.fold) foldTheMiddle(table, rows.length, options.fold);
   const tools = interrogable(table, specs, rows.length, depth);
   return { table, tools };
 }
 
+/**
+ * Hide a table's middle rows behind one control that says how many.
+ *
+ * The rows stay in the document - hidden, not removed - so Ctrl-F, the
+ * export and `Copy shown rows` all see what they saw before, and
+ * opening the fold is a `hidden` flip rather than a render.
+ */
+function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
+  if (total <= head + tail + 1) return null;
+  const body = table.querySelector?.("tbody");
+  const all = [...(body?.querySelectorAll?.("tr") ?? [])];
+  const middle = all.slice(head, all.length - tail);
+  if (!middle.length) return null;
+  for (const row of middle) row.hidden = true;
+  const cells = all[0]?.children?.length ?? 1;
+  const more = el("button", {
+    type: "button", class: "fold-more", "data-folded": String(middle.length),
+    // §3a.1: the count is visible before the click, and it names what
+    // is behind it rather than promising "more".
+    title: `Show the ${middle.length} ${noun} between the first ${head} `
+           + `and the last ${tail}`,
+  }, `+${middle.length} more ${noun} (${total} in all)`);
+  const row = el("tr", { class: "fold-row", "data-fold-rows": String(middle.length) },
+                 el("td", { colspan: String(cells) }, more));
+  more.addEventListener?.("click", () => {
+    for (const hidden of middle) hidden.hidden = false;
+    row.hidden = true;
+  });
+  // Where the middle *begins*, not where it ends: the hidden rows
+  // collapse to nothing, so this is what a reader sees between the two
+  // ends - and DOM order is the order a screen reader and a `Tab` key
+  // follow (`UX-254`'s lesson about the rail, one element down).
+  body?.insertBefore?.(row, all[head] ?? null);
+  return row;
+}
+
 /** One table as its own view: `buildTable`, in a section. */
-export function renderTable(key, rows, hint = {}, node = undefined) {
-  const { table, tools } = buildTable(key, rows, hint, node);
+export function renderTable(key, rows, hint = {}, node = undefined,
+                            options = {}) {
+  const { table, tools } = buildTable(key, rows, hint, node, 0, options);
   return el("section", { "data-section": key,
                          "data-rail": heading(key, hint).rail },
     sectionHead(key, hint), tools, table);
@@ -1168,7 +1216,12 @@ export function liftedCriticalPath(signals, node) {
   const rows = signals?.[LIFTED_SECTION];
   if (!Array.isArray(rows) || !rows.length) return null;
   const child = childNode(node, LIFTED_SECTION);
-  return renderTable(LIFTED_SECTION, rows, hintsOf(child), child);
+  // `UX-319`: the chain's listing, folded by the chain's own numbers -
+  // the same `PATH_HEAD`/`PATH_TAIL` the drawing uses, so the two
+  // surfaces show the same chain rather than two elisions of it.
+  return renderTable(LIFTED_SECTION, rows, hintsOf(child), child,
+                     { fold: { head: PATH_HEAD, tail: PATH_TAIL,
+                               noun: "elements" } });
 }
 
 // UX-269: a long value is truncated; a long *sentence* is not.

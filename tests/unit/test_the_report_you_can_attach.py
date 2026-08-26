@@ -106,11 +106,29 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # 295 KB attachment is not a problem, but the next round that wants
 # the page smaller should start here rather than at the payload.
 #
+# `UX-312` and `UX-314` moved the page by **+13,255 B**, all of it
+# checked-in viewer source and none of it data:
+#
+#     questions.js   10,748 -> 18,238   (+7,490)  seven new questions
+#     perfetto.js     8,329 -> 11,785   (+3,456)  Perfetto's own CSP,
+#                                                 quoted where it is used
+#     app.js        103,023 -> 104,875  (+1,852)  the transport decision
+#     index.html      1,703 ->  2,160     (+457)  the save-it-yourself route
+#
+# So the numbers below move again, and the reason is the one the
+# backstop's docstring already gives: a byte count cannot tell a
+# feature from a library, and the guards that can - `the page is the
+# modules and nothing else` and `no module looks like a vendored
+# library` - both pass on this page. Nothing crept in.
+#
+# The comment share is the real lever and it is still `UX-307`'s: this
+# very block is bytes every reader of an exported report pays for.
+#
 # The +1,073 of *data* on both runs is the two `bga:distribution`
 # hints and one `bga:series`, with their descriptions - the schema the
 # page carries, which is the half the companion guard below proves is
 # documents rather than payload.
-PAGE_BUDGET_B = 200_000
+PAGE_BUDGET_B = 210_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -121,7 +139,7 @@ COMMITTED_EXPORTS = [
     # `UX-302` moved both again, by 5,315 B: the §1 dispatch table and
     # the "view as JSON" toggle are two new modules and their styles.
     # Source, not content - see the split above.
-    ("golden", GOLDEN, 298_000),                       #  294,976 B
+    ("golden", GOLDEN, 308_000),                       #  302,960 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -133,7 +151,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 338_000),             #  334,155 B
+    ("macro_micro", MACRO_MICRO, 348_000),             #  342,156 B
 ]
 
 
@@ -362,13 +380,23 @@ class TestTheSizeDiscipline:
         _vendored_library` below, which checks the thing this number was
         a proxy for. If the absolute fires again it should be because
         that one is silent and something genuinely odd is happening.
+
+        It fired a fifth time, at 204,308 B, when `UX-312` and `UX-314`
+        landed - and the check the paragraph above describes did its
+        job. Both companion guards stayed **silent**: every added byte
+        is a checked-in module (`questions.js` +7,490 for seven new
+        canned questions, `perfetto.js` +3,456 for Perfetto's own CSP
+        quoted where it is used, `app.js` +1,852, `index.html` +457),
+        and none of it resembles a vendored library. So this is the
+        fifth "a round landed", looked at rather than assumed, and the
+        number moves to 210,000.
         """
         html = open(exported[0], encoding="utf-8").read()
         # Every `<script type="application/json">` block and the trace
         # blob are *data*. What is left is the page.
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
-        assert len(page) < 200_000, (
+        assert len(page) < PAGE_BUDGET_B, (
             f"the exported page is {len(page)} B with its data removed - "
             f"that is a structural change, not a feature. Check "
             f"`test_the_page_is_the_modules_and_nothing_else` and "

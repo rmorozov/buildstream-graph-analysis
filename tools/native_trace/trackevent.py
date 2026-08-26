@@ -31,17 +31,48 @@ trace.proto              Trace.packet = 1
 trace_packet.proto       timestamp = 8, trusted_packet_sequence_id = 10,
                          track_event = 11, interned_data = 12,
                          sequence_flags = 13, track_descriptor = 60
-track_event.proto        category_iids = 3, type = 9, name_iid = 10,
-                         track_uuid = 11, name = 23, counter_value = 30
+track_event.proto        category_iids = 3, debug_annotations = 4,
+                         type = 9, name_iid = 10,
+                         track_uuid = 11, name = 23, counter_value = 30,
+                         flow_ids = 47, terminating_flow_ids = 48
                          TYPE_SLICE_BEGIN = 1, TYPE_SLICE_END = 2,
                          TYPE_INSTANT = 3, TYPE_COUNTER = 4
+                         EventCategory.iid = 1, EventCategory.name = 2
                          EventName.iid = 1, EventName.name = 2
+debug_annotation.proto   DebugAnnotation.name_iid = 1, int_value = 4,
+                         string_value = 6
+                         DebugAnnotationName.iid = 1, .name = 2
 track_descriptor.proto   uuid = 1, name = 2, process = 3, thread = 4,
-                         parent_uuid = 5
+                         parent_uuid = 5, counter = 8,
+                         sibling_order_rank = 12, process_ordering = 19
+                         ProcessOrdering.PROCESS_ORDERING_EXPLICIT = 1
+counter_descriptor.proto unit = 3, unit_name = 6
+                         Unit.UNIT_COUNT = 2
 process_descriptor.proto pid = 1, process_name = 6
 thread_descriptor.proto  pid = 1, tid = 2, thread_name = 5
-interned_data.proto      event_names = 2
+interned_data.proto      event_categories = 1, event_names = 2,
+                         debug_annotation_names = 3
 ```
+
+`UX-310` added the counter descriptor, which is what turns
+`TYPE_COUNTER` from a reserved constant into a graph above the lanes.
+
+`UX-311` added the two ordering fields, and reading them rather than
+remembering them is what caught the rule that matters:
+`sibling_order_rank` is **ignored on a process track** unless the
+*root* descriptor (`uuid = 0`) sets `process_ordering` to
+`PROCESS_ORDERING_EXPLICIT`. A rank written without that root packet is
+a hint no UI reads.
+
+`UX-309` added `flow_ids`/`terminating_flow_ids` - both `fixed64`,
+which is a **different wire type** from every other number here and the
+one thing a copy of the varint path would have got silently wrong.
+`UX-308` added the second block and the two interning tables beside
+it, read the same way: `debug_annotation.proto` and `interned_data.proto`
+fetched from the same tree and checked against the fixture's recorded
+sha256, not remembered. `track_event.proto` and `interned_data.proto`
+came back byte-identical to what `UX-298` pinned, which is the evidence
+that the numbers above are still the numbers upstream means.
 """
 import gzip
 import struct
@@ -75,7 +106,23 @@ TRACK_UUID = 1
 TRACK_NAME = 2
 TRACK_PROCESS = 3
 TRACK_THREAD = 4
+# UX-310: `optional CounterDescriptor counter = 8`. A track with this
+# set is a graph rather than a lane of slices, and its events carry
+# `counter_value` instead of a name.
+TRACK_COUNTER = 8
 TRACK_PARENT_UUID = 5
+# UX-311: `optional int32 sibling_order_rank = 12` - lower ranks first.
+# On a *process* track it is ignored unless the root descriptor says to
+# read it, which is the next constant.
+TRACK_SIBLING_ORDER_RANK = 12
+# `optional ProcessOrdering process_ordering = 19`, "only valid on the
+# root track descriptor (uuid = 0)", with
+# `PROCESS_ORDERING_EXPLICIT = 1` meaning "order processes by their
+# tracks' `sibling_order_rank`". One packet, and without it every rank
+# below is inert.
+TRACK_PROCESS_ORDERING = 19
+PROCESS_ORDERING_EXPLICIT = 1
+ROOT_TRACK_UUID = 0
 
 # --- ProcessDescriptor / ThreadDescriptor --------------------------------
 PROCESS_PID = 1
@@ -86,30 +133,80 @@ THREAD_NAME = 5
 
 # --- TrackEvent ----------------------------------------------------------
 EVENT_CATEGORY_IIDS = 3
+# UX-308: `repeated DebugAnnotation debug_annotations = 4`. This is the
+# field the details panel reads and the field `extract_arg` extracts
+# from; without it a slice carries its name and nothing else.
+EVENT_DEBUG_ANNOTATIONS = 4
 EVENT_TYPE = 9
 EVENT_NAME_IID = 10
 EVENT_TRACK_UUID = 11
 EVENT_COUNTER_VALUE = 30
+# UX-309: `repeated fixed64 flow_ids = 47` and `terminating_flow_ids
+# = 48`. Note **fixed64**, not varint: upstream's own comment says the
+# older varint fields (36 and 42) are deprecated in favour of these,
+# and writing a flow id as a varint into field 47 produces a packet a
+# reader silently drops. Direction is inferred from timestamps - "the
+# earliest event with the same flow ID becomes the source" - so an edge
+# is one id on two slices, and the terminating list is what says which
+# of them is the end rather than a step on the way.
+EVENT_FLOW_IDS = 47
+EVENT_TERMINATING_FLOW_IDS = 48
 
 TYPE_SLICE_BEGIN = 1
 TYPE_SLICE_END = 2
 TYPE_INSTANT = 3
-# Reserved rather than used: `UX-300` may publish a resource series, and
-# an event stream may carry only what a capture measured.
+# `UX-310` gave this a caller. It stayed reserved for two rounds under
+# the rule that an event stream may carry only what a capture measured -
+# which is still the rule, and is why the series below is a count of
+# processes and not a memory curve: `max_rss_kb` is a per-process
+# *lifetime* peak, not a sample, and a curve drawn from peaks that never
+# coexisted is the error `compute_peak_memory` exists to refuse.
 TYPE_COUNTER = 4
 
-# --- InternedData / EventName --------------------------------------------
+# --- CounterDescriptor ---------------------------------------------------
+COUNTER_UNIT = 3
+COUNTER_UNIT_NAME = 6
+UNIT_COUNT = 2
+
+# --- DebugAnnotation -----------------------------------------------------
+# The name is a `oneof`: interned (`name_iid`) or literal (`name = 10`).
+# Interned, here - a million slices carry the same handful of keys, and
+# the key is exactly the kind of repeated short string interning exists
+# for.
+ANNOTATION_NAME_IID = 1
+# The value is a `oneof` too. Two of its arms are used: `int_value`
+# (`int64`) for every number, `string_value` for everything else -
+# including the exit status, which is a *vocabulary* (`3`, `signal:9`)
+# rather than a number. `uint_value = 3` is deliberately not used: one
+# signed arm is one decoding rule, and nothing here is large enough for
+# the extra bit to matter.
+ANNOTATION_INT_VALUE = 4
+ANNOTATION_STRING_VALUE = 6
+
+# --- InternedData / EventName / EventCategory / DebugAnnotationName ------
+# Each interning table has its own iid space: an `EventName` iid and a
+# `DebugAnnotationName` iid of 1 are different names. Three counters,
+# not one - sharing one would still decode, and would waste the low
+# iids that make the varints short.
+INTERNED_EVENT_CATEGORIES = 1
 INTERNED_EVENT_NAMES = 2
+INTERNED_DEBUG_ANNOTATION_NAMES = 3
 EVENT_NAME_IID_FIELD = 1
 EVENT_NAME_NAME = 2
+EVENT_CATEGORY_IID_FIELD = 1
+EVENT_CATEGORY_NAME = 2
+DEBUG_ANNOTATION_NAME_IID_FIELD = 1
+DEBUG_ANNOTATION_NAME_NAME = 2
 
 
 def varint(value: int) -> bytes:
     """Base-128, low group first, high bit set on every group but the last."""
     if value < 0:
         # Protobuf encodes a negative int64 as a 10-byte varint of its
-        # two's complement. Nothing here emits one, but a silent wrong
-        # answer is worse than a long encoding.
+        # two's complement. Nothing here emits one - every number `bga`
+        # annotates is a count, a duration or a size - but a silent
+        # wrong answer is worse than a long encoding, and `int_field`
+        # exists so that a future one is not read as 2**64 - n.
         value += 1 << 64
     out = bytearray()
     while True:
@@ -127,6 +224,13 @@ def tag(field: int, wire: int) -> bytes:
 
 
 def uint_field(field: int, value: int) -> bytes:
+    return tag(field, WIRE_VARINT) + varint(value)
+
+
+def int_field(field: int, value: int) -> bytes:
+    """A signed `int64` field. Same wire shape as `uint_field` - the
+    difference is the reader's, and naming it at the call site is how a
+    negative value stays readable rather than becoming 2**64 - n."""
     return tag(field, WIRE_VARINT) + varint(value)
 
 
@@ -162,14 +266,22 @@ class TrackEventWriter:
         self._handle = (gzip.open(path, "wb", compresslevel=6) if compress
                         else open(path, "wb"))
         self._sequence_id = sequence_id
-        self._names: Dict[str, int] = {}
-        self._pending_names: list = []
-        self._next_iid = 1
+        # UX-308: three interning tables, each with its own iid space
+        # (`InternedData` field number -> {name: iid}) and its own
+        # pending queue, because a table's definitions ride on the next
+        # packet that refers to them.
+        self._tables: Dict[int, Dict[str, int]] = {
+            INTERNED_EVENT_NAMES: {},
+            INTERNED_EVENT_CATEGORIES: {},
+            INTERNED_DEBUG_ANNOTATION_NAMES: {},
+        }
+        self._pending: Dict[int, list] = {field: [] for field in self._tables}
         self._next_uuid = 1
         self._first = True
         self.packets = 0
         self.slices = 0
         self.tracks = 0
+        self.counters = 0
 
     # -- lifecycle --------------------------------------------------------
     def __enter__(self):
@@ -204,31 +316,105 @@ class TrackEventWriter:
         return (uint_field(PACKET_SEQUENCE_ID, self._sequence_id)
                 + uint_field(PACKET_SEQUENCE_FLAGS, flags))
 
-    def _intern(self, name: str) -> int:
-        """The iid for a name, queueing its definition if it is new.
+    # `InternedData` field -> the (iid, name) field numbers of its entry
+    # message. All three entry messages happen to be `iid = 1, name = 2`,
+    # and they are written out rather than assumed, because "they are the
+    # same today" is not a wire guarantee.
+    _ENTRY_FIELDS = {
+        INTERNED_EVENT_NAMES: (EVENT_NAME_IID_FIELD, EVENT_NAME_NAME),
+        INTERNED_EVENT_CATEGORIES: (EVENT_CATEGORY_IID_FIELD,
+                                    EVENT_CATEGORY_NAME),
+        INTERNED_DEBUG_ANNOTATION_NAMES: (DEBUG_ANNOTATION_NAME_IID_FIELD,
+                                          DEBUG_ANNOTATION_NAME_NAME),
+    }
+
+    def _intern(self, name: str, table: int = INTERNED_EVENT_NAMES) -> int:
+        """The iid for a name in one table, queueing it if it is new.
 
         Interning is why a million slices of forty distinct commands
-        cost forty strings. The definition rides on the next packet
-        written, which is the packet that first refers to it - a reader
-        meets the name before it needs it.
+        cost forty strings - and why a million slices carrying six
+        annotation keys cost six. The definition rides on the next
+        packet written, which is the packet that first refers to it, so
+        a reader meets the name before it needs it.
         """
-        iid = self._names.get(name)
+        entries = self._tables[table]
+        iid = entries.get(name)
         if iid is None:
-            iid = self._names[name] = self._next_iid
-            self._next_iid += 1
-            self._pending_names.append((iid, name))
+            iid = entries[name] = len(entries) + 1
+            self._pending[table].append((iid, name))
         return iid
 
     def _take_interned(self) -> bytes:
-        if not self._pending_names:
+        if not any(self._pending.values()):
             return b""
-        entries = b"".join(
-            bytes_field(INTERNED_EVENT_NAMES,
-                        uint_field(EVENT_NAME_IID_FIELD, iid)
-                        + string_field(EVENT_NAME_NAME, name))
-            for iid, name in self._pending_names)
-        self._pending_names.clear()
+        entries = b""
+        for table, queued in self._pending.items():
+            if not queued:
+                continue
+            iid_field, name_field = self._ENTRY_FIELDS[table]
+            entries += b"".join(
+                bytes_field(table,
+                            uint_field(iid_field, iid)
+                            + string_field(name_field, name))
+                for iid, name in queued)
+            queued.clear()
         return bytes_field(PACKET_INTERNED_DATA, entries)
+
+    def _annotations(self, annotations) -> bytes:
+        """`repeated DebugAnnotation`, one per key, name interned.
+
+        `annotations` is an iterable of `(key, value)` - a sequence
+        rather than a mapping, because the order a details panel shows
+        them in is the order they are written and that order is a
+        decision (`cmd` first: it is the one a reader opened the slice
+        for). A `None` value is dropped rather than written as an empty
+        string: an annotation that is absent and an annotation that is
+        empty say different things, and only the first is true of a
+        record that never carried the field.
+        """
+        out = b""
+        for key, value in annotations:
+            if value is None:
+                continue
+            payload = uint_field(ANNOTATION_NAME_IID,
+                                 self._intern(key,
+                                              INTERNED_DEBUG_ANNOTATION_NAMES))
+            if isinstance(value, bool):
+                # Before `int`, which `bool` is a subclass of. Written as
+                # its word rather than as 0/1, because these are read by
+                # a person in a details panel.
+                payload += string_field(ANNOTATION_STRING_VALUE,
+                                        "true" if value else "false")
+            elif isinstance(value, int):
+                payload += int_field(ANNOTATION_INT_VALUE, value)
+            else:
+                payload += string_field(ANNOTATION_STRING_VALUE, str(value))
+            out += bytes_field(EVENT_DEBUG_ANNOTATIONS, payload)
+        return out
+
+    def _flows(self, flows, terminating_flows) -> bytes:
+        """`UX-309`: the ids that make Perfetto draw an arrow.
+
+        A flow is one id on two events, and the UI infers the direction
+        from their timestamps - so the caller does not say "from A to
+        B", it says "A is in this flow" and "B ends it". The ids are
+        **fixed64**, eight bytes each, which is why they use
+        `fixed64_field` and not the varint path everything else here
+        takes: field 47 with a varint in it is a packet a reader drops
+        without complaining.
+        """
+        return (b"".join(fixed64_field(EVENT_FLOW_IDS, flow)
+                         for flow in flows)
+                + b"".join(fixed64_field(EVENT_TERMINATING_FLOW_IDS, flow)
+                           for flow in terminating_flows))
+
+    def _categories(self, categories) -> bytes:
+        """`repeated uint64 category_iids`, which is what makes a class
+        of slice filterable in the UI and selectable in SQL."""
+        return b"".join(
+            uint_field(EVENT_CATEGORY_IIDS,
+                       self._intern(category, INTERNED_EVENT_CATEGORIES))
+            for category in categories)
 
     # -- tracks -----------------------------------------------------------
     def _uuid(self) -> int:
@@ -236,12 +422,70 @@ class TrackEventWriter:
         self._next_uuid += 1
         return value
 
-    def process_track(self, name: str, pid: int) -> int:
-        """A process lane. Returns its uuid, which slices are hung from."""
+    def counter_track(self, name: str, parent: int, unit_name: str,
+                      unit: int = UNIT_COUNT) -> int:
+        """A graph rather than a lane. Returns its uuid.
+
+        `UX-310`. `unit_name` rides in the descriptor rather than being
+        smuggled into the track name, because a reader who asks
+        `trace_processor` what this counts should get an answer without
+        parsing a label.
+        """
         uuid = self._uuid()
         descriptor = (
             uint_field(TRACK_UUID, uuid)
             + string_field(TRACK_NAME, name)
+            + uint_field(TRACK_PARENT_UUID, parent)
+            + bytes_field(TRACK_COUNTER,
+                          uint_field(COUNTER_UNIT, unit)
+                          + string_field(COUNTER_UNIT_NAME, unit_name)))
+        self._write_packet(self._sequence_prefix()
+                           + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
+        self.tracks += 1
+        return uuid
+
+    def counter(self, timestamp_ns: int, track: int, value: int) -> None:
+        """One sample on a counter track.
+
+        No name and no interning: a counter event is a number at a time,
+        which is the whole reason a series costs so much less than the
+        slices it was folded from.
+        """
+        event = (uint_field(EVENT_TYPE, TYPE_COUNTER)
+                 + uint_field(EVENT_TRACK_UUID, track)
+                 + int_field(EVENT_COUNTER_VALUE, value))
+        self._write_packet(self._sequence_prefix()
+                           + uint_field(PACKET_TIMESTAMP, timestamp_ns)
+                           + bytes_field(PACKET_TRACK_EVENT, event))
+        self.counters += 1
+
+    def order_processes_explicitly(self) -> None:
+        """Say once that the process lanes carry their own order.
+
+        `UX-311`. `sibling_order_rank` on a process track is ignored
+        unless the **root** descriptor - `uuid = 0`, which is not a
+        track anyone writes events to - sets this. Reading that out of
+        the schema is the whole reason the ranks below are not inert.
+        """
+        self._write_packet(
+            self._sequence_prefix()
+            + bytes_field(PACKET_TRACK_DESCRIPTOR,
+                          uint_field(TRACK_UUID, ROOT_TRACK_UUID)
+                          + uint_field(TRACK_PROCESS_ORDERING,
+                                       PROCESS_ORDERING_EXPLICIT)))
+
+    def process_track(self, name: str, pid: int, rank: int = 0) -> int:
+        """A process lane. Returns its uuid, which slices are hung from.
+
+        `rank` orders it against its siblings, lower first (`UX-311`),
+        and needs `order_processes_explicitly()` to have been called or
+        the UI ignores it.
+        """
+        uuid = self._uuid()
+        descriptor = (
+            uint_field(TRACK_UUID, uuid)
+            + string_field(TRACK_NAME, name)
+            + uint_field(TRACK_SIBLING_ORDER_RANK, rank)
             + bytes_field(TRACK_PROCESS,
                           uint_field(PROCESS_PID, pid)
                           + string_field(PROCESS_NAME, name)))
@@ -267,10 +511,30 @@ class TrackEventWriter:
         return uuid
 
     # -- events -----------------------------------------------------------
-    def slice_begin(self, timestamp_ns: int, track: int, name: str) -> None:
+    def slice_begin(self, timestamp_ns: int, track: int, name: str,
+                    annotations=(), categories=(),
+                    flows=(), terminating_flows=()) -> None:
+        """A slice opens, carrying what is known about it.
+
+        `annotations` are `(key, value)` pairs (`UX-308`) - the details
+        panel's contents, and what `extract_arg` extracts. They go on
+        the **begin**, never on the end: the end of a slice carries no
+        name for the same reason, and a reader assembling one slice from
+        two packets should have to read one of them.
+
+        `categories` are names, interned; a slice that has one is
+        filterable in the UI and selectable in SQL by it.
+
+        `flows` and `terminating_flows` are ids (`UX-309`); a slice in
+        both lists for one id would be a flow that is its own end, which
+        upstream says not to write, so the caller keeps them disjoint.
+        """
         event = (uint_field(EVENT_TYPE, TYPE_SLICE_BEGIN)
                  + uint_field(EVENT_TRACK_UUID, track)
-                 + uint_field(EVENT_NAME_IID, self._intern(name)))
+                 + uint_field(EVENT_NAME_IID, self._intern(name))
+                 + self._categories(categories)
+                 + self._flows(flows, terminating_flows)
+                 + self._annotations(annotations))
         self._write_packet(self._sequence_prefix()
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
                            + self._take_interned()
@@ -290,13 +554,22 @@ class TrackEventWriter:
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
                            + bytes_field(PACKET_TRACK_EVENT, event))
 
-    def instant(self, timestamp_ns: int, track: int, name: str) -> None:
+    def instant(self, timestamp_ns: int, track: int, name: str,
+                annotations=(), categories=(),
+                flows=(), terminating_flows=()) -> None:
         """A moment rather than a span - what a process with no observed
         exit gets, because a zero-width bar reads as "instantaneous" and
-        `bga` does not fabricate an end it never saw."""
+        `bga` does not fabricate an end it never saw.
+
+        It carries the same annotations a slice does: a process whose
+        exit was never seen is exactly the one a reader wants the full
+        command line of."""
         event = (uint_field(EVENT_TYPE, TYPE_INSTANT)
                  + uint_field(EVENT_TRACK_UUID, track)
-                 + uint_field(EVENT_NAME_IID, self._intern(name)))
+                 + uint_field(EVENT_NAME_IID, self._intern(name))
+                 + self._categories(categories)
+                 + self._flows(flows, terminating_flows)
+                 + self._annotations(annotations))
         self._write_packet(self._sequence_prefix()
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
                            + self._take_interned()

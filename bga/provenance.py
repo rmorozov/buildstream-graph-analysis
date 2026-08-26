@@ -174,7 +174,11 @@ TRACE_QUERIES = {
     "capacity-recommendation": "stalls",
     # Execution: the finding names elements; the query opens them.
     "time-concentration": "element-time",
-    "execution-bound": "element-commands",
+    # `UX-312`: `execution-bound` is a claim about how much of the
+    # build was *running processes*, so the count is the drill-down and
+    # `latent-heavies` keeps the command list - which is the question
+    # about which commands, not how many.
+    "execution-bound": "process-storm",
     "latent-heavies": "element-commands",
     # Dependencies: the finding is about shape, not speed.
     "criticality": "dependency-wait",
@@ -182,8 +186,24 @@ TRACE_QUERIES = {
     "blast-radius-structural": "dependency-wait",
     "shared-source-blast": "dependency-wait",
     # Resources: what the processes inside the sandbox cost.
-    "memory-envelope": "process-storm",
+    "memory-envelope": "peak-rss",
     "cache-transfer-cost": "sandbox-tax",
+    # `UX-312`. The vocabulary `UX-308`..`UX-311` put on the trace made
+    # seven more questions answerable, and a question no finding points
+    # at is a question nobody arrives at - the page is where it lives,
+    # a finding is how a reader gets there.
+    #
+    # `memory-envelope` moved above rather than gaining a second row:
+    # it is a claim about *peak* memory, and `peak-rss` reads the same
+    # per-process maximum the claim is computed from, where
+    # `process-storm` answers a question about counts.
+    "build-failed": "failed-processes",
+    "failed-task-time": "failed-processes",
+    "efficiency-score": "cpu-versus-wall",
+    "certified-headroom": "concurrency-curve",
+    "optimization-horizon": "time-by-kind",
+    "run-mode-incremental": "which-run-is-this",
+    "joint-saving": "waited-on-flow",
 }
 
 

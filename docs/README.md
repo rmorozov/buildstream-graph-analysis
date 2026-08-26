@@ -125,6 +125,7 @@ What must be true. The ground truth for what every number means.
 |---|---|
 | [`spec/specification.md`](spec/specification.md) | the v9 specification — Parts 0-40, invariants `I1`-`I13` |
 | [`spec/ingestion-pipeline.md`](spec/ingestion-pipeline.md) | how real BuildStream output maps to the schema, with the empirically confirmed facts behind it |
+| [`spec/trace-dictionary.md`](spec/trace-dictionary.md) | what a slice in the Perfetto trace carries — the annotation keys, scopes, counter track and flows a canned query is written against (`UX-312`) |
 
 ## Design
 

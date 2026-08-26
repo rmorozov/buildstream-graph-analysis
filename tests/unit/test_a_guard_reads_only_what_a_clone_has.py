@@ -36,6 +36,7 @@ failure, and tests name plenty of those on purpose - asserting a module
 was **not** added, or building a path they then create.
 """
 import pathlib
+import ast
 import re
 import subprocess
 
@@ -60,6 +61,12 @@ NOT_DATA = ("__pycache__", ".egg-info", ".pytest_cache")
 # something a clone has. `tests/fixtures/` is where this repository keeps
 # committed run directories, by convention and by the context map.
 COMMITTED_DATA = "tests/fixtures/"
+
+# What a `skipif` condition looks like when it is asking "is this path
+# here?". Names rather than shapes, because the repository writes the
+# question four ways (`os.path.exists`, `os.path.isdir`, `Path.exists`,
+# `Path.is_dir`) and all four mean the same thing.
+ABSENCE_PROBES = ("'exists'", "'isdir'", "'is_dir'", "'is_file'")
 
 # The group around the alternation is not decoration. Without it the
 # `[\w./-]+` binds to the last root only, so the pattern matches almost
@@ -90,15 +97,95 @@ def _test_files():
                   if "__pycache__" not in p.parts)
 
 
+def _joined_paths(text):
+    """Paths assembled from `os.path.join` fragments.
+
+    Round 43 found the hole by walking into it: a guard wrote its
+    capture path as
+
+    ```python
+    os.path.join(REPO, "examples", "06-...", ".bga", "runs", ...)
+    ```
+
+    and `PATH_LITERAL` - which reads one quoted string at a time - saw
+    only the fragments, none of which is a path. The file rested
+    entirely on two gitignored captures, passed this check, and failed
+    in CI. So the fragments are re-joined here before they are matched.
+
+    A syntax error is not this guard's business to report; the file that
+    cannot be parsed simply contributes nothing, and every other check
+    in the suite will have something to say about it.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return set()
+    found = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = getattr(node.func, "attr", None) or getattr(node.func, "id", "")
+        if name != "join":
+            continue
+        parts = [arg.value for arg in node.args
+                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str)]
+        if len(parts) < 2:
+            continue
+        joined = "/".join(part.strip("/") for part in parts)
+        if joined.startswith(ROOTS):
+            found.add(joined.rstrip("/"))
+    return found
+
+
+def _guards_absence(text):
+    """Whether the file skips when a path it names is missing.
+
+    The other way to be safe. `COMMITTED_DATA` beside the citation was
+    the only way this guard recognised, and it is not the only way the
+    repository actually uses: a `skipif` keyed on the path's existence
+    means the clause does not run in a clone rather than failing there,
+    which is exactly the outcome this guard exists to secure.
+
+    Round 43 found the gap by fixing a file the honest way - skip-marks
+    plus generated stand-ins for the properties - and watching this
+    guard still call it an offender. Recognising a committed fixture
+    and not a skip was a rule about *how* rather than about *whether*.
+
+    The detection is a proxy: a `skipif` whose condition mentions an
+    existence test. It cannot tell which clauses that mark covers, so a
+    file that skips one clause and leaves another unguarded still gets
+    past - which is why the suite is also run with the untracked paths
+    moved aside, and why that is the check this one only approximates.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if getattr(node.func, "attr", None) != "skipif":
+            continue
+        condition = ast.dump(node.args[0]) if node.args else ""
+        if any(probe in condition for probe in ABSENCE_PROBES):
+            return True
+    return False
+
+
 def _cited_paths(path):
     """Repository paths a test file names, minus the ones it creates."""
+    text = path.read_text(encoding="utf-8")
     cited = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         if WRITTEN_NOT_READ.search(line):
             continue
         for match in PATH_LITERAL.finditer(line):
             cited.add(match.group(1).rstrip("/"))
-    return cited
+    # `os.path.join` fragments, which the line-at-a-time regex cannot
+    # see. Not filtered by `WRITTEN_NOT_READ`: a join that builds a
+    # path under `tmp_path` has a non-constant first argument, so it
+    # never reaches `ROOTS` in the first place.
+    return cited | _joined_paths(text)
 
 
 def _untracked_but_present(cited, tracked):
@@ -121,7 +208,7 @@ class TestEveryPathAGuardNamesIsInTheClone:
                 continue
             fallback = [name for name in cited
                         if name.startswith(COMMITTED_DATA) and name in tracked]
-            if fallback:
+            if fallback or _guards_absence(path.read_text(encoding="utf-8")):
                 continue
             offenders.append(
                 f"{path.relative_to(REPO)} -> {risky} (and no committed "
@@ -194,6 +281,51 @@ class TestTheCheckItselfDiscriminates:
         assert "tests/fixtures/macro_micro/run" in cited, (
             f"the extractor found no fixture path in a file that names one: "
             f"{sorted(cited)}")
+
+    def test_it_reads_a_path_assembled_from_join_fragments(self):
+        """The hole round 43 walked into.
+
+        `test_the_pairing_pass_streams.py` wrote its two captures as
+        `os.path.join` fragments, so the line-at-a-time regex saw
+        `"examples"` and `".bga"` and nothing that looked like a path.
+        The file rested entirely on two gitignored captures, passed
+        this check, and failed in CI on three clauses.
+        """
+        source = (
+            'import os\n'
+            'X = os.path.join(REPO, "examples", "06-macro-micro-optimization",'
+            ' ".bga", "runs", "20260821T170127Z", "plane2.log.gz")\n')
+        assert not PATH_LITERAL.search(source), (
+            "the regex now reads this on its own, so this test no longer "
+            "shows what the join walk is for")
+        assert _joined_paths(source) == {
+            "examples/06-macro-micro-optimization/.bga/runs/"
+            "20260821T170127Z/plane2.log.gz"}
+
+    def test_the_join_walk_ignores_a_join_that_builds_nothing(self):
+        """Two fragments that are not a repository path, and a join
+        whose parts are not constants, must not become citations."""
+        assert _joined_paths('os.path.join(a, b)') == set()
+        assert _joined_paths('os.path.join("var", "log")') == set()
+        assert _joined_paths('os.path.join(tmp, "out.json")') == set()
+
+    def test_a_skipif_on_the_paths_absence_is_the_other_way_to_be_safe(self):
+        """A clause that skips when the capture is gone does not fail in
+        a clone, which is the whole property this guard secures."""
+        assert _guards_absence(
+            'import os, pytest\n'
+            'M = pytest.mark.skipif(not os.path.exists(P), reason="gone")\n')
+        assert _guards_absence(
+            'import pytest\n'
+            'M = pytest.mark.skipif(not CAPTURE.is_dir(), reason="gone")\n')
+
+    def test_a_skipif_about_something_else_does_not_count(self):
+        """`node is None` says nothing about whether the capture is
+        here, and must not buy a file an exemption."""
+        assert not _guards_absence(
+            'import pytest, shutil\n'
+            'M = pytest.mark.skipif(shutil.which("node") is None, reason="x")\n')
+        assert not _guards_absence('x = 1\n')
 
     def test_it_would_have_flagged_the_original(self):
         """The literal that shipped, checked against the tree."""

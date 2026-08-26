@@ -622,6 +622,7 @@ bga analyze RUN/ --format json | head -2      # "schema": "analyze/v2"
 bga compare A B --format json                 # "schema": "compare/v1"
 bga blast TARGET --format json                # "schema": "blast/v1"
 bga correlate RUN/ --format json              # "schema": "correlate/v1"
+bga whatif RUN/ --element E --format json     # "schema": "whatif/v1"
 ```
 
 `--schema` prints the JSON Schema of an output and exits 0. It needs no
@@ -725,6 +726,39 @@ plan is read straight from `signals.optimization_horizon`; any other
 subset is asked of the server, which runs this same projection. In an
 export there is no server, so the section shows the command instead of
 a control that cannot answer.
+
+**The payload: `whatif/v1`** (`UX-295`). `--format json` stamps this
+shape as its first key, and a consumer holding one reads:
+
+| key | what it is |
+|---|---|
+| `run_id` | the run this projection is over |
+| `selected` | the element uids you asked about, as given |
+| `total_duration_us` | the run's own wall-clock, for scale |
+| `convention` | the sentence every figure here depends on, carried in the payload rather than left to the reader (`UX-244`) |
+| `refusals` | why no projection was made, when one was not — a list of `{check, elements, sentence}` |
+| `projected` | the projection, or `null` when `refusals` is non-empty |
+
+and inside `projected`:
+
+| key | what it is |
+|---|---|
+| `baseline_makespan_us` | this run's longest path, unchanged |
+| `makespan_after_us` | that path recomputed with every selected element zeroed |
+| `joint_saving_us` | the difference — what the set is worth **together**, and the answer |
+| `sum_of_individual_us` | what each element is worth alone, summed; published *because* it can differ, never as the answer |
+
+Measured on the golden fixture for `base.bst`: baseline 14,000 µs,
+after 8,000 µs, joint saving 6,000 µs, sum of individuals 6,000 µs —
+equal here because one element cannot disagree with itself; the two
+figures separate as soon as two selected elements share a chain.
+
+A refusal is a populated answer rather than an error, and the command
+still exits 0 — which is why a consumer reads `refusals` before
+`projected` rather than after, and why `projected` being `null` is a
+statement rather than a missing field.
+
+`bga whatif --schema` prints the whole shape without needing a run.
 
 ### Why this one is ranked first (`UX-227`)
 

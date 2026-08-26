@@ -32,6 +32,14 @@
     Nothing opened? <a id="perfetto-link" href="#">open ui.perfetto.dev
     with this trace</a>.
   </p>
+  <!-- UX-314: the transport that needs no permission from anybody.
+       Perfetto's connect-src decides whether the deep link may be
+       used, and postMessage has a size ceiling, so the reader always
+       has the file itself and Perfetto's own drag-and-drop. -->
+  <p id="actions-download" class="muted" hidden>
+    Or <a id="trace-download" href="#" download>save the trace</a> and
+    drag it into <span class="mono">ui.perfetto.dev</span>.
+  </p>
 </header>
 <main id="report" aria-busy="true">
   <p class="muted">Loading…</p>

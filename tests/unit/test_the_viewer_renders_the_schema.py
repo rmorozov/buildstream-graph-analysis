@@ -19,6 +19,7 @@ through its own structure where it is not, so CI needs no browser.
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -397,6 +398,35 @@ class TestTheSchemaDescribesWhatRealRunsEmit:
             f"declare - a consumer reading the schema would not know they "
             f"exist, and a rename would be silent")
 
+# `UX-314`. What a viewer module may say about `http://`.
+#
+# `http://www.w3.org/2000/svg` is an XML *namespace identifier*,
+# required by `createElementNS` and never dereferenced by anything;
+# `UX-196` added the first SVG and this guard flagged it - correct
+# instinct, wrong rule. Loopback joined it for the same reason: a CDN is
+# by definition somebody else's host, and `127.0.0.1` cannot be one. It
+# appears in `perfetto.js` inside a quotation of ui.perfetto.dev's own
+# `connect-src`, which is the rule deciding whether the deep link can
+# work - and `test_the_csp_rule_is_written_from_perfettos_own_source`
+# requires those exact literals to be there. Two guards, one demanding
+# the string and one forbidding it, is how the blunt rule announced that
+# it needed the exception.
+#
+# The boundary matters: an exemption written as a prefix would also
+# excuse `http://localhost.evil.example`, which is a remote host wearing
+# a local name. So the match ends at `:`, `/`, or the end of the token.
+_INERT_URL = re.compile(
+    r"http://(?:127\.0\.0\.1|localhost)(?=[:/]|\b(?![.\w]))"
+    r"|http://www\.w3\.org/2000/svg")
+
+
+def _no_cdn(text):
+    """True if `text` fetches nothing from anyone else's server."""
+    text = _INERT_URL.sub("", text)
+    return ("http://" not in text and "cdn." not in text
+            and "unpkg" not in text and "jsdelivr" not in text)
+
+
 class TestTheViewerShipsNoToolchain:
     """Direction 7's rule, made checkable."""
 
@@ -424,14 +454,40 @@ class TestTheViewerShipsNoToolchain:
         # required by `createElementNS` and never dereferenced by
         # anything. `UX-196` added the first SVG and this guard flagged
         # it - correct instinct, wrong rule.
-        inert = ("http://127.0.0.1", "http://www.w3.org/2000/svg")
+        #
+        # `UX-314` added `http://localhost`, and the reason is the same
+        # shape: a CDN is by definition somebody else's host, and a
+        # loopback origin cannot be one. It appears in `perfetto.js`
+        # inside a quotation of ui.perfetto.dev's own `connect-src`,
+        # which is the rule deciding whether the deep link can work -
+        # and `test_the_csp_rule_is_written_from_perfettos_own_source`
+        # requires those exact literals to be there. Two guards, one
+        # demanding the string and one forbidding it, is how the blunt
+        # rule announced that it needed the exception.
         for name in os.listdir("bga/viewer"):
             text = open(os.path.join("bga/viewer", name), encoding="utf-8").read()
-            for allowed in inert:
-                text = text.replace(allowed, "")
-            assert "http://" not in text, name
-            assert "cdn." not in text, name
-            assert "unpkg" not in text and "jsdelivr" not in text, name
+            assert _no_cdn(text), name
+
+    def test_a_remote_host_is_still_a_cdn(self):
+        """The exemptions are loopback and a namespace, and nothing else.
+
+        Widening them is how this guard would stop guarding, so the rule
+        is exercised against text rather than only against the tree it
+        happens to be scanning today. The last two cases are why the
+        exemption matches an origin boundary rather than a prefix:
+        `localhost.evil.example` starts with `localhost` and is somebody
+        else's host.
+        """
+        assert _no_cdn('const NS = "http://www.w3.org/2000/svg";')
+        assert _no_cdn('// quoted: http://localhost:8080, http://127.0.0.1:9001')
+        assert _no_cdn('fetch("http://localhost/x")')
+        assert not _no_cdn('import x from "http://example.com/x.js";')
+        assert not _no_cdn('<script src="https://cdn.example/x.js">')
+        assert not _no_cdn('import x from "https://unpkg.com/x";')
+        assert not _no_cdn('// see http://localhost.evil.example/x.js'), (
+            "a host that merely starts with `localhost` is not loopback")
+        assert not _no_cdn('src="http://127.0.0.1.evil.example/x.js"'), (
+            "a host that merely starts with `127.0.0.1` is not loopback")
 
     def test_there_is_no_package_json_anywhere_near_it(self):
         assert not os.path.exists("bga/viewer/package.json")

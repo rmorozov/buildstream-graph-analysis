@@ -979,7 +979,31 @@ def serve(run: str, port: int = 0,
                     "trace_lock": threading.Lock(),
                     "run_root": os.path.abspath(run)})
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
-    return httpd, f"http://127.0.0.1:{httpd.server_address[1]}/"
+    return httpd, landing_url(httpd.server_address[1])
+
+
+# `UX-314`: the two plain-http origins ui.perfetto.dev's own
+# `connect-src` will let it fetch a trace from. Read from Perfetto's
+# source, quoted in `bga/viewer/perfetto.js`, which is where the rule
+# and its provenance live; this is the serving half of the same fact.
+#
+# `9001` is fetchable and deliberately not recommended: it is
+# `trace_processor_shell --httpd`'s port, and Perfetto probes it at
+# startup expecting an RPC endpoint. `8080` is the llama-server port,
+# which nothing probes.
+PERFETTO_FETCHABLE_PORTS = {8080: "localhost", 9001: "127.0.0.1"}
+
+
+def landing_url(port: int) -> str:
+    """The URL to hand the browser, spelled so Perfetto can follow it.
+
+    The server binds `127.0.0.1` and every port but one is named that
+    way. CSP matches the host **name**, not the address it resolves to,
+    so `http://127.0.0.1:8080` is refused where `http://localhost:8080`
+    is allowed - the same interface, and the spelling is the whole
+    difference between a working `?url=` handoff and a console error.
+    """
+    return f"http://{PERFETTO_FETCHABLE_PORTS.get(port, '127.0.0.1')}:{port}/"
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -1076,6 +1100,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 7
 
     print(f"Serving {os.path.abspath(run)} at {landing}", file=sys.stderr)
+    # `UX-314`: say it here, once, where the port is known. A trace over
+    # the tab-to-tab threshold can only reach Perfetto through the
+    # `?url=` deep link, and Perfetto's CSP refuses every origin but
+    # two - so on the default ephemeral port a big trace has no
+    # one-click route at all, and the page can only say so after the
+    # reader has clicked.
+    if args.port not in PERFETTO_FETCHABLE_PORTS:
+        print(f"  ui.perfetto.dev may not fetch from this port, so a trace "
+              f"over {TRACE_BUDGET_B // 1048576} MiB has no one-click "
+              f"handoff. Re-run with --port 8080 for that, or save the "
+              f"trace and drag it in.", file=sys.stderr)
     if args.perfetto:
         # The handshake needs the server alive while the tab fetches the
         # trace, which is why this does not exit as soon as the browser

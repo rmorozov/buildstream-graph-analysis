@@ -11,7 +11,8 @@
 // viewer should show has to enter the published schema first, where the
 // text renderer, CI and every external consumer get it too.
 
-import { handOff, deepLink, tracedSize, openTab } from "./perfetto.js";
+import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
+         PERFETTO_FRIENDLY_URL } from "./perfetto.js";
 import { renderBand, renderCulprits, renderElementHistory, renderHorizon,
          renderTrend, renderBlastSearch,
          renderOverview, renderEvidence,
@@ -1788,9 +1789,26 @@ export function wireTheHandoff(run = {}) {
   const url = traceUrl();
   const absolute = new URL(url, location.href);
   const served = absolute.protocol === "http:" || absolute.protocol === "https:";
-  if (fallback && served) {
+  // `UX-314`: served is not enough. The deep link makes *Perfetto*
+  // fetch this URL, so it is Perfetto's own `connect-src` that decides
+  // - and over plain http that allows two origins, neither of which is
+  // the ephemeral port `bga view` binds by default. A link that is
+  // always refused is worse than no link: it fails in a console the
+  // reader has no reason to open.
+  const fetchable = served && perfettoCanFetch(absolute.href);
+  if (fallback && fetchable) {
     fallback.href = deepLink(absolute.href);
     fallback.parentElement.hidden = false;
+  }
+  // `UX-314`: the route that needs nobody's permission. Shown whenever
+  // there is a server behind the trace, because both other transports
+  // can be refused - the deep link by Perfetto's CSP, the tab-to-tab
+  // post by the size threshold - and Perfetto's drag-and-drop is
+  // refused by neither.
+  const download = document.getElementById("trace-download");
+  if (download && served) {
+    download.href = absolute.href;
+    download.parentElement.hidden = false;
   }
 
   // UX-299: the threshold above which the trace is fetched by Perfetto
@@ -1814,11 +1832,27 @@ export function wireTheHandoff(run = {}) {
         // page and nothing is structured-cloned across the boundary.
         const size = await tracedSize(url, {});
         if (size !== null && size > inlineMax) {
-          tab.location = deepLink(absolute.href);
+          // `UX-314`: only when Perfetto is actually allowed to fetch
+          // it. Navigating the tab to a link its CSP will refuse loses
+          // the trace into an empty Perfetto and says nothing - which
+          // is the failure this whole path existed to avoid.
+          if (fetchable) {
+            tab.location = deepLink(absolute.href);
+            status.textContent =
+              `${(size / 1048576).toFixed(1)} MiB — over the ` +
+              `${(inlineMax / 1048576).toFixed(0)} MiB this page will copy, ` +
+              `so Perfetto is fetching it from here directly.`;
+            return;
+          }
+          tab.close?.();
           status.textContent =
             `${(size / 1048576).toFixed(1)} MiB — over the ` +
             `${(inlineMax / 1048576).toFixed(0)} MiB this page will copy, ` +
-            `so Perfetto is fetching it from here directly.`;
+            `and ui.perfetto.dev may not fetch ${absolute.origin} ` +
+            `(its own connect-src allows https, 127.0.0.1:9001 and ` +
+            `localhost:8080 only). Re-run with --port 8080 and open ` +
+            `${PERFETTO_FRIENDLY_URL} — or save the trace below and drag ` +
+            `it into ui.perfetto.dev.`;
           return;
         }
       }

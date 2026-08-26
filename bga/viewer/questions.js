@@ -27,6 +27,31 @@
 // rather than by parsing a span's display name or matching a
 // `native: ` prefix. That prefix is a *process* name, not a track name,
 // which is why the old `track.name like 'native:%'` matched nothing.
+// `UX-312`: two things about these strings that a reader has to know
+// before editing a query below.
+//
+// **The arg namespace is `debug.`, not `args.`.** `UX-204` wrote these
+// queries against the legacy Chrome JSON trace, where an `args` object
+// becomes `args.<key>` in `trace_processor`. `UX-298` made Perfetto's
+// own TrackEvent the default format, where the same facts are *debug
+// annotations* and land as `debug.<key>` - and nobody re-pointed the
+// library. Verified against Perfetto v49.0 on `examples/06`: the keys
+// are there, under `debug.`.
+//
+// **The plane category came back.** `UX-210` scoped every query with
+// `slice.category`, which the Chrome converter wrote and the
+// TrackEvent emitter did not - `EVENT_CATEGORY_IIDS` was "reserved
+// rather than used" until `UX-308` spent it on `failed`. So between
+// those rounds all six queries here matched nothing and returned zero
+// rows *in silence*, which is the worst way for a canned question to
+// be wrong. The emitter tags every slice with its plane now, under
+// these same names, so a query saved against the old trace works
+// again rather than needing a rewrite.
+//
+// Matched with `glob` rather than `=` because a slice may carry more
+// than one category - a failed Plane 2 process is
+// `native-process,failed`, which `= 'native-process'` would miss, and
+// missing exactly the failures is the wrong thing to be blind to.
 const PLANE_1 = "bst-builder";
 const PLANE_2 = "native-process";
 
@@ -41,11 +66,11 @@ export const QUESTIONS = [
       " plane, so Plane 2 command names cannot crowd the answer. The " +
       " figure bga analyze prints in the Attribution table; here to " +
       " cross-check it, or to slice it further.",
-    sql: `select extract_arg(s.arg_set_id, 'args.element') as element,
+    sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        count(*) as spans,
        sum(s.dur) / 1e9 as seconds
 from slice s
-where s.category = 'bst-builder'
+where s.category glob '*bst-builder*'
 group by element
 order by seconds desc
 limit 25;`,
@@ -59,11 +84,11 @@ limit 25;`,
       "Plane 2's processes, grouped by the element that ran them. A " +
       " high count with low total time is a process-storm - many short " +
       " execs, the shape examples/08-process-storm exists to show.",
-    sql: `select extract_arg(s.arg_set_id, 'args.element') as element,
+    sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        count(*) as processes,
        sum(s.dur) / 1e9 as seconds
 from slice s
-where s.category = 'native-process'
+where s.category glob '*native-process*'
 group by element
 order by processes desc
 limit 25;`,
@@ -83,11 +108,11 @@ limit 25;`,
        e.dur / 1e9 as element_seconds,
        (e.dur - coalesce(sum(n.dur), 0)) / 1e9 as unaccounted_seconds
 from (select s.id, s.ts, s.dur,
-             extract_arg(s.arg_set_id, 'args.element') as element
-      from slice s where s.category = 'bst-builder') e
+             extract_arg(s.arg_set_id, 'debug.element') as element
+      from slice s where s.category glob '*bst-builder*') e
 left join (select s.ts, s.dur,
-                  extract_arg(s.arg_set_id, 'args.element') as element
-           from slice s where s.category = 'native-process') n
+                  extract_arg(s.arg_set_id, 'debug.element') as element
+           from slice s where s.category glob '*native-process*') n
   on n.element = e.element
  and n.ts >= e.ts and n.ts + n.dur <= e.ts + e.dur
 group by e.id
@@ -106,9 +131,9 @@ limit 20;`,
       " close exactly the gaps this question is looking for.",
     sql: `select element, ts, dur,
        lead(ts) over (order by ts) - (ts + dur) as gap_after
-from (select extract_arg(s.arg_set_id, 'args.element') as element,
+from (select extract_arg(s.arg_set_id, 'debug.element') as element,
              s.ts, s.dur
-      from slice s where s.category = 'bst-builder')
+      from slice s where s.category glob '*bst-builder*')
 order by gap_after desc
 limit 20;`,
   },
@@ -124,8 +149,8 @@ limit 20;`,
       " both planes carry, not by a lane name.",
     sql: `select s.name as command, s.dur / 1e6 as ms
 from slice s
-where s.category = 'native-process'
-  and extract_arg(s.arg_set_id, 'args.element') = '{element}'
+where s.category glob '*native-process*'
+  and extract_arg(s.arg_set_id, 'debug.element') = '{element}'
 order by s.dur desc
 limit 40;`,
   },
@@ -141,14 +166,164 @@ limit 40;`,
       " problem rather than a scheduler one - the distinction the " +
       " blast and criticality findings are about.",
     sql: `select element, (ts + dur) / 1e9 as ended_at_seconds
-from (select extract_arg(s.arg_set_id, 'args.element') as element,
+from (select extract_arg(s.arg_set_id, 'debug.element') as element,
              s.ts, s.dur
-      from slice s where s.category = 'bst-builder')
+      from slice s where s.category glob '*bst-builder*')
 where ts + dur <= (select min(s.ts) from slice s
-                   where s.category = 'bst-builder'
-                     and extract_arg(s.arg_set_id, 'args.element') = '{element}')
+                   where s.category glob '*bst-builder*'
+                     and extract_arg(s.arg_set_id, 'debug.element') = '{element}')
 order by ended_at_seconds desc
 limit 15;`,
+  },
+  {
+    id: "time-by-kind",
+    category: "execution",
+    plane: "Plane 1",
+    title: "Which kinds of element cost the most?",
+    why:
+      "`UX-308` put the element's kind on its Plane 1 slice, so this " +
+      " is one group-by rather than a join against the graph. A kind " +
+      " that dominates is a question about the build's shape - one " +
+      " cmake element is slow, forty of them is a toolchain decision.",
+    sql: `select extract_arg(s.arg_set_id, 'debug.element_kind') as kind,
+       count(*) as tasks,
+       sum(s.dur) / 1e9 as seconds
+from slice s
+where s.category glob '*bst-builder*'
+group by kind
+order by seconds desc;`,
+  },
+  {
+    id: "failed-processes",
+    category: "execution",
+    plane: "Plane 2",
+    title: "What failed, and what ran it?",
+    why:
+      "`UX-308` gives a non-zero exit its own category, so the work " +
+      " that failed is one predicate away instead of a scan of every " +
+      " command line. `debug.cmd` is the untruncated argv - the slice " +
+      " name is only its first 120 characters, which is rarely the " +
+      " part that distinguishes two compiler invocations.",
+    sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
+       extract_arg(s.arg_set_id, 'debug.exit_status') as exit_status,
+       extract_arg(s.arg_set_id, 'debug.cmd') as command,
+       s.dur / 1e6 as ms
+from slice s
+where s.category glob '*native-process*'
+  and s.category glob '*failed*'
+order by ms desc
+limit 40;`,
+  },
+  {
+    id: "cpu-versus-wall",
+    category: "resources",
+    plane: "Plane 2",
+    title: "Which elements are waiting rather than computing?",
+    why:
+      "Plane 2's own `debug.cpu_us` against wall time, per element, " +
+      " annotations alone - no containment join, so nothing another " +
+      " element did in parallel can be attributed here. A ratio far " +
+      " below 1 is a process that waited; far above 1 is one that " +
+      " used several cores. This is the sandbox-tax cross-check that " +
+      " `bga correlate` publishes, asked of the trace directly.",
+    sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
+       sum(extract_arg(s.arg_set_id, 'debug.cpu_us')) / 1e6 as cpu_seconds,
+       sum(s.dur) / 1e9 as wall_seconds,
+       sum(extract_arg(s.arg_set_id, 'debug.cpu_us')) * 1000.0
+         / nullif(sum(s.dur), 0) as cpu_per_wall
+from slice s
+where s.category glob '*native-process*'
+group by element
+having cpu_seconds > 0
+order by wall_seconds desc
+limit 25;`,
+  },
+  {
+    id: "peak-rss",
+    category: "resources",
+    plane: "Plane 2",
+    title: "Which single process wanted the most memory?",
+    why:
+      "Plane 2's `debug.max_rss_kb` is one process's own lifetime " +
+      " peak. It is " +
+      " read as a maximum and never summed: two processes peaking at " +
+      " different moments never held the sum between them, which is " +
+      " the same refusal `compute_peak_memory` makes and the reason " +
+      " `UX-310` declined to draw a memory curve.",
+    sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
+       max(extract_arg(s.arg_set_id, 'debug.max_rss_kb')) / 1024 as peak_mb,
+       s.name as command
+from slice s
+where s.category glob '*native-process*'
+group by element
+order by peak_mb desc
+limit 25;`,
+  },
+  {
+    id: "waited-on-flow",
+    category: "dependencies",
+    plane: "Plane 1",
+    title: "What did this element wait for, by the graph?",
+    example: "core.bst",
+    why:
+      "Plane 1 again, by the graph rather than the clock: `UX-309` " +
+      " draws the dependency edges as **flows**, so this is " +
+      " the declared graph rather than whatever happened to finish " +
+      " first. The timestamp-proximity version of this question is " +
+      " `dependency-wait` above; where they disagree, the gap is a " +
+      " scheduler question and not a dependency one.",
+    sql: `select extract_arg(o.arg_set_id, 'debug.element') as waited_for,
+       (o.ts + o.dur) / 1e9 as it_ended_at,
+       i.ts / 1e9 as this_started_at,
+       (i.ts - (o.ts + o.dur)) / 1e6 as slack_ms
+from flow f
+join slice o on f.slice_out = o.id
+join slice i on f.slice_in = i.id
+where o.category glob '*bst-builder*'
+  and i.category glob '*bst-builder*'
+  and extract_arg(i.arg_set_id, 'debug.element') = '{element}'
+order by slack_ms asc
+limit 20;`,
+  },
+  {
+    id: "concurrency-curve",
+    category: "scheduling",
+    plane: "Plane 2",
+    reads: "counter",
+    title: "How many processes were running at once, over time?",
+    why:
+      "Plane 2's concurrency as a curve: `UX-310`'s counter track, " +
+      " sampled from the same records the " +
+      " process census counts. Its peak equals the `max_concurrency` " +
+      " the report publishes - by construction, because both read one " +
+      " function. Read it against the machine's core count: a plateau " +
+      " well under it is capacity nobody used.",
+    sql: `select c.ts / 1e9 as seconds, c.value as processes_running
+from counter c
+join counter_track t on c.track_id = t.id
+where t.name = 'traced processes running'
+order by c.value desc
+limit 25;`,
+  },
+  {
+    id: "which-run-is-this",
+    category: "scheduling",
+    plane: "run",
+    title: "Whose build is this, and did it finish?",
+    why:
+      "`UX-311` puts the run's identity on its own track, so a trace " +
+      " that left the machine still says which project, which host " +
+      " and which `bga` wrote it. `incomplete_reason` is the one key " +
+      " a finished run never emits - its absence is the only thing " +
+      " its absence means, and a trace of an interrupted build is " +
+      " not a measurement.",
+    sql: `select extract_arg(s.arg_set_id, 'debug.run') as run,
+       extract_arg(s.arg_set_id, 'debug.project') as project,
+       extract_arg(s.arg_set_id, 'debug.host_cpu_count') as cpus,
+       extract_arg(s.arg_set_id, 'debug.builders') as builders,
+       extract_arg(s.arg_set_id, 'debug.incomplete_reason') as incomplete
+from slice s
+where s.category glob '*bst-invocation*';`,
   },
 ];
 

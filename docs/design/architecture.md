@@ -218,6 +218,105 @@ empty.
   every entry carries `spine+hook` / `spine-only` / `hook-only`, and
   coverage stops being a footnote and becomes a count. Verified at scale:
   **127,632 processes on freedesktop-sdk, all one class**.
+- **One counter, and two refusals** (`UX-310`). `UX-298` pinned
+  `TYPE_COUNTER` as "reserved rather than used" under the rule that an
+  event stream may carry only what a capture measured; this is its
+  caller, and the same rule decides what is *not* drawn. There is no
+  memory curve: `max_rss_kb` is a per-process **lifetime** peak, not a
+  sample, so a curve from it would sum peaks that never coexisted -
+  exactly what `compute_peak_memory` refuses - and a guard asserts no
+  memory counter exists rather than leaving the absence to be read as
+  an oversight. "Cores busy" and "open process count" are one question,
+  answered by `compute_max_concurrency` over matched records only,
+  because an open record's end is unknown and a curve that included it
+  would be inventing one. So one series - *traced processes running* -
+  whose peak **equals** the published `max_concurrency`, with the tie
+  rule taken from the scalar rather than re-decided. The stride is a
+  decision with a number: 1,000 windows, each contributing its maximum
+  and its closing value, so the cost is independent of build size and
+  the peak survives exactly - 1,626 raw endpoints become 538 samples on
+  `examples/06` with the peak still 20. Cost: one packet a sample plus
+  one for the track, 25.1 B uncompressed and 6.3 B compressed.
+- **The trace knows whose build it was** (`UX-311`). A trace file
+  leaves the machine that made it - attached, shared, opened weeks later
+  beside five others - and carried no identity at all. One `bga: run`
+  process track, ranked first, holds one annotated instant: the run
+  stamp, project, targets, manifest hash, git commit, `bga` and `bst`
+  versions, the host manifest, the builders, and the plane anchor and
+  offset. Portable vocabulary on purpose - `trace_processor` selects it
+  like any other slice. An unfinished run says so in the **track name**
+  (`bga: run (interrupted)`), not only in an annotation, because an
+  annotation is something a reader has to open a slice to see and the
+  honesty `UX-156` enforces in the report belongs where the first scroll
+  lands; all three ways of being unfinished are covered because it calls
+  `bga`'s own one accessor rather than re-deriving the rule. Lane order
+  is explicit: `sibling_order_rank` per track, and - the rule that had
+  to be read rather than remembered - the root descriptor (`uuid = 0`)
+  setting `process_ordering` to `PROCESS_ORDERING_EXPLICIT`, without
+  which every rank is a hint no UI reads. Identity first, Plane 1
+  second, element lanes after, **heaviest traced first** and labelled
+  with their kind. That last is a recorded deviation: the item asks for
+  the critical path, the timeline reads two logs and a graph rather than
+  an analysis, and the trace states which rule it used in `lane_order`
+  instead of letting a reader assume the other one.
+- **The arrows say why something started now** (`UX-309`). An element
+  ends, another begins, and whether that adjacency is *causation* is
+  what `graph.json` knows and the trace never said. Perfetto's
+  vocabulary is **flows**, drawn as arrows: the timeline emits one per
+  dependency edge whose two endpoints both produced a task, and one per
+  `ppid` link inside a sandbox - the exec chain, which makes a build
+  system's process tree followable instead of inferred from lane
+  adjacency. Nothing else: there is no captured relation between one
+  element's process and another's, and a flow that invented one would be
+  a lie the UI draws in bold. A flow is *one id on two slices* and
+  upstream infers the direction from their timestamps, so an edge whose
+  source does not begin strictly before its sink is **dropped and
+  counted** rather than guessed at - on `examples/06` that is two edges,
+  because `toolchain.bst` is instantaneous and both its dependents begin
+  in the microsecond it does. The bound is no bound, and the measurement
+  is the argument: a flow id rides the slice packet that already exists,
+  so **packets are unchanged** at both scales measured (2,335 on
+  `examples/06`, 62,804 on a 20,000-process synthetic) and a flow costs
+  20.0 B uncompressed, 8.6 B gzipped. The ids are `fixed64`, a different
+  wire type from every other number the emitter writes, and a varint in
+  that field is a packet a reader drops without complaining - so the
+  guard asserts the wire type, not only the value.
+- **A slice says what `bga` knows about it** (`UX-308`). A slice used
+  to carry its name alone, and for Plane 2 that name is the command
+  truncated to 120 characters - so the argv tail that tells two
+  compiler invocations apart was not in the trace at all. Perfetto's
+  vocabulary for this is **debug annotations**, and the timeline now
+  writes them: per Plane 2 slice `cmd` (whole), `src`, `cpu_us`,
+  `max_rss_kb`, `exit_status`, `exec_chain`; per Plane 1 task
+  `element`, `element_kind`, `task_type`, `outcome`. A process that did
+  not exit `0` also gets the `failed` **category**, which is what makes
+  a class of slice filterable in the UI and selectable in SQL - and
+  which is the constant `UX-298` pinned as "reserved rather than used".
+  The keys are a contract (`PLANE1_ANNOTATIONS` / `PLANE2_ANNOTATIONS`
+  in `tools/bga_timeline.py`, rendered by `UX-312`'s trace dictionary),
+  because renaming one silently breaks a saved query; the guard holds
+  the emitted set and the documented set equal in both directions. An
+  absent field is an absent key rather than a zero: the hook cannot
+  observe an exit status, and `0` there would state that the process
+  succeeded. Measured on `examples/06`, 825 slices: 100,922 to 330,188 B
+  uncompressed and 27,013 to 51,102 B gzipped - the whole command line
+  is nearly all of it, and on that capture 412 of 813 records run past
+  the 120-character name.
+- **Extraction is one pass over the log, holding no events**
+  (`UX-297`). Parsing and pairing were two phases with the whole event
+  list between them, because `pair_events` sorted globally before
+  pairing. Pairing needs a weaker property than that: one key's own
+  events in order, a key being one process seen through one mechanism,
+  whose START and END are written by one writer. `examples/06` carries
+  **2 global inversions and 0 per-key inversions**, which is the
+  measurement that decides it. `stream_records` yields a record when
+  its END arrives and holds only the processes currently open;
+  `pair_events` is that generator with its input and output sorted, so
+  the list every existing caller wants is still a list and still says
+  the same thing. On a 200,000-process trace: **288.3 MB peak to 259.5
+  MB, 8.2 s to 7.1 s, identical report digest**. The remaining floor is
+  the record list itself - `O(processes)`, not `O(elements)`, and named
+  as such rather than implied (`UX-313`).
 - **Opens-dependent findings state their scope.** Declared-vs-used
   (`UX-46`) now computes over the hook-covered processes and says what
   share that is — `examples/01`'s eight static elements are reported
@@ -706,6 +805,37 @@ The corollary is the constraint Direction 7 wanted: anything the viewer
 should show has to enter a published schema first, where the text
 renderer, CI and every external consumer get it too.
 
+### Which file owns what
+
+`UX-294`. The principles above are written down; the map from a
+principle to the file that implements it was not, so a reader opening
+`bga/viewer/` had to derive it. One line each — the file is its own
+description, and this table's job is only to say which one to open.
+
+| module | owns |
+|---|---|
+| `app.js` | the boot sequence, the payload fetches, and the thresholds the page renders against |
+| `views.js` | every section the report has — the largest module, and the one a "where is this drawn" question usually ends at |
+| `shapes.js` | the styleguide's §1 dispatch table as code: value shape + hint → the one control that draws it (`UX-302`) |
+| `tables.js` | the element table, its columns, sorting and the preset filters `bga:presets` declares |
+| `nav.js` | the rail, the anchors, section collapse, and the jump box / command palette |
+| `chapters.js` | the chapter grouping that turns forty-eight sections into a document (`UX-286`) |
+| `viewstate.js` | the URL fragment contract — the working set `UX-211` and `UX-225` publish links against |
+| `focus.js` | focusing one element and dimming the rest (`UX-222`) |
+| `drawings.js` | sparklines and density strips: the self-built geometry, and the boundary on what one may print (`UX-303`) |
+| `rawjson.js` | the "view as JSON" toggles, and the record of which section each blob came from (`UX-302`) |
+| `questions.js` | the canned SQL library, its categories, and the `why` each question carries (`UX-210`, `UX-312`) |
+| `sql.js` | the Query (SQL) satellite page that renders that library |
+| `perfetto.js` | the handoff transports: `postMessage`, the `?url=` deep link, and what Perfetto's CSP will fetch (`UX-314`) |
+| `perfetto_page.js` | the standalone handoff page `bga view --perfetto` lands on |
+| `trace_context.js` | the finding→query mapping that gives an investigate button its question (`UX-229`) |
+| `style.css` | every colour, the two token grades, and dark as the design surface (`UX-304`) |
+
+`tests/unit/test_the_viewer_modules_have_a_home.py` holds this table
+and the directory equal in both directions, so a new module that no
+one documented reddens rather than joining the eight that once had no
+entry here.
+
 ## The published contracts
 
 The tool's external surface, one line each. **`--schema` is the source
@@ -771,6 +901,303 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-26 (after `UX-310`), re-grounded in
+`tools/native_trace/trackevent.py`'s `counter_track`/`counter`, in
+`tools/bga_timeline.py`'s `concurrency_series`, and in
+`tests/unit/test_the_counter_the_constant_was_waiting_for.py`. The
+Plane 2 bullets now say what the trace graphs and - as load-bearing -
+what it declines to graph and why.
+
+**A guard caught the whole round on the way past.**
+`examples/06-macro-micro-optimization/.bga/runs/**` is gitignored: it
+exists on this machine and not in a clone. Every clause `UX-308`,
+`UX-309`, `UX-310` and `UX-311` wrote against it would have passed here
+and failed in CI before an assertion ran, and
+`test_a_guard_reads_only_what_a_clone_has.py` says so by name. It fired
+on this item, where the last committed fixture had just been removed as
+an unused import; the same defect was latent in the three before it.
+The repository's convention is a skipif, and a skip alone would leave
+CI believing something it never ran - so every *property* those clauses
+check now has a committed-fixture clause beside it, and only the
+*figures* (813 records, 412 past the 120-character name, 538 samples,
+836 flows) stay behind the skip. Verified by moving that directory
+aside and running the four files as a clone sees them: **61 passed, 17
+skipped**, clone guard green.
+
+Six mutations against the committed tree, all discriminating after one
+repair, and one rejected:
+
+```text
+M1  open records extended to the trace's last stamp          6 red
+M2  a tie is resolved start-first                            1 red
+M3  the window keeps its close and drops its maximum         2 red
+M4  the track claims to be a memory series                   2 red
+M5  the counter track forgets it is a counter                2 red
+M6  the sweep is walked in reverse                           9 red
+--  `open` dropped from the exclusion test               rejected
+```
+
+M6 is the one that changed the code. Its first form - removing the
+"drop a backwards sample" branch from the series filter - **passed**,
+and the reason is that the branch was dead: the construction never
+produces a backwards sample, and a filter that silently swallowed one
+would *hide* a construction bug rather than fix one. The branch is gone
+and the ordering is asserted in the guard instead, where a break in it
+fails loudly; reversing the sweep then reddens nine clauses including
+that one.
+
+M1's first form was rejected rather than counted. Dropping `open` from
+the exclusion test changes nothing, because `_open_record` always sets
+`end_ts` to `None` - the two halves of that condition are one fact.
+The mutation that is a real defect is the historical one
+`compute_max_concurrency`'s own docstring describes: extending an open
+record to the trace's last timestamp, which once produced a
+`max_concurrency` of 24 for a `-j4` build. That reddens six clauses.
+
+Updated 2026-08-26 (after `UX-311`), re-grounded in
+`tools/native_trace/trackevent.py`'s `order_processes_explicitly` and
+ranked `process_track`, in `tools/bga_timeline.py`'s `run_identity` /
+`identity_annotations` / `identity_track_name`, and in
+`tests/unit/test_the_trace_knows_whose_build.py`. The viewer axis now
+says what a trace states about its own run, which it could not before
+there was anything in it to state.
+
+Six mutations against the committed tree, all discriminating:
+
+```text
+M1  the root descriptor never asks for explicit order        1 red
+M2  every element lane takes the same rank                   1 red
+M3  the incompleteness is an annotation and not the name     3 red
+M4  the reason is re-derived from `interrupted` alone        3 red
+M5  the lane label drops the element kind                    3 red
+M6  the identity forgets which run it is                     3 red
+```
+
+M4 is the one worth keeping. `interrupted` alone is the obvious
+re-derivation and it is wrong twice over - a failed run and a suspended
+one are both incomplete, which is exactly why `UX-156`, `UX-157` and
+`UX-185` were joined into one accessor. The guard parametrizes all
+three, so the shortcut cannot pass by being right about the case whoever
+wrote it had in mind: it reddens on `failed` and on `suspended` and
+stays green on the one it remembered.
+
+M1 is the one that would otherwise have been silent. Dropping the root
+packet leaves every rank on the wire, every lane in the right order in
+the file, and a UI that ignores all of it - a trace that looks correct
+and orders nothing. Only a clause that reads the root descriptor can
+tell the difference.
+
+Updated 2026-08-26 (after `UX-309`), re-grounded in
+`tools/native_trace/trackevent.py`'s flow writer, in
+`tools/bga_timeline.py`'s `dependency_edges` / `_plane1_flows` /
+`_plane2_flows`, and in `tests/unit/test_the_arrows_say_why_now.py`.
+The Plane 2 bullets now say which relations the trace draws as
+causation and which it refuses to.
+
+Six mutations against the committed tree, all discriminating:
+
+```text
+M1  flow ids written as varints instead of fixed64   1 red, 9 errors
+M2  the parent lookup crosses sandboxes                     1 red
+M3  a backwards or tied edge is drawn anyway                3 red
+M4  one event both starts and ends a flow                   7 red
+M5  a half-connected edge is emitted                 1 red, 9 errors
+M6  the two planes reuse each other's flow ids              7 red
+```
+
+M2 is the one worth keeping. It **passed** the first time: the fixture
+ran its two sandboxes ten seconds apart, so a lookup that forgot the
+invocation still found the right shell by accident - the other one had
+already exited. A parallel build's sandboxes overlap, which is the
+whole reason pids collide; the fixture now starts the second shell
+50 ms after the first, both are alive when either's children fork, and
+the mutation reddens. The fixture was wrong, not the guard, and the
+mutation is what said so.
+
+Updated 2026-08-26 (after `UX-308`), re-grounded in
+`tools/native_trace/trackevent.py`'s annotation and category writers,
+in `tools/bga_timeline.py`'s `PLANE1_ANNOTATIONS` /
+`PLANE2_ANNOTATIONS`, and in
+`tests/unit/test_the_slice_says_what_bga_knows.py`. The field numbers
+were fetched again rather than remembered: `track_event.proto` and
+`interned_data.proto` came back **byte-identical** to what `UX-298`
+pinned, and `debug_annotation.proto` is recorded beside them with its
+own sha256. The Plane 2 bullet now says what a slice carries, which
+until this round was only its name.
+
+`UX-298`'s non-vacuity clause - "the table above must cover what the
+module pins" - caught all ten new constants the moment they were added,
+before any of the work below.
+
+Eight mutations against the committed tree, all discriminating, and a
+ninth rejected:
+
+```text
+M1  a contract key is emitted under a different name       4 red
+M2  a key is documented and never written                  3 red
+M3  the failed rule is the first draft's `not in (None,0)` 3 red
+M4  an absent field is annotated as zero                   2 red
+M5  the annotation is truncated like the name              3 red
+M6  the Plane 2 annotations are dropped from the begin     7 red
+M7  a wrong field number for `debug_annotations`           1 red
+M8  annotation names go into the event-name table       1 red, 12 errors
+--  the three interning tables share one iid counter       rejected
+```
+
+M7 reddens **only** the schema clause, and that is the point: this
+round's own decoder reads the constant it is checking, so a wrong
+number is invisible to it and the committed fixture is the only thing
+that can see it - which is what `UX-298`'s docstring says and what this
+mutation confirms rather than assumes. The rejected one is not a defect:
+iids unique across tables are legal, so sharing a counter only wastes
+the low ones. It is written down rather than counted.
+
+**A finding the first draft made and the record refuted.** `spine.c`
+writes `exit=%d` for a normal exit and `exit=signal:%d` for a killed
+one, so `exit_status` is a *string with a vocabulary*, not a number.
+The first failed-category rule read `status not in (None, 0)` - which
+would have marked **every** process failed, because `"0"` is not `0`.
+Success is exactly the string `"0"`, and the constant that says so has
+a name and three assertions on it.
+
+Updated 2026-08-26 (after `UX-294` and `UX-295`), re-grounded in the
+new `Which file owns what` table above and in `docs/guides/cli.md`'s
+`whatif/v1` entry — the two halves of review 3's *does this have a
+home* checklist that were still open.
+
+Both were found the same way and both had the same shape: a guard that
+was green because it was asking the maintainer's question.
+`UX-294`'s acceptance (*named in at least one document under `docs/`*)
+had become true of all fifteen viewer modules by attrition, while the
+architecture — the document a reader of `bga/viewer/` opens — named
+eight; so the guard went on the map instead. `UX-295`'s contract-home
+guard checked the spec and this document, which is where a maintainer
+looks, so `whatif/v1` being absent from every *guide* sat under it
+unnoticed; the new clause asks the reader's question, scoped to the
+printable contracts with the run-directory shapes exempted by name.
+
+Six mutations across the two, all discriminating. Recorded because it
+recurred: the first attempt at two of `UX-294`'s measured nothing —
+`git checkout -- docs/` reverted the uncommitted map between
+mutations, so the guard was asserting against a document with no table
+in it. Mutation testing runs against a committed tree.
+
+Updated 2026-08-26 (after `UX-314`'s browser verification), re-grounded
+in what the deployed Perfetto UI actually does with the deep link.
+
+The reporter suggested running Perfetto locally, and it worked better
+than expected: `ui.perfetto.dev` is refused at CONNECT here, but the
+bucket serving it is not, so the whole UI (81 files, `v58.2`) mirrors
+byte-for-byte and stamps its own CSP exactly as the live site does -
+checked by reading the directive back out of the shipped bundle. Driven
+over CDP with the Chromium already installed:
+
+```text
+                                   CSP        request     result
+A  http://127.0.0.1:41234      REFUSED    never sent    empty Perfetto
+B  http://localhost:8080        passed    SENT          CORS: no grant
+C  http://localhost:8080        passed    RESPONSE 200  trace loaded
+   (+ grant issued)
+```
+
+A is the field report reproduced verbatim, down to the console text. B
+separates the two layers: on a CSP-legal origin the request is sent and
+*then* fails CORS, which is the cleanest demonstration that the
+`Access-Control-Allow-Origin` grant is necessary and not sufficient. C
+is the handoff working, and it closes `UX-298`'s second recorded
+deviation - the one-time UI open - which had assumed the trace would
+have to be uploaded to a third party. It did not.
+
+Updated 2026-08-26 (after `UX-312`), re-grounded in
+`bga/viewer/questions.js` as it now selects, `tools/bga_timeline.py`'s
+three scope categories, and `docs/spec/trace-dictionary.md` - which is
+the trace's half of what the styleguide is to the report, and is held
+equal to the emitter's own contract in both directions.
+
+The finding is worth the entry. The canned question library was not
+thin, it was **dead**: `UX-204` wrote it against the Chrome JSON trace
+(`args.<key>`, a `cat` field), `UX-298` made TrackEvent the default
+(`debug.<key>`, and `EVENT_CATEGORY_IIDS` unused until `UX-308`), and
+nobody re-pointed it. All six questions returned zero rows, in silence,
+because `extract_arg` on an absent key is null rather than an error.
+Decoded off the wire before the fix: zero categories interned.
+
+Eight mutations, all discriminating; two of them run twice, because the
+first attempt at each broke the module rather than the property. Two
+existing guards had been asserting the broken shapes and are corrected
+rather than deleted.
+
+Updated 2026-08-26 (after `UX-314`), re-grounded in
+`bga/viewer/perfetto.js`'s `perfettoCanFetch`, `tools/bga_view.py`'s
+`landing_url`, and the two handoff guards that now parametrize the
+served origin. The viewer axis gains the rule it was missing: a
+transport is only offered where the *other* side's policy permits it.
+
+A field report - `connect-src` in ui.perfetto.dev's console, no trace -
+turned out to be Perfetto's own Content-Security-Policy, not this
+server's headers. Our `Access-Control-Allow-Origin` grant is necessary
+and not sufficient: when `connect-src` refuses, the request never
+leaves the browser for CORS to answer. Read from
+`ui/src/frontend/index.ts` rather than guessed, over plain `http:`
+exactly two origins are fetchable - `127.0.0.1:9001` and
+`localhost:8080` - and `bga view` binds an ephemeral port, so the
+`?url=` deep link had never worked in served mode. `UX-299` then made
+it the only transport above 4 MiB.
+
+Eight mutations, all discriminating:
+
+```text
+P1  served implies fetchable (the bug as it shipped)   3 guards red
+P2  the host spelling is ignored                       1 red
+P3  8080 is named by address again                     3 red
+P4  navigate to a link CSP will refuse                 1 red
+P5  the save-it-yourself route disappears              1 red
+P6  the server stops saying the handoff is limited     1 red
+P7  the rule stops saying where it was read from       1 red
+P8  the message stops naming the way out               1 red
+```
+
+P4 passed on the first run, and that is the finding. The
+over-threshold branch was the whole bug and nothing covered it,
+because `UX-299`'s harness pinned `location` to a refused origin while
+asserting the navigation happened - a guard written entirely from this
+side of the boundary. Both halves of the fix are now held to one
+answer by a clause that runs the Python spelling through the
+JavaScript predicate.
+
+**Not verified against the live site.** Both Perfetto hosts are
+refused by this environment's network policy, so this is argued from
+Perfetto's source and guarded against it, not confirmed in a browser.
+
+Updated 2026-08-26 (after `UX-297`), re-grounded in
+`tools/bst_native_build_tracer.py`'s `stream_trace_events` /
+`stream_records` as they now stand, in the three call sites in
+`tools/bga_timeline.py`, and in
+`tests/unit/test_the_pairing_pass_streams.py`. The Plane 2 bullet now
+says extraction holds no events and names what it does hold, which is
+the half this document had been leaving to a task file.
+
+Six mutations against the committed tree, all discriminating:
+
+```text
+M1  the pass stops counting fork-only exits            1 guard red
+M2  `pair_events` stops sorting its output             3 red
+M3  `pair_events` stops consuming its input            1 red
+M4  the still-open records are dropped                 passed - see below
+M5  the analysis builds an event list again            1 red
+M6  the timeline builds one again                      1 red
+```
+
+M4 is the one worth keeping. Every clause comparing the two entry
+points is true *by construction* - they share one implementation, so a
+change moves both sides and the comparison stays green; that is the
+same hole `UX-297`'s own M2 fell into a round earlier. Four hand-worked
+processes replace the argument with an answer - one that pairs, one
+still open, a hook END with no START and a spine END with no START -
+and M4 reddens now. It was already caught by two clauses elsewhere in
+the suite, which is why it was worth finding rather than worth
+shipping.
 
 Updated 2026-08-25 (after `UX-306`), re-grounded in the three viewer
 bullets round 41 added and in the guards that hold them:

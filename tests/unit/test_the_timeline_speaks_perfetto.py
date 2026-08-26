@@ -274,6 +274,53 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
                 trackevent.THREAD_NAME,
             ("interned_data.proto", "InternedData", "event_names"):
                 trackevent.INTERNED_EVENT_NAMES,
+            # UX-308: annotations, categories, and the two interning
+            # tables they need.
+            ("track_event.proto", "TrackEvent", "debug_annotations"):
+                trackevent.EVENT_DEBUG_ANNOTATIONS,
+            ("track_event.proto", "EventCategory", "iid"):
+                trackevent.EVENT_CATEGORY_IID_FIELD,
+            ("track_event.proto", "EventCategory", "name"):
+                trackevent.EVENT_CATEGORY_NAME,
+            ("debug_annotation.proto", "DebugAnnotation", "name_iid"):
+                trackevent.ANNOTATION_NAME_IID,
+            ("debug_annotation.proto", "DebugAnnotation", "int_value"):
+                trackevent.ANNOTATION_INT_VALUE,
+            ("debug_annotation.proto", "DebugAnnotation", "string_value"):
+                trackevent.ANNOTATION_STRING_VALUE,
+            ("debug_annotation.proto", "DebugAnnotationName", "iid"):
+                trackevent.DEBUG_ANNOTATION_NAME_IID_FIELD,
+            ("debug_annotation.proto", "DebugAnnotationName", "name"):
+                trackevent.DEBUG_ANNOTATION_NAME_NAME,
+            ("interned_data.proto", "InternedData", "event_categories"):
+                trackevent.INTERNED_EVENT_CATEGORIES,
+            ("interned_data.proto", "InternedData", "debug_annotation_names"):
+                trackevent.INTERNED_DEBUG_ANNOTATION_NAMES,
+            # UX-309: flows. Both `fixed64`, which is a different wire
+            # type from every other number pinned here.
+            ("track_event.proto", "TrackEvent", "flow_ids"):
+                trackevent.EVENT_FLOW_IDS,
+            ("track_event.proto", "TrackEvent", "terminating_flow_ids"):
+                trackevent.EVENT_TERMINATING_FLOW_IDS,
+            # UX-311: lane order. `sibling_order_rank` is ignored on a
+            # process track unless the root descriptor asks for it,
+            # which is what the second pair pins.
+            ("track_descriptor.proto", "TrackDescriptor",
+             "sibling_order_rank"): trackevent.TRACK_SIBLING_ORDER_RANK,
+            ("track_descriptor.proto", "TrackDescriptor", "process_ordering"):
+                trackevent.TRACK_PROCESS_ORDERING,
+            ("track_descriptor.proto", "ProcessOrdering",
+             "PROCESS_ORDERING_EXPLICIT"): trackevent.PROCESS_ORDERING_EXPLICIT,
+            # UX-310: the counter descriptor, which is what turns
+            # `TYPE_COUNTER` from a reserved constant into a graph.
+            ("track_descriptor.proto", "TrackDescriptor", "counter"):
+                trackevent.TRACK_COUNTER,
+            ("counter_descriptor.proto", "CounterDescriptor", "unit"):
+                trackevent.COUNTER_UNIT,
+            ("counter_descriptor.proto", "CounterDescriptor", "unit_name"):
+                trackevent.COUNTER_UNIT_NAME,
+            ("counter_descriptor.proto", "Unit", "UNIT_COUNT"):
+                trackevent.UNIT_COUNT,
         }
         wrong = []
         for (proto, block, field), ours in expected.items():
@@ -362,9 +409,12 @@ class TestTheTraceSaysWhatTheCaptureSaw:
     def test_a_process_with_no_observed_exit_is_an_instant(self, rendered):
         """`UX-188`'s rule, carried over: never a zero-width bar and
         never a fabricated end."""
-        instants = rendered["trace"]["instants"]
-        assert len(instants) == 1, instants
-        assert "no observed exit" in instants[0]["name"]
+        instants = [entry for entry in rendered["trace"]["instants"]
+                    if "no observed exit" in (entry["name"] or "")]
+        assert len(instants) == 1, rendered["trace"]["instants"]
+        # The other instant is `UX-311`'s run-identity marker, which is
+        # a fact about the run rather than a process.
+        assert len(rendered["trace"]["instants"]) == 2
 
     def test_the_names_are_interned_once_each(self, rendered):
         """What makes a million slices of forty commands cost forty
@@ -375,9 +425,11 @@ class TestTheTraceSaysWhatTheCaptureSaw:
         assert names, "nothing was interned"
         assert len(set(names.values())) == len(names), names
         slices = rendered["trace"]["slices"]
-        assert len(slices) > len(names), (
-            f"{len(slices)} slices over {len(names)} names - this fixture "
-            "does not repeat a name, so it cannot show interning at all")
+        instants = rendered["trace"]["instants"]
+        assert len(slices) + len(instants) > len(names), (
+            f"{len(slices)} slices and {len(instants)} instants over "
+            f"{len(names)} names - this fixture does not repeat a name, so "
+            "it cannot show interning at all")
         for entry in slices:
             assert entry["name"], entry
 

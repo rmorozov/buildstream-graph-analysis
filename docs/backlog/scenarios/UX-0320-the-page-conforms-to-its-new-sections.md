@@ -118,3 +118,41 @@ trimming.
 **The fixing guide's checklist** now asks the four new questions and
 names the guard that answers each, and a clause here holds it to that:
 a section nobody is told to check is a section that decays.
+
+**Mutations — six, all discriminating, and two of them found holes.**
+
+```text
+R1  the store diagram's box written out       1 red   the static half
+R2  a control back in the header              2 red   the exported markup
+R3  the evidence fold goes quiet again        2 red   the pass's own find
+R4  a section opens collapsed                 1 red   §3b's third click
+R5  an exemption whose fold nothing builds    1 red   the other direction
+R6  the checklist stops naming §3a            1 red
+```
+
+R1 and R2 **passed on the first run**, and both were holes rather than
+non-discriminating mutations:
+
+- The grade walk only ever saw drawings the committed fixtures render,
+  and the store diagram needs a store with two snapshots — it is on
+  neither page. The box is held statically now as well, along with the
+  local heights those `${H}` boxes interpolate, which is the shape
+  `const H = 40` would have hidden in.
+- The apparatus walk was measuring a header **nobody renders**: the
+  shim's `querySelector("header")` returns a synthetic node the probe
+  makes for `app.js` to insert the rail after, so a control put
+  straight back into the real header passed. It reads the exported
+  file's markup now — a third surface beside `UX-317`'s `index.html`
+  scan and its browser measurement.
+
+R2 also had to be re-aimed once: `bga_view` strips anchors to satellite
+pages the export does not carry, so a header `<a>` never reaches the
+file. A `<button>` does, and that is the mutation above. The first
+attempt was measuring a property of the exporter, not a hole.
+
+**And a process note, because it cost a run.** The mutation harness
+ended with `git checkout -- .`, which reverted the *guard fixes* R1 and
+R2 had just earned along with the mutation — the third time in this
+project's history that a blanket revert has discarded uncommitted work
+mid-mutation. It reverts only the files its patch touched now, and the
+fixes were committed before the mutations were re-run.

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-314 scenarios: **5 open**, 309 closed.
+320 scenarios: **11 open**, 309 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 57 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 2 | 76 |
+| viewer | 8 | 82 |
 | cli | 0 | 4 |
 | store | 2 | 27 |
 | docs | 0 | 29 |
@@ -39,8 +39,38 @@ task file, which is the only place it ever lived twice.
 | UX-307 | [the export ships the source commentary](UX-0307-the-export-ships-the-source-comments.md) | viewer | Medium | R1 | 🔴 |
 | UX-313 | [the record list is the floor that is left](UX-0313-the-record-list-is-the-floor-that-is-left.md) | capture | Low | R1 | 🔴 |
 | UX-315 | [every canned question's `why` renders with doubled spaces](UX-0315-the-canned-why-renders-with-doubled-spaces.md) | viewer | Low | R1 | 🔴 |
+| UX-316 | [exhibits drawn at annotation size](UX-0316-exhibits-drawn-at-annotation-size.md) | viewer | High | R1, R3 | 🔴 |
+| UX-317 | [apparatus in its place](UX-0317-apparatus-in-its-place.md) | viewer | Medium | R1 | 🔴 |
+| UX-318 | [the rabbit hole announces its depth](UX-0318-the-rabbit-hole-announces-its-depth.md) | viewer | High | R1, R2 | 🔴 |
+| UX-319 | [the chain folds, and the clicks are counted](UX-0319-the-chain-folds-and-the-clicks-are-counted.md) | viewer | Medium | R1 | 🔴 |
+| UX-320 | [the page conforms to its new sections](UX-0320-the-page-conforms-to-its-new-sections.md) | viewer | Medium | R1 | 🔴 |
+| UX-321 | [the question that can never answer, and three smaller seams](UX-0321-the-question-that-can-never-answer.md) | viewer | Medium | R1, R2 | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+
+## UX-316..UX-321: the forty-fourth round — the report, read at arm's length (2026-08-26)
+
+The trace-enrichment landing verified seven for seven (seventeen
+mutations, all discriminating; the real `trace_processor` fetched
+and twelve clauses passed), with one survivor of the dead-question
+class filed as
+[`UX-321`](UX-0321-the-question-that-can-never-answer.md). Then the
+user's thirteen readability observations from a real capture,
+ground-truthed into four classes and four style-guide sections:
+exhibits drawn at annotation size (one geometry served two jobs —
+§2a splits the grades and gives every exhibit its table twin,
+[`UX-316`](UX-0316-exhibits-drawn-at-annotation-size.md)); apparatus
+out of place (the save-the-trace line in the header, descriptions
+behind hover — §2b,
+[`UX-317`](UX-0317-apparatus-in-its-place.md)); the unannounced
+rabbit hole (uncounted folds, nested scrollboxes, the enlarge
+request — §3a's depth budget and table focus,
+[`UX-318`](UX-0318-the-rabbit-hole-announces-its-depth.md)); and
+unpriced reading costs (the unfolded chain, unmeasured clicks —
+§3b, [`UX-319`](UX-0319-the-chain-folds-and-the-clicks-are-counted.md)),
+sealed by [`UX-320`](UX-0320-the-page-conforms-to-its-new-sections.md)'s
+conformance pass. Full narrative:
+[`../../audits/round-44.md`](../../audits/round-44.md).
 
 ## UX-308..UX-312: the forty-third round — the trace speaks the format, not yet the language (2026-08-26)
 

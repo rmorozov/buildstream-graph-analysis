@@ -823,16 +823,28 @@ until this round was only its name.
 module pins" - caught all ten new constants the moment they were added,
 before any of the work below.
 
-Six mutations against the committed tree, all discriminating:
+Eight mutations against the committed tree, all discriminating, and a
+ninth rejected:
 
 ```text
-M1  a contract key is emitted under a different name       2 red
-M2  a key is documented and never written                  1 red
-M3  the failed category is on every process                2 red
+M1  a contract key is emitted under a different name       4 red
+M2  a key is documented and never written                  3 red
+M3  the failed rule is the first draft's `not in (None,0)` 3 red
 M4  an absent field is annotated as zero                   2 red
-M5  the full command is truncated like the name            1 red
-M6  the annotations move to the slice end                  1 red
+M5  the annotation is truncated like the name              3 red
+M6  the Plane 2 annotations are dropped from the begin     7 red
+M7  a wrong field number for `debug_annotations`           1 red
+M8  annotation names go into the event-name table       1 red, 12 errors
+--  the three interning tables share one iid counter       rejected
 ```
+
+M7 reddens **only** the schema clause, and that is the point: this
+round's own decoder reads the constant it is checking, so a wrong
+number is invisible to it and the committed fixture is the only thing
+that can see it - which is what `UX-298`'s docstring says and what this
+mutation confirms rather than assumes. The rejected one is not a defect:
+iids unique across tables are legal, so sharing a counter only wastes
+the low ones. It is written down rather than counted.
 
 **A finding the first draft made and the record refuted.** `spine.c`
 writes `exit=%d` for a normal exit and `exit=signal:%d` for a killed

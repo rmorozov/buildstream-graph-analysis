@@ -95,3 +95,50 @@ the field user: the trace they can already open just says more
 with each landing. The round's one-sentence verdict for the user's
 question: the container is right, the vocabulary is empty, and
 everything needed to fill it is already on disk.
+
+## The landing (2026-08-26)
+
+All five items and `UX-297`'s open half, in the order this round
+recommended. Every figure below was measured, and every guard was
+falsified against a committed tree.
+
+| item | what landed | mutations |
+|---|---|---|
+| `UX-297` | parsing and pairing are one pass; peak 288.3 → 259.5 MB, 8.2 → 7.1 s, digest identical | 6, all red |
+| `UX-308` | ten debug-annotation keys as a contract, plus the `failed` category | 8 red, 1 rejected |
+| `UX-309` | dependency and exec-chain flows; zero packet cost at both scales | 6, all red |
+| `UX-311` | the `bga: run` identity track, explicit lane order, kinds in labels | 6, all red |
+| `UX-310` | one counter series, and two refusals argued rather than omitted | 6 red, 1 rejected |
+| `UX-312` | its **first clause only**: `UX-298`'s `trace_processor` debt, paid | 1 red |
+
+**The round's own premise, tested.** `UX-298`'s unpaid
+`trace_processor` debt was called load-bearing here, and it was:
+everything the four items added sat on a wire format only `bga` had
+ever read. The binary turned out to be reachable from the artifact host
+even though `get.perfetto.dev` is refused, and Perfetto v49.0 confirmed
+all of it - 826 slices, 836 flows, 538 counter samples peaking at 20,
+and every annotation key resolving through `extract_arg` as
+`debug.<key>`, including a 553-character `debug.cmd` behind a
+120-character name. The container is right, the vocabulary is no longer
+empty, and the reader agrees.
+
+**Three things the work found that the filings did not predict.**
+
+1. *`exit_status` is a string with a vocabulary, not a number.* The
+   first failed-category rule would have marked every process failed.
+2. *`UX-310`'s memory series cannot exist.* `max_rss_kb` is a
+   per-process lifetime peak; a curve from it sums peaks that never
+   coexisted. Refused with a clause rather than omitted, and its two
+   surviving bullets turned out to be one question.
+3. *Round 43's guards read a gitignored capture.* Every clause the four
+   items wrote against `examples/06`'s `.bga` would have passed here
+   and failed in CI. `test_a_guard_reads_only_what_a_clone_has.py`
+   caught it; the properties now have committed-fixture clauses beside
+   them and only the figures stay behind a skip.
+
+**Still open.** `UX-312`'s own body - the trace dictionary and the
+canned question library the vocabulary now makes possible - and
+`UX-298`'s second deviation, the one-time `ui.perfetto.dev` open, which
+this environment's network policy refuses. `UX-313` was filed on the
+way past: the record list is the floor `UX-297` left, and whether it
+can be windowed is a measurement nobody has taken.

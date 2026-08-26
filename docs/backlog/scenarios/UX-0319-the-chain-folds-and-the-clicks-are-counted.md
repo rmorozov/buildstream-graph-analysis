@@ -112,3 +112,25 @@ would have measured the wide cost twice and called it both viewports.
 The probe models that single API and nothing else; `UX-257`'s rule is
 that the shim does not pretend to have a layout engine, and this does
 not ask it to.
+
+**Mutations — seven, all discriminating.** Run against the committed
+tree, one at a time, reverted between:
+
+```text
+P1  the fold is never applied              3 red
+P2  the control moves before the tail      1 red   DOM order
+P3  the numbers become 12/12               3 red   not the chain's
+P4  the label loses its counts             1 red   §3a.1 on this surface
+P5  one section starts collapsed           2 red   the third click, narrow
+P6  app.js keeps its own pair of numbers   1 red   statically
+P7  a section leaves the rail              1 red   unreachable, not scored
+```
+
+P5 is the acceptance's own named mutation, and it reddens exactly where
+the slack is: at wide width the cost goes 1 → 2 and stays inside the
+budget; at narrow it goes 2 → 3 and the guard fires. P6 had to be
+rewritten once — the first attempt declared a second `PATH_HEAD`, which
+is a **syntax** error in the exported page (every module is inlined
+into one script), so it broke the module rather than the property. The
+realistic drift is a second pair under a second name, and that is what
+is run above.

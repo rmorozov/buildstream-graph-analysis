@@ -39,6 +39,59 @@ def _published_schemas():
     return contracts.ids()
 
 
+GUIDES = REPO / "docs/guides"
+
+
+def test_every_printable_contract_has_a_home_in_the_guides():
+    """`UX-295`: a *guide* is where the consumer of a payload looks.
+
+    Review 3 counted homes and found `whatif/v1` named four times
+    across the spec, the architecture and a direction - and **zero**
+    times in `docs/guides/`. The command that produces it was
+    documented (`UX-246`); the document it produces was not, so a
+    consumer holding `{"schema": "whatif/v1", ...}` and grepping the
+    guides found how to make one and nothing about reading it.
+
+    The clauses above already asked whether every contract has a home.
+    Their notion of home is the spec and the architecture - where a
+    *maintainer* looks - which is why this gap sat under a green
+    guard. This one asks the reader's question instead.
+
+    **Printable only.** `bga.contracts.unprintable()` names the shapes
+    a run directory carries rather than a subcommand emits - `host/v1`,
+    `sources/v1`, `plane2/*`. No `--format json` hands one to anybody,
+    so requiring a CLI guide entry for them would be asking the wrong
+    document to explain them; the architecture is their home and the
+    clauses above hold it.
+    """
+    from bga import contracts
+
+    printable = set(contracts.ids()) - set(contracts.unprintable())
+    assert printable, "no contract is printable; this guard checks nothing"
+
+    text = "\n".join(path.read_text(encoding="utf-8")
+                     for path in sorted(GUIDES.rglob("*.md")))
+    missing = sorted(name for name in printable if name not in text)
+    assert missing == [], (
+        f"published contract(s) named in no guide: {missing}. A consumer "
+        f"holding one greps docs/guides/ and finds the command that made "
+        f"it, not the document they are reading")
+
+
+def test_the_unprintable_shapes_are_not_required_to_be_in_a_guide():
+    """The exemption is a decision, so it is asserted rather than
+    assumed - and it fails if `unprintable()` ever empties, which would
+    silently widen the clause above into something nobody chose."""
+    from bga import contracts
+
+    unprintable = set(contracts.unprintable())
+    assert unprintable, "unprintable() is empty; the exemption above is moot"
+    assert unprintable <= set(contracts.ids())
+    assert "whatif/v1" not in unprintable, (
+        "whatif/v1 is printable - `bga whatif --format json` hands it to a "
+        "consumer - and exempting it would undo UX-295")
+
+
 def test_every_published_schema_is_named_in_the_spec():
     """In **Part 32.5**, not merely somewhere in the file.
 

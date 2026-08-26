@@ -640,6 +640,18 @@ main .map-table { display: block; }
 .actions-group { margin: 0 0 .6rem; }
 .actions-group > p { margin: .25rem 0; }
 
+/* UX-319 (styleguide §3a.1 + UX-187): the chain's middle, folded and
+   counted. One row, spanning the table, holding one control that says
+   how many and out of how many. */
+tr.fold-row td { text-align: center; padding: .3rem 0; }
+button.fold-more {
+  font: inherit; font-size: .82rem; cursor: pointer;
+  background: transparent; color: var(--muted);
+  border: 1px dashed var(--line); border-radius: 3px;
+  padding: .1rem .6rem;
+}
+button.fold-more:hover { color: var(--fg); }
+
 /* UX-317 (styleguide §2b.3): **a described value shows its
    affordance.** The `?` is the door; the sentence opens beside the
    value - to its right where the row has room, below it where it does

@@ -1421,6 +1421,7 @@ the other rounds now:
 | [40](../audits/round-40.md) | the field's first architectural showstopper: a 2 GB dual-plane snapshot OOMs `bga view` — every load path measured, ~95 % of the monolith unread, the streaming fix on the wrong path; Direction 15 argued (events as a Perfetto TrackEvent stream, capture computes / view serves) and the rounds 28-39 sample verified six for six (`UX-296`..`UX-301`) |
 | [41](../audits/round-41.md) | a design round while Direction 15 executes: the user's brainstorm became the visual contract (`styleguide.md`) — shape→control mapping, sparklines and density strips, a measured-and-budgeted palette (two validator failures found), dark first with print kept honest (`UX-302`..`UX-306`, Direction 16) |
 | [43](../audits/round-43.md) | Direction 15 and the visual contract verified eleven for eleven, fourteen mutations discriminating; then the user's question answered by inventory — the trace speaks Perfetto's format and none of its vocabulary, while the capture holds the content for all of it (`UX-308`..`UX-312`, Direction 15's second iteration) |
+| [44](../audits/round-44.md) | the trace vocabulary verified seven for seven with one dead question surviving its own class's purge; the user's thirteen readability observations became four visual-contract sections — drawing grades, apparatus placement, the depth budget and table focus, the click budget (`UX-316`..`UX-321`) |
 
 ## Verification Log
 

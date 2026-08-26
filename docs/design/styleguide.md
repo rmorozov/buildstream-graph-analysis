@@ -144,6 +144,56 @@ mode; in the export the strip is static). This is the aggregate
 the user asked to have "somewhere near the table", placed where
 the eye already is.
 
+## 2a. Drawing grades and the size scale (round 44)
+
+The field found §2's "fixed small geometry" over-applied: one size
+served both the sparkline beside a table cell and the drawing that
+*is* a section's whole answer, and at annotation size the answers
+were invisible — the blast-radius distribution, the store diagram
+and the element-duration distribution all drew at 20 viewBox units
+and said nothing. The token lesson (§4.5) again: one grade cannot do
+two jobs.
+
+- **Annotation grade** — a drawing beside something else (a history
+  sparkline in an element section, a strip in a table header): the
+  §2 small geometry, unchanged. Its reading is "shape at a glance";
+  its numbers are one hover away.
+- **Exhibit grade** — a drawing that is the section's answer (a
+  distribution the section exists to show, the store diagram, the
+  graph shape): container width, height from the size scale,
+  readable tick labels, and **always paired with its table twin** —
+  an "as table" toggle rendering the same published values as a §3
+  table, so the drawing never hoards data a reader wants as rows.
+- **The size scale**: drawing heights and type sizes come from a
+  small token scale in `style.css`, not from per-drawing constants
+  — the normalization instrument. A drawing is annotation grade or
+  exhibit grade; there is no third size, and a guard holds geometry
+  to the scale.
+- The grade is declared where the drawing is placed (the renderer
+  knows whether it is the section's answer), never guessed from
+  data.
+
+## 2b. Apparatus in its place (round 44)
+
+Three placement rules the field pass earned:
+
+1. **A control's explanation lives with the control.** The
+   save-the-trace sentence belongs inside the Perfetto action
+   group, not in the header two blocks above it. Nothing explains
+   a control from under a different heading.
+2. **The header carries identity only** — run name, stamp, verdict
+   state — within a stated vertical budget (measured in lines, in
+   the guard). Actions and their apparatus live in the actions
+   group; prose lives in sections.
+3. **A described value shows its affordance.** §1 gave described
+   values a popover; discovery was hover archaeology. A value whose
+   schema carries a `description` renders a visible marker (the
+   `?`), and the description opens *beside the value* — to its
+   right where the row has room, below it where it does not. In
+   print and export the marker survives and the description renders
+   inline-on-open state only; hover is never the only door (§4.3's
+   rule, applied to prose).
+
 ## 3. Tables
 
 The existing machinery (declared columns, sorting, text filter,
@@ -161,6 +211,42 @@ nesting cap) is kept and this guide adds the reading rules:
   per-table inventions; a new tool enters the guide first.
 - Folding inside cells follows the nesting cap and is always
   labeled with a count — the `UX-277` rule, restated as law.
+
+### 3a. The depth budget and table focus (round 44)
+
+The field report: tables nest several levels deep, the reader
+cannot tell how deep the rabbit hole goes, and a nested table's own
+scroll does not work inside a scrolling parent. Three rules:
+
+1. **Depth is announced.** A cell that folds deeper content states
+   what is below it — "2 levels, 34 rows" — before any click. The
+   unknown-depth rabbit hole is the defect; the count is the fix.
+2. **One nested level renders inline.** Deeper than that, the fold
+   does not open in place: it opens in **table focus** — the
+   nested table takes the content column's full width as a plain
+   in-flow section (its breadcrumb naming the path back), and the
+   parent collapses behind it. One mechanism, deliberately not an
+   overlay or drawer (round 24's export-survivability argument
+   stands): focus is served-mode state like `UX-222`'s, the export
+   renders folds with counts, and nothing about the meaning needs
+   the mechanism.
+3. **Every capped or nested table offers focus explicitly** — the
+   user's enlarge affordance: one control, "expand this table",
+   entering the same focus state. Nested scrollboxes are abolished
+   rather than fixed: a table scrolls only when it is the widest
+   thing on screen, which in focus it always is.
+
+### 3b. The click budget (round 44)
+
+Navigation cost is measured, not felt: from a chapter's rail entry,
+any section's content is reachable in **at most two interactions**
+(open chapter, open section), and the walk that measures the worst
+path is a guard, not an aspiration. A structure change that pushes
+a third click into the common path reddens before a reader meets
+it. Folds inside content (the labeled fold, the chain's middle) do
+not count against the budget — they are depth, not navigation — but
+their counts must be visible (§3a.1), so the reader spends clicks
+knowingly.
 
 ## 4. Color and emphasis: the budget
 

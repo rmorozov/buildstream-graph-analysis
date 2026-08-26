@@ -68,16 +68,25 @@ print(json.dumps({{"peak_mb": peak, "digest": digest,
                   "processes": report["process_count"]}}))
 """
 
-# The pre-UX-169 shape, as a patch applied inside the child: pairing
-# copies rather than consumes, and the caller keeps the event list
-# alive past it - which is what `del events` and `consume=True` undid.
+# The pre-UX-169 shape, as a patch applied inside the child: the whole
+# event list exists, and is held past the pairing that read it - which
+# is what `del events` and `consume=True` undid, and what `UX-297`'s
+# streaming pass then removed the possibility of.
+#
+# `UX-297` moved where this has to be applied. The analysis no longer
+# calls `pair_events` at all, so patching *that* stopped reintroducing
+# anything and the guard measured the same tree twice (45 MB against
+# 45 MB). The seam is the parse now: pour the stream into a list, hold
+# it, and hand back an iterator over it - which is precisely the shape
+# the fix deleted.
 _PRE_UX169 = """
-_real_pair = tracer.pair_events
+_real_stream = tracer.stream_trace_events
 _kept = []
-def pair_events(events, consume=False):
+def stream_trace_events(lines, total_lines=None):
+    events = list(_real_stream(lines, total_lines))
     _kept.append(events)
-    return _real_pair(events, consume=False)
-tracer.pair_events = pair_events
+    return iter(events)
+tracer.stream_trace_events = stream_trace_events
 """
 
 

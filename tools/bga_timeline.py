@@ -92,19 +92,21 @@ def pick_anchor(raw_log: str) -> Optional[str]:
     is the smallest *share* of its span, and because it is the element a
     reader opening the timeline is most likely looking for.
     """
-    from .bst_native_build_tracer import pair_events, parse_trace_lines
+    from .bst_native_build_tracer import stream_records, stream_trace_events
 
-    with _open_raw(raw_log) as handle:
-        records = pair_events(parse_trace_lines(handle))
     spans = {}
-    for record in records:
-        element = record.get("element")
-        if not element or element == "unknown":
-            continue
-        start, end = record.get("start_ts"), record.get("end_ts")
-        if start is None or end is None:
-            continue
-        spans[element] = max(spans.get(element, 0), end - start)
+    with _open_raw(raw_log) as handle:
+        # `UX-297`: a max per element, which is a fold - so the records
+        # stream past rather than piling up, and the events behind them
+        # never exist as a list at all.
+        for record in stream_records(stream_trace_events(handle)):
+            element = record.get("element")
+            if not element or element == "unknown":
+                continue
+            start, end = record.get("start_ts"), record.get("end_ts")
+            if start is None or end is None:
+                continue
+            spans[element] = max(spans.get(element, 0), end - start)
     return max(spans, key=spans.get) if spans else None
 
 
@@ -119,11 +121,11 @@ def element_spans(raw_log: str) -> dict:
     read twice rather than three times, and nothing is held but one
     entry per element.
     """
-    from .bst_native_build_tracer import pair_events, parse_trace_lines
+    from .bst_native_build_tracer import stream_records, stream_trace_events
 
     spans = {}
     with _open_raw(raw_log) as handle:
-        for record in pair_events(parse_trace_lines(handle), consume=True):
+        for record in stream_records(stream_trace_events(handle)):
             element = record.get("element")
             if not element or element == "unknown":
                 continue
@@ -192,16 +194,19 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output):
-    """The trace, packet by packet, never held.
+    """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
-    converter already built. Plane 2 is streamed: a record becomes a
-    slice the moment it is paired, and the only thing that grows is one
-    entry per `(element, pid)` lane - which is the same cardinality the
-    Chrome converter's `tid` had, and is named here rather than left to
-    be discovered.
+    converter already built. Plane 2 is read as a stream of *events*
+    (`UX-297`) and drawn from the record list those events fold to: one
+    packet is written per slice and none are buffered, but the records
+    are ordered by start before drawing, for the reason the loop below
+    states. What grows with the build is one entry per `(element, pid)`
+    lane - the same cardinality the Chrome converter's `tid` had, named
+    here rather than left to be discovered - and one record per
+    process, which is what a per-process timeline is.
     """
-    from .bst_native_build_tracer import pair_events, parse_trace_lines
+    from .bst_native_build_tracer import stream_records, stream_trace_events
     from .native_trace.trackevent import TrackEventWriter
 
     offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
@@ -240,7 +245,23 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output):
                        for index, element in enumerate(sorted(spans))}
         lanes = {}
         with _open_raw(raw_log) as handle:
-            for record in pair_events(parse_trace_lines(handle), consume=True):
+            # `UX-297`: the events stream; the records are still sorted
+            # by start before they are drawn, and that is deliberate.
+            # Slices are emitted per *track*, and a track here is
+            # `(element, pid)` - which a dual-stream process shares with
+            # itself. The spine sees the exec first and the kernel exit
+            # last; the hook's constructor runs after the exec and its
+            # `atexit` before the exit, so the pass yields the hook's
+            # record first and the spine's second while their starts run
+            # the other way. Measured on the four-line case: streamed
+            # `[hook 100.001, spine 100.000]` against sorted
+            # `[spine 100.000, hook 100.001]`. Emitting that order into
+            # the trace would reorder two slices on one track under a
+            # change about memory, so the sort stays and the floor here
+            # is O(processes) - the events, which are twice as many, are
+            # the ones that no longer pile up.
+            for record in sorted(stream_records(stream_trace_events(handle)),
+                                 key=lambda record: record["start_ts"]):
                 element = record.get("element") or "unknown"
                 pid = element_pid.get(element)
                 if pid is None:

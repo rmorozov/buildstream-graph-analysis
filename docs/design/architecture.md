@@ -218,6 +218,21 @@ empty.
   every entry carries `spine+hook` / `spine-only` / `hook-only`, and
   coverage stops being a footnote and becomes a count. Verified at scale:
   **127,632 processes on freedesktop-sdk, all one class**.
+- **Extraction is one pass over the log, holding no events**
+  (`UX-297`). Parsing and pairing were two phases with the whole event
+  list between them, because `pair_events` sorted globally before
+  pairing. Pairing needs a weaker property than that: one key's own
+  events in order, a key being one process seen through one mechanism,
+  whose START and END are written by one writer. `examples/06` carries
+  **2 global inversions and 0 per-key inversions**, which is the
+  measurement that decides it. `stream_records` yields a record when
+  its END arrives and holds only the processes currently open;
+  `pair_events` is that generator with its input and output sorted, so
+  the list every existing caller wants is still a list and still says
+  the same thing. On a 200,000-process trace: **288.3 MB peak to 259.5
+  MB, 8.2 s to 7.1 s, identical report digest**. The remaining floor is
+  the record list itself - `O(processes)`, not `O(elements)`, and named
+  as such rather than implied (`UX-313`).
 - **Opens-dependent findings state their scope.** Declared-vs-used
   (`UX-46`) now computes over the hook-covered processes and says what
   share that is — `examples/01`'s eight static elements are reported

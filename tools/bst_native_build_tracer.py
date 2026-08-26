@@ -67,6 +67,7 @@ import array
 import atexit
 import contextlib
 import errno
+import itertools
 import json
 import os
 import re
@@ -977,8 +978,27 @@ def parse_trace_lines(lines, total_lines: Optional[int] = None) -> List[dict]:
 
     The format is line-oriented, so a file handle is a perfectly good
     argument and the string copy simply need not exist.
+
+    **The list, for the callers that want one.** `UX-297` needed the
+    events never to exist all at once, and the parse was always a
+    stream - `stream_trace_events` below is that stream, and this is it
+    poured into a list. One parser, two shapes: a second copy of this
+    loop is exactly the drift `UX-214` and `UX-273` are about.
     """
-    events = []
+    return list(stream_trace_events(lines, total_lines))
+
+
+def stream_trace_events(lines, total_lines: Optional[int] = None):
+    """Each trace event as it is parsed, holding none of them.
+
+    `UX-297`'s open half. The measured floor of an extraction was the
+    event list itself, not the fold beside it - on a 200,000-process
+    trace, 400,000 event dicts are **212.6 MB** of a 340.8 MB peak, and
+    pairing them added 1.2 MB net because the records replaced the
+    events as they drained. Nothing needed the list; `pair_events`
+    needed *order*, which is the next function's problem and not this
+    one's.
+    """
     # UX-183: a 200k-process trace holds `Analyzing the captured trace...`
     # for minutes. The line count is not known in advance without a
     # second pass over the file, so this counts up rather than toward a
@@ -1104,9 +1124,8 @@ def parse_trace_lines(lines, total_lines: Optional[int] = None) -> List[dict]:
             record["children_cpu_us"] = int(
                 round((rusage["cutime"] + rusage["cstime"]) * 1e6)
             )
-        events.append(record)
+        yield record
     tick.done()
-    return events
 
 
 def _pair_key(ev: dict) -> Tuple[str, int, str]:
@@ -1208,22 +1227,68 @@ def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
     is destructive, which is why it is opt-in: only the analysis path,
     which drops its reference immediately afterwards, asks for it.
     Measured on a 400k-process trace: 479 MB peak against 545 MB before,
-    and the record list is unchanged either way."""
-    open_by_key: Dict[Tuple[str, int, str], List[dict]] = {}
-    records: List[dict] = []
+    and the record list is unchanged either way.
+
+    `UX-297`: the algorithm is `stream_records` now, and this is it
+    sorted - both the events going in (which is what makes this
+    function's answer byte-identical to what it always was) and the
+    records coming out. The streaming callers skip the first sort; see
+    that function for the ordering property they rely on and the
+    measurement behind it."""
     if consume:
         events.sort(key=lambda e: e["ts"])
         ordered = _drain(events)
     else:
         ordered = sorted(events, key=lambda e: e["ts"])
+    return sorted(stream_records(ordered), key=lambda r: r["start_ts"])
+
+
+def stream_records(events, counts: Optional[Dict[str, int]] = None):
+    """`pair_events`, as the single pass it can be.
+
+    Yields each record when its END arrives, then the open ones - so a
+    caller that folds as it reads never holds the record list either.
+    Holds only the processes currently open, which is a build's
+    concurrency rather than its size.
+
+    **Why no sort.** Pairing needs one property: that a key's own events
+    arrive in order. A global sort is far stronger, and it is what
+    forced the event list to exist. A *key* is one process seen through
+    one mechanism (`_pair_key`), and one process's own START and END are
+    written by one writer in that order - the hook writes both from the
+    traced process itself, the spine writes both from the single
+    supervisor. Concurrent writers interleave *across* keys, which is
+    what breaks the global order and not this one.
+
+    Measured on the two real captures in this repository:
+
+    ```text
+                          events   keys   global inv.   per-key inv.
+    examples/01 raw           64     40             0              0
+    examples/06 plane2.gz   1485    813             2              0
+    ```
+
+    `examples/06` is the case: the file is **not** globally ordered and
+    **is** per-key ordered, so the weaker property is the one that
+    actually holds. `test_the_pairing_pass_streams.py` asserts the two
+    entry points agree record-for-record on both, and on a generated
+    trace whose global order is deliberately shuffled.
+
+    `counts` is filled as the stream runs with the same keys
+    `count_unmatched_ends` returns. It is an argument rather than a
+    second walk because after this pass the events are gone - and
+    because the open-set it needs is the one this loop already keeps.
+    """
+    open_by_key: Dict[Tuple[str, int, str], List[dict]] = {}
+    if counts is not None:
+        counts.setdefault("fork_only", 0)
+        counts.setdefault("unmatched", 0)
     # UX-183: the second half of the same wait. A 200k-process trace pairs
     # for as long as it parses, and both sit behind one phase line.
-    # `_drain` yields lazily on purpose (UX-169), so there is no length to
-    # count toward - the ticker then counts up, which is the same signal.
-    pair_tick = progress.ticker(
-        "pairing processes",
-        total=len(ordered) if isinstance(ordered, (list, tuple)) else None)
-    for index, ev in enumerate(ordered, 1):
+    # The stream yields lazily on purpose, so there is no length to count
+    # toward - the ticker then counts up, which is the same signal.
+    pair_tick = progress.ticker("pairing processes", total=None)
+    for index, ev in enumerate(events, 1):
         if not index % 5000:
             pair_tick.step(index)
         # UX-61: the sandbox id, when the capture has one, is the correct
@@ -1272,8 +1337,8 @@ def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
             # this corpus, which is the kind of threshold this codebase
             # does not add.
             if pending and pending[-1].get("ppid") != ev.get("ppid"):
-                records.append(_open_record(pending[0], pending[-1], len(pending),
-                                            reason="end-lost-pid-reused"))
+                yield _open_record(pending[0], pending[-1], len(pending),
+                                   reason="end-lost-pid-reused")
                 pending.clear()
             pending.append(ev)
         elif ev["event"] == "END":
@@ -1281,10 +1346,20 @@ def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
             if not pending:
                 # UX-123: an exit for a pid that never exec'd - a
                 # fork-without-exec child, whose recorded cmdline is its
-                # parent's. Dropped here and counted by
-                # `count_fork_only_exits` over the same events, so the
+                # parent's. Dropped here and counted as it passes, so the
                 # report can say how many rather than leaving a whole
                 # record class neither shown nor mentioned.
+                #
+                # UX-297: counted *here* rather than by
+                # `count_unmatched_ends` walking a second sorted copy of
+                # the events. The split is UX-133's and unchanged: only
+                # the spine can see a fork-only exit, so a hook END with
+                # no START is a truncated log and says so.
+                if counts is not None:
+                    if ev.get("src") == "spine":
+                        counts["fork_only"] += 1
+                    else:
+                        counts["unmatched"] += 1
                 continue
             # UX-123: one pid, one record, even when it exec'd several
             # times.
@@ -1347,12 +1422,11 @@ def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
             # it is killed.
             if "exit_status" in ev:
                 record["exit_status"] = ev["exit_status"]
-            records.append(record)
+            yield record
     for pending in open_by_key.values():
         for start_ev in pending:
-            records.append(_open_record(start_ev, start_ev, 1))
+            yield _open_record(start_ev, start_ev, 1)
     pair_tick.done()
-    return sorted(records, key=lambda r: r["start_ts"])
 
 
 def _open_record(start_ev: dict, final_ev: dict, exec_chain: int,
@@ -4124,9 +4198,14 @@ def load_records(raw_log_path: str, merge: bool = True) -> List[dict]:
     process instead is a real question and `UX-298`'s, not this item's -
     changing it here would have been a silent edit to what the timeline
     shows, under a change about memory.
+
+    `UX-297`: streamed, so the events never exist as a list beside the
+    records they became. The rows come back sorted by start, which is
+    what `pair_events` always returned and what every caller reads.
     """
     with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as handle:
-        records = pair_events(parse_trace_lines(handle), consume=True)
+        records = sorted(stream_records(stream_trace_events(handle)),
+                         key=lambda record: record["start_ts"])
     return merge_record_streams(records) if merge else records
 
 
@@ -4140,37 +4219,54 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     staged. Omitted - the default, and what `report` does without a
     project - the rest of the report is exactly as before.
     """
-    # UX-168: stream it. `parse_trace_lines` takes the handle directly, so
-    # the file is never held as one string beside the events it produced.
+    # UX-168: stream it. `stream_trace_events` takes the handle directly,
+    # so the file is never held as one string beside the events it
+    # produced.
+    # UX-297: and the events are never held either. This used to build
+    # the whole event list, count over it, and pair it - 212.6 MB of a
+    # 340.8 MB peak on a 200,000-process trace, for a list nothing kept.
+    # Parsing and pairing are now one pass, and the counts the report
+    # needs are filled by the pass that already visits every event.
+    unmatched = {"fork_only": 0, "unmatched": 0}
     with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as f:
-        events = parse_trace_lines(f)
-    if not events and os.path.getsize(raw_log_path) > 0:
-        # UX-38: non-empty file, nothing parseable in it. Almost always
-        # the wrong file (this tool's own JSON report is the usual
-        # culprit); never something to report as "0 processes traced".
-        raise EmptyTraceError(
-            f"{raw_log_path}: no trace events could be parsed from this file. "
-            "`report` expects a raw trace log (as written by `run --raw-log`). "
-            "If this is a JSON report written by `run`, it is now rendered "
-            "directly - this error means the file is neither."
-        )
-    # UX-107: one process, one entry. With the spine running every
-    # dynamically-linked process appears in both streams, and summing
-    # them would double-count exactly the CPU and concurrency this plane
-    # exists to measure. A capture with no spine records passes through
-    # unchanged, which is what keeps every pre-spine capture parsing
-    # byte-identically.
-    # UX-123: counted from the events, since pairing drops them.
-    # UX-169: counted *before* pairing, so the event list can be dropped
-    # the moment the records exist. It used to stay bound through
-    # `summarize` and the opens pass - a quarter of a gigabyte on a
-    # 400k-process trace, alive for no reason at the exact moment the
-    # report's own aggregates are being built.
-    unmatched = count_unmatched_ends(events)
-    # `consume=True`: this is the one caller that has no use for the
-    # events afterwards, so pairing may empty the list as it reads it.
-    records = merge_record_streams(pair_events(events, consume=True))
-    del events
+        events = stream_trace_events(f)
+        first = next(events, None)
+        if first is None and os.path.getsize(raw_log_path) > 0:
+            # UX-38: non-empty file, nothing parseable in it. Almost
+            # always the wrong file (this tool's own JSON report is the
+            # usual culprit); never something to report as "0 processes
+            # traced". Asked of the first event rather than of a list,
+            # because there is no list any more - and one event is the
+            # whole question.
+            raise EmptyTraceError(
+                f"{raw_log_path}: no trace events could be parsed from this file. "
+                "`report` expects a raw trace log (as written by `run --raw-log`). "
+                "If this is a JSON report written by `run`, it is now rendered "
+                "directly - this error means the file is neither."
+            )
+        if first is not None:
+            events = itertools.chain((first,), events)
+        # UX-107: one process, one entry. With the spine running every
+        # dynamically-linked process appears in both streams, and
+        # summing them would double-count exactly the CPU and
+        # concurrency this plane exists to measure. A capture with no
+        # spine records passes through unchanged, which is what keeps
+        # every pre-spine capture parsing byte-identically.
+        # UX-123: counted from the events, since pairing drops them.
+        # UX-169: counted *before* pairing, so the event list could be
+        # dropped the moment the records existed - a quarter of a
+        # gigabyte on a 400k-process trace, alive for no reason at the
+        # exact moment the report's own aggregates were being built.
+        # UX-297: there is no second walk now, and no list to drop. The
+        # pairing pass fills `unmatched` as it runs, because after it
+        # the events are gone - and the open-set that count needs is the
+        # one that loop already keeps. The records are still sorted by
+        # start, which is the order every downstream reader has always
+        # seen; that list is the remaining floor, and it is O(processes)
+        # rather than O(events).
+        records = merge_record_streams(sorted(
+            stream_records(events, unmatched),
+            key=lambda record: record["start_ts"]))
     fork_only_exits = unmatched["fork_only"]
     unmatched_ends = unmatched["unmatched"]
 

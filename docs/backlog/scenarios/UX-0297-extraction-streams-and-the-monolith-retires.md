@@ -1,6 +1,6 @@
 # UX-297: extraction streams, and the monolith retires
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** Direction 15, UX-298 (the trace it writes beside), UX-215 (the aggregate pattern) | **Serves:** R1, R2 | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 15, UX-298 (the trace it writes beside), UX-215 (the aggregate pattern) | **Serves:** R1, R2 | **Topic:** capture
 
 ## Motivation
 
@@ -118,8 +118,8 @@ every asserted number was computed from it.
    reached it), and `bga doctor` reads the coverage census the report
    already publishes rather than re-tallying the records.
 
-**Not landed, and why.** *Extraction is not O(elements) yet, and peak
-RSS went up 7%.* Measured inside one extraction of the same trace:
+**Not landed then, and why.** *Extraction is not O(elements) yet, and
+peak RSS went up 7%.* Measured inside one extraction of the same trace:
 
 ```text
 after parsing            247 MB resident
@@ -134,11 +134,6 @@ START with its own END needs order. So the event list is materialized
 whatever the aggregates do, and the fold's own state (~22 MB here, in
 timestamps and parentage the algorithms genuinely need) now sits above
 that floor instead of the record-holding intermediates that used to.
-
-Removing the floor needs the capture to write something consumable in
-order, which is exactly what `UX-298` is - and which is why this
-item's own header lists it as a dependency. The RSS-ceiling clause of
-the acceptance test moves there with it.
 
 **Also deviated, recorded.** The acceptance test says *no `plane2.json`
 is written for a new capture*. One still is: the same path, the same
@@ -166,3 +161,75 @@ known-answer clauses over three hand-worked processes replace the
 argument with an answer, and the tie is the case written down: one
 process starts exactly as another ends, they are never both running,
 the peak is 2, and the mutation says 3. M2 reddens now.
+
+## Progress (2026-08-26): the streaming clause, closed
+
+✅ **Done.** The premise above turned out to be half right. Pairing does
+need order - but not the *global* order the sort was buying. It needs
+one key's own events in order, a key being one process seen through one
+mechanism (`_pair_key`), whose START and END are written by one writer
+in that order: the hook writes both from the traced process itself, the
+spine writes both from the single supervisor. Concurrent writers
+interleave *across* keys, which is what breaks the global order and not
+this one. Measured on the two real captures this repository carries:
+
+```text
+                      events   keys   global inv.   per-key inv.
+examples/01 raw           64     40             0              0
+examples/06 plane2.gz   1485    813             2              0
+```
+
+`examples/06` is the case that decides it: the file is **not** globally
+ordered and **is** per-key ordered, so the weaker property is the one
+that actually holds on a real capture.
+
+So the algorithm became a generator: `stream_records` yields a record
+when its END arrives and holds only the processes currently open, and
+`parse_trace_lines` became `list(stream_trace_events(...))` - one
+parser in two shapes. `pair_events` is now that generator with its
+input and output sorted, so its answer is byte-identical to what it
+always was and every caller that wants a list still gets one.
+`count_unmatched_ends`' second walk over the events folded into the
+pass, because after the pass there are no events to walk.
+
+**What it bought.** End to end on a generated 200,000-process trace,
+the same file through `load_and_summarize` in a worktree at the
+pre-change commit and in this tree:
+
+```text
+                   before      after
+peak RSS          288.3 MB   259.5 MB      -10.0%
+wall               8.2 s      7.1 s        -13%
+report digest   b7e6c5f4f1798c9e - identical
+```
+
+and inside one extraction, where the plateau moved:
+
+```text
+                        before     after
+events parsed          247.4 MB      -      (400,000 dicts, never built)
+records paired         249.0 MB   221.1 MB
+folded, records freed   46.1 MB    42.8 MB
+```
+
+**Stated rather than implied: this is not O(elements).** 185.8 MB of
+that 221.1 is the record list, which `merge_record_streams` joins whole
+and which the start order every reader sees is sorted from. Extraction
+is `O(processes)` - a fifth of what `O(events)` cost. Whether the last
+step is reachable is a question with a measurement in front of it, and
+it is filed as `UX-313` rather than asserted here.
+
+**One deliberate non-change.** The timeline's Plane 2 writer streams
+its events and still sorts its records. Slices are emitted per *track*,
+a track is `(element, pid)`, and a dual-stream process shares one with
+itself: the spine sees the exec first and the kernel exit last, while
+the hook's constructor runs after the exec and its `atexit` before the
+exit. So the pass yields the hook's record first and the spine's second
+while their starts run the other way - measured on the four-line case,
+streamed `[hook 100.001, spine 100.000]` against sorted `[spine
+100.000, hook 100.001]`. Emitting that would reorder two slices on one
+track, under a change about memory.
+
+**Falsification.** Recorded in the Verification Log with the rest of
+round 43.
+

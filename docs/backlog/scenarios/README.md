@@ -38,13 +38,13 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
-| UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🟡 |
 | UX-307 | [the export ships the source commentary](UX-0307-the-export-ships-the-source-comments.md) | viewer | Medium | R1 | 🔴 |
 | UX-308 | [a slice that says what bga knows about it](UX-0308-a-slice-that-says-what-bga-knows-about-it.md) | capture | High | R1, R2 | 🔴 |
 | UX-309 | [the arrows that answer "why did this start now"](UX-0309-the-arrows-that-answer-why-now.md) | capture | High | R1, R3 | 🔴 |
 | UX-310 | [the counters the reserved constant was waiting for](UX-0310-the-counters-the-reserved-constant-was-waiting-for.md) | capture | Medium | R1, R5 | 🔴 |
 | UX-311 | [a trace that knows whose build it was](UX-0311-a-trace-that-knows-whose-build-it-was.md) | capture | Medium | R1, R4 | 🔴 |
 | UX-312 | [questions for the trace that can finally answer them](UX-0312-questions-for-the-trace-that-can-finally-answer-them.md) | viewer | Medium | R1, R2 | 🔴 |
+| UX-313 | [the record list is the floor that is left](UX-0313-the-record-list-is-the-floor-that-is-left.md) | capture | Low | R1 | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 

@@ -1030,6 +1030,25 @@ would have marked **every** process failed, because `"0"` is not `0`.
 Success is exactly the string `"0"`, and the constant that says so has
 a name and three assertions on it.
 
+Updated 2026-08-26 (after `UX-312`), re-grounded in
+`bga/viewer/questions.js` as it now selects, `tools/bga_timeline.py`'s
+three scope categories, and `docs/spec/trace-dictionary.md` - which is
+the trace's half of what the styleguide is to the report, and is held
+equal to the emitter's own contract in both directions.
+
+The finding is worth the entry. The canned question library was not
+thin, it was **dead**: `UX-204` wrote it against the Chrome JSON trace
+(`args.<key>`, a `cat` field), `UX-298` made TrackEvent the default
+(`debug.<key>`, and `EVENT_CATEGORY_IIDS` unused until `UX-308`), and
+nobody re-pointed it. All six questions returned zero rows, in silence,
+because `extract_arg` on an absent key is null rather than an error.
+Decoded off the wire before the fix: zero categories interned.
+
+Eight mutations, all discriminating; two of them run twice, because the
+first attempt at each broke the module rather than the property. Two
+existing guards had been asserting the broken shapes and are corrected
+rather than deleted.
+
 Updated 2026-08-26 (after `UX-314`), re-grounded in
 `bga/viewer/perfetto.js`'s `perfettoCanFetch`, `tools/bga_view.py`'s
 `landing_url`, and the two handoff guards that now parametrize the

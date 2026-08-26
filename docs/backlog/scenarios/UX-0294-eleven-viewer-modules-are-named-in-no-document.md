@@ -1,6 +1,6 @@
 # UX-294: eleven viewer modules are named in no document
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the maintainers, and the next reader of `bga/viewer/` | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainers, and the next reader of `bga/viewer/` | **Topic:** docs
 
 ## Motivation
 
@@ -61,3 +61,45 @@ the whole document.
 
 Every module under `bga/viewer/` is named in at least one document
 under `docs/`, and a guard says so.
+
+## Outcome
+
+🟢 **Done.** The architecture carries a `### Which file owns what`
+table — sixteen rows, one line each, from `app.js` to `style.css`.
+
+**The count had moved, and the gap had not.** Re-measured before
+writing anything: every module is now named *somewhere* under `docs/`
+(the backlog files and the Verification Log mention them in passing),
+so the acceptance as filed — *named in at least one document under
+`docs/`* — was **already true of all fifteen**. But
+`docs/design/architecture.md`, the document a reader of `bga/viewer/`
+actually opens, named only eight; `views.js` at 2,400 lines, `nav.js`,
+`viewstate.js`, `tables.js`, `focus.js`, `sql.js` and
+`perfetto_page.js` appeared **zero** times.
+
+So the guard is on the *map*, which is what the Required Fix asks for,
+rather than on the acceptance sentence. A guard on the latter would
+have been green the day it was written and green forever — the
+non-discriminating shape this repository keeps finding in its own work
+(`UX-297`'s M2, `UX-312`'s dead queries). The weaker clause is kept
+beside it so a module that leaves the map *and* every other document
+at once reddens twice rather than once.
+
+**Falsification.** Four mutations against the committed tree:
+
+```text
+V1  the largest module leaves the map        1 guard red
+V2  an entry that only repeats the filename  1 red
+V3  the map names a file that does not exist 2 red
+V4  a new module ships with no entry         2 red
+```
+
+V4 is the one the item exists to prevent, and it reddens in both
+directions at once.
+
+**Recorded:** the first attempt at V2 and V3 measured nothing, because
+`git checkout -- docs/` reverted the *uncommitted* map between
+mutations and left the guard asserting against a document with no
+table at all. Mutation testing runs against a committed tree; this is
+the second time that rule has earned its place this round.
+

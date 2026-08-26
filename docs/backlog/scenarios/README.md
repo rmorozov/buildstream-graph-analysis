@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-314 scenarios: **7 open**, 307 closed.
+314 scenarios: **5 open**, 309 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 2 | 76 |
 | cli | 0 | 4 |
 | store | 2 | 27 |
-| docs | 2 | 29 |
+| docs | 0 | 29 |
 | guards | 0 | 39 |
 
 ## Open scenarios
@@ -36,8 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
-| UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
 | UX-307 | [the export ships the source commentary](UX-0307-the-export-ships-the-source-comments.md) | viewer | Medium | R1 | 🔴 |
 | UX-313 | [the record list is the floor that is left](UX-0313-the-record-list-is-the-floor-that-is-left.md) | capture | Low | R1 | 🔴 |
 | UX-315 | [every canned question's `why` renders with doubled spaces](UX-0315-the-canned-why-renders-with-doubled-spaces.md) | viewer | Low | R1 | 🔴 |

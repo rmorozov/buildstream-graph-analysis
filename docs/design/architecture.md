@@ -1061,6 +1061,28 @@ would have marked **every** process failed, because `"0"` is not `0`.
 Success is exactly the string `"0"`, and the constant that says so has
 a name and three assertions on it.
 
+Updated 2026-08-26 (after `UX-294` and `UX-295`), re-grounded in the
+new `Which file owns what` table above and in `docs/guides/cli.md`'s
+`whatif/v1` entry — the two halves of review 3's *does this have a
+home* checklist that were still open.
+
+Both were found the same way and both had the same shape: a guard that
+was green because it was asking the maintainer's question.
+`UX-294`'s acceptance (*named in at least one document under `docs/`*)
+had become true of all fifteen viewer modules by attrition, while the
+architecture — the document a reader of `bga/viewer/` opens — named
+eight; so the guard went on the map instead. `UX-295`'s contract-home
+guard checked the spec and this document, which is where a maintainer
+looks, so `whatif/v1` being absent from every *guide* sat under it
+unnoticed; the new clause asks the reader's question, scoped to the
+printable contracts with the run-directory shapes exempted by name.
+
+Six mutations across the two, all discriminating. Recorded because it
+recurred: the first attempt at two of `UX-294`'s measured nothing —
+`git checkout -- docs/` reverted the uncommitted map between
+mutations, so the guard was asserting against a document with no table
+in it. Mutation testing runs against a committed tree.
+
 Updated 2026-08-26 (after `UX-314`'s browser verification), re-grounded
 in what the deployed Perfetto UI actually does with the deep link.
 

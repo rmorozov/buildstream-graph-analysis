@@ -133,6 +133,23 @@ shape the two-element fixtures could not produce.
 
 **What could not be run here, stated rather than skipped.**
 
+> **Closed 2026-08-26 (round 43, `UX-312`'s first clause): item 1 below
+> is done.** `trace_processor_shell` turned out to be reachable after
+> all - not from `get.perfetto.dev`, which this environment's network
+> policy refuses at CONNECT, but from the artifact host
+> (`commondatastorage.googleapis.com/perfetto-luci-artifacts/...`),
+> which it allows. Perfetto v49.0 loaded the trace and answered in its
+> own SQL: 826 slices, 836 flows, 538 counter samples peaking at 20 on
+> one `count`-united track, and **every** annotation key resolving
+> through `extract_arg` as `debug.<key>` - including a `debug.cmd` of
+> 553 characters behind a slice name of 120, which is `UX-308`'s whole
+> argument proven by the reader instead of asserted by the writer.
+> `tests/unit/test_the_real_reader_agrees.py` is that round-trip, run
+> when the binary is present and skipped when it is not, and it says
+> where to get one. **Item 2 remains open**: `ui.perfetto.dev` is
+> refused by the same policy that refuses `get.perfetto.dev`, so the
+> one-time UI open still has not happened.
+
 1. *The `trace_processor` round-trip.* It is not installed in this
    container and there is no package for it in the environment, so the
    acceptance test's "CI extra" clause did not run. What replaced it is

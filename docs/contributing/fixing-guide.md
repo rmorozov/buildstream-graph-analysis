@@ -218,6 +218,7 @@ tests/conftest.py          the tier hook and the skip census (UX-235)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
 tests/browser.py           what drives it from a test; every geometric claim goes through here
+tests/trace_processor.py   the one gate for the optional Perfetto reader, and its skip reason (UX-321)
 tests/test_e2e.py          the whole pipeline on a committed run · test_golden.py  byte-for-byte
 tests/test_cli.py          argument parsing and exit codes, at the CLI boundary
 tests/test_synthetic_multi_subproject.py  the multi-project ingestion path

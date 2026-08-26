@@ -551,14 +551,36 @@ class TestTheDeepLink:
         match = re.search(r'PERFETTO_ORIGIN = "([^"]+)"', module)
         assert match and match.group(1) == served_origin
 
+    # `UX-314`. The old parametrization said "served, therefore shown",
+    # which is the rule that produced the bug: it is *Perfetto's*
+    # `connect-src` that decides whether it may fetch this URL, and over
+    # plain http that is two origins, neither of them the ephemeral port
+    # `bga view` binds by default. The reported symptom was a
+    # `connect-src` refusal in ui.perfetto.dev's console and no trace.
+    #
+    # `127.0.0.1:8080` against `localhost:8080` is the pair worth having:
+    # same interface, and CSP matches the host *name*, so one is refused
+    # and the other is not.
     @needs_node
-    @pytest.mark.parametrize("trace,shown", [
-        ("timeline.json.gz", True),                     # served
-        ("data:application/gzip;base64,H4sIAA==", False),   # exported
+    @pytest.mark.parametrize("trace,here,shown", [
+        ("timeline.json.gz", "http://127.0.0.1:8000/index.html", False),
+        ("timeline.json.gz", "http://127.0.0.1:41234/index.html", False),
+        ("timeline.json.gz", "http://127.0.0.1:8080/index.html", False),
+        ("timeline.json.gz", "http://localhost:8080/index.html", True),
+        ("timeline.json.gz", "http://127.0.0.1:9001/index.html", True),
+        ("timeline.json.gz", "https://reports.example/index.html", True),
+        ("data:application/gzip;base64,H4sIAA==",
+         "http://localhost:8080/index.html", False),
     ])
-    def test_the_link_appears_only_where_a_server_is_behind_it(self, trace, shown):
-        """There is no server behind an export - the trace is inlined as
-        a `data:` URL - so a deep link would point at nothing.
+    def test_the_link_appears_only_where_perfetto_may_fetch_it(
+            self, trace, here, shown):
+        """A deep link is offered only where it can work.
+
+        Two ways it cannot. There is no server behind an export - the
+        trace is inlined as a `data:` URL - so the link would point at
+        nothing. And a served origin Perfetto's CSP refuses is worse
+        than no link at all: it fails in a console the reader has no
+        reason to open, which is exactly how this shipped.
 
         Driven through the real `wireTheHandoff`. The first version of
         this guard read the exported *file* for the link string and was
@@ -566,7 +588,7 @@ class TestTheDeepLink:
         so the static file never contains it either way, and deleting
         the check left the guard green.
         """
-        script = _LINK_HARNESS % json.dumps(trace)
+        script = _LINK_HARNESS % (json.dumps(trace), json.dumps(here))
         result = subprocess.run(
             [node, "--input-type=module", "-e", script],
             capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
@@ -575,6 +597,156 @@ class TestTheDeepLink:
         assert out["fallbackShown"] is shown, out
         if shown:
             assert out["href"].startswith("https://ui.perfetto.dev/#!/?url=")
+
+    @needs_node
+    @pytest.mark.parametrize("trace,here,shown", [
+        ("timeline.json.gz", "http://127.0.0.1:41234/index.html", True),
+        ("data:application/gzip;base64,H4sIAA==",
+         "http://127.0.0.1:41234/index.html", False),
+    ])
+    def test_the_save_it_yourself_route_is_offered_wherever_there_is_a_server(
+            self, trace, here, shown):
+        """`UX-314`: the transport nobody can refuse.
+
+        Both other paths can be taken away - the deep link by Perfetto's
+        CSP, the tab-to-tab post by `UX-299`'s size threshold - and on
+        the ephemeral port that is the default, a big trace had neither.
+        Perfetto's own drag-and-drop is refused by no policy, so the
+        file is always reachable where there is a server to reach it
+        from. An export has the trace inlined already.
+        """
+        script = _LINK_HARNESS % (json.dumps(trace), json.dumps(here))
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+        assert result.returncode == 0, result.stderr
+        out = json.loads(result.stdout)
+        assert out["downloadShown"] is shown, out
+        if shown:
+            assert out["downloadHref"].endswith("/timeline.json.gz"), out
+
+    def test_the_csp_rule_is_written_from_perfettos_own_source(self):
+        """The rule is a quotation, and it says where from.
+
+        `UX-298` established the procedure for a fact that lives in
+        someone else's repository: read it from the schema, record where
+        it came from, and never restate it from memory. The CSP is the
+        same kind of fact and it decides whether the handoff works at
+        all, so the module carries the directive it was read from and
+        the file it was read out of.
+        """
+        module = open("bga/viewer/perfetto.js", encoding="utf-8").read()
+        assert "ui/src/frontend/index.ts" in module, (
+            "the CSP rule does not say which upstream file it was read from")
+        assert "setupContentSecurityPolicy" in module
+        for allowed in ("'http://localhost:8080'", "'http://127.0.0.1:9001'",
+                        "'https:'"):
+            assert allowed in module, (
+                f"{allowed} is missing from the quoted connect-src, so the "
+                f"rule below it cannot be checked against its source")
+        assert "cspAllowAnyWebsocketPort" in module, (
+            "the rpc_port escape hatch is not named, so a reader cannot tell "
+            "why it was not used")
+
+
+class TestTheServedOriginCanBeFetched:
+    """`UX-314`, the serving half.
+
+    Reported from a real run: *"i am again see this problem in
+    ui.perfetto.dev console and no capture handed over to it"*. The
+    console said `connect-src`, and it was Perfetto's own policy, not
+    this server's - our `Access-Control-Allow-Origin` grant is
+    necessary and not sufficient, because when `connect-src` refuses,
+    the request never leaves the browser for CORS to answer.
+    """
+
+    def test_the_default_port_is_named_by_address_and_8080_by_name(self):
+        """Same interface, and CSP matches the name."""
+        from tools.bga_view import landing_url
+
+        assert landing_url(8080) == "http://localhost:8080/"
+        assert landing_url(9001) == "http://127.0.0.1:9001/"
+        assert landing_url(41234) == "http://127.0.0.1:41234/"
+
+    @needs_node
+    def test_the_two_sides_agree_about_which_origins_work(self):
+        """Python decides how to spell the URL and JavaScript decides
+        whether to offer the link. They are one fact, and nothing but
+        this would notice them disagreeing - the symptom is a console
+        error in a tab the reader opened on purpose.
+        """
+        from tools.bga_view import PERFETTO_FETCHABLE_PORTS, landing_url
+
+        urls = {port: landing_url(port) for port in PERFETTO_FETCHABLE_PORTS}
+        urls[41234] = landing_url(41234)
+        script = (
+            'const { perfettoCanFetch } = '
+            'await import("./bga/viewer/perfetto.js");\n'
+            f'const urls = {json.dumps(urls)};\n'
+            'const out = {};\n'
+            'for (const [port, url] of Object.entries(urls)) '
+            'out[port] = perfettoCanFetch(url);\n'
+            'console.log(JSON.stringify(out));')
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+        assert result.returncode == 0, result.stderr
+        verdicts = json.loads(result.stdout)
+        for port in PERFETTO_FETCHABLE_PORTS:
+            assert verdicts[str(port)] is True, (
+                f"Python spells port {port} as {urls[port]}, which the "
+                f"viewer says Perfetto may not fetch")
+        assert verdicts["41234"] is False, (
+            "an ephemeral port is being reported as fetchable, so the "
+            "deep link would be offered where it cannot work")
+
+    def test_a_default_run_says_the_handoff_is_limited(self, snapshot, capsys):
+        """The reader is told at startup, not after a failed click.
+
+        On the default port the size-threshold path has no transport at
+        all, and the page cannot say so until the trace has been
+        measured - which happens on click. The server knows the port
+        before the browser opens.
+        """
+        import tools.bga_view as view
+
+        argv = [str(snapshot / "run"), "--no-browser", "--port", "8000"]
+        started = {}
+
+        def fake_serve_forever(self):
+            started["ok"] = True
+            raise KeyboardInterrupt
+
+        original = view.http.server.ThreadingHTTPServer.serve_forever
+        view.http.server.ThreadingHTTPServer.serve_forever = fake_serve_forever
+        try:
+            view.main(argv)
+        finally:
+            view.http.server.ThreadingHTTPServer.serve_forever = original
+        assert started.get("ok")
+        err = capsys.readouterr().err
+        assert "may not fetch from this port" in err, err
+        assert "--port 8080" in err, err
+
+    def test_the_friendly_port_does_not_carry_the_warning(self, snapshot, capsys):
+        import tools.bga_view as view
+
+        argv = [str(snapshot / "run"), "--no-browser", "--port", "8080"]
+
+        def fake_serve_forever(self):
+            raise KeyboardInterrupt
+
+        original = view.http.server.ThreadingHTTPServer.serve_forever
+        view.http.server.ThreadingHTTPServer.serve_forever = fake_serve_forever
+        try:
+            view.main(argv)
+        except OSError:
+            pytest.skip("port 8080 is in use on this machine")
+        finally:
+            view.http.server.ThreadingHTTPServer.serve_forever = original
+        err = capsys.readouterr().err
+        assert "may not fetch from this port" not in err, err
+        assert "http://localhost:8080/" in err, err
 
 
 class TestThePreFlightIsAnswered:
@@ -703,6 +875,7 @@ class TestThePreFlightIsAnswered:
 # protocol - `http(s):` served, `data:` exported.
 _LINK_HARNESS = """
 const trace = %s;
+const here = %s;
 
 function node(id) {
   return {
@@ -716,12 +889,15 @@ const nodes = {
   handoff: node("handoff"),
   "perfetto-link": node("perfetto-link"),
   "actions-fallback": node("actions-fallback"),
+  "trace-download": node("trace-download"),
+  "actions-download": node("actions-download"),
   "bga-trace": { textContent: trace },
 };
 nodes["perfetto-link"].parentElement = nodes["actions-fallback"];
+nodes["trace-download"].parentElement = nodes["actions-download"];
 
 globalThis.document = { getElementById: (id) => nodes[id] ?? null };
-globalThis.location = { href: "http://127.0.0.1:8000/index.html" };
+globalThis.location = { href: here };
 
 const { wireTheHandoff } = await import("./bga/viewer/app.js");
 wireTheHandoff();
@@ -729,6 +905,8 @@ wireTheHandoff();
 console.log(JSON.stringify({
   fallbackShown: nodes["actions-fallback"].hidden === false,
   href: nodes["perfetto-link"].href,
+  downloadShown: nodes["actions-download"].hidden === false,
+  downloadHref: nodes["trace-download"].href,
 }));
 """
 

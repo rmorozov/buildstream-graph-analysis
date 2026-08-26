@@ -49,6 +49,93 @@ export function deepLink(traceUrl, origin = PERFETTO_ORIGIN) {
   return `${origin}/#!/?url=${encodeURIComponent(traceUrl)}`;
 }
 
+// `UX-314`. What Perfetto's *own* Content-Security-Policy will let it
+// fetch, which is the half of the deep link this project does not
+// control and had never checked.
+//
+// A `?url=` link makes ui.perfetto.dev fetch the trace itself, so the
+// request is governed by ui.perfetto.dev's `connect-src` - not by
+// anything this server sends. Our `Access-Control-Allow-Origin` grant
+// is necessary and **not sufficient**: when `connect-src` refuses, the
+// request never leaves the browser and there is nothing for CORS to
+// answer.
+//
+// Read from Perfetto's own source rather than from memory or from a
+// guess, the same procedure `UX-298` used for the wire format -
+// `ui/src/frontend/index.ts`, `setupContentSecurityPolicy()`:
+//
+// ```text
+// 'connect-src': [
+//   'self',
+//   'ws://127.0.0.1:8037',    // adb websocket server
+//   'http://localhost:8080',  // local llama-server
+//   'https:',                 // any HTTPS
+//   'blob:', 'data:',
+// ].concat(rpcPolicy)
+//
+// rpcPolicy = [
+//   'http://127.0.0.1:9001',  // trace_processor_shell --httpd
+//   'ws://127.0.0.1:9001',
+//   'ws://127.0.0.1:9167',
+// ]
+// ```
+//
+// So over plain `http:` exactly two origins are fetchable, and neither
+// is the ephemeral port `bga view` binds by default. `https:` is
+// allowed wholesale, which is why the rule below is a protocol test
+// first.
+//
+// There is a third route and it is **not** usable unattended:
+// `rpcPolicy` is replaced by `http://127.0.0.1:<rpc_port>` when the
+// `cspAllowAnyWebsocketPort` feature flag is on and the link carries
+// `rpc_port=`. That flag is `defaultValue: false`, so a link built on
+// it fails for every reader who has not gone and turned it on. It is
+// named in the guidance rather than relied on.
+const PERFETTO_FETCHABLE_HTTP = new Set([
+  // `trace_processor_shell --httpd`'s port. Fetchable, and deliberately
+  // not recommended: Perfetto probes this origin at startup expecting
+  // an RPC endpoint, and a plain file server answering there confuses
+  // the thing we are trying to hand a trace to.
+  "127.0.0.1:9001",
+  // The local llama-server port. Nothing probes it, so this is the one
+  // plain-http origin a static file server can safely occupy - which
+  // is what `bga view --port 8080` exists for. Note the **host**: CSP
+  // matches the name, so `127.0.0.1:8080` is refused where
+  // `localhost:8080` is allowed, and they are the same interface.
+  "localhost:8080",
+]);
+
+/**
+ * Whether ui.perfetto.dev is allowed to fetch `traceUrl` itself.
+ *
+ * `false` does not mean the handoff is broken - it means the `?url=`
+ * transport is unavailable and the bytes have to travel by
+ * `postMessage` (which no CSP governs) or by the reader saving the
+ * file and dragging it in.
+ */
+export function perfettoCanFetch(traceUrl) {
+  let url;
+  try {
+    url = new URL(traceUrl);
+  } catch (error) {
+    return false;
+  }
+  if (url.protocol === "https:") return true;
+  if (url.protocol !== "http:") return false;
+  return PERFETTO_FETCHABLE_HTTP.has(url.host);
+}
+
+/**
+ * The origin `bga view --port 8080` should be reached by, spelled the
+ * way Perfetto's CSP requires.
+ *
+ * The server binds `127.0.0.1` and names itself that way, and CSP
+ * matches on the host *name*: `http://127.0.0.1:8080` is refused where
+ * `http://localhost:8080` is allowed. Same interface, different
+ * spelling, and the spelling is the whole difference.
+ */
+export const PERFETTO_FRIENDLY_URL = "http://localhost:8080/";
+
 export function openTab(deps = {}) {
   const { open = (url) => window.open(url), origin = PERFETTO_ORIGIN } = deps;
   const tab = open(origin);

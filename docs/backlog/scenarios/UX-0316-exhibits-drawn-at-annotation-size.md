@@ -133,3 +133,22 @@ which is what `UX-320` needs.
    `data-table` off every `<table>` and crashed on the twin, which
    deliberately has none - a twin is not a §3 table (no columns, no
    sort, no state key), and the probe now says so.
+
+**Mutations — eight, all discriminating.** Run against the committed
+tree, one at a time, reverted between:
+
+```text
+M1  exhibit scale set back to 20/8            3 red  (the acceptance's own)
+M2  scaleFor falls back to annotation         3 red  (the default returns)
+M3  section distribution graded annotation    4 red  (on the booted pages)
+M4  `viewBox: "0 0 100 20"` back in views.js  1 red  (statically)
+M5  an exhibit height becomes 1.4rem          1 red  (statically)
+M6  the twin computes its own median          1 red  (equality walk)
+M7  the p50 tick pinned to the middle         2 red  (tick vs mark)
+M8  the annotation strip's bar doubles        1 red  ("unchanged", falsified)
+M9  the twin ships open                       1 red  (round trip)
+```
+
+M8 is the one worth naming: the "annotation grade is unchanged" claim
+is only worth something if a drift in it reddens, and it does — in this
+file and in `UX-303`'s, which is the guard that was there first.

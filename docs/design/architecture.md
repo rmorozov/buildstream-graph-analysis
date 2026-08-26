@@ -830,6 +830,33 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
+Updated 2026-08-26 (after `UX-309`), re-grounded in
+`tools/native_trace/trackevent.py`'s flow writer, in
+`tools/bga_timeline.py`'s `dependency_edges` / `_plane1_flows` /
+`_plane2_flows`, and in `tests/unit/test_the_arrows_say_why_now.py`.
+The Plane 2 bullets now say which relations the trace draws as
+causation and which it refuses to.
+
+Six mutations against the committed tree, all discriminating:
+
+```text
+M1  flow ids written as varints instead of fixed64   1 red, 9 errors
+M2  the parent lookup crosses sandboxes                     1 red
+M3  a backwards or tied edge is drawn anyway                3 red
+M4  one event both starts and ends a flow                   7 red
+M5  a half-connected edge is emitted                 1 red, 9 errors
+M6  the two planes reuse each other's flow ids              7 red
+```
+
+M2 is the one worth keeping. It **passed** the first time: the fixture
+ran its two sandboxes ten seconds apart, so a lookup that forgot the
+invocation still found the right shell by accident - the other one had
+already exited. A parallel build's sandboxes overlap, which is the
+whole reason pids collide; the fixture now starts the second shell
+50 ms after the first, both are alive when either's children fork, and
+the mutation reddens. The fixture was wrong, not the guard, and the
+mutation is what said so.
+
 Updated 2026-08-26 (after `UX-308`), re-grounded in
 `tools/native_trace/trackevent.py`'s annotation and category writers,
 in `tools/bga_timeline.py`'s `PLANE1_ANNOTATIONS` /

@@ -787,6 +787,35 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
+Updated 2026-08-26 (after `UX-297`), re-grounded in
+`tools/bst_native_build_tracer.py`'s `stream_trace_events` /
+`stream_records` as they now stand, in the three call sites in
+`tools/bga_timeline.py`, and in
+`tests/unit/test_the_pairing_pass_streams.py`. The Plane 2 bullet now
+says extraction holds no events and names what it does hold, which is
+the half this document had been leaving to a task file.
+
+Six mutations against the committed tree, all discriminating:
+
+```text
+M1  the pass stops counting fork-only exits            1 guard red
+M2  `pair_events` stops sorting its output             3 red
+M3  `pair_events` stops consuming its input            1 red
+M4  the still-open records are dropped                 passed - see below
+M5  the analysis builds an event list again            1 red
+M6  the timeline builds one again                      1 red
+```
+
+M4 is the one worth keeping. Every clause comparing the two entry
+points is true *by construction* - they share one implementation, so a
+change moves both sides and the comparison stays green; that is the
+same hole `UX-297`'s own M2 fell into a round earlier. Four hand-worked
+processes replace the argument with an answer - one that pairs, one
+still open, a hook END with no START and a spine END with no START -
+and M4 reddens now. It was already caught by two clauses elsewhere in
+the suite, which is why it was worth finding rather than worth
+shipping.
+
 Updated 2026-08-25 (after `UX-306`), re-grounded in the three viewer
 bullets round 41 added and in the guards that hold them:
 `bga/viewer/shapes.js` against `docs/design/styleguide.md` §1 and

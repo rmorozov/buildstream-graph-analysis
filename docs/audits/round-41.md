@@ -87,6 +87,23 @@ findings:
   because `--export` inlines modules verbatim. Filed as `UX-307`
   rather than absorbed.
 
+  > **Falsified by `UX-320` (round 44), and measured out by `UX-307`
+  > (round 45).** The sentence above is wrong in both halves, and was
+  > wrong when it was written rather than overtaken later: `--export`
+  > does **not** inline modules verbatim — `_uncommented` in
+  > `tools/bga_view.py` has stripped comments from the inlined copy
+  > since `UX-205`, twenty rounds before this audit — so 175 KB of the
+  > page was never commented JavaScript. Measured on the round-44
+  > export: the page is **89% code**. `UX-307` then removed everything
+  > that was left, which came to **153 B** of a 223,227 B page, 0.069%.
+  >
+  > It is annotated rather than rewritten (`UX-132`): this is what
+  > round 41 believed, and the belief is why `UX-287`'s ratio threshold
+  > was lowered from 4x to 3.5x here — a threshold that has since moved
+  > again, to 3.3x, against the same misattributed cause both times.
+  > The filing it produced was still the right call; only its reason
+  > was wrong.
+
 ## Standing
 
 Direction 15 outranks all of this — the user cannot open their

@@ -165,7 +165,21 @@ shape the two-element fixtures could not produce.
    headless Chromium but the page is a third-party origin and the trace
    would have to be uploaded to it; that is a human's check on a human's
    machine, and claiming it here would be claiming a thing not done.
-   The record is: **not yet opened in the UI.**
+   The record was: **not yet opened in the UI.**
+
+   **Closed 2026-08-26 (`UX-314`).** The premise was wrong in a useful
+   way: nothing had to be uploaded anywhere. `ui.perfetto.dev` is
+   refused at CONNECT by this environment, but the bucket serving it is
+   not - the UI is 81 files under
+   `storage.googleapis.com/ui.perfetto.dev/`. Mirrored byte-for-byte
+   (`v58.2-add693d8b`, current stable), served locally and driven with
+   the headless Chromium already here, it loaded a trace this emitter
+   wrote: **`CURRENT TRACE timeline.json.gz (1 MB)`**, drawing
+   `bga: run` first, then `Plane 1: BuildStream`, then one
+   `native: <element>` lane per element - `UX-311`'s ordering,
+   `UX-298`'s format and `UX-308`..`UX-310`'s vocabulary, in the viewer
+   they were built for. The recipe and the three-case CSP measurement
+   are in `UX-314`.
 
 **Falsification.** Six mutations against the committed tree:
 

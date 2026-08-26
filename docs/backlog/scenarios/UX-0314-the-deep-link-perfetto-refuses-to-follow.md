@@ -110,9 +110,74 @@ asserting the navigation happened. Parametrizing that harness by
 origin is what made P4 discriminate, and the clause it added is
 the field failure written down.
 
-**Not verified against the live site.** `ui.perfetto.dev` and
-`get.perfetto.dev` are both refused by this environment's network
-policy, so the fix is argued from Perfetto's source and guarded
-against it, not confirmed in a browser against the real page. The
-reporter's own run is the only end-to-end evidence either way, and
-it is evidence for the diagnosis rather than for the repair.
+## Verified in a browser, against the deployed UI
+
+The deviation above said this was argued from source and not watched
+working. It has now been watched working, and the route was the
+reporter's own suggestion: run Perfetto locally.
+
+`ui.perfetto.dev` is refused at CONNECT by this environment's network
+policy, but **the bucket it is served from is not**. The whole UI is 81
+files under `storage.googleapis.com/ui.perfetto.dev/`; mirrored
+byte-for-byte (86 MB, `v58.2-add693d8b`, the current stable) and served
+locally, it stamps its own CSP exactly as the deployed site does -
+confirmed by reading the directive back out of the shipped
+`frontend_bundle.js`, where it is identical to the source `UX-314` was
+argued from.
+
+Driven with the Chromium already installed here, over CDP, three cases:
+
+```text
+                                   CSP        request     result
+A  http://127.0.0.1:41234      REFUSED    never sent    empty Perfetto
+B  http://localhost:8080        passed    SENT          CORS: no grant
+C  http://localhost:8080        passed    RESPONSE 200  trace loaded
+   (+ grant issued)
+```
+
+**A is the reported bug, reproduced verbatim.** The console says:
+
+```text
+Refused to connect to 'http://127.0.0.1:41234/timeline.json.gz' because
+it violates the following Content Security Policy directive:
+"connect-src 'self' ws://127.0.0.1:8037 http://localhost:8080 https:
+blob: data: http://127.0.0.1:9001 ws://127.0.0.1:9001
+ws://127.0.0.1:9167"
+```
+
+and `Network.requestWillBeSent` never fires - the request does not
+leave the browser, which is why no CORS header could have helped.
+
+**B is the two layers, separated.** On the CSP-legal origin the refusal
+is gone and the request *is* sent; it then fails CORS, because the
+grant is pinned to `https://ui.perfetto.dev` and this mirror is
+`http://localhost:10000`. That is the server behaving correctly, and it
+is the cleanest possible demonstration that the grant is necessary and
+not sufficient.
+
+**C is the handoff working.** With the mirror's origin granted, the
+fetch returns `200` and Perfetto reports `CURRENT TRACE
+timeline.json.gz (1 MB)`, drawing `bga: run` first, then `Plane 1:
+BuildStream`, then one `native: <element>` lane per element - which is
+`UX-311`'s lane order, `UX-298`'s format and `UX-308`..`UX-310`'s
+vocabulary, all visible in the viewer they were built for.
+
+**To reproduce** (not a suite guard: the mirror is 86 MB, and a guard
+that fetches it would fail for reasons unrelated to the code - the same
+reasoning `UX-312` applies to `trace_processor_shell`):
+
+```sh
+# 1. mirror the deployed UI
+curl -s "https://storage.googleapis.com/ui.perfetto.dev?prefix=<version>/&max-keys=1000" \
+  | grep -o "<Key>[^<]*</Key>" | sed "s/<\/*Key>//g" > files.txt
+#    ... fetch each key under storage.googleapis.com/ui.perfetto.dev/
+#    plus /index.html at the root, then serve that directory.
+# 2. bga view <snapshot> --port 8080
+# 3. open  http://localhost:10000/#!/?url=http://localhost:8080/timeline.json.gz
+```
+
+**What this still does not prove.** The live `ui.perfetto.dev` origin
+is `https:`, so on the real site `'self'` is that origin and any
+`https:` trace URL is fetchable - a case this http-only mirror cannot
+exercise. Everything `UX-314` actually claims is about plain-http
+origins, and all of it is now observed rather than argued.

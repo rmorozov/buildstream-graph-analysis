@@ -1030,6 +1030,32 @@ would have marked **every** process failed, because `"0"` is not `0`.
 Success is exactly the string `"0"`, and the constant that says so has
 a name and three assertions on it.
 
+Updated 2026-08-26 (after `UX-314`'s browser verification), re-grounded
+in what the deployed Perfetto UI actually does with the deep link.
+
+The reporter suggested running Perfetto locally, and it worked better
+than expected: `ui.perfetto.dev` is refused at CONNECT here, but the
+bucket serving it is not, so the whole UI (81 files, `v58.2`) mirrors
+byte-for-byte and stamps its own CSP exactly as the live site does -
+checked by reading the directive back out of the shipped bundle. Driven
+over CDP with the Chromium already installed:
+
+```text
+                                   CSP        request     result
+A  http://127.0.0.1:41234      REFUSED    never sent    empty Perfetto
+B  http://localhost:8080        passed    SENT          CORS: no grant
+C  http://localhost:8080        passed    RESPONSE 200  trace loaded
+   (+ grant issued)
+```
+
+A is the field report reproduced verbatim, down to the console text. B
+separates the two layers: on a CSP-legal origin the request is sent and
+*then* fails CORS, which is the cleanest demonstration that the
+`Access-Control-Allow-Origin` grant is necessary and not sufficient. C
+is the handoff working, and it closes `UX-298`'s second recorded
+deviation - the one-time UI open - which had assumed the trace would
+have to be uploaded to a third party. It did not.
+
 Updated 2026-08-26 (after `UX-312`), re-grounded in
 `bga/viewer/questions.js` as it now selects, `tools/bga_timeline.py`'s
 three scope categories, and `docs/spec/trace-dictionary.md` - which is

@@ -218,6 +218,28 @@ empty.
   every entry carries `spine+hook` / `spine-only` / `hook-only`, and
   coverage stops being a footnote and becomes a count. Verified at scale:
   **127,632 processes on freedesktop-sdk, all one class**.
+- **The trace knows whose build it was** (`UX-311`). A trace file
+  leaves the machine that made it - attached, shared, opened weeks later
+  beside five others - and carried no identity at all. One `bga: run`
+  process track, ranked first, holds one annotated instant: the run
+  stamp, project, targets, manifest hash, git commit, `bga` and `bst`
+  versions, the host manifest, the builders, and the plane anchor and
+  offset. Portable vocabulary on purpose - `trace_processor` selects it
+  like any other slice. An unfinished run says so in the **track name**
+  (`bga: run (interrupted)`), not only in an annotation, because an
+  annotation is something a reader has to open a slice to see and the
+  honesty `UX-156` enforces in the report belongs where the first scroll
+  lands; all three ways of being unfinished are covered because it calls
+  `bga`'s own one accessor rather than re-deriving the rule. Lane order
+  is explicit: `sibling_order_rank` per track, and - the rule that had
+  to be read rather than remembered - the root descriptor (`uuid = 0`)
+  setting `process_ordering` to `PROCESS_ORDERING_EXPLICIT`, without
+  which every rank is a hint no UI reads. Identity first, Plane 1
+  second, element lanes after, **heaviest traced first** and labelled
+  with their kind. That last is a recorded deviation: the item asks for
+  the critical path, the timeline reads two logs and a graph rather than
+  an analysis, and the trace states which rule it used in `lane_order`
+  instead of letting a reader assume the other one.
 - **The arrows say why something started now** (`UX-309`). An element
   ends, another begins, and whether that adjacency is *causation* is
   what `graph.json` knows and the trace never said. Perfetto's
@@ -829,6 +851,16 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-26 (after `UX-311`), re-grounded in
+`tools/native_trace/trackevent.py`'s `order_processes_explicitly` and
+ranked `process_track`, in `tools/bga_timeline.py`'s `run_identity` /
+`identity_annotations` / `identity_track_name`, and in
+`tests/unit/test_the_trace_knows_whose_build.py`. The viewer axis now
+says what a trace states about its own run, which it could not before
+there was anything in it to state.
+
+MUTATIONS-PENDING
 
 Updated 2026-08-26 (after `UX-309`), re-grounded in
 `tools/native_trace/trackevent.py`'s flow writer, in

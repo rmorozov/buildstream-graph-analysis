@@ -54,8 +54,9 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from tools import bga_timeline  # noqa: E402
 from tools.bga_timeline import (  # noqa: E402
-    CATEGORY_FAILED, DEFAULT_OUTPUT, EXIT_STATUS_OK, FORMAT_TRACKEVENT,
-    PLANE1_ANNOTATIONS, PLANE2_ANNOTATIONS, element_kinds, render)
+    ANNOTATION_CONTRACT, CATEGORY_FAILED, DEFAULT_OUTPUT, EXIT_STATUS_OK,
+    FORMAT_TRACKEVENT, PLANE1_ANNOTATIONS, PLANE2_ANNOTATIONS, element_kinds,
+    render)
 from tools.bst_native_build_tracer import (  # noqa: E402
     parse_trace_lines, stream_records)
 from tools.native_trace import trackevent  # noqa: E402
@@ -244,6 +245,14 @@ def rendered(tmp_path_factory):
 class TestTheKeysAreAContract:
 
     def test_every_documented_key_is_emitted(self, rendered):
+        """This item's own two sets. `UX-311` added a third - the run
+        identity - which no Plane 1 or Plane 2 slice carries and which
+        `test_the_arrows...`'s neighbour guards on the fixture that can
+        (an interrupted run is the only thing that emits
+        `incomplete_reason`). The *reverse* direction below still reads
+        the whole contract, because an undocumented key is undocumented
+        wherever it came from.
+        """
         emitted = set(rendered["trace"]["annotation_names"].values())
         documented = {key for key, _ in PLANE1_ANNOTATIONS + PLANE2_ANNOTATIONS}
         assert documented - emitted == set(), (
@@ -252,7 +261,7 @@ class TestTheKeysAreAContract:
 
     def test_every_emitted_key_is_documented(self, rendered):
         emitted = set(rendered["trace"]["annotation_names"].values())
-        documented = {key for key, _ in PLANE1_ANNOTATIONS + PLANE2_ANNOTATIONS}
+        documented = {key for key, _ in ANNOTATION_CONTRACT}
         assert emitted - documented == set(), (
             "written and undocumented - the trace dictionary is the only "
             "place a reader can learn a key exists")
@@ -260,7 +269,7 @@ class TestTheKeysAreAContract:
     def test_every_key_says_what_it_means(self):
         """A key with no sentence is a key nobody can use. `UX-312`
         renders this table; an empty cell would render as one."""
-        for key, meaning in PLANE1_ANNOTATIONS + PLANE2_ANNOTATIONS:
+        for key, meaning in ANNOTATION_CONTRACT:
             assert key and key == key.lower().replace(" ", "_"), key
             assert len(meaning.split()) >= 5, (key, meaning)
 
@@ -356,8 +365,11 @@ class TestTheNameStaysShortAndTheArgvSurvives:
         """A process whose exit was never seen is exactly the one a
         reader wants the full command line of."""
         instants = [e for e in rendered["trace"]["events"]
-                    if e["type"] == trackevent.TYPE_INSTANT]
-        assert len(instants) == 1
+                    if e["type"] == trackevent.TYPE_INSTANT
+                    and "cmd" in e["args"]]
+        assert len(instants) == 1, (
+            "the other instant is `UX-311`'s run-identity marker, which is "
+            "not a process and carries no command")
         assert instants[0]["args"]["cmd"] == "cc -c never-exits.c"
         assert "(no observed exit)" in instants[0]["name"]
 
@@ -465,9 +477,11 @@ class TestTheAnnotationsRideTheSamePass:
             body = handle.read()
         packed = os.path.getsize(real["path"])
         slices = real["result"]["slices"]
-        assert slices == 825, slices
-        assert len(body) < 400_000, (
+        assert slices == 826, slices   # 825 processes + the identity marker
+        assert len(body) < 420_000, (
             f"{len(body)} B uncompressed over {slices} slices - measured at "
-            f"330,188 when this was written")
-        assert packed < 64_000, (
-            f"{packed} B gzipped - measured at 51,102 when this was written")
+            f"330,188 when this was written, 348,014 once `UX-309`'s flows "
+            f"and `UX-311`'s identity joined it")
+        assert packed < 70_000, (
+            f"{packed} B gzipped - measured at 51,102 when this was written, "
+            f"58,150 with the flows and the identity")

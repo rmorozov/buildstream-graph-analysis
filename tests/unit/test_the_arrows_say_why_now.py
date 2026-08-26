@@ -356,26 +356,46 @@ class TestTheArrowsRideThePacketsThatExist:
                 digests.append(hashlib.sha256(handle.read()).hexdigest())
         assert digests[0] == digests[1], digests
 
-    def test_a_flow_costs_no_packet_at_all(self, tmp_path):
-        """Measured on `examples/06`: 2,335 packets with the flows and
-        2,335 without, and the same at 20k processes. A flow id rides
-        the slice packet that already exists, which is the whole
-        argument for emitting every edge rather than capping them."""
+    def test_a_flow_costs_no_packet_at_all(self, tmp_path, monkeypatch):
+        """The property, not a remembered number.
+
+        The same capture is rendered twice - once as it ships, once
+        with both flow sources silenced - and the packet counts must be
+        **equal**. A flow id rides the slice packet that already exists,
+        which is the whole argument for emitting every edge rather than
+        capping them. Asserting a constant instead would have gone
+        stale the moment `UX-311` added three packets of its own, and
+        would have said nothing about flows either way.
+        """
+        import tools.bga_timeline as timeline
+
         snapshot = tmp_path / "20260821T170127Z"
         snapshot.mkdir()
         shutil.copy(REAL_CAPTURE / "build.log", snapshot / "build.log")
         shutil.copy(REAL_CAPTURE / "plane2.log.gz", snapshot / "plane2.log.gz")
         shutil.copytree(REAL_CAPTURE / "run", snapshot / "run")
+
         out = tmp_path / "trace.gz"
-        result = render(str(snapshot), str(out))
-        assert result["packets"] == 2335, result["packets"]
-        assert result["slices"] == 825
-        assert result["flows"] == 836, result["flows"]
-        assert result["flows_dropped"] == 2, (
+        withf = render(str(snapshot), str(out))
+        with gzip.open(out, "rb") as handle:
+            with_body = handle.read()
+
+        monkeypatch.setattr(timeline, "dependency_edges", lambda _s: [])
+        monkeypatch.setattr(timeline, "_plane2_flows",
+                            lambda records, first: ({}, first))
+        bare = tmp_path / "bare.gz"
+        without = render(str(snapshot), str(bare))
+        with gzip.open(bare, "rb") as handle:
+            without_body = handle.read()
+
+        assert withf["packets"] == without["packets"], (
+            withf["packets"], without["packets"])
+        assert withf["slices"] == without["slices"]
+        assert without["flows"] == 0 and withf["flows"] == 836, withf["flows"]
+        assert withf["flows_dropped"] == 2, (
             "`toolchain.bst` is instantaneous and shares its microsecond "
             "with both dependents - if that changed, so did the capture")
-        with gzip.open(out, "rb") as handle:
-            body = handle.read()
-        assert len(body) < 420_000, (
-            f"{len(body)} B - measured at 347,118 with the flows and "
-            f"330,188 without, 20.0 B per flow")
+        # 836 flows, two ids each, nine bytes an id plus the growth of
+        # the length prefixes they sit inside.
+        per_flow = (len(with_body) - len(without_body)) / withf["flows"]
+        assert 18.0 <= per_flow <= 22.0, per_flow

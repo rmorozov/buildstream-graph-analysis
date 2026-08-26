@@ -219,6 +219,142 @@ def _plane1_outcomes(events) -> dict:
 
 
 # --------------------------------------------------------------------------
+# `UX-311`: whose build this was.
+#
+# A trace file leaves the machine that made it - attached, shared,
+# opened weeks later beside five others - and until this it carried no
+# identity at all. The report refuses to present an interrupted run's
+# numbers as measurements; the trace, opened directly in Perfetto,
+# looked like any other build.
+#
+# The surface is one track and one instant on it, because that is
+# portable vocabulary: `trace_processor` selects it like any other
+# slice, and the UI shows it without knowing anything about `bga`.
+IDENTITY_TRACK = "bga: run"
+IDENTITY_TRACK_PID = 0
+
+IDENTITY_ANNOTATIONS = (
+    ("run", "the snapshot directory's own stamp - which run this is"),
+    ("project", "the project identity the run was captured under"),
+    ("targets", "the elements `bst build` was asked for"),
+    ("manifest_hash", "the run identity hash two runs are compared by"),
+    ("project_git_commit", "the commit the project was at, where it is a "
+                           "git checkout"),
+    ("bga_version", "the version of `bga` that wrote this trace"),
+    ("bst_version", "the BuildStream the capture ran against"),
+    ("host_cpu_model", "the CPU the build ran on, from the host manifest"),
+    ("host_cpu_count", "how many cores that host had"),
+    ("host_memory_mb", "how much memory it had"),
+    ("kernel_release", "the kernel the sandboxes ran under"),
+    ("distro_id", "the distribution the capture was taken on"),
+    ("builders", "BuildStream's element-dispatch concurrency for this run"),
+    ("incomplete_reason", "why this run is not a measurement - `failed`, "
+                          "`interrupted` or `suspended`. Absent on a run "
+                          "that finished, which is the only thing its "
+                          "absence means"),
+    ("anchor_element", "the element the two planes were aligned on"),
+    ("plane_offset_us", "the single offset that alignment applied, in "
+                        "microseconds"),
+    ("lane_order", "the rule the element lanes are ordered by"),
+)
+
+# The whole trace dictionary's slice half, in one name. Three sets, one
+# contract: a query does not care which plane a key came from, and the
+# guard that holds emitted-equals-documented has to see all of them or
+# it is only checking the ones it remembers.
+ANNOTATION_CONTRACT = (PLANE1_ANNOTATIONS + PLANE2_ANNOTATIONS
+                       + IDENTITY_ANNOTATIONS)
+
+# `UX-311`'s deviation, named where the value is produced rather than
+# only in the task file. The item asks for the *critical path* first,
+# and the timeline has no critical path: it reads two logs and a graph,
+# not an analysis, and computing one here would be a second copy of the
+# analyzer's own rule. The heaviest traced element first is what this
+# command can compute from what it reads, and the trace says which rule
+# it used rather than leaving a reader to assume the other one.
+LANE_ORDER_RULE = "longest-traced-first"
+
+
+def run_identity(snapshot: str) -> dict:
+    """What `run-context.json` says about the run, flattened.
+
+    Everything here is already on disk; none of it is new capture. A
+    snapshot without a readable context yields `{}` and the trace gets
+    a bare identity track, which still says *which* run it is - the
+    directory stamp is the one fact that needs no file.
+    """
+    path = os.path.join(snapshot, RUN_SUBDIR, "run-context.json")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            context = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    identity = context.get("run_identity") or {}
+    manifest = context.get("host_manifest") or {}
+    toolchain = manifest.get("toolchain") or {}
+    scheduler = identity.get("scheduler") or {}
+    targets = identity.get("targets") or []
+    return {
+        "project": identity.get("project_identity"),
+        "targets": ", ".join(targets) or None,
+        "manifest_hash": identity.get("manifest_hash"),
+        "project_git_commit": identity.get("project_git_commit"),
+        "bst_version": toolchain.get("bst"),
+        "host_cpu_model": manifest.get("cpu_model"),
+        "host_cpu_count": manifest.get("cpu_count"),
+        "host_memory_mb": manifest.get("memory_mb"),
+        "kernel_release": manifest.get("kernel_release"),
+        "distro_id": manifest.get("distro_id"),
+        "builders": scheduler.get("builders"),
+        "incomplete_reason": _incomplete_reason(context.get("build_outcome")),
+    }
+
+
+def _incomplete_reason(build_outcome):
+    """Why this run is not a measurement, by `bga`'s own one rule.
+
+    `UX-156`/`UX-157`/`UX-185` are answered by a single accessor
+    precisely so a consumer cannot handle one and forget the others -
+    which is what happened between the first two. Re-deriving it here
+    would be the fourth place to forget the third; the model is
+    constructed instead, which costs one import and is the same answer
+    by construction.
+    """
+    if not build_outcome:
+        return None
+    from bga.ingest.models import RunContext
+
+    return RunContext(build_outcome=build_outcome).incomplete_reason
+
+
+def identity_annotations(snapshot: str, anchor, offset_us):
+    """`IDENTITY_ANNOTATIONS`, filled - absent keys for absent facts."""
+    from bga import __version__
+
+    values = dict(run_identity(snapshot))
+    values.update({
+        "run": os.path.basename(os.path.normpath(snapshot)) or None,
+        "bga_version": __version__,
+        "anchor_element": anchor,
+        "plane_offset_us": None if offset_us is None else int(round(offset_us)),
+        "lane_order": LANE_ORDER_RULE,
+    })
+    return [(key, values.get(key)) for key, _ in IDENTITY_ANNOTATIONS
+            if values.get(key) is not None]
+
+
+def identity_track_name(reason) -> str:
+    """The track's own name, which says `interrupted` where it applies.
+
+    An annotation is something a reader has to open a slice to see. The
+    honesty `UX-156` enforces in the report belongs where the first
+    scroll lands, so the incompleteness is in the **name** and the
+    reason is in the annotation beside it.
+    """
+    return IDENTITY_TRACK if not reason else f"{IDENTITY_TRACK} ({reason})"
+
+
+# --------------------------------------------------------------------------
 # `UX-309`: the arrows.
 #
 # A flow is one id on two slices, and Perfetto infers the direction from
@@ -486,6 +622,18 @@ def choose_anchor(spans, plane1_events) -> Optional[str]:
     return max(candidates, key=lambda name: spans[name]["longest"])
 
 
+def _plane1_start_us(plane1_events) -> float:
+    """The earliest Plane 1 stamp, or 0.
+
+    Where the identity instant goes (`UX-311`): at the beginning of the
+    trace rather than at zero, so it sits with the run it describes on
+    whatever window the UI opens on rather than off the left edge.
+    """
+    stamps = [event["ts"] for event in plane1_events
+              if event.get("ph") in ("B", "E") and event.get("ts") is not None]
+    return min(stamps) if stamps else 0.0
+
+
 def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
     """Plane 2's monotonic clock, placed on Plane 1's wall clock.
 
@@ -505,7 +653,7 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
-                      kinds=None, edges=()):
+                      kinds=None, edges=(), snapshot=None):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -532,9 +680,28 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     flow_count = next_flow - 1
 
     with TrackEventWriter(output) as trace:
+        # `UX-311`: say once that the lane order is the ranks below, or
+        # every rank is a hint no UI reads.
+        trace.order_processes_explicitly()
+
+        # `UX-311`: whose build this was, first lane and first thing a
+        # reader meets. One instant on one track - portable vocabulary,
+        # so `trace_processor` selects it like any other slice.
+        reason = None
+        if snapshot is not None:
+            identity = identity_annotations(snapshot, anchor_element,
+                                            offset_us)
+            reason = dict(identity).get("incomplete_reason")
+            identity_track = trace.process_track(
+                identity_track_name(reason), pid=IDENTITY_TRACK_PID, rank=0)
+            start_us = _plane1_start_us(plane1_events)
+            trace.instant(int(round(start_us * NS_PER_US)), identity_track,
+                          identity_track_name(reason), annotations=identity)
+
         # Plane 1: one lane, one thread track per task tid, which is
         # the convention `bst_log_to_chrome_trace` already writes.
-        plane1_track = trace.process_track("Plane 1: BuildStream", pid=1)
+        plane1_track = trace.process_track("Plane 1: BuildStream", pid=1,
+                                           rank=1)
         threads = {}
         names = {}
         for event in plane1_events:
@@ -563,10 +730,20 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         if not raw_log:
             return {"packets": trace.packets, "slices": trace.slices,
                     "tracks": trace.tracks, "flows": flow_count,
-                    "flows_dropped": dropped}
+                    "flows_dropped": dropped, "incomplete_reason": reason,
+                    "lane_order": LANE_ORDER_RULE}
 
         # Plane 2: one process lane per element, one thread lane per
         # traced pid inside it.
+        # `UX-311`: the lane order. Ranks 0 and 1 are the identity and
+        # Plane 1; element lanes take 2 upward, heaviest first, which is
+        # `LANE_ORDER_RULE` and is *not* the critical path - see there
+        # for why this command cannot know that one. The pid stays the
+        # sorted-name index so a lane's identity does not move when a
+        # run's timings do.
+        ranked = sorted(spans, key=lambda name: (-spans[name]["longest"], name))
+        element_rank = {element: index + 2
+                        for index, element in enumerate(ranked)}
         element_pid = {element: index + 2
                        for index, element in enumerate(sorted(spans))}
         lanes = {}
@@ -600,9 +777,15 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     pid = element_pid[element] = len(element_pid) + 2
                 lane = lanes.get(element)
                 if lane is None:
+                    # `UX-311`: the kind in the label, so a lane says
+                    # what sort of element it is without a lookup.
+                    kind = kinds.get(element)
+                    label = (f"native: {element} ({kind})" if kind
+                             else f"native: {element}")
                     lane = lanes[element] = {
-                        "track": trace.process_track(f"native: {element}",
-                                                     pid=pid),
+                        "track": trace.process_track(
+                            label, pid=pid,
+                            rank=element_rank.get(element, len(element_rank) + 2)),
                         "threads": {},
                     }
                 thread = lane["threads"].get(record["pid"])
@@ -637,7 +820,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 trace.slice_end(max(end_ns, start_ns), thread)
         return {"packets": trace.packets, "slices": trace.slices,
                 "tracks": trace.tracks, "flows": flow_count,
-                "flows_dropped": dropped}
+                "flows_dropped": dropped, "incomplete_reason": reason,
+                "lane_order": LANE_ORDER_RULE}
 
 
 def render(snapshot: str, output: str,
@@ -690,7 +874,7 @@ def render(snapshot: str, output: str,
             written = _write_trackevent(
                 plane1_events, raw if anchor else None, spans, anchor, output,
                 kinds=element_kinds(snapshot),
-                edges=dependency_edges(snapshot))
+                edges=dependency_edges(snapshot), snapshot=snapshot)
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
                       "anchor": anchor, "raw_log": raw, "format": fmt}
             result.update(written)

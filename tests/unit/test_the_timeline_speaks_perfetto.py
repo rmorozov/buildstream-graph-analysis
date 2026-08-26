@@ -302,6 +302,15 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
                 trackevent.EVENT_FLOW_IDS,
             ("track_event.proto", "TrackEvent", "terminating_flow_ids"):
                 trackevent.EVENT_TERMINATING_FLOW_IDS,
+            # UX-311: lane order. `sibling_order_rank` is ignored on a
+            # process track unless the root descriptor asks for it,
+            # which is what the second pair pins.
+            ("track_descriptor.proto", "TrackDescriptor",
+             "sibling_order_rank"): trackevent.TRACK_SIBLING_ORDER_RANK,
+            ("track_descriptor.proto", "TrackDescriptor", "process_ordering"):
+                trackevent.TRACK_PROCESS_ORDERING,
+            ("track_descriptor.proto", "ProcessOrdering",
+             "PROCESS_ORDERING_EXPLICIT"): trackevent.PROCESS_ORDERING_EXPLICIT,
         }
         wrong = []
         for (proto, block, field), ours in expected.items():
@@ -390,9 +399,12 @@ class TestTheTraceSaysWhatTheCaptureSaw:
     def test_a_process_with_no_observed_exit_is_an_instant(self, rendered):
         """`UX-188`'s rule, carried over: never a zero-width bar and
         never a fabricated end."""
-        instants = rendered["trace"]["instants"]
-        assert len(instants) == 1, instants
-        assert "no observed exit" in instants[0]["name"]
+        instants = [entry for entry in rendered["trace"]["instants"]
+                    if "no observed exit" in (entry["name"] or "")]
+        assert len(instants) == 1, rendered["trace"]["instants"]
+        # The other instant is `UX-311`'s run-identity marker, which is
+        # a fact about the run rather than a process.
+        assert len(rendered["trace"]["instants"]) == 2
 
     def test_the_names_are_interned_once_each(self, rendered):
         """What makes a million slices of forty commands cost forty
@@ -403,9 +415,11 @@ class TestTheTraceSaysWhatTheCaptureSaw:
         assert names, "nothing was interned"
         assert len(set(names.values())) == len(names), names
         slices = rendered["trace"]["slices"]
-        assert len(slices) > len(names), (
-            f"{len(slices)} slices over {len(names)} names - this fixture "
-            "does not repeat a name, so it cannot show interning at all")
+        instants = rendered["trace"]["instants"]
+        assert len(slices) + len(instants) > len(names), (
+            f"{len(slices)} slices and {len(instants)} instants over "
+            f"{len(names)} names - this fixture does not repeat a name, so "
+            "it cannot show interning at all")
         for entry in slices:
             assert entry["name"], entry
 

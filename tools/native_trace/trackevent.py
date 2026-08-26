@@ -43,12 +43,21 @@ debug_annotation.proto   DebugAnnotation.name_iid = 1, int_value = 4,
                          string_value = 6
                          DebugAnnotationName.iid = 1, .name = 2
 track_descriptor.proto   uuid = 1, name = 2, process = 3, thread = 4,
-                         parent_uuid = 5
+                         parent_uuid = 5, sibling_order_rank = 12,
+                         process_ordering = 19
+                         ProcessOrdering.PROCESS_ORDERING_EXPLICIT = 1
 process_descriptor.proto pid = 1, process_name = 6
 thread_descriptor.proto  pid = 1, tid = 2, thread_name = 5
 interned_data.proto      event_categories = 1, event_names = 2,
                          debug_annotation_names = 3
 ```
+
+`UX-311` added the two ordering fields, and reading them rather than
+remembering them is what caught the rule that matters:
+`sibling_order_rank` is **ignored on a process track** unless the
+*root* descriptor (`uuid = 0`) sets `process_ordering` to
+`PROCESS_ORDERING_EXPLICIT`. A rank written without that root packet is
+a hint no UI reads.
 
 `UX-309` added `flow_ids`/`terminating_flow_ids` - both `fixed64`,
 which is a **different wire type** from every other number here and the
@@ -93,6 +102,18 @@ TRACK_NAME = 2
 TRACK_PROCESS = 3
 TRACK_THREAD = 4
 TRACK_PARENT_UUID = 5
+# UX-311: `optional int32 sibling_order_rank = 12` - lower ranks first.
+# On a *process* track it is ignored unless the root descriptor says to
+# read it, which is the next constant.
+TRACK_SIBLING_ORDER_RANK = 12
+# `optional ProcessOrdering process_ordering = 19`, "only valid on the
+# root track descriptor (uuid = 0)", with
+# `PROCESS_ORDERING_EXPLICIT = 1` meaning "order processes by their
+# tracks' `sibling_order_rank`". One packet, and without it every rank
+# below is inert.
+TRACK_PROCESS_ORDERING = 19
+PROCESS_ORDERING_EXPLICIT = 1
+ROOT_TRACK_UUID = 0
 
 # --- ProcessDescriptor / ThreadDescriptor --------------------------------
 PROCESS_PID = 1
@@ -382,12 +403,33 @@ class TrackEventWriter:
         self._next_uuid += 1
         return value
 
-    def process_track(self, name: str, pid: int) -> int:
-        """A process lane. Returns its uuid, which slices are hung from."""
+    def order_processes_explicitly(self) -> None:
+        """Say once that the process lanes carry their own order.
+
+        `UX-311`. `sibling_order_rank` on a process track is ignored
+        unless the **root** descriptor - `uuid = 0`, which is not a
+        track anyone writes events to - sets this. Reading that out of
+        the schema is the whole reason the ranks below are not inert.
+        """
+        self._write_packet(
+            self._sequence_prefix()
+            + bytes_field(PACKET_TRACK_DESCRIPTOR,
+                          uint_field(TRACK_UUID, ROOT_TRACK_UUID)
+                          + uint_field(TRACK_PROCESS_ORDERING,
+                                       PROCESS_ORDERING_EXPLICIT)))
+
+    def process_track(self, name: str, pid: int, rank: int = 0) -> int:
+        """A process lane. Returns its uuid, which slices are hung from.
+
+        `rank` orders it against its siblings, lower first (`UX-311`),
+        and needs `order_processes_explicitly()` to have been called or
+        the UI ignores it.
+        """
         uuid = self._uuid()
         descriptor = (
             uint_field(TRACK_UUID, uuid)
             + string_field(TRACK_NAME, name)
+            + uint_field(TRACK_SIBLING_ORDER_RANK, rank)
             + bytes_field(TRACK_PROCESS,
                           uint_field(PROCESS_PID, pid)
                           + string_field(PROCESS_NAME, name)))

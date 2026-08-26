@@ -70,10 +70,15 @@
     },
     "track_descriptor.proto": {
       "numbers": {
+        "ProcessOrdering": {
+          "PROCESS_ORDERING_EXPLICIT": 1
+        },
         "TrackDescriptor": {
           "name": 2,
           "parent_uuid": 5,
           "process": 3,
+          "process_ordering": 19,
+          "sibling_order_rank": 12,
           "thread": 4,
           "uuid": 1
         }

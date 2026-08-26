@@ -83,13 +83,21 @@ _LOG = """[wrapper][2026-08-21 12:00:00,000] INFO: Executing command: bst build 
 [wrapper][2026-08-21 12:00:06,200] INFO: Return code: 0
 """
 
-# Two sandboxes, each a shell that forks compilers - and the *same* pid
-# numbers in both, which is what a `--unshare-pid` sandbox does and what
-# a flow must never cross.
+# Two sandboxes, each a shell that forks compilers - the *same* pid
+# numbers in both, which is what `--unshare-pid` does, and **overlapping
+# in time**, which is what a parallel build does.
+#
+# The overlap is the point. With the sandboxes separated in time, a
+# lookup that forgot the invocation still picks the right parent by
+# accident, because the other sandbox's shell has already exited; the
+# first draft of this fixture ran them 10 seconds apart and the
+# cross-sandbox mutation passed. Here `leaf.bst`'s shell starts 50 ms
+# after `mid.bst`'s and both are alive when either's children fork, so a
+# merged key connects one element's compiler to the other's shell.
 def _raw():
     lines = []
     for element, invocation, base in (("mid.bst", "inv-mid", 1000.0),
-                                      ("leaf.bst", "inv-leaf", 1010.0)):
+                                      ("leaf.bst", "inv-leaf", 1000.05)):
         lines.append(f"START pid=2 ppid=1 ts={base:.6f} element={element} "
                      f"inv={invocation} src=spine cmd=sh -c make\n")
         for index in range(3):

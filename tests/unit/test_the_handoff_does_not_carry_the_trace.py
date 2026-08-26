@@ -40,6 +40,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 _HARNESS = """
 const size = %(size)s;
 const inlineMax = %(inline_max)s;
+const here = %(here)s;
 
 const calls = { fetches: [], opened: [], navigated: [], posted: 0, closed: 0 };
 
@@ -57,12 +58,15 @@ const nodes = {
   handoff: node("handoff"),
   "perfetto-link": node("perfetto-link"),
   "actions-fallback": node("actions-fallback"),
-  "bga-trace": { textContent: "http://127.0.0.1:8000/timeline.json.gz" },
+  "trace-download": node("trace-download"),
+  "actions-download": node("actions-download"),
+  "bga-trace": { textContent: here + "timeline.json.gz" },
 };
 nodes["perfetto-link"].parentElement = nodes["actions-fallback"];
+nodes["trace-download"].parentElement = nodes["actions-download"];
 
 globalThis.document = { getElementById: (id) => nodes[id] ?? null };
-globalThis.location = { href: "http://127.0.0.1:8000/index.html" };
+globalThis.location = { href: here + "index.html" };
 
 globalThis.fetch = async (url, init = {}) => {
   calls.fetches.push({ url: String(url), method: init.method ?? "GET" });
@@ -111,16 +115,26 @@ console.log(JSON.stringify({
   ...calls,
   status: nodes.handoff.textContent,
   fallbackHref: nodes["perfetto-link"].href,
+  downloadShown: nodes["actions-download"].hidden === false,
+  downloadHref: nodes["trace-download"].href,
 }));
 """
 
 INLINE_MAX = 4 * 1024 * 1024
 
+# `UX-314`: an origin ui.perfetto.dev's own CSP will let it fetch. The
+# default `bga view` port is **not** one, which is why the deep-link
+# scenarios below have to say which origin they are standing on - the
+# transport that wins depends on it.
+FETCHABLE = "http://localhost:8080/"
+REFUSED = "http://127.0.0.1:8000/"
 
-def _click(size, inline_max=INLINE_MAX):
+
+def _click(size, inline_max=INLINE_MAX, here=FETCHABLE):
     result = subprocess.run(
         [node, "--input-type=module", "-e",
-         _HARNESS % {"size": size, "inline_max": inline_max}],
+         _HARNESS % {"size": size, "inline_max": inline_max,
+                     "here": json.dumps(here)}],
         capture_output=True, text=True, cwd=REPO, timeout=90)
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])
@@ -133,8 +147,14 @@ class TestTheTransportIsChosenBySize:
         """The acceptance test's first clause. Over the threshold the
         page navigates the opened tab to the deep link, and **no byte of
         the trace is read by this page's own JS** - the only request it
-        makes is the `HEAD` that told it the size."""
-        out = _click(size=INLINE_MAX * 3)
+        makes is the `HEAD` that told it the size.
+
+        `UX-314`: on an origin Perfetto is allowed to fetch. This guard
+        used to stand on `127.0.0.1:8000`, which Perfetto's CSP refuses,
+        and asserted the navigation happened anyway - so it was green
+        for the whole time the transport was broken in the field.
+        """
+        out = _click(size=INLINE_MAX * 3, here=FETCHABLE)
         assert out["navigated"], out
         assert out["navigated"][0].startswith("https://ui.perfetto.dev/#!/?url=")
         assert out["posted"] == 0, "the trace was posted tab to tab anyway"
@@ -142,6 +162,38 @@ class TestTheTransportIsChosenBySize:
         assert bodies == [], bodies
         assert "12.0 MiB" in out["status"], out["status"]
         assert "4 MiB" in out["status"], out["status"]
+
+    def test_a_big_trace_is_not_navigated_where_perfetto_may_not_fetch(self):
+        """`UX-314`, and the failure the field hit.
+
+        Over the threshold the tab-to-tab post is refused by size and
+        the deep link is refused by Perfetto's `connect-src`. The old
+        code navigated anyway: ui.perfetto.dev opened, its console said
+        `connect-src`, and the reader got an empty Perfetto and no
+        explanation. There is no transport here, so the page must say
+        that and name both ways out - not open a tab onto a refusal.
+        """
+        out = _click(size=INLINE_MAX * 3, here=REFUSED)
+        assert out["navigated"] == [], (
+            "navigated to a deep link Perfetto's CSP will refuse")
+        assert out["posted"] == 0, "posted a trace over the threshold"
+        assert out["closed"] >= 1, "left a blank Perfetto tab open"
+        bodies = [call for call in out["fetches"] if call["method"] != "HEAD"]
+        assert bodies == [], bodies
+        status = out["status"]
+        assert "12.0 MiB" in status, status
+        assert "connect-src" in status, status
+        assert "--port 8080" in status, status
+        assert "drag" in status, status
+        # And the route that always works is on the page.
+        assert out["downloadShown"] is True, out
+
+    def test_the_save_it_yourself_route_is_there_either_way(self):
+        """Both sizes, because both transports can be refused."""
+        for size in (25_000, INLINE_MAX * 3):
+            out = _click(size=size, here=REFUSED)
+            assert out["downloadShown"] is True, (size, out)
+            assert out["downloadHref"].endswith("/timeline.json.gz"), out
 
     def test_a_small_trace_still_goes_tab_to_tab(self):
         """The other half, and the one `UX-198` verified: below the

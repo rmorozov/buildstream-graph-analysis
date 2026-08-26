@@ -564,7 +564,7 @@ def _inline_module(name: str) -> str:
 
 
 def _uncommented(text: str):
-    """The module's lines, minus whole-line comments and blank lines.
+    """The module's lines, minus every comment and every blank line.
 
     `UX-205` is where the export crossed Direction 7's page ceiling, and
     the honest place to find the bytes was here: this project's comments
@@ -572,26 +572,167 @@ def _uncommented(text: str):
     report carries none of those readers. Measured: 79,180 B of modules
     become 52,870 B.
 
-    Deliberately conservative - only lines whose first non-space
-    characters open a comment, and block comments delimited on their own
-    lines. A `//` inside a string or a regex literal is never at the
-    start of a line, so nothing here can truncate an expression. It is
-    not a minifier and must not become one: code is left exactly as
-    written, so a stack trace from an exported page still quotes the
-    source.
+    `UX-307` made the pass **literal-aware**. What it replaced dropped
+    lines whose first non-space characters opened a comment - safe, but
+    it can only ever reach a comment that starts a line, so four
+    trailing `//` comments rode into every export and the rule could not
+    be extended to reach them without understanding literals first. Four
+    lines in the same bundle are why:
+
+        const PERFETTO_ORIGIN = "https://ui.perfetto.dev";
+        const SVG_NS = "http://www.w3.org/2000/svg";
+
+    A stripper that cuts at the first `//` truncates those into
+    unterminated strings, and the page does not parse, let alone boot.
+    `views.js` carries the same hazard in the block form: the regex
+    literal `/\\s*\\n\\s*/g` contains `*/`, so a `/\\*.*?\\*/` run over
+    the whole text can pair it with a `/*` anywhere above and delete
+    everything in between.
+
+    It is still **not a minifier** and must not become one: code is left
+    exactly as written, so a stack trace from an exported page still
+    quotes the source. The only bytes it takes are comments, and the
+    whitespace that led into them.
     """
-    in_block = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if in_block:
-            in_block = "*/" not in stripped
+    return _uncomment_js(text).splitlines()
+
+
+# A `/` opens a regex literal only where a value may not appear - after
+# an operator, a keyword or an opening bracket. After an identifier, a
+# number or a closing bracket it is division instead.
+_VALUE_MAY_FOLLOW = frozenset("=(,:[!&|?{};+-*%~^<>\n")
+_KEYWORDS_BEFORE_REGEX = frozenset((
+    "return", "typeof", "instanceof", "in", "of", "new", "delete", "void",
+    "case", "do", "else", "yield", "await"))
+
+
+def _comment_spans(text: str):
+    """Yield `(start, end)` of every comment, literals excluded.
+
+    One pass. The states that matter are the ones in which a `//` or a
+    `/*` is *not* a comment: the two quoted string forms, a template
+    literal - whose `${ }` is code again, and may hold more of either -
+    and a regex literal.
+    """
+    i, n = 0, len(text)
+    prev = ""          # last significant character of code
+    word = ""          # last identifier, for `return /re/`
+    while i < n:
+        char = text[i]
+        if char in "\"'":
+            i, prev, word = _close_string(text, i, char), char, ""
+        elif char == "`":
+            i, prev, word = _close_template(text, i), "`", ""
+        elif char == "/" and i + 1 < n and text[i + 1] == "/":
+            end = text.find("\n", i)
+            end = n if end < 0 else end
+            yield i, end
+            i = end
+        elif char == "/" and i + 1 < n and text[i + 1] == "*":
+            end = text.find("*/", i + 2)
+            end = n if end < 0 else end + 2
+            yield i, end
+            i = end
+        elif char == "/" and (not prev or prev in _VALUE_MAY_FOLLOW
+                              or word in _KEYWORDS_BEFORE_REGEX):
+            i, prev, word = _close_regex(text, i), "/", ""
+        else:
+            if not char.isspace():
+                prev = char
+                word = word + char if (char.isalpha() or char == "_") else ""
+            i += 1
+
+
+def _close_string(text: str, i: int, quote: str) -> int:
+    i += 1
+    while i < len(text):
+        if text[i] == "\\":
+            i += 2
             continue
-        if stripped.startswith("/*"):
-            in_block = "*/" not in stripped
+        if text[i] == quote or text[i] == "\n":
+            return i + 1
+        i += 1
+    return i
+
+
+def _close_regex(text: str, i: int) -> int:
+    i, in_class = i + 1, False
+    while i < len(text):
+        char = text[i]
+        if char == "\\":
+            i += 2
             continue
-        if not stripped or stripped.startswith("//"):
+        if char == "[":
+            in_class = True
+        elif char == "]":
+            in_class = False
+        elif char == "/" and not in_class:
+            return i + 1
+        elif char == "\n":
+            return i          # unterminated: it was division after all
+        i += 1
+    return i
+
+
+def _close_template(text: str, i: int) -> int:
+    i += 1
+    while i < len(text):
+        char = text[i]
+        if char == "\\":
+            i += 2
             continue
-        yield line
+        if char == "`":
+            return i + 1
+        if char == "$" and i + 1 < len(text) and text[i + 1] == "{":
+            i = _close_interpolation(text, i + 2)
+            continue
+        i += 1
+    return i
+
+
+def _close_interpolation(text: str, i: int) -> int:
+    """Code inside `${ }`: nested braces, strings and templates count."""
+    depth = 1
+    while i < len(text):
+        char = text[i]
+        if char in "\"'":
+            i = _close_string(text, i, char)
+            continue
+        if char == "`":
+            i = _close_template(text, i)
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return i
+
+
+def _uncomment_js(text: str) -> str:
+    """`text` with every comment gone and every blank line dropped.
+
+    Newlines inside a removed block comment are kept, so two statements
+    a comment sat between never end up on one line - which would change
+    what automatic semicolon insertion does to them.
+    """
+    out, at = [], 0
+    for start, end in _comment_spans(text):
+        # The run of spaces that led into the comment goes with it. That
+        # whitespace is provably outside every literal, because a comment
+        # is only recognised in code context - so this can never take the
+        # trailing spaces of a line inside a template literal, which are
+        # part of the string.
+        while start > at and text[start - 1] in " \t":
+            start -= 1
+        out.append(text[at:start])
+        out.append("\n" * text.count("\n", start, end))
+        at = end
+    out.append(text[at:])
+    return "\n".join(
+        line for line in "".join(out).splitlines() if line.strip())
 
 
 def _uncommented_css(text: str) -> str:

@@ -155,6 +155,22 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # promised - and a round that wants the page smaller should start from
 # this measurement rather than from that sentence.
 #
+# **Round 45 (`UX-307`) took them, and the estimate above was low.** The
+# stripper is literal-aware now, so it reaches trailing comments as well
+# as whole-line ones: **153 B**, not ~114, across four sites in three
+# modules. Measured on the golden export, which is the fixture the bound
+# below is set against:
+#
+#     page     223,227 B  ->  223,074 B     -153
+#     data      98,374 B      98,374 B        +0
+#     html     321,770 B     321,617 B      -153
+#
+# That is 0.07% of the page, and `UX-307` says so in its own Outcome
+# rather than presenting the pass as a size win. What the pass actually
+# bought is that the export's stripper knows a comment from a string -
+# four URL constants and one regex literal in the same bundle look
+# exactly like comments and are not.
+#
 # The +1,073 of *data* on both runs is the two `bga:distribution`
 # hints and one `bga:series`, with their descriptions - the schema the
 # page carries, which is the half the companion guard below proves is
@@ -170,7 +186,7 @@ COMMITTED_EXPORTS = [
     # `UX-302` moved both again, by 5,315 B: the §1 dispatch table and
     # the "view as JSON" toggle are two new modules and their styles.
     # Source, not content - see the split above.
-    ("golden", GOLDEN, 324_000),                       #  321,939 B
+    ("golden", GOLDEN, 324_000),                       #  321,617 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -182,7 +198,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 364_000),             #  361,135 B
+    ("macro_micro", MACRO_MICRO, 364_000),             #  360,932 B
 ]
 
 
@@ -501,7 +517,10 @@ class TestTheSizeDiscipline:
 
         So the page is **code**, and `UX-307`'s remaining scope is the
         ~114 B of trailing comments plus whatever a real minifier would
-        buy - not the 175 KB the old note promised. The threshold moves
+        buy - not the 175 KB the old note promised. (Round 45 took
+        them and the estimate was low: **153 B**, measured, across
+        four sites. The ratio is unmoved by it - 153 B of 223 KB - so
+        the threshold below stands where round 44 put it.) The threshold moves
         to **3.3x** with that correction, and the honest statement is
         that this ratio has now moved twice for one cause: the viewer
         grows features and the synthetic run's data does not grow with

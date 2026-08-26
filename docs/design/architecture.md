@@ -878,7 +878,35 @@ Updated 2026-08-26 (after `UX-310`), re-grounded in
 Plane 2 bullets now say what the trace graphs and - as load-bearing -
 what it declines to graph and why.
 
-MUTATIONS-PENDING
+Six mutations against the committed tree, all discriminating after one
+repair, and one rejected:
+
+```text
+M1  open records extended to the trace's last stamp          6 red
+M2  a tie is resolved start-first                            1 red
+M3  the window keeps its close and drops its maximum         2 red
+M4  the track claims to be a memory series                   2 red
+M5  the counter track forgets it is a counter                2 red
+M6  the sweep is walked in reverse                           9 red
+--  `open` dropped from the exclusion test               rejected
+```
+
+M6 is the one that changed the code. Its first form - removing the
+"drop a backwards sample" branch from the series filter - **passed**,
+and the reason is that the branch was dead: the construction never
+produces a backwards sample, and a filter that silently swallowed one
+would *hide* a construction bug rather than fix one. The branch is gone
+and the ordering is asserted in the guard instead, where a break in it
+fails loudly; reversing the sweep then reddens nine clauses including
+that one.
+
+M1's first form was rejected rather than counted. Dropping `open` from
+the exclusion test changes nothing, because `_open_record` always sets
+`end_ts` to `None` - the two halves of that condition are one fact.
+The mutation that is a real defect is the historical one
+`compute_max_concurrency`'s own docstring describes: extending an open
+record to the trace's last timestamp, which once produced a
+`max_concurrency` of 24 for a `-j4` build. That reddens six clauses.
 
 Updated 2026-08-26 (after `UX-311`), re-grounded in
 `tools/native_trace/trackevent.py`'s `order_processes_explicitly` and

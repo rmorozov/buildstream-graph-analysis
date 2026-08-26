@@ -142,16 +142,6 @@ console.log(JSON.stringify({
     })(root, 0);
     return depths;
   })(),
-  // §2b: the header, and what it holds.
-  header: (() => {
-    const head = all(body, (n) => n.tagName === "header")[0] ?? null;
-    if (!head) return null;
-    return {
-      blocks: (head.children ?? []).length,
-      controls: all(head, (n) =>
-        ["button", "select", "input", "a"].includes(n.tagName)).length,
-    };
-  })(),
   // §3b: every section, and whether the rail lists it.
   sections: (() => {
     const nav = all(body, (n) => n.tagName === "nav"
@@ -202,6 +192,24 @@ def pages(tmp_path_factory):
             for name, run in (("golden", GOLDEN), ("macro_micro", MACRO))}
 
 
+@pytest.fixture(scope="module")
+def exports(tmp_path_factory):
+    """The exported files themselves, for the claims that are about
+    markup rather than about a booted document."""
+    import tools.bga_view as view
+
+    out = {}
+    for name, source in (("golden", GOLDEN), ("macro_micro", MACRO)):
+        tmp = tmp_path_factory.mktemp(f"{name}-export")
+        run = tmp / "run"
+        shutil.copytree(source, run)
+        (run / "expected_output.json").unlink(missing_ok=True)
+        page = tmp / "report.html"
+        view.export(str(run), str(page))
+        out[name] = page
+    return out
+
+
 @needs_node
 @pytest.mark.medium
 class TestTheGradeWalk:
@@ -215,6 +223,39 @@ class TestTheGradeWalk:
                 assert drawing["grade"] in ("annotation", "exhibit"), (
                     name, drawing)
 
+    def test_no_module_writes_a_box_the_scale_does_not_name(self):
+        """The other half, and the one the booted pages cannot give: a
+        drawing that renders only on a payload the committed fixtures do
+        not carry - the store diagram needs two snapshots - is on
+        neither page, so the walk below never sees it. Held statically
+        instead, which is why the walk below is not the whole check.
+        """
+        loose = []
+        for path in sorted(VIEWER.glob("*.js")):
+            for line, body in enumerate(
+                    path.read_text(encoding="utf-8").splitlines(), 1):
+                if re.match(r"\s*(//|\*|/\*)", body):
+                    continue
+                for match in re.finditer(r"viewBox:\s*(.+?)(?:,\s*$|,\s)", body):
+                    expr = match.group(1).strip()
+                    if not any(token in expr for token in
+                               ("size.", "SCALE[", "${H}", "${W}")):
+                        loose.append((path.name, line, expr))
+        assert loose == [], (
+            f"a drawing's box is written out rather than read from the "
+            f"scale: {loose}")
+
+    def test_every_local_height_is_read_from_the_scale(self):
+        """And the variables those `${H}` boxes interpolate - or the
+        clause above has a hole shaped like a local constant, which is
+        how the store diagram's `const H = 40` would have survived."""
+        source = (VIEWER / "views.js").read_text(encoding="utf-8")
+        assigns = re.findall(r"const (?:W = [^,;]+, )?H = ([^;]+);", source)
+        assert assigns, "no figure height assigned in views.js"
+        for expr in assigns:
+            assert "SCALE[" in expr, (
+                f"a figure's height is a local constant: {expr}")
+
     def test_every_box_comes_from_the_scale(self, pages):
         boxes = _boxes()
         for name, page in pages.items():
@@ -224,27 +265,47 @@ class TestTheGradeWalk:
                     f"which is not one of the scale's boxes {sorted(boxes)}")
 
 
-@needs_node
-@pytest.mark.medium
 class TestTheApparatusWalk:
-    """§2b, on the booted page rather than on `index.html` - the header
-    is what a reader meets, and a control appended to it at runtime
-    would pass a scan of the source."""
+    """§2b, on the **exported file** rather than on `index.html`.
 
-    def test_the_header_holds_no_control(self, pages):
-        for name, page in pages.items():
-            assert page["header"], f"{name} has no header"
-            assert page["header"]["controls"] == 0, (name, page["header"])
+    A first draft read the header off the booted DOM and passed a
+    mutation that put a control straight back into it. The reason is
+    worth writing down: the shim's `querySelector("header")` returns a
+    *synthetic* node the probe makes for `app.js` to insert the rail
+    after, so the walk was measuring a header nobody renders. `UX-317`
+    measures the real one in a browser and scans `index.html`; this
+    reads the export's own markup, which is the third surface and the
+    one an attachment carries.
 
-    def test_the_header_stays_within_its_line_budget(self, pages):
-        # `UX-317` owns the number; this pass holds the page to it
+    Note what the export does to a link: `bga_view` strips anchors to
+    satellite pages it does not carry, so a header `<a>` never reaches
+    the file. A `<button>` does, which is what this catches.
+    """
+
+    def _header(self, path):
+        html = Path(path).read_text(encoding="utf-8")
+        found = re.search(r"<header>(.*?)</header>", html, re.S)
+        assert found, f"{path} has no header"
+        return re.sub(r"<!--.*?-->", "", found.group(1), flags=re.S)
+
+    def test_the_header_holds_no_control(self, exports):
+        for name, path in exports.items():
+            body = self._header(path)
+            for tag in ("<button", "<select", "<input", "<a "):
+                assert tag not in body, (
+                    f"{name}'s exported header holds a {tag.strip('< ')}: "
+                    f"§2b.2 says actions live in the actions group")
+
+    def test_the_header_stays_within_its_line_budget(self, exports):
+        # `UX-317` owns the number; this pass holds the export to it
         # rather than keeping a second copy.
         sys.path.insert(0, str(REPO / "tests" / "unit"))
         from test_apparatus_in_its_place import HEADER_LINE_BUDGET
 
-        for name, page in pages.items():
-            assert page["header"]["blocks"] <= HEADER_LINE_BUDGET, (
-                name, page["header"])
+        for name, path in exports.items():
+            blocks = re.findall(r"<(h1|p|div|ul|ol|table|section)\b",
+                                self._header(path))
+            assert len(blocks) <= HEADER_LINE_BUDGET, (name, blocks)
 
 
 @needs_node

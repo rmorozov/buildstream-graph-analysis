@@ -125,11 +125,36 @@ class TestOneAccentAndNoSecondPalette:
                 f"--{name} is exempted as set by the page, and no module "
                 f"sets it")
 
+    def _colour_tokens(self):
+        """The tokens that declare a **colour**.
+
+        `UX-316` put a size scale in the same `:root` block (§2a: drawing
+        heights are tokens too), and a census that counted every custom
+        property as a hue read seven lengths as seven new accents. The
+        split is measurable rather than by name: a colour token's value
+        is a hex or an `rgb()`, and a length's is not.
+        """
+        found = {}
+        for name, value in re.findall(r"--([\w-]+)\s*:\s*([^;]+);", CSS):
+            found.setdefault(name, value.strip())
+        return {name for name, value in found.items()
+                if value.startswith("#") or value.startswith("rgb")}
+
+    def test_the_size_scale_is_not_a_colour(self):
+        """The split above, asserted in both directions - or a colour
+        renamed to `--draw-…` would leave the accent census silently."""
+        colours = self._colour_tokens()
+        sizes = {name for name in re.findall(r"--([\w-]+)\s*:", CSS)
+                 if name.startswith("draw-")}
+        assert sizes, "UX-316's size scale is gone"
+        assert not (sizes & colours), (
+            f"a size token declares a colour: {sorted(sizes & colours)}")
+
     def test_one_accent_hue(self):
         """Outside ink, the surfaces and the three status tones, the
         page has **one** hue and it comes in two grades."""
         head, _, rest = CSS.partition("* { box-sizing")
-        hues = set(re.findall(r"var\(--([\w-]+)\)", rest))
+        hues = set(re.findall(r"var\(--([\w-]+)\)", rest)) & self._colour_tokens()
         ink = {"fg", "muted", "line", "bg", "panel", "muted-bg", "head", "w"}
         status = {"good", "warn", "bad",
                   "good-mark", "warn-mark", "bad-mark"}

@@ -44,7 +44,8 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped } from "./shapes.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
 // there.
-import { sparkline, strip, columnStrip } from "./drawings.js";
+import { sparkline, strip, columnStrip, GRADE_ANNOTATION, GRADE_EXHIBIT }
+  from "./drawings.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -468,15 +469,24 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   // `UX-303`: a series and a distribution draw as their shape, at any
   // depth - the nesting cap is about tables inside tables, and a
   // sparkline is one element wide however deep it sits.
+  //
+  // `UX-316` grades them, and the grade is a property of *why the
+  // drawing is here* rather than of where it landed: a value the schema
+  // declares a series or a distribution renders as that drawing because
+  // the drawing **is** the value - it is the answer, not a mark beside
+  // one, wherever the nesting puts it. The two annotation-grade
+  // drawings in this viewer are the two that annotate something else:
+  // `columnStrip` beside a table, and `views.js`'s per-element history
+  // beside an element's row. Neither comes through here.
   if (control === CONTROLS.SPARKLINE) {
     return sparkline(value, {
-      unit: String(declared[SERIES]),
+      unit: String(declared[SERIES]), grade: GRADE_EXHIBIT,
       format: (n) => quantity(n, quantityFor(node, key)),
     });
   }
   if (control === CONTROLS.DENSITY_STRIP) {
     return strip(value, {
-      countKey: String(declared[DISTRIBUTION]),
+      countKey: String(declared[DISTRIBUTION]), grade: GRADE_EXHIBIT,
       format: (n) => quantity(n, quantityFor(node, key)),
     });
   }
@@ -868,6 +878,7 @@ function distributionStrip(table, specs, total, state, refresh) {
   if (!raw.length) return null;
 
   const drawn = columnStrip(raw, {
+    grade: GRADE_ANNOTATION,
     format: (n) => quantity(n, spec.quantity),
     label: `${spec.title ?? title(spec.key)} across all ${
       total.toLocaleString("en-US")} rows`,
@@ -1422,6 +1433,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
                 strip(value, {
                   countKey: String(hintsOf(node)[DISTRIBUTION]
                                    ?? hint[DISTRIBUTION]),
+                  grade: GRADE_EXHIBIT,
                   format: (n) => quantity(n, quantityFor(node, key)),
                 }));
     }

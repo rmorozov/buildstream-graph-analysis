@@ -11,6 +11,15 @@
 // own arithmetic would be a second implementation of the analysis, and
 // the first thing it would do is disagree with the first one.
 
+// UX-316: the size scale, and the two exhibit affordances, from the one
+// module that owns them. `drawings.js` imports nothing, so this is not a
+// cycle - and the alternative was a second copy of the scale, which is
+// the defect §2a exists to end (`viewBox: "0 0 100 20"` was written out
+// by hand in this file).
+import {
+  SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
+} from "./drawings.js";
+
 const SVG = "http://www.w3.org/2000/svg";
 
 function svg(tag, attrs = {}) {
@@ -91,10 +100,14 @@ export function renderBand(compare) {
   const geometry = bandGeometry(compare);
   if (!geometry) return null;
 
-  const H = 74;
+  // UX-316: exhibit grade, and the height is the scale's `figure` - a
+  // composed drawing with lanes. The number is what it always was; what
+  // changed is that it is now read from one place, so the grade walk can
+  // hold it and a fourth drawing cannot invent a fifth height.
+  const H = SCALE[GRADE_EXHIBIT].figure;
   const figure = svg("svg", {
     viewBox: `0 0 100 ${H}`, class: "band", preserveAspectRatio: "none",
-    role: "img", "data-where": geometry.where,
+    role: "img", "data-grade": GRADE_EXHIBIT, "data-where": geometry.where,
     "data-disputed": String(geometry.disputed),
     "data-candidate-x": geometry.candidate.x.toFixed(3),
     "data-band-x": geometry.band.x.toFixed(3),
@@ -146,6 +159,17 @@ export function renderBand(compare) {
       + "baselines themselves spanned, so compare declines to call it."
     : `The candidate is ${geometry.where}.`;
   wrapper.append(heading, figure, caption);
+  // UX-316 (§2a): the band's twin. Every row is a published edge of
+  // `compare/v1` - the geometry object holds the values beside the
+  // positions, so the table and the drawing cannot disagree.
+  wrapper.append(exhibitTwin(document, ["mark", "value"], [
+    ["candidate", String(geometry.candidate.value)],
+    ["band low", String(geometry.band.low)],
+    ["band high", String(geometry.band.high)],
+    ["observed low", String(geometry.observed.low)],
+    ["observed high", String(geometry.observed.high)],
+    ...geometry.runs.map((run, i) => [`baseline ${i + 1}`, String(run.value)]),
+  ]));
   if (geometry.disputed) {
     const why = document.createElement("details");
     why.className = "muted";
@@ -233,17 +257,24 @@ export function renderTrend(store, schema = undefined,
   if (rows.length < 2) return null;
   const markers = verdictMarkers(schema);
 
-  const W = 100, H = 40;
+  // UX-316: the store diagram is exhibit grade - it is the section's
+  // whole answer, and the field pass read it as "unreadable because
+  // everything is very small". Its box comes from the scale's `spark`
+  // (a line over an order is what this is), and the marks come from the
+  // box: a dot written as `1.3` was a dot sized for a box of 40, and it
+  // would have stayed that size while the box grew.
+  const W = SCALE[GRADE_EXHIBIT].width, H = SCALE[GRADE_EXHIBIT].spark;
+  const dot = H / 30;
   // UX-203: the axis is duration. It was `bytes`, so the trend
   // answered "is this project drifting" with disk usage.
   const sizes = rows.map((r) => r.total_duration_us ?? 0);
   const max = Math.max(...sizes, 1);
   const x = (i) => (rows.length === 1 ? W / 2 : (i / (rows.length - 1)) * W);
-  const y = (v) => H - (v / max) * (H - 6) - 3;
+  const y = (v) => H - (v / max) * (H - dot * 4.5) - dot * 2.25;
 
   const figure = svg("svg", {
     viewBox: `0 0 ${W} ${H}`, class: "trend", preserveAspectRatio: "none",
-    role: "img", "data-points": rows.length,
+    role: "img", "data-grade": GRADE_EXHIBIT, "data-points": rows.length,
   });
   // UX-234: the distribution the points come from, drawn behind them.
   // Every edge is a published figure of `store-aggregate/v1` - the page
@@ -278,11 +309,12 @@ export function renderTrend(store, schema = undefined,
     const verdict = row.verdict_kind ?? "";
     const point = reason
       ? svg("rect", {
-          x: x(index) - 1.3, y: y(row.total_duration_us ?? 0) - 1.3, width: 2.6,
-          height: 2.6, class: "trend-point incomplete", "data-marker": "square",
+          x: x(index) - dot, y: y(row.total_duration_us ?? 0) - dot,
+          width: dot * 2, height: dot * 2,
+          class: "trend-point incomplete", "data-marker": "square",
           "data-stamp": row.stamp, "data-incomplete": reason })
       : markerPoint(verdictMarker(verdict, markers), x(index),
-                    y(row.total_duration_us ?? 0), 1.3, {
+                    y(row.total_duration_us ?? 0), dot, {
           class: `trend-point${row.alias ? " aliased" : ""}`
                  + (verdict ? ` verdict-${verdict}` : ""),
           "data-stamp": row.stamp, "data-alias": row.alias ?? "",
@@ -316,7 +348,25 @@ export function renderTrend(store, schema = undefined,
   caption.textContent = incomplete.length
     ? `${rows.length} snapshots \u00b7 ${incomplete.length} not measurements`
     : `${rows.length} snapshots \u00b7 all finished`;
-  wrapper.append(heading, figure, caption);
+  wrapper.append(heading, figure);
+  // UX-316 (§2a): an exhibit's ends are read, not hovered - and it is
+  // paired with its table twin, so the drawing never hoards values a
+  // reader wants as rows. Both are built from `rows`, which is what the
+  // drawing itself was handed: no second reading of the store.
+  wrapper.append(exhibitAxis(document, [
+    { name: "first", at: 0, label: rows[0].stamp },
+    { name: "peak", at: (sizes.indexOf(max) / Math.max(1, rows.length - 1)) * 100,
+      label: seconds(max) },
+    { name: "last", at: 100, label: rows[rows.length - 1].stamp },
+  ]));
+  wrapper.append(caption);
+  wrapper.append(exhibitTwin(document, ["snapshot", "duration", "verdict"],
+    rows.map((row) => [
+      row.stamp,
+      row.total_duration_us != null ? seconds(row.total_duration_us) : "—",
+      row.incomplete_reason ? row.incomplete_reason
+        : (row.verdict_kind ?? "—").replace(/_/g, " "),
+    ])));
   // UX-234: what the band is, or why there is none. A refusal is data:
   // a chart that silently dropped its band would read as a store with
   // nothing to say about itself.
@@ -2356,15 +2406,26 @@ export function renderElementHistory(store, uid, schema = null) {
                        .filter((v) => typeof v === "number");
   if (values.length) {
     const high = Math.max(...values, 1);
+    // UX-316: **annotation** grade - this sparkline sits beside an
+    // element's row and annotates it; it is not the section's answer.
+    // Its box used to be written out here as `0 0 100 20`, which is the
+    // per-drawing constant §2a's scale replaces: the same numbers, from
+    // the one place that holds them, so a guard can hold every drawing
+    // to the scale instead of to a grep.
+    const size = SCALE[GRADE_ANNOTATION];
+    const inset = size.spark / 10;
     const line = svg("svg", {
-      viewBox: `0 0 100 20`, class: "sparkline", preserveAspectRatio: "none",
-      role: "img", "data-role": "sparkline",
+      viewBox: `0 0 ${size.width} ${size.spark}`, class: "sparkline",
+      preserveAspectRatio: "none",
+      role: "img", "data-role": "sparkline", "data-grade": GRADE_ANNOTATION,
       "data-values": values.join(","),
     });
     series.forEach((point, i) => {
       if (typeof point.duration_us !== "number") return;
-      const x = series.length === 1 ? 50 : (i / (series.length - 1)) * 100;
-      const y = 18 - (point.duration_us / high) * 16;
+      const x = series.length === 1
+        ? size.width / 2 : (i / (series.length - 1)) * size.width;
+      const y = (size.spark - inset)
+                - (point.duration_us / high) * (size.spark - inset * 2);
       line.append(svg("circle", {
         cx: x.toFixed(2), cy: y.toFixed(2), r: 1.6,
         class: "spark-point",

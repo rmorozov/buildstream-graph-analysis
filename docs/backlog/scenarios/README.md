@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-320 scenarios: **11 open**, 309 closed.
+320 scenarios: **10 open**, 310 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 57 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 8 | 82 |
+| viewer | 7 | 82 |
 | cli | 0 | 4 |
 | store | 2 | 27 |
 | docs | 0 | 29 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-307 | [the export ships the source commentary](UX-0307-the-export-ships-the-source-comments.md) | viewer | Medium | R1 | 🔴 |
 | UX-313 | [the record list is the floor that is left](UX-0313-the-record-list-is-the-floor-that-is-left.md) | capture | Low | R1 | 🔴 |
 | UX-315 | [every canned question's `why` renders with doubled spaces](UX-0315-the-canned-why-renders-with-doubled-spaces.md) | viewer | Low | R1 | 🔴 |
-| UX-316 | [exhibits drawn at annotation size](UX-0316-exhibits-drawn-at-annotation-size.md) | viewer | High | R1, R3 | 🔴 |
 | UX-317 | [apparatus in its place](UX-0317-apparatus-in-its-place.md) | viewer | Medium | R1 | 🔴 |
 | UX-318 | [the rabbit hole announces its depth](UX-0318-the-rabbit-hole-announces-its-depth.md) | viewer | High | R1, R2 | 🔴 |
 | UX-319 | [the chain folds, and the clicks are counted](UX-0319-the-chain-folds-and-the-clicks-are-counted.md) | viewer | Medium | R1 | 🔴 |

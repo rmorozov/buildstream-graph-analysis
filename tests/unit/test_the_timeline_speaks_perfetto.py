@@ -274,6 +274,28 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
                 trackevent.THREAD_NAME,
             ("interned_data.proto", "InternedData", "event_names"):
                 trackevent.INTERNED_EVENT_NAMES,
+            # UX-308: annotations, categories, and the two interning
+            # tables they need.
+            ("track_event.proto", "TrackEvent", "debug_annotations"):
+                trackevent.EVENT_DEBUG_ANNOTATIONS,
+            ("track_event.proto", "EventCategory", "iid"):
+                trackevent.EVENT_CATEGORY_IID_FIELD,
+            ("track_event.proto", "EventCategory", "name"):
+                trackevent.EVENT_CATEGORY_NAME,
+            ("debug_annotation.proto", "DebugAnnotation", "name_iid"):
+                trackevent.ANNOTATION_NAME_IID,
+            ("debug_annotation.proto", "DebugAnnotation", "int_value"):
+                trackevent.ANNOTATION_INT_VALUE,
+            ("debug_annotation.proto", "DebugAnnotation", "string_value"):
+                trackevent.ANNOTATION_STRING_VALUE,
+            ("debug_annotation.proto", "DebugAnnotationName", "iid"):
+                trackevent.DEBUG_ANNOTATION_NAME_IID_FIELD,
+            ("debug_annotation.proto", "DebugAnnotationName", "name"):
+                trackevent.DEBUG_ANNOTATION_NAME_NAME,
+            ("interned_data.proto", "InternedData", "event_categories"):
+                trackevent.INTERNED_EVENT_CATEGORIES,
+            ("interned_data.proto", "InternedData", "debug_annotation_names"):
+                trackevent.INTERNED_DEBUG_ANNOTATION_NAMES,
         }
         wrong = []
         for (proto, block, field), ours in expected.items():

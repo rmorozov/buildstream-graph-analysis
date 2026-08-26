@@ -218,6 +218,27 @@ empty.
   every entry carries `spine+hook` / `spine-only` / `hook-only`, and
   coverage stops being a footnote and becomes a count. Verified at scale:
   **127,632 processes on freedesktop-sdk, all one class**.
+- **A slice says what `bga` knows about it** (`UX-308`). A slice used
+  to carry its name alone, and for Plane 2 that name is the command
+  truncated to 120 characters - so the argv tail that tells two
+  compiler invocations apart was not in the trace at all. Perfetto's
+  vocabulary for this is **debug annotations**, and the timeline now
+  writes them: per Plane 2 slice `cmd` (whole), `src`, `cpu_us`,
+  `max_rss_kb`, `exit_status`, `exec_chain`; per Plane 1 task
+  `element`, `element_kind`, `task_type`, `outcome`. A process that did
+  not exit `0` also gets the `failed` **category**, which is what makes
+  a class of slice filterable in the UI and selectable in SQL - and
+  which is the constant `UX-298` pinned as "reserved rather than used".
+  The keys are a contract (`PLANE1_ANNOTATIONS` / `PLANE2_ANNOTATIONS`
+  in `tools/bga_timeline.py`, rendered by `UX-312`'s trace dictionary),
+  because renaming one silently breaks a saved query; the guard holds
+  the emitted set and the documented set equal in both directions. An
+  absent field is an absent key rather than a zero: the hook cannot
+  observe an exit status, and `0` there would state that the process
+  succeeded. Measured on `examples/06`, 825 slices: 100,922 to 330,188 B
+  uncompressed and 27,013 to 51,102 B gzipped - the whole command line
+  is nearly all of it, and on that capture 412 of 813 records run past
+  the 120-character name.
 - **Extraction is one pass over the log, holding no events**
   (`UX-297`). Parsing and pairing were two phases with the whole event
   list between them, because `pair_events` sorted globally before
@@ -786,6 +807,40 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-26 (after `UX-308`), re-grounded in
+`tools/native_trace/trackevent.py`'s annotation and category writers,
+in `tools/bga_timeline.py`'s `PLANE1_ANNOTATIONS` /
+`PLANE2_ANNOTATIONS`, and in
+`tests/unit/test_the_slice_says_what_bga_knows.py`. The field numbers
+were fetched again rather than remembered: `track_event.proto` and
+`interned_data.proto` came back **byte-identical** to what `UX-298`
+pinned, and `debug_annotation.proto` is recorded beside them with its
+own sha256. The Plane 2 bullet now says what a slice carries, which
+until this round was only its name.
+
+`UX-298`'s non-vacuity clause - "the table above must cover what the
+module pins" - caught all ten new constants the moment they were added,
+before any of the work below.
+
+Six mutations against the committed tree, all discriminating:
+
+```text
+M1  a contract key is emitted under a different name       2 red
+M2  a key is documented and never written                  1 red
+M3  the failed category is on every process                2 red
+M4  an absent field is annotated as zero                   2 red
+M5  the full command is truncated like the name            1 red
+M6  the annotations move to the slice end                  1 red
+```
+
+**A finding the first draft made and the record refuted.** `spine.c`
+writes `exit=%d` for a normal exit and `exit=signal:%d` for a killed
+one, so `exit_status` is a *string with a vocabulary*, not a number.
+The first failed-category rule read `status not in (None, 0)` - which
+would have marked **every** process failed, because `"0"` is not `0`.
+Success is exactly the string `"0"`, and the constant that says so has
+a name and three assertions on it.
 
 Updated 2026-08-26 (after `UX-297`), re-grounded in
 `tools/bst_native_build_tracer.py`'s `stream_trace_events` /

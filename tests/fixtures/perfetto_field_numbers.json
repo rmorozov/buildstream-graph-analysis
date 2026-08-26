@@ -1,8 +1,24 @@
 {
   "files": {
+    "debug_annotation.proto": {
+      "numbers": {
+        "DebugAnnotation": {
+          "int_value": 4,
+          "name_iid": 1,
+          "string_value": 6
+        },
+        "DebugAnnotationName": {
+          "iid": 1,
+          "name": 2
+        }
+      },
+      "sha256": "3927ee166f7e7482465b5fe1cc43d82bd3c76ad03133532f13d1eb620d9f9cad"
+    },
     "interned_data.proto": {
       "numbers": {
         "InternedData": {
+          "debug_annotation_names": 3,
+          "event_categories": 1,
           "event_names": 2
         }
       },
@@ -66,6 +82,10 @@
     },
     "track_event.proto": {
       "numbers": {
+        "EventCategory": {
+          "iid": 1,
+          "name": 2
+        },
         "EventName": {
           "iid": 1,
           "name": 2
@@ -73,6 +93,7 @@
         "TrackEvent": {
           "category_iids": 3,
           "counter_value": 30,
+          "debug_annotations": 4,
           "name_iid": 10,
           "track_uuid": 11,
           "type": 9

@@ -35,7 +35,7 @@ import os
 import shutil
 import sys
 import tempfile
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 HELP = """Render one Chrome-trace timeline for a snapshot, both planes in it.
 
@@ -67,6 +67,169 @@ DEFAULT_OUTPUT = {
 # Perfetto counts in nanoseconds; both planes here count in
 # microseconds, and Plane 2 in seconds before that.
 NS_PER_US = 1000
+
+# --------------------------------------------------------------------------
+# `UX-308`: the trace dictionary's slice half.
+#
+# A slice used to carry its name and nothing else, and for Plane 2 that
+# name is the command **truncated to 120 characters** - so the argv tail
+# that tells two compiler invocations apart was not in the trace at all.
+# Everything below was already in the record or the run directory; none
+# of it is new capture.
+#
+# These keys are a **contract**, not a convenience. They are what a
+# details panel shows, what `extract_arg(arg_set_id, 'debug.<key>')`
+# selects on, and what `UX-312`'s canned questions are written against -
+# so renaming one silently breaks a query someone saved. The guard holds
+# the emitted set and this table equal in both directions.
+#
+# Order is the order a reader meets them: the thing they opened the
+# slice for first.
+PLANE2_ANNOTATIONS = (
+    ("cmd", "the full command line, untruncated - the slice name is the "
+            "first 120 characters and this is the rest"),
+    ("src", "which mechanism recorded it: `hook` (the LD_PRELOAD hook, "
+            "loaded at exec) or `spine` (the ptrace supervisor)"),
+    ("cpu_us", "CPU microseconds this process itself used, from its own "
+               "`getrusage` at exit or the spine's read at the exit-stop"),
+    ("max_rss_kb", "peak resident kilobytes of this process alone - never "
+                   "summed with another's, which never held it at the same "
+                   "moment"),
+    ("exit_status", "how it ended, in the spine's own vocabulary: a "
+                    "decimal exit code, or `signal:N` for a process the "
+                    "kernel killed. The hook cannot see one - its "
+                    "destructor runs before the process has a status, and "
+                    "not at all when it is killed - so a hook-only record "
+                    "carries no key rather than a zero"),
+    ("exec_chain", "how many `execve`s this one record collapses - a shell "
+                   "that exec'd a compiler is one process and two commands"),
+)
+
+PLANE1_ANNOTATIONS = (
+    ("element", "the BuildStream element this task is for"),
+    ("element_kind", "its kind from the run's own graph (`cmake`, `import`, "
+                     "`manual`, ...), or `unknown` where the capture "
+                     "recorded none"),
+    ("task_type", "what the scheduler was doing: `build`, `fetch`, `pull`, "
+                  "`push`, `track`"),
+    ("outcome", "the status BuildStream's log closed the task with - "
+                "`SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache "
+                "outcome is the last two, and only where the log states it"),
+)
+
+# The one category, and the one already-pinned constant it earns
+# (`EVENT_CATEGORY_IIDS`, reserved by `UX-298` and unused until now).
+# A category is what makes a class of slice filterable in the UI and
+# selectable in SQL, and "the work that failed" is the class a reader
+# opening a broken build's trace is looking for.
+CATEGORY_FAILED = "failed"
+
+
+def _plane2_annotations(record: dict):
+    """`PLANE2_ANNOTATIONS`, filled from one record.
+
+    A key whose field the record does not carry is **absent**, not
+    empty: a hook record has no `exit_status` because the hook cannot
+    see one, and writing `0` there would state that the process
+    succeeded.
+    """
+    values = {
+        "cmd": record.get("cmd") or None,
+        "src": record.get("src"),
+        "cpu_us": record.get("cpu_us"),
+        "max_rss_kb": record.get("max_rss_kb"),
+        "exit_status": record.get("exit_status"),
+        "exec_chain": record.get("exec_chain"),
+    }
+    return [(key, values[key]) for key, _ in PLANE2_ANNOTATIONS
+            if values[key] is not None]
+
+
+# The one value that means "this process succeeded". `spine.c` writes
+# `exit=%d` for a normal exit and `exit=signal:%d` for a killed one, so
+# the status is a **string with a vocabulary**, not a number - and
+# `"0"` is the whole of the success half of it. Comparing it to the
+# integer `0` would have called every process a failure; comparing
+# truthiness would have called `"0"` a failure too.
+EXIT_STATUS_OK = "0"
+
+
+def _plane2_categories(record: dict):
+    """`failed` on a process that did not exit 0, and on nothing else.
+
+    A record with no `exit_status` at all is **not** categorised: the
+    hook cannot observe one, so its absence is missing evidence rather
+    than evidence of success, and marking those slices either way would
+    state something the capture does not know.
+    """
+    status = record.get("exit_status")
+    if status is None or str(status) == EXIT_STATUS_OK:
+        return ()
+    return (CATEGORY_FAILED,)
+
+
+def element_kinds(snapshot: str) -> dict:
+    """element uid -> its kind, from the run's own graph.
+
+    `UX-308`. The kind is a Plane 1 fact that Plane 1's *log* never
+    states - it is in `run/graph.json`, which the capture already wrote
+    and which is one small entry per element. A snapshot without one
+    (or with one this reader cannot parse) yields `{}` and every task
+    annotates `unknown`, which is the honest answer rather than a
+    missing key.
+    """
+    path = os.path.join(snapshot, RUN_SUBDIR, "graph.json")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            graph = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    kinds = {}
+    for element in graph.get("elements") or ():
+        uid = element.get("uid")
+        if uid:
+            kinds[uid] = element.get("element_kind") or "unknown"
+    return kinds
+
+
+def _plane1_outcomes(events) -> dict:
+    """`id(begin event)` -> the status its own end reported.
+
+    The outcome is only known when the task closes, and the annotations
+    ride the **begin** (`slice_begin`'s own rule). Plane 1 is a handful
+    of tasks already held as a list, so pairing B to E by track and
+    order costs nothing and puts the whole answer on one packet - rather
+    than splitting a slice's facts across two, which a reader would have
+    to reassemble.
+    """
+    open_by_tid: Dict[int, list] = {}
+    outcomes = {}
+    for event in events:
+        phase = event.get("ph")
+        if phase == "B":
+            open_by_tid.setdefault(event.get("tid", 0), []).append(event)
+        elif phase == "E":
+            pending = open_by_tid.get(event.get("tid", 0))
+            if pending:
+                began = pending.pop()
+                status = (event.get("args") or {}).get("Status")
+                if status:
+                    outcomes[id(began)] = status
+    return outcomes
+
+
+def _plane1_annotations(event: dict, kinds: dict, outcome) -> list:
+    args = event.get("args") or {}
+    element = args.get("element")
+    values = {
+        "element": element,
+        "element_kind": kinds.get(element, "unknown") if element else None,
+        "task_type": args.get("action"),
+        "outcome": outcome,
+    }
+    return [(key, values[key]) for key, _ in PLANE1_ANNOTATIONS
+            if values[key] is not None]
+
 
 
 def _raw_log(snapshot: str) -> Optional[str]:
@@ -193,7 +356,8 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
         anchor_element)
 
 
-def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output):
+def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
+                      kinds=None):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -211,6 +375,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output):
 
     offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
                  if anchor_element else 0.0)
+    kinds = kinds or {}
+    outcomes = _plane1_outcomes(plane1_events)
 
     with TrackEventWriter(output) as trace:
         # Plane 1: one lane, one thread track per task tid, which is
@@ -232,7 +398,10 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output):
                     pid=1, tid=tid)
             timestamp = int(round(event["ts"] * NS_PER_US))
             if phase == "B":
-                trace.slice_begin(timestamp, track, event.get("name") or "task")
+                trace.slice_begin(
+                    timestamp, track, event.get("name") or "task",
+                    annotations=_plane1_annotations(
+                        event, kinds, outcomes.get(id(event))))
             else:
                 trace.slice_end(timestamp, track)
 
@@ -280,15 +449,25 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output):
                         pid=pid, tid=record["pid"])
                 start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US
                                      + offset_us * NS_PER_US))
+                # `UX-308`: the name stays 120 characters - a lane is
+                # read at a glance - and the full argv rides beside it
+                # as an annotation, which is where length belongs.
                 name = (record.get("cmd") or "")[:120] or "process"
+                annotations = _plane2_annotations(record)
+                categories = _plane2_categories(record)
                 if record["open"] or record["end_ts"] is None:
                     # No observed exit. An instant, never a zero-width
                     # bar and never a fabricated end (`UX-188`).
-                    trace.instant(start_ns, thread, f"{name} (no observed exit)")
+                    trace.instant(start_ns, thread,
+                                  f"{name} (no observed exit)",
+                                  annotations=annotations,
+                                  categories=categories)
                     continue
                 end_ns = int(round(record["end_ts"] * 1e6 * NS_PER_US
                                    + offset_us * NS_PER_US))
-                trace.slice_begin(start_ns, thread, name)
+                trace.slice_begin(start_ns, thread, name,
+                                  annotations=annotations,
+                                  categories=categories)
                 trace.slice_end(max(end_ns, start_ns), thread)
         return trace.packets, trace.slices, trace.tracks
 
@@ -341,7 +520,8 @@ def render(snapshot: str, output: str,
 
         if fmt == FORMAT_TRACKEVENT:
             packets, slices, tracks = _write_trackevent(
-                plane1_events, raw if anchor else None, spans, anchor, output)
+                plane1_events, raw if anchor else None, spans, anchor, output,
+                kinds=element_kinds(snapshot))
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
                       "anchor": anchor, "raw_log": raw, "format": fmt,
                       "packets": packets, "slices": slices, "tracks": tracks}

@@ -31,17 +31,30 @@ trace.proto              Trace.packet = 1
 trace_packet.proto       timestamp = 8, trusted_packet_sequence_id = 10,
                          track_event = 11, interned_data = 12,
                          sequence_flags = 13, track_descriptor = 60
-track_event.proto        category_iids = 3, type = 9, name_iid = 10,
+track_event.proto        category_iids = 3, debug_annotations = 4,
+                         type = 9, name_iid = 10,
                          track_uuid = 11, name = 23, counter_value = 30
                          TYPE_SLICE_BEGIN = 1, TYPE_SLICE_END = 2,
                          TYPE_INSTANT = 3, TYPE_COUNTER = 4
+                         EventCategory.iid = 1, EventCategory.name = 2
                          EventName.iid = 1, EventName.name = 2
+debug_annotation.proto   DebugAnnotation.name_iid = 1, int_value = 4,
+                         string_value = 6
+                         DebugAnnotationName.iid = 1, .name = 2
 track_descriptor.proto   uuid = 1, name = 2, process = 3, thread = 4,
                          parent_uuid = 5
 process_descriptor.proto pid = 1, process_name = 6
 thread_descriptor.proto  pid = 1, tid = 2, thread_name = 5
-interned_data.proto      event_names = 2
+interned_data.proto      event_categories = 1, event_names = 2,
+                         debug_annotation_names = 3
 ```
+
+`UX-308` added the second block and the two interning tables beside
+it, read the same way: `debug_annotation.proto` and `interned_data.proto`
+fetched from the same tree and checked against the fixture's recorded
+sha256, not remembered. `track_event.proto` and `interned_data.proto`
+came back byte-identical to what `UX-298` pinned, which is the evidence
+that the numbers above are still the numbers upstream means.
 """
 import gzip
 import struct
@@ -86,6 +99,10 @@ THREAD_NAME = 5
 
 # --- TrackEvent ----------------------------------------------------------
 EVENT_CATEGORY_IIDS = 3
+# UX-308: `repeated DebugAnnotation debug_annotations = 4`. This is the
+# field the details panel reads and the field `extract_arg` extracts
+# from; without it a slice carries its name and nothing else.
+EVENT_DEBUG_ANNOTATIONS = 4
 EVENT_TYPE = 9
 EVENT_NAME_IID = 10
 EVENT_TRACK_UUID = 11
@@ -98,18 +115,45 @@ TYPE_INSTANT = 3
 # an event stream may carry only what a capture measured.
 TYPE_COUNTER = 4
 
-# --- InternedData / EventName --------------------------------------------
+# --- DebugAnnotation -----------------------------------------------------
+# The name is a `oneof`: interned (`name_iid`) or literal (`name = 10`).
+# Interned, here - a million slices carry the same handful of keys, and
+# the key is exactly the kind of repeated short string interning exists
+# for.
+ANNOTATION_NAME_IID = 1
+# The value is a `oneof` too. Two of its arms are used: `int_value`
+# (`int64`) for every number, `string_value` for everything else -
+# including the exit status, which is a *vocabulary* (`3`, `signal:9`)
+# rather than a number. `uint_value = 3` is deliberately not used: one
+# signed arm is one decoding rule, and nothing here is large enough for
+# the extra bit to matter.
+ANNOTATION_INT_VALUE = 4
+ANNOTATION_STRING_VALUE = 6
+
+# --- InternedData / EventName / EventCategory / DebugAnnotationName ------
+# Each interning table has its own iid space: an `EventName` iid and a
+# `DebugAnnotationName` iid of 1 are different names. Three counters,
+# not one - sharing one would still decode, and would waste the low
+# iids that make the varints short.
+INTERNED_EVENT_CATEGORIES = 1
 INTERNED_EVENT_NAMES = 2
+INTERNED_DEBUG_ANNOTATION_NAMES = 3
 EVENT_NAME_IID_FIELD = 1
 EVENT_NAME_NAME = 2
+EVENT_CATEGORY_IID_FIELD = 1
+EVENT_CATEGORY_NAME = 2
+DEBUG_ANNOTATION_NAME_IID_FIELD = 1
+DEBUG_ANNOTATION_NAME_NAME = 2
 
 
 def varint(value: int) -> bytes:
     """Base-128, low group first, high bit set on every group but the last."""
     if value < 0:
         # Protobuf encodes a negative int64 as a 10-byte varint of its
-        # two's complement. Nothing here emits one, but a silent wrong
-        # answer is worse than a long encoding.
+        # two's complement. Nothing here emits one - every number `bga`
+        # annotates is a count, a duration or a size - but a silent
+        # wrong answer is worse than a long encoding, and `int_field`
+        # exists so that a future one is not read as 2**64 - n.
         value += 1 << 64
     out = bytearray()
     while True:
@@ -127,6 +171,13 @@ def tag(field: int, wire: int) -> bytes:
 
 
 def uint_field(field: int, value: int) -> bytes:
+    return tag(field, WIRE_VARINT) + varint(value)
+
+
+def int_field(field: int, value: int) -> bytes:
+    """A signed `int64` field. Same wire shape as `uint_field` - the
+    difference is the reader's, and naming it at the call site is how a
+    negative value stays readable rather than becoming 2**64 - n."""
     return tag(field, WIRE_VARINT) + varint(value)
 
 
@@ -162,9 +213,16 @@ class TrackEventWriter:
         self._handle = (gzip.open(path, "wb", compresslevel=6) if compress
                         else open(path, "wb"))
         self._sequence_id = sequence_id
-        self._names: Dict[str, int] = {}
-        self._pending_names: list = []
-        self._next_iid = 1
+        # UX-308: three interning tables, each with its own iid space
+        # (`InternedData` field number -> {name: iid}) and its own
+        # pending queue, because a table's definitions ride on the next
+        # packet that refers to them.
+        self._tables: Dict[int, Dict[str, int]] = {
+            INTERNED_EVENT_NAMES: {},
+            INTERNED_EVENT_CATEGORIES: {},
+            INTERNED_DEBUG_ANNOTATION_NAMES: {},
+        }
+        self._pending: Dict[int, list] = {field: [] for field in self._tables}
         self._next_uuid = 1
         self._first = True
         self.packets = 0
@@ -204,31 +262,89 @@ class TrackEventWriter:
         return (uint_field(PACKET_SEQUENCE_ID, self._sequence_id)
                 + uint_field(PACKET_SEQUENCE_FLAGS, flags))
 
-    def _intern(self, name: str) -> int:
-        """The iid for a name, queueing its definition if it is new.
+    # `InternedData` field -> the (iid, name) field numbers of its entry
+    # message. All three entry messages happen to be `iid = 1, name = 2`,
+    # and they are written out rather than assumed, because "they are the
+    # same today" is not a wire guarantee.
+    _ENTRY_FIELDS = {
+        INTERNED_EVENT_NAMES: (EVENT_NAME_IID_FIELD, EVENT_NAME_NAME),
+        INTERNED_EVENT_CATEGORIES: (EVENT_CATEGORY_IID_FIELD,
+                                    EVENT_CATEGORY_NAME),
+        INTERNED_DEBUG_ANNOTATION_NAMES: (DEBUG_ANNOTATION_NAME_IID_FIELD,
+                                          DEBUG_ANNOTATION_NAME_NAME),
+    }
+
+    def _intern(self, name: str, table: int = INTERNED_EVENT_NAMES) -> int:
+        """The iid for a name in one table, queueing it if it is new.
 
         Interning is why a million slices of forty distinct commands
-        cost forty strings. The definition rides on the next packet
-        written, which is the packet that first refers to it - a reader
-        meets the name before it needs it.
+        cost forty strings - and why a million slices carrying six
+        annotation keys cost six. The definition rides on the next
+        packet written, which is the packet that first refers to it, so
+        a reader meets the name before it needs it.
         """
-        iid = self._names.get(name)
+        entries = self._tables[table]
+        iid = entries.get(name)
         if iid is None:
-            iid = self._names[name] = self._next_iid
-            self._next_iid += 1
-            self._pending_names.append((iid, name))
+            iid = entries[name] = len(entries) + 1
+            self._pending[table].append((iid, name))
         return iid
 
     def _take_interned(self) -> bytes:
-        if not self._pending_names:
+        if not any(self._pending.values()):
             return b""
-        entries = b"".join(
-            bytes_field(INTERNED_EVENT_NAMES,
-                        uint_field(EVENT_NAME_IID_FIELD, iid)
-                        + string_field(EVENT_NAME_NAME, name))
-            for iid, name in self._pending_names)
-        self._pending_names.clear()
+        entries = b""
+        for table, queued in self._pending.items():
+            if not queued:
+                continue
+            iid_field, name_field = self._ENTRY_FIELDS[table]
+            entries += b"".join(
+                bytes_field(table,
+                            uint_field(iid_field, iid)
+                            + string_field(name_field, name))
+                for iid, name in queued)
+            queued.clear()
         return bytes_field(PACKET_INTERNED_DATA, entries)
+
+    def _annotations(self, annotations) -> bytes:
+        """`repeated DebugAnnotation`, one per key, name interned.
+
+        `annotations` is an iterable of `(key, value)` - a sequence
+        rather than a mapping, because the order a details panel shows
+        them in is the order they are written and that order is a
+        decision (`cmd` first: it is the one a reader opened the slice
+        for). A `None` value is dropped rather than written as an empty
+        string: an annotation that is absent and an annotation that is
+        empty say different things, and only the first is true of a
+        record that never carried the field.
+        """
+        out = b""
+        for key, value in annotations:
+            if value is None:
+                continue
+            payload = uint_field(ANNOTATION_NAME_IID,
+                                 self._intern(key,
+                                              INTERNED_DEBUG_ANNOTATION_NAMES))
+            if isinstance(value, bool):
+                # Before `int`, which `bool` is a subclass of. Written as
+                # its word rather than as 0/1, because these are read by
+                # a person in a details panel.
+                payload += string_field(ANNOTATION_STRING_VALUE,
+                                        "true" if value else "false")
+            elif isinstance(value, int):
+                payload += int_field(ANNOTATION_INT_VALUE, value)
+            else:
+                payload += string_field(ANNOTATION_STRING_VALUE, str(value))
+            out += bytes_field(EVENT_DEBUG_ANNOTATIONS, payload)
+        return out
+
+    def _categories(self, categories) -> bytes:
+        """`repeated uint64 category_iids`, which is what makes a class
+        of slice filterable in the UI and selectable in SQL."""
+        return b"".join(
+            uint_field(EVENT_CATEGORY_IIDS,
+                       self._intern(category, INTERNED_EVENT_CATEGORIES))
+            for category in categories)
 
     # -- tracks -----------------------------------------------------------
     def _uuid(self) -> int:
@@ -267,10 +383,24 @@ class TrackEventWriter:
         return uuid
 
     # -- events -----------------------------------------------------------
-    def slice_begin(self, timestamp_ns: int, track: int, name: str) -> None:
+    def slice_begin(self, timestamp_ns: int, track: int, name: str,
+                    annotations=(), categories=()) -> None:
+        """A slice opens, carrying what is known about it.
+
+        `annotations` are `(key, value)` pairs (`UX-308`) - the details
+        panel's contents, and what `extract_arg` extracts. They go on
+        the **begin**, never on the end: the end of a slice carries no
+        name for the same reason, and a reader assembling one slice from
+        two packets should have to read one of them.
+
+        `categories` are names, interned; a slice that has one is
+        filterable in the UI and selectable in SQL by it.
+        """
         event = (uint_field(EVENT_TYPE, TYPE_SLICE_BEGIN)
                  + uint_field(EVENT_TRACK_UUID, track)
-                 + uint_field(EVENT_NAME_IID, self._intern(name)))
+                 + uint_field(EVENT_NAME_IID, self._intern(name))
+                 + self._categories(categories)
+                 + self._annotations(annotations))
         self._write_packet(self._sequence_prefix()
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
                            + self._take_interned()
@@ -290,13 +420,20 @@ class TrackEventWriter:
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
                            + bytes_field(PACKET_TRACK_EVENT, event))
 
-    def instant(self, timestamp_ns: int, track: int, name: str) -> None:
+    def instant(self, timestamp_ns: int, track: int, name: str,
+                annotations=(), categories=()) -> None:
         """A moment rather than a span - what a process with no observed
         exit gets, because a zero-width bar reads as "instantaneous" and
-        `bga` does not fabricate an end it never saw."""
+        `bga` does not fabricate an end it never saw.
+
+        It carries the same annotations a slice does: a process whose
+        exit was never seen is exactly the one a reader wants the full
+        command line of."""
         event = (uint_field(EVENT_TYPE, TYPE_INSTANT)
                  + uint_field(EVENT_TRACK_UUID, track)
-                 + uint_field(EVENT_NAME_IID, self._intern(name)))
+                 + uint_field(EVENT_NAME_IID, self._intern(name))
+                 + self._categories(categories)
+                 + self._annotations(annotations))
         self._write_packet(self._sequence_prefix()
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
                            + self._take_interned()

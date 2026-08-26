@@ -86,6 +86,23 @@ NS_PER_US = 1000
 # Order is the order a reader meets them: the thing they opened the
 # slice for first.
 PLANE2_ANNOTATIONS = (
+    # `UX-321`: **the join key, on both planes.** `UX-210` designed
+    # `element-commands` around "the element uid both planes carry", and
+    # `UX-308` gave the key to Plane 1 only - so the question filtered
+    # Plane 2 slices on a key no Plane 2 slice had and returned zero rows
+    # on every trace this emitter can write, silently, because
+    # `extract_arg` on an absent key is NULL rather than an error.
+    #
+    # The alternative was to route the question through the lane's
+    # *name* (`native: <element>`), and it is declined: the name is a
+    # label - it carries the kind in brackets and is built for a reader
+    # at a glance - while the uid is the identity the rest of the tool
+    # joins on. A question that parsed a label would be reading the
+    # presentation to recover the data.
+    ("element", "the BuildStream element this belongs to - the task it is "
+                "for on Plane 1, the sandbox the process ran in on Plane 2. "
+                "The same uid on both, which is what lets one query join "
+                "them"),
     ("cmd", "the full command line, untruncated - the slice name is the "
             "first 120 characters and this is the rest"),
     ("src", "which mechanism recorded it: `hook` (the LD_PRELOAD hook, "
@@ -106,7 +123,10 @@ PLANE2_ANNOTATIONS = (
 )
 
 PLANE1_ANNOTATIONS = (
-    ("element", "the BuildStream element this task is for"),
+    ("element", "the BuildStream element this belongs to - the task it is "
+                "for on Plane 1, the sandbox the process ran in on Plane 2. "
+                "The same uid on both, which is what lets one query join "
+                "them"),
     ("element_kind", "its kind from the run's own graph (`cmake`, `import`, "
                      "`manual`, ...), or `unknown` where the capture "
                      "recorded none"),
@@ -155,6 +175,10 @@ def _plane2_annotations(record: dict):
     succeeded.
     """
     values = {
+        # `UX-321`: the join key. Absent rather than `"unknown"` where
+        # the record has none - a query that matched `unknown` would be
+        # answering about a bucket rather than about an element.
+        "element": record.get("element") or None,
         "cmd": record.get("cmd") or None,
         "src": record.get("src"),
         "cpu_us": record.get("cpu_us"),
@@ -395,12 +419,52 @@ IDENTITY_ANNOTATIONS = (
     ("lane_order", "the rule the element lanes are ordered by"),
 )
 
-# The whole trace dictionary's slice half, in one name. Three sets, one
-# contract: a query does not care which plane a key came from, and the
-# guard that holds emitted-equals-documented has to see all of them or
-# it is only checking the ones it remembers.
-ANNOTATION_CONTRACT = (PLANE1_ANNOTATIONS + PLANE2_ANNOTATIONS
-                       + IDENTITY_ANNOTATIONS)
+# The scope each key rides on, keyed by scope name - which is also the
+# category the emitter tags those slices with, so "which plane carries
+# this key" and "which slices a query selects" are the same vocabulary.
+#
+# `UX-321`: this used to be three lists concatenated, and the union was
+# the only thing anyone could ask. That is exactly the question that
+# cannot catch a question keyed outside its plane: `element` is in the
+# union whether Plane 2 carries it or not, and for two rounds it did
+# not.
+ANNOTATION_SCOPES = {
+    CATEGORY_PLANE1: PLANE1_ANNOTATIONS,
+    CATEGORY_PLANE2: PLANE2_ANNOTATIONS,
+    CATEGORY_RUN: IDENTITY_ANNOTATIONS,
+}
+
+
+def scopes_of(key: str) -> tuple:
+    """Which scopes carry `key`, in the order the scopes are declared."""
+    return tuple(scope for scope, keys in ANNOTATION_SCOPES.items()
+                 if any(name == key for name, _ in keys))
+
+
+def _one_contract():
+    """The union, in declaration order, each key once.
+
+    `element` rides two scopes with one description (`UX-321`), so the
+    union has to dedupe or the dictionary would document it twice and
+    the emitted-equals-documented guard would compare a list against a
+    set.
+    """
+    seen, out = set(), []
+    for keys in ANNOTATION_SCOPES.values():
+        for key, description in keys:
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append((key, description))
+    return tuple(out)
+
+
+# The whole trace dictionary's slice half, in one name. Three scopes,
+# one contract: a query does not care which plane a key came from, and
+# the guard that holds emitted-equals-documented has to see all of them
+# or it is only checking the ones it remembers. Which *scope* a key
+# rides is `scopes_of`, and that is the question `UX-321` needed.
+ANNOTATION_CONTRACT = _one_contract()
 
 # `UX-311`'s deviation, named where the value is produced rather than
 # only in the task file. The item asks for the *critical path* first,

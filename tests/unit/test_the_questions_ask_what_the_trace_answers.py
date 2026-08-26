@@ -99,6 +99,42 @@ class TestEveryQuestionNamesEmittedVocabulary:
             f"converter's namespace; a TrackEvent debug annotation is "
             f"`debug.<key>`")
 
+    def test_every_key_is_carried_by_the_plane_the_question_scopes_to(self):
+        """`UX-321`'s per-scope guard, and the survivor it was filed
+        for.
+
+        `element-commands` selects Plane 2 slices - `category glob
+        '*native-process*'` - and read `debug.element`, a key the
+        contract gave Plane 1 only. It returned zero rows on every trace
+        this emitter can write, silently, because `extract_arg` on an
+        absent key is NULL rather than an error; and the dictionary
+        guard could not see it, because it asks whether a key is in the
+        **union**.
+
+        So the question is asked per scope: for each category a query
+        filters on, every key it reads must be one that scope carries.
+        `failed` is not a scope - it is a second category on a Plane 2
+        slice - so a query scoped by it inherits Plane 2's keys.
+        """
+        from tools.bga_timeline import scopes_of
+
+        wrong = {}
+        for question in _questions():
+            scoped = _categories(question["sql"]) - {
+                bga_timeline.CATEGORY_FAILED}
+            if not scoped:
+                continue
+            for key in _arg_keys(question["sql"]):
+                carried = set(scopes_of(key))
+                if scoped & carried:
+                    continue
+                wrong.setdefault(question["id"], []).append(
+                    (key, sorted(scoped), sorted(carried)))
+        assert wrong == {}, (
+            f"question(s) reading a key the plane they filter on does not "
+            f"carry - the query is structurally dead and says nothing about "
+            f"it: {wrong}")
+
     def test_every_category_is_one_the_emitter_emits(self):
         unknown = {}
         for question in _questions():
@@ -181,14 +217,41 @@ class TestTheTraceDictionaryIsTheOneDocumentedPlace:
             f"documented key(s) the emitter never writes: {sorted(extra)}. A "
             f"reader would build a query on them and get nothing back")
 
+    #: The dictionary's spelling of each emitted scope. The emitter's
+    #: names are its categories, and a reader scopes a query by them -
+    #: so the two vocabularies are held equal rather than each held to
+    #: itself (`UX-321`).
+    SCOPE_NAMES = {"Plane 1": "bst-builder", "Plane 2": "native-process",
+                   "run": "bst-invocation"}
+
     def test_every_key_says_which_plane_it_rides(self):
         rows = self._key_rows()
         assert len(rows) == len(CONTRACT), (len(rows), len(CONTRACT))
-        planes = {"Plane 1", "Plane 2", "run"}
         for key, plane in rows:
-            assert plane.strip() in planes, (
-                f"`{key}` rides {plane.strip()!r}; a key belongs to one of "
-                f"{sorted(planes)} and a reader scopes their query by it")
+            named = [part.strip() for part in plane.split(",")]
+            assert named, key
+            for one in named:
+                assert one in self.SCOPE_NAMES, (
+                    f"`{key}` rides {one!r}; a key rides one or more of "
+                    f"{sorted(self.SCOPE_NAMES)} and a reader scopes their "
+                    f"query by them")
+
+    def test_the_documented_scopes_are_the_emitted_ones(self):
+        """`UX-321`'s per-scope membership, held in both directions.
+
+        The union was the only question anyone could ask before, and it
+        is exactly the question that cannot see a query keyed outside
+        its plane: `element` was in the union whether Plane 2 carried it
+        or not, and for two rounds it did not.
+        """
+        from tools.bga_timeline import scopes_of
+
+        for key, plane in self._key_rows():
+            documented = tuple(self.SCOPE_NAMES[part.strip()]
+                               for part in plane.split(","))
+            assert set(documented) == set(scopes_of(key)), (
+                f"`{key}` is documented as riding {documented} and the "
+                f"emitter puts it on {scopes_of(key)}")
 
     def test_the_stability_rule_is_written_down(self):
         _documented, text = self._documented()

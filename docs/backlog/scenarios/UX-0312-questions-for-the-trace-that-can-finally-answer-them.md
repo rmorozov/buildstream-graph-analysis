@@ -91,9 +91,13 @@ contract key a *finished* run never emits, so the coverage clause takes
 the union over two traces - one finished, one interrupted - rather than
 pretending a single capture carries the whole vocabulary.
 
-**Still open: the one-time `ui.perfetto.dev` open.** The same network
-policy refuses that host. It cannot be done from here, and saying
-otherwise would be claiming a thing not done.
+**Closed since, by `UX-314`.** This paragraph read "still open: the
+one-time `ui.perfetto.dev` open - the same network policy refuses that
+host", and it was right when it was written and stale by the end of the
+same round. `UX-314` found the way: the host is refused at CONNECT, and
+the bucket serving it is not, so the deployed UI mirrors byte-for-byte
+and the handoff was driven in a real browser. `UX-298`'s file recorded
+that closure and this one did not; `UX-321` reconciled them.
 
 **Not started: this item's own body.** The trace dictionary in one
 documented place, and the canned question library grown to the

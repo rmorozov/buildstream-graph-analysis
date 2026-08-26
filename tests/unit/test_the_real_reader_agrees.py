@@ -44,7 +44,6 @@ dropped.
 """
 import gzip
 import json
-import os
 import pathlib
 import shutil
 import subprocess
@@ -55,6 +54,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+
+import trace_processor  # noqa: E402
 
 from tools.bga_timeline import (  # noqa: E402
     ANNOTATION_CONTRACT, CONCURRENCY_COUNTER, render)
@@ -62,21 +64,18 @@ from tools.bga_timeline import (  # noqa: E402
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 
 
-def _shell():
-    """The binary, or `None`."""
-    named = os.environ.get("BGA_TRACE_PROCESSOR")
-    if named and os.path.isfile(named) and os.access(named, os.X_OK):
-        return named
-    return shutil.which("trace_processor_shell")
-
-
-# The reason string is `test_the_perfetto_handoff.py`'s, verbatim, and
-# deliberately so: the skip census counts by reason, and a second
-# wording for "the same optional tool is absent" would split one family
-# into two for no gain. Where to get one is in this module's docstring,
-# which is where a reader who hits the skip will look.
+# `UX-321`: one gate, in `tests/trace_processor.py`. This module
+# honoured `BGA_TRACE_PROCESSOR` and its sibling did not, so a machine
+# with the binary in an unusual place ran half the clauses that could
+# have run - and the skip census counted the other half as "the tool is
+# absent". Where to get one is in this module's docstring, which is
+# where a reader who hits the skip will look.
 needs_trace_processor = pytest.mark.skipif(
-    _shell() is None, reason="trace_processor_shell is not installed")
+    trace_processor.shell() is None, reason=trace_processor.REASON)
+
+
+def _shell():
+    return trace_processor.shell()
 
 
 # One of everything the four items emit, so the reader has something of

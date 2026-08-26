@@ -33,10 +33,19 @@ rule - and gzip absorbs most of it.
 `trace_processor` resolve `extract_arg` for each key. There is still no
 `trace_processor` in CI - `UX-298`'s own open deviation, which
 `UX-312` absorbs as its first clause - so the decoding below is done by
-the in-repo protobuf reader, written from the wire rules rather than
-from the emitter. That checks the bytes are what the schema says; it
-does not check that Perfetto's own SQL reaches them, and this note is
-here so that gap is not read as covered.
+the in-repo protobuf reader. That checks the bytes are what the schema
+says; it does not check that Perfetto's own SQL reaches them, and this
+note is here so that gap is not read as covered.
+
+**And what the decoder is and is not** (`UX-321`). It reads the wire
+format by hand, but it takes its **field numbers from the emitter's own
+`trackevent` module** - so a number that is wrong in both places is
+wrong in neither, and this reader would not notice. What discriminates
+is `tests/fixtures/perfetto_field_numbers.json`: every constant pinned
+against upstream's `.proto` with its sha256, checked by
+`test_the_timeline_speaks_perfetto.py`. The reader is independent of
+the emitter's *encoding*, not of its numbering, and an earlier draft of
+this docstring claimed both.
 """
 import gzip
 import hashlib
@@ -149,9 +158,11 @@ def decode(path):
     """Slices and instants with their annotations and categories.
 
     The reader from `test_the_timeline_speaks_perfetto.py`, extended to
-    the two fields this item added - and written from the wire rules
-    rather than from the emitter, so a value written into the wrong
-    field number is a value this does not find.
+    the two fields this item added. It decodes the wire format by hand
+    and takes the *field numbers* from `trackevent` - the emitter's own
+    module - so it catches a value written into the wrong field but not
+    a field number that is wrong in both. The pinned fixture is what
+    catches that, and the module docstring says so (`UX-321`).
     """
     raw = gzip.open(path, "rb").read()
     packets = [v for f, w, v in _fields(raw) if f == trackevent.TRACE_PACKET]
@@ -287,12 +298,87 @@ class TestTheKeysAreAContract:
             assert len(meaning.split()) >= 5, (key, meaning)
 
     def test_the_two_planes_do_not_disagree_about_a_key(self):
+        """A key **may** ride both planes - `UX-321` gave `element` to
+        Plane 2 so one query can join them - and where it does, the two
+        declarations have to say the same thing.
+
+        The rule this replaces was "a key rides one plane", which was a
+        proxy for "one key, one meaning" and forbade the join outright.
+        The meaning is the property; the count of planes never was.
+        """
         plane1 = dict(PLANE1_ANNOTATIONS)
         plane2 = dict(PLANE2_ANNOTATIONS)
-        shared = set(plane1) & set(plane2)
-        assert shared == set(), (
-            f"{shared} is documented twice - one key, one meaning, or a "
-            "query has to know which plane it is reading")
+        for key in set(plane1) & set(plane2):
+            assert plane1[key] == plane2[key], (
+                f"`{key}` is declared twice with two meanings; a query "
+                f"would have to know which plane it is reading:\n"
+                f"  Plane 1: {plane1[key]}\n  Plane 2: {plane2[key]}")
+
+    def test_the_shared_key_is_the_one_the_join_needs(self):
+        """Named, not counted. A second key quietly acquiring both
+        planes is a contract change that has to be argued for."""
+        shared = set(dict(PLANE1_ANNOTATIONS)) & set(dict(PLANE2_ANNOTATIONS))
+        assert shared == {"element"}, (
+            f"the planes share {sorted(shared)}; `element` is the join key "
+            f"`UX-321` gave them, and anything else needs its own filing")
+
+    def test_every_plane_2_slice_carries_the_join_key(self, rendered):
+        """`UX-321`, off the wire. Not "the emitter is told to write
+        it" - every Plane 2 slice on the committed fixture carries
+        `element`, because a question that filters on it and misses a
+        class of slice is a wrong answer rather than a missing one.
+
+        This is the clause `element-commands` needed and never had: it
+        was written against "the element uid both planes carry" while
+        only one of them did.
+        """
+        slices = list(rendered["plane2"].values())
+        assert slices, "the fixture emitted no Plane 2 slices at all"
+        without = [event["name"] for event in slices
+                   if not event["args"].get("element")]
+        assert without == [], (
+            f"{len(without)} Plane 2 slice(s) carry no `element`, so a query "
+            f"joining the planes on it misses them: {without[:3]}")
+
+    def test_the_join_key_is_the_record_s_own_element(self, rendered):
+        """One meaning, checked against the record the slice was built
+        from rather than against the description that claims it.
+
+        Not "Plane 2's elements are a subset of Plane 1's": they need
+        not be, and on this fixture they are not. `work-b.bst` has
+        native processes and no Plane 1 task, which is the ordinary
+        shape when the wrapper log recorded no task for an element the
+        hook still saw - and a guard asserting containment would be
+        asserting a property of the *capture*, not of the key.
+        """
+        records = {record["cmd"]: record
+                   for record in rendered["records"].values()
+                   if record.get("cmd")}
+        checked = 0
+        for command, event in rendered["plane2"].items():
+            record = records.get(command)
+            if record is None:
+                continue
+            assert event["args"].get("element") == record.get("element"), (
+                command, event["args"].get("element"), record.get("element"))
+            checked += 1
+        assert checked >= 3, f"only {checked} slices matched a record"
+
+    def test_the_two_planes_meet_on_at_least_one_element(self, rendered):
+        """The join has to actually join. An `element` on Plane 2 that
+        never matched a Plane 1 value would be a key with the right
+        name and the wrong vocabulary."""
+        plane2 = {event["args"]["element"]
+                  for event in rendered["plane2"].values()}
+        plane1 = {event["args"]["element"] for event in rendered["plane1"]
+                  if event["args"].get("element")}
+        assert plane2 & plane1, (sorted(plane2), sorted(plane1))
+
+    def test_the_contract_lists_a_shared_key_once(self):
+        keys = [key for key, _ in ANNOTATION_CONTRACT]
+        assert len(keys) == len(set(keys)), (
+            f"the union documents a key twice: "
+            f"{sorted({k for k in keys if keys.count(k) > 1})}")
 
     def test_a_key_is_interned_once_on_the_committed_fixture(
             self, rendered):

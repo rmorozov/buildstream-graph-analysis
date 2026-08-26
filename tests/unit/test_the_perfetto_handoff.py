@@ -22,6 +22,7 @@ import shutil
 import re
 import urllib.parse
 import subprocess
+import pathlib
 import sys
 import tempfile
 import threading
@@ -29,6 +30,10 @@ import urllib.error
 import urllib.request
 
 import pytest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+
+import trace_processor  # noqa: E402
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 node = shutil.which("node")
@@ -399,8 +404,8 @@ class TestTheCannedSql:
     def test_it_is_reachable_from_the_handoff_page(self, snapshot, served):
         assert _get(served(snapshot / "run") + "sql.html")[0] == 200
 
-    @pytest.mark.skipif(shutil.which("trace_processor_shell") is None,
-                        reason="trace_processor_shell is not installed")
+    @pytest.mark.skipif(trace_processor.shell() is None,
+                        reason=trace_processor.REASON)
     def test_the_snippets_run_against_a_real_trace(self, snapshot):  # pragma: no cover
         """Local only, deliberately: bundling Perfetto is out of scope,
         and a CI job that downloads it would be a network dependency for
@@ -413,7 +418,7 @@ class TestTheCannedSql:
         for question in _questions():
             query = question["rendered"]
             result = subprocess.run(
-                ["trace_processor_shell", "-q", "/dev/stdin", trace],
+                [trace_processor.shell(), "-q", "/dev/stdin", trace],
                 input=query, capture_output=True, text=True, timeout=120)
             assert result.returncode == 0, result.stderr
 

@@ -132,10 +132,17 @@ reason to want more than the record.
 `trace_processor` resolve `extract_arg` for each key. There is still no
 `trace_processor` in CI - `UX-298`'s own open deviation, which `UX-312`
 absorbs as its first clause - so the decoding is done by the in-repo
-protobuf reader, written from the wire rules rather than from the
-emitter. That checks the bytes are what the schema says; it does not
-check that Perfetto's own SQL reaches them, and this is written here so
-the gap is not read as covered.
+protobuf reader. That checks the bytes are what the schema says; it does
+not check that Perfetto's own SQL reaches them, and this is written here
+so the gap is not read as covered.
+
+`UX-321` corrects the second half of that sentence: the reader decodes
+the wire format by hand but takes its **field numbers from the
+emitter's own `trackevent` module**, so a number wrong in both places
+would be wrong in neither. What discriminates is
+`tests/fixtures/perfetto_field_numbers.json`, pinned against upstream's
+`.proto` with a sha256 - which the Verification Log already stated
+correctly and this paragraph contradicted.
 
 **Falsification.** Recorded in the Verification Log with the rest of
 round 43.

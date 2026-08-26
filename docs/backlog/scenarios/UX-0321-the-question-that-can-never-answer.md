@@ -1,6 +1,6 @@
 # UX-321: the question that can never answer, and three smaller seams
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-312 (the class it survives from), UX-308 (the contract it mis-reads) | **Serves:** R1, R2 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the class it survives from), UX-308 (the contract it mis-reads) | **Serves:** R1, R2 | **Topic:** viewer
 
 ## Motivation
 
@@ -52,3 +52,82 @@ decoder always); the per-scope guard reddens on a question keyed
 outside its plane (mutation: re-key it to `debug.element` → red,
 statically); both trace_processor clauses use one availability
 gate; the two progress notes agree.
+
+## Log
+
+**The survivor, and the decision it forced.** `element-commands` filtered
+Plane 2 slices on `debug.element`, a key the contract gave Plane 1 only.
+Zero rows on every trace this emitter can write, silently, because
+`extract_arg` on an absent key is NULL rather than an error — and the
+dictionary guard could not see it, because it asked whether a key is in
+the **union**.
+
+Two ways out, and the filing said to decide against the dictionary
+rather than improvise. The declined one is the lane name: Plane 2's
+track is labelled `native: <element> (<kind>)`, so a query could parse
+its way back to the element. That is reading the *presentation* to
+recover the data — the label carries the kind in brackets and is built
+for a reader at a glance, while the uid is the identity the rest of the
+tool joins on.
+
+So `element` joins Plane 2's contract, which is what the question's own
+`why` had claimed all along: *"Selected by the element uid both planes
+carry, not by a lane name."* The rationale was right and the emitter
+had never honoured it.
+
+```text
+element   Plane 1              ->  Plane 1, Plane 2
+          one description shared by both, asserted equal
+```
+
+**The guard learns scopes.** `ANNOTATION_SCOPES` maps each emitted
+category to the keys that ride it, `scopes_of(key)` answers the
+per-scope question, and `ANNOTATION_CONTRACT` is the deduplicated union
+built from them. Three clauses use it:
+
+- a question filtering on a category must read only keys that scope
+  carries — the clause `element-commands` needed and never had;
+- the dictionary's `rides` column must equal `scopes_of` in both
+  directions;
+- and a key on two scopes must carry the **same description**, which is
+  what "one key, one meaning" always meant. The rule it replaces was "a
+  key rides one plane", a proxy that forbade the join outright.
+
+**Off the wire, not asserted about the source**: every Plane 2 slice on
+the committed fixture carries `element`, and each one equals the
+`element` on the record it was built from. Not "Plane 2's elements are
+a subset of Plane 1's" — they need not be, and on this fixture they are
+not: `work-b.bst` has native processes and no Plane 1 task, which is the
+ordinary shape when the wrapper log recorded no task for an element the
+hook still saw. A guard asserting containment would have been asserting
+a property of the capture.
+
+**The three smaller seams.**
+
+1. **The docstring that claimed more than the mechanism.** The
+   annotation guard said its decoder was "written from the wire rules
+   rather than from the emitter". It decodes the wire format by hand
+   and takes its **field numbers from the emitter's own `trackevent`
+   module**, so a number wrong in both places is wrong in neither. What
+   discriminates is `tests/fixtures/perfetto_field_numbers.json`,
+   pinned against upstream's `.proto` with a sha256 — which the
+   Verification Log stated correctly and two paragraphs contradicted.
+   Both corrected.
+2. **The two progress notes that disagreed.** `UX-312` still called the
+   `ui.perfetto.dev` debt open; `UX-298`'s file recorded it closed by
+   `UX-314`. `UX-312`'s note now says what happened and who closed it.
+3. **One availability gate.** `test_the_real_reader_agrees.py` honoured
+   `BGA_TRACE_PROCESSOR` and `test_the_perfetto_handoff.py` did not, so
+   a machine with the binary in an unusual place ran half the clauses
+   that could have run — and the skip census counted the other half as
+   "the tool is absent". `tests/trace_processor.py` is the one gate now,
+   with the one reason string, and the handoff clause runs the binary
+   the gate found rather than the one on `PATH`.
+
+**The deviation this item inherits, restated.** Its acceptance asks
+that `element-commands` "returns non-empty on the committed two-plane
+fixture **under the real reader where available**". There is still no
+`trace_processor` here, so the in-repo half is what ran: the key is on
+the wire, on every Plane 2 slice, equal to its record's. The SQL itself
+is unchanged by this fix — it was always the right query — which is why
+the emitter moving is the whole of the change.

@@ -32,7 +32,7 @@ TrackEvent format does not. Verified against Perfetto v49.0 on
 
 | key | rides | what it is |
 |---|---|---|
-| `element` | Plane 1 | the BuildStream element this task is for |
+| `element` | Plane 1, Plane 2 | the BuildStream element this belongs to - the task it is for on Plane 1, the sandbox the process ran in on Plane 2. The same uid on both, which is what lets one query join them |
 | `element_kind` | Plane 1 | its kind from the run's own graph (`cmake`, `import`, `manual`, ...), or `unknown` where the capture recorded none |
 | `task_type` | Plane 1 | what the scheduler was doing: `build`, `fetch`, `pull`, `push`, `track` |
 | `outcome` | Plane 1 | the status BuildStream's log closed the task with - `SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache outcome is the last two, and only where the log states it |

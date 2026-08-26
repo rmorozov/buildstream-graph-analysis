@@ -106,6 +106,15 @@ KNOWN_SKIP_REASONS = {
     # `test_the_real_reader_agrees.py`, 1 from the handoff guard.
     "trace_processor_shell is not installed": (
         "Perfetto's shell is an optional local tool, not a dependency", 13),
+    # UX-313 reads the committed dual-plane capture of `examples/06` to
+    # show that every element leaves a record whose exit was never
+    # observed - the fact that makes the reorder window the whole record
+    # list. `UX-189` keeps that capture out of a clone, and CI runs
+    # without it, so the three clauses that need it declare their
+    # absence here rather than passing vacuously.
+    "the example capture is not in this clone (UX-189)": (
+        "the capture archive is deliberately not shipped; the clauses "
+        "that read it say so rather than passing on an empty tree", 3),
     "node is not installed": (
         "the viewer guards need node; CI has it", 0),
     # UX-257's geometry guards. Declared so that "no browser here" is

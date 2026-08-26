@@ -98,7 +98,7 @@ class TestASparklineDrawsWhatItWasGiven:
     def _drawn(self, values):
         return _js("""
 const { sparkline } = await import("./bga/viewer/drawings.js");
-const block = sparkline(%s, { unit: "level" });
+const block = sparkline(%s, { unit: "level", grade: "annotation" });
 const svg = all(block, (n) => n.tagName === "svg")[0] ?? null;
 const line = svg && all(svg, (n) => n.tagName === "polyline")[0];
 console.log(JSON.stringify({
@@ -171,7 +171,7 @@ class TestAPublishedStripPrintsWhatWasPublished:
     def _drawn(self, distribution, count_key="n"):
         return _js("""
 const { strip } = await import("./bga/viewer/drawings.js");
-const block = strip(%s, { countKey: %s });
+const block = strip(%s, { countKey: %s, grade: "annotation" });
 const svg = all(block, (n) => n.tagName === "svg")[0] ?? null;
 console.log(JSON.stringify({
   drawn: block.attrs["data-drawn"], n: block.attrs["data-n"],
@@ -228,7 +228,7 @@ class TestASelfBuiltStripPrintsNoDerivedNumber:
     def _drawn(self, values):
         return _js("""
 const { columnStrip } = await import("./bga/viewer/drawings.js");
-const block = columnStrip(%s);
+const block = columnStrip(%s, { grade: "annotation" });
 const svg = all(block, (n) => n.tagName === "svg")[0] ?? null;
 console.log(JSON.stringify({
   drawn: block.attrs["data-drawn"], n: block.attrs["data-n"],

@@ -74,6 +74,27 @@
      a `var()` fallback for a token nothing declared, which is a colour
      with no name and no job (§4.5). */
   --muted-bg: #232323;
+
+  /* UX-316 (styleguide §2a): the **drawing size scale**, the geometry
+     half of the §4.5 lesson. Two grades, and no third: an annotation is
+     word-sized because it sits beside something else, an exhibit is the
+     section's answer and takes the container's width. The viewBox side
+     of the scale lives in `drawings.js` (`SCALE`) because it is
+     coordinate space rather than layout; these are what a reader
+     actually measures, and the grade walk reads them from here.
+
+     The three exhibit heights are the three drawing *kinds*, not three
+     grades: a line over an order, a range on one axis, and a composed
+     figure with lanes. A new drawing takes one of them or amends the
+     guide; it does not write its own rem. */
+  --draw-annotation-w: 7rem;
+  --draw-annotation-h: 1.4rem;
+  --draw-annotation-strip-w: 9rem;
+  --draw-annotation-strip-h: .9rem;
+  --draw-exhibit-h: 9rem;
+  --draw-exhibit-strip-h: 3.5rem;
+  --draw-exhibit-figure-h: 11rem;
+  --draw-tick: .72rem;
 }
 
 /* The override. `prefers-color-scheme: light` also matches a reader
@@ -224,7 +245,14 @@ summary { cursor: pointer; color: var(--muted); }
 footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem; font-size: .9rem; }
 
 /* UX-196: the band strip and the store trend. Two SVGs, no library. */
-.band, .trend { width: 100%; height: 5rem; display: block; margin: .4rem 0; }
+/* UX-316: both are exhibit grade - the section's whole answer - so
+   both take the container's width and the scale's exhibit height. The
+   band is the composed figure (three lanes); the store diagram is a
+   line over an order. At 5rem the field pass read the store diagram as
+   "unreadable because everything is very small". */
+.band, .trend { width: 100%; display: block; margin: .4rem 0; }
+.trend { height: var(--draw-exhibit-h); }
+.band { height: var(--draw-exhibit-figure-h); }
 /* UX-212: the outline is the channel that survives grayscale; the
    fill is what it looks like in colour. */
 .observed { fill: var(--line); opacity: .55; stroke: var(--fg); }
@@ -726,7 +754,10 @@ button.json-toggle:hover { color: var(--fg); }
 .series-label, .density-label {
   font-size: .78rem; color: var(--muted);
 }
-.sparkline { width: 7rem; height: 1.4rem; flex: none; }
+.sparkline {
+  width: var(--draw-annotation-w); height: var(--draw-annotation-h);
+  flex: none;
+}
 .spark-line { stroke: var(--accent-mark); stroke-width: 1.2; }
 .spark-point { fill: var(--accent-mark); stroke: var(--bg); stroke-width: .4; }
 /* The peak is not a *status* - it is a position - so it is told apart
@@ -736,7 +767,10 @@ button.json-toggle:hover { color: var(--fg); }
 .series-sentence, .density-sentence {
   font-size: .82rem; font-variant-numeric: tabular-nums;
 }
-.density-strip { width: 9rem; height: .9rem; flex: none; }
+.density-strip {
+  width: var(--draw-annotation-strip-w);
+  height: var(--draw-annotation-strip-h); flex: none;
+}
 .density-range { fill: var(--line); }
 .density-end { stroke: var(--fg); stroke-width: 1; }
 .density-tick { stroke: var(--accent-mark); stroke-width: 1.4; }
@@ -747,3 +781,59 @@ button.json-toggle:hover { color: var(--fg); }
    a click that does nothing is `UX-194`'s dead affordance. */
 .density[data-interactive="true"] .density-strip { cursor: pointer; }
 .table-tools .density { width: 100%; }
+
+/* UX-316 (styleguide §2a): **exhibit grade.** A drawing that is its
+   section's answer stops being a word beside a sentence: it takes the
+   content column, stands on its own line, and gets the two things §2
+   denies an annotation - labels on its ends, and a table twin, so the
+   drawing never hoards values a reader wants as rows. No grid and no
+   legend still: §2's ban on apparatus is about *furniture*, and the
+   ends of the scale are the reading. */
+.series.exhibit, .density.exhibit { display: block; margin: .6rem 0 1rem; }
+.series.exhibit .sparkline,
+.density.exhibit .density-strip {
+  width: 100%; flex: auto; display: block;
+}
+.series.exhibit .sparkline { height: var(--draw-exhibit-h); }
+.density.exhibit .density-strip { height: var(--draw-exhibit-strip-h); }
+.series.exhibit .series-label, .density.exhibit .density-label {
+  display: block; margin-bottom: .2rem;
+}
+
+/* The tick row: positions along the drawing above it, so it is
+   `relative` and each label is placed by its own percentage. The ends
+   pull back inside the box - a label centred on 100% would hang off the
+   page - and that is a rendering rule, not a value. */
+.draw-axis {
+  position: relative; height: 1.1rem; margin-top: .15rem;
+  font-size: var(--draw-tick); color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.draw-tick { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.draw-tick[data-mark="min"], .draw-tick[data-mark="first"] {
+  transform: none; left: 0;
+}
+.draw-tick[data-mark="max"], .draw-tick[data-mark="last"] {
+  transform: translateX(-100%);
+}
+
+/* The twin. Closed by default - the drawing is the answer and the
+   table is the same answer as rows - and it survives the export,
+   because a toggle is DOM and needs no server (`UX-195`). */
+.draw-twin { margin: .3rem 0 0; }
+button.twin-toggle {
+  background: none; border: 1px solid var(--line); border-radius: 3px;
+  color: var(--muted); font-size: .75rem; cursor: pointer;
+  padding: .1rem .4rem;
+}
+button.twin-toggle:hover { color: var(--fg); }
+table.twin-table { margin-top: .3rem; font-size: .82rem; }
+table.twin-table td { font-variant-numeric: tabular-nums; }
+
+/* Paper has no toggles: an exhibit's twin prints open, so the values
+   reach the reader of a printed report too (§2b's rule that hover is
+   never the only door, applied to a click). */
+@media print {
+  table.twin-table { display: table !important; }
+  button.twin-toggle { display: none; }
+}

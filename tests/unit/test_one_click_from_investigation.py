@@ -238,7 +238,7 @@ class TestInvestigationIsOneClickAway:
         `<pre>` of raw JSON nested in a definition list, so nothing in
         it was sortable, filterable or one click from anywhere."""
         out = _render(_report())
-        by_key = {t["key"]: t for t in out["tables"]}
+        by_key = {t["key"]: t for t in out["tables"] if t["key"]}
         for key in ("critical_path_detail", "optimization_horizon",
                     "latent_heavies", "top_actions"):
             assert key in by_key, sorted(by_key)
@@ -449,7 +449,13 @@ console.log(JSON.stringify({
       return at === n;
     };
     return {
-      key: n.attrs["data-table"],
+      // `?? null` rather than `undefined`: `UX-316`'s drawing twin is a
+      // real `<table>` on the page and deliberately **not** a §3 one -
+      // no declared columns, no sort, no state key - so it carries no
+      // `data-table`, and `JSON.stringify` would drop the field
+      // entirely. Named as absent, the clauses below can say "§3
+      // tables" and mean it.
+      key: n.attrs["data-table"] ?? null,
       element_column: n.attrs["data-element-column"] ?? null,
       // A body row of *this* table: its parent is a `tbody` and that
       // tbody's parent is this table. The selector alone cannot say so.

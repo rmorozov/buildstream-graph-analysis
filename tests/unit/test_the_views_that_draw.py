@@ -336,17 +336,32 @@ class TestTheViewsStayThin:
             f"or use a table.")
 
     def test_no_library_and_no_arithmetic_beyond_layout(self):
+        import re
+
         source = open("bga/viewer/views.js", encoding="utf-8").read()
         code = [line for line in source.splitlines()
                 if not line.lstrip().startswith("//")]
-        assert not [line for line in code if line.lstrip().startswith("import")], (
-            "views.js pulled in a dependency")
+        # No **library**: a bare specifier reaches outside this
+        # repository, and a `../` one reaches outside the viewer. A
+        # sibling module is neither - `UX-316` made this file import
+        # `drawings.js` for the size scale, and the alternative was a
+        # second copy of the scale in the file that had already written
+        # `viewBox: "0 0 100 20"` out by hand, which is the defect §2a
+        # exists to end. `drawings.js` imports nothing, so nothing
+        # arrives behind it.
+        imports = [line.strip() for line in code
+                   if line.lstrip().startswith("import")]
+        for line in imports:
+            source_of = re.search(r'from\s+"([^"]+)"', line + " ".join(
+                source.split(line, 1)[1].splitlines()[:3]))
+            assert source_of, f"cannot read what this import names: {line}"
+            named = source_of.group(1)
+            assert named.startswith("./") and "/" not in named[2:], (
+                f"views.js reached outside the viewer directory: {named}")
         # Strings and comments stripped first: the band's caption
         # legitimately contains the word "regression" (it is quoting what
         # compare declines to call the result), and the first draft of
         # this guard flagged its own explanation.
-        import re
-
         bare = re.sub(r'"[^"\n]*"|\'[^\'\n]*\'|`[^`]*`|//[^\n]*', "", source)
         for word in ("percentile", "stddev", "regress", "quantile", "Math.sqrt"):
             assert word.lower() not in bare.lower(), (

@@ -388,6 +388,11 @@ section[data-section="evidence"] .verdict { margin: .4rem 0 .8rem; }
    x=423 against a 390px viewport, so the whole report scrolled
    sideways and every line of prose moved with it. */
 main table { display: block; max-width: 100%; overflow-x: auto; }
+/* UX-318: and only the outermost one. A table inside another table's
+   cell is not the widest thing on screen - its own sideways scroll is
+   the second box in a chain, and the outer table's is the one a reader
+   can actually reach. */
+main table table { display: table; max-width: none; overflow: visible; }
 /* A published command is long by nature (`bga whatif a.bst b.bst …`)
    and must not set the page's width. */
 main code, main pre { overflow-wrap: anywhere; max-width: 100%; }
@@ -606,16 +611,41 @@ section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
 details.map > summary { cursor: pointer; }
 details.map > summary .map-count { font-weight: normal; }
 
-/* A generated map table gets its own scroll rather than the page's, and
-   `resize` so a reader who wants more can have it - the bound is a
-   default, never a ceiling (`UX-187`'s rule). */
-main .map-table {
-  display: block;
-  max-height: 20rem;
-  overflow-y: auto;
-  resize: vertical;
-}
+/* UX-318 (styleguide §3a.3): **nested scrollboxes are abolished.**
+   This box used to carry `max-height: 20rem; overflow-y: auto`, which
+   is the field defect exactly: the resource blast table "became
+   scrollable, but nested doesn't work if I try to look through all
+   rows" - a scroll container inside a scroll container, where the inner
+   one takes the wheel and the outer one never moves. A table scrolls
+   only when it is the widest thing on screen, which it is when it is
+   expanded, and the way to see all the rows is `Expand`. The row bound
+   is still there and is still a default rather than a ceiling: it is
+   the Top-N the table opens with (`UX-262`). */
+main .map-table { display: block; }
 
+/* UX-318 (styleguide §3a.2/§3a.3): **table focus.** One table takes the
+   content column, the rest of the report stands behind it, and the
+   breadcrumb is the way back. Not an overlay - round 24's argument
+   stands and is the reason this is a plain in-flow section: nothing
+   here needs a stacking context, an escape handler or a scroll lock,
+   and all three are what a drawer would fail to survive in an export or
+   a print. */
+.table-focus { display: block; width: 100%; margin: 0; }
+.table-focus > h2 { margin-top: .2rem; }
+.focus-crumb { margin: 0 0 .3rem; }
+button.focus-back, button.expand-table {
+  font: inherit; font-size: .82rem; cursor: pointer;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 3px;
+  padding: .1rem .45rem;
+}
+button.focus-back:hover, button.expand-table:hover { color: var(--fg); }
+/* Behind, not gone. `display: none` rather than a visual dimming: a
+   reader in focus is looking at one table, and a half-visible report
+   under it is the noise the state exists to remove. The nodes are still
+   in the document, so Ctrl-F, the anchors and the export are unchanged
+   - which is exactly what an overlay could not promise. */
+[data-behind-focus="true"] { display: none; }
 /* UX-269: a truncated cell shows that it is truncated, and the whole
    value stays selectable once opened. */
 details.long-text > summary { cursor: pointer; }

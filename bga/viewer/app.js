@@ -40,12 +40,14 @@ import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
 // control draws a structured value. The controls live here; the choice
 // between them lives there, so that "raw JSON unless deliberate" is a
 // rule with one enforcement point rather than a habit.
-import { CONTROLS, UNMAPPED, classify, noteUnmapped } from "./shapes.js";
+import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence, shapeOf } from "./shapes.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
 // there.
 import { sparkline, strip, columnStrip, GRADE_ANNOTATION, GRADE_EXHIBIT }
   from "./drawings.js";
+import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
+  from "./tablefocus.js";
 
 const QUANTITY = "bga:quantity";
 const SEVERITY = "bga:severity";
@@ -433,13 +435,133 @@ function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
   return box;
 }
 
-/** A large value, folded behind a summary that says what it holds. */
-function folded(label, count, body) {
-  return el("details", { class: "map" },
+/**
+ * A large value, folded behind a summary that says what it holds.
+ *
+ * `UX-318` (§3a.1): and **how deep it goes**. "N entries" answered how
+ * wide the first level is and said nothing about what is behind it -
+ * the field report's unknown rabbit hole. The summary now carries
+ * `shapeOf`'s sentence, and the numbers are on the element so a walk
+ * can check them against the value rather than against the text.
+ */
+function folded(label, value, body, path = null) {
+  const { levels, rows } = shapeOf(value);
+  return el("details", { class: "map",
+                         // The payload key this fold holds, so a walk can
+                         // check the numbers against the *value* rather
+                         // than against the sentence beside them.
+                         "data-fold-path": path,
+                         "data-levels": String(levels),
+                         "data-rows": String(rows) },
             el("summary", {},
                el("span", { class: "map-name" }, label),
-               el("span", { class: "map-count muted" }, ` · ${count} entries`)),
+               el("span", { class: "map-count muted" },
+                  ` · ${depthSentence(value)}`)),
             body);
+}
+
+/**
+ * The node a table travels as: its box with its own tools, or - for a
+ * table that *is* a section - the section.
+ *
+ * Walked rather than `closest`, so the shim and a browser answer the
+ * same thing (`UX-264`'s rule about the instrument).
+ */
+// `tagName` is upper-case in a browser and whatever `createElement` was
+// handed in the shim, so the comparison is folded. The first draft
+// compared against `"SECTION"` and every breadcrumb read "the report".
+const isSection = (node) =>
+  String(node?.tagName ?? "").toLowerCase() === "section"
+  && node.getAttribute?.("data-section");
+
+function movableBox(table) {
+  let at = table.parentNode;
+  let section = null;
+  while (at) {
+    const klass = at.className || at.getAttribute?.("class") || "";
+    if (String(klass).split(" ").includes("map-table")) return at;
+    if (!section && isSection(at)) section = at;
+    at = at.parentNode;
+  }
+  return section ?? table.parentNode ?? table;
+}
+
+/** The section a table came from, for the breadcrumb's "back to …". */
+function breadcrumbFor(table) {
+  let at = table.parentNode;
+  while (at) {
+    if (isSection(at)) return title(at.getAttribute("data-section"));
+    at = at.parentNode;
+  }
+  return "the report";
+}
+
+/**
+ * `UX-318` (§3a.3): the expand control on a capped or nested table.
+ *
+ * It registers **at click time**, because that is when the box it has
+ * to move is in the document: a table is built before it is placed, and
+ * a registry filled at build time would remember a detached parent.
+ */
+function expandTableControl(table, depth) {
+  const path = table.getAttribute?.("data-table") ?? "table";
+  const button = el("button", {
+    type: "button", class: "expand-table", "data-expand": path,
+    title: depth > 0
+      ? "Open this nested table full width, with a way back"
+      : "Open this table full width, with a way back",
+  }, "Expand");
+  const notify = (root) => root?.dispatchEvent?.(
+    new Event("change", { bubbles: true }));
+  button.addEventListener?.("click", () => {
+    const root = document.getElementById?.("report");
+    if (focusedTable(root) === path) {
+      leaveTableFocus(root);
+    } else {
+      registerFocusTarget(path, {
+        label: title(path.split(".").pop() ?? path),
+        breadcrumb: breadcrumbFor(table), node: movableBox(table) });
+      enterTableFocus(root, path, { onLeave: () => notify(root) });
+    }
+    notify(root);
+  });
+  return button;
+}
+
+/**
+ * `UX-318` (§3a.3): "expand this table" - the user's enlarge
+ * affordance, and §3a's route out of a rabbit hole, as one control.
+ *
+ * The node is rendered **once, here, detached**, and handed to the
+ * registry: entering focus moves it into the focus section and leaving
+ * puts it back, so the table a reader expands is *the* table with its
+ * filter, sort and Top-N exactly as they were left. A second render
+ * would be a second answer.
+ */
+function expandControl(path, label, render, breadcrumb = "the report") {
+  const button = el("button", {
+    type: "button", class: "expand-table",
+    "data-expand": path,
+    // `UX-279`: the noun and what it does, before it is pressed.
+    title: `Open ${label} full width, with a way back`,
+  }, `Expand ${label}`);
+  let made = null;
+  // The fragment listens for `change` on the report root already, so
+  // firing one event rather than writing the hash here keeps `UX-211`
+  // the only writer of the URL.
+  const notify = (root) => root?.dispatchEvent?.(
+    new Event("change", { bubbles: true }));
+  button.addEventListener?.("click", () => {
+    const root = document.getElementById?.("report");
+    if (!made) {
+      made = el("div", { class: "focus-body" }, render());
+      registerFocusTarget(path, { label, breadcrumb, node: made });
+    }
+    if (focusedTable(root) === path) leaveTableFocus(root);
+    else enterTableFocus(root, path, { onLeave: () => notify(root) });
+    notify(root);
+  });
+  return button;
 }
 
 /**
@@ -500,8 +622,27 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   // unnoticed one stays open.
   if (control === CONTROLS.FOLD || control === UNMAPPED) {
     if (control === UNMAPPED) noteUnmapped(path, value);
-    return folded(title(key), count,
-                  el("p", { class: "full-text" }, JSON.stringify(value)));
+    // `UX-318` (§3a.2): **one nested level renders inline.** Deeper than
+    // that the fold does not open in place - it opens in table focus,
+    // where the value renders as the tables §1 would have given it, at
+    // the content column's full width.
+    //
+    // Served only, and the export keeps exactly what it had: a fold, its
+    // depth, and the whole value one click away. An export is a file
+    // somebody scrolls, prints and attaches; a control that rearranges
+    // the page has nothing to rearrange there, and `UX-194`'s rule is
+    // that an affordance whose precondition is absent is not drawn as a
+    // dead one. Nothing about the *meaning* needs the mechanism, which
+    // is §3a's own condition on it.
+    if (control === CONTROLS.FOLD && served()) {
+      return folded(title(key), value,
+                    expandControl(path, title(key), () =>
+                      renderStructured(key, value, hint, node, 0, path)),
+                    path);
+    }
+    return folded(title(key), value,
+                  el("p", { class: "full-text" }, JSON.stringify(value)),
+                  path);
   }
   if (Array.isArray(value)) {
     if (control === CONTROLS.INLINE_LIST) {
@@ -509,8 +650,9 @@ export function renderStructured(key, value, hint = {}, node = undefined,
     }
     if (control === CONTROLS.FOLDED_LIST) {
       const rows = value.map((item, at) => ({ key: String(at), value: item }));
-      return folded(title(key), value.length,
-                    mapTable(key, rows, hint, node, false, depth + 1, path));
+      return folded(title(key), value,
+                    mapTable(key, rows, hint, node, false, depth + 1, path),
+                    path);
     }
     // `UX-277`: an array of *arrays* - `[["app.bst", 8], …]` - used to
     // reach `Array.prototype.toString` twice and render `app.bst,8,
@@ -544,9 +686,10 @@ export function renderStructured(key, value, hint = {}, node = undefined,
           ? Object.fromEntries([["key", String(at)],
                                 ...item.map((m, i) => [`#${i + 1}`, m])])
           : item));
-    return folded(title(key), value.length,
+    return folded(title(key), value,
                   mapTable(key, rows, tuple ? { ...hint, [COLUMNS]: declared } : hint,
-                           node, true, depth + 1, path));
+                           node, true, depth + 1, path),
+                  path);
   }
   const entries = Object.entries(value);
   if (control === CONTROLS.INLINE_OBJECT) return inlineObject(value, node);
@@ -554,8 +697,9 @@ export function renderStructured(key, value, hint = {}, node = undefined,
     member && typeof member === "object" && !Array.isArray(member));
   const rows = entries.map(([name, member]) => (
     nested ? { key: name, ...member } : { key: name, value: member }));
-  return folded(title(key), entries.length,
-                mapTable(key, rows, hint, node, nested, depth + 1, path));
+  return folded(title(key), value,
+                mapTable(key, rows, hint, node, nested, depth + 1, path),
+                path);
 }
 
 /**
@@ -661,7 +805,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                      "\u2315"));
     }
   }
-  const tools = interrogable(table, specs, rows.length);
+  const tools = interrogable(table, specs, rows.length, depth);
   return { table, tools };
 }
 
@@ -682,7 +826,7 @@ export function renderTable(key, rows, hint = {}, node = undefined) {
  * metadata is what makes `> 5s` parseable: the column declares that it
  * is a `duration_us`, so the suffix has a meaning.
  */
-export function interrogable(table, specs, total) {
+export function interrogable(table, specs, total, depth = 0) {
   const state = { text: "", thresholds: {} };
   const badge = el("span", { class: "badge" }, badgeText(total, total));
   const refresh = () => {
@@ -845,9 +989,23 @@ export function interrogable(table, specs, total) {
   // else. A percentile worth printing enters the payload first.
   const shape = distributionStrip(table, specs, total, state, refresh);
 
+  // `UX-318` (§3a.3): **every capped or nested table offers focus.** A
+  // table that opened bounded is hiding rows behind a Top-N; a nested
+  // one is inside a cell that cannot give it room. Both are the
+  // reader's "enlarge table to occupy more space", and both enter the
+  // same state - one control, not two features.
+  //
+  // "Nested" is measured in *tables*, not in calls: `renderStructured`
+  // hands `mapTable` `depth + 1`, so a section's own fold already
+  // arrives here at depth 1. Depth 2 is a table inside another table's
+  // cell - the one with no room - and depth 3 does not exist, because
+  // `CELL_NEST_LIMIT` turns it into the fold that routes to focus.
+  const nested = depth > 1;
+  const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
+    ? expandTableControl(table, depth) : null;
   const tools = el("div", { class: "table-tools" }, box, badge,
                             state.preset ?? null, copyRows, asMarkdown,
-                            shape);
+                            expand, shape);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);
   tools.addEventListener?.("change", label);

@@ -28,6 +28,9 @@ export const SEPARATOR = "~";
 // I want you to look at" and "here is where I got to" are both links.
 import { applyFocus, applyMarks, captureFocusAndMarks, clearFocus,
          parseMarks } from "./focus.js";
+// UX-318: table focus is view state by the same argument - "look at
+// this table, all of it" is a link somebody pastes into an issue.
+import { applyTableFocus, captureTableFocus } from "./tablefocus.js";
 
 export function splitHash(hash = "") {
   const text = String(hash).replace(/^#/, "");
@@ -91,6 +94,7 @@ export function captureView(root) {
   if (open.length) params.set("o", open.join(","));
 
   captureFocusAndMarks(root, params);
+  captureTableFocus(root, params);
 
   // Once the view says anything, it says what is collapsed - including
   // "nothing". Without this, a reader who expanded everything and then
@@ -207,6 +211,13 @@ export function applyView(root, query, { dispatch } = {}) {
     const uid = params.get("focus");
     if (uid) { applyFocus(root, uid); applied.push(`focus:${uid}`); }
     else { clearFocus(root); }
+  }
+  // UX-318: the table last. It *moves* a node, and every pass above
+  // reads the document by selector - applying it first would have them
+  // walk a tree with a section standing somewhere it does not live.
+  if (params.has("tf")) {
+    const opened = applyTableFocus(root, params);
+    if (opened) applied.push(`tf:${opened}`);
   }
   return applied;
 }

@@ -1030,6 +1030,48 @@ would have marked **every** process failed, because `"0"` is not `0`.
 Success is exactly the string `"0"`, and the constant that says so has
 a name and three assertions on it.
 
+Updated 2026-08-26 (after `UX-314`), re-grounded in
+`bga/viewer/perfetto.js`'s `perfettoCanFetch`, `tools/bga_view.py`'s
+`landing_url`, and the two handoff guards that now parametrize the
+served origin. The viewer axis gains the rule it was missing: a
+transport is only offered where the *other* side's policy permits it.
+
+A field report - `connect-src` in ui.perfetto.dev's console, no trace -
+turned out to be Perfetto's own Content-Security-Policy, not this
+server's headers. Our `Access-Control-Allow-Origin` grant is necessary
+and not sufficient: when `connect-src` refuses, the request never
+leaves the browser for CORS to answer. Read from
+`ui/src/frontend/index.ts` rather than guessed, over plain `http:`
+exactly two origins are fetchable - `127.0.0.1:9001` and
+`localhost:8080` - and `bga view` binds an ephemeral port, so the
+`?url=` deep link had never worked in served mode. `UX-299` then made
+it the only transport above 4 MiB.
+
+Eight mutations, all discriminating:
+
+```text
+P1  served implies fetchable (the bug as it shipped)   3 guards red
+P2  the host spelling is ignored                       1 red
+P3  8080 is named by address again                     3 red
+P4  navigate to a link CSP will refuse                 1 red
+P5  the save-it-yourself route disappears              1 red
+P6  the server stops saying the handoff is limited     1 red
+P7  the rule stops saying where it was read from       1 red
+P8  the message stops naming the way out               1 red
+```
+
+P4 passed on the first run, and that is the finding. The
+over-threshold branch was the whole bug and nothing covered it,
+because `UX-299`'s harness pinned `location` to a refused origin while
+asserting the navigation happened - a guard written entirely from this
+side of the boundary. Both halves of the fix are now held to one
+answer by a clause that runs the Python spelling through the
+JavaScript predicate.
+
+**Not verified against the live site.** Both Perfetto hosts are
+refused by this environment's network policy, so this is argued from
+Perfetto's source and guarded against it, not confirmed in a browser.
+
 Updated 2026-08-26 (after `UX-297`), re-grounded in
 `tools/bst_native_build_tracer.py`'s `stream_trace_events` /
 `stream_records` as they now stand, in the three call sites in

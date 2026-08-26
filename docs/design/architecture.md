@@ -1211,6 +1211,20 @@ what may be coloured and what a drawing owes its reader — three
 questions this document could not answer before there was a contract
 to answer them from.
 
+Updated 2026-08-26 (after `UX-320`), re-grounded in
+`bga/viewer/drawings.js`'s `SCALE` and its two grades,
+`bga/viewer/tablefocus.js` as it now stands, `bga/viewer/index.html`'s
+header and actions group, and `tools/bga_view.py`'s `ASSETS`: the
+viewer module map gained `tablefocus.js` and `drawings.js`'s row now
+says the size scale is its. Four measurements this round, each taken
+rather than argued - the sticky header 172px to 92px at 1440x900 and
+284px to 134px at 390x844 with the actions moved out; the click cost of
+reaching any section, 1 wide and 2 narrow, unchanged by the round and
+recorded because it had never been taken; +44,601 B of checked-in
+viewer source, per file; and the exported page measured at 89% code,
+which falsified round 41's claim that 175 KB of it was commented
+JavaScript and corrected `UX-307`'s motivation accordingly.
+
 Updated 2026-08-25 (after `UX-298`), re-grounded in
 `tools/native_trace/trackevent.py`'s pinned field numbers against
 `tests/fixtures/perfetto_field_numbers.json`, and in `bga timeline`'s

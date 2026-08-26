@@ -219,6 +219,114 @@ def _plane1_outcomes(events) -> dict:
 
 
 # --------------------------------------------------------------------------
+# `UX-310`: the counter the reserved constant was waiting for.
+#
+# `UX-298` pinned `TYPE_COUNTER` with the comment "reserved rather than
+# used". This is the caller - and it is **one** series, not the three
+# the item imagined, for reasons that are worth having written down.
+#
+# *The memory curve does not exist.* `max_rss_kb` is `ru_maxrss`: a
+# per-process peak over that process's whole lifetime, not a sample at a
+# moment. A curve drawn from it would be summing peaks that never
+# coexisted, which is precisely what `compute_peak_memory` refuses to do
+# and says so at length ("two processes that each peaked at 500 MB at
+# different moments never held 1 GB between them"). A counter must come
+# from what the capture measured; this one was not measured, so it is
+# not drawn.
+#
+# *"Cores busy" and "open process count" are the same series.* Both are
+# "how many traced processes were running at time t", and `bga` already
+# has one answer to that: `compute_max_concurrency`, over **matched**
+# records only. Open records are excluded there deliberately - a
+# `sh -c` wrapper that `_exit()`s never runs its destructor, so its end
+# is unknown and its contribution at time t is unknowable. Excluding it
+# from a peak and including it in a curve would be two answers to one
+# question.
+#
+# So: one series, whose peak **equals** the published `max_concurrency`
+# by construction, which is the acceptance test's "one pass, one truth".
+CONCURRENCY_COUNTER = "traced processes running"
+CONCURRENCY_UNIT = "processes"
+
+# The stride, as a decision with a number behind it. A sample per
+# endpoint is two packets per process - 400,000 on a 200,000-process
+# trace, which is packet spam by any reading. Bucketing the build into a
+# fixed number of windows makes the cost independent of the build's
+# size, and emitting each window's **maximum** as well as its closing
+# value keeps the peak exact (so the equality above survives the
+# stride) while still drawing the shape rather than an envelope.
+COUNTER_WINDOWS = 1000
+
+
+def concurrency_series(records, windows: int = COUNTER_WINDOWS):
+    """`(timestamp_s, running processes)` over the build, strided.
+
+    The sweep is `compute_max_concurrency`'s: +1 at a matched record's
+    start, -1 at its end, open records excluded. Ties go to the end
+    first, so a process that starts exactly as another finishes never
+    reads as two running at once - the same rule, because a series that
+    disagreed with the scalar about a tie would be a second answer.
+    """
+    points = []
+    for record in records:
+        if record.get("open") or record.get("end_ts") is None:
+            continue
+        points.append((record["start_ts"], 1))
+        points.append((record["end_ts"], -1))
+    if not points:
+        return []
+    # `-1` before `+1` at the same timestamp: an end is taken first.
+    points.sort(key=lambda point: (point[0], point[1]))
+
+    span = points[-1][0] - points[0][0]
+    # `windows=0` is "no stride at all" - every endpoint, which is what
+    # a hand-worked case wants to compare against. It is not the
+    # shipping setting for the reason in `COUNTER_WINDOWS`.
+    if not windows:
+        series = []
+        running = 0
+        for timestamp, delta in points:
+            running += delta
+            series.append((timestamp, running))
+        return _monotonic(series)
+    width = (span / windows) if span > 0 else 0.0
+
+    series = []
+    running = 0
+    window_end = points[0][0] + width if width else None
+    best = (points[0][0], 0)
+    for timestamp, delta in points:
+        if window_end is not None and timestamp > window_end:
+            series.append(best)
+            series.append((window_end, running))
+            while window_end < timestamp:
+                window_end += width
+            best = (timestamp, 0)
+        running += delta
+        if running > best[1]:
+            best = (timestamp, running)
+    series.append(best)
+    series.append((points[-1][0], running))
+    return _monotonic(series)
+
+
+def _monotonic(series):
+    """Non-decreasing timestamps, no repeated point.
+
+    Perfetto draws a step function: a sample behind the previous one is
+    a step that is not one, and a duplicate is a step of zero height.
+    """
+    out = []
+    for timestamp, value in series:
+        if out and out[-1][0] == timestamp and out[-1][1] == value:
+            continue
+        if out and timestamp < out[-1][0]:
+            continue
+        out.append((timestamp, value))
+    return out
+
+
+# --------------------------------------------------------------------------
 # `UX-311`: whose build this was.
 #
 # A trace file leaves the machine that made it - attached, shared,
@@ -731,7 +839,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             return {"packets": trace.packets, "slices": trace.slices,
                     "tracks": trace.tracks, "flows": flow_count,
                     "flows_dropped": dropped, "incomplete_reason": reason,
-                    "lane_order": LANE_ORDER_RULE}
+                    "lane_order": LANE_ORDER_RULE, "counters": 0,
+                    "counter_peak": None}
 
         # Plane 2: one process lane per element, one thread lane per
         # traced pid inside it.
@@ -770,6 +879,20 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             # no second read of the log, and no second copy of it.
             plane2_flows, next_flow = _plane2_flows(records, next_flow)
             flow_count = next_flow - 1
+            # `UX-310`: the series, folded from the records already in
+            # hand and hung off the Plane 1 lane so it graphs above the
+            # build rather than inside one element's group.
+            series = concurrency_series(records)
+            counter_track = None
+            if series:
+                counter_track = trace.counter_track(
+                    CONCURRENCY_COUNTER, parent=plane1_track,
+                    unit_name=CONCURRENCY_UNIT)
+                for timestamp, value in series:
+                    trace.counter(
+                        int(round(timestamp * 1e6 * NS_PER_US
+                                  + offset_us * NS_PER_US)),
+                        counter_track, value)
             for record in records:
                 element = record.get("element") or "unknown"
                 pid = element_pid.get(element)
@@ -821,7 +944,9 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         return {"packets": trace.packets, "slices": trace.slices,
                 "tracks": trace.tracks, "flows": flow_count,
                 "flows_dropped": dropped, "incomplete_reason": reason,
-                "lane_order": LANE_ORDER_RULE}
+                "lane_order": LANE_ORDER_RULE,
+                "counters": trace.counters,
+                "counter_peak": max((v for _t, v in series), default=None)}
 
 
 def render(snapshot: str, output: str,

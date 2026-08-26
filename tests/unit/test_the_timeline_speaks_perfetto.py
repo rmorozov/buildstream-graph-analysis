@@ -311,6 +311,16 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
                 trackevent.TRACK_PROCESS_ORDERING,
             ("track_descriptor.proto", "ProcessOrdering",
              "PROCESS_ORDERING_EXPLICIT"): trackevent.PROCESS_ORDERING_EXPLICIT,
+            # UX-310: the counter descriptor, which is what turns
+            # `TYPE_COUNTER` from a reserved constant into a graph.
+            ("track_descriptor.proto", "TrackDescriptor", "counter"):
+                trackevent.TRACK_COUNTER,
+            ("counter_descriptor.proto", "CounterDescriptor", "unit"):
+                trackevent.COUNTER_UNIT,
+            ("counter_descriptor.proto", "CounterDescriptor", "unit_name"):
+                trackevent.COUNTER_UNIT_NAME,
+            ("counter_descriptor.proto", "Unit", "UNIT_COUNT"):
+                trackevent.UNIT_COUNT,
         }
         wrong = []
         for (proto, block, field), ours in expected.items():

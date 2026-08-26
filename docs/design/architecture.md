@@ -218,6 +218,25 @@ empty.
   every entry carries `spine+hook` / `spine-only` / `hook-only`, and
   coverage stops being a footnote and becomes a count. Verified at scale:
   **127,632 processes on freedesktop-sdk, all one class**.
+- **One counter, and two refusals** (`UX-310`). `UX-298` pinned
+  `TYPE_COUNTER` as "reserved rather than used" under the rule that an
+  event stream may carry only what a capture measured; this is its
+  caller, and the same rule decides what is *not* drawn. There is no
+  memory curve: `max_rss_kb` is a per-process **lifetime** peak, not a
+  sample, so a curve from it would sum peaks that never coexisted -
+  exactly what `compute_peak_memory` refuses - and a guard asserts no
+  memory counter exists rather than leaving the absence to be read as
+  an oversight. "Cores busy" and "open process count" are one question,
+  answered by `compute_max_concurrency` over matched records only,
+  because an open record's end is unknown and a curve that included it
+  would be inventing one. So one series - *traced processes running* -
+  whose peak **equals** the published `max_concurrency`, with the tie
+  rule taken from the scalar rather than re-decided. The stride is a
+  decision with a number: 1,000 windows, each contributing its maximum
+  and its closing value, so the cost is independent of build size and
+  the peak survives exactly - 1,626 raw endpoints become 538 samples on
+  `examples/06` with the peak still 20. Cost: one packet a sample plus
+  one for the track, 25.1 B uncompressed and 6.3 B compressed.
 - **The trace knows whose build it was** (`UX-311`). A trace file
   leaves the machine that made it - attached, shared, opened weeks later
   beside five others - and carried no identity at all. One `bga: run`
@@ -851,6 +870,15 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-26 (after `UX-310`), re-grounded in
+`tools/native_trace/trackevent.py`'s `counter_track`/`counter`, in
+`tools/bga_timeline.py`'s `concurrency_series`, and in
+`tests/unit/test_the_counter_the_constant_was_waiting_for.py`. The
+Plane 2 bullets now say what the trace graphs and - as load-bearing -
+what it declines to graph and why.
+
+MUTATIONS-PENDING
 
 Updated 2026-08-26 (after `UX-311`), re-grounded in
 `tools/native_trace/trackevent.py`'s `order_processes_explicitly` and

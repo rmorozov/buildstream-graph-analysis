@@ -1,5 +1,17 @@
 {
   "files": {
+    "counter_descriptor.proto": {
+      "numbers": {
+        "CounterDescriptor": {
+          "unit": 3,
+          "unit_name": 6
+        },
+        "Unit": {
+          "UNIT_COUNT": 2
+        }
+      },
+      "sha256": "f09f52cbd76a45a2de25b4b72fb460cb0dc1855662683b2e905862c026ff2a96"
+    },
     "debug_annotation.proto": {
       "numbers": {
         "DebugAnnotation": {
@@ -74,6 +86,7 @@
           "PROCESS_ORDERING_EXPLICIT": 1
         },
         "TrackDescriptor": {
+          "counter": 8,
           "name": 2,
           "parent_uuid": 5,
           "process": 3,

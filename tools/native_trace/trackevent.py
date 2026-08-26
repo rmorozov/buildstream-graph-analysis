@@ -43,14 +43,19 @@ debug_annotation.proto   DebugAnnotation.name_iid = 1, int_value = 4,
                          string_value = 6
                          DebugAnnotationName.iid = 1, .name = 2
 track_descriptor.proto   uuid = 1, name = 2, process = 3, thread = 4,
-                         parent_uuid = 5, sibling_order_rank = 12,
-                         process_ordering = 19
+                         parent_uuid = 5, counter = 8,
+                         sibling_order_rank = 12, process_ordering = 19
                          ProcessOrdering.PROCESS_ORDERING_EXPLICIT = 1
+counter_descriptor.proto unit = 3, unit_name = 6
+                         Unit.UNIT_COUNT = 2
 process_descriptor.proto pid = 1, process_name = 6
 thread_descriptor.proto  pid = 1, tid = 2, thread_name = 5
 interned_data.proto      event_categories = 1, event_names = 2,
                          debug_annotation_names = 3
 ```
+
+`UX-310` added the counter descriptor, which is what turns
+`TYPE_COUNTER` from a reserved constant into a graph above the lanes.
 
 `UX-311` added the two ordering fields, and reading them rather than
 remembering them is what caught the rule that matters:
@@ -101,6 +106,10 @@ TRACK_UUID = 1
 TRACK_NAME = 2
 TRACK_PROCESS = 3
 TRACK_THREAD = 4
+# UX-310: `optional CounterDescriptor counter = 8`. A track with this
+# set is a graph rather than a lane of slices, and its events carry
+# `counter_value` instead of a name.
+TRACK_COUNTER = 8
 TRACK_PARENT_UUID = 5
 # UX-311: `optional int32 sibling_order_rank = 12` - lower ranks first.
 # On a *process* track it is ignored unless the root descriptor says to
@@ -146,9 +155,18 @@ EVENT_TERMINATING_FLOW_IDS = 48
 TYPE_SLICE_BEGIN = 1
 TYPE_SLICE_END = 2
 TYPE_INSTANT = 3
-# Reserved rather than used: `UX-300` may publish a resource series, and
-# an event stream may carry only what a capture measured.
+# `UX-310` gave this a caller. It stayed reserved for two rounds under
+# the rule that an event stream may carry only what a capture measured -
+# which is still the rule, and is why the series below is a count of
+# processes and not a memory curve: `max_rss_kb` is a per-process
+# *lifetime* peak, not a sample, and a curve drawn from peaks that never
+# coexisted is the error `compute_peak_memory` exists to refuse.
 TYPE_COUNTER = 4
+
+# --- CounterDescriptor ---------------------------------------------------
+COUNTER_UNIT = 3
+COUNTER_UNIT_NAME = 6
+UNIT_COUNT = 2
 
 # --- DebugAnnotation -----------------------------------------------------
 # The name is a `oneof`: interned (`name_iid`) or literal (`name = 10`).
@@ -263,6 +281,7 @@ class TrackEventWriter:
         self.packets = 0
         self.slices = 0
         self.tracks = 0
+        self.counters = 0
 
     # -- lifecycle --------------------------------------------------------
     def __enter__(self):
@@ -402,6 +421,43 @@ class TrackEventWriter:
         value = self._next_uuid
         self._next_uuid += 1
         return value
+
+    def counter_track(self, name: str, parent: int, unit_name: str,
+                      unit: int = UNIT_COUNT) -> int:
+        """A graph rather than a lane. Returns its uuid.
+
+        `UX-310`. `unit_name` rides in the descriptor rather than being
+        smuggled into the track name, because a reader who asks
+        `trace_processor` what this counts should get an answer without
+        parsing a label.
+        """
+        uuid = self._uuid()
+        descriptor = (
+            uint_field(TRACK_UUID, uuid)
+            + string_field(TRACK_NAME, name)
+            + uint_field(TRACK_PARENT_UUID, parent)
+            + bytes_field(TRACK_COUNTER,
+                          uint_field(COUNTER_UNIT, unit)
+                          + string_field(COUNTER_UNIT_NAME, unit_name)))
+        self._write_packet(self._sequence_prefix()
+                           + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
+        self.tracks += 1
+        return uuid
+
+    def counter(self, timestamp_ns: int, track: int, value: int) -> None:
+        """One sample on a counter track.
+
+        No name and no interning: a counter event is a number at a time,
+        which is the whole reason a series costs so much less than the
+        slices it was folded from.
+        """
+        event = (uint_field(EVENT_TYPE, TYPE_COUNTER)
+                 + uint_field(EVENT_TRACK_UUID, track)
+                 + int_field(EVENT_COUNTER_VALUE, value))
+        self._write_packet(self._sequence_prefix()
+                           + uint_field(PACKET_TIMESTAMP, timestamp_ns)
+                           + bytes_field(PACKET_TRACK_EVENT, event))
+        self.counters += 1
 
     def order_processes_explicitly(self) -> None:
         """Say once that the process lanes carry their own order.

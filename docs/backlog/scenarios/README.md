@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-312 scenarios: **8 open**, 304 closed.
+312 scenarios: **7 open**, 305 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 57 |
+| capture | 1 | 57 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
 | viewer | 2 | 76 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-294 | [eleven viewer modules are named in no document](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) | docs | Low | — | 🔴 |
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
 | UX-307 | [the export ships the source commentary](UX-0307-the-export-ships-the-source-comments.md) | viewer | Medium | R1 | 🔴 |
-| UX-310 | [the counters the reserved constant was waiting for](UX-0310-the-counters-the-reserved-constant-was-waiting-for.md) | capture | Medium | R1, R5 | 🔴 |
 | UX-312 | [questions for the trace that can finally answer them](UX-0312-questions-for-the-trace-that-can-finally-answer-them.md) | viewer | Medium | R1, R2 | 🔴 |
 | UX-313 | [the record list is the floor that is left](UX-0313-the-record-list-is-the-floor-that-is-left.md) | capture | Low | R1 | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |

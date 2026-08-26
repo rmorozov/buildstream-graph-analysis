@@ -231,6 +231,55 @@ def _write_trace(path, processes):
                 f"stime_us=300 max_rss_kb=2048 cmd=/usr/bin/cc -c f{index}.c\n")
 
 
+class TestTheAnswerIsWrittenDown:
+    """Four hand-worked processes, because equality is not enough.
+
+    Every clause above compares the two entry points, and they share
+    one implementation - so a change to `stream_records` moves both
+    sides and the comparison stays true. That is the trap `UX-297`'s
+    own `M2` fell into on the first pass. Falsified here: dropping the
+    still-open records from the end of the pass leaves every equality
+    clause green (both sides lose them together), and reddens this one.
+
+    The trace below carries one of each thing the pass has to tell
+    apart: a process that pairs, a START still open when the capture
+    ended, a hook END with no START (a truncated log - the hook is
+    loaded *by* the linker at exec, so it cannot be a fork-only child),
+    and a spine END with no START (which is exactly a fork-only child,
+    because `PTRACE_EVENT_EXIT` fires whether or not the process
+    exec'd).
+    """
+
+    LOG = [
+        "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=paired",
+        "END pid=2 ppid=1 ts=2.0 element=e.bst inv=a utime_us=10 stime_us=5",
+        "START pid=3 ppid=1 ts=1.5 element=e.bst inv=a cmd=still-running",
+        "END pid=4 ppid=1 ts=3.0 element=e.bst inv=a utime_us=1 stime_us=1",
+        "END pid=5 ppid=1 ts=3.5 element=e.bst inv=a src=spine "
+        "utime_us=1 stime_us=1",
+    ]
+
+    def test_the_pass_yields_exactly_these_records(self):
+        counts = {}
+        records = sorted(stream_records(iter(parse_trace_lines(self.LOG))),
+                         key=lambda record: record["start_ts"])
+
+        assert [(r["pid"], r["cmd"], r["open"]) for r in records] == [
+            (2, "paired", False),
+            (3, "still-running", True),
+        ], "an open record is a process, not an omission"
+        assert records[0]["duration_s"] == 1.0
+        assert records[1]["duration_s"] is None, (
+            "a process with no observed exit must not get a fabricated end")
+        assert records[1]["open_reason"] == "no-observed-exit"
+
+        list(stream_records(iter(parse_trace_lines(self.LOG)), counts))
+        assert counts == {"fork_only": 1, "unmatched": 1}, (
+            "the spine END is a fork-without-exec child and the hook END is "
+            "a truncated log; one number for both states what neither "
+            "record can support")
+
+
 class TestNothingOnTheseTwoPathsBuildsAList:
     """The list-building entry points made fatal, inside a child.
 

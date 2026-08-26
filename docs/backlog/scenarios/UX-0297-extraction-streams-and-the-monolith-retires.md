@@ -233,7 +233,6 @@ track, under a change about memory.
 **Falsification.** Recorded in the Verification Log with the rest of
 round 43.
 
-
 ## Progress (2026-08-26): the record list is the floor, and why
 
 `UX-313` asked the question this task's own measurement left open —

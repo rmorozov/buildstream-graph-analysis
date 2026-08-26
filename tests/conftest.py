@@ -119,6 +119,13 @@ KNOWN_SKIP_REASONS = {
     "the clone has no history for this file (a shallow checkout)": (
         "UX-247 compares a document's own Verification Log date against "
         "when git last changed it; a depth-1 clone cannot answer that", 0),
+    # `UX-314` asks for port 8080 by name, because it is one of exactly
+    # two plain-http origins ui.perfetto.dev's CSP will fetch from. A
+    # developer machine often has something there already, and the
+    # guard binds the port to find out rather than trusting an
+    # exception `bga view` handles for itself.
+    "port 8080 is in use on this machine": (
+        "UX-314's friendly-port arm, where the port is already taken", 0),
     "jsonschema is not installed - `pip install -e '.[dev]'`": (
         "schema validation is a dev extra", 0),
     "buildstream is not installed": (

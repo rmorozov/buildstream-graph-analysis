@@ -199,7 +199,7 @@
                     "sentence": "1.00 is at or above 0.90 and at or above 0.70, which is what chooses the sentence beside it; the caveat below 0.8 confidence is a second rule, not this one.",
                     "module": "bga/findings.py"
                 },
-                "trace_query": null,
+                "trace_query": "cpu-versus-wall",
                 "unpublished_inputs": []
             }
         }

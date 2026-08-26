@@ -750,7 +750,28 @@ class TestTheServedOriginCanBeFetched:
         assert "--port 8080" in err, err
 
     def test_the_friendly_port_does_not_carry_the_warning(self, snapshot, capsys):
+        """The one port a reader is told to use says nothing discouraging.
+
+        8080 is asked for by name here, and it is a port a developer
+        machine very often already has something on - so whether it is
+        free is checked by binding it, not by catching an exception.
+        `bga view` *handles* `EADDRINUSE` and prints `Error: [Errno 98]
+        Address already in use` rather than raising, so the `except
+        OSError` this started as never fired and the guard failed on any
+        machine with a busy 8080 instead of skipping. Found by leaving a
+        server on it.
+        """
+        import socket
+
         import tools.bga_view as view
+
+        probe = socket.socket()
+        try:
+            probe.bind(("127.0.0.1", 8080))
+        except OSError:
+            pytest.skip("port 8080 is in use on this machine")
+        finally:
+            probe.close()
 
         argv = [str(snapshot / "run"), "--no-browser", "--port", "8080"]
 
@@ -761,11 +782,12 @@ class TestTheServedOriginCanBeFetched:
         view.http.server.ThreadingHTTPServer.serve_forever = fake_serve_forever
         try:
             view.main(argv)
-        except OSError:
-            pytest.skip("port 8080 is in use on this machine")
         finally:
             view.http.server.ThreadingHTTPServer.serve_forever = original
         err = capsys.readouterr().err
+        assert "Address already in use" not in err, (
+            "8080 was free a moment ago and is not now; this guard cannot "
+            "say anything about the warning it is checking for")
         assert "may not fetch from this port" not in err, err
         assert "http://localhost:8080/" in err, err
 

@@ -714,8 +714,17 @@ export function renderEvidence(payload) {
   const fold = document.createElement("details");
   fold.className = "evidence-detail";
   fold.setAttribute("data-fold", "evidence");
+  // `UX-320` (styleguide §3a.1): this folds **published values** and
+  // said only "The numbers behind that" - a rabbit hole whose depth the
+  // reader could not see. `UX-318` gave the rule to the value folds
+  // `renderStructured` builds; the conformance pass found this one,
+  // built by hand here, outside it. One level, `rows.length` rows.
+  fold.setAttribute("data-levels", "1");
+  fold.setAttribute("data-rows", String(rows.length));
   const summary = document.createElement("summary");
-  summary.textContent = "The numbers behind that";
+  summary.textContent =
+    `The numbers behind that · 1 level, ${rows.length} `
+    + `row${rows.length === 1 ? "" : "s"}`;
   fold.append(summary);
 
   const list = document.createElement("dl");

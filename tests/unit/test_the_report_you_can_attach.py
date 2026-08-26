@@ -124,11 +124,42 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # The comment share is the real lever and it is still `UX-307`'s: this
 # very block is bytes every reader of an exported report pays for.
 #
+# **Round 44 (`UX-320`) moved the page again, and corrected the claim
+# above.** The +44,601 B of checked-in viewer source this round added:
+#
+#     app.js        104,875 -> 118,215  (+13,340)  grades, folds, focus,
+#                                                  the described value
+#     drawings.js    12,545 ->  21,421   (+8,876)  the size scale, the
+#                                                  twin, the tick row
+#     style.css      34,575 ->  43,052   (+8,477)  §2a/§2b/§3a's rules
+#     tablefocus.js       0 ->   6,692   (+6,692)  table focus, new module
+#     views.js       98,792 -> 102,947   (+4,155)  the graded figures
+#     shapes.js       6,541 ->   8,082   (+1,541)  `shapeOf`
+#     index.html      2,160 ->   3,103     (+943)  the actions group
+#     viewstate.js   10,686 ->  11,263     (+577)  `tf=` in the fragment
+#
+# And the correction, which matters more than the numbers. The round-41
+# note above says "**The export inlines modules verbatim, comments
+# included** ... 175 KB of the 196 KB page is commented JavaScript".
+# **It does not.** `tools/bga_view.py`'s `_uncommented` has stripped
+# whole-line and block comments from the inlined copy since `UX-205`.
+# Measured on the exported page this round:
+#
+#     page     223,276 B
+#       js     198,058 B   89%   trailing `//` comments ~114 B
+#       css     22,247 B   10%
+#       rest     2,971 B
+#
+# So the page is code. `UX-307`'s remaining scope is those ~114 B plus
+# whatever a real minifier would buy - not the 175 KB the old note
+# promised - and a round that wants the page smaller should start from
+# this measurement rather than from that sentence.
+#
 # The +1,073 of *data* on both runs is the two `bga:distribution`
 # hints and one `bga:series`, with their descriptions - the schema the
 # page carries, which is the half the companion guard below proves is
 # documents rather than payload.
-PAGE_BUDGET_B = 210_000
+PAGE_BUDGET_B = 226_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -139,7 +170,7 @@ COMMITTED_EXPORTS = [
     # `UX-302` moved both again, by 5,315 B: the §1 dispatch table and
     # the "view as JSON" toggle are two new modules and their styles.
     # Source, not content - see the split above.
-    ("golden", GOLDEN, 308_000),                       #  302,960 B
+    ("golden", GOLDEN, 324_000),                       #  321,939 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -151,7 +182,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 348_000),             #  342,156 B
+    ("macro_micro", MACRO_MICRO, 364_000),             #  361,135 B
 ]
 
 
@@ -452,15 +483,32 @@ class TestTheSizeDiscipline:
         has doubled since the ratio was set and the data at this scale
         has not, so 4x no longer has headroom.
 
-        The cause is named rather than absorbed: **the export inlines
-        every module verbatim, comments included**, and this
-        repository's modules are heavily commented by design - 175 KB
-        of the 196 KB page is commented JavaScript. Stripping comments
-        from the *inlined* copy (the repository keeps them; the
-        attachment does not need them) is filed as `UX-307`, and it is
-        the fix. Until it lands the threshold is **3.5x**, which still
-        catches what this guard exists for: a framework arriving is
-        hundreds of kilobytes of vendor code, not a comment block.
+        **Re-measured at round 44** (`UX-320`), because it tripped
+        again - and because the reason round 41 recorded was wrong.
+        That note said "the export inlines every module verbatim,
+        comments included ... 175 KB of the 196 KB page is commented
+        JavaScript". It does not: `_uncommented` has stripped
+        whole-line and block comments from the inlined copy since
+        `UX-205`. Measured on this page:
+
+        ```text
+        page     223,276 B
+          js     198,058 B   89%   trailing `//` comments ~114 B
+          css     22,247 B   10%
+          rest     2,971 B
+        data     764,900 B   3.43x
+        ```
+
+        So the page is **code**, and `UX-307`'s remaining scope is the
+        ~114 B of trailing comments plus whatever a real minifier would
+        buy - not the 175 KB the old note promised. The threshold moves
+        to **3.3x** with that correction, and the honest statement is
+        that this ratio has now moved twice for one cause: the viewer
+        grows features and the synthetic run's data does not grow with
+        it. What the guard still catches is what it was built for - a
+        framework arriving is hundreds of kilobytes of vendor code
+        landing at once, which `test_no_module_looks_like_a_vendored_library`
+        catches by shape and this catches by weight.
         """
         import tools.bga_view as view
 
@@ -473,7 +521,7 @@ class TestTheSizeDiscipline:
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
         data = len(html) - len(page)
-        assert data > 3.5 * len(page), (
+        assert data > 3.3 * len(page), (
             f"{data} B of data against a {len(page)} B page - Direction 7's "
             f"rule is that the data is what an export weighs, and at this "
             f"scale it should not be close")

@@ -70,9 +70,13 @@ def _shell():
     return shutil.which("trace_processor_shell")
 
 
+# The reason string is `test_the_perfetto_handoff.py`'s, verbatim, and
+# deliberately so: the skip census counts by reason, and a second
+# wording for "the same optional tool is absent" would split one family
+# into two for no gain. Where to get one is in this module's docstring,
+# which is where a reader who hits the skip will look.
 needs_trace_processor = pytest.mark.skipif(
-    _shell() is None,
-    reason="no trace_processor_shell (set BGA_TRACE_PROCESSOR or add it to PATH)")
+    _shell() is None, reason="trace_processor_shell is not installed")
 
 
 # One of everything the four items emit, so the reader has something of
@@ -162,7 +166,7 @@ def _build(tmp, outcome=None, name="20260821T120000Z"):
 def queried(tmp_path_factory):
     shell = _shell()
     if shell is None:
-        pytest.skip("no trace_processor_shell")
+        pytest.skip("trace_processor_shell is not installed")
     tmp = tmp_path_factory.mktemp("realreader")
     _snapshot, trace, result = _build(tmp)
     # A second trace from an interrupted run: `incomplete_reason` is the

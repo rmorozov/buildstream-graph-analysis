@@ -95,8 +95,17 @@ KNOWN_SKIP_REASONS = {
     "not a dev environment by its own account (BGA_EXPECT_DEV is unset)": (
         "the dev-extras canary, which only asserts where the environment "
         "claims to be a dev environment (CI sets BGA_EXPECT_DEV)", 0),
+    # Round 43 gave this reason a second file and twelve more skips.
+    # `UX-312`'s first clause loads the emitted trace with Perfetto's
+    # own reader instead of this repository's decoder, which is the
+    # only way to check that `bga` and Perfetto agree about the wire
+    # format - and the binary is deliberately neither vendored (11 MB,
+    # in a repository that declines a protobuf dependency) nor fetched
+    # by the suite (a guard that reaches the network fails for reasons
+    # unrelated to the code). Measured on this container: 12 from
+    # `test_the_real_reader_agrees.py`, 1 from the handoff guard.
     "trace_processor_shell is not installed": (
-        "Perfetto's shell is an optional local tool, not a dependency", 0),
+        "Perfetto's shell is an optional local tool, not a dependency", 13),
     "node is not installed": (
         "the viewer guards need node; CI has it", 0),
     # UX-257's geometry guards. Declared so that "no browser here" is
@@ -121,8 +130,14 @@ KNOWN_SKIP_REASONS = {
     # them, which is precisely what the census is for.
     "no real capture here": (
         "UX-213's second arm, where examples/06's capture is absent", 19),
+    # Round 43's four trace guards adopted this string. Their
+    # *properties* are checked on committed fixtures that a clone has;
+    # what skips here is the arithmetic only `examples/06`'s gitignored
+    # capture can produce. Measured with that directory moved aside:
+    # 3 from the annotations guard, 3 from the counter guard, 1 each
+    # from the flows and identity guards - plus `UX-213`'s own arm.
     "no real capture in this tree": (
-        "UX-213's second arm, where examples/06's capture is absent", 0),
+        "UX-213's second arm, where examples/06's capture is absent", 8),
     "the examples/06 capture is not here": (
         "UX-213's second arm, where examples/06's capture is absent", 10),
     # The seven CI's `test` job produces and a dev container does not.

@@ -71,17 +71,37 @@ from tools.bst_native_build_tracer import (
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# **Both of these are gitignored.** They exist on this machine and not
+# in a clone, so the clauses that read them are skipped where they are
+# absent - the measurements in this file's header came from them and are
+# worth having exactly, but a guard whose only data is an untracked path
+# passes locally and fails in CI before an assertion runs.
+#
+# The paths are written as whole strings rather than assembled from
+# `os.path.join` fragments, deliberately:
+# `test_a_guard_reads_only_what_a_clone_has.py` scans test files for
+# path-like literals, and a path split across `join` arguments is
+# invisible to it. That is how this file got past it - and the guard now
+# reads fragments too, so the next one does not.
 RAW_CAPTURE = os.path.join(
-    REPO_ROOT, "examples", "01-resource-contention", ".bga", "tmp",
-    "trace-qmy4cnf0", "bind", "trace.log")
+    REPO_ROOT,
+    "examples/01-resource-contention/.bga/tmp/trace-qmy4cnf0/bind/trace.log")
 GZ_CAPTURE = os.path.join(
-    REPO_ROOT, "examples", "06-macro-micro-optimization", ".bga", "runs",
-    "20260821T170127Z", "plane2.log.gz")
+    REPO_ROOT,
+    "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z"
+    "/plane2.log.gz")
+
+
+def _needs(path):
+    return pytest.mark.skipif(not os.path.exists(path),
+                              reason="no real capture in this tree")
+
 
 CAPTURES = [
-    pytest.param(RAW_CAPTURE, open, id="examples-01-raw"),
+    pytest.param(RAW_CAPTURE, open, id="examples-01-raw",
+                 marks=_needs(RAW_CAPTURE)),
     pytest.param(GZ_CAPTURE, lambda p: gzip.open(p, "rt", errors="ignore"),
-                 id="examples-06-plane2-gz"),
+                 id="examples-06-plane2-gz", marks=_needs(GZ_CAPTURE)),
 ]
 
 
@@ -123,6 +143,8 @@ class TestTheTwoEntryPointsAgree:
         list(stream_records(iter(events), counts))
         assert counts == count_unmatched_ends(events)
 
+    @_needs(RAW_CAPTURE)
+    @_needs(GZ_CAPTURE)
     def test_a_capture_is_out_of_global_order_and_in_per_key_order(self):
         """The premise, asserted on the capture that carries it.
 
@@ -143,6 +165,49 @@ class TestTheTwoEntryPointsAgree:
         assert gz_per_key == 0, (
             f"{gz_per_key} events arrive before an earlier event of their own "
             "key - the property the streaming pass rests on does not hold")
+
+    def test_the_premise_holds_on_a_capture_a_clone_has(self):
+        """The same premise as the clause above, where CI can check it.
+
+        The real captures are gitignored, so the clause that measures
+        *them* skips there. This one generates a log with the same two
+        properties - out of global order, in per-key order - so the
+        thing the streaming pass rests on is asserted everywhere and
+        only the figures are local.
+        """
+        lines = []
+        for index in range(60):
+            element = f"core-{index % 5:02d}.bst"
+            pid = 1000 + index % 11
+            lines.append(
+                f"START pid={pid} ppid=1 ts={2000.0 + index * 2} "
+                f"element={element} inv=inv-{index % 5:02d} cmd=cc f{index}.c")
+            lines.append(
+                f"END pid={pid} ppid=1 ts={2000.0 + index * 2 + 1} "
+                f"element={element} inv=inv-{index % 5:02d} "
+                f"utime=0.01 stime=0.01 maxrss_kb=512 cmd=cc f{index}.c")
+        events = parse_trace_lines(lines)
+        # Interleave across keys the way concurrent writers do, without
+        # ever reordering one key's own two events.
+        by_key = {}
+        for event in events:
+            by_key.setdefault(_pair_key(event), []).append(event)
+        queues = list(by_key.values())
+        interleaved = []
+        while queues:
+            for queue in list(queues):
+                interleaved.append(queue.pop(0))
+                if not queue:
+                    queues.remove(queue)
+
+        global_inv, per_key_inv = _inversions(interleaved)
+        assert global_inv > 0, (
+            "the generated log is globally ordered, so it cannot stand in "
+            "for a real capture's interleaving")
+        assert per_key_inv == 0
+        streamed = sorted(stream_records(iter(interleaved)),
+                          key=lambda record: record["start_ts"])
+        assert streamed == pair_events(list(interleaved))
 
     def test_they_agree_when_the_global_order_is_deliberately_shuffled(self):
         """Interleaving taken past what any real writer would produce.

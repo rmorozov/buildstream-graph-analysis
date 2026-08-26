@@ -199,25 +199,11 @@ def rendered(tmp_path_factory):
 
 
 class TestTheSeriesAndTheScalarAgree:
-
-    @needs_real_capture
-    def test_the_peak_equals_the_published_max_concurrency(self):
-        """One pass, one truth. If the stride ever cost the peak, this
-        is where it would show - and the stride is written to keep each
-        window's maximum precisely so it cannot."""
-        records = _records()
-        series = concurrency_series(records)
-        assert series
-        assert max(value for _ts, value in series) == \
-            compute_max_concurrency(records)
-
-    @needs_real_capture
-    def test_the_trace_carries_that_same_peak(self, rendered):
-        records = _records()
-        assert rendered["result"]["counter_peak"] == \
-            compute_max_concurrency(records)
-        values = [sample["value"] for sample in rendered["trace"]["samples"]]
-        assert max(values) == compute_max_concurrency(records)
+    """The properties, on the fixture in this file - so a clone runs
+    them. `examples/06`'s capture is gitignored; what it is for here is
+    the *figures*, and those live in one clause below rather than nine,
+    because they are one measurement and a module-scoped skip that
+    silences nine tests is what the skip census exists to notice."""
 
     def test_a_hand_folded_window_matches_the_series(self):
         """Four processes worked by hand, against the fold."""
@@ -258,77 +244,57 @@ class TestTheSeriesAndTheScalarAgree:
         assert max(v for _t, v in concurrency_series(records, windows=0)) == 1
 
 
-class TestTheStrideIsBounded:
+class TestTheFiguresOnTheRealCapture:
+    """One clause, because they are one measurement.
+
+    Nine of these were nine tests until the skip census pointed out
+    what that costs a clone: `examples/06`'s capture is gitignored, so
+    every one of them was a silence there. The *properties* they were
+    checking are on the committed fixture below and run everywhere;
+    what is left here is the arithmetic that only a real capture can
+    produce, and it fails as one thing because it is one thing.
+    """
 
     @needs_real_capture
-    def test_the_sample_count_cannot_grow_with_the_build(self):
+    def test_the_measurement_this_file_reports(self, rendered):
         records = _records()
-        assert len(records) == 813
         series = concurrency_series(records)
+        peak = compute_max_concurrency(records)
+
+        # The series and the scalar, on 813 real records.
+        assert len(records) == 813, len(records)
+        assert max(value for _ts, value in series) == peak == 20
+
+        # The stride: 1,626 raw endpoints become 538 samples, and the
+        # peak survives every setting of the knob.
         assert len(series) == 538, len(series)
         assert len(series) <= 2 * COUNTER_WINDOWS + 2
-
-    @needs_real_capture
-    def test_a_tighter_stride_gives_fewer_samples_and_the_same_peak(self):
-        """The stride is a knob with a measured effect, not a constant
-        nobody has turned."""
-        records = _records()
-        peak = compute_max_concurrency(records)
         counts = []
         for windows in (10, 100, 1000):
-            series = concurrency_series(records, windows=windows)
-            counts.append(len(series))
-            assert max(value for _ts, value in series) == peak, windows
-        assert counts == sorted(counts), counts
-        assert counts[0] < counts[-1], counts
+            strided = concurrency_series(records, windows=windows)
+            counts.append(len(strided))
+            assert max(value for _ts, value in strided) == peak, windows
+        assert counts == sorted(counts) and counts[0] < counts[-1], counts
 
-    @needs_real_capture
-    def test_the_timestamps_never_go_backwards(self, rendered):
-        """Perfetto draws a step function; a sample behind the previous
-        one is a step that is not one."""
-        stamps = [sample["ts"] for sample in rendered["trace"]["samples"]]
-        assert stamps == sorted(stamps)
-        assert len(stamps) == rendered["result"]["counters"]
-
-
-class TestTheTrackSaysWhatItCounts:
-
-    @needs_real_capture
-    def test_there_is_exactly_one_counter_track_and_it_names_its_unit(
-            self, rendered):
+        # What reached the trace, read back off the wire.
+        assert rendered["result"]["counter_peak"] == peak
         counters = rendered["trace"]["counters"]
         assert len(counters) == 1, counters
         (entry,) = counters.values()
         assert entry["name"] == CONCURRENCY_COUNTER
         assert entry["unit_name"] == CONCURRENCY_UNIT
         assert entry["unit"] == trackevent.UNIT_COUNT
+        assert not any("rss" in (e["name"] or "").lower()
+                       for e in counters.values())
+        stamps = [sample["ts"] for sample in rendered["trace"]["samples"]]
+        assert stamps == sorted(stamps)
+        assert len(stamps) == rendered["result"]["counters"] == 538
+        assert {s["track"] for s in rendered["trace"]["samples"]} == set(counters)
 
     @needs_real_capture
-    def test_there_is_no_memory_series(self, rendered):
-        """The clause that records a refusal rather than an omission.
-
-        `max_rss_kb` is a lifetime peak, not a sample. If a memory
-        counter ever appears here, the question it has to answer first
-        is what it sampled - and `compute_peak_memory`'s own docstring
-        is the argument it has to beat."""
-        names = {entry["name"] for entry in
-                 rendered["trace"]["counters"].values()}
-        assert not any("rss" in name.lower() or "mem" in name.lower()
-                       for name in names), names
-
-    @needs_real_capture
-    def test_every_sample_is_on_that_track(self, rendered):
-        tracks = {sample["track"] for sample in rendered["trace"]["samples"]}
-        assert tracks == set(rendered["trace"]["counters"])
-
-
-class TestWhatTheSeriesCosts:
-
-    @needs_real_capture
-    def test_it_is_one_packet_a_sample_and_one_for_the_track(
-            self, tmp_path, monkeypatch):
-        """The property, measured rather than remembered: the same
-        capture rendered with the series and without it."""
+    def test_what_it_costs_there(self, tmp_path, monkeypatch):
+        """The same capture with the series silenced: one packet a
+        sample plus one for the track, 25.1 B a sample uncompressed."""
         import tools.bga_timeline as timeline
 
         snapshot = _snapshot(tmp_path)

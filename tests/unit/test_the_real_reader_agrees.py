@@ -46,6 +46,7 @@ import gzip
 import json
 import pathlib
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -76,6 +77,56 @@ needs_trace_processor = pytest.mark.skipif(
 
 def _shell():
     return trace_processor.shell()
+
+
+class TestTheGateIsOneGate:
+    """`UX-321`: this module honoured `BGA_TRACE_PROCESSOR` and its
+    sibling did not, so a machine with the binary unpacked somewhere
+    unusual ran half the clauses that could have run - and the skip
+    census counted the other half as "the tool is absent"."""
+
+    def test_the_env_var_wins_over_the_path(self, tmp_path):
+        fake = tmp_path / "trace_processor_shell"
+        fake.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+        found = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; sys.path.insert(0, sys.argv[1]);"
+             " import trace_processor; print(trace_processor.shell() or '')",
+             str(REPO / "tests")],
+            capture_output=True, text=True,
+            # `PATH` emptied, so `which` cannot be what finds it.
+            env={"BGA_TRACE_PROCESSOR": str(fake), "PATH": "/nonexistent"})
+        assert found.stdout.strip() == str(fake), found
+
+    def test_a_named_binary_that_is_not_executable_is_not_the_gate(
+            self, tmp_path):
+        """Named is not enough: a path that cannot be run would skip
+        every clause with a message saying the tool is missing, which is
+        true of the file and misleading about the machine."""
+        named = tmp_path / "not-executable"
+        named.write_text("", encoding="utf-8")
+        found = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; sys.path.insert(0, sys.argv[1]);"
+             " import trace_processor; print(trace_processor.shell() or '')",
+             str(REPO / "tests")],
+            capture_output=True, text=True,
+            env={"BGA_TRACE_PROCESSOR": str(named), "PATH": "/nonexistent"})
+        assert found.stdout.strip() == "", found
+
+    def test_both_families_ask_the_same_question(self):
+        """Named, not counted: the two files that gate on this reader
+        import the gate rather than each spelling it."""
+        # Assembled, so the needle is not in this file as a literal -
+        # a scan that matched its own assertion would fail on the tree
+        # it is meant to pass on.
+        needle = "shutil.which(" + '"trace_processor' + '_shell")'
+        for name in ("test_the_real_reader_agrees.py",
+                     "test_the_perfetto_handoff.py"):
+            source = (REPO / "tests/unit" / name).read_text(encoding="utf-8")
+            assert "import trace_processor" in source, name
+            assert needle not in source, f"{name} spells the gate itself again"
 
 
 # One of everything the four items emit, so the reader has something of

@@ -131,3 +131,19 @@ fixture **under the real reader where available**". There is still no
 the wire, on every Plane 2 slice, equal to its record's. The SQL itself
 is unchanged by this fix — it was always the right query — which is why
 the emitter moving is the whole of the change.
+
+**Mutations — six, all discriminating.** Run against the committed tree,
+one at a time, reverted between:
+
+```text
+Q1  element leaves Plane 2's contract      6 red   the defect, restored
+Q2  the emitter declares it, never fills   3 red   off the wire
+Q3  a Plane 1 query reads `debug.cmd`      1 red   the per-scope clause
+Q4  the dictionary says Plane 1 only       1 red   both directions
+Q5  the two planes describe it differently 1 red   one key, one meaning
+Q6  the gate stops reading the env var     2 red   with the sibling scan
+```
+
+Q1 is the one worth naming: it puts the survivor back exactly as it was
+and six clauses fire — the per-scope guard, the wire walk, the shared-key
+census and the dictionary equality — where before, nothing did.

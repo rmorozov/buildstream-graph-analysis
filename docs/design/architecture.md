@@ -805,6 +805,37 @@ The corollary is the constraint Direction 7 wanted: anything the viewer
 should show has to enter a published schema first, where the text
 renderer, CI and every external consumer get it too.
 
+### Which file owns what
+
+`UX-294`. The principles above are written down; the map from a
+principle to the file that implements it was not, so a reader opening
+`bga/viewer/` had to derive it. One line each — the file is its own
+description, and this table's job is only to say which one to open.
+
+| module | owns |
+|---|---|
+| `app.js` | the boot sequence, the payload fetches, and the thresholds the page renders against |
+| `views.js` | every section the report has — the largest module, and the one a "where is this drawn" question usually ends at |
+| `shapes.js` | the styleguide's §1 dispatch table as code: value shape + hint → the one control that draws it (`UX-302`) |
+| `tables.js` | the element table, its columns, sorting and the preset filters `bga:presets` declares |
+| `nav.js` | the rail, the anchors, section collapse, and the jump box / command palette |
+| `chapters.js` | the chapter grouping that turns forty-eight sections into a document (`UX-286`) |
+| `viewstate.js` | the URL fragment contract — the working set `UX-211` and `UX-225` publish links against |
+| `focus.js` | focusing one element and dimming the rest (`UX-222`) |
+| `drawings.js` | sparklines and density strips: the self-built geometry, and the boundary on what one may print (`UX-303`) |
+| `rawjson.js` | the "view as JSON" toggles, and the record of which section each blob came from (`UX-302`) |
+| `questions.js` | the canned SQL library, its categories, and the `why` each question carries (`UX-210`, `UX-312`) |
+| `sql.js` | the Query (SQL) satellite page that renders that library |
+| `perfetto.js` | the handoff transports: `postMessage`, the `?url=` deep link, and what Perfetto's CSP will fetch (`UX-314`) |
+| `perfetto_page.js` | the standalone handoff page `bga view --perfetto` lands on |
+| `trace_context.js` | the finding→query mapping that gives an investigate button its question (`UX-229`) |
+| `style.css` | every colour, the two token grades, and dark as the design surface (`UX-304`) |
+
+`tests/unit/test_the_viewer_modules_have_a_home.py` holds this table
+and the directory equal in both directions, so a new module that no
+one documented reddens rather than joining the eight that once had no
+entry here.
+
 ## The published contracts
 
 The tool's external surface, one line each. **`--schema` is the source

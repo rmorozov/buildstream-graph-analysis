@@ -68,6 +68,16 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
                        "20260821T170127Z")
 
+# `examples/06`'s capture is real and **gitignored** - it exists on this
+# machine and not in a clone. The measured figures below are taken from
+# it and are worth having exactly, so the clauses that need it are
+# skipped rather than deleted; every *property* they check is also
+# checked on a committed fixture, so CI is not left believing something
+# it never ran.
+needs_real_capture = pytest.mark.skipif(
+    not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
+
+
 # Three elements in a chain and one off it, with a `bst`-shaped log.
 # `top.bst` is instantaneous and **begins** in the same millisecond
 # `mid.bst` does, which is the tie the drop rule exists for: the flow
@@ -356,6 +366,7 @@ class TestTheArrowsRideThePacketsThatExist:
                 digests.append(hashlib.sha256(handle.read()).hexdigest())
         assert digests[0] == digests[1], digests
 
+    @needs_real_capture
     def test_a_flow_costs_no_packet_at_all(self, tmp_path, monkeypatch):
         """The property, not a remembered number.
 
@@ -399,3 +410,25 @@ class TestTheArrowsRideThePacketsThatExist:
         # the length prefixes they sit inside.
         per_flow = (len(with_body) - len(without_body)) / withf["flows"]
         assert 18.0 <= per_flow <= 22.0, per_flow
+
+    def test_a_flow_costs_no_packet_on_the_committed_fixture_either(
+            self, tmp_path, monkeypatch):
+        """The same property where a clone can check it.
+
+        The clause above takes the *figures* from `examples/06`, which
+        git does not track. This one takes the property from the
+        fixture in this file, which it does.
+        """
+        import tools.bga_timeline as timeline
+
+        snapshot = _snapshot(tmp_path)
+        out = tmp_path / "with.gz"
+        withf = render(str(snapshot), str(out))
+        monkeypatch.setattr(timeline, "dependency_edges", lambda _s: [])
+        monkeypatch.setattr(timeline, "_plane2_flows",
+                            lambda records, first: ({}, first))
+        bare = tmp_path / "bare.gz"
+        without = render(str(snapshot), str(bare))
+        assert withf["flows"] == 7 and without["flows"] == 0
+        assert withf["packets"] == without["packets"]
+        assert withf["slices"] == without["slices"]

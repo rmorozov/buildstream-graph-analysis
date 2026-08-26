@@ -67,6 +67,16 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
                        "20260821T170127Z")
 
+# `examples/06`'s capture is real and **gitignored** - it exists on this
+# machine and not in a clone. The measured figures below are taken from
+# it and are worth having exactly, so the clauses that need it are
+# skipped rather than deleted; every *property* they check is also
+# checked on a committed fixture, so CI is not left believing something
+# it never ran.
+needs_real_capture = pytest.mark.skipif(
+    not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
+
+
 # A command long enough that the 120-character name loses its tail, with
 # the distinguishing part *in* that tail - which is the case the item
 # was filed for.
@@ -208,6 +218,8 @@ def decode(path):
 
 @pytest.fixture(scope="module")
 def real(tmp_path_factory):
+    if not REAL_CAPTURE.is_dir():
+        pytest.skip("no real capture in this tree")
     """`examples/06`'s own capture, rendered.
 
     The small fixture above is built to carry one of everything; this is
@@ -281,6 +293,18 @@ class TestTheKeysAreAContract:
             f"{shared} is documented twice - one key, one meaning, or a "
             "query has to know which plane it is reading")
 
+    def test_a_key_is_interned_once_on_the_committed_fixture(
+            self, rendered):
+        """The property where a clone can check it: the names table has
+        no duplicate, and more annotation *values* are written than
+        there are names to write them under. The clause below takes the
+        same claim at a scale only the gitignored capture has."""
+        names = rendered["trace"]["annotation_names"]
+        written = sum(len(event["args"])
+                      for event in rendered["trace"]["events"])
+        assert len(names) == len(set(names.values())), names
+        assert written > len(names), (written, len(names))
+
     def test_a_key_is_interned_once_however_many_slices_use_it(self, real):
         """Ten keys over 825 slices cost ten strings.
 
@@ -350,6 +374,7 @@ class TestTheNameStaysShortAndTheArgvSurvives:
         assert event["args"]["cmd"] == LONG_CMD
         assert LONG_TAIL in event["args"]["cmd"]
 
+    @needs_real_capture
     def test_the_real_capture_has_commands_that_need_this(self):
         """Not a hypothetical. On `examples/06`, 412 of 813 records run
         past the 120-character name."""

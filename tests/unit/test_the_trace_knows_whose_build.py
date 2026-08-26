@@ -54,6 +54,16 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
                        "20260821T170127Z")
 
+# `examples/06`'s capture is real and **gitignored** - it exists on this
+# machine and not in a clone. The measured figures below are taken from
+# it and are worth having exactly, so the clauses that need it are
+# skipped rather than deleted; every *property* they check is also
+# checked on a committed fixture, so CI is not left believing something
+# it never ran.
+needs_real_capture = pytest.mark.skipif(
+    not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
+
+
 # Three elements whose Plane 2 spans are deliberately in the *reverse*
 # of their name order, so lane rank cannot accidentally agree with the
 # alphabetical pid assignment.
@@ -413,6 +423,7 @@ class TestTheIdentityKeysAreInTheContract:
         assert documented - emitted == set()
         assert emitted - documented == set()
 
+    @needs_real_capture
     def test_the_real_capture_fills_it_too(self, tmp_path):
         """Not only the shaped fixture: `examples/06` is a real
         `run-context.json` written by a real capture."""

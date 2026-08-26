@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-306 scenarios: **6 open**, 300 closed.
+311 scenarios: **11 open**, 300 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 52 |
+| capture | 5 | 56 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
-| viewer | 1 | 75 |
+| viewer | 2 | 76 |
 | cli | 0 | 4 |
 | store | 2 | 27 |
 | docs | 2 | 29 |
@@ -40,8 +40,32 @@ task file, which is the only place it ever lived twice.
 | UX-295 | [`whatif/v1` is published, and named in no guide](UX-0295-whatif-v1-is-in-no-guide.md) | docs | Low | R5, R7 | 🔴 |
 | UX-297 | [extraction streams, and the monolith retires](UX-0297-extraction-streams-and-the-monolith-retires.md) | capture | High | R1, R2 | 🟡 |
 | UX-307 | [the export ships the source commentary](UX-0307-the-export-ships-the-source-comments.md) | viewer | Medium | R1 | 🔴 |
+| UX-308 | [a slice that says what bga knows about it](UX-0308-a-slice-that-says-what-bga-knows-about-it.md) | capture | High | R1, R2 | 🔴 |
+| UX-309 | [the arrows that answer "why did this start now"](UX-0309-the-arrows-that-answer-why-now.md) | capture | High | R1, R3 | 🔴 |
+| UX-310 | [the counters the reserved constant was waiting for](UX-0310-the-counters-the-reserved-constant-was-waiting-for.md) | capture | Medium | R1, R5 | 🔴 |
+| UX-311 | [a trace that knows whose build it was](UX-0311-a-trace-that-knows-whose-build-it-was.md) | capture | Medium | R1, R4 | 🔴 |
+| UX-312 | [questions for the trace that can finally answer them](UX-0312-questions-for-the-trace-that-can-finally-answer-them.md) | viewer | Medium | R1, R2 | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+
+## UX-308..UX-312: the forty-third round — the trace speaks the format, not yet the language (2026-08-26)
+
+The user's question — are we really using Perfetto's power? —
+answered by reading both sides of the seam. The trace is the right
+container (UX-298) carrying almost nothing: a slice says its name
+alone, Plane 2's truncated to 120 characters, while the records it
+came from hold CPU time, peak RSS, exit status and exec chains, and
+the run holds kinds, cache outcomes, dependency edges, path
+membership and identity. Perfetto's vocabulary for every one of
+them sits unused: debug annotations, flows, counter tracks (pinned
+"reserved rather than used"), trace identity, descriptor ordering.
+Direction 15's second iteration states the rule — the artifact is
+not just Perfetto's format, it is Perfetto's vocabulary — and the
+orchard is filed as
+[`UX-308`](UX-0308-a-slice-that-says-what-bga-knows-about-it.md)..[`UX-312`](UX-0312-questions-for-the-trace-that-can-finally-answer-them.md),
+every item riding the existing streaming pass under the existing
+RSS ceilings. Full narrative:
+[`../../audits/round-43.md`](../../audits/round-43.md).
 
 ## UX-302..UX-306: the forty-first round — the page gets a visual contract (2026-08-25)
 

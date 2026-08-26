@@ -1331,6 +1331,43 @@ knows how to be small — and the paths that matter never learned.
 - `UX-300` — capture-side footprint and retention: what a 2 GB
   snapshot does to a store, priced and governed.
 
+### Second iteration (argued 2026-08-26, round 43): the trace learns to say what bga knows
+
+The first iteration made the trace the right *container*; round 43
+audited whether it uses the container's *vocabulary*, against the
+user's question — are we really using Perfetto's power? Measured
+answer: no. A slice today carries exactly one fact, its name — for
+Plane 2 a command truncated to 120 characters — while the record it
+was built from carries CPU time, peak RSS, exit status and the exec
+chain, and the Plane 1 task knows its element kind, task type,
+cache outcome and every dependency edge. Perfetto's semantic
+surface for all of it sits unused: debug annotations (the details
+panel is empty; `extract_arg` has nothing to extract), flows (the
+dependency arrows a timeline exists for), counter tracks (the
+`TYPE_COUNTER` constant was pinned and reserved), trace-level
+identity (a trace leaves the machine and forgets whose build it
+was), and descriptor ordering (lanes open in discovery order, not
+where the report would send the reader).
+
+The iteration's rule extends rule 3: **the artifact is not just
+Perfetto's format — it is Perfetto's vocabulary.** Every fact the
+capture already holds that Perfetto can express enters the trace in
+Perfetto's own idiom, so the UI shows it, `trace_processor` selects
+on it, and the canned questions stop querying names and timestamps
+because that was all there was. Field numbers keep the UX-298
+procedure — read from the protos, never from memory — and every
+enrichment rides the existing single streaming pass, under the
+existing RSS ceilings. Annotation keys become a contract (the trace
+dictionary), because a query built on a drifting key breaks
+silently.
+
+Decomposed as `UX-308` (annotations, the full command, the failed
+category), `UX-309` (dependency and exec flows, bounded and
+priced), `UX-310` (the three counter series the reserved constant
+was waiting for), `UX-311` (run identity in the trace, lanes
+ordered by the path), `UX-312` (the question library learns the
+vocabulary, and the dictionary gets its guard).
+
 ## Direction 16: the visual contract (argued 2026-08-25, round 41)
 
 **Serves:** every reader of the page; R1 first ([roles](roles.md)).
@@ -1383,6 +1420,7 @@ the other rounds now:
 | 28-39 | the sibling's execution rounds: UX-236..295 landed, Directions 10-14 argued — recorded in each direction's section and the backlog's round sections rather than as audit files |
 | [40](../audits/round-40.md) | the field's first architectural showstopper: a 2 GB dual-plane snapshot OOMs `bga view` — every load path measured, ~95 % of the monolith unread, the streaming fix on the wrong path; Direction 15 argued (events as a Perfetto TrackEvent stream, capture computes / view serves) and the rounds 28-39 sample verified six for six (`UX-296`..`UX-301`) |
 | [41](../audits/round-41.md) | a design round while Direction 15 executes: the user's brainstorm became the visual contract (`styleguide.md`) — shape→control mapping, sparklines and density strips, a measured-and-budgeted palette (two validator failures found), dark first with print kept honest (`UX-302`..`UX-306`, Direction 16) |
+| [43](../audits/round-43.md) | Direction 15 and the visual contract verified eleven for eleven, fourteen mutations discriminating; then the user's question answered by inventory — the trace speaks Perfetto's format and none of its vocabulary, while the capture holds the content for all of it (`UX-308`..`UX-312`, Direction 15's second iteration) |
 
 ## Verification Log
 

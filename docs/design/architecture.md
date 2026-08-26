@@ -218,6 +218,28 @@ empty.
   every entry carries `spine+hook` / `spine-only` / `hook-only`, and
   coverage stops being a footnote and becomes a count. Verified at scale:
   **127,632 processes on freedesktop-sdk, all one class**.
+- **The arrows say why something started now** (`UX-309`). An element
+  ends, another begins, and whether that adjacency is *causation* is
+  what `graph.json` knows and the trace never said. Perfetto's
+  vocabulary is **flows**, drawn as arrows: the timeline emits one per
+  dependency edge whose two endpoints both produced a task, and one per
+  `ppid` link inside a sandbox - the exec chain, which makes a build
+  system's process tree followable instead of inferred from lane
+  adjacency. Nothing else: there is no captured relation between one
+  element's process and another's, and a flow that invented one would be
+  a lie the UI draws in bold. A flow is *one id on two slices* and
+  upstream infers the direction from their timestamps, so an edge whose
+  source does not begin strictly before its sink is **dropped and
+  counted** rather than guessed at - on `examples/06` that is two edges,
+  because `toolchain.bst` is instantaneous and both its dependents begin
+  in the microsecond it does. The bound is no bound, and the measurement
+  is the argument: a flow id rides the slice packet that already exists,
+  so **packets are unchanged** at both scales measured (2,335 on
+  `examples/06`, 62,804 on a 20,000-process synthetic) and a flow costs
+  20.0 B uncompressed, 8.6 B gzipped. The ids are `fixed64`, a different
+  wire type from every other number the emitter writes, and a varint in
+  that field is a packet a reader drops without complaining - so the
+  guard asserts the wire type, not only the value.
 - **A slice says what `bga` knows about it** (`UX-308`). A slice used
   to carry its name alone, and for Plane 2 that name is the command
   truncated to 120 characters - so the argv tail that tells two

@@ -94,7 +94,9 @@
           "category_iids": 3,
           "counter_value": 30,
           "debug_annotations": 4,
+          "flow_ids": 47,
           "name_iid": 10,
+          "terminating_flow_ids": 48,
           "track_uuid": 11,
           "type": 9
         },

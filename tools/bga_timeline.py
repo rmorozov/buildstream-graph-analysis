@@ -218,6 +218,154 @@ def _plane1_outcomes(events) -> dict:
     return outcomes
 
 
+# --------------------------------------------------------------------------
+# `UX-309`: the arrows.
+#
+# A flow is one id on two slices, and Perfetto infers the direction from
+# their timestamps - "the earliest event with the same flow ID becomes
+# the source". So the emitter is told "this slice is in flow F" and
+# "this one ends it", never "from A to B", and an edge whose two slices
+# are in the wrong time order would be drawn **backwards**. That is the
+# one way this can state something false, so it is checked rather than
+# assumed: an edge whose source does not begin before its sink is
+# dropped and counted, and the count is in the render result.
+#
+# Two relations qualify, and only two. `graph.json`'s dependency edges
+# are a Plane 1 fact the trace never said; `ppid` inside one sandbox is
+# a Plane 2 fact the record already carries. There is no captured
+# relation between one element's process and another's, and a flow that
+# invented one would be a lie the UI draws in bold.
+FLOW_DEPENDENCY = "dependency"
+FLOW_EXEC = "parent"
+
+
+def dependency_edges(snapshot: str):
+    """`(predecessor, successor)` for every build-order edge in the run.
+
+    From `run/graph.json`, which the capture already wrote. A snapshot
+    without one yields nothing rather than raising: the timeline's job
+    is to draw what it has.
+    """
+    path = os.path.join(snapshot, RUN_SUBDIR, "graph.json")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            graph = json.load(handle)
+    except (OSError, ValueError):
+        return []
+    edges = []
+    for edge in graph.get("dependencies") or ():
+        predecessor, successor = edge.get("predecessor"), edge.get("successor")
+        if predecessor and successor and predecessor != successor:
+            edges.append((predecessor, successor))
+    return edges
+
+
+def _last_to_end(spans):
+    """The begin event of the slice that ended last, or `None`."""
+    return max(spans, key=lambda pair: pair[1])[0] if spans else None
+
+
+def _first_to_begin(spans):
+    """The begin event of the slice that started first, or `None`."""
+    return min(spans, key=lambda pair: pair[0]["ts"])[0] if spans else None
+
+
+def _plane1_flows(plane1_events, edges, first_flow_id):
+    """Which begin-event carries which flow id, for the graph's edges.
+
+    Returns `(by_event_id, dropped)`. An element's **last-ending** slice
+    is the source of its outgoing edges and its **first-beginning**
+    slice is the sink of its incoming ones - the dependency is satisfied
+    when the predecessor has finished, and it constrains when the
+    dependent may start. On a `bst build` these are the same slice,
+    because an element gets one builder task; the rule is written for
+    the capture that also has a fetch or a pull in the lane.
+    """
+    # B paired to E per track, as `_plane1_outcomes` does - keeping the
+    # begin *object*, because that is what carries the flow ids.
+    spans = {}
+    open_by_tid = {}
+    for event in plane1_events:
+        phase = event.get("ph")
+        if phase == "B":
+            open_by_tid.setdefault(event.get("tid", 0), []).append(event)
+        elif phase == "E":
+            pending = open_by_tid.get(event.get("tid", 0))
+            if not pending:
+                continue
+            began = pending.pop()
+            element = (began.get("args") or {}).get("element")
+            if not element:
+                continue
+            spans.setdefault(element, []).append((began, event["ts"]))
+
+    flows = {}
+    flow_id = first_flow_id
+    dropped = 0
+    for predecessor, successor in edges:
+        source = _last_to_end(spans.get(predecessor))
+        sink = _first_to_begin(spans.get(successor))
+        if source is None or sink is None:
+            # One end of the edge produced no task in this run - a
+            # cached element, or one built earlier. Nothing to connect,
+            # and an arrow to nowhere is not an improvement.
+            continue
+        if source["ts"] >= sink["ts"]:
+            # The flow ids ride the **begin** events, so the begins are
+            # what Perfetto compares. Equal or reversed, it would draw
+            # the arrow backwards - the reverse of the dependency - or
+            # pick one at random. On `examples/06` this is two edges:
+            # `toolchain.bst` is instantaneous and both its dependents
+            # begin in the microsecond it does.
+            dropped += 1
+            continue
+        flows.setdefault(id(source), ([], []))[0].append(flow_id)
+        flows.setdefault(id(sink), ([], []))[1].append(flow_id)
+        flow_id += 1
+    return flows, dropped, flow_id
+
+
+def _plane2_flows(records, first_flow_id):
+    """`id(record)` -> flow ids, for the exec chain inside one sandbox.
+
+    A record's `ppid` names its parent, and pids are namespaced per
+    sandbox - so the parent is looked up inside the same
+    `(invocation, element)` and never across two, because no captured
+    relation exists between one element's process and another's.
+
+    A pid is reused inside a sandbox, so the parent is the holder of
+    that pid whose own span contains the child's start; two candidates
+    that both do would be a pid alive twice at once, which
+    `--unshare-pid` does not do.
+    """
+    by_pid = {}
+    for record in records:
+        key = (record.get("invocation"), record.get("element"), record["pid"])
+        by_pid.setdefault(key, []).append(record)
+
+    flows = {}
+    flow_id = first_flow_id
+    for record in records:
+        parent_key = (record.get("invocation"), record.get("element"),
+                      record.get("ppid"))
+        if record.get("ppid") is None or parent_key[2] == record["pid"]:
+            continue
+        parent = None
+        for candidate in by_pid.get(parent_key) or ():
+            if candidate["start_ts"] > record["start_ts"]:
+                continue
+            end = candidate.get("end_ts")
+            if end is not None and end < record["start_ts"]:
+                continue
+            parent = candidate
+        if parent is None:
+            continue
+        flows.setdefault(id(parent), ([], []))[0].append(flow_id)
+        flows.setdefault(id(record), ([], []))[1].append(flow_id)
+        flow_id += 1
+    return flows, flow_id
+
+
 def _plane1_annotations(event: dict, kinds: dict, outcome) -> list:
     args = event.get("args") or {}
     element = args.get("element")
@@ -357,7 +505,7 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
-                      kinds=None):
+                      kinds=None, edges=()):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -377,6 +525,11 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                  if anchor_element else 0.0)
     kinds = kinds or {}
     outcomes = _plane1_outcomes(plane1_events)
+    # `UX-309`: flow ids are global within a trace, so one counter runs
+    # through both planes. Plane 1's are assigned first because Plane 1
+    # is written first; Plane 2's continue from wherever that ended.
+    plane1_flows, dropped, next_flow = _plane1_flows(plane1_events, edges, 1)
+    flow_count = next_flow - 1
 
     with TrackEventWriter(output) as trace:
         # Plane 1: one lane, one thread track per task tid, which is
@@ -398,15 +551,19 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     pid=1, tid=tid)
             timestamp = int(round(event["ts"] * NS_PER_US))
             if phase == "B":
+                sources, sinks = plane1_flows.get(id(event), ((), ()))
                 trace.slice_begin(
                     timestamp, track, event.get("name") or "task",
                     annotations=_plane1_annotations(
-                        event, kinds, outcomes.get(id(event))))
+                        event, kinds, outcomes.get(id(event))),
+                    flows=sources, terminating_flows=sinks)
             else:
                 trace.slice_end(timestamp, track)
 
         if not raw_log:
-            return trace.packets, trace.slices, trace.tracks
+            return {"packets": trace.packets, "slices": trace.slices,
+                    "tracks": trace.tracks, "flows": flow_count,
+                    "flows_dropped": dropped}
 
         # Plane 2: one process lane per element, one thread lane per
         # traced pid inside it.
@@ -429,8 +586,14 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             # change about memory, so the sort stays and the floor here
             # is O(processes) - the events, which are twice as many, are
             # the ones that no longer pile up.
-            for record in sorted(stream_records(stream_trace_events(handle)),
-                                 key=lambda record: record["start_ts"]):
+            records = sorted(stream_records(stream_trace_events(handle)),
+                             key=lambda record: record["start_ts"])
+            # `UX-309`: the exec chain needs each record's parent, which
+            # is a lookup over the list the sort already materialized -
+            # no second read of the log, and no second copy of it.
+            plane2_flows, next_flow = _plane2_flows(records, next_flow)
+            flow_count = next_flow - 1
+            for record in records:
                 element = record.get("element") or "unknown"
                 pid = element_pid.get(element)
                 if pid is None:
@@ -455,21 +618,26 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 name = (record.get("cmd") or "")[:120] or "process"
                 annotations = _plane2_annotations(record)
                 categories = _plane2_categories(record)
+                sources, sinks = plane2_flows.get(id(record), ((), ()))
                 if record["open"] or record["end_ts"] is None:
                     # No observed exit. An instant, never a zero-width
                     # bar and never a fabricated end (`UX-188`).
                     trace.instant(start_ns, thread,
                                   f"{name} (no observed exit)",
                                   annotations=annotations,
-                                  categories=categories)
+                                  categories=categories,
+                                  flows=sources, terminating_flows=sinks)
                     continue
                 end_ns = int(round(record["end_ts"] * 1e6 * NS_PER_US
                                    + offset_us * NS_PER_US))
                 trace.slice_begin(start_ns, thread, name,
                                   annotations=annotations,
-                                  categories=categories)
+                                  categories=categories,
+                                  flows=sources, terminating_flows=sinks)
                 trace.slice_end(max(end_ns, start_ns), thread)
-        return trace.packets, trace.slices, trace.tracks
+        return {"packets": trace.packets, "slices": trace.slices,
+                "tracks": trace.tracks, "flows": flow_count,
+                "flows_dropped": dropped}
 
 
 def render(snapshot: str, output: str,
@@ -519,12 +687,13 @@ def render(snapshot: str, output: str,
         anchor = anchor_element or choose_anchor(spans, plane1_events)
 
         if fmt == FORMAT_TRACKEVENT:
-            packets, slices, tracks = _write_trackevent(
+            written = _write_trackevent(
                 plane1_events, raw if anchor else None, spans, anchor, output,
-                kinds=element_kinds(snapshot))
+                kinds=element_kinds(snapshot),
+                edges=dependency_edges(snapshot))
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
-                      "anchor": anchor, "raw_log": raw, "format": fmt,
-                      "packets": packets, "slices": slices, "tracks": tracks}
+                      "anchor": anchor, "raw_log": raw, "format": fmt}
+            result.update(written)
             if raw and not anchor:
                 result["omitted"] = (
                     "the Plane 2 capture attributes no span to an element, so "

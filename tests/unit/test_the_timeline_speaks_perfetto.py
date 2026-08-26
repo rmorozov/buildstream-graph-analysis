@@ -296,6 +296,12 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
                 trackevent.INTERNED_EVENT_CATEGORIES,
             ("interned_data.proto", "InternedData", "debug_annotation_names"):
                 trackevent.INTERNED_DEBUG_ANNOTATION_NAMES,
+            # UX-309: flows. Both `fixed64`, which is a different wire
+            # type from every other number pinned here.
+            ("track_event.proto", "TrackEvent", "flow_ids"):
+                trackevent.EVENT_FLOW_IDS,
+            ("track_event.proto", "TrackEvent", "terminating_flow_ids"):
+                trackevent.EVENT_TERMINATING_FLOW_IDS,
         }
         wrong = []
         for (proto, block, field), ours in expected.items():

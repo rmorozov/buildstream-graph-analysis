@@ -33,7 +33,8 @@ trace_packet.proto       timestamp = 8, trusted_packet_sequence_id = 10,
                          sequence_flags = 13, track_descriptor = 60
 track_event.proto        category_iids = 3, debug_annotations = 4,
                          type = 9, name_iid = 10,
-                         track_uuid = 11, name = 23, counter_value = 30
+                         track_uuid = 11, name = 23, counter_value = 30,
+                         flow_ids = 47, terminating_flow_ids = 48
                          TYPE_SLICE_BEGIN = 1, TYPE_SLICE_END = 2,
                          TYPE_INSTANT = 3, TYPE_COUNTER = 4
                          EventCategory.iid = 1, EventCategory.name = 2
@@ -49,6 +50,9 @@ interned_data.proto      event_categories = 1, event_names = 2,
                          debug_annotation_names = 3
 ```
 
+`UX-309` added `flow_ids`/`terminating_flow_ids` - both `fixed64`,
+which is a **different wire type** from every other number here and the
+one thing a copy of the varint path would have got silently wrong.
 `UX-308` added the second block and the two interning tables beside
 it, read the same way: `debug_annotation.proto` and `interned_data.proto`
 fetched from the same tree and checked against the fixture's recorded
@@ -107,6 +111,16 @@ EVENT_TYPE = 9
 EVENT_NAME_IID = 10
 EVENT_TRACK_UUID = 11
 EVENT_COUNTER_VALUE = 30
+# UX-309: `repeated fixed64 flow_ids = 47` and `terminating_flow_ids
+# = 48`. Note **fixed64**, not varint: upstream's own comment says the
+# older varint fields (36 and 42) are deprecated in favour of these,
+# and writing a flow id as a varint into field 47 produces a packet a
+# reader silently drops. Direction is inferred from timestamps - "the
+# earliest event with the same flow ID becomes the source" - so an edge
+# is one id on two slices, and the terminating list is what says which
+# of them is the end rather than a step on the way.
+EVENT_FLOW_IDS = 47
+EVENT_TERMINATING_FLOW_IDS = 48
 
 TYPE_SLICE_BEGIN = 1
 TYPE_SLICE_END = 2
@@ -338,6 +352,22 @@ class TrackEventWriter:
             out += bytes_field(EVENT_DEBUG_ANNOTATIONS, payload)
         return out
 
+    def _flows(self, flows, terminating_flows) -> bytes:
+        """`UX-309`: the ids that make Perfetto draw an arrow.
+
+        A flow is one id on two events, and the UI infers the direction
+        from their timestamps - so the caller does not say "from A to
+        B", it says "A is in this flow" and "B ends it". The ids are
+        **fixed64**, eight bytes each, which is why they use
+        `fixed64_field` and not the varint path everything else here
+        takes: field 47 with a varint in it is a packet a reader drops
+        without complaining.
+        """
+        return (b"".join(fixed64_field(EVENT_FLOW_IDS, flow)
+                         for flow in flows)
+                + b"".join(fixed64_field(EVENT_TERMINATING_FLOW_IDS, flow)
+                           for flow in terminating_flows))
+
     def _categories(self, categories) -> bytes:
         """`repeated uint64 category_iids`, which is what makes a class
         of slice filterable in the UI and selectable in SQL."""
@@ -384,7 +414,8 @@ class TrackEventWriter:
 
     # -- events -----------------------------------------------------------
     def slice_begin(self, timestamp_ns: int, track: int, name: str,
-                    annotations=(), categories=()) -> None:
+                    annotations=(), categories=(),
+                    flows=(), terminating_flows=()) -> None:
         """A slice opens, carrying what is known about it.
 
         `annotations` are `(key, value)` pairs (`UX-308`) - the details
@@ -395,11 +426,16 @@ class TrackEventWriter:
 
         `categories` are names, interned; a slice that has one is
         filterable in the UI and selectable in SQL by it.
+
+        `flows` and `terminating_flows` are ids (`UX-309`); a slice in
+        both lists for one id would be a flow that is its own end, which
+        upstream says not to write, so the caller keeps them disjoint.
         """
         event = (uint_field(EVENT_TYPE, TYPE_SLICE_BEGIN)
                  + uint_field(EVENT_TRACK_UUID, track)
                  + uint_field(EVENT_NAME_IID, self._intern(name))
                  + self._categories(categories)
+                 + self._flows(flows, terminating_flows)
                  + self._annotations(annotations))
         self._write_packet(self._sequence_prefix()
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
@@ -421,7 +457,8 @@ class TrackEventWriter:
                            + bytes_field(PACKET_TRACK_EVENT, event))
 
     def instant(self, timestamp_ns: int, track: int, name: str,
-                annotations=(), categories=()) -> None:
+                annotations=(), categories=(),
+                flows=(), terminating_flows=()) -> None:
         """A moment rather than a span - what a process with no observed
         exit gets, because a zero-width bar reads as "instantaneous" and
         `bga` does not fabricate an end it never saw.
@@ -433,6 +470,7 @@ class TrackEventWriter:
                  + uint_field(EVENT_TRACK_UUID, track)
                  + uint_field(EVENT_NAME_IID, self._intern(name))
                  + self._categories(categories)
+                 + self._flows(flows, terminating_flows)
                  + self._annotations(annotations))
         self._write_packet(self._sequence_prefix()
                            + uint_field(PACKET_TIMESTAMP, timestamp_ns)

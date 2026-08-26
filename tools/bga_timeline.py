@@ -124,6 +124,27 @@ PLANE1_ANNOTATIONS = (
 # opening a broken build's trace is looking for.
 CATEGORY_FAILED = "failed"
 
+# `UX-312`. The plane a slice belongs to, as a category - which is the
+# channel `UX-210` designed every canned question around and which the
+# trace stopped carrying when `UX-298` changed the format underneath
+# them. The Chrome JSON converter wrote a `cat` field; the TrackEvent
+# emitter had `EVENT_CATEGORY_IIDS` "reserved rather than used" until
+# `UX-308` spent it on `failed`, so between those two rounds every
+# query saying `where s.category = 'bst-builder'` matched **nothing**
+# and returned zero rows in silence.
+#
+# The names are `UX-210`'s own, unchanged, because a query someone
+# saved against the old trace should start working again rather than
+# need rewriting. Interned, so a million slices cost two strings.
+CATEGORY_PLANE1 = "bst-builder"
+CATEGORY_PLANE2 = "native-process"
+# `UX-210` named three scopes and the third is the build itself, which
+# is `UX-311`'s identity slice: neither plane, and the thing a reader
+# selects when they want to know whose run this is. Every slice in the
+# trace carries exactly one of these three, so a question scoped by
+# scope can never silently miss a class of them.
+CATEGORY_RUN = "bst-invocation"
+
 
 def _plane2_annotations(record: dict):
     """`PLANE2_ANNOTATIONS`, filled from one record.
@@ -164,8 +185,8 @@ def _plane2_categories(record: dict):
     """
     status = record.get("exit_status")
     if status is None or str(status) == EXIT_STATUS_OK:
-        return ()
-    return (CATEGORY_FAILED,)
+        return (CATEGORY_PLANE2,)
+    return (CATEGORY_PLANE2, CATEGORY_FAILED)
 
 
 def element_kinds(snapshot: str) -> dict:
@@ -812,7 +833,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 identity_track_name(reason), pid=IDENTITY_TRACK_PID, rank=0)
             start_us = _plane1_start_us(plane1_events)
             trace.instant(int(round(start_us * NS_PER_US)), identity_track,
-                          identity_track_name(reason), annotations=identity)
+                          identity_track_name(reason), annotations=identity,
+                          categories=(CATEGORY_RUN,))
 
         # Plane 1: one lane, one thread track per task tid, which is
         # the convention `bst_log_to_chrome_trace` already writes.
@@ -839,6 +861,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     timestamp, track, event.get("name") or "task",
                     annotations=_plane1_annotations(
                         event, kinds, outcomes.get(id(event))),
+                    categories=(CATEGORY_PLANE1,),
                     flows=sources, terminating_flows=sinks)
             else:
                 trace.slice_end(timestamp, track)

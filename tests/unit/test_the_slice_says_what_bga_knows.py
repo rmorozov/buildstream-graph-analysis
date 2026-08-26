@@ -53,7 +53,8 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from tools import bga_timeline  # noqa: E402
-from tools.bga_timeline import (  # noqa: E402
+from tools.bga_timeline import (
+    CATEGORY_PLANE2,  # noqa: E402
     ANNOTATION_CONTRACT, CATEGORY_FAILED, DEFAULT_OUTPUT, EXIT_STATUS_OK,
     FORMAT_TRACKEVENT, PLANE1_ANNOTATIONS, PLANE2_ANNOTATIONS, element_kinds,
     render)
@@ -349,8 +350,12 @@ class TestThePlane2ValuesAreTheRecordsOwn:
         event = rendered["plane2"][LONG_CMD]
         assert event["args"]["src"] == "hook"
         assert "exit_status" not in event["args"]
-        assert event["categories"] == [], (
+        assert CATEGORY_FAILED not in event["categories"], (
             "a process whose exit was never observed is not a failure")
+        # It still says which plane it is on (`UX-312`): the scope is
+        # what a query filters by, and a slice missing from that filter
+        # is a wrong answer rather than an absent one.
+        assert event["categories"] == [CATEGORY_PLANE2]
 
     def test_the_numbers_are_numbers(self, rendered):
         args = rendered["plane2"]["cc -c ok.c"]["args"]
@@ -407,20 +412,27 @@ class TestTheFailedCategoryIsExactlyTheFailures:
         assert failed == {"cc -c broken.c", "cc -c killed.c"}
 
     def test_a_signal_counts_and_a_zero_does_not(self, rendered):
+        """`UX-312` gave every slice its plane as a category too, so a
+        process that succeeded carries its plane and nothing else -
+        `failed` is still exactly the failures, which is what this has
+        always been about."""
         assert rendered["plane2"]["cc -c killed.c"]["args"]["exit_status"] == \
             "signal:9"
-        assert rendered["plane2"]["cc -c ok.c"]["categories"] == []
+        assert rendered["plane2"]["cc -c ok.c"]["categories"] == \
+            [CATEGORY_PLANE2]
+        assert CATEGORY_FAILED not in rendered["plane2"]["cc -c ok.c"][
+            "categories"]
 
     def test_the_success_value_is_a_string_not_a_number(self):
         """`spine.c` writes `exit=%d`, so the status is text. Comparing
         it to the integer `0` would have called every process a failure;
         comparing truthiness would have called `"0"` one."""
         assert EXIT_STATUS_OK == "0"
-        assert bga_timeline._plane2_categories({"exit_status": "0"}) == ()
-        assert bga_timeline._plane2_categories({"exit_status": 0}) == ()
-        assert bga_timeline._plane2_categories({}) == ()
+        for record in ({"exit_status": "0"}, {"exit_status": 0}, {}):
+            assert bga_timeline._plane2_categories(record) == (
+                CATEGORY_PLANE2,), record
         assert bga_timeline._plane2_categories(
-            {"exit_status": "signal:9"}) == (CATEGORY_FAILED,)
+            {"exit_status": "signal:9"}) == (CATEGORY_PLANE2, CATEGORY_FAILED)
 
 
 class TestThePlane1TaskSaysWhatItWas:

@@ -242,7 +242,7 @@ def _questions():
         'const q = await import("./bga/viewer/questions.js");'
         "console.log(JSON.stringify(q.QUESTIONS.map((x) => ({"
         "  id: x.id, title: x.title, why: x.why, category: x.category,"
-        "  plane: x.plane, sql: x.sql,"
+        "  plane: x.plane, sql: x.sql, reads: x.reads ?? null,"
         "  rendered: q.renderedSql(x), categories: q.CATEGORIES }))));")
     result = subprocess.run([node, "--input-type=module", "-e", script],
                             capture_output=True, text=True, cwd=os.getcwd(),
@@ -280,8 +280,12 @@ class TestTheCannedSql:
             assert question["title"].strip().endswith("?"), question["id"]
             assert len(question["why"].strip()) > 40, question["id"]
 
+    # `UX-312` added the third scope `UX-210` had already named. Every
+    # slice carries exactly one of the three, so they partition the
+    # trace and a scoped query cannot silently miss a class of slice.
     @pytest.mark.parametrize("plane,category", [
-        ("Plane 1", "bst-builder"), ("Plane 2", "native-process")])
+        ("Plane 1", "bst-builder"), ("Plane 2", "native-process"),
+        ("run", "bst-invocation")])
     def test_every_query_scopes_itself_to_a_plane(self, plane, category):
         """`UX-210`: the merged trace puts both planes in one `slice`
         table, and four of these six were written as if it had one
@@ -296,17 +300,28 @@ class TestTheCannedSql:
         for question in _questions():
             if question["plane"] != plane:
                 continue
-            assert f"'{category}'" in question["sql"], (
+            if question.get("reads") == "counter":
+                # A counter series has no `slice.category` to scope by;
+                # its track name is the scope, and the clause below
+                # holds it to naming one.
+                assert "counter_track" in question["sql"], question["id"]
+                continue
+            # `UX-312`: matched with `glob`, because a slice may carry
+            # a second category (`failed`) and `trace_processor` joins
+            # them into one string - so `= 'native-process'` would miss
+            # exactly the failures.
+            assert f"'*{category}*'" in question["sql"], (
                 f"{question['id']} says it reads {plane} and never says so "
-                f"in SQL - the answer will be drawn from both planes")
+                f"in SQL - the answer will be drawn from every scope")
 
     def test_no_query_is_unscoped(self):
         """The guard the Required Fix asks for: a future question
         cannot ship without saying which plane it reads."""
         for question in _questions():
-            assert "s.category" in question["sql"] or \
-                   "category =" in question["sql"], (
-                f"{question['id']} does not constrain slice.category")
+            assert ".category" in question["sql"] or \
+                   "t.name" in question["sql"], (
+                f"{question['id']} constrains neither slice.category nor a "
+                f"counter track - it reads the whole trace")
             assert question["plane"], f"{question['id']} declares no plane"
 
     def test_the_planes_are_joined_by_the_uid_both_carry(self):
@@ -319,6 +334,11 @@ class TestTheCannedSql:
                 pytest.fail(
                     f"{question['id']} matches a lane by name prefix; "
                     f"`args.element` is carried by both planes")
+            if question.get("reads") == "counter":
+                # A counter series is selected by track name; there is
+                # no arg on a counter row to extract.
+                assert "counter_track" in question["sql"], question["id"]
+                continue
             if question["plane"] == "Plane 2" or question["id"] == "sandbox-tax":
                 assert "extract_arg" in question["sql"], question["id"]
 
@@ -342,13 +362,14 @@ class TestTheCannedSql:
                 f"element - a parallel build is subtracted from this one")
             # And the nested side is the process plane, not everything.
             native = sql.split("left join", 1)[1].split(") n", 1)[0]
-            assert "'native-process'" in native, (
+            assert "native-process" in native, (
                 f"{question['id']} subtracts slices from any plane")
 
     def test_each_why_says_which_plane_it_reads(self):
         for question in _questions():
             why = question["why"].lower()
-            assert "plane 1" in why or "plane 2" in why or "element plane" in why, (
+            assert ("plane 1" in why or "plane 2" in why
+                    or "element plane" in why or "run" in why), (
                 f"{question['id']} does not tell the reader which plane its "
                 f"answer comes from")
 

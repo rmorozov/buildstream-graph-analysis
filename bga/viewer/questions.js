@@ -63,9 +63,9 @@ export const QUESTIONS = [
     title: "Where did the time actually go, per element?",
     why:
       "Plane 1's element spans, aggregated - scoped to the element " +
-      " plane, so Plane 2 command names cannot crowd the answer. The " +
-      " figure bga analyze prints in the Attribution table; here to " +
-      " cross-check it, or to slice it further.",
+      "plane, so Plane 2 command names cannot crowd the answer. The " +
+      "figure bga analyze prints in the Attribution table; here to " +
+      "cross-check it, or to slice it further.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        count(*) as spans,
        sum(s.dur) / 1e9 as seconds
@@ -82,8 +82,8 @@ limit 25;`,
     title: "Which elements ran the most processes?",
     why:
       "Plane 2's processes, grouped by the element that ran them. A " +
-      " high count with low total time is a process-storm - many short " +
-      " execs, the shape examples/08-process-storm exists to show.",
+      "high count with low total time is a process-storm - many short " +
+      "execs, the shape examples/08-process-storm exists to show.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        count(*) as processes,
        sum(s.dur) / 1e9 as seconds
@@ -100,10 +100,10 @@ limit 25;`,
     title: "What is the sandbox tax here?",
     why:
       "Time inside an element's Plane 1 span that its own Plane 2 " +
-      " processes do not account for: staging, checkout, the sandbox " +
-      " itself. The containment is constrained to the same element, so " +
-      " another element building in parallel cannot be subtracted from " +
-      " this one. Compare with bga correlate's figure.",
+      "processes do not account for: staging, checkout, the sandbox " +
+      "itself. The containment is constrained to the same element, so " +
+      "another element building in parallel cannot be subtracted from " +
+      "this one. Compare with bga correlate's figure.",
     sql: `select e.element,
        e.dur / 1e9 as element_seconds,
        (e.dur - coalesce(sum(n.dur), 0)) / 1e9 as unaccounted_seconds
@@ -126,9 +126,9 @@ limit 20;`,
     title: "Where are the longest stalls?",
     why:
       "Gaps on the element plane: the build was running and nothing " +
-      " was building. Windowed over element spans alone - measured " +
-      " against every track, thousands of interleaved Plane 2 slices " +
-      " close exactly the gaps this question is looking for.",
+      "was building. Windowed over element spans alone - measured " +
+      "against every track, thousands of interleaved Plane 2 slices " +
+      "close exactly the gaps this question is looking for.",
     sql: `select element, ts, dur,
        lead(ts) over (order by ts) - (ts + dur) as gap_after
 from (select extract_arg(s.arg_set_id, 'debug.element') as element,
@@ -145,8 +145,8 @@ limit 20;`,
     example: "core.bst",
     why:
       "The micro half of the cycle - the commands Plane 2 recorded " +
-      " inside one sandbox, longest first. Selected by the element uid " +
-      " both planes carry, not by a lane name.",
+      "inside one sandbox, longest first. Selected by the element uid " +
+      "both planes carry, not by a lane name.",
     sql: `select s.name as command, s.dur / 1e6 as ms
 from slice s
 where s.category glob '*native-process*'
@@ -162,9 +162,9 @@ limit 40;`,
     example: "core.bst",
     why:
       "The elements that finished last before it could start, on the " +
-      " element plane only. A long gap here is a dependency shape " +
-      " problem rather than a scheduler one - the distinction the " +
-      " blast and criticality findings are about.",
+      "element plane only. A long gap here is a dependency shape " +
+      "problem rather than a scheduler one - the distinction the " +
+      "blast and criticality findings are about.",
     sql: `select element, (ts + dur) / 1e9 as ended_at_seconds
 from (select extract_arg(s.arg_set_id, 'debug.element') as element,
              s.ts, s.dur
@@ -182,9 +182,9 @@ limit 15;`,
     title: "Which kinds of element cost the most?",
     why:
       "`UX-308` put the element's kind on its Plane 1 slice, so this " +
-      " is one group-by rather than a join against the graph. A kind " +
-      " that dominates is a question about the build's shape - one " +
-      " cmake element is slow, forty of them is a toolchain decision.",
+      "is one group-by rather than a join against the graph. A kind " +
+      "that dominates is a question about the build's shape - one " +
+      "cmake element is slow, forty of them is a toolchain decision.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element_kind') as kind,
        count(*) as tasks,
        sum(s.dur) / 1e9 as seconds
@@ -200,10 +200,10 @@ order by seconds desc;`,
     title: "What failed, and what ran it?",
     why:
       "`UX-308` gives a non-zero exit its own category, so the work " +
-      " that failed is one predicate away instead of a scan of every " +
-      " command line. `debug.cmd` is the untruncated argv - the slice " +
-      " name is only its first 120 characters, which is rarely the " +
-      " part that distinguishes two compiler invocations.",
+      "that failed is one predicate away instead of a scan of every " +
+      "command line. `debug.cmd` is the untruncated argv - the slice " +
+      "name is only its first 120 characters, which is rarely the " +
+      "part that distinguishes two compiler invocations.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        extract_arg(s.arg_set_id, 'debug.exit_status') as exit_status,
        extract_arg(s.arg_set_id, 'debug.cmd') as command,
@@ -221,11 +221,11 @@ limit 40;`,
     title: "Which elements are waiting rather than computing?",
     why:
       "Plane 2's own `debug.cpu_us` against wall time, per element, " +
-      " annotations alone - no containment join, so nothing another " +
-      " element did in parallel can be attributed here. A ratio far " +
-      " below 1 is a process that waited; far above 1 is one that " +
-      " used several cores. This is the sandbox-tax cross-check that " +
-      " `bga correlate` publishes, asked of the trace directly.",
+      "annotations alone - no containment join, so nothing another " +
+      "element did in parallel can be attributed here. A ratio far " +
+      "below 1 is a process that waited; far above 1 is one that " +
+      "used several cores. This is the sandbox-tax cross-check that " +
+      "`bga correlate` publishes, asked of the trace directly.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        sum(extract_arg(s.arg_set_id, 'debug.cpu_us')) / 1e6 as cpu_seconds,
        sum(s.dur) / 1e9 as wall_seconds,
@@ -245,11 +245,11 @@ limit 25;`,
     title: "Which single process wanted the most memory?",
     why:
       "Plane 2's `debug.max_rss_kb` is one process's own lifetime " +
-      " peak. It is " +
-      " read as a maximum and never summed: two processes peaking at " +
-      " different moments never held the sum between them, which is " +
-      " the same refusal `compute_peak_memory` makes and the reason " +
-      " `UX-310` declined to draw a memory curve.",
+      "peak. It is " +
+      "read as a maximum and never summed: two processes peaking at " +
+      "different moments never held the sum between them, which is " +
+      "the same refusal `compute_peak_memory` makes and the reason " +
+      "`UX-310` declined to draw a memory curve.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        max(extract_arg(s.arg_set_id, 'debug.max_rss_kb')) / 1024 as peak_mb,
        s.name as command
@@ -267,11 +267,11 @@ limit 25;`,
     example: "core.bst",
     why:
       "Plane 1 again, by the graph rather than the clock: `UX-309` " +
-      " draws the dependency edges as **flows**, so this is " +
-      " the declared graph rather than whatever happened to finish " +
-      " first. The timestamp-proximity version of this question is " +
-      " `dependency-wait` above; where they disagree, the gap is a " +
-      " scheduler question and not a dependency one.",
+      "draws the dependency edges as **flows**, so this is " +
+      "the declared graph rather than whatever happened to finish " +
+      "first. The timestamp-proximity version of this question is " +
+      "`dependency-wait` above; where they disagree, the gap is a " +
+      "scheduler question and not a dependency one.",
     sql: `select extract_arg(o.arg_set_id, 'debug.element') as waited_for,
        (o.ts + o.dur) / 1e9 as it_ended_at,
        i.ts / 1e9 as this_started_at,
@@ -293,11 +293,11 @@ limit 20;`,
     title: "How many processes were running at once, over time?",
     why:
       "Plane 2's concurrency as a curve: `UX-310`'s counter track, " +
-      " sampled from the same records the " +
-      " process census counts. Its peak equals the `max_concurrency` " +
-      " the report publishes - by construction, because both read one " +
-      " function. Read it against the machine's core count: a plateau " +
-      " well under it is capacity nobody used.",
+      "sampled from the same records the " +
+      "process census counts. Its peak equals the `max_concurrency` " +
+      "the report publishes - by construction, because both read one " +
+      "function. Read it against the machine's core count: a plateau " +
+      "well under it is capacity nobody used.",
     sql: `select c.ts / 1e9 as seconds, c.value as processes_running
 from counter c
 join counter_track t on c.track_id = t.id
@@ -312,11 +312,11 @@ limit 25;`,
     title: "Whose build is this, and did it finish?",
     why:
       "`UX-311` puts the run's identity on its own track, so a trace " +
-      " that left the machine still says which project, which host " +
-      " and which `bga` wrote it. `incomplete_reason` is the one key " +
-      " a finished run never emits - its absence is the only thing " +
-      " its absence means, and a trace of an interrupted build is " +
-      " not a measurement.",
+      "that left the machine still says which project, which host " +
+      "and which `bga` wrote it. `incomplete_reason` is the one key " +
+      "a finished run never emits - its absence is the only thing " +
+      "its absence means, and a trace of an interrupted build is " +
+      "not a measurement.",
     sql: `select extract_arg(s.arg_set_id, 'debug.run') as run,
        extract_arg(s.arg_set_id, 'debug.project') as project,
        extract_arg(s.arg_set_id, 'debug.host_cpu_count') as cpus,

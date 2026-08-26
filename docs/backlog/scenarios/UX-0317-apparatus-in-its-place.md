@@ -118,3 +118,20 @@ description opened before printing prints and one that was never opened
 does not. That is §2b.3's own wording ("the description renders
 inline-on-open state only"); a page that printed all seventy-two would
 print a glossary nobody asked for.
+
+**Mutations — seven, all discriminating.** Run against the committed
+tree, one at a time, reverted between:
+
+```text
+O1  a prose line added to the header       5 red   incl. both viewports
+O2  el() reverts to data-only attributes   2 red   the aria clause, statically
+O3  the marker is never built              5 red   incl. the browser placement
+O4  the wide-viewport rule is deleted      2 red   the sentence never moves
+O5  the sentence goes back in the header    7 red   the field defect, restored
+O6  --head reverts to 5.5rem               1 red   88px against a 92px band
+O7  the description is revealed by hover    3 red   the door being replaced
+```
+
+O5 is the one worth naming: it is the reported defect put back exactly
+as it was, and it reddens the tag scan, the pixel measurement at both
+viewports and the anchor-cover clause together.

@@ -860,7 +860,30 @@ ranked `process_track`, in `tools/bga_timeline.py`'s `run_identity` /
 says what a trace states about its own run, which it could not before
 there was anything in it to state.
 
-MUTATIONS-PENDING
+Six mutations against the committed tree, all discriminating:
+
+```text
+M1  the root descriptor never asks for explicit order        1 red
+M2  every element lane takes the same rank                   1 red
+M3  the incompleteness is an annotation and not the name     3 red
+M4  the reason is re-derived from `interrupted` alone        3 red
+M5  the lane label drops the element kind                    3 red
+M6  the identity forgets which run it is                     3 red
+```
+
+M4 is the one worth keeping. `interrupted` alone is the obvious
+re-derivation and it is wrong twice over - a failed run and a suspended
+one are both incomplete, which is exactly why `UX-156`, `UX-157` and
+`UX-185` were joined into one accessor. The guard parametrizes all
+three, so the shortcut cannot pass by being right about the case whoever
+wrote it had in mind: it reddens on `failed` and on `suspended` and
+stays green on the one it remembered.
+
+M1 is the one that would otherwise have been silent. Dropping the root
+packet leaves every rank on the wire, every lane in the right order in
+the file, and a UI that ignores all of it - a trace that looks correct
+and orders nothing. Only a clause that reads the root descriptor can
+tell the difference.
 
 Updated 2026-08-26 (after `UX-309`), re-grounded in
 `tools/native_trace/trackevent.py`'s flow writer, in

@@ -132,3 +132,22 @@ silence, exactly as a `tf` naming a table this run does not have.
 in `bga_view.py`'s `ASSETS`, so a served page would have 404'd on the
 import and died at boot — caught by `UX-233`'s guard, which follows
 every import from each entry module rather than naming a list.
+
+**Mutations — eight, all discriminating.** Run against the committed
+tree, one at a time, reverted between:
+
+```text
+N1  shapeOf stops descending                4 red  known answers + the walk
+N2  the .map-table scrollbox comes back     3 red  including the booted chain
+N3  the home marker is left behind          1 red  byte-identity, after back
+N4  every section hides, focus included     1 red  the empty-page case
+N5  the expand control ships in the export  1 red
+N6  the fragment stops carrying `tf`        2 red  both directions
+N7  the inner table keeps its scroll        1 red
+N8  the summary reverts to "N entries"      1 red  sentence vs attributes
+```
+
+N2 is the one worth naming: it puts the field defect back exactly as it
+was, and the guard that catches it is the walk over the **booted** page,
+not the scan of the stylesheet — so a second route to a nested
+scrollbox would redden too.

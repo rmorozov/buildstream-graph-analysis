@@ -60,6 +60,7 @@ would have caught it; a bound at it would only just have.
 | 1 | 2026-08-23 | 237 | `2818a06` | `UX-245`, `UX-246`, `UX-247` |
 | 2 | 2026-08-24 | 263 | `b17d741` | `UX-273`, `UX-274` |
 | 3 | 2026-08-25 | 290 | `011dbd6` | `UX-294`, `UX-295` |
+| 4 | 2026-08-26 | 318 | `c38116a` | `UX-322`, `UX-323` |
 
 ### Review 3 — 2026-08-25
 
@@ -230,3 +231,80 @@ context map pass their guard (7 passed) and gained `contracts.py`,
 them. `UX-245`'s measurement is unchanged — `bga blast` and `bga whatif`
 are still the two rows the CLI table lacks, and `--explain` still
 appears nowhere — so it needs no re-filing, only doing.
+
+### Review 4 — 2026-08-26
+
+Twenty-eight rows closed since review 3, which is what tripped the
+cadence — and it tripped mid-round, on the closure of `UX-315`, which
+is the mechanism working: the trigger is a number in the tree rather
+than a memory.
+
+**1. Does the code still do what it says?** The CLI table checked
+against the parser and against `bga --help`, by running every command
+the table names and every command the tool has:
+
+```text
+rows in the architecture's table   18   all name a real command
+commands that work                 20
+missing from the table              2   bga view, bga timeline
+```
+
+Filed as `UX-322`. It is a recurrence of `UX-245` — the same table, two
+commands behind, three reviews later — and this time the two missing
+are `bga view`, the entry point for the whole viewer axis from `UX-193`
+to `UX-320`, and `bga timeline`, `UX-298`'s native Perfetto emitter.
+Both are named in the document's prose and absent from the list built
+to be read as a list. The filing asks for a guard as well as the rows,
+because a hand-maintained table against a parser that knows the answer
+will drift a fourth time.
+
+**2. Does every published contract have a home?**
+
+```text
+contract              architecture   guides
+analyze/v2                      4        2
+blast/v1                        1        1
+compare/v1                      1        1
+correlate/v1                    1        1
+store-aggregate/v1              1        1
+store/v1                        1        1
+whatif/v1                       5        1
+```
+
+Seven of seven, both columns. Review 3's one finding here — `whatif/v1`
+documented as a command and not as a contract — is closed by `UX-295`,
+and this is the check confirming it.
+
+**3. Is any figure invalidated?** One, and it is the round-41 claim
+this round spent two items on. `docs/audits/round-41.md` line 86 still
+states, unqualified, that "175 KB of the 196 KB page is commented
+JavaScript, because `--export` inlines modules verbatim". Both halves
+are false: `_uncommented` has stripped comments since `UX-205`,
+`UX-320` measured the page at 89% code, and `UX-307` this round
+removed what was actually left — 153 B. Nothing in the file marks it.
+Filed as `UX-323`.
+
+It is not an inert error. It is the stated reason the `UX-287` ratio
+threshold went 4x → 3.5x, and the threshold has since moved again to
+3.3x — twice restated against a misattributed cause. `architecture.md`
+was checked and is **not** affected: it reports the falsification
+rather than repeating the claim.
+
+**4. What shipped since the last review that no document names?** The
+inventories: `bga --help` (20 commands), `schemas.names()` (7
+contracts) and the twenty-eight closed rows. The contracts are
+covered; the commands are `UX-322`. The viewer module map, which
+review 3 filed as `UX-294`, gained `tablefocus.js` in round 44 and it
+was written into the map in the same round — so the guard `UX-294`
+produced is holding, which is what a closed finding should look like
+one review later.
+
+**5. Does each document's "last updated" claim match reality?**
+`architecture.md`'s Verification Log carries a round-44 entry dated
+2026-08-26 and the file was last changed 2026-08-26. It remains the
+only document making the claim, and `UX-247`'s guard now checks it
+rather than a reviewer doing so by hand — this review confirmed the
+guard is in the suite and green rather than re-deriving its answer.
+
+**No code was produced by this review**, per the rule above. The two
+findings are filings.

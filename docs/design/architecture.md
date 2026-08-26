@@ -878,6 +878,22 @@ Updated 2026-08-26 (after `UX-310`), re-grounded in
 Plane 2 bullets now say what the trace graphs and - as load-bearing -
 what it declines to graph and why.
 
+**A guard caught the whole round on the way past.**
+`examples/06-macro-micro-optimization/.bga/runs/**` is gitignored: it
+exists on this machine and not in a clone. Every clause `UX-308`,
+`UX-309`, `UX-310` and `UX-311` wrote against it would have passed here
+and failed in CI before an assertion ran, and
+`test_a_guard_reads_only_what_a_clone_has.py` says so by name. It fired
+on this item, where the last committed fixture had just been removed as
+an unused import; the same defect was latent in the three before it.
+The repository's convention is a skipif, and a skip alone would leave
+CI believing something it never ran - so every *property* those clauses
+check now has a committed-fixture clause beside it, and only the
+*figures* (813 records, 412 past the 120-character name, 538 samples,
+836 flows) stay behind the skip. Verified by moving that directory
+aside and running the four files as a clone sees them: **61 passed, 17
+skipped**, clone guard green.
+
 Six mutations against the committed tree, all discriminating after one
 repair, and one rejected:
 

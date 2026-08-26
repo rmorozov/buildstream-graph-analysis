@@ -1210,14 +1210,27 @@ has it. A run with no raw Plane 2 log has no timeline to hand over and
 exits **7** rather than opening a page that would 404.
 
 The page also serves a list of **questions worth asking in Perfetto**
-(`sql.html`, beside the report) — paste-ready PerfettoSQL for
-per-element aggregates, process counts, sandbox tax and the longest
-stalls. It is a docs page, not a feature: the SQL engine is Perfetto's.
+(`sql.html`, beside the report) — thirteen paste-ready PerfettoSQL
+queries. It is a docs page, not a feature: the SQL engine is Perfetto's.
 
-**Format**: the trace stays legacy Chrome JSON, which Perfetto ingests
-natively. The reasons and the revisit trigger are argued in
-[Direction 7](../design/directions.md) — the next person reaching for
-protobuf should find the argument rather than an accident.
+**When to press the button.** The report has no time axis: every number
+in it is a total, a per-element aggregate or a ranking. So a question
+that needs *when*, or needs one individual **process** rather than the
+element around it, is a question for the trace — and one that does not
+is already answered on the page. Six of the thirteen canned questions
+genuinely need the trip; seven are sharper instruments for something
+the page has said already.
+[`what-the-viewer-answers.md`](what-the-viewer-answers.md) sorts them,
+names the three places the report holds the element's answer and the
+trace holds the process's, and says which of the eight
+[roles](../design/roles.md) the trip actually serves — R1 and R2 only.
+
+**Format**: `bga timeline` writes **Perfetto's own TrackEvent protobuf**
+by default, gzipped as a stream, with `--format chrome` for the legacy
+Chrome JSON that `chrome://tracing` and any pipeline already parsing it
+still want (`UX-298`). Direction 7 argued for the JSON and named its
+revisit trigger; `UX-298` is that revisit, so the argument to read now
+is the one in `UX-298` rather than the direction that preceded it.
 
 ### View-hints v1
 

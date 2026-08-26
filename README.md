@@ -69,6 +69,13 @@ Run `bga doctor` first — it takes a second or two. Every capture environment t
 up was assembled by failure (a missing plugin, an absent compiler, `bwrap` blocked by a sysctl); each
 has a one-line remedy, cheaper to read before a thirty-minute build than after.
 
+`bga view` has one boundary worth knowing: **the report has no time axis** — every number in it is a
+total, a per-element aggregate or a ranking. A question needing *when*, or one individual process
+rather than the element around it, is a question for the trace, and the page's **Open timeline in
+Perfetto** button is the way there.
+[`docs/guides/what-the-viewer-answers.md`](docs/guides/what-the-viewer-answers.md) sorts all thirteen
+canned questions by which side answers them, and says which [roles](docs/design/roles.md) the trip serves.
+
 The second `snapshot` prints the analysis **and** the verdict against the first. Captures land
 in `.bga/runs/<UTC-stamp>/` under the project (gitignored), and every command taking a run
 directory also takes `@last`, `@prev` or a stamp prefix — `bga analyze @last`,
@@ -240,6 +247,12 @@ make test-small           # the tier to run while you work: 21s, measured
 make test                 # the whole suite: 5m11s, measured
 make lint                 # ruff + markdown (`make dev-run` prints a real report)
 ```
+
+<!-- UX-135 set `wc -l README.md` <= 250 and this file sat exactly at it. Round 46 took it to
+     263 lines to state the viewer/Perfetto boundary above: readers were going looking in the
+     page for answers that are only in the trace, and the six lines that say so are cheaper than
+     the hunt. The budget is a measured target, not a law - but exceeding it silently is what
+     turned 420 into "430" once before, so the number is here rather than in a commit message. -->
 
 Tiers come from measured per-file duration (`tests/tiers.py`, `UX-238`), not from taste; `small` is
 the default, so a new file joins it free. `pytest -m bst` needs a real BuildStream, and CI's

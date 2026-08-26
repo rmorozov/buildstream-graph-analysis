@@ -104,6 +104,7 @@ Two journeys, one page each — then the reference.
 |---|---|---|
 | [`guides/real-project.md`](guides/real-project.md) | a real project end to end: capture, read, fix, prove | **the local optimizer** |
 | [`guides/ci-comment.md`](guides/ci-comment.md) | capture → baseline set → gates → the PR comment | **the CI owner** |
+| [`guides/what-the-viewer-answers.md`](guides/what-the-viewer-answers.md) | which questions the page answers, and when to drop into Perfetto — by role | **anyone reading a report** |
 | [`guides/cli.md`](guides/cli.md) | every command, flag and exit code | reference |
 
 ### Case studies

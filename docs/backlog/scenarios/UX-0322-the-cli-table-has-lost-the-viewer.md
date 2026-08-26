@@ -1,6 +1,6 @@
 # UX-322: the CLI table has lost the viewer
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** R2 — whoever is looking for what this tool can do | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** R2 — whoever is looking for what this tool can do | **Topic:** docs
 
 ## Motivation
 
@@ -71,3 +71,77 @@ Every command `bga --help` lists has a row in the table and every row
 names a real command; the guard reddens when a command is added to the
 parser without a row, and when a row names a command that does not
 exist.
+
+## Outcome (round 46, 2026-08-26) — 🟢 Done
+
+### A correction to this filing's own numbers
+
+Review 4 said "the table has 18 rows; the tool has 20 commands". The
+20 was wrong — it came from probing eight names by hand. Counted from
+the parser and the alias table:
+
+```text
+native subcommands (bga/cli.py)          12
+tools/ aliases     (TOOL_ALIASES)        19
+                                         --
+commands in all                          31
+rows in the architecture's table         18
+rows naming no real command               0
+```
+
+The finding survives the correction — `bga view` and `bga timeline`
+were among the thirteen aliases reachable only through the catch-all
+row — but the shape is different from what the filing described, and
+that is worth having straight before the guard encodes it.
+
+### The third gap, found while writing the rule
+
+`bga wrap` had no row either. It *looked* like it did, because the
+catch-all row was titled ``| `bga wrap` / `extract` / `rebuild-set` /
+…``, and a scan for row-leading command names matched the first one.
+Rewriting that title to name the converters instead made `wrap`
+disappear — and the guard, written minutes earlier, caught it on its
+first run. It is in the README's own quickstart, so it now has a real
+row.
+
+Three commands, then: `view`, `timeline`, `wrap`. The table is 21 rows.
+
+### What the rule had to be
+
+"Every command has a row" is wrong, and that mattered: eleven aliases
+are format converters (`log-to-chrome`, `chrome-to-trace`,
+`native-to-chrome`, `graph-from-show`) and internal plumbing
+(`gen-synthetic`, `run-context`, `release-notes`, `cross-check`,
+`checkout-cost`, `extract`, `rebuild-set`). A row each would bury the
+eight a reader actually looks for.
+
+So `tests/unit/test_the_command_table_is_the_cli.py` holds three
+clauses that need no judgement and one that isolates the judgement:
+
+* every **native subcommand** has a row — the parser is the list;
+* every **row** names a command that exists — the direction `UX-245`
+  never checked, and the one a rename breaks;
+* every **promoted alias** has a row, `PROMOTED` being the eight;
+* and two clauses on `PROMOTED` itself: every name in it is a real
+  alias, and promotion stays a minority of the aliases — because if
+  most get promoted the distinction has stopped meaning anything and
+  the table is a command dump again.
+
+A new alias defaults to *not* promoted and nothing fails. That is right
+for a converter and wrong for the next `bga view`, and it is a
+deliberate limit: what catches that one is still a review, but a review
+arguing about one name rather than re-deriving the table.
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| V1 | delete the `bga view` row — the exact `UX-322` defect | the promoted-alias clause and the by-name clause |
+| V2 | rename `floors` to `floorz` in the table | the native-subcommand clause *and* the names-something-real clause, from opposite directions |
+
+### Deviation from the Required Fix
+
+None. Both rows landed and the guard landed. The filing's Out of Scope
+said not to rewrite the table's other rows; the `wrap` row is a new
+row, not a rewrite of an existing one, and it is there because the
+guard demanded it rather than because the round widened.

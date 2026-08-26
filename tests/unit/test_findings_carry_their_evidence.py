@@ -232,8 +232,18 @@ const cells = lists.flatMap((l) => all(l, (n) => n.attrs["data-field"]));
 console.log(JSON.stringify({
   evidence_fields: Object.fromEntries(
     cells.map((c) => [c.attrs["data-field"], c.attrs["data-raw"]])),
+  // `UX-317`: the cell's **value**, not everything inside it. A
+  // described value's `<dd>` now holds the number and, beside it, the
+  // schema's own sentence about the number - so "what this cell reads
+  // as" is the cell minus its description. `data-raw` is unaffected and
+  // is still the machine value, which is what every other consumer
+  // reads.
   formatted: Object.fromEntries(
-    cells.map((c) => [c.attrs["data-field"], c.textContent])),
+    cells.map((c) => [c.attrs["data-field"],
+      (c.children ?? []).filter(
+        (n) => n.attrs?.["data-role"] === "description")
+        .reduce((text, n) => text.replace(n.textContent, ""),
+                c.textContent)])),
   folds: all(root, (n) => n.attrs["data-fold"] === "evidence").length,
   findings: all(root, (n) => n.attrs["data-finding-id"]).length,
 }));

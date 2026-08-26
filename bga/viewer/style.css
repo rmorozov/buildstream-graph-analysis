@@ -152,11 +152,14 @@ body[data-has-toc] {
   max-width: 84rem;
   display: grid;
   grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
-  grid-template-areas: "head head" "rail main" "rail foot";
+  grid-template-areas: "head head" "acts acts" "rail main" "rail foot";
   align-items: start;
   column-gap: 2rem;
 }
 body[data-has-toc] > header { grid-area: head; }
+/* UX-317: its own band under the identity, spanning both panes - the
+   controls are about the whole run, not about the rail or one section. */
+body[data-has-toc] > .actions-group { grid-area: acts; }
 body[data-has-toc] > nav.toc { grid-area: rail; }
 body[data-has-toc] > main    { grid-area: main; min-width: 0; }
 body[data-has-toc] > footer  { grid-area: foot; }
@@ -173,7 +176,13 @@ body[data-has-toc] > header {
    offset and every anchor's landing clear it by the same amount. A
    jump that lands under the header is the "information overlaps"
    report, in the one place a reader most often looks. */
-body[data-has-toc] { --head: 5.5rem; }
+/* UX-317: the sticky header's height, and every anchor's landing clears
+   it by this. Measured in Chromium after the actions moved out: 92px at
+   1440x900 and 134px at 390x844, so 6rem and 8.5rem cover them. It had
+   been 5.5rem against a **172px** header - anchors landed 84px under
+   the heading, which is the "information overlaps" report in the one
+   place a reader most often looks. */
+body[data-has-toc] { --head: 6rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
 body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + .5rem); }
 h2 { font-size: 1.05rem; margin: 2rem 0 .5rem; }
@@ -623,6 +632,42 @@ details.map > summary .map-count { font-weight: normal; }
    the Top-N the table opens with (`UX-262`). */
 main .map-table { display: block; }
 
+/* UX-317 (styleguide §2b): the actions group. One block, below the
+   identity, holding every control for one decision - how do I get this
+   trace open - and each control's own explanation with it. Nothing in
+   it explains something under a different heading, which is the rule
+   the save-the-trace sentence was breaking from inside the header. */
+.actions-group { margin: 0 0 .6rem; }
+.actions-group > p { margin: .25rem 0; }
+
+/* UX-317 (styleguide §2b.3): **a described value shows its
+   affordance.** The `?` is the door; the sentence opens beside the
+   value - to its right where the row has room, below it where it does
+   not. That is the "room rule", and it is a breakpoint rather than a
+   measurement because the row's width is the column's width and the
+   column's width is the viewport's. */
+button.describe {
+  font: inherit; font-size: .7rem; line-height: 1; cursor: help;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 50%;
+  width: 1.1em; height: 1.1em; padding: 0; margin-left: .35rem;
+  vertical-align: super;
+}
+button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg); }
+.description {
+  font-size: .82rem; color: var(--muted);
+  display: block; margin-top: .2rem;
+}
+@media (min-width: 60rem) {
+  /* Room: the sentence sits to the right of the value on the same line. */
+  .description { display: inline; margin: 0 0 0 .6rem; }
+}
+/* Paper has no pointer, so the marker cannot be the only door there -
+   but neither is the description forced open: §2b.3 says the *opened*
+   state renders, and a page that printed every sentence would print a
+   glossary nobody asked for. Nothing here hides either one, which is
+   the whole rule: hover is never the only way in (§4.3). */
+
 /* UX-318 (styleguide §3a.2/§3a.3): **table focus.** One table takes the
    content column, the rest of the report stands behind it, and the
    breadcrumb is the way back. Not an overlay - round 24's argument
@@ -671,33 +716,19 @@ details.long-text .full-text { white-space: pre-wrap; margin: 0.4rem 0 0; }
    than once, and that - not the document's length - is the argument
    for tidying it. The vertical space is in the sections; `UX-267` and
    `UX-268` are where it lives. */
-body[data-has-toc] > header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "name actions" "path actions" "stamp actions";
-  align-items: start;
-  column-gap: 1rem;
-}
-body[data-has-toc] > header > h1 { grid-area: name; }
-body[data-has-toc] > header > #run-path { grid-area: path; }
-body[data-has-toc] > header > #run-producer { grid-area: stamp; }
-body[data-has-toc] > header > #actions { grid-area: actions; margin: 0; }
-body[data-has-toc] > header > #actions-fallback {
-  grid-column: 1 / -1;
-  margin: .2rem 0 0;
-}
-/* Below `UX-254`'s breakpoint it stacks again: two columns in a
-   phone-width header is the same defect at a different size. */
+/* UX-317 (styleguide §2b.2): **the header carries identity only.** The
+   two-column grid this rule used to declare existed to stand the
+   actions beside the name; the actions have their own band now, so the
+   header is three lines of identity and nothing else, at every width.
+   That is the vertical height the field pass called precious - paid on
+   every screen, because the header is sticky. */
+body[data-has-toc] > header { display: block; }
+/* Below `UX-254`'s breakpoint the sticky heading is taller, and
+   `--head` is what every anchor's `scroll-margin-top` reads. Leaving it
+   at the wide value would land a jump under the heading at exactly the
+   width where there is least room to recover. */
 @media (max-width: 60rem) {
-  body[data-has-toc] > header {
-    display: block;
-  }
-  /* Stacked, the header is taller - measured 134px at 390x844 against
-     92px at 1440x900 - and `--head` is what every anchor's
-     `scroll-margin-top` reads (`UX-254`). Leaving it at the wide value
-     would land a jump under the heading at exactly the width where
-     there is least room to recover. */
-  body[data-has-toc] { --head: 9rem; }
+  body[data-has-toc] { --head: 8.5rem; }
 }
 
 /* UX-281: the way home, on every satellite page. Small and quiet - it

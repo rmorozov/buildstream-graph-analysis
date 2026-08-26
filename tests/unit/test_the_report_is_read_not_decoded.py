@@ -200,36 +200,49 @@ class TestTheRailNestsRatherThanGrowingAColumn:
 
 
 class TestTheHeaderIsOneRowWhereThereIsRoom:
-    def test_it_is_a_grid_with_the_actions_beside_the_name(self):
+    """`UX-255` made the header a two-column band so the actions could
+    stand beside the name; `UX-317` (styleguide §2b.2) took the actions
+    out of the header entirely, so the band is one column of identity
+    and the grid it needed is gone with them.
+
+    What survives here is the part that was never about the actions: the
+    sticky offset must follow the header's height, and nothing may
+    silently drop out of the page. The header's own budget and the
+    actions' new home are `tests/unit/test_apparatus_in_its_place.py`'s.
+    """
+
+    def test_it_is_one_column_of_identity(self):
         block = "\n".join(re.findall(
             r"body\[data-has-toc\] > header\s*\{([^}]*)\}", CSS))
-        assert "grid" in block, block
-        assert "grid-template-areas" in block, block
+        assert "display: block" in block, block
+        assert "grid-template-areas" not in block, (
+            "the header is laying out columns again - §2b.2 says it carries "
+            "identity only, and the second column existed for the actions")
 
-    def test_it_stacks_again_below_the_breakpoint(self):
-        blocks = [b for b in _media_blocks("(max-width: 60rem)")
-                  if "header" in b]
-        assert blocks, "no narrow-width rule mentions the header"
-        assert any("display: block" in b for b in blocks), (
-            "two columns in a phone-width header is the same defect at a "
-            "different size")
+    def test_the_actions_have_their_own_band(self):
+        """They did not disappear: `UX-198`'s fallback link and
+        `UX-314`'s download sentence are still on the page, in the group
+        with the control they explain."""
+        assert "body[data-has-toc] > .actions-group" in CSS, (
+            "the actions group has no place in the layout")
 
     def test_the_sticky_offset_follows_the_header_it_offsets(self):
-        """Measured: 92px at 1440, 134px at 390. `--head` is what every
-        anchor's `scroll-margin-top` reads, so one value for both lands
-        a jump under the heading at the narrow width."""
+        """Measured in Chromium after `UX-317`: 92px at 1440x900, 134px
+        at 390x844. `--head` is what every anchor's `scroll-margin-top`
+        reads, so one value for both lands a jump under the heading at
+        the narrow width."""
         blocks = _media_blocks("(max-width: 60rem)")
         assert any("--head" in b for b in blocks), (
             "`--head` does not change with the header's height, so an anchor "
             "lands under the heading at 390px")
 
-    def test_nothing_was_removed_from_the_header(self):
+    def test_nothing_was_removed_from_the_page(self):
         html = (REPO / "bga/viewer/index.html").read_text(encoding="utf-8")
         for slot in ("run-name", "run-path", "run-producer", "actions",
-                     "actions-fallback"):
+                     "actions-fallback", "actions-download"):
             assert f'id="{slot}"' in html, (
-                f"{slot} left the header - each is there for a filed reason "
-                f"(UX-255, UX-198)")
+                f"{slot} left the page - each is there for a filed reason "
+                f"(UX-255, UX-198, UX-314)")
 
 
 if __name__ == "__main__":  # pragma: no cover

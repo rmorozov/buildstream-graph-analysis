@@ -14,6 +14,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- UX-317 (styleguide §2b.2): the header carries **identity only** -
+     what this run is, within a stated vertical budget. Three lines,
+     and `tests/unit/test_apparatus_in_its_place.py` holds them: the
+     save-the-trace sentence used to render here, two blocks above the
+     control it explains, and it "occupies precious vertical height"
+     before the reader has seen a single number. -->
 <header>
   <h1 id="run-name">bga</h1>
   <p id="run-path" class="muted"></p>
@@ -21,6 +27,13 @@
        Hidden until app.js has a payload to fill it from, so a page that
        failed to load never shows a heading that claims something. -->
   <p id="run-producer" class="muted" hidden></p>
+</header>
+<!-- UX-317 (styleguide §2b.1): **a control's explanation lives with the
+     control.** The Perfetto button, the link that works when the pop-up
+     does not, and the file to drag into Perfetto yourself are one group
+     because they are one decision - how do I get this trace open - and
+     nothing here explains a control from under a different heading. -->
+<div id="actions-group" class="actions-group">
   <p id="actions" hidden>
     <button id="perfetto">Open timeline in Perfetto</button>
     <a href="sql.html">Questions to ask it</a>
@@ -35,12 +48,14 @@
   <!-- UX-314: the transport that needs no permission from anybody.
        Perfetto's connect-src decides whether the deep link may be
        used, and postMessage has a size ceiling, so the reader always
-       has the file itself and Perfetto's own drag-and-drop. -->
+       has the file itself and Perfetto's own drag-and-drop.
+       UX-317: and it renders here, under the control it explains,
+       rather than in the header two blocks above it. -->
   <p id="actions-download" class="muted" hidden>
     Or <a id="trace-download" href="#" download>save the trace</a> and
     drag it into <span class="mono">ui.perfetto.dev</span>.
   </p>
-</header>
+</div>
 <main id="report" aria-busy="true">
   <p class="muted">Loading…</p>
 </main>

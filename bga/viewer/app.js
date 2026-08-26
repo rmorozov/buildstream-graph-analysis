@@ -178,7 +178,17 @@ function el(tag, attrs = {}, ...children) {
   for (const [name, value] of Object.entries(attrs)) {
     if (value === null || value === undefined) continue;
     if (name === "class") node.className = value;
-    else if (name.startsWith("data-")) node.setAttribute(name, value);
+    // `UX-317`: **any hyphenated name is an attribute**, not a
+    // property. It was `data-` only, so `el("input", {"aria-label": …})`
+    // assigned a JS property a browser reflects nowhere - measured in
+    // Chromium 141: `node["aria-label"] = "filter rows"` leaves
+    // `getAttribute("aria-label")` at `null`, and a
+    // `[aria-expanded="true"]` selector matches nothing. Five
+    // `aria-label`s in this file had been invisible to assistive
+    // technology and to CSS since they were written; the sixth
+    // (`UX-317`'s own `aria-expanded`) is what surfaced it, because it
+    // is the first one a *guard* reads back.
+    else if (name.includes("-")) node.setAttribute(name, value);
     else node[name] = value;
   }
   for (const child of children.flat()) {
@@ -223,14 +233,19 @@ export function renderFindingEvidence(evidence, node = undefined) {
   const list = el("dl", { class: "pairs evidence" });
   for (const [key, value] of scalars) {
     const kind = quantityFor(childNode(node, key), key);
+    // UX-317 (§2b.3): the same marker here. The mechanism is generic -
+    // any described value, anywhere - and this list is one of the three
+    // places a `<dt>` is built.
+    const { term, describe } = describedTerm(
+      key, hintsOf(childNode(node, key)).description);
     list.append(
-      el("dt", { title: hintsOf(childNode(node, key)).description ?? null },
-         title(key)),
+      term,
       el("dd", { class: typeof value === "number" ? "num" : null,
                  "data-field": key,
                  "data-raw": value === null ? "" : String(value) },
          typeof value === "number" ? quantity(value, kind)
-           : value === null ? "—" : String(value)));
+           : value === null ? "—" : String(value),
+         describe));
   }
   if (scalars.length <= EVIDENCE_SHOWN) return list;
   // UX-209's fold, for the same reason: the evidence is the point, and
@@ -1431,15 +1446,14 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       cell = el("span", { "data-raw": value === null ? "" : String(value) },
                 value === null ? "—" : String(value));
     }
-    // UX-201: the schema's own `description` is the popover - the "why
+    // UX-201: the schema's own `description` is the sentence - the "why
     // does this number matter" answer sourced from the contract, and
     // thence the spec, rather than from prose written beside the
     // renderer where it would drift.
-    const term = el("dt", { "data-key": name,
-                            title: described ?? null,
-                            "data-described": described ? "true" : null },
-                    title(name));
-    list.append(term, el("dd", {}, cell));
+    //
+    // UX-317 (§2b.3): and it has a door a reader can see.
+    const { term, describe } = describedTerm(name, described);
+    list.append(term, el("dd", {}, cell, describe));
   }
   const parts = [sectionHead(key, hint)];
   if (joined) {
@@ -1605,6 +1619,51 @@ export function renderSection(key, value, hint = {}, node = undefined,
   return null;   // scalars belong in the summary, below
 }
 
+/**
+ * `UX-317` (styleguide §2b.3): **a described value shows its
+ * affordance.**
+ *
+ * `UX-201` sourced the "why does this number matter" sentence from the
+ * schema and put it in a `title`, where discovery is hover archaeology:
+ * the reader who does not know to hover never learns what
+ * `scheduler_wait` means, and the one who does gets a tooltip they
+ * cannot keep open while comparing two values.
+ *
+ * So the term carries a visible `?`, and the sentence opens **beside
+ * the value** - which is why the description node is built here and
+ * appended to the `<dd>` rather than to the `<dt>`. The `title` stays:
+ * it costs nothing, and it is what a screen reader and a keyboard
+ * focus already read.
+ *
+ * Returns `{ term, describe }` - the `<dt>`, and the node to put in the
+ * `<dd>`, or `null` when the schema describes nothing.
+ */
+function describedTerm(name, description, attrs = {}) {
+  const term = el("dt", { ...attrs, "data-key": name,
+                          title: description ?? null,
+                          "data-described": description ? "true" : null },
+                  title(name));
+  if (!description) return { term, describe: null };
+  const sentence = el("span", { class: "description",
+                                "data-role": "description",
+                                "data-describes": name, hidden: "" },
+                      description);
+  sentence.hidden = true;
+  const marker = el("button", {
+    type: "button", class: "describe", "data-describe": name,
+    "aria-expanded": "false",
+    // `UX-279`: the control says what it does before it is pressed.
+    title: `What ${title(name)} means`,
+  }, "?");
+  marker.addEventListener?.("click", () => {
+    const open = marker.getAttribute("aria-expanded") === "true";
+    marker.setAttribute("aria-expanded", open ? "false" : "true");
+    sentence.hidden = open;
+  });
+  term.append(marker);
+  return { term, describe: sentence };
+}
+
 export function renderSummary(payload, hints) {
   const scalars = Object.entries(payload).filter(
     ([, value]) => value === null || typeof value !== "object");
@@ -1612,13 +1671,14 @@ export function renderSummary(payload, hints) {
   const list = el("dl", { class: "pairs" });
   for (const [key, value] of scalars) {
     const kind = hints[key]?.[QUANTITY] ?? guessQuantity(key);
+    const { term, describe } = describedTerm(key, hints[key]?.description);
     list.append(
-      el("dt", { "data-key": key }, title(key)),
+      term,
       el("dd", {}, el("span", {
         class: typeof value === "number" ? "num" : null,
         "data-raw": value === null ? "" : String(value),
       }, typeof value === "number" ? quantity(value, kind)
-         : value === null ? "—" : String(value))));
+         : value === null ? "—" : String(value)), describe));
   }
   return el("section", { "data-section": "summary" },
             el("h2", {}, "Run"), list);
@@ -2331,7 +2391,13 @@ async function boot() {
       // out which build they were looking at. DOM order is the reading
       // order a screen reader and a `Tab` key follow, so it is fixed
       // here rather than only in the grid.
-      const heading = document.querySelector("header");
+      // `UX-317`: after the actions group, which is now its own block
+      // below the header - so the reading order a screen reader and a
+      // `Tab` key follow is identity, then how to open the timeline,
+      // then the rail, then the report. That is the order this had
+      // before the group moved out of the header, kept deliberately.
+      const heading = document.querySelector("#actions-group")
+        ?? document.querySelector("header");
       if (heading && typeof heading.after === "function") {
         heading.after(contents);
       } else {

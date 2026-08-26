@@ -68,22 +68,37 @@ def _stripped(name):
 class TestTheStripperKnowsACommentFromAString:
 
     @pytest.mark.parametrize("name", MODULES)
-    def test_it_removes_only_comments(self, name):
-        """Every span it takes opens a comment, and the text it keeps,
-        with those spans put back, is the module again."""
+    def test_every_span_it_takes_is_a_whole_comment(self, name):
+        """Each removed span opens *and closes* as a comment, and they
+        arrive in order without overlapping.
+
+        The first draft of this asserted that the spans "tile the
+        source" by cutting `source` at the same indices and gluing it
+        back - which is true of any indices at all, and passed happily
+        against a mutation that ran every block span one character
+        past its `*/`. Found by mutation T5; what follows is what it
+        should have said.
+        """
         source = (VIEWER / name).read_text(encoding="utf-8")
-        rebuilt, at = [], 0
-        for start, end in view._comment_spans(source):
-            assert source[start:start + 2] in ("//", "/*"), (
-                f"{name}: a removed span at {start} does not open a comment: "
-                f"{source[start:start + 40]!r}")
-            rebuilt.append(source[at:start])
-            rebuilt.append(source[start:end])
-            at = end
-        rebuilt.append(source[at:])
-        assert "".join(rebuilt) == source, (
-            f"{name}: the spans do not tile the source, so something was "
-            "dropped or double-counted")
+        previous_end = -1
+        spans = list(view._comment_spans(source))
+        for start, end in spans:
+            body = source[start:end]
+            assert start > previous_end, (
+                f"{name}: span at {start} overlaps the one before it")
+            previous_end = end
+            assert body[:2] in ("//", "/*"), (
+                f"{name}: a removed span does not open a comment: "
+                f"{body[:40]!r}")
+            if body.startswith("/*"):
+                assert body.endswith("*/"), (
+                    f"{name}: a block span does not end at its `*/`: "
+                    f"{body[-40:]!r}")
+            else:
+                assert "\n" not in body, (
+                    f"{name}: a line comment span ran past its newline: "
+                    f"{body[:60]!r}")
+        assert spans, f"{name}: no comment at all was found in the source"
 
     @pytest.mark.parametrize("name", MODULES)
     def test_stripping_twice_changes_nothing(self, name):
@@ -91,6 +106,30 @@ class TestTheStripperKnowsACommentFromAString:
         assert view._uncomment_js(once) == once, (
             f"{name}: a second pass found more to take, which means the "
             "first pass left something it believes is a comment")
+
+    def test_a_regex_literal_full_of_slashes_survives(self):
+        """The regex state, exercised - because the corpus does not.
+
+        Blinding `_close_regex` entirely leaves all sixteen modules
+        byte-identical: no regex checked in today contains a `//` or a
+        `/*`, so nothing in the tree can tell the state is there. That
+        was found by mutation, and the honest fix is a case that does
+        exercise it rather than a clause that claims coverage it has
+        not got. `SURVIVING_STARSLASH` below is a different claim - it
+        guards against a whole-text `/\\*.*?\\*/` pass, not against
+        this scanner.
+        """
+        module = "\n".join((
+            r'const url = /^https:\/\//;   // strip the scheme',
+            'const kept = "after the regex";',
+        ))
+        out = view._uncomment_js(module)
+        assert r'/^https:\/\//' in out, (
+            "the regex literal was eaten: its trailing `\\/\\/` was read "
+            "as a line comment")
+        assert 'const kept = "after the regex";' in out, (
+            "everything after the regex was swallowed")
+        assert "strip the scheme" not in out
 
     def test_a_comment_delimiter_inside_a_string_survives(self):
         """The acceptance test's own case, built rather than hoped for."""

@@ -517,10 +517,7 @@ class TestTheSizeDiscipline:
 
         So the page is **code**, and `UX-307`'s remaining scope is the
         ~114 B of trailing comments plus whatever a real minifier would
-        buy - not the 175 KB the old note promised. (Round 45 took
-        them and the estimate was low: **153 B**, measured, across
-        four sites. The ratio is unmoved by it - 153 B of 223 KB - so
-        the threshold below stands where round 44 put it.) The threshold moves
+        buy - not the 175 KB the old note promised. The threshold moves
         to **3.3x** with that correction, and the honest statement is
         that this ratio has now moved twice for one cause: the viewer
         grows features and the synthetic run's data does not grow with
@@ -528,6 +525,18 @@ class TestTheSizeDiscipline:
         framework arriving is hundreds of kilobytes of vendor code
         landing at once, which `test_no_module_looks_like_a_vendored_library`
         catches by shape and this catches by weight.
+
+        **Round 45 (`UX-307`) took the trailing comments, and the
+        estimate above was low: 153 B, measured, not ~114.** The
+        threshold stays at 3.3x, and that is a deliberate refusal
+        rather than an oversight. `UX-307`'s acceptance test asks for
+        the ratio to be "restated upward with the new measurement",
+        which was written when the item was believed to be worth
+        175 KB. On this fixture it moves the ratio from 3.4266x to
+        3.4289x - the fourth decimal place. Tightening a threshold on
+        that would be manufacturing a significance the measurement
+        does not have, and the next round to trip this guard would
+        inherit a number nobody could account for.
         """
         import tools.bga_view as view
 

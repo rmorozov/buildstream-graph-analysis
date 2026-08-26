@@ -822,7 +822,8 @@ description, and this table's job is only to say which one to open.
 | `chapters.js` | the chapter grouping that turns forty-eight sections into a document (`UX-286`) |
 | `viewstate.js` | the URL fragment contract — the working set `UX-211` and `UX-225` publish links against |
 | `focus.js` | focusing one element and dimming the rest (`UX-222`) |
-| `drawings.js` | sparklines and density strips: the self-built geometry, and the boundary on what one may print (`UX-303`) |
+| `tablefocus.js` | opening one nested or capped table full width, and putting it back (`UX-318`) |
+| `drawings.js` | sparklines and density strips: the size scale, the two drawing grades, and the boundary on what one may print (`UX-303`, `UX-316`) |
 | `rawjson.js` | the "view as JSON" toggles, and the record of which section each blob came from (`UX-302`) |
 | `questions.js` | the canned SQL library, its categories, and the `why` each question carries (`UX-210`, `UX-312`) |
 | `sql.js` | the Query (SQL) satellite page that renders that library |

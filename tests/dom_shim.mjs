@@ -230,6 +230,30 @@ export function makeNode(tag) {
       unparent(this);
       this._parent = null; this.parentElement = null; this.parentNode = null;
     },
+    // A browser has both, and the viewer uses both: `remove()` on the
+    // node, `removeChild()` on the parent. This shim had only the
+    // first, so every `parent.removeChild?.(child)` in the page was a
+    // silent no-op here - the optional call swallowed the missing
+    // method and the guard saw a document a browser would have changed.
+    // Found by `UX-318`, whose focus state leaves a marker behind and
+    // then takes it away again: the marker stayed, and "the document is
+    // byte-identical after going back" failed against the instrument
+    // rather than against the page.
+    //
+    // Measured in Chromium 141: `removeChild` returns the child and
+    // throws `NotFoundError` when it is not this node's child. The
+    // throw matters - `wireFocusAndMarks` removes transient nodes by
+    // selector and a wrong parent there would be a real bug that a
+    // permissive shim would hide.
+    removeChild(child) {
+      if (!child || child._parent !== this) {
+        throw new Error(
+          "NotFoundError: the node to be removed is not a child of this node");
+      }
+      unparent(child);
+      child._parent = null; child.parentElement = null; child.parentNode = null;
+      return child;
+    },
 
     matches(selector) { return matchesSelector(this, selector); },
     closest(selector) {

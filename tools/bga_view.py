@@ -101,7 +101,12 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # UX-303: §2's two drawings, which import nothing and take
           # their formatter - so they are a module of their own rather
           # than more of `views.js`.
-          "drawings.js")
+          "drawings.js",
+          # UX-318: opening one nested or capped table full width. Its
+          # own module because it imports nothing and both `app.js` and
+          # `viewstate.js` need it - which would be a cycle anywhere
+          # else.
+          "tablefocus.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured

@@ -146,6 +146,19 @@ class TestItAgreesWithChrome:
         # Descendant selectors, which the probes use.
         "tbody_tr": 1,
         "all_tr": 2,
+        # `UX-318`: the shim had `remove()` and not `removeChild()`, so
+        # every `parent.removeChild?.(child)` in the viewer was a silent
+        # no-op here - the optional call swallowed the missing method
+        # and the guard read a document a browser would have changed.
+        # Measured in the same Chromium 141.0.7390.37 as the block
+        # above, on a blank page.
+        "remove_child_returns_the_child": True,
+        "remove_child_empties_the_parent": 0,
+        "remove_child_clears_parent_node": True,
+        # The throw matters: `wireFocusAndMarks` removes transient nodes
+        # by selector, and a wrong parent there is a real bug that a
+        # permissive shim would hide.
+        "remove_child_on_a_stranger": "NotFoundError",
     }
 
     def test_the_shim_answers_what_chrome_answered(self):
@@ -179,6 +192,13 @@ const host = mk("div"); host.className = "a";
 const direct = mk("b"); const wrap = mk("span"); const deep = mk("b");
 host.append(direct, wrap); wrap.append(deep);
 
+const holder = mk("div"), held = mk("span");
+holder.append(held);
+const returned = holder.removeChild(held);
+let strangerSaid;
+try { holder.removeChild(mk("i")); strangerSaid = "no throw"; }
+catch (error) { strangerSaid = String(error.message).split(":")[0]; }
+
 console.log(JSON.stringify({
   style_width: a.getAttribute("style"),
   style_custom: b.getAttribute("style"),
@@ -197,6 +217,10 @@ console.log(JSON.stringify({
   all_tr: table.querySelectorAll("tr").length,
   child_combinator: host.querySelectorAll(".a > b").length,
   descendant_combinator: host.querySelectorAll(".a b").length,
+  remove_child_returns_the_child: returned === held,
+  remove_child_empties_the_parent: holder.children.length,
+  remove_child_clears_parent_node: held.parentNode === null,
+  remove_child_on_a_stranger: strangerSaid,
 }));
 """)
         assert out == self.CHROME, (

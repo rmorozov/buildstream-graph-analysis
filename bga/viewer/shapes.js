@@ -149,3 +149,42 @@ export function noteUnmapped(where, value, log = undefined) {
     + "docs/design/styleguide.md §1, then to shapes.js.");
   return note;
 }
+
+
+// UX-318 (styleguide §3a.1): **depth is announced.**
+//
+// "It is unknown for user how deep rabbit hole is" - a fold said what
+// it was called and how many entries it had, and nothing about what was
+// behind it. The count is the fix, and counting is not analysis: this
+// walks the published value and reports its shape. Nothing here reads a
+// schema, derives a number or decides what a value *means*.
+
+/**
+ * How deep a value goes, and how many rows the fold would open onto.
+ *
+ * `levels` is the container nesting **below and including** this value:
+ * a flat list is 1 level, a list of objects is 2, a list of objects
+ * holding lists is 3. `rows` is what the fold's own table would render -
+ * its entries - so "2 levels, 34 rows" reads as the sentence §3a asks
+ * for.
+ *
+ * A scalar is 0 levels and 0 rows: it is not a rabbit hole, and a fold
+ * is never built for one.
+ */
+export function shapeOf(value) {
+  if (value === null || typeof value !== "object") return { levels: 0, rows: 0 };
+  const members = Array.isArray(value) ? value : Object.values(value);
+  let deepest = 0;
+  for (const member of members) {
+    const below = shapeOf(member).levels;
+    if (below > deepest) deepest = below;
+  }
+  return { levels: 1 + deepest, rows: members.length };
+}
+
+/** `shapeOf` as the sentence a summary carries. */
+export function depthSentence(value) {
+  const { levels, rows } = shapeOf(value);
+  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  return `${plural(levels, "level")}, ${plural(rows, "row")}`;
+}

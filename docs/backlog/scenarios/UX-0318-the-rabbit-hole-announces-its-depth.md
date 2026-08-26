@@ -1,6 +1,6 @@
 # UX-318: the rabbit hole announces its depth
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-277 (the nesting cap), UX-205 (the tables), styleguide §3a | **Serves:** R1, R2 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-277 (the nesting cap), UX-205 (the tables), styleguide §3a | **Serves:** R1, R2 | **Topic:** viewer
 
 ## Motivation
 
@@ -47,3 +47,88 @@ width, breadcrumb resolving back, and every row is reachable by
 plain page scroll (the field defect's repro, inverted into the
 guard); focus round-trips through the fragment; export shows folds
 with counts and no focus machinery.
+
+## Log
+
+**Ground truth.** Three field reports, one mechanism, and the code that
+made all three true:
+
+```text
+fold summary        "Blast radius · 44 entries"    width, never depth
+main .map-table     max-height: 20rem; overflow-y: auto
+main table          display: block; overflow-x: auto
+```
+
+The last two are the nested-scroll defect exactly: a `.map-table`
+inside a `<td>` of a table that is itself inside a `.map-table` is a
+scroll container inside a scroll container. The inner one takes the
+wheel and the outer one never moves, which is what "nested doesn't work
+if I try to look through all rows" describes.
+
+**§3a.1 — depth is announced.** `shapeOf` walks the published value and
+reports `{levels, rows}`; the summary carries the sentence and the
+element carries the numbers, so a walk checks them against the *value*
+rather than against the prose beside them. Counting is not analysis:
+nothing here reads a schema or derives a figure.
+
+```text
+"Blast radius · 44 entries"     ->  "Blast radius · 1 level, 44 rows"
+"Odd shape · 3 entries"         ->  "Odd shape · 2 levels, 3 rows"
+```
+
+Measured on the two committed exports: 18 folds on the golden page, 28
+on macro_micro, every one carrying both numbers, and eleven of them
+resolved back to their payload key and re-counted in Python.
+
+**§3a.2/§3a.3 — table focus, and it is a section.** One control, three
+entrances: the fold that is too deep to render inline, the nested
+table, and the capped one. `tablefocus.js` **moves** the node rather
+than re-rendering it — the table a reader expands is *the* table, with
+its filter, its sort and its Top-N as they were left — and remembers
+where it came from with a marker so it goes back exactly there.
+
+Deliberately not an overlay; round 24's export-survivability argument
+stands, and the guard makes it checkable: after going back, the
+document is **byte-identical** to before, measured by serialising the
+whole report tree on both sides.
+
+```text
+                          export      served
+folds                       18/28       18/28
+expand controls              0/0         5/11
+```
+
+Nested is counted in *tables*, not in calls: `renderStructured` hands
+`mapTable` `depth + 1`, so a section's own fold arrives at depth 1 and
+only depth 2 is a table inside another table's cell. The first draft
+used `depth > 0` and put an Expand on all 18.
+
+**Nested scrollboxes are gone**, not tuned: `main .map-table` has no
+scroll of its own, and `main table table` turns off the inner table's
+sideways scroll. The chain walk on both booted pages finds no scroll
+container inside another.
+
+**The instrument was wrong, and this found it.** `tests/dom_shim.mjs`
+had `remove()` and **not** `removeChild()`, so every
+`parent.removeChild?.(child)` in the viewer was a silent no-op in every
+guard — the optional call swallowed the missing method. Focus leaves a
+marker and takes it away again, so "byte-identical after going back"
+failed against the instrument rather than against the page. Added, and
+measured in the same Chromium the shim's other rows were measured in:
+it returns the child, empties the parent, clears `parentNode`, and
+throws `NotFoundError` for a node that is not a child.
+
+**Deviation from the Required Fix, recorded.** It says focus state
+"travels in the URL fragment like the rest of the view state", and it
+does — `tf=<path>`, captured and applied through `captureView` /
+`applyView`. What is *not* in the export is the machinery: the
+acceptance asks for "folds with counts and no focus machinery" there,
+so the expand control is served-only and the deep fold keeps its label,
+its counts and the whole value one click away on paper. A `tf` in a
+fragment opened against an export therefore applies nothing, in
+silence, exactly as a `tf` naming a table this run does not have.
+
+**One more served-only defect this surfaced**: `tablefocus.js` was not
+in `bga_view.py`'s `ASSETS`, so a served page would have 404'd on the
+import and died at boot — caught by `UX-233`'s guard, which follows
+every import from each entry module rather than naming a list.

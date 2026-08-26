@@ -458,7 +458,9 @@ console.log(JSON.stringify({
         assert probed["cellTag"] == "details"
         assert probed["cellFolded"], "no labeled fold body"
         assert "Odd shape" in probed["cellSummary"], probed["cellSummary"]
-        assert "3 entries" in probed["cellSummary"], probed["cellSummary"]
+        # `UX-318`: the fold's count is now its shape - levels as well
+        # as rows - so the reader knows the depth before the click.
+        assert "2 levels, 3 rows" in probed["cellSummary"], probed["cellSummary"]
 
     def test_the_section_folds_it_too(self, probed):
         """Section level, not only cell level. This is where the

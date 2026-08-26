@@ -101,7 +101,10 @@ class TestNothingIsCalledObject:
     def test_a_wide_map_folds_behind_its_own_name(self):
         drawn = _draw("blast_radius", {f"e{i}.bst": i for i in range(44)})
         assert drawn["tag"] == "details", drawn
-        assert drawn["summary"] == ["Blast radius · 44 entries"], drawn
+        # `UX-318` (§3a.1): and how deep, not only how wide. "44
+        # entries" said nothing about what was behind the fold, which is
+        # the unknown-depth rabbit hole the field pass reported.
+        assert drawn["summary"] == ["Blast radius · 1 level, 44 rows"], drawn
 
     def test_no_shape_renders_raw_json(self):
         """The `<pre>` is the thing being removed; a guard on the label

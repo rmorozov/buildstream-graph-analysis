@@ -311,16 +311,24 @@ def concurrency_series(records, windows: int = COUNTER_WINDOWS):
 
 
 def _monotonic(series):
-    """Non-decreasing timestamps, no repeated point.
+    """The same series without repeated points.
 
-    Perfetto draws a step function: a sample behind the previous one is
-    a step that is not one, and a duplicate is a step of zero height.
+    Perfetto draws a step function and a duplicate is a step of zero
+    height, so consecutive identical samples are dropped.
+
+    **Not** a re-ordering. The construction above is ordered by
+    construction - every point folded into a window's maximum is at or
+    before that window's end, and each window's end precedes the next
+    window's points - and a filter that silently dropped a backwards
+    sample would *hide* a construction bug rather than fix one. A
+    mutation confirmed the branch was dead: removing it changed nothing,
+    because nothing ever reached it. The ordering is asserted in
+    `test_the_counter_the_constant_was_waiting_for.py` instead, where a
+    break in it fails loudly.
     """
     out = []
     for timestamp, value in series:
-        if out and out[-1][0] == timestamp and out[-1][1] == value:
-            continue
-        if out and timestamp < out[-1][0]:
+        if out and out[-1] == (timestamp, value):
             continue
         out.append((timestamp, value))
     return out

@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-320 scenarios: **3 open**, 317 closed.
+320 scenarios: **2 open**, 318 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 57 |
+| capture | 0 | 57 |
 | analysis | 0 | 50 |
 | contracts | 0 | 35 |
 | viewer | 0 | 82 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-313 | [the record list is the floor that is left](UX-0313-the-record-list-is-the-floor-that-is-left.md) | capture | Low | R1 | 🔴 |
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 

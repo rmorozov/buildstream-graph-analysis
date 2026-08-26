@@ -233,3 +233,72 @@ track, under a change about memory.
 **Falsification.** Recorded in the Verification Log with the rest of
 round 43.
 
+
+## Progress (2026-08-26): the record list is the floor, and why
+
+`UX-313` asked the question this task's own measurement left open —
+whether the 185.8 MB record list could be replaced by a bounded reorder
+window, making extraction `O(concurrency)` rather than `O(processes)`.
+**It cannot.** The measurement is in `UX-313`'s Outcome; the finding
+belongs here, because this is the file a later round will read.
+
+The window is real and it is bounded — right up until a process
+outlives the capture. On synthetic traces, holding concurrency at 8:
+
+```text
+processes   500  1,000  2,000  4,000  8,000
+window       10     12     12     12     13
+```
+
+Flat in the build's length. And it grows with concurrency, not size:
+
+```text
+concurrency   1   2   4   8  16  32  64
+window        0   5   7  12  21  42  75
+```
+
+So the `O(concurrency)` bound exists. **One process that does not close
+destroys it:**
+
+```text
+long-lived processes   0      1      2      4      8
+window                12  3,992  3,992  3,992  3,992
+```
+
+One is enough, and the reason a real capture always has one is
+structural. BuildStream tears the sandbox down around each element's
+shell, so the hook never observes its exit. Measured on this
+repository's own capture of `examples/06` — 813 records, 9 elements:
+
+```text
+paired (an END was observed)         663    window  83
+open   (no END ever arrived)         150    window 663
+elements leaving at least one open     9 of 9   (16-21 records each)
+earliest open record, in start order   position 0
+```
+
+`stream_records` cannot know an open record exists until the stream
+ends, so emitting in start order means holding every record that starts
+after the earliest one — and the earliest is the **first process of the
+build**. The buffer is 813 of 813 records, 100% of the list.
+
+The join has the same answer. On a dual-stream capture made for this
+question (`--trace-spine=on`, 813 hook + 813 spine records), the
+distance between a spine record and its hook partner in stream order is
+usually nothing at all and occasionally everything:
+
+```text
+p50  1    p90  736    p99  1,346    max  1,414 of 1,626  (87%)
+```
+
+The median is 1 — the partner is normally the next record. The tail is
+the same open records: the spine sees the exit through
+`PTRACE_EVENT_EXIT` and the hook does not, so one half of the pair is
+yielded in place and the other is flushed at the end.
+
+**So the record list stays, and `O(processes)` is the floor for
+extraction as the capture is shaped today.** `tests/unit/
+test_the_record_list_is_the_floor.py` holds both halves — that the
+bound is real without open records, and that the real capture defeats
+it with its first process — so a later round finds the measurement
+instead of re-deriving it, and hears about it if the shape changes.

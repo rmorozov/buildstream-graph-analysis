@@ -45,7 +45,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import contracts                               # noqa: E402
+from bga import contracts, schemas                     # noqa: E402
 
 RUN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 #: The two-plane fixture, because `correlate` is a *join* - it refuses
@@ -294,6 +294,46 @@ class TestTheUnionIsTheInventory:
         assert contracts.superseded() == ["plane2/v1"], \
             contracts.superseded()
         assert "plane2/v1" in FILE_WRITTEN
+
+
+class TestAnUnknownNameAndABrokenContractAreDifferentThings:
+    """The second defect `UX-339` turned up, found by its own mutation.
+
+    `schema()` was `return _SCHEMAS[name]()` under one `except
+    KeyError`, so a `KeyError` raised *inside* a document's builder -
+    which is how `_check_hint` reports a view-hint for a key the
+    required map does not have - came back as:
+
+    ```text
+    KeyError: "unknown schema 'sweep/v1' - this tool produces
+               analyze/v2, ..., sweep/v1, ..."
+    ```
+
+    A message that names the thing it says it does not know, and sends
+    the reader looking for a missing registry entry that is right
+    there. The lookup and the build are separate statements now, and
+    these two clauses are what keeps them apart.
+    """
+
+    def test_a_name_that_is_not_in_the_registry_says_so(self):
+        with pytest.raises(KeyError) as raised:
+            schemas.schema("not-a-contract/v1")
+        assert "unknown schema" in str(raised.value)
+
+    def test_a_contract_that_raises_while_building_does_not_say_unknown(
+            self, monkeypatch):
+        """The positive control, applied to the real registry so the
+        clause cannot pass against a stub of its own making."""
+        def explode():
+            raise KeyError(f"{schemas.SWEEP}: view-hint for unknown key")
+
+        monkeypatch.setitem(schemas._SCHEMAS, schemas.SWEEP, explode)
+        with pytest.raises(KeyError) as raised:
+            schemas.schema(schemas.SWEEP)
+        assert "unknown schema" not in str(raised.value), (
+            "a broken contract still reports as a missing one, which is "
+            "the message that sent the last reader to the wrong file")
+        assert "view-hint" in str(raised.value)
 
 
 class TestTheDocumentSaysWhatTheToolDoes:

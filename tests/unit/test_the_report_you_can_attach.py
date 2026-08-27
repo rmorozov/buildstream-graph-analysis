@@ -635,6 +635,33 @@ class TestTheSizeDiscipline:
         that would be manufacturing a significance the measurement
         does not have, and the next round to trip this guard would
         inherit a number nobody could account for.
+
+        **Round 52 (`UX-342`) corrected what sits on each side, and the
+        threshold moves with the classification rather than with a
+        failure.** The embedded schemas were counted as *data*. They are
+        not: they were byte-identical across two different runs, which
+        is how `UX-342` found them, and a quantity that does not vary
+        with the run belongs on the fixed side beside the modules and
+        the stylesheet. So the ratio is the run's own data over
+        everything that is the same for every run. Measured on this
+        fixture, before and after that round:
+
+        ```text
+                             before      after
+        page (modules, css)  228,291    228,291
+        embedded schemas      83,669     43,981
+        fixed cost           311,960    272,272
+        run's own data       684,801    684,801   <- unchanged
+        run data / fixed       2.195      2.515
+        old data/page          3.366      3.192
+        ```
+
+        The numerator is identical because `UX-342` removed no data - it
+        removed 39,688 B of contract for documents the page can never
+        hold. Under the old metric that reads as a *regression*, which
+        is the tell that the old metric was measuring the wrong thing.
+        The bound is **2.4x**: the pre-`UX-342` export fails it at 2.195
+        and this one clears it at 2.515.
         """
         import tools.bga_view as view
 
@@ -646,11 +673,20 @@ class TestTheSizeDiscipline:
         html = out.read_text(encoding="utf-8")
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
-        data = len(html) - len(page)
-        assert data > 3.3 * len(page), (
-            f"{data} B of data against a {len(page)} B page - Direction 7's "
-            f"rule is that the data is what an export weighs, and at this "
-            f"scale it should not be close")
+        schemas = re.search(
+            r'<script type="application/json" id="bga-schemas">(.*?)'
+            r"</script>", html, re.S).group(1)
+        # `UX-342`: the schemas are apparatus, not this run's data -
+        # identical for every run of a given contract set, so they sit
+        # beside the modules and the stylesheet rather than beside the
+        # measurements.
+        fixed = len(page) + len(schemas)
+        run_data = len(html) - len(page) - len(schemas)
+        assert run_data > 2.4 * fixed, (
+            f"{run_data} B of this run's data against {fixed} B of fixed "
+            f"cost ({run_data / fixed:.3f}x) - Direction 7's rule is that "
+            f"the data is what an export weighs, and at this scale it "
+            f"should not be close")
 
     def test_the_page_is_the_modules_and_nothing_else(self, exported):
         """What the ceiling is really guarding: that the page is the

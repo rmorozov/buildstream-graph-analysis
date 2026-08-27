@@ -260,6 +260,69 @@ class TestOneBadRowCostsOneSection:
 
 @needs_browser
 @needs_node
+class TestTheLoadFailureIsStillAPageFailure:
+    """The half containment must **not** take away.
+
+    A report that will not parse is not a report, and there is nothing
+    to render around it - so `boot()`'s page-wide catch stays, and its
+    banner is marked `data-page-failed` so a stylesheet and a guard can
+    tell it from a section's card. Both wear `.verdict.refused`, which
+    is right (they both say "this did not work") and is why the marker
+    exists.
+
+    Added because a mutation found nothing: removing the marker left
+    every other clause in this file green. A distinction the page draws
+    and no guard reads is a distinction the next round deletes.
+    """
+
+    def test_an_unparseable_report_refuses_the_page_and_says_which(
+            self, tmp_path_factory, healthy_store):
+        from tools.bga_view import payloads, serve
+
+        run = _project(tmp_path_factory.mktemp("unparseable"))
+        documents = dict(payloads(str(run)))
+        # A `report.json` that is literally `null` - what a truncated
+        # write or an empty file deserializes to. `boot()` reaches for
+        # `payload.schema` on it before any section exists to contain.
+        #
+        # `{"not": "an analyze document"}` was tried first and is *not*
+        # a load failure: the page rendered it without complaint,
+        # because a document with no `schema` key renders as a document
+        # with nothing in it. Worth knowing - a wrong-shaped report is
+        # quietly empty rather than refused - but it is not this
+        # clause's subject.
+        documents["report.json"] = None
+        documents["store.json"] = healthy_store
+        httpd, url = serve(str(run), port=0, documents=documents)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        time.sleep(0.3)
+        try:
+            with Browser(chrome) as opened:
+                got = opened.observe(url, """(() => {
+                  const root = document.getElementById("report");
+                  const page = root.querySelector("[data-page-failed]");
+                  return {
+                    page: page ? page.textContent.slice(0, 120) : null,
+                    sectionCards:
+                      root.querySelectorAll("[data-section-failed]").length,
+                  };
+                })()""")
+        finally:
+            httpd.shutdown()
+
+        value = got["value"]
+        assert value["page"], (
+            "a report that will not render produced no page-wide refusal - "
+            "containment swallowed the one failure that should stop the page")
+        assert "Could not load this run" in value["page"], value["page"]
+        assert value["sectionCards"] == 0, (
+            "the load failure was reported as a section's failure, which "
+            "tells the reader one section is missing when the answer is "
+            "that none of them could be drawn")
+
+
+@needs_browser
+@needs_node
 class TestTheContainmentItselfWorks:
     """A renderer that really throws. Nothing in the shipped page does
     any more - that is what the classes above establish - so this

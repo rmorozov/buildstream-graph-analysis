@@ -741,7 +741,7 @@ how it is *read*, and the shape is deliberately small.
   behind a fold, and a long **explanation** does not truncate, because
   the sentence is the point.
 
-  The thresholds are exported names in `bga/viewer/app.js`
+  The thresholds are exported names in `bga/viewer/structured.js`
   (`OBJECT_INLINE_FIELDS`, `ARRAY_INLINE_ITEMS`, `CELL_TEXT_CAP`) rather
   than numbers repeated here, so a later round moves them in one place.
   Depth is deliberately not the criterion, and that is the whole
@@ -774,7 +774,7 @@ how it is *read*, and the shape is deliberately small.
   carries the reading its control needs: the unit of one step, and the
   key that holds the sample count. `bga/viewer/drawings.js` holds the
   sparkline and the density strip; it imports nothing and takes its
-  formatter, so the quantity table stays in `app.js`. Under three
+  formatter, so the quantity table stays in `format.js`. Under three
   points is a sentence and no drawing. A table past the row bound
   wears a strip built from its primary quantity column's own
   `data-raw` values, under [`styleguide.md` §2](styleguide.md)'s
@@ -921,6 +921,39 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-27 (after `UX-337`), re-grounded in `bga/viewer/`, which
+is twenty modules rather than fifteen: `app.js` and `views.js` held
+5,283 of the viewer's 9,603 lines between them and now hold 2,151, with
+`primitives.js`, `format.js`, `structured.js`, `element.js` and
+`decision.js` carrying the rest. A pure move — the exported page is
+byte-identical but for the two characters of one `?.`, and both
+committed fixtures render the same 28 and 40 sections booted in real
+Chrome.
+
+**What the round added that no guard held before.** The export
+concatenates the modules in the order `tools/bga_view.py::_module_order`
+derives from `import` lines, and its premise is that what a module
+imported is declared above it. `walk()` adds a module to `seen` *before*
+recursing, so a cycle does not hang — it emits an order in which a
+module precedes something it imports, and the blob reads a `const` in
+its temporal dead zone. That is `UX-199`'s empty report by a new route,
+and it was unasserted.
+`tests/unit/test_the_viewer_splits_along_its_seams.py` now asserts the
+order is a real topological order of the graph, that no module uses a
+re-export form `_IMPORT_RE` cannot see (`export * from` is the tidy
+shape a future round will reach for, and it produces an export that
+never inlines the module at all), that everything inlined is also
+served, and that no module is over 1,500 lines.
+
+**The instrument was wrong before it was right.** The symbols crossing
+each candidate cut were counted with comments and string literals
+stripped — first by regexes, which paired the backtick of a template
+holding `${…}` with a later one and ate 90% of `app.js`, reporting a
+cleaner split than the real one. The character scanner that replaced it
+found three more crossings. The lesson is the repository's own: an
+instrument that reports a good answer is not thereby correct, and the
+cheapest check is whether it still sees the file.
 
 Updated 2026-08-27 (after `UX-334`), re-grounded in the viewer module
 map against the directory it claims to describe: `bga/viewer/` gained

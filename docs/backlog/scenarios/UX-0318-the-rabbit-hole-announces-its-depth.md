@@ -151,3 +151,15 @@ N2 is the one worth naming: it puts the field defect back exactly as it
 was, and the guard that catches it is the walk over the **booted** page,
 not the scan of the stylesheet — so a second route to a nested
 scrollbox would redden too.
+
+> **Correction (round 48, `UX-332`).** The last clause of that sentence
+> was false, and round 45's verification proved it: a *second*
+> `main .map-table { overflow-y: auto }` rule appended later in
+> `style.css` restored the scrollbox with **all twenty-one clauses in
+> this file green** — verified live. Both scroll clauses stopped at the
+> first matching rule, and the booted walk was no protection because
+> the flag it is handed (`_map_table_scrolls`) read the stylesheet the
+> same first-match way: the browser saw a scrollbox while the walk was
+> told there was none. `UX-332` merges every rule per selector and
+> judges the cascade's winner, and both routes now redden the same
+> three clauses.

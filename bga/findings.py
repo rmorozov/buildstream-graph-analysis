@@ -87,15 +87,25 @@ DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND,
 # clause `_time_concentration_findings` used to spell out itself is now
 # derived from the same enum, so the report and the headline cannot
 # describe one build two ways.
+#
+# `UX-331`: each bound sentence names the line it fell on. Without it
+# the scheduler-bound wording reads as a contradiction - the golden
+# fixture says "scheduler-bound ... the critical path is 88% of
+# wall-clock", and 88% *sounds* like the chain is the constraint. The
+# unstated threshold is the whole of what flips it, and a reader who
+# does not know `CHAIN_BOUND_RATIO` has no way to reach it from the
+# sentence. `{bound}` is formatted from that constant rather than
+# written out, so the number cannot drift from the rule that used it.
 DIAGNOSIS_SENTENCES = {
     DIAGNOSIS_CHAIN_BOUND:
         "This build is chain-bound, not scheduler-bound: the critical path "
-        "is {ratio:.0%} of wall-clock, so the way to a shorter build is a "
-        "shorter chain.",
+        "is {ratio:.0%} of wall-clock, at or above the {bound:.0%} "
+        "chain-bound line, so the way to a shorter build is a shorter "
+        "chain.",
     DIAGNOSIS_SCHEDULER_BOUND:
         "This build is scheduler-bound, not chain-bound: the critical path "
-        "is {ratio:.0%} of wall-clock, so the time is going somewhere other "
-        "than the chain.",
+        "is {ratio:.0%} of wall-clock, below the {bound:.0%} chain-bound "
+        "line, so the time is going somewhere other than the chain.",
     DIAGNOSIS_INCONCLUSIVE:
         "Neither the chain nor the scheduler can be named the constraint: "
         "this run did not record the durations the comparison needs.",
@@ -1169,7 +1179,8 @@ def diagnose(result: AnalysisResult) -> dict:
             else DIAGNOSIS_SCHEDULER_BOUND)
     return {'diagnosis': name, 'chain_ratio': ratio,
             'chain_bound_ratio': CHAIN_BOUND_RATIO,
-            'sentence': DIAGNOSIS_SENTENCES[name].format(ratio=ratio)}
+            'sentence': DIAGNOSIS_SENTENCES[name].format(
+                ratio=ratio, bound=CHAIN_BOUND_RATIO)}
 
 
 def _top_actions(result: AnalysisResult, findings: List[dict]) -> List[dict]:

@@ -125,6 +125,9 @@ MEDIUM = (
     "tests/unit/test_one_bad_row_costs_one_section.py",         #   11.3s
     "tests/unit/test_every_emitted_contract_is_answerable.py",  #    9.0s
     "tests/unit/test_the_view_parses_nothing.py",               #    7.6s
+    # Round 50, tiered on landing for the same reason: four `bga analyze`
+    # subprocesses, three of them `--format json --explain`.
+    "tests/unit/test_the_readme_block_is_the_real_output.py",   #    1.2s
     # UX-298's emitter: a 40,000-process trace written twice, once for
     # the ceiling and once for the bytes-before-close clause.
     "tests/unit/test_the_timeline_speaks_perfetto.py",           #    6.0s

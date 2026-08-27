@@ -134,7 +134,7 @@ which is what `UX-320` needs.
    deliberately has none - a twin is not a §3 table (no columns, no
    sort, no state key), and the probe now says so.
 
-**Mutations — eight, all discriminating.** Run against the committed
+**Mutations — nine, all discriminating.** Run against the committed
 tree, one at a time, reverted between:
 
 ```text

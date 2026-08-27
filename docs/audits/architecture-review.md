@@ -55,12 +55,25 @@ would have caught it; a bound at it would only just have.
 
 ## The log
 
-| review | date | closed rows at review | commit | findings |
-|---|---|---|---|---|
-| 1 | 2026-08-23 | 237 | `2818a06` | `UX-245`, `UX-246`, `UX-247` |
-| 2 | 2026-08-24 | 263 | `b17d741` | `UX-273`, `UX-274` |
-| 3 | 2026-08-25 | 290 | `011dbd6` | `UX-294`, `UX-295` |
-| 4 | 2026-08-26 | 318 | `c38116a` | `UX-322`, `UX-323` |
+<!-- UX-332: the commit column is gone. It cited the branch commit each
+     review ran against, and this repository merges pull requests - so a
+     hash that names a branch tip is only as durable as the branch.
+     Measured on the four rows it carried: three of the four are **not
+     reachable from `origin/main`**, so a reader with an ordinary clone
+     cannot resolve them, and the one that is (`b17d741`) is reachable
+     by luck of which pull request kept its commits rather than by
+     anything the column guaranteed.
+
+     "Closed rows at review" is the merge-stable identity and was
+     already here: a count in the tree, what the cadence guard measures
+     distance in, and immune to any merge strategy. -->
+
+| review | date | closed rows at review | findings |
+|---|---|---|---|
+| 1 | 2026-08-23 | 237 | `UX-245`, `UX-246`, `UX-247` |
+| 2 | 2026-08-24 | 263 | `UX-273`, `UX-274` |
+| 3 | 2026-08-25 | 290 | `UX-294`, `UX-295` |
+| 4 | 2026-08-26 | 318 | `UX-322`, `UX-323` |
 
 ### Review 3 — 2026-08-25
 

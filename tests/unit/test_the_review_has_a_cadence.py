@@ -29,8 +29,14 @@ CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 # round that an ordinary range does not trip it.
 MAX_ROWS_BETWEEN_REVIEWS = 25
 
+# `UX-332`: no commit column. It named the branch tip each review ran
+# against, and this repository merges pull requests - three of the four
+# hashes it carried are not reachable from `origin/main`, so a reader
+# with an ordinary clone cannot resolve them. "Closed rows at review" is
+# the merge-stable identity, it was already in the table, and it is what
+# this guard measures distance in.
 _LOG_ROW = re.compile(
-    r"^\|\s*(\d+)\s*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|\s*`([0-9a-f]+)`\s*\|")
+    r"^\|\s*(\d+)\s*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|")
 
 
 def _log_rows():
@@ -39,8 +45,7 @@ def _log_rows():
         match = _LOG_ROW.match(line)
         if match:
             rows.append({"n": int(match.group(1)), "date": match.group(2),
-                         "rows_at_review": int(match.group(3)),
-                         "commit": match.group(4)})
+                         "rows_at_review": int(match.group(3))})
     return rows
 
 
@@ -83,8 +88,35 @@ class TestTheDistanceIsMeasured:
         rows = _log_rows()
         assert rows, (
             "the review log has no row this guard can read; the table is "
-            "`| n | date | closed rows at review | `commit` | findings |`")
+            "`| n | date | closed rows at review | findings |`")
         assert [r["n"] for r in rows] == list(range(1, len(rows) + 1))
+
+    def test_the_log_cites_no_hash_a_clone_cannot_resolve(self):
+        """`UX-332`. The column named the branch tip a review ran
+        against, and this repository merges pull requests: measured,
+        three of the four hashes it carried were **not reachable from
+        `origin/main`**, so the identity a reader was given resolved on
+        the author's machine and nowhere else.
+
+        Rather than checking each hash against git - which would make
+        this guard need a network and a full clone - the column is gone
+        and this holds it gone. "Closed rows at review" is the
+        merge-stable identity, it was already in the table, and it is
+        what the distance above is measured in.
+        """
+        import re as _re
+
+        text = REVIEW_LOG.read_text(encoding="utf-8")
+        head = _re.search(r"^\| review \|.*$", text, _re.M)
+        assert head, "the log has no header row to read"
+        assert "commit" not in head.group(0), (
+            "the commit column is back; it cites branch tips that do not "
+            "survive a merged pull request", head.group(0))
+        rows = [line for line in text.splitlines()
+                if _re.match(r"^\|\s*\d+\s*\|", line)]
+        stray = [line for line in rows if _re.search(r"`[0-9a-f]{7,40}`", line)]
+        assert not stray, (
+            "a log row still cites a bare commit hash", stray)
 
     def test_the_last_review_is_not_too_far_back(self):
         rows = _log_rows()
@@ -118,7 +150,13 @@ class TestTheDistanceIsMeasured:
             line = next(l for l in text.splitlines()
                         if _LOG_ROW.match(l)
                         and int(_LOG_ROW.match(l).group(1)) == row["n"])
-            findings = line.strip().strip("|").split("|")[4].strip()
+            # UX-332: the *last* cell, not column 4. Dropping the
+            # commit column shifted findings from index 4 to 3, and a
+            # fixed index made this clause raise `IndexError` rather
+            # than say anything about findings - a guard that breaks on
+            # a column change is a guard that gets deleted at the next
+            # one. Findings is the last column and reads as one.
+            findings = line.strip().strip("|").split("|")[-1].strip()
             assert findings and findings != "—", (
                 f"review {row['n']} names no findings and no explicit none")
 

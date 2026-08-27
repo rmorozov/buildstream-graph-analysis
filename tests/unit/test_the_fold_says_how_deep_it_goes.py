@@ -120,9 +120,9 @@ console.log(JSON.stringify([depthSentence([1, 2, 3]), depthSentence([{a: 1}]),
 # 2. No scroll container inside another.
 # --------------------------------------------------------------------------
 
-def _rules():
-    css = re.sub(r"/\*.*?\*/", "", (VIEWER / "style.css").read_text(
-        encoding="utf-8"), flags=re.S)
+def _parse(css):
+    """`[(selector, {property: value})]` in source order, comments gone."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
     out = []
     for match in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
         selector = " ".join(match.group(1).split())
@@ -135,21 +135,83 @@ def _rules():
     return out
 
 
+def _merge(rules, selector):
+    """The declarations `selector` ends up with. Later rules win."""
+    merged = {}
+    for candidate, decls in rules:
+        if candidate == selector:
+            merged.update(decls)
+    return merged
+
+
+def _rules():
+    return _parse((VIEWER / "style.css").read_text(encoding="utf-8"))
+
+
+def cascade(selector):
+    """Every rule for `selector`, merged the way a browser merges them.
+
+    `UX-332`. Both scroll clauses below used to stop at the **first**
+    matching rule, and round 45's verification proved what that lets
+    through: a second `main .map-table { overflow-y: auto }` appended
+    later in the sheet restores the nested scrollbox, **wins the
+    cascade in a real browser**, and left all twenty-one clauses in
+    this file green - verified live before the fix.
+
+    Later wins, because these selectors are textually identical and so
+    have identical specificity; source order is the whole tiebreak.
+    That is the narrow rule this needs and the whole of what it
+    implements - `UX-332` declines a CSS cascade engine, and a guard
+    that compared *different* selectors would need one.
+
+    Returns `None` when the sheet has no such rule at all, which is a
+    different fact from "a rule with nothing in it".
+    """
+    merged, seen = {}, False
+    for candidate, decls in _rules():
+        if candidate != selector:
+            continue
+        seen = True
+        merged.update(decls)
+    return merged if seen else None
+
+
 class TestNestedScrollboxesAreGone:
     """§3a.3, and the defect it deletes rather than decorates."""
 
     def test_the_map_table_no_longer_scrolls_on_its_own(self):
-        for selector, decls in _rules():
-            if selector != "main .map-table":
-                continue
-            assert "max-height" not in decls and "overflow-y" not in decls, (
-                "the nested scrollbox is back: a `.map-table` with its own "
-                f"vertical scroll is the field defect ({decls})")
-            return
-        pytest.fail("no `main .map-table` rule at all")
+        """Against the cascade's winner, not the first rule written.
+
+        `UX-318`'s own log said "a second route to a nested scrollbox
+        would redden too". It did not: this is that route, inverted
+        into the guard.
+        """
+        decls = cascade("main .map-table")
+        assert decls is not None, "no `main .map-table` rule at all"
+        assert "max-height" not in decls and "overflow-y" not in decls, (
+            "the nested scrollbox is back: a `.map-table` with its own "
+            f"vertical scroll is the field defect ({decls})")
+
+    def test_a_later_rule_is_the_one_that_counts(self):
+        """The mechanism, on a sheet this test builds.
+
+        Held separately from the clause above because that one passes
+        whether or not the merge happens - there *is* only one
+        `main .map-table` rule today. This one fails the moment the
+        merge stops merging, and it is the round-45 evasion in the form
+        a guard can keep.
+        """
+        css = ("main .map-table { overflow-y: visible; }\n"
+               "main .other { color: red; }\n"
+               "main .map-table { overflow-y: auto; max-height: 20rem; }\n")
+        assert _merge(_parse(css), "main .map-table") == {
+            "overflow-y": "auto", "max-height": "20rem"}, (
+            "the first rule won, so an appended scroll rule is invisible - "
+            "which is exactly how round 45 restored the scrollbox with "
+            "every clause green")
 
     def test_only_the_outermost_table_scrolls(self):
-        rule = dict(_rules()).get("main table table")
+        rule = cascade("main table table")
         assert rule, (
             "nothing stops a table inside a table's cell from having its "
             "own sideways scroll - the second box in the chain")
@@ -526,10 +588,13 @@ def _boot(run_dir, tmp, protocol, tail, extra_helpers=""):
 # this item; the probe reads that from the sheet so the chain walk fails
 # if the rule comes back rather than quietly counting one box fewer.
 def _map_table_scrolls():
-    for selector, decls in _rules():
-        if selector == "main .map-table":
-            return "overflow-y" in decls or "max-height" in decls
-    return False
+    # UX-332: the cascade's winner, not the first rule. This feeds the
+    # *booted* walk, so a first-match read here meant the browser saw a
+    # scrollbox while the walk was told there was none - the two halves
+    # of the round-45 evasion, and this is the half that made the live
+    # page and the guard disagree.
+    decls = cascade("main .map-table") or {}
+    return "overflow-y" in decls or "max-height" in decls
 
 
 def _pages(protocol, tail):

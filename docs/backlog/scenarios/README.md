@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-338 scenarios: **10 open**, 328 closed.
+338 scenarios: **9 open**, 329 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 59 |
 | analysis | 0 | 51 |
-| contracts | 2 | 36 |
+| contracts | 1 | 36 |
 | viewer | 1 | 85 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-328 | [--schema answers for everything that emits one](UX-0328-schema-answers-for-everything-that-emits-one.md) | contracts | Medium | R1 | 🔴 |
 | UX-330 | [the stranger needs a seed](UX-0330-the-stranger-needs-a-seed.md) | docs | Medium | R1 | 🔴 |
 | UX-331 | [the README excerpt, and the sentence that contradicts itself](UX-0331-the-readme-excerpt-and-the-sentence-that-contradicts-itself.md) | docs | Low | R1 | 🔴 |
 | UX-332 | [the cascade beats the first match, and two record nits](UX-0332-the-cascade-beats-the-first-match.md) | guards | Medium | — | 🔴 |

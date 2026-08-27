@@ -367,6 +367,10 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
 
     if args.format == 'json':
         return json.dumps({
+            # UX-339: the id, first, like every other document this tool
+            # prints. It had none, so a consumer could not version-check
+            # the one answer `R5` comes here for.
+            'schema': schemas.SWEEP,
             'resource': args.resource,
             'sweeps': sweep_result.sweeps,
             'knee_points': sweep_result.knee_points,
@@ -1939,27 +1943,26 @@ _SCHEMA_BY_COMMAND = {
     # which is why the guard over this table is structural now rather
     # than a second list somebody has to remember.
     "whatif": schemas.WHATIF,
+    # UX-339: and the capacity sweep, which is `R5`'s command and was
+    # the one printed document a consumer could not version-check.
+    "sweep": schemas.SWEEP,
 }
 
 #: Commands whose JSON carries **no** `schema:` id, with what they emit
-#: instead. `--schema` refuses for these, and says so - which is the
-#: point.
+#: instead. `--schema` refuses for these and says so, rather than
+#: naming a shape the document does not have.
 #:
-#: `UX-328` found `sweep` here while enrolling the three the item was
-#: filed for, and it is the same defect one turn worse: `bga sweep
-#: --schema` printed `analyze/v2`, and `bga sweep --format json` emits a
-#: document with **none** of that contract's four required keys
-#: (`schema`, `run_id`, `total_duration_us`, `section`). A missing
-#: answer sends a reader to look; a confidently wrong one sends them to
-#: write a parser against a shape that does not exist.
+#: Empty since `UX-339`. It held `sweep` for one round: `UX-328` found
+#: `bga sweep --schema` printing `analyze/v2` for a document with
+#: **none** of that contract's four required keys, de-enrolled it so
+#: the tool said what was true, and filed the contract the document
+#: wanted. `sweep/v1` landed and it moved to `_SCHEMA_BY_COMMAND`.
 #:
-#: The document itself wants a contract of its own. That is a new id
-#: rather than a re-enrolment, so it is filed (`UX-339`) rather than
-#: invented here, and until then the tool says what is true.
-_EMITS_NO_CONTRACT = {
-    "sweep": "a capacity sweep: `resource`, `sweeps`, `knee_points`, "
-             "`monotonicity_violations` and the calibration it used",
-}
+#: Kept rather than deleted: the *next* command to print an
+#: unversioned document has somewhere honest to be declared while its
+#: contract is written, and `UX-328`'s guard reads this to hold the
+#: absence.
+_EMITS_NO_CONTRACT = {}
 
 #: Commands whose *flag* decides the contract. `bga snapshot` is one
 #: command and two documents (`UX-234` added the second), so a single

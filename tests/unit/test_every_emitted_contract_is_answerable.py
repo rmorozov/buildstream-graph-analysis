@@ -64,6 +64,7 @@ EMITTERS = {
     "correlate": ["correlate", str(MACRO), str(PLANE2),
                   "--format", "json"],
     "whatif": ["whatif", str(RUN), "--format", "json"],
+    "sweep": ["sweep", str(RUN), "--format", "json"],
     "graph": ["graph", str(RUN), "--format", "json"],
     "floors": ["floors", str(RUN), "--format", "json"],
     "replay": ["replay", str(RUN), "--format", "json"],
@@ -71,13 +72,19 @@ EMITTERS = {
     "diagnostics": ["diagnostics", str(RUN), "--format", "json"],
 }
 
-#: Commands whose JSON carries no `schema:` id at all. Enumerated here
-#: because "emits nothing versioned" is a claim, and a claim gets
-#: checked: the clause below runs each one and asserts the *absence*,
-#: so an id appearing later reddens rather than sitting unenrolled.
-NO_CONTRACT = {
-    "sweep": ["sweep", str(RUN), "--format", "json"],
-}
+#: Commands whose JSON carries no `schema:` id at all. "Emits nothing
+#: versioned" is a claim, so the clauses below run each one and assert
+#: the *absence* - an id appearing later reddens rather than sitting
+#: unenrolled.
+#:
+#: **Empty since `UX-339`.** It held `sweep` for exactly one round:
+#: `UX-328` found `bga sweep --schema` printing `analyze/v2` for a
+#: document with none of that contract's four required keys, de-enrolled
+#: it so the tool said what was true, and filed the contract the
+#: document wanted. `sweep/v1` landed, `sweep` moved into `EMITTERS`,
+#: and the equality clause covers it by existing - which is what
+#: `UX-328`'s Acceptance Test said would happen.
+NO_CONTRACT = {}
 
 #: Ids written into a run directory rather than printed by a command,
 #: each with the file it lives in. This is the *only* legitimate reason
@@ -146,36 +153,66 @@ class TestTheUnversionedDocumentsAreDeclared:
     that does not exist.
     """
 
-    @pytest.mark.parametrize("command", sorted(NO_CONTRACT))
-    def test_it_really_emits_no_id(self, command):
-        document = json.loads(_bga(*NO_CONTRACT[command]).stdout)
-        assert "schema" not in document, (
-            f"`bga {command}` emits `{document.get('schema')}` now, so it "
-            f"belongs in EMITTERS and in the enrolment table - being "
-            f"declared unversioned is no longer true of it")
+    def test_the_set_is_empty_and_that_is_the_point(self):
+        """`UX-339` emptied it, and the emptiness is the claim.
 
-    @pytest.mark.parametrize("command", sorted(NO_CONTRACT))
-    def test_schema_refuses_rather_than_guessing(self, command):
+        Every command this tool has that prints a document now answers
+        `--schema` for it. `NO_CONTRACT` stays as the honest place to
+        declare the next one while its contract is being written - a
+        command that printed an unversioned document and was in neither
+        table would be invisible to the union below.
+        """
+        assert NO_CONTRACT == {}, (
+            "a command is declared as printing an unversioned document; "
+            "the clauses below check that claim, and its contract is "
+            "owed", sorted(NO_CONTRACT))
+
+    def test_any_declared_one_really_emits_no_id(self):
+        """Looped rather than parametrized: an empty parametrize is a
+        *skip*, and a clause that runs nowhere is what this repository
+        spends its census on. Vacuous here, live the moment an entry is
+        added."""
+        for command, argv in sorted(NO_CONTRACT.items()):
+            document = json.loads(_bga(*argv).stdout)
+            assert "schema" not in document, (
+                f"`bga {command}` emits `{document.get('schema')}` now, so "
+                f"it belongs in EMITTERS and in the enrolment table - being "
+                f"declared unversioned is no longer true of it")
+
+    def test_schema_refuses_for_them_rather_than_guessing(self):
         from bga.cli import _SCHEMA_BY_COMMAND
 
-        assert command not in _SCHEMA_BY_COMMAND, (
-            f"`bga {command} --schema` answers with a contract its own "
-            f"output does not satisfy")
-        done = _bga(command, "--schema", expect=2)
-        assert "no schema id yet" in done.stderr, done.stderr
+        for command in sorted(NO_CONTRACT):
+            assert command not in _SCHEMA_BY_COMMAND, (
+                f"`bga {command} --schema` answers with a contract its own "
+                f"output does not satisfy")
+            done = _bga(command, "--schema", expect=2)
+            assert "no schema id yet" in done.stderr, done.stderr
 
-    def test_the_analyze_contract_would_not_have_fitted_it(self):
-        """The measurement behind the de-enrolment, kept rather than
-        summarised: not "a different shape" but zero of four."""
+    def test_the_sweep_now_answers_with_a_contract_that_fits(self):
+        """`UX-339`, and the measurement that made `UX-328` de-enrol it
+        kept rather than summarised.
+
+        `bga sweep --schema` printed `analyze/v2` for a document with
+        **zero of four** of that contract's required keys - not "a
+        different shape" but no overlap at all. It has `sweep/v1` now,
+        and this asserts both halves: the wrong contract still does not
+        fit, and the right one does.
+        """
         from bga import schemas
 
-        document = json.loads(_bga(*NO_CONTRACT["sweep"]).stdout)
-        required = schemas.schema(schemas.ANALYZE)["required"]
-        assert sorted(required) == ["run_id", "schema", "section",
-                                    "total_duration_us"], required
-        assert [key for key in required if key in document] == [], (
-            "sweep's document satisfies part of analyze/v2 after all - "
-            "re-read the de-enrolment", document.keys())
+        document = json.loads(
+            _bga("sweep", str(RUN), "--format", "json").stdout)
+        analyze = schemas.schema(schemas.ANALYZE)["required"]
+        assert [key for key in analyze if key in document] == ["schema"], (
+            "sweep's document overlaps analyze/v2 by more than the id "
+            "every document has - re-read why it was de-enrolled",
+            sorted(document))
+        assert document["schema"] == schemas.SWEEP, document["schema"]
+        fits = schemas.schema(schemas.SWEEP)["required"]
+        assert [key for key in fits if key not in document] == [], (
+            "the document does not carry what its own contract requires",
+            sorted(document))
 
 
 class TestEveryEmittedIdIsAnswerable:

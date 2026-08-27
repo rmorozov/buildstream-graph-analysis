@@ -1520,6 +1520,7 @@ Schemas:
 run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the analysis shape)
 analyze/v2          compare/v1    blast/v1      correlate/v1  (published outputs - 32.5)
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
+sweep/v1                                                      (what capacity buys - 32.5)
 host/v1                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
 plane2/v2           plane2/v1                                 (the Plane 2 report - UX-297)
@@ -1649,6 +1650,7 @@ key:
 | `bga snapshot --list --format json` | `store/v1` | `bga analyze --schema` lists every id |
 | `bga snapshot --aggregate --format json` | `store-aggregate/v1` | as above |
 | `bga whatif --format json` | `whatif/v1` | as above |
+| `bga sweep --format json` | `sweep/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v1` | `bga.hostinfo.collect` |
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
 | the Plane 2 report at `plane2.json` beside a run | `plane2/v2` | `bga.plane2` |

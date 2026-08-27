@@ -85,6 +85,13 @@ NS_PER_US = 1000
 #
 # Order is the order a reader meets them: the thing they opened the
 # slice for first.
+#
+# **`cmd` is not here, and its absence is the contract.** `UX-308`
+# published it because the name was trimmed to 120 characters and the
+# argv tail had to live somewhere; `UX-333` untrimmed the name, so the
+# annotation would be the same string a second time. A saved query
+# reading `debug.cmd` gets NULL now and must read `slice.name` instead
+# - a declared break, recorded here rather than discovered.
 PLANE2_ANNOTATIONS = (
     # `UX-321`: **the join key, on both planes.** `UX-210` designed
     # `element-commands` around "the element uid both planes carry", and
@@ -103,8 +110,6 @@ PLANE2_ANNOTATIONS = (
                 "for on Plane 1, the sandbox the process ran in on Plane 2. "
                 "The same uid on both, which is what lets one query join "
                 "them"),
-    ("cmd", "the full command line, untruncated - the slice name is the "
-            "first 120 characters and this is the rest"),
     ("src", "which mechanism recorded it: `hook` (the LD_PRELOAD hook, "
             "loaded at exec) or `spine` (the ptrace supervisor)"),
     ("cpu_us", "CPU microseconds this process itself used, from its own "
@@ -179,7 +184,6 @@ def _plane2_annotations(record: dict):
         # the record has none - a query that matched `unknown` would be
         # answering about a bucket rather than about an element.
         "element": record.get("element") or None,
-        "cmd": record.get("cmd") or None,
         "src": record.get("src"),
         "cpu_us": record.get("cpu_us"),
         "max_rss_kb": record.get("max_rss_kb"),
@@ -1013,10 +1017,27 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                         pid=pid, tid=record["pid"])
                 start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US
                                      + offset_us * NS_PER_US))
-                # `UX-308`: the name stays 120 characters - a lane is
-                # read at a glance - and the full argv rides beside it
-                # as an annotation, which is where length belongs.
-                name = (record.get("cmd") or "")[:120] or "process"
+                # `UX-333`: the whole command, and nothing beside it.
+                #
+                # `UX-308` trimmed this to 120 characters and put the
+                # full argv in `debug.cmd`, reasoning that a lane is
+                # read at a glance and length belongs in an annotation.
+                # The field report says the click is the wrong trade,
+                # and measuring it says worse: a compiler argv's
+                # distinguishing part is the **file at the end**, and
+                # its first 120 characters are the flags every
+                # invocation shares. Three thousand distinct compiles
+                # interned to **one** name - the whole workload drawn
+                # as one repeated label. The trim did not hide detail;
+                # it destroyed identity.
+                #
+                # Dropping `debug.cmd` with it is what makes this
+                # nearly free: the string is interned once as a name
+                # instead of twice (+0.6% raw against +75.1% for
+                # keeping both). Near-unique names mean interning saves
+                # little, and that is the point - the bytes moved from
+                # the annotation to the name table rather than doubled.
+                name = record.get("cmd") or "process"
                 annotations = _plane2_annotations(record)
                 categories = _plane2_categories(record)
                 sources, sinks = plane2_flows.get(id(record), ((), ()))

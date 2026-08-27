@@ -285,11 +285,9 @@ empty.
   that field is a packet a reader drops without complaining - so the
   guard asserts the wire type, not only the value.
 - **A slice says what `bga` knows about it** (`UX-308`). A slice used
-  to carry its name alone, and for Plane 2 that name is the command
-  truncated to 120 characters - so the argv tail that tells two
-  compiler invocations apart was not in the trace at all. Perfetto's
-  vocabulary for this is **debug annotations**, and the timeline now
-  writes them: per Plane 2 slice `cmd` (whole), `src`, `cpu_us`,
+  to carry its name alone. Perfetto's
+  vocabulary for the rest is **debug annotations**, and the timeline now
+  writes them: per Plane 2 slice `src`, `cpu_us`,
   `max_rss_kb`, `exit_status`, `exec_chain`; per Plane 1 task
   `element`, `element_kind`, `task_type`, `outcome`. A process that did
   not exit `0` also gets the `failed` **category**, which is what makes
@@ -303,8 +301,19 @@ empty.
   observe an exit status, and `0` there would state that the process
   succeeded. Measured on `examples/06`, 825 slices: 100,922 to 330,188 B
   uncompressed and 27,013 to 51,102 B gzipped - the whole command line
-  is nearly all of it, and on that capture 412 of 813 records run past
+  was nearly all of it, and on that capture 412 of 813 records ran past
   the 120-character name.
+- **And the name is the whole command** (`UX-333`, which reverses the
+  half of `UX-308` above that trimmed it). The 120-character cut fell
+  where a compiler argv is least distinguishing: the flags prefix is
+  shared and the file is at the end, so **3,000 distinct compiles
+  interned to one slice name** - the trim did not hide detail, it
+  destroyed identity. The name is untrimmed and the `cmd` annotation
+  that carried the tail is dropped with it, because the two together
+  would pay for one string twice. Measured on those 3,000 processes at
+  466 characters of argv: full name with `cmd` kept costs +75.1% raw,
+  full name without it +0.6%. A saved query reading `debug.cmd` gets
+  NULL now and reads `slice.name` instead - a declared break.
 - **Extraction is one pass over the log, holding no events**
   (`UX-297`). Parsing and pairing were two phases with the whole event
   list between them, because `pair_events` sorted globally before

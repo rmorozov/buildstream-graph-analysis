@@ -1,10 +1,17 @@
 """UX-308: a slice carries what bga knows about it, not just its name.
 
-Before this, a slice said one thing: its name - and for Plane 2 that
-name is the command **truncated to 120 characters**, so the argv tail
-that tells two compiler invocations apart was not in the trace at all.
-Everything the annotations carry was already in the record or the run
-directory; none of it is new capture.
+Before this, a slice said one thing: its name. Everything the
+annotations carry was already in the record or the run directory; none
+of it is new capture.
+
+**`UX-333` reversed one of this item's decisions and the file says so
+where it happened.** `UX-308` trimmed the Plane 2 name to 120
+characters and published the full argv as `debug.cmd`, arguing that a
+lane is read at a glance and length belongs in an annotation. The name
+is the whole command now and `debug.cmd` is gone - see
+`TestTheNameIsTheWholeCommand` and the emitter's own comment. The
+paragraph below on what the duplication cost is kept as the record of
+what was measured at the time, not as a description of this tree.
 
 **Why the keys are a contract.** They are what a details panel shows,
 what `extract_arg(arg_set_id, 'debug.<key>')` selects on, and what
@@ -25,9 +32,25 @@ gzipped            27,013 B    51,102 B     1.89x   (+29 B/slice)
 
 The full command line is nearly all of it: on that capture 412 of 813
 records run past the 120-character name, and 127,167 of 199,389 command
-bytes are past the cut. The duplication is deliberate - `debug.cmd` is
-*always* the whole command, so a query never has to know the truncation
-rule - and gzip absorbs most of it.
+bytes are past the cut. The duplication was deliberate - `debug.cmd`
+was *always* the whole command, so a query never had to know the
+truncation rule - and gzip absorbed most of it.
+
+`UX-333` re-measured that trade on 3,000 processes with realistic
+466-character compiler argvs, and the duplication is what it removed:
+
+```text
+                                gzipped                raw
+trim + debug.cmd  (UX-308)      127,960             1,914,053
+full name + debug.cmd           166,566  +30.2%     3,350,676  +75.1%
+full name, no debug.cmd         146,042  +14.1%     1,925,667   +0.6%
+```
+
+Keeping both pays for the string twice; dropping the annotation with
+the trim moves the bytes from the annotation table to the name table
+and costs **+0.6% raw**. The gzipped column rises because near-unique
+names are what interning cannot compress - which is the same fact from
+the other side.
 
 **A recorded deviation.** The acceptance test asks that
 `trace_processor` resolve `extract_arg` for each key. There is still no
@@ -250,6 +273,15 @@ def real(tmp_path_factory):
     return {"path": out, "result": result, "trace": decode(out)}
 
 
+#: An instant's name is the command plus why it is an instant, so the
+#: index keys on the command half. `UX-188`'s suffix, not a value.
+_NO_EXIT = " (no observed exit)"
+
+
+def _command(name):
+    return name[:-len(_NO_EXIT)] if name.endswith(_NO_EXIT) else name
+
+
 @pytest.fixture(scope="module")
 def rendered(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("annotated")
@@ -257,10 +289,14 @@ def rendered(tmp_path_factory):
     out = tmp / DEFAULT_OUTPUT[FORMAT_TRACKEVENT]
     result = render(str(snapshot), str(out))
     trace = decode(out)
-    plane2 = [e for e in trace["events"] if "cmd" in e["args"]]
+    # `UX-333`: keyed on the slice **name**, which is now the whole
+    # command. It used to key on `args["cmd"]` - the annotation that
+    # carried the same string a second time and is gone.
     plane1 = [e for e in trace["events"] if "element_kind" in e["args"]]
+    plane2 = [e for e in trace["events"]
+              if "src" in e["args"] and e not in plane1]
     return {"path": out, "result": result, "trace": trace,
-            "plane2": {e["args"]["cmd"]: e for e in plane2},
+            "plane2": {_command(e["name"]): e for e in plane2},
             "plane1": plane1, "records": {
                 r["pid"]: r for r in stream_records(
                     iter(parse_trace_lines(_raw().splitlines())))}}
@@ -416,7 +452,12 @@ class TestThePlane2ValuesAreTheRecordsOwn:
             event = rendered["plane2"].get(cmd)
             assert event is not None, f"pid {pid} ({cmd}) has no slice"
             args = event["args"]
-            assert args["cmd"] == record["cmd"]
+            # `UX-333`: the command is the **name**, not an annotation.
+            # An instant's name carries `UX-188`'s reason after it, so
+            # the comparison is against the command half.
+            assert _command(event["name"]) == record["cmd"]
+            assert "cmd" not in args, (
+                "`debug.cmd` is back - the string is now paid for twice")
             assert args["src"] == record["src"]
             assert args["exec_chain"] == record["exec_chain"]
             for key, field in (("cpu_us", "cpu_us"),
@@ -453,17 +494,35 @@ class TestThePlane2ValuesAreTheRecordsOwn:
         assert args["exit_status"] == "0"
 
 
-class TestTheNameStaysShortAndTheArgvSurvives:
+class TestTheNameIsTheWholeCommand:
+    """`UX-333`. This class was `TestTheNameStaysShortAndTheArgvSurvives`
+    and asserted the opposite: `len(name) == 120`, with the tail
+    recovered from `debug.cmd`. The field report said the click to the
+    details pane was the wrong trade; measuring it said worse. See the
+    module docstring."""
 
-    def test_a_long_command_is_cut_in_the_name_and_whole_in_the_annotation(
-            self, rendered):
-        event = rendered["plane2"][LONG_CMD]
-        assert len(event["name"]) == 120, event["name"]
-        assert LONG_TAIL not in event["name"], (
-            "the fixture no longer loses its tail to the cut - this clause "
-            "tests nothing until it does")
-        assert event["args"]["cmd"] == LONG_CMD
-        assert LONG_TAIL in event["args"]["cmd"]
+    def test_a_long_command_is_whole_in_the_name(self, rendered):
+        event = rendered["plane2"].get(LONG_CMD)
+        assert event is not None, (
+            "no slice is named the whole long command; the names the "
+            "trace carries are", sorted(rendered["plane2"]))
+        assert event["name"] == LONG_CMD
+        assert LONG_TAIL in event["name"], (
+            "the distinguishing tail is not on the slice - which is the "
+            "whole of what this item was filed for")
+        assert "cmd" not in event["args"]
+
+    def test_the_trim_would_have_erased_this_fixture_s_identity(self):
+        """The positive control, in plain arithmetic: two invocations
+        that differ only past character 120 are **the same slice name**
+        under the old rule. Without this the class above could pass on a
+        fixture where the trim never mattered."""
+        sibling = LONG_CMD.replace(LONG_TAIL, "a-different-file-entirely")
+        assert sibling != LONG_CMD
+        assert sibling[:120] == LONG_CMD[:120], (
+            "the fixture's two commands differ inside the first 120 "
+            "characters, so the trim would have told them apart and this "
+            "guard proves nothing")
 
     @needs_real_capture
     def test_the_real_capture_has_commands_that_need_this(self):
@@ -482,12 +541,11 @@ class TestTheNameStaysShortAndTheArgvSurvives:
         reader wants the full command line of."""
         instants = [e for e in rendered["trace"]["events"]
                     if e["type"] == trackevent.TYPE_INSTANT
-                    and "cmd" in e["args"]]
+                    and "src" in e["args"]]
         assert len(instants) == 1, (
             "the other instant is `UX-311`'s run-identity marker, which is "
             "not a process and carries no command")
-        assert instants[0]["args"]["cmd"] == "cc -c never-exits.c"
-        assert "(no observed exit)" in instants[0]["name"]
+        assert instants[0]["name"] == "cc -c never-exits.c (no observed exit)"
 
 
 class TestTheFailedCategoryIsExactlyTheFailures:
@@ -595,6 +653,16 @@ class TestTheAnnotationsRideTheSamePass:
         27,013 -> 51,102 B gzipped (1.89x, +29 B/slice). The ceilings
         below are those figures with room, so a change that doubles the
         cost again has to come and say so here.
+
+        `UX-333` moved it **down**, and the direction is worth keeping:
+        348,014 -> 316,559 B uncompressed (-9.0%), 58,150 -> 52,642 B
+        gzipped (-9.5%). Untrimming the name lengthens 412 of these 826
+        slices and dropping `debug.cmd` shortens all of them, and on
+        this capture the second wins. On a workload of near-uniform
+        466-character compiler argvs it goes the other way by +0.6%
+        raw - so "what the name costs" is a property of the *workload*,
+        not a constant, which is why this clause is a ceiling with room
+        rather than an equality.
         """
         with gzip.open(real["path"], "rb") as handle:
             body = handle.read()
@@ -604,7 +672,7 @@ class TestTheAnnotationsRideTheSamePass:
         assert len(body) < 420_000, (
             f"{len(body)} B uncompressed over {slices} slices - measured at "
             f"330,188 when this was written, 348,014 once `UX-309`'s flows "
-            f"and `UX-311`'s identity joined it")
+            f"and `UX-311`'s identity joined it, 316,559 after `UX-333`")
         assert packed < 70_000, (
             f"{packed} B gzipped - measured at 51,102 when this was written, "
-            f"58,150 with the flows and the identity")
+            f"58,150 with the flows and the identity, 52,642 after `UX-333`")

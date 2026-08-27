@@ -297,7 +297,7 @@ function make(tag) {
 }
 globalThis.document = { createElement: make, createElementNS: (_ns, t) => make(t) };
 
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const node = views["%s"](%s);
 
 const points = [];

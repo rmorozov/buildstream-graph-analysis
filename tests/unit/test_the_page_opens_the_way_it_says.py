@@ -34,7 +34,14 @@ import re
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-VIEWS = (REPO / "bga/viewer/views.js").read_text(encoding="utf-8")
+# `UX-337`: the sections are three modules now - `views.js` handed
+# the element object to `element.js` and the decision panel to
+# `decision.js` unchanged. The census is of what *opens*, so it
+# reads all three; against `views.js` alone it would have reported
+# `renderWhyRanked` as an entry for nothing.
+VIEWS = "\n".join(
+    (REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
+    for _name in ("views.js", "element.js", "decision.js"))
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")
 
 # Every place the viewer opens a `<details>` on first load, and why.

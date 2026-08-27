@@ -329,7 +329,7 @@ globalThis.location = { protocol: "http:", href: "http://x/" };
 globalThis.window = { localStorage: { getItem: () => null, setItem: () => {} } };
 globalThis.CSS = { escape: (s) => s };
 globalThis.Event = class { constructor(t) { this.type = t; } };
-const { buildTable } = await import("./bga/viewer/app.js");
+const { buildTable } = await import("./tests/viewer.mjs");
 const { table, tools } = buildTable("t",
   Array.from({ length: 50 }, (_, i) => ({ key: `e${i}.bst`, value: i })),
   {}, undefined, 0);

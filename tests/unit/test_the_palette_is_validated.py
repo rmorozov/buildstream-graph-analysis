@@ -331,7 +331,7 @@ globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis.document = { createElement: _makeNode,
                         createElementNS: (_n, t) => _makeNode(t),
                         getElementById: () => null };
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 
 // The findings block and a delta cell, built directly - the two toned
 // controls a golden run really renders.

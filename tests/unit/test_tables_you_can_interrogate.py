@@ -199,7 +199,7 @@ globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t)
 """
 
 _HARNESS = _SHIM + """
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const tables = await import("./bga/viewer/tables.js");
 
 const COLUMNS = ["element_uid", "duration_us", "share_of_path"];
@@ -226,7 +226,7 @@ console.log(JSON.stringify(out));
 """
 
 _BIG_HARNESS = _SHIM + """
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const tables = await import("./bga/viewer/tables.js");
 
 const rows = Array.from({ length: 4000 }, (_, i) => ({

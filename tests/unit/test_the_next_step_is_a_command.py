@@ -247,7 +247,7 @@ globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t)
                                                   attrs: {}, children: [] }),
                         getElementById: () => null };
 globalThis.setTimeout = () => 0;
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const payload = %s;
 let copied = null;
 const node = views.renderDecision(payload, null, (t) => { copied = t; });

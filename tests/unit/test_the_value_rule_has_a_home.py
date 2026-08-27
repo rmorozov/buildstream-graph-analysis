@@ -31,7 +31,10 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ARCHITECTURE = REPO / "docs/design/architecture.md"
-APP = REPO / "bga/viewer/app.js"
+# `UX-337`: the three thresholds moved to `structured.js` with the
+# table machinery they bound. The rule is about what the viewer
+# exports as a number, not about which module holds it.
+VIEWER_MODULES = ("app.js", "format.js", "structured.js")
 CHAPTER = "## The viewer axis"
 
 # The three the rule is expressed in. Each decides one of the three
@@ -51,8 +54,9 @@ def _chapter():
 
 
 def _exported_constants():
-    """What `bga/viewer/app.js` actually exports as a number."""
-    source = APP.read_text(encoding="utf-8")
+    """What the viewer actually exports as a number."""
+    source = "\n".join((REPO / "bga/viewer" / name).read_text(encoding="utf-8")
+                       for name in VIEWER_MODULES)
     return {name: value for name, value in
             re.findall(r"^export const ([A-Z_]+) = (\d+);", source, re.M)}
 
@@ -95,7 +99,7 @@ class TestTheThresholdsAreNamedAndNotCopied:
         no longer exports is worse than one that repeated the number,
         because it reads as checkable and is not."""
         assert constant in _exported_constants(), (
-            f"the architecture names {constant}, which bga/viewer/app.js "
+            f"the architecture names {constant}, which {VIEWER_MODULES} "
             f"does not export as a number")
 
     def test_the_chapter_does_not_restate_the_numbers(self):

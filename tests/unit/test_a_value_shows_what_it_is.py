@@ -51,14 +51,23 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
-APP = (REPO / "bga/viewer/app.js").read_text(encoding="utf-8")
+# `UX-337`: `app.js` was one file when these clauses were written. The
+# formatters and the schema-hint readers moved to `format.js`, and the
+# machinery that turns a value into an interrogable table moved to
+# `structured.js` - unchanged, in a commit that was a move. These
+# clauses are about what the viewer declares, not about which file
+# declares it, so they read all three; pointing them at `app.js` alone
+# would have quietly stopped seeing the constants they defend.
+APP_MODULES = ("app.js", "format.js", "structured.js")
+APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
+                for _name in APP_MODULES)
 
 _HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis.document = { createElement: _makeNode,
                         createElementNS: (_n, t) => _makeNode(t),
                         getElementById: () => null };
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const drawn = app.renderStructured(%s, %s, {}, undefined);
 
 const text = (n) => {

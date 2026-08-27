@@ -168,7 +168,13 @@ class TestNoPageRunsAnInlineScript:
     def test_the_drawings_still_set_the_properties_they_used_to(self):
         """The ban is only worth having if the encodings survived it. A
         page that stopped drawing would also pass a ban on drawing."""
-        code = _code((VIEWER / "views.js").read_text(encoding="utf-8"))
+        # `UX-337`: `bar` - and `fill.style.width` with it - moved to
+        # `primitives.js`, the module the chapters sit on. The
+        # encodings are what this defends, not the filename.
+        code = _code("\n".join(
+            (VIEWER / name).read_text(encoding="utf-8")
+            for name in ("views.js", "element.js", "decision.js",
+                         "primitives.js")))
         for expected in ("fill.style.width", "box.style.flexGrow",
                          "row.style.paddingLeft",
                          'bar.style.setProperty("--w"'):

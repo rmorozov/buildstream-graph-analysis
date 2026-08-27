@@ -307,7 +307,7 @@ function make(tag) {
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const store = { schema: "store/v1", snapshots: [
   { stamp: "a", total_duration_us: 10000000 },
   { stamp: "b", total_duration_us: 12000000 },

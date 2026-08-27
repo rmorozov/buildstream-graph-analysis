@@ -28,6 +28,20 @@ import pytest
 from bga import schemas
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
+# `UX-337`: the sections used to be one file. They are three - the
+# chapters `views.js` grew too long to hold moved to `element.js`
+# and `decision.js` unchanged - and these clauses are about the
+# *sections*, not about a filename, so they read all three. Reading
+# only `views.js` would have quietly stopped seeing
+# `renderElementHistory`, which is exactly the drawing the set
+# below argues for.
+SECTION_MODULES = ("views.js", "element.js", "decision.js")
+
+
+def _sections_source():
+    return "\n".join(
+        open("bga/viewer/" + name, encoding="utf-8").read()
+        for name in SECTION_MODULES)
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
@@ -320,7 +334,7 @@ class TestTheViewsStayThin:
         say it - held as a named set, not a count."""
         import re
 
-        source = open("bga/viewer/views.js", encoding="utf-8").read()
+        source = _sections_source()
         drawing_at = [m.start() for m in re.finditer(r'svg\("svg"', source)]
         functions = [(m.start(), m.group(1)) for m in
                      re.finditer(r"function\s+(\w+)", source)]
@@ -338,7 +352,7 @@ class TestTheViewsStayThin:
     def test_no_library_and_no_arithmetic_beyond_layout(self):
         import re
 
-        source = open("bga/viewer/views.js", encoding="utf-8").read()
+        source = _sections_source()
         code = [line for line in source.splitlines()
                 if not line.lstrip().startswith("//")]
         # No **library**: a bare specifier reaches outside this
@@ -370,7 +384,7 @@ class TestTheViewsStayThin:
 
 
 _HARNESS = """
-const mod = await import("./bga/viewer/views.js");
+const mod = await import("./tests/viewer.mjs");
 console.log(JSON.stringify(mod.%s(%s) ?? null));
 """
 
@@ -387,7 +401,7 @@ globalThis.document = {
   createElementNS: (ns, t) => makeNode(t, ns),
   getElementById: () => makeNode("div"),
 };
-const mod = await import("./bga/viewer/views.js");
+const mod = await import("./tests/viewer.mjs");
 const out = mod.%s(%s);
 if (!out) { console.log(JSON.stringify({ empty: true })); }
 else {

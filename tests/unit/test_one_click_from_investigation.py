@@ -116,7 +116,7 @@ class TestTheSchemaCarriesTheVocabulary:
 class TestSectionsAreNamedAsQuestions:
     def test_a_declared_question_becomes_the_heading(self):
         out = _node(
-            'const a = await import("./bga/viewer/app.js");'
+            'const a = await import("./tests/viewer.mjs");'
             'console.log(JSON.stringify(a.heading("floors",'
             ' {"bga:question": "How much faster?", "bga:rail": "prove"})));')
         assert out["label"] == "How much faster?"
@@ -126,7 +126,7 @@ class TestSectionsAreNamedAsQuestions:
     def test_no_question_falls_back_to_the_key(self):
         """The mutation asserted both ways, as the acceptance asks."""
         out = _node(
-            'const a = await import("./bga/viewer/app.js");'
+            'const a = await import("./tests/viewer.mjs");'
             'console.log(JSON.stringify(a.heading("floors", {})));')
         assert out["label"] == "Floors"
         assert out["subtitle"] is None
@@ -249,7 +249,7 @@ class TestInvestigationIsOneClickAway:
         """The acceptance's mutation: no declaration → no buttons, and
         nothing errors."""
         out = _node(
-            'const a = await import("./bga/viewer/app.js");'
+            'const a = await import("./tests/viewer.mjs");'
             'console.log(JSON.stringify({'
             '  declared: a.elementColumn([{key: "element_uid", role: "element"}]),'
             '  undeclared: a.elementColumn([{key: "element_uid"}]) }));')
@@ -377,7 +377,7 @@ globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t)
 """
 
 _HARNESS = _SHIM + """
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const nav = await import("./bga/viewer/nav.js");
 const { readFileSync } = await import("node:fs");
 const [payloadPath, schemaPath] = %s;
@@ -419,7 +419,7 @@ const tocLinks = contents
       .map((n) => ({ key: n.attrs["data-toc"], rail: n.attrs["data-rail"] }))
   : [];
 
-const chain = (await import("./bga/viewer/views.js")).renderCriticalPath(payload);
+const chain = (await import("./tests/viewer.mjs")).renderCriticalPath(payload);
 const popovers = chain
   ? all(chain, (n) => n.attrs["data-popover"])
       .map((n) => ({ element: n.attrs["data-element"],
@@ -469,7 +469,7 @@ console.log(JSON.stringify({
 """
 
 _TOP_N = _SHIM + """
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const tables = await import("./bga/viewer/tables.js");
 const rows = Array.from({length: 40}, (_, i) => ({
   element_uid: `e-${i}.bst`, duration_us: (i + 1) * 100000 }));
@@ -485,7 +485,7 @@ console.log(JSON.stringify({ shown, visible,
 """
 
 _CHIPS = """
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const make = (t, a = {}, ...c) => ({ tagName: t, attrs: {...a}, children: [],
   textContent: c.join(""), setAttribute(k, v) { this.attrs[k] = v; },
   getAttribute(k) { return this.attrs[k] ?? null; },
@@ -513,7 +513,7 @@ console.log(JSON.stringify({
 """
 
 _TREND_PROBE = """
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const rows = [
   { run_id: "a", total_duration_us: 100, incomplete_reason: null },
   { run_id: "b", total_duration_us: 120, incomplete_reason: "failed" },
@@ -526,7 +526,7 @@ const node = views.renderTrend({ snapshots: rows });
 # outside the band its scatter produced, and the candidate lands in
 # between.
 _BAND_PROBE = """
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const node = views.renderBand({
   baseline_band: { low_us: 99, high_us: 101, median_us: 100,
                    observed_low_us: 100, observed_high_us: 200,

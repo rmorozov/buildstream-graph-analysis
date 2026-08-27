@@ -248,7 +248,7 @@ class TestMarksAnnotateAndNeverFilter:
         This is what stops the two copies drifting."""
         out = _js('''
           const f = await import("./bga/viewer/focus.js");
-          const v = await import("./bga/viewer/views.js");
+          const v = await import("./tests/viewer.mjs");
           console.log(JSON.stringify({ focus: f.MARKS, views: v.ELEMENT_MARKS }));
         ''')
         assert out["focus"] == out["views"]
@@ -355,7 +355,7 @@ class TestTheControlsAreOnEveryElement:
 
     def test_each_element_section_offers_focus_and_the_three_marks(self):
         out = _js('''
-          const v = await import("./bga/viewer/views.js");
+          const v = await import("./tests/viewer.mjs");
           const payload = { signals: { critical_path_detail: [
             { element_uid: "core.bst", duration_us: 10, share_of_path: 0.5 }] } };
           const root = make("div");

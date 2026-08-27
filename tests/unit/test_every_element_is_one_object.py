@@ -110,8 +110,8 @@ class TestEveryElementLinkResolves:
         there is one expression. Asserted by value on awkward uids, not
         by reading the source."""
         out = _node(
-            'const a = await import("./bga/viewer/app.js");'
-            'const v = await import("./bga/viewer/views.js");'
+            'const a = await import("./tests/viewer.mjs");'
+            'const v = await import("./tests/viewer.mjs");'
             # UX-235: `my_lib.bst` earns its place. The set had no
             # underscore, and `\w` includes one while `A-Za-z0-9` does
             # not - so `cssId` re-duplicated as `[^A-Za-z0-9-]+` differs
@@ -236,7 +236,7 @@ function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const total = views.ELEMENTS_SHOWN + 7;
 const payload = { signals: { critical_path_detail:
   Array.from({length: total}, (_, i) => ({ element_uid: `e-${i}.bst`,
@@ -267,8 +267,8 @@ globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t)
 """
 
 _HARNESS = _SHIM + """
-const app = await import("./bga/viewer/app.js");
-const views = await import("./bga/viewer/views.js");
+const app = await import("./tests/viewer.mjs");
+const views = await import("./tests/viewer.mjs");
 const nav = await import("./bga/viewer/nav.js");
 const { readFileSync } = await import("node:fs");
 const [payloadPath, schemaPath] = %s;

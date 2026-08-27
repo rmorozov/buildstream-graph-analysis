@@ -947,7 +947,7 @@ nodes["trace-download"].parentElement = nodes["actions-download"];
 globalThis.document = { getElementById: (id) => nodes[id] ?? null };
 globalThis.location = { href: here };
 
-const { wireTheHandoff } = await import("./bga/viewer/app.js");
+const { wireTheHandoff } = await import("./tests/viewer.mjs");
 wireTheHandoff();
 
 console.log(JSON.stringify({

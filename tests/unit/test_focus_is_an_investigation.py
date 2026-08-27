@@ -160,7 +160,7 @@ function make(tag) {
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const panel = views.renderInvestigation(__PAYLOAD__, __UID__,
                                         { store: __STORE__ });
 const groups = [], rows = [];
@@ -228,7 +228,7 @@ globalThis.document = {
                                children: [], textContent: text }),
   getElementById: () => null, addEventListener() {} };
 globalThis.Event = class { constructor(name) { this.type = name; } };
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const focus = await import("./bga/viewer/focus.js");
 const payload = __PAYLOAD__;
 const root = make("main");

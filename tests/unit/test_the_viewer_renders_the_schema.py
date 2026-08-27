@@ -608,7 +608,7 @@ globalThis.document = {
   getElementById: () => makeNode("div"),
 };
 
-const mod = await import("./bga/viewer/app.js");
+const mod = await import("./tests/viewer.mjs");
 const root = makeNode("main");
 mod.render(payload, schema, root);
 

@@ -194,7 +194,7 @@ const all = (n, p, f = []) => { if (!n) return f; if (p(n)) f.push(n);
 """
 
 _TREND = """
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const schema = %s;
 const rows = [
   { stamp: "a", total_duration_us: 300, verdict_kind: "improved" },
@@ -210,7 +210,7 @@ console.log(JSON.stringify({ points }));
 """
 
 _BAND = """
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const node = views.renderBand({
   baseline_band: { low_us: 99, high_us: 101, median_us: 100,
                    observed_low_us: 90, observed_high_us: 200 },
@@ -226,7 +226,7 @@ console.log(JSON.stringify({
 # One table, driven the way a reader drives it, then rebuilt from
 # scratch and restored from the fragment alone.
 _VIEWSTATE = """
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const vs = await import("./bga/viewer/viewstate.js");
 const rows = [
   { element_uid: "openssl.bst", duration_us: 900000 },
@@ -292,7 +292,7 @@ console.log(JSON.stringify({
 """
 
 _LINK = """
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const vs = await import("./bga/viewer/viewstate.js");
 const rows = [{ element_uid: "openssl.bst", duration_us: 900000 },
               { element_uid: "zlib.bst", duration_us: 100000 }];

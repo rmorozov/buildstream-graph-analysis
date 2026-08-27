@@ -216,7 +216,7 @@ globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t)
                         createTextNode: (t) => ({ nodeType: 3, textContent: t,
                                                   attrs: {}, children: [] }),
                         getElementById: () => null };
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const { readFileSync } = await import("node:fs");
 const [payloadPath, schemaPath] = %s;
 const payload = JSON.parse(readFileSync(payloadPath, "utf8"));

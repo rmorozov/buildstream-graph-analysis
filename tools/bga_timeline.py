@@ -721,6 +721,43 @@ def _plane1_annotations(event: dict, kinds: dict, outcome) -> list:
 
 
 
+def _no_wrapped_log(snapshot: str) -> str:
+    """Why there is no `build.log`, told apart rather than assumed.
+
+    `UX-330`. The message used to say one thing - *"`bga timeline`
+    renders a snapshot directory, not a run directory - try its
+    parent"* - and it is right for exactly one of the three ways to get
+    here. Pointed at a snapshot that simply kept no wrapped log (a
+    `gen-synthetic` store, an import, a capture run without the
+    wrapper), it sent the reader up a directory to a place with no
+    snapshot in it at all, and the real cause was never named.
+
+    So the three cases are distinguished by what is actually on disk,
+    and each names its own remedy.
+    """
+    if os.path.isdir(os.path.join(snapshot, "run")):
+        # A snapshot, and the log is the thing that is missing.
+        return (
+            f"{snapshot}: no {WRAPPED_LOG_NAME}. This is a snapshot "
+            f"directory - it has a `run/` - but `bga timeline` needs the "
+            f"wrapped BuildStream log the build wrote, and this capture "
+            f"kept none. A snapshot taken by `bga snapshot -- bst build "
+            f"...` has one; a run directory imported or generated on its "
+            f"own does not, and there is no timeline to draw from it.")
+    if os.path.exists(os.path.join(snapshot, "graph.json")):
+        # A run directory. The old message's case, and still its advice.
+        parent = os.path.dirname(os.path.abspath(snapshot)) or "."
+        return (
+            f"{snapshot}: no {WRAPPED_LOG_NAME} here. This looks like a "
+            f"*run* directory (it has a `graph.json`); `bga timeline` "
+            f"renders the snapshot directory around it - try {parent}.")
+    return (
+        f"{snapshot}: no {WRAPPED_LOG_NAME} here, and no `run/` or "
+        f"`graph.json` either - this is neither a snapshot directory nor "
+        f"a run directory. `bga timeline` renders the directory `bga "
+        f"snapshot` created.")
+
+
 def _raw_log(snapshot: str) -> Optional[str]:
     """The snapshot's raw Plane 2 log, compressed or not."""
     for name in (RAW_LOG_NAME, RAW_LOG_NAME[:-3]):
@@ -1090,10 +1127,7 @@ def render(snapshot: str, output: str,
 
     wrapped = os.path.join(snapshot, WRAPPED_LOG_NAME)
     if not os.path.exists(wrapped):
-        raise FileNotFoundError(
-            f"{snapshot}: no {WRAPPED_LOG_NAME} here. `bga timeline` renders a "
-            f"snapshot directory (the one `bga snapshot` created), not a run "
-            f"directory - try its parent.")
+        raise FileNotFoundError(_no_wrapped_log(snapshot))
 
     scratch = tempfile.mkdtemp(prefix="bga-timeline-")
     try:

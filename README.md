@@ -63,6 +63,28 @@ the same constant from the same place (`UX-331`).
 
 Bigger fixtures need no BuildStream either: `make dev-run ARGS=--large` runs a 14-element sample, and `bga gen-synthetic /tmp/scale --seed 1` a byte-reproducible 1202-element one — which is how [round 2](docs/audits/round-2.md) found four defects invisible at eleven elements.
 
+### Without BuildStream: one command for the whole tool (`UX-330`)
+
+`analyze` reads a run directory, but most of `bga` reads a **store** —
+two runs to compare, a Plane 2 report, a wrapped log to draw a timeline
+from. One command plants one:
+
+```bash
+bga gen-synthetic --store /tmp/bga-demo
+cd /tmp/bga-demo
+bga snapshot --list          # the two runs it planted, newest first
+bga analyze @last            # the report
+bga compare @prev @last      # what moved between them
+bga view @last               # the same report, in a browser
+bga timeline @last -o t.gz   # both planes in one trace, for Perfetto
+```
+
+Nothing there needs `bst` or `bubblewrap`. The seed is synthetic and says
+so — it is a shape to learn the commands on, not a measurement of
+anything — but it is the same shape a real capture has, read by the same
+code, so every answer above is the answer you will get from your own
+build.
+
 ## Use it on your real project
 
 The short version is two commands, run from inside the project:
@@ -262,9 +284,11 @@ make lint                 # ruff + markdown (`make dev-run` prints a real report
 <!-- UX-135 set `wc -l README.md` <= 250 and this file sat exactly at it. Round 46 took it to
      263 lines to state the viewer/Perfetto boundary above: readers were going looking in the
      page for answers that are only in the trace, and the six lines that say so are cheaper than
-     the hunt. Round 50 (`UX-331`) takes it to 277 lines: the Quick start block claimed to be the full
+     the hunt. Round 50 takes it to 301 lines: the Quick start block claimed to be the full
      report over a sixth of it, and honest output costs the lines the elision markers and the
-     restored diagnosis line take. The budget is a measured target, not a law - but exceeding it
+     restored diagnosis line take, and `UX-330`'s no-BuildStream seed paragraph is the rest -
+     a stranger had no committed path into two thirds of the tool. The budget is a measured
+     target, not a law - but exceeding it
      silently is what turned 420 into "430" once before, so the number is here rather than in a
      commit message. -->
 

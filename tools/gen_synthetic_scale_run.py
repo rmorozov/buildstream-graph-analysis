@@ -63,8 +63,10 @@ docstring, and docs/audits/round-2.md.
 """
 
 import argparse
+import gzip
 import json
 import random
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from ._run_context_common import add_producer
@@ -100,6 +102,36 @@ DEPS_PER_MODULE = 2
 # cases the analyzer already handles, so this ratio is deliberately
 # copied from a real project rather than chosen.
 RUNTIME_EDGE_EVERY = 20
+
+# `UX-330`: what `--store` plants instead of a bare run directory.
+#
+# A newcomer with no `bst` had no committed path into half the tool. The
+# example stores are empty scaffolds, the only real run data sits in a
+# fixtures directory named by an appendix, and every store command
+# dead-ended in *"take a snapshot"* - with the command that cannot run
+# without BuildStream. So the seed plants a whole store: a project root,
+# two snapshots so `@last`/`@prev` and `compare` have two things to
+# compare, and per snapshot the wrapped log and the Plane 2 records that
+# make `timeline` and `capture report` answer rather than refuse.
+#
+# The scale defaults are small on purpose. The 1,202-element fixture
+# exists to find defects invisible at eleven; a seed exists to be read,
+# and a reader wants a graph they can hold in their head.
+STORE_LAYERS = 3
+STORE_WIDTH = 4
+STORE_BUILDERS = 4
+STORE_RUNS = 2
+
+#: The store's first snapshot. Fixed rather than "now" so the seed is
+#: byte-reproducible in the same sense the run directory already was.
+STORE_EPOCH = datetime(2026, 3, 2, 9, 15, 0, tzinfo=timezone.utc)
+STORE_STAMP = "%Y%m%dT%H%M%SZ"
+
+#: How much slower the second run's slowest element is. A store whose
+#: two runs are identical makes `compare` correct and useless: it would
+#: report "nothing moved" and teach the reader nothing about what the
+#: command is for.
+STORE_REGRESSION = 1.6
 
 
 def build_graph(layers, width, rng):
@@ -231,6 +263,222 @@ def schedule(elements, dependencies, durations, builders):
     return placement
 
 
+def _wrapped_log(placement, durations, started, builders):
+    """The Plane 1 half of a snapshot: the log the wrapper writes.
+
+    `bga timeline` reads this and the Plane 2 records and aligns them on
+    a shared element, so a seed without it can render neither plane -
+    which is exactly the dead end `UX-330` was filed for. The shape is
+    BuildStream's own, because the parser is BuildStream's own: the
+    `Maximum ... Tasks:` headers carry the capacities, and one
+    START/SUCCESS pair per element carries the schedule.
+    """
+    lines = [f"[wrapper][{_stamp(started)}] INFO: Executing command: "
+             f"bst build all.bst",
+             f"[wrapper][{_stamp(started)}] INFO: Maximum Build Tasks: "
+             f"{builders}",
+             f"[wrapper][{_stamp(started)}] INFO: Maximum Fetch Tasks: 10",
+             f"[wrapper][{_stamp(started)}] INFO: Maximum Push Tasks: 4"]
+    events = []
+    for uid, (start_us, _dur) in placement.items():
+        events.append((start_us, 0, "START", uid))
+        events.append((start_us + durations[uid], 1, "SUCCESS", uid))
+    for offset_us, _order, kind, uid in sorted(events):
+        when = started + timedelta(microseconds=offset_us)
+        # The cache-key bracket is what the parser keys a task's span
+        # on, so it has to differ per element. The first draft wrote
+        # `aaaaaaaa` for all of them and fourteen elements collapsed
+        # into three spans - a log that reads correctly and parses
+        # wrong.
+        lines.append(
+            f"[wrapper][{_stamp(when)}] INFO: [{_elapsed(offset_us)}]"
+            f"[{_cache_key(uid)}][   build:{uid}] {kind} Building")
+    last = max(start + durations[uid] for uid, (start, _) in placement.items())
+    lines.append(f"[wrapper][{_stamp(started + timedelta(microseconds=last))}] "
+                 f"INFO: Return code: 0")
+    return "\n".join(lines) + "\n"
+
+
+def _cache_key(uid):
+    """A stable 8-hex key per element, as BuildStream's log carries."""
+    import hashlib
+
+    return hashlib.sha256(uid.encode("utf-8")).hexdigest()[:8]
+
+
+def _stamp(when):
+    return when.strftime("%Y-%m-%d %H:%M:%S,") + f"{when.microsecond // 1000:03d}"
+
+
+def _elapsed(offset_us):
+    total = int(offset_us // 1_000_000)
+    return f"{total // 3600:02d}:{total % 3600 // 60:02d}:{total % 60:02d}"
+
+
+def _plane2_records(placement, durations, started, rng):
+    """The Plane 2 half: one compiler process per building element.
+
+    Deliberately one process each rather than a realistic tree. The seed
+    is for a reader learning what the two planes *are* - that a Plane 1
+    task is an element and a Plane 2 slice is a process inside its
+    sandbox - and a hundred `sh`/`make`/`cc` wrappers per element would
+    bury that in the same lane clutter a real capture has.
+
+    `ts` is epoch seconds, which is what the spine writes and what
+    `bga timeline` aligns against the wrapped log's wall-clock.
+    """
+    epoch = started.timestamp()
+    lines, pid = [], 1000
+    for uid in sorted(placement):
+        start_us, _ = placement[uid]
+        pid += 1
+        begin = epoch + start_us / 1e6
+        # The sandbox process starts a shade after the task and ends a
+        # shade before it: the difference is the sandbox tax the whole
+        # of Plane 2 exists to measure, and a seed where they coincide
+        # would show a reader a tax of zero.
+        end = begin + max(durations[uid] / 1e6 * 0.92, 0.000_001)
+        cmd = (f"/usr/bin/cc -DNDEBUG -I/usr/include -O2 -g -pipe "
+               f"-c -o {uid[:-4]}.o {uid[:-4]}.c")
+        # `pid`, `ppid`, `ts` first and in that order: the parser reads
+        # them positionally and drops any line that does not open with
+        # them. Getting this wrong writes a log that looks right and
+        # parses to nothing, which is how the first draft of this seed
+        # produced a timeline with no Plane 2 in it.
+        tail = f"element={uid} inv=inv-{pid} src=spine"
+        lines.append(
+            f"START pid={pid} ppid=1 ts={begin:.6f} {tail} cmd={cmd}\n")
+        lines.append(
+            f"END pid={pid} ppid=1 ts={end:.6f} {tail} exit=0 "
+            f"utime={rng.uniform(0.05, 0.9):.3f} "
+            f"stime={rng.uniform(0.01, 0.2):.3f} "
+            f"maxrss_kb={rng.randrange(2048, 262144)} cmd={cmd}\n")
+    return "".join(lines)
+
+
+def _write_run(directory, elements, dependencies, placement, durations,
+               builders, run_id):
+    """The three files a run directory is, factored out of `main`."""
+    horizon = max(start + dur for start, dur in placement.values())
+    spans = sorted(
+        ({"task_key": f"{uid}|BUILD|BUILD|0",
+          "ts_us": placement[uid][0], "dur_us": placement[uid][1],
+          "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+         for uid in placement),
+        key=lambda s: (s["ts_us"], s["task_key"]))
+    loading_us, resolving_us = 900_000, 1_100_000
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "graph.json").write_text(json.dumps(
+        {"elements": elements, "dependencies": dependencies,
+         "run_identity_hash": run_id}, indent=1))
+    (directory / "trace.json").write_text(json.dumps(
+        {"run_identity_hash": run_id, "spans": spans, "phases": []}, indent=1))
+    run_context = {
+        "trace_epsilon_us": 50_000,
+        "resource_capacities": {"PROCESS": builders, "DOWNLOAD": 10,
+                                "UPLOAD": 4},
+        "max_jobs": builders, "native_max_jobs": 4,
+        "native_max_jobs_source": "parsed_from_invocation",
+        "host_cpu_count": builders,
+        "wall_clock": {"start_us": 0,
+                       "end_us": horizon + loading_us + resolving_us},
+        "pipeline_overhead": [
+            {"phase": "Loading elements", "elapsed_us": loading_us},
+            {"phase": "Resolving elements", "elapsed_us": resolving_us}],
+        "run_identity": {"manifest_hash": run_id, "targets": ["all.bst"]},
+    }
+    add_producer(run_context)
+    (directory / "run-context.json").write_text(json.dumps(run_context, indent=1))
+    return horizon
+
+
+def _plant_store(output, args):
+    """`UX-330`: a store a stranger with no `bst` can walk end to end.
+
+    Returns the list of snapshot directories written, newest last.
+    """
+    output.mkdir(parents=True, exist_ok=True)
+    # Store resolution walks up for `project.conf` (`UX-127`), so the
+    # seed is a project root as far as `bga` is concerned. Minimal on
+    # purpose: it is a marker, not a buildable project, and pretending
+    # otherwise would invite `bst build` against it.
+    (output / "project.conf").write_text(
+        "# Planted by `bga gen-synthetic --store` (UX-330).\n"
+        "# A marker so `bga`'s store resolution finds this directory; it\n"
+        "# is not a buildable BuildStream project and `bst` will refuse\n"
+        "# it, which is the honest state of a no-BuildStream seed.\n"
+        "name: bga-seed\n"
+        "element-path: elements\n"
+        "min-version: 2.0\n")
+    runs_root = output / ".bga" / "runs"
+    planted = []
+    for index in range(args.runs):
+        rng = random.Random(args.seed + index)
+        elements, dependencies = build_graph(args.layers, args.width, rng)
+        durations = _durations(elements, rng)
+        if index:
+            # The regression the second run exists to show.
+            slowest = max(durations, key=lambda uid: durations[uid])
+            durations[slowest] = int(durations[slowest] * STORE_REGRESSION)
+        placement = schedule(elements, dependencies, durations, args.builders)
+        started = STORE_EPOCH + timedelta(days=index)
+        stamp = started.strftime(STORE_STAMP)
+        snapshot = runs_root / stamp
+        snapshot.mkdir(parents=True, exist_ok=True)
+        _write_run(snapshot / "run", elements, dependencies, placement,
+                   durations, args.builders, f"{args.run_id}-{index}")
+        # `UX-330`: without this, `bga blast` on the seed says "this run
+        # carries no source inventory" and the reader is back at a dead
+        # end - so the seed carries one. Two of the elements share a
+        # repository, because the one thing `blast` is *for* is telling
+        # you that a change to a shared source rebuilds more than the
+        # element you were thinking about.
+        _write_sources(snapshot / "run", elements)
+        (snapshot / "build.log").write_text(
+            _wrapped_log(placement, durations, started, args.builders))
+        with gzip.open(snapshot / "plane2.log.gz", "wt",
+                       encoding="utf-8") as out:
+            out.write(_plane2_records(placement, durations, started, rng))
+        planted.append(snapshot)
+    (output / ".bga" / "tmp").mkdir(exist_ok=True)
+    return planted
+
+
+def _write_sources(directory, elements):
+    """A `sources/v1` inventory for the seed (`UX-330`)."""
+    inventory, shared = {}, "https://example.invalid/shared-toolchain.git"
+    for index, element in enumerate(sorted(e["uid"] for e in elements)):
+        if element.endswith(".bst") and index % 7 == 3:
+            # The interesting case: several elements off one repository.
+            inventory[element] = [{
+                "kind": "git", "identity": shared, "declared": shared,
+                "keying": "ref", "staged_at": None}]
+        else:
+            inventory[element] = [{
+                "kind": "local", "identity": f"files/{element[:-4]}",
+                "declared": f"files/{element[:-4]}", "keying": "content",
+                "staged_at": None}]
+    (directory / "sources.json").write_text(json.dumps(
+        {"schema": "sources/v1", "elements": inventory, "unreadable": []},
+        indent=1))
+
+
+def _durations(elements, rng):
+    """Per-element build duration, shared by both writers."""
+    durations = {}
+    for element in elements:
+        uid = element["uid"]
+        if element["element_kind"] in ("import", "stack"):
+            # Structural elements do no build work. 1us rather than 0 so
+            # they still appear as real spans - a 0-duration span is a
+            # different edge case and not the one this fixture is for.
+            durations[uid] = 1
+        else:
+            durations[uid] = int(
+                rng.uniform(MIN_DURATION_S, MAX_DURATION_S) * 1_000_000)
+    return durations
+
+
 def main():
     parser = argparse.ArgumentParser(description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("output", type=Path, help="Run directory to create.")
@@ -244,21 +492,49 @@ def main():
         help="run_identity_hash written to every file. Must match across "
         "the three files or ingestion rejects the directory.",
     )
+    parser.add_argument(
+        "--store", action="store_true",
+        help="UX-330: plant a whole store rather than one run directory - "
+             "a project root, two snapshots, and per snapshot the wrapped "
+             "log and Plane 2 records that `timeline` and `capture report` "
+             "need. This is the no-BuildStream seed the README's quick "
+             "start points at; it defaults to a small graph, because a "
+             "seed is for reading.",
+    )
+    parser.add_argument(
+        "--runs", type=int, default=STORE_RUNS,
+        help=f"With --store: how many snapshots to plant (default "
+             f"{STORE_RUNS}). Two is the minimum that makes `@prev`, "
+             f"`compare` and the trend answer at all.",
+    )
     args = parser.parse_args()
+
+    if args.store:
+        # The scale defaults exist to reproduce the round-2 fixture; a
+        # seed wants a graph a reader can hold in their head. Only the
+        # ones left at their default are replaced, so `--store --width 40`
+        # still means what it says.
+        for name, small in (("layers", STORE_LAYERS), ("width", STORE_WIDTH),
+                            ("builders", STORE_BUILDERS)):
+            if getattr(args, name) == globals()[f"DEFAULT_{name.upper()}"]:
+                setattr(args, name, small)
+        planted = _plant_store(args.output, args)
+        print(f"Wrote a store at {args.output}")
+        for snapshot in planted:
+            print(f"  snapshot: {snapshot.name}")
+        print()
+        print("Nothing here needs BuildStream. Try, from that directory:")
+        print("  bga snapshot --list          # the two runs, newest first")
+        print("  bga analyze @last            # the report")
+        print("  bga compare @prev @last      # what moved between them")
+        print("  bga view @last               # the same report, in a browser")
+        print("  bga timeline @last -o t.gz   # both planes, one trace")
+        return
 
     rng = random.Random(args.seed)
     elements, dependencies = build_graph(args.layers, args.width, rng)
 
-    durations = {}
-    for element in elements:
-        uid = element["uid"]
-        if element["element_kind"] in ("import", "stack"):
-            # Structural elements do no build work. 1us rather than 0 so
-            # they still appear as real spans - a 0-duration span is a
-            # different edge case and not the one this fixture is for.
-            durations[uid] = 1
-        else:
-            durations[uid] = int(rng.uniform(MIN_DURATION_S, MAX_DURATION_S) * 1_000_000)
+    durations = _durations(elements, rng)
 
     placement = schedule(elements, dependencies, durations, args.builders)
     horizon = max(start + dur for start, dur in placement.values())

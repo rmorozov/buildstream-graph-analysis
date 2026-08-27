@@ -32,9 +32,41 @@ def project(tmp_path):
 
 
 @pytest.fixture
-def recorded(monkeypatch):
+def a_bst_on_path(tmp_path_factory, monkeypatch):
+    """A `bst` this machine may not have.
+
+    `UX-324` made `bga snapshot` ask `bga doctor` whether the build can
+    start *before* it writes anything, and `check_bst` reads the real
+    PATH. That is right for a user and it made every composition test
+    below depend on the host: they passed on a developer box with
+    BuildStream installed and failed on a CI runner without it, which is
+    `UX-213`'s defect exactly. So the stub is put there on purpose - the
+    pre-flight then runs for real and finds it, which tests more than
+    stubbing the pre-flight out would.
+
+    `check_bst` only *fails* when `bst` is absent or will not run; a
+    version outside the supported line is a warning, and a warning is
+    not a refusal - so printing anything at all is enough here.
+    """
+    import stat
+
+    binaries = tmp_path_factory.mktemp("path")
+    stub = binaries / "bst"
+    stub.write_text("#!/bin/sh\necho 'BuildStream 2.0.0+stub'\n", encoding="utf-8")
+    stub.chmod(stub.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    monkeypatch.setenv("PATH", f"{binaries}{os.pathsep}{os.environ['PATH']}")
+    return stub
+
+
+@pytest.fixture
+def recorded(monkeypatch, a_bst_on_path):
     """`capture run`, replaced by something that records its argv and
-    lays down the files a successful capture would leave."""
+    lays down the files a successful capture would leave.
+
+    Takes `a_bst_on_path` because the two go together: what is being
+    replaced is *running the build*, and `UX-324`'s pre-flight asks
+    whether the build could run at all.
+    """
     calls = []
 
     def fake_capture(argv):
@@ -226,7 +258,7 @@ class TestTheAnswerIsTheBuildsAnswer:
         assert main(["--", "bst", "build", "all.bst"]) == 255
 
     def test_a_build_that_produced_no_run_directory_says_which_half_survived(
-            self, project, monkeypatch, capsys):
+            self, project, monkeypatch, capsys, a_bst_on_path):
         def capture_without_a_run(argv):
             snapshot = os.path.dirname(argv[argv.index("--run-dir") + 1])
             with open(os.path.join(snapshot, PLANE2_NAME), "w") as handle:

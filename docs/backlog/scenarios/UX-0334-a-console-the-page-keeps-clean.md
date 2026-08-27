@@ -177,6 +177,53 @@ for that, fetching a payload that does not exist on the served page and
 asserting the harness reports it. M8 reddens it now. A net with three
 channels needs three positive controls; it had two.
 
+### Five failures CI found that no developer box could
+
+The round's first CI run was red, and every one of the five was a real
+defect in this branch that the container it was written on could not
+show. Recorded here because they are one finding, not five: **this
+repository's guards had drifted into assuming a machine that has built
+with BuildStream**, and `UX-213` is the item that says a guard which
+runs on one machine is the failure.
+
+| what failed | which item put it there | the fix |
+|---|---|---|
+| `bga cache-logs PROJECT_DIR` printed a message with nothing of the reader's in it | `UX-327` | the missing-log-root branch keeps the project it was asked about, and says the `project.conf` it came from. The branch is unreachable on any machine that has ever run `bst`, so the guard over the project-shaped message passed everywhere and failed on a fresh runner |
+| seven `bga snapshot` composition tests exited 2 | `UX-324` | the pre-flight reads the real PATH, which is right for a user and made these host-dependent. A `bst` stub goes on PATH in the fixture, so the pre-flight runs *for real* and finds it - testing more than stubbing it out would |
+| the installed sweep called `bga doctor` exiting 1 a failure | `UX-325` | `doctor` exits non-zero when a **check** fails, and on a bare runner two do. A fourth verdict, `REPORTS`: it ran, the exit code judges the machine, and the only thing that can be wrong is silence |
+| the golden export was 22 B over its bound | `UX-334` | see below - the bound was measuring the checkout path |
+| `producer.contracts` carried a `probe/v3` that does not exist | `UX-336` | a guard planted a module **inside the installed package** to prove the contract inventory derives rather than lists. One process, harmless; under `-n auto` a race. It plants into a directory appended to `bga.__path__` now - same mechanism, nothing shared - and a second clause asserts the package directory is byte-identical across it |
+
+The export bound is the one worth the space. It had **12 B of
+headroom**, and CI's checkout is 34 B of path longer than this
+container's:
+
+```text
+run path length   20   ->  323,829 B
+run path length   61   ->  324,075 B
+run path length  111   ->  324,375 B
+```
+
+The export embeds the run's absolute path, so the number is a function
+of *where the repository is checked out* - about 5 B per character.
+Exporting from a copy at a fixed path was tried and **declined**: the
+committed runs sit inside a store, so `payloads()` finds a `compare`
+and a `store` beside them that a copy does not, and macro_micro
+measures 363,424 B in place against 340,467 B copied - the bound would
+stop bounding the report the fixture actually produces. So the bounds
+carry ~4 KB of headroom instead of 12 B, and the note above them says
+why a tight number here is not a tight measurement. Falsified: 5 KB of
+new viewer source still reddens it.
+
+Verified in an environment built to match the runner - no `bst`, no
+`bwrap`, a fresh `HOME`:
+
+```text
+CI-like    4,143 passed, 48 skipped, 0 failed, 153s at -n auto
+ordinary   4,173 passed, 18 skipped, 0 failed, 196s at -n auto
+small tier 2,350 passed, 15 skipped, 23.6s single-process (CI budget: 120s)
+```
+
 ### Two repairs to `dev_close_task.py` this closure turned up
 
 `UX-336`'s helper wrote `🟢 Done — 🟢 Done — …` for this row: the note

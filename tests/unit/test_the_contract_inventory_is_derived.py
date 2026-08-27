@@ -115,31 +115,72 @@ class TestTheInventoryIsComplete:
 
 class TestTheDerivationIsNotAList:
     def test_a_new_module_declaring_a_schema_joins_without_being_listed(
-            self, tmp_path, monkeypatch):
+            self, tmp_path, monkeypatch=None):
         """The property that makes this different from what it replaced.
 
         A hand-kept union covers the contracts someone remembered; this
-        covers the ones that exist. Proven by creating a module inside
-        the package at runtime and confirming the inventory grows.
+        covers the ones that exist. Proven by creating a module the
+        package can import at runtime and confirming the inventory
+        grows.
         """
+        import sys
+
         import bga
         from bga import contracts
 
-        planted = pathlib.Path(bga.__path__[0]) / "zz_probe_contract.py"
-        planted.write_text('SCHEMA = "probe/v3"\n', encoding="utf-8")
+        # The probe goes in a directory *appended to* `bga.__path__`,
+        # not written into the checked-out package.
+        # `_declared_in_modules` walks `pkgutil.iter_modules(
+        # bga.__path__)` - every entry - so this exercises the same
+        # derivation by the same mechanism and leaves nothing another
+        # test can see.
+        #
+        # It used to write `bga/zz_probe_contract.py` into the real
+        # package. Harmless while the suite ran in one process; a race
+        # the moment `UX-336` turned on `-n auto`, because any worker
+        # that stamped an artifact during the millisecond the file
+        # existed got `probe/v3` in its `producer` block. It failed
+        # once in CI, on one interpreter, in the small tier - which is
+        # how a shared-state race presents.
+        home = pathlib.Path(str(tmp_path)) / "probe"
+        home.mkdir()
+        (home / "zz_probe_contract.py").write_text(
+            'SCHEMA = "probe/v3"\n', encoding="utf-8")
+        bga.__path__.append(str(home))
         try:
             assert "probe/v3" in contracts.ids(), (
                 "a module declaring SCHEMA did not join the inventory - "
                 "the derivation is not deriving")
             assert contracts.inventory()["probe/v3"] == "bga.zz_probe_contract"
         finally:
-            planted.unlink()
-            import sys
+            bga.__path__.remove(str(home))
             sys.modules.pop("bga.zz_probe_contract", None)
 
         assert "probe/v3" not in contracts.ids(), (
             "the probe outlived its file, so the inventory is cached and "
             "this test would pass against a stale answer")
+
+    def test_the_probe_never_touches_the_checked_out_package(self, tmp_path):
+        """The clause that keeps the fix above from being undone.
+
+        Planting into `bga/` is the obvious way to write the test above
+        and the way it was written; under `-n auto` it is a race whose
+        symptom is another worker's artifact carrying a contract that
+        does not exist. This is deterministic where that race is not:
+        whatever the probe does, the package it derives from is the
+        same before and after.
+        """
+        import bga
+        from bga import contracts
+
+        package = pathlib.Path(bga.__path__[0])
+        before = sorted(entry.name for entry in package.iterdir())
+        self.test_a_new_module_declaring_a_schema_joins_without_being_listed(
+            tmp_path)
+        assert sorted(entry.name for entry in package.iterdir()) == before, (
+            "the derivation probe wrote into the checked-out package - "
+            "under -n auto every other worker sees it")
+        assert "probe/v3" not in contracts.ids()
 
 
 if __name__ == "__main__":  # pragma: no cover

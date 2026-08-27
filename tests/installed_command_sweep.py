@@ -29,7 +29,9 @@ So this module derives the list instead:
   nineteen the hand-list named;
 * and every command carries a declared **verdict** for one real
   invocation - `OK` (exit 0), `REFUSES` (a clean one-line refusal, no
-  traceback), or `PARSE_ONLY` with the reason it cannot be run in CI.
+  traceback), `REPORTS` (it ran; the exit code is a verdict on the
+  machine, not on the invocation), or `PARSE_ONLY` with the reason it
+  cannot be run in CI.
   `PARSE_ONLY` is the only judgement, it needs a written reason, and
   `tests/unit/test_no_absolute_tools_import_survives.py` keeps it a
   minority.
@@ -61,6 +63,7 @@ _ROW = re.compile(r"^\| `bga ([a-z-]+)", re.M)
 
 OK = "ok"                  # exit 0 on a real invocation
 REFUSES = "refuses"        # non-zero, one clean line, no traceback
+REPORTS = "reports"        # runs; the exit code judges the *machine*
 PARSE_ONLY = "parse-only"  # cannot be run in CI; the reason says why
 
 
@@ -203,7 +206,13 @@ def invocations(fx: Fixtures):
         "snapshot": (OK, ["snapshot", "--aggregate", "--project", str(fx.store)]),
 
         # --- runs anywhere, and says what it found ------------------
-        "doctor": (OK, ["doctor"]),
+        # `REPORTS`, not `OK`: `bga doctor` exits non-zero when a
+        # check *fails*, and on a bare CI runner two of them do - no
+        # `bst`, no `bwrap`. That is the command working. Recording it
+        # as `OK` made this sweep assert that the runner is a machine
+        # you could capture a build on, which is not a fact about the
+        # wheel and is false on every runner by design.
+        "doctor": (REPORTS, ["doctor"]),
 
         # --- the two whose refusal is the reachable path ------------
         "cache-logs": (REFUSES, ["cache-logs", str(fx.empty)]),
@@ -287,6 +296,14 @@ def sweep(bga: str, verbose: bool = True) -> int:
                 failures.append(
                     f"`bga {label} ...` succeeded where the sweep records a "
                     "refusal; the entry is out of date")
+            elif verdict == REPORTS and not joined.strip():
+                # The only thing a `REPORTS` entry can get wrong: any
+                # exit code is allowed, so silence is what would mean
+                # it never ran.
+                failures.append(
+                    f"`bga {label} ...` printed nothing; a command whose "
+                    f"exit code judges the machine has to say what it "
+                    f"found")
             elif verbose:
                 print(f"  {verdict:7s} bga {label} ... -> {done.returncode}")
 

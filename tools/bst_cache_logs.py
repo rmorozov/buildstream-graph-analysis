@@ -1236,12 +1236,28 @@ def main(argv: Optional[List[str]] = None) -> int:
         root = args.target or default_log_root()
 
     if not os.path.isdir(root):
-        print(
-            f"Error: no BuildStream log directory at {root}. Point this at one "
-            f"explicitly, or run a build first - these logs are written by "
-            f"BuildStream itself, not by bga.",
-            file=sys.stderr,
-        )
+        # UX-327, second pass: a reader who handed this its *project*
+        # was told only that a directory somewhere under `~/.cache` is
+        # missing - a sentence with nothing of theirs in it. The
+        # project they asked about survives into the message now, and
+        # so does the fact that it was derived from their
+        # `project.conf` rather than guessed. Found by CI: this branch
+        # is unreachable on any machine that has ever run `bst`, so the
+        # guard over the project-shaped message passed on every
+        # developer box and failed on a fresh runner.
+        lines = [f"Error: no BuildStream log directory at {root}."]
+        if project:
+            lines[0] = (f"Error: no BuildStream log directory at {root}, so "
+                        f"there are no logs for project {project!r} to read.")
+            if project_dir:
+                lines.append(
+                    f"  {project_dir}/project.conf declares `name: {project}`, "
+                    f"and that is the name BuildStream files its logs under.")
+        lines.append(
+            "  Point this at a log directory explicitly, or run a build "
+            "first - these logs are written by BuildStream itself, not by "
+            "bga.")
+        print("\n".join(lines), file=sys.stderr)
         return 1
 
     # UX-127 item 2: discovery is the tool's job. A bare invocation used to

@@ -117,6 +117,13 @@ MEDIUM = (
     # carries what it measured at.
     # UX-296's big-run fixture: a million process records written to
     # disk, and four subprocess startups measured against it.
+    # Round 48, measured on landing rather than after the drift: both
+    # of these are subprocess-heavy by construction, and `UX-336`'s
+    # lesson is that a file joins `small` by *default* - so the tier is
+    # chosen when the file is written, not when the budget notices.
+    # The small tier went 23.6s -> 46.2s with these two in it.
+    "tests/unit/test_one_bad_row_costs_one_section.py",         #   11.3s
+    "tests/unit/test_every_emitted_contract_is_answerable.py",  #    9.0s
     "tests/unit/test_the_view_parses_nothing.py",               #    7.6s
     # UX-298's emitter: a 40,000-process trace written twice, once for
     # the ceiling and once for the bytes-before-close clause.

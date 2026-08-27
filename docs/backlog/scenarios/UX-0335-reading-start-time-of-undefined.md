@@ -71,9 +71,9 @@ bga/ and tools/, as an identifier 4 sites
 
 So `start_time` is a **Python argparse dest** in three CLI tools and
 appears nowhere the browser executes. The verdict the filing reached
-stands - the field error came from outside bga's viewer, a browser
-extension's content script on the localhost page being the likeliest
-- and the check on the field machine is still an incognito or
+stands: the field error came from outside bga's viewer, a browser
+extension's content script on the localhost page being the likeliest,
+and the check on the field machine is still an incognito or
 extension-free profile. Only the phrasing was too wide, and it is
 corrected here rather than repeated.
 

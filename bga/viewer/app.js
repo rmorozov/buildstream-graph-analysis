@@ -1327,7 +1327,7 @@ export const NOT_ELEMENT_KEYED = {
  * Returns `null` when the run carries none of them, so a payload
  * without the signals renders exactly as it did.
  */
-export function elementSignalTable(signals, node) {
+export function elementSignalTable(signals, node, join = null) {
   const present = ELEMENT_KEYED_SIGNALS.filter(
     (name) => signals?.[name] && typeof signals[name] === "object");
   if (present.length < 2) return null;
@@ -1349,6 +1349,35 @@ export function elementSignalTable(signals, node) {
       byElement.set(uid, row);
     }
   }
+  // UX-338: `element_join` is the same population under a second
+  // heading. `UX-215` published the two-plane join keyed by `element`,
+  // and the page drew it as a table of its own - so every viewer of a
+  // two-plane snapshot has seen all eleven elements twice since then.
+  // `UX-289` had already settled the rule ("one element table, many
+  // presets"); this applies it to the columns `UX-215` added, by
+  // merging them into the row that element already has.
+  //
+  // Only onto rows Plane 1 put in play: the join "never introduces an
+  // element" is `views.js`'s own statement of what it is, and a join
+  // row for an element the schedule does not carry would be a
+  // population this table does not claim to be.
+  const joinedIn = [];
+  for (const row of Array.isArray(join) ? join : []) {
+    const uid = row?.element;
+    const existing = uid && byElement.get(uid);
+    if (!existing) continue;
+    for (const [field, value] of Object.entries(row)) {
+      if (field === "element" || value === null
+          || typeof value === "object") continue;
+      // Plane 1 wins a name collision: this table's other columns are
+      // its own, and a join field that shadowed one would change what
+      // a column means without changing its heading.
+      if (field in existing) continue;
+      existing[field] = value;
+      if (!joinedIn.includes(field)) joinedIn.push(field);
+    }
+  }
+
   const rows = [...byElement.values()];
   if (!rows.length) return null;
   const columns = [...new Set(rows.flatMap(Object.keys))]
@@ -1361,7 +1390,7 @@ export function elementSignalTable(signals, node) {
                     ?? guessQuantity(name) ?? "count" }))],
     [QUESTION]: "Which element should I look at?",
   };
-  return { rows, hint, merged: present };
+  return { rows, hint, merged: present, joined: joinedIn };
 }
 
 /**
@@ -1384,9 +1413,30 @@ export function elementSignalTable(signals, node) {
  * offered empty: "there are no choke points" and "this run does not
  * carry choke points" are different claims, and a view that draws zero
  * rows makes them look alike.
+ *
+ * `UX-338` extends that from rows to **columns**. `Plane 2 (sandbox)`
+ * asks a question only a two-plane run can answer, and on a run with
+ * no Plane 2 report every column it names but `element` is absent - so
+ * the view rendered as two columns under a heading promising five.
+ * Measured on `macro_micro` served without its `plane2.json`, which is
+ * how this was found: a control that is present and answers nothing is
+ * the dead-button defect `UX-194` removed everywhere else.
+ *
+ * The preset declares its subject (`requires`), because "which of my
+ * columns make me this view" is a question only its author can
+ * answer. Inferring it was tried and is wrong: `Plane 2 (sandbox)`
+ * also names `element_durations`, which every run carries, so any
+ * "some column is present" rule keeps offering it.
  */
 export function presetTable(key, rows, presets, hint, node, payload) {
+  const carried = new Set(rows.flatMap(Object.keys));
+  // Every column the preset declares as its subject, or it is not
+  // offered. A preset with no `requires` is unaffected, which is all of
+  // them but one.
+  const answerable = (preset) =>
+    (preset?.requires ?? []).every((name) => carried.has(name));
   const usable = (presets ?? [])
+    .filter(answerable)
     .map((preset) => ({ preset, view: applyPreset(preset, rows, payload) }))
     .filter((entry) => entry.view);
   if (usable.length < 2) return null;
@@ -1445,7 +1495,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   const list = el("dl", { class: "pairs" });
   // UX-268: the element-keyed signals leave the pair list and become
   // one table, so they are drawn once rather than six times.
-  const joined = key === "signals" ? elementSignalTable(object, node) : null;
+  const joined = key === "signals"
+    ? elementSignalTable(object, node, payload?.element_join)
+    : null;
   const merged = new Set(joined?.merged ?? []);
   for (const [name, value] of Object.entries(object)) {
     if (merged.has(name)) continue;
@@ -1622,9 +1674,22 @@ export function renderVerdict(payload) {
 
 // The generic dispatch. Note there is no `switch (key)` here: what a
 // value is rendered as follows from its *shape* and its hints.
+//: `UX-338`: sections the page deliberately does not draw on their
+//: own, and where their content went instead. Not a blanket "skip
+//: list": each entry is a population that is drawn *somewhere*, and
+//: saying where is what stops this becoming a place to hide a section
+//: nobody wants to fix.
+export const DRAWN_ELSEWHERE = {
+  element_join: "merged into the one element table (`signals`), which "
+    + "is `UX-289`'s rule applied to the columns `UX-215` added - it is "
+    + "the same eleven elements, and drawing it twice is what `UX-338` "
+    + "was filed for",
+};
+
 export function renderSection(key, value, hint = {}, node = undefined,
                               investigate = null, payload = undefined) {
   if (value === null || value === undefined) return null;
+  if (key in DRAWN_ELSEWHERE) return null;
   if (hint[SEVERITY] && Array.isArray(value)) {
     // UX-217: the schema node travels with the value, so the evidence
     // renders in its declared units rather than by name-sniffing.

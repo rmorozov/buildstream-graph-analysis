@@ -330,6 +330,33 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
                 raise ValueError(
                     f"{document}.{key}: preset {name!r} question "
                     f"{question!r} is not a question")
+            # `UX-338`: the columns without which this view has no
+            # answer. A preset whose *subject* the run does not carry
+            # is not offered - "there are no choke points" and "this
+            # run has no Plane 2" are different claims, and the second
+            # one is not a view with two columns in it.
+            #
+            # Declared rather than inferred: "which of my columns make
+            # me this view" is a question only the preset's author can
+            # answer. Inferring it from what a run happens to carry was
+            # tried and is wrong - `Plane 2 (sandbox)` also names
+            # `element_durations`, which every run has, so any
+            # "some column is present" rule keeps offering it.
+            requires = preset.get("requires")
+            if requires is not None:
+                if (not isinstance(requires, (list, tuple)) or not requires
+                        or not all(isinstance(name_, str)
+                                   for name_ in requires)):
+                    raise ValueError(
+                        f"{document}.{key}: preset {name!r} `requires` must "
+                        f"be a non-empty list of column names")
+                missing = [name_ for name_ in requires
+                           if name_ not in columns]
+                if missing:
+                    raise ValueError(
+                        f"{document}.{key}: preset {name!r} requires "
+                        f"{missing} which it does not show - a view cannot "
+                        f"depend on a column it does not draw")
         if len(set(names)) != len(names):
             raise ValueError(
                 f"{document}.{key}: two presets share a name: {names}")
@@ -1290,6 +1317,29 @@ _ANALYZE_HINTS = {
              "where": {"column": "observed_critical", "equals": False},
              "columns": ["element", "element_durations", "slack",
                          "downstream_count", "risk_score"],
+             "sort": {"column": "element_durations", "direction": "desc"},
+             "bound": 25},
+            # UX-338: the two-plane join, as a *view* of this table
+            # rather than a second table of the same eleven elements.
+            # `UX-215` published `element_join` and the page drew it on
+            # its own, so every reader of a two-plane snapshot has seen
+            # the whole population twice since then - which `UX-289` had
+            # already ruled out. The columns are the join's: what the
+            # sandbox actually did with the cores it was given.
+            #
+            # A run with no Plane 2 report carries none of these
+            # columns, and `presetTable` drops a preset whose columns
+            # are all absent - so this appears exactly when there is
+            # something behind it, which is `UX-194`'s dead-control
+            # rule at the level of a view.
+            {"name": "Plane 2 (sandbox)",
+             "question": "Compute-bound, or badly built?",
+             "columns": ["element", "element_durations", "cores_busy",
+                         "requested_jobs", "peak_rss_kb"],
+             # Without these the view is `element_durations` under a
+             # heading that promises the sandbox, so it is not offered
+             # at all on a run that captured no Plane 2.
+             "requires": ["cores_busy", "requested_jobs", "peak_rss_kb"],
              "sort": {"column": "element_durations", "direction": "desc"},
              "bound": 25},
         ],

@@ -214,6 +214,7 @@ tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
 tools/dev_touching.py        the tests that name what your diff touched (UX-336)
 tools/dev_close_task.py      the mechanical tail of closing a row (UX-336)
+tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
 ```
 
 **Tests and docs:**

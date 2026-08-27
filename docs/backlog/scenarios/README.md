@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-322 scenarios: **2 open**, 320 closed.
+331 scenarios: **11 open**, 320 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 57 |
-| analysis | 0 | 50 |
-| contracts | 0 | 35 |
+| capture | 1 | 58 |
+| analysis | 1 | 51 |
+| contracts | 1 | 36 |
 | viewer | 0 | 82 |
-| cli | 0 | 4 |
-| store | 2 | 27 |
-| docs | 0 | 31 |
-| guards | 0 | 39 |
+| cli | 1 | 5 |
+| store | 3 | 28 |
+| docs | 3 | 34 |
+| guards | 1 | 40 |
 
 ## Open scenarios
 
@@ -38,6 +38,45 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-324 | [a capture that cannot start says so, and leaves nothing](UX-0324-a-capture-that-cannot-start-says-so-and-leaves-nothing.md) | capture | High | R1 | 🔴 |
+| UX-325 | [--aggregate crashes on every user install](UX-0325-aggregate-crashes-on-every-user-install.md) | store | High | R1, R5, R7 | 🔴 |
+| UX-326 | [the tool's own sentences are contracts](UX-0326-the-tools-own-sentences-are-contracts.md) | cli | High | R1 | 🔴 |
+| UX-327 | [four documented invocations that do not exist](UX-0327-four-documented-invocations-that-do-not-exist.md) | docs | High | R1 | 🔴 |
+| UX-328 | [--schema answers for everything that emits one](UX-0328-schema-answers-for-everything-that-emits-one.md) | contracts | Medium | R1 | 🔴 |
+| UX-329 | [the terminal and the viewer disagree about Plane 2](UX-0329-the-terminal-and-the-viewer-disagree-about-plane-2.md) | analysis | High | R1, R2 | 🔴 |
+| UX-330 | [the stranger needs a seed](UX-0330-the-stranger-needs-a-seed.md) | docs | Medium | R1 | 🔴 |
+| UX-331 | [the README excerpt, and the sentence that contradicts itself](UX-0331-the-readme-excerpt-and-the-sentence-that-contradicts-itself.md) | docs | Low | R1 | 🔴 |
+| UX-332 | [the cascade beats the first match, and two record nits](UX-0332-the-cascade-beats-the-first-match.md) | guards | Medium | — | 🔴 |
+
+## UX-324..UX-332: the forty-fifth round — the guides, walked by a stranger (2026-08-27)
+
+The round-44 landing verified (thirteen of fourteen mutation forms
+discriminating; the one evasion — first-match-blind scrollbox
+guards beaten by the CSS cascade — filed as
+[`UX-332`](UX-0332-the-cascade-beats-the-first-match.md)). Then the
+user's proposed method: an agent under a stranger protocol walked
+the READMEs and guides through install → doctor → snapshot → view
+across the three planes, forbidden to read source. Fifteen
+frictions, four genuine bugs no feature round had seen: the no-bst
+snapshot traceback with debris
+([`UX-324`](UX-0324-a-capture-that-cannot-start-says-so-and-leaves-nothing.md)),
+the `--aggregate` crash on every user install
+([`UX-325`](UX-0325-aggregate-crashes-on-every-user-install.md)),
+the self-crashing printed "Next:" command and the flag-claim that
+was never passed
+([`UX-326`](UX-0326-the-tools-own-sentences-are-contracts.md)),
+four documented invocations that do not exist
+([`UX-327`](UX-0327-four-documented-invocations-that-do-not-exist.md)),
+the `--schema` story contradicting itself
+([`UX-328`](UX-0328-schema-answers-for-everything-that-emits-one.md)),
+analyze and view disagreeing about Plane 2 against an explicit
+never-disagree promise
+([`UX-329`](UX-0329-the-terminal-and-the-viewer-disagree-about-plane-2.md)),
+no committed path for a bst-less newcomer
+([`UX-330`](UX-0330-the-stranger-needs-a-seed.md)), and the
+README's self-contradicting excerpt
+([`UX-331`](UX-0331-the-readme-excerpt-and-the-sentence-that-contradicts-itself.md)).
+Full narrative: [`../../audits/round-45.md`](../../audits/round-45.md).
 
 ## UX-316..UX-321: the forty-fourth round — the report, read at arm's length (2026-08-26)
 

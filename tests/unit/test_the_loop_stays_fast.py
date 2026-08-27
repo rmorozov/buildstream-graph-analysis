@@ -121,22 +121,51 @@ class TestTheCloseHelperRefusesTheJudgementParts:
                         "Deviation from the Required Fix"):
             assert heading in done.stdout, heading
 
-    def test_move_refuses_without_the_one_line_nobody_can_write_for_you(self):
-        done = self._run("UX-337", "--move")
-        assert done.returncode != 0
-        assert "--note" in done.stderr
+    @staticmethod
+    def _backlog_with_an_open_row(tmp_path):
+        """A copy of the backlog with one synthetic open row in it.
 
-    def test_move_refuses_a_task_file_with_no_outcome(self, tmp_path):
-        """Against a **copy** of the backlog, deliberately: falsifying
-        the refusal made this clause perform the move, on the real
-        files. A guard that edits the repository when the code under
-        test misbehaves is worse than what it is testing."""
+        Both refusals below need an id that is open and has no Outcome.
+        They used to name a real one, and `UX-337` closing turned this
+        file red for a reason that had nothing to do with the loop -
+        the guard was coupled to which task happened to be unfinished.
+        A row this test writes itself cannot go stale, and the copy is
+        deliberate: falsifying the refusal made the clause perform the
+        move, and a guard that edits the repository when the code under
+        test misbehaves is worse than what it is testing.
+        """
         import shutil
 
         scenarios = tmp_path / "scenarios"
         shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
+        uid, slug = "UX-999", "UX-0999-a-row-this-guard-wrote"
+        (scenarios / f"{slug}.md").write_text(
+            f"# {uid}: a row this guard wrote\n\n"
+            f"**Priority:** Low | **Status:** \U0001f534 Not Started | "
+            f"**Serves:** nobody | **Topic:** guards\n\n"
+            f"## Motivation\n\nNo Outcome section, which is the point.\n",
+            encoding="utf-8")
+        readme = scenarios / "README.md"
+        text = readme.read_text(encoding="utf-8")
+        marker = "\n## UX-333"
+        assert marker in text, "the open table's end moved"
+        row = (f"| {uid} | [a row this guard wrote]({slug}.md) | guards "
+               f"| Low | — | \U0001f534 |\n")
+        readme.write_text(text.replace(marker, "\n" + row + marker, 1),
+                          encoding="utf-8")
+        return uid, scenarios
+
+    def test_move_refuses_without_the_one_line_nobody_can_write_for_you(
+            self, tmp_path):
+        uid, scenarios = self._backlog_with_an_open_row(tmp_path)
+        done = self._run(uid, "--move", "--scenarios", str(scenarios))
+        assert done.returncode != 0
+        assert "--note" in done.stderr
+
+    def test_move_refuses_a_task_file_with_no_outcome(self, tmp_path):
+        uid, scenarios = self._backlog_with_an_open_row(tmp_path)
         before = (scenarios / "README.md").read_bytes()
-        done = self._run("UX-337", "--move", "--note", "x" * 20,
+        done = self._run(uid, "--move", "--note", "x" * 20,
                          "--scenarios", str(scenarios))
         assert done.returncode == 2, done.stdout + done.stderr
         assert "no Outcome section" in done.stderr, done.stderr

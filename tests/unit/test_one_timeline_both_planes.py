@@ -217,13 +217,23 @@ class TestTheOneCommand:
 
     def test_a_run_directory_is_refused_with_the_fix(self, tmp_path):
         """The likeliest slip - `<snapshot>/run` instead of the snapshot -
-        gets the sentence that names the difference, not a traceback."""
+        gets the sentence that names the difference, not a traceback.
+
+        `UX-330` made the message discriminate: it used to say "try its
+        parent" for every way of arriving without a `build.log`, which
+        is wrong advice for a *snapshot* that kept no log. This case is
+        the one it was right for, and the message now names the parent
+        rather than referring to it - so this asserts the path, which is
+        strictly more than the old literal did.
+        """
         from tools.bga_timeline import render
 
         snapshot = _snapshot(tmp_path)
         with pytest.raises(FileNotFoundError) as caught:
             render(str(snapshot / "run"), str(tmp_path / "t.json"))
-        assert "try its parent" in str(caught.value)
+        said = str(caught.value)
+        assert "*run* directory" in said, said
+        assert f"try {snapshot}" in said, said
 
     def test_stdout_carries_only_the_machine_summary(self, tmp_path):
         result = _bga(["timeline", str(_snapshot(tmp_path)),

@@ -1500,7 +1500,7 @@ identical to one in the document they do. So:
 | level | answers | moves when |
 |---|---|---|
 | **contract version** (`analyze/v1`) | can my parser read this document? | that document breaks |
-| **package version** (`bga 0.2.0`) | which build produced this artifact? | every release |
+| **package version** (`bga 0.3.0`) | which build produced this artifact? | every release |
 | **the release row** | which contract states shipped together? | every release |
 
 **The package version's job inside an artifact is provenance, not

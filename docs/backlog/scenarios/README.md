@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-343 scenarios: **7 open**, 336 closed.
+343 scenarios: **6 open**, 337 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 1 | 43 |
+| guards | 0 | 43 |
 
 ## Open scenarios
 
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-340 | [the graph was derived with a broken instrument](UX-0340-the-graph-was-derived-with-a-broken-instrument.md) | guards | Medium | — | 🔴 |
 | UX-341 | [one unit per dimension](UX-0341-one-unit-per-dimension.md) | contracts | Medium | — | 🔴 |
 | UX-342 | [the export ships six schemas nothing can resolve](UX-0342-the-export-ships-six-schemas-nothing-can-resolve.md) | viewer | High | — | 🔴 |
 | UX-343 | [seven in ten numbers carry no declared unit](UX-0343-seven-in-ten-numbers-carry-no-declared-unit.md) | contracts | Medium | — | 🔴 |

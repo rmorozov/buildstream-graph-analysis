@@ -166,14 +166,18 @@ def cascade(selector):
 
     Returns `None` when the sheet has no such rule at all, which is a
     different fact from "a rule with nothing in it".
+
+    The merge itself is `_merge`, which the clause below drives on a
+    sheet of its own - **one implementation**, so a mutation to the
+    merge reddens both. Two copies of it was the first draft and it
+    left this function mutable with every clause green: the real sheet
+    has one `main .map-table` rule, so first-match and merge agree
+    there, and only a built sheet can tell them apart.
     """
-    merged, seen = {}, False
-    for candidate, decls in _rules():
-        if candidate != selector:
-            continue
-        seen = True
-        merged.update(decls)
-    return merged if seen else None
+    rules = _rules()
+    if not any(candidate == selector for candidate, _ in rules):
+        return None
+    return _merge(rules, selector)
 
 
 class TestNestedScrollboxesAreGone:

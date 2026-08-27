@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-338 scenarios: **9 open**, 329 closed.
+338 scenarios: **8 open**, 330 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 34 |
-| guards | 2 | 42 |
+| guards | 1 | 42 |
 
 ## Open scenarios
 
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-330 | [the stranger needs a seed](UX-0330-the-stranger-needs-a-seed.md) | docs | Medium | R1 | 🔴 |
 | UX-331 | [the README excerpt, and the sentence that contradicts itself](UX-0331-the-readme-excerpt-and-the-sentence-that-contradicts-itself.md) | docs | Low | R1 | 🔴 |
-| UX-332 | [the cascade beats the first match, and two record nits](UX-0332-the-cascade-beats-the-first-match.md) | guards | Medium | — | 🔴 |
 | UX-333 | [the name is the whole command](UX-0333-the-name-is-the-whole-command.md) | capture | Medium | R1, R2 | 🔴 |
 | UX-337 | [the two viewer modules split along their seams](UX-0337-the-two-viewer-modules-split-along-their-seams.md) | guards | Medium | — | 🔴 |
 | UX-338 | [the page draws the element population twice](UX-0338-the-page-draws-the-element-population-twice.md) | viewer | Medium | R1 | 🔴 |

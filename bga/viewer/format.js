@@ -215,6 +215,15 @@ export function childNode(node, key) {
     const inside = node.items.properties?.[key];
     return inside ?? node.items;
   }
+  // UX-343: a map keyed by *data* - an element uid, a resource name -
+  // cannot name its keys in `properties`, so the value's schema is
+  // declared once under `additionalProperties`. Seven such maps in
+  // `signals` alone put 56 leaves in front of the reader with no unit
+  // at all, because there was nowhere to say what they were.
+  if (node.additionalProperties &&
+      typeof node.additionalProperties === "object") {
+    return node.additionalProperties;
+  }
   return undefined;
 }
 

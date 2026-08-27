@@ -31,24 +31,35 @@ Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-A three-element fixture that runs instantly — small enough to read in full, which is the point:
+A three-element fixture that runs instantly. The report is **86 lines**;
+its two headline sections are below, verbatim, with every cut marked —
+`UX-192` is on file for a block that claimed to be full output and was
+not:
 
 ```text
 Key Findings:
+  This build is scheduler-bound, not chain-bound: the critical path is 88% of wall-clock, below the 90% chain-bound line, so the time is going somewhere other than the chain.
   Confidence: 0.88 (high)
   Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
-    -> real time after the last tracked task finished - outside per-task tracking,
-       not a scheduling issue
+    -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue
   Elements Most Worth Optimizing First (by blast radius):
     1. base.bst (2 downstream elements)
     2. lib.bst (1 downstream elements)
     3. app.bst (0 downstream elements)
-  Efficiency Score: 1.00 (scheduling is near the certified floor for this graph -
-    further gains need the graph or the work itself to change, not the scheduler)
+  Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
+
+[... elided: Confidence, Certified Floors, Attribution Breakdown ...]
 
 Critical Path Length: 3 elements
   Path: base.bst → lib.bst → app.bst
+
+[... elided: CPU Utilisation, Advanced Diagnostics ...]
 ```
+
+The first line repays a second read: **88% sounds chain-bound**, and
+the sentence says the opposite. The 90% line it names is what flips
+it — below that, shortening the chain buys nothing. `--explain` prints
+the same constant from the same place (`UX-331`).
 
 Bigger fixtures need no BuildStream either: `make dev-run ARGS=--large` runs a 14-element sample, and `bga gen-synthetic /tmp/scale --seed 1` a byte-reproducible 1202-element one — which is how [round 2](docs/audits/round-2.md) found four defects invisible at eleven elements.
 
@@ -251,8 +262,11 @@ make lint                 # ruff + markdown (`make dev-run` prints a real report
 <!-- UX-135 set `wc -l README.md` <= 250 and this file sat exactly at it. Round 46 took it to
      263 lines to state the viewer/Perfetto boundary above: readers were going looking in the
      page for answers that are only in the trace, and the six lines that say so are cheaper than
-     the hunt. The budget is a measured target, not a law - but exceeding it silently is what
-     turned 420 into "430" once before, so the number is here rather than in a commit message. -->
+     the hunt. Round 50 (`UX-331`) takes it to 277 lines: the Quick start block claimed to be the full
+     report over a sixth of it, and honest output costs the lines the elision markers and the
+     restored diagnosis line take. The budget is a measured target, not a law - but exceeding it
+     silently is what turned 420 into "430" once before, so the number is here rather than in a
+     commit message. -->
 
 Tiers come from measured per-file duration (`tests/tiers.py`, `UX-238`), not from taste; `small` is
 the default, so a new file joins it free. `pytest -m bst` needs a real BuildStream, and CI's

@@ -49,9 +49,11 @@ which is why the guides pick between them rather than always saying
 ## What it emits
 
 Every JSON document `bga` writes carries its schema id, and
-`bga --schema <id>` prints the contract — types, units, and the
-view-hints the browser report renders from (`UX-201`). Nine ids, and
-what writes each:
+`bga <command> --schema` prints that command's contract — types, units,
+and the view-hints the browser report renders from (`UX-201`). Where a
+command emits two documents, the flag selects: `bga snapshot --list
+--schema` and `bga snapshot --aggregate --schema` print different
+contracts. Eleven ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -68,8 +70,14 @@ what writes each:
 | `plane2/v1` | the same file as a capture before `UX-297` wrote it, with every per-process record embedded. Still read, never written |
 
 The last four are written into a run directory rather than printed by a
-command, so `bga --schema` does not know them, and `plane2/v1` is only
-ever read - it is the shape an older store's captures are in. A key may be added to
+command, so no `--schema` invocation prints them, and `plane2/v1` is
+only ever read - it is the shape an older store's captures are in. The
+other seven each have a command that prints their contract, and
+`tests/unit/test_every_emitted_contract_is_answerable.py` holds that
+split by running both sides rather than by reading this table
+(`UX-328`). One command's JSON carries no id at all - `bga sweep
+--format json`, whose contract is filed as `UX-339`; it says so when
+asked rather than naming a shape it does not have. A key may be added to
 any of these without a version bump; a rename or a removal bumps. The full contract table is
 [spec Part 32.5](spec/specification.md); what each command does with it
 is [`guides/cli.md`](guides/cli.md).

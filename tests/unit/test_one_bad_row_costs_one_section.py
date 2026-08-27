@@ -331,28 +331,47 @@ class TestTheContainmentItselfWorks:
     """
 
     @staticmethod
-    def _with_a_throwing_renderer(tmp_path_factory):
+    def _assets_with_a_throwing_renderer(tmp_path):
+        """A **copy** of the viewer, with one renderer made to throw.
+
+        The first draft wrote the probe into the checked-out
+        `bga/viewer/views.js` and restored it in a `finally`. That is
+        the shared-state race `UX-336`'s `-n auto` makes real, and it
+        bit on the first full run: another worker booted a page while
+        the probe was in the file, and the failure surfaced *here*
+        rather than there. The same defect this round fixed in the
+        contract-inventory probe, introduced two files away.
+
+        Copying costs one directory and touches nothing another worker
+        can see.
+        """
         from tools.bga_view import ASSET_DIR
 
-        run = _project(tmp_path_factory.mktemp("throw"))
-        views = pathlib.Path(ASSET_DIR, "views.js")
-        original = views.read_text(encoding="utf-8")
+        assets = tmp_path / "viewer"
+        shutil.copytree(ASSET_DIR, assets)
+        views = assets / "views.js"
+        source = views.read_text(encoding="utf-8")
         anchor = "export function renderOverview(payload) {"
-        assert anchor in original, "renderOverview moved; re-anchor the probe"
-        views.write_text(original.replace(
+        assert anchor in source, "renderOverview moved; re-anchor the probe"
+        views.write_text(source.replace(
             anchor,
             anchor + '\n  throw new TypeError("UX-335 containment probe");',
             1), encoding="utf-8")
-        return run, views, original
+        return assets
 
     def test_a_throwing_renderer_loses_its_section_and_says_so(
-            self, tmp_path_factory, healthy_store):
-        run, views, original = self._with_a_throwing_renderer(tmp_path_factory)
-        try:
-            with Browser(chrome) as opened:
-                got = _boot(run, healthy_store, opened)
-        finally:
-            views.write_text(original, encoding="utf-8")
+            self, tmp_path_factory, healthy_store, monkeypatch):
+        import tools.bga_view as view
+
+        tmp = tmp_path_factory.mktemp("throw")
+        run = _project(tmp)
+        # In this process only: the server reads `ASSET_DIR` at request
+        # time, and every other xdist worker is a process of its own
+        # still reading the real directory.
+        monkeypatch.setattr(view, "ASSET_DIR",
+                            str(self._assets_with_a_throwing_renderer(tmp)))
+        with Browser(chrome) as opened:
+            got = _boot(run, healthy_store, opened)
 
         value = got["value"]
         assert value["refused"] is None, (

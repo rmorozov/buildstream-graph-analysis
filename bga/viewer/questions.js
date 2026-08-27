@@ -201,12 +201,13 @@ order by seconds desc;`,
     why:
       "`UX-308` gives a non-zero exit its own category, so the work " +
       "that failed is one predicate away instead of a scan of every " +
-      "command line. `debug.cmd` is the untruncated argv - the slice " +
-      "name is only its first 120 characters, which is rarely the " +
-      "part that distinguishes two compiler invocations.",
+      "command line. The command is `s.name`: `UX-333` untrimmed the " +
+      "slice name and dropped the `debug.cmd` this question used to " +
+      "read, because the argv's distinguishing part is the file at " +
+      "the end and the 120-character cut fell before it.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        extract_arg(s.arg_set_id, 'debug.exit_status') as exit_status,
-       extract_arg(s.arg_set_id, 'debug.cmd') as command,
+       s.name as command,
        s.dur / 1e6 as ms
 from slice s
 where s.category glob '*native-process*'

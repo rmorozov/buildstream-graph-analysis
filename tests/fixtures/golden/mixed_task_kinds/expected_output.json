@@ -208,7 +208,7 @@
         "diagnosis": "scheduler_bound",
         "chain_ratio": 0.875,
         "chain_bound_ratio": 0.9,
-        "sentence": "This build is scheduler-bound, not chain-bound: the critical path is 88% of wall-clock, so the time is going somewhere other than the chain.",
+        "sentence": "This build is scheduler-bound, not chain-bound: the critical path is 88% of wall-clock, below the 90% chain-bound line, so the time is going somewhere other than the chain.",
         "certified_headroom_us": 0,
         "scheduling_gap_us": 2000,
         "top_actions": [

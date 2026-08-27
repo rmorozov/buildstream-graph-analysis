@@ -201,7 +201,7 @@ order by seconds desc;`,
     why:
       "`UX-308` gives a non-zero exit its own category, so the work " +
       "that failed is one predicate away instead of a scan of every " +
-      "command line. The command is `s.name`: `UX-333` untrimmed the " +
+      "Plane 2 command line. The command is `s.name`: `UX-333` untrimmed the " +
       "slice name and dropped the `debug.cmd` this question used to " +
       "read, because the argv's distinguishing part is the file at " +
       "the end and the 120-character cut fell before it.",

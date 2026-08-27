@@ -428,6 +428,139 @@ class TestThePageDrawsThem:
             "rather than a coincidence")
 
 
+_JOIN_HARNESS = r"""
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+const mk = (tag) => _makeNode(tag);
+globalThis.document = { createElement: mk, createElementNS: (_n, t) => mk(t),
+                        getElementById: () => null, body: mk("body") };
+globalThis.window = { location: { hash: "", search: "" }, addEventListener() {},
+                      matchMedia: () => ({ matches: false, addEventListener() {} }) };
+const app = await import("%s");
+
+// Two elements, one Plane 1 signal each, and a join that carries a
+// field of its own *and* one Plane 1 already owns.
+// Enough Plane 1 signal for two views to survive without any Plane 2,
+// so "the sandbox view is gone" is measured against a control that is
+// still offering something rather than against a control that vanished.
+const signals = {
+  element_durations: { "a.bst": 10, "b.bst": 20 },
+  slack: { "a.bst": 0, "b.bst": 5 },
+  blast_radius: {
+    "a.bst": { downstream_count: 1, is_leaf: false, risk_score: 2 },
+    "b.bst": { downstream_count: 0, is_leaf: true, risk_score: 0 },
+  },
+  criticality_probability: {
+    "a.bst": { observed_critical: true, probability: 0.9 },
+    "b.bst": { observed_critical: false, probability: 0.1 },
+  },
+};
+// All three columns `Plane 2 (sandbox)` requires, so the view is
+// offered - plus one Plane 1 already owns, which it must not take.
+const join = [
+  { element: "a.bst", cores_busy: 0.5, requested_jobs: 2, peak_rss_kb: 100,
+    downstream_count: 999 },   // `downstream_count` is Plane 1's
+  { element: "b.bst", cores_busy: 0.8, requested_jobs: 4, peak_rss_kb: 200 },
+  // An element Plane 1 never scheduled: the join "never introduces an
+  // element", so this row has nowhere to land.
+  { element: "ghost.bst", cores_busy: 0.9, requested_jobs: 1,
+    peak_rss_kb: 50 },
+];
+const out = app.elementSignalTable(signals, undefined, join);
+
+// And the same table built with **no** join at all, offered the same
+// presets: `Plane 2 (sandbox)` must not be among them.
+const presets = %s;
+// `presetTable` hands back its own `select`, so the offered views are
+// read from the control rather than hunted for in the tree.
+const named = (built) => built
+  ? (built.select.children ?? []).map((o) => (o.attrs ?? {}).value)
+  : [];
+const withJoin = app.presetTable("elements", out.rows, presets, out.hint,
+                                 undefined, {});
+const withoutJoin = app.presetTable(
+  "elements", app.elementSignalTable(signals, undefined, null).rows,
+  presets, out.hint, undefined, {});
+
+console.log(JSON.stringify({
+  elements: out.rows.map((r) => r.element).sort(),
+  a: out.rows.find((r) => r.element === "a.bst"),
+  joined: out.joined,
+  offeredWithJoin: named(withJoin),
+  offeredWithoutJoin: named(withoutJoin),
+}));
+"""
+
+
+class TestTheJoinMergesWithoutOverwriting:
+    """`UX-338`'s two boundary rules, driven directly.
+
+    Neither is reachable on the committed fixture - its join carries no
+    field Plane 1 also owns, and no element Plane 1 did not schedule -
+    so a mutation to either left every clause in this file green.
+    Found by mutation, held here on a payload built to reach them.
+    """
+
+    @staticmethod
+    def _merge():
+        script = _JOIN_HARNESS % ((REPO / "bga/viewer/app.js").as_uri(),
+                                  json.dumps(_presets()))
+        done = subprocess.run([node, "--input-type=module", "-e", script],
+                              capture_output=True, text=True, cwd=REPO,
+                              timeout=120,
+                              env={**os.environ, "BGA_DOM_SHIM":
+                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+        assert done.returncode == 0, done.stderr[-3000:]
+        return json.loads(done.stdout)
+
+    @needs_node
+    def test_plane_one_wins_a_name_collision(self):
+        """A join field shadowing an existing column would change what
+        that column means without changing its heading - the reader sees
+        `Rebuilds: 999` and has no way to know which plane said so."""
+        assert self._merge()["a"]["downstream_count"] == 1, (
+            "the join overwrote a Plane 1 column")
+
+    @needs_node
+    def test_the_join_introduces_no_element(self):
+        """`views.js` states it as what the join *is*: the Plane 2 half
+        of elements Plane 1 already put in play. A row for an element
+        the schedule does not carry would make this table a population
+        it does not claim to be."""
+        assert self._merge()["elements"] == ["a.bst", "b.bst"], (
+            "an element with no Plane 1 row joined the element table")
+
+    @needs_node
+    def test_the_plane_two_view_is_not_offered_without_plane_two(self):
+        """`UX-194`'s dead-control rule, at the level of a view.
+
+        Found while checking the work rather than by a clause: served
+        without its `plane2.json`, the fixture offered `Plane 2
+        (sandbox)` and drew two columns under a heading promising five.
+        The preset declares its subject (`requires`) so the page can
+        tell "this run has no Plane 2" from "this view is empty", and
+        this is what holds the declaration - a mutation removing it
+        left every other clause here green, because the committed
+        fixture *has* Plane 2.
+        """
+        merged = self._merge()
+        assert "Plane 2 (sandbox)" in merged["offeredWithJoin"], (
+            "the view is not offered even where it can answer",
+            merged["offeredWithJoin"])
+        assert "Plane 2 (sandbox)" not in merged["offeredWithoutJoin"], (
+            "a run with no Plane 2 is still offered the sandbox view",
+            merged["offeredWithoutJoin"])
+        assert merged["offeredWithoutJoin"], (
+            "no view at all survived, so the assertion above passes for "
+            "the wrong reason")
+
+    @needs_node
+    def test_the_columns_it_did_add_are_reported(self):
+        """The merge says what it merged, so the section's own sentence
+        counts signals rather than guessing."""
+        assert self._merge()["joined"] == ["cores_busy", "requested_jobs",
+                                           "peak_rss_kb"], self._merge()
+
+
 @needs_node
 class TestAViewTravelsInTheLink:
     def test_the_fragment_carries_the_view(self, payload):

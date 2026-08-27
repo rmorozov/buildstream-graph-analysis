@@ -55,7 +55,7 @@ Every `bst` run leaves logs under the cache directory, including runs
 `bga` never wrapped. This reads them into the same run-directory shape
 `analyze` takes, so history you already have becomes measurable.
 
-Full background: docs/guides/plane3.md
+Full background: docs/guides/cli.md (`bga cache-logs`)
 """
 import argparse
 import json
@@ -1268,7 +1268,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         # the project - used to produce that message about a project
         # whose logs sit two directories away.
         available = [entry['project'] for entry in summarize_log_tree(root)]
-        lines = [f"Error: no element logs found under {root}"]
+        # UX-327: absolute. A user who typed `.` was told "no element
+        # logs found under .", which names a directory only they can
+        # resolve and reads as a truncation.
+        lines = [f"Error: no element logs found under {os.path.abspath(root)}"]
         if project:
             lines[0] += f" for project {project!r}"
             if project_dir:
@@ -1285,7 +1288,22 @@ def main(argv: Optional[List[str]] = None) -> int:
                 "  `bga cache-logs --list` shows all of them with counts and spans."
             )
         else:
-            lines.append("  Nothing to report on.")
+            # UX-327: the branch a stranger actually lands in, and it
+            # used to say "Nothing to report on." - which names neither
+            # where the tool would have looked by default nor the two
+            # arguments that would have worked.
+            default = default_log_root()
+            if os.path.abspath(root) != os.path.abspath(default):
+                lines.append(f"  The default log root is {default}; this was "
+                             f"pointed somewhere else.")
+            lines.append(
+                "  Hand it the project directory instead - `bga cache-logs "
+                "PROJECT_DIR` reads `name:` out of its project.conf and "
+                "resolves the log tree itself - or name the project with "
+                "`--project NAME`.")
+            lines.append(
+                "  `bga cache-logs --list` shows every project the tree "
+                "holds, with counts and spans.")
         print("\n".join(lines), file=sys.stderr)
         return 1
 

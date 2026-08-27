@@ -217,11 +217,20 @@ no persistent project directory to keep one in.
 
 ## Installation
 
-Ensure the package is installed in your environment:
-
 ```bash
-pip install -e .
+pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
+
+That is **user mode**, and it is what the README teaches. `pip install
+-e .` from inside a checkout is **contributor** mode — the two differ in
+ways that have shipped bugs (`UX-77`, `UX-203`, `UX-325`: an editable
+install has the repository root on `sys.path`, a wheel does not), so
+this guide names which one it means rather than showing one and
+describing the other (`UX-327`).
+
+Add `bga[bst]` for a real BuildStream in the same environment,
+`bga[completion]` for tab completion, `bga[all]` for both; `pip install
+-e '.[dev]'` is the contributor set that `make test` needs.
 
 ## Basic Usage
 

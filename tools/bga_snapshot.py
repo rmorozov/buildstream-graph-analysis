@@ -30,7 +30,7 @@ Runs the build under the tracer, stores the capture in `.bga/runs/`, prints
 the analysis, and compares it against the last healthy snapshot. Run it once
 before your change and once after; the comparison is automatic.
 
-Full background: docs/guides/local-loop.md
+Full background: docs/guides/real-project.md
 """
 import argparse
 import json

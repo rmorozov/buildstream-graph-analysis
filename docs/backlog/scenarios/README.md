@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-335 scenarios: **11 open**, 324 closed.
+336 scenarios: **11 open**, 325 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 34 |
-| guards | 2 | 41 |
+| guards | 2 | 42 |
 
 ## Open scenarios
 
@@ -46,7 +46,7 @@ task file, which is the only place it ever lived twice.
 | UX-333 | [the name is the whole command](UX-0333-the-name-is-the-whole-command.md) | capture | Medium | R1, R2 | 🔴 |
 | UX-334 | [a console the page keeps clean](UX-0334-a-console-the-page-keeps-clean.md) | viewer | High | R1 | 🔴 |
 | UX-335 | [reading 'start_time' of undefined](UX-0335-reading-start-time-of-undefined.md) | viewer | Medium | R1 | 🔴 |
-| UX-336 | [the loop that got slow, measured and re-tooled](UX-0336-the-loop-that-got-slow.md) | guards | High | — | 🔴 |
+| UX-337 | [the two viewer modules split along their seams](UX-0337-the-two-viewer-modules-split-along-their-seams.md) | guards | Medium | — | 🔴 |
 
 ## UX-333..UX-336: the forty-sixth round — three field errors and a slowing loop (2026-08-27)
 

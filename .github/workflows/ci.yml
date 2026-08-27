@@ -54,6 +54,16 @@ jobs:
       - name: Test
         run: make test
 
+      # UX-336: `make test` runs `-n auto` (see the Makefile). CI is not
+      # the loop this item was about - the local one is - but a suite
+      # that only ever runs parallel in one place is a suite whose
+      # parallel-safety is untested where it matters. This re-runs the
+      # tiers' own boundary single-process, so an ordering assumption
+      # that xdist happens to hide cannot ship. Cheap: the small tier is
+      # 25s single-process after the re-tier.
+      - name: Test (small tier, single process)
+        run: PYTEST_XDIST= timeout 120 make test-small
+
   packaging:
     # UX-77: the front door. Every `bga wrap/extract/capture/...` alias
     # dispatches by importing `tools.<module>`, and `pyproject.toml`

@@ -62,6 +62,14 @@ dev = [
     # optional extra as well (`bga[completion]`) - the CLI works without
     # it and the import is guarded.
     "argcomplete>=3.0",
+    # UX-336: the suite runs in parallel. Measured on this 4-core
+    # container: 375s single-process -> 148.7s at `-n auto`, 4,014
+    # passed, zero races. The adoption cost was zero because every
+    # server the suite starts already binds an ephemeral port and every
+    # fixture already writes under `tmp_path` - the two things that
+    # break a suite under xdist. A dev dependency: nothing a user
+    # installs needs it.
+    "pytest-xdist>=3.5",
 ]
 # UX-191: `pip install bga[completion]`, then
 # `eval "$(register-python-argcomplete bga)"`. Shell completion for the

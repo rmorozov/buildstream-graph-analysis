@@ -209,7 +209,34 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # So the bounds below carry **~4 KB of headroom instead of 12 B**, which
 # is about 800 characters of run path, and this note is what stops the
 # next reader from reading a tight number as a tight measurement.
-PAGE_BUDGET_B = 226_000
+# **Round 48 (`UX-335`) moved the page again**, and the page budget is
+# the guard that saw it - which is what it is for. Section-boundary
+# error containment is new source and nothing else:
+#
+#     controls.js     2,816 ->   5,289   (+2,473)  `contained`, the
+#                                                  failure card, and the
+#                                                  measurement that
+#                                                  argues for them
+#     views.js      103,573 -> 105,711   (+2,138)  the two null-row
+#                                                  sites stating their
+#                                                  absence
+#     app.js        120,600 -> 121,942   (+1,342)  nine renderers routed
+#                                                  through `contained`
+#
+#     page          225,002 -> 227,498 B   (+2,496, all source)
+#     data           98,986 ->  98,986 B       (+0)
+#     golden        323,988 -> 326,484 B   (+2,496)
+#     macro_micro   363,424 -> 365,920 B   (+2,496)
+#
+# Data did not move by a byte, on either run, which is the split saying
+# what it exists to say: this round added code, not payload.
+#
+# The budget moves to 230,000 - the same ~2.5 KB of headroom the two
+# export bounds carry, rather than the 998 B it had left after
+# `UX-334`. A budget with one round's growth left in it reddens on the
+# next round whatever that round does, and a guard that always reddens
+# is a guard nobody reads.
+PAGE_BUDGET_B = 230_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -220,7 +247,7 @@ COMMITTED_EXPORTS = [
     # `UX-302` moved both again, by 5,315 B: the §1 dispatch table and
     # the "view as JSON" toggle are two new modules and their styles.
     # Source, not content - see the split above.
-    ("golden", GOLDEN, 328_000),                       #  323,988 B
+    ("golden", GOLDEN, 330_000),                       #  326,484 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -232,7 +259,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 368_000),             #  363,424 B
+    ("macro_micro", MACRO_MICRO, 370_000),             #  365,920 B
 ]
 
 

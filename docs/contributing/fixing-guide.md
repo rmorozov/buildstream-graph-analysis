@@ -227,6 +227,7 @@ tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
 tests/browser.py           what drives it from a test; every geometric claim goes through here
 tests/trace_processor.py   the one gate for the optional Perfetto reader, and its skip reason (UX-321)
 tests/installed_command_sweep.py  every documented command, run against an installed wheel (UX-325)
+tests/degenerate_store.py  a real store with one row damaged, for both readers (UX-335)
 tests/test_e2e.py          the whole pipeline on a committed run · test_golden.py  byte-for-byte
 tests/test_cli.py          argument parsing and exit codes, at the CLI boundary
 tests/test_synthetic_multi_subproject.py  the multi-project ingestion path

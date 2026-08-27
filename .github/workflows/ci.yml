@@ -82,20 +82,25 @@ jobs:
           python -m venv /tmp/pkgvenv
           /tmp/pkgvenv/bin/pip install dist/*.whl
 
-      - name: Every documented alias runs from an empty directory
+      - name: Every documented command, parsed and really run
         # `cd /tmp/empty` matters: a console-script entry point does not
         # put the working directory on sys.path, which is precisely how
         # running from the repo root hid this for every prior round.
+        #
+        # UX-325: this step was a hand-written list of nineteen aliases,
+        # written in round 12 and `--help`-only. It could not have found
+        # `bga snapshot --aggregate` dying with `ModuleNotFoundError` on
+        # every install - `--aggregate` is a flag, not an alias, and a
+        # `--help` never reaches the import. So the list is now *derived*
+        # from the architecture's command table (which UX-322's guard
+        # holds equal to the parser), and eighteen of the twenty-one
+        # commands are run for real against fixtures the script builds.
+        # The three it cannot run carry a written reason.
         run: |
           set -euo pipefail
           mkdir -p /tmp/empty && cd /tmp/empty
-          for alias in analyze compare correlate \
-                       wrap extract capture rebuild-set checkout-cost run-context \
-                       graph-from-show log-to-chrome chrome-to-trace native-to-chrome \
-                       cache-logs cross-check gen-synthetic baseline doctor snapshot; do
-            echo "--- bga $alias --help"
-            /tmp/pkgvenv/bin/bga "$alias" --help > /dev/null
-          done
+          python "$GITHUB_WORKSPACE/tests/installed_command_sweep.py" \
+            --bga /tmp/pkgvenv/bin/bga
 
       - name: The everything extra installs everything
         # UX-200: `bga[all]` is the form the README tells a user to run,

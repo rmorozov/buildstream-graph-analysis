@@ -1399,8 +1399,9 @@ def _snapshot_completer(prefix, parsed_args, **_kwargs):
 def _element_completer(prefix, parsed_args, **_kwargs):
     """Element names, for `bga blast`, from the project's own files."""
     try:
-        from .tools_dispatch import TOOL_ALIASES  # noqa: F401  (import guard)
-        from tools.bst_native_build_tracer import discover_element_names
+        from .tools_dispatch import _import_tool
+        discover_element_names = _import_tool(
+            "tools.bst_native_build_tracer").discover_element_names
 
         project = getattr(parsed_args, "project", None)
         if project is None:

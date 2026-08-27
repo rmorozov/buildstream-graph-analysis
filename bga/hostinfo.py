@@ -132,7 +132,13 @@ def collect(with_toolchain: bool = True) -> dict:
     of `bga` looked, which is different from a capture too old to have
     looked at all.
     """
-    from tools._run_context_common import host_cpu_count, host_memory_mb
+    # `UX-325`: see `store_aggregate.read` - the same class, found by
+    # sweeping for it rather than by a second stranger.
+    from .tools_dispatch import _import_tool
+
+    _common = _import_tool("tools._run_context_common")
+    host_cpu_count = _common.host_cpu_count
+    host_memory_mb = _common.host_memory_mb
 
     uname = os.uname() if hasattr(os, "uname") else None
     manifest = {

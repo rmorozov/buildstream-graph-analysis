@@ -1045,10 +1045,18 @@ Next:
   Plane 2 measured this run, so the join can say whether core.bst is compute-bound…
     bga correlate examples/06-…/.bga/runs/20260821T170127Z/run
   Make the change, then capture it the same way.
-    bga snapshot examples/06-macro-micro-optimization
-  Whether it helped, judged against this store's noise.
-    bga compare @prev @last --project examples/06-macro-micro-optimization
+    bga snapshot --project examples/06-macro-micro-optimization -- bst build all.bst
+  Whether it helped, judged against this store's noise - run it in examples/06-macro-micro-optimization.
+    bga compare @prev @last
 ```
+
+Every line under a reason is a command as `bga` would receive it, and
+`UX-326` is why that is worth saying: for six rounds the last two were
+not. `bga snapshot <project>` put the project where the *build command*
+goes and crashed; `bga compare … --project` named a flag `bga compare`
+does not have. Both are now parsed by the parser that would receive
+them, in
+[`tests/unit/test_the_printed_sentences_are_contracts.py`](../../tests/unit/test_the_printed_sentences_are_contracts.py).
 
 Same list in `--format json` as `next_steps`, and in the page's
 decision panel with a Copy button beside each — one function, so the

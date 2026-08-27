@@ -231,7 +231,17 @@ def _CompactRawHelp(prog):
     from bga.help_format import CompactRawHelp
     return CompactRawHelp(prog)
 
-def main(argv: Optional[List[str]] = None) -> int:
+def create_parser() -> argparse.ArgumentParser:
+    """`bga snapshot`'s own parser, built where a caller can reach it.
+
+    `UX-326`: the advice block prints a `bga snapshot ...` command, and
+    the only honest way to check that command is to parse it with the
+    parser that will receive it. Appending `--help` to it does not work
+    and is not safe - the trailing positional is
+    `argparse.REMAINDER`, so `--help` lands *inside the build command*
+    and the build runs. That is how this function came to exist: the
+    guard's first draft ran a real capture in a unit test.
+    """
     parser = argparse.ArgumentParser(
         description=HELP, formatter_class=_CompactRawHelp,
     )
@@ -324,7 +334,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
                         help="The build to run, e.g. -- bst build all.bst.")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = create_parser().parse_args(argv)
 
     if args.no_progress:
         # UX-183: an environment variable rather than a threaded-through

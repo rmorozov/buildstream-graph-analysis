@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-331 scenarios: **9 open**, 322 closed.
+331 scenarios: **8 open**, 323 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -24,7 +24,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | analysis | 1 | 51 |
 | contracts | 1 | 36 |
 | viewer | 0 | 82 |
-| cli | 1 | 5 |
+| cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 3 | 34 |
 | guards | 1 | 40 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-326 | [the tool's own sentences are contracts](UX-0326-the-tools-own-sentences-are-contracts.md) | cli | High | R1 | 🔴 |
 | UX-327 | [four documented invocations that do not exist](UX-0327-four-documented-invocations-that-do-not-exist.md) | docs | High | R1 | 🔴 |
 | UX-328 | [--schema answers for everything that emits one](UX-0328-schema-answers-for-everything-that-emits-one.md) | contracts | Medium | R1 | 🔴 |
 | UX-329 | [the terminal and the viewer disagree about Plane 2](UX-0329-the-terminal-and-the-viewer-disagree-about-plane-2.md) | analysis | High | R1, R2 | 🔴 |

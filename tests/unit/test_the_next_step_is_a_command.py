@@ -145,8 +145,16 @@ class TestTheCommandsActuallyRun:
     """The acceptance. Not "a command is shown" - `bga blast` with the
     arguments in the wrong order would show just as well."""
 
-    @pytest.mark.parametrize("step_id", [
-        "blast-the-top-element", "sweep-the-capacity"])
+    # UX-326: derived, not written down. This list was two ids for six
+    # rounds - `blast-the-top-element` and `sweep-the-capacity` - while
+    # the block published four, and both of the two it never ran were
+    # broken: `bga snapshot <project>` crashed and `bga compare … 
+    # --project` named a flag that does not exist. The ids come from the
+    # fixture's own report now, and the store-shaped steps (which this
+    # fixture, being outside a store, does not offer) are executed by
+    # `test_the_printed_sentences_are_contracts.py` against one that is.
+    @pytest.mark.parametrize("step_id", sorted(
+        {s["id"] for s in _report()["next_steps"]}))
     def test_every_published_argv_is_executable_as_spelled(self, step_id):
         steps = {s["id"]: s for s in _report()["next_steps"]}
         if step_id not in steps:

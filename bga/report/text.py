@@ -1464,12 +1464,26 @@ def format_compare_text(comparison) -> str:
     if comparison.low_confidence:
         lines.append("  Caveat: at least one run's confidence is below the 'high' band - treat this comparison with caution.")
     if comparison.comparability_warning:
-        # UX-78: reaching this text at all means `--allow-mismatch` was
-        # passed - the default is now a refusal, printed instead of the
-        # comparison rather than beside it - so the caveat belongs here,
-        # where there really is a comparison below it.
         lines.append(f"  Warning: {comparison.comparability_warning}")
-        lines.append("  (--allow-mismatch was given; treat every figure below with real skepticism)")
+        # UX-326: gated on `mismatches`, not on the warning. The comment
+        # that used to sit here said "reaching this text at all means
+        # `--allow-mismatch` was passed", and that was true of the
+        # *refusal* and never of this string: `comparability_warning`
+        # also accumulates the cross-host caveat (`UX-186`) and the
+        # producer note (`UX-249`), neither of which is a mismatch and
+        # neither of which needs a flag. So `bga compare @prev @last`
+        # with no flags at all printed a sentence asserting one.
+        #
+        # `mismatches` is the right condition and is checkable: `bga
+        # compare` refuses outright when `mismatches` is non-empty and
+        # the flag was not given (`cli.py`), so a comparison that is
+        # being printed *with* mismatches is one where it was.
+        if comparison.mismatches:
+            lines.append("  (--allow-mismatch was given; treat every figure "
+                         "below with real skepticism)")
+        else:
+            lines.append("  (a caveat, not a refusal - no flag was needed and "
+                         "the figures below still compare)")
     lines.append("")
 
     lines.append("Certified Floors:")

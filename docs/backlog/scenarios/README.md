@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-337 scenarios: **11 open**, 326 closed.
+337 scenarios: **10 open**, 327 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 59 |
 | analysis | 0 | 51 |
 | contracts | 1 | 36 |
-| viewer | 3 | 85 |
+| viewer | 2 | 85 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 34 |
@@ -43,7 +43,6 @@ task file, which is the only place it ever lived twice.
 | UX-331 | [the README excerpt, and the sentence that contradicts itself](UX-0331-the-readme-excerpt-and-the-sentence-that-contradicts-itself.md) | docs | Low | R1 | 🔴 |
 | UX-332 | [the cascade beats the first match, and two record nits](UX-0332-the-cascade-beats-the-first-match.md) | guards | Medium | — | 🔴 |
 | UX-333 | [the name is the whole command](UX-0333-the-name-is-the-whole-command.md) | capture | Medium | R1, R2 | 🔴 |
-| UX-334 | [a console the page keeps clean](UX-0334-a-console-the-page-keeps-clean.md) | viewer | High | R1 | 🔴 |
 | UX-335 | [reading 'start_time' of undefined](UX-0335-reading-start-time-of-undefined.md) | viewer | Medium | R1 | 🔴 |
 | UX-337 | [the two viewer modules split along their seams](UX-0337-the-two-viewer-modules-split-along-their-seams.md) | guards | Medium | — | 🔴 |
 | UX-338 | [the page draws the element population twice](UX-0338-the-page-draws-the-element-population-twice.md) | viewer | Medium | R1 | 🔴 |

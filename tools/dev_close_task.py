@@ -111,6 +111,20 @@ def check():
     return problems
 
 
+def _shown(path: pathlib.Path) -> str:
+    """A path to print: repo-relative when it is in the repo.
+
+    `--scenarios` accepts a directory anywhere - a `tmp_path` copy is
+    the whole point of it - and `relative_to` raises on one that is
+    outside. It raised *after* the row was written, so the move
+    succeeded and the command still exited with a traceback.
+    """
+    try:
+        return str(path.relative_to(REPO))
+    except ValueError:
+        return str(path)
+
+
 def move(uid: str, note: str) -> int:
     path = task_file(uid)
     body = path.read_text(encoding="utf-8")
@@ -137,8 +151,17 @@ def move(uid: str, note: str) -> int:
     # both and the row rendered with a duplicated title - caught by
     # reading the row it produced, which is why `--move` prints a line
     # telling you to.
+    # The verdict is this function's to write, so a note that already
+    # opens with one is not doubled. `🟢 Done — 🟢 Done — …` is what the
+    # first row written from a note drafted elsewhere looked like -
+    # caught, again, by reading the row it produced.
+    said = note.strip()
+    for opener in ("🟢 Done —", "🟢 Done -", "Done —", "Done -"):
+        if said.startswith(opener):
+            said = said[len(opener):].strip()
+            break
     closed_row = (f"| {uid} | {scenario} | {priority} | {serves} | "
-                  f"🟢 Done — {note} | [{uid}]({path.name}) |")
+                  f"🟢 Done — {said} | [{uid}]({path.name}) |")
 
     text = INDEX.read_text(encoding="utf-8")
     text = text.replace(line + "\n", "")
@@ -165,7 +188,7 @@ def move(uid: str, note: str) -> int:
           f"  Read the row it just wrote. The scenario text is copied from "
           f"the open row and usually wants rewriting into what was *found*, "
           f"and this function's own first run produced a malformed row -\n"
-          f"    grep '^| {uid} |' {CLOSED.relative_to(REPO)}")
+          f"    grep '^| {uid} |' {_shown(CLOSED)}")
     return 0
 
 

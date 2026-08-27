@@ -176,8 +176,14 @@ class TestTheConsoleStaysClean:
         above would catch it too, and this one says *which*.
         """
         for name, got in observed.items():
-            probes = [e["text"] for e in _errors(got)
-                      if any(word in e["text"] for word in
+            # Text *and* url: a served 404 says only "Failed to load
+            # resource: ... 404" and carries the path in its own field,
+            # while a `file://` refusal names the path in the sentence.
+            # Reading the text alone made this clause blind to exactly
+            # half the regression it is named for - found by mutation,
+            # not by review.
+            probes = [f"{e['text']} {e['url']}" for e in _errors(got)
+                      if any(word in f"{e['text']} {e['url']}" for word in
                              ("compare.json", "store.json",
                               "store-aggregate.json", "favicon.ico"))]
             assert not probes, (name, probes)
@@ -214,6 +220,31 @@ class TestTheInstrumentCanSee:
             httpd.shutdown()
         texts = [e["text"] for e in _errors(got)]
         assert any("UX-334 positive control" in t for t in texts), texts
+
+    def test_it_reports_a_browser_log_line_that_is_there(self, observed,
+                                                        tmp_path_factory):
+        """The third channel, and the one with no other witness.
+
+        A 404 on a subresource is reported by the *browser*, not by the
+        page - `Log.entryAdded` and nowhere else. Found by mutation:
+        dropping `Log.enable` from the harness and reintroducing the
+        favicon 404 left all seven clauses green, so the whole
+        network-error half of this guard could have been switched off
+        without a single test noticing.
+        """
+        out = tmp_path_factory.mktemp("positive-log")
+        exported, served, httpd = _boot(GOLDEN, out)
+        try:
+            with Browser(chrome) as opened:
+                got = opened.observe(
+                    served,
+                    'fetch("ux-334-no-such-payload.json").then(() => 1,'
+                    ' () => 1)')
+        finally:
+            httpd.shutdown()
+        network = [f"{e['text']} {e['url']}" for e in _errors(got)
+                   if "ux-334-no-such-payload" in e["url"]]
+        assert network, [e["text"] for e in got["console"]]
 
     def test_it_reports_a_policy_violation_that_is_there(self, observed,
                                                         tmp_path_factory):

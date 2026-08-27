@@ -101,6 +101,12 @@ LARGE = (
     # the default tier - the same mechanism round 39 documented, three
     # rounds later.
     "tests/unit/test_apparatus_in_its_place.py",                     #   17.4s
+    # UX-334's console net: four boots of a real Chromium - two fixture
+    # runs, served and exported - and three positive controls that each
+    # start a browser of their own to prove one channel of the
+    # instrument can still hear. Measured at 13.8s with two controls and
+    # 16.4s with the third, which is what moved it over the floor.
+    "tests/unit/test_the_console_stays_clean.py",                    #   16.4s
 )
 
 MEDIUM = (
@@ -111,11 +117,6 @@ MEDIUM = (
     # carries what it measured at.
     # UX-296's big-run fixture: a million process records written to
     # disk, and four subprocess startups measured against it.
-    # UX-334's console net: four boots of a real Chromium - two runs,
-    # served and exported - plus two positive controls that prove the
-    # instrument can still hear. Measured at 13.8s, under the large
-    # floor but not by much; re-measure it before adding a fifth boot.
-    "tests/unit/test_the_console_stays_clean.py",               #   13.8s
     "tests/unit/test_the_view_parses_nothing.py",               #    7.6s
     # UX-298's emitter: a 40,000-process trace written twice, once for
     # the ceiling and once for the bytes-before-close clause.

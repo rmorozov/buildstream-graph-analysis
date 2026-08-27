@@ -128,6 +128,9 @@ MEDIUM = (
     # Round 50, tiered on landing for the same reason: four `bga analyze`
     # subprocesses, three of them `--format json --explain`.
     "tests/unit/test_the_readme_block_is_the_real_output.py",   #    1.2s
+    # `UX-330`'s walk: a seed planted once, then ten `bga` subprocesses
+    # run against it - the whole point is that it is not in-process.
+    "tests/unit/test_the_stranger_has_a_seed.py",               #    5.6s
     # UX-298's emitter: a 40,000-process trace written twice, once for
     # the ceiling and once for the bytes-before-close clause.
     "tests/unit/test_the_timeline_speaks_perfetto.py",           #    6.0s

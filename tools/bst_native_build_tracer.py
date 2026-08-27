@@ -67,6 +67,7 @@ import array
 import atexit
 import contextlib
 import errno
+import gzip
 import itertools
 import json
 import os
@@ -4209,6 +4210,28 @@ def load_records(raw_log_path: str, merge: bool = True) -> List[dict]:
     return merge_record_streams(records) if merge else records
 
 
+def _open_maybe_gzipped(path: str):
+    """The raw log, compressed or not (`UX-330`).
+
+    Every snapshot stores its Plane 2 log as `plane2.log.gz` - the
+    capture writes it compressed and `bga timeline` and `bga correlate`
+    both read it that way. `bga capture report` opened it as plain text,
+    found no parseable event in the deflate stream, and said *"this
+    error means the file is neither"* a raw trace nor a JSON report.
+    It is a raw trace; it is gzipped. The refusal named the one thing
+    that was not wrong with the file.
+
+    Detected by magic number rather than by extension: a log named
+    `.log` that happens to be compressed is the same file, and a
+    reader who renamed it should not get a different answer.
+    """
+    with open(path, "rb") as probe:
+        gzipped = probe.read(2) == b"\x1f\x8b"
+    if gzipped:
+        return gzip.open(path, "rt", encoding="utf-8", errors="ignore")
+    return open(path, "r", encoding="utf-8", errors="ignore")
+
+
 def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
                        invocation_log_path: Optional[str] = None,
                        plane1_log_path: Optional[str] = None) -> dict:
@@ -4228,7 +4251,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # Parsing and pairing are now one pass, and the counts the report
     # needs are filled by the pass that already visits every event.
     unmatched = {"fork_only": 0, "unmatched": 0}
-    with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as f:
+    with _open_maybe_gzipped(raw_log_path) as f:
         events = stream_trace_events(f)
         first = next(events, None)
         if first is None and os.path.getsize(raw_log_path) > 0:

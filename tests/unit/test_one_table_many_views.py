@@ -47,22 +47,20 @@ from bga import schemas
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUN = REPO / "tests/fixtures/macro_micro/run"
 
-# UX-338, exempted here and filed rather than fixed. `UX-329` made
-# `bga analyze` attach the sibling `plane2.json`, which put
-# `element_join` into this fixture's payload - and the page has drawn it
-# as a second whole-population table since `UX-215`. **That is not new**:
+# `UX-338` landed and the exemption that stood here is gone. What it
+# said, kept because the *reason* it was needed outlives it: `UX-329`
+# made `bga analyze` attach the sibling `plane2.json`, which put
+# `element_join` into this fixture's payload - and the page had drawn it
+# as a second whole-population table since `UX-215`. That was never new;
 # `bga view` has attached the sibling since `UX-203`, so every real
-# viewer of a two-plane snapshot has seen both tables. Measured on the
-# tree before `UX-329`, through `bga view`:
+# viewer of a two-plane snapshot saw both tables. This guard could not
+# see it because its fixture used to reach the page through `analyze`
+# *without* Plane 2 - the one configuration a viewer never has.
 #
-#     element_join present = True | rows = 11   (11 elements in the run)
-#
-# This guard never saw it because its fixture reaches the page through
-# `analyze` *without* `--plane2` - the one configuration a viewer never
-# has, which is the same shape as the defect `UX-329` fixed. Folding the
-# join into the one element table is `UX-289`'s answer and `UX-338`'s
-# job; the exemption goes when that lands.
-_UX338 = frozenset({"element_join"})
+# The fixture now carries the join (measured: `element_join present =
+# True | rows = 11`), and the join is a *view* of the one element table
+# rather than a table of its own, which is `UX-289`'s rule applied to
+# the columns `UX-215` added.
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
@@ -82,12 +80,7 @@ PUBLISHED_VIEWS = {
 # UX-285: by `data-table` path rather than by position, so it names the
 # two tables the docstring names and survives a section moving.
 KNOWN_COINCIDENCE = ["structural.batch_opportunities.serialized_pairs and "
-                     "structural.sensitivity.top_opportunities (5)",
-                     # UX-338, and unlike the pair above this one is a
-                     # real duplication rather than a coincidence - it
-                     # is listed so the guard is honest about carrying
-                     # it, not because it is acceptable. See `_UX338`.
-                     "element_join and elements (11)"]
+                     "structural.sensitivity.top_opportunities (5)"]
 
 # The bound, stated here rather than read from `schemas`. Reading the
 # constant and asserting against it is the mutation that passes:
@@ -369,7 +362,7 @@ class TestThePageDrawsThem:
                     if frozenset(table["population"])
                     == frozenset(payload["signals"].get("element_durations")
                                  or {})
-                    and table["section"] not in _UX338]
+                    ]
         assert len(elements) <= 1, (
             f"{len(elements)} tables draw the whole element population: "
             f"{[t['section'] for t in elements]}")

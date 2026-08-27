@@ -1427,16 +1427,38 @@ def compute_next_steps(result: AnalysisResult,
         })
 
     if in_store:
-        steps.append({
-            'id': 'measure-again',
-            'reason': "Make the change, then capture it the same way.",
-            'argv': ['bga', 'snapshot', project],
-            'follows_from': 'run_instance.run_dir',
-        })
+        # UX-326: `bga snapshot <project>` was printed here for six
+        # rounds, and run verbatim it crashed - `snapshot`'s positional
+        # is `argparse.REMAINDER`, the *build command*, so the project
+        # path arrived as a command to execute and the wrapper refused
+        # it. The project belongs in `--project`; the build goes after
+        # the `--`. Both halves come from what this run recorded, which
+        # is the only way "capture it the same way" can be true.
+        #
+        # No targets means the step is not offered at all, for the same
+        # reason a missing run path returns no steps at the top of this
+        # function: a command spelled approximately is worse than none.
+        targets = [t for t in (instance.get('targets') or []) if t]
+        if targets:
+            steps.append({
+                'id': 'measure-again',
+                'reason': "Make the change, then capture it the same way.",
+                'argv': ['bga', 'snapshot', '--project', project, '--',
+                         'bst', 'build', *targets],
+                'follows_from': 'run_instance.targets',
+            })
+        # UX-326, the same class as the step above and found by the
+        # guard rather than by the walk: `bga compare` has no
+        # `--project`. The printed line has read `--project <path>` since
+        # `UX-218`, and every reader who pasted it got
+        # `unrecognized arguments`. Aliases resolve against the working
+        # directory, so the project belongs in the sentence, not in a
+        # flag the parser does not have.
         steps.append({
             'id': 'compare-with-the-run-before',
-            'reason': "Whether it helped, judged against this store's noise.",
-            'argv': ['bga', 'compare', '@prev', '@last', '--project', project],
+            'reason': ("Whether it helped, judged against this store's "
+                       f"noise - run it in {project}."),
+            'argv': ['bga', 'compare', '@prev', '@last'],
             'follows_from': 'run_instance.run_dir',
         })
     return steps

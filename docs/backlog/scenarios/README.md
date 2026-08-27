@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-335 scenarios: **15 open**, 320 closed.
+337 scenarios: **10 open**, 327 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 59 |
-| analysis | 1 | 51 |
+| capture | 1 | 59 |
+| analysis | 0 | 51 |
 | contracts | 1 | 36 |
-| viewer | 2 | 84 |
-| cli | 1 | 5 |
-| store | 3 | 28 |
-| docs | 3 | 34 |
-| guards | 2 | 41 |
+| viewer | 2 | 85 |
+| cli | 0 | 5 |
+| store | 2 | 28 |
+| docs | 2 | 34 |
+| guards | 2 | 42 |
 
 ## Open scenarios
 
@@ -38,19 +38,14 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-324 | [a capture that cannot start says so, and leaves nothing](UX-0324-a-capture-that-cannot-start-says-so-and-leaves-nothing.md) | capture | High | R1 | 🔴 |
-| UX-325 | [--aggregate crashes on every user install](UX-0325-aggregate-crashes-on-every-user-install.md) | store | High | R1, R5, R7 | 🔴 |
-| UX-326 | [the tool's own sentences are contracts](UX-0326-the-tools-own-sentences-are-contracts.md) | cli | High | R1 | 🔴 |
-| UX-327 | [four documented invocations that do not exist](UX-0327-four-documented-invocations-that-do-not-exist.md) | docs | High | R1 | 🔴 |
 | UX-328 | [--schema answers for everything that emits one](UX-0328-schema-answers-for-everything-that-emits-one.md) | contracts | Medium | R1 | 🔴 |
-| UX-329 | [the terminal and the viewer disagree about Plane 2](UX-0329-the-terminal-and-the-viewer-disagree-about-plane-2.md) | analysis | High | R1, R2 | 🔴 |
 | UX-330 | [the stranger needs a seed](UX-0330-the-stranger-needs-a-seed.md) | docs | Medium | R1 | 🔴 |
 | UX-331 | [the README excerpt, and the sentence that contradicts itself](UX-0331-the-readme-excerpt-and-the-sentence-that-contradicts-itself.md) | docs | Low | R1 | 🔴 |
 | UX-332 | [the cascade beats the first match, and two record nits](UX-0332-the-cascade-beats-the-first-match.md) | guards | Medium | — | 🔴 |
 | UX-333 | [the name is the whole command](UX-0333-the-name-is-the-whole-command.md) | capture | Medium | R1, R2 | 🔴 |
-| UX-334 | [a console the page keeps clean](UX-0334-a-console-the-page-keeps-clean.md) | viewer | High | R1 | 🔴 |
 | UX-335 | [reading 'start_time' of undefined](UX-0335-reading-start-time-of-undefined.md) | viewer | Medium | R1 | 🔴 |
-| UX-336 | [the loop that got slow, measured and re-tooled](UX-0336-the-loop-that-got-slow.md) | guards | High | — | 🔴 |
+| UX-337 | [the two viewer modules split along their seams](UX-0337-the-two-viewer-modules-split-along-their-seams.md) | guards | Medium | — | 🔴 |
+| UX-338 | [the page draws the element population twice](UX-0338-the-page-draws-the-element-population-twice.md) | viewer | Medium | R1 | 🔴 |
 
 ## UX-333..UX-336: the forty-sixth round — three field errors and a slowing loop (2026-08-27)
 

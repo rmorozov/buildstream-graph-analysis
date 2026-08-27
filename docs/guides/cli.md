@@ -105,10 +105,24 @@ bga analyze @last
 bga compare @prev @last
 bga cache-trend @prev @last
 bga analyze @20260819                          # by stamp prefix, if unambiguous
-bga analyze @last --plane2 @last
+bga analyze @last                              # the Plane 2 report beside it is found
+bga analyze @last --no-plane2                  # ...unless you say not to
 bga compare @prev @last --baseline-plane2 @prev --candidate-plane2 @last
 bga cache-logs . --native-report @last
 ```
+
+`bga analyze` finds the `plane2.json` beside a snapshot on its own
+(`UX-329`), as `bga correlate` and `bga view` always have — before that
+the same run published `plane2_coverage: null` in the terminal and the
+full coverage in the page, which `bga view --help` promises can never
+happen. `--plane2` still names a different report; `--no-plane2`
+declines the sibling and the report says it declined.
+
+**When Plane 2 is not in a report, the report says which absence it
+is** — never captured, captured with its raw log not kept (so no
+timeline), or declined. One sentence pair in `bga/plane2.py`, printed by
+the terminal, published as `plane2_absence`, and shown by the page and
+the export, so the three cannot describe one absence differently.
 
 **One alias is one snapshot**, whichever of its files is being asked
 for, so `bga correlate @prev @last` means a run from one and a report
@@ -174,6 +188,15 @@ failed build is not a successful snapshot; equally, a comparison verdict
 does not change the exit code — the CI gates live on `bga compare`
 (`--fail-on-regression` and friends), which is what CI should call.
 
+The one thing it will not do is start. If the build command's executable
+is not runnable — no `bst` on `PATH` being the case that matters —
+`bga snapshot` **refuses before it writes anything**, exits `2` like its
+other refusals, and prints one sentence with the remedy and a pointer to
+`bga doctor`, which is the command that checks the whole machine
+(`UX-324`). No snapshot directory is created on that path, so there is
+no debris to describe, resolve or prune afterwards. The check is
+`bga doctor`'s own rather than a second copy of it.
+
 Snapshots are build artifacts and `.bga/runs` entries can be deleted at
 any time. Every capture now **says what it weighed and what the store
 holds** (`UX-300`), and `bga` still warns once the store passes 2 GB.
@@ -208,11 +231,20 @@ no persistent project directory to keep one in.
 
 ## Installation
 
-Ensure the package is installed in your environment:
-
 ```bash
-pip install -e .
+pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
+
+That is **user mode**, and it is what the README teaches. `pip install
+-e .` from inside a checkout is **contributor** mode — the two differ in
+ways that have shipped bugs (`UX-77`, `UX-203`, `UX-325`: an editable
+install has the repository root on `sys.path`, a wheel does not), so
+this guide names which one it means rather than showing one and
+describing the other (`UX-327`).
+
+Add `bga[bst]` for a real BuildStream in the same environment,
+`bga[completion]` for tab completion, `bga[all]` for both; `pip install
+-e '.[dev]'` is the contributor set that `make test` needs.
 
 ## Basic Usage
 
@@ -1036,10 +1068,18 @@ Next:
   Plane 2 measured this run, so the join can say whether core.bst is compute-bound…
     bga correlate examples/06-…/.bga/runs/20260821T170127Z/run
   Make the change, then capture it the same way.
-    bga snapshot examples/06-macro-micro-optimization
-  Whether it helped, judged against this store's noise.
-    bga compare @prev @last --project examples/06-macro-micro-optimization
+    bga snapshot --project examples/06-macro-micro-optimization -- bst build all.bst
+  Whether it helped, judged against this store's noise - run it in examples/06-macro-micro-optimization.
+    bga compare @prev @last
 ```
+
+Every line under a reason is a command as `bga` would receive it, and
+`UX-326` is why that is worth saying: for six rounds the last two were
+not. `bga snapshot <project>` put the project where the *build command*
+goes and crashed; `bga compare … --project` named a flag `bga compare`
+does not have. Both are now parsed by the parser that would receive
+them, in
+[`tests/unit/test_the_printed_sentences_are_contracts.py`](../../tests/unit/test_the_printed_sentences_are_contracts.py).
 
 Same list in `--format json` as `next_steps`, and in the page's
 decision panel with a Copy button beside each — one function, so the
@@ -1734,7 +1774,10 @@ graph is a much smaller number than its share suggests.
 
 - `0`: Success.
 - `1`: General error (e.g., invalid arguments, missing files).
-- `2`: Data ingestion failure (e.g., malformed v9 artifacts).
+- `2`: Data ingestion failure (e.g., malformed v9 artifacts), and
+  `bga snapshot`'s own refusals — no project here, nothing to run, and
+  (`UX-324`) a build command whose executable will not run, which is
+  declined before anything is written.
 - `3`: Analysis failure (e.g., graph cycles detected).
 - `4`: **not "slower" alone.** `bga compare` returns it for any of three things, and a CI job that triages it as a duration regression will mis-read two of them:
   - `--fail-on-regression` and the build's total duration really did regress beyond the threshold (`docs/backlog/scenarios/UX-03`);
@@ -1750,7 +1793,9 @@ graph is a much smaller number than its share suggests.
   analyzed, and labelled as a build that did not finish. A comparison
   against that snapshot obeys the same incompleteness rules as any
   unfinished build. Interrupting *before* the build starts leaves
-  nothing behind and says so.
+  nothing behind and says so — and so does a machine that cannot start
+  the build at all, which refuses with `2` before creating a snapshot
+  (`UX-324`).
 
 ## See Also
 

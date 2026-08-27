@@ -16,14 +16,29 @@ Run the command in the task's **Acceptance Test** section verbatim and
 paste the real output into the file. Not a paraphrase and not a
 description of what it printed.
 
-## 2. The tier your change touched
+## 2. The tests that touch what you changed
 
 ```bash
-make test-small      # 21s  - the default tier; most edits need only this
-make test-medium     # ~3m  - spawns a process or a node harness
-make test-large      # ~2.5m - scale fixtures, real process trees
-make test-fast       # small + medium: everything needing no real bst
+make test-touching   # the files that name the modules your diff touched
 ```
+
+Measured on a one-module diff: **4s**, 7 files, 123 tests (`UX-336`).
+A *selector*, not a gate - a grep-derived set can miss a test that
+exercises a module without naming it, which is why step 3 is unchanged.
+`make test-touching ARGS=--why` says what selected each file.
+
+Then the tier, when the change is wider than one module:
+
+```bash
+make test-small      # 11s  - the default tier; most edits need only this
+make test-medium     # ~1m50s - spawns a process or a node harness
+make test-large      # ~1m15s - scale fixtures, real process trees
+make test-fast       # small + medium: everything needing no real bst (~2m)
+```
+
+Every target runs `-n auto` (`UX-336`). `PYTEST_XDIST= make test-small`
+turns it off for a single-process run - which is what you want with
+`-x`, or under `pdb`.
 
 Tiers come from measured per-file duration in
 [`tests/tiers.py`](../../../tests/tiers.py). Use them for the edit-run
@@ -40,7 +55,7 @@ python3 -m pytest tests/unit/test_<file>.py -q -k <substring>
 ## 3. The whole suite, and lint
 
 ```bash
-make test    # ~5m10s
+make test    # ~3m15s at -n auto (10m40s single-process)
 make lint    # ruff + PyMarkdown; both must be clean
 ```
 
@@ -59,9 +74,25 @@ The index counts at the top of `README.md` (`N open`, and the per-topic
 table) change too.
 
 `tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files`
-fails naming the item if you miss one.
+fails naming the item if you miss one, and
+
+```bash
+python tools/dev_close_task.py UX-NNN --move --note "one line for closed.md"
+python tools/dev_close_task.py --check
+```
+
+does the four mechanical edits and reports what disagrees (`UX-336`).
+`--move` refuses when the task file has no Outcome section.
 
 ## 5. The Outcome section
+
+```bash
+python tools/dev_close_task.py UX-NNN --outcome --round NN --date YYYY-MM-DD
+```
+
+prints the skeleton with the headings below and every measurement left
+blank - `UX-336`, and blank on purpose: a helper that pre-filled them
+would be inviting the unmeasured claim this list exists to prevent.
 
 Append to the task file. What it must contain, because a later round
 will read it instead of the code:

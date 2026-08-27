@@ -827,6 +827,7 @@ description, and this table's job is only to say which one to open.
 | `focus.js` | focusing one element and dimming the rest (`UX-222`) |
 | `tablefocus.js` | opening one nested or capped table full width, and putting it back (`UX-318`) |
 | `drawings.js` | sparklines and density strips: the size scale, the two drawing grades, and the boundary on what one may print (`UX-303`, `UX-316`) |
+| `controls.js` | `name`/`id` for every form control the page builds, and `for` on the labels beside them — imports nothing, so `views.js` may use it (`UX-334`) |
 | `rawjson.js` | the "view as JSON" toggles, and the record of which section each blob came from (`UX-302`) |
 | `questions.js` | the canned SQL library, its categories, and the `why` each question carries (`UX-210`, `UX-312`) |
 | `sql.js` | the Query (SQL) satellite page that renders that library |
@@ -905,6 +906,17 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-27 (after `UX-334`), re-grounded in the viewer module
+map against the directory it claims to describe: `bga/viewer/` gained
+`controls.js`, and `tests/unit/test_the_viewer_modules_have_a_home.py`
+holds the table and the directory equal in both directions, so the row
+below was not optional. The same round's instrument is
+`tests/cdp.mjs --observe` and
+`tests/unit/test_the_console_stays_clean.py`, which read what the
+*browser* says about the page - the first thing in this repository to
+do so, and the reason the served report's exhibit geometry could
+disagree with the export's for ten rounds unnoticed.
 
 Updated 2026-08-26 (after `UX-310`), re-grounded in
 `tools/native_trace/trackevent.py`'s `counter_track`/`counter`, in

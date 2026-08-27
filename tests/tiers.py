@@ -40,6 +40,27 @@ a file joins `small` by default, so twenty-four of them crossed the
 floor one at a time and only the aggregate budget could see it. It saw
 it.
 
+Re-measured 2026-08-27 (round 47, `UX-336`), and the same drift had
+happened again — fourteen files over the medium floor, one of them
+above the *large* one:
+
+```text
+small tier before   81.7s test time, 33s wall at -n auto   103 files
+small tier after    35.5s test time, 11s wall at -n auto    89 files
+```
+
+The whole suite moved with it, and the parallelism is the larger half:
+
+```text
+full suite, single process   642s   4,131 passed, 18 skipped
+full suite, -n auto          194s   4,131 passed, 18 skipped   3.3x
+skip census                  identical between the two, reason for reason
+```
+
+`-n auto` is how every tier runs now (`make`'s `PYTEST_XDIST`). The
+tiers still matter: they are what `make test-small` selects, and 11s is
+a different kind of loop from 33s.
+
 **The lists are the exceptions, not the taxonomy.** Adding a test file
 costs nothing here unless it is slow, and a slow one that is not listed
 is caught by the small tier's own wall-clock budget rather than by
@@ -74,6 +95,18 @@ LARGE = (
     "tests/unit/test_snapshot.py",                                   #   18.9s
     "tests/unit/test_cache_logs.py",                                 #   18.2s
     "tests/unit/test_doctor.py",                                     #   15.4s
+    # UX-336, re-measured 2026-08-27: the drift the aggregate budget
+    # hides, again. `UX-317`'s apparatus checks boot the exported page
+    # once per claim and had reached the large floor while sitting in
+    # the default tier - the same mechanism round 39 documented, three
+    # rounds later.
+    "tests/unit/test_apparatus_in_its_place.py",                     #   17.4s
+    # UX-334's console net: four boots of a real Chromium - two fixture
+    # runs, served and exported - and three positive controls that each
+    # start a browser of their own to prove one channel of the
+    # instrument can still hear. Measured at 13.8s with two controls and
+    # 16.4s with the third, which is what moved it over the floor.
+    "tests/unit/test_the_console_stays_clean.py",                    #   16.4s
 )
 
 MEDIUM = (
@@ -166,4 +199,21 @@ MEDIUM = (
     "tests/unit/test_every_element_is_one_object.py",                #    1.2s
     "tests/unit/test_the_next_step_is_a_command.py",                 #    1.1s
     "tests/unit/test_blast_query_and_kinds.py",                      #    1.1s
+    # UX-336, re-measured 2026-08-27 on the small tier alone. Thirteen
+    # more files had crossed the medium floor since round 39 and were
+    # invisible for the same reason: each is small, the budget is an
+    # aggregate. Together they were 46.2s of the small tier's 81.7s.
+    "tests/unit/test_emphasis_is_a_budget.py",                       #   12.4s
+    "tests/unit/test_the_documented_invocations_parse.py",           #    5.6s
+    "tests/unit/test_the_chain_folds_and_clicks_are_counted.py",     #    4.8s
+    "tests/unit/test_the_fold_says_how_deep_it_goes.py",             #    4.4s
+    "tests/unit/test_the_shape_before_the_rows.py",                  #    3.6s
+    "tests/unit/test_a_drawing_is_graded.py",                        #    3.1s
+    "tests/unit/test_the_mapping_is_law.py",                         #    2.2s
+    "tests/unit/test_the_page_conforms_to_its_sections.py",          #    2.1s
+    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",        #    2.1s
+    "tests/unit/test_the_printed_sentences_are_contracts.py",        #    1.6s
+    "tests/unit/test_a_capture_that_cannot_start.py",                #    1.5s
+    "tests/unit/test_the_handoff_does_not_carry_the_trace.py",       #    1.3s
+    "tests/unit/test_buttons_that_know_why.py",                      #    1.0s
 )

@@ -30,7 +30,7 @@ Runs the build under the tracer, stores the capture in `.bga/runs/`, prints
 the analysis, and compares it against the last healthy snapshot. Run it once
 before your change and once after; the comparison is automatic.
 
-Full background: docs/guides/local-loop.md
+Full background: docs/guides/real-project.md
 """
 import argparse
 import json
@@ -78,6 +78,88 @@ def _capture_context(project: str, command: List[str], config: dict) -> str:
         f"runner_os={platform.platform()}",
         f"nproc={os.cpu_count()}",
     ]) + "\n"
+
+
+def why_the_build_cannot_start(command: List[str]):
+    """The sentence to print instead of capturing, or `None`.
+
+    `UX-324`. On a machine without `bst`, `bga snapshot -- bst build
+    all.bst` - the README's own first command - ran the census, launched
+    the capture, and died in a 32-line traceback out of
+    `subprocess.Popen`, having already created a snapshot directory with
+    `build.log`, `capture-context.txt` and an empty `plane2.log` in it.
+    `bga doctor` on the same machine opens with `[FAIL] bst-present` and
+    a one-line remedy, so the tool *knew*; nothing asked it.
+
+    So this asks it, and asks it **before anything is written** - which
+    is why it is called from `main` rather than from `take_snapshot`:
+    the snapshot directory, the sticky config and the store's
+    `.gitignore` are all created on the way here, and "leaves nothing
+    behind" has to mean nothing.
+
+    `bga_doctor.check_bst` rather than a second `shutil.which`: the
+    doctor's check knows about the `bst` installed beside this `bga` but
+    not on PATH (`UX-150`), and a duplicate would have to learn that
+    again. Only a `FAIL` refuses - an unsupported-version `WARN` is the
+    doctor's to report and not a reason to decline a build.
+    """
+    from . import bga_doctor
+
+    executable = command[0]
+    if executable == "bst" or executable.endswith("/bst"):
+        check = bga_doctor.check_bst()
+        if check["status"] != bga_doctor.FAIL:
+            return None
+        remedy = check["remedy"] or "install BuildStream"
+        return (f"Error: {check['summary']}, so this build cannot start. "
+                f"Nothing was captured and nothing was written.\n"
+                f"  -> {remedy}\n"
+                f"  `bga doctor` checks this and everything else a capture "
+                f"on this machine needs.")
+
+    if shutil.which(executable) is None and not os.path.exists(executable):
+        return (f"Error: {executable!r} is not on PATH, so this build cannot "
+                f"start. Nothing was captured and nothing was written.\n"
+                f"  `bga doctor` checks what a capture on this machine needs.")
+    return None
+
+
+def build_ever_started(snapshot: str):
+    """Did the build this snapshot was taken for ever launch? Or unknown.
+
+    `UX-324`: the store described a never-started capture as "the build
+    produced no elements", which is a claim about a build that ran. The
+    two are different problems - one is a broken machine and the other
+    is a broken build - and the reader is told the wrong one.
+
+    Read off the wrapper log, whose shape is fixed by
+    `bst_run_wrapped.run_wrapped`: an `Executing command:` line, a
+    `bga-clocks start` line, then either the build's own output or (on
+    an interrupt) a `Stopping the build after ...` line. **A log that
+    stops at the clock line is a build that was never launched**, and
+    nothing else in that function produces one.
+
+    `None` is a real answer and not a convenience: a snapshot with no
+    wrapped log at all - a directory from before this file existed, or
+    one a user assembled by hand - reads exactly like one whose build
+    never ran, and saying "the build never started" of it would be the
+    same overreach in the other direction as the sentence this replaces.
+
+    Only the tail is read: a wrapped log of a real build is hundreds of
+    megabytes and this runs once per row of `--list`.
+    """
+    path = os.path.join(snapshot, WRAPPED_LOG_NAME)
+    try:
+        size = os.path.getsize(path)
+        with open(path, "rb") as handle:
+            handle.seek(max(0, size - 4096))
+            tail = handle.read().decode("utf-8", "replace")
+    except OSError:
+        return None
+    lines = [line for line in tail.splitlines() if line.strip()]
+    if not lines:
+        return None
+    return "bga-clocks start" not in lines[-1]
 
 
 def take_snapshot(project: str, command: List[str], config: dict,
@@ -149,7 +231,17 @@ def _CompactRawHelp(prog):
     from bga.help_format import CompactRawHelp
     return CompactRawHelp(prog)
 
-def main(argv: Optional[List[str]] = None) -> int:
+def create_parser() -> argparse.ArgumentParser:
+    """`bga snapshot`'s own parser, built where a caller can reach it.
+
+    `UX-326`: the advice block prints a `bga snapshot ...` command, and
+    the only honest way to check that command is to parse it with the
+    parser that will receive it. Appending `--help` to it does not work
+    and is not safe - the trailing positional is
+    `argparse.REMAINDER`, so `--help` lands *inside the build command*
+    and the build runs. That is how this function came to exist: the
+    guard's first draft ran a real capture in a unit test.
+    """
     parser = argparse.ArgumentParser(
         description=HELP, formatter_class=_CompactRawHelp,
     )
@@ -242,7 +334,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
                         help="The build to run, e.g. -- bst build all.bst.")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = create_parser().parse_args(argv)
 
     if args.no_progress:
         # UX-183: an environment variable rather than a threaded-through
@@ -311,6 +407,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not command:
         print("Error: nothing to run. Usage: bga snapshot -- bst build TARGET",
               file=sys.stderr)
+        return 2
+
+    # UX-324: before the sticky config, before the snapshot directory,
+    # before the store's .gitignore - all three are writes, and this
+    # path is the one that must leave nothing.
+    refusal = why_the_build_cannot_start(command)
+    if refusal is not None:
+        print(refusal, file=sys.stderr)
         return 2
 
     config = _sticky_config(project, args)
@@ -731,6 +835,9 @@ def store_listing(project: str) -> dict:
             # UX-156/157/185's three ways to be incomplete, so the trend
             # can mark them rather than drawing them as measurements.
             "incomplete_reason": _incomplete_reason(path) if has_run else None,
+            # UX-324: "never started" and "started and produced nothing"
+            # are different problems and used to print the same sentence.
+            "started": build_ever_started(path),
             # UX-203: what the trend was always supposed to plot. The
             # view drew `bytes` - so "is this project drifting" was
             # answered by disk usage, which is not the question. Read
@@ -914,7 +1021,12 @@ def _list(project: str, as_json: bool = False) -> int:
         return 0
     print(f"{listing['count']} snapshot(s) in {project}:")
     for row in listing["snapshots"]:
-        if not row["has_run"]:
+        if not row["has_run"] and row["started"] is False:
+            # UX-324: the build was never launched. Saying "produced no
+            # elements" of a build that never ran sends the reader to
+            # look at their project instead of at their machine.
+            suffix = "  (the build never started - nothing was captured)"
+        elif not row["has_run"]:
             suffix = "  (no run directory - the build produced no elements)"
         elif row["alias"]:
             suffix = f"  {row['alias']}"

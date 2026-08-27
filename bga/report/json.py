@@ -115,6 +115,15 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and getattr(result, 'plane2_coverage', None):
         data['plane2_coverage'] = result.plane2_coverage
 
+    # UX-329: and *why* it is absent when it is. `plane2_coverage`
+    # missing has meant three different things - not captured, captured
+    # with its raw log dropped, captured and declined - and a reader
+    # could tell them apart only by looking in the store themselves. The
+    # sentence is the same one the page and the export print, from
+    # `bga.plane2`, so the three cannot describe one absence differently.
+    if section is None and getattr(result, 'plane2_absence', None):
+        data['plane2_absence'] = result.plane2_absence
+
     if section is None and hasattr(result, 'attribution') and result.attribution:
         data['attribution'] = result.attribution
         # UX-04: additive sibling key, same category_us keys as

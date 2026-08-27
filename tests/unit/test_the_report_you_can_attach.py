@@ -175,6 +175,40 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # hints and one `bga:series`, with their descriptions - the schema the
 # page carries, which is the half the companion guard below proves is
 # documents rather than payload.
+# **Round 47 (`UX-334`) moved the page, and CI found what the bound was
+# really measuring.** The console work added a viewer module and the
+# commentary that argues for it:
+#
+#     page          223,362 -> 225,002 B   (+1,640, all source)
+#     data           98,951 ->  98,986 B      (+35, the payload manifest
+#                                              `run.json` now publishes)
+#     golden        322,313 -> 323,988 B   (+1,675)
+#     macro_micro   361,749 -> 363,424 B   (+1,675)
+#
+# The page moved by what the source moved by, on both runs - the split
+# doing its job again. But the golden bound had **12 B of headroom** on
+# the checkout it was last measured on, and it failed in CI at 324,022:
+#
+#     path len   20  ->  323,829 B
+#     path len   61  ->  324,075 B
+#     path len  111  ->  324,375 B
+#
+# The export embeds the run's absolute path - `run.json`'s `run` key and
+# the analyze document both carry it - so **the number is a function of
+# where the repository is checked out**, at roughly 5 B per character.
+# A CI runner's checkout is 34 B of path longer than the container this
+# was measured on, and that is the whole of the difference.
+#
+# Exporting from a copy at a fixed path was tried and declined: the
+# committed runs sit inside a store, so `payloads()` finds a
+# `compare.json` and a `store.json` beside them that a copy in `tmp_path`
+# does not have - measured, macro_micro exports 363,424 B in place and
+# 340,467 B copied. The bound would stop bounding the report the fixture
+# actually produces.
+#
+# So the bounds below carry **~4 KB of headroom instead of 12 B**, which
+# is about 800 characters of run path, and this note is what stops the
+# next reader from reading a tight number as a tight measurement.
 PAGE_BUDGET_B = 226_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
@@ -186,7 +220,7 @@ COMMITTED_EXPORTS = [
     # `UX-302` moved both again, by 5,315 B: the §1 dispatch table and
     # the "view as JSON" toggle are two new modules and their styles.
     # Source, not content - see the split above.
-    ("golden", GOLDEN, 324_000),                       #  321,617 B
+    ("golden", GOLDEN, 328_000),                       #  323,988 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -198,7 +232,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 364_000),             #  360,932 B
+    ("macro_micro", MACRO_MICRO, 368_000),             #  363,424 B
 ]
 
 
@@ -354,7 +388,16 @@ class TestTheTimeline:
         result = export(str(run), str(tmp_path / "r.html"))
 
         assert result["has_timeline"] is False
-        assert result["omitted"] and "no raw Plane 2 log" in result["omitted"]
+        # UX-329: which absence, not just that there is one. This run is
+        # a copy of the golden fixture with no Plane 2 report anywhere
+        # near it, and the sentence it used to get - "no raw Plane 2
+        # log" - describes a *captured* run whose log was dropped. A
+        # reader cannot tell a machine that never traced from a
+        # measurement missing only its timeline, and those are the two
+        # things this sentence was covering.
+        from bga import plane2
+
+        assert result["omitted"] == plane2.NOT_CAPTURED, result["omitted"]
         run_block = re.search(r'id="bga-run">(.*?)</script>',
                               (tmp_path / "r.html").read_text())
         assert json.loads(run_block.group(1))["has_timeline"] is False
@@ -640,7 +683,9 @@ class TestTheSizeDiscipline:
         path = tmp_path / f"{label}.html"
         result = export(str(run), str(path))
         assert result["bytes"] < bound, (
-            f"{label} exports {result['bytes']} B, over its stated {bound} B")
+            f"{label} exports {result['bytes']} B from a "
+            f"{len(os.path.abspath(run))}-character run path, over its "
+            f"stated {bound} B - see the note above on what the path costs")
         assert result["over_budget"] is False
 
     def test_the_data_is_the_documents_and_the_schemas(self, exported):

@@ -101,19 +101,37 @@ class Browser:
                 self.process.kill()
         shutil.rmtree(self.profile, ignore_errors=True)
 
+    def _drive(self, url, expression, width, height, extra=()):
+        driver = pathlib.Path(__file__).resolve().parent / "cdp.mjs"
+        node = shutil.which("node")
+        if node is None:                                 # pragma: no cover
+            raise RuntimeError("node is required to speak CDP")
+        done = subprocess.run(
+            [node, str(driver), str(self.port), url, str(width), str(height),
+             *extra],
+            input=expression, capture_output=True, text=True, timeout=120)
+        if done.returncode != 0:                         # pragma: no cover
+            raise RuntimeError(done.stderr)
+        return json.loads(done.stdout)
+
     def measure(self, url, expression, width=1440, height=900):
         """Load `url` at `width`x`height` and return `expression`'s value.
 
         The evaluation happens in node rather than here because the CDP
         client is a WebSocket and Python's standard library has none.
         """
-        driver = pathlib.Path(__file__).resolve().parent / "cdp.mjs"
-        node = shutil.which("node")
-        if node is None:                                 # pragma: no cover
-            raise RuntimeError("node is required to speak CDP")
-        done = subprocess.run(
-            [node, str(driver), str(self.port), url, str(width), str(height)],
-            input=expression, capture_output=True, text=True, timeout=120)
-        if done.returncode != 0:                         # pragma: no cover
-            raise RuntimeError(done.stderr)
-        return json.loads(done.stdout)
+        return self._drive(url, expression, width, height)
+
+    def observe(self, url, expression="null", width=1440, height=900):
+        """The same load, plus everything the console and the CSP said.
+
+        `UX-334`: `{"value", "console", "csp"}`. `console` is one entry
+        per `console.*` call, uncaught exception and browser log line -
+        which is where a 404 on a subresource appears, and nowhere the
+        page itself can see. `csp` is one entry per
+        `securitypolicyviolation` event, carrying the directive that
+        refused it: a page can violate its own policy silently as far
+        as `console.error` is concerned, so the two channels are
+        collected separately and neither substitutes for the other.
+        """
+        return self._drive(url, expression, width, height, ("--observe",))

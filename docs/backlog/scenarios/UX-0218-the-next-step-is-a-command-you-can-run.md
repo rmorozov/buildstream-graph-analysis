@@ -98,6 +98,15 @@ examples/06 (chain-bound, in a store, Plane 2 present)
     look-inside-the-element    bga correlate examples/06/…/run
     measure-again              bga snapshot examples/06-…
     compare-with-the-run-before  bga compare @prev @last --project …
+
+> **`UX-326` (round 47):** the last two lines above were wrong as
+> shipped, and this Outcome is left as written per `UX-132`. `bga
+> snapshot <project>` put the project where `snapshot`'s REMAINDER build
+> command goes and crashed with `ValueError: command must start with
+> 'bst'`; `bga compare … --project` named a flag `bga compare` has never
+> had. Neither was caught because this round's own acceptance -
+> "every published `argv` is executed" - was implemented as a
+> hand-written parametrize of two step ids, and these are the other two.
 ```
 
 Note what is *absent* from each: the golden run is offered no

@@ -43,15 +43,20 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tier your change touches** (`UX-238`). The whole suite is ~5m10s; the tier most edits need finishes in 21s:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`; the whole suite is ~3m15s at that (10m40s single-process) and the small tier is 11s:
 
-   | target | files | measured | what is in it |
-   |---|---|---|---|
-   | `make test-small` | 164 | **21s** | pure Python over in-memory fixtures — the default tier |
-   | `make test-medium` | 53 | ~3m | spawns a process or a node harness |
-   | `make test-large` | 7 | ~2.5m | scale fixtures, real process trees |
-   | `make test-fast` | 217 | ~3.5m | small + medium: everything needing no real `bst` |
-   | `pytest -m bst` | 18 | — | the enormous tier; needs a real `bst`/`bwrap` build |
+   | target | measured at `-n auto` | what is in it |
+   |---|---|---|
+   | `make test-touching` | **4s** on a one-module diff | the test files that name what your diff touched |
+   | `make test-small` | **11s** | pure Python over in-memory fixtures — the default tier |
+   | `make test-medium` | ~1m50s | spawns a process or a node harness |
+   | `make test-large` | ~1m15s | scale fixtures, real process trees |
+   | `make test-fast` | ~2m | small + medium: everything needing no real `bst` |
+   | `pytest -m bst` | — | the enormous tier; needs a real `bst`/`bwrap` build |
+
+   Re-measured 2026-08-27 (`UX-336`) on a 4-core container, after the
+   re-tier the same measurement forced. `PYTEST_XDIST=` turns the
+   parallelism off for a run that needs one process.
 
    Tiers come from measured per-file duration (`tests/tiers.py`), not from taste. Use them for the edit-run loop and for re-running one guard after a mutation — **not** as a substitute for the next step.
 
@@ -207,6 +212,8 @@ tools/bga_release_notes.py  a release body, generated from the closed rows (UX-2
 tools/bga_cross_check.py, gen_synthetic_scale_run.py, chrome_trace_to_bga_trace.py,
 tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
+tools/dev_touching.py        the tests that name what your diff touched (UX-336)
+tools/dev_close_task.py      the mechanical tail of closing a row (UX-336)
 ```
 
 **Tests and docs:**
@@ -219,6 +226,7 @@ tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
 tests/browser.py           what drives it from a test; every geometric claim goes through here
 tests/trace_processor.py   the one gate for the optional Perfetto reader, and its skip reason (UX-321)
+tests/installed_command_sweep.py  every documented command, run against an installed wheel (UX-325)
 tests/test_e2e.py          the whole pipeline on a committed run · test_golden.py  byte-for-byte
 tests/test_cli.py          argument parsing and exit codes, at the CLI boundary
 tests/test_synthetic_multi_subproject.py  the multi-project ingestion path

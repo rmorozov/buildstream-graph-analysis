@@ -34,7 +34,7 @@ HELP = """Fetch published capture refs and build a baseline set from them.
 A single baseline run cannot say whether a delta is noise. This assembles
 several comparable runs into the set `compare --baseline-run` judges against.
 
-Full background: docs/guides/ci.md
+Full background: docs/guides/ci-comment.md
 """
 import argparse
 import json

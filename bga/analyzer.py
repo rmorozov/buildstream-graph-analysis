@@ -136,6 +136,16 @@ def _run_instance(run_context, loaded_from) -> dict:
     manifest = getattr(run_context, 'host_manifest', None) if run_context else None
     if manifest:
         instance['host_manifest'] = manifest
+    # UX-326: what was asked to be built. Published because the advice
+    # block has to *spell* the command that would capture this run
+    # again, and `bga snapshot <project>` - which is what it printed
+    # before - is not that command: the positional is the build, and the
+    # project belongs in `--project`. Read from the run identity, which
+    # has carried the targets since UX-07.
+    identity = getattr(run_context, 'run_identity', None) if run_context else None
+    targets = (identity or {}).get('targets')
+    if targets:
+        instance['targets'] = list(targets)
     # UX-249: and which build measured it. Rides with the host manifest
     # for the same reason - `bga compare` should not have to load a
     # second channel to answer "are these two even the same tool".

@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import __version__, schemas
+from . import plane2 as plane2_shape
 from .analyzer import (
     MODELLED_AXIS_CLAUSE, UNMODELED_AXIS_CLAUSE, BuildEfficiencyAnalyzer,
 )
@@ -135,9 +136,32 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     the analysis is complete without it and refusing to print it would
     be a worse outcome than printing today's hint.
     """
+    directory = getattr(args, 'directory', None)
+    declined = bool(getattr(args, 'no_plane2', False))
     path = getattr(args, 'plane2', None)
+
+    # UX-329: why Plane 2 is absent, when it is - set before anything is
+    # attached, because it is a fact about the run and the flags rather
+    # than about how far this function got. `None` when the plane and
+    # its raw log are both there.
+    if directory:
+        result.plane2_absence = plane2_shape.absence(str(directory), declined)
+
     if not path:
-        return
+        # UX-329: find the sibling, exactly as `bga correlate` and `bga
+        # view` already did. Before this, `analyze` was the one reader
+        # of the three that required `--plane2` and hinted at nothing,
+        # so the same snapshot published `plane2_coverage: null` here
+        # and the full coverage in the page - against `bga view
+        # --help`'s promise that the two can never disagree.
+        if declined or not directory:
+            return
+        path, refusal = plane2_shape.attachable(str(directory))
+        if refusal:
+            print(refusal, file=sys.stderr)
+        if not path:
+            return
+        print(f"Plane 2: {path}", file=sys.stderr)
     from bga.correlate import compute_memory_envelope, summarize_plane2_capacity
 
     try:
@@ -165,8 +189,6 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # is the size it is, which is the question a user of a 1.5 GB
     # capture actually has.
     if result.plane2_coverage:
-        from bga import plane2 as plane2_shape
-
         result.plane2_coverage = dict(
             result.plane2_coverage, source=plane2_shape.provenance(native_report))
     # UX-215: the report keeps the Plane 2 report itself, so the JSON
@@ -1303,9 +1325,14 @@ def _add_common_arguments(
             '--plane2',
             type=str,
             metavar='NATIVE_REPORT.json',
-            help='Plane 2 report for this same run: capacity advice is then\n'
-                 'conditioned on what the sandboxes actually measured.'
+            help='Plane 2 report for this run. A snapshot\'s is found anyway.'
         )
+        # UX-329: the way to decline the sibling, so that "not attached"
+        # is something a reader can ask for and see, rather than the
+        # silent default it used to be.
+        subparser.add_argument(
+            '--no-plane2', action='store_true',
+            help='Ignore that report, and say the analysis declined it.')
         subparser.add_argument(
             '-d', '--diagnostics',
             action='store_true',
@@ -1399,8 +1426,9 @@ def _snapshot_completer(prefix, parsed_args, **_kwargs):
 def _element_completer(prefix, parsed_args, **_kwargs):
     """Element names, for `bga blast`, from the project's own files."""
     try:
-        from .tools_dispatch import TOOL_ALIASES  # noqa: F401  (import guard)
-        from tools.bst_native_build_tracer import discover_element_names
+        from .tools_dispatch import _import_tool
+        discover_element_names = _import_tool(
+            "tools.bst_native_build_tracer").discover_element_names
 
         project = getattr(parsed_args, "project", None)
         if project is None:

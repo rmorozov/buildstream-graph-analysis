@@ -503,8 +503,14 @@ def _distribution_lines(entry: dict) -> List[str]:
 
 def read(project: str, blend: bool = False) -> dict:
     """The aggregate for a project's store, from its own listing."""
-    from tools.bga_snapshot import store_listing
+    # `UX-325`: through `_import_tool`, not `from tools.…`. The
+    # directory is `tools/` in a checkout and `bga._tools` in a wheel
+    # (`UX-94`), so an absolute `tools.` import resolves only where the
+    # author happened to be working - which is why this line ran in
+    # every test and never once on a user's machine.
+    from .tools_dispatch import _import_tool
 
+    store_listing = _import_tool("tools.bga_snapshot").store_listing
     return aggregate(store_listing(project), blend=blend)
 
 

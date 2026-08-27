@@ -39,6 +39,8 @@ import urllib.parse
 import webbrowser
 from typing import Dict, List, Optional
 
+from bga import plane2 as _plane2_shape
+
 HELP = """Open one run's report in a browser.
 
 Serves the same JSON `--format json` prints, rendered by a page that
@@ -106,7 +108,12 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # own module because it imports nothing and both `app.js` and
           # `viewstate.js` need it - which would be a cycle anywhere
           # else.
-          "tablefocus.js")
+          "tablefocus.js",
+          # UX-334: `name`/`id` for every form control the page builds,
+          # and `for` on the labels beside them. Imports nothing, and
+          # `views.js` uses it - which `app.js` could not have provided
+          # without the cycle its own note forbids.
+          "controls.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured
@@ -199,7 +206,10 @@ def predecessor(run: str) -> Optional[str]:
 # ~30 s, twice, before the socket existed). Above it the page renders
 # without Plane 2 and says which command publishes the payload; it does
 # not quietly spend the memory, and it does not quietly drop the plane.
-PLANE2_VIEW_MAX_BYTES = 64 * 1024 * 1024
+# UX-329: moved to `bga.plane2.VIEW_MAX_BYTES`, which is where the
+# policy that reads it lives now. Kept as an alias because
+# `bga/viewer/perfetto.js` and two guards quote this name.
+PLANE2_VIEW_MAX_BYTES = _plane2_shape.VIEW_MAX_BYTES
 
 
 def published_analysis(run: str) -> Optional[dict]:
@@ -232,27 +242,32 @@ def _analyze_now(run: str) -> dict:
     `UX-194` made for a dead button: an affordance whose precondition is
     absent is named, not silently exercised.
     """
-    from bga import run_store
+    from bga import plane2 as plane2_shape
 
+    # UX-329: the same discovery and the same bound `bga analyze` uses,
+    # from `bga.plane2` - this function and the CLI held two copies of
+    # the policy, and the copies disagreed: the page attached the
+    # sibling and the terminal did not.
     argv = ["analyze", run, "--format", "json"]
-    plane2 = run_store.sibling_plane2(os.path.abspath(run))
-    if plane2:
-        try:
-            size = os.path.getsize(plane2)
-        except OSError:
-            size = 0
-        if size <= PLANE2_VIEW_MAX_BYTES:
-            argv += ["--plane2", plane2]
-        else:
-            print(
-                f"Plane 2 is {run_store.human_bytes(size)} and this run "
-                f"published no analysis, so the report is rendered from "
-                f"Plane 1 alone - parsing it here costs about "
-                f"{run_store.human_bytes(int(size * 2.9))} of memory "
-                f"(UX-296). `bga snapshot -- bst build TARGET` publishes "
-                f"an analysis that carries both planes.",
-                file=sys.stderr)
+    path, refusal = plane2_shape.attachable(run)
+    if path:
+        argv += ["--plane2", path]
+    elif refusal:
+        print(refusal, file=sys.stderr)
     return _capture(argv)
+
+
+def _offered(documents: Dict[str, dict]) -> List[str]:
+    """The payload names the page may load, from the table it will be given.
+
+    `UX-334`: keyed by *name* - "compare" - because that is what
+    `load()` takes, while the served table is keyed by url and the
+    export's by name. Deriving it from the table rather than listing it
+    means a payload added later joins the manifest with no edit here,
+    and a payload that failed to build is absent from both at once.
+    """
+    return sorted(name[:-len(".json")] if name.endswith(".json") else name
+                  for name in documents)
 
 
 def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
@@ -766,13 +781,28 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                  for name, body in payloads(run).items()}
     documents["schemas"] = schemas_payload()
     documents["run"] = {"run": os.path.abspath(run),
-                        "name": os.path.basename(os.path.abspath(run))}
+                        "name": os.path.basename(os.path.abspath(run)),
+                        # UX-334: the same manifest the server
+                        # publishes. An export inlines every payload it
+                        # has, so `load` never reaches the network here
+                        # - but the page reads one key either way, and
+                        # a key that exists on one side only is a key
+                        # that gets tested on one side only.
+                        "payloads": _offered(documents)}
 
     trace = trace_bytes(run) if with_trace else None
     omitted = None
     if trace is None:
-        omitted = ("this run kept no raw Plane 2 log, so there is no "
-                   "timeline to carry")
+        # UX-329: which absence, from `bga.plane2` - the same sentence
+        # the terminal prints and the JSON publishes. The one this
+        # replaced said "no raw Plane 2 log" for a run that never
+        # captured the plane at all, which reads as "Plane 2 is
+        # missing" when the report is right there beside the run.
+        from bga import plane2 as plane2_shape
+
+        omitted = plane2_shape.absence(run) or (
+            "this run kept no raw Plane 2 log, so there is no timeline "
+            "to carry")
     elif len(trace) * 4 / 3 > TRACE_BUDGET_B:
         omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
                    f"compressed, over this export's "
@@ -860,6 +890,18 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             return self._blast(raw)
         if path == "whatif.json":
             return self._whatif(raw)
+        if path == "favicon.ico":
+            # UX-334: a browser asks for this on every navigation
+            # whether the document links one or not, and a 404 is an
+            # *error* in the console - one per boot, forever, for a
+            # file this report has no use for. 204 is the answer that
+            # says "nothing here, and that is fine".
+            #
+            # The alternative - `<link rel="icon" href="data:,">` in
+            # the page - was tried and measured: this server's own
+            # `default-src 'self'` refuses a `data:` image, so it
+            # traded a 404 for a CSP violation, which is worse.
+            return self._send(204, "image/x-icon", b"")
         if path in self.documents:
             return self._json(self.documents[path])
         if path in self.blobs:
@@ -1107,6 +1149,14 @@ def serve(run: str, port: int = 0,
     documents.setdefault("run.json", {
         "run": os.path.abspath(run),
         "name": os.path.basename(os.path.abspath(run)),
+        # UX-334: which optional payloads exist, so the page stops
+        # asking the network. `compare`, `store` and `store-aggregate`
+        # are each absent on a perfectly ordinary run, and the page
+        # learned that by fetching them and catching the 404 - three
+        # red lines in every console on every boot, which is three
+        # lines of noise a real error has to be spotted among. The
+        # server already knows the answer here; it just never said it.
+        "payloads": _offered(documents),
         # So the page can offer the button only when there is something
         # behind it - a dead "Open in Perfetto" is worse than none.
         "has_timeline": offered,

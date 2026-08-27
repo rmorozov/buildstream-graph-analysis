@@ -22,7 +22,7 @@ import sys
 
 import pytest
 
-from bga import schemas
+from bga import plane2, schemas
 
 # UX-235: a *method*-level skip, not a module-scope `importorskip`.
 # This file shipped one in round 25 and it went unnoticed for two
@@ -315,9 +315,18 @@ class TestOnePlaneIsNotAJoin:
         the next test asserts.
         """
         report = json.loads(_bga(
-            ["analyze", os.path.join(REAL, "run"), "--format", "json"]).stdout)
+            ["analyze", GOLDEN, "--format", "json"]).stdout)
         assert "element_join" not in report
         assert "element_join_coverage" not in report
+        # UX-329: `GOLDEN`, not the real capture this used to read. That
+        # capture *has* a `plane2.json` beside it, and this clause only
+        # ever passed because `analyze` refused to look for it - so it
+        # was asserting "one plane" about a two-plane run. The run with
+        # genuinely one plane is the golden fixture, which is not inside
+        # a snapshot and has no sibling.
+        assert plane2.attachable(GOLDEN) == (None, None), (
+            "the fixture this clause calls single-plane has a Plane 2 "
+            "report beside it, so it is not asserting what it says")
         jsonschema.validate(report, schemas.schema(schemas.ANALYZE))
 
     def test_an_element_plane2_never_saw_degrades_rather_than_zeroes(self):

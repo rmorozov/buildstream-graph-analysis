@@ -254,6 +254,31 @@ def sibling_plane2(run_dir: str) -> Optional[str]:
     return plane2 if os.path.isfile(plane2) else None
 
 
+# UX-329: the raw trace log the timeline is rendered from, named here
+# beside the report it belongs with. `tools/bga_snapshot.py` writes it;
+# the absence grammar in `bga/plane2.py` has to be able to ask whether
+# it is there without importing the capture.
+RAW_LOG_NAME = "plane2.log.gz"
+
+
+def sibling_raw_log(run_dir: str) -> Optional[str]:
+    """The raw Plane 2 log beside a run directory, if there is one.
+
+    The same filesystem question `sibling_plane2` asks, about the other
+    half: the *report* is what the analysis reads and the *log* is what
+    `bga timeline` renders, and a capture can have either without the
+    other - which is the distinction `UX-329` exists to state.
+    """
+    if os.path.basename(os.path.normpath(run_dir)) != RUN_SUBDIR:
+        return None
+    snapshot = os.path.dirname(os.path.normpath(run_dir))
+    for name in (RAW_LOG_NAME, RAW_LOG_NAME[:-3]):
+        path = os.path.join(snapshot, name)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
     """The snapshot directory an alias names.
 
@@ -271,10 +296,15 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
         )
     snapshots = list_runs(project)
     if not snapshots:
-        incomplete = len(list_snapshots(project))
+        # UX-324: name them. `bga snapshot --list` shows these rows, and
+        # a refusal that only counts them reads as a disagreement about
+        # what is on disk.
+        incomplete = [os.path.basename(s) for s in list_snapshots(project)]
         raise StoreError(
             f"{token} names a snapshot and {project} has "
-            + (f"{incomplete} whose build produced no run directory."
+            + (f"{len(incomplete)} whose build produced no run directory "
+               f"({', '.join(incomplete[-4:])}) - `bga snapshot --list` "
+               f"shows them."
                if incomplete else "none yet.")
             + " `bga snapshot -- bst build TARGET` takes one."
         )
@@ -301,6 +331,21 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
 
     matches = [s for s in snapshots if os.path.basename(s).startswith(name)]
     if not matches:
+        # UX-324: a prefix that names a directory `--list` shows must not
+        # be told it does not exist. The candidate list here is
+        # `list_runs` - deliberately, because an alias resolves only to a
+        # capture that produced one - and the difference between the two
+        # lists is exactly what the reader is looking at.
+        debris = [os.path.basename(s) for s in list_snapshots(project)
+                  if os.path.basename(s).startswith(name)]
+        if debris:
+            raise StoreError(
+                f"{name!r} names {len(debris)} snapshot(s) in {project} with "
+                f"no run directory ({', '.join(debris[-4:])}). "
+                f"`bga snapshot --list` shows them and says why; an alias "
+                f"resolves only to a capture that produced a run. "
+                f"Resolvable: {', '.join(os.path.basename(s) for s in snapshots[-4:])}"
+            )
         raise StoreError(
             f"no snapshot in {project} starts with {name!r}. "
             f"Have: {', '.join(os.path.basename(s) for s in snapshots[-4:])}"

@@ -142,7 +142,7 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("c", [_element("core.bst", 9400000)]),
         )
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           const block = renderElementHistory(%s, "core.bst");
           const spark = all(block, (n) => n.attrs["data-role"] === "sparkline")[0];
           console.log(JSON.stringify({
@@ -166,7 +166,7 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("b", [_element("core.bst", 9400000)]),
         )
         out = _js('''
-          const { elementHistory } = await import("./bga/viewer/views.js");
+          const { elementHistory } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify(
             elementHistory(%s, "core.bst").series.map((p) => p.duration_us)));
         ''' % json.dumps(store))
@@ -176,7 +176,7 @@ class TestTheHistoryIsDrawnFromPublishedValues:
     def test_one_run_is_stated_as_one_run(self):
         store = _store(_snapshot("a", [_element("core.bst", 5000000)]))
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           const block = renderElementHistory(%s, "core.bst");
           console.log(JSON.stringify(text(all(block,
             (n) => n.attrs["data-role"] === "history-sentence")[0])));
@@ -189,7 +189,7 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("second", [_element("core.bst", 3000000, on_path=False)]),
         )
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           const block = renderElementHistory(%s, "core.bst");
           console.log(JSON.stringify(text(all(block,
             (n) => n.attrs["data-role"] === "history-sentence")[0])));
@@ -212,7 +212,7 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("b", [_element("core.bst", 8)], verdict="improved"),
         )
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           const block = renderElementHistory(%s, "core.bst", %s);
           console.log(JSON.stringify(all(block,
             (n) => n.attrs["data-marker"]).map((n) => n.attrs["data-marker"])));
@@ -226,7 +226,7 @@ class TestTheHistoryIsDrawnFromPublishedValues:
         store = _store(_snapshot("a", [_element("core.bst", 10)],
                                  verdict="regressed"))
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           const block = renderElementHistory(%s, "core.bst");
           console.log(JSON.stringify(all(block,
             (n) => n.attrs["data-marker"]).map((n) => n.attrs["data-marker"])));
@@ -240,7 +240,7 @@ class TestAbsenceIsStatedNeverDrawn:
     def test_an_element_with_no_history_says_so(self):
         store = _store(_snapshot("a", [_element("other.bst", 100)]))
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           const block = renderElementHistory(%s, "core.bst");
           console.log(JSON.stringify({
             history: block.attrs["data-history"],
@@ -259,7 +259,7 @@ class TestAbsenceIsStatedNeverDrawn:
         old = _store({"stamp": "a", "verdict_kind": "improved", "elements": None})
         analyzed = _store(_snapshot("a", []))
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify({
             old: text(renderElementHistory(%s, "core.bst")),
             analyzed: text(renderElementHistory(%s, "core.bst")),
@@ -272,7 +272,7 @@ class TestAbsenceIsStatedNeverDrawn:
     def test_a_pre_existing_store_renders_without_an_error(self):
         """The acceptance's last clause."""
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           const block = renderElementHistory(
             { schema: "store/v1", snapshots: [
               { stamp: "a", total_duration_us: 1, bytes: 2 },
@@ -285,7 +285,7 @@ class TestAbsenceIsStatedNeverDrawn:
 
     def test_no_store_at_all_is_not_an_error(self):
         out = _js('''
-          const { renderElementHistory } = await import("./bga/viewer/views.js");
+          const { renderElementHistory } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify(
             renderElementHistory(null, "core.bst").attrs["data-history"]));
         ''')

@@ -56,7 +56,7 @@ class TestTheTwoLiveWrongnesses:
     def test_nested_megabytes_render_as_megabytes(self):
         out = _js('''
           const { quantity, quantityFor, childNode } =
-            await import("./bga/viewer/app.js");
+            await import("./tests/viewer.mjs");
           const envelope = %s;
           console.log(JSON.stringify(
             quantity(512, quantityFor(
@@ -68,7 +68,7 @@ class TestTheTwoLiveWrongnesses:
     def test_a_declared_percent_is_not_multiplied_again(self):
         out = _js('''
           const { quantity, quantityFor, childNode } =
-            await import("./bga/viewer/app.js");
+            await import("./tests/viewer.mjs");
           const util = %s;
           console.log(JSON.stringify(
             quantity(42, quantityFor(childNode(util, "useful_pct"), "useful_pct"))));
@@ -82,7 +82,7 @@ class TestTheTwoLiveWrongnesses:
         exists. It asserts on *names*, so it needs no schema node and
         was untouched when UX-220 moved the fixtures above."""
         out = _js('''
-          const { quantity, guessQuantity } = await import("./bga/viewer/app.js");
+          const { quantity, guessQuantity } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify([
             quantity(512, guessQuantity("peak_rss_mb")),
             quantity(42, guessQuantity("cpu_pct")),
@@ -97,7 +97,7 @@ class TestTheTwoLiveWrongnesses:
         two. Whole counts, which are all the others, are untouched."""
         out = _js('''
           const { quantity, quantityFor, childNode } =
-            await import("./bga/viewer/app.js");
+            await import("./tests/viewer.mjs");
           const block = %s;
           console.log(JSON.stringify([
             quantity(1.603977885512677,
@@ -113,7 +113,7 @@ class TestTheTwoLiveWrongnesses:
 
     def test_declared_beats_guessed(self):
         out = _js('''
-          const { quantityFor } = await import("./bga/viewer/app.js");
+          const { quantityFor } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify([
             quantityFor({"bga:quantity": "megabytes"}, "peak_rss_mb"),
             quantityFor(undefined, "peak_rss_mb"),
@@ -187,7 +187,7 @@ class TestColumnsAreObjects:
     @needs_node
     def test_a_column_declared_unsortable_renders_unsortable(self):
         out = _js('''
-          const { columnSpecs } = await import("./bga/viewer/app.js");
+          const { columnSpecs } = await import("./tests/viewer.mjs");
           const rows = [{ field: "trace_spine", baseline: "1", candidate: "2" }];
           const hint = { "bga:columns": [
             { key: "field", sortable: true },
@@ -203,7 +203,7 @@ class TestColumnsAreObjects:
         """A column of numeric-looking *strings* must not become a
         number column because the sample happened to look like one."""
         out = _js('''
-          const { columnSpecs } = await import("./bga/viewer/app.js");
+          const { columnSpecs } = await import("./tests/viewer.mjs");
           const rows = [{ ref: "12345", seconds: 3 }];
           const hint = { "bga:columns": [
             { key: "ref" },
@@ -256,7 +256,7 @@ class TestTheVerdictIsAValue:
     @needs_node
     def test_the_banner_styles_from_the_enum_not_the_prose(self):
         out = _js('''
-          const { verdictClass } = await import("./bga/viewer/app.js");
+          const { verdictClass } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify([
             verdictClass("THE BUILD GOT WORSE, MATE", "regressed"),
             verdictClass("improved", "regressed"),
@@ -273,7 +273,7 @@ class TestDescriptionsAreThePopovers:
             "pipeline_overhead"]
         description = overhead["properties"]["total_us"]["description"]
         out = _js('''
-          const { renderPairs } = await import("./bga/viewer/app.js");
+          const { renderPairs } = await import("./tests/viewer.mjs");
           globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 
 function make(tag) {

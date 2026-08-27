@@ -335,7 +335,7 @@ function make(tag) {
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
 
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const { readFileSync } = await import("node:fs");
 const payload = JSON.parse(readFileSync(%s, "utf8"));
 const node = views["%s"](payload);

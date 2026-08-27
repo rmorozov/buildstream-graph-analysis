@@ -104,7 +104,7 @@ globalThis.window = {
 globalThis.addEventListener = globalThis.window.addEventListener;
 globalThis.removeEventListener = () => {};
 
-const { wireTheHandoff } = await import("./bga/viewer/app.js");
+const { wireTheHandoff } = await import("./tests/viewer.mjs");
 wireTheHandoff({ has_timeline: true, trace_inline_max_bytes: inlineMax });
 
 for (const fn of nodes.perfetto.listeners.click ?? []) await fn();

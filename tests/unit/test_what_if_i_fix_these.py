@@ -72,7 +72,7 @@ def report():
 @pytest.fixture(scope="module")
 def drawn(report):
     script = _SHIM + '''
-      const { renderHorizon } = await import("./bga/viewer/views.js");
+      const { renderHorizon } = await import("./tests/viewer.mjs");
       const section = renderHorizon(%s);
       if (section === null) { console.log(JSON.stringify(null)); }
       else {
@@ -230,7 +230,7 @@ class TestTheTotalIsPublishedValuesOnly:
         assert sum(s["saving_us"] for s in
                    payload["signals"]["optimization_horizon"]) == 20
         script = _SHIM + '''
-          const { renderHorizon } = await import("./bga/viewer/views.js");
+          const { renderHorizon } = await import("./tests/viewer.mjs");
           const section = renderHorizon(%s);
           const total = all(section,
             (n) => n.attrs["data-role"] === "horizon-total")[0];
@@ -254,7 +254,7 @@ class TestAbsenceStaysAbsent:
     @staticmethod
     def _render(payload):
         script = _SHIM + '''
-          const { renderHorizon } = await import("./bga/viewer/views.js");
+          const { renderHorizon } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify(renderHorizon(%s) === null));
         ''' % json.dumps(payload)
         result = subprocess.run([node, "--input-type=module", "-e", script],

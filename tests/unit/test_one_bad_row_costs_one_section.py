@@ -113,7 +113,7 @@ def _renderers(store, tmp_path):
     """Feed a store straight to the two renderers that indexed its rows."""
     path = tmp_path / "store.json"
     path.write_text(json.dumps(store), encoding="utf-8")
-    script = _RENDERERS % {"views": (REPO / "bga/viewer/views.js").as_uri(),
+    script = _RENDERERS % {"views": (REPO / "tests/viewer.mjs").as_uri(),
                            "store": json.dumps(str(path))}
     done = subprocess.run([node, "--input-type=module", "-e", script],
                           capture_output=True, text=True, cwd=REPO, timeout=120,

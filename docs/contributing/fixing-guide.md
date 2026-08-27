@@ -223,6 +223,7 @@ tests/unit/                one file per item, named for its claim - the bulk of 
 tests/tiers.py             which tier each file is in, from measurement (UX-238)
 tests/conftest.py          the tier hook and the skip census (UX-235)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
+tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
 tests/browser.py           what drives it from a test; every geometric claim goes through here
 tests/trace_processor.py   the one gate for the optional Perfetto reader, and its skip reason (UX-321)

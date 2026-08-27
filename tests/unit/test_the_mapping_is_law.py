@@ -416,7 +416,7 @@ globalThis.document = { createElement: _makeNode,
                         getElementById: () => null };
 const warnings = [];
 globalThis.console = { ...console, warn: (m) => warnings.push(String(m)) };
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const shapes = await import("./bga/viewer/shapes.js");
 
 // A payload key whose value is a mixed array. §1 has no row for it.
@@ -489,9 +489,9 @@ class TestStringifyIsAllowlisted:
         # The published value on the cell, for filters, thresholds and
         # the copy path to read. An *attribute*, so it is never a text
         # node and never reaches the reader as text (`UX-205`).
-        ("app.js", "buildTable"): "data-raw",
+        ("structured.js", "buildTable"): "data-raw",
         # `UX-277`'s labeled fold: §1's first deliberate site.
-        ("app.js", "renderStructured"): "the labeled fold",
+        ("structured.js", "renderStructured"): "the labeled fold",
         # `UX-302`'s toggle: §1's second.
         ("rawjson.js", "sectionJson"): "the view-as-JSON toggle",
         # The clipboard, which is not the page.

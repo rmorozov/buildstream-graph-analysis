@@ -125,7 +125,7 @@ def _page(payload):
         doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
                        encoding="utf-8")
         script = _HARNESS % {
-            "app": (REPO / "bga/viewer/app.js").as_uri(),
+            "app": (REPO / "tests/viewer.mjs").as_uri(),
             "payload": json.dumps(str(run)), "schema": json.dumps(str(doc))}
         done = subprocess.run([node, "--input-type=module", "-e", script],
                               capture_output=True, text=True, cwd=REPO,

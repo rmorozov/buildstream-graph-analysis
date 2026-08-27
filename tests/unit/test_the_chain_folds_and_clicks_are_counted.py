@@ -110,8 +110,8 @@ class TestTheChainsListingFolds:
 
     def _chain(self, length):
         return _js("""
-const { liftedCriticalPath } = await import("./bga/viewer/app.js");
-const { PATH_HEAD, PATH_TAIL } = await import("./bga/viewer/views.js");
+const { liftedCriticalPath } = await import("./tests/viewer.mjs");
+const { PATH_HEAD, PATH_TAIL } = await import("./tests/viewer.mjs");
 const rows = Array.from({ length: %d }, (_, i) => ({
   element_uid: `e${i}.bst`, duration_us: 1000 * (%d - i),
   share_of_path: 0.05 }));
@@ -176,14 +176,21 @@ console.log(JSON.stringify({
         where the listing uses them - asserted from the source, because
         a second copy would agree today and drift tomorrow."""
         views = (VIEWER / "views.js").read_text(encoding="utf-8")
-        app = (VIEWER / "app.js").read_text(encoding="utf-8")
+        # `UX-337`: the listing is `liftedCriticalPath`, which moved to
+        # `structured.js` with the rest of the table machinery. What
+        # this asserts is that the listing *imports* the drawing's two
+        # numbers rather than restating them, wherever the listing is.
+        listing = (VIEWER / "structured.js").read_text(encoding="utf-8")
         assert re.search(r"export const PATH_HEAD = \d+;", views), (
             "the chain's fold numbers are not exported")
-        assert "PATH_HEAD, PATH_TAIL } from \"./views.js\"" in app, (
-            "app.js declares its own chain fold rather than importing the "
-            "one the drawing uses")
-        assert not re.search(r"const PATH_HEAD\s*=", app), (
-            "a second copy of the chain's head count lives in app.js")
+        assert "PATH_HEAD, PATH_TAIL } from \"./views.js\"" in listing, (
+            "structured.js declares its own chain fold rather than importing "
+            "the one the drawing uses")
+        for name in ("app.js", "structured.js"):
+            assert not re.search(
+                r"const PATH_HEAD\s*=",
+                (VIEWER / name).read_text(encoding="utf-8")), (
+                f"a second copy of the chain's head count lives in {name}")
 
 
 # --------------------------------------------------------------------------

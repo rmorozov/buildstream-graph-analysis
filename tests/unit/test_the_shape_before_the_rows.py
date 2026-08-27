@@ -276,7 +276,7 @@ console.log(JSON.stringify({
 
 
 _TABLE = """
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 const rows = Array.from({ length: %d }, (_, i) => (
   { element_uid: `e${i}.bst`, duration_us: (i + 1) * 1000 }));
 const { table, tools } = app.buildTable("probe", rows, { "bga:columns": [

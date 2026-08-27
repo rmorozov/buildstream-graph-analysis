@@ -630,7 +630,7 @@ class TestTheComposedFiguresAreExhibits:
 
     def _render(self, function, argument):
         result = _js("""
-const mod = await import("./bga/viewer/views.js");
+const mod = await import("./tests/viewer.mjs");
 const node = mod.%s(%s);
 const svg = all(node, (n) => n.tagName === "svg")[0] ?? null;
 console.log(JSON.stringify({

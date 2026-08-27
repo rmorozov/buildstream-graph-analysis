@@ -201,7 +201,7 @@ function make(tag) {
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
 
-const app = await import("./bga/viewer/app.js");
+const app = await import("./tests/viewer.mjs");
 
 const handedOff = [];
 const fn = (context) => { handedOff.push(context); return Promise.resolve({bytes: 2048}); };

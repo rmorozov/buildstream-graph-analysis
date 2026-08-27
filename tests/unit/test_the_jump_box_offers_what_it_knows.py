@@ -168,7 +168,7 @@ class TestTheAnchorIsNotSpeltTwice:
         defect that item closed."""
         out = _js('''
           const { paletteResults } = await import("./bga/viewer/nav.js");
-          const { elementAnchor } = await import("./bga/viewer/views.js");
+          const { elementAnchor } = await import("./tests/viewer.mjs");
           const groups = paletteResults(
             [{kind: "element", key: "a/weird:name.bst", text: "a/weird:name.bst"}],
             "weird", {}, {});

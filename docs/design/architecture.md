@@ -826,8 +826,13 @@ description, and this table's job is only to say which one to open.
 
 | module | owns |
 |---|---|
-| `app.js` | the boot sequence, the payload fetches, and the thresholds the page renders against |
-| `views.js` | every section the report has — the largest module, and the one a "where is this drawn" question usually ends at |
+| `app.js` | the boot sequence, the payload fetches, the findings block, and the router that sends a section key to whatever draws it |
+| `views.js` | the report's sections down to the element object: the band, the trend, the blast box, the overview and the two graphs (`UX-337`) |
+| `element.js` | the element object — one element's facts, history, culprits, horizon and what-if, and the sections built per element (`UX-216`, `UX-337`) |
+| `decision.js` | the first screen: the decision panel, the provenance block and the investigation context (`UX-207`, `UX-337`) |
+| `structured.js` | a value becomes a table and the table becomes interrogable — columns, filters, sort, Top-N, presets, folds, the copy control (`UX-201`, `UX-289`, `UX-337`) |
+| `format.js` | the nine `bga:` hint keys, the readers that pull them off a schema node, the formatters they select, and `el` — the one node constructor (`UX-201`, `UX-337`) |
+| `primitives.js` | what everything may use and that uses nothing: the SVG namespace, the bar row, the anchor spelling, and whether this page is served (`UX-337`) |
 | `shapes.js` | the styleguide's §1 dispatch table as code: value shape + hint → the one control that draws it (`UX-302`) |
 | `tables.js` | the element table, its columns, sorting and the preset filters `bga:presets` declares |
 | `nav.js` | the rail, the anchors, section collapse, and the jump box / command palette |

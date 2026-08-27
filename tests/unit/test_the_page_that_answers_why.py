@@ -288,8 +288,8 @@ function make(tag) {
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
 
-const views = await import("./bga/viewer/views.js");
-const app = await import("./bga/viewer/app.js");
+const views = await import("./tests/viewer.mjs");
+const app = await import("./tests/viewer.mjs");
 // `UX-207` moved the refusal banner out of the evidence header and into
 // `renderVerdict`, which returns a *list* of banners - so the harness
 // drives either module, and the banner *count* is what one of these

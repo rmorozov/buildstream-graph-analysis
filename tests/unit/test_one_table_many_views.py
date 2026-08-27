@@ -214,7 +214,7 @@ def _page(payload, apply=None):
         doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
                        encoding="utf-8")
         script = _HARNESS % (
-            (REPO / "bga/viewer/app.js").as_uri(),
+            (REPO / "tests/viewer.mjs").as_uri(),
             (REPO / "bga/viewer/nav.js").as_uri(),
             (REPO / "bga/viewer/viewstate.js").as_uri(),
             json.dumps(str(run)), json.dumps(str(doc)),
@@ -502,7 +502,7 @@ class TestTheJoinMergesWithoutOverwriting:
 
     @staticmethod
     def _merge():
-        script = _JOIN_HARNESS % ((REPO / "bga/viewer/app.js").as_uri(),
+        script = _JOIN_HARNESS % ((REPO / "tests/viewer.mjs").as_uri(),
                                   json.dumps(_presets()))
         done = subprocess.run([node, "--input-type=module", "-e", script],
                               capture_output=True, text=True, cwd=REPO,

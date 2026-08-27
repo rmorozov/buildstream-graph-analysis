@@ -154,8 +154,8 @@ def _follow(payload):
         doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
                        encoding="utf-8")
         script = _HARNESS % {
-            "app": (REPO / "bga/viewer/app.js").as_uri(),
-            "views": (REPO / "bga/viewer/views.js").as_uri(),
+            "app": (REPO / "tests/viewer.mjs").as_uri(),
+            "views": (REPO / "tests/viewer.mjs").as_uri(),
             "payload": json.dumps(str(run)), "schema": json.dumps(str(doc))}
         done = subprocess.run([node, "--input-type=module", "-e", script],
                               capture_output=True, text=True, cwd=REPO,
@@ -277,7 +277,7 @@ def _follow_uid(payload, uid):
     try:
         run = pathlib.Path(scratch, "payload.json")
         run.write_text(json.dumps(payload), encoding="utf-8")
-        script = _ONE % {"views": (REPO / "bga/viewer/views.js").as_uri(),
+        script = _ONE % {"views": (REPO / "tests/viewer.mjs").as_uri(),
                          "payload": json.dumps(str(run)),
                          "uid": json.dumps(uid)}
         done = subprocess.run([node, "--input-type=module", "-e", script],

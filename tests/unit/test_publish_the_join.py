@@ -127,7 +127,9 @@ class TestTheDocumentIsPublished:
 
     def test_kilobytes_is_a_declared_quantity_the_viewer_renders(self):
         assert "kilobytes" in schemas.QUANTITIES
-        source = open(os.path.join(REPO, "bga/viewer/app.js"),
+        # `UX-337`: the formatter moved out of `app.js` into
+        # `format.js` with the hint keys that select it.
+        source = open(os.path.join(REPO, "bga/viewer/format.js"),
                       encoding="utf-8").read()
         assert 'case "kilobytes":' in source, (
             "a quantity nothing renders is a promise nothing keeps")

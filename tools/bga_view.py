@@ -70,6 +70,15 @@ ASSET_DIR = _asset_dir()
 # The only paths this server answers. Everything else is 404 - there is
 # no directory listing and no fall-through to the filesystem.
 ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
+          # `UX-337`: the primitives the viewer chapters share, in a
+          # module below all of them. Served as well as inlined - the
+          # served page loads real ES modules and would 404 on it.
+          "primitives.js",
+          # `UX-337`: the two chapters `views.js` grew too long to hold,
+          # and the two `app.js` did - the schema hints and formatters,
+          # and the machinery that turns a value into an interrogable
+          # table.
+          "element.js", "decision.js", "format.js", "structured.js",
           # UX-194: the Perfetto handoff and the canned-SQL page.
           # `UX-266`: each page's script is a *file*. They were inline
           # `<script type="module">` blocks, which the server's own

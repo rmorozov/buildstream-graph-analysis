@@ -877,7 +877,7 @@ console.log(JSON.stringify(collect(root)));
 _SERVED_HARNESS = _COMMON_SHIM + """
 const payload = %s, schema = %s;
 globalThis.document = { createElement: makeNode, getElementById: () => makeNode("div") };
-const mod = await import("./bga/viewer/app.js");
+const mod = await import("./tests/viewer.mjs");
 const root = makeNode("main");
 mod.render(payload, schema, root);
 console.log(JSON.stringify(collect(root)));

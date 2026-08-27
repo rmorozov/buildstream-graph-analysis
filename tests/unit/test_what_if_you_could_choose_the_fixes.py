@@ -179,7 +179,7 @@ function make(tag) {
 }
 globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
                         getElementById: () => null };
-const views = await import("./bga/viewer/views.js");
+const views = await import("./tests/viewer.mjs");
 const asked = [];
 const ask = __SERVED__
   ? (elements) => { asked.push([...elements]); return Promise.resolve(__ANSWER__); }

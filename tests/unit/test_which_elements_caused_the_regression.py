@@ -306,7 +306,7 @@ class TestTheStripReadsThePayload:
     @staticmethod
     def _render(comparison):
         script = _SHIM + '''
-          const { renderCulprits } = await import("./bga/viewer/views.js");
+          const { renderCulprits } = await import("./tests/viewer.mjs");
           const section = renderCulprits(%s);
           const items = all(section, (n) => n.tagName === "li").map((li) => {
             const link = all(li, (n) => n.tagName === "a")[0];
@@ -388,7 +388,7 @@ class TestTheStripReadsThePayload:
 
     def test_a_comparison_with_no_deltas_renders_nothing(self):
         script = _SHIM + '''
-          const { renderCulprits } = await import("./bga/viewer/views.js");
+          const { renderCulprits } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify({
             empty: renderCulprits({}) === null,
             noRows: renderCulprits({element_deltas: {rows: []}}) === null,

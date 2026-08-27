@@ -31,7 +31,12 @@ export function sections(root) {
 // nothing - so this edge adds no cycle. UX-216 made a link and its
 // target one expression, and the palette must not reintroduce a
 // second spelling of it.
-import { elementAnchor } from "./views.js";
+// `UX-337`: `elementAnchor` moved to `primitives.js` with the other
+// symbols that were making the chapters cyclic. Named directly
+// rather than re-exported through `views.js`: a re-export is
+// invisible to the export's `_module_order`, which walks `import`
+// lines, so the module would never be inlined.
+import { elementAnchor } from "./primitives.js";
 
 /**
  * The named things inside one section, as a nested list - or `null`.

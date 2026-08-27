@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-331 scenarios: **10 open**, 321 closed.
+331 scenarios: **9 open**, 322 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 58 |
+| capture | 0 | 58 |
 | analysis | 1 | 51 |
 | contracts | 1 | 36 |
 | viewer | 0 | 82 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-324 | [a capture that cannot start says so, and leaves nothing](UX-0324-a-capture-that-cannot-start-says-so-and-leaves-nothing.md) | capture | High | R1 | 🔴 |
 | UX-326 | [the tool's own sentences are contracts](UX-0326-the-tools-own-sentences-are-contracts.md) | cli | High | R1 | 🔴 |
 | UX-327 | [four documented invocations that do not exist](UX-0327-four-documented-invocations-that-do-not-exist.md) | docs | High | R1 | 🔴 |
 | UX-328 | [--schema answers for everything that emits one](UX-0328-schema-answers-for-everything-that-emits-one.md) | contracts | Medium | R1 | 🔴 |

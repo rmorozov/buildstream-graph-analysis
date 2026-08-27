@@ -174,6 +174,15 @@ failed build is not a successful snapshot; equally, a comparison verdict
 does not change the exit code — the CI gates live on `bga compare`
 (`--fail-on-regression` and friends), which is what CI should call.
 
+The one thing it will not do is start. If the build command's executable
+is not runnable — no `bst` on `PATH` being the case that matters —
+`bga snapshot` **refuses before it writes anything**, exits `2` like its
+other refusals, and prints one sentence with the remedy and a pointer to
+`bga doctor`, which is the command that checks the whole machine
+(`UX-324`). No snapshot directory is created on that path, so there is
+no debris to describe, resolve or prune afterwards. The check is
+`bga doctor`'s own rather than a second copy of it.
+
 Snapshots are build artifacts and `.bga/runs` entries can be deleted at
 any time. Every capture now **says what it weighed and what the store
 holds** (`UX-300`), and `bga` still warns once the store passes 2 GB.
@@ -1734,7 +1743,10 @@ graph is a much smaller number than its share suggests.
 
 - `0`: Success.
 - `1`: General error (e.g., invalid arguments, missing files).
-- `2`: Data ingestion failure (e.g., malformed v9 artifacts).
+- `2`: Data ingestion failure (e.g., malformed v9 artifacts), and
+  `bga snapshot`'s own refusals — no project here, nothing to run, and
+  (`UX-324`) a build command whose executable will not run, which is
+  declined before anything is written.
 - `3`: Analysis failure (e.g., graph cycles detected).
 - `4`: **not "slower" alone.** `bga compare` returns it for any of three things, and a CI job that triages it as a duration regression will mis-read two of them:
   - `--fail-on-regression` and the build's total duration really did regress beyond the threshold (`docs/backlog/scenarios/UX-03`);
@@ -1750,7 +1762,9 @@ graph is a much smaller number than its share suggests.
   analyzed, and labelled as a build that did not finish. A comparison
   against that snapshot obeys the same incompleteness rules as any
   unfinished build. Interrupting *before* the build starts leaves
-  nothing behind and says so.
+  nothing behind and says so — and so does a machine that cannot start
+  the build at all, which refuses with `2` before creating a snapshot
+  (`UX-324`).
 
 ## See Also
 

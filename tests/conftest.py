@@ -112,9 +112,14 @@ KNOWN_SKIP_REASONS = {
     # list. `UX-189` keeps that capture out of a clone, and CI runs
     # without it, so the three clauses that need it declare their
     # absence here rather than passing vacuously.
+    # Round 50 (`UX-330`) added two, and the census is what found the
+    # mistake behind them: the gzipped-raw-log clauses first called
+    # that capture "committed" and invented their own skip reason, so
+    # they skipped silently in CI and passed vacuously here, where the
+    # capture happens to exist. 3 -> 5.
     "the example capture is not in this clone (UX-189)": (
         "the capture archive is deliberately not shipped; the clauses "
-        "that read it say so rather than passing on an empty tree", 3),
+        "that read it say so rather than passing on an empty tree", 5),
     "node is not installed": (
         "the viewer guards need node; CI has it", 0),
     # UX-257's geometry guards. Declared so that "no browser here" is

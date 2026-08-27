@@ -241,6 +241,15 @@ class TestAGzippedRawLogIsARawLog:
     """`bga capture report` said a compressed trace was **neither** a
     trace nor a report.
 
+    **A correction, and the reason CI caught it and this container did
+    not.** The first draft of this class called `examples/06`'s capture
+    "the committed capture". It is not committed - `UX-189` keeps the
+    capture archive out of a clone deliberately, and this container has
+    it only because earlier work fetched it. The skip census
+    (`UX-235`) is what said so, by refusing a skip reason nobody had
+    declared. The claim is corrected here, in the task file and in the
+    architecture's own words: what a clone has is the seed.
+
     Every snapshot stores its Plane 2 log as `plane2.log.gz` - the
     capture writes it compressed, and `timeline` and `correlate` both
     read it that way. `report` opened it as text, found nothing
@@ -255,31 +264,46 @@ class TestAGzippedRawLogIsARawLog:
     the one thing that was not wrong with it.
     """
 
-    #: The committed capture, so this is not a claim about a fixture
-    #: this file wrote for itself.
-    COMMITTED = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
-                        "20260821T170127Z/plane2.log.gz")
+    #: `examples/06`'s real capture. **Not in a clone** - `UX-189`
+    #: keeps the capture archive out of one on purpose, and CI runs
+    #: without it, so these two clauses declare their absence through
+    #: the reason `tests/conftest.py` already knows rather than
+    #: inventing one. The seed's own log is guarded above and is
+    #: present everywhere, so the fix is never unguarded; what these
+    #: add is the same answer on a capture nobody wrote for this test.
+    REAL = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
+                   "20260821T170127Z/plane2.log.gz")
+    ABSENT = "the example capture is not in this clone (UX-189)"
 
-    @pytest.mark.skipif(not COMMITTED.exists(),
-                        reason="no committed capture in this tree")
-    def test_the_committed_gzipped_log_renders(self):
-        done = _bga("capture", "report", str(self.COMMITTED))
+    @pytest.mark.skipif(not REAL.exists(), reason=ABSENT)
+    def test_the_real_gzipped_log_renders(self):
+        done = _bga("capture", "report", str(self.REAL))
         assert "Native Build Trace" in done.stdout
         assert "813" in done.stdout, "the process count moved"
 
     def test_the_same_log_uncompressed_gives_the_same_answer(self, tmp_path):
         """Detected by magic number rather than extension: a reader who
         renamed the file should not get a different answer."""
-        if not self.COMMITTED.exists():
-            pytest.skip("no committed capture in this tree")
+        if not self.REAL.exists():
+            pytest.skip(self.ABSENT)
         plain = tmp_path / "plane2.log"
-        plain.write_bytes(gzip.open(self.COMMITTED, "rb").read())
+        plain.write_bytes(gzip.open(self.REAL, "rb").read())
         renamed = tmp_path / "still-gzipped.log"
-        renamed.write_bytes(self.COMMITTED.read_bytes())
+        renamed.write_bytes(self.REAL.read_bytes())
         first = _bga("capture", "report", str(plain)).stdout
         second = _bga("capture", "report", str(renamed)).stdout
         assert first.splitlines()[3] == second.splitlines()[3], (
             first.splitlines()[3], second.splitlines()[3])
+
+    def test_the_seed_covers_this_where_the_capture_does_not(self, seed):
+        """The clause that runs everywhere, so the two above skipping in
+        a clone leaves nothing unguarded. `UX-330`'s seed writes its
+        Plane 2 log gzipped exactly as a capture does."""
+        newest = sorted((seed / ".bga" / "runs").iterdir())[-1]
+        log = newest / "plane2.log.gz"
+        assert log.read_bytes()[:2] == b"\x1f\x8b", "the seed's log is not gzipped"
+        done = _bga("capture", "report", str(log))
+        assert "Native Build Trace" in done.stdout, done.stdout
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -116,9 +116,20 @@ It is a raw trace. It is gzipped. Every snapshot stores
 `plane2.log.gz` (the capture writes it compressed, and `timeline` and
 `correlate` both read it that way), so the one command that could not
 was the one whose message said the file was not what it is. Detected by magic number
-rather than extension, so a renamed file gets the same answer, and
-reproduced on the committed 813-process capture rather than on a
-fixture written for it.
+rather than extension, so a renamed file gets the same answer.
+
+**A correction CI made, and this container could not.** The first
+draft called `examples/06`'s 813-process capture *"the committed
+capture"* and leaned on it as the reproduction. It is **not
+committed**: `UX-189` keeps the capture archive out of a clone on
+purpose, and this container has it only because earlier work fetched
+it. `git ls-files` on that path returns nothing. What caught it was
+the skip census (`UX-235`) refusing a skip reason nobody had declared:
+the clause reached CI, found no capture, skipped, and the census
+failed the run rather than letting a green pass hide it. The two
+clauses that read it now declare their absence through the reason
+`tests/conftest.py` already knows, and a third clause asserts the same
+answer on the **seed's** log, which every clone has.
 
 **A correction to the filing.** It located this defect in "the
 committed plane2/v2 fixture", i.e. `plane2.json`. That document reads
@@ -130,7 +141,7 @@ document that was refused is the `.log.gz` beside it.
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | open the raw log as plain text again - re-refuse the gzip | 3 failed, 11 passed, including the committed capture |
+| M1 | open the raw log as plain text again - re-refuse the gzip | 3 failed, 11 passed, on the seed's own log and on `examples/06`'s where it is present |
 | M2 | write the seed's Plane 2 fields as `element` before `ts` | 3 failed, 11 passed: the record parse, the timeline's two planes, and `capture report` |
 | M3 | one cache key (`aaaaaaaa`) for every element in the wrapped log | 1 failed, 13 passed: `1 == 14` spans |
 | M4 | collapse the three missing-log messages back into one | 3 failed, 1 passed - the fourth clause is the positive control that the three are *different*, which is what M4 is |
@@ -148,6 +159,10 @@ guard's docstring.
   fixture copy"*. The first was taken: a copy would have committed
   capture bytes the `UX-213` size argument is against, and a generator
   keeps the seed reproducible from a seed number.
+- **The reproduction is not on a committed capture**, because there is
+  no committed capture to have it on - see the correction above. The
+  clause that runs in every clone is the one on the seed's own gzipped
+  log; `examples/06`'s is the corroboration where it exists.
 - **The acceptance test asks for the walk in CI's installed-mode job.**
   It is a unit guard here instead. The installed-mode job exists to
   catch what `pip install` breaks (`UX-94`'s `bga._tools` packaging),

@@ -129,9 +129,20 @@ class TestTheBandIsReachable:
         assert not out["rendered"]
 
     def test_the_page_asks_for_the_compare_document(self):
+        """It asks *somebody* for it - the network or the manifest.
+
+        `UX-334` moved this from `load("compare", null)` to
+        `optional(run, "compare")`: the comparison is absent on a first
+        run, and discovering that by fetching it and catching the 404
+        put an error in every reader's console on every boot. Which
+        channel answers is that item's business; `UX-203`'s claim is
+        that the page reaches for the document at all, so this clause
+        accepts either and would still redden if the reach went away.
+        """
         source = open("bga/viewer/app.js", encoding="utf-8").read()
-        assert 'load("compare"' in source, (
-            "the page never fetches it, so serving it changes nothing")
+        assert ('load("compare"' in source
+                or 'optional(run, "compare")' in source), (
+            "the page never asks for it, so serving it changes nothing")
         assert "renderBand(payload)" not in source, (
             "renderBand is being handed the analyze document again")
 

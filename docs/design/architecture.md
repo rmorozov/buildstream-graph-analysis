@@ -827,6 +827,7 @@ description, and this table's job is only to say which one to open.
 | `focus.js` | focusing one element and dimming the rest (`UX-222`) |
 | `tablefocus.js` | opening one nested or capped table full width, and putting it back (`UX-318`) |
 | `drawings.js` | sparklines and density strips: the size scale, the two drawing grades, and the boundary on what one may print (`UX-303`, `UX-316`) |
+| `controls.js` | `name`/`id` for every form control the page builds, and `for` on the labels beside them — imports nothing, so `views.js` may use it (`UX-334`) |
 | `rawjson.js` | the "view as JSON" toggles, and the record of which section each blob came from (`UX-302`) |
 | `questions.js` | the canned SQL library, its categories, and the `why` each question carries (`UX-210`, `UX-312`) |
 | `sql.js` | the Query (SQL) satellite page that renders that library |

@@ -108,7 +108,12 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # own module because it imports nothing and both `app.js` and
           # `viewstate.js` need it - which would be a cycle anywhere
           # else.
-          "tablefocus.js")
+          "tablefocus.js",
+          # UX-334: `name`/`id` for every form control the page builds,
+          # and `for` on the labels beside them. Imports nothing, and
+          # `views.js` uses it - which `app.js` could not have provided
+          # without the cycle its own note forbids.
+          "controls.js")
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured
@@ -250,6 +255,19 @@ def _analyze_now(run: str) -> dict:
     elif refusal:
         print(refusal, file=sys.stderr)
     return _capture(argv)
+
+
+def _offered(documents: Dict[str, dict]) -> List[str]:
+    """The payload names the page may load, from the table it will be given.
+
+    `UX-334`: keyed by *name* - "compare" - because that is what
+    `load()` takes, while the served table is keyed by url and the
+    export's by name. Deriving it from the table rather than listing it
+    means a payload added later joins the manifest with no edit here,
+    and a payload that failed to build is absent from both at once.
+    """
+    return sorted(name[:-len(".json")] if name.endswith(".json") else name
+                  for name in documents)
 
 
 def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
@@ -763,7 +781,14 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                  for name, body in payloads(run).items()}
     documents["schemas"] = schemas_payload()
     documents["run"] = {"run": os.path.abspath(run),
-                        "name": os.path.basename(os.path.abspath(run))}
+                        "name": os.path.basename(os.path.abspath(run)),
+                        # UX-334: the same manifest the server
+                        # publishes. An export inlines every payload it
+                        # has, so `load` never reaches the network here
+                        # - but the page reads one key either way, and
+                        # a key that exists on one side only is a key
+                        # that gets tested on one side only.
+                        "payloads": _offered(documents)}
 
     trace = trace_bytes(run) if with_trace else None
     omitted = None
@@ -865,6 +890,18 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             return self._blast(raw)
         if path == "whatif.json":
             return self._whatif(raw)
+        if path == "favicon.ico":
+            # UX-334: a browser asks for this on every navigation
+            # whether the document links one or not, and a 404 is an
+            # *error* in the console - one per boot, forever, for a
+            # file this report has no use for. 204 is the answer that
+            # says "nothing here, and that is fine".
+            #
+            # The alternative - `<link rel="icon" href="data:,">` in
+            # the page - was tried and measured: this server's own
+            # `default-src 'self'` refuses a `data:` image, so it
+            # traded a 404 for a CSP violation, which is worse.
+            return self._send(204, "image/x-icon", b"")
         if path in self.documents:
             return self._json(self.documents[path])
         if path in self.blobs:
@@ -1112,6 +1149,14 @@ def serve(run: str, port: int = 0,
     documents.setdefault("run.json", {
         "run": os.path.abspath(run),
         "name": os.path.basename(os.path.abspath(run)),
+        # UX-334: which optional payloads exist, so the page stops
+        # asking the network. `compare`, `store` and `store-aggregate`
+        # are each absent on a perfectly ordinary run, and the page
+        # learned that by fetching them and catching the 404 - three
+        # red lines in every console on every boot, which is three
+        # lines of noise a real error has to be spotted among. The
+        # server already knows the answer here; it just never said it.
+        "payloads": _offered(documents),
         # So the page can offer the button only when there is something
         # behind it - a dead "Open in Perfetto" is worse than none.
         "has_timeline": offered,

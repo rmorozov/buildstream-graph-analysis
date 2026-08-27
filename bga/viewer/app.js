@@ -28,6 +28,9 @@ import { chapters, fileInChapter } from "./chapters.js";
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
 import { jsonToggles, recordSource } from "./rawjson.js";
+// UX-334: `name` and `id` on every control the page builds - see the
+// measured counts in the module.
+import { identify, labelFor } from "./controls.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
@@ -891,6 +894,10 @@ export function renderTable(key, rows, hint = {}, node = undefined,
  */
 export function interrogable(table, specs, total, depth = 0) {
   const state = { text: "", thresholds: {} };
+  // UX-334: what these controls are called. The table key is the name
+  // `viewstate.js` already keys this table's url state by, so the
+  // control's `name` and its bookmarked parameter say the same word.
+  const key = table.getAttribute?.("data-table") ?? "table";
   const badge = el("span", { class: "badge" }, badgeText(total, total));
   const refresh = () => {
     badge.textContent = badgeText(applyFilters(table, state), total);
@@ -901,6 +908,7 @@ export function interrogable(table, specs, total, depth = 0) {
     placeholder: "filter rows…",
     "aria-label": "filter rows",
   });
+  identify(box, `filter-${key}`);
   box.addEventListener("input", () => { state.text = box.value; refresh(); });
 
   // A threshold per quantity column, in the header, where the column
@@ -913,6 +921,7 @@ export function interrogable(table, specs, total, depth = 0) {
       placeholder: PLACEHOLDER[spec.quantity] ?? "> 0",
       "aria-label": `threshold for ${spec.title ?? spec.key}`,
     });
+    identify(input, `threshold-${key}-${spec.key}`);
     input.addEventListener("input", () => {
       const parsed = parseThreshold(input.value, spec.quantity);
       // Unparseable is *no filter*, and says so: a threshold nobody can
@@ -950,6 +959,7 @@ export function interrogable(table, specs, total, depth = 0) {
   const presets = presetColumns(specs);
   if (presets.length) {
     const preset = el("select", { class: "top-n", "aria-label": "Top rows" });
+    identify(preset, `top-${key}`);
     preset.append(el("option", { value: "" }, "All rows"));
     for (const column of presets) {
       for (const n of [10, 25]) {
@@ -1002,6 +1012,7 @@ export function interrogable(table, specs, total, depth = 0) {
     el("input", { type: "checkbox", class: "copy-markdown" }),
     " as Markdown");
   const markdownBox = asMarkdown.querySelector("input");
+  if (markdownBox) identify(markdownBox, `copy-markdown-${key}`);
   const remembered = readCopyFormat();
   if (markdownBox && remembered === "markdown") markdownBox.checked = true;
   markdownBox?.addEventListener?.("change", () => {
@@ -1385,6 +1396,7 @@ export function presetTable(key, rows, presets, hint, node, payload) {
   const select = el("select", { class: "preset-view",
                                 "data-table": key,
                                 "aria-label": "View" });
+  identify(select, `view-${key}`);
   for (const { preset, view } of usable) {
     select.append(el("option", { value: preset.name, title: preset.question ?? null },
                      `${preset.name} (${view.total})`));
@@ -1418,9 +1430,12 @@ export function presetTable(key, rows, presets, hint, node, payload) {
   };
   select.addEventListener("change", () => draw(select.value));
   draw(usable[0].preset.name);
-  slot.append(el("div", { class: "preset-bar" },
-                 el("label", { class: "preset-label" }, "View: "), select),
-              body);
+  // UX-334: the label points at the select rather than floating beside
+  // it - `<label>` with neither `for` nor a nested control is the
+  // second complaint the Issues panel raised on this page.
+  const presetLabel = el("label", { class: "preset-label" }, "View: ");
+  labelFor(presetLabel, select, `view-${key}`);
+  slot.append(el("div", { class: "preset-bar" }, presetLabel, select), body);
   return { node: slot, select, draw, presets: usable.map((e) => e.preset) };
 }
 
@@ -1923,6 +1938,10 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   const box = document.createElement("input");
   box.setAttribute("type", "search");
   box.setAttribute("id", "jump");
+  // UX-334: an `id` alone satisfies the browser here; the `name` is
+  // set anyway so every control this page builds carries both and the
+  // guard can say so without an exception list.
+  box.setAttribute("name", "jump");
   box.setAttribute("placeholder", "Jump to…");
   box.setAttribute("aria-label", "Jump to a section or element");
   const list = document.createElement("ul");
@@ -2167,6 +2186,38 @@ export function inlined(name) {
   }
 }
 
+/**
+ * `UX-334`: does this page have that payload, without asking for it.
+ *
+ * `compare`, `store` and `store-aggregate` are optional by design -
+ * a first run has no predecessor, a run outside a project has no
+ * store - and the page used to discover that by fetching each one and
+ * catching the 404. Three console errors on every boot of every served
+ * report, which is three lines of noise that a real error has to be
+ * noticed among. The manifest is published by `bga view` on both sides
+ * (`_offered` in `bga_view.py`), so the question is answerable locally.
+ *
+ * A run document with no `payloads` key predates this and gets the old
+ * behaviour: probe, and treat a failure as absence. An export made by
+ * an older `bga view` and opened in a newer page still renders.
+ */
+export function offered(run, name) {
+  if (inlined(name) !== null) return true;
+  const listed = run?.payloads;
+  if (!Array.isArray(listed)) return true;
+  return listed.includes(name);
+}
+
+/**
+ * An optional payload: null when the manifest says it is not here, and
+ * null when it is here but will not parse. Never a thrown error and
+ * never a request the manifest already answered.
+ */
+export async function optional(run, name) {
+  if (!offered(run, name)) return null;
+  return load(name, null).catch(() => null);
+}
+
 export async function load(name, fallback = null) {
   const here = inlined(name);
   if (here !== null) return here;
@@ -2246,7 +2297,7 @@ async function boot() {
     // document has. Handing it `payload` meant it returned null every
     // time, so the band had never rendered for any user. `bga view`
     // now serves the comparison against the run before this one.
-    const comparison = await load("compare", null).catch(() => null);
+    const comparison = await optional(run, "compare");
     const band = comparison && renderBand(comparison);
     if (band) root.append(band);
     // UX-221: and which elements put the candidate where the band says
@@ -2317,12 +2368,12 @@ async function boot() {
     // gets no history block, which is the same absence a store with no
     // slices produces. Loading earlier moves no DOM: the panel is
     // still placed by `chapters.js` and the sections still appended.
-    const store = await load("store", null).catch(() => null);
+    const store = await optional(run, "store");
     // UX-234: and what the store says about itself as a distribution.
     // A separate document rather than a key of the listing: one row
     // per snapshot and one row per host class are different shapes,
     // and a page with no aggregate simply draws no band.
-    const aggregate = await load("store-aggregate", null).catch(() => null);
+    const aggregate = await optional(run, "store-aggregate");
     const decision = renderDecision(payload,
       run.has_timeline ? (action) => decisionInvestigation(action, payload) : null,
       // UX-218: the clipboard helper, passed in so `views.js` keeps

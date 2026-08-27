@@ -19,6 +19,10 @@
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 } from "./drawings.js";
+// UX-334: `name`/`id` on every control, and a `<label>` that points at
+// one. `controls.js` imports nothing, which is why this module may use
+// it where it may not use `app.js` - see the note below.
+import { identify, labelFor } from "./controls.js";
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -438,6 +442,8 @@ export function renderBlastSearch(onQuery) {
   form.setAttribute("data-role", "blast-form");
   const input = document.createElement("input");
   input.setAttribute("data-role", "blast-input");
+  identify(input, "blast-query");
+  input.setAttribute("aria-label", "What rebuilds if I touch this?");
   input.placeholder = "a git url, a path in the project, or an element name";
   input.size = 52;
   const button = document.createElement("button");
@@ -2133,6 +2139,10 @@ export function renderWhatIf(payload, ask = null, options = {}) {
     box.setAttribute("data-whatif-element", step.element_uid);
     const label = document.createElement("label");
     label.textContent = step.element_uid;
+    // UX-334: the label points at its box. It sat *beside* it with no
+    // `for`, which is a label that names nothing - the element name is
+    // not clickable and the checkbox has no accessible name at all.
+    labelFor(label, box, `whatif-${step.element_uid}`);
     row.append(box, label);
     list.append(row);
     boxes.push([box, step.element_uid]);

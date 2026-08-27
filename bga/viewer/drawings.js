@@ -147,13 +147,25 @@ export function exhibitAxis(doc, ticks) {
   const row = box(doc, "div", { class: "draw-axis", "data-role": "draw-axis" });
   for (const tick of ticks) {
     if (!tick) continue;
-    row.append(box(doc, "span", {
-      class: "draw-tick", "data-mark": tick.name,
-      "data-at": tick.at.toFixed(2),
-      // `left` is a position, not a colour or a size (§4.5's tokens
-      // govern those); a per-mark percentage cannot be a class.
-      style: `left: ${tick.at.toFixed(2)}%`,
-    }, tick.label));
+    const at = tick.at.toFixed(2);
+    const label = box(doc, "span", {
+      class: "draw-tick", "data-mark": tick.name, "data-at": at,
+    }, tick.label);
+    // `left` is a position, not a colour or a size (§4.5's tokens
+    // govern those); a per-mark percentage cannot be a class.
+    //
+    // UX-334: through the CSSOM, never `style: ...`, which `box` would
+    // set as an *attribute*. The server sends `default-src 'self'` with
+    // no `style-src`, so a style attribute is inline style and Chrome
+    // **refuses to apply it** - measured at 11 `style-src-attr`
+    // violations per macro-page boot, with every tick computing
+    // `left: 0px` and piling at the exhibit's left edge on served
+    // pages. The export has no CSP, so it looked right there and the
+    // served page was the broken one. `UX-263` learned this in
+    // `views.js:566` and this module reintroduced it; a property
+    // assignment is not inline style and is not subject to the policy.
+    if (label.style) label.style.left = `${at}%`;
+    row.append(label);
   }
   return row;
 }

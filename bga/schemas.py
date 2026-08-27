@@ -2680,13 +2680,24 @@ def names() -> List[str]:
 
 
 def schema(name: str) -> dict:
-    """The JSON Schema for one output, by its `schema` value."""
+    """The JSON Schema for one output, by its `schema` value.
+
+    The lookup and the build are separate statements on purpose. They
+    were one - `return _SCHEMAS[name]()` under a single `except
+    KeyError` - and a `KeyError` raised *inside* a document's builder
+    came back as "unknown schema `sweep/v1` - this tool produces ...,
+    `sweep/v1`, ...", which names the thing it says it does not know.
+    `UX-339` hit it: a contract whose hints describe a key its required
+    map no longer has raises from `_document`, and that is a defect in
+    the contract, not a missing one.
+    """
     try:
-        return _SCHEMAS[name]()
+        build = _SCHEMAS[name]
     except KeyError:
         raise KeyError(
             f"unknown schema {name!r} - this tool produces "
             f"{', '.join(names())}") from None
+    return build()
 
 
 def critical_path_uids(signals: dict) -> list:

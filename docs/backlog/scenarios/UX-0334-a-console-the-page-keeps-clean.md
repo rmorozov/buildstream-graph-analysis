@@ -105,8 +105,8 @@ exported: [['first', '0%', 695], ['peak', '0%', 674], ['last', '100%', 868]]
 served  : [['first', '0%', 695], ['peak', '0%', 674], ['last', '100%', 868]]
 ```
 
-Full suite after the fix: 4,177 passed, 18 skipped, 0 failed. Lint
-clean.
+Full suite after the fix: 4,172 passed, 18 skipped, 0 failed, 200s
+at `-n auto`. Lint clean.
 
 ### Why each fix has the shape it has
 

@@ -67,14 +67,19 @@ by data, and nothing is nested inside a record it is only joined to.
 
 In the next contract version:
 
+- `provenance` is published once, at the top level, keyed by the claim
+  it explains; `findings[]` and `headline.top_actions[]` carry the claim
+  id they already carry today. **`UX-342` left this saving here**: after
+  the export stopped carrying six unreachable schemas, the repeated
+  prose still inside `analyze/v2` is 4,046 B and *all* of it is the
+  provenance block written three times, so normalizing the shape is
+  also the deduplication, with no `$ref` indirection for the viewer to
+  resolve;
 - the `signals.*` and `structural.*` namespaces are lifted — each named
   table becomes a top-level key, which is also what `bga:rail` already
   groups them by for the reader;
 - `findings[].evidence.blast_radius` becomes a list of rows with
-  `element_uid`, so its columns can be declared (`UX-343`);
-- `provenance` is published once, at the top level, keyed by the claim
-  it explains; `findings[]` and `headline.top_actions[]` carry the claim
-  id they already carry today.
+  `element_uid`, so its columns can be declared (`UX-343`).
 
 The measured depth is published with the document — the deepest path
 and the count over three — so the next round can see the drift the way

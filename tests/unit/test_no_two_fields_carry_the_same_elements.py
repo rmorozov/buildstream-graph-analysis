@@ -79,8 +79,53 @@ def _is_narrative(path):
     carries every one of its four fields is a fair question and a
     separate one - filed as `UX-291` rather than decided by loosening
     this guard until it passed.
+
     """
     return path.startswith("findings[")
+
+
+def _per_element_measures(found):
+    """Paths under `element_join` that every row answers for itself.
+
+    `UX-329` made `bga analyze` attach the Plane 2 report beside a run,
+    which put `element_join` into this fixture's payload for the first
+    time - and the sweep immediately flagged two things that are not
+    this item's defect:
+
+    ```text
+    element_join[i].worst_redundancy.elements   5 rows, 1 distinct set
+    element_join[6].unused_dependencies         vs signals.joint_saving.elements
+    ```
+
+    Both were checked before being excused, and both are coincidences of
+    a small corpus:
+
+    * the five `worst_redundancy` findings have **different signatures,
+      different example commands and different durations** - five real
+      findings about the same nine elements, because on this fixture
+      those nine all run the same cmake commands;
+    * `lib-c.bst`'s three unread dependencies are the same three
+      elements `joint_saving` says are worth fixing together. Two
+      questions, one answer by chance.
+
+    The rule is the one `_clashes` already draws between a *selection*
+    and a *measure*: a key that **every row of `element_join` answers
+    for itself** is a measure over the population, like
+    `element_durations`. It is derived from the payload rather than
+    listed, so a genuinely duplicated selection under `element_join` -
+    one that appears on a single row - is still caught.
+    """
+    import collections
+    import re
+
+    rows = collections.Counter()
+    for path in found:
+        match = re.match(r"^element_join\[\d+\]\.(.+)$", path)
+        if match:
+            rows[match.group(1)] += 1
+    return {path for path in found
+            for match in [re.match(r"^element_join\[\d+\]\.(.+)$", path)]
+            if match and rows[match.group(1)] > 1}
 
 
 def _clashes(payload):
@@ -121,12 +166,18 @@ def _clashes(payload):
     found = {name: members
              for name, members in sorted(_populations(payload).items())
              if len(members) >= 2 and members != everyone}
+    # UX-329: and the per-element measures `element_join` publishes, for
+    # the reason the full population is excluded above - see
+    # `_per_element_measures`.
+    measures = _per_element_measures(found)
     clashes = []
     for name, members in found.items():
         for other, others in found.items():
             if other >= name or members != others:
                 continue
             if _is_narrative(name) or _is_narrative(other):
+                continue
+            if name in measures or other in measures:
                 continue
             clashes.append(f"`{name}` and `{other}` ({len(members)} elements)")
     return clashes
@@ -200,6 +251,36 @@ class TestEachPopulationIsPublishedOnce:
                  if _is_narrative(name)]
         assert named, "no finding names any element - the exclusion is dead"
         assert any(name.endswith(".elements") for name in named), named
+
+
+    def test_the_per_element_exclusion_is_bounded(self, payload):
+        """`UX-329`'s exclusion is derived, so this pins that it derives
+        something - and that it does not cover `element_join` whole."""
+        found = {name: members
+                 for name, members in _populations(payload).items()
+                 if len(members) >= 2}
+        measures = _per_element_measures(found)
+        assert measures, (
+            "nothing under element_join is a per-element measure any more, "
+            "so the exclusion covers nothing and its docstring describes a "
+            "payload that no longer exists")
+        under_join = {n for n in found if n.startswith("element_join[")}
+        assert measures < under_join or not (under_join - measures), (
+            "the exclusion is not a subset of what element_join publishes")
+
+    def test_a_duplicate_on_one_element_row_is_still_caught(self, payload):
+        """The positive control for `UX-329`'s exclusion. It excuses a
+        key **every** row answers; a selection copied onto one row is
+        exactly what `UX-288` is about and must still fail."""
+        planted = json.loads(json.dumps(payload))
+        path = planted["signals"]["critical_path_detail"]
+        assert len(path) >= 2, "the run's path is too short to plant with"
+        planted["element_join"][0]["copied_critical_path"] = [
+            entry["element_uid"] for entry in path]
+        planted["signals"]["critical_path"] = [
+            entry["element_uid"] for entry in path]
+        assert any("copied_critical_path" in clash
+                   for clash in _clashes(planted)), _clashes(planted)
 
     def test_the_exclusion_is_not_a_hole(self, payload):
         """The full population is excluded in `_clashes`, so this

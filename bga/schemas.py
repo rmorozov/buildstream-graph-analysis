@@ -486,6 +486,9 @@ _ANALYZE_OPTIONAL = {
     "timestamp_agreement": "object",
     # UX-202: present only when a Plane 2 report was in hand.
     "plane2_coverage": "object",
+    # UX-329: present only when Plane 2 is *absent*, saying which of the
+    # three absences it is. Additive, so `analyze/v2` does not bump.
+    "plane2_absence": "string",
     # UX-215: the two-plane join, present when `--plane2` was given.
     # Same rows as `correlate/v1`'s `elements`, from the same function.
     "element_join": "array",
@@ -684,6 +687,11 @@ ANALYZE_FULL_KEYS = (
 # full report.
 ANALYZE_PLANE2_KEYS = (
     "plane2_coverage", "element_join", "element_join_coverage",
+    # UX-329: the other side of the same conditional. `plane2_absence`
+    # is present exactly when the three above are not, so it belongs in
+    # the same list for the same reason: a full report is full with
+    # either, and the pin must not demand both.
+    "plane2_absence",
 )
 
 _COMPARE_REQUIRED = {
@@ -1670,6 +1678,14 @@ _ANALYZE_HINTS = {
                 },
             },
         },
+    },
+    "plane2_absence": {
+        QUESTION: 'Why is Plane 2 not in this report?',
+        RAIL: 'prove',
+        "description": "One of three sentences (bga/plane2.py): the plane "
+                       "was never captured, or it was captured and its raw "
+                       "log was not kept, or this analysis was told to "
+                       "ignore it. Absent when Plane 2 is here.",
     },
     "plane2_coverage": {
         QUESTION: 'How much did Plane 2 see?',

@@ -39,6 +39,8 @@ import urllib.parse
 import webbrowser
 from typing import Dict, List, Optional
 
+from bga import plane2 as _plane2_shape
+
 HELP = """Open one run's report in a browser.
 
 Serves the same JSON `--format json` prints, rendered by a page that
@@ -199,7 +201,10 @@ def predecessor(run: str) -> Optional[str]:
 # ~30 s, twice, before the socket existed). Above it the page renders
 # without Plane 2 and says which command publishes the payload; it does
 # not quietly spend the memory, and it does not quietly drop the plane.
-PLANE2_VIEW_MAX_BYTES = 64 * 1024 * 1024
+# UX-329: moved to `bga.plane2.VIEW_MAX_BYTES`, which is where the
+# policy that reads it lives now. Kept as an alias because
+# `bga/viewer/perfetto.js` and two guards quote this name.
+PLANE2_VIEW_MAX_BYTES = _plane2_shape.VIEW_MAX_BYTES
 
 
 def published_analysis(run: str) -> Optional[dict]:
@@ -232,26 +237,18 @@ def _analyze_now(run: str) -> dict:
     `UX-194` made for a dead button: an affordance whose precondition is
     absent is named, not silently exercised.
     """
-    from bga import run_store
+    from bga import plane2 as plane2_shape
 
+    # UX-329: the same discovery and the same bound `bga analyze` uses,
+    # from `bga.plane2` - this function and the CLI held two copies of
+    # the policy, and the copies disagreed: the page attached the
+    # sibling and the terminal did not.
     argv = ["analyze", run, "--format", "json"]
-    plane2 = run_store.sibling_plane2(os.path.abspath(run))
-    if plane2:
-        try:
-            size = os.path.getsize(plane2)
-        except OSError:
-            size = 0
-        if size <= PLANE2_VIEW_MAX_BYTES:
-            argv += ["--plane2", plane2]
-        else:
-            print(
-                f"Plane 2 is {run_store.human_bytes(size)} and this run "
-                f"published no analysis, so the report is rendered from "
-                f"Plane 1 alone - parsing it here costs about "
-                f"{run_store.human_bytes(int(size * 2.9))} of memory "
-                f"(UX-296). `bga snapshot -- bst build TARGET` publishes "
-                f"an analysis that carries both planes.",
-                file=sys.stderr)
+    path, refusal = plane2_shape.attachable(run)
+    if path:
+        argv += ["--plane2", path]
+    elif refusal:
+        print(refusal, file=sys.stderr)
     return _capture(argv)
 
 
@@ -771,8 +768,16 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
     trace = trace_bytes(run) if with_trace else None
     omitted = None
     if trace is None:
-        omitted = ("this run kept no raw Plane 2 log, so there is no "
-                   "timeline to carry")
+        # UX-329: which absence, from `bga.plane2` - the same sentence
+        # the terminal prints and the JSON publishes. The one this
+        # replaced said "no raw Plane 2 log" for a run that never
+        # captured the plane at all, which reads as "Plane 2 is
+        # missing" when the report is right there beside the run.
+        from bga import plane2 as plane2_shape
+
+        omitted = plane2_shape.absence(run) or (
+            "this run kept no raw Plane 2 log, so there is no timeline "
+            "to carry")
     elif len(trace) * 4 / 3 > TRACE_BUDGET_B:
         omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
                    f"compressed, over this export's "

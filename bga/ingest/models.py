@@ -566,6 +566,10 @@ class AnalysisResult:
     # a Plane 2 report is supplied and the capture recorded the host's
     # memory - the arithmetic needs both.
     memory_envelope: dict = field(default_factory=dict)
+    # UX-329: why Plane 2 is absent from this analysis, as the one
+    # sentence the terminal, the page and the export all print. `None`
+    # when it is not absent.
+    plane2_absence: Optional[str] = None
     total_duration_us: int = 0
     # BuildStream's own top-level pipeline overhead (Query cache, Resolving
     # elements, etc.) - not part of analysis/v9's spec-mandated schema

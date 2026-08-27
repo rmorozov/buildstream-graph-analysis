@@ -354,7 +354,16 @@ class TestTheTimeline:
         result = export(str(run), str(tmp_path / "r.html"))
 
         assert result["has_timeline"] is False
-        assert result["omitted"] and "no raw Plane 2 log" in result["omitted"]
+        # UX-329: which absence, not just that there is one. This run is
+        # a copy of the golden fixture with no Plane 2 report anywhere
+        # near it, and the sentence it used to get - "no raw Plane 2
+        # log" - describes a *captured* run whose log was dropped. A
+        # reader cannot tell a machine that never traced from a
+        # measurement missing only its timeline, and those are the two
+        # things this sentence was covering.
+        from bga import plane2
+
+        assert result["omitted"] == plane2.NOT_CAPTURED, result["omitted"]
         run_block = re.search(r'id="bga-run">(.*?)</script>',
                               (tmp_path / "r.html").read_text())
         assert json.loads(run_block.group(1))["has_timeline"] is False

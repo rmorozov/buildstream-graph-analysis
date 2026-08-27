@@ -97,8 +97,15 @@ class TestTheRecommendationReachesAConsumer:
             self):
         """Absent, not zeroed - the distinction `run_instance` and
         `plane2_coverage` already keep. "Not measured" must not render
-        as "no constraint"."""
-        without = json.loads(_analyze("--format", "json"))
+        as "no constraint".
+
+        `UX-329`: `--no-plane2`, not a bare invocation. `RUN` sits in a
+        snapshot with a Plane 2 report beside it, and a bare `analyze`
+        now finds it - which is the fix, and which means the bare form
+        no longer describes a run without Plane 2. The flag is how a
+        reader asks for one plane, so it is how this clause asks too.
+        """
+        without = json.loads(_analyze("--no-plane2", "--format", "json"))
         assert KEY not in without, without.get(KEY)
 
 

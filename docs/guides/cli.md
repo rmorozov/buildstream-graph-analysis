@@ -105,10 +105,24 @@ bga analyze @last
 bga compare @prev @last
 bga cache-trend @prev @last
 bga analyze @20260819                          # by stamp prefix, if unambiguous
-bga analyze @last --plane2 @last
+bga analyze @last                              # the Plane 2 report beside it is found
+bga analyze @last --no-plane2                  # ...unless you say not to
 bga compare @prev @last --baseline-plane2 @prev --candidate-plane2 @last
 bga cache-logs . --native-report @last
 ```
+
+`bga analyze` finds the `plane2.json` beside a snapshot on its own
+(`UX-329`), as `bga correlate` and `bga view` always have — before that
+the same run published `plane2_coverage: null` in the terminal and the
+full coverage in the page, which `bga view --help` promises can never
+happen. `--plane2` still names a different report; `--no-plane2`
+declines the sibling and the report says it declined.
+
+**When Plane 2 is not in a report, the report says which absence it
+is** — never captured, captured with its raw log not kept (so no
+timeline), or declined. One sentence pair in `bga/plane2.py`, printed by
+the terminal, published as `plane2_absence`, and shown by the page and
+the export, so the three cannot describe one absence differently.
 
 **One alias is one snapshot**, whichever of its files is being asked
 for, so `bga correlate @prev @last` means a run from one and a report

@@ -253,11 +253,21 @@ class TestTheFullReportKeepsItsKeys:
         """And the other direction, so the pin cannot rot into a list of
         keys the tool stopped producing years ago."""
         payload = json.loads(_bga(["analyze", GOLDEN, "--format", "json"]).stdout)
-        unpinned = sorted(set(payload) - set(schemas.ANALYZE_FULL_KEYS))
+        # UX-329: the conditional keys count as pinned too. Before this
+        # they were all *Plane-2-present* keys and a single-plane run
+        # carried none of them, so subtracting `ANALYZE_FULL_KEYS` alone
+        # happened to be right; `plane2_absence` is the first key that
+        # appears exactly when the others do not.
+        pinned = set(schemas.ANALYZE_FULL_KEYS) | set(schemas.ANALYZE_PLANE2_KEYS)
+        unpinned = sorted(set(payload) - pinned)
         assert not unpinned, (
             f"new top-level key(s) {unpinned} - add them to ANALYZE_FULL_KEYS "
-            f"(an addition does not bump the version) and to _ANALYZE_OPTIONAL "
-            f"so the schema types them.")
+            f"(or ANALYZE_PLANE2_KEYS if conditional; an addition does not "
+            f"bump the version) and to _ANALYZE_OPTIONAL so the schema types "
+            f"them.")
+        assert "plane2_absence" in payload, (
+            "the single-plane fixture publishes no absence sentence, so this "
+            "clause is no longer exercising the conditional half")
 
 
 @needs_jsonschema

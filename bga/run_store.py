@@ -254,6 +254,31 @@ def sibling_plane2(run_dir: str) -> Optional[str]:
     return plane2 if os.path.isfile(plane2) else None
 
 
+# UX-329: the raw trace log the timeline is rendered from, named here
+# beside the report it belongs with. `tools/bga_snapshot.py` writes it;
+# the absence grammar in `bga/plane2.py` has to be able to ask whether
+# it is there without importing the capture.
+RAW_LOG_NAME = "plane2.log.gz"
+
+
+def sibling_raw_log(run_dir: str) -> Optional[str]:
+    """The raw Plane 2 log beside a run directory, if there is one.
+
+    The same filesystem question `sibling_plane2` asks, about the other
+    half: the *report* is what the analysis reads and the *log* is what
+    `bga timeline` renders, and a capture can have either without the
+    other - which is the distinction `UX-329` exists to state.
+    """
+    if os.path.basename(os.path.normpath(run_dir)) != RUN_SUBDIR:
+        return None
+    snapshot = os.path.dirname(os.path.normpath(run_dir))
+    for name in (RAW_LOG_NAME, RAW_LOG_NAME[:-3]):
+        path = os.path.join(snapshot, name)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
     """The snapshot directory an alias names.
 

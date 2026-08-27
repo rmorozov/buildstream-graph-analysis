@@ -33,8 +33,14 @@ one of the four items' claims held. 826 slices, 836 flows, 538 counter
 samples peaking at 20 on one `count`-united track, and **every**
 annotation key resolving as `debug.<key>` in the `args` table -
 including `debug.cmd` at 553 characters behind a slice name of 120,
-which is the whole of `UX-308`'s argument, proven by the reader rather
+which was the whole of `UX-308`'s argument, proven by the reader rather
 than asserted by the writer.
+
+**That finding is history, and it is kept because it is the record of
+what this reader confirmed at the time.** `UX-333` untrimmed the name
+and dropped `debug.cmd` with it: the 553 characters are on the slice
+now, and the two clauses below ask this reader for both halves - the
+tail findable by name, and the annotation really absent.
 
 **Still open, and not closeable here.** `UX-298`'s *other* deviation is
 a one-time open of `ui.perfetto.dev`. This environment's network policy
@@ -298,17 +304,31 @@ class TestPerfettosOwnReaderAgrees:
         assert documented - seen == set(), documented - seen
         assert seen - documented == set(), seen - documented
 
-    def test_the_argv_tail_survives_behind_a_short_name(self, queried):
-        """The item's own headline, read back by the reader: the name is
-        cut at 120 and the annotation is not."""
+    def test_the_argv_tail_is_on_the_slice_itself(self, queried):
+        """`UX-333`, read back by the reader Perfetto ships.
+
+        This asserted the opposite until round 50: `name_len == 120`
+        with the tail recovered from `debug.cmd`. The name is the whole
+        command now, `debug.cmd` is gone, and the query that used to
+        find the slice by its annotation finds it by its name - which
+        is the point, because that is what a reader scanning a lane
+        sees.
+        """
         rows = queried["ask"](
-            "select length(s.name) as name_len, "
-            "length(extract_arg(s.arg_set_id,'debug.cmd')) as cmd_len "
-            "from slice s where extract_arg(s.arg_set_id,'debug.cmd') "
-            f"like '%{LONG_CMD[-20:]}';")
-        assert rows, "the long command produced no slice"
-        assert int(rows[0]["name_len"]) == 120
-        assert int(rows[0]["cmd_len"]) == len(LONG_CMD) > 120
+            "select length(s.name) as name_len from slice s "
+            f"where s.name like '%{LONG_CMD[-20:]}';")
+        assert rows, ("the long command produced no slice findable by "
+                      "its own argv tail")
+        assert int(rows[0]["name_len"]) == len(LONG_CMD) > 120
+
+    def test_the_dropped_annotation_is_really_gone(self, queried):
+        """The other half of a declared break: a query still reading
+        `debug.cmd` must find nothing rather than something stale."""
+        rows = queried["ask"](
+            "select count(*) as n from slice s where "
+            "extract_arg(s.arg_set_id,'debug.cmd') is not null;")
+        assert int(rows[0]["n"]) == 0, (
+            "`debug.cmd` is still emitted - the string is paid for twice")
 
     def test_the_failed_processes_are_selectable(self, queried):
         rows = queried["ask"](

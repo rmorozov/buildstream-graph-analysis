@@ -36,7 +36,6 @@ TrackEvent format does not. Verified against Perfetto v49.0 on
 | `element_kind` | Plane 1 | its kind from the run's own graph (`cmake`, `import`, `manual`, ...), or `unknown` where the capture recorded none |
 | `task_type` | Plane 1 | what the scheduler was doing: `build`, `fetch`, `pull`, `push`, `track` |
 | `outcome` | Plane 1 | the status BuildStream's log closed the task with - `SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache outcome is the last two, and only where the log states it |
-| `cmd` | Plane 2 | the full command line, untruncated - the slice name is the first 120 characters and this is the rest |
 | `src` | Plane 2 | which mechanism recorded it: `hook` (the LD_PRELOAD hook, loaded at exec) or `spine` (the ptrace supervisor) |
 | `cpu_us` | Plane 2 | CPU microseconds this process itself used, from its own `getrusage` at exit or the spine's read at the exit-stop |
 | `max_rss_kb` | Plane 2 | peak resident kilobytes of this process alone - never summed with another's, which never held it at the same moment |

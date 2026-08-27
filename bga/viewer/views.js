@@ -257,7 +257,16 @@ function markerPoint(marker, cx, cy, r, attrs) {
 
 export function renderTrend(store, schema = undefined,
                             aggregate = undefined) {
-  const rows = store?.snapshots ?? [];
+  // UX-335: a row that is not an object is not a snapshot. `store/v1`
+  // says every entry is one, and a store written by a half-finished
+  // prune or an interrupted snapshot can carry a `null` anyway - at
+  // which point `r.total_duration_us` below threw and took the *page*
+  // with it, not the trend. Dropped rather than drawn, and counted, so
+  // the drawing can say it is speaking for fewer runs than the store
+  // holds.
+  const all = store?.snapshots ?? [];
+  const rows = all.filter((row) => row && typeof row === "object");
+  const unreadable = all.length - rows.length;
   if (rows.length < 2) return null;
   const markers = verdictMarkers(schema);
 
@@ -352,6 +361,17 @@ export function renderTrend(store, schema = undefined,
   caption.textContent = incomplete.length
     ? `${rows.length} snapshots \u00b7 ${incomplete.length} not measurements`
     : `${rows.length} snapshots \u00b7 all finished`;
+  // UX-335: and how many rows this drawing could not read at all. Said
+  // rather than silently dropped - a trend over 3 of 4 snapshots that
+  // presents itself as a trend over 4 is the kind of quiet wrong this
+  // repository spends its rounds removing.
+  if (unreadable) {
+    caption.textContent += unreadable === 1
+      ? ` \u00b7 1 row in this store could not be read and is not drawn`
+      : ` \u00b7 ${unreadable} rows in this store could not be read and `
+        + `are not drawn`;
+    wrapper.setAttribute("data-unreadable-rows", String(unreadable));
+  }
   wrapper.append(heading, figure);
   // UX-316 (§2a): an exhibit's ends are read, not hovered - and it is
   // paired with its table twin, so the drawing never hoards values a
@@ -2379,7 +2399,13 @@ export function elementHistory(store, uid) {
   const snapshots = store?.snapshots ?? [];
   const series = [];
   let sawASliceAtAll = false;
+  let unreadable = 0;
   for (const snapshot of snapshots) {
+    // UX-335: the row itself, before its fields. A `null` here read
+    // `snapshot.elements` and threw; the throw reached `boot()`'s
+    // page-wide catch, and every section in the report was replaced by
+    // one sentence about a `TypeError`.
+    if (!snapshot || typeof snapshot !== "object") { unreadable += 1; continue; }
     // `null` means "captured before UX-226"; `[]` means "analyzed, and
     // this element was not worth watching in that run". The two are
     // different facts and the drawing must not merge them.
@@ -2394,7 +2420,8 @@ export function elementHistory(store, uid) {
       verdict_kind: snapshot.verdict_kind ?? null,
     });
   }
-  return { series: series.slice(-HISTORY_POINTS_MAX), sawASliceAtAll };
+  return { series: series.slice(-HISTORY_POINTS_MAX), sawASliceAtAll,
+           unreadable };
 }
 
 /**
@@ -2405,17 +2432,27 @@ export function elementHistory(store, uid) {
  * make.
  */
 export function renderElementHistory(store, uid, schema = null) {
-  const { series, sawASliceAtAll } = elementHistory(store, uid);
+  const { series, sawASliceAtAll, unreadable } = elementHistory(store, uid);
   const block = document.createElement("p");
   block.className = "element-history";
   block.setAttribute("data-role", "element-history");
   block.setAttribute("data-element", uid);
   block.setAttribute("data-points", String(series.length));
 
+  if (unreadable) block.setAttribute("data-unreadable-rows", String(unreadable));
   if (!series.length) {
     block.setAttribute("data-history", "none");
     block.className += " muted";
-    block.textContent = sawASliceAtAll
+    // UX-335: three absences, not two. A store whose rows will not read
+    // is a different fact from a store that recorded nothing for this
+    // element, and telling a reader "it has not been on the critical
+    // path" when the truth is "this store is damaged" sends them to
+    // look at the wrong thing.
+    block.textContent = unreadable && !sawASliceAtAll
+      ? `No history for this element: ${unreadable} row`
+        + `${unreadable === 1 ? "" : "s"} in this store could not be read, `
+        + `and no other snapshot carries per-element history.`
+      : sawASliceAtAll
       ? "No history for this element: it has not been on the critical path "
         + "or in the top actions of an earlier run."
       : "No history for this element: the snapshots in this store were "

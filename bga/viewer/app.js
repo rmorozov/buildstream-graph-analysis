@@ -30,7 +30,7 @@ import { chapters, fileInChapter } from "./chapters.js";
 import { jsonToggles, recordSource } from "./rawjson.js";
 // UX-334: `name` and `id` on every control the page builds - see the
 // measured counts in the module.
-import { identify, labelFor } from "./controls.js";
+import { identify, labelFor, contained } from "./controls.js";
 import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
@@ -2298,13 +2298,16 @@ async function boot() {
     // time, so the band had never rendered for any user. `bga view`
     // now serves the comparison against the run before this one.
     const comparison = await optional(run, "compare");
-    const band = comparison && renderBand(comparison);
+    const band = comparison && contained(
+      document, "band", "compare.json", () => renderBand(comparison));
     if (band) root.append(band);
     // UX-221: and which elements put the candidate where the band says
     // it is. The band states the verdict, this states the cause, and
     // `chapters.js` is what puts them in that order - see the note on
     // `renderDecision` below.
-    const culprits = comparison && renderCulprits(comparison);
+    const culprits = comparison && contained(
+      document, "culprits", "compare.json",
+      () => renderCulprits(comparison));
     if (culprits) root.append(culprits);
 
     // UX-202: the overview above the sections, and the evidence header
@@ -2314,13 +2317,15 @@ async function boot() {
     // UX-206: the chain drawn, hung off the overview's execution
     // segment - the "where did the time go" spine, as a list with
     // widths rather than a graph layout problem.
-    const chain = renderCriticalPath(payload);
+    const chain = contained(document, "critical_path", "report.json",
+                            () => renderCriticalPath(payload));
     if (chain) root.append(chain);
 
     // UX-219: the horizon as a plan rather than a five-column table.
     // Placed with the chain, because "what is the path" and "what does
     // fixing it buy" are the same question one step apart.
-    const horizon = renderHorizon(payload);
+    const horizon = contained(document, "horizon", "report.json",
+                              () => renderHorizon(payload));
     if (horizon) root.append(horizon);
 
     // UX-230: and the same plan with checkboxes. A prefix of the
@@ -2338,9 +2343,11 @@ async function boot() {
     } : null, { run: run.name ?? "RUN" });
     if (whatif) root.append(whatif);
 
-    const overview = renderOverview(payload);
+    const overview = contained(document, "overview", "report.json",
+                               () => renderOverview(payload));
     if (overview) root.append(overview);
-    const evidence = renderEvidence(payload);
+    const evidence = contained(document, "evidence", "report.json",
+                               () => renderEvidence(payload));
     if (evidence) root.append(evidence);
 
     // UX-207: **first screen = decision, everything else = evidence.**
@@ -2374,14 +2381,15 @@ async function boot() {
     // per snapshot and one row per host class are different shapes,
     // and a page with no aggregate simply draws no band.
     const aggregate = await optional(run, "store-aggregate");
-    const decision = renderDecision(payload,
+    const decision = contained(document, "decision", "report.json", () =>
+      renderDecision(payload,
       run.has_timeline ? (action) => decisionInvestigation(action, payload) : null,
       // UX-218: the clipboard helper, passed in so `views.js` keeps
       // having no dependency on `tables.js`.
       copy,
       // UX-227: the store and the schema, for the history line and the
       // verdict shapes inside each "why this one" fold.
-      { store, schema: schemas[store?.schema] });
+      { store, schema: schemas[store?.schema] }));
     if (decision) root.append(decision);
     // UX-216: one section per element the report discusses, appended
     // after everything that names an element has been drawn - the
@@ -2397,7 +2405,11 @@ async function boot() {
       if (store) {
         const uid = node.getAttribute?.("data-element");
         if (uid) {
-          node.append(renderElementHistory(store, uid, schemas[store.schema]));
+          // Per element, so one element's malformed history costs that
+          // element's line rather than every element's section.
+          node.append(contained(
+            document, `element_history:${uid}`, "store.json",
+            () => renderElementHistory(store, uid, schemas[store.schema])));
         }
       }
       root.append(node);
@@ -2405,7 +2417,9 @@ async function boot() {
     // UX-212: the schema, so the trend draws the shape the *contract*
     // assigns each verdict. UX-234: and the distribution the points
     // came from, drawn behind them from published figures only.
-    const trend = store && renderTrend(store, schemas[store.schema], aggregate);
+    const trend = store && contained(
+      document, "store_trend", "store.json",
+      () => renderTrend(store, schemas[store.schema], aggregate));
     if (trend) root.append(trend);
     // UX-199: the blast box is a *transport* - it asks the server. An
     // export is a `file://` document with no server, so the box could
@@ -2576,7 +2590,15 @@ async function boot() {
     applyView(root, splitHash(location.hash).query);
     wireViewState(root, { location, history: window.history });
   } catch (error) {
-    root.replaceChildren(el("div", { class: "verdict refused" },
+    // UX-335: this is the *load* failure - a report that will not parse
+    // is not a report, and there is nothing to render around. It is
+    // marked as such because a section's contained failure wears the
+    // same refusal styling: both say "this did not work", and only one
+    // of them means the page is empty. A reader's stylesheet and a
+    // guard both need to tell them apart, and `.verdict.refused` alone
+    // could not.
+    root.replaceChildren(el("div", { class: "verdict refused",
+                                     "data-page-failed": "true" },
       el("h2", {}, "Could not load this run"),
       el("p", {}, String(error))));
   }

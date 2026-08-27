@@ -66,3 +66,61 @@ export function labelFor(label, node, stem) {
 export function forgetIds() {
   taken.clear();
 }
+
+// UX-335: a section that throws loses its section, not the page.
+//
+// `boot()` has one page-wide `try/catch`, so **any** renderer's throw
+// replaced the whole report with "Could not load this run". Measured on
+// the golden run served with a single `null` row in `store.json` - the
+// shape a field capture hit:
+//
+//     refused: "Could not load this run
+//               TypeError: Cannot read properties of null (reading 'elements')"
+//     sections rendered: 0
+//
+// Forty-eight sections' worth of correct analysis thrown away because
+// one row of one optional payload was malformed. The page-wide catch
+// stays for *load* failures - a report that will not parse is not a
+// report - but a renderer's throw is now contained where it happened.
+//
+// **It also reaches the console on purpose.** The catch is what made
+// this class invisible to `UX-334`'s console guard: the page swallowed
+// the throw and rendered a banner, so the boot came back with zero
+// console errors and a net built for exactly this saw nothing. A
+// contained failure that is silent is a failure nobody measures.
+
+/** The card a failed section leaves behind: what broke, and from where. */
+export function sectionFailure(doc, name, payload, error) {
+  const card = doc.createElement("section");
+  card.className = "verdict refused section-failed";
+  card.setAttribute("data-section", name);
+  card.setAttribute("data-section-failed", "true");
+  card.setAttribute("data-payload", payload);
+  const head = doc.createElement("h2");
+  head.textContent = `This section could not be drawn: ${name}`;
+  const why = doc.createElement("p");
+  // The payload path, because that is the half a reader can act on:
+  // the section is a consequence, the document is the cause.
+  why.textContent =
+    `Its renderer threw on \`${payload}\`, so this section is missing and `
+    + `the rest of this report is not. ${String(error)}`;
+  card.append(head, why);
+  return card;
+}
+
+/**
+ * Run `build`, or return the card that says why it could not.
+ *
+ * `name` is the section, `payload` the document it was drawn from -
+ * both appear in the card and in the console line, so a reader and a
+ * guard read the same two facts.
+ */
+export function contained(doc, name, payload, build) {
+  try {
+    return build();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`bga: section "${name}" failed on ${payload}:`, error);
+    return sectionFailure(doc, name, payload, error);
+  }
+}

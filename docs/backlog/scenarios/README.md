@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-331 scenarios: **7 open**, 324 closed.
+335 scenarios: **11 open**, 324 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 58 |
+| capture | 1 | 59 |
 | analysis | 1 | 51 |
 | contracts | 1 | 36 |
-| viewer | 0 | 82 |
+| viewer | 2 | 84 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 34 |
-| guards | 1 | 40 |
+| guards | 2 | 41 |
 
 ## Open scenarios
 
@@ -43,6 +43,33 @@ task file, which is the only place it ever lived twice.
 | UX-330 | [the stranger needs a seed](UX-0330-the-stranger-needs-a-seed.md) | docs | Medium | R1 | 🔴 |
 | UX-331 | [the README excerpt, and the sentence that contradicts itself](UX-0331-the-readme-excerpt-and-the-sentence-that-contradicts-itself.md) | docs | Low | R1 | 🔴 |
 | UX-332 | [the cascade beats the first match, and two record nits](UX-0332-the-cascade-beats-the-first-match.md) | guards | Medium | — | 🔴 |
+| UX-333 | [the name is the whole command](UX-0333-the-name-is-the-whole-command.md) | capture | Medium | R1, R2 | 🔴 |
+| UX-334 | [a console the page keeps clean](UX-0334-a-console-the-page-keeps-clean.md) | viewer | High | R1 | 🔴 |
+| UX-335 | [reading 'start_time' of undefined](UX-0335-reading-start-time-of-undefined.md) | viewer | Medium | R1 | 🔴 |
+| UX-336 | [the loop that got slow, measured and re-tooled](UX-0336-the-loop-that-got-slow.md) | guards | High | — | 🔴 |
+
+## UX-333..UX-336: the forty-sixth round — three field errors and a slowing loop (2026-08-27)
+
+Four user observations, each measured before filed. The 120-char
+slice trim interns 3,000 realistic compiles to **two names** (the
+flags prefix is the shared half; full-name-plus-dropped-duplicate
+costs +8.4 % gz —
+[`UX-333`](UX-0333-the-name-is-the-whole-command.md)). The CSP
+console spam is one path — exhibit tick labels as style attributes
+against `default-src 'self'` — and Chrome *enforces*: ticks pile at
+`left: 0` on served pages while the export renders them right; the
+fix ships with the console/violation guard the user asked for
+([`UX-334`](UX-0334-a-console-the-page-keeps-clean.md)). The
+`start_time` TypeError is provably not this codebase's (never in
+any commit; an extension is the likely thrower) — but the class
+reproduced: one null store row kills the whole page, so error
+containment moves to the section boundary
+([`UX-335`](UX-0335-reading-start-time-of-undefined.md)). And the
+slowing implementation loop got its levers measured: xdist takes
+the suite 375→148.7 s with zero races, the "fast" tier is 335 s of
+not-fast, and the ritual's mechanical tail gets a scaffold
+([`UX-336`](UX-0336-the-loop-that-got-slow.md)). Full narrative:
+[`../../audits/round-46.md`](../../audits/round-46.md).
 
 ## UX-324..UX-332: the forty-fifth round — the guides, walked by a stranger (2026-08-27)
 

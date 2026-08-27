@@ -29,9 +29,13 @@ RELEASE_GUIDE = REPO / "docs/contributing/release-guide.md"
 
 KINDS = ("initial", "breaking", "extending", "patch")
 
+# `UX-339` dropped the `commit` column, for the reason `UX-332` dropped
+# it from the review log: the one hash it carried was not reachable from
+# `origin/main`, so it named a commit on one machine. A release row also
+# cannot carry its own commit's hash, because the hash covers the row.
 _ROW = re.compile(
     r"^\|\s*\[?(\d+\.\d+\.\d+)\]?[^|]*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|"
-    r"\s*`([0-9a-f]+)`\s*\|\s*(\w+)\s*\|")
+    r"\s*(\w+)\s*\|")
 _STATE = re.compile(r"```text state\n(.*?)```", re.S)
 
 
@@ -42,7 +46,7 @@ def _rows():
         if match:
             rows.append({"version": match.group(1), "date": match.group(2),
                          "closed_rows": int(match.group(3)),
-                         "commit": match.group(4), "kind": match.group(5)})
+                         "kind": match.group(4)})
     return rows
 
 
@@ -96,7 +100,7 @@ class TestTheLedgerIsWellFormed:
     def test_there_is_at_least_one_release(self):
         assert _rows(), (
             "CHANGELOG.md has no release row this guard can read; the "
-            "table is `| version | date | closed rows | `commit` | kind |`")
+            "table is `| version | date | closed rows | kind |`")
 
     def test_every_row_has_a_recorded_state(self):
         states = _states()

@@ -20,7 +20,7 @@ follow, and they have different answers:
 | which contract states shipped together? | the **release row** in `CHANGELOG.md` |
 
 The package version is *provenance*. It is never the compatibility
-signal: it is a lossy summary of nine independent contracts, and
+signal: it is a lossy summary of twelve independent contracts, and
 comparing it would refuse across upgrades that moved nothing. What a
 reader compares is the contract set — that is `UX-250`'s job.
 

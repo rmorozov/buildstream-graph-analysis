@@ -61,6 +61,13 @@ STORE_AGGREGATE = "store-aggregate/v1"
 # document because it answers a *question a reader asked*, not a
 # property of the run - two selections over one run are two answers.
 WHATIF = "whatif/v1"
+
+# `UX-339`: the capacity sweep. `UX-328` found it as the one printed
+# document with no id at all - and `bga sweep --schema` answering
+# `analyze/v2` for a document with **none** of that contract's four
+# required keys, which is a confidently wrong answer rather than a
+# missing one.
+SWEEP = "sweep/v1"
 # UX-215: the two-plane join, which `bga correlate --format json` has
 # emitted since UX-51 as an unversioned blob. Everything in it was
 # already computed and already correct; what it lacked was a contract,
@@ -619,6 +626,64 @@ _PROVENANCE = {
                            "no gap."},
     },
     "required": ["claim", "kind", "document"],
+}
+
+
+_SWEEP_REQUIRED = {
+    "resource": "string",
+    "sweeps": "array",
+    "knee_points": "object",
+    "monotonicity_violations": "array",
+    "capacity_model_caveat": "string",
+    "calibration_capacities": "array",
+}
+
+_SWEEP_HINTS = {
+    "resource": {"description": "The resource whose capacity was swept - "
+                                "`PROCESS`, `DOWNLOAD` or `UPLOAD`. One "
+                                "sweep answers about one of them."},
+    "sweeps": {
+        # `prove`: the sweep is the evidence behind a capacity
+        # recommendation, not the recommendation itself.
+        RAIL: "prove",
+        QUESTION: "What does more capacity buy?",
+        COLUMNS: [
+            {"key": "capacity", "title": "Capacity"},
+            {"key": "makespan_us", "title": "Makespan",
+             "quantity": "duration_us"},
+            {"key": "normalized_improvement", "title": "Improvement",
+             "quantity": "ratio"},
+        ],
+        "description": "One row per capacity tried: the full capacity "
+                       "vector at that point, the makespan the replay "
+                       "produced, and what that capacity bought over the "
+                       "one before it. `normalized_improvement` is a "
+                       "*step* gain, not a total - reading it as a total "
+                       "is the mistake the column exists to prevent."},
+    "knee_points": {
+        "description": "Per resource, the capacity past which more buys "
+                       "little. Absent for a resource with no knee, "
+                       "which is a different answer from a knee at the "
+                       "minimum."},
+    "monotonicity_violations": {
+        "description": "Capacities where the makespan got *worse* as "
+                       "capacity rose. The replay model says that cannot "
+                       "happen, so each one is a hole in the model rather "
+                       "than a finding about the build - published so a "
+                       "reader can see the model failing rather than "
+                       "trust a number it produced."},
+    "capacity_model_caveat": {
+        "description": "What this projection does not model, published "
+                       "with every answer so a figure that travels keeps "
+                       "its assumption attached: the replay replays each "
+                       "task's already-observed duration and does not "
+                       "model CPU contention rising with concurrency."},
+    "calibration_capacities": {
+        "description": "The capacities that had real measurements behind "
+                       "them, when a contention calibration was supplied. "
+                       "Empty means every point is a projection - the "
+                       "difference between a curve with data in it and "
+                       "one without."},
 }
 
 
@@ -2588,6 +2653,15 @@ _SCHEMAS = {
         "excluded and counted; a mix of machines is refused rather than "
         "blended, because durations are not scaled across hosts.",
         hints=_STORE_AGGREGATE_HINTS),
+    SWEEP: lambda: _document(
+        SWEEP, "bga sweep RUN --format json",
+        _SWEEP_REQUIRED,
+        "What more capacity would buy: one makespan per capacity tried, "
+        "the knee past which more buys little, and the capacities where "
+        "the model contradicted itself. A replay over already-observed "
+        "durations, so the caveat travels with the numbers rather than "
+        "beside them.",
+        hints=_SWEEP_HINTS),
     WHATIF: lambda: _document(
         WHATIF, "bga whatif RUN --element A --element B",
         _WHATIF_REQUIRED,

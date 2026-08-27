@@ -1574,6 +1574,29 @@ advice that clears the CPU check and blows the memory one is advice to
 build into swap, which is why the two are computed together and the
 binding one is named.
 
+**The sweep behind it, as data: `sweep/v1`** (`UX-339`). The graph
+constraint above is the *knee* of a capacity sweep, and `bga sweep`
+prints that whole curve rather than the one number the recommendation
+uses:
+
+```bash
+bga sweep tests/fixtures/macro_micro/run --format json | jq '.knee_points'
+```
+
+| key | what it is |
+|---|---|
+| `resource` | which resource was swept — `PROCESS`, `DOWNLOAD` or `UPLOAD`. One sweep answers about one of them |
+| `sweeps` | one row per capacity tried: the full capacity vector, the makespan the replay produced, and `normalized_improvement` — a **step** gain over the capacity before it, not a total |
+| `knee_points` | per resource, the capacity past which more buys little. A resource with no knee is absent rather than zero |
+| `monotonicity_violations` | capacities where the makespan got *worse* as capacity rose. The replay model says that cannot happen, so each is a hole in the model rather than a finding about the build |
+| `capacity_model_caveat` | what the projection does not model, carried with the numbers rather than beside them: the replay replays already-observed durations and does not model CPU contention rising with concurrency |
+| `calibration_capacities` | the capacities that had real measurements behind them. Empty means every point is a projection — the difference between a curve with data in it and one without |
+
+It had **no `schema:` key at all** until `UX-339`, and `bga sweep
+--schema` answered `analyze/v2` — a contract this document has none of
+the required keys of. `UX-328` found that while enrolling three others,
+said what was true in the meantime, and filed the contract this is.
+
 **Where it appears.** In the text report, under the headline. It is
 **not** a key of `analyze/v2` — `bga analyze -f json` does not carry it
 (`UX-275`).

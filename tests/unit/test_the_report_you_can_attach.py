@@ -236,7 +236,31 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # `UX-334`. A budget with one round's growth left in it reddens on the
 # next round whatever that round does, and a guard that always reddens
 # is a guard nobody reads.
-PAGE_BUDGET_B = 230_000
+#
+# **Round 49 moved both halves, one each**, and the split named which
+# item did which. Measured on a checkout whose path is the same length
+# as this one's, so the numbers are comparable to the round above
+# rather than to a temporary directory:
+#
+#                       round 48    UX-338    UX-339
+#     page               227,498   228,528   228,528   (+1,030, +0)
+#     data (golden)       98,986    99,291   101,906     (+305, +2,615)
+#     golden             326,484   327,819   330,434
+#     macro_micro        365,920   367,255   369,870
+#
+# `UX-338` is the one round in this note's history that moved *both*:
+# +1,030 B of source, where the join merges into the element table and
+# a preset gates itself on what it declares it draws, and +305 B of
+# payload, because that declaration - `requires` - travels in the
+# embedded `schemas.json` where the page can read it.
+#
+# `UX-339` moved the page by **zero bytes** and the payload by 2,615 on
+# both runs, which is what a new contract looks like from here:
+# `sweep/v1` is the twelfth document in the embedded inventory and no
+# line of viewer source knows it exists. A ceiling could not have told
+# that from 2,615 B of new code; the split can, and that is the whole
+# argument for keeping it.
+PAGE_BUDGET_B = 231_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -247,7 +271,11 @@ COMMITTED_EXPORTS = [
     # `UX-302` moved both again, by 5,315 B: the §1 dispatch table and
     # the "view as JSON" toggle are two new modules and their styles.
     # Source, not content - see the split above.
-    ("golden", GOLDEN, 330_000),                       #  326,484 B
+    # `UX-338` and `UX-339` moved both again, by 3,950 B - 1,030 of
+    # source and 2,920 of payload, split between the two items in the
+    # note above. The bounds are restated rather than the twelfth
+    # contract left unpublished to fit a number nobody argued.
+    ("golden", GOLDEN, 335_000),                       #  330,434 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -259,7 +287,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 370_000),             #  365,920 B
+    ("macro_micro", MACRO_MICRO, 375_000),             #  369,870 B
 ]
 
 

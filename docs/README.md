@@ -53,7 +53,7 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Eleven ids, and what writes each:
+contracts. Twelve ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -64,6 +64,7 @@ contracts. Eleven ids, and what writes each:
 | `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
+| `sweep/v1` | `bga sweep --format json` — what more capacity would buy, the knee past which it buys little, and where the model contradicted itself (`UX-339`) |
 | `host/v1` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
 | `sources/v1` | `bga extract`, at `sources.json` in a run directory — every element's sources, and how each one is keyed |
 | `plane2/v2` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured, as per-element reductions (`UX-297`) |
@@ -72,12 +73,12 @@ contracts. Eleven ids, and what writes each:
 The last four are written into a run directory rather than printed by a
 command, so no `--schema` invocation prints them, and `plane2/v1` is
 only ever read - it is the shape an older store's captures are in. The
-other seven each have a command that prints their contract, and
+other eight each have a command that prints their contract, and
 `tests/unit/test_every_emitted_contract_is_answerable.py` holds that
 split by running both sides rather than by reading this table
-(`UX-328`). One command's JSON carries no id at all - `bga sweep
---format json`, whose contract is filed as `UX-339`; it says so when
-asked rather than naming a shape it does not have. A key may be added to
+(`UX-328`). Every command that prints a document now answers for it:
+`bga sweep` was the last that did not, and `UX-339` gave it one. A key
+may be added to
 any of these without a version bump; a rename or a removal bumps. The full contract table is
 [spec Part 32.5](spec/specification.md); what each command does with it
 is [`guides/cli.md`](guides/cli.md).

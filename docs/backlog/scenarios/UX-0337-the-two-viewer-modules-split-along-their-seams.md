@@ -61,3 +61,66 @@ under the DOM shim and renders the same section list as before (asserted
 against a before/after capture, not a literal); the export's byte size
 moves by less than 1%; `_module_order` returns an acyclic order
 containing every new module (asserted); the module map names them.
+
+## Groundwork (round 50) — the graph, derived
+
+Not closed this round, and deliberately not started: this is a pure
+move with no user-visible change, and its own Motivation names the
+risk — `UX-199` is on file because exactly this inlining shipped an
+export that threw `ReferenceError` in `boot()` and rendered **empty**
+for several rounds. Landing it inside a batch of three unrelated fixes
+would make the one diff that has to read as a move read as a rewrite.
+
+What *was* done is the part the Required Fix says must come first —
+**the dependency graph between the chapters, derived rather than
+guessed** — because it turned up something that changes the shape of
+the work:
+
+```text
+chapter                               lines  defines  depends on
+(preamble)                               54        4  -
+band                                    198        5  (preamble)
+trend                                   197        3  (preamble), band
+blast box                                97        3  UX-206: two graphs
+UX-202: the overview                    264        7  (preamble), UX-206: two graphs
+UX-206: two graphs                      180        6  (preamble), the element object
+UX-207: the decision                    548       11  (preamble), the element object
+the element object                      993       25  (preamble), UX-202: the overview, band
+```
+
+**The chapters are not acyclic.** There is a three-chapter cycle:
+
+```text
+UX-202: the overview  ->  UX-206: two graphs  ->  the element object
+                      <-------------------------------------------
+```
+
+and it is created by exactly three symbols, one per edge:
+
+```text
+UX-202: the overview  ->  UX-206: two graphs   OVERVIEW_SHOWN
+UX-206: two graphs    ->  the element object   elementAnchor
+the element object    ->  UX-202: the overview  bar
+```
+
+All three are **primitives, not chapter content**: a constant (`4`), a
+pure string function, and a DOM row builder. None of them belongs to
+the chapter it happens to sit in, and the cycle is entirely an artifact
+of where they were written down.
+
+So the split has a step the filing did not know it needed, and it comes
+first: a shared module for the primitives (`svg`, `seconds`, `mib`
+already live in the preamble and belong with them), after which the
+seven chapters *are* acyclic and the inliner's premise holds.
+
+The rest of the shape, measured:
+
+```text
+bga/viewer/views.js   2,531  ->  element object (993) out, primitives out  ~1,478
+bga/viewer/app.js     2,752  ->  table machinery (~1,150) and format (~160) out  ~1,440
+```
+
+`app.js` has only three comment seams (`format`, `render`, `boot`) and
+the middle one is 1,956 lines, so its cut is by *function group* rather
+than by an existing rule: the table machinery from `columnSpecs` to
+`renderPairs` is one contiguous block and one subject.

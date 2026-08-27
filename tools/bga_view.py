@@ -472,16 +472,59 @@ def trace_bytes(run: str) -> Optional[bytes]:
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def schemas_payload() -> dict:
+def schemas_payload(documents: Optional[Dict[str, dict]] = None) -> dict:
     """The schemas, so the page can render generically.
 
     Served rather than inlined so the page has one source of truth for
     what a field means, and so `curl .../schemas.json` answers the same
     question a reader has.
+
+    `UX-342`: with `documents`, only the ones those documents *declare*.
+    An export embeds its payloads and cannot fetch anything, so it used
+    to carry all eight schemas - 83,669 B, byte-identical between two
+    runs, against a golden report of 17,891 B. The page resolves a
+    schema in exactly two places, `schemas[payload.schema]` and
+    `schemas[store?.schema]`, and the other six were 35,185 B nothing
+    could reach. Derived from what is being embedded rather than
+    subtracted from a list, so a page that later embeds a
+    `correlate/v1` document gets that schema with no edit here.
+
+    The **served** side passes nothing and still answers with all of
+    them: `schemas.json` is a published API, and a byte there costs the
+    page nothing.
     """
     from bga import schemas
 
-    return {name: schemas.schema(name) for name in schemas.names()}
+    names = schemas.names() if documents is None else _declared_schemas(
+        documents, set(schemas.names()))
+    return {name: schemas.schema(name) for name in sorted(names)}
+
+
+def _declared_schemas(documents: Dict[str, dict], known) -> set:
+    """Every schema id the documents name, at any depth.
+
+    At any depth because a document can carry another's id inside it -
+    `UX-253`'s aggregate says which contract sets it mixes - and a page
+    that draws the inner one needs its schema as much as the outer.
+    Unknown ids are dropped rather than raising: an id this build does
+    not publish is a payload written by a newer one, and refusing to
+    export it would be worse than rendering it generically.
+    """
+    found = set()
+
+    def walk(value):
+        if isinstance(value, dict):
+            declared = value.get("schema")
+            if isinstance(declared, str) and declared in known:
+                found.add(declared)
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(documents)
+    return found
 
 
 # ---------------------------------------------------------------- export
@@ -788,7 +831,9 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
     # looks fine everywhere except where it is used.
     documents = {name[:-len(".json")] if name.endswith(".json") else name: body
                  for name, body in payloads(run).items()}
-    documents["schemas"] = schemas_payload()
+    # `UX-342`: after the payloads and before the manifest - it has to
+    # see what is being embedded, and `_offered` has to see it.
+    documents["schemas"] = schemas_payload(documents)
     documents["run"] = {"run": os.path.abspath(run),
                         "name": os.path.basename(os.path.abspath(run)),
                         # UX-334: the same manifest the server

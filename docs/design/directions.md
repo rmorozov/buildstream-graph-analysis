@@ -1423,6 +1423,7 @@ the other rounds now:
 | [43](../audits/round-43.md) | Direction 15 and the visual contract verified eleven for eleven, fourteen mutations discriminating; then the user's question answered by inventory — the trace speaks Perfetto's format and none of its vocabulary, while the capture holds the content for all of it (`UX-308`..`UX-312`, Direction 15's second iteration) |
 | [44](../audits/round-44.md) | the trace vocabulary verified seven for seven with one dead question surviving its own class's purge; the user's thirteen readability observations became four visual-contract sections — drawing grades, apparatus placement, the depth budget and table focus, the click budget (`UX-316`..`UX-321`) |
 | [45](../audits/round-45.md) | the guides walked by a stranger: four bugs forty-four feature rounds never saw — the no-bst traceback, the user-install crash, the self-crashing printed command, the ghost invocations — plus the round-44 landing verified with one cascade evasion (`UX-324`..`UX-332`) |
+| [46](../audits/round-46.md) | three field errors measured to mechanisms — the trim that interns 3,000 compiles to two names, the CSP that silently breaks tick labels on served pages, the TypeError that was never bga's — and the implementation loop re-tooled with a measured 2.5× (`UX-333`..`UX-336`) |
 
 ## Verification Log
 

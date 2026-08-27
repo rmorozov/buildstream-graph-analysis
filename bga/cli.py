@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from . import __version__, schemas
+from . import __version__, contracts, schemas
 from . import plane2 as plane2_shape
 from .analyzer import (
     MODELLED_AXIS_CLAUSE, UNMODELED_AXIS_CLAUSE, BuildEfficiencyAnalyzer,
@@ -1923,7 +1923,6 @@ _SCHEMA_BY_COMMAND = {
     "graph": schemas.ANALYZE,
     "floors": schemas.ANALYZE,
     "replay": schemas.ANALYZE,
-    "sweep": schemas.ANALYZE,
     "utilisation": schemas.ANALYZE,
     "diagnostics": schemas.ANALYZE,
     "compare": schemas.COMPARE,
@@ -1932,6 +1931,43 @@ _SCHEMA_BY_COMMAND = {
     # "correlate produces no versioned JSON output" when asked what
     # shape it was.
     "correlate": schemas.CORRELATE,
+    # UX-328: the same defect, three more times. Each of these prints a
+    # document with a `schema:` id in it and answered "produces no
+    # versioned JSON output" when asked which - a refusal the tool's own
+    # output falsifies two lines later. `UX-190`'s rule did not grow a
+    # new exception; three emitters were added without being enrolled,
+    # which is why the guard over this table is structural now rather
+    # than a second list somebody has to remember.
+    "whatif": schemas.WHATIF,
+}
+
+#: Commands whose JSON carries **no** `schema:` id, with what they emit
+#: instead. `--schema` refuses for these, and says so - which is the
+#: point.
+#:
+#: `UX-328` found `sweep` here while enrolling the three the item was
+#: filed for, and it is the same defect one turn worse: `bga sweep
+#: --schema` printed `analyze/v2`, and `bga sweep --format json` emits a
+#: document with **none** of that contract's four required keys
+#: (`schema`, `run_id`, `total_duration_us`, `section`). A missing
+#: answer sends a reader to look; a confidently wrong one sends them to
+#: write a parser against a shape that does not exist.
+#:
+#: The document itself wants a contract of its own. That is a new id
+#: rather than a re-enrolment, so it is filed (`UX-339`) rather than
+#: invented here, and until then the tool says what is true.
+_EMITS_NO_CONTRACT = {
+    "sweep": "a capacity sweep: `resource`, `sweeps`, `knee_points`, "
+             "`monotonicity_violations` and the calibration it used",
+}
+
+#: Commands whose *flag* decides the contract. `bga snapshot` is one
+#: command and two documents (`UX-234` added the second), so a single
+#: command -> id mapping cannot answer it. First match wins, and the
+#: order is the order the flags are declared.
+_SCHEMA_BY_FLAG = {
+    "snapshot": (("--aggregate", schemas.STORE_AGGREGATE),
+                 ("--list", schemas.STORE)),
 }
 
 
@@ -1958,17 +1994,79 @@ def _maybe_print_schema(argv: list) -> Optional[int]:
     if "--schema" not in argv:
         return None
     command = next((arg for arg in argv if not arg.startswith("-")), None)
-    name = _SCHEMA_BY_COMMAND.get(command)
+    name = _schema_for(command, argv)
     if name is None:
-        print(
-            f"Error: `--schema` is available on "
-            f"{', '.join(sorted(_SCHEMA_BY_COMMAND))}; "
-            f"{command or 'no command'} produces no versioned JSON output.",
-            file=sys.stderr,
-        )
-        return 2
+        return _refuse_schema(command, argv)
     print(json.dumps(schemas.schema(name), indent=2))
     return 0
+
+
+def _schema_for(command, argv) -> Optional[str]:
+    """The contract `bga <command> [flags] --schema` should print.
+
+    `UX-328`: the flag first, because a command that emits two
+    documents emits the one its flags select - answering `bga snapshot
+    --aggregate --schema` with `store/v1` would be a confident wrong
+    answer rather than a missing one.
+    """
+    for flag, name in _SCHEMA_BY_FLAG.get(command, ()):
+        if flag in argv:
+            return name
+    if command in _SCHEMA_BY_FLAG:
+        # The command is enrolled but no flag selected a document. Its
+        # bare form writes a run directory rather than printing JSON, so
+        # there is no id to give - and saying which flags have one is
+        # the whole of what a reader needs here.
+        return None
+    return _SCHEMA_BY_COMMAND.get(command)
+
+
+def _refuse_schema(command, argv) -> int:
+    """Say what `--schema` can answer, and what was asked instead."""
+    answerable = sorted(_SCHEMA_BY_COMMAND)
+    for name, pairs in _SCHEMA_BY_FLAG.items():
+        answerable += [f"{name} {flag}" for flag, _ in pairs]
+    lines = [f"Error: `--schema` is available on {', '.join(sorted(answerable))}."]
+    if command in _SCHEMA_BY_FLAG:
+        offered = ", ".join(f"`--{f.lstrip('-')}`"
+                            for f, _ in _SCHEMA_BY_FLAG[command])
+        lines.append(
+            f"  `bga {command}` prints a document only with {offered}; "
+            f"without one it writes a run directory and prints a report.")
+    elif command and contracts.CONTRACT_ID.match(command):
+        # UX-328: `bga --schema analyze/v2` is the form `docs/README.md`
+        # promised and this tool never had. Saying "analyze/v2 produces
+        # no versioned JSON output" about a *contract id* is the same
+        # class of false refusal this item was filed for, one level up.
+        owner = _command_emitting(command)
+        lines.append(
+            f"  `{command}` is a contract id, not a command. "
+            + (f"Ask the command that emits it: `bga {owner} --schema`."
+               if owner else
+               "It is written into a run directory rather than printed, "
+               "so no command prints its contract."))
+    elif command in _EMITS_NO_CONTRACT:
+        lines.append(
+            f"  `bga {command} --format json` prints "
+            f"{_EMITS_NO_CONTRACT[command]}, and that document carries no "
+            f"schema id yet - so there is no contract to print. UX-339.")
+    else:
+        lines.append(f"  {command or 'no command'} produces no versioned "
+                     f"JSON output.")
+    print("\n".join(lines), file=sys.stderr)
+    return 2
+
+
+def _command_emitting(contract: str) -> Optional[str]:
+    """Which `--schema` invocation prints `contract`, if any."""
+    for command, name in sorted(_SCHEMA_BY_COMMAND.items()):
+        if name == contract:
+            return command
+    for command, pairs in sorted(_SCHEMA_BY_FLAG.items()):
+        for flag, name in pairs:
+            if name == contract:
+                return f"{command} {flag}"
+    return None
 
 
 def main(argv: Optional[list[str]] = None) -> int:

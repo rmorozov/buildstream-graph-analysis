@@ -152,6 +152,27 @@ is **not** a load failure at all - the page renders it as a document
 with nothing in it, silently. A truncated write (`null`) is, and that
 is what the clause uses.
 
+### The race this item's own guard introduced
+
+The containment probe has to make a renderer throw, and the first
+draft wrote it into the checked-out `bga/viewer/views.js`, restoring
+it in a `finally`. Under `-n auto` that is shared state: another
+worker booted a page while the probe was in the file, and the full
+suite failed **in this file** on a defect belonging to another test's
+timing.
+
+It is the same shape as the `probe/v3` race `UX-336` left behind and
+this round fixed two files away - written again, one item later. The
+probe copies the viewer directory now and points `ASSET_DIR` at the
+copy for the length of one test; every other worker is a process still
+reading the real one. Confirmed by two consecutive full runs at `-n
+auto`, 4,200 passed each.
+
+The lesson worth keeping is not "copy the directory". It is that **a
+guard which writes into the tree it guards is a race by
+construction**, and `-n auto` turned the latent ones live all at once.
+Two found this round; the third will not announce itself either.
+
 ### Deviation from the Required Fix
 
 - The Required Fix says the class "is held by `UX-334`'s console

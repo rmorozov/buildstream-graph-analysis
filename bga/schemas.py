@@ -422,6 +422,32 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
             _check_hint(document, f"{key}[].{nested_key}", nested)
 
 
+def _distribution(quantity: str, description: str) -> dict:
+    """`UX-343`: a distribution declares the unit of its own leaves.
+
+    `{n, min, max, deciles{p10..p90}, p95, p99, is_flat}` is one shape
+    published twice, and declaring `bga:quantity` on the *object* left
+    every percentile inside it undeclared - measured through the page's
+    own `quantityFor`, `min`, `max`, `p95`, `p99` and all nine deciles
+    reached the reader as bare numbers. The count is a count; everything
+    else is the quantity the population is of.
+    """
+    percentile = {QUANTITY: quantity}
+    return {
+        DISTRIBUTION: "n", QUANTITY: quantity, "description": description,
+        "properties": {
+            "n": {QUANTITY: "count",
+                  "description": "How many values the percentiles are "
+                                 "over. A strip without its population "
+                                 "is a picture of an opinion."},
+            "min": dict(percentile), "max": dict(percentile),
+            "p95": dict(percentile), "p99": dict(percentile),
+            "deciles": {"properties": {f"p{step}": dict(percentile)
+                                       for step in range(10, 100, 10)}},
+        },
+    }
+
+
 def _document(name: str, title: str, required: Dict[str, str],
               description: str, optional: Dict[str, str] = None,
               hints: Dict[str, dict] = None) -> dict:
@@ -1419,21 +1445,17 @@ _ANALYZE_HINTS = {
             # for. Both are `{n, min, max, deciles, p95, p99, is_flat}`,
             # so the hint names `n` as the count and one control draws
             # them and the store aggregate's `samples` shape alike.
-            "element_duration_distribution": {
-                DISTRIBUTION: "n", QUANTITY: "duration_us",
-                "description": "How this run's element durations are "
-                               "spread. The answer to \"is 40s slow "
-                               "*here*?\", which has none without the "
-                               "population. Nearest-rank percentiles, "
-                               "`null` below the sample floor.",
-            },
-            "blast_radius_distribution": {
-                DISTRIBUTION: "n", QUANTITY: "count",
-                "description": "How many elements sit downstream of "
-                               "each, spread across this graph. \"753 "
-                               "downstream\" is p99.9 in a 1,202-element "
-                               "run and unremarkable in 40,000.",
-            },
+            "element_duration_distribution": _distribution(
+                "duration_us",
+                "How this run's element durations are spread. The answer "
+                "to \"is 40s slow *here*?\", which has none without the "
+                "population. Nearest-rank percentiles, `null` below the "
+                "sample floor."),
+            "blast_radius_distribution": _distribution(
+                "count",
+                "How many elements sit downstream of each, spread across "
+                "this graph. \"753 downstream\" is p99.9 in a "
+                "1,202-element run and unremarkable in 40,000."),
             "critical_path_detail": {
                 "description": "The chain itself, element by element. "
                                "The longest path through the graph as "
@@ -1484,6 +1506,118 @@ _ANALYZE_HINTS = {
                      "quantity": "duration_us", "sortable": True},
                 ],
             },
+            # `UX-343`: the element-keyed maps. A map whose keys are
+            # *data* - an element uid - cannot name them in
+            # `properties`, so the value's schema is declared once under
+            # `additionalProperties` and every key resolves to it.
+            # Measured through the page's own resolution, these were 56
+            # leaves reaching the reader with no unit at all.
+            "element_durations": {
+                QUANTITY: "duration_us",
+                "additionalProperties": {QUANTITY: "duration_us"},
+                "description": "Each element's own duration, keyed by "
+                               "uid. A cached element contributes its "
+                               "restore, not its build."},
+            "slack": {
+                QUANTITY: "duration_us",
+                "additionalProperties": {QUANTITY: "duration_us"},
+                "description": "How long each element could have been "
+                               "delayed without moving the makespan. "
+                               "Zero is on the chain."},
+            "downstream_count": {
+                QUANTITY: "count",
+                "additionalProperties": {QUANTITY: "count"},
+                "description": "How many elements sit downstream of "
+                               "each - what a change to it rebuilds."},
+            "unweighted_depth": {
+                QUANTITY: "count",
+                "additionalProperties": {QUANTITY: "count"},
+                "description": "Edges from each element to the root, "
+                               "ignoring duration. The graph's shape "
+                               "rather than this run's timings."},
+            "wall_clock_share": {
+                QUANTITY: "share",
+                "additionalProperties": {QUANTITY: "share"},
+                "description": "Each task's duration over the makespan. "
+                               "Keyed by the task's own identity, not by "
+                               "element, because one element can run "
+                               "more than one task."},
+            "criticality_probability": {
+                "additionalProperties": {
+                    "properties": {
+                        "probability": {
+                            QUANTITY: "share",
+                            "description": "How often this element lands "
+                                           "on the critical path under "
+                                           "the run's own perturbation - "
+                                           "1.0 is always."},
+                        "slack_us": {QUANTITY: "duration_us"},
+                    }},
+                "description": "How reliably each element binds, rather "
+                               "than whether it happened to today."},
+            "blast_radius": {
+                "additionalProperties": {
+                    "properties": {
+                        "downstream_count": {QUANTITY: "count"},
+                        "weighted_duration_us": {QUANTITY: "duration_us"},
+                        "risk_score": {
+                            QUANTITY: "ratio",
+                            "description": "Downstream work weighted by "
+                                           "duration. A ranking, not a "
+                                           "measurement - comparable "
+                                           "within a run, not across."},
+                    }},
+                "description": "What one element's change rebuilds, and "
+                               "what that costs."},
+            "critical_path_length": {
+                QUANTITY: "count",
+                "description": "How many elements the chain runs "
+                               "through. A count of elements, not a "
+                               "duration - `floors.t_infinity_observed` "
+                               "is the time."},
+            "zero_slack_share": {QUANTITY: "share"},
+            "cache": {
+                "description": "What this run had to build and what it "
+                               "restored.",
+                "properties": {
+                    "built_elements": {QUANTITY: "count"},
+                    "cached_elements": {QUANTITY: "count"},
+                    "hit_ratio": {QUANTITY: "share"},
+                    "fetch": {"properties": {
+                        "fetched": {QUANTITY: "count"},
+                        "already_present": {QUANTITY: "count"},
+                        "hit_ratio": {QUANTITY: "share"}}},
+                    "target_closure": {"properties": {
+                        "elements": {QUANTITY: "count"},
+                        "built": {QUANTITY: "count"},
+                        "cached": {QUANTITY: "count"},
+                        "hit_ratio": {QUANTITY: "share"}}},
+                }},
+            "ready_queue": {
+                "description": "How much work was ready to run and had "
+                               "nowhere to run it.",
+                "properties": {
+                    "average_depth": {QUANTITY: "ratio"},
+                    "peak_depth": {QUANTITY: "count"},
+                    "nonzero_fraction": {
+                        QUANTITY: "share",
+                        "description": "The share of the build spent with "
+                                       "anything waiting. High means "
+                                       "capacity bound, not graph "
+                                       "bound."}}},
+            "fetch_build_overlap": {
+                "properties": {
+                    "overlap_us": {QUANTITY: "duration_us"},
+                    "fetch_prefix_us": {QUANTITY: "duration_us"},
+                    "build_suffix_us": {QUANTITY: "duration_us"},
+                    "fraction": {QUANTITY: "share"}}},
+            "joint_saving": {
+                "properties": {
+                    "joint_saving_us": {QUANTITY: "duration_us"},
+                    "sum_of_individual_us": {QUANTITY: "duration_us"}}},
+            "leaf_analysis": {
+                "properties": {
+                    "deferrable_count": {QUANTITY: "count"}}},
         },
     },
     "attribution": {QUESTION: 'Where did the wall-clock go?', RAIL: 'act'},

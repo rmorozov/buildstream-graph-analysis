@@ -208,6 +208,24 @@ DIRECTION = "bga:direction"        # what the sign of a delta means
 # opinion.
 SERIES = "bga:series"
 DISTRIBUTION = "bga:distribution"
+
+# `UX-361` (styleguide §2d): the two shapes the vocabulary did not have.
+#
+# A strip shows a distribution and a sparkline shows an ordered series.
+# Round 55 counted what that leaves undrawn: 19 of `golden`'s 43
+# sections and 29 of `macro_micro`'s 58 carry six or more numbers and
+# no marks - `floors` (11 numbers, 558 px, the tool's central claim)
+# and `confidence` (28 numbers, 561 px) among them, because a *total
+# split into parts* and *values compared on one axis* are neither of
+# the two shapes that exist.
+#
+# Both hints name **published paths**, in the grammar `resolvePath` and
+# `bga/provenance.py` both walk, resolved against the document. That is
+# Direction 7 in the declaration rather than in a comment: the page
+# does not choose the parts, does not compute a remainder, and does not
+# pick an axis from the data.
+DECOMPOSITION = "bga:decomposition"   # a published total, in published parts
+INTERVAL = "bga:interval"             # published values on one axis
 # Below this a series is a sentence. Stated here because the page and
 # the guards must agree on it, and `UX-273`'s rule is that a threshold
 # lives in one place.
@@ -2384,6 +2402,23 @@ _ANALYZE_HINTS = {
     "floors": {
         QUESTION: 'How much faster could this build possibly be?',
         RAIL: 'prove',
+        # `UX-361`: the tool's central claim, drawn. Both parts and the
+        # total are published fields and they sum to it exactly -
+        # 43,200,000 + 2,933,000 = 46,133,000 on `macro_micro` - so the
+        # page lays out three numbers it was handed rather than working
+        # out what is left over.
+        DECOMPOSITION: {
+            "total": "total_duration_us",
+            "quantity": "duration_us",
+            "parts": [
+                {"path": "floors.t_infinity_observed",
+                 "key": "chain", "label": "critical path"},
+                {"path": "headline.scheduling_gap_us",
+                 "key": "gap", "label": "off the path"},
+            ],
+            "mark": {"path": "floors.lb", "key": "lb",
+                     "label": "certified lower bound"},
+        },
         "description": "Lower bounds this run certifies: what no schedule "
                        "of the same recorded work could have beaten. "
                        "Floors, not forecasts - beating one needs the "
@@ -2537,6 +2572,27 @@ _ANALYZE_HINTS = {
     "confidence": {
         QUESTION: 'How much of this can be believed?',
         RAIL: 'prove',
+        # `UX-361`: five published scores on one axis, so a reader sees
+        # which one is the weak leg rather than reading five numbers
+        # and holding them in their head. The axis is 0..1 because a
+        # share's axis is 0..1, not because of anything in the data -
+        # a mark that moved when another one did would be a picture of
+        # this run rather than of the scores.
+        INTERVAL: {
+            "quantity": "share", "low": 0, "high": 1,
+            "marks": [
+                {"path": "confidence.primary",
+                 "key": "primary", "label": "confidence"},
+                {"path": "confidence.provenance_score",
+                 "key": "provenance", "label": "provenance"},
+                {"path": "confidence.coverage_score",
+                 "key": "coverage", "label": "coverage"},
+                {"path": "confidence.model_score",
+                 "key": "model", "label": "model"},
+                {"path": "confidence.attribution_score",
+                 "key": "attribution", "label": "attribution"},
+            ],
+        },
         "properties": {
             # `UX-343`: the scores are shares of a population, and
             # `ordering_violations` is a count of events. Both reached

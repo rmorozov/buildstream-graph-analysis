@@ -521,6 +521,202 @@ function stripTicks(marks, format) {
  * nothing else. A percentile worth printing enters the payload first
  * and comes back through `strip()`.
  */
+/**
+ * `UX-361` (styleguide §2d): a published total, split into its
+ * published parts.
+ *
+ * The third shape, and the argument for a third shape at all: a strip
+ * shows a **distribution** and a sparkline shows an **ordered series**,
+ * and neither can show a total decomposed. `floors` is the tool's
+ * central claim - how much of this build is irreducible and how much
+ * is yours to take - and it rendered as eleven labelled durations in a
+ * definition list, on both fixtures, with the subtraction left to the
+ * reader.
+ *
+ * **Every segment is a published field and so is the total.** The page
+ * does not compute a remainder, does not scale to a maximum it chose,
+ * and does not decide what the parts are - `parts` arrive named and
+ * measured, and Direction 7's rule is why: a viewer that worked out
+ * what was left over would be a second analyzer.
+ *
+ * A `mark` is an optional published bound drawn as a rule across the
+ * bar - `t_infinity_observed` over a wall clock, which is the shape of
+ * "this much of it could not have been shorter".
+ */
+export function decomposition(parts, {
+  total = null, format = String, doc = document, label = null,
+  grade = undefined, mark = null,
+} = {}) {
+  const size = scaleFor(grade);
+  const wrap = box(doc, "div", {
+    class: grade === GRADE_EXHIBIT ? "decomposition exhibit" : "decomposition",
+    "data-role": "decomposition", "data-grade": grade });
+  if (label) wrap.append(box(doc, "span", { class: "density-label" }, label));
+
+  const named = (parts ?? []).filter(
+    (part) => part && Number.isFinite(Number(part.value)));
+  const whole = Number(total);
+  if (!named.length || !Number.isFinite(whole) || whole <= 0) {
+    // `UX-226`'s floor, in this shape's own terms: with no total there
+    // is nothing to be a share *of*, and a bar scaled to its own parts
+    // would be a picture of an opinion.
+    wrap.setAttribute("data-drawn", "false");
+    wrap.append(box(doc, "span", { class: "density-sentence muted",
+                                   "data-role": "density-sentence" },
+                    "No total published for this split, so there is "
+                    + "nothing to draw the parts against."));
+    return wrap;
+  }
+  wrap.setAttribute("data-drawn", "true");
+  wrap.setAttribute("data-total", String(whole));
+
+  const drawing = make(doc, "svg", {
+    viewBox: `0 0 ${size.width} ${size.strip}`,
+    preserveAspectRatio: "none", class: "draw decomposition-bar",
+    role: "img", "aria-label": `${format(whole)} split into `
+      + named.map((part) => part.label).join(", "),
+  });
+  let at = 0;
+  for (const part of named) {
+    const width = (Number(part.value) / whole) * size.width;
+    drawing.append(make(doc, "rect", {
+      x: at.toFixed(3), y: "0", width: Math.max(width, 0).toFixed(3),
+      height: String(size.strip), class: `decomposition-part part-${part.key}`,
+      "data-part": part.key, "data-raw": String(part.value),
+    }));
+    at += width;
+  }
+  if (mark && Number.isFinite(Number(mark.value))) {
+    const x = (Number(mark.value) / whole) * size.width;
+    drawing.append(make(doc, "line", {
+      x1: x.toFixed(3), x2: x.toFixed(3), y1: "0", y2: String(size.strip),
+      class: "decomposition-mark", "data-mark": mark.key,
+      "data-raw": String(mark.value),
+    }));
+  }
+  wrap.append(drawing);
+
+  const ticks = named.map((part, index) => ({
+    name: part.key, label: `${part.label} ${format(part.value)}`,
+    at: (named.slice(0, index).reduce(
+      (sum, before) => sum + Number(before.value), 0) / whole) * 100,
+  }));
+  wrap.append(exhibitAxis(doc, ticks));
+  wrap.append(box(doc, "span", { class: "density-sentence",
+                                 "data-role": "density-sentence" },
+                  `${format(whole)} in total: `
+                  + named.map((part) => `${format(part.value)} ${part.label}`)
+                    .join(", ")
+                  + (mark ? `. ${mark.label} ${format(mark.value)}.` : ".")));
+  // §2a: the exhibit never hoards data a reader wants as rows.
+  if (grade === GRADE_EXHIBIT) {
+    wrap.append(exhibitTwin(doc, ["Part", "Value"],
+                            named.map((part) => [part.label,
+                                                 format(part.value)])));
+  }
+  return wrap;
+}
+
+/**
+ * `UX-361` (styleguide §2d): published values on one axis, against a
+ * published threshold.
+ *
+ * The fourth shape, and the same argument: `confidence` publishes a
+ * headline score and five component scores, all in 0..1, and rendered
+ * as 28 numbers over 561 px on both fixtures. What a reader wants is
+ * whether they agree and where the weak one is - a comparison neither
+ * a strip nor a sparkline can make, because these are not a sample of
+ * one population and not an order.
+ *
+ * `marks` are published `(key, label, value)` and `threshold` is a
+ * published value or `null`. The axis is `low`..`high`, published or
+ * defaulted to 0..1 for a share - the page picks no bounds of its own
+ * from the data, so a mark cannot move because another one did.
+ */
+export function interval(marks, {
+  low = 0, high = 1, threshold = null, thresholdLabel = "line",
+  format = String, doc = document, label = null, grade = undefined,
+} = {}) {
+  const size = scaleFor(grade);
+  const wrap = box(doc, "div", {
+    class: grade === GRADE_EXHIBIT ? "interval exhibit" : "interval",
+    "data-role": "interval", "data-grade": grade });
+  if (label) wrap.append(box(doc, "span", { class: "density-label" }, label));
+
+  const named = (marks ?? []).filter(
+    (one) => one && Number.isFinite(Number(one.value)));
+  const span = Number(high) - Number(low);
+  if (named.length < 2 || !Number.isFinite(span) || span <= 0) {
+    // One value on an axis is a value, not a comparison. `UX-226`'s
+    // floor again: below two marks the sentence says what the numbers
+    // are and the drawing goes.
+    wrap.setAttribute("data-drawn", "false");
+    wrap.append(box(doc, "span", { class: "density-sentence muted",
+                                   "data-role": "density-sentence" },
+                    named.length
+                      ? named.map((one) => `${one.label} ${format(one.value)}`)
+                        .join(", ") + " — one value is not a comparison."
+                      : "No comparable values published here."));
+    return wrap;
+  }
+  wrap.setAttribute("data-drawn", "true");
+  wrap.setAttribute("data-n", String(named.length));
+
+  const place = (value) => ((Number(value) - Number(low)) / span) * size.width;
+  const drawing = make(doc, "svg", {
+    viewBox: `0 0 ${size.width} ${size.strip}`,
+    preserveAspectRatio: "none", class: "draw interval-axis",
+    role: "img", "aria-label": named.map(
+      (one) => `${one.label} ${format(one.value)}`).join(", "),
+  });
+  drawing.append(make(doc, "line", {
+    x1: "0", x2: String(size.width),
+    y1: String(size.strip / 2), y2: String(size.strip / 2),
+    class: "interval-rule",
+  }));
+  if (threshold !== null && Number.isFinite(Number(threshold))) {
+    const x = place(threshold);
+    drawing.append(make(doc, "line", {
+      x1: x.toFixed(3), x2: x.toFixed(3), y1: "0", y2: String(size.strip),
+      class: "interval-threshold", "data-mark": "threshold",
+      "data-raw": String(threshold),
+    }));
+  }
+  for (const one of named) {
+    const mark = make(doc, "circle", {
+      cx: place(one.value).toFixed(3), cy: String(size.strip / 2),
+      r: String(Math.max(size.strip / 6, 1)),
+      class: `interval-mark mark-${one.key}`,
+      "data-mark": one.key, "data-raw": String(one.value),
+    });
+    // The mark names itself. `<title>` rather than a tick label,
+    // deliberately: five scores that agree land within a few percent of
+    // each other, and a tick row of five labels three percent apart is
+    // five labels on top of each other - which is what `UX-350`'s
+    // overlap guard is for, and it caught exactly that here. The
+    // reading a tick row would have carried is in the sentence below
+    // and in the table twin, both of which name every mark.
+    const names = make(doc, "title", {});
+    names.textContent = `${one.label} ${format(one.value)}`;
+    mark.append(names);
+    drawing.append(mark);
+  }
+  wrap.append(drawing);
+  wrap.append(box(doc, "span", { class: "density-sentence",
+                                 "data-role": "density-sentence" },
+                  named.map((one) => `${one.label} ${format(one.value)}`)
+                    .join(", ")
+                  + (threshold !== null && Number.isFinite(Number(threshold))
+                     ? `, against ${thresholdLabel} ${format(threshold)}.`
+                     : ".")));
+  if (grade === GRADE_EXHIBIT) {
+    wrap.append(exhibitTwin(doc, ["Measure", "Value"],
+                            named.map((one) => [one.label,
+                                                format(one.value)])));
+  }
+  return wrap;
+}
+
 export function columnStrip(values, { format = String, doc = document,
                                       label = null,
                                       grade = GRADE_ANNOTATION } = {}) {

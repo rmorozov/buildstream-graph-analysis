@@ -78,7 +78,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Twelve hints, and this table is the one place they are all written
+Fourteen hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it. A hint the schemas emit and
 this table does not name is a hint whose meaning lives only in code,
@@ -100,6 +100,8 @@ sets equal in both directions.
 | `bga:series` | that an array is an ordered series, and the unit of one step | the sparkline and its sentence (§2) |
 | `bga:distribution` | that an object publishes percentiles, and where it counts | the density strip and its stated `n` (§2) |
 | `bga:inline` | that this value's sentence stays beside it rather than behind its `?` — `name` or `caveat` (§4a) | `describedTerm`, which then draws no door |
+| `bga:decomposition` | that a section's numbers are a published total split into published parts, each named by its path | the decomposition bar and its sentence (§2d) |
+| `bga:interval` | that a set of published values compare on one axis, each named by its path | the interval and its sentence (§2d) |
 
 Two properties this table is here to keep. **A hint is a declaration,
 never a guess**: the page reads what the schema says a value is and

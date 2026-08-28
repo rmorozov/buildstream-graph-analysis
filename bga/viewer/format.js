@@ -35,6 +35,13 @@ export const SERIES = "bga:series";
 
 export const DISTRIBUTION = "bga:distribution";
 
+// `UX-361` (§2d): the two shapes the vocabulary did not have. Both name
+// **published paths**, resolved against the document, so the page lays
+// out numbers it was handed rather than choosing parts or an axis.
+export const DECOMPOSITION = "bga:decomposition";
+
+export const INTERVAL = "bga:interval";
+
 // UX-209: the question a section answers, and which part of the
 // argument it belongs to. UX-208: what a column's values *are*.
 export const QUESTION = "bga:question";
@@ -256,7 +263,8 @@ export function hintsOf(node) {
   const hint = {};
   if (!node || typeof node !== "object") return hint;
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
-                      RAIL, PRESETS, SERIES, DISTRIBUTION, INLINE]) {
+                      RAIL, PRESETS, SERIES, DISTRIBUTION, INLINE,
+                      DECOMPOSITION, INTERVAL]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;

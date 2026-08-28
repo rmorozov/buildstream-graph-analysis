@@ -268,8 +268,13 @@ class TestThePageIsThisRunsNumbers:
         Beside one that is, it is the duplication this item removed."""
         out = browser.measure(pages[label], _PAGE, width=1440, height=900)
         assert out["doorsOnInline"] == 0, (label, out["doorsOnInline"])
-        assert out["doors"] == out["described"] - len(set(out["inlineKeys"])), (
-            label, out["doors"], out["described"], sorted(set(out["inlineKeys"])))
+        # `UX-344`: counted per *render*, not per key. `UX-346` could
+        # use the set because no declared key was drawn twice; lifting
+        # `joint_saving` out of `signals` made `sum_of_individual_us` a
+        # row of a section as well as a finding's evidence, and the two
+        # renders are two doors that are not there.
+        assert out["doors"] == out["described"] - len(out["inlineKeys"]), (
+            label, out["doors"], out["described"], sorted(out["inlineKeys"]))
 
     def test_every_door_on_the_page_opens_its_own_sentence(
             self, browser, pages, label):

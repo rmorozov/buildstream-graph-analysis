@@ -558,9 +558,9 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
     named here by the payload key each draws, not by a count:
 
     ```text
-    macro_micro  signals.element_duration_distribution   "unreadable"
-                 signals.blast_radius_distribution       "very small"
-    both         structural.parallelism.width_at_level   the graph shape
+    macro_micro  element_duration_distribution   "unreadable"
+                 blast_radius_distribution       "very small"
+    both         parallelism.width_at_level   the graph shape
     ```
 
     The fourth - the store diagram - needs a store with two snapshots,

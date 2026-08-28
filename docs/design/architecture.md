@@ -60,7 +60,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 
 Every conclusion the text report draws is also published by `--format json` as a `findings` array, each entry with a stable `id`, a `severity` and the numbers behind it (`UX-75`). Both renderers consume the same list, so they cannot disagree, and a CI consumer keys on `id` rather than re-deriving a threshold out of the renderer.
 
-**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v3` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
+**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v4` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
 
 ## Real package structure (Plane 1)
 
@@ -863,7 +863,7 @@ renderers are built against, so nothing here is a second copy to drift.
 
 | schema | what it is | printed by |
 |---|---|---|
-| `analyze/v3` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists. `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
+| `analyze/v4` | one run's analysis: attribution, floors, the element population, the graph's shape, findings, the headline decision, next steps, and the provenance behind each claim. **v4** (`UX-344`) removed the two namespaces — `signals` and `structural` were maps of named tables that held no value of their own, so each table is a top-level key now, `metrics` and `summary` renamed to `graph_metrics` and `graph_summary` and the six element-keyed maps grouped under `elements`; `provenance` is published once per claim at the top level rather than written into every finding, the headline and each top action; and `findings[].evidence.blast_radius` is gone by `UX-288`'s rule, being a slice of a population published in full beside it. Measured on the two fixtures: leaves deeper than three fell from 57% to 40% and from 67% to 53%, and the golden report's deepest path from six levels to five. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists (their names at the time). `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
 | `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
 | `blast/v2` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
 | `correlate/v2` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
@@ -875,6 +875,7 @@ renderers are built against, so nothing here is a second copy to drift.
 | `sources/v1` | every element's source resources and how each is keyed - the on-disk shape `bga blast` reads | inside `sources.json` |
 | `plane2/v2` | Plane 2's report: the per-element reductions a capture computed, and nothing else (`UX-297`) | at `plane2.json` beside a run |
 | `plane2/v1` | the same reductions plus every per-process record - the shape a capture before `UX-297` wrote. Read, never written | as above, in an older store |
+| `analyze/v3` | what `analyze` wrote before `UX-344` lifted the `signals` and `structural` namespaces and published `provenance` once. Read, never written | in an older store |
 | `analyze/v2` | what `analyze` wrote before `UX-341` unified the units - `measured_seconds`, `peak_rss_kb`, `useful_pct`, `occupancy_ratio`. Read, never written | in an older store |
 | `compare/v1` | the same, for a comparison. Read, never written | in an older store |
 | `blast/v1` | the same, for a blast answer. Read, never written | in an older store |
@@ -883,7 +884,7 @@ renderers are built against, so nothing here is a second copy to drift.
 
 **Every artifact says what wrote it** (`UX-249`): a `producer` block —
 tool, version, and the contract set the writing build had — rides in
-every run directory and every published `analyze/v3` document, because
+every run directory and every published `analyze/v4` document, because
 `bga` reads its own past output as input and until round 30 nothing in
 those artifacts said which build produced them. The version there is
 *provenance*; compatibility is decided per contract, which is why
@@ -927,15 +928,23 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
-Updated 2026-08-28 (after `UX-345`), re-grounded in the contracts
+Updated 2026-08-28 (after `UX-344`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory and the ids
-`bga analyze --schema` actually prints, and carrying `UX-341`'s
-contract move with it: five contracts moved
-(`analyze/v3`, `compare/v2`, `blast/v2`, `correlate/v2`, `host/v2`)
-because renaming a key is removing it, and their five predecessors are
-in the table as read-never-written rather than deleted from it. The
-`analyze/v3` row is checked against the keys the schema declares, which
-`UX-345` removed one of.
+`bga analyze --schema` actually prints. `analyze` is at **v4**: the two
+namespaces are gone, `provenance` is published once per claim, and one
+evidence key that republished a population went with them — three
+removals, which is what a version move is for. The row is checked
+against the keys the schema declares, and `ANALYZE_FULL_KEYS` now names
+the eighteen tables the namespaces used to hold, with a third list for
+the four that depend on what the run has rather than on which planes
+were captured.
+
+**What the lift left measurable.** The document publishes its own
+shape: `document_shape` carries the leaf count, the deepest path and
+the count over three levels, counting itself, so the next round reads
+the depth off the document instead of writing a script against two
+fixtures — and a guard re-measures and compares, which is the clause
+that would catch a level coming back.
 
 **What the two rounds asserted that no guard held before.** `UX-341`
 made the vocabulary five members and `DIMENSIONS` state what each
@@ -1333,7 +1342,7 @@ Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
 module list, the published schema `bga analyze --schema` prints, and
 `docs/backlog/scenarios/closed.md`'s round-38 and round-39 rows: the
 viewer axis gained the chapters `UX-286` groups the document into, and
-the contracts table's `analyze/v3` row is checked against the keys the
+the contracts table's `analyze/v4` row is checked against the keys the
 schema declares - which `UX-275` added one to. The date on this line is
 guarded (`UX-247`): a commit that changes this document's prose without
 re-grounding it reddens

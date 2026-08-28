@@ -141,7 +141,7 @@ class TestTheElementIsAnObject:
         payload = _report()
         out = _render(payload)
         detail = {e["element_uid"]: e for e in
-                  payload["signals"]["critical_path_detail"]}
+                  payload["critical_path_detail"]}
         checked = 0
         for section in out["element_sections"]:
             entry = detail.get(section["element"])
@@ -238,9 +238,9 @@ function make(tag) {
 }
 const views = await import("./tests/viewer.mjs");
 const total = views.ELEMENTS_SHOWN + 7;
-const payload = { signals: { critical_path_detail:
+const payload = { critical_path_detail:
   Array.from({length: total}, (_, i) => ({ element_uid: `e-${i}.bst`,
-    share_of_path: 0.01, duration_us: 1000 })) } };
+    share_of_path: 0.01, duration_us: 1000 })) };
 const nodes = views.renderElementSections(payload, make("div"), {});
 const sections = nodes.filter((n) => n.tagName === "section");
 const note = nodes.find((n) => n.attrs["data-elided"]);

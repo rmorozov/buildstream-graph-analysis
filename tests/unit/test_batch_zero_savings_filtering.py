@@ -88,7 +88,7 @@ def test_no_groups_at_all_produces_empty_lists_not_missing_keys():
 
 def _render_batch_section(batch_opportunities):
     """Exercises the same rendering path `format_text` uses for the
-    structural.batch_opportunities block, via a real (mostly-empty)
+    batch_opportunities block, via a real (mostly-empty)
     `AnalysisResult` - every field has a real default, so only the
     fields this block actually reads need real content."""
     from bga.ingest.models import AnalysisResult

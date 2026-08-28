@@ -57,7 +57,7 @@ class TestTheStampIsWritten:
         assert "sources/v1" in recorded, (
             "the run directory's own on-disk contract is missing from the "
             "set it recorded")
-        assert "analyze/v3" in recorded
+        assert "analyze/v4" in recorded
 
     def test_the_published_document_records_it_too(self):
         """A payload archived by a CI job is re-read like a stored run."""

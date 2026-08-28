@@ -83,7 +83,11 @@ class TestStructureIsReportedNotRanked:
         assert "toolchain.bst" in shape["elements"]
         assert "1201" in shape["title"]
         assert "not a task" in shape["title"]
-        assert shape["evidence"]["blast_radius"]["toolchain.bst"]["downstream_count"] == 1201
+        # `UX-344`: the finding names the element and the title carries
+        # the number; the per-element records are published once, in
+        # `elements.blast_radius`, rather than sliced into the evidence
+        # of the finding that names them.
+        assert "blast_radius" not in (shape.get("evidence") or {})
 
     def test_a_graph_that_is_all_structural_still_says_something(self):
         """The degenerate case. An empty ranking and no statement would

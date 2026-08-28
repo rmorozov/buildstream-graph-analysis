@@ -258,7 +258,12 @@ class TestTheFullReportKeepsItsKeys:
         # carried none of them, so subtracting `ANALYZE_FULL_KEYS` alone
         # happened to be right; `plane2_absence` is the first key that
         # appears exactly when the others do not.
-        pinned = set(schemas.ANALYZE_FULL_KEYS) | set(schemas.ANALYZE_PLANE2_KEYS)
+        # `UX-344`: and a third list. Lifting `signals` turned one
+        # always-present key into fourteen, four of which depend on what
+        # the run has rather than on which planes were captured.
+        pinned = (set(schemas.ANALYZE_FULL_KEYS)
+                  | set(schemas.ANALYZE_PLANE2_KEYS)
+                  | set(schemas.ANALYZE_RUN_DEPENDENT_KEYS))
         unpinned = sorted(set(payload) - pinned)
         assert not unpinned, (
             f"new top-level key(s) {unpinned} - add them to ANALYZE_FULL_KEYS "
@@ -279,7 +284,7 @@ class TestTheSchemasThemselves:
     def test_an_unknown_name_names_the_ones_that_exist(self):
         with pytest.raises(KeyError) as caught:
             schemas.schema("analyze/v99")
-        assert "analyze/v3" in str(caught.value)
+        assert "analyze/v4" in str(caught.value)
 
     def test_stamp_does_not_mutate_its_argument(self):
         payload = {"run_id": "x"}

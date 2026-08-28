@@ -149,9 +149,10 @@ class TestTheTwoRenderersCannotDisagree:
         """The other half of the same disagreement. `UX-229`'s chain
         listed these fields as "computed, not published" - an honest
         label for a real gap, and a lie the moment the gap closed."""
-        finding = [f for f in published["findings"]
-                   if f["id"] == "capacity-recommendation"][0]
-        chain = finding["provenance"]
+        # `UX-344`: one published record per claim, keyed by the id the
+        # finding carries.
+        chain = [entry for entry in published["provenance"]
+                 if entry["claim"] == "capacity-recommendation"][0]
         assert chain["unpublished_inputs"] == [], chain["unpublished_inputs"]
         cited = {entry["path"]: entry for entry in chain["evidence"]}
         assert f"{KEY}.binding_constraint" in cited, sorted(cited)

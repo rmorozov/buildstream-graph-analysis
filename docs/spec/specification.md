@@ -1518,13 +1518,14 @@ Schemas:
 
 ```text
 run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the analysis shape)
-analyze/v3          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
+analyze/v4          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
 sweep/v1                                                      (what capacity buys - 32.5)
 host/v2                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
 plane2/v2           plane2/v1                                 (the Plane 2 report - UX-297)
-analyze/v2          compare/v1    blast/v1      correlate/v1  (read, never written - UX-341)
+analyze/v3          analyze/v2                                (read, never written - UX-344)
+compare/v1          blast/v1      correlate/v1                  (read, never written - UX-341)
 host/v1                                                       (read, normalised in - UX-341)
 ```
 
@@ -1645,7 +1646,7 @@ key:
 
 | output | schema | printed by |
 |---|---|---|
-| `bga analyze --format json` (and every section subcommand) | `analyze/v3` | `bga analyze --schema` |
+| `bga analyze --format json` (and every section subcommand) | `analyze/v4` | `bga analyze --schema` |
 | `bga compare --format json` | `compare/v2` | `bga compare --schema` |
 | `bga blast --format json` | `blast/v2` | `bga blast --schema` |
 | `bga correlate --format json` | `correlate/v2` | `bga correlate --schema` |
@@ -1657,7 +1658,7 @@ key:
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
 | the Plane 2 report at `plane2.json` beside a run | `plane2/v2` | `bga.plane2` |
 | the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
-| what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units - read, never written | `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
+| what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, and what `analyze` wrote before `UX-344` lifted its two namespaces - read, never written | `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
 
 The last four are **written but not printable**: they are on-disk
@@ -1686,7 +1687,7 @@ and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
 an *addition* does not. So `additionalProperties` is true in all three,
-and a consumer that pins `analyze/v3` keeps working while the tool
+and a consumer that pins `analyze/v4` keeps working while the tool
 grows.
 
 The schemas live in one place, `bga/schemas.py`, which the renderers

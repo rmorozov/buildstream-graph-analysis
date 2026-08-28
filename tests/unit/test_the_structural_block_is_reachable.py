@@ -73,18 +73,23 @@ const root = shim.makeNode("div");
 app.render(JSON.parse(readFileSync(%(payload)s, "utf8")),
            JSON.parse(readFileSync(%(schema)s, "utf8")), root);
 
-const section = root.querySelectorAll('section[data-section="structural"]')[0];
+// `UX-344`: `structural` was one section holding nine tables; the
+// tables are sections of their own now, so "the block" is the set of
+// them and the counts below are over all three the schema declares.
+const BLOCKS = ["bottleneck", "sensitivity", "batch_opportunities"];
+const sections = BLOCKS.flatMap(
+  (name) => root.querySelectorAll(`section[data-section="${name}"]`));
 const text = (n) => (n.textContent ?? "") + (n.children ?? []).map(text).join("");
-const heads = section ? section.querySelectorAll("th") : [];
+const every = (selector) => sections.flatMap((s) => s.querySelectorAll(selector));
+const heads = every("th");
 console.log(JSON.stringify({
-  links_out: section ? section.querySelectorAll("a.inspect").length : -1,
-  sortable: section ? section.querySelectorAll('th[data-sortable="true"]').length : -1,
+  links_out: sections.length ? every("a.inspect").length : -1,
+  sortable: sections.length ? every('th[data-sortable="true"]').length : -1,
   headers: heads.map((h) => text(h).trim()),
   described: heads.filter((h) => h.getAttribute("title")).map(
     (h) => [text(h).trim(), h.getAttribute("title")]),
-  element_columns: section
-    ? section.querySelectorAll("table[data-element-column]").map(
-        (t) => t.getAttribute("data-table")) : [],
+  element_columns: every("table[data-element-column]").map(
+    (t) => t.getAttribute("data-table")),
 }));
 """
 
@@ -114,10 +119,10 @@ def _structural(payload):
 
 class TestTheSchemaDescribesItsTuples:
     def test_every_named_field_declares_its_members(self):
-        node = schemas.schema(schemas.ANALYZE)["properties"]["structural"]
+        properties = schemas.schema(schemas.ANALYZE)["properties"]
         missing = []
         for block, fields in DESCRIBED.items():
-            inside = (node.get("properties") or {}).get(block) or {}
+            inside = properties.get(block) or {}
             for field in fields:
                 declared = ((inside.get("properties") or {}).get(field)
                             or {}).get(schemas.COLUMNS)
@@ -130,10 +135,10 @@ class TestTheSchemaDescribesItsTuples:
         a field gaining a *description* gains a tooltip, so a
         declaration with no description keeps the old defect wearing a
         better name."""
-        node = schemas.schema(schemas.ANALYZE)["properties"]["structural"]
+        properties = schemas.schema(schemas.ANALYZE)["properties"]
         bare = []
         for block, fields in DESCRIBED.items():
-            inside = (node.get("properties") or {}).get(block) or {}
+            inside = properties.get(block) or {}
             for field in fields:
                 for column in (((inside.get("properties") or {}).get(field)
                                 or {}).get(schemas.COLUMNS) or []):
@@ -145,9 +150,9 @@ class TestTheSchemaDescribesItsTuples:
         """What earns the row its Inspect, and the reason the section
         had zero links out of it: `UX-208`'s affordance is driven by the
         declaration, so an undeclared element column gets nothing."""
-        node = schemas.schema(schemas.ANALYZE)["properties"]["structural"]
+        properties = schemas.schema(schemas.ANALYZE)["properties"]
         for block, fields in DESCRIBED.items():
-            inside = (node.get("properties") or {}).get(block) or {}
+            inside = properties.get(block) or {}
             for field in fields:
                 columns = (((inside.get("properties") or {}).get(field)
                             or {}).get(schemas.COLUMNS) or [])
@@ -160,7 +165,7 @@ class TestTheBlockIsReachable:
     def test_the_section_has_links_out_of_it(self, payload):
         drawn = _structural(payload)
         assert drawn["links_out"] > 0, (
-            "the structural section still carries no route to an element")
+            "the graph-shape sections still carry no route to an element")
 
     def test_every_element_table_in_it_carries_the_route(self, payload):
         """Not "some link exists somewhere" - each element table earns
@@ -170,7 +175,7 @@ class TestTheBlockIsReachable:
 
     def test_the_choke_points_can_be_sorted(self, payload):
         drawn = _structural(payload)
-        assert drawn["sortable"] > 0, "nothing in the section sorts"
+        assert drawn["sortable"] > 0, "nothing in those sections sorts"
 
     def test_no_header_names_a_position(self, payload):
         """`UX-290`'s acceptance. `#1`, `#2`, `C0` and `Key` name where a
@@ -184,7 +189,7 @@ class TestTheBlockIsReachable:
         own sentence is the tooltip, with no page edit."""
         drawn = _structural(payload)
         titled = dict(drawn["described"])
-        assert titled, "no column in the section carries a tooltip"
+        assert titled, "no column in those sections carries a tooltip"
         assert any("downstream" in text.lower() for text in titled.values()), (
             f"the choke-point column's sentence is not among {titled}")
 

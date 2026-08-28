@@ -187,7 +187,7 @@ class TestTheChainDrawn:
         """
         payload = _analyze(run)
         out = _render("renderCriticalPath", payload)
-        detail = payload["signals"]["critical_path_detail"]
+        detail = payload["critical_path_detail"]
         assert len(out["boxes"]) == len(detail)
         by_uid = {e["element_uid"]: e for e in detail}
         widths = set()
@@ -202,7 +202,7 @@ class TestTheChainDrawn:
         assert len(widths) > 1, "every box is the same width - nothing is drawn"
 
     def test_a_run_with_no_chain_draws_nothing(self):
-        out = _render("renderCriticalPath", {"signals": {}})
+        out = _render("renderCriticalPath", {})
         assert out["rendered"] is False
 
     def test_a_long_chain_folds_and_the_fold_opens_in_place(self):
@@ -216,7 +216,7 @@ class TestTheChainDrawn:
                    "share_of_path": (i % 40 + 1) / 24040}
                   for i in range(1202)]
         out = _render("renderCriticalPath",
-                      {"signals": {"critical_path_detail": detail}})
+                      {"critical_path_detail": detail})
         assert out["folded"] == 1202 - 6 - 3, out["folded"]
         assert out["hidden_before"] == out["folded"]
         # Clicked: the middle appears between the two ends rather than
@@ -225,10 +225,10 @@ class TestTheChainDrawn:
         assert out["boxes_after"] == 1202
 
     def test_a_short_chain_is_not_folded(self):
-        out = _render("renderCriticalPath", {"signals": {"critical_path_detail": [
+        out = _render("renderCriticalPath", {"critical_path_detail": [
             {"element_uid": "a.bst", "duration_us": 10, "share_of_path": 0.5},
             {"element_uid": "b.bst", "duration_us": 10, "share_of_path": 0.5},
-        ]}})
+        ]})
         assert out["folded"] is None
         assert out["hidden_before"] == 0
 

@@ -244,13 +244,14 @@ def _format_key_findings(result: AnalysisResult,
     from .json import build_document
 
     document = build_document(result)
+    # `UX-344`: one published list keyed by claim, so the terminal looks
+    # each chain up by the id the claim already carries.
     lines.extend(provenance.render(
-        (document.get("headline") or {}).get("provenance") or {}, indent="    "))
-    by_id = {f.get("id"): f for f in document.get("findings") or []}
+        provenance.for_claim(document, "diagnosis") or {}, indent="    "))
     for finding in findings:
         lines.append(f"{finding.get('indent', '  ')}{finding['title']}")
         lines.extend(finding.get('detail') or [])
-        record = (by_id.get(finding.get('id')) or {}).get('provenance')
+        record = provenance.for_claim(document, finding.get('id'))
         if record:
             lines.extend(provenance.render(record, indent="    "))
     return lines + [""]

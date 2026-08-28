@@ -134,16 +134,18 @@ export function renderProvenance(provenance) {
  * `bga/provenance.py` both walk, so a reader (or a guard) follows it
  * back into the payload rather than trusting the number. The reason
  * the claim is ranked at all comes from `UX-229`'s provenance record,
- * followed through the top action's `see` pointer: the composition
+ * looked up by the `finding_id` the action carries: the composition
  * this item was filed with is the interim, and the contract is what it
- * reads now.
+ * reads now. `UX-344` published those records once, at the top level,
+ * so this is a lookup by claim rather than a walk down a `see` path
+ * into a copy of the record inside the finding.
  */
 export function renderWhyRanked(payload, action, options = {}) {
   const uid = action?.element_uid;
   if (!uid) return null;
   const facts = elementFacts(payload).get(uid);
-  const record = action.provenance?.see
-    ? resolvePath(payload, action.provenance.see) : null;
+  const record = (payload?.provenance ?? []).find(
+    (entry) => entry?.claim === action?.finding_id) ?? null;
   const history = options.store
     ? renderElementHistory(options.store, uid, options.schema ?? null) : null;
   // `elementFacts` touches a record for every uid a source *names*, so
@@ -311,10 +313,10 @@ function investigationWhy(payload, uid, options) {
 function investigationEvidence(payload, uid, options) {
   const rows = [];
   const sources = [
-    ["Critical path", `signals.critical_path_detail[element_uid=${uid}]`],
+    ["Critical path", `critical_path_detail[element_uid=${uid}]`],
     ["Optimization horizon",
-     `signals.optimization_horizon[element_uid=${uid}]`],
-    ["Off-path heavies", `signals.latent_heavies[element_uid=${uid}]`],
+     `optimization_horizon[element_uid=${uid}]`],
+    ["Off-path heavies", `latent_heavies[element_uid=${uid}]`],
     ["Plane 2 (sandbox)", `element_join[element=${uid}]`],
   ];
   for (const [label, path] of sources) {
@@ -353,12 +355,12 @@ function investigationRelations(payload, uid) {
   // provenance is checkable or it is decoration (`UX-229`) - so it
   // cites the detail entry rather than the bare list that used to
   // duplicate it.
-  const detail = payload?.signals?.critical_path_detail;
+  const detail = payload?.critical_path_detail;
   const chain = Array.isArray(detail)
     ? detail.map((entry) => entry?.element_uid) : null;
   if (chain) {
     const at = chain.indexOf(uid);
-    const cite = (i) => `signals.critical_path_detail[${i}].element_uid`;
+    const cite = (i) => `critical_path_detail[${i}].element_uid`;
     if (at > 0) {
       rows.push({ label: "Waits on (chain)", path: cite(at - 1),
                   raw: chain[at - 1], text: chain[at - 1],
@@ -371,10 +373,10 @@ function investigationRelations(payload, uid) {
     }
   }
   const downstream = resolvePath(
-    payload, `signals.blast_radius[${uid}].downstream_count`);
+    payload, `elements.blast_radius[${uid}].downstream_count`);
   if (typeof downstream === "number") {
     rows.push({ label: "Rebuilds if changed",
-                path: `signals.blast_radius[${uid}].downstream_count`,
+                path: `elements.blast_radius[${uid}].downstream_count`,
                 raw: downstream, text: `${downstream} element(s)` });
   }
   return rows;

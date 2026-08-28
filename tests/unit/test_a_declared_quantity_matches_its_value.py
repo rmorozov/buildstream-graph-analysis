@@ -16,7 +16,7 @@ Critical path length   43200000   How many elements the chain runs
 
 Ten elements. `43200000` is `floors.t_infinity_observed` in
 microseconds - the very field the sentence points at as the other thing
-- and `structural.metrics.critical_path_length` held the real count, 10.
+- and `graph_metrics.critical_path_length` held the real count, 10.
 One name, two quantities, both declared `count`.
 
 **The two cheap checks, and why only two.** A `count` is a whole number
@@ -74,9 +74,9 @@ SHARE_SLACK = 1e-6
 #: reason. An average over a population is a count of things per thing,
 #: and rounding it would be the lie.
 FRACTIONAL_COUNTS = {
-    "structural.metrics.avg_fanin":
+    "graph_metrics.avg_fanin":
         "Edges per element, averaged over the graph - a mean of counts.",
-    "structural.metrics.avg_fanout":
+    "graph_metrics.avg_fanout":
         "The same, the other way round.",
 }
 
@@ -176,8 +176,8 @@ class TestAValueCanBeWhatItSaysItIs:
             f"{label}: leaves declared `share` outside 0..1: {bad[:6]}")
 
     def test_the_summary_repeats_the_metrics_it_quotes(self, label):
-        """Found by a mutation that survived. `structural.summary` is
-        three numbers copied from `structural.metrics` under two of
+        """Found by a mutation that survived. `graph_summary` is
+        three numbers copied from `graph_metrics` under two of
         their names, and a value that contradicts its declaration is
         not the only way one number can be two things: `+ 1` at the
         summary's own site changed a published count and reddened
@@ -186,17 +186,18 @@ class TestAValueCanBeWhatItSaysItIs:
         cheap half of it."""
         from tools.bga_view import payloads
 
-        structural = payloads(str(FIXTURES[label]))["report.json"].get(
-            "structural") or {}
-        metrics, summary = structural.get("metrics") or {}, structural.get(
-            "summary") or {}
-        assert metrics and summary, (label, sorted(structural))
+        # `UX-344`: two keys of the document, where they were two
+        # members of `structural`.
+        document = payloads(str(FIXTURES[label]))["report.json"]
+        metrics = document.get("graph_metrics") or {}
+        summary = document.get("graph_summary") or {}
+        assert metrics and summary, (label, sorted(document))
         for quoted, source in (("total_elements", "num_elements"),
                                ("critical_path_length", "critical_path_length"),
                                ("max_parallelism", "max_parallelism")):
             assert summary[quoted] == metrics[source], (
-                f"{label}: structural.summary.{quoted} is "
-                f"{summary[quoted]} and structural.metrics.{source} is "
+                f"{label}: graph_summary.{quoted} is "
+                f"{summary[quoted]} and graph_metrics.{source} is "
                 f"{metrics[source]}")
 
     def test_the_walk_reached_the_document(self, label):
@@ -213,21 +214,23 @@ class TestTheOneThisWasFiledFor:
     def test_the_chains_length_is_not_published_as_a_count(self):
         """`signals.critical_path_length` held the weighted longest
         path in microseconds. `floors.t_infinity_observed` and
-        `structural.sensitivity.critical_path_us` are the same number
+        `sensitivity.critical_path_us` are the same number
         under names that are true, so it is gone rather than renamed -
         `UX-288`'s rule is that a population is published once."""
         from tools.bga_view import payloads
 
         for label, run in FIXTURES.items():
             payload = payloads(str(run))["report.json"]
-            signals = payload.get("signals") or {}
-            assert "critical_path_length" not in signals, (
-                f"{label}: signals.critical_path_length is back, holding "
-                f"{signals['critical_path_length']}")
+            # `UX-344` lifted the namespace; the removed key would come
+            # back as a key of the document or as a member of `elements`.
+            for where in (payload, payload.get("elements") or {}):
+                assert "critical_path_length" not in where, (
+                    f"{label}: critical_path_length is back, holding "
+                    f"{where['critical_path_length']}")
             # The two that remain say the same thing, truthfully.
             floors = (payload.get("floors") or {}).get("t_infinity_observed")
-            sensitivity = ((payload.get("structural") or {})
-                           .get("sensitivity") or {}).get("critical_path_us")
+            sensitivity = (payload.get("sensitivity") or {}).get(
+                "critical_path_us")
             assert floors == sensitivity, (label, floors, sensitivity)
 
     def test_the_count_of_elements_on_the_chain_still_reads_as_one(self):
@@ -237,7 +240,7 @@ class TestTheOneThisWasFiledFor:
 
         for label, run in FIXTURES.items():
             payload = payloads(str(run))["report.json"]
-            metrics = ((payload.get("structural") or {}).get("metrics") or {})
-            detail = (payload.get("signals") or {}).get("critical_path_detail")
+            metrics = payload.get("graph_metrics") or {}
+            detail = payload.get("critical_path_detail")
             assert metrics.get("critical_path_length") == len(detail or []), (
                 label, metrics.get("critical_path_length"), len(detail or []))

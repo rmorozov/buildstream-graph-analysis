@@ -22,7 +22,8 @@ import { QUANTITY, SEVERITY, COLUMNS, SERIES, DISTRIBUTION, INLINE, bytes,
          childNode, cssId, el, guessQuantity, heading, hintsOf, quantity,
          quantityFor, sectionHead, title } from "./format.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, OBJECT_INLINE_FIELDS,
-         describedTerm, liftedCriticalPath, renderPairs, renderStructured,
+         LIFTED_SECTION, describedTerm, liftedCriticalPath, renderPairs,
+         renderStructured,
          renderTable } from "./structured.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
          PERFETTO_FRIENDLY_URL } from "./perfetto.js";
@@ -273,7 +274,7 @@ export function renderVerdict(payload) {
 //: saying where is what stops this becoming a place to hide a section
 //: nobody wants to fix.
 export const DRAWN_ELSEWHERE = {
-  element_join: "merged into the one element table (`signals`), which "
+  element_join: "merged into the one element table (`elements`), which "
     + "is `UX-289`'s rule applied to the columns `UX-215` added - it is "
     + "the same eleven elements, and drawing it twice is what `UX-338` "
     + "was filed for",
@@ -338,7 +339,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
     }
     return Object.keys(value).length
       // UX-289: the whole document, because a preset's population is a
-      // selection published elsewhere in it - `structural.bottleneck`
+      // selection published elsewhere in it - `bottleneck`
       // for the choke points. The section renders its own value; the
       // payload is only ever read for a declared `from` path.
       ? renderPairs(key, value, hint, node, payload, root) : null;
@@ -379,8 +380,15 @@ export function render(payload, schema, root, investigate = null) {
   for (const banner of renderVerdict(payload)) root.append(banner);
   for (const [key, value] of Object.entries(payload)) {
     if (key === "schema") continue;
-    const section = renderSection(key, value, hints[key] ?? {}, nodes[key],
-                                  investigate, payload, schema);
+    // UX-270: the critical path is the one table that grows with *path
+    // depth* rather than element count, so it folds by the chain's own
+    // numbers. `UX-344` made it a key of the document rather than a row
+    // of `signals`, which is what it was already drawn as - this is the
+    // fold, kept, now that the section arrives on its own.
+    const section = key === LIFTED_SECTION
+      ? liftedCriticalPath(payload, schema)
+      : renderSection(key, value, hints[key] ?? {}, nodes[key],
+                      investigate, payload, schema);
     // `UX-302`: what this section was rendered *from*, so the "view as
     // JSON" toggle has a published value to show rather than a
     // re-serialisation of the DOM. Only the schema-driven sections get
@@ -388,13 +396,6 @@ export function render(payload, schema, root, investigate = null) {
     // single payload slice, and gets no toggle rather than a misleading
     // one.
     if (section) root.append(recordSource(section, value));
-    // UX-270: the run's most important list, immediately after the
-    // section it used to be a row of. `UX-262` bounded its rows and
-    // `UX-208` gave it a badge; this only moves it.
-    if (key === "signals") {
-      const lifted = liftedCriticalPath(value, nodes[key]);
-      if (lifted) root.append(lifted);
-    }
   }
   const summary = renderSummary(payload, hints);
   if (summary) {

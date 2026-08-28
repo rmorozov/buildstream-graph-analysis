@@ -1,7 +1,7 @@
 """Tests for UX-20 (minimum tier): sensitivity.top_opportunities was
 already computed (`bga/structural/analyzer.py::compute_sensitivity`)
 but never rendered anywhere outside `--format json`'s
-`structural.sensitivity` key - invisible to a user reading the text
+`sensitivity` key - invisible to a user reading the text
 report, the one most users actually read first.
 """
 from pathlib import Path
@@ -24,7 +24,7 @@ def test_text_report_surfaces_top_improvement_opportunities():
     output = format_text(result)
 
     assert "Top Improvement Opportunities" in output
-    # Real data from this fixture's own structural.sensitivity - not
+    # Real data from this fixture's own sensitivity - not
     # just a section header with nothing under it.
     sensitivity = result.structural["sensitivity"]
     # `UX-343`: rows with named fields, matching the columns the
@@ -43,15 +43,15 @@ def test_text_report_names_best_case_speedup_and_improvable_time():
 
 def test_json_report_still_has_sensitivity_unchanged():
     """This is additive to the text report only - JSON's own
-    structural.sensitivity shape (already correct) must stay unchanged."""
+    sensitivity shape (already correct) must stay unchanged."""
     from bga.report.json import format_json
     import json
 
     result = _analyze()
     data = json.loads(format_json(result))
 
-    assert "top_opportunities" in data["structural"]["sensitivity"]
-    assert "best_case_speedup" in data["structural"]["sensitivity"]
+    assert "top_opportunities" in data["sensitivity"]
+    assert "best_case_speedup" in data["sensitivity"]
 
 
 def test_text_report_surfaces_batch_opportunities(tmp_path):
@@ -121,6 +121,6 @@ def test_json_report_has_batch_opportunities():
     result = _analyze()
     data = json.loads(format_json(result))
 
-    assert "batch_opportunities" in data["structural"]
-    assert "groups" in data["structural"]["batch_opportunities"]
-    assert "serialized_pairs" in data["structural"]["batch_opportunities"]
+    assert "batch_opportunities" in data
+    assert "groups" in data["batch_opportunities"]
+    assert "serialized_pairs" in data["batch_opportunities"]

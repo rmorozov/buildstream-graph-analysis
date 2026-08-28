@@ -380,14 +380,14 @@ class TestTheUndeclaredGateIsLoadBearing:
         # share without appearing in any signals map, and therefore the
         # only path on which the `declared` gate is reachable.
         analysis = {
-            "signals": {
-                "critical_path": ["real.bst"],
-                "blast_radius": {"real.bst": 2},
-            },
-            "structural": {"sensitivity": {
+            # `UX-344`: the element population is `elements` and the
+            # graph's tables are keys of the document.
+            "critical_path_detail": [{"element_uid": "real.bst"}],
+            "elements": {"blast_radius": {"real.bst": 2}},
+            "sensitivity": {
                 "top_opportunities": [["real.bst", 0.45],
                                       ["orphan.bst", 0.40]],
-                "critical_path_us": 20_000_000}},
+                "critical_path_us": 20_000_000},
             "total_duration_us": 20_000_000,
         }
         native = {

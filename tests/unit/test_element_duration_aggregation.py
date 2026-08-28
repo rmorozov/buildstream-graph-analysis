@@ -143,7 +143,7 @@ def test_critical_path_us_agrees_with_t_infinity(tmp_path, topology_name):
     data = json.loads(format_json(result))
 
     assert (
-        data["structural"]["sensitivity"]["critical_path_us"]
+        data["sensitivity"]["critical_path_us"]
         == data["floors"]["t_infinity_observed"]
     )
 
@@ -158,6 +158,6 @@ def test_critical_path_length_agrees_with_the_named_path(tmp_path, topology_name
     result = topologies.build_analyzer(tmp_path, topology).analyze()
     data = json.loads(format_json(result))
 
-    assert data["structural"]["metrics"]["critical_path_length"] == len(
-        [e["element_uid"] for e in data["signals"]["critical_path_detail"]]
+    assert data["graph_metrics"]["critical_path_length"] == len(
+        [e["element_uid"] for e in data["critical_path_detail"]]
     )

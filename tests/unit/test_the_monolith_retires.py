@@ -120,8 +120,9 @@ class TestAnOlderStoreStillReads:
         assert plane2.shape_of(legacy) == "plane2/v1"
 
     def test_it_is_inventoried_as_read_and_never_written(self):
-        assert contracts.superseded() == ["analyze/v2", "blast/v1", "compare/v1", "correlate/v1", "host/v1",
-            "plane2/v1"]
+        assert contracts.superseded() == [
+            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
+            "correlate/v1", "host/v1", "plane2/v1"]
         assert "plane2/v1" in contracts.ids()
         assert plane2.SCHEMA in contracts.ids()
 

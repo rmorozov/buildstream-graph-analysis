@@ -80,8 +80,12 @@ class TestTheReferencesResolve:
         for finding in synthetic["findings"]:
             assert finding["id"] in explained, finding["id"]
         assert "diagnosis" in explained
+        # `UX-344`: a top action's chain is the finding's, reached by
+        # the `finding_id` it already carries - there is no second
+        # record beside the id, and no `see` path spelling it out.
         for action in synthetic["headline"]["top_actions"]:
-            assert action.get("provenance"), action
+            assert "provenance" not in action, action
+            assert action["finding_id"] in explained, action
 
     def test_a_dangling_path_is_published_as_unresolved_not_dropped(self):
         """"We could not read it" and "there was nothing there" are
@@ -90,12 +94,12 @@ class TestTheReferencesResolve:
                                    "finding", {"confidence": {}})
         assert [e["resolved"] for e in record["evidence"]] == [False, False, False]
         assert provenance.unresolved_references(
-            {"findings": [{"id": "confidence", "provenance": record}]})
+            {"findings": [{"id": "confidence"}], "provenance": [record]})
 
 
 class TestTheRuleIsTheLiveConstant:
     def test_the_diagnosis_record_names_the_ratio_and_the_threshold(self, golden):
-        record = golden["headline"]["provenance"]
+        record = provenance.for_claim(golden, "diagnosis")
         assert record["rule"]["name"] == "CHAIN_BOUND_RATIO"
         assert record["rule"]["threshold"] == 0.9
         assert record["rule"]["observed_path"] == "headline.chain_share"
@@ -117,9 +121,9 @@ class TestTheRuleIsTheLiveConstant:
             analyzer.load(Path(GOLDEN))
             return build_document(analyzer.analyze(Path(GOLDEN)))
 
-        before = analyse()["headline"]["provenance"]["rule"]
+        before = provenance.for_claim(analyse(), "diagnosis")["rule"]
         monkeypatch.setattr(findings_mod, "CHAIN_BOUND_RATIO", 0.5)
-        after = analyse()["headline"]["provenance"]["rule"]
+        after = provenance.for_claim(analyse(), "diagnosis")["rule"]
         assert before["threshold"] == 0.9 and after["threshold"] == 0.5
         # And the comparison flips with it: 0.875 is below 0.9 and above
         # 0.5, so the same run is diagnosed the other way.
@@ -153,7 +157,7 @@ class TestTheTableCoversTheFindings:
         assert findings_mod.MESH_ZERO_SLACK_SHARE == 0.5
         record = provenance.record(
             {"id": "mesh-graph", "evidence": {"zero_slack_share": 0.62}},
-            "mesh-graph", "finding", {"signals": {"zero_slack_share": 0.62}})
+            "mesh-graph", "finding", {"elements": {"zero_slack_share": 0.62}})
         assert record["rule"]["name"] == "MESH_ZERO_SLACK_SHARE"
         assert record["rule"]["threshold"] == 0.5
 
@@ -196,28 +200,29 @@ class TestATopActionPointsRatherThanCopies:
     `finding_id` is where the reasoning lives. The first draft of the
     provenance module copied the whole record into each action, which
     restated one chain four times in a document whose subject is not
-    restating things."""
+    restating things.
 
-    def test_the_action_carries_a_path_not_a_second_copy(self, golden):
-        for action in golden["headline"]["top_actions"]:
-            record = action["provenance"]
-            assert record["see"] == (
-                f"findings[id={action['finding_id']}].provenance")
-            assert "rule" not in record and "evidence" not in record
+    `UX-344` removed the last of that: the action used to carry a third
+    spelling of the reference - a `see` path into the finding's *copy*
+    of the record - and now carries only the id, which resolves into the
+    one published list."""
 
-    def test_the_path_it_names_resolves_to_the_findings_record(self, golden):
+    def test_the_action_carries_an_id_and_nothing_else(self, golden):
         for action in golden["headline"]["top_actions"]:
-            pointed = provenance.resolve(golden, action["provenance"]["see"])
-            assert pointed is not provenance.UNRESOLVED
+            assert "provenance" not in action, action
+            assert action["finding_id"]
+
+    def test_the_id_it_names_resolves_to_the_published_record(self, golden):
+        for action in golden["headline"]["top_actions"]:
+            pointed = provenance.for_claim(golden, action["finding_id"])
+            assert pointed is not None, action
             assert pointed["claim"] == action["finding_id"]
             assert pointed["rule"]["sentence"]
 
     def test_a_pointer_that_dangles_is_reported(self):
-        record = provenance.reference({"findings": []}, "no-such-finding")
-        assert record["resolved"] is False
         assert provenance.unresolved_references(
-            {"headline": {"provenance": {}, "top_actions": [
-                {"provenance": record}]}})
+            {"provenance": [], "headline": {"top_actions": [
+                {"finding_id": "no-such-finding"}]}})
 
 
 @pytest.fixture(scope="module")
@@ -237,11 +242,11 @@ class TestTheComparisonCitesTheCandidatesChain:
 
     def test_it_says_which_document_its_paths_walk(self, comparison, golden):
         """A record that travels needs to name where its paths resolve.
-        These are into the candidate run's `analyze/v3`, not into the
+        These are into the candidate run's `analyze/v4`, not into the
         comparison quoting it - and following them against the wrong
         document is the failure this field exists to prevent."""
         record = comparison.to_dict()["candidate_diagnosis"]["provenance"]
-        assert record["document"] == "analyze/v3"
+        assert record["document"] == "analyze/v4"
         for entry in record["evidence"]:
             assert provenance.resolve(comparison.to_dict(),
                                       entry["path"]) is provenance.UNRESOLVED
@@ -317,9 +322,9 @@ class TestThePathGrammar:
             document, "violations[type=build_failed].failed_count") == 4
 
     def test_an_index_walks_a_list(self):
-        document = {"signals": {"latent_heavies": [{"duration_us": 7}]}}
+        document = {"latent_heavies": [{"duration_us": 7}]}
         assert provenance.resolve(
-            document, "signals.latent_heavies[0].duration_us") == 7
+            document, "latent_heavies[0].duration_us") == 7
 
     def test_a_missing_key_is_unresolved_and_not_none(self):
         assert provenance.resolve({"a": {"b": None}}, "a.b") is None
@@ -335,10 +340,8 @@ class TestBothRenderersReadTheSameObject:
         """Not "prints something similar": the exact lines
         `provenance.render` produces from the document's own record."""
         explained = _bga(["analyze", GOLDEN, "--explain"])
-        for line in provenance.render(golden["headline"]["provenance"]):
-            assert line in explained, line
-        for finding in golden["findings"]:
-            for line in provenance.render(finding["provenance"]):
+        for record in golden["provenance"]:
+            for line in provenance.render(record):
                 assert line in explained, line
 
     def test_the_chain_appears_under_the_claim_it_explains(self):
@@ -364,7 +367,7 @@ class TestThePageDrawsTheObject:
         comparison itself would be a second explanation of one claim,
         and the first thing it would do is disagree with the terminal.
         """
-        record = golden["headline"]["provenance"]
+        record = provenance.for_claim(golden, "diagnosis")
         out = self._render(record)
         published = {str(record["rule"]["sentence"]), str(record["rule"]["name"]),
                      str(record["rule"]["threshold"]),
@@ -387,13 +390,13 @@ class TestThePageDrawsTheObject:
             f"the page shows text no field of the record holds: {unaccounted}")
 
     def test_the_reference_paths_and_values_are_the_records_own(self, golden):
-        record = golden["headline"]["provenance"]
+        record = provenance.for_claim(golden, "diagnosis")
         out = self._render(record)
         assert out["paths"] == [e["path"] for e in record["evidence"]]
         assert out["raw"] == [str(e["value"]) for e in record["evidence"]]
 
     def test_the_threshold_is_carried_not_recomputed(self, golden):
-        out = self._render(golden["headline"]["provenance"])
+        out = self._render(provenance.for_claim(golden, "diagnosis"))
         assert out["threshold"] == "0.9"
         assert out["rule"] == "CHAIN_BOUND_RATIO"
 

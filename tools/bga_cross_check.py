@@ -166,27 +166,30 @@ def run(run_dir: str, analysis: dict) -> int:
     def check(name, mine, reported, note=""):
         checks.append((name, mine, reported, mine == reported, note))
 
-    structural = analysis.get("structural") or {}
+    # `UX-344`: the tables `structural` and `signals` used to hold are
+    # keys of the document.
+    metrics = analysis.get("graph_metrics") or {}
+    sensitivity = analysis.get("sensitivity") or {}
     floors = analysis.get("floors") or {}
-    signals = analysis.get("signals") or {}
+    path = analysis.get("critical_path_detail") or []
     occupancy = analysis.get("occupancy") or {}
 
-    if structural and signals:
-        check("metrics.critical_path_length vs len(signals.critical_path)",
-              structural["metrics"]["critical_path_length"],
-              len(_schemas.critical_path_uids(signals)))
+    if metrics and path:
+        check("graph_metrics.critical_path_length vs len(critical_path_detail)",
+              metrics["critical_path_length"],
+              len(_schemas.critical_path_uids(analysis)))
         check("sensitivity.critical_path_us vs floors.t_infinity_observed",
-              structural["sensitivity"]["critical_path_us"],
+              sensitivity["critical_path_us"],
               floors["t_infinity_observed"])
-        check("structural.metrics.num_elements vs graph.json",
-              structural["metrics"]["num_elements"], len(graph["elements"]))
+        check("graph_metrics.num_elements vs graph.json",
+              metrics["num_elements"], len(graph["elements"]))
     if floors:
         check("independent longest weighted path vs t_infinity_observed",
               longest_path_us(graph, build_durations), floors["t_infinity_observed"])
-        if signals:
+        if path:
             check("BUILD durations along the reported critical path vs t_infinity",
                   sum(build_durations[e]
-                      for e in _schemas.critical_path_uids(signals)),
+                      for e in _schemas.critical_path_uids(analysis)),
                   floors["t_infinity_observed"])
     if analysis.get("attribution"):
         check("sum(attribution categories) vs total_duration_us",

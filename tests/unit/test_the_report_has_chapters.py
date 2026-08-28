@@ -266,8 +266,11 @@ class TestTheReportHasChapters:
         rather than of a pass that moved three sections."""
         out = _boot_chapters()
         assert out["chapters"][-1]["id"] == "run", out["chapters"][-1]
+        # `UX-344`: and `document_shape`, which says how deep the
+        # document itself turned out to be - a fact about the artifact,
+        # like the producer stamp above it.
         assert out["chapters"][-1]["members"] == [
-            "summary", "run_instance", "producer"]
+            "summary", "run_instance", "producer", "document_shape"]
 
     def test_the_blast_control_sits_with_the_table_it_answers(self):
         """`UX-285`'s other outcome. The chapter's declared order puts

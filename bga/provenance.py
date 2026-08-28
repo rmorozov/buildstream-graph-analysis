@@ -282,7 +282,7 @@ def _cache_hit_rule(claim, document):
             else "at or above HEALTHY_HIT_RATIO")
     return _rule(
         "POOR_HIT_RATIO/HEALTHY_HIT_RATIO", [POOR_HIT_RATIO, HEALTHY_HIT_RATIO],
-        "banded", "signals.cache.hit_share",
+        "banded", "cache.hit_share",
         f"A {ratio:.0%} hit ratio is {band} "
         f"({POOR_HIT_RATIO:.0%}/{HEALTHY_HIT_RATIO:.0%}), which is what sets "
         f"this finding's severity.",
@@ -324,7 +324,7 @@ def _mesh_rule(claim, document):
     density = (claim.get("evidence") or {}).get("zero_slack_share")
     return _rule(
         "MESH_ZERO_SLACK_SHARE", _findings.MESH_ZERO_SLACK_SHARE, ">=",
-        "signals.zero_slack_share",
+        "elements.zero_slack_share",
         f"{density:.0%} of elements have zero slack, at or above the "
         f"{_findings.MESH_ZERO_SLACK_SHARE:.0%} at which the graph is called "
         f"a mesh rather than a chain."
@@ -372,13 +372,13 @@ _CLAIMS = {
             "mode is a fact about the capture, not a measurement to band."),
         ()),
     "cache-hit-ratio": (
-        ("signals.cache.hit_share", "signals.cache.built_elements",
-         "signals.cache.cached_elements", "confidence.run_mode"),
+        ("cache.hit_share", "cache.built_elements",
+         "cache.cached_elements", "confidence.run_mode"),
         _cache_hit_rule, ()),
     "cache-transfer-cost": (
-        ("signals.cache.transfer_share",),
+        ("cache.transfer_share",),
         _rule("TRANSFER_SHARE_NOTABLE", TRANSFER_SHARE_NOTABLE, ">=",
-              "signals.cache.transfer_share",
+              "cache.transfer_share",
               "Artifact transfer took at or above the share of wall-clock at "
               "which moving artifacts is worth saying out loud.",
               module=CACHE_RULE_MODULE), ()),
@@ -396,7 +396,7 @@ _CLAIMS = {
             "it; which elements, and their share, are the finding's own "
             "`evidence.rows`."), ()),
     "mesh-graph": (
-        ("signals.zero_slack_share",), _mesh_rule, ()),
+        ("elements.zero_slack_share",), _mesh_rule, ()),
     "shared-source-blast": (
         ("resource_blast.element_count",),
         _unconditional(
@@ -444,22 +444,22 @@ _CLAIMS = {
             "total_duration_us"),
         _wait_category_rule, ()),
     "joint-saving": (
-        ("signals.joint_saving.joint_saving_us",
-         "signals.joint_saving.sum_of_individual_us",
-         "signals.joint_saving.savings_add", "total_duration_us"),
+        ("joint_saving.joint_saving_us",
+         "joint_saving.sum_of_individual_us",
+         "joint_saving.savings_add", "total_duration_us"),
         _unconditional(
             "Published whenever the top elements have a joint projection; "
             "whether the savings add is the finding, not its gate."), ()),
     "optimization-horizon": (
-        ("signals.optimization_horizon[0].makespan_after_us",
-         "signals.optimization_horizon[0].cumulative_saving_us",
+        ("optimization_horizon[0].makespan_after_us",
+         "optimization_horizon[0].cumulative_saving_us",
          "total_duration_us"),
         _unconditional(
             "Published when the horizon has more than one step - a "
             "single-step horizon is the first fix, which is already named."),
         ()),
     "latent-heavies": (
-        ("signals.latent_heavies[0].duration_us",),
+        ("latent_heavies[0].duration_us",),
         _unconditional(
             "Published whenever elements off the critical path are heavy "
             "enough to bound how far shortening the chain can go."), ()),
@@ -471,7 +471,7 @@ _CLAIMS = {
               "not already constrain; above the threshold the ranking that "
               "matters is how long each element takes."), ()),
     "blast-radius-structural": (
-        ("signals.blast_radius",),
+        ("elements.blast_radius",),
         _unconditional(
             "Published when the elements with the widest reach are "
             "structural kinds - a base image, a toolchain, a stack. Their "
@@ -558,42 +558,26 @@ def record(claim: dict, claim_id: str, kind: str, document: dict) -> dict:
     }
 
 
-def reference(document: dict, finding_id: Optional[str]) -> dict:
-    """A top action's provenance: a *pointer* to the finding's record.
-
-    `_top_actions` is references-not-copies by construction - its
-    docstring says so, because `finding_id` is where the reasoning
-    lives. The first draft of this module copied the whole record into
-    each action anyway, which restated one chain four times in a
-    document whose whole subject is not restating things. `see` is a
-    path in this module's own grammar, so following it is the same walk
-    as reading any other reference.
-    """
-    where = f"findings[id={finding_id}].provenance"
-    return {"claim": finding_id, "kind": "top_action",
-            "document": ANALYZE_DOCUMENT, "see": where,
-            "resolved": resolve(document, where) is not UNRESOLVED}
-
-
 def attach(document: dict) -> dict:
-    """Give every claim in `document` its provenance record, in place.
+    """Publish one record per claim in `document`, in place.
 
     Runs last in the report build, for the reason in the module
     docstring: a reference into a document is only checkable once the
     document exists.
+
+    `UX-344`: **one list, not one copy per claim.** The record used to
+    be written into the headline, into every finding, and - as a `see`
+    path pointing back at the finding's copy - into every top action,
+    which put the document's deepest shape inside the record it
+    explains and gave the top action a third spelling of a reference it
+    already carried. `headline.top_actions[].finding_id` and
+    `findings[].id` are the claim ids; this is what they resolve into.
     """
-    # Findings first: a top action's record is a *pointer* into a
-    # finding's, and `reference` checks that the path resolves - which
-    # it cannot until the finding it names carries one.
-    for finding in document.get("findings") or []:
-        finding["provenance"] = record(finding, finding.get("id"), "finding",
-                                       document)
-    headline = document.get("headline")
-    if isinstance(headline, dict):
-        headline["provenance"] = record(headline, "diagnosis", "diagnosis",
-                                        document)
-        for action in headline.get("top_actions") or []:
-            action["provenance"] = reference(document, action.get("finding_id"))
+    records = [record(document["headline"], "diagnosis", "diagnosis", document)
+               ] if isinstance(document.get("headline"), dict) else []
+    records += [record(finding, finding.get("id"), "finding", document)
+                for finding in document.get("findings") or []]
+    document["provenance"] = records
     return document
 
 
@@ -605,37 +589,58 @@ def _finding_by_id(document: dict, finding_id: Optional[str]):
 def unresolved_references(document: dict) -> List[str]:
     """Every published reference that does not resolve - the guard's
     whole job, and a function rather than a test helper because a
-    consumer deserves the same check."""
+    consumer deserves the same check.
+
+    `UX-344`: a claim that resolves into nothing counts too. The list is
+    keyed by claim id, so a `finding_id` or a finding with no record is
+    the dangling reference the `see` path used to be.
+    """
     dangling: List[str] = []
-    for _claim, provenance in claims(document):
-        if provenance.get("see") and not provenance.get("resolved"):
-            dangling.append(f"{provenance['claim']}: {provenance['see']}")
-        for entry in provenance.get("evidence") or []:
-            if not entry.get("resolved"):
-                dangling.append(f"{provenance['claim']}: {entry['path']}")
+    published = {entry.get("claim") for entry in document.get("provenance") or []}
+    for _claim, entry in claims(document):
+        for cited in entry.get("evidence") or []:
+            if not cited.get("resolved"):
+                dangling.append(f"{entry['claim']}: {cited['path']}")
+    for action in (document.get("headline") or {}).get("top_actions") or []:
+        if action.get("finding_id") and action["finding_id"] not in published:
+            dangling.append(
+                f"headline.top_actions: {action['finding_id']} explains nothing")
+    for finding in document.get("findings") or []:
+        if finding.get("id") and finding["id"] not in published:
+            dangling.append(f"findings: {finding['id']} explains nothing")
     return dangling
 
 
+def for_claim(document: dict, claim_id: Optional[str]) -> Optional[dict]:
+    """The published record for one claim id, or `None`.
+
+    The lookup every consumer of a `finding_id` needs since `UX-344`
+    stopped writing a copy of the record beside each id.
+    """
+    if not claim_id:
+        return None
+    for entry in document.get("provenance") or []:
+        if entry.get("claim") == claim_id:
+            return entry
+    return None
+
+
 def claims(document: dict):
-    """`(claim, provenance)` for everything in `document` that carries
-    one, in the order the document lists them."""
-    headline = document.get("headline") or {}
-    if headline.get("provenance"):
-        yield headline, headline["provenance"]
-    for action in headline.get("top_actions") or []:
-        if action.get("provenance"):
-            yield action, action["provenance"]
+    """`(claim, provenance)` for every published record, paired with the
+    thing it explains, in the order the document lists them."""
+    by_id = {"diagnosis": document.get("headline") or {}}
     for finding in document.get("findings") or []:
-        if finding.get("provenance"):
-            yield finding, finding["provenance"]
+        by_id[finding.get("id")] = finding
+    for entry in document.get("provenance") or []:
+        claim = by_id.get(entry.get("claim"))
+        if claim is not None:
+            yield claim, entry
 
 
 def render(provenance: dict, indent: str = "    ") -> List[str]:
     """The chain as text lines. One renderer for the terminal, so
     `--explain` and the page cannot word the same chain differently."""
-    if provenance.get("see"):
-        return [f"{indent}why: see {provenance['see']}"]
-    if not provenance.get("rule"):
+    if not provenance or not provenance.get("rule"):
         return []
     lines = [f"{indent}why: {provenance['rule']['sentence']}"]
     rule = provenance["rule"]

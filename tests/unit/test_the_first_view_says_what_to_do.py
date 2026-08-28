@@ -93,7 +93,7 @@ class TestTheCriticalPathComesFirst:
                 {"element_uid": "slow.bst", "duration_us": 60_000_000}]}
 
         steps = compute_next_steps(Result(), headline={})
-        assert steps[0]["follows_from"] == "signals.critical_path_detail"
+        assert steps[0]["follows_from"] == "critical_path_detail"
 
 
 class TestTheShapeIsOneLine:

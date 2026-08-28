@@ -103,6 +103,9 @@ FILE_WRITTEN = {
     # on the way in so an old baseline still compares.
     "host/v1": "run-context.json, before UX-341 moved it to bytes",
     "analyze/v2": "an older store's report.json",
+    # `UX-344` put a sixth there: the shape `analyze` wrote before the
+    # two namespaces were lifted.
+    "analyze/v3": "an older store's report.json, before UX-344",
     "compare/v1": "an older store's comparison",
     "blast/v1": "an older store's blast answer",
     "correlate/v1": "an older store's two-plane join",
@@ -299,9 +302,9 @@ class TestTheUnionIsTheInventory:
     def test_the_superseded_id_is_declared_and_not_answerable(self):
         """`plane2/v1` is read and never written. A third state, and one
         `--schema` must not offer as if a command produced it."""
-        assert contracts.superseded() == ["analyze/v2", "blast/v1", "compare/v1", "correlate/v1", "host/v1",
-            "plane2/v1"], \
-            contracts.superseded()
+        assert contracts.superseded() == [
+            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
+            "correlate/v1", "host/v1", "plane2/v1"], contracts.superseded()
         assert "plane2/v1" in FILE_WRITTEN
 
 

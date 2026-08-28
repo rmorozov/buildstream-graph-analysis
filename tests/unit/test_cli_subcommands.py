@@ -120,8 +120,10 @@ def test_diagnostics_subcommand_forces_diagnostics_on(tmp_path):
     result = _run_bga(["diagnostics", str(run_dir), "--format", "json"])
     assert result.returncode == 0, result.stderr
     data = json.loads(result.stdout)
-    assert "signals" in data
-    assert "criticality_probability" in data["signals"]
+    # `UX-344`: the section's tables are keys of the document, and the
+    # element-keyed maps are members of `elements`.
+    assert "elements" in data
+    assert "criticality_probability" in data["elements"]
 
 
 def test_sweep_subcommand_reports_makespan_per_capacity(tmp_path):

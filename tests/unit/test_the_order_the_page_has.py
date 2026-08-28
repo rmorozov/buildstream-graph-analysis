@@ -325,10 +325,14 @@ class TestTheSkipCensus:
 #   the query the narrative provokes          UX-285 item 3
 #   the analysis                              signals, structural, ...
 #   the identity, last                        UX-285 item 1
+# `UX-344` lifted the two namespaces: `signals` and `structural` were
+# one section each and are eleven now, so the two landmarks in the
+# middle are the two tables a reader arrives at - the element table and
+# the graph's shape - rather than the boxes they used to sit in.
 INTENDED_ORDER = ["decision", "evidence", "overview",
                   "findings", "headline", "next_steps", "blast-offline",
-                  "signals", "structural",
-                  "summary", "run_instance", "producer"]
+                  "elements", "graph_metrics",
+                  "summary", "run_instance", "producer", "document_shape"]
 
 # What a run with a shared git repository has in it. Four elements, one
 # monorepo behind three of them - `examples/06`'s shape, small enough to
@@ -388,9 +392,15 @@ class TestThePageReadsInTheOrderItShould:
 
     def test_the_identity_group_closes_the_document(self):
         """Item 1: adjacent, and low. Not merely "in this order" - the
-        last three sections of the page, with nothing between them."""
+        last sections of the page, with nothing between them.
+
+        `UX-344` added a fourth: `document_shape` says how deep the
+        document a reader is holding turned out to be, which is a fact
+        about the artifact rather than about the run, and it closes the
+        same chapter for the same reason `producer` does."""
         order = _boot_order()
-        assert order[-3:] == ["summary", "run_instance", "producer"], order[-6:]
+        assert order[-4:] == ["summary", "run_instance", "producer",
+                              "document_shape"], order[-7:]
 
     def test_the_element_sections_sit_above_the_identity(self):
         """`UX-216` appends one section per element *after* `render`

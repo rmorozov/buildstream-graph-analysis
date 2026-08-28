@@ -764,6 +764,7 @@ def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
     for its comparison types, and a top-level import back would be a
     cycle.
     """
+    from . import provenance as _provenance
     from .report.json import build_document
 
     try:
@@ -773,11 +774,18 @@ def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
         # this file's standing rule for every optional enrichment.
         return None
     headline = document.get('headline') or {}
-    if not headline.get('provenance'):
+    # `UX-344`: the chain is published once per claim at the top level,
+    # so the diagnosis's record is looked up by its claim id rather than
+    # read out of the headline it explains. The record still travels
+    # *inside* this comparison - a consumer reading `compare/v2` has no
+    # second document to resolve it against - which is why `document`
+    # names the contract its paths walk.
+    record = _provenance.for_claim(document, 'diagnosis')
+    if not record:
         return None
     return {'diagnosis': headline.get('diagnosis'),
             'sentence': headline.get('sentence'),
-            'provenance': headline['provenance']}
+            'provenance': record}
 
 
 def _compare_results(

@@ -206,7 +206,7 @@ class TestInvestigationIsOneClickAway:
         run = REAL if os.path.isdir(REAL) else GOLDEN
         payload = _report(run)
         out = _render(payload)
-        detail = payload["signals"]["critical_path_detail"]
+        detail = payload["critical_path_detail"]
         by_uid = {e["element_uid"]: e for e in detail}
         assert out["popovers"], "no path box carried a popover"
         for box in out["popovers"]:
@@ -233,7 +233,7 @@ class TestInvestigationIsOneClickAway:
                 assert table["inspect"] == 0, table
 
     def test_the_element_tables_the_report_is_about_are_among_them(self):
-        """`signals.critical_path_detail` is the list of elements the
+        """`critical_path_detail` is the list of elements the
         whole report argues about; before this item it rendered as a
         `<pre>` of raw JSON nested in a definition list, so nothing in
         it was sortable, filterable or one click from anywhere."""
@@ -492,7 +492,7 @@ const make = (t, a = {}, ...c) => ({ tagName: t, attrs: {...a}, children: [],
   addEventListener() {}, append(...x) {
     for (const y of x) if (y) this.children.push(y); } });
 const node = views.blastChips(
-  { signals: { top_blast_radius: %s } }, () => {}, make);
+  { elements: { top_blast_radius: %s } }, () => {}, make);
 const chips = node
   ? node.children.filter((c) => c.attrs["data-element"])
       .map((c) => c.attrs["data-element"]) : [];

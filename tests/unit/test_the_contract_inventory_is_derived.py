@@ -57,9 +57,11 @@ class TestTheInventoryIsComplete:
         # `UX-341` put five more shapes here: the four documents whose
         # units it renamed, and `host/v1`. All five are read and never
         # written, which is exactly the state this list is for.
+        # `UX-344` added `analyze/v3`, for the same reason.
         assert contracts.unprintable() == [
-            "analyze/v2", "blast/v1", "compare/v1", "correlate/v1",
-            "host/v1", "host/v2", "plane2/v1", "plane2/v2", "sources/v1"]
+            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
+            "correlate/v1", "host/v1", "host/v2", "plane2/v1", "plane2/v2",
+            "sources/v1"]
 
     def test_a_retired_shape_is_inventoried_as_one(self):
         """`UX-297`: the Plane 2 monolith is read and never written.
@@ -72,8 +74,9 @@ class TestTheInventoryIsComplete:
         that says which."""
         from bga import contracts
 
-        assert contracts.superseded() == ["analyze/v2", "blast/v1", "compare/v1", "correlate/v1", "host/v1",
-            "plane2/v1"]
+        assert contracts.superseded() == [
+            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
+            "correlate/v1", "host/v1", "plane2/v1"]
         assert "plane2/v1" in contracts.ids()
         assert "plane2/v1" not in contracts.printable()
 

@@ -131,8 +131,11 @@ def test_no_plane3_report_means_no_merge_half_at_all():
 # --- split candidates ---------------------------------------------------
 
 def _analysis(path, durations, horizon):
+    # `UX-344`: `critical_path_detail` is a key of the document and the
+    # element-keyed maps are members of `elements`.
     return {
-        'signals': {'critical_path': path, 'element_durations': durations},
+        'critical_path_detail': [{'element_uid': uid} for uid in path],
+        'elements': {'element_durations': durations},
         'floors': {'t_infinity_observed': horizon},
     }
 

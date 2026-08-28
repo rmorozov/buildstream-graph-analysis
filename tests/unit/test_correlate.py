@@ -25,17 +25,15 @@ GOLDEN_RUN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds
 
 
 def _analysis(critical_path=(), opportunities=(), critical_path_us=20_000_000, blast=None):
+    # `UX-344`: the two namespaces are gone - `critical_path_detail` and
+    # `sensitivity` are keys of the document and the element-keyed maps
+    # are members of `elements`.
     return {
-        "signals": {
-            "critical_path_detail": [{"element_uid": u}
-                                     for u in critical_path],
-            "blast_radius": blast or {},
-        },
-        "structural": {
-            "sensitivity": {
-                "top_opportunities": [list(o) for o in opportunities],
-                "critical_path_us": critical_path_us,
-            }
+        "critical_path_detail": [{"element_uid": u} for u in critical_path],
+        "elements": {"blast_radius": blast or {}},
+        "sensitivity": {
+            "top_opportunities": [list(o) for o in opportunities],
+            "critical_path_us": critical_path_us,
         },
     }
 
@@ -246,18 +244,13 @@ def _real_analysis(with_savings=True):
         detail.append(entry)
     return {
         "total_duration_us": 3_614_220_000,
-        "signals": {
-            "critical_path": [e[0] for e in REAL_ELEMENTS],
-            "critical_path_detail": detail,
-            "blast_radius": {},
-        },
-        "structural": {
-            "sensitivity": {
-                # The saturated proxy, exactly as the real capture carries it.
-                "top_opportunities": [[e[0], _TIED_SCORE, _TIED_SCORE * 100]
-                                      for e in REAL_ELEMENTS],
-                "critical_path_us": 3_610_500_000,
-            }
+        "critical_path_detail": detail,
+        "elements": {"blast_radius": {}},
+        "sensitivity": {
+            # The saturated proxy, exactly as the real capture carries it.
+            "top_opportunities": [[e[0], _TIED_SCORE, _TIED_SCORE * 100]
+                                  for e in REAL_ELEMENTS],
+            "critical_path_us": 3_610_500_000,
         },
     }
 
@@ -354,8 +347,12 @@ def test_analyze_and_correlate_name_the_same_element_first():
         floors={"t_infinity_observed": 3_610_500_000},
         total_duration_us=analysis["total_duration_us"],
         confidence={"primary": 1.0},
-        signals=analysis["signals"],
-        structural=analysis["structural"],
+        # `UX-344` lifted the namespaces out of the *document*; the
+        # analyzer's own result still carries the two blocks, and this
+        # rebuilds them from the document the helper writes.
+        signals={"critical_path_detail": analysis["critical_path_detail"],
+                 "blast_radius": {}},
+        structural={"sensitivity": analysis["sensitivity"]},
     )
 
     analyze_first = heaviest_on_path(result)[0]["element_uid"]
@@ -513,18 +510,13 @@ def test_a_name_that_is_not_a_declared_element_never_enters_the_join():
     """
     analysis = {
         "total_duration_us": 100_000_000,
-        "signals": {
-            "critical_path": ["real.bst"],
-            "critical_path_detail": [{
-                "element_uid": "real.bst", "duration_us": 50_000_000,
-                "share_of_path": 1.0, "is_structural_kind": False,
-                "realizable_saving_us": 50_000_000,
-            }],
-            "slack": {"real.bst": 0},
-            "blast_radius": {},
-        },
-        "structural": {"sensitivity": {"top_opportunities": [],
-                                       "critical_path_us": 50_000_000}},
+        "critical_path_detail": [{
+            "element_uid": "real.bst", "duration_us": 50_000_000,
+            "share_of_path": 1.0, "is_structural_kind": False,
+            "realizable_saving_us": 50_000_000,
+        }],
+        "elements": {"slack": {"real.bst": 0}, "blast_radius": {}},
+        "sensitivity": {"top_opportunities": [], "critical_path_us": 50_000_000},
     }
     native = _native(unused=[{"element": "flit_core.bst", "dependency": "d.bst"}])
     native["by_element"]["flit_core.bst"] = 5

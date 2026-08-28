@@ -70,8 +70,8 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # expectation from the same declaration would pass on a declaration that
 # is wrong about the run.
 PUBLISHED_VIEWS = {
-    "Critical path": "signals.critical_path_detail",
-    "Choke points": "structural.bottleneck.choke_points",
+    "Critical path": "critical_path_detail",
+    "Choke points": "bottleneck.choke_points",
 }
 
 # The one pair of tables that draw the same elements on this fixture and
@@ -79,8 +79,10 @@ PUBLISHED_VIEWS = {
 # `test_no_two_tables_carry_the_same_elements` for the measurement.
 # UX-285: by `data-table` path rather than by position, so it names the
 # two tables the docstring names and survives a section moving.
-KNOWN_COINCIDENCE = ["structural.batch_opportunities.serialized_pairs and "
-                     "structural.sensitivity.top_opportunities (5)"]
+# `UX-344` lifted `structural`, so `top_opportunities` is drawn in a
+# section of its own and the path it is named by lost a level.
+KNOWN_COINCIDENCE = ["batch_opportunities.serialized_pairs and "
+                     "top_opportunities (5)"]
 
 # The bound, stated here rather than read from `schemas`. Reading the
 # constant and asserting against it is the mutation that passes:
@@ -91,7 +93,7 @@ VIEW_COLUMNS_BOUND = 8
 
 
 def _presets():
-    return schemas.schema(schemas.ANALYZE)["properties"]["signals"][
+    return schemas.schema(schemas.ANALYZE)["properties"]["elements"][
         schemas.PRESETS]
 
 
@@ -267,16 +269,16 @@ class TestThePresetsAreDeclaredNotCoded:
         exercised at a fixed width rather than at `PRESET_COLUMNS_MAX +
         1` - which would keep raising however far the constant moved."""
         with pytest.raises(ValueError, match="columns"):
-            schemas._check_hint("analyze/v3", "signals", {
+            schemas._check_hint("analyze/v4", "elements", {
                 schemas.PRESETS: [{"name": "wide", "columns":
                                    [f"c{n}" for n in
                                     range(VIEW_COLUMNS_BOUND + 1)]}]})
 
     def test_a_preset_choosing_rows_two_ways_is_refused(self):
         with pytest.raises(ValueError, match="two answers"):
-            schemas._check_hint("analyze/v3", "signals", {
+            schemas._check_hint("analyze/v4", "elements", {
                 schemas.PRESETS: [{"name": "both", "columns": ["element"],
-                                   "from": "signals.critical_path_detail",
+                                   "from": "critical_path_detail",
                                    "where": {"column": "is_leaf",
                                              "equals": True}}]})
 
@@ -304,10 +306,10 @@ class TestEveryViewIsAFilterOverPublishedFields:
                    for header in table["headers"]}
         # The rendered headers are titled, so compare against the raw
         # keys the payload carries for an element instead.
-        record = next(iter((payload["signals"].get("blast_radius") or {})
+        record = next(iter((payload["elements"].get("blast_radius") or {})
                            .values()), {})
         record = {**record,
-                  **next(iter((payload["signals"].get("criticality_probability")
+                  **next(iter((payload["elements"].get("criticality_probability")
                                or {}).values()), {})}
         unknown = [preset["name"] for preset in _presets()
                    if preset.get("where")
@@ -340,7 +342,7 @@ class TestThePageDrawsThem:
     def test_the_leaves_view_is_the_leaves(self, payload):
         drawn = _page(payload)
         by_name = {view["name"]: view for view in drawn["views"]}
-        published = set(payload["signals"]["leaf_analysis"]["leaves_detail"])
+        published = set(payload["leaf_analysis"]["leaves_detail"])
         assert set(by_name["Leaves"]["population"]) == published
 
     def test_no_table_is_wider_than_the_bound(self, payload):
@@ -360,7 +362,7 @@ class TestThePageDrawsThem:
         drawn = _page(payload)
         elements = [table for table in drawn["tables"]
                     if frozenset(table["population"])
-                    == frozenset(payload["signals"].get("element_durations")
+                    == frozenset(payload["elements"].get("element_durations")
                                  or {})
                     ]
         assert len(elements) <= 1, (
@@ -428,12 +430,12 @@ class TestThePageDrawsThem:
             return {member for row in (value or []) for member in members(row)
                     if isinstance(member, str) and member.endswith(".bst")}
 
-        top = uids(payload["structural"]["sensitivity"]["top_opportunities"])
-        pairs = uids(payload["structural"]["batch_opportunities"]
+        top = uids(payload["sensitivity"]["top_opportunities"])
+        pairs = uids(payload["batch_opportunities"]
                      ["serialized_pairs"])
         assert top and pairs, "the exempted pair no longer draws anything"
-        assert (payload["structural"]["sensitivity"]["top_opportunities"]
-                != payload["structural"]["batch_opportunities"]
+        assert (payload["sensitivity"]["top_opportunities"]
+                != payload["batch_opportunities"]
                 ["serialized_pairs"]), (
             "the two fields are now the same value, which is a duplication "
             "rather than a coincidence")
@@ -584,7 +586,7 @@ class TestAViewTravelsInTheLink:
         drawn = _page(payload)
         assert [entry["name"] for entry in drawn["rail"]] == drawn["offered"]
         for entry in drawn["rail"]:
-            assert entry["href"].startswith("#signals~v.elements="), entry
+            assert entry["href"].startswith("#elements~v.elements="), entry
             assert entry["name"].replace(" ", "%20") in entry["href"], entry
 
     def test_a_view_this_run_cannot_support_is_not_offered(self, payload):
@@ -593,7 +595,7 @@ class TestAViewTravelsInTheLink:
         them look alike. So the selection is removed and the view has to
         disappear - not appear with zero rows."""
         without = json.loads(json.dumps(payload))
-        without["structural"]["bottleneck"]["choke_points"] = []
+        without["bottleneck"]["choke_points"] = []
         drawn = _page(without)
         assert "Choke points" not in drawn["offered"], drawn["offered"]
         assert "Critical path" in drawn["offered"], (
@@ -606,7 +608,7 @@ class TestAViewTravelsInTheLink:
         all. Removing that check left all eighteen of these green until
         this was added - a line no test could redden."""
         without = json.loads(json.dumps(payload))
-        for record in (without["signals"].get("blast_radius") or {}).values():
+        for record in (without["elements"].get("blast_radius") or {}).values():
             record["is_leaf"] = False
         drawn = _page(without)
         assert "Leaves" not in drawn["offered"], drawn["offered"]
@@ -618,7 +620,7 @@ class TestAViewTravelsInTheLink:
         different view and let them believe it is the one they asked
         for."""
         without = json.loads(json.dumps(payload))
-        without["structural"]["bottleneck"]["choke_points"] = []
+        without["bottleneck"]["choke_points"] = []
         drawn = _page(without, apply="v.elements=Choke+points")
         assert drawn["drawn"] == ["All elements"], drawn["drawn"]
 

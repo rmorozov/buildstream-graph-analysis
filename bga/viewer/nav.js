@@ -383,9 +383,9 @@ export function matches(targets, query, limit = 8) {
  * `SyntaxError` in the shipped page, which is UX-199's defect exactly.
  */
 export function paletteFacts(payload, uid) {
-  const detail = (payload?.signals?.critical_path_detail ?? [])
+  const detail = (payload?.critical_path_detail ?? [])
     .find((row) => row.element_uid === uid);
-  const durations = payload?.signals?.element_durations ?? {};
+  const durations = payload?.elements?.element_durations ?? {};
   const action = (payload?.headline?.top_actions ?? [])
     .find((row) => row.element_uid === uid);
   const duration = detail?.duration_us ?? durations[uid] ?? null;

@@ -129,7 +129,7 @@ edge that cost 2.0s of critical path is not carrying anything.
   re-derived — the same published record `bga analyze RUN --explain`
   prints and the page draws — so the comment and the report cannot
   explain one build two ways. The paths in it are into the candidate
-  run's `analyze/v3`, which the block says out loud.
+  run's `analyze/v4`, which the block says out loud.
 - **The trailing line is the run instance** (`UX-95`), not the run
   identity. Two pushes of the same tree produce identical identity
   hashes; only the instant tells the two comments apart.

@@ -4,7 +4,7 @@ Styleguide §3b, and `UX-187` reaching its third surface.
 
 **The chain.** `UX-187` taught the text report to fold the chain's
 middle; `UX-196` gave the drawn strip a fold at `PATH_HEAD = 6` /
-`PATH_TAIL = 3`. The *listing* — `signals.critical_path_detail`, lifted
+`PATH_TAIL = 3`. The *listing* — `critical_path_detail`, lifted
 into its own section — rendered whole, and "occupies a lot of space".
 
 `UX-262`'s Top-N was not the answer waiting to be applied: it is a

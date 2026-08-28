@@ -175,6 +175,30 @@ class TestAValueCanBeWhatItSaysItIs:
         assert bad == [], (
             f"{label}: leaves declared `share` outside 0..1: {bad[:6]}")
 
+    def test_the_summary_repeats_the_metrics_it_quotes(self, label):
+        """Found by a mutation that survived. `structural.summary` is
+        three numbers copied from `structural.metrics` under two of
+        their names, and a value that contradicts its declaration is
+        not the only way one number can be two things: `+ 1` at the
+        summary's own site changed a published count and reddened
+        nothing. Both sites declare `count` truthfully, so the checks
+        above cannot see it - `UX-288`'s rule can, and this is the
+        cheap half of it."""
+        from tools.bga_view import payloads
+
+        structural = payloads(str(FIXTURES[label]))["report.json"].get(
+            "structural") or {}
+        metrics, summary = structural.get("metrics") or {}, structural.get(
+            "summary") or {}
+        assert metrics and summary, (label, sorted(structural))
+        for quoted, source in (("total_elements", "num_elements"),
+                               ("critical_path_length", "critical_path_length"),
+                               ("max_parallelism", "max_parallelism")):
+            assert summary[quoted] == metrics[source], (
+                f"{label}: structural.summary.{quoted} is "
+                f"{summary[quoted]} and structural.metrics.{source} is "
+                f"{metrics[source]}")
+
     def test_the_walk_reached_the_document(self, label):
         """A census that resolved nothing would pass both clauses above
         by finding no values to judge."""

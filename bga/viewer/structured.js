@@ -809,6 +809,17 @@ export function interrogable(table, specs, total, depth = 0) {
     copy(markdownBox?.checked
       ? rowsMarkdown(rows, specs)
       : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key))).join(",")}]`);
+    // `UX-355` (styleguide §4c): and it says so. A clipboard write is
+    // invisible by construction, so the control acknowledges the press
+    // itself - the same shape `copy-step`, `copy-sql` and `copy-view`
+    // already use. This was the most numerous copy control on the page
+    // (13 on `golden`, 23 on `macro_micro`) and the only one of the
+    // four that reported nothing.
+    copyRows.textContent = "\u2713 copied";
+    // Back through `label`, not to a captured string: the count follows
+    // the filter and the bound, so what it should say on the way back
+    // is whatever it would say now.
+    setTimeout(label, 1200);
   });
   // The count follows the filter, the threshold, the sort and the
   // bound - all of which go through `refresh` or the preset - so it is

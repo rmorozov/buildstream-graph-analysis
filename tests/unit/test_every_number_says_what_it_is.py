@@ -197,6 +197,44 @@ class TestTheAllowlistIsNotAGraveyard:
             f"these resolve now and the allowlist still excuses them: {dead}")
 
 
+class TestAPathResolvesToItsUnit:
+    """`quantity_for_path` is what lets a provenance row carry a unit
+    its own key could never declare. The cases below are the ones the
+    fixtures do not happen to exercise - a subscript holding an element
+    uid, which contains a dot.
+
+    Splitting the path on `.` before reading its subscripts turns
+    `signals.element_durations[app.bst]` into two nonsense segments that
+    resolve to nothing, and no payload in this repository publishes a
+    provenance path in that form today. So the resolver would be wrong
+    and every other clause would stay green.
+    """
+
+    @pytest.mark.parametrize("path,expected", [
+        ("total_duration_us", "duration_us"),
+        ("floors.lb", "duration_us"),
+        ("headline.chain_ratio", "share"),
+        # A list of records, subscripted by index.
+        ("signals.critical_path_detail[0].duration_us", "duration_us"),
+        # A table that declares columns instead of `items`.
+        ("element_join[0].peak_rss_kb", "kilobytes"),
+        # A map keyed by an element uid - the dot inside the subscript
+        # is the case a split-first walk loses.
+        ("signals.element_durations[app.bst]", "duration_us"),
+        ("signals.blast_radius[app.bst].risk_score", "ratio"),
+        ("signals.criticality_probability[lib.bst].probability", "share"),
+        # The selector form the provenance grammar also allows.
+        ("findings[id=x].evidence.share", "share"),
+        # A path the schema does not describe resolves to nothing rather
+        # than to a guess.
+        ("nonsense.path", None),
+    ])
+    def test_it_reads_the_unit_the_page_would(self, path, expected):
+        from bga import schemas
+
+        assert schemas.quantity_for_path(path) == expected, path
+
+
 @needs_node
 class TestTheProducerMatchesItsOwnColumns:
     """`UX-290` declared these three as rows with named columns; the

@@ -39,16 +39,16 @@ not:
 ```text
 Key Findings:
   This build is scheduler-bound, not chain-bound: the critical path is 88% of wall-clock, below the 90% chain-bound line, so the time is going somewhere other than the chain.
-  Confidence: 0.88 (high)
-  Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
+  Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
     -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue
   Elements Most Worth Optimizing First (by blast radius):
     1. base.bst (2 downstream elements)
     2. lib.bst (1 downstream elements)
     3. app.bst (0 downstream elements)
+  Confidence: 0.88 (high)
   Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
 
-[... elided: Confidence, Certified Floors, Attribution Breakdown ...]
+[... elided: Certified Floors, Attribution Breakdown ...]
 
 Critical Path Length: 3 elements
   Path: base.bst → lib.bst → app.bst
@@ -154,7 +154,7 @@ Key Findings:
   actually did, not the whole project - compare against another incremental run, not
   against a caches-off nightly
   Confidence: 1.00 (high)
-  Biggest Opportunity: this build is execution-bound - no wait category exceeds 1% of
+  Biggest wait category: this build is execution-bound - no wait category exceeds 1% of
   wall-clock time, so there is no scheduling gap to close
   Where the time is: 4 element(s) are 94.0% of the 3610.5s critical path - this build is
   chain-bound, not scheduler-bound

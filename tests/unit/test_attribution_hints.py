@@ -1,4 +1,4 @@
-"""Tests for UX-04: "Biggest Opportunity" (the Key Findings block's
+"""Tests for UX-04: the wait-category line (the Key Findings block's
 single largest non-EXECUTION_ON_CHAIN attribution category, P4-02) names
 a category but, before this fix, gave no way to know from the report
 itself what that category means or what to do about it - RESOURCE_WAIT/
@@ -81,12 +81,14 @@ def dependency_wait_dominant_result(tmp_path):
 def test_text_report_shows_the_hint_for_the_named_biggest_opportunity(dependency_wait_dominant_result):
     output = format_text(dependency_wait_dominant_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Biggest Opportunity" in key_findings_section
+    # `UX-365` re-scoped this label: it was "Biggest Opportunity",
+    # a claim over every finding, and names its own population now.
+    assert "Biggest wait category" in key_findings_section
     assert "DEPENDENCY WAIT" in key_findings_section
     assert ATTRIBUTION_CATEGORY_HINTS_BY_KEY["dependency_wait_us"] in key_findings_section
-    # The hint line must actually follow the Biggest Opportunity line,
+    # The hint line must actually follow the wait-category line,
     # not just appear anywhere in the report by coincidence.
-    opportunity_idx = key_findings_section.index("Biggest Opportunity")
+    opportunity_idx = key_findings_section.index("Biggest wait category")
     hint_idx = key_findings_section.index(ATTRIBUTION_CATEGORY_HINTS_BY_KEY["dependency_wait_us"])
     assert hint_idx > opportunity_idx
 

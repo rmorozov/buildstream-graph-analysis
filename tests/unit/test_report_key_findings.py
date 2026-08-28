@@ -77,7 +77,8 @@ def test_key_findings_block_appears_before_certified_floors(analyzed_result):
 def test_key_findings_names_the_correct_dominant_wait_category(analyzed_result):
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Biggest Opportunity" in key_findings_section
+    # `UX-365`: the superlative names the population it is over.
+    assert "Biggest wait category" in key_findings_section
     assert "DEPENDENCY WAIT" in key_findings_section
     # Not any of the other categories, which are all much smaller here.
     assert "RESOURCE WAIT" not in key_findings_section

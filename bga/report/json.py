@@ -89,6 +89,64 @@ def document_shape(document: dict, adding: int = _SHAPE_OWN_LEAVES) -> dict:
     }
 
 
+def _binary_rows(binary_cost):
+    """Plane 2's per-element binary costs, as one flat table.
+
+    `UX-370`: the Plane 2 report nests these - element, then two
+    rankings, then a row - and projecting that shape verbatim broke
+    four of this contract's own rules at once. Measured on
+    `macro_micro`:
+
+        deeper than three levels   0.626 of leaves, against a 0.58 bound
+        one population, twice      `configure_phase.per_element` and
+                                   `binary_cost`, the same 9 elements
+        table width                `configure_phase[]` at 9 columns,
+                                   against `PRESET_COLUMNS_MAX` of 8
+
+    Four rules saying one thing: this document is flat, publishes each
+    population once, and draws tables a reader can read. So the two
+    rankings become one row per **(element, binary)** pair - which is
+    also the shape the item asked for, "a table with a share column" -
+    and `configure_phase.per_element` is dropped rather than published
+    as a second copy of the element population. The per-element split
+    stays in `plane2.json`, where `bga correlate` reads it.
+
+    `wall_s` becomes `wall_us` on the way: Plane 2 publishes seconds
+    and this vocabulary carries one time member, in microseconds
+    (`UX-341`). Converting at the boundary is `bga/units.py`'s own
+    rule; the alternative is a number the page renders from a guess.
+    """
+    rows = []
+    for element, cost in sorted((binary_cost or {}).items()):
+        if not isinstance(cost, dict) or not cost.get('available'):
+            continue
+        calls = {entry.get('binary'): entry.get('count')
+                 for entry in cost.get('by_count') or []}
+        seen = set()
+        for entry in cost.get('by_cpu') or []:
+            binary = entry.get('binary')
+            seen.add(binary)
+            wall_s = entry.get('wall_s')
+            rows.append({
+                'element': element,
+                'binary': binary,
+                'calls': entry.get('count', calls.get(binary)),
+                'cpu_us': entry.get('cpu_us'),
+                'cpu_share': entry.get('cpu_share'),
+                'wall_us': (round(wall_s * 1_000_000)
+                            if isinstance(wall_s, (int, float)) else None),
+            })
+        # A binary ranked by count and not by CPU is a cheap one that
+        # ran often - the process-storm shape, and the half of the
+        # question a CPU ranking alone cannot answer.
+        for binary, count in calls.items():
+            if binary not in seen:
+                rows.append({'element': element, 'binary': binary,
+                             'calls': count, 'cpu_us': None,
+                             'cpu_share': None, 'wall_us': None})
+    return rows
+
+
 def build_document(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> dict:
     """
     Format analysis results as JSON.
@@ -309,6 +367,26 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
         if joined:
             data['element_join'] = joined.get('elements') or []
             data['element_join_coverage'] = joined.get('coverage') or {}
+        # `UX-370`: what the build spent its time *running*, which
+        # Plane 2 measures and nothing carried out of it. Round 58
+        # asked what cmake configure costs and found the answer in
+        # `plane2.json` beside the run and nowhere a reader goes: the
+        # page had the binary *names* and none of the numbers.
+        #
+        # A projection, not a computation - each key is copied as the
+        # Plane 2 report published it, which is why this sits beside
+        # the join rather than in `correlate`. Absent without
+        # `--plane2` for the same reason the join is.
+        if native_report.get('by_binary'):
+            data['by_binary'] = dict(native_report['by_binary'])
+        rows = _binary_rows(native_report.get('binary_cost'))
+        if rows:
+            data['binary_cost'] = rows
+        phase = native_report.get('configure_phase')
+        if phase:
+            data['configure_phase'] = {
+                key: value for key, value in phase.items()
+                if key != 'per_element'}
 
     # UX-229: and why every claim above is made. Last, and reading the
     # finished dict, because provenance is *references into this

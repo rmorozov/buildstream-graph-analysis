@@ -232,6 +232,10 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-370`, tiered on landing. One boot of `macro_micro` - the only
+    # committed fixture with a Plane 2 report beside its run - plus
+    # four payload clauses that need no browser at all. 2.2s.
+    "tests/unit/test_plane_two_says_what_it_ran.py",              #    2.2s
     # `UX-366`, tiered on landing. One boot of the seeded 1,202-element
     # run, every population driven twice - at rest and on "All rows" -
     # in a single measure call. 8.2s, most of it the generate and the

@@ -129,9 +129,24 @@ def compute_confidence(
 
     declared_duration_us = sum(s.dur_us for s in trace.spans) if trace else 0
     accounted_duration_us = sum(t.dur_us for t in normalized_tasks)
-    duration_coverage = (
-        accounted_duration_us / declared_duration_us if declared_duration_us > 0 else 1.0
-    )
+    # UX-345: quantization (Part 3.2) rounds a span's start and its
+    # finish onto the epsilon grid independently, so a normalized task
+    # can come out up to one epsilon longer than the span it was made
+    # from. On the macro_micro fixture that lifts the accounted sum
+    # 9 ms above the 50.191 s declared, and this published a coverage
+    # of 1.00018 - a share that is not a share. Coverage is complete at
+    # 1.0, and an excess the grid can explain is exactly that. An
+    # excess it cannot is left visible: a duplicated task stream would
+    # double the numerator, and clamping that would hide it.
+    epsilon_us = (run_context.trace_epsilon_us if run_context else None) or 50000
+    grid_slack_us = epsilon_us * len(normalized_tasks)
+    if declared_duration_us > 0:
+        duration_coverage = accounted_duration_us / declared_duration_us
+        if (duration_coverage > 1.0
+                and accounted_duration_us - declared_duration_us <= grid_slack_us):
+            duration_coverage = 1.0
+    else:
+        duration_coverage = 1.0
 
     # --- Run identity (I8, P1-37) ---
     # The spec states I8's invariant ("all analysis inputs must belong to

@@ -60,6 +60,11 @@ answers, is declared, or reddens.
 **Contract delta:** one new contract, `sweep/v1`, and five bumped —
 `analyze/v3`, `compare/v2`, `blast/v2`, `correlate/v2` and `host/v2`
 (`UX-341`), which makes the row `breaking` rather than `extending`.
+`UX-345` removes one key from `analyze/v3` and renames another
+(`signals.critical_path_length`, a duration published under a count's
+declaration, and `signals.wall_clock_share` -> `wall_clock_share_us`);
+both fold into the same unshipped `v3` rather than a fourth version,
+since no release has ever written `v3`.
 The five predecessors stay in the set as **read, never written**: an
 older store still analyzes, and `host/v1`'s `memory_mb` is converted
 on the way in so an old baseline still compares rather than reading as

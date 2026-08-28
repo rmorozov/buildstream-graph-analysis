@@ -1957,16 +1957,19 @@ _ANALYZE_HINTS = {
                 "description": "Edges from each element to the root, "
                                "ignoring duration. The graph's shape "
                                "rather than this run's timings."},
-            "wall_clock_share": {
-                QUANTITY: "share",
+            "wall_clock_share_us": {
+                QUANTITY: "duration_us",
                 "additionalProperties": {
-                    QUANTITY: "share",
-                    "description": "This task's duration over the "
-                                   "makespan."},
-                "description": "Each task's duration over the makespan. "
-                               "Keyed by the task's own identity, not by "
-                               "element, because one element can run "
-                               "more than one task."},
+                    QUANTITY: "duration_us",
+                    "description": "The wall-clock this task alone is "
+                                   "responsible for - its marginal share of "
+                                   "the active window, as time rather than "
+                                   "as a fraction."},
+                "description": "How much of the active window each task "
+                               "alone accounts for, in microseconds. Keyed "
+                               "by the task's own identity, not by element, "
+                               "because one element can run more than one "
+                               "task."},
             "criticality_probability": {
                 "additionalProperties": {
                     "properties": {
@@ -2005,12 +2008,6 @@ _ANALYZE_HINTS = {
                     }},
                 "description": "What one element's change rebuilds, and "
                                "what that costs."},
-            "critical_path_length": {
-                QUANTITY: "count",
-                "description": "How many elements the chain runs "
-                               "through. A count of elements, not a "
-                               "duration - `floors.t_infinity_observed` "
-                               "is the time."},
             "zero_slack_share": {
                 QUANTITY: "share",
                 "description": "The share of elements with no slack at "
@@ -2343,8 +2340,13 @@ _ANALYZE_HINTS = {
                                "back to a published field."},
             "duration_coverage": {
                 QUANTITY: "share",
-                "description": "The share of elements whose duration was "
-                               "actually recorded."},
+                "description": "The share of the task time this run "
+                               "recorded that the normalised timeline "
+                               "accounts for. Below one, some of the "
+                               "recorded time did not survive "
+                               "normalisation - start-clamping shrinks "
+                               "a task that began before its "
+                               "dependencies finished."},
             "critical_path_coverage": {
                 QUANTITY: "share",
                 "description": "The share of the chain whose elements carry a "

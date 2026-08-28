@@ -186,10 +186,10 @@ def test_diagnostics():
         
         # Verify signals are populated
         assert analyzer.analysis_result.signals is not None
-        assert "wall_clock_share" in analyzer.analysis_result.signals
+        assert "wall_clock_share_us" in analyzer.analysis_result.signals
         assert "blast_radius" in analyzer.analysis_result.signals
         
-        print(f"  ✓ Wall clock shares computed: {len(analyzer.analysis_result.signals['wall_clock_share'])} tasks")
+        print(f"  ✓ Wall clock shares computed: {len(analyzer.analysis_result.signals['wall_clock_share_us'])} tasks")
         print(f"  ✓ Blast radius computed: {len(analyzer.analysis_result.signals['blast_radius'])} tasks")
         print("  PASSED\n")
 

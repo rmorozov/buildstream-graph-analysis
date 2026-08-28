@@ -393,7 +393,6 @@
         }
     },
     "signals": {
-        "critical_path_length": 14000,
         "critical_path_detail": [
             {
                 "element_uid": "base.bst",
@@ -493,7 +492,7 @@
                 "duration_us": 4000
             }
         ],
-        "wall_clock_share": {
+        "wall_clock_share_us": {
             "base.bst|BUILD|BUILD|0": 4000.0,
             "extra.bst|FETCH|FETCH|0": 2000.0,
             "lib.bst|BUILD|BUILD|0": 5000.0,

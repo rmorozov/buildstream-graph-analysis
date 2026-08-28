@@ -62,7 +62,9 @@ relative to the population it counts.
 
 ## Out of Scope
 
-- Renaming `structural.metrics.critical_path_length`, which is correct.
+- Renaming `structural.metrics.critical_path_length`. That site is
+  already right: it holds the count of elements its description
+  describes, and only the `signals` copy was ever a duration.
 - A general value-versus-declaration checker for every quantity.
   `share` outside 0..1 and `count` that is not integral are the two
   cheap ones; the rest is a separate item if the two find anything.

@@ -70,7 +70,9 @@ the page cannot drift back.
 - Deleting or shortening the sentences. They are `UX-220`'s contract
   and `UX-326`'s rule that the tool's sentences are contracts; this is
   about altitude only.
-- The `->` gloss under a finding's title, which is about *this* run.
+- The `->` gloss under a finding's title. That sentence states what
+  happened in this run rather than what the field means, so it is
+  content and not apparatus.
 
 ## Acceptance Test
 

@@ -60,7 +60,8 @@ the wrong thing.
 
 - Padding sections to a screen. Direction 13 already refused it, with
   a measurement: 31.3 screens of whitespace on the synthetic run.
-- The first chapter, which is the decision and stays open.
+- The first chapter, which is the decision and stays open. A reader
+  who has to open the verdict has been handed nothing at all.
 
 ## Acceptance Test
 

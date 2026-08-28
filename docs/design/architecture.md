@@ -715,7 +715,7 @@ how it is *read*, and the shape is deliberately small.
 - **The document has chapters** (`UX-286`, round 39). Forty-eight
   sections averaging 0.24 screens, grouped by nothing, made the fragment
   the reader's only unit of navigation. `bga/viewer/chapters.js` groups
-  them into seven chapters, each named for a question the reader has -
+  them into eight chapters, each named for a question the reader has -
   and the sections that answer it are the ones whose published
   `bga:question` is a spelling of that question. The table is in the
   viewer rather than the schema because nine of the forty-eight sections

@@ -567,6 +567,13 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .copy-sql { font: inherit; font-size: .78rem; padding: .1rem .45rem;
             margin-top: .25rem; background: var(--panel); color: inherit;
             border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+/* UX-369: the query builder's one substitution. Inline with its label
+   so it reads as a sentence the reader completes, not as a form. The
+   select itself is a `.top-n`: the same control, drawn the same way. */
+.query-element { margin: .4rem 0 .6rem; display: flex; gap: .4rem;
+                 align-items: baseline; flex-wrap: wrap; }
+.query-element > label { font-size: .82rem; color: var(--muted); }
+.query-element > p { flex-basis: 100%; margin: .15rem 0 0; }
 .top-n { font: inherit; font-size: .8rem; background: var(--panel);
          color: inherit; border: 1px solid var(--line); border-radius: 3px;
          max-width: 100%; }

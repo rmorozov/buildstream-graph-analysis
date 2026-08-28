@@ -40,7 +40,7 @@ import { renderBand, renderTrend, renderBlastSearch, renderBlastOffline,
 // a module it would never inline (`UX-199`).
 import { renderCulprits, renderElementHistory, renderHorizon,
          renderElementSections, ensureElementSection, uidForAnchor,
-         renderWhatIf, resolvePath } from "./element.js";
+         renderWhatIf, resolvePath, elementUids } from "./element.js";
 import { renderDecision, renderProvenance, renderProvenanceRecords,
          renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
@@ -1061,7 +1061,12 @@ async function boot() {
         hasTimeline: Boolean(run.has_timeline),
         // UX-364: which planes are actually in the trace, so the lead
         // names what the reader will see rather than both by default.
-        tracePlanes: run.trace_planes }));
+        tracePlanes: run.trace_planes,
+        // `UX-369`: this run's own elements, and the one the report is
+        // already pointing at. The three element-scoped queries used
+        // to substitute `macro_micro`'s `core.bst` on every project.
+        elements: elementUids(payload),
+        element: payload.headline?.top_actions?.[0]?.element_uid ?? null }));
     }
     // UX-194: only when there is a timeline behind it. A dead button is
     // worse than no button - the run that has no Plane 2 log is exactly

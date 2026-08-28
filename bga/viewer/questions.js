@@ -10,8 +10,17 @@
 // per-finding investigate buttons that reference entries by `id`.
 //
 // `{element}` is the one substitution. `trace_context.js` puts a real
-// element uid there when a finding names one; the page renders
-// `example` so the reader sees a query they can run as it stands.
+// element uid there when a finding names one; `renderQuestions` puts
+// one from **this run** there, over the population the page holds.
+//
+// `UX-369`: it used to put the literal `"core.bst"` - `macro_micro`'s
+// element name, in three entries, shipped to every project. A reader
+// on any other build copied a query, pasted it into Perfetto and got
+// zero rows, with nothing on the page saying which token to change.
+// The default is `headline.top_actions[0]` now, which is `core.bst`
+// on that one fixture by coincidence rather than by compilation.
+
+import { labelFor } from "./controls.js";
 
 // `UX-210`: **every query says which plane it is asking.**
 //
@@ -155,7 +164,6 @@ limit 20;`,
     category: "execution",
     plane: "Plane 2",
     title: "What did one element actually execute?",
-    example: "core.bst",
     why:
       "The micro half of the cycle - the commands Plane 2 recorded " +
       "inside one sandbox, longest first. Selected by the element uid " +
@@ -172,7 +180,6 @@ limit 40;`,
     category: "dependencies",
     plane: "Plane 1",
     title: "What was this element waiting for?",
-    example: "core.bst",
     why:
       "The elements that finished last before it could start, on the " +
       "element plane only. A long gap here is a dependency shape " +
@@ -278,7 +285,6 @@ limit 25;`,
     category: "dependencies",
     plane: "Plane 1",
     title: "What did this element wait for, by the graph?",
-    example: "core.bst",
     why:
       "Plane 1 again, by the graph rather than the clock: `UX-309` " +
       "draws the dependency edges as **flows**, so this is " +
@@ -381,7 +387,12 @@ export function copyButton(make, text, deps = {}, noun = "query") {
       ?? (typeof navigator !== "undefined" ? navigator.clipboard : null);
     let wrote = false;
     try {
-      wrote = Boolean(clipboard?.writeText?.(text));
+      // `UX-369`: the **attribute**, not the closure. The element
+      // picker re-renders a query in place, and a button that copied
+      // the text it was built with would hand over the query the
+      // reader is no longer looking at - worse than no picker.
+      wrote = Boolean(clipboard?.writeText?.(
+        button.getAttribute("data-copy") ?? text));
     } catch (error) {
       wrote = false;
     }
@@ -462,8 +473,12 @@ export function renderQuestions(make, options = {}) {
         + "here and the ones scoped to Plane 1 answer.") + openIt;
   }
   section.append(intro);
+  // `UX-369`: the element these queries ask about, and the control
+  // that swaps it. Before the worked example, because the example is
+  // one of the queries the choice applies to.
+  const chosen = elementPicker(section, make, options);
   const worked = byId(WORKED_EXAMPLE);
-  if (worked) section.append(workedExample(worked, make));
+  if (worked) section.append(workedExample(worked, make, chosen));
   for (const category of CATEGORIES) {
     const entries = inCategory(category);
     if (!entries.length) continue;
@@ -485,17 +500,106 @@ export function renderQuestions(make, options = {}) {
       heading.textContent = question.title;
       const why = make("p", { class: "muted" });
       why.textContent = question.why;
-      const block = make("pre", {});
-      const code = make("code", {});
-      code.textContent = renderedSql(question);
-      block.append(code);
-      // UX-208 item 3: every rendered SQL block copies, with an
-      // acknowledgment - a query you have to select by hand is a query
-      // most readers retype wrongly.
-      fold.append(heading, why, block, copyButton(make, renderedSql(question)));
+      fold.append(heading, why, ...sqlBlock(question, make, chosen));
     }
   }
   return section;
+}
+
+/**
+ * `UX-369`: which element the three element-scoped queries ask about.
+ *
+ * The smallest honest query builder: one substitution, over the
+ * population the page already holds. `options.elements` is this run's
+ * element uids and `options.element` the default - `app.js` reads both
+ * from the payload, so `sql.html`, which has no run behind it, gets no
+ * control and renders the token instead.
+ *
+ * Returns the element chosen at render time, so the initial SQL and
+ * the re-render agree on where they started.
+ */
+function elementPicker(section, make, options) {
+  const asks = QUESTIONS.filter(takesElement).length;
+  const population = (options.elements ?? []).filter(Boolean);
+  const chosen = population.includes(options.element)
+    ? options.element : (population[0] ?? null);
+  if (!asks) return chosen;
+
+  const lead = `${asks} of the queries below ask about one element. `;
+  const box = make("div", { class: "query-element",
+                            "data-control": "query-element" });
+  const note = make("p", { class: "muted" });
+  if (!population.length) {
+    // No run behind this page. Saying so is the point: the token is
+    // visible in the SQL below, and this says what to put there
+    // rather than leaving a reader to infer it from zero rows.
+    note.textContent = `${lead}Replace ${ELEMENT_TOKEN} with an element `
+                     + "uid from your own report.";
+    box.append(note);
+    section.append(box);
+    return null;
+  }
+  // `labelFor`, not `make("label", { for: ... })`: `format.js`'s `el`
+  // assigns any name without a hyphen as a **property**, and a label's
+  // reflecting property is `htmlFor` - so `for` lands nowhere and
+  // Chromium reports `FormLabelHasNeitherForNorNestedInput`. Measured
+  // by `test_the_console_stays_clean.py` on the golden export, which
+  // is `UX-317`'s defect one property over. This is also the seam that
+  // uniquifies the id, so two runs of the picker in one document
+  // cannot collide.
+  const label = make("label", {}, "Ask about element");
+  const select = make("select", { class: "top-n",
+                                  "data-role": "query-element",
+                                  "aria-label": "Ask about element" });
+  labelFor(label, select, "query-element");
+  for (const uid of population) {
+    const option = make("option", { value: uid }, uid);
+    if (uid === chosen) option.setAttribute("selected", "selected");
+    select.append(option);
+  }
+  note.textContent = `${lead}All ${population.length} of this run's `
+                   + "elements are here; the default is the one the "
+                   + "report's first action names.";
+  box.append(label, select, note);
+  section.append(box);
+  select.addEventListener?.("change",
+                            () => applyElement(section, select.value));
+  return chosen;
+}
+
+/**
+ * `[<pre><code>, <button>]` for one query, aimed at `element`.
+ *
+ * UX-208 item 3: every rendered SQL block copies, with an
+ * acknowledgment - a query you have to select by hand is a query most
+ * readers retype wrongly. `UX-369` added the tag both nodes carry:
+ * the display and the payload are two places the same query is
+ * written, and a picker that moves one is a picker that lies.
+ */
+function sqlBlock(question, make, element) {
+  const block = make("pre", {});
+  const code = make("code", { "data-sql-for": question.id });
+  code.textContent = renderedSql(question, element);
+  block.append(code);
+  const copy = copyButton(make, code.textContent);
+  copy.setAttribute("data-sql-for", question.id);
+  return [block, copy];
+}
+
+/** Re-render every element-scoped query in `section` for `element`.
+ *  The `<code>` a reader reads and the `data-copy` a reader pastes,
+ *  from the one call, because they are one query. */
+function applyElement(section, element) {
+  for (const node of section.querySelectorAll?.("[data-sql-for]") ?? []) {
+    const entry = byId(node.getAttribute("data-sql-for"));
+    if (!entry || !takesElement(entry)) continue;
+    const sql = renderedSql(entry, element);
+    if (String(node.tagName).toLowerCase() === "button") {
+      node.setAttribute("data-copy", sql);
+    } else {
+      node.textContent = sql;
+    }
+  }
 }
 
 /**
@@ -505,7 +609,7 @@ export function renderQuestions(make, options = {}) {
  * example *before* any fold, and a fold that happens to be open is one
  * click from being the closed thing this item was filed about.
  */
-function workedExample(question, make) {
+function workedExample(question, make, element = null) {
   const box = make("div", { class: "worked-example",
                             "data-worked": question.id });
   box.append(make("p", { class: "worked-lead" },
@@ -515,12 +619,7 @@ function workedExample(question, make) {
   heading.textContent = question.title;
   const why = make("p", { class: "muted" });
   why.textContent = question.why;
-  const block = make("pre", {});
-  const code = make("code", {});
-  code.textContent = renderedSql(question);
-  block.append(code);
-  box.append(heading, why, block,
-             copyButton(make, renderedSql(question)));
+  box.append(heading, why, ...sqlBlock(question, make, element));
   const returns = question.returns ?? [];
   if (returns.length) {
     box.append(make("p", { class: "muted" },
@@ -539,8 +638,25 @@ function workedExample(question, make) {
   return box;
 }
 
-/** The query as the page shows it: the example element filled in, so a
- *  reader can paste it without editing. */
-export function renderedSql(question) {
-  return question.sql.split("{element}").join(question.example ?? "");
+/** The one substitution, as a name rather than as a literal in four
+ *  places - `takesElement` and the re-render below both need it. */
+export const ELEMENT_TOKEN = "{element}";
+
+/** Whether this entry asks about one element. Three of thirteen do. */
+export function takesElement(question) {
+  return String(question?.sql ?? "").includes(ELEMENT_TOKEN);
+}
+
+/**
+ * The query as the page shows it, aimed at `element`.
+ *
+ * `UX-369`: with no element, the **token** is what renders - not the
+ * empty string it used to collapse to when an entry had no `example`.
+ * A visible `{element}` says there is a value to choose; `= ''` says
+ * the query is finished and returns nothing, which is the failure this
+ * item was filed for happening more quietly.
+ */
+export function renderedSql(question, element = null) {
+  const target = element ?? question?.example ?? ELEMENT_TOKEN;
+  return question.sql.split(ELEMENT_TOKEN).join(target);
 }

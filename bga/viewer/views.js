@@ -438,6 +438,12 @@ export function distributionNote(aggregate) {
 export function renderBlastSearch(onQuery) {
   const wrapper = document.createElement("section");
   wrapper.setAttribute("data-section", "blast");
+  // `UX-348`: the rail names the capability. Both shapes of this
+  // section carry the same label, because a reader looking for the
+  // blast radius is looking for the same thing whether the page is
+  // served or exported - what differs is how they get the answer, and
+  // that difference is stated inside the section.
+  wrapper.setAttribute("data-toc-label", "Blast radius");
   const heading = document.createElement("h2");
   heading.textContent = "What rebuilds if I touch this?";
   const form = document.createElement("form");
@@ -487,7 +493,8 @@ export function renderBlastSearch(onQuery) {
  * needs a server without inventing an element to pass it.
  */
 export function renderBlastOffline(payload, copy, make) {
-  const section = make("section", { "data-section": "blast" });
+  const section = make("section", { "data-section": "blast",
+                                    "data-toc-label": "Blast radius" });
   section.append(make("h2", {}, "Blast radius"));
   const step = (payload?.next_steps ?? []).find(
     (entry) => Array.isArray(entry?.argv) && entry.argv[1] === "blast");

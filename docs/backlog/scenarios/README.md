@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-350 scenarios: **6 open**, 344 closed.
+350 scenarios: **5 open**, 345 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 59 |
 | analysis | 0 | 51 |
 | contracts | 0 | 40 |
-| viewer | 4 | 92 |
+| viewer | 3 | 92 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-348 | [the two capabilities the tool is for are a closed fold and a stub](UX-0348-the-two-capabilities-the-tool-is-for-are-a-closed-fold-and-a-stub.md) | viewer | High | — | 🔴 |
 | UX-349 | [the table tools do not scale with the table](UX-0349-the-table-tools-do-not-scale-with-the-table.md) | viewer | Medium | — | 🔴 |
 | UX-350 | [the shape channel is written and unbuilt](UX-0350-the-shape-channel-is-written-and-unbuilt.md) | viewer | Medium | — | 🔴 |
 | UX-351 | [the label prints the unit the value already carries](UX-0351-the-label-prints-the-unit-the-value-already-carries.md) | viewer | Low | — | 🔴 |

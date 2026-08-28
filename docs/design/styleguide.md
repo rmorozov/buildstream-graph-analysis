@@ -673,12 +673,22 @@ against `data-raw` (the UX-196 discipline); and the conformance
 checklist — shape in the table? sentence written? budget kept? —
 joins the fixing guide for any task that touches the page.
 
-Round 55's sections were written before their guards, which is the state
-`§2c` was in when it was written and the reason it says so out loud.
-Landed since: **§4c** (`UX-355`,
-`test_a_control_acts_on_what_it_names.py`) and **§1b** entire
-(`UX-356`, `test_the_merge_carries_every_field.py`; `UX-357`,
-`test_the_provenance_names_its_rule.py`) and **§2d** (`UX-361`,
-`test_the_vocabulary_has_the_shape.py`). Still waiting on its guard:
-§3e (`UX-360`). A section here with no filed item behind it
+Round 55's five sections were written before their guards, which is the
+state `§2c` was in when it was written and the reason it says so out
+loud. **Round 56 landed all five**, and each is now held by a guard
+named for its claim:
+
+| section | guard | item |
+|---|---|---|
+| §1b | `test_the_merge_carries_every_field.py`, `test_the_provenance_names_its_rule.py` | `UX-356`, `UX-357` |
+| §2d | `test_the_vocabulary_has_the_shape.py` | `UX-361` |
+| §3e | `test_the_page_has_a_volume_budget.py` | `UX-360` |
+| §4c | `test_a_control_acts_on_what_it_names.py` | `UX-355` |
+| §6a | — | the borrowings are rules the four above enforce |
+
+§6a has no guard of its own and should not: it is the argument the
+other four are drawn from, and a section that restated their clauses
+would be a fifth copy of four numbers. A section here with no filed
+item behind it is still the failure mode this paragraph exists to make
+visible. A section here with no filed item behind it
 is the failure mode this paragraph exists to make visible.

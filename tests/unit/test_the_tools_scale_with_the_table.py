@@ -55,6 +55,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
 from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+from pages import snapshot_copy    # noqa: E402
 
 FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
             "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
@@ -221,9 +222,7 @@ def pages(tmp_path_factory):
 
     made = {}
     for name, fixture in FIXTURES.items():
-        run = tmp_path_factory.mktemp(f"tools-{name}") / "run"
-        shutil.copytree(fixture, run)
-        (run / "expected_output.json").unlink(missing_ok=True)
+        run = snapshot_copy(fixture, tmp_path_factory.mktemp(f"tools-{name}"))
         page = tmp_path_factory.mktemp(f"tools-page-{name}") / "report.html"
         view.export(str(run), str(page))
         made[name] = page.as_uri()

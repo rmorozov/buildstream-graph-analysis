@@ -114,8 +114,21 @@ export function renderFindingEvidence(evidence, node = undefined) {
   if (scalars.length <= EVIDENCE_SHOWN) return list;
   // UX-209's fold, for the same reason: the evidence is the point, and
   // eight rows of it above the next finding is a wall.
-  return el("details", { class: "evidence-fold", "data-fold": "evidence" },
-            el("summary", {}, `${scalars.length} measurements`), list);
+  //
+  // `UX-359`: and it announces its depth, like every other value fold
+  // (§3a.1). It did not, for the same reason `evidence-detail` did not
+  // until `UX-320` - it is built by hand here rather than by
+  // `renderStructured`. What kept it hidden this time is that it only
+  // appears on a finding with more than `EVIDENCE_SHOWN` scalars, and
+  // the only fixture that has one is the Plane 2 half of `macro_micro`
+  // that every guard's `copytree` was dropping. One level, N rows.
+  const rows = scalars.length;
+  return el("details", { class: "evidence-fold", "data-fold": "evidence",
+                         "data-levels": "1", "data-rows": String(rows) },
+            el("summary", {},
+               `${rows} measurements · 1 level, `
+               + `${rows} row${rows === 1 ? "" : "s"}`),
+            list);
 }
 
 export function renderFindings(findings, investigate = null, node = undefined) {

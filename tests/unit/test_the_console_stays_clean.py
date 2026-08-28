@@ -59,6 +59,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+from pages import snapshot_copy    # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -88,9 +89,7 @@ def _boot(run_dir, out_dir):
     """The two shapes of one run: `(exported file url, served url)`."""
     from tools.bga_view import export, serve
 
-    run = out_dir / "run"
-    shutil.copytree(run_dir, run)
-    (run / "expected_output.json").unlink(missing_ok=True)
+    run = snapshot_copy(run_dir, out_dir)
     page = out_dir / "report.html"
     export(str(run), str(page))
 

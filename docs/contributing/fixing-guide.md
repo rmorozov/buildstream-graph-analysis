@@ -229,6 +229,7 @@ tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
 tests/browser.py           what drives it from a test; every geometric claim goes through here
+tests/pages.py             the exported page every browser guard measures - the *snapshot* is copied, not the run (UX-359)
 tests/trace_processor.py   the one gate for the optional Perfetto reader, and its skip reason (UX-321)
 tests/installed_command_sweep.py  every documented command, run against an installed wheel (UX-325)
 tests/degenerate_store.py  a real store with one row damaged, for both readers (UX-335)

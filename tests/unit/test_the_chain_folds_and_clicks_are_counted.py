@@ -57,6 +57,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
 from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+from pages import snapshot_copy    # noqa: E402
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -252,9 +253,7 @@ console.log(JSON.stringify({
 
 
 def _boot(run_dir, tmp, narrow):
-    run = tmp / "run"
-    shutil.copytree(run_dir, run)
-    (run / "expected_output.json").unlink(missing_ok=True)
+    run = snapshot_copy(run_dir, tmp)
 
     import tools.bga_view as view
 
@@ -530,9 +529,7 @@ def exports(tmp_path_factory):
 
     made = {}
     for name, fixture in (("golden", GOLDEN), ("macro_micro", MACRO)):
-        run = tmp_path_factory.mktemp(f"distance-{name}") / "run"
-        shutil.copytree(fixture, run)
-        (run / "expected_output.json").unlink(missing_ok=True)
+        run = snapshot_copy(fixture, tmp_path_factory.mktemp(f"distance-{name}"))
         page = tmp_path_factory.mktemp(f"distance-page-{name}") / "report.html"
         view.export(str(run), str(page))
         made[name] = f"file://{page}"

@@ -47,6 +47,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tests"))
+from pages import snapshot_copy    # noqa: E402
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 VIEWER = REPO / "bga" / "viewer"
@@ -159,9 +161,7 @@ console.log(JSON.stringify({
 
 
 def _boot(run_dir, tmp):
-    run = tmp / "run"
-    shutil.copytree(run_dir, run)
-    (run / "expected_output.json").unlink(missing_ok=True)
+    run = snapshot_copy(run_dir, tmp)
 
     import tools.bga_view as view
 
@@ -201,9 +201,7 @@ def exports(tmp_path_factory):
     out = {}
     for name, source in (("golden", GOLDEN), ("macro_micro", MACRO)):
         tmp = tmp_path_factory.mktemp(f"{name}-export")
-        run = tmp / "run"
-        shutil.copytree(source, run)
-        (run / "expected_output.json").unlink(missing_ok=True)
+        run = snapshot_copy(source, tmp)
         page = tmp / "report.html"
         view.export(str(run), str(page))
         out[name] = page

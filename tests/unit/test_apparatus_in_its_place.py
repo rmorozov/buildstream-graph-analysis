@@ -61,6 +61,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from browser import NO_BROWSER, Browser, find_chrome   # noqa: E402
+from pages import snapshot_copy    # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -249,9 +250,7 @@ console.log(JSON.stringify({
 
 
 def _boot(run_dir, tmp):
-    run = tmp / "run"
-    shutil.copytree(run_dir, run)
-    (run / "expected_output.json").unlink(missing_ok=True)
+    run = snapshot_copy(run_dir, tmp)
 
     import tools.bga_view as view
 
@@ -489,9 +488,7 @@ def page(tmp_path_factory):
     """
     from tools.bga_view import export
 
-    run = tmp_path_factory.mktemp("apparatus") / "run"
-    shutil.copytree(MACRO, run)
-    (run / "expected_output.json").unlink(missing_ok=True)
+    run = snapshot_copy(MACRO, tmp_path_factory.mktemp("apparatus"))
     path = tmp_path_factory.mktemp("apparatus-page") / "report.html"
     export(str(run), str(path))
     return f"file://{path}"

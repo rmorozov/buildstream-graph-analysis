@@ -273,9 +273,15 @@ class TestTheExportSaysWhatToRunInstead:
         shutil.copytree(os.path.join(REPO, "tests/fixtures/golden/mixed_task_kinds"),
                         run)
         (run / "expected_output.json").unlink(missing_ok=True)
+        # `UX-364` widened the export's seam from `trace_bytes` to
+        # `trace_with_planes`, which returns the bytes *and* which
+        # planes are in them. `trace_bytes` still exists and still
+        # delegates here; the export no longer calls it, so faking it
+        # would fake nothing. Same blob, same threshold, same claims.
         monkeypatch.setattr(
-            view, "trace_bytes",
-            lambda _run: b"\x1f\x8b" + b"x" * (view.TRACE_BUDGET_B * 2))
+            view, "trace_with_planes",
+            lambda _run: (b"\x1f\x8b" + b"x" * (view.TRACE_BUDGET_B * 2),
+                          ["1", "2"]))
 
         path = tmp_path / "report.html"
         result = view.export(str(run), str(path))

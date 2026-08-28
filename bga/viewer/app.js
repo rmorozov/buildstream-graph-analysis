@@ -1057,7 +1057,11 @@ async function boot() {
       // `UX-348`: the section says how to open the timeline, so it has
       // to know whether there is one - the same fact `UX-194`'s
       // dead-control rule gates the header button on.
-      root.append(renderQuestions(el, { hasTimeline: Boolean(run.has_timeline) }));
+      root.append(renderQuestions(el, {
+        hasTimeline: Boolean(run.has_timeline),
+        // UX-364: which planes are actually in the trace, so the lead
+        // names what the reader will see rather than both by default.
+        tracePlanes: run.trace_planes }));
     }
     // UX-194: only when there is a timeline behind it. A dead button is
     // worse than no button - the run that has no Plane 2 log is exactly

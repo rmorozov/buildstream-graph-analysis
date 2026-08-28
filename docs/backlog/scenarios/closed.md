@@ -358,6 +358,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-348 | [the two capabilities the tool is for are a closed fold and a stub](UX-0348-the-two-capabilities-the-tool-is-for-are-a-closed-fold-and-a-stub.md) | High | — | 🟢 Done — the export spells the published blast command, and the query library leads with one query worked through | [UX-348](UX-0348-the-two-capabilities-the-tool-is-for-are-a-closed-fold-and-a-stub.md) |
 | UX-351 | [the label prints the unit the value already carries](UX-0351-the-label-prints-the-unit-the-value-already-carries.md) | Low | — | 🟢 Done — the trim is keyed by the declared quantity, so a key that only looks like a duration keeps its suffix | [UX-351](UX-0351-the-label-prints-the-unit-the-value-already-carries.md) |
 | UX-354 | [the workflow reads the payload, and no guard reads the workflow](UX-0354-the-workflow-reads-the-payload-and-no-guard-reads-the-workflow.md) | Medium | — | 🟢 Done — a step that parses a document reads its keys from the module that writes it | [UX-354](UX-0354-the-workflow-reads-the-payload-and-no-guard-reads-the-workflow.md) |
+| UX-353 | [the roles table serves a contract nothing writes](UX-0353-the-roles-table-serves-a-contract-nothing-writes.md) | Low | — | 🟢 Done — a retired id is legitimate where its row or paragraph says it is retired, and roles.md's did not | [UX-353](UX-0353-the-roles-table-serves-a-contract-nothing-writes.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

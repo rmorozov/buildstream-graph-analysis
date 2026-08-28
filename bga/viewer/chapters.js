@@ -145,7 +145,7 @@ export const CHAPTERS = [
       if (typeof total !== "number" || !worst) return null;
       return `${duration(total)} wall-clock, of which `
         + `${duration(worst.value)} is `
-        + `${title(worst.key.replace(/_us$/, "")).toLowerCase()}.`;
+        + `${title(worst.key, "duration_us").toLowerCase()}.`;
     },
   },
   {

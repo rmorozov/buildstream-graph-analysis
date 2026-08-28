@@ -101,7 +101,7 @@ export function renderFindingEvidence(evidence, node = undefined) {
     // places a `<dt>` is built.
     const { term, describe } = describedTerm(
       key, hintsOf(childNode(node, key)).description, {},
-      hintsOf(childNode(node, key))[INLINE]);
+      hintsOf(childNode(node, key))[INLINE], kind);
     list.append(
       term,
       el("dd", { class: typeof value === "number" ? "num" : null,
@@ -355,7 +355,7 @@ export function renderSummary(payload, hints) {
   for (const [key, value] of scalars) {
     const kind = hints[key]?.[QUANTITY] ?? guessQuantity(key);
     const { term, describe } = describedTerm(key, hints[key]?.description, {},
-                                             hints[key]?.[INLINE]);
+                                             hints[key]?.[INLINE], kind);
     list.append(
       term,
       el("dd", {}, el("span", {

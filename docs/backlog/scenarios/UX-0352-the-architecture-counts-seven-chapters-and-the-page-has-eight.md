@@ -1,6 +1,6 @@
 # UX-352: the architecture counts seven chapters and the page has eight
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-286 (the report reads in chapters) | **Serves:** anyone reading the architecture to learn what the viewer does | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-286 (the report reads in chapters) | **Serves:** anyone reading the architecture to learn what the viewer does | **Topic:** docs
 
 ## Motivation
 
@@ -64,3 +64,71 @@ for the CLI table after the same drift happened three times.
 `architecture.md`'s chapter count equals `CHAPTERS.length`, asserted
 by a guard that reads both - so the next chapter added or removed
 reddens rather than waiting for a fourth review to read the sentence.
+
+## Outcome (round 54, 2026-08-28) — 🟢 Done
+
+### The gap
+
+```text
+architecture.md:718   groups them into seven chapters
+chapters.js           8  decide,change,compare,time,machine,elements,believe,run
+3c4a96b               8  (the commit that introduced the module and wrote
+                         the sentence)
+```
+
+The sentence now says eight.
+
+### The guard reads the number, and asks the module
+
+`_claimed` finds `into <word> chapters` and resolves the number word -
+the prose spells small numbers as words, which is the house style and
+not something a guard should make a document give up. `_module` asks
+`chapters.js` through node rather than counting `id:` lines: the file
+also exports an `UNCHAPTERED` fallback with an id of its own, so a
+regex over the source counts **nine** and would call a correct
+document wrong.
+
+### The Out of Scope entry was wrong, and correcting it explains the item
+
+This filing's second Out of Scope entry said the bullet's chapter
+*table* was correct and therefore excluded. **There is no chapter
+table.** The bullet is prose from end to end; the entry was written
+during review 5 and asserted rows nobody had counted. It is struck
+through above with the correction.
+
+It is also the explanation the filing was missing. The obvious question
+about this item is how a wrong count survives three reviews of a
+document read line by line - and the answer is that there was nothing
+beside it to disagree with. A wrong number over a right table is a
+contradiction a reader trips on; a wrong number alone is just a
+number.
+
+### Mutations verified red and reverted (3)
+
+Counts are what the run printed, not what was expected of it. Run
+against the committed tree at `6ce1b0a`.
+
+| # | mutation | reddened |
+|---|---|---|
+| R1 | the prose says seven again — the defect itself | *"architecture.md says 'into seven chapters'; `chapters.js` exports 8"* |
+| R2 | a ninth chapter added to the module, prose untouched — the direction a later round would actually break it in | the same clause, naming the nine ids |
+| R3 | the sentence reworded past the pattern (`a handful of chapters`) | two clauses, including the instrument one: *"architecture.md no longer says how many chapters the viewer groups the document into"* |
+
+R2 is the one that matters for the argument: the filing is about a
+number that was never true, but the failure a guard has to catch from
+here on is the *ordinary* one — someone adds a chapter and does not
+think about a sentence four hundred lines away in another file.
+
+### Deviation from the Required Fix
+
+- The Required Fix suggested the guard could be derived "where that is
+  cheap", citing `test_the_architecture_names_the_commands.py`. That
+  guard compares two *lists*; this compares a spelled-out number to a
+  length, because the document makes its claim as a sentence and not
+  as a table. Same argument, different instrument.
+- `docs/design/directions.md:1885` records `UX-286` as having settled
+  on "seven chapters" too, and is left alone: it is a dated record of
+  what round 39 argued, and the population this guard walks is the
+  live documents, on the same reasoning `UX-353` used. It does mean
+  the miscount is still readable at its origin, which is what a dated
+  record is for.

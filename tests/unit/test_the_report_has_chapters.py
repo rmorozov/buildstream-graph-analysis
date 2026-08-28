@@ -179,7 +179,19 @@ const boxes = box.children.filter((n) => n.getAttribute?.("data-chapter")
 console.log(JSON.stringify({
   chapters: boxes.map((n) => ({
     id: n.getAttribute("data-chapter"),
-    title: n.children.find((c) => c.className === "chapter-title")?.textContent,
+    // UX-347: the heading now carries the chapter's open/shut control,
+    // the way a section's heading has carried its collapse caret since
+    // UX-317. The chapter's *name* is the heading without it - compared
+    // against `aria-label` below, which is what a screen reader reads.
+    title: (() => {
+      const head = n.children.find((c) => c.className === "chapter-title");
+      if (!head) return undefined;
+      const control = head.children.find(
+        (c) => c.getAttribute?.("data-chapter-open"));
+      return control
+        ? String(head.textContent).replace(String(control.textContent), "")
+        : head.textContent;
+    })(),
     role: n.getAttribute("role"),
     label: n.getAttribute("aria-label"),
     id_attr: n.getAttribute("id"),

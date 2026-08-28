@@ -43,7 +43,7 @@ import { renderDecision, renderProvenance,
          renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
-import { chapters, fileInChapter } from "./chapters.js";
+import { chapters, fileInChapter, revealChapter } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
@@ -481,6 +481,11 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       : root.querySelector(`[data-element="${CSS?.escape?.(target.key)
           ?? target.key}"]`);
     if (!node) return;
+    // UX-347: a folded chapter is not a wall. Every way in opens it
+    // first - here, on a rail link, and on a pasted `#anchor` - so the
+    // fold costs the interaction §3b already budgets and never a
+    // section a reader cannot reach.
+    revealChapter(node);
     node.scrollIntoView?.({ behavior: "smooth", block: "start" });
     node.setAttribute("data-jumped", "true");
     setTimeout(() => node.removeAttribute("data-jumped"), 1600);
@@ -997,7 +1002,7 @@ async function boot() {
     // `placeBlast` a day earlier; both are gone, because two mechanisms
     // deciding one order is how a page ends up with an order nobody can
     // predict.
-    chapters(root, document);
+    chapters(root, document, payload);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing
     // above changes; a reader who ignores all of it sees the same
@@ -1094,13 +1099,37 @@ async function boot() {
       const href = link?.getAttribute?.("href") ?? "";
       if (href.startsWith("#")) openElement(href.slice(1));
     });
+
+    // UX-347: an anchor into a folded chapter opens it. One delegated
+    // listener on the document rather than a handler per link: the
+    // rail is one source of `#section` links, the palette another, the
+    // findings' own "next step" a third, and a pasted link is a fourth
+    // with no click at all. What they share is the target.
+    const revealAnchor = (id) => {
+      if (!id) return null;
+      const node = document.getElementById(id)
+        ?? root.querySelector?.(`[data-section="${id}"]`);
+      return node ? revealChapter(node) : null;
+    };
+    document.addEventListener?.("click", (event) => {
+      const href = event?.target?.closest?.("a[href^=\"#\"]")
+        ?.getAttribute?.("href");
+      if (href && href.length > 1) revealAnchor(href.slice(1));
+    });
     window.addEventListener?.("hashchange", () => {
       const built = openElement(splitHash(location.hash).anchor);
+      revealAnchor(splitHash(location.hash).anchor);
       // The browser has already decided there was nothing to scroll to,
       // so the section it just missed has to say where it is.
       built?.scrollIntoView?.();
     });
     openElement(splitHash(location.hash).anchor);
+    // A pasted `#confidence` lands on a document whose chapters are
+    // folded, and the browser has already tried to scroll before this
+    // runs - so the reveal is followed by the scroll it could not do.
+    revealAnchor(splitHash(location.hash).anchor)
+      && document.getElementById(splitHash(location.hash).anchor)
+        ?.scrollIntoView?.();
 
     // UX-211: the fragment last, over the finished document - it drives
     // the controls the way a reader would, so there is no second path

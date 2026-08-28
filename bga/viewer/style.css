@@ -357,6 +357,34 @@ h2.chapter-title {
    test's third clause. */
 section.chapter > section > h2 { margin-top: .9rem; }
 
+/* UX-347 (styleguide §3c): **a folded chapter is its question, its
+   answer and its count.** The document was 22.7 screens with every
+   section permanently expanded, so §3b's click budget was met by
+   converting navigation into scroll. A chapter other than the first
+   holds its sections behind one interaction; the heading, the answer
+   line and the control stay. */
+section.chapter[data-open="false"] > section[data-section] { display: none; }
+p.chapter-answer {
+  margin: .35rem 0 0; color: var(--muted); font-size: .95rem;
+  max-width: 62ch;
+}
+button.chapter-open {
+  font: inherit; font-size: .8rem; cursor: pointer; margin-left: .6rem;
+  vertical-align: middle;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: .35rem; padding: .1rem .5rem;
+}
+button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
+  color: var(--fg); border-color: var(--fg);
+}
+/* Paper has no interaction at all, so a folded chapter would print as
+   a heading over nothing. Everything opens for print - the fold is a
+   navigation device, and paper does not navigate. */
+@media print {
+  section.chapter[data-open="false"] > section[data-section] { display: block; }
+  button.chapter-open { display: none; }
+}
+
 /* Collapsed sections keep their heading; everything below it goes.
    Scoped to a section that names itself, so a chapter - which is also a
    `section` - never hides the sections inside it. */

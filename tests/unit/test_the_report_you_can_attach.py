@@ -260,7 +260,28 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # line of viewer source knows it exists. A ceiling could not have told
 # that from 2,615 B of new code; the split can, and that is the whole
 # argument for keeping it.
-PAGE_BUDGET_B = 231_000
+#
+# Round 52 moved the page again, and the split says the same thing the
+# other way round - all of it is source:
+#
+#                       UX-339    UX-346    UX-347
+#     page             228,528   231,478   236,271   (+2,950, +4,793)
+#     data (golden)     101,906    89,148    89,148  (-12,758, +0)
+#     golden           330,434   320,626   325,419
+#     macro_micro      369,870   337,760   342,553
+#
+# `UX-346` is the declaration channel (`bga:inline`, its two reasons,
+# and `describedTerm`'s exception path) plus the twenty-four
+# declarations, which are payload rather than page - and the *data*
+# fell 12,758 B on the golden run, because the schemas travel with the
+# document and `UX-345` removed a key from them.
+#
+# `UX-347` is the chapter fold: seven `answer` functions reading
+# published fields, the open/shut control, the reveal every anchor goes
+# through, and the CSS for all of it. Both companion guards stayed
+# silent - every byte is a checked-in module, and none of it resembles
+# a vendored library.
+PAGE_BUDGET_B = 240_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes

@@ -54,6 +54,12 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tests"))
+
+from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+
+chrome = find_chrome()
+needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 VIEWER = REPO / "bga" / "viewer"
@@ -323,3 +329,211 @@ class TestTheClicksAreCounted:
                     ("macro_micro", False): 1, ("macro_micro", True): 2}
         measured = {key: out["worst"] for key, out in walks.items()}
         assert measured == expected, measured
+
+
+# --------------------------------------------------------------------------
+# 3. The distance, budgeted (UX-347).
+# --------------------------------------------------------------------------
+#
+# Round 52 measured what §3b cannot see. Every walk above costs one
+# click, and it cost one click because **almost nothing was folded**:
+# 51 `details` on the page, 3 open, every *section* permanently
+# expanded, and the document 22.7 screens. Zero clicks to `confidence`
+# — and 18.3 screens of scroll past nineteen things nobody asked for.
+#
+# A click is directed: the reader names what they want and arrives. A
+# screen of scroll is a search. §3b measured the first and nothing
+# measured the second, so the design optimised exactly what was
+# measured. The clauses below are the second currency, in the same
+# file, so a change that spends one to buy the other reddens on the
+# side it was paid from.
+#
+# The instrument is a real browser, because this is layout and the shim
+# is not allowed to pretend it models layout (`UX-257`). The walk above
+# stays where it is: it counts structure, which the shim can see.
+
+#: The document a reader lands on, at 1440x900, in screens. Measured
+#: after chapters fold: 4.1 (golden) and 6.6 (macro_micro), against
+#: 11.6 and 22.7 before. The bound is 10 - one and a half times the
+#: worst measured, which admits a run with more findings in the open
+#: first chapter and reddens on a page that stops folding at all.
+DOCUMENT_SCREENS = 10.0
+
+#: How far the *last* chapter's question sits from the top. Measured
+#: 3.8 and 6.3; a reader scanning the chapter list should not have to
+#: scroll a screenful per chapter to read the next question.
+CHAPTER_HEADING_SCREENS = 8.0
+
+#: And inside a chapter, its first section under its own heading.
+#: Measured 0.1 on every chapter of both fixtures: the heading, the
+#: chapter's one-line answer, the control, the section.
+CHAPTER_FIRST_SECTION_SCREENS = 0.5
+
+_DISTANCE = r"""
+(() => {
+  const scr = (px) => Math.round(px / 900 * 10) / 10;
+  // The eight destinations the round-52 census walked, by the
+  // selectors it used - published in the failure message in both
+  // currencies, which is the acceptance test's own clause.
+  const targets = {
+    "the verdict sentence": '[data-section="decision"] p',
+    "what to fix first": '[data-section="decision"] a',
+    "the element table": '[data-section="signals"] table',
+    "the critical path list": '[data-section="critical_path_detail"]',
+    "a Perfetto query": '[data-section="perfetto-questions"] code,'
+                      + ' [data-section="perfetto-questions"] pre',
+    "the memory envelope": '[data-section="capacity_recommendation"],'
+                         + ' [data-section="occupancy"]',
+    "confidence": '[data-section="confidence"]',
+    "the run identity": '[data-section="run_instance"], [data-section="producer"]',
+  };
+  const reach = {};
+  for (const [name, sel] of Object.entries(targets)) {
+    const node = document.querySelector(sel);
+    if (!node) { reach[name] = null; continue; }
+    const box = node.closest("section.chapter");
+    const folded = box?.getAttribute("data-open") === "false";
+    // The rail entry, plus any content fold still shut around it. The
+    // chapter is not a third click: its rail link opens it, which the
+    // clause below clicks rather than assumes.
+    let clicks = 1;
+    for (let p = node; p; p = p.parentElement) {
+      if (p.tagName === "DETAILS" && !p.open) clicks += 1;
+    }
+    if (box) box.setAttribute("data-open", "true");
+    const top = node.getBoundingClientRect().top + window.scrollY;
+    if (folded && box) box.setAttribute("data-open", "false");
+    reach[name] = { clicks, screensDown: scr(top), behindFold: Boolean(folded) };
+  }
+  const chapters = [...document.querySelectorAll("section.chapter")].map((c) => {
+    const open = c.getAttribute("data-open") !== "false";
+    c.setAttribute("data-open", "true");
+    const first = c.querySelector("[data-section]");
+    const inside = first
+      ? scr(first.getBoundingClientRect().top - c.getBoundingClientRect().top)
+      : null;
+    if (!open) c.setAttribute("data-open", "false");
+    return {
+      id: c.getAttribute("data-chapter"),
+      open,
+      answer: c.querySelector(".chapter-answer")?.innerText ?? null,
+      control: c.querySelector(".chapter-open")?.innerText ?? null,
+      sections: c.querySelectorAll("[data-section]").length,
+      headingScr: scr(c.querySelector(".chapter-title")
+        .getBoundingClientRect().top + window.scrollY),
+      firstSectionScr: inside,
+    };
+  });
+  return { documentScr: scr(document.documentElement.scrollHeight),
+           chapters, reach };
+})()
+"""
+
+_RAIL_OPENS = r"""
+(() => {
+  const out = [];
+  for (const link of document.querySelectorAll("[data-toc]")) {
+    const key = link.getAttribute("data-toc");
+    const target = document.getElementById(key);
+    if (!target) { out.push([key, "no section"]); continue; }
+    const box = target.closest("section.chapter");
+    if (!box) { out.push([key, "no chapter"]); continue; }
+    box.setAttribute("data-open", "false");
+    link.click();
+    if (box.getAttribute("data-open") !== "true") out.push([key, "stayed shut"]);
+    else if (target.getBoundingClientRect().height <= 0) out.push([key, "not drawn"]);
+  }
+  return out;
+})()
+"""
+
+
+@needs_browser
+@pytest.mark.medium
+class TestTheDistanceIsBudgetedToo:
+    def test_the_document_fits_the_budget(self, browser, exports):
+        for page, url in exports.items():
+            out = browser.measure(url, _DISTANCE, width=1440, height=900)
+            assert out["documentScr"] <= DOCUMENT_SCREENS, (
+                f"{page}: the document is {out['documentScr']} screens at "
+                f"1440x900, against a budget of {DOCUMENT_SCREENS}. "
+                f"{_walk(out)}")
+
+    def test_every_chapter_question_is_within_reach(self, browser, exports):
+        for page, url in exports.items():
+            out = browser.measure(url, _DISTANCE, width=1440, height=900)
+            far = [(c["id"], c["headingScr"]) for c in out["chapters"]
+                   if c["headingScr"] > CHAPTER_HEADING_SCREENS]
+            assert far == [], (
+                f"{page}: a chapter's question is more than "
+                f"{CHAPTER_HEADING_SCREENS} screens down: {far}. {_walk(out)}")
+
+    def test_a_chapters_first_section_is_under_its_own_heading(
+            self, browser, exports):
+        for page, url in exports.items():
+            out = browser.measure(url, _DISTANCE, width=1440, height=900)
+            far = [(c["id"], c["firstSectionScr"]) for c in out["chapters"]
+                   if (c["firstSectionScr"] or 0) > CHAPTER_FIRST_SECTION_SCREENS]
+            assert far == [], (f"{page}: {far}")
+
+    def test_only_the_first_chapter_is_open(self, browser, exports):
+        """The decision stays open - a reader who has to open the
+        verdict has been handed nothing at all - and everything else
+        is one interaction away."""
+        for page, url in exports.items():
+            out = browser.measure(url, _DISTANCE, width=1440, height=900)
+            opened = [c["id"] for c in out["chapters"] if c["open"]]
+            assert opened == [out["chapters"][0]["id"]], (page, opened)
+            assert out["chapters"][0]["id"] == "decide", out["chapters"][0]
+
+    def test_every_folded_chapter_says_what_is_behind_it(self, browser, exports):
+        """§3a.1 on this surface: the count before the click, and the
+        chapter's own answer so the reader can decide not to click."""
+        for page, url in exports.items():
+            out = browser.measure(url, _DISTANCE, width=1440, height=900)
+            for chapter in out["chapters"][1:]:
+                assert chapter["control"], (page, chapter["id"], "no control")
+                assert str(chapter["sections"]) in chapter["control"], (
+                    page, chapter["id"], chapter["control"], chapter["sections"])
+                assert chapter["answer"], (
+                    f"{page}: chapter {chapter['id']} folds with no answer - "
+                    f"a heading over nothing is worse than the scroll it saved")
+
+    def test_the_rail_opens_the_fold_it_points_into(self, browser, exports):
+        """The click model above prices a folded chapter at zero extra
+        interactions. This is why: every rail entry, shut and clicked,
+        opening the chapter that holds its target and leaving it drawn.
+        A reveal that broke would make the walk a fiction."""
+        for page, url in exports.items():
+            broken = browser.measure(url, _RAIL_OPENS, width=1440, height=900)
+            assert broken == [], (page, broken[:8])
+
+
+def _walk(out):
+    """The eight destinations, in clicks and in screens - published in
+    the failure message so a bound that fires says what it cost."""
+    rows = [f"{name}: {r['clicks']} click(s), {r['screensDown']} screens"
+            + (" (behind a fold)" if r["behindFold"] else "")
+            for name, r in out["reach"].items() if r]
+    return "The walk: " + "; ".join(rows)
+
+
+@pytest.fixture(scope="module")
+def browser():
+    with Browser(chrome) as opened:
+        yield opened
+
+
+@pytest.fixture(scope="module")
+def exports(tmp_path_factory):
+    import tools.bga_view as view
+
+    made = {}
+    for name, fixture in (("golden", GOLDEN), ("macro_micro", MACRO)):
+        run = tmp_path_factory.mktemp(f"distance-{name}") / "run"
+        shutil.copytree(fixture, run)
+        (run / "expected_output.json").unlink(missing_ok=True)
+        page = tmp_path_factory.mktemp(f"distance-page-{name}") / "report.html"
+        view.export(str(run), str(page))
+        made[name] = f"file://{page}"
+    return made

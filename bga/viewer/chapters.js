@@ -39,6 +39,37 @@
  * *rail* belongs to rather than in a bucket at the end.
  */
 
+import { duration, quantity, title } from "./format.js";
+
+/**
+ * `UX-347`: **the distance budget, and what a folded chapter says.**
+ *
+ * Round 52 measured the click budget being met by never folding: 51
+ * `details` on the page, 3 open, every *section* permanently expanded,
+ * and the document 22.7 screens after `UX-346`'s note removal. Zero
+ * clicks to `confidence` - and 19.9 screens of scroll. A click is
+ * directed; a screen of scroll is a search past everything the reader
+ * did not ask for, and only the first was ever measured.
+ *
+ * So every chapter but the first opens to its heading, its own
+ * question and **one line answering it from published fields**, and
+ * expands on demand. `answer` below is that line, per chapter: it
+ * reads the payload the page is already rendering, returns `null`
+ * when the fields it needs are absent (a first run has no comparison;
+ * a Plane-1-only run has no join), and never computes anything the
+ * document does not publish - a chapter summary that derived its own
+ * numbers would be a second pipeline, disagreeing quietly.
+ */
+function largest(map, field) {
+  let best = null;
+  for (const [key, value] of Object.entries(map ?? {})) {
+    const at = typeof value === "number" ? value : value?.[field];
+    if (typeof at !== "number") continue;
+    if (!best || at > best.value) best = { key, value: at, row: value };
+  }
+  return best;
+}
+
 // The chapters, in the order the document reads. Each names the
 // question it answers, and holds the sections that answer it.
 export const CHAPTERS = [
@@ -59,6 +90,17 @@ export const CHAPTERS = [
     // boundary is where that belongs, one heading below it.
     sections: ["resource_blast", "blast", "blast-offline", "blast-tree",
                "whatif", "perfetto-questions"],
+    // The widest change this graph can absorb, from `signals.blast_radius`
+    // - the population the chapter's own first table ranks.
+    answer(payload) {
+      const worst = largest(payload?.signals?.blast_radius, "downstream_count");
+      if (!worst) return null;
+      const cost = worst.row?.weighted_duration_us;
+      return `A change to ${worst.key} rebuilds `
+        + `${quantity(worst.value, "count")} elements`
+        + (typeof cost === "number" ? ` (${duration(cost)} of work)` : "")
+        + " - the widest here.";
+    },
   },
   {
     id: "compare",
@@ -66,6 +108,17 @@ export const CHAPTERS = [
     // Only rendered when there is something to compare against, so the
     // chapter is absent on a first run rather than empty.
     sections: ["culprits", "band", "store-trend"],
+    // Absent on a first run, so the sentence is too rather than
+    // reading "no change" over a comparison that was never made.
+    answer(payload) {
+      const verdict = payload?.comparison?.verdict ?? payload?.verdict;
+      const delta = payload?.comparison?.delta_us ?? payload?.delta_us;
+      if (!verdict) return null;
+      return `${title(String(verdict))}`
+        + (typeof delta === "number" ? `, ${duration(Math.abs(delta))} `
+            + `${delta < 0 ? "faster" : "slower"}` : "")
+        + " than the baseline.";
+    },
   },
   {
     id: "time",
@@ -73,6 +126,19 @@ export const CHAPTERS = [
     sections: ["attribution", "attribution_hints", "signals",
                "critical_path_detail", "critical-path-drawn", "horizon",
                "pipeline_overhead"],
+    // The run's wall-clock and the biggest thing it went on, named by
+    // the attribution split rather than by this file's opinion.
+    answer(payload) {
+      const total = payload?.total_duration_us;
+      const buckets = Object.fromEntries(
+        Object.entries(payload?.attribution ?? {}).filter(
+          ([key, value]) => key.endsWith("_us") && typeof value === "number"));
+      const worst = largest(buckets);
+      if (typeof total !== "number" || !worst) return null;
+      return `${duration(total)} wall-clock, of which `
+        + `${duration(worst.value)} is `
+        + `${title(worst.key.replace(/_us$/, "")).toLowerCase()}.`;
+    },
   },
   {
     id: "machine",
@@ -83,11 +149,32 @@ export const CHAPTERS = [
     // "Everything else".
     sections: ["occupancy", "utilisation", "floors", "capacity_verdict",
                "capacity_recommendation"],
+    // What the run was given and how much of it was used - the two
+    // numbers the chapter's own verdict is computed from.
+    answer(payload) {
+      const slots = payload?.capacity_recommendation?.builders
+        ?? payload?.utilisation?.effective_cpus;
+      const used = payload?.floors?.occupancy_share;
+      if (typeof used !== "number") return null;
+      return (typeof slots === "number"
+        ? `${quantity(slots, "count")} builder slots, ` : "")
+        + `${quantity(used, "share")} of their time used.`;
+    },
   },
   {
     id: "elements",
     title: "Which elements, and how do they connect?",
     sections: ["structural", "element_join"],
+    // How many elements, and the one that costs the most - the row a
+    // reader opening this chapter is looking for.
+    answer(payload) {
+      const count = payload?.structural?.summary?.total_elements;
+      const worst = largest(payload?.signals?.element_durations);
+      if (typeof count !== "number") return null;
+      return `${quantity(count, "count")} elements`
+        + (worst ? `; the slowest is ${worst.key} at ${duration(worst.value)}.`
+                 : ".");
+    },
     // `UX-216`'s one section per element, and `UX-278`'s built on
     // demand: there is one per element the report names, so they are
     // matched by prefix rather than listed.
@@ -98,12 +185,40 @@ export const CHAPTERS = [
     title: "How much of this can I believe?",
     sections: ["confidence", "violations", "timestamp_agreement",
                "plane2_coverage", "element_join_coverage"],
+    // The one number this chapter exists to qualify, and the count
+    // that most often explains it.
+    answer(payload) {
+      const primary = payload?.confidence?.primary;
+      if (typeof primary !== "number") return null;
+      const violations = payload?.confidence?.ordering_violations;
+      return `${quantity(primary, "share")} of this report resolves to `
+        + "this run's own record"
+        + (typeof violations === "number" && violations > 0
+            ? `, and ${quantity(violations, "count")} recorded orderings `
+              + "contradict the graph." : ".");
+    },
   },
   {
     id: "run",
     title: "Which run is this?",
     // `UX-285`: the identity is reference, and reference goes last.
     sections: ["summary", "run_instance", "producer"],
+    // When it was taken, on what, and under which contract - the
+    // three questions this chapter's own blocks answer. Not the run
+    // identity hash: sixty-four characters of it is what the block
+    // itself is for, and a summary that pasted it would be the block.
+    answer(payload) {
+      const started = payload?.run_instance?.started_at;
+      const host = payload?.run_instance?.host_manifest?.cpu_model;
+      const contract = payload?.schema;
+      // The golden fixture's run instance carries a directory and
+      // nothing else, so this degrades rather than printing "as
+      // analyze/v3." as if it were a sentence.
+      const when = started
+        ? `Captured ${started}${host ? ` on ${host}` : ""}` : null;
+      if (when) return `${when}${contract ? `, written as ${contract}` : ""}.`;
+      return contract ? `Written as ${contract}.` : null;
+    },
   },
 ];
 
@@ -161,7 +276,7 @@ function isTransient(node) {
  * among its neighbours; those are two separate claims and only the
  * first one is this function's.
  */
-export function chapters(root, doc) {
+export function chapters(root, doc, payload) {
   if (!root || !doc) return [];
   const boxes = openBoxes(root);
   const loose = [...(root.children ?? [])].filter(
@@ -180,13 +295,18 @@ export function chapters(root, doc) {
     let box = boxes.get(chapter.id);
     if (!members.length && !box) continue;
     if (!box) {
-      box = makeBox(chapter, doc);
+      box = makeBox(chapter, doc, payload, chapter.id === CHAPTERS[0].id);
       boxes.set(chapter.id, box);
     }
     for (const node of members) {
       node.setAttribute("data-chapter", chapter.id);
       box.append(node);
     }
+    // UX-347: the control counts what the chapter holds, and it holds
+    // nothing until the loop above - a box labelled at construction
+    // said "Show 0 sections" on every chapter, measured on both
+    // fixtures before this line existed.
+    labelFold(box);
     root.append(box);
     made.push(box);
   }
@@ -212,7 +332,7 @@ function ordered(chapter, members) {
   return [...declared, ...members.filter((node) => at(node) < 0)];
 }
 
-function makeBox(chapter, doc) {
+function makeBox(chapter, doc, payload, first) {
   const box = doc.createElement("section");
   box.className = "chapter";
   box.setAttribute("data-chapter", chapter.id);
@@ -228,7 +348,97 @@ function makeBox(chapter, doc) {
   title.className = "chapter-title";
   title.textContent = chapter.title;
   box.append(title);
+
+  // UX-347: the first chapter is the decision and stays open - a
+  // reader who has to open the verdict has been handed nothing. Every
+  // other one opens to this much: its question, one line answering it,
+  // and a control saying how many sections are behind it.
+  box.setAttribute("data-open", String(Boolean(first)));
+  const said = safely(chapter, payload);
+  if (said) {
+    const line = doc.createElement("p");
+    line.className = "chapter-answer";
+    line.setAttribute("data-chapter-answer", chapter.id);
+    line.textContent = said;
+    box.append(line);
+  }
+  if (!first) {
+    const toggle = doc.createElement("button");
+    toggle.className = "chapter-open";
+    toggle.setAttribute("type", "button");
+    toggle.setAttribute("data-chapter-open", chapter.id);
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-controls", `chapter-${chapter.id}`);
+    toggle.addEventListener?.("click", () => setOpen(box, !isOpen(box)));
+    title.append(toggle);
+    labelFold(box);
+  }
   return box;
+}
+
+/**
+ * A chapter's own sentence, or `null`.
+ *
+ * Wrapped, because a summary that threw would take the chapter's
+ * heading with it - `UX-335`'s rule that one bad value costs one
+ * section, applied one level up. A chapter with no line is a chapter
+ * that says so by saying nothing, which is the honest answer for a
+ * payload whose fields are absent.
+ */
+function safely(chapter, payload) {
+  if (typeof chapter.answer !== "function" || !payload) return null;
+  try {
+    const said = chapter.answer(payload);
+    return typeof said === "string" && said.trim() ? said : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/** Whether a chapter box is open. The first one always is. */
+export function isOpen(box) {
+  return box?.getAttribute?.("data-open") !== "false";
+}
+
+/**
+ * Open or shut one chapter, and say on its control how many sections
+ * are behind it (`§3a.1`: a fold names its count before it is opened).
+ */
+export function setOpen(box, open) {
+  if (!box) return box;
+  box.setAttribute("data-open", String(Boolean(open)));
+  labelFold(box);
+  return box;
+}
+
+function labelFold(box) {
+  const toggle = box.querySelector?.("[data-chapter-open]");
+  if (!toggle) return;
+  const held = box.querySelectorAll?.("[data-section]")?.length ?? 0;
+  const open = isOpen(box);
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.textContent = open ? "Hide" : `Show ${held} section${held === 1 ? "" : "s"}`;
+  toggle.setAttribute("title", open
+    ? `Fold "${box.getAttribute("aria-label")}" back to its answer`
+    : `Open "${box.getAttribute("aria-label")}"`);
+}
+
+/**
+ * Open whatever chapter holds `node`, and return it.
+ *
+ * Every way into a section goes through here: the rail's links, the
+ * jump box, a pasted `#anchor`, `hashchange`. A fold that a link
+ * cannot open is a section the click budget cannot reach, which is
+ * the defect `UX-347` would have introduced rather than fixed.
+ */
+export function revealChapter(node) {
+  let box = node;
+  while (box && !(box.classList?.contains?.("chapter")
+                  ?? String(box.className ?? "").includes("chapter"))) {
+    box = box.parentElement ?? box._parent;
+  }
+  if (box && !isOpen(box)) setOpen(box, true);
+  return box ?? null;
 }
 
 /** The chapter boxes already in the document: `id -> box`. */
@@ -261,6 +471,9 @@ export function fileInChapter(root, node, doc) {
   if (box) {
     node.setAttribute("data-chapter", id);
     box.append(node);
+    // UX-347: the control counts what the chapter holds, and this is
+    // the one path that changes that after boot.
+    labelFold(box);
   }
   return node;
 }

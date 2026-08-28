@@ -348,12 +348,34 @@ know how far, and pass everything they did not ask for. A structure
 change may spend one currency to buy the other, and the guard has to
 see both or it will keep buying the invisible one.
 
-The rule: the document is at most **N screens at 1440x900**, and no
-chapter's first section begins more than **M screens** from the top of
-its chapter — asserted in the same guard that holds the click budget,
-so a trade shows up on the side it was paid from. `UX-347` sets N and M
-against the page as it stands *after* the note removal below, not
-before.
+The rule, with the numbers `UX-347` set against the page as it stands
+after §4a's note removal:
+
+- the document a reader lands on is at most **10 screens at 1440x900**;
+- every chapter's question sits within **8 screens** of the top;
+- and a chapter's first section begins within **half a screen** of its
+  own heading.
+
+All three are asserted in the same guard that holds the click budget,
+so a trade shows up on the side it was paid from, and the guard's
+failure message publishes the walk to all eight destinations in *both*
+currencies.
+
+**The lever is folding by chapter.** Every chapter but the first opens
+to its question, one line answering it from published fields, and a
+control naming how many sections are behind it; the first chapter is
+the decision and stays open. Measured: the document went 11.6 → 4.1
+screens (golden) and 22.7 → 6.6 (macro_micro), `confidence` from 18.3
+screens down to 6.3, the run identity from 19.6 to 6.7 — and no walk
+grew a click, because every way into a section opens the chapter
+holding it.
+
+A chapter's one-line answer is **read from what the document already
+publishes** (`chapters.js`'s `answer`), never computed beside it: a
+summary that derived its own numbers would be a second pipeline,
+disagreeing quietly. A chapter whose fields are absent folds with its
+question and its count and no sentence, which is the honest answer for
+a run that cannot support one.
 
 ## 4a. Where a sentence lives (round 52)
 

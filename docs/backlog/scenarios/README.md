@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-361 scenarios: **3 open**, 358 closed.
+362 scenarios: **4 open**, 358 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 0 | 45 |
+| guards | 1 | 46 |
 
 ## Open scenarios
 
@@ -39,6 +39,7 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-362 | [the Plane 2 absence sentence claims a timeline it does not own](UX-0362-the-absence-sentence-claims-a-plane-it-does-not-own.md) | viewer | Medium | — | 🔴 |
+| UX-363 | [the small tier's budget is nine-tenths headroom](UX-0363-the-small-tier-budget-is-nine-tenths-headroom.md) | guards | Low | — | 🔴 |
 
 ## UX-355..UX-361: the fifty-fifth round — the page, opened rather than landed on (2026-08-28)
 

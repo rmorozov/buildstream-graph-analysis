@@ -614,6 +614,17 @@ _PROVENANCE = {
                                             "dotted keys, `[i]` for a list "
                                             "index, `[key=value]` for the "
                                             "one list entry matching it."},
+                    "quantity": {
+                        "enum": list(QUANTITIES),
+                        "description": "The unit of `value`, resolved "
+                                       "from `path`. Here rather than on "
+                                       "`value` because a provenance row "
+                                       "carries whatever field the rule "
+                                       "read, so no single declaration "
+                                       "on the key could be right "
+                                       "(`UX-343`). Absent where the "
+                                       "path names something the schema "
+                                       "does not describe."},
                     "value": {"description": "What that path held when the "
                                              "report was written."},
                     "resolved": {"description": "False where the path did "
@@ -634,6 +645,14 @@ _PROVENANCE = {
                                         "threshold - which is a different "
                                         "statement from a threshold of "
                                         "zero."},
+                "threshold_quantity": {
+                    "enum": list(QUANTITIES),
+                    "description": "The unit of `threshold`, resolved from "
+                                   "the `observed_path` it is compared "
+                                   "against. Absent where the rule "
+                                   "compares against a quantity the "
+                                   "finding computes rather than "
+                                   "publishes (`UX-343`)."},
                 "threshold": {"description": "That constant's value, read "
                                              "live: change the constant and "
                                              "this changes with it."},
@@ -3412,6 +3431,94 @@ _SCHEMAS = {
         "cannot project.",
         hints=_WHATIF_HINTS),
 }
+
+
+def quantity_for_path(path, document=None):
+    """The declared unit of the value a provenance path names, or None.
+
+    `UX-343`: `provenance.evidence[].value` is whatever field the rule
+    read, so no single declaration on that key can be right - it was the
+    one shape in the report that genuinely could not carry a unit, and
+    forty-two of its leaves reached the reader as bare numbers. The
+    unit *is* knowable: `path` names the field, and the field is
+    declared. So the row carries the answer rather than the key
+    pretending to.
+
+    The walk resolves the way the page does - `properties`, then a
+    `bga:columns` entry, then `additionalProperties` - because a second
+    resolution order would disagree with the renderer about exactly the
+    fields that are hardest to check by eye.
+    """
+    node = schema(document or ANALYZE)
+    for segment in _path_segments(path):
+        if node is None:
+            return None
+        node = _descend(node, segment)
+    return (node or {}).get(QUANTITY) if isinstance(node, dict) else None
+
+
+def _path_segments(path: str):
+    """`a.b[2].c[id=x].d` -> the names, with subscripts as `None`.
+
+    Scanned rather than split on `.`, because a subscript's contents can
+    contain one: `signals.element_durations[app.bst]` is a map keyed by
+    an element uid, and splitting first turns that into two nonsense
+    segments that resolve to nothing.
+
+    A subscript selects *within* a collection, so it descends through
+    whatever the collection says it holds rather than naming a key.
+    """
+    name, depth = "", 0
+    for char in path:
+        if char == "[":
+            if depth == 0:
+                if name:
+                    yield name
+                name = ""
+            depth += 1
+        elif char == "]":
+            depth -= 1
+            if depth == 0:
+                yield None
+        elif char == "." and depth == 0:
+            if name:
+                yield name
+            name = ""
+        elif depth == 0:
+            name += char
+    if name:
+        yield name
+
+
+def _descend(node: dict, segment):
+    if not isinstance(node, dict):
+        return None
+    if segment is None:
+        # A subscript selects *within* a collection. Three ways a
+        # collection says what it holds: `items` for a list of records,
+        # `additionalProperties` for a map keyed by data, and - for a
+        # table that declares its columns instead - nothing at all, so
+        # the row resolves against the same node the columns are on.
+        items = node.get("items")
+        if isinstance(items, dict):
+            return items
+        extra = node.get("additionalProperties")
+        if isinstance(extra, dict):
+            return extra
+        return node if node.get(COLUMNS) else None
+    properties = node.get("properties")
+    if isinstance(properties, dict) and segment in properties:
+        return properties[segment]
+    for spec in node.get(COLUMNS) or ():
+        if isinstance(spec, dict) and spec.get("key") == segment:
+            return {QUANTITY: spec["quantity"]} if spec.get("quantity") else {}
+    extra = node.get("additionalProperties")
+    if isinstance(extra, dict):
+        return extra
+    items = node.get("items")
+    if isinstance(items, dict):
+        return _descend(items, segment)
+    return None
 
 
 def names() -> List[str]:

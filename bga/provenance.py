@@ -209,9 +209,23 @@ TRACE_QUERIES = {
 
 def _rule(name, threshold, comparison, observed_path, sentence,
           module=RULE_MODULE):
-    return {"name": name, "threshold": threshold, "comparison": comparison,
+    rule = {"name": name, "threshold": threshold, "comparison": comparison,
             "observed_path": observed_path, "sentence": sentence,
             "module": module}
+    # `UX-343`: a threshold is in the unit of the field it is compared
+    # against, and `observed_path` names that field - so the unit is
+    # resolvable rather than a property of the number. Omitted where
+    # the rule compares against something no path names, which is a
+    # smaller set than it looks: the thresholds without an observed
+    # path are floors on a quantity the finding computes rather than
+    # publishes.
+    if observed_path:
+        from . import schemas as _schemas
+
+        quantity = _schemas.quantity_for_path(observed_path, ANALYZE_DOCUMENT)
+        if quantity:
+            rule["threshold_quantity"] = quantity
+    return rule
 
 
 def _unconditional(sentence):
@@ -501,14 +515,27 @@ def record(claim: dict, claim_id: str, kind: str, document: dict) -> dict:
         paths = paths(claim, document)
     if callable(rule):
         rule = rule(claim, document)
+    from . import schemas as _schemas
+
     evidence = []
     for path in paths:
         value = resolve(document, path)
-        evidence.append({
+        row = {
             "path": path,
             "value": None if value is UNRESOLVED else value,
             "resolved": value is not UNRESOLVED,
-        })
+        }
+        # `UX-343`: the unit of `value`, resolved from the `path` beside
+        # it. This is the one shape in the report that genuinely cannot
+        # declare a unit on the key - `value` is whatever field the rule
+        # read - so the row carries the answer instead. Omitted rather
+        # than null when the path names something the schema does not
+        # describe, which is `UX-249`'s rule about absence: "no unit"
+        # and "a unit nobody declared" are different facts.
+        quantity = _schemas.quantity_for_path(path, ANALYZE_DOCUMENT)
+        if quantity:
+            row["quantity"] = quantity
+        evidence.append(row)
     return {
         "claim": claim_id,
         "kind": kind,

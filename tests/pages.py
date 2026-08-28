@@ -49,6 +49,18 @@ FIXTURES = {
     "macro_micro": REPO / "tests/fixtures/macro_micro/run",
 }
 
+#: UX-358: the one committed capture that can render a **timeline**.
+#:
+#: Not in `FIXTURES`, deliberately. Every guard that parametrises over
+#: those two would triple its browser time for a page that differs from
+#: `macro_micro` in exactly one respect, and this exists for that one
+#: respect: it is the snapshot with a `build.log`, so `bga timeline`
+#: renders, `trace_bytes` is not `None`, and `#perfetto` gets a box.
+#: `tests/fixtures/` holds no capture that can - which is what let the
+#: flagship handoff go four rounds with no end-to-end exercise.
+WITH_TIMELINE = REPO / (
+    "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run")
+
 #: `bga snapshot` writes it and `bga view` refuses to export beside it;
 #: removing it is the whole reason a copy is made.
 _DROPPED = "expected_output.json"

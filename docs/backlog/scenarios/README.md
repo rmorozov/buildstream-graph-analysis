@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-372 scenarios: **11 open**, 361 closed.
+372 scenarios: **10 open**, 362 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 59 |
-| analysis | 1 | 52 |
+| analysis | 0 | 52 |
 | contracts | 0 | 40 |
 | viewer | 8 | 107 |
 | cli | 0 | 5 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-365 | [the finding that claims the superlative is the small one](UX-0365-the-finding-that-claims-the-superlative-is-the-small-one.md) | analysis | High | — | 🔴 |
 | UX-366 | ["All rows" shows 25 of 1,202](UX-0366-all-rows-shows-twenty-five-of-twelve-hundred.md) | viewer | High | — | 🔴 |
 | UX-367 | [the volume budget is enforced at eleven elements](UX-0367-the-volume-budget-is-enforced-at-eleven-elements.md) | viewer | High | — | 🔴 |
 | UX-368 | [no finding carries a Perfetto query](UX-0368-no-finding-carries-a-perfetto-query.md) | viewer | High | — | 🔴 |

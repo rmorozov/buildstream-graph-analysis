@@ -425,17 +425,42 @@ export function renderQuestions(make, options = {}) {
                                     id: "perfetto-questions" });
   section.append(make("h2", {}, "Questions worth asking in Perfetto"));
   const intro = make("p", { class: "muted" });
-  intro.textContent =
-    "Both planes of this run land in one trace: Plane 1's element spans "
-    + "and Plane 2's process lanes, on one clock, joined by the element "
-    + "uid this report prints. "
-    + (options.hasTimeline
-        ? "Open it with \u201cOpen timeline in Perfetto\u201d at the top "
-          + "of this page, then Query (SQL), and paste one of these."
-        : "This snapshot carries no build log, so there is no timeline "
-          + "to open here - a capture made with `bga capture` records "
-          + "one, and `bga timeline` writes the trace. The queries "
-          + "below are what to ask it.");
+  // `UX-364`: what this run's trace actually carries, from
+  // `run.trace_planes`, which is the renderer's own answer. This
+  // sentence used to open "Both planes of this run land in one trace"
+  // unconditionally - on a Plane 1 capture that is a promise of process
+  // lanes the reader will not find, three sections from `UX-362`'s
+  // absence sentence saying the plane was never captured.
+  const planes = options.tracePlanes || [];
+  intro.setAttribute("data-planes", planes.join("+") || "none");
+  // Three shapes, not two. The first draft branched on the planes and
+  // kept the old "lands in this run's trace" opener for the other
+  // side - which then told the two fixtures with **no** trace that
+  // their element spans were in one. Trading one false claim for
+  // another is what a measurement catches and a reading does not.
+  if (!options.hasTimeline) {
+    intro.textContent =
+      "This snapshot carries no build log, so there is no timeline to "
+      + "open here - a capture made with `bga capture` records one, and "
+      + "`bga timeline` writes the trace. The queries below are what to "
+      + "ask it once there is one.";
+  } else {
+    // One copy of the how-to-open half, so the two trace shapes differ
+    // only where they actually differ - and so the button's name stays
+    // a contiguous string that `UX-326`'s guard can read out of the
+    // source and match against the control `index.html` draws.
+    const openIt =
+      " Open it with \u201cOpen timeline in Perfetto\u201d at the top of "
+      + "this page, then Query (SQL), and paste one of these.";
+    intro.textContent = (planes.includes("2")
+      ? "Both planes of this run land in one trace: Plane 1's element "
+        + "spans and Plane 2's process lanes, on one clock, joined by "
+        + "the element uid this report prints."
+      : "Plane 1's element spans land in this run's trace - one span "
+        + "per task, on the build's own clock. Plane 2 is not in it, so "
+        + "the queries below that read process lanes return nothing "
+        + "here and the ones scoped to Plane 1 answer.") + openIt;
+  }
   section.append(intro);
   const worked = byId(WORKED_EXAMPLE);
   if (worked) section.append(workedExample(worked, make));

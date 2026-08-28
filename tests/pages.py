@@ -73,6 +73,54 @@ _DROPPED = "expected_output.json"
 _IGNORED = shutil.ignore_patterns("__pycache__", "*.pyc")
 
 
+#: UX-364: the **two-plane** state, constructed rather than committed.
+#:
+#: `WITH_TIMELINE` is Plane 1 only and the two in `FIXTURES` have no
+#: timeline at all, so until this existed no guard could reach a page
+#: whose trace carries Plane 2 lanes - which is the state the handoff's
+#: lead sentence was written for and claimed unconditionally.
+#:
+#: Built rather than committed because it needs no real capture: a
+#: four-line wrapped Plane 1 log and two raw Plane 2 records merge into
+#: a real two-plane trace, over the golden run. `bga snapshot` writes a
+#: much larger version of the same shape; `UX-189` is why this is not
+#: another 700 KB in the tree.
+#:
+#: `test_one_timeline_both_planes.py` builds the same shape for the CLI
+#: route with `--no-keep-raw` and uncompressed variants. This one exists
+#: to be *exported as a page*, which that one never does.
+_WRAPPED_LOG = """\
+[wrapper][2026-08-21 12:00:00,000] INFO: Executing command: bst build all.bst
+[wrapper][2026-08-21 12:00:00,100] INFO: [00:00:00][aaaaaaaa][   build:work-a.bst] START Building
+[wrapper][2026-08-21 12:00:03,100] INFO: [00:00:03][aaaaaaaa][   build:work-a.bst] SUCCESS Building
+[wrapper][2026-08-21 12:00:03,200] INFO: Return code: 0
+"""
+
+_RAW_PLANE2 = """\
+START pid=101 ppid=1 ts=1000.000000 element=work-a.bst cmd=cc -c main.c
+END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
+"""
+
+
+def two_plane_snapshot(into) -> pathlib.Path:
+    """A snapshot whose trace carries **both** planes. The run inside it.
+
+    Shaped like one `bga snapshot` writes: a wrapped BuildStream log
+    beside a `run/`, and the raw Plane 2 log the merge reads.
+    """
+    import gzip
+
+    snapshot = pathlib.Path(into) / "20260821T120000Z"
+    snapshot.mkdir(parents=True, exist_ok=True)
+    (snapshot / "build.log").write_text(_WRAPPED_LOG, encoding="utf-8")
+    shutil.copytree(FIXTURES["golden"], snapshot / "run",
+                    ignore=_IGNORED, dirs_exist_ok=True)
+    (snapshot / "run" / _DROPPED).unlink(missing_ok=True)
+    with gzip.open(snapshot / "plane2.log.gz", "wt") as handle:
+        handle.write(_RAW_PLANE2)
+    return snapshot / "run"
+
+
 def snapshot_copy(fixture, into) -> pathlib.Path:
     """Copy the fixture's whole **snapshot** and return the run inside it.
 

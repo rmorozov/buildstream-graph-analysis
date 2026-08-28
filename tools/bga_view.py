@@ -441,14 +441,31 @@ def trace_file(run: str, destination: str) -> Optional[str]:
     comes out is the format it reads natively rather than the JSON it
     tolerates.
     """
+    return (trace_render(run, destination) or {}).get("path")
+
+
+def trace_render(run: str, destination: str) -> Optional[dict]:
+    """`render`'s own result for this run, plus `path`. `None` on refusal.
+
+    `UX-364`: the renderer already reports **which planes it put in the
+    trace** - `["1"]` or `["1", "2"]` - and every caller threw that away.
+    The page then told a reader of a Plane 1 capture that "Plane 2's
+    process lanes" were in the trace they were about to open.
+
+    It is not derivable from anything else the page holds.
+    `has_timeline` is true for both. `plane2_absence` is wrong in the
+    other direction: `DECLINED` means the analysis was told to ignore
+    Plane 2, while `bga timeline` reads the raw log regardless and the
+    lanes *are* there. Only the render knows, so the render is asked.
+    """
     from .bga_timeline import render
 
     snapshot = os.path.dirname(os.path.abspath(run))
     try:
-        render(snapshot, destination, quiet=True)
-        return destination
+        result = render(snapshot, destination, quiet=True)
     except (FileNotFoundError, RuntimeError, OSError):
         return None
+    return dict(result or {}, path=destination)
 
 
 def trace_bytes(run: str) -> Optional[bytes]:
@@ -459,15 +476,25 @@ def trace_bytes(run: str) -> Optional[bytes]:
     being inlined. The **serving** path no longer uses this
     (`trace_file` above), which is where the memory ceiling lives.
     """
+    return trace_with_planes(run)[0]
+
+
+def trace_with_planes(run: str):
+    """`(bytes, planes)` - the trace, and which planes are in it.
+
+    `UX-364`. `trace_bytes` is the same call with the second half
+    dropped; the export wants both, because the section that pitches the
+    handoff has to name what the reader will actually see.
+    """
     scratch = tempfile.mkdtemp(prefix="bga-view-")
     try:
-        rendered = trace_file(run, os.path.join(scratch, "timeline.json.gz"))
+        rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"))
         if rendered is None:
-            return None
-        with open(rendered, "rb") as handle:
-            return handle.read()
+            return None, None
+        with open(rendered["path"], "rb") as handle:
+            return handle.read(), list(rendered.get("planes") or [])
     except OSError:
-        return None
+        return None, None
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -844,7 +871,8 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                         # that gets tested on one side only.
                         "payloads": _offered(documents)}
 
-    trace = trace_bytes(run) if with_trace else None
+    trace, trace_planes = (trace_with_planes(run) if with_trace
+                           else (None, None))
     omitted = None
     if trace is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
@@ -876,6 +904,11 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
         }
         trace = None
     documents["run"]["has_timeline"] = trace is not None
+    # UX-364: and *which* planes are in it, when there is one. The
+    # handoff's lead sentence names them; before this it named both
+    # unconditionally, on a capture that had one.
+    if trace is not None:
+        documents["run"]["trace_planes"] = trace_planes
     # UX-299: the threshold travels with the payload rather than being
     # written down twice. The page applies the same number to the same
     # decision on the served side, where the size is only knowable once

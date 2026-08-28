@@ -164,12 +164,21 @@ class TestTheTimelineIsPitchedBeforeItIsCatalogued:
         about, one level up."""
         lead = browser.measure(
             pages[label]["url"], _LOOK, 1440, 900)["perfetto"]["lead"]
-        assert "one trace" in lead, lead
         # Both fixtures are snapshots without a build log, so the honest
         # lead names the absence rather than a button that is not there
         # (`UX-194`, `UX-329`). A run that has one is told where the
         # button is instead.
-        assert "no build log" in lead or "Open timeline" in lead, lead
+        assert "no build log" in lead, lead
+        assert "bga timeline" in lead, (
+            f"{label}: the lead names no way to get a trace: {lead}")
+        # `UX-364` removed the clause that used to be asserted here -
+        # `"one trace" in lead`, from the opener "Both planes of this
+        # run land in one trace". That sentence was unconditional, and
+        # on these two fixtures it described a trace that does not
+        # exist. What the lead says about a trace's *contents* is now
+        # `test_the_lead_names_the_planes_it_has.py`, across all three
+        # states; what it says about *opening* one is the pair above,
+        # which is what this clause was named for.
 
     def test_the_section_is_inside_the_document_a_reader_lands_on(
             self, browser, pages, label):
@@ -260,9 +269,15 @@ class TestTheLeadQuotesAControlThatExists:
             encoding="utf-8")
         page = (REPO / "bga/viewer/index.html").read_text(encoding="utf-8")
         # The source spells the quotation marks as JS escapes, so
-        # this reads what a reader will see, not the bytes.
-        quoted = re.findall(r"\\u201c(.+?)\\u201d",
-                            questions.replace("\n", " "))
+        # this reads what a reader will see, not the bytes - and joins
+        # adjacent string literals first, because a label wrapped
+        # across a `"` + `"` reads as a label containing the
+        # concatenation. That is not hypothetical: `UX-364` split this
+        # one while rewriting the sentence around it, and the clause
+        # reported a control named `Open "       + "timeline in
+        # Perfetto` rather than the split.
+        joined = re.sub(r'"\s*\+\s*"', "", questions.replace("\n", " "))
+        quoted = re.findall(r"\\u201c(.+?)\\u201d", joined)
         assert quoted, "the lead quotes no control at all"
         for label in quoted:
             assert f">{label}<" in page, (

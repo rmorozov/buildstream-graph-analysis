@@ -1,6 +1,6 @@
 # UX-367: the volume budget is enforced at eleven elements
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-360 (the volume budget), UX-187 (a report you can read at four thousand elements) | **Serves:** anyone whose project is bigger than the fixtures | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-360 (the volume budget), UX-187 (a report you can read at four thousand elements) | **Serves:** anyone whose project is bigger than the fixtures | **Topic:** viewer
 
 ## Motivation
 
@@ -165,11 +165,22 @@ against the committed tree.
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | the scale run dropped from `LABELS`, as it was before | *pending* |
-| M2 | one pair of bounds for every class again | *pending* |
-| M3 | `budget_for` clamps to the last class instead of refusing | *pending* |
-| M4 | the ratio asserts `2.5 * code` — the disguise, restored | *pending* |
-| M5 | §3e states only the small class's bounds | *pending* |
+| M1 | the scale run dropped from `LABELS`, as it was before | **0 failed at first** — see below. With the clause added: 1 failed, 10 passed — `test_every_class_has_a_run_behind_it` |
+| M2 | one pair of bounds for every class again | 2 failed, 10 passed — `test_the_whole_page_is_bounded_too[scale]`, `test_the_size_classes_are_stated_too` |
+| M3 | `budget_for` clamps to the last class instead of refusing | **0 failed at first** — see below. With the clause added: 1 failed, 15 passed — `test_a_run_past_every_class_is_refused_and_not_clamped` |
+| M4 | the ratio asserts `2.5 * code` — the disguise, restored | 1 failed, 23 passed — `test_only_one_number_bounds_the_page` |
+| M5 | §3e states only the large class's bounds removed | 1 failed, 14 passed — `test_the_style_guide_states_every_budget` |
+
+**Two of five passed the first sweep, and both were this item's own
+defect one level up.** Deleting `"scale"` from the population left the
+whole file green — splitting bounds by size class does nothing if a
+class has no run behind it, which is "the budget is enforced at eleven
+elements" restated with more rows. And `budget_for` clamping instead of
+refusing passed everything, because no run in the population reaches
+that branch: a bound stated for 4,000 elements quietly governing 40,000
+is the same "nobody decided". `TestEverySizeClassIsActuallyMeasured` is
+both clauses, written because the sweep found them rather than because
+they were foreseen.
 
 ### Deviation from the Required Fix
 

@@ -273,6 +273,15 @@ class TestStatusToneIsNeverAlone:
             "data-severity, printed in the badge",
         '.finding[data-severity="info"], .finding[data-severity="low"]':
             "data-severity, printed in the badge",
+        # `UX-356`: the join's own advice, at the same grade and with
+        # the same channel - `data-severity` on the block, the word
+        # printed in the badge beside the sentence.
+        '.advice[data-severity="critical"], .advice[data-severity="high"]':
+            "data-severity, printed in the badge",
+        '.advice[data-severity="warning"], .advice[data-severity="medium"]':
+            "data-severity, printed in the badge",
+        '.advice[data-severity="info"], .advice[data-severity="low"]':
+            "data-severity, printed in the badge",
         # `UX-305`: the tone moved off the value and onto the marker
         # beside it (§4.4). The glyph is the channel, and the value
         # still carries its sign.

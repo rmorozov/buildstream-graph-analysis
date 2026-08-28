@@ -151,12 +151,67 @@ function pathSegments(path) {
   return segments;
 }
 
+/**
+ * `UX-356`: the join's advice and its nested evidence, onto a record.
+ *
+ * `recommendations[].text` is the sentence the analyzer wrote for this
+ * reader - *"holds 44% of the critical path … remove `notparallel` /
+ * raise its job count before touching its sources"* - and the page
+ * rendered its `severity` and dropped it. Twenty-three of them on
+ * `macro_micro`, reaching no node outside the embedded payload. §1b's
+ * second clause: where the payload publishes prose written for this
+ * reader, the page prints the prose.
+ */
+function joinDetail(record, entry) {
+  for (const advice of entry.recommendations ?? []) {
+    if (!advice?.text) continue;
+    record.advice.push({
+      id: advice.id ?? "",
+      severity: String(advice.severity ?? "info").toLowerCase(),
+      text: advice.text,
+      path: `element_join[element=${entry.element}].recommendations`,
+    });
+  }
+  for (const [key, label, fields] of JOIN_EVIDENCE) {
+    const held = entry[key];
+    if (!held) continue;
+    const rows = [];
+    const already = new Set();
+    for (const [field, name, kind] of fields) {
+      const value = held[field];
+      if (value === null || value === undefined || value === "") continue;
+      // `UX-349`'s rule, inside a block: a value identical to one
+      // already in it is a fact about the block, not a second row.
+      // `worst_redundancy.example_cmd` is the case - it equals
+      // `signature` unless the normalisation changed something, and
+      // where it does differ it is the concrete command and worth its
+      // line.
+      if (already.has(String(value))) continue;
+      already.add(String(value));
+      rows.push({ label: name, value, kind, field,
+                  path: `element_join[element=${entry.element}].${key}.${field}` });
+    }
+    if (rows.length) record.evidence.push({ key, label, rows });
+  }
+  // The two lists the join publishes as bare strings. Not a table:
+  // they are names, and `UX-302`'s mapping says a short scalar array
+  // is an inline list.
+  for (const [key, label] of [["native_findings", "Plane 2 flagged"],
+                              ["unused_dependencies", "Depends on, unused"]]) {
+    const held = entry[key];
+    if (Array.isArray(held) && held.length) {
+      record.lists.push({ key, label, items: held.map(String) });
+    }
+  }
+}
+
 export function elementFacts(payload) {
   const facts = new Map();
   const touch = (uid) => {
     if (!uid) return null;
     if (!facts.has(uid)) {
-      facts.set(uid, { element: uid, rows: [], findings: [], entering: [] });
+      facts.set(uid, { element: uid, rows: [], findings: [], entering: [],
+                       advice: [], evidence: [], lists: [] });
     }
     return facts.get(uid);
   };
@@ -187,6 +242,7 @@ export function elementFacts(payload) {
       if (Array.isArray(entry.entering) && entry.entering.length) {
         record.entering = entry.entering;
       }
+      if (array === "element_join") joinDetail(record, entry);
     }
   }
   for (const finding of payload?.findings ?? []) {
@@ -242,7 +298,7 @@ export function elementFactsFor(payload, uid) {
   const known = elementFacts(payload).get(uid);
   if (known) return known;
   const record = { element: uid, rows: [], findings: [], entering: [],
-                   onDemand: true };
+                   advice: [], evidence: [], lists: [], onDemand: true };
   for (const [path, field, label, kind] of ELEMENT_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
     const held = map?.[uid];
@@ -326,7 +382,52 @@ const SOURCES = [
     ["cores_busy", "Cores busy", "ratio"],
     ["requested_jobs", "Jobs asked for", "count"],
     ["peak_rss_bytes", "Peak RSS", "bytes"],
-    ["blast_radius", "Blast radius", "count"]]],
+    ["blast_radius", "Blast radius", "count"],
+    // `UX-356`: two scalars the projection dropped. `cpu_coverage` is
+    // the caveat on `cores_busy` beside it - a low coverage makes that
+    // number a sample rather than a measurement - and `saving_share`
+    // is `potential_saving_us` as a share of the run, which is the
+    // form the decision ranks in.
+    ["cpu_coverage", "Plane 2 coverage", "share"],
+    ["saving_share", "Worth, as a share of the run", "share"]]],
+];
+
+// `UX-356` (styleguide §1b): the join's **nested** evidence, declared
+// the same way its scalars are.
+//
+// `app.js`'s `DRAWN_ELSEWHERE` said `element_join` was "merged into the
+// one element table", and the merge kept four of twenty-eight fields.
+// Thirteen reached no rendered node at all - among them the three
+// objects below, which are the Plane 2 half of *why* an element is
+// slow: which binary took the CPU, which one ran alone, and what work
+// was repeated. A projection is allowed; a projection that does not
+// say what it dropped is not (§1b).
+//
+// Adding a field is a line here, exactly as it is in `SOURCES`.
+const JOIN_EVIDENCE = [
+  ["dominant_binary", "Dominant binary", [
+    ["binary", "Binary", null],
+    ["count", "Processes", "count"],
+    ["cpu_us", "CPU time", "duration_us"],
+    ["wall_us", "Wall-clock", "duration_us"],
+    ["cpu_share", "Share of this element's CPU", "share"]]],
+  ["serial_binary", "Ran one process at a time", [
+    ["binary", "Binary", null],
+    ["cpu_us", "CPU time", "duration_us"],
+    ["wall_us", "Wall-clock", "duration_us"]]],
+  ["worst_redundancy", "Repeated work", [
+    ["signature", "Command", null],
+    // Only where it differs from the signature - which is exactly
+    // where the normalisation did something (`cmTC_<id>` against
+    // `cmTC_0df0f`), and the concrete one is then the command a reader
+    // can go and look for. Where they are identical it is the same
+    // string twice, which `UX-349` calls a fact about the block rather
+    // than a row; `joinDetail` drops it there.
+    ["example_cmd", "One occurrence", null],
+    ["occurrence_count", "Times run", "count"],
+    ["total_duration_us", "Cost, all occurrences", "duration_us"],
+    ["max_element_duration_us", "Worst single element", "duration_us"],
+    ["worst_element", "Worst element", null]]],
 ];
 
 /**
@@ -436,6 +537,81 @@ function elementSection(record, places, investigate, format) {
       list.append(term, detail);
     }
     section.append(list);
+  }
+
+  // `UX-356` (§1b): the sentence the analyzer wrote for this reader,
+  // above the evidence it rests on and above the findings that name
+  // the element. It is the finished advice, so it reads at the grade
+  // `headline.top_actions` does rather than behind a fold.
+  for (const advice of record.advice ?? []) {
+    const line = document.createElement("p");
+    line.className = "advice";
+    line.setAttribute("data-severity", advice.severity);
+    line.setAttribute("data-advice", advice.id);
+    line.setAttribute("data-path", advice.path);
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = advice.severity;
+    line.append(badge, document.createTextNode(` ${advice.text}`));
+    section.append(line);
+  }
+
+  // The Plane 2 evidence behind those sentences. Folded, because it is
+  // the *why* under an answer already given - and the fold announces
+  // its depth (§3a.1), like every other value fold on the page.
+  const evidenceRows = (record.evidence ?? [])
+    .reduce((total, block) => total + block.rows.length, 0);
+  if (evidenceRows) {
+    const fold = document.createElement("details");
+    fold.className = "join-evidence";
+    fold.setAttribute("data-fold", "join-evidence");
+    fold.setAttribute("data-levels", "1");
+    fold.setAttribute("data-rows", String(evidenceRows));
+    const summary = document.createElement("summary");
+    summary.textContent =
+      `What Plane 2 saw · 1 level, ${evidenceRows} `
+      + `row${evidenceRows === 1 ? "" : "s"}`;
+    fold.append(summary);
+    for (const block of record.evidence) {
+      const name = document.createElement("p");
+      name.className = "muted";
+      name.setAttribute("data-evidence", block.key);
+      name.textContent = block.label;
+      const list = document.createElement("dl");
+      list.className = "pairs";
+      for (const row of block.rows) {
+        const term = document.createElement("dt");
+        term.textContent = row.label;
+        const detail = document.createElement("dd");
+        detail.setAttribute("data-field", row.field);
+        detail.setAttribute("data-raw", String(row.value));
+        detail.setAttribute("data-path", row.path);
+        detail.className = typeof row.value === "number" ? "num" : "";
+        detail.textContent = typeof row.value === "number"
+          ? format(row.value, row.kind) : String(row.value);
+        list.append(term, detail);
+      }
+      fold.append(name, list);
+    }
+    section.append(fold);
+  }
+
+  // `UX-302`'s mapping: a short scalar array is an inline list, not a
+  // table and not a `<pre>`.
+  for (const named of record.lists ?? []) {
+    const line = document.createElement("p");
+    line.className = "muted";
+    line.setAttribute("data-list", named.key);
+    line.append(document.createTextNode(`${named.label}: `));
+    named.items.forEach((item, index) => {
+      const code = document.createElement("code");
+      code.textContent = item;
+      line.append(code);
+      if (index < named.items.length - 1) {
+        line.append(document.createTextNode(", "));
+      }
+    });
+    section.append(line);
   }
 
   if (record.entering.length) {

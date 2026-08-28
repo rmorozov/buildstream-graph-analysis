@@ -153,7 +153,7 @@ class TestThePayloadIsInTheNewUnitsAndTheSameNumbers:
     bytes are both integer multiples of what they replaced - so this
     asserts equality rather than closeness."""
 
-    def test_a_duration_and_a_memory_figure_round_trip(self, fixture):
+    def test_a_duration_figure_is_an_integer_count_of_microseconds(self, fixture):
         import pathlib
 
         from tools.bga_view import payloads
@@ -161,13 +161,37 @@ class TestThePayloadIsInTheNewUnitsAndTheSameNumbers:
         root = pathlib.Path(__file__).resolve().parents[2]
         payload = payloads(str(root / "tests/fixtures" / fixture))["report.json"]
         agreement = payload.get("timestamp_agreement") or {}
-        if agreement.get("resolution_us") is not None:
-            assert isinstance(agreement["resolution_us"], int), (
-                "a µs figure converted from seconds is an integer count, "
-                "not a float of seconds under a new name")
+        if agreement.get("resolution_us") is None:
+            pytest.skip(f"{fixture} carries no timestamp agreement")
+        assert isinstance(agreement["resolution_us"], int), (
+            "a µs figure converted from seconds is an integer count, "
+            "not a float of seconds under a new name")
+
+    def test_every_memory_figure_is_the_records_own_number(self, fixture):
+        """The rename must not have changed a value. `ru_maxrss` is KiB
+        and the payload is bytes, so the published figure is the
+        record's own times 1024 - exactly, not rounded through
+        megabytes, which is what the float it replaced did."""
+        import json
+        import pathlib
+
+        from tools.bga_view import payloads
+
+        root = pathlib.Path(__file__).resolve().parents[2]
+        run = root / "tests/fixtures" / fixture
+        report = run.parent / "plane2.json"
+        if not report.exists():
+            pytest.skip(f"{fixture} has no Plane 2 record beside it")
+        record = json.loads(report.read_text())
+        peaks = ((record.get("peak_memory") or {}).get("per_element")) or {}
+        payload = payloads(str(run))["report.json"]
+        checked = 0
         for row in payload.get("element_join") or []:
-            if row.get("peak_rss_bytes") is not None:
-                assert row["peak_rss_bytes"] % 1024 == 0, (
-                    "`ru_maxrss` is KiB, so every byte figure derived from "
-                    "it is a whole number of KiB - a float here means the "
-                    "conversion went through megabytes")
+            measured = (peaks.get(row.get("element")) or {}).get("peak_rss_kb")
+            if measured is None or row.get("peak_rss_bytes") is None:
+                continue
+            assert row["peak_rss_bytes"] == measured * 1024, row["element"]
+            checked += 1
+        assert checked, (
+            "no element carried a peak this could compare - the clause "
+            "would pass on a payload that published nothing")

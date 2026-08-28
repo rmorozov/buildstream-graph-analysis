@@ -62,13 +62,29 @@ class TestTheStoppingBuildIsStillRead:
         ''')
         proc = _spawn(script)
         # Let the child install its handler and say something first.
-        deadline = time.monotonic() + 10
         assert proc.stdout.readline().strip() == b"Build started"
 
         said = []
+        # Timed around the shutdown alone, the way the two clauses below
+        # this one do it. It used to be an absolute deadline started
+        # before the `readline()` above and set to the same 10s as the
+        # grace, so the budget was `interpreter startup + shutdown <=
+        # 10s` while the contract being tested is `shutdown <= 10s`.
+        # Those cannot both hold, and on a loaded CI runner the pair
+        # missed by 32 ms - a green shutdown reported as a red test.
+        started = time.monotonic()
         stopped = bst_run_wrapped.shutdown_build_group(
             proc, emit=said.append, grace=10)
-        assert time.monotonic() < deadline
+        elapsed = time.monotonic() - started
+
+        # Well inside the grace, not merely within it: `stopped is True`
+        # already means "before the deadline", so a bound *at* the grace
+        # would assert nothing. The claim `UX-175` is about is that
+        # draining **is** the wait, so a child that complies is noticed
+        # when it complies - the old read loop burned the whole window.
+        assert elapsed < 5, (
+            f"the shutdown took {elapsed:.1f}s for a child that complied "
+            f"at once; draining is supposed to be the wait")
 
         assert stopped is True, "the child complied; it must not read as killed"
         assert MARKER in "\n".join(said), (

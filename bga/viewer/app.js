@@ -18,7 +18,8 @@
 // `import` lines, and a re-export is a module it would never inline
 // (`UX-199`).
 import { served, safeStorage } from "./primitives.js";
-import { QUANTITY, SEVERITY, COLUMNS, SERIES, DISTRIBUTION, INLINE, bytes,
+import { QUANTITY, SEVERITY, COLUMNS, SERIES, DISTRIBUTION, INLINE,
+         DECOMPOSITION, INTERVAL, bytes,
          childNode, cssId, el, guessQuantity, heading, hintsOf, quantity,
          quantityFor, sectionHead, title } from "./format.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, OBJECT_INLINE_FIELDS,
@@ -39,7 +40,7 @@ import { renderBand, renderTrend, renderBlastSearch, renderBlastOffline,
 // a module it would never inline (`UX-199`).
 import { renderCulprits, renderElementHistory, renderHorizon,
          renderElementSections, ensureElementSection, uidForAnchor,
-         renderWhatIf } from "./element.js";
+         renderWhatIf, resolvePath } from "./element.js";
 import { renderDecision, renderProvenance, renderProvenanceRecords,
          renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
@@ -60,7 +61,8 @@ import { copyButton, renderQuestions } from "./questions.js";
 import { investigationFor } from "./trace_context.js";
 import { copy } from "./tables.js";
 import { CONTROLS, classify } from "./shapes.js";
-import { strip, GRADE_EXHIBIT } from "./drawings.js";
+import { strip, decomposition, interval,
+         GRADE_EXHIBIT } from "./drawings.js";
 
 /**
  * `UX-204`: each finding carries a button that knows *why* it is
@@ -354,14 +356,67 @@ export function renderSection(key, value, hint = {}, node = undefined,
                   format: (n) => quantity(n, quantityFor(node, key)),
                 }));
     }
-    return Object.keys(value).length
-      // UX-289: the whole document, because a preset's population is a
-      // selection published elsewhere in it - `bottleneck`
-      // for the choke points. The section renders its own value; the
-      // payload is only ever read for a declared `from` path.
-      ? renderPairs(key, value, hint, node, payload, root) : null;
+    if (!Object.keys(value).length) return null;
+    // `UX-361` (§2d): a section whose declaration says its numbers are
+    // a *total split into parts*, or *values on one axis*, draws that
+    // before it lists them. The declaration names published paths and
+    // this resolves them - the page chooses nothing, which is the
+    // whole of why the shape could be added without becoming a second
+    // analyzer (Direction 7).
+    const shaped = declaredDrawing(key, hint, node, payload);
+    const body = renderPairs(key, value, hint, node, payload, root);
+    if (shaped && body) body.insertBefore(shaped, body.children[1] ?? null);
+    // UX-289: the whole document, because a preset's population is a
+    // selection published elsewhere in it - `bottleneck`
+    // for the choke points. The section renders its own value; the
+    // payload is only ever read for a declared `from` path.
+    return body;
   }
   return null;   // scalars belong in the summary, below
+}
+
+/**
+ * `UX-361`: the drawing a section's own declaration asks for, or `null`.
+ *
+ * Both hints name published paths in the grammar `resolvePath` walks,
+ * and every number the drawing gets comes back from one of them. A
+ * path that does not resolve drops its part rather than being guessed
+ * at, and a drawing left with nothing to say returns its sentence -
+ * which is `strip`'s discipline (`UX-226`) in the two new shapes.
+ */
+function declaredDrawing(key, hint, node, payload) {
+  if (!payload) return null;
+  const hints = hintsOf(node);
+  const split = hints[DECOMPOSITION] ?? hint[DECOMPOSITION];
+  const axis = hints[INTERVAL] ?? hint[INTERVAL];
+  const at = (path) => (path ? resolvePath(payload, path) : undefined);
+
+  if (split) {
+    const parts = (split.parts ?? []).map((part) => ({
+      key: part.key, label: part.label, value: at(part.path),
+    })).filter((part) => part.value !== undefined && part.value !== null);
+    const mark = split.mark && at(split.mark.path) !== undefined
+      ? { key: split.mark.key, label: split.mark.label,
+          value: at(split.mark.path) }
+      : null;
+    return decomposition(parts, {
+      total: at(split.total), mark, grade: GRADE_EXHIBIT,
+      format: (n) => quantity(n, split.quantity ?? quantityFor(node, key)),
+    });
+  }
+  if (axis) {
+    const marks = (axis.marks ?? []).map((one) => ({
+      key: one.key, label: one.label, value: at(one.path),
+    })).filter((one) => one.value !== undefined && one.value !== null);
+    return interval(marks, {
+      low: axis.low ?? 0, high: axis.high ?? 1,
+      threshold: axis.threshold === undefined ? null : at(axis.threshold),
+      thresholdLabel: axis.threshold_label ?? "line",
+      grade: GRADE_EXHIBIT,
+      format: (n) => quantity(n, axis.quantity ?? quantityFor(node, key)),
+    });
+  }
+  return null;
 }
 
 export function renderSummary(payload, hints) {

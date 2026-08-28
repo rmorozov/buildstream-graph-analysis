@@ -930,6 +930,33 @@ button.json-toggle:hover { color: var(--fg); }
   display: block; margin-bottom: .2rem;
 }
 
+/* UX-361 (§2d): the two shapes the vocabulary did not have.
+
+   A decomposition is one bar at the strip's exhibit height, its parts
+   laid out left to right in the order the declaration named them. The
+   first part carries the accent because it is the part the claim is
+   about - the chain, in `floors` - and the rest is the ground it is
+   measured against; §4's budget is one emphasis per block and this
+   spends it there. The published bound is a rule across the bar.
+
+   An interval is a line with a mark per published value. The marks are
+   all one weight: which of them is low is the reading, and giving the
+   headline score its own colour would answer the question for the
+   reader. */
+.decomposition, .interval { display: block; margin: .6rem 0 1rem; }
+.decomposition-bar, .interval-axis {
+  width: 100%; display: block; height: var(--draw-exhibit-strip-h);
+}
+.decomposition .density-label, .interval .density-label {
+  display: block; margin-bottom: .2rem;
+}
+.decomposition-part { fill: var(--line); }
+.decomposition-part:first-of-type { fill: var(--accent-mark); }
+.decomposition-mark { stroke: var(--fg); stroke-width: 1.4; }
+.interval-rule { stroke: var(--line); stroke-width: 1; }
+.interval-mark { fill: var(--accent-mark); }
+.interval-threshold { stroke: var(--fg); stroke-width: 1.4; stroke-dasharray: 1.5 1.5; }
+
 /* The tick row: positions along the drawing above it, so it is
    `relative` and each label is placed by its own percentage. The ends
    pull back inside the box - a label centred on 100% would hang off the

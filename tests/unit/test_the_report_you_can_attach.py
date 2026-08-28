@@ -315,7 +315,25 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # published fields is the trade, and the bounds are restated rather
 # than the sentences left in `script#bga-report` to fit a number
 # nobody argued.
-PAGE_BUDGET_B = 254_000
+# Round 56, second move - `UX-361`:
+#
+#                      UX-356   UX-361
+#     page            249,694  260,369   (+10,675)
+#     data (golden)    85,356   86,152   (+796)
+#     golden          335,050  346,521
+#     macro_micro     375,346  386,817
+#
+# Two new drawings and their styles - `decomposition` and `interval`,
+# the shapes a strip and a sparkline cannot make - plus the resolver
+# that reads their declarations. The *data* moved this time, by 796 B
+# on the golden run: the two hints travel in the schemas, which travel
+# with the document, and a declaration a consumer can read is worth
+# more than the bytes (`UX-201`'s argument, and `UX-342`'s).
+#
+# This is the third page rise of the round, and the largest. It is also
+# the last: `UX-360` is next and sets the volume budget these three
+# restatements have been standing in for.
+PAGE_BUDGET_B = 265_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -330,7 +348,7 @@ COMMITTED_EXPORTS = [
     # source and 2,920 of payload, split between the two items in the
     # note above. The bounds are restated rather than the twelfth
     # contract left unpublished to fit a number nobody argued.
-    ("golden", GOLDEN, 341_000),                       #  335,050 B
+    ("golden", GOLDEN, 352_000),                       #  346,521 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -342,7 +360,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 381_000),             #  375,346 B
+    ("macro_micro", MACRO_MICRO, 392_000),             #  386,817 B
 ]
 
 

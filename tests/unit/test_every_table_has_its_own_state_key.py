@@ -36,6 +36,7 @@ synthetic  (1,202)      38             38  {}
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 
@@ -55,7 +56,47 @@ def payload():
         ["python", "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
         capture_output=True, text=True, cwd=REPO, timeout=180)
     assert done.returncode == 0, done.stderr[-2000:]
-    return json.loads(done.stdout)
+    document = json.loads(done.stdout)
+    return _long_enough_to_filter(document)
+
+
+#: The row cap `bga/viewer/structured.js` filters above, read from the
+#: module rather than repeated - `UX-349` set the filter row's bound to
+#: it, and a guard that pinned its own 40 would pass a round that moved
+#: the rule.
+def _row_cap():
+    source = (REPO / "bga/viewer/structured.js").read_text(encoding="utf-8")
+    found = re.search(r"TABLE_OPENS_BOUNDED_ABOVE\s*=\s*(\d+)", source)
+    assert found, "structured.js no longer names the row cap"
+    return int(found.group(1))
+
+
+def _long_enough_to_filter(document):
+    """Pad one nested map past the row cap.
+
+    `UX-349` gave the filter row a length: below the cap the reader
+    scans, and no table on this run reaches it - the longest nested map
+    is eleven rows. This guard's subject is *which table a typed filter
+    names*, so it needs a nested table that has a filter, which is now
+    a long one.
+
+    Padded here rather than in the fixture: the fixture is a real
+    `bga analyze` output and this is the guard's own apparatus. The
+    padding goes into `leaf_analysis.leaves_detail`, which is a nested
+    map that renders as a nested table with a dotted key - the shape
+    this guard is about - and the rows are the shape it already had.
+    """
+    leaves = (document.get("leaf_analysis") or {}).get("leaves_detail")
+    assert isinstance(leaves, dict) and leaves, (
+        "the run no longer publishes leaf_analysis.leaves_detail, which is "
+        "the nested table this guard pads to reach the filter row")
+    sample = next(iter(leaves.values()))
+    padded = dict(leaves)
+    for index in range(_row_cap() + 5 - len(padded)):
+        padded[f"padding-{index}.bst"] = (
+            dict(sample) if isinstance(sample, dict) else sample)
+    document["leaf_analysis"]["leaves_detail"] = padded
+    return document
 
 
 _HARNESS = r"""

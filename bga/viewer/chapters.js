@@ -434,6 +434,30 @@ export function setOpen(box, open) {
   return box;
 }
 
+/**
+ * Open or shut **every** chapter that has a control.
+ *
+ * `UX-355`: the rail's "Expand all" was built on `collapsible().all()`,
+ * which walks *sections* - and `UX-347` moved the document's fold to
+ * the chapter. Sections are default-open, so from a fresh load
+ * `all(false)` set open what was already open and the page did not
+ * move: 3,548 px and 1 of 7 chapters before the press and after it.
+ *
+ * The first chapter is skipped, and that is not an oversight: it has no
+ * toggle, because `UX-347` decided the decision stays open - "a reader
+ * who has to open the verdict has been handed nothing". Shutting it
+ * from here would make a fold with no way back, which is the defect
+ * this function exists to remove rather than move.
+ */
+export function setAllOpen(root, open) {
+  const boxes = [...(root?.querySelectorAll?.("section.chapter") ?? [])];
+  for (const box of boxes) {
+    if (!box.querySelector?.("[data-chapter-open]")) continue;
+    setOpen(box, open);
+  }
+  return boxes.length;
+}
+
 function labelFold(box) {
   const toggle = box.querySelector?.("[data-chapter-open]");
   if (!toggle) return;

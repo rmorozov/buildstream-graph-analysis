@@ -44,7 +44,8 @@ import { renderDecision, renderProvenance,
          renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
-import { chapters, fileInChapter, revealChapter } from "./chapters.js";
+import { chapters, fileInChapter, revealChapter,
+         setAllOpen } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
@@ -1027,8 +1028,13 @@ async function boot() {
     // UX-302: before `collapsible`, so the collapse caret ends up first
     // in the heading - `collapsible` prepends and this appends.
     jsonToggles(root, { document });
+    // `UX-355`: the rail's pair drives both fold layers. It used to
+    // drive only the sections, which are default-open - so "Expand all"
+    // did nothing at all from a fresh load, and "Collapse all" shut the
+    // sections of the one open chapter and left the rest folded.
     const controls = collapsible(root, {
-      document, storage: served() ? safeStorage() : null });
+      document, storage: served() ? safeStorage() : null,
+      enclosing: (open) => setAllOpen(root, open) });
     const contents = toc(root, { document, controls });
     if (contents) {
       // UX-223: which actions this run can honestly offer. UX-194's

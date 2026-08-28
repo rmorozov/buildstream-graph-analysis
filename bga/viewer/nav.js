@@ -165,8 +165,17 @@ function writeCollapsed(storage, keys) {
  * Default-open, always: a report that hid itself on first load would
  * answer the navigation complaint by making the document harder to
  * read, not easier.
+ *
+ * `enclosing` is the fold layer *outside* the sections, as
+ * `(open) => …`. `UX-355`: the document folds at two layers now -
+ * `UX-347`'s chapters over `UX-199`'s sections - and a control that
+ * says "all" and drives one of them is a control whose label is not
+ * true. It is injected rather than imported so this module keeps
+ * knowing only about sections, and so `all()` is the one place both
+ * layers are named.
  */
-export function collapsible(root, { document: doc, storage } = {}) {
+export function collapsible(root, { document: doc, storage,
+                                    enclosing = null } = {}) {
   const collapsed = readCollapsed(storage);
   const toggles = new Map();
 
@@ -203,12 +212,17 @@ export function collapsible(root, { document: doc, storage } = {}) {
   return {
     keys: [...toggles.keys()],
     all(shut) {
+      // The enclosing layer first when opening, so the sections it
+      // holds are on screen by the time they are told to open; and
+      // last when shutting, for the same reason in reverse.
+      if (!shut) enclosing?.(true);
       collapsed.clear();
       for (const [key, apply] of toggles) {
         apply(shut);
         if (shut) collapsed.add(key);
       }
       writeCollapsed(storage, collapsed);
+      if (shut) enclosing?.(false);
     },
   };
 }

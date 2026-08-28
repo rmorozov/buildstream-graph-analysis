@@ -349,6 +349,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-337 | [the two viewer modules split along their seams](UX-0337-the-two-viewer-modules-split-along-their-seams.md) | Medium | — | 🟢 Done — the viewer split along its seams: 20 modules, an order asserted acyclic, none over 1,500 lines | [UX-337](UX-0337-the-two-viewer-modules-split-along-their-seams.md) |
 | UX-340 | [the graph was derived with a broken instrument](UX-0340-the-graph-was-derived-with-a-broken-instrument.md) | Medium | — | 🟢 Done — the module graph derived by a character scanner, and the fixture that shows the regex it replaced losing a whole function | [UX-340](UX-0340-the-graph-was-derived-with-a-broken-instrument.md) |
 | UX-342 | [the export ships six schemas nothing can resolve](UX-0342-the-export-ships-six-schemas-nothing-can-resolve.md) | High | — | 🟢 Done — the export carries the schemas its documents declare: 39,688 B off both fixtures, sections identical, and the ratio guard corrected rather than relaxed | [UX-342](UX-0342-the-export-ships-six-schemas-nothing-can-resolve.md) |
+| UX-343 | [half the numbers carry no unit at all](UX-0343-seven-in-ten-numbers-carry-no-declared-unit.md) | Medium | — | 🟢 Done — Half the numbers in the report carried no unit at all; the contract now declares them, and the page's own strict-hints complaint is read on a real boot. | [UX-343](UX-0343-seven-in-ten-numbers-carry-no-declared-unit.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

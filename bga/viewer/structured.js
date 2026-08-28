@@ -1283,12 +1283,17 @@ export function presetTable(key, rows, presets, hint, node, payload) {
     };
     const built = buildTable("elements", view.shown, viewHint, node);
     built.table.setAttribute("data-preset", preset.name);
+    // `UX-366`: **the caption says how big this view is; the badge
+    // says how much of it is shown** - one fact each, and the only
+    // pair that cannot go stale, because the limit moves the
+    // shown-count and this is drawn once. See
+    // `test_all_rows_means_all_rows.py`.
     body.replaceChildren(
       el("p", { class: "muted" },
          preset.question ? `${preset.question} ` : "",
-         `${view.shown.length} of ${rows.length} elements`
-         + (view.total > view.shown.length
-            ? `, the first ${view.shown.length} of ${view.total}` : "")),
+         view.total >= rows.length
+           ? `all ${rows.length} elements`
+           : `${view.total} of ${rows.length} elements`),
       built.tools, built.table);
   };
   select.addEventListener("change", () => draw(select.value));

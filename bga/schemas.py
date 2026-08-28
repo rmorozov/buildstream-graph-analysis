@@ -1408,8 +1408,7 @@ _ELEMENT_PRESETS = [
      "question": "Which element should I look at?",
      "columns": ["element", "element_durations", "downstream_count",
                  "is_leaf", "observed_critical", "element_kind"],
-     "sort": {"column": "element_durations", "direction": "desc"},
-     "bound": 25},
+     "sort": {"column": "element_durations", "direction": "desc"}},
     {"name": "Critical path",
      "question": "Which elements are on the chain that binds?",
      # In the order the chain runs, which is the order the
@@ -1434,8 +1433,7 @@ _ELEMENT_PRESETS = [
      "where": {"column": "observed_critical", "equals": False},
      "columns": ["element", "element_durations", "slack",
                  "downstream_count", "risk_score"],
-     "sort": {"column": "element_durations", "direction": "desc"},
-     "bound": 25},
+     "sort": {"column": "element_durations", "direction": "desc"}},
     # UX-338: the two-plane join, as a *view* of this table
     # rather than a second table of the same eleven elements.
     # `UX-215` published `element_join` and the page drew it on
@@ -1457,8 +1455,7 @@ _ELEMENT_PRESETS = [
      # heading that promises the sandbox, so it is not offered
      # at all on a run that captured no Plane 2.
      "requires": ["cores_busy", "requested_jobs", "peak_rss_bytes"],
-     "sort": {"column": "element_durations", "direction": "desc"},
-     "bound": 25},
+     "sort": {"column": "element_durations", "direction": "desc"}},
 ]
 
 # `UX-344`: the two namespaces, and what stands where they did.

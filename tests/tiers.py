@@ -232,6 +232,11 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-366`, tiered on landing. One boot of the seeded 1,202-element
+    # run, every population driven twice - at rest and on "All rows" -
+    # in a single measure call. 8.2s, most of it the generate and the
+    # export.
+    "tests/unit/test_all_rows_means_all_rows.py",                #    8.2s
     # `UX-368`, tiered on landing. Four browser clauses over the three
     # committed captures - `with_timeline` for the page that has a
     # handoff, the other two for the dead-control rule. 7.6s.

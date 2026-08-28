@@ -570,14 +570,24 @@ with roughly a fifth of headroom on the largest run in each class.
 Round 59 (`UX-367`) added the third row and split the bounds by size:
 
 ```text
-                 elements   landed   opened    words   controls
-golden                  4    3,501   14,560    5,280        410
-macro_micro            11    5,541   28,257    9,883        660
-budget, to 50 elts             7,000   34,000   12,000        800
+                 elements   landed   opened    words   controls    nodes
+golden                  4    3,501   14,560    5,280        410    2,409
+macro_micro            11    5,541   28,257    9,883        660    4,586
+budget, to 50 elts             7,000   34,000   12,000        800    5,500
 
-scale               1,202    4,397   54,968   33,864      1,922
-budget, to 4,000 elts          7,000   66,000   41,000      2,300
+scale               1,202    4,397   54,968   35,031      1,925   22,977
+budget, to 4,000 elts          7,000   66,000   41,000      2,300   27,500
 ```
+
+**`nodes` is the fifth column because the other four are blind to a
+table.** `UX-366` lifted the element table's cap, putting 1,177 more
+rows in the DOM: height did not move (a hidden row occupies none),
+controls moved by three, and *words* moved by 1,167 — because the cells
+carry no whitespace between them, so `textContent` renders a whole
+six-column row as `layer00/mod023.bst9.0 s645falsecmakefalse`, one
+"word". The DOM element count is the measure that saw it, 12,305 →
+22,977. A budget that cannot see the page's largest population double
+is not measuring volume.
 
 **Landed height is one number for every class**, and that is the
 result rather than a shortcut: at 1,202 elements the page a reader

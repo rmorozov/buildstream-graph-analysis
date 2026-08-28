@@ -569,10 +569,10 @@ Every control class on the page was pressed, on the page a user gets,
 in the state a user lands in. Twelve classes; two of them do not keep
 the promise their label makes.
 
-**"Expand all" expands nothing.** The pair is built on
+**"Expand all" expanded nothing.** The pair was built on
 `collapsible().all()`, which walks *sections*. `UX-347` moved the fold
 to the *chapter*. Sections are default-open, so from a fresh load
-`all(false)` sets open what is already open:
+`all(false)` set open what was already open:
 
 ```text
                           height   chapters open   sections data-collapsed=true
@@ -582,15 +582,20 @@ after opening each
   chapter by hand        13,844              7/7                             0
 ```
 
-"Collapse all" works, because sections are the layer it shuts — so the
-pair is not symmetric: one half acts on the fold the reader sees and
-the other on a fold that is already open. A reader who wants the whole
-document clicks six chapter headings.
+"Collapse all" worked, because sections were the layer it shut — so the
+pair was not symmetric: one half acted on the fold the reader sees and
+the other on a fold that is already open. A reader who wanted the whole
+document clicked six chapter headings. `UX-355` gave `collapsible` an
+`enclosing` layer, injected rather than imported, so both halves drive
+both folds and "Expand all" now reaches 13,844 px in one press.
 
-**"Copy 11 rows" says nothing.** Of four copy controls, `copy-step`,
+**"Copy 11 rows" said nothing.** Of four copy controls, `copy-step`,
 `copy-sql` and `copy-view` change their own label on success; the most
-numerous one — 13 of them on `golden`, 23 on `macro_micro` — writes to
-the clipboard and leaves no trace on the page at all.
+numerous one — 13 of them on `golden`, 23 on `macro_micro` — wrote to
+the clipboard and left no trace on the page at all. It now restores its
+label through the function that builds it rather than a string captured
+at build time, because the count that label carries follows the filter
+and the bound.
 
 - **A control's label names its scope, and the scope is the layer the
   reader is looking at.** When a fold moves to a new layer, every
@@ -643,9 +648,10 @@ against `data-raw` (the UX-196 discipline); and the conformance
 checklist — shape in the table? sentence written? budget kept? —
 joins the fixing guide for any task that touches the page.
 
-Round 55's sections are written before their guards, which is the state
-`§2c` was in when it was written and the reason it says so out loud. The
-guard each one is waiting on: `UX-355` (§4c), `UX-356` (§1b),
-`UX-357` (§1b's provenance clause), `UX-360` (§3e), `UX-361` (§2d). A
-section here with no filed item behind it is the failure mode this
-paragraph exists to make visible.
+Round 55's sections were written before their guards, which is the state
+`§2c` was in when it was written and the reason it says so out loud.
+Landed since: **§4c** (`UX-355`,
+`test_a_control_acts_on_what_it_names.py`). Still waiting on its guard:
+§1b (`UX-356`, and `UX-357` for its provenance clause), §3e
+(`UX-360`), §2d (`UX-361`). A section here with no filed item behind it
+is the failure mode this paragraph exists to make visible.

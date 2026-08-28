@@ -146,7 +146,7 @@
             "governing core count (host_cpu_count/cpu_budget)"
         ]
     },
-    "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail and no timeline. `bga snapshot -- bst build TARGET` captures both planes.",
+    "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
         "execution_on_chain_us": 14000,
         "dependency_wait_us": 0,

@@ -37,6 +37,15 @@ The rule the pair states, in `TestBothStatesAreReachable`: a capability
 the page advertises is exercised by at least one committed fixture. A
 capability with no fixture is not tested and not testable, and four
 rounds of reasoning about this one from its source is what that cost.
+
+**`UX-362` is what the fixture found on its first boot**, and it is
+held here rather than in a file of its own because it is the same
+measurement: this capture has Plane 1 and no Plane 2, so the page
+stated the Plane 2 absence *and* denied the timeline it was at that
+moment handing to Perfetto. The sentence now says what it owns and
+stops, and the clauses below assert both directions - a page with a
+timeline denies none, a page without one says so - because either
+alone is satisfied by a page that never mentions a timeline at all.
 """
 import pathlib
 import sys
@@ -53,7 +62,7 @@ from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
-_LOOK = """
+_LOOK = r"""
 (() => {
   const box = (el) => el ? Math.round(el.getBoundingClientRect().height) : null;
   const button = document.getElementById("perfetto");
@@ -69,7 +78,22 @@ _LOOK = """
     // hand it over from `file://`. Present exactly when there is one.
     traceScript: Boolean(document.getElementById("bga-trace")),
     absence: absenceOn(text),
+    // `UX-362`: every rendered sentence that denies a timeline. The
+    // claim is not "the page never says it" - on a run with no
+    // timeline saying so is the whole point - it is that the page
+    // only says it when it is true.
+    denials: denialsIn(main),
   };
+  function denialsIn(root) {
+    const found = [];
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walk.nextNode())) {
+      const said = (node.textContent || "").replace(/\s+/g, " ").trim();
+      if (/no timeline/i.test(said)) found.push(said.slice(0, 180));
+    }
+    return [...new Set(found)];
+  }
   function absenceOn(text) {
     for (const [name, needle] of [
         ["NOT_CAPTURED", "Plane 2 was not captured for this run"],
@@ -145,28 +169,28 @@ class TestTheHandoffRendersWhereThereIsATrace:
         assert out["actionsHidden"] is False, out
         assert out["traceScript"], out
 
-    def test_the_page_says_which_plane_is_missing(self, browser, booted):
-        """The fixture found a defect the moment it existed, and this
-        clause records it rather than asserting it away.
+    def test_the_absence_is_stated_and_claims_only_its_own_plane(
+            self, browser, booted):
+        """`UX-362`, and the pair is the point.
 
-        This capture has Plane 1 and no Plane 2, so the page renders
-        `NOT_CAPTURED` - *"Plane 2 was not captured for this run, so
-        there is no per-process detail and no timeline"* - **while
-        carrying a Plane 1 timeline and a working Perfetto button.**
-        Whether there is a timeline is not Plane 2's fact alone, and
-        `UX-329` split that grammar one level too high.
+        This capture has Plane 1 and no Plane 2, so the page states the
+        Plane 2 absence - that half is true and must stay. What it may
+        not do is deny the timeline in the same breath: `bga timeline`
+        renders from the wrapped BuildStream log, this page carries a
+        working Perfetto button and an inlined trace, and it said
+        *"...and no timeline"* three sections away for two rounds.
 
-        Filed as `UX-362`. Asserted here as what is true today, so the
-        contradiction is visible in the suite rather than only in a
-        reader's eye - and so the clause reddens when `UX-362` fixes
-        it, which is where the wording change should be argued.
+        Both clauses together, so neither fix passes alone: deleting
+        the sentence loses the honest Plane 2 half and reddens the
+        first, and leaving the timeline claim reddens the second.
         """
         out = browser.measure(booted["with_timeline"], _LOOK, 1440, 900)
         assert out["height"], "the button does not render on this capture"
         assert out["absence"] == "NOT_CAPTURED", (
-            "the Plane 2 absence sentence has changed on a capture that "
-            "has Plane 1 and no Plane 2 - if `UX-362` landed, this clause "
-            "is what it should have moved")
+            "the Plane 2 absence is no longer stated on a capture that has "
+            "no Plane 2 - the honest half went with the wrong one")
+        assert out["denials"] == [], (
+            f"this page renders a timeline and denies one: {out['denials']}")
 
     def test_the_label_says_what_the_press_does(self, browser, booted):
         out = browser.measure(booted["with_timeline"], _LOOK, 1440, 900)
@@ -199,6 +223,19 @@ class TestTheAbsenceRendersWhereThereIsNone:
                     "macro_micro": "CAPTURED_NO_RAW_LOG"}[label]
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         assert out["absence"] == expected, out
+
+    def test_the_missing_timeline_is_stated_here(self, browser, booted, label):
+        """`UX-362`'s other direction, and the one that makes its clause
+        mean something: "no page denies a timeline" is satisfied by a
+        page that never mentions one. These two captures have no
+        timeline, so each has to say so - and after `UX-362` the
+        sentence that says it is no longer the Plane 2 one on `golden`,
+        because `golden` has no build log either.
+        """
+        out = browser.measure(booted[label], _LOOK, 1440, 900)
+        assert out["denials"], (
+            f"{label} renders no timeline and never says so; the "
+            f"with_timeline clause is then vacuous")
 
 
 @needs_browser

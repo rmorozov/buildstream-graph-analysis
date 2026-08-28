@@ -225,13 +225,18 @@ LARGE = (
 )
 
 MEDIUM = (
-    # `UX-369`, tiered on landing. Three browser clauses over `golden`
+    # `UX-369`, tiered on landing. Four browser clauses over `golden`
     # plus one over the seeded 1,202-element run - the generate and the
-    # export are 3.5s of it, the scale boot most of the rest. Measured
-    # at 12.8s, which is under the large floor and a long way over the
-    # medium one; the scale clause is the only place a picker offering
-    # 26 of 1,202 elements can be told from one offering all of them.
-    "tests/unit/test_the_query_asks_about_this_run.py",          #   12.8s
+    # export are 3.5s of it, the scale boot most of the rest. The scale
+    # clause is the only place a picker offering 26 of 1,202 elements
+    # can be told from one offering all of them, so it is what the file
+    # costs rather than something to trim.
+    #
+    # **14.7s, against a large floor of 15.0.** The closest call in
+    # either list: one more browser clause moves this file, and the
+    # honest place to say so is here rather than in the round that
+    # trips over it.
+    "tests/unit/test_the_query_asks_about_this_run.py",          #   14.7s
     # `UX-364`, tiered on landing rather than after CI noticed - which
     # it did, at 96% of `timeout 33 make test-small`. Four page exports
     # and eleven clauses over a real Chromium; measured at 10.3s, which

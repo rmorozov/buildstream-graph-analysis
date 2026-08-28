@@ -1,6 +1,6 @@
 # UX-369: the query library substitutes one project's element name
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-312 (the canned question library), UX-368 (findings carry their query) | **Serves:** anyone pasting a query into Perfetto | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the canned question library), UX-368 (findings carry their query) | **Serves:** anyone pasting a query into Perfetto | **Topic:** viewer
 
 ## Motivation
 
@@ -138,16 +138,25 @@ control in the viewer already goes through. This is `UX-317`'s defect
 one property over, and the `el` factory can still do it to the next
 caller.
 
-### Mutations verified red and reverted (4)
+### Mutations verified red and reverted (5)
 
-Counts are what the run printed, not what was expected of it.
+Counts are what the run printed, not what was expected of it. Run
+against the committed tree, after `e902b8f` — twice before, a sweep
+over uncommitted edits wiped work in progress and produced errors that
+looked like caught mutations.
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | `example: "core.bst"` back on the three entries | *pending* |
-| M2 | `renderedSql` falls back to `""` rather than the token | *pending* |
-| M3 | `applyElement` updates `textContent` and not `data-copy` | *pending* |
-| M4 | `elementUids` reads `elementFacts` alone again | *pending* |
+| M1 | `example: "core.bst"` back on the three entries | 4 failed, 6 passed — `test_no_entry_carries_a_hard_coded_example`, `test_an_unfilled_query_shows_the_token`, `test_no_query_on_the_page_names_another_projects_element`, `test_the_picker_offers_the_whole_run` |
+| M2 | `renderedSql` falls back to `""` rather than the token | 1 failed, 9 passed — `test_an_unfilled_query_shows_the_token` |
+| M3 | `applyElement` updates `textContent` and not `data-copy` | 1 failed, 9 passed — `test_changing_it_moves_the_query_and_the_paste_together` |
+| M4 | `elementUids` reads `elementFacts` alone again | 2 failed, 8 passed — `test_it_reaches_an_element_no_published_array_names`, `test_the_picker_offers_the_whole_run` |
+| M5 | `copyButton` copies its closure text, not `data-copy` | **0 failed at first** — the guard read the attribute the fix sets rather than the thing the reader receives. A clause that stubs the clipboard and presses the control was added; the mutation now gives 1 failed, 9 passed — `test_pressing_copy_hands_over_the_query_now_on_screen` |
+
+M5 is the one worth keeping: nine clauses passed over a build whose
+`data-copy` was correct and whose clipboard was stale, which is the
+exact failure the `Falsification` section calls worse than no builder
+at all. The sweep found the hole rather than confirming the guard.
 
 ### Deviation from the Required Fix
 

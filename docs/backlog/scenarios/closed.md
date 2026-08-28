@@ -351,6 +351,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-342 | [the export ships six schemas nothing can resolve](UX-0342-the-export-ships-six-schemas-nothing-can-resolve.md) | High | — | 🟢 Done — the export carries the schemas its documents declare: 39,688 B off both fixtures, sections identical, and the ratio guard corrected rather than relaxed | [UX-342](UX-0342-the-export-ships-six-schemas-nothing-can-resolve.md) |
 | UX-343 | [half the numbers carry no unit at all](UX-0343-seven-in-ten-numbers-carry-no-declared-unit.md) | Medium | — | 🟢 Done — Half the numbers in the report carried no unit at all; the contract now declares them, and the page's own strict-hints complaint is read on a real boot. | [UX-343](UX-0343-seven-in-ten-numbers-carry-no-declared-unit.md) |
 | UX-341 | [one unit per dimension](UX-0341-one-unit-per-dimension.md) | Medium | — | 🟢 Done — The payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each - and the four contracts that carried the old spellings moved a version. | [UX-341](UX-0341-one-unit-per-dimension.md) |
+| UX-345 | [the chain's length is a duration wearing a count's declaration](UX-0345-the-chains-length-is-a-duration-wearing-a-counts-declaration.md) | High | — | 🟢 Done — one duration published three times, once as a count; the guard found two more | [UX-345](UX-0345-the-chains-length-is-a-duration-wearing-a-counts-declaration.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-343 scenarios: **3 open**, 340 closed.
+350 scenarios: **10 open**, 340 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 59 |
 | analysis | 0 | 51 |
-| contracts | 1 | 39 |
-| viewer | 0 | 86 |
+| contracts | 2 | 40 |
+| viewer | 6 | 92 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -39,6 +39,85 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-344 | [the payload is six deep, and two of them are namespaces](UX-0344-the-payload-is-six-deep-and-two-of-them-are-namespaces.md) | contracts | Medium | — | 🔴 |
+| UX-345 | [the chain's length is a duration wearing a count's declaration](UX-0345-the-chains-length-is-a-duration-wearing-a-counts-declaration.md) | contracts | High | — | 🔴 |
+| UX-346 | [two thirds of the page is the schema's own sentences](UX-0346-two-thirds-of-the-page-is-the-schemas-own-sentences.md) | viewer | High | — | 🔴 |
+| UX-347 | [the click budget is satisfied by never folding](UX-0347-the-click-budget-is-satisfied-by-never-folding.md) | viewer | High | — | 🔴 |
+| UX-348 | [the two capabilities the tool is for are a closed fold and a stub](UX-0348-the-two-capabilities-the-tool-is-for-are-a-closed-fold-and-a-stub.md) | viewer | High | — | 🔴 |
+| UX-349 | [the table tools do not scale with the table](UX-0349-the-table-tools-do-not-scale-with-the-table.md) | viewer | Medium | — | 🔴 |
+| UX-350 | [the shape channel is written and unbuilt](UX-0350-the-shape-channel-is-written-and-unbuilt.md) | viewer | Medium | — | 🔴 |
+| UX-351 | [the label prints the unit the value already carries](UX-0351-the-label-prints-the-unit-the-value-already-carries.md) | viewer | Low | — | 🔴 |
+
+## UX-345..UX-351: the fifty-second round — the page, measured rather than described (2026-08-28)
+
+The user asked for a UX test of `bga snapshot` → `bga view` under
+stated principles: **high visual clarity, the fewest clicks to
+important information, actionability** — and to look at the layout
+widely rather than defend it, with Apple's decisions as the reference
+for what "considered" means.
+
+Measured on a real boot at 1440x900, both committed fixtures, before
+anything was filed:
+
+```text
+                   height   sections   words   buttons  inputs  selects  links
+golden           11,286 px         28   3,448      195      81       20    116
+macro_micro      18,148 px         37   5,026      274     120       32    204
+```
+
+**The architecture is sound and the surface is not.** `UX-286`'s
+chapters hold: the document reads decide → change → time → machine →
+elements → believe → run, and the first screen is a verdict sentence,
+three ranked elements with what each is worth, and a runnable command.
+That is the story the user asked for, and it is already there.
+
+Below it, four measurements say the same thing four ways:
+
+- **Two thirds of the words are the schema's own sentences** — 3,388 of
+  5,026 — printed beside every value on every run, *and* offered again
+  behind a `?` door on the same line (`UX-346`).
+- **Clicks are ~0 and distance is twenty screens.** §3b's click budget
+  is met by never folding, so the cost moved to scroll, which nothing
+  measures: the element table is 6.8 screens down, confidence 18.3, the
+  run identity 19.6 (`UX-347`).
+- **26 of 38 tables are twelve rows or shorter and carry a filter box
+  per column anyway**, which is most of the page's 120 inputs; fourteen
+  rendered columns have one distinct value over more than three rows
+  (`UX-349`).
+- **The shape channel §2 specifies is not built**: one sparkline, zero
+  density strips, three drawings in twenty screens, and the element
+  table §2 names by name has no strip (`UX-350`).
+
+**The two things the tool is for are the two least visible things on
+the page** (`UX-348`). Perfetto — the handoff nothing else offers — is
+four closed folds 5.9 screens down with no worked example. Blast, in an
+exported report, is 103 px reading *"Not available in an exported
+report ... Run `bga blast <target> <run>`"*, with the rail entry
+**"Blast offline"** — while the first screen, four screens above,
+already prints the same command with the real target and the real path
+and a Copy button.
+
+And the census found a live defect (`UX-345`): `signals.
+critical_path_length` reads **43200000** under a sentence that says
+"A count of elements, not a duration". The chain is ten elements long;
+43,200,000 is microseconds, and it is byte-for-byte
+`floors.t_infinity_observed`. `structural.metrics.critical_path_length`
+holds the real count, 10. One name, two quantities, both declared
+`count`, one wrong by 4.3 million — and `UX-341`'s guard could not see
+it, because that guard checks the vocabulary and this is a declaration
+that disagrees with its own value.
+
+Order: `UX-345` first and alone — it is a wrong number a reader is
+being shown. Then `UX-346`, which is the largest single lever on
+clarity and changes the page's height, and `UX-347` after it, because
+the distance bound has to be chosen against the page that exists once
+the notes have moved rather than the one that exists now. `UX-348` is
+independent and is the highest-value change per line. `UX-349`,
+`UX-350`, `UX-351` are the tail, in that order.
+
+`UX-344` (the payload's depth, and its two namespace levels) is
+deliberately **not** in this ordering: it proposes removing grouping
+levels, and this round's brief was to look for grouping that should be
+*added*. It waits for what these seven settle.
 
 ## UX-333..UX-336: the forty-sixth round — three field errors and a slowing loop (2026-08-27)
 

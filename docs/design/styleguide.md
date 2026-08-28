@@ -322,6 +322,112 @@ does it; absence stated, never drawn as zero. A drawing whose
 sentence cannot be written from published fields is a drawing the
 pipeline is not ready for — publish first.
 
+## 3c. The distance budget (round 52)
+
+§3b's click budget is measured and met, and the round-52 census found
+what it does not see. Clicks from first paint to each thing a reader
+comes for, on `macro_micro`:
+
+```text
+                              clicks   screens down
+the verdict sentence               0            0.3
+a Perfetto query                   1            5.9
+the element table                  0            6.8
+confidence                         0           18.3
+the run identity                   0           19.6
+```
+
+Zero clicks, because almost nothing is folded — 51 `details`, 3 open,
+and every *section* permanently expanded. The budget was satisfied by
+converting navigation into an 18,148 px scroll.
+
+**So distance is a budget too.** A click is directed: the reader names
+what they want and arrives. A screen of scroll is a search: they do not
+know how far, and pass everything they did not ask for. A structure
+change may spend one currency to buy the other, and the guard has to
+see both or it will keep buying the invisible one.
+
+The rule: the document is at most **N screens at 1440x900**, and no
+chapter's first section begins more than **M screens** from the top of
+its chapter — asserted in the same guard that holds the click budget,
+so a trade shows up on the side it was paid from. `UX-347` sets N and M
+against the page as it stands *after* the note removal below, not
+before.
+
+## 4a. Where a sentence lives (round 52)
+
+`UX-220` gave every declared quantity a sentence from the contract.
+Round 52 measured where they ended up: **67-72% of the page's words**
+are those sentences, printed beside every value on every run, while the
+same sentence is also behind a `?` door on the same line.
+
+A description is **reference**, and §2b already decided where reference
+goes: on demand, near what it explains, not in the reading path. The
+sentence lives on the door.
+
+Two exceptions stay inline, and the list is closed:
+
+- a value whose *name* misleads without it — the contract marks these,
+  so the page cannot decide case by case;
+- a **caveat** rather than a description: the "this is a ranking, not a
+  measurement" class (`UX-129`, `UX-275`). A warning belongs where the
+  number is, because a reader who skips the door must still meet it.
+
+The test for which one you have: a description answers *what is this?*
+and a caveat answers *what may I not conclude from it?*
+
+## 4b. A label is for the reader; the suffix is for the contract
+
+`UX-341` gave every payload key a unit suffix — `_us`, `_bytes`,
+`_share` — so the contract says what a number is without a renderer's
+help. That is a rule about the **payload**. The label a reader sees is
+derived from it, and derivation includes dropping what the value
+already says:
+
+```text
+wrong    Execution on chain us    43.2 s
+right    Execution on chain       43.2 s
+```
+
+The suffix is dropped only where the declared quantity accounts for it,
+read from the schema rather than from a list of suffixes — a key ending
+`_us` that is not a duration keeps its suffix and looks as wrong as it
+is (`UX-351`).
+
+## 3d. Table tools scale with the table (round 52)
+
+Measured in round 52: 26 of `macro_micro`'s 38 tables are twelve rows
+or shorter and carry a threshold filter per column anyway — most of the
+page's 120 inputs — and one of them sits under a boolean column with
+the placeholder `> 10`.
+
+- **Filters appear at the row cap**, not below it. Under it the reader
+  scans; a filter is a control with nothing to do.
+- **A column with one distinct value is a sentence above the table**,
+  not a column. "All eleven are `cmake`, none is a leaf" costs one
+  line; the column costs eleven repetitions and a sixth of the width.
+- **A filter's placeholder is derived from the column's declared
+  quantity.** `> 10` under a boolean is the tell that a default was
+  chosen where a declaration was available.
+
+Sorting is exempt from all of this: it costs no ink and helps at every
+length.
+
+## 2c. The shape channel is a promise, and promises are enforced
+
+§2 specifies sparklines and density strips at length, including a strip
+beside every table longer than the row cap. Round 52 counted what the
+page actually draws: **one sparkline, zero strips, three SVG elements
+in twenty screens**, and the element table §2 names by name carries no
+strip.
+
+A written-and-unbuilt section of this document is worse than an absent
+one — it lets a reviewer believe the channel exists. So §2 joins §7's
+enforcement: **every published distribution renders its strip**,
+asserted against the payload rather than a list, and coincident marks
+merge into one label rather than overlapping (`19.1 s (p95, max)`, not
+`19.1 s19.1 s` printed over `max`). See `UX-350`.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted

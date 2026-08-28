@@ -269,6 +269,17 @@ class TestTheRuleIsTheDeclaration:
         assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == [
             "Retries us", "Window us", "Depth bytes"]
 
+    def test_a_count_and_a_ratio_keep_their_word(self):
+        """The other half of the table's rule, and the one a later
+        round is most likely to undo by tidying: `count` and `ratio`
+        are quantities whose *rendered value* spells no unit - `1204`
+        and `1.50x` - so the word in the label is the only thing
+        saying what the number is."""
+        cases = [["process_count", "count"], ["retry_count", "count"],
+                 ["inefficiency_ratio", "ratio"]]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == [
+            "Process count", "Retry count", "Inefficiency ratio"]
+
     def test_a_key_with_no_quantity_is_untouched(self):
         """Which is every label the page draws beside a sentence
         rather than a number."""
@@ -276,11 +287,17 @@ class TestTheRuleIsTheDeclaration:
         assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == [
             "Idle us", "Total bytes"]
 
-    def test_a_key_that_is_only_its_unit_keeps_it(self):
-        """`_us` alone is not a label, and an empty `<dt>` is worse
-        than an ugly one."""
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(
-            [["us", "duration_us"], ["bytes", "bytes"]])}) == ["Us", "Bytes"]
+    def test_a_key_the_trim_would_empty_keeps_its_label(self):
+        """No key in either fixture is only its own suffix, and an
+        empty `<dt>` is worse than an ugly one - so the fallback is
+        asserted directly rather than left to a payload to discover."""
+        drawn = _run(_TITLES, {"BGA_CASES": json.dumps(
+            [["_us", "duration_us"], ["_bytes", "bytes"],
+             ["us", "duration_us"]])})
+        assert all(name.strip() for name in drawn), drawn
+        # The one without a leading underscore is not a suffix at all,
+        # and comes through untouched.
+        assert drawn[2] == "Us", drawn
 
 
 if __name__ == "__main__":  # pragma: no cover

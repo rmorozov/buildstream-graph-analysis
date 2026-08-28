@@ -651,8 +651,8 @@ joins the fixing guide for any task that touches the page.
 Round 55's sections were written before their guards, which is the state
 `§2c` was in when it was written and the reason it says so out loud.
 Landed since: **§4c** (`UX-355`,
-`test_a_control_acts_on_what_it_names.py`) and **§1b's first two
-clauses** (`UX-356`, `test_the_merge_carries_every_field.py`). Still
-waiting on its guard: §1b's provenance clause (`UX-357`), §3e
-(`UX-360`), §2d (`UX-361`). A section here with no filed item behind it
+`test_a_control_acts_on_what_it_names.py`) and **§1b** entire
+(`UX-356`, `test_the_merge_carries_every_field.py`; `UX-357`,
+`test_the_provenance_names_its_rule.py`). Still waiting on its guard:
+§3e (`UX-360`), §2d (`UX-361`). A section here with no filed item behind it
 is the failure mode this paragraph exists to make visible.

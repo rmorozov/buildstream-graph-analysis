@@ -377,6 +377,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-367 | [the volume budget is enforced at eleven elements](UX-0367-the-volume-budget-is-enforced-at-eleven-elements.md) | High | — | 🟢 Done — The volume budget runs at 1,202 elements with bounds per size class; the ratio guard stopped being a second, tighter page bound in disguise. | [UX-367](UX-0367-the-volume-budget-is-enforced-at-eleven-elements.md) |
 | UX-368 | [no finding carries a Perfetto query](UX-0368-no-finding-carries-a-perfetto-query.md) | High | — | 🟢 Done — The mapping was one join away and the joiner read a key UX-344 removed; the finding carries trace_query now and the Investigate button works again. | [UX-368](UX-0368-no-finding-carries-a-perfetto-query.md) |
 | UX-366 | ["All rows" shows 25 of 1,202](UX-0366-all-rows-shows-twenty-five-of-twelve-hundred.md) | High | — | 🟢 Done — The preset's own cap is gone; the table's limit does the bounding and 'All rows' delivers all 1,202. | [UX-366](UX-0366-all-rows-shows-twenty-five-of-twelve-hundred.md) |
+| UX-370 | [Plane 2's frequency and time do not reach the page](UX-0370-plane-twos-frequency-and-time-do-not-reach-the-page.md) | Medium | — | 🟢 Done — The Plane 2 report never reached the viewer; by_binary, binary_cost and configure_phase are projected into analyze/v4 in the document's own flat shape. | [UX-370](UX-0370-plane-twos-frequency-and-time-do-not-reach-the-page.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

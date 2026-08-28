@@ -1,6 +1,6 @@
 # UX-344: the payload is six deep, and two of them are namespaces
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-229 (provenance, the deepest shape), UX-288 (publish each population once), UX-277 (what a deep value costs a cell) | **Serves:** anyone reading the JSON, and every renderer that walks it | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-229 (provenance, the deepest shape), UX-288 (publish each population once), UX-277 (what a deep value costs a cell) | **Serves:** anyone reading the JSON, and every renderer that walks it | **Topic:** contracts
 
 ## Motivation
 
@@ -140,3 +140,156 @@ report is at most 5, down from 6, and the fraction of leaves deeper
 than three is pasted before and after. `provenance` appears once per
 claim in the payload, asserted by count, and every `findings[].claim`
 resolves into it.
+
+## Outcome (round 53, 2026-08-28) — 🟢 Done
+
+`analyze/v4`. Three removals and two renames, which is what a version
+move is for, and `analyze/v3` joins the read-never-written set.
+
+### The shape, before and after
+
+Measured on the two committed fixtures, counting a container step per
+level - the same walk this item was filed with, published with the
+document now:
+
+```text
+                     leaves   deeper than three   deepest
+golden      before      489         281 (57%)        6  findings.[].provenance.rule.threshold.[]
+            after       462         184 (40%)        5  provenance.[].evidence.[].path
+macro_micro before     1442         967 (67%)        7  findings.[].evidence.steps.[].entering.[]
+            after      1433         771 (54%)        7  (the same path)
+```
+
+`macro_micro` keeps its seventh level and the item said it would:
+`findings[].evidence.steps[].entering[]` is four real relations, not a
+namespace. The golden report reaches the five the acceptance asked for.
+
+### What moved, and why each one
+
+**The two namespaces are gone.** `signals` held nineteen tables and
+`structural` nine; neither carried a value of its own, and both cost
+every table below them a level. Each table is a top-level key with the
+`bga:rail` its namespace used to carry for it - which is what `UX-286`'s
+chapters place a section by, so eighteen new sections landed in the
+chapters they belong to with the table naming only the ones whose rail
+is a poor proxy (the ready queue is about the machine, not about which
+element to fix). Two were renamed: `metrics` and `summary` would have
+been two of the most generic keys in the document, and the page already
+draws a `summary` section - the run's own scalars - that a second
+`data-section="summary"` would have collided with. They are
+`graph_metrics` and `graph_summary`.
+
+**The element population is one key, not six.** Lifting the six
+element-keyed maps to the top level would have published one population
+as six sections, which is exactly `UX-338`. They are members of
+`elements`, with `zero_slack_share`, `top_blast_radius` and
+`blast_radius_ranked_by` beside them because each describes the
+population rather than any one element - and a scalar at the top level
+is drawn into the run-identity summary beside the run id. The page kept
+its **own list** of which signals were element-keyed to do `UX-268`'s
+join; it reads the document now, and `ELEMENT_KEYED_SIGNALS` and the
+note arguing `wall_clock_share_us` out of it are gone from
+`structured.js`.
+
+**`provenance` is published once per claim.** It used to be written
+into the headline, into every finding, and - as a `see` path pointing
+back at the finding's copy - into every top action: the document's
+deepest shape, nested inside the record it explains, three times.
+`findings[].id` and `headline.top_actions[].finding_id` are the claim
+ids; `provenance.for_claim` is the lookup, and the terminal, the page,
+the CI comment and `compare/v2` all use it. `reference()` and the `see`
+field are gone, and `unresolved_references` now reports a claim that
+resolves into nothing, which is the dangling shape that replaced them.
+
+**`findings[].evidence.blast_radius` is gone rather than tabulated.**
+The Required Fix asked for rows with an `element_uid` "so its columns
+can be declared". Measured: as a row list inside `findings[].evidence`
+its fields sit at depth **six**, exactly where the map's did - the
+item's "depth 5 and declarable" counted a level the shape does not
+lose. And the rows were a slice of `elements.blast_radius`, keyed by
+the same uids, inside the finding that already names those elements in
+its `elements` field - `UX-288`'s rule. So the population is published
+once and the finding cites membership. The finding's prose already
+carried the numbers (*"app.bst (7 downstream elements, at or above p90
+of this run)"*), so no reader lost one.
+
+### The document publishes its own shape
+
+`document_shape` carries the leaf count, the deepest path, the count
+over three levels and that count as a share - **counting itself**, so a
+consumer that re-measures gets these numbers back. This item had to
+write a script against two fixtures to find out the depth; the next
+round reads it off the document, and a guard re-measures and compares,
+which is the clause that catches a level coming back.
+
+### Where the clauses landed
+
+`test_no_level_carries_nothing.py`, eleven clauses over both fixtures.
+Two acceptance clauses were **not** implemented as written, with the
+measurement that decided it:
+
+- *"every non-leaf key either holds a value of its own or is a list"*
+  does not separate what this item is about: `signals` carried
+  `zero_slack_share`, so it passes that test, and `bottleneck` - which
+  nobody proposed lifting - fails it. The clauses assert the properties
+  the item's own prose states: the namespaces are gone, every table
+  they held is still published, and the element population is one key.
+- *"no map has keys the schema does not name"* is unreachable and
+  `UX-343` had already settled why: a map keyed by element uid cannot
+  name `app.bst` in `properties`, so it declares what a *value* is
+  under `additionalProperties` and every key resolves to that. The
+  clause asserts that instead - and found `leaf_analysis.leaves_detail`
+  on its first run, an element-keyed map of four-field records
+  declaring nothing at all.
+
+### Mutations verified red and reverted (7)
+
+Run against the committed tree at `0ee6f17`.
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `signals` is published as a namespace again | 8 clauses, including *"`['signals']` is back - a level that holds only other levels"* |
+| M2 | `document_shape` stops counting its own leaves | `test_the_published_shape_is_the_measured_shape`, both fixtures |
+| M3 | the record is written back into each finding as well | `test_no_claim_carries_a_copy_of_its_chain`, and the depth and share clauses with it |
+| M4 | the blast-radius slice returns to `findings[].evidence` | `test_no_finding_republishes_the_element_population`, plus the undeclared-map and deepest-leaf clauses |
+| M5 | `leaves_detail` declares `properties` instead of `additionalProperties` | `test_every_map_keyed_by_a_uid_declares_its_values` - the clause that found it |
+| M6 | one finding's record is not published | `test_the_chain_is_published_once_per_claim` and `test_every_id_a_claim_carries_resolves_into_it` |
+| M7 | the six element-keyed maps are lifted individually | `test_the_element_population_is_one_key_rather_than_six` - added *because* the first run of this mutation reddened only a provenance path, which is not the property being claimed |
+
+### Guards that moved with the shape, each for a reason
+
+- `test_the_fold_says_how_deep_it_goes`: the expand control's threshold
+  was `depth > 1` because `signals.leaf_analysis.leaves_detail` sat two
+  levels inside its section. Lifting made `leaf_analysis` a section and
+  the same cramped table one level nearer the top, so the number moved
+  to `depth > 0`; the rule - a table inside a cell offers the way out -
+  is unchanged. Measured after: five expand controls on golden, nine on
+  `macro_micro`, where there had been zero.
+- `test_the_page_has_geometry`'s padding clause measures the chapter's
+  own chrome (head and tail) rather than the whole difference from the
+  sum of its sections. With thirteen sections in the `elements` chapter
+  the *gaps between them* were 0.42 screens of that difference at
+  390px, and a gap is layout, not padding.
+- `test_the_order_the_page_has` and `test_the_report_has_chapters`: the
+  identity chapter closes on four blocks, because `document_shape` is a
+  fact about the artifact, like the producer stamp above it.
+- `test_a_sentence_lives_on_its_door` counts inline renders rather than
+  distinct keys: `sum_of_individual_us` is drawn in a finding's
+  evidence *and* in the lifted `joint_saving` section, and two renders
+  are two doors that are not there.
+- `test_the_structural_block_is_reachable` walks the three sections the
+  namespace's tables became, rather than one section that no longer
+  exists.
+- `test_output_schemas` gains a third pinned list: lifting turned one
+  always-present key into fourteen, four of which depend on what the
+  run has (`cache` and the two distributions need a population;
+  `fetch_build_overlap` needs both phases).
+
+### What this leaves
+
+`element_join[].recommendations[]` and `element_join[].worst_redundancy`
+are the deepest shapes left on `macro_micro` after the findings, and
+both are records with genuinely nested parts - the case the item's Out
+of Scope names. The 54% still deeper than three is mostly `findings[]`
+and `element_join[]`, one row per element and per claim; the levels
+that carried nothing are gone.

@@ -57,6 +57,29 @@ full suite, -n auto          194s   4,131 passed, 18 skipped   3.3x
 skip census                  identical between the two, reason for reason
 ```
 
+Re-measured 2026-08-28 (round 56), and CI caught it the way the design
+says it should — the small tier's own timeout, not a review:
+
+```text
+                  wall at -n auto   wall single-process   CI budget
+small tier before           74.3s                236.4s    90s / 120s
+small tier after             8.6s                 22.3s
+```
+
+Both CI steps were over, not just the one that reported: the parallel
+step is budgeted at 90s and the single-process step at 120s, and the
+tier was at 74s and 236s. The parallel step failed first and `bash -e`
+stopped the job before the second could say so.
+
+Twelve files, and this time the cause has a name rather than being
+twelve independent drifts. `UX-359` ruled that a guard measures the
+page a *user* gets — an exported page, booted in a real Chromium — and
+converted fourteen guards to it. That is the right rule and it is why
+round 55's defects were findable at all; it also means those files now
+do what `test_the_page_has_geometry.py` does, and belong where it is.
+The twelve were 213s of the tier's 214s: every other file in the
+default tier is under a second, so the split is not a judgement call.
+
 `-n auto` is how every tier runs now (`make`'s `PYTEST_XDIST`). The
 tiers still matter: they are what `make test-small` selects, and 11s is
 a different kind of loop from 33s.
@@ -107,9 +130,32 @@ LARGE = (
     # instrument can still hear. Measured at 13.8s with two controls and
     # 16.4s with the third, which is what moved it over the floor.
     "tests/unit/test_the_console_stays_clean.py",                    #   16.4s
+    # Round 56, re-measured after `UX-355`..`UX-361` landed. Twelve
+    # files had drifted over the medium floor, seven of them over the
+    # large one, and together they were 213s of the small tier's 214s -
+    # every other file in the default tier is under a second. The
+    # mechanism is the one round 39 and round 47 both documented, and
+    # the cause this time is named: `UX-359` made every page guard boot
+    # a real Chromium against an exported page, which is precisely the
+    # character of the three files above it. A browser boot per claim
+    # is a large test; the tier is where that gets said.
+    "tests/unit/test_a_control_acts_on_what_it_names.py",             #   30.0s
+    "tests/unit/test_the_two_capabilities_are_offered.py",            #   27.9s
+    "tests/unit/test_the_vocabulary_has_the_shape.py",                #   25.0s
+    "tests/unit/test_the_provenance_names_its_rule.py",               #   22.7s
+    "tests/unit/test_a_sentence_lives_on_its_door.py",                #   20.2s
+    "tests/unit/test_the_shape_channel_is_built.py",                  #   19.8s
+    "tests/unit/test_the_tools_scale_with_the_table.py",              #   16.8s
 )
 
 MEDIUM = (
+    # Round 56, the other five of the twelve (see the LARGE block
+    # above): over the medium floor, under the large one.
+    "tests/unit/test_the_handoff_has_a_fixture.py",              #   12.6s
+    "tests/unit/test_the_guards_measure_the_page.py",            #   11.5s
+    "tests/unit/test_the_page_has_a_volume_budget.py",           #   11.5s
+    "tests/unit/test_the_merge_carries_every_field.py",          #    8.7s
+    "tests/unit/test_the_label_is_for_the_reader.py",            #    6.4s
     # Re-measured 2026-08-25 (round 39). Twenty-four files had drifted
     # over the medium floor while staying in the default tier: the
     # budget is an aggregate, so each one was invisible on its own and

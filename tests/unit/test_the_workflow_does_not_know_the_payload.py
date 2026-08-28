@@ -49,8 +49,35 @@ _PARSES = re.compile(r"\bjson\.loads?\s*\(")
 
 #: `x['k']`, `x["k"]`, `.get('k')` - a string literal standing where a
 #: key goes. Not `sys.argv[1]`, which is a position rather than a key,
-#: and not a bare `[0]`.
+#: and not a bare `[0]`. This is the *shape* rule, and it catches a key
+#: this repository has never heard of - `'signals'` after `UX-344`
+#: removed it - which is the case the item was filed on.
 _LITERAL_KEY = re.compile(r"""(?:\.get\s*\(\s*|\[\s*)(['"])([A-Za-z_][\w-]*)\1""")
+
+#: Any quoted string at all, for the *membership* rule below.
+_QUOTED = re.compile(r"""(['"])([A-Za-z_][\w/.-]*)\1""")
+
+
+def _published():
+    """Every contract id, and every key a published contract declares.
+
+    The membership rule the shape rule cannot cover. `UX-288`'s defect
+    was `key = 'schema'` - a plain assignment, no subscript - and a
+    mutation of exactly that form passed the shape rule when this guard
+    was first written. The name is not in a subscript, so the only
+    thing that makes it a finding is that the package publishes it.
+    """
+    from bga import contracts, schemas
+
+    names = set(contracts.ids())
+    names.update(schemas.ANALYZE_FULL_KEYS)
+    for contract in contracts.ids():
+        try:
+            node = schemas.schema(contract)
+        except KeyError:
+            continue    # superseded ids keep an id and no body
+        names.update((node or {}).get("properties", {}))
+    return names
 
 
 def _run_blocks(text):
@@ -93,14 +120,44 @@ def _code(line):
 
 
 def _findings():
+    """`(file, line, key, text)` for every literal that names a key.
+
+    Two rules, and the second is not redundant: the shape rule sees a
+    subscript whatever the key, the membership rule sees a published
+    name wherever it stands.
+    """
+    published = _published()
     found = []
     for path in WORKFLOWS:
         for block in _run_blocks(path.read_text(encoding="utf-8")):
             if not any(_PARSES.search(_code(line)) for _, line in block):
                 continue
             for number, line in block:
-                for _, key in _LITERAL_KEY.findall(_code(line)):
+                code = _code(line)
+                keys = {key for _, key in _LITERAL_KEY.findall(code)}
+                keys.update(key for _, key in _QUOTED.findall(code)
+                            if key in published)
+                for key in sorted(keys):
                     found.append((path.name, number, key, line.strip()))
+    return found
+
+
+def _ids_outside_comments():
+    """A published contract id anywhere in a workflow, parsing step or
+    not. `UX-293` fixed one of these by reading `ANALYZE` out of the
+    tree; a `grep -q "analyze/v4"` added tomorrow is the same defect
+    somewhere the parsing-block rule does not look."""
+    from bga import contracts
+
+    ids = contracts.ids()
+    found = []
+    for path in WORKFLOWS:
+        for number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), 1):
+            code = _code(line)
+            for contract in ids:
+                if contract in code:
+                    found.append((path.name, number, contract, line.strip()))
     return found
 
 
@@ -124,6 +181,17 @@ class TestNoWorkflowNamesAPayloadsKeys:
             "produces; the producing module publishes them:\n"
             + "\n".join(f"  {name}:{line}  {key!r}  in  {text}"
                         for name, line, key, text in bad))
+
+    def test_no_step_spells_a_contract_id(self):
+        """`UX-288`'s half, at the file's scale rather than the block's:
+        `EXPECTED` reads `ANALYZE` from the tree precisely so that no
+        version literal sits here to go stale."""
+        bad = _ids_outside_comments()
+        assert bad == [], (
+            "a workflow names a published contract id; read it from the "
+            "package or the tree, as the packaging step does:\n"
+            + "\n".join(f"  {name}:{line}  {cid}  in  {text}"
+                        for name, line, cid, text in bad))
 
 
 class TestTheIndirectionsExist:

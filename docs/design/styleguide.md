@@ -660,6 +660,111 @@ an ecosystem* is a rule for a platform vendor and this is one page.
 export constraint at the top of this document: a pattern that needs a
 server or a hover to mean anything is never the meaning.
 
+## 3f. A budget is measured at the size the page is used at (round 58)
+
+`UX-360` gave the page a volume budget and a guard that holds it. The
+guard runs over the two committed fixtures, which are **11-element**
+runs. Measured on the seeded 1,202-element run — the size
+`gen-synthetic` exists to probe:
+
+```text
+                    budget   macro_micro (11)   scale (1,202)
+opened height       34,000            28,213          70,577
+words               12,000             9,879          33,835
+controls               800               659           1,834
+```
+
+Every bound is exceeded 2-3x where no guard looks. So the rule the
+budget needs is one level up from the numbers:
+
+**A bound is stated together with the size it was measured at, and it is
+enforced at the largest size the tool tells people to use.** A budget
+measured only where the page is small has never met the page.
+
+This is `UX-363`'s lesson about the tier budget, in the other document:
+there, one measurement was compared against the number that made it look
+sized. Here, one *population* is.
+
+`UX-367` is the item.
+
+## 1c. A superlative is a measurement, not an adjective (round 58)
+
+`UX-326` made the tool's sentences contracts. Round 58 found the
+strongest form of that rule being broken by a label:
+
+```text
+wait-category   "Biggest Opportunity: 5.9% of wall-clock (2.72s)"
+joint-saving    "the top 3 are worth 23.1s (50% of the build)"
+```
+
+The finding that carries the word is 8.5x smaller than the one that does
+not, and `headline.top_actions` agrees with the second.
+
+**A word that asserts a maximum — biggest, largest, worst, top — is a
+claim about every other candidate, and is only written where the tool
+has compared them.** Where it has not, the sentence says what it
+measured and stops. This is `UX-362`'s rule ("say what you own") applied
+to comparatives rather than to planes.
+
+The corollary the same round found: **the order a list is published in
+is a claim too.** `findings[0]` and `findings[1]` are `info`, and the
+first says of itself that it is "the intent rather than a finding". A
+reader who reads top-down spends their first two entries on non-actions,
+while the page's own first screen leads correctly. Two surfaces, one
+payload, and only one of them ordered.
+
+`UX-365` is the item.
+
+## 4d. A handoff hands over this run's values (round 58)
+
+The query library ships thirteen queries; three carry an `{element}`
+placeholder, and the page fills all three with the literal `core.bst` —
+a real element **of one fixture**, compiled into a library shipped for
+every project.
+
+```javascript
+return question.sql.split("{element}").join(question.example ?? "");
+```
+
+The page knows this run's elements. It draws them in a table and names
+three in `headline.top_actions`. The substitution reads none of them.
+
+**Where the page hands the reader something to run elsewhere — a query,
+a command, a link — every value in it comes from this run, or the page
+says which value the reader must supply.** A pasted query that returns
+zero rows because it names somebody else's element teaches the reader
+that the handoff does not work.
+
+`UX-218` already applied this to commands (`bga blast <this element>`);
+this is the same rule reaching the SQL.
+
+`UX-369` and `UX-368` are the items.
+
+## 5a. Repetition is spent from the volume budget (round 58)
+
+Counted over rendered blocks — `p`, `li`, `summary`, `td`, `h3`, `h4`,
+longer than 40 characters — on `macro_micro` fully opened:
+
+```text
+138 distinct blocks, 17 repeated
+repeated text: 4,742 of 21,914 block characters = 21.6%
+x9  "No named threshold; computed in bga/findings.py"
+x7  "Where the time is: 4 element(s) are 71.9% of the 43.2s critical path…"
+```
+
+Every repeat is individually defensible — `UX-229` says a claim carries
+its provenance. **The total is nobody's, which is how it reached a
+fifth of the page.** Three of the repeats are visible on the first
+screen at once, because the decision chapter draws three top actions and
+each carries the same provenance sentence.
+
+The measurement rule matters as much as the bound: **count what a reader
+sees as a unit.** Splitting `textContent` into sentences found *zero*
+duplicates on the same page, because the repeated blocks sit inside
+different surrounding text.
+
+`UX-371` is the item.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -688,7 +793,25 @@ named for its claim:
 
 §6a has no guard of its own and should not: it is the argument the
 other four are drawn from, and a section that restated their clauses
-would be a fifth copy of four numbers. A section here with no filed
-item behind it is still the failure mode this paragraph exists to make
-visible. A section here with no filed item behind it
-is the failure mode this paragraph exists to make visible.
+would be a fifth copy of four numbers. A section here with no filed item
+behind it is the failure mode this paragraph exists to make visible.
+
+Round 58's four sections are in the same state round 55's were, and are
+listed here the same way — written from a measurement, each with a filed
+item, none with a guard yet:
+
+| section | measured | item |
+|---|---|---|
+| §1c | "Biggest" on 2.72s against a sibling worth 23.1s | `UX-365` |
+| §3f | 70,577 px / 33,835 words at 1,202 elements, budget 34,000 / 12,000 | `UX-367` |
+| §4d | `core.bst` filled into three queries on every page the tool writes | `UX-369`, `UX-368` |
+| §5a | 21.6% of block characters repeated; sentence-splitting says 0% | `UX-371` |
+
+The last row carries its own warning. §5a's measurement contradicts the
+obvious one: counting duplicate *sentences* over `textContent` finds
+nothing on the same page where counting duplicate *blocks* finds a
+fifth. A guard for §5a that measures the easy way will pass forever.
+
+This paragraph found one while it was being written: §7 itself carried
+the same sentence twice, in slightly different words, which is the
+defect §5a is about happening to the document that describes it.

@@ -116,6 +116,32 @@ class TestTheContextTravels:
         assert "{element}" not in out["sql"]
         assert "core.bst" not in out["sql"], "the example leaked past the real uid"
 
+    def test_a_query_needing_an_element_it_was_not_given_shows_the_token(
+            self):
+        """`UX-369` removed the per-entry `example`, and `withElement`
+        fell back to the empty string - so a finding whose query asks
+        about one element while naming none handed the reader `= ''`, a
+        query that runs and returns nothing.
+
+        Asserted here rather than on the page: no finding on the
+        committed captures is in that state, so the browser clause
+        passes over it either way. A mutation sweep found exactly that
+        - the page-level clause did not redden, and this one does.
+        """
+        out = _node(
+            'const t = await import("./bga/viewer/trace_context.js");'
+            'const q = await import("./bga/viewer/questions.js");'
+            'const entry = q.QUESTIONS.find(q.takesElement);'
+            "console.log(JSON.stringify({"
+            "  bare: t.withElement(entry, null),"
+            "  viaFinding: t.investigationFor({ id: 'latent-heavies',"
+            "    title: 'heavy', trace_query: entry.id, elements: [] }),"
+            "  token: q.ELEMENT_TOKEN }));")
+        assert out["token"] in out["bare"], out["bare"]
+        assert "= ''" not in out["bare"], out["bare"]
+        assert out["token"] in out["viaFinding"]["sql"], out["viaFinding"]
+        assert "= ''" not in out["viaFinding"]["sql"], out["viaFinding"]
+
     def test_a_finding_no_query_answers_gets_no_button(self):
         out = _node(
             'const t = await import("./bga/viewer/trace_context.js");'

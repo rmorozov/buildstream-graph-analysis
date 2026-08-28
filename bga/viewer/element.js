@@ -294,6 +294,31 @@ const ELEMENT_MAPS = [
  * element", and the section built from it says so rather than being
  * absent.
  */
+/**
+ * `UX-369`: every element uid this payload knows, sorted.
+ *
+ * **The whole population, not `elementFacts`.** The first draft read
+ * the facts map, and measuring the synthetic 1,202-element run gave a
+ * picker with 26 entries beside a sentence reading "26 in this run":
+ * `elementFacts` is built from the *published top-N arrays*, so it
+ * knows the elements the report chose to talk about. That is the right
+ * population for the element sections and the wrong one for a query
+ * picker, whose whole purpose is reaching an element the report did
+ * **not** rank - and it is `UX-366`'s defect committed again one
+ * control over.
+ *
+ * `elements.element_durations` is the run's full element list, so it
+ * leads; the facts map is unioned in so an element named only by a
+ * finding is still reachable. Sorted, because this one is read as an
+ * alphabet by someone hunting a name.
+ */
+export function elementUids(payload) {
+  const uids = new Set(
+    Object.keys(payload?.elements?.element_durations ?? {}));
+  for (const uid of elementFacts(payload).keys()) uids.add(uid);
+  return [...uids].filter(Boolean).sort();
+}
+
 export function elementFactsFor(payload, uid) {
   const known = elementFacts(payload).get(uid);
   if (known) return known;

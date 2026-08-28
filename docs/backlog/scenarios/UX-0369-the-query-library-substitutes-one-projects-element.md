@@ -68,3 +68,102 @@ A general SQL editor. Perfetto has one, it is where the reader is going,
 and `UX-296` is why this page does not parse SQL. The scope here is the
 values the page already knows being filled into the queries it already
 ships.
+
+## Outcome (round 59, 2026-08-28) — 🟢 Done
+
+### The gap, measured
+
+The seeded 1,202-element run, whose elements are all called
+`layer08/mod099.bst`, exported before the fix:
+
+```text
+$ bga gen-synthetic /tmp/scale --seed 1
+$ bga view /tmp/scale --export /tmp/scale.html
+$ grep -o 'core\.bst' /tmp/scale.html | wc -l
+3
+```
+
+Three — one per element-scoped query, none of them an element of that
+run. `golden`, whose elements are `base/extra/lib/app.bst`, said it
+three times too.
+
+### After
+
+```text
+$ grep -o 'core\.bst' /tmp/scale.html | wc -l
+0
+```
+
+and, measured in Chromium on that page:
+
+```text
+options offered                   1202
+note beside the control           "3 of the queries below ask about one
+                                   element. All 1202 of this run's
+                                   elements are here; the default is the
+                                   one the report's first action names."
+default (golden)                  base.bst      == headline.top_actions[0]
+default (macro_micro)             core.bst      == headline.top_actions[0]
+after selecting the last option   SQL and data-copy both moved, equal
+```
+
+`macro_micro` still renders `core.bst` — by coincidence now rather than
+by compilation, which is the whole shape of the fix.
+
+### The substitution reads the run, and the reader can change it
+
+`renderedSql(question, element)` takes the element; `QUESTIONS` carries
+no `example`. `renderQuestions` is given `elements` and `element` by
+`app.js` and draws one `<select>` over the run's own population, and
+`applyElement` re-renders every `[data-sql-for]` node — the `<code>` a
+reader reads and the `data-copy` a reader pastes, from one call. With
+no run behind the page (`sql.html`), there is no control, the token
+`{element}` stays visible, and a sentence says what to put there.
+
+**Two corrections the measurement forced, both mine.**
+
+`elementUids` first read `elementFacts`, which is built from the
+published top-N arrays: 26 options on a 1,202-element run, beside a
+sentence saying "26 in this run". That is `UX-366`'s defect committed
+again one control over. It reads `elements.element_durations` now, with
+the facts map unioned in.
+
+The label was written `make("label", { for: "query-element" })`, and
+`format.js`'s `el` assigns any name without a hyphen as a **property** —
+a label's reflecting property is `htmlFor`, so the attribute landed
+nowhere. Chromium reported `FormLabelHasNeitherForNorNestedInput` and
+`test_the_console_stays_clean.py` failed on the golden export. It uses
+`controls.js`'s `labelFor` now, which is the seam every other labelled
+control in the viewer already goes through. This is `UX-317`'s defect
+one property over, and the `el` factory can still do it to the next
+caller.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `example: "core.bst"` back on the three entries | *pending* |
+| M2 | `renderedSql` falls back to `""` rather than the token | *pending* |
+| M3 | `applyElement` updates `textContent` and not `data-copy` | *pending* |
+| M4 | `elementUids` reads `elementFacts` alone again | *pending* |
+
+### Deviation from the Required Fix
+
+- **The falsifying capture named in the filing does not falsify.**
+  `Falsification` proposed `tests/fixtures/with_timeline`; that capture
+  has an element *called* `core.bst` (40 occurrences on its page), so it
+  cannot tell the substitution from the coincidence. `golden` can, is
+  already committed, and is what the page-level clauses run on. The
+  synthetic run is kept for the one claim only scale can make.
+- Otherwise none.
+
+### One thing this moved that belongs to another item
+
+The export's `data > 2.6 × page` bound is at **2.6008** with this
+change in — about 200 B of headroom on a 263,509 B page. That guard's
+own comment says a third restatement would make it a record of the
+page's growth rather than a bound on it, so it was not restated and the
+feature was fitted under it instead. The next viewer item that adds a
+control will not fit. Recorded in `UX-367`.

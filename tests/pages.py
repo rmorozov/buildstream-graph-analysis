@@ -121,6 +121,29 @@ def two_plane_snapshot(into) -> pathlib.Path:
     return snapshot / "run"
 
 
+#: `UX-369`: the seeded scale run, as a run directory.
+#:
+#: Not a fixture and not committed - `bga gen-synthetic --seed 1` is
+#: deterministic, so 1,202 elements cost a subprocess rather than a
+#: megabyte in the tree (`UX-189`). Measured at 3.5 s for the generate
+#: and the export together, which is why a file that calls this is
+#: tiered rather than left in `small`.
+#:
+#: The two committed fixtures are 11-element runs, and round 2 found
+#: four defects at this size that were invisible at eleven. `UX-367`
+#: is the item about the budgets never being measured here.
+def scale_run(into) -> pathlib.Path:
+    """`gen-synthetic --seed 1` into `into`. The run directory."""
+    import subprocess
+    import sys
+
+    run = pathlib.Path(into) / "scale"
+    subprocess.run([sys.executable, "-m", "bga.cli", "gen-synthetic",
+                    str(run), "--seed", "1"],
+                   check=True, capture_output=True, cwd=str(REPO))
+    return run
+
+
 def snapshot_copy(fixture, into) -> pathlib.Path:
     """Copy the fixture's whole **snapshot** and return the run inside it.
 

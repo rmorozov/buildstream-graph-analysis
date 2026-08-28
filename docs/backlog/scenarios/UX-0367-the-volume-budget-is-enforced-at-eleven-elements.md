@@ -51,6 +51,35 @@ numbers the round-56 guard asserts. It fails today at 2.1x, 2.8x and
 2.3x. A guard that passes on `golden` and `macro_micro` and is never
 asked about scale is the state this item is about.
 
+## A second budget, found in round 59
+
+`UX-369` added one control to the Perfetto section and the export's
+**other** bound — `test_the_report_you_can_attach.py`'s "the data
+dwarfs the page", asserted as `run_data > 2.6 * code` — went from
+2.630 to 2.6008 on the same synthetic run:
+
+```text
+                       code B      data B     ratio
+before UX-369         260,601     685,327     2.630
+after UX-369          263,509     685,327     2.601   (bound: 2.600)
+```
+
+About 200 B of headroom. The data does not move — the synthetic run is
+fixed by construction — so that ratio measures the page alone, which is
+what its own comment already says:
+
+> **Two rounds in a row have moved this in one direction** […] a third
+> restatement would make it a record of the page's growth rather than a
+> bound on it. That is `UX-360`'s volume budget, which is what should
+> catch the next one; this number is not it.
+
+So the bound points at this item and this item has to answer it. Two
+budgets over one page, one of them exhausted and forbidden from being
+restated, is a state to resolve here rather than to rediscover in the
+next viewer round: either the volume budget takes over the job the
+ratio has been doing by accident, or the ratio is restated **once**
+with a reason that is not "the page grew again".
+
 ## Out of Scope
 
 Making the page smaller. That is `UX-366` and whatever follows it; this

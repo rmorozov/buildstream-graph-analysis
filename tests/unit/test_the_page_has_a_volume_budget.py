@@ -57,10 +57,10 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: they are found:
 #:
 #: ```text
-#:              elements   landed   opened    words  controls  sect  svg
-#: golden              4    3,501   14,560    5,280       410    43    8
-#: macro_micro        11    5,541   28,257    9,883       660    58   18
-#: scale           1,202    4,397   54,968   33,864     1,922    66   13
+#:              elements   landed   opened    words  controls  nodes
+#: golden              4    3,501   14,560    5,280       410   2,409
+#: macro_micro        11    5,541   28,257    9,883       660   4,586
+#: scale           1,202    4,397   54,968   35,031     1,925  22,977
 #: ```
 #:
 #: `UX-367`: **the third row is the point.** Round 56 set one pair of
@@ -107,13 +107,30 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 LANDED_HEIGHT_PX = 7_000
 
 #: `UX-367`: the opened bounds, per size class, largest class last.
-#: Each row is `(elements at most, opened px, words, controls)`, and a
-#: run is measured against the first row it fits. A page that is 55,000
-#: px at 1,202 elements may be acceptable; what was not acceptable is
-#: that nobody had decided.
+#: Each row is `(elements at most, opened px, words, controls, nodes)`,
+#: and a run is measured against the first row it fits. A page that is
+#: 55,000 px at 1,202 elements may be acceptable; what was not
+#: acceptable is that nobody had decided.
+#:
+#: `UX-366` added the fifth column, because closing it found the other
+#: four blind to what it changed. Lifting the element table's cap put
+#: **1,177 more rows in the DOM**, hidden - and the page measured:
+#:
+#: ```text
+#:                  height    words  controls    DOM nodes
+#: before           54,968   33,864     1,922       12,305
+#: after            54,968   35,031     1,925       22,977
+#: ```
+#:
+#: Height does not move because a hidden row occupies none, controls
+#: barely move, and **`words` is nearly blind to a table**: the cells
+#: carry no whitespace between them, so `textContent` renders a whole
+#: six-column row as `layer00/mod023.bst9.0 s645falsecmakefalse` - one
+#: "word". A budget that cannot see the page's biggest population
+#: doubling is not measuring volume. `nodes` is the one that can.
 BUDGETS = (
-    (50, 34_000, 12_000, 800),
-    (4_000, 66_000, 41_000, 2_300),
+    (50, 34_000, 12_000, 800, 5_500),
+    (4_000, 66_000, 41_000, 2_300, 27_500),
 )
 
 
@@ -147,6 +164,10 @@ _LOOK = """
       words: (main.textContent || "").trim().split(/\\s+/)
         .filter(Boolean).length,
       controls: document.querySelectorAll("button, input, select, a").length,
+      // `UX-366`: the one measure that sees a table. Elements rather
+      // than nodes, because a text node per cell would make this a
+      // second word count.
+      nodes: document.querySelectorAll("*").length,
       sections: main.querySelectorAll("section[data-section]").length,
       shown: [...main.querySelectorAll("section[data-section]")]
         .filter((s) => s.getBoundingClientRect().height > 0).length,
@@ -224,7 +245,11 @@ class TestBothBudgetsAreBound:
         """
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         opened = out["opened"]
-        klass, height, words, controls = budget_for(sizes[label])
+        klass, height, words, controls, nodes = budget_for(sizes[label])
+        assert opened["nodes"] <= nodes, (
+            f"{label}: {opened['nodes']} DOM elements, over the {nodes} "
+            f"budget for runs up to {klass} elements - the measure that "
+            f"sees a table growing, which height and words do not")
         assert opened["height"] <= height, (
             f"{label}: the whole document is {opened['height']} px, over "
             f"the {height} px budget for runs up to {klass} elements - "
@@ -260,7 +285,7 @@ class TestBothBudgetsAreBound:
             klass = budget_for(sizes[other])[0]
             if sizes[other] >= sizes.get(largest.get(klass), -1):
                 largest[klass] = other
-        klass, height, words, controls = budget_for(sizes[label])
+        klass, height, words, controls, nodes = budget_for(sizes[label])
         if largest[klass] != label:
             pytest.skip(f"{largest[klass]} is the largest run in this class")
         out = browser.measure(booted[label], _LOOK, 1440, 900)
@@ -269,7 +294,8 @@ class TestBothBudgetsAreBound:
                 (out["landed"]["height"], LANDED_HEIGHT_PX, "landed height"),
                 (opened["height"], height, "opened height"),
                 (opened["words"], words, "words"),
-                (opened["controls"], controls, "controls")):
+                (opened["controls"], controls, "controls"),
+                (opened["nodes"], nodes, "DOM elements")):
             assert measured * 2 > bound, (
                 f"the {name} budget for runs up to {klass} elements is "
                 f"{bound} and {label} measures {measured}; a bound with "

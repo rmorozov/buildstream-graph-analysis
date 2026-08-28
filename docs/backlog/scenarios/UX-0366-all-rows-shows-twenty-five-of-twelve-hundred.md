@@ -71,3 +71,96 @@ handler replaces the element; a cached reference reads a detached tree.
 The other tables. `leaf_analysis` draws 135 rows uncapped and
 `consolidation_candidates` 26; if a cap is right anywhere it is right
 there too, but this item is about the control that says "All".
+
+## Outcome (round 59, 2026-08-28) — 🟢 Done
+
+### The gap, measured
+
+On the seeded 1,202-element run, re-querying the table between changes:
+
+```text
+control                            rows visible
+population = All elements (1202)             25
+row limit  = All rows                        25
+```
+
+**1,177 of 1,202 elements could not be reached by any control.**
+
+### After
+
+```text
+population        caption                         limit            badge         visible   on "All rows"
+All elements      all 1202 elements               Top 25 by …      25 of 1,202        25            1202
+Leaves            135 of 1202 elements            Top 25 by …      25 of 135          25             135
+Critical path     14 of 1202 elements             All rows         14 rows            14              14
+Choke points      1 of 1202 elements              All rows         1 row               1               1
+```
+
+### One bound applied twice
+
+The preset carried `{"name": "All elements", …, "bound": 25}` and
+`applyPreset` sliced to it **before** `buildTable` saw the rows — so
+the reader's limit control was overriding a population already cut.
+`buildTable` has bounded tables of more than
+`TABLE_OPENS_BOUNDED_ABOVE` rows since `UX-262`, badge and "All rows"
+included. The preset's copy was a second mechanism for the same thing,
+one layer too high to be reachable. It is gone; the table's own limit
+does the work, and `UX-262`'s rule now applies to every view
+uniformly rather than to whichever preset happened to omit a bound.
+
+### The caption, and two wrong rewrites
+
+With the preset's bound gone `view.shown` is the whole view, so the old
+caption said **"1202 of 1202"** over 25 visible rows — one disagreement
+traded for another. Counting the *visible* rows was the second wrong
+answer: the limit control changes that number and the caption is drawn
+once, so pressing "All rows" left it claiming 25 over 1,202. The
+caption states the view's size and the badge states what is shown —
+one fact each, the division `UX-208` already made, and neither can go
+stale.
+
+### What it cost, and the budget that could not see it
+
+```text
+                 height    words  controls    DOM elements
+before           54,968   33,864     1,922          12,305
+after            54,968   35,031     1,925          22,977
+```
+
+Height does not move because a hidden row occupies none; controls move
+by three; and **`words` is nearly blind to a table** — the cells carry
+no whitespace between them, so `textContent` renders a whole six-column
+row as `layer00/mod023.bst9.0 s645falsecmakefalse`, one "word". So
+`UX-367`'s budget gained a fifth measure, DOM element count, bounded at
+5,500 and 27,500 per size class. A budget that cannot see the page's
+largest population double is not measuring volume, and this item is how
+that was found — one round after the budget was set.
+
+### Mutations verified red and reverted (5)
+
+Counts are what the run printed, not what was expected of it. Run
+against the committed tree.
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `"bound": 25` back on the `All elements` preset | *pending* |
+| M2 | the caption counts `view.shown` again | *pending* |
+| M3 | the caption counts visible rows (stale on "All rows") | *pending* |
+| M4 | `TABLE_OPENS_BOUNDED_ABOVE` raised past the population | *pending* |
+| M5 | the DOM-element budget removed from `BUDGETS` | *pending* |
+
+### Deviation from the Required Fix
+
+- The filing offered two designs; this is the first ("All rows" clears
+  the bound), because the second leaves 1,177 elements unreachable and
+  only makes the page honest about it.
+- **The round-58 measurement conflated DOM rows with visible rows.**
+  Its table read "Leaves (135) → 135 rows" — those were rows in the
+  DOM, of which 25 were visible, because `applyTopN` hides rather than
+  removes. The defect it reported is real and its `Leaves` row was
+  measuring something else.
+- **`structured.js` is at 1,498 of `UX-337`'s 1,500-line ceiling.** The
+  first draft of the comment on this change put it at 1,516 and the
+  guard fired. The reasoning moved to the guard's docstring, which is
+  where this repository keeps it anyway — but the module has two lines
+  of headroom and the next item to touch it will have to split it.

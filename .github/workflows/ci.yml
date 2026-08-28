@@ -195,10 +195,22 @@ jobs:
             print(re.search(r'^ANALYZE = \"([^\"]+)\"', \
               pathlib.Path('$GITHUB_WORKSPACE/bga/schemas.py').read_text(), \
               re.M).group(1))")
-          python -c "import json,sys; d=json.load(open('/tmp/report.json')); \
+          # `UX-344` is why the second assertion is no longer a key
+          # literal either. It read `d['signals']`, and that round
+          # lifted the namespace away - so this step went red for the
+          # same reason `UX-288` reddened the version literal, in the
+          # same file the suite does not scan. The keys a full report
+          # always carries are published by the *installed* package,
+          # which is what this job is testing, so they are read from it.
+          /tmp/pkgvenv/bin/python -c "import json,sys; \
+            from bga import schemas; \
+            d=json.load(open('/tmp/report.json')); \
             assert d['schema']==sys.argv[1], (d.get('schema'), sys.argv[1]); \
-            assert d.get('signals'), 'the payload has no signals'; \
-            print('served', sys.argv[1], 'from the installed wheel')" "$EXPECTED"
+            missing=[k for k in schemas.ANALYZE_FULL_KEYS if k not in d]; \
+            assert not missing, ('the payload is missing', missing); \
+            print('served', sys.argv[1], 'with all', \
+                  len(schemas.ANALYZE_FULL_KEYS), \
+                  'always-present keys, from the installed wheel')" "$EXPECTED"
 
       - name: The wheel owns exactly one top-level name
         # UX-94: `UX-77` made the aliases work by packaging `tools*`,

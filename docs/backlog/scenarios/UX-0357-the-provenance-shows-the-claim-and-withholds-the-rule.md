@@ -1,6 +1,6 @@
 # UX-357: the provenance section shows the claim and withholds the rule
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-229 (publish why bga believes what it believes) | **Serves:** the reviewer who has to decide whether to trust a number before acting on it | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-229 (publish why bga believes what it believes) | **Serves:** the reviewer who has to decide whether to trust a number before acting on it | **Topic:** viewer
 
 ## Motivation
 
@@ -88,3 +88,113 @@ field names, with `trace_query` the single named exemption and its
 reason written where the exemption is. And, as the other direction: a
 run whose `unpublished_inputs` is empty draws no absence sentence, so
 the clause is a distinction rather than a decoration.
+
+## Outcome (round 56, 2026-08-28) — 🟢 Done
+
+### The gap, measured — and its cause
+
+```text
+macro_micro, provenance (12 records)   before / after
+  rule.module                            0/12 -> 12/12
+  rule.name                               0/5 ->   5/5
+  rule.observed_path                      0/5 ->   5/5
+  rule.sentence                          1/12 -> 12/12
+  evidence[].path                        7/29 -> 29/29
+  unpublished_inputs[]                    0/3 ->   3/3
+```
+
+The cause was a **declaration**, not a renderer. The schema gives
+`provenance` a `bga:columns` of `claim` and `kind`, so the section
+renders as a two-column table — and a table takes the scalar columns
+and drops everything nested. Every field that makes a provenance record
+*provenance* is nested.
+
+### The shape is the page's own
+
+An **index table plus a detail block per row**, which is exactly what
+`elements` and the element sections are, and what `UX-356` extended a
+commit earlier. `renderProvenance` has existed since `UX-229`; nothing
+reached it from the section path. `renderProvenanceRecords` appends one
+block per claim, and the two-column index over twelve claims stays —
+`test_the_index_table_survives` asserts it, because a fix that replaced
+the table would be a different design and should have to say so.
+
+### Three things the block never said
+
+- **The observed path**, beside the comparison and the threshold:
+  `CHAIN_BOUND_RATIO` `headline.chain_share >= 0.9` in
+  `bga/findings.py`. It is the one address that says which published
+  number the rule compared, and it was published from the first and
+  rendered nowhere.
+- **The document the paths resolve against.** The schema calls this
+  load-bearing the moment a record travels — a `compare/v1` chain read
+  beside an `analyze/v4` one resolves elsewhere.
+- **The module, on a record with no named rule.** Six of
+  `macro_micro`'s twelve publish a module and a sentence and no named
+  threshold, because the claim is computed rather than gated. The old
+  condition gated the whole paragraph on the name, so those six said
+  where they came from nowhere. One of them —
+  `cache-hit-ratio` — publishes an observed path and *no* threshold
+  (`confidence.run_mode present`), which the block now says too.
+
+### Mutations verified red and reverted (6)
+
+Counts are what the run printed, not what was expected of it. Run
+against the committed tree at `d443347`.
+
+| # | mutation | reddened |
+|---|---|---|
+| S1 | the records are not drawn — the section is the table alone, the defect itself | 7 |
+| S2 | the rule paragraph is gated on the name again | 1: the six nameless records |
+| S3 | the observed path is an attribute again and not in the text | 2 |
+| S4 | `unpublished_inputs` stops rendering | 2, including the coverage clause |
+| S5 | the fold stops counting its evidence | 2 |
+| S6 | the index table is removed and only the blocks remain | 2 |
+
+**S3 survived the first draft**, and both reasons were the guard's.
+The clause read `data-observed`, which the mutation did not touch — and
+the coverage clause could not see the loss either, because
+`headline.chain_share` is *also* published as an `evidence[].path` on
+the same record, so the string was reachable however the rule
+paragraph rendered. The clause now asserts the path is in the block's
+rendered **text**, which is the claim being made: the block says which
+number the rule compared.
+
+Strengthening it also turned the clean tree red, on the one record
+that publishes an observed path with no named rule — a defect the
+first version of the renderer had and the first version of the guard
+could not see.
+
+### `trace_query` is the one named exemption
+
+Two of nine reach the page, and both by coincidence: the id
+(`element-time`) also names a query in the handoff's own library, which
+the questions section prints. It is carried on the block as
+`data-query` so the handoff can find it — a machine's channel, not a
+reader's. `EXEMPT` names it with that reason written where the
+exemption is, and `test_the_exemption_is_still_withheld` reddens if the
+page starts drawing it, so the exemption cannot quietly cover the next
+field to fall under it.
+
+### Deviation from the Required Fix
+
+- The Required Fix said the evidence path should render as "a `code`
+  span, not a link", and it does — but the paths were **already**
+  rendered as `code` spans by `renderProvenance`; what was missing was
+  anything calling it for the section's records. The fix is a wiring
+  change, not a rendering one, which is why it is eleven lines.
+- The Required Fix expected `rule.comparison` and `rule.threshold` to
+  be "rendered as loose values" that needed gathering. They were not
+  rendered at all in the section; they were rendered in the *finding*
+  blocks, which is where the round-55 measurement found its one hit of
+  each. The gathering happened anyway — the rule now reads as one
+  sentence — but the filing's description of the starting state was
+  drawn from the wrong two records.
+- Two guards outside this item moved with the change, both recorded in
+  the commit: the no-derivation guard's `published` set gained four
+  fields of the same record and its layout allowance became an explicit
+  set of strings rather than a pattern; and `renderProvenance` builds
+  its connectives with `span` rather than `createTextNode`, because
+  thirty-four test stubs hand-build a `document` offering
+  `createElement` and little else. That is `UX-264`'s complaint still
+  half-true, and it is not this item's to fix.

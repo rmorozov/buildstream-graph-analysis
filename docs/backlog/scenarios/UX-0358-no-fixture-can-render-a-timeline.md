@@ -1,6 +1,6 @@
 # UX-358: no committed fixture can render a timeline, so the handoff the tool is for is never exercised
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-298 (the timeline speaks Perfetto), UX-299 (a handoff that carries the trace), UX-348 (the two capabilities, made visible) | **Serves:** every future round that has to believe the Perfetto handoff works | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-298 (the timeline speaks Perfetto), UX-299 (a handoff that carries the trace), UX-348 (the two capabilities, made visible) | **Serves:** every future round that has to believe the Perfetto handoff works | **Topic:** guards
 
 ## Motivation
 
@@ -90,3 +90,96 @@ On the three existing fixtures: `has_timeline` is false, the button
 does not render, and the Plane 2 absence sentence does — asserted as a
 **pair** in one guard, so a change that made the button render
 unconditionally reddens rather than passing the first clause.
+
+## Outcome (round 56, 2026-08-28) — 🟢 Done
+
+### The gap, measured — and the filing's claim, corrected
+
+```text
+                has_timeline  #perfetto box  #bga-trace  absence
+golden                 False              0       False  NOT_CAPTURED
+macro_micro            False              0       False  CAPTURED_NO_RAW_LOG
+```
+
+The filing said *"no committed fixture can render a timeline"*. That is
+too broad, and the correction is the fix.
+`examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/`
+carries a **real capture** — `build.log`, `plane2.log.gz`,
+`plane2.json` and its run — and has since round 46. Four guards already
+read its *trace* under the name `REAL_CAPTURE`:
+
+```text
+tests/unit/test_the_arrows_say_why_now.py
+tests/unit/test_the_counter_the_constant_was_waiting_for.py
+tests/unit/test_the_slice_says_what_bga_knows.py
+tests/unit/test_the_trace_knows_whose_build.py
+```
+
+None of them exported a **page** from it. So what was true is the
+narrower claim: no fixture *used to build a page* could render a
+timeline, and every page guard parametrised over the two in
+`tests/fixtures/` that cannot. The capability was reachable and nobody
+had reached it.
+
+### After
+
+```text
+with_timeline           True             21        True  none
+```
+
+`tests/pages.py` names the capture `WITH_TIMELINE` and deliberately
+keeps it **out of** `FIXTURES`: every guard that parametrises over
+those two would add a third browser boot for a page that differs from
+`macro_micro` in exactly one respect, and this exists for that one
+respect.
+
+### The pair is one file
+
+`TestTheHandoffRendersWhereThereIsATrace` and
+`TestTheAbsenceRendersWhereThereIsNone` sit together on purpose. A
+change that rendered the button unconditionally satisfies every clause
+of the first and reddens three of the second — which is mutation Q1,
+below, and the reason the absence path is not a separate file.
+
+`TestBothStatesAreReachable` is the rule rather than the instance: it
+asserts that the committed captures reach **both** states, stated as a
+set rather than by name, so a repository that lost the timeline capture
+reddens on coverage rather than on a path.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it. Run
+against the committed tree at `82e22ec`.
+
+| # | mutation | reddened |
+|---|---|---|
+| Q1 | `has_timeline` forced true — the button renders whether or not there is a trace | 3, both `test_the_button_does_not_render` and `test_the_two_states_differ_where_it_matters` |
+| Q2 | `WITH_TIMELINE` re-pointed at `macro_micro`, a capture with no `build.log` — the state before this item | 6, including `test_every_state_has_a_fixture` |
+| Q3 | the export stops inlining the trace | 2: the box clause and the two-states clause |
+| Q4 | `plane2.absence` returns `None` for a run that never captured | 1: `test_the_absence_is_stated_and_says_which_one[golden]` |
+
+Q2 is the one that matters for the rule: it is not a mutation of the
+page, it is a mutation of the *fixture set*, and it is the state this
+repository was actually in for four rounds.
+
+### Deviation from the Required Fix
+
+- The Required Fix asked for "the smallest wrapped log `bga timeline`
+  will accept", written for this item. **Not done, and deliberately.**
+  A real capture that already exists, is already committed, and is
+  already read by four guards is a better fixture than a synthetic log
+  in every respect that matters: it exercises the renderer's actual
+  input, and it cannot drift from what `bga snapshot` writes. Writing a
+  minimal log would have been inventing a second, weaker answer to a
+  question the tree had already answered.
+- The Required Fix's third clause — "a capability the page advertises
+  is exercised by at least one fixture" — is landed as
+  `TestBothStatesAreReachable` rather than as a general walk over
+  capabilities. There is no declared list of the page's capabilities to
+  walk; asserting one here would have invented the register rather than
+  read it. The rule is written in the style guide (§2c's argument
+  applied to capabilities) and the clause holds it for the one
+  capability it was filed about.
+- Verifying the trace through Perfetto's own reader stays out of scope,
+  as filed. `tests/trace_processor.py` gates that and round 44 settled
+  where it runs.

@@ -800,7 +800,14 @@ export function interrogable(table, specs, total, depth = 0) {
  * point and the click is a convenience.
  */
 function distributionStrip(table, specs, total, state, refresh) {
-  if (total <= TABLE_OPENS_BOUNDED_ABOVE) return null;
+  // `UX-350`: **at any length.** The row cap decides whether a table is
+  // *paged*, not whether its shape is worth showing - and gating the
+  // strip on it meant the report's central table, eleven rows on one
+  // fixture and four on the other, never drew the one §2 names.
+  // Measured before this: one sparkline and zero strips on golden, in
+  // a twenty-screen document. `columnStrip` already states rather than
+  // draws below `SERIES_MIN_POINTS`, so a two-row table is still a
+  // sentence.
   const spec = specs.find((s) => s && s.quantity && s.numeric !== false);
   if (!spec) return null;
   // The column key, not `cssId`: that normalises an *element uid* into

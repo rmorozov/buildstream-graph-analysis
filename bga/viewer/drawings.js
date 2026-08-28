@@ -143,9 +143,57 @@ const numeric = (v) => typeof v === "number" && Number.isFinite(v);
  * at. Percent positions, because the drawing above stretches to its
  * container and a viewBox unit is not a pixel.
  */
+/**
+ * `UX-350`: two marks at one position are one label.
+ *
+ * On an eleven-element population the 95th percentile **is** the
+ * largest value, and the axis printed both at the same offset:
+ *
+ * ```text
+ * 0 ms (min)      3.1 s (p50)                    19.1 s19.1 s (p95)
+ *                                                      max
+ * ```
+ *
+ * The sparkline had it too, and on the *smaller* fixture: `golden`'s
+ * width series peaks at level 1, so `first` and `peak` shared an
+ * offset and their labels overlapped by 42 px. A small `n` is the
+ * first run a new reader has, so this is the case the page has to
+ * handle rather than the exotic one - which is why the merge lives
+ * here, over every exhibit axis, rather than in the strip that
+ * happened to be measured first.
+ *
+ * Which marks landed together is the interesting part, so the merged
+ * label names them: identical labels become `19.1 s (p95, max)`, and
+ * different ones `level 1 (peak 2)`.
+ */
+function mergeTicks(ticks) {
+  const out = [];
+  for (const tick of ticks) {
+    if (!tick) continue;
+    const at = Number(tick.at.toFixed(2));
+    const already = out.find((seen) => Number(seen.at.toFixed(2)) === at);
+    if (!already) {
+      out.push({ ...tick, names: [tick.name], labels: [tick.label] });
+      continue;
+    }
+    already.names.push(tick.name);
+    already.labels.push(tick.label);
+  }
+  return out.map((tick) => {
+    if (tick.names.length === 1) return tick;
+    const same = tick.labels.every((one) => one === tick.labels[0]);
+    const rest = same
+      ? tick.names.slice(1).join(", ")
+      : tick.names.slice(1).map((name, i) => `${name} ${tick.labels[i + 1]}`)
+                  .join(", ");
+    return { ...tick, name: tick.names.join(" "),
+             label: `${tick.labels[0]} (${same ? tick.names.join(", ") : rest})` };
+  });
+}
+
 export function exhibitAxis(doc, ticks) {
   const row = box(doc, "div", { class: "draw-axis", "data-role": "draw-axis" });
-  for (const tick of ticks) {
+  for (const tick of mergeTicks(ticks)) {
     if (!tick) continue;
     const at = tick.at.toFixed(2);
     const label = box(doc, "span", {
@@ -409,6 +457,21 @@ export function strip(distribution, {
     wrap.append(box(doc, "span", { class: "density-sentence muted",
                                    "data-role": "density-sentence" },
                     "No distribution published for this population."));
+    return wrap;
+  }
+  // `UX-350`: the `UX-226` rule reaches the published strip too. It
+  // was global for a *series* and enforced in `sparkline` and in
+  // `columnStrip`, and a payload's own distribution walked past it -
+  // so a two-element build drew a range bar and two ticks over a
+  // population that cannot have a shape. The sentence still prints
+  // every number the payload published; only the drawing goes.
+  if (marks.n !== null && marks.n < SERIES_MIN_POINTS) {
+    wrap.setAttribute("data-drawn", "false");
+    wrap.append(box(doc, "span", { class: "density-sentence",
+                                   "data-role": "density-sentence" },
+                    `${format(marks.min)} → ${format(marks.max)}`
+                    + ` over ${marks.n} value${marks.n === 1 ? "" : "s"}`
+                    + " — too few to have a shape."));
     return wrap;
   }
   wrap.setAttribute("data-drawn", "true");

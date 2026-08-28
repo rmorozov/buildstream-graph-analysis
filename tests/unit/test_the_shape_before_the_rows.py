@@ -303,14 +303,40 @@ console.log(JSON.stringify({
         assert out["n"] == "60"
         assert out["sentence"] == "1 ms → 60 ms across 60 rows."
 
-    def test_a_short_table_gets_none(self):
-        """The bound is `TABLE_OPENS_BOUNDED_ABOVE`, the same one that
-        decides whether the table opens bounded — a strip on a table a
-        reader can see whole is apparatus for nothing."""
+    def test_a_short_table_wears_one_too(self):
+        """`UX-350` moved this bound. It used to be
+        `TABLE_OPENS_BOUNDED_ABOVE` - the same forty that decides
+        whether a table opens bounded - on the argument that a strip
+        over a table a reader can see whole is apparatus for nothing.
+        Measured against the whole document that argument did not hold:
+        the report's central table is eleven rows on one fixture and
+        four on the other, and the page carried **one** drawing in
+        twenty screens.
+
+        The row cap decides whether a table is *paged*. Whether its
+        shape is worth showing is a different question, and §2 answers
+        it the same way at every length."""
         out = _js(_TABLE % 12 + """
-console.log(JSON.stringify({ present: Boolean(strip) }));
+console.log(JSON.stringify({ present: Boolean(strip),
+  drawn: strip?.attrs["data-drawn"] ?? null,
+  n: strip?.attrs["data-n"] ?? null }));
 """)
-        assert not out["present"]
+        assert out["present"], "a twelve-row table draws no strip"
+        assert out["drawn"] == "true", out
+
+    def test_a_table_under_the_sample_floor_states_it(self):
+        """The floor that replaced the cap, and the only one left:
+        `UX-226`'s rule that fewer than three points is a sentence. Two
+        rows have no shape to show, at any table length."""
+        out = _js(_TABLE % 2 + """
+console.log(JSON.stringify({ present: Boolean(strip),
+  drawn: strip?.attrs["data-drawn"] ?? null,
+  sentence: strip ? text(all(strip,
+    (n) => n.attrs["data-role"] === "density-sentence")[0]) : null }));
+""")
+        assert out["present"], "the strip's box is still drawn"
+        assert out["drawn"] == "false", out
+        assert "too few to have a shape" in (out["sentence"] or ""), out
 
     def test_the_export_strip_is_static(self):
         """`UX-194`'s rule: an affordance whose precondition is absent
@@ -419,6 +445,9 @@ console.log(JSON.stringify({
                 (x) => x.attrs["data-role"] === "series-sentence")[0]) })),
   density: all(root, (n) => n.attrs?.["data-role"] === "density").map(
     (n) => ({ drawn: n.attrs["data-drawn"], n: n.attrs["data-n"],
+              // `UX-350`: the page now carries both kinds, and which
+              // kind a strip is decides what its sentence may say.
+              klass: n.className || n.attrs.class || "",
               sentence: text(all(n,
                 (x) => x.attrs["data-role"] === "density-sentence")[0]) })),
 }));
@@ -478,18 +507,36 @@ class TestTheRealPagesDrawThem:
     def test_the_two_populations_draw_in_their_units(self, booted):
         """`macro_micro` publishes both; `golden` has four elements and
         is under the sample floor, so it publishes neither - an absence
-        of payload, not of control."""
-        sentences = [one["sentence"] for one in booted["macro_micro"]["density"]]
+        of payload, not of control.
+
+        Scoped to the *published* strips since `UX-350`: the page also
+        carries a self-built strip per table now, and those are a
+        reading of rows rather than a published distribution. The split
+        is `density-self`, which `drawings.js` sets and this reads."""
+        published = [one for one in booted["macro_micro"]["density"]
+                     if "density-self" not in (one["klass"] or "")]
+        sentences = [one["sentence"] for one in published]
         assert len(sentences) == 2, sentences
         assert "0 ms → 19.1 s, median 3.1 s, p95 19.1 s — n=11." in sentences
         assert "0 → 10, median 5, p95 10 — n=11." in sentences
-        assert not booted["golden"]["density"]
+        assert not [one for one in booted["golden"]["density"]
+                    if "density-self" not in (one["klass"] or "")]
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_every_drawing_states_its_population(self, booted, page):
+        """§2's rule: a strip without its population is a picture of an
+        opinion. Both kinds state it, in the vocabulary each is
+        entitled to - a published strip prints `n=11` because the
+        payload published it, and a self-built one says `across 11
+        rows`, because rows are what it counted."""
         for one in booted[page]["density"]:
+            if one["drawn"] != "true":
+                continue    # the floor's sentence, checked above
             assert one["n"], one
-            assert f"n={one['n']}" in one["sentence"], one
+            if "density-self" in (one["klass"] or ""):
+                assert f"across {one['n']} row" in one["sentence"], one
+            else:
+                assert f"n={one['n']}" in one["sentence"], one
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -1021,12 +1021,22 @@ export const NOT_ELEMENT_KEYED = {
  * Returns `null` when the run carries none of them, so a payload
  * without the signals renders exactly as it did.
  */
-export function elementSignalTable(signals, node, join = null) {
+export function elementSignalTable(signals, node, join = null,
+                                   joinNode = undefined) {
   const present = ELEMENT_KEYED_SIGNALS.filter(
     (name) => signals?.[name] && typeof signals[name] === "object");
   if (present.length < 2) return null;
   const byElement = new Map();
+  // UX-343: a merged column's unit is declared where the field came
+  // *from*, not under `signals` - `weighted_duration_us` is declared on
+  // `signals.blast_radius`'s value schema and `slack_us` on
+  // `element_join`'s item. Resolving every column against the signals
+  // node alone found neither, so three columns of the report's central
+  // table were rendered from `guessQuantity`'s name-sniff. Found by the
+  // console reader, on a real boot, not by reading the payload.
+  const origin = new Map();
   for (const name of present) {
+    const signalNode = childNode(node, name);
     for (const [uid, value] of Object.entries(signals[name])) {
       const row = byElement.get(uid) ?? { element: uid };
       // A record-valued signal (`blast_radius`) contributes its own
@@ -1035,10 +1045,14 @@ export function elementSignalTable(signals, node, join = null) {
         for (const [field, member] of Object.entries(value)) {
           if (member === null || typeof member !== "object") {
             row[field] = member;
+            if (!origin.has(field)) {
+              origin.set(field, childNode(childNode(signalNode, uid), field));
+            }
           }
         }
       } else {
         row[name] = value;
+        if (!origin.has(name)) origin.set(name, signalNode);
       }
       byElement.set(uid, row);
     }
@@ -1068,6 +1082,7 @@ export function elementSignalTable(signals, node, join = null) {
       // a column means without changing its heading.
       if (field in existing) continue;
       existing[field] = value;
+      if (!origin.has(field)) origin.set(field, childNode(joinNode, field));
       if (!joinedIn.includes(field)) joinedIn.push(field);
     }
   }
@@ -1080,7 +1095,8 @@ export function elementSignalTable(signals, node, join = null) {
     [COLUMNS]: [{ key: "element", title: "element" },
                 ...columns.map((name) => ({
                   key: name, title: title(name),
-                  quantity: quantityFor(childNode(node, name), name)
+                  quantity: quantityFor(origin.get(name)
+                                        ?? childNode(node, name), name)
                     ?? guessQuantity(name) ?? "count" }))],
     [QUESTION]: "Which element should I look at?",
   };
@@ -1184,13 +1200,14 @@ export function presetTable(key, rows, presets, hint, node, payload) {
 }
 
 export function renderPairs(key, object, hint = {}, node = undefined,
-                            payload = undefined) {
+                            payload = undefined, root = undefined) {
   const direction = hint[DIRECTION];
   const list = el("dl", { class: "pairs" });
   // UX-268: the element-keyed signals leave the pair list and become
   // one table, so they are drawn once rather than six times.
   const joined = key === "signals"
-    ? elementSignalTable(object, node, payload?.element_join)
+    ? elementSignalTable(object, node, payload?.element_join,
+                         childNode(root, "element_join"))
     : null;
   const merged = new Set(joined?.merged ?? []);
   for (const [name, value] of Object.entries(object)) {
@@ -1204,7 +1221,13 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // guessed from its name. `deltas` was hinted at the top level and
     // still name-sniffed every member inside it.
     const child = childNode(node, name);
-    const kind = quantityFor(child, name);
+    // UX-343: asked only of a number. `quantityFor` complains under
+    // `BGA_STRICT_HINTS` when it had to name-sniff, and asking it about
+    // `attribution_hints.idle_us` - a *sentence*, keyed by the metric
+    // it explains - produced eight complaints per boot about units no
+    // number here needs. A guess nothing renders from is noise in the
+    // one channel that is supposed to name real gaps.
+    const kind = typeof value === "number" ? quantityFor(child, name) : null;
     const described = hintsOf(child).description;
     let cell;
     // UX-208: a nested array of objects is a *table*, not a JSON dump.

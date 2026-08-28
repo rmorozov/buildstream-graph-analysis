@@ -64,7 +64,8 @@ so the placeholder can be derived rather than chosen.
 
 - The row cap itself, and `UX-289`'s presets, which decide *which*
   rows a table has rather than what sits above them.
-- Sorting, which costs no ink and helps at every length.
+- Sorting. It costs one header affordance at any length and helps at
+  every one, so there is nothing here for a threshold to scale.
 
 ## Acceptance Test
 

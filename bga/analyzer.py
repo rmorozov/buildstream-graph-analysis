@@ -1423,7 +1423,17 @@ class BuildEfficiencyAnalyzer:
                 # UX-288: `critical_path` is gone - it was exactly the
                 # uids of `critical_path_detail`, in the same order.
                 # The detail carries the path and everything about it.
-                'critical_path_length': graph_analysis['critical_path_length'],
+                #
+                # UX-345: and `critical_path_length` is gone too. It
+                # held `compute_critical_path`'s *weighted* result - a
+                # duration in microseconds - under a name and a
+                # `count` declaration that both said "elements on the
+                # chain", beside a sentence pointing at
+                # `floors.t_infinity_observed` as the time. It was that
+                # number, byte for byte, and so is
+                # `structural.sensitivity.critical_path_us`: one
+                # duration published three times, once falsely. The two
+                # truthful names remain.
                 'critical_path_detail': self._build_critical_path_detail(
                     graph_analysis['critical_path']
                 ),
@@ -1443,7 +1453,7 @@ class BuildEfficiencyAnalyzer:
                 'unweighted_depth': graph_analysis['unweighted_depth'],
                 # UX-79: every element's measured duration, not just the
                 # ones on the critical path. `critical_path_detail`
-                # covers the path and `wall_clock_share` is amortized, so
+                # covers the path and `wall_clock_share_us` is amortized, so
                 # until now nothing published "how long did this element
                 # take" for an element off the path - which is exactly
                 # what a marginal, per-element diff between two runs
@@ -1955,7 +1965,7 @@ class BuildEfficiencyAnalyzer:
             
         Returns:
             Dict containing diagnostic metrics including:
-            - wall_clock_share
+            - wall_clock_share_us
             - ready_queue
             - blast_radius
             - criticality_probability
@@ -2042,7 +2052,14 @@ class BuildEfficiencyAnalyzer:
         
         # Wall-clock share (Part 20)
         if diag_result.wall_clock_shares:
-            signals['wall_clock_share'] = {
+            # UX-345: `wall_clock_share_us` is what the producer calls
+            # it and what it is - a task's marginal share of active wall
+            # time, *in microseconds*. It was published as
+            # `wall_clock_share` and declared a `share`, so the page
+            # put 20,433,333.33 through `format.js`'s share branch and
+            # printed "2043333333.0%". Found by the guard this item
+            # asked for, on its first run.
+            signals['wall_clock_share_us'] = {
                 s.task_key: s.wall_clock_share_us for s in diag_result.wall_clock_shares
             }
         

@@ -620,7 +620,12 @@ def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
     durations = signals.get('element_durations') or {}
     from bga import schemas as _schemas
     path = list(_schemas.critical_path_uids(signals))
-    path_us = signals.get('critical_path_length') or 0
+    # `UX-345`: `signals.critical_path_length` held this same number
+    # under a `count` declaration and is gone. `sensitivity` carries it
+    # under the name it has always deserved, and `section='graph'`
+    # populates it.
+    sensitivity = (getattr(result, 'structural', None) or {}).get('sensitivity') or {}
+    path_us = sensitivity.get('critical_path_us') or 0
     headline = getattr(result, 'headline', None) or {}
     actions = [entry.get('element_uid')
                for entry in (headline.get('top_actions') or [])

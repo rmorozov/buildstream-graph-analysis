@@ -387,8 +387,10 @@ _CLAIMS = {
          "confidence.task_coverage"),
         _confidence_rule, ()),
     "time-concentration": (
-        ("signals.critical_path_length", "total_duration_us",
-         "floors.t_infinity_observed"),
+        # `UX-345`: this named the same duration twice - once as
+        # `signals.critical_path_length`, which held it under a `count`
+        # declaration, and once truthfully.
+        ("total_duration_us", "floors.t_infinity_observed"),
         _unconditional(
             "Published whenever the critical path has measured elements on "
             "it; which elements, and their share, are the finding's own "
@@ -477,7 +479,7 @@ _CLAIMS = {
             "why UX-258 reports them here instead of ranking them as work "
             "(the rule UX-76 already applied to criticality)."), ()),
     "criticality": (
-        ("signals.critical_path_length",),
+        ("floors.t_infinity_observed",),
         _unconditional(
             "Published when at least one non-structural element has a "
             "non-certain probability of being on the path; a list where "

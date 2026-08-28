@@ -991,11 +991,11 @@ export function renderText(name, value) {
 // slowest element with the widest blast radius" had to open two and
 // join them by hand.
 //
-// The seventh is not the same population at all. `wall_clock_share` is
+// The seventh is not the same population at all. `wall_clock_share_us` is
 // keyed by **task**:
 //
 //   element-keyed     app.bst
-//   wall_clock_share  app.bst|BUILD|BUILD|0
+//   wall_clock_share_us  app.bst|BUILD|BUILD|0
 //   union 88 keys, intersection 0
 //
 // It shares no keys with the other six, and nothing on the page said
@@ -1010,7 +1010,7 @@ export const ELEMENT_KEYED_SIGNALS = [
 ];
 
 export const NOT_ELEMENT_KEYED = {
-  wall_clock_share: "keyed by task (`element|BUILD|BUILD|0`), not by "
+  wall_clock_share_us: "keyed by task (`element|BUILD|BUILD|0`), not by "
     + "element - it shares zero keys with the six and pooling them "
     + "would put two populations in one table",
 };

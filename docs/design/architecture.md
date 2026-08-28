@@ -863,7 +863,7 @@ renderers are built against, so nothing here is a second copy to drift.
 
 | schema | what it is | printed by |
 |---|---|---|
-| `analyze/v3` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists | `bga analyze --schema` |
+| `analyze/v3` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists. `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
 | `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
 | `blast/v2` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
 | `correlate/v2` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
@@ -926,6 +926,29 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-08-28 (after `UX-345`), re-grounded in the contracts
+table above against `bga.contracts`'s derived inventory and the ids
+`bga analyze --schema` actually prints, and carrying `UX-341`'s
+contract move with it: five contracts moved
+(`analyze/v3`, `compare/v2`, `blast/v2`, `correlate/v2`, `host/v2`)
+because renaming a key is removing it, and their five predecessors are
+in the table as read-never-written rather than deleted from it. The
+`analyze/v3` row is checked against the keys the schema declares, which
+`UX-345` removed one of.
+
+**What the two rounds asserted that no guard held before.** `UX-341`
+made the vocabulary five members and `DIMENSIONS` state what each
+measures, so "no two members measure one dimension" is a property the
+suite evaluates rather than a list of retired names a later round could
+re-add. `UX-343` made every numeric leaf on the page carry a
+declaration — 98% and 99% declared on the two fixtures, from 26% and
+24%. `UX-345` closes the third gap the first two structurally cannot
+see: a leaf that declares a *valid* member and holds a value that
+member cannot be. `signals.critical_path_length` declared `count` and
+held 43,200,000 microseconds; the check that a `count` is integral and
+a `share` is in 0..1 found two more the same day
+(`signals.wall_clock_share`, `confidence.duration_coverage`).
 
 Updated 2026-08-27 (after `UX-337`), re-grounded in `bga/viewer/`, which
 is twenty modules rather than fifteen: `app.js` and `views.js` held

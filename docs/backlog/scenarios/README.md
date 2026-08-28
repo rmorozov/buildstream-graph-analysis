@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-353 scenarios: **5 open**, 348 closed.
+353 scenarios: **4 open**, 349 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 2 | 92 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
-| docs | 1 | 34 |
+| docs | 0 | 34 |
 | guards | 0 | 43 |
 
 ## Open scenarios
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-349 | [the table tools do not scale with the table](UX-0349-the-table-tools-do-not-scale-with-the-table.md) | viewer | Medium | — | 🔴 |
 | UX-350 | [the shape channel is written and unbuilt](UX-0350-the-shape-channel-is-written-and-unbuilt.md) | viewer | Medium | — | 🔴 |
-| UX-352 | [the architecture counts seven chapters and the page has eight](UX-0352-the-architecture-counts-seven-chapters-and-the-page-has-eight.md) | docs | Low | — | 🔴 |
 
 ## UX-345..UX-351: the fifty-second round — the page, measured rather than described (2026-08-28)
 

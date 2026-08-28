@@ -5,22 +5,9 @@
     "section": null,
     "findings": [
         {
-            "id": "confidence",
-            "severity": "info",
-            "title": "Confidence: 0.88 (high)",
-            "detail": [],
-            "elements": [],
-            "evidence": {
-                "primary": 0.875,
-                "band": "high",
-                "violation_count": 0
-            },
-            "copy_text": "BGA finding: Confidence: 0.88 (high)\n  primary 88%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1"
-        },
-        {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)",
+            "title": "Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)",
             "detail": [
                 "    -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             ],
@@ -31,7 +18,7 @@
                 "share": 0.125,
                 "hint": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             },
-            "copy_text": "BGA finding: Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1"
+            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1"
         },
         {
             "id": "blast-radius-ranking",
@@ -49,6 +36,19 @@
             ],
             "evidence": {},
             "copy_text": "BGA finding: Elements Most Worth Optimizing First (by blast radius):\n      1. base.bst (2 downstream elements)\n      2. lib.bst (1 downstream elements)\n      3. app.bst (0 downstream elements)\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1"
+        },
+        {
+            "id": "confidence",
+            "severity": "info",
+            "title": "Confidence: 0.88 (high)",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "primary": 0.875,
+                "band": "high",
+                "violation_count": 0
+            },
+            "copy_text": "BGA finding: Confidence: 0.88 (high)\n  primary 88%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1"
         },
         {
             "id": "efficiency-score",
@@ -576,45 +576,6 @@
             "unpublished_inputs": []
         },
         {
-            "claim": "confidence",
-            "kind": "finding",
-            "document": "analyze/v4",
-            "evidence": [
-                {
-                    "path": "confidence.primary",
-                    "value": 0.875,
-                    "resolved": true,
-                    "quantity": "share"
-                },
-                {
-                    "path": "confidence.coverage_score",
-                    "value": 1.0,
-                    "resolved": true,
-                    "quantity": "share"
-                },
-                {
-                    "path": "confidence.task_coverage",
-                    "value": 1.0,
-                    "resolved": true,
-                    "quantity": "share"
-                }
-            ],
-            "rule": {
-                "name": "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
-                "threshold": [
-                    0.5,
-                    0.8
-                ],
-                "comparison": "banded",
-                "observed_path": "confidence.primary",
-                "sentence": "0.88 bands as high against 0.50/0.80.",
-                "module": "bga/findings.py",
-                "threshold_quantity": "share"
-            },
-            "trace_query": null,
-            "unpublished_inputs": []
-        },
-        {
             "claim": "wait-category",
             "kind": "finding",
             "document": "analyze/v4",
@@ -665,6 +626,45 @@
                 "threshold_quantity": "share"
             },
             "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "confidence",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "confidence.primary",
+                    "value": 0.875,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.coverage_score",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.task_coverage",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
+                "threshold": [
+                    0.5,
+                    0.8
+                ],
+                "comparison": "banded",
+                "observed_path": "confidence.primary",
+                "sentence": "0.88 bands as high against 0.50/0.80.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": null,
             "unpublished_inputs": []
         },
         {

@@ -315,6 +315,38 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
 
 
 def _run_scope_findings(result: AnalysisResult) -> List[dict]:
+    """Everything true of the run rather than of an element.
+
+    `UX-365` split what this returns into two lists without moving any
+    finding between them. `_run_blocking_findings` is what invalidates
+    the numbers below it - a failed build, the time its failures burned
+    - and `UX-54` requires those first: a real capture in which all four
+    attempted elements failed led with "Efficiency Score: 1.00" and
+    never mentioned them.
+
+    `_run_context_findings` is what *describes* the run - its mode, its
+    cache, its confidence. Those opened the report until round 58
+    measured what a reader meets first:
+
+    ```text
+    #0  info  cache-hit-ratio  "...so a 0% hit ratio is the intent
+                                rather than a finding"
+    #1  info  confidence       a score, not an action
+    #2  high  wait-category    the first thing to do
+    ```
+
+    Two `info` entries, the first disclaiming itself, ahead of every
+    action. They are still published and still in this module; they are
+    now below the actions rather than above them.
+
+    Kept as one entry point because `compute_findings` is the only
+    caller that needs the halves apart.
+    """
+    return _run_blocking_findings(result) + _run_context_findings(result)
+
+
+def _run_blocking_findings(result: AnalysisResult) -> List[dict]:
+    """`UX-54`: what makes every number below describe a different build."""
     findings: List[dict] = []
     # UX-54: said first, before any efficiency number, because every
     # number below describes a build that did not finish. A real
@@ -378,6 +410,14 @@ def _run_scope_findings(result: AnalysisResult) -> List[dict]:
             evidence={'failed_task_us': failed_us, 'failed_task_count': failed_count},
         ))
 
+    return findings
+
+
+def _run_context_findings(result: AnalysisResult) -> List[dict]:
+    """What this run *was* - mode, cache, confidence. Description rather
+    than action, which is why `UX-365` stopped it opening the list."""
+    findings: List[dict] = []
+    confidence = result.confidence or {}
     # UX-55: which of the two CI scenarios this run is, said before the
     # numbers, because it changes what they are *about*.
     if confidence.get('run_mode') == 'incremental':
@@ -804,7 +844,7 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> List[dic
             return []
         return [_finding(
             'execution-bound', SEVERITY_HIGH,
-            f"Biggest Opportunity: this build is execution-bound - "
+            f"Biggest wait category: this build is execution-bound - "
             f"no wait category exceeds {OPPORTUNITY_FLOOR_PCT:.0f}% of "
             f"wall-clock time, so there is no scheduling gap to close",
             evidence={'largest_wait_category': top_category,
@@ -832,7 +872,14 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> List[dic
         hint = plane2_hint
     return [_finding(
         'wait-category', SEVERITY_HIGH,
-        f"Biggest Opportunity: {pct:.1f}% of wall-clock time is "
+        # `UX-365`: **which** biggest. This is the largest of the
+        # non-execution wait categories - a real superlative over a real
+        # population - and it used to read "Biggest Opportunity", which
+        # is a claim about every finding in the report. On `macro_micro`
+        # it named 2.72s while `joint-saving` three rows below was worth
+        # 23.1s and claimed nothing. Naming the population is the whole
+        # fix: the measurement was never wrong, the scope was.
+        f"Biggest wait category: {pct:.1f}% of wall-clock time is "
         f"{label} ({top_duration_us / 1e6:.2f}s)",
         detail=[f"    -> {hint}"] if hint else None,
         evidence={'category': top_category, 'category_us': top_duration_us,
@@ -1128,7 +1175,13 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     # same question differently.
     chain_bound = diagnose(result)['diagnosis'] == DIAGNOSIS_CHAIN_BOUND
 
-    findings = _run_scope_findings(result)
+    # `UX-365`: what invalidates the numbers, then what to do about
+    # them, then what the run was. Before this the whole of
+    # `_run_scope_findings` came first, so a successful build opened
+    # with two `info` entries - a cache note that says it is "the intent
+    # rather than a finding", and a confidence score - and the first
+    # action was third.
+    findings = _run_blocking_findings(result)
     opportunity = _opportunity_findings(result, chain_bound)
     findings.extend(opportunity)
     concentration_emitted = any(
@@ -1146,6 +1199,11 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
         findings.extend(_ranking_findings(result, chain_bound))
     if concentration_emitted:
         findings.extend(_outlook_findings(result))
+    # `UX-365`: the run's own description, after the actions it frames
+    # and before the other descriptive findings it belongs with. Still
+    # ahead of memory, capacity and the floors, so the reader meets
+    # "what this run was" once, in one place.
+    findings.extend(_run_context_findings(result))
     findings.extend(_memory_finding(result))
     # UX-116: after the memory envelope, because it consumes it - the
     # reader meets the inputs and then the sentence that intersects them.

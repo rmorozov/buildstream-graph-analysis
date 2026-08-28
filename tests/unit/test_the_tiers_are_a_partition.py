@@ -124,11 +124,13 @@ class TestTheDefaultTierStaysFast:
             f"both steps read as the same budget: {found} - the patterns "
             f"are not distinguishing the two lines")
 
-    @pytest.mark.parametrize("measured,budget", (
-        ("SMALL_TIER_CI_S", "SMALL_TIER_BUDGET_S"),
-        ("SMALL_TIER_CI_1P_S", "SMALL_TIER_BUDGET_1P_S")))
-    def test_each_budget_is_reachable_and_still_a_bound(self, measured,
-                                                        budget):
+    @pytest.mark.parametrize("slowest,fastest,budget", (
+        ("SMALL_TIER_CI_SLOW_S", "SMALL_TIER_CI_FAST_S",
+         "SMALL_TIER_BUDGET_S"),
+        ("SMALL_TIER_CI_SLOW_1P_S", "SMALL_TIER_CI_FAST_1P_S",
+         "SMALL_TIER_BUDGET_1P_S")))
+    def test_each_budget_is_reachable_and_still_a_bound(self, slowest,
+                                                        fastest, budget):
         """`UX-363`, and the reason it was filed: a bound nothing can
         reach is not a bound.
 
@@ -146,16 +148,28 @@ class TestTheDefaultTierStaysFast:
         the edit, and it moves the budgets with it rather than leaving
         them where a previous round happened to put them.
         """
-        seen, bound = getattr(tiers, measured), getattr(tiers, budget)
-        assert seen < bound, (
-            f"{budget} is {bound}s and the tier measures {seen}s - the "
-            f"budget is below normal running and will red on every push")
-        assert bound < seen + tiers.LARGE_FLOOR_S, (
-            f"{budget} is {bound}s against a {seen}s tier, so a file of "
-            f"{tiers.LARGE_FLOOR_S}s - the large floor - can land in the "
-            f"default tier without tripping it. That is the slack "
-            f"`UX-363` was filed for; re-measure and restate rather than "
-            f"widening this")
+        slow = getattr(tiers, slowest)
+        fast = getattr(tiers, fastest)
+        bound = getattr(tiers, budget)
+        assert fast <= slow, (
+            f"{fastest} ({fast}s) is not faster than {slowest} ({slow}s); "
+            f"the two measurements are the wrong way round")
+        # Each half against the measurement that makes it hard. The
+        # first draft used one number for both and the second clause
+        # then checked the bound against the *slow* run, which is the
+        # side that makes any budget look sized: 32s passed against a
+        # 21.4s tier while the same runner's 13.8s day let a floor-sized
+        # file through. Caught by reading the first green run's log.
+        assert slow < bound, (
+            f"{budget} is {bound}s and the tier's slowest run measures "
+            f"{slow}s - the budget is below normal running and will red "
+            f"on an ordinary bad day")
+        assert bound < fast + tiers.LARGE_FLOOR_S, (
+            f"{budget} is {bound}s against a {fast}s tier at its fastest, "
+            f"so a file of {tiers.LARGE_FLOOR_S}s - the large floor - can "
+            f"land in the default tier without tripping it. That is the "
+            f"slack `UX-363` was filed for; re-measure and restate rather "
+            f"than widening this")
 
     def test_the_makefile_offers_every_tier(self):
         makefile = (REPO / "Makefile").read_text(encoding="utf-8")

@@ -128,19 +128,47 @@ MEDIUM_FLOOR_S = 1.0
 # right half says one large file landing in the default tier trips it,
 # which is the whole job. Both budgets carry ~1.5x of the measurement,
 # and re-measuring is what moves them - not a commit that needed room.
-SMALL_TIER_CI_S = 23.8            # parallel, `-n auto`, on CI
-SMALL_TIER_CI_1P_S = 21.4         # single process, on CI
-
-SMALL_TIER_BUDGET_S = 35.0        # the `-n auto` step's timeout
-SMALL_TIER_BUDGET_1P_S = 32.0     # the single-process step's timeout
-
-# **Do not re-size these against a local run.** Falsifying them here,
-# with the smallest `LARGE` file (16.4s) moved into the default tier:
+# Two numbers per step, not one, because the runner varies. The first
+# green run under these budgets came in at 20.5s and 13.8s against the
+# 23.8s and 21.4s measured the run before - a 1.5x spread on the same
+# step. Each half of the inequality needs the measurement that makes it
+# hard:
+#
+# * `slowest < budget` - checked against the **slowest** run, or the
+#   budget reds on an ordinary bad day.
+# * `budget < fastest + LARGE_FLOOR_S` - checked against the **fastest**
+#   run, or a large file slips into the default tier on a good one.
+#
+# A single measurement satisfies the first and quietly fails the second,
+# which is this item's own defect one level down: the bound looked sized
+# because it was compared against the number that made it look sized.
+#
+# The two together leave a window, and the budget goes inside it rather
+# than at either edge - at an edge, one ordinary run either reds the
+# build or reds this guard:
 #
 # ```text
-#                        local        would be on CI
-# parallel   8.5 + 16.4 = 24.9s  <35   23.8 + 16.4 = 40.2s  >35   caught
-# 1 proc    21.7 + 16.4 = 38.1s  >32   21.4 + 16.4 = 37.8s  >32   caught
+#             window                    chosen
+# parallel    (23.8, 35.5)                33.0
+# 1 proc      (21.4, 28.8)                27.0
+# ```
+SMALL_TIER_CI_SLOW_S = 23.8       # parallel, `-n auto`, slowest seen
+SMALL_TIER_CI_FAST_S = 20.5       # parallel, fastest seen
+SMALL_TIER_CI_SLOW_1P_S = 21.4    # single process, slowest seen
+SMALL_TIER_CI_FAST_1P_S = 13.8    # single process, fastest seen
+
+SMALL_TIER_BUDGET_S = 33.0        # the `-n auto` step's timeout
+SMALL_TIER_BUDGET_1P_S = 27.0     # the single-process step's timeout
+
+# **Do not re-size these against a local run.** Falsifying them here,
+# with the smallest `LARGE` file (16.4s) moved into the default tier,
+# and on CI against the *fastest* run, which is the case that has to
+# hold:
+#
+# ```text
+#                        local        on CI at its fastest
+# parallel   8.5 + 16.4 = 24.9s  <33   20.5 + 16.4 = 36.9s  >33   caught
+# 1 proc    21.7 + 16.4 = 38.1s  >27   13.8 + 16.4 = 30.2s  >27   caught
 # ```
 #
 # The single-process budget is falsifiable on a dev machine because

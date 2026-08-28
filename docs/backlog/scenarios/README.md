@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-360 scenarios: **9 open**, 351 closed.
+360 scenarios: **8 open**, 352 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 2 | 45 |
+| guards | 1 | 45 |
 
 ## Open scenarios
 
@@ -42,7 +42,6 @@ task file, which is the only place it ever lived twice.
 | UX-356 | [the element join is "merged into the element table", and the merge keeps four of its twenty-eight fields](UX-0356-the-merge-keeps-four-of-twenty-eight-fields.md) | viewer | High | — | 🔴 |
 | UX-357 | [the provenance section shows the claim and withholds the rule](UX-0357-the-provenance-shows-the-claim-and-withholds-the-rule.md) | viewer | Medium | — | 🔴 |
 | UX-358 | [no committed fixture can render a timeline, so the handoff the tool is for is never exercised](UX-0358-no-fixture-can-render-a-timeline.md) | guards | High | — | 🔴 |
-| UX-359 | [every guard measures a page with Plane 2 stripped out of it](UX-0359-every-guard-measures-a-plane-2-stripped-page.md) | guards | High | — | 🔴 |
 | UX-360 | [folding paid the distance, and the volume grew by a third](UX-0360-folding-paid-the-distance-and-the-volume-grew.md) | viewer | Medium | — | 🔴 |
 | UX-361 | [the drawing vocabulary is two shapes, and the tool's central claim has neither](UX-0361-the-drawing-vocabulary-is-two-shapes.md) | viewer | Medium | — | 🔴 |
 

@@ -362,6 +362,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-352 | [the architecture counts seven chapters and the page has eight](UX-0352-the-architecture-counts-seven-chapters-and-the-page-has-eight.md) | Low | — | 🟢 Done — the count is read out of the prose and compared to CHAPTERS.length; the filing's own claim about a chapter table was corrected | [UX-352](UX-0352-the-architecture-counts-seven-chapters-and-the-page-has-eight.md) |
 | UX-350 | [the shape channel is written and unbuilt](UX-0350-the-shape-channel-is-written-and-unbuilt.md) | Medium | — | 🟢 Done — the cap that withheld the strip is gone, the floor that replaced it reaches every strip, and coincident marks merge | [UX-350](UX-0350-the-shape-channel-is-written-and-unbuilt.md) |
 | UX-349 | [the table tools do not scale with the table](UX-0349-the-table-tools-do-not-scale-with-the-table.md) | Medium | — | 🟢 Done — filters appear past the row cap, a column that never varies is a sentence, and a threshold box needs a number | [UX-349](UX-0349-the-table-tools-do-not-scale-with-the-table.md) |
+| UX-359 | [every guard measures a page with Plane 2 stripped out of it](UX-0359-every-guard-measures-a-plane-2-stripped-page.md) | High | — | 🟢 Done — the guards copied the run and left macro_micro's Plane 2 sibling behind; tests/pages.py copies the snapshot, and the conversion immediately found a fold that announced no depth | [UX-359](UX-0359-every-guard-measures-a-plane-2-stripped-page.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

@@ -218,6 +218,24 @@ console.log(JSON.stringify({
         assert out["drawn"] == "false"
         assert "No distribution" in out["sentence"]
 
+    def test_a_population_under_the_floor_states_it(self):
+        """`UX-350`: `UX-226`'s rule reaches the *published* strip too.
+
+        It was global for a series and enforced in `sparkline` and in
+        `columnStrip`; a payload's own distribution walked past it, so
+        a two-element build drew a range bar and two ticks over a
+        population that cannot have a shape. Driven here rather than
+        from a fixture because neither committed run has one - both
+        publish n=11 - which is exactly how the gap survived being
+        written down."""
+        out = self._drawn({"n": 2, "min": 1, "max": 9,
+                           "deciles": {"p50": 5}, "p95": 9})
+        assert out["drawn"] == "false", out
+        assert "too few to have a shape" in out["sentence"], out
+        # The numbers the payload published are still printed. Only
+        # the drawing goes.
+        assert "1 → 9" in out["sentence"], out["sentence"]
+
 
 @needs_node
 class TestASelfBuiltStripPrintsNoDerivedNumber:

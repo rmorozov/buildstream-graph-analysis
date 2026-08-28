@@ -360,6 +360,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-354 | [the workflow reads the payload, and no guard reads the workflow](UX-0354-the-workflow-reads-the-payload-and-no-guard-reads-the-workflow.md) | Medium | — | 🟢 Done — a step that parses a document reads its keys from the module that writes it | [UX-354](UX-0354-the-workflow-reads-the-payload-and-no-guard-reads-the-workflow.md) |
 | UX-353 | [the roles table serves a contract nothing writes](UX-0353-the-roles-table-serves-a-contract-nothing-writes.md) | Low | — | 🟢 Done — a retired id is legitimate where its row or paragraph says it is retired, and roles.md's did not | [UX-353](UX-0353-the-roles-table-serves-a-contract-nothing-writes.md) |
 | UX-352 | [the architecture counts seven chapters and the page has eight](UX-0352-the-architecture-counts-seven-chapters-and-the-page-has-eight.md) | Low | — | 🟢 Done — the count is read out of the prose and compared to CHAPTERS.length; the filing's own claim about a chapter table was corrected | [UX-352](UX-0352-the-architecture-counts-seven-chapters-and-the-page-has-eight.md) |
+| UX-350 | [the shape channel is written and unbuilt](UX-0350-the-shape-channel-is-written-and-unbuilt.md) | Medium | — | 🟢 Done — the cap that withheld the strip is gone, the floor that replaced it reaches every strip, and coincident marks merge | [UX-350](UX-0350-the-shape-channel-is-written-and-unbuilt.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

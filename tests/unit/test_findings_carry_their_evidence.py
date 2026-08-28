@@ -91,10 +91,36 @@ class TestTheVocabularyIsDeclared:
         assert declared["host_cpu_count"][schemas.QUANTITY] == "count"
 
     def test_every_declared_unit_is_one_the_renderer_knows(self):
+        """Every unit anywhere under `evidence`, not only the scalars.
+
+        `UX-343` gave the structured members of a finding's evidence -
+        its `rows`, `steps`, `blast_radius` - declarations of their own,
+        and those are containers: the unit sits on a column inside them
+        rather than on the entry. Reading only the top level would have
+        left the new declarations unchecked, so the walk goes all the
+        way down and counts what it found, because a walk that reached
+        nothing would pass this silently.
+        """
         declared = schemas.schema(schemas.ANALYZE)["properties"]["findings"][
             "items"]["properties"]["evidence"]["properties"]
+        seen = []
+
+        def walk(node, where):
+            if isinstance(node, dict):
+                if schemas.QUANTITY in node:
+                    assert node[schemas.QUANTITY] in schemas.QUANTITIES, where
+                    seen.append(where)
+                for name, sub in node.items():
+                    walk(sub, f"{where}.{name}")
+            elif isinstance(node, list):
+                for index, sub in enumerate(node):
+                    walk(sub, f"{where}[{index}]")
+
         for key, hint in declared.items():
-            assert hint[schemas.QUANTITY] in schemas.QUANTITIES, key
+            walk(hint, key)
+        assert len(seen) >= len(declared), (
+            f"only {len(seen)} declared units under {len(declared)} evidence "
+            f"keys - the walk is not reaching the nested ones")
 
     def test_no_declaration_names_a_key_no_finding_emits(self):
         """A hint for a key nothing produces is dead weight in the

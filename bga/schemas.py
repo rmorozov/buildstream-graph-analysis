@@ -900,6 +900,33 @@ _JOIN_COLUMNS = [
 
 _JOIN_ITEM_PROPERTIES = {
     "element": {"type": "string"},
+    # `UX-343`: the three nested records a Plane 2 join carries per
+    # element, and the count beside them. Thirty-one leaves reaching the
+    # reader with no unit, in the block that exists to say what the
+    # sandbox did with the cores it was given.
+    "redundancy_count": {QUANTITY: "count"},
+    "dominant_binary": {
+        "description": "The one binary that took most of this element's "
+                       "measured CPU.",
+        "properties": {
+            "count": {QUANTITY: "count"},
+            "cpu_us": {QUANTITY: "duration_us"},
+            "cpu_share": {QUANTITY: "share"},
+            "wall_s": {QUANTITY: "seconds"},
+        }},
+    "serial_binary": {
+        "description": "The binary whose work ran one process at a time.",
+        "properties": {
+            "cpu_us": {QUANTITY: "duration_us"},
+            "wall_s": {QUANTITY: "seconds"},
+        }},
+    "worst_redundancy": {
+        "description": "The repeated work this element paid for most.",
+        "properties": {
+            "occurrence_count": {QUANTITY: "count"},
+            "total_duration_s": {QUANTITY: "seconds"},
+            "max_element_duration_s": {QUANTITY: "seconds"},
+        }},
     "declared": {
         "type": "boolean",
         "description": "Whether Plane 1's declared graph knows this "
@@ -1077,9 +1104,75 @@ EVIDENCE_QUANTITIES = {
     for key, (quantity, sentence) in _EVIDENCE_FIELDS.items()
 }
 
+# `UX-343`: the *structured* members of a finding's evidence. The scalars
+# above have been declared since `UX-217`; the tables and maps a finding
+# carries beside them had nothing, so a finding that showed its rows
+# printed durations and shares as bare numbers while the same columns
+# rendered correctly one section away.
+#
+# These mirror the shapes they are drawn from rather than restating
+# them: what a finding shows is a slice of a published population, and
+# a slice that disagreed with its source about a unit would be worse
+# than a slice with no unit at all.
+EVIDENCE_QUANTITIES.update({
+    "change": {QUANTITY: "share",
+               "description": "The signed change this finding is about, "
+                              "as a share of the baseline."},
+    "blast_radius": {
+        "additionalProperties": {"properties": {
+            "downstream_count": {QUANTITY: "count"},
+            "weighted_duration_us": {QUANTITY: "duration_us"},
+            "risk_score": {QUANTITY: "ratio"},
+        }},
+        "description": "What each named element's change rebuilds."},
+    "constraints": {"items": {"properties": {
+        "allows": {QUANTITY: "count"}}}},
+    "rows": {"items": {"properties": {
+        "duration_us": {QUANTITY: "duration_us"},
+        "realizable_saving_us": {QUANTITY: "duration_us"},
+        "share_of_path": {QUANTITY: "share"},
+    }}},
+    "steps": {"items": {"properties": {
+        "saving_us": {QUANTITY: "duration_us"},
+        "makespan_after_us": {QUANTITY: "duration_us"},
+        "cumulative_saving_us": {QUANTITY: "duration_us"},
+    }}},
+    "latent_heavies": {"items": {"properties": {
+        "duration_us": {QUANTITY: "duration_us"}}}},
+})
+
 _ANALYZE_HINTS = {
-    "timestamp_agreement": {QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove'},
-    "run_instance": {QUESTION: 'Which capture is this?', RAIL: 'raw'},
+    "timestamp_agreement": {
+        QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove',
+        # `UX-343`: this block is entirely seconds and counts, and said
+        # so nowhere - nine leaves, no unit. The `_s` suffix is what
+        # `UX-341` will take to microseconds; declaring it is what makes
+        # that a rename rather than a guess.
+        "properties": {
+            "resolution_s": {QUANTITY: "seconds"},
+            "shortest_task_s": {QUANTITY: "seconds"},
+            "worst_excess_s": {QUANTITY: "seconds"},
+            "worst_shortfall_s": {QUANTITY: "seconds"},
+            "material_share": {QUANTITY: "share"},
+            "tasks_compared": {QUANTITY: "count"},
+            "tasks_measured": {QUANTITY: "count"},
+            "tasks_shorter_than_bst": {QUANTITY: "count"},
+            "tasks_where_material": {QUANTITY: "count"},
+        }},
+    "run_instance": {
+        QUESTION: 'Which capture is this?', RAIL: 'raw',
+        "properties": {
+            "started_at_us": {
+                QUANTITY: "duration_us",
+                "description": "When the capture began, as microseconds "
+                               "since the epoch. A point in time rather "
+                               "than a span - the unit is the same and "
+                               "the reading is not."},
+            "host_manifest": {"properties": {
+                "cpu_count": {QUANTITY: "count"},
+                "memory_mb": {QUANTITY: "megabytes"},
+            }},
+        }},
     "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
     "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
     "capacity_recommendation": {
@@ -1125,7 +1218,7 @@ _ANALYZE_HINTS = {
                                     "the four inputs this ceiling comes "
                                     "from."},
                     {"key": "allows", "title": "Builders it allows",
-                     QUANTITY: "count", "sortable": True},
+                     "quantity": "count", "sortable": True},
                     {"key": "reason", "title": "Why",
                      "description": "The measurement this ceiling was read "
                                     "off, in the units it was measured in."},
@@ -1190,6 +1283,49 @@ _ANALYZE_HINTS = {
         QUESTION: 'What shape is this dependency graph?',
         RAIL: 'investigate',
         "properties": {
+            # `UX-343`: `metrics`, `summary` and `deferrability` said
+            # nothing about a single one of their members - twenty-six
+            # leaves reaching the reader as bare numbers, in the block
+            # whose whole job is to describe the graph's shape.
+            "metrics": {
+                "description": "The graph's shape as numbers, "
+                               "independent of how long anything took.",
+                "properties": {
+                    "num_elements": {QUANTITY: "count"},
+                    "num_edges": {QUANTITY: "count"},
+                    "max_depth": {QUANTITY: "count"},
+                    "avg_fanin": {QUANTITY: "ratio"},
+                    "avg_fanout": {QUANTITY: "ratio"},
+                    "max_parallelism": {QUANTITY: "count"},
+                    "avg_parallelism": {QUANTITY: "ratio"},
+                    "critical_path_length": {
+                        QUANTITY: "count",
+                        "description": "Elements on the chain, not its "
+                                       "duration."},
+                    "critical_path_ratio": {QUANTITY: "share"},
+                    "serialization_ratio": {QUANTITY: "share"},
+                    "cyclomatic_complexity": {QUANTITY: "count"},
+                }},
+            "summary": {
+                "description": "The headline shape numbers, for a reader "
+                               "who wants one line rather than the block.",
+                "properties": {
+                    "total_elements": {QUANTITY: "count"},
+                    "critical_path_length": {QUANTITY: "count"},
+                    "max_parallelism": {QUANTITY: "count"},
+                    "bottleneck_count": {QUANTITY: "count"},
+                    "deferrable_leaves": {QUANTITY: "count"},
+                    "best_case_speedup": {
+                        QUANTITY: "ratio",
+                        "description": "How much faster an unlimited-"
+                                       "capacity replay of this graph "
+                                       "would be. A multiplier, and a "
+                                       "ceiling rather than a plan."},
+                }},
+            "deferrability": {
+                "properties": {
+                    "total_deferrable_work_us": {QUANTITY: "duration_us"},
+                }},
             # UX-303: the graph's width, level by level - an ordered
             # numeric array whose order *is* the axis, which is what
             # `bga:series` says. Drawn as a sparkline with the sentence
@@ -1199,7 +1335,18 @@ _ANALYZE_HINTS = {
             # make.
             "parallelism": {
                 "properties": {
+                    # `UX-343`: the four scalars beside the series, and
+                    # the series' own values.
+                    "levels": {QUANTITY: "count",
+                               "items": {QUANTITY: "count"}},
+                    "min_width": {QUANTITY: "count"},
+                    "max_width": {QUANTITY: "count"},
+                    "mean_width": {QUANTITY: "ratio"},
+                    "width_uniformity": {QUANTITY: "share"},
                     "width_at_level": {
+                        # `UX-343`: the series declared its axis and not
+                        # the values on it.
+                        "items": {QUANTITY: "count"},
                         SERIES: "level",
                         "description": "How many elements sit at each "
                                        "depth of the graph, from the "
@@ -1213,6 +1360,7 @@ _ANALYZE_HINTS = {
                 "description": "Where work funnels through one element, "
                                "and how much waits behind it.",
                 "properties": {
+                    "serial_chain_length": {QUANTITY: "count"},
                     # UX-283: the choke points are an element table like
                     # any other, so they earn the Inspect route and the
                     # sort every other element table has. Before this
@@ -1228,7 +1376,7 @@ _ANALYZE_HINTS = {
                              "role": "element", "sortable": True},
                             {"key": "downstream_count",
                              "title": "Waiting on it",
-                             QUANTITY: "count", "sortable": True,
+                             "quantity": "count", "sortable": True,
                              "description": "How many elements are "
                                             "downstream of this one, and "
                                             "so cannot start until it "
@@ -1248,7 +1396,7 @@ _ANALYZE_HINTS = {
                             {"key": "element_uid", "title": "Element",
                              "role": "element", "sortable": True},
                             {"key": "fan_in", "title": "Direct dependents",
-                             QUANTITY: "count", "sortable": True,
+                             "quantity": "count", "sortable": True,
                              "description": "Elements naming this one as "
                                             "a dependency - an in-degree, "
                                             "not a transitive count."},
@@ -1260,7 +1408,7 @@ _ANALYZE_HINTS = {
                             {"key": "element_uid", "title": "Element",
                              "role": "element", "sortable": True},
                             {"key": "fan_out", "title": "Direct dependencies",
-                             QUANTITY: "count", "sortable": True,
+                             "quantity": "count", "sortable": True,
                              "description": "Dependencies this element "
                                             "names - an out-degree, not a "
                                             "transitive count."},
@@ -1268,6 +1416,10 @@ _ANALYZE_HINTS = {
                 }},
             "sensitivity": {
                 "properties": {
+                    # `UX-343`: the three scalars beside the list.
+                    "critical_path_us": {QUANTITY: "duration_us"},
+                    "total_improvable_time_us": {QUANTITY: "duration_us"},
+                    "best_case_speedup": {QUANTITY: "ratio"},
                     "top_opportunities": {
                         "description": "Elements whose duration the "
                                        "makespan is most sensitive to.",
@@ -1275,12 +1427,12 @@ _ANALYZE_HINTS = {
                             {"key": "element_uid", "title": "Element",
                              "role": "element", "sortable": True},
                             {"key": "sensitivity", "title": "Sensitivity",
-                             QUANTITY: "share", "sortable": True,
+                             "quantity": "share", "sortable": True,
                              "description": "How much of the makespan "
                                             "moves per unit this element "
                                             "moves."},
                             {"key": "saving_s", "title": "Worth fixing",
-                             QUANTITY: "seconds", "sortable": True,
+                             "quantity": "seconds", "sortable": True,
                              "description": "What the makespan would drop "
                                             "by, in seconds, if this "
                                             "element cost nothing."},
@@ -1288,6 +1440,12 @@ _ANALYZE_HINTS = {
                 }},
             "serialization_point_risks": {
                 "items": {"properties": {
+                    # `UX-343`: the record's own scalars, beside the
+                    # nested element table that was already declared.
+                    "builders": {QUANTITY: "count"},
+                    "governing_cores": {QUANTITY: "count"},
+                    "typical_max_jobs": {QUANTITY: "count"},
+                    "downstream_count": {QUANTITY: "count"},
                     "pinned_elements": {
                         "description": "The elements pinned at this "
                                        "serialization point, and what each "
@@ -1296,12 +1454,12 @@ _ANALYZE_HINTS = {
                             {"key": "element_uid", "title": "Element",
                              "role": "element", "sortable": True},
                             {"key": "max_jobs", "title": "Native jobs",
-                             QUANTITY: "count", "sortable": True,
+                             "quantity": "count", "sortable": True,
                              "description": "The parallelism this "
                                             "element's own build system "
                                             "was allowed."},
                             {"key": "duration_us", "title": "Duration",
-                             QUANTITY: "duration_us", "sortable": True},
+                             "quantity": "duration_us", "sortable": True},
                         ]},
                 }}},
             "batch_opportunities": {
@@ -1352,10 +1510,15 @@ _ANALYZE_HINTS = {
                                "More builders cannot recover this; only a "
                                "different graph shape can."},
             "resource_occupancy": {
+                # `UX-343`: keyed by resource kind, which is data.
+                QUANTITY: "ratio",
+                "additionalProperties": {QUANTITY: "ratio"},
                 "description": "Occupancy per resource kind, so a "
                                "saturated fetcher is not averaged away by "
                                "idle builders."},
             "peak_resource_occupancy": {
+                QUANTITY: "count",
+                "additionalProperties": {QUANTITY: "count"},
                 "description": "The most in flight at once, per resource "
                                "kind."},
         },
@@ -1620,7 +1783,21 @@ _ANALYZE_HINTS = {
                     "deferrable_count": {QUANTITY: "count"}}},
         },
     },
-    "attribution": {QUESTION: 'Where did the wall-clock go?', RAIL: 'act'},
+    "attribution": {
+        QUESTION: 'Where did the wall-clock go?', RAIL: 'act',
+        # `UX-343`: eight durations that rendered correctly only because
+        # `guessQuantity` recognised `_us`. A guess that happens to be
+        # right is still the gap UX-201 wrote the rule for.
+        "properties": {
+            "execution_on_chain_us": {QUANTITY: "duration_us"},
+            "dependency_wait_us": {QUANTITY: "duration_us"},
+            "scheduler_wait_us": {QUANTITY: "duration_us"},
+            "resource_wait_us": {QUANTITY: "duration_us"},
+            "retry_wait_us": {QUANTITY: "duration_us"},
+            "idle_us": {QUANTITY: "duration_us"},
+            "untracked_head_us": {QUANTITY: "duration_us"},
+            "untracked_tail_us": {QUANTITY: "duration_us"},
+        }},
     # UX-220: a floor is the number in this report most easily read as a
     # prediction, and it is not one. Every member says what it is, what it
     # is not, and what it rests on - and the text report reads these same
@@ -1777,6 +1954,26 @@ _ANALYZE_HINTS = {
         QUESTION: 'How much of this can be believed?',
         RAIL: 'prove',
         "properties": {
+            # `UX-343`: the scores are shares of a population, and
+            # `ordering_violations` is a count of events. Both reached
+            # the reader as bare numbers.
+            "attribution_score": {QUANTITY: "share"},
+            "model_score": {QUANTITY: "share"},
+            "provenance_score": {QUANTITY: "share"},
+            "duration_coverage": {QUANTITY: "share"},
+            "critical_path_coverage": {QUANTITY: "share"},
+            "dominator_coverage": {QUANTITY: "share"},
+            "blame_chain_coverage": {QUANTITY: "share"},
+            "ordering_violations": {
+                QUANTITY: "count",
+                "description": "Task pairs whose recorded order "
+                               "contradicts the graph. Nonzero means the "
+                               "clock, not the graph, is the thing to "
+                               "distrust."},
+            "task_count": {QUANTITY: "count"},
+            "failed_task_count": {QUANTITY: "count"},
+            "failed_task_us": {QUANTITY: "duration_us"},
+            "explained_untracked_us": {QUANTITY: "duration_us"},
             "primary": {QUANTITY: "share",
                         "description": "How much of this run's own record "
                                        "supports the conclusions above - "
@@ -1817,6 +2014,7 @@ _ANALYZE_HINTS = {
                        "different things, and an element only one of them "
                        "saw carries only that plane's fields.",
         "properties": {
+            "aggregating_dependency_pairs": {QUANTITY: "count"},
             "joined_elements": {
                 QUANTITY: "count",
                 "description": "Elements both planes saw - the only ones "
@@ -1940,6 +2138,17 @@ _ANALYZE_HINTS = {
         QUESTION: 'How much did Plane 2 see?',
         RAIL: 'prove',
         "properties": {
+            # `UX-343`: process counts, every one of them.
+            "cpu_reconciled_processes": {QUANTITY: "count"},
+            "cpu_from_spine_only": {QUANTITY: "count"},
+            "opens_covered_processes": {QUANTITY: "count"},
+            "fork_only_exits": {QUANTITY: "count"},
+            "unmatched_ends": {QUANTITY: "count"},
+            "by_coverage": {
+                QUANTITY: "count",
+                "additionalProperties": {QUANTITY: "count"},
+                "description": "How many processes each coverage class "
+                               "accounts for, keyed by the class."},
             "processes": {QUANTITY: "count",
                           "description": "Processes Plane 2 saw across both "
                                          "record streams - the hook and the "
@@ -2021,10 +2230,23 @@ _ANALYZE_HINTS = {
                                "wall-clock times the capacity. The "
                                "denominator of the percentages below."},
             "buckets": {
+                # `UX-343`: the six the shares below are computed from.
+                # The object said what it was; its members said nothing,
+                # so they printed as raw microsecond integers beside the
+                # percentages derived from them.
+                QUANTITY: "duration_us",
                 "description": "Slot-time split by what it was doing: "
                                "useful work, idleness with nothing ready, "
                                "idleness with too little parallelism, and "
-                               "work thrown away by retry or rebuild."},
+                               "work thrown away by retry or rebuild.",
+                "properties": {
+                    "useful": {QUANTITY: "duration_us"},
+                    "idle_no_tasks": {QUANTITY: "duration_us"},
+                    "idle_underparallel": {QUANTITY: "duration_us"},
+                    "wasted_rebuild": {QUANTITY: "duration_us"},
+                    "wasted_retry": {QUANTITY: "duration_us"},
+                    "untracked": {QUANTITY: "duration_us"},
+                }},
             "total_accounted_us": {
                 QUANTITY: "duration_us",
                 "description": "The buckets summed. Compared against "

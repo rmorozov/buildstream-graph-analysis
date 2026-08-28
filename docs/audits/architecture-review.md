@@ -74,6 +74,7 @@ would have caught it; a bound at it would only just have.
 | 2 | 2026-08-24 | 263 | `UX-273`, `UX-274` |
 | 3 | 2026-08-25 | 290 | `UX-294`, `UX-295` |
 | 4 | 2026-08-26 | 318 | `UX-322`, `UX-323` |
+| 5 | 2026-08-28 | 346 | `UX-352`, `UX-353` |
 
 ### Review 3 — 2026-08-25
 
@@ -318,6 +319,94 @@ one review later.
 only document making the claim, and `UX-247`'s guard now checks it
 rather than a reviewer doing so by hand — this review confirmed the
 guard is in the suite and green rather than re-deriving its answer.
+
+**No code was produced by this review**, per the rule above. The two
+findings are filings.
+
+### Review 5 — 2026-08-28
+
+Twenty-eight rows closed since review 4, which is what tripped the
+cadence — on `UX-344`'s closure, mid-round again. Run against
+`docs/design/architecture.md`, `docs/design/roles.md`, the three
+guides, `docs/README.md` and the eight published contracts.
+
+**1. Does the code still do what it says?** The CLI table is now
+guarded (`test_the_architecture_names_the_commands.py`, `UX-322`'s
+answer to three reviews of the same drift): 21 rows, 21 commands, and
+the guard is green in the suite rather than re-derived here. The
+viewer chapter was read against `bga/viewer/` after the round that
+moved most of it, and one sentence does not survive the module:
+
+```text
+$ node -e 'import("./bga/viewer/chapters.js").then(
+      m => console.log(m.CHAPTERS.length, m.CHAPTERS.map(c => c.id).join(",")))'
+8 decide,change,compare,time,machine,elements,believe,run
+
+architecture.md:718   groups them into seven chapters
+```
+
+Filed as `UX-352`. It has been eight since `3c4a96b`, the commit that
+introduced the module and wrote the sentence, so this is not drift —
+the number was never true, and three reviews read past it. The filing
+asks for a guard rather than a correction, on the same argument
+`UX-322` made: a count in prose is read by nothing but a human.
+
+**2. Does every published contract have a home?**
+
+```text
+contract               architecture   guides
+analyze/v4                        4       12
+blast/v2                          1        2
+compare/v2                        1        1
+correlate/v2                      1        3
+store-aggregate/v1                1        1
+store/v1                          1        2
+sweep/v1                          1        1
+whatif/v1                         5        2
+```
+
+Eight of eight, both columns — `sweep/v1` is new since review 4
+(`UX-339`) and arrived documented. The prose check found the other
+finding: `docs/design/roles.md`'s "bga today" column serves role R2
+with `correlate/v1`, which `UX-341` superseded in round 51. Every
+other document says v2, or says v1 is read-never-written; this one is
+present tense and points a reader at a payload nothing writes. Filed
+as `UX-353`, with the guard's population widened to the one design
+document that names a contract id — which is why the mechanical half
+missed it.
+
+**3. Is any figure invalidated?** Two candidates, one of them a
+finding. `architecture.md`'s chapter bullet also carries "forty-eight
+sections averaging 0.24 screens" and "18.51 screens to 18.10", which
+`UX-347` moved a long way — but both are attributed to `UX-286`,
+round 39, and a dated measurement a later round moved is a record.
+The chapter count in the same bullet is not dated and is `UX-352`.
+
+The second candidate is this document. Review 4's own text says the
+page/data ratio threshold "has since moved again to 3.3x"; it is
+**2.8x** now, moved by `UX-342`'s reclassification and this round's
+`UX-348`. That sentence is a dated row in a log rather than a claim
+about today, so it is not re-filed — but the current number is written
+here, where the next review will read it, and
+`tests/unit/test_the_report_you_can_attach.py` carries the split that
+justifies it round by round.
+
+**4. What shipped since the last review that no document names?** The
+inventories: `schemas.names()` (8 contracts, all homed, see above),
+the architecture's command table (guarded), and the twenty-eight
+closed rows. `analyze` went to **v4** this round (`UX-344`) and the
+version reached `architecture.md`'s contracts table, the spec's Part
+32 registry, `docs/README.md`, `CHANGELOG.md` and two guides in the
+same round. The viewer module map and the `bga/`/`tools/` context map
+pass their guards (37 passed), and `bga/viewer/` gained no module this
+round — the three items moved code inside the ones that exist.
+
+**5. Does each document's "last updated" claim match reality?**
+`architecture.md`'s Verification Log is still the only document making
+the claim; its newest entry reads "Updated 2026-08-28 (after
+`UX-344`)" and `git log -1 --date=short` on the file returns
+2026-08-28. `UX-247`'s guard checks this, and this review confirmed
+the guard is in the suite and green rather than re-deriving it.
 
 **No code was produced by this review**, per the rule above. The two
 findings are filings.

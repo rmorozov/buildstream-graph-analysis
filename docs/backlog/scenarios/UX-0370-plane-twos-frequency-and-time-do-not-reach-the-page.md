@@ -1,6 +1,6 @@
 # UX-370: Plane 2's frequency and time do not reach the page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-356 (every field of the element join reaches a reader), UX-102 (configure tax, both planes side by side) | **Serves:** anyone asking what the build spends its time running | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-356 (every field of the element join reaches a reader), UX-102 (configure tax, both planes side by side) | **Serves:** anyone asking what the build spends its time running | **Topic:** viewer
 
 ## Motivation
 
@@ -146,12 +146,20 @@ other now.
 
 ### Mutations verified red and reverted (4)
 
+Counts are what the run printed, not what was expected of it. Run
+against the committed tree.
+
 | # | mutation | reddened |
 |---|---|---|
-| M1 | the projection removed — the state before this item | *pending* |
-| M2 | `configure_phase.per_element` published again | *pending* |
-| M3 | `wall_s` left unconverted | *pending* |
-| M4 | a binary ranked by count alone dropped from the rows | *pending* |
+| M1 | the projection removed — the state before this item | 12 failed, 1 passed |
+| M2 | `configure_phase.per_element` published again | 1 failed, 48 passed — `test_every_map_keyed_by_a_uid_declares_its_values[macro_micro]`, in the contract's own guard rather than this item's |
+| M3 | `wall_s` left unconverted | 2 failed, 32 passed — this item's projection clause and `test_what_cannot_resolve_is_named_with_a_reason` |
+| M4 | a binary ranked by calls alone dropped from the rows | 2 failed, 11 passed — `test_every_measured_element_and_binary_has_a_row`, `test_a_binary_ranked_by_calls_alone_keeps_its_count` |
+
+M2 is worth noting: the mutation is caught by the **contract's** guard,
+not by this item's file. That is the right owner — one population
+published once is a rule about the document, and a per-item clause
+restating it would be a second copy of the thing it asserts.
 
 ### Deviation from the Required Fix
 

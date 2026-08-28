@@ -735,10 +735,12 @@ jobs:
             echo "No comparable baseline set to trend against yet"
             exit 0
           fi
-          # `bga baseline` returns newest first; a trend reads forwards,
-          # because nothing in a run directory records which build came
-          # before it - the order is the caller's to supply.
-          DIRS="$(python3 -c 'import json,sys; print(" ".join(m["run_dir"] for m in reversed(json.load(open(sys.argv[1]))["members"])))' "$RUNNER_TEMP/trend-set.json")"
+          # `UX-354`: the set document's shape is the producing module's
+          # to know. `trend_order` reads it and states the newest-first
+          # to forwards-in-time rule once, where a test can reach it -
+          # this step used to spell two key literals in a `python3 -c`,
+          # in the one file no guard in this repository reads.
+          DIRS="$(python3 -c 'import sys; from bga._tools.bst_baseline_set import trend_order; print(" ".join(trend_order(sys.argv[1])))' "$RUNNER_TEMP/trend-set.json")"
           # shellcheck disable=SC2086
           bga cache-trend $DIRS | tee "$RUNNER_TEMP/trend.txt"
 

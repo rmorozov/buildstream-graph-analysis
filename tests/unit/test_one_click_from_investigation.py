@@ -276,8 +276,17 @@ class TestInvestigationIsOneClickAway:
         # declaration order is not render order. Both directions: no
         # block without a copy, and no copy carrying anything but a
         # block's exact text.
-        assert sorted(out["copies"]) == sorted(out["sql"]), (
+        #
+        # `UX-348`: as *sets*, not as sorted lists. The worked example
+        # draws one question twice on purpose - once in full above the
+        # library, once inside its category fold - so its SQL is
+        # copyable from two places, and counting renders would make the
+        # pitch look like a defect.
+        assert set(out["copies"]) == set(out["sql"]), (
             "the copy text is not the block's exact SQL")
+        assert len(out["copies"]) == len(out["sql"]) + 1, (
+            "exactly one question is drawn twice - the worked example",
+            len(out["copies"]), len(out["sql"]))
 
     def test_the_top_n_preset_narrows_without_lying_about_the_total(self):
         out = _node(_TOP_N)

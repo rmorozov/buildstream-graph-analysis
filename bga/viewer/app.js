@@ -30,7 +30,7 @@ import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
 // `renderBlastTree` is *not* imported here: `views.js` draws the tree
 // inside `renderBlastSearch`, and the name sat in this list unused
 // until UX-337 counted what each half of the file actually reaches for.
-import { renderBand, renderTrend, renderBlastSearch,
+import { renderBand, renderTrend, renderBlastSearch, renderBlastOffline,
          renderOverview, renderEvidence,
          renderCriticalPath, INCOMPLETE } from "./views.js";
 // `UX-337`: the two chapters that moved out of `views.js`. Named
@@ -969,22 +969,24 @@ async function boot() {
         return answer;
       }));
     } else {
-      const note = el("section", { "data-section": "blast-offline" },
-        el("h2", {}, "Blast radius"),
-        el("p", { class: "muted" },
-          "Not available in an exported report - the search asks the "
-          + "server, and there is not one here. Run "),
-        el("p", {}, el("code", {}, "bga blast <target> <run>")));
-      // UX-286 files it beside `resource_blast` in "What if I change
-      // this?", which is where the served page offers to compute it.
-      root.append(note);
+      // `UX-348`: the same capability as a command this run can run,
+      // read from the published `next_steps` - not `<target> <run>`
+      // under a rail entry reading "Blast offline". `UX-286` files it
+      // beside `resource_blast` in "What if I change this?", which is
+      // where the served page offers to compute it.
+      root.append(renderBlastOffline(payload, copy, el));
     }
 
     // UX-199: the export used to strip the link to the questions page
     // and leave nothing behind it - functionality lost rather than
     // moved. They are inlined here instead, from the same module
     // `sql.html` renders, so the two cannot drift.
-    if (!served()) root.append(renderQuestions(el));
+    if (!served()) {
+      // `UX-348`: the section says how to open the timeline, so it has
+      // to know whether there is one - the same fact `UX-194`'s
+      // dead-control rule gates the header button on.
+      root.append(renderQuestions(el, { hasTimeline: Boolean(run.has_timeline) }));
+    }
     // UX-194: only when there is a timeline behind it. A dead button is
     // worse than no button - the run that has no Plane 2 log is exactly
     // the run whose user would spend a minute wondering what broke.

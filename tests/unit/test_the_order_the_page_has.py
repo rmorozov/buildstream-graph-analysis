@@ -330,7 +330,7 @@ class TestTheSkipCensus:
 # middle are the two tables a reader arrives at - the element table and
 # the graph's shape - rather than the boxes they used to sit in.
 INTENDED_ORDER = ["decision", "evidence", "overview",
-                  "findings", "headline", "next_steps", "blast-offline",
+                  "findings", "headline", "next_steps", "blast",
                   "elements", "graph_metrics",
                   "summary", "run_instance", "producer", "document_shape"]
 
@@ -420,7 +420,7 @@ class TestThePageReadsInTheOrderItShould:
         inside it - and `next_steps` is where the run prints
         `bga blast <target>` as the command to run."""
         order = _boot_order()
-        assert order.index("blast-offline") == order.index("next_steps") + 1, (
+        assert order.index("blast") == order.index("next_steps") + 1, (
             order[:10])
 
     def test_the_control_sits_beside_the_table_when_there_is_one(self):
@@ -431,7 +431,7 @@ class TestThePageReadsInTheOrderItShould:
         order = _boot_order(inventory=SHARED_MONOREPO)
         assert "resource_blast" in order, (
             "the inventory produced no table; the pair is unchecked")
-        assert order.index("blast-offline") == order.index("resource_blast") + 1, (
+        assert order.index("blast") == order.index("resource_blast") + 1, (
             order[:12])
 
     def test_the_table_displaces_next_steps_as_the_anchor(self):
@@ -439,5 +439,5 @@ class TestThePageReadsInTheOrderItShould:
         that matters. With a table present the control leaves the
         `next_steps` slot it takes without one."""
         order = _boot_order(inventory=SHARED_MONOREPO)
-        assert order.index("blast-offline") > order.index("next_steps") + 1, (
+        assert order.index("blast") > order.index("next_steps") + 1, (
             order[:12])

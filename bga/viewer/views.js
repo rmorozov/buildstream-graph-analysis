@@ -469,6 +469,65 @@ export function renderBlastSearch(onQuery) {
 }
 
 /**
+ * `UX-348`: the same capability, in a document with no server behind it.
+ *
+ * What was here was a heading, one sentence of refusal and
+ * `bga blast <target> <run>` - 103 px, a placeholder command with angle
+ * brackets, in a chapter called "What if I change this?", under a rail
+ * entry that read **"Blast offline"**. The navigation announced the
+ * capability as unavailable, and the export could already spell the
+ * command with this run's own path: two `next_steps` entries do, with a
+ * Copy button.
+ *
+ * So this reads the published step rather than composing one. Direction
+ * 7's boundary: the pipeline decides which element to ask about (the
+ * longest thing on the chain, or the first thing to fix), and the page
+ * prints what it decided. A run whose pipeline published no blast step
+ * has no target to name, and the section says the interactive search
+ * needs a server without inventing an element to pass it.
+ */
+export function renderBlastOffline(payload, copy, make) {
+  const section = make("section", { "data-section": "blast" });
+  section.append(make("h2", {}, "Blast radius"));
+  const step = (payload?.next_steps ?? []).find(
+    (entry) => Array.isArray(entry?.argv) && entry.argv[1] === "blast");
+  const argv = step ? step.argv.join(" ") : null;
+  // `UX-282`'s rule: the difference between this page and a served one
+  // is stated *inside* the section, not in its name.
+  section.append(make("p", { class: "muted" },
+    argv
+      ? "The search box asks a server, and an exported report has none - "
+        + "so here is the same answer as a command, for the element this "
+        + "run ranks first:"
+      : "The search box asks a server, and an exported report has none. "
+        + "Run `bga blast` against this run with the element you are "
+        + "about to change."));
+  if (argv) {
+    if (step.reason) {
+      section.append(make("p", { class: "muted", "data-role": "blast-why" },
+                          step.reason));
+    }
+    const command = make("code", { class: "next-command",
+                                   "data-argv": argv }, argv);
+    section.append(command);
+    if (copy) {
+      const button = make("button", { type: "button", class: "copy-step",
+                                      "data-copies": "command",
+                                      title: "Copy this command to the "
+                                             + "clipboard, ready to run" },
+                          "Copy command");
+      button.addEventListener?.("click", () => {
+        copy(argv);
+        button.textContent = "\u2713 copied";
+        setTimeout(() => { button.textContent = "Copy command"; }, 1200);
+      });
+      section.append(button);
+    }
+  }
+  return section;
+}
+
+/**
  * `UX-208` item 5: example chips, from the payload's own ranking.
  *
  * A search box with no examples is a box a reader has to already know

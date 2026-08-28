@@ -198,6 +198,50 @@ only meaningful while `SMALL_TIER_CI_S` is what CI actually measures, so
 letting the measurement rot reddens rather than quietly widening the
 bound.
 
+### Correction, from this item's own first green run
+
+The budgets above were sized from one CI measurement per step. The first
+green run under them reported its own timings and falsified that:
+
+```text
+step              budget   that run   the run it was sized from
+parallel            35s      20.47s     23.76s
+single process      32s      13.79s     21.37s
+```
+
+A 1.5x spread on the same step, and it matters because the two halves of
+the inequality pull on different measurements. `slowest < budget` has to
+hold against the **slowest** run or the budget reds on an ordinary bad
+day. `budget < fastest + LARGE_FLOOR_S` has to hold against the
+**fastest** one, or a floor-sized file lands in the default tier
+untripped on a good day — which at 32s against a 13.8s run it did
+(13.8 + 15.0 = 28.8 < 32).
+
+So the bound looked sized because it was compared against the number
+that made it look sized: this item's own defect, one level down. Both
+ends are recorded per step now, each half takes the measurement that
+makes it hard, and the budget sits **inside** the resulting window
+rather than at an edge, where one ordinary run either reds the build or
+reds the guard:
+
+```text
+             window                    chosen
+parallel     (23.8, 35.5)                33s
+1 proc       (21.4, 28.8)                27s
+```
+
+Three more mutations, all caught, all reverted:
+
+| | mutation | result |
+|---|---|---|
+| G6 | the 1p budget back to 32s against a 13.8s fast run — the defect above | 1 failed |
+| G7 | slowest and fastest recorded the wrong way round | 1 failed |
+| G8 | the budget moved to the reachable edge (27 → 21) | 1 failed |
+
+It was caught by reading the run rather than by a later round noticing,
+which is the only reason it is a correction here and not a fourth entry
+in the drift table above.
+
 ### Deviation from the Required Fix
 
 None. The Required Fix named both bounds, the unguarded second step and

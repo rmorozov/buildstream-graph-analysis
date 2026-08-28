@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-360 scenarios: **7 open**, 353 closed.
+360 scenarios: **6 open**, 354 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 1 | 45 |
+| guards | 0 | 45 |
 
 ## Open scenarios
 
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-356 | [the element join is "merged into the element table", and the merge keeps four of its twenty-eight fields](UX-0356-the-merge-keeps-four-of-twenty-eight-fields.md) | viewer | High | — | 🔴 |
 | UX-357 | [the provenance section shows the claim and withholds the rule](UX-0357-the-provenance-shows-the-claim-and-withholds-the-rule.md) | viewer | Medium | — | 🔴 |
-| UX-358 | [no committed fixture can render a timeline, so the handoff the tool is for is never exercised](UX-0358-no-fixture-can-render-a-timeline.md) | guards | High | — | 🔴 |
 | UX-360 | [folding paid the distance, and the volume grew by a third](UX-0360-folding-paid-the-distance-and-the-volume-grew.md) | viewer | Medium | — | 🔴 |
 | UX-361 | [the drawing vocabulary is two shapes, and the tool's central claim has neither](UX-0361-the-drawing-vocabulary-is-two-shapes.md) | viewer | Medium | — | 🔴 |
 

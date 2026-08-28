@@ -25,6 +25,12 @@ OWNERS = {
     "verify": "docs/contributing/fixing-guide.md",
     "falsify": "docs/contributing/fixing-guide.md",
     "measure": "docs/contributing/style-guide.md",
+    # `UX-340`: deriving the viewer's module graph before moving code
+    # between its files. The rule it is the entry point for is the
+    # architecture's, because what it protects is the export's inline
+    # order - `_module_order` walking `import` lines, and `UX-199`'s
+    # empty page when that premise breaks.
+    "derive": "docs/design/architecture.md",
 }
 
 _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)

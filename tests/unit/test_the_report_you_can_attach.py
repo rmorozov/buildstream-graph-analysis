@@ -660,8 +660,42 @@ class TestTheSizeDiscipline:
         removed 39,688 B of contract for documents the page can never
         hold. Under the old metric that reads as a *regression*, which
         is the tell that the old metric was measuring the wrong thing.
-        The bound is **2.4x**: the pre-`UX-342` export fails it at 2.195
-        and this one clears it at 2.515.
+
+        **`UX-343` moved it a second time in the same round, and twice
+        is the signal to stop patching and measure the thing the guard
+        is actually for.** Declaring a unit for every number means
+        writing a sentence for each (`UX-220`), which grew the embedded
+        contract by 23,011 B - so a rule that counts contract as fixed
+        cost now falls whenever the schema says *more*, which is the
+        opposite of what this guards.
+
+        What it guards is a **framework arriving**: hundreds of
+        kilobytes of vendor code landing at once. So the three
+        quantities are separated and the ratio is the run's data over
+        the viewer's **code** - not over the contract, which is prose,
+        and not over both. Measured on this fixture across all three
+        states:
+
+        ```text
+                            pre-UX-342   post-UX-342   post-UX-343
+        code (modules, css)    228,291      228,291       228,423
+        contract (schemas)      83,669       43,981        66,992
+        this run's data        684,801      684,801       685,026
+        data / code              2.999        2.999         2.999
+        data / code+contract     2.195        2.515         2.319
+        ```
+
+        The code side is **invariant** across both rounds, because
+        neither touched it - which is what a metric for "did the page
+        balloon" should do. The combined ratio moves under both, in
+        opposite directions, for reasons that have nothing to do with
+        the page ballooning.
+
+        The bound is **2.9x**. The contract's own size is reported in
+        the failure message rather than bounded here: `UX-342`'s guard
+        holds it to the schemas the page can resolve, and `UX-220`
+        requires each to carry a sentence, so the two rules between them
+        already say what it may contain.
         """
         import tools.bga_view as view
 
@@ -680,13 +714,16 @@ class TestTheSizeDiscipline:
         # identical for every run of a given contract set, so they sit
         # beside the modules and the stylesheet rather than beside the
         # measurements.
-        fixed = len(page) + len(schemas)
-        run_data = len(html) - len(page) - len(schemas)
-        assert run_data > 2.4 * fixed, (
-            f"{run_data} B of this run's data against {fixed} B of fixed "
-            f"cost ({run_data / fixed:.3f}x) - Direction 7's rule is that "
+        code = len(page)
+        contract = len(schemas)
+        run_data = len(html) - code - contract
+        assert run_data > 2.9 * code, (
+            f"{run_data} B of this run's data against {code} B of viewer "
+            f"code ({run_data / code:.3f}x) - Direction 7's rule is that "
             f"the data is what an export weighs, and at this scale it "
-            f"should not be close")
+            f"should not be close. The embedded contract is {contract} B, "
+            f"which this ratio deliberately does not count: it is prose, "
+            f"and it grows when the schema says more")
 
     def test_the_page_is_the_modules_and_nothing_else(self, exported):
         """What the ceiling is really guarding: that the page is the

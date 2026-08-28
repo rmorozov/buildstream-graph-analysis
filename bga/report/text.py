@@ -956,10 +956,22 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                     f"{ceiling}, i.e. up to {improvable_us / 1e6:.2f}s off it "
                     f"if every critical-path element were free):"
                 )
-                for key, score, impact_pct in top_opportunities[:5]:
+                # `UX-343`: rows with named fields. The saving is read
+                # rather than recomputed here - it is published now, and
+                # two places deriving one number is how they drift.
+                for row in top_opportunities[:5]:
+                    # A run captured before the producer matched its own
+                    # declared columns holds `(key, score, impact)`, and
+                    # a store outlives a release.
+                    if isinstance(row, dict):
+                        key, score = row["element_uid"], row["sensitivity"]
+                        saving_us = row["saving_us"]
+                    else:
+                        key, score = row[0], row[1]
+                        saving_us = score * critical_path_us
                     lines.append(
-                        f"    - {key}: up to {score * critical_path_us / 1e6:.2f}s "
-                        f"off the finish ({impact_pct:.1f}%)"
+                        f"    - {key}: up to {saving_us / 1e6:.2f}s "
+                        f"off the finish ({score * 100:.1f}%)"
                     )
                 lines.append(
                     "    (graph-only upper bound, not a target: each saving is capped "

@@ -413,8 +413,19 @@ class TestThePageDrawsThem:
         of the other, this is what would say so - and `UX-288`'s guard
         would fail first, on the payload."""
         def uids(value):
-            return {member for row in (value or [])
-                    for member in (row if isinstance(row, list) else [row])
+            """Element uids out of a row, whatever shape the row is.
+
+            `UX-343` turned `top_opportunities` into records with named
+            fields; `serialized_pairs` is still a pair of uids. Both are
+            read here, because what this clause is about is *which
+            elements* each publishes, not how either spells a row.
+            """
+            def members(row):
+                if isinstance(row, dict):
+                    return row.values()
+                return row if isinstance(row, list) else [row]
+
+            return {member for row in (value or []) for member in members(row)
                     if isinstance(member, str) and member.endswith(".bst")}
 
         top = uids(payload["structural"]["sensitivity"]["top_opportunities"])

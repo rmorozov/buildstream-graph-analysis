@@ -13,8 +13,11 @@ declared above it*. `UX-199` is on file because that premise broke and
 the exported report threw `ReferenceError` in `boot()` and rendered
 **empty** for several rounds.
 
-So the graph comes first, and it is derived rather than read off.
-`tools/dev_js_deps.py` is the instrument.
+So the graph comes first, and it is derived rather than read off. The
+rule lives in
+[`docs/design/architecture.md`](../../../docs/design/architecture.md) —
+"Which file owns what", and the inlining the Verification Log describes.
+`tools/dev_js_deps.py` is the instrument; this is the procedure.
 
 ## Before you move anything
 

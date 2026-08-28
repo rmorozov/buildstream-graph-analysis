@@ -2273,7 +2273,24 @@ class BuildEfficiencyAnalyzer:
                     {'element': uid, 'element_kind': kind_by_uid.get(uid, 'unknown')}
                 )
             elif len(actionable_opportunities) < 5:
-                actionable_opportunities.append(entry)
+                # `UX-343`: a row, not a positional tuple. The schema has
+                # declared these columns by name since `UX-290`
+                # (`element_uid`, `sensitivity`, `saving_us`) while the
+                # payload published `(key, score, score * 100)` - so the
+                # third column's name, its declared unit and its value
+                # disagreed three ways, and the first two columns were
+                # nameless positions a reader had to count.
+                #
+                # `saving_us` is now what the column says it is: the
+                # seconds this element could take off the finish, which
+                # is what the text report was computing at its own print
+                # site from `score` and the path length.
+                actionable_opportunities.append({
+                    'element_uid': entry[0],
+                    'sensitivity': entry[1],
+                    'saving_us': int(entry[1]
+                                     * result.sensitivity.critical_path_us),
+                })
 
         batch_opportunities = {'groups': [], 'omitted_zero_savings_groups': [], 'serialized_pairs': []}
         if self.replay_scheduler is not None:
@@ -2298,7 +2315,7 @@ class BuildEfficiencyAnalyzer:
             # which is a fact about people, not about the schedule.
             realizable = getattr(self, '_realizable_candidates', None) or []
             candidates = realizable[:5] or [
-                key for key, _, _ in actionable_opportunities
+                row['element_uid'] for row in actionable_opportunities
             ]
             element_to_task_key = {
                 t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks
@@ -2394,8 +2411,16 @@ class BuildEfficiencyAnalyzer:
                 'resource_contention': result.bottleneck.resource_contention,
                 'longest_serial_chain': result.bottleneck.longest_serial_chain,
                 'serial_chain_length': result.bottleneck.serial_chain_length,
-                'high_fanin_elements': result.bottleneck.high_fanin_elements[:5],
-                'high_fanout_elements': result.bottleneck.high_fanout_elements[:5],
+                # `UX-343`: rows, not positional pairs - the columns
+                # have had names since `UX-290` and the payload did not.
+                'high_fanin_elements': [
+                    {'element_uid': uid, 'fan_in': count}
+                    for uid, count in result.bottleneck.high_fanin_elements[:5]
+                ],
+                'high_fanout_elements': [
+                    {'element_uid': uid, 'fan_out': count}
+                    for uid, count in result.bottleneck.high_fanout_elements[:5]
+                ],
             },
             'parallelism': {
                 'levels': result.parallelism.levels,

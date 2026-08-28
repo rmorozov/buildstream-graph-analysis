@@ -197,7 +197,7 @@ class StructuralAnalyzer:
         
         # Serialization ratio (elements with both in-degree > 0 and out-degree > 0 that form chains)
         serial_count = sum(1 for n in G.nodes() if G.in_degree(n) > 0 and G.out_degree(n) > 0)
-        serialization_ratio = serial_count / n_elements if n_elements > 0 else 0.0
+        serialization_share = serial_count / n_elements if n_elements > 0 else 0.0
         
         return StructuralMetrics(
             num_elements=n_elements,
@@ -206,11 +206,11 @@ class StructuralAnalyzer:
             avg_fanout=avg_fanout,
             avg_fanin=avg_fanin,
             critical_path_length=cp_length,
-            critical_path_ratio=cp_ratio,
+            critical_path_share=cp_ratio,
             max_parallelism=max_parallelism,
             avg_parallelism=avg_parallelism,
             cyclomatic_complexity=cyclomatic,
-            serialization_ratio=serialization_ratio,
+            serialization_share=serialization_share,
         )
     
     def analyze_bottlenecks(self) -> BottleneckAnalysis:

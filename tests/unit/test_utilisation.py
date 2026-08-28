@@ -169,9 +169,9 @@ def test_no_cpu_accounting_reports_unavailable_not_a_fabricated_number():
     assert result.effective_cpus is None
     assert result.effective_cpus_source is None
     assert result.capacity_cpu_us is None
-    assert result.useful_pct is None
-    assert result.idle_pct is None
-    assert result.wasted_pct is None
+    assert result.useful_share is None
+    assert result.idle_share is None
+    assert result.wasted_share is None
 
 
 def test_no_cpu_accounting_skips_reconciliation_and_oversubscription():
@@ -186,7 +186,7 @@ def test_no_cpu_accounting_skips_reconciliation_and_oversubscription():
         task_intervals=[_interval("a.bst", 100000)],
         occupancy_segments=[],
     )
-    assert result.reconciliation_error_pct is None
+    assert result.reconciliation_error_share is None
     assert result.potential_oversubscription is False
     assert result.oversubscription_evidence == "INSUFFICIENT_EVIDENCE"
 

@@ -84,7 +84,7 @@ class TestEveryQuantityCarriesItsSentence:
 class TestTheSchemaDescribesWhatIsPublished:
     """Clause 1, and the failure that motivated it.
 
-    `utilisation` declared `peak_rss_mb`, `cpu_pct` and `cpu_seconds` -
+    `utilisation` declared `peak_rss_bytes`, `cpu_pct` and `cpu_seconds` -
     three names `_compute_utilization` has never emitted. The hints were
     aimed at a shape that did not exist, so every member the object
     really carries went unhinted and undescribed.
@@ -130,7 +130,7 @@ class TestTheSentencesHaveOneHome:
             [sys.executable, "-m", "bga.cli", "analyze", str(GOLDEN)],
             capture_output=True, text=True)
         assert proc.returncode == 0, proc.stderr
-        sentence = schemas.description(schemas.ANALYZE, "floors.occupancy_ratio")
+        sentence = schemas.description(schemas.ANALYZE, "floors.occupancy_share")
         assert sentence in proc.stdout
 
     def test_help_states_what_a_floor_is_from_the_schema(self):

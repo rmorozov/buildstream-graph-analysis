@@ -41,6 +41,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from . import schemas
+from .units import (GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes,
+                    s_to_us)
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 
 
@@ -74,7 +76,24 @@ _DOMINANT_BINARY_SHARE = 0.5
 # UX-72: a single process peaking above this much resident memory is
 # where concurrent builders start to matter on an ordinary CI runner -
 # round 9's host had 16 GB across 4 builders, so 4 GB each.
-_PEAK_RSS_NOTABLE_MB = 1024
+_PEAK_RSS_NOTABLE_BYTES = GIB
+
+#: `UX-341`: Plane 2's record names its durations in seconds and is an
+#: input with its own conventions. Every one it hands over is republished
+#: in this document, so the rename happens once, here, rather than in
+#: each of the six readers that used to divide by `1e6` beside it.
+_SECONDS_FIELDS = ("wall_s", "total_duration_s", "max_element_duration_s")
+
+
+def _durations_in_us(record: dict) -> dict:
+    """A Plane 2 sub-record with its `_s` durations as `_us`."""
+    if not isinstance(record, dict):
+        return record
+    out = {k: v for k, v in record.items() if k not in _SECONDS_FIELDS}
+    for name in _SECONDS_FIELDS:
+        if name in record:
+            out[f"{name[:-2]}_us"] = s_to_us(record[name])
+    return out
 
 # UX-72: a redundant operation is worth naming in an element's row only
 # when it is a real fraction of what fixing that element is worth at all.
@@ -169,7 +188,7 @@ class ElementJoin:
     # ever reaching the command the workflow ends on.
     dominant_binary: Optional[dict] = None
     serial_binary: Optional[dict] = None
-    peak_rss_kb: Optional[int] = None
+    peak_rss_bytes: Optional[int] = None
     worst_redundancy: Optional[dict] = None
     redundancy_count: int = 0
     aggregating_dependencies: List[str] = field(default_factory=list)
@@ -326,17 +345,22 @@ def _plane2_view(native_report: dict) -> Dict[str, dict]:
         record = view.setdefault(element, {})
         by_cpu = entry.get("by_cpu") or []
         if by_cpu:
-            record["dominant_binary"] = by_cpu[0]
+            record["dominant_binary"] = _durations_in_us(by_cpu[0])
         serial = [s for s in (entry.get("single_process_costs") or []) if s.get("wall_s")]
         if serial:
-            record["serial_binary"] = max(serial, key=lambda s: s["wall_s"])
+            record["serial_binary"] = _durations_in_us(
+                max(serial, key=lambda s: s["wall_s"]))
 
     # UX-63: the largest single process's resident memory.
     for element, entry in ((native_report.get("peak_memory") or {}).get(
         "per_element"
     ) or {}).items():
         if entry.get("peak_rss_kb"):
-            view.setdefault(element, {})["peak_rss_kb"] = entry["peak_rss_kb"]
+            # UX-341: `ru_maxrss` is KiB, so this is exact and integral.
+            # The record keeps its own spelling; the payload publishes
+            # bytes, like every other memory figure the tool writes.
+            view.setdefault(element, {})["peak_rss_bytes"] = kb_to_bytes(
+                entry["peak_rss_kb"])
 
     # UX-23/UX-73: cross-element repeats, attributed to the element that
     # paid the most for them. Only the worst one per element is carried:
@@ -348,10 +372,11 @@ def _plane2_view(native_report: dict) -> Dict[str, dict]:
         record = view.setdefault(worst, {})
         record["redundancy_count"] = record.get("redundancy_count", 0) + 1
         current = record.get("worst_redundancy")
-        if current is None or (finding.get("max_element_duration_s") or 0) > (
-            current.get("max_element_duration_s") or 0
+        candidate = _durations_in_us(finding)
+        if current is None or (candidate.get("max_element_duration_us") or 0) > (
+            current.get("max_element_duration_us") or 0
         ):
-            record["worst_redundancy"] = finding
+            record["worst_redundancy"] = candidate
 
     return view
 
@@ -547,7 +572,8 @@ def _grouped_line(finding_id: str, entries: List[dict], text: str) -> Optional[s
         if len(binaries) != 1 or None in binaries:
             return None
         walls = _collapse_range(
-            [(e.get('serial_binary') or {}).get('wall_s') for e in entries],
+            [((e.get('serial_binary') or {}).get('wall_us') or 0) / US_PER_S
+             for e in entries],
             lambda v: f"{v:.1f}", "s",
         )
         return (f"`{binaries.pop()}` is a SINGLE process holding {walls} of wall time "
@@ -717,15 +743,15 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
         serial = joined.serial_binary
         serial_floor_s = max(
             _SERIALIZATION_NOTABLE_S,
-            joined.potential_saving_us / 1e6 * _SERIALIZATION_NOTABLE_SHARE,
+            joined.potential_saving_us / US_PER_S * _SERIALIZATION_NOTABLE_SHARE,
         )
-        if serial and (serial.get('wall_s') or 0) >= serial_floor_s:
+        if serial and (serial.get('wall_us') or 0) / US_PER_S >= serial_floor_s:
             ranked.append((_EVIDENCE_SERIALIZATION, 'serialization-point',
                 f"`{serial['binary']}` is a SINGLE process holding "
-                f"{serial['wall_s']:.1f}s of wall time - a serialization point no "
+                f"{serial['wall_us'] / US_PER_S:.1f}s of wall time - a serialization point no "
                 f"job count can help; it has to get faster or go away"))
 
-        if joined.peak_rss_kb and joined.peak_rss_kb / 1024 >= _PEAK_RSS_NOTABLE_MB:
+        if joined.peak_rss_bytes and joined.peak_rss_bytes >= _PEAK_RSS_NOTABLE_BYTES:
             # UX-104: the trailing instruction used to be "multiply by
             # however many elements build concurrently before raising
             # `builders`". Where the capture recorded the host's RAM the
@@ -735,7 +761,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
             # arithmetic it can do.
             ranked.append((_EVIDENCE_MEMORY, 'peak-memory',
                 f"its largest single process peaked at "
-                f"{joined.peak_rss_kb / 1024:.0f} MB resident"
+                f"{joined.peak_rss_bytes / MIB:.0f} MB resident"
                 + (
                     " - see the memory envelope above for what that means for "
                     "`builders`" if memory_envelope_available else
@@ -745,10 +771,11 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                 )))
 
         redundancy = joined.worst_redundancy
-        redundancy_s = (redundancy or {}).get("max_element_duration_s") or 0
+        redundancy_s = ((redundancy or {}).get("max_element_duration_us")
+                        or 0) / US_PER_S
         floor_s = max(
             _REDUNDANCY_NOTABLE_S,
-            joined.potential_saving_us / 1e6 * _REDUNDANCY_NOTABLE_SHARE,
+            joined.potential_saving_us / US_PER_S * _REDUNDANCY_NOTABLE_SHARE,
         )
         if redundancy and redundancy_s >= floor_s:
             others = [e for e in redundancy.get("elements", []) if e != joined.element]
@@ -790,7 +817,8 @@ _SATURATION_SHARE = 0.8
 
 
 def compute_memory_envelope(
-    native_report: dict, builders: Optional[int], host_memory_mb: Optional[int],
+    native_report: dict, builders: Optional[int],
+    host_memory_bytes: Optional[int],
 ) -> dict:
     """UX-104: how much memory this build's shape needs at N builders,
     and whether the host has it.
@@ -824,19 +852,24 @@ def compute_memory_envelope(
     """
     peak_memory = (native_report or {}).get("peak_memory") or {}
     per_element = peak_memory.get("per_element") or {}
-    peaks_mb = sorted(
-        ((entry.get("peak_rss_kb") or 0) / 1024 for entry in per_element.values()),
+    # UX-341: bytes throughout. `peak_rss_kb` arrives from Plane 2 as
+    # `ru_maxrss`, which is KiB, so the conversion is exact and integral
+    # - the megabyte float this used to carry existed only to be
+    # printed, and it put three spellings of one dimension in the
+    # payload.
+    peaks = sorted(
+        (kb_to_bytes(entry.get("peak_rss_kb") or 0) for entry in per_element.values()),
         reverse=True,
     )
-    peaks_mb = [peak for peak in peaks_mb if peak > 0]
-    if not peaks_mb or not host_memory_mb:
+    peaks = [peak for peak in peaks if peak > 0]
+    if not peaks or not host_memory_bytes:
         return {}
 
-    def _envelope(count: int) -> float:
+    def _envelope(count: int) -> int:
         # Fewer measured elements than builders means the build cannot
         # actually run that many at once out of this population, so the
         # sum is over what exists rather than padded with a guess.
-        return sum(peaks_mb[:count])
+        return sum(peaks[:count])
 
     observed = builders if isinstance(builders, int) and builders > 0 else None
     projections = []
@@ -846,13 +879,13 @@ def compute_memory_envelope(
     # measured there is nothing to sum but a guess. (An earlier version
     # stopped two past the observed count, which is arbitrary and hid a
     # ceiling three builders away.)
-    for count in range(1, len(peaks_mb) + 1):
+    for count in range(1, len(peaks) + 1):
         envelope = _envelope(count)
         projections.append({
             'builders': count,
-            'envelope_mb': envelope,
-            'share_of_host': envelope / host_memory_mb,
-            'fits': envelope <= host_memory_mb,
+            'envelope_bytes': envelope,
+            'share_of_host': envelope / host_memory_bytes,
+            'fits': envelope <= host_memory_bytes,
         })
     at_observed = next(
         (p for p in projections if p['builders'] == observed), None,
@@ -860,10 +893,10 @@ def compute_memory_envelope(
     higher = [p for p in projections if observed and p['builders'] > observed]
     first_that_does_not_fit = next((p for p in higher if not p['fits']), None)
     return {
-        'host_memory_mb': host_memory_mb,
+        'host_memory_bytes': host_memory_bytes,
         'builders': observed,
-        'elements_measured': len(peaks_mb),
-        'largest_element_peak_mb': peaks_mb[0],
+        'elements_measured': len(peaks),
+        'largest_element_peak_bytes': peaks[0],
         'at_observed_builders': at_observed,
         'projections': projections,
         'first_builders_that_does_not_fit': (
@@ -957,7 +990,7 @@ def resource_profile(native_report: dict) -> dict:
     peaks = [entry.get("peak_rss_kb") for entry in per_element.values()
              if entry.get("peak_rss_kb")]
     if peaks:
-        profile["peak_rss_mb"] = max(peaks) / 1024
+        profile["peak_rss_bytes"] = kb_to_bytes(max(peaks))
     return profile
 
 
@@ -1056,7 +1089,7 @@ def compute_capacity_recommendation(
         'constraints': constraints,
         'binding_constraint': binding['name'],
         'recommended_builders': binding['allows'],
-        'change': binding['allows'] - builders,
+        'builders_change': binding['allows'] - builders,
         'pinned_elements': pinned,
         # UX-14, inherited rather than re-invented: the sweep replays the
         # durations it observed and does not model contention, so a knee
@@ -1087,8 +1120,8 @@ def _memory_allows(memory_envelope: dict) -> Optional[dict]:
             'allows': 0,
             'reason': (
                 f"no builders value fits: even one element of this shape peaks at "
-                f"~{envelope['largest_element_peak_mb'] / 1024:.1f} GB against "
-                f"{envelope['host_memory_mb'] / 1024:.1f} GB of RAM"
+                f"~{envelope['largest_element_peak_bytes'] / GIB:.1f} GB "
+                f"against {envelope['host_memory_bytes'] / GIB:.1f} GB of RAM"
             ),
         }
     largest = max(fitting)
@@ -1097,7 +1130,7 @@ def _memory_allows(memory_envelope: dict) -> Optional[dict]:
         'allows': largest,
         'reason': (
             f"the {largest}-builder envelope fits in "
-            f"{envelope['host_memory_mb'] / 1024:.1f} GB"
+            f"{envelope['host_memory_bytes'] / GIB:.1f} GB"
             + (f" (measured over {measured} element peak(s), so it says nothing "
                f"above {measured})" if measured and largest >= measured else "")
         ),
@@ -1446,8 +1479,10 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     memory_envelope = compute_memory_envelope(
         native_report,
         getattr(run_context, 'max_jobs', None),
-        getattr(run_context, 'memory_budget_mb', None)
-        or getattr(run_context, 'host_memory_mb', None),
+        # UX-341: the capture records both in MB (`run-context.json` is
+        # an input, with its own conventions); the payload is in bytes.
+        mb_to_bytes(getattr(run_context, 'memory_budget_mb', None)
+                     or getattr(run_context, 'host_memory_mb', None)),
     )
     memory_envelope_available = bool(memory_envelope.get('at_observed_builders'))
 
@@ -1472,7 +1507,7 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
             unused_dependencies=p2.get("unused_dependencies", []),
             dominant_binary=p2.get("dominant_binary"),
             serial_binary=p2.get("serial_binary"),
-            peak_rss_kb=p2.get("peak_rss_kb"),
+            peak_rss_bytes=p2.get("peak_rss_bytes"),
             worst_redundancy=p2.get("worst_redundancy"),
             redundancy_count=p2.get("redundancy_count", 0),
             aggregating_dependencies=p2.get("aggregating_dependencies", []),
@@ -1706,10 +1741,10 @@ def format_correlation(result: dict) -> str:
     envelope = result.get("memory_envelope") or {}
     at_observed = envelope.get("at_observed_builders")
     if at_observed:
-        host_gb = envelope["host_memory_mb"] / 1024
+        host_gb = envelope["host_memory_bytes"] / GIB
         line = (
             f"  Memory envelope: {at_observed['builders']} builders of this shape "
-            f"peak at ~{at_observed['envelope_mb'] / 1024:.1f} GB of {host_gb:.1f} GB "
+            f"peak at ~{at_observed['envelope_bytes'] / GIB:.1f} GB of {host_gb:.1f} GB "
             f"({at_observed['share_of_host'] * 100:.0f}%)"
         )
         ceiling = envelope.get("first_builders_that_does_not_fit")

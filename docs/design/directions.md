@@ -282,7 +282,7 @@ disabled — with nothing printed to say so (`UX-40`).
 work the build does. The candidate the audit data supports is work-vs-span:
 
 ```text
-occupancy_ratio = Σ task occupancy / (wall_clock × capacity)
+occupancy_share = Σ task occupancy / (wall_clock × capacity)
 
   mis-optimized build:  40.25s / (39.57s × 4) = 25.4%
   optimized build:      61.45s / (27.50s × 4) = 55.9%
@@ -315,7 +315,7 @@ Around that metric, three properties matter more than the exact formula:
    out of `UX-39` so it does not silently become that task.
 
 > **Done.** `--fail-on-efficiency-regression`/`--min-efficiency` ship on
-> `occupancy_ratio` with their own exit code `5` (`UX-39`), and the
+> `occupancy_share` with their own exit code `5` (`UX-39`), and the
 > confidence interaction that kept the gate from running is fixed
 > (`UX-40`). All three properties below were implemented as argued; the
 > default tolerance was derived from three repeat captures of an
@@ -1130,7 +1130,7 @@ why the absolute was the wrong instrument all along.
 report.** `next_steps` is published, so the terminal, CI and the page
 give the same next command — and the branch that chooses it stays in
 the pipeline, because a viewer that picked the next command from
-`chain_ratio` would be the second decision-maker `UX-207` exists to
+`chain_share` would be the second decision-maker `UX-207` exists to
 prevent. The acceptance is not "a command is shown" but "the command
 runs": every published `argv` is executed against the fixture. What is
 *absent* is asserted too — a chain-bound build is not told to add

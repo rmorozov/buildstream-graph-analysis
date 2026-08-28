@@ -170,6 +170,8 @@ bga/run_store.py       .bga/runs, the @last/@prev aliases, prune
 bga/sources.py         the source inventory and resource identity
 bga/plane2.py          what a Plane 2 report is, and which shape one is
 bga/hostinfo.py        the host manifest; the cross-host refusal
+bga/units.py           the payload's units, and the two input
+                       boundaries that convert into them (UX-341)
 bga/suspend.py         did this capture sleep
 bga/cli.py             argparse CLI and dispatch
 bga/tools_dispatch.py  the `tools/` aliases `bga` exposes as subcommands

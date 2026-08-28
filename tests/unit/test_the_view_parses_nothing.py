@@ -76,7 +76,7 @@ def _write_monolith(path, records):
     """
     per_element = {f"el-{i}.bst": {"cpu_us": 1000 + i, "processes": 3}
                    for i in range(200)}
-    peaks = {f"el-{i}.bst": {"peak_rss_kb": 1024 * (i + 1)} for i in range(200)}
+    peaks = {f"el-{i}.bst": {"peak_rss_bytes": 1024 * (i + 1)} for i in range(200)}
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("{\n")
         handle.write(' "wall_span_s": 3600.0,\n')
@@ -94,7 +94,7 @@ def _write_monolith(path, records):
                                f"/src/file{i}.c"],
                       "element": f"el-{i % 200}.bst", "start_ts": i * 10,
                       "end_ts": i * 10 + 9, "cpu_us": 9000,
-                      "peak_rss_kb": 4096, "inv": f"inv-{i % 64}"}
+                      "peak_rss_bytes": 4096, "inv": f"inv-{i % 64}"}
             handle.write(("  " if i == 0 else " ,") + json.dumps(record) + "\n")
         handle.write(" ]\n}\n")
 
@@ -155,7 +155,7 @@ _MEASURE = textwrap.dedent("""
     httpd.server_close()
     print(json.dumps({
         "seconds": elapsed,
-        "peak_rss_mb": peak_mb(),
+        "peak_rss_bytes": peak_mb(),
         "opened": opened,
     }))
 """)
@@ -181,7 +181,7 @@ class TestStartupDoesNotPayForWhatItServes:
     def test_the_big_run_reaches_a_socket_inside_both_ceilings(self, store):
         """The acceptance test's first clause, on the generated run."""
         out = _startup(store / ".bga/runs" / BIG_STAMP / "run")
-        assert out["peak_rss_mb"] < RSS_CEILING_MB, out
+        assert out["peak_rss_bytes"] < RSS_CEILING_MB, out
         assert out["seconds"] < SECONDS_CEILING, out
 
     def test_the_big_artifacts_are_not_opened_at_all(self, store):
@@ -199,7 +199,7 @@ class TestStartupDoesNotPayForWhatItServes:
         showed the defect's shape: 1,233 MB to view a 2 MB run, because
         the store aggregate walked into the big snapshot beside it."""
         out = _startup(store / ".bga/runs" / SMALL_STAMP / "run")
-        assert out["peak_rss_mb"] < RSS_CEILING_MB, out
+        assert out["peak_rss_bytes"] < RSS_CEILING_MB, out
         assert out["seconds"] < SECONDS_CEILING, out
         assert [p for p in out["opened"]
                 if os.path.basename(p) == "plane2.json"] == [], out["opened"]
@@ -227,7 +227,7 @@ class TestStartupDoesNotPayForWhatItServes:
             out = _startup(snapshot / "run")
             assert [p for p in out["opened"]
                     if os.path.basename(p) == "plane2.json"] == [], out["opened"]
-            assert out["peak_rss_mb"] < RSS_CEILING_MB, out
+            assert out["peak_rss_bytes"] < RSS_CEILING_MB, out
         finally:
             (snapshot / "analyze.json").unlink()
 

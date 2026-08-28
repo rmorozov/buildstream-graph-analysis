@@ -42,6 +42,7 @@ from .compare import (
 from .exceptions import AnalysisError, IngestionError
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
+from .units import mb_to_bytes
 from .replay.scheduler import build_contention_calibration
 from .run_store import (
     StoreError,
@@ -103,15 +104,13 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
         return
     downstream, _upstream = compute_reachability(graph)
     element_kinds = {e.uid: (e.element_kind or 'unknown') for e in graph.elements}
-    # UX-53's single per-element duration definition, in seconds. Summed
-    # across a blast set this is *work*, not wall clock - the report
-    # says so where it prints it.
+    # UX-53's single per-element duration definition. Summed across a
+    # blast set this is *work*, not wall clock - the report says so
+    # where it prints it. `UX-341`: in microseconds, as published; this
+    # divided by 1e6 to feed a `measured_seconds` nothing else spoke.
     from bga.graph.edg import compute_element_durations
-    durations = {
-        uid: micros / 1e6
-        for uid, micros in compute_element_durations(
-            getattr(analyzer, 'normalized_tasks', []) or []).items()
-    }
+    durations = compute_element_durations(
+        getattr(analyzer, 'normalized_tasks', []) or [])
     rows = sources_module.resource_blast(
         inventory, downstream, element_kinds, durations)
     result.resource_blast = {
@@ -204,8 +203,8 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     result.memory_envelope = compute_memory_envelope(
         native_report,
         getattr(context, 'max_jobs', None),
-        getattr(context, 'memory_budget_mb', None)
-        or getattr(context, 'host_memory_mb', None),
+        mb_to_bytes(getattr(context, 'memory_budget_mb', None)
+                    or getattr(context, 'host_memory_mb', None)),
     )
     # UX-116: and the sentence that intersects them. Every constraint on
     # the joint (builders x max-jobs) choice is now a measured number in
@@ -440,24 +439,25 @@ def _memory_envelope_delta(args: argparse.Namespace) -> dict:
         envelopes[label] = compute_memory_envelope(
             native_report,
             getattr(run_context, 'max_jobs', None),
-            getattr(run_context, 'memory_budget_mb', None)
-            or getattr(run_context, 'host_memory_mb', None),
+            mb_to_bytes(getattr(run_context, 'memory_budget_mb', None)
+                        or getattr(run_context, 'host_memory_mb', None)),
         )
 
     baseline_at = (envelopes['baseline'] or {}).get('at_observed_builders')
     candidate_at = (envelopes['candidate'] or {}).get('at_observed_builders')
     if not baseline_at or not candidate_at:
         return {}
-    delta_mb = candidate_at['envelope_mb'] - baseline_at['envelope_mb']
+    delta = candidate_at['envelope_bytes'] - baseline_at['envelope_bytes']
     return {
-        'baseline_envelope_mb': baseline_at['envelope_mb'],
-        'candidate_envelope_mb': candidate_at['envelope_mb'],
-        'delta_mb': delta_mb,
+        'baseline_envelope_bytes': baseline_at['envelope_bytes'],
+        'candidate_envelope_bytes': candidate_at['envelope_bytes'],
+        'delta_bytes': delta,
         'delta_share': (
-            delta_mb / baseline_at['envelope_mb'] if baseline_at['envelope_mb'] else None
+            delta / baseline_at['envelope_bytes']
+            if baseline_at['envelope_bytes'] else None
         ),
         'candidate_fits': candidate_at['fits'],
-        'host_memory_mb': envelopes['candidate'].get('host_memory_mb'),
+        'host_memory_bytes': envelopes['candidate'].get('host_memory_bytes'),
         'note': (
             "A note, not a gate: peak RSS has no measured noise band, so a grown "
             "envelope is a fact to look at rather than a threshold to fail."
@@ -819,7 +819,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     # the second.
     if efficiency_gate_on:
         # UX-87: a gate that stops gating must say so. Both efficiency
-        # gates read `occupancy_ratio` and both return False - pass -
+        # gates read `occupancy_share` and both return False - pass -
         # when a run lacks it, so a pipeline that asked for the gate
         # would see exit 0 and nothing on stderr while nothing was
         # checked. Fail-open stays the default (UX-40's precedent: do not
@@ -835,7 +835,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             runs = " and ".join(signal['missing_occupancy_in'])
             print(
                 f"Efficiency gate NOT APPLIED: {'/'.join(signal['gates_not_applied'])} "
-                f"was requested, but the {runs} run has no `occupancy_ratio` signal, "
+                f"was requested, but the {runs} run has no `occupancy_share` signal, "
                 f"so there is nothing to gate on. This is not a pass - it is an "
                 f"unevaluated check (`efficiency_gate_evaluated: false` in --format "
                 f"json). Pass --require-efficiency-signal to treat this as a failure "
@@ -847,7 +847,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 return EXIT_CODE_SIGNAL_UNAVAILABLE
 
         if efficiency_below_floor(comparison, getattr(args, 'min_efficiency', None)):
-            candidate = comparison.candidate_metrics.get('occupancy_ratio')
+            candidate = comparison.candidate_metrics.get('occupancy_share')
             print(
                 f"Efficiency gate FAILED: dispatch occupancy {candidate * 100:.1f}% is below "
                 f"the declared floor of {args.min_efficiency * 100:.1f}% "
@@ -858,8 +858,8 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             return EXIT_CODE_EFFICIENCY_REGRESSION
         if getattr(args, 'fail_on_efficiency_regression', False) and \
                 efficiency_regression_exceeds_threshold(comparison, args.max_efficiency_drop):
-            baseline = comparison.baseline_metrics.get('occupancy_ratio')
-            candidate = comparison.candidate_metrics.get('occupancy_ratio')
+            baseline = comparison.baseline_metrics.get('occupancy_share')
+            candidate = comparison.candidate_metrics.get('occupancy_share')
             threshold_desc = (
                 f"{args.max_efficiency_drop}pp" if args.max_efficiency_drop is not None
                 else f"the default {_EFFICIENCY_DROP_PP}pp"

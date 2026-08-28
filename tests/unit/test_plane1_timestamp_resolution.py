@@ -119,7 +119,8 @@ class TestTheReportStatesTheResolution:
 
         lines = _format_timestamp_resolution(self._result(
             tasks_compared=25, tasks_shorter_than_bst=0, shorter_than_bst=[],
-            resolution_s=1.5, shortest_task_s=600.0, tasks_measured=25,
+            resolution_us=1_500_000, shortest_task_us=600_000_000,
+            tasks_measured=25,
             tasks_where_material=0, material_share=0.05,
         ))
 
@@ -135,7 +136,8 @@ class TestTheReportStatesTheResolution:
 
         text = " ".join(_format_timestamp_resolution(self._result(
             tasks_compared=20, tasks_shorter_than_bst=0, shorter_than_bst=[],
-            resolution_s=0.31, shortest_task_s=2.69, tasks_measured=8,
+            resolution_us=310_000, shortest_task_us=2_690_000,
+            tasks_measured=8,
             tasks_where_material=8, material_share=0.05,
         )))
 
@@ -150,7 +152,8 @@ class TestTheReportStatesTheResolution:
             shorter_than_bst=[{"element": "work-g.bst", "action": "build",
                                "span_s": 2.687, "bst_elapsed_s": 3.0,
                                "shortfall_s": 0.313}],
-            resolution_s=0.31, shortest_task_s=2.69, tasks_measured=8,
+            resolution_us=310_000, shortest_task_us=2_690_000,
+            tasks_measured=8,
             tasks_where_material=8, material_share=0.05,
         )))
 

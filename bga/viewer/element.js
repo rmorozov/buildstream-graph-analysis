@@ -325,7 +325,7 @@ const SOURCES = [
   ["element_join", "element", [
     ["cores_busy", "Cores busy", "ratio"],
     ["requested_jobs", "Jobs asked for", "count"],
-    ["peak_rss_kb", "Peak RSS", "kilobytes"],
+    ["peak_rss_bytes", "Peak RSS", "bytes"],
     ["blast_radius", "Blast radius", "count"]]],
 ];
 

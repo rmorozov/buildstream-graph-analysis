@@ -1,6 +1,6 @@
 """UX-48: idle capacity must be split by whether work was ready to run.
 
-`IDLE_UNDERPARALLEL` was declared in `CPUBucket`, read by `idle_pct`, and
+`IDLE_UNDERPARALLEL` was declared in `CPUBucket`, read by `idle_share`, and
 never assigned anywhere - the code said so itself ("For now, assign all
 to IDLE_NO_TASKS"). So every run booked its whole idle capacity to
 `IDLE_NO_TASKS`.
@@ -119,7 +119,7 @@ def test_split_preserves_reconciliation_exactly():
 
     assert sum(result.buckets.values()) == result.capacity_cpu_us
     assert result.unaccounted_us == 0
-    assert result.reconciliation_error_pct == 0.0
+    assert result.reconciliation_error_share == 0.0
 
 
 def test_underparallel_never_exceeds_total_idle():

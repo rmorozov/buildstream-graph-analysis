@@ -20,8 +20,8 @@ from bga.compare import (
 def _comparison(baseline_occupancy, candidate_occupancy):
     """Only the fields the efficiency gate reads - the rest of
     ComparisonResult is exercised by tests/unit/test_compare.py."""
-    baseline = {"occupancy_ratio": baseline_occupancy, "total_duration_us": 26_000_000}
-    candidate = {"occupancy_ratio": candidate_occupancy, "total_duration_us": 26_000_000}
+    baseline = {"occupancy_share": baseline_occupancy, "total_duration_us": 26_000_000}
+    candidate = {"occupancy_share": candidate_occupancy, "total_duration_us": 26_000_000}
     deltas = {
         k: (None if candidate[k] is None or baseline[k] is None else candidate[k] - baseline[k])
         for k in baseline

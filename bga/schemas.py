@@ -48,10 +48,23 @@ from .findings import DIAGNOSES
 # uid lists - each of which republished element membership already
 # published beside it. The versioning rule below is explicit that a
 # removal moves the version, and this is the case it was written for.
-ANALYZE = "analyze/v2"
-COMPARE = "compare/v1"
-BLAST = "blast/v1"
+# `UX-341`: v3. Four spellings of three dimensions left the vocabulary
+# and the keys that carried them were renamed with the unit they are
+# now in - `measured_us`, `peak_rss_bytes`, `useful_share`,
+# `occupancy_share`. Renames are removals, so this is a version move by
+# the rule below and not an edit.
+ANALYZE = "analyze/v3"
+COMPARE = "compare/v2"
+BLAST = "blast/v2"
 STORE = "store/v1"
+
+# `UX-297`'s convention, one level up: the ids a release still *reads*
+# but no longer writes. An old store is full of files stamped with one,
+# and the release that can open them has to be able to say so. `bga`
+# reads a `v2` analyze document by name - the keys this item renamed
+# resolve through `guessQuantity` rather than through a declaration, so
+# an old snapshot still renders, with the fallback saying so.
+SUPERSEDED = ("analyze/v2", "compare/v1", "blast/v1", "correlate/v1")
 # UX-234: the store as a distribution rather than as a list. Beside
 # `store/v1` rather than inside it: a listing is one row per snapshot
 # and this is one row per *host class*, and a consumer wanting the
@@ -73,7 +86,7 @@ SWEEP = "sweep/v1"
 # already computed and already correct; what it lacked was a contract,
 # so `bga view` could not serve it, CI could not gate on it and no
 # consumer could validate it.
-CORRELATE = "correlate/v1"
+CORRELATE = "correlate/v2"
 
 # The key that carries the version, and the first key of every payload -
 # a consumer reading a truncated or streamed document sees it before it
@@ -206,19 +219,36 @@ PRESET_COLUMNS_MAX = 8
 # The closed set of quantities. Closed deliberately: an open vocabulary
 # is one a renderer cannot be complete against, and a renderer that
 # silently falls back to "print the raw number" is what this replaces.
+# `UX-341`: and *one member per dimension*. It had nine, and three
+# dimensions were spelled more than one way - `seconds` beside
+# `duration_us`, `megabytes` and `kilobytes` beside `bytes`, `percent`
+# beside `share`. Every tail was derived from its own head, usually by
+# a lossy division of a value the tool already held as an integer, and
+# a consumer comparing two figures had to know which convention each
+# was written under. The renderer still knows the retired spellings
+# (`bga/viewer/format.js`); no schema may declare one.
 QUANTITIES = (
     "duration_us",   # microseconds; render as a human duration
-    "bytes",
-    "megabytes",     # UX-201: `peak_rss_mb` is not a byte count
-    "kilobytes",     # UX-215: nor is `peak_rss_kb`, and calling it
-                     # `bytes` would be wrong by 1024x - which is the
-                     # exact class of error UX-201 exists to stop
+    "bytes",         # UX-201/UX-215: not megabytes, not kilobytes -
+                     # calling a KiB count `bytes` is wrong by 1024x,
+                     # which is why the conversion happens at the input
+                     # boundary in `bga/units.py` and not in a renderer
     "share",         # 0..1; render as a percentage
-    "percent",       # UX-201: already 0..100; do not multiply again
     "count",
-    "seconds",
     "ratio",         # unbounded; render as a multiplier
 )
+
+# The dimension each member measures. `UX-341`'s property, stated as
+# data so a guard can assert it: no two members may measure one thing,
+# which is a rule about the vocabulary rather than a list of four names
+# a later round would re-add.
+DIMENSIONS = {
+    "duration_us": "time",
+    "bytes": "memory",
+    "share": "bounded fraction",
+    "count": "cardinality",
+    "ratio": "unbounded multiplier",
+}
 
 # UX-201: the verdict as a value, beside the sentence. `compare/v1`
 # typed `verdict` as a plain string, so the viewer styled its banner by
@@ -894,7 +924,7 @@ _BLAST_REQUIRED = {
     "by_element_kind": "object",
     # UX-206: additive - the closure keyed by depth, kind and cost.
     "blast_tree": "array",
-    "measured_seconds": "",
+    "measured_us": "",
     "measured_elements": "integer",
     "element_count": "integer",
     "has_inventory": "boolean",
@@ -927,8 +957,8 @@ _JOIN_COLUMNS = [
      "quantity": "ratio", "sortable": True},
     {"key": "requested_jobs", "title": "Jobs asked for",
      "quantity": "count", "sortable": True},
-    {"key": "peak_rss_kb", "title": "Peak RSS",
-     "quantity": "kilobytes", "sortable": True},
+    {"key": "peak_rss_bytes", "title": "Peak RSS",
+     "quantity": "bytes", "sortable": True},
 ]
 
 _JOIN_ITEM_PROPERTIES = {
@@ -955,8 +985,8 @@ _JOIN_ITEM_PROPERTIES = {
                 QUANTITY: "share",
                 "description": "That CPU over the element's own. High means "
                                "one binary is the element."},
-            "wall_s": {
-                QUANTITY: "seconds",
+            "wall_us": {
+                QUANTITY: "duration_us",
                 "description": "Wall-clock those processes spanned."},
         }},
     "serial_binary": {
@@ -966,8 +996,8 @@ _JOIN_ITEM_PROPERTIES = {
                 QUANTITY: "duration_us",
                 "description": "CPU time this binary used while running one "
                                "process at a time."},
-            "wall_s": {
-                QUANTITY: "seconds",
+            "wall_us": {
+                QUANTITY: "duration_us",
                 "description": "Wall-clock it spanned doing so - close to "
                                "`cpu_us` is the tell."},
         }},
@@ -977,12 +1007,12 @@ _JOIN_ITEM_PROPERTIES = {
             "occurrence_count": {
                 QUANTITY: "count",
                 "description": "How many times the repeated work ran."},
-            "total_duration_s": {
-                QUANTITY: "seconds",
+            "total_duration_us": {
+                QUANTITY: "duration_us",
                 "description": "Wall-clock the repeated work cost across all "
                                "its occurrences."},
-            "max_element_duration_s": {
-                QUANTITY: "seconds",
+            "max_element_duration_us": {
+                QUANTITY: "duration_us",
                 "description": "The longest single occurrence of the repeated "
                                "work."},
         }},
@@ -1029,8 +1059,8 @@ _JOIN_ITEM_PROPERTIES = {
         "description": "The parallelism the element's own build "
                        "commands asked for, read from the observed "
                        "argv - not what BuildStream granted."},
-    "peak_rss_kb": {
-        QUANTITY: "kilobytes",
+    "peak_rss_bytes": {
+        QUANTITY: "bytes",
         "description": "The largest single process's resident memory, "
                        "which is what a builder count has to be "
                        "multiplied against."},
@@ -1083,7 +1113,7 @@ _EVIDENCE_FIELDS = {
     "efficiency_score": ("share",
         "Makespan against the certified floor. Measured against a bound "
         "this run proved, never against an ideal build."),
-    "hit_ratio": ("share",
+    "hit_share": ("share",
         "Cache hits as a share of lookups."),
     "largest_wait_share": ("share",
         "The biggest single wait category, as a share of wall-clock."),
@@ -1096,7 +1126,7 @@ _EVIDENCE_FIELDS = {
         "asked for."),
     "share_of_path": ("share",
         "As a share of the critical path - not of wall-clock."),
-    "target_closure_hit_ratio": ("share",
+    "target_closure_hit_share": ("share",
         "Cache hits within the target's own dependency closure, which is "
         "the part a change to the target can affect."),
     "transfer_share": ("share",
@@ -1146,15 +1176,15 @@ _EVIDENCE_FIELDS = {
         "Ordering violations in the recorded log. Each one weakens every "
         "timing conclusion drawn from it."),
     # Everything else.
-    "envelope_mb": ("megabytes",
+    "envelope_bytes": ("bytes",
         "Peak resident memory the run would need at the recommended "
         "builder count."),
-    "host_memory_mb": ("megabytes",
+    "host_memory_bytes": ("bytes",
         "Memory the host reported, which the memory ceiling is computed against."),
     "cores_busy": ("ratio",
         "CPU-seconds per wall-second inside the element - how much "
         "parallelism its own build actually achieved."),
-    "measured_seconds": ("seconds",
+    "measured_us": ("duration_us",
         "Wall-clock actually measured, as opposed to estimated."),
 }
 
@@ -1174,10 +1204,16 @@ EVIDENCE_QUANTITIES = {
 # a slice that disagreed with its source about a unit would be worse
 # than a slice with no unit at all.
 EVIDENCE_QUANTITIES.update({
-    "change": {
-        QUANTITY: "share",
-        "description": "The signed change this finding is about, as a share of "
-                       "the baseline."},
+    # `UX-341`: `change` used to be here as a `share` *and* on
+    # `capacity_recommendation` as a count of builders. One name, two
+    # dimensions - so the count was renamed for what it counts, and the
+    # share went with it, because after the rename nothing emitted a
+    # finding key called `change` at all.
+    "builders_change": {
+        QUANTITY: "count", DIRECTION: "higher_is_better",
+        "description": "`recommended_builders` minus `builders`, signed - "
+                       "negative means the run asked for more than something "
+                       "can serve."},
     "blast_radius": {
         "additionalProperties": {"properties": {
             "downstream_count": {
@@ -1229,25 +1265,25 @@ EVIDENCE_QUANTITIES.update({
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
         QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove',
-        # `UX-343`: this block is entirely seconds and counts, and said
-        # so nowhere - nine leaves, no unit. The `_s` suffix is what
-        # `UX-341` will take to microseconds; declaring it is what makes
-        # that a rename rather than a guess.
+        # `UX-343`: this block is entirely durations and counts, and
+        # said so nowhere - nine leaves, no unit. `UX-341` then took the
+        # four `_s` members to microseconds; declaring them first is
+        # what made that a rename rather than a guess.
         "properties": {
-            "resolution_s": {
-                QUANTITY: "seconds",
+            "resolution_us": {
+                QUANTITY: "duration_us",
                 "description": "The finest interval the two planes' clocks can "
                                "tell apart."},
-            "shortest_task_s": {
-                QUANTITY: "seconds",
+            "shortest_task_us": {
+                QUANTITY: "duration_us",
                 "description": "The shortest task measured - the case the "
                                "resolution above matters most for."},
-            "worst_excess_s": {
-                QUANTITY: "seconds",
+            "worst_excess_us": {
+                QUANTITY: "duration_us",
                 "description": "The largest amount by which one plane's "
                                "duration exceeded the other's."},
-            "worst_shortfall_s": {
-                QUANTITY: "seconds",
+            "worst_shortfall_us": {
+                QUANTITY: "duration_us",
                 "description": "The largest amount by which one plane's "
                                "duration fell short of the other's."},
             "material_share": {
@@ -1282,8 +1318,8 @@ _ANALYZE_HINTS = {
                 "cpu_count": {
                     QUANTITY: "count",
                     "description": "Cores the host reported, which the CPU ceiling is computed against."},
-                "memory_mb": {
-                    QUANTITY: "megabytes",
+                "memory_bytes": {
+                    QUANTITY: "bytes",
                     "description": "Memory the host reported, which the memory ceiling is computed against."},
             }},
         }},
@@ -1316,11 +1352,16 @@ _ANALYZE_HINTS = {
                                "machine rather than about the graph "
                                "alone."},
             "cores_busy": {
-                QUANTITY: "count",
+                QUANTITY: "ratio",
                 "description": "Cores drawn on average across the whole "
-                               "run, from Plane 2. An average, not a peak: "
-                               "during the parallel stretch each element "
-                               "draws more, so the CPU ceiling below is "
+                               "run, from Plane 2 - CPU-seconds per "
+                               "wall-second, which is the same measurement "
+                               "`element_join[].cores_busy` publishes and "
+                               "so carries the same unit (UX-341: this "
+                               "declared `count` and that declared "
+                               "`ratio`). An average, not a peak: during "
+                               "the parallel stretch each element draws "
+                               "more, so the CPU ceiling below is "
                                "optimistic."},
             "constraints": {
                 "description": "One record per ceiling that could be "
@@ -1347,11 +1388,14 @@ _ANALYZE_HINTS = {
                 "description": "What the binding constraint allows. A "
                                "hypothesis to time, not a setting to "
                                "apply - see `caveat`."},
-            "change": {
-                QUANTITY: "count",
+            "builders_change": {
+                QUANTITY: "count", DIRECTION: "higher_is_better",
                 "description": "`recommended_builders` minus `builders`, "
                                "signed - negative means the run asked for "
-                               "more than something can serve."},
+                               "more than something can serve. UX-341: "
+                               "named for what it counts, because "
+                               "`findings[].evidence.change` is a share and "
+                               "one name may not mean two things."},
             "pinned_elements": {
                 "description": "Elements whose own build pinned itself to "
                                "one core, from Plane 2. Free capacity these "
@@ -1435,12 +1479,12 @@ _ANALYZE_HINTS = {
                         QUANTITY: "count",
                         "description": "Elements on the chain, not its "
                                        "duration."},
-                    "critical_path_ratio": {
+                    "critical_path_share": {
                         QUANTITY: "share",
                         "description": "The chain's length over the graph's "
                                        "depth - how much of the shape the "
                                        "chain accounts for."},
-                    "serialization_ratio": {
+                    "serialization_share": {
                         QUANTITY: "share",
                         "description": "How much of the graph has to run one "
                                        "thing after another."},
@@ -1795,11 +1839,11 @@ _ANALYZE_HINTS = {
             {"name": "Plane 2 (sandbox)",
              "question": "Compute-bound, or badly built?",
              "columns": ["element", "element_durations", "cores_busy",
-                         "requested_jobs", "peak_rss_kb"],
+                         "requested_jobs", "peak_rss_bytes"],
              # Without these the view is `element_durations` under a
              # heading that promises the sandbox, so it is not offered
              # at all on a run that captured no Plane 2.
-             "requires": ["cores_busy", "requested_jobs", "peak_rss_kb"],
+             "requires": ["cores_busy", "requested_jobs", "peak_rss_bytes"],
              "sort": {"column": "element_durations", "direction": "desc"},
              "bound": 25},
         ],
@@ -1983,7 +2027,7 @@ _ANALYZE_HINTS = {
                         QUANTITY: "count",
                         "description": "Elements this run restored instead of "
                                        "building."},
-                    "hit_ratio": {
+                    "hit_share": {
                         QUANTITY: "share",
                         "description": "Elements restored over elements "
                                        "considered."},
@@ -1998,7 +2042,7 @@ _ANALYZE_HINTS = {
                                 QUANTITY: "count",
                                 "description": "Artifacts already local, "
                                                "so nothing was pulled."},
-                            "hit_ratio": {
+                            "hit_share": {
                                 QUANTITY: "share",
                                 "description": "Artifacts already local "
                                                "over artifacts "
@@ -2018,7 +2062,7 @@ _ANALYZE_HINTS = {
                                 QUANTITY: "count",
                                 "description": "Of those, the ones "
                                                "restored."},
-                            "hit_ratio": {
+                            "hit_share": {
                                 QUANTITY: "share",
                                 "description": "Restored over considered, "
                                                "inside the closure."}}},
@@ -2161,11 +2205,15 @@ _ANALYZE_HINTS = {
                                "bound - the model's own slack. Published "
                                "so it cannot be mistaken for headroom."},
             "efficiency_score": {
-                QUANTITY: "ratio",
-                "description": "Makespan against the certified floor. A "
-                               "ratio against a bound this run proved, "
-                               "never against an ideal build."},
-            "occupancy_ratio": {
+                QUANTITY: "share",
+                "description": "Makespan against the certified floor. `LB / "
+                               "horizon`, so it is bounded at 1 - a share "
+                               "against a bound this run proved, never "
+                               "against an ideal build. UX-341: the finding "
+                               "that quotes this declared `share` while the "
+                               "floor itself declared `ratio`; one number "
+                               "cannot have two units."},
+            "occupancy_share": {
                 QUANTITY: "share",
                 "description": "Slot-time used as a share of slot-time "
                                "available. Unlike the efficiency score it "
@@ -2438,13 +2486,13 @@ _ANALYZE_HINTS = {
                                          "scheduler is the constraint, or "
                                          "neither where the run did not "
                                          "record enough to say."},
-            "chain_ratio": {
+            "chain_share": {
                 QUANTITY: "share",
                 "description": "The critical path as a share of wall-clock - "
                                "the number the diagnosis is decided by."},
-            "chain_bound_ratio": {
+            "chain_bound_share": {
                 QUANTITY: "share",
-                "description": "The threshold `chain_ratio` is compared "
+                "description": "The threshold `chain_share` is compared "
                                "against."},
             "certified_headroom_us": {
                 QUANTITY: "duration_us",
@@ -2581,8 +2629,9 @@ _ANALYZE_HINTS = {
             # in this object, so UX-201's hints described a shape that
             # did not exist and every real member of it went unhinted.
             # The lesson those three carried is kept where it is live:
-            # `element_join[].peak_rss_kb` is the published peak-memory
-            # field, and `megabytes` remains a declared quantity.
+            # `element_join[].peak_rss_bytes` is the published
+            # peak-memory field (`UX-341` retired `megabytes` and
+            # `kilobytes`; the payload is in bytes).
             "cpu_accounting_available": {
                 "description": "Whether the run recorded enough to account "
                                "for its slot-time at all. When false every "
@@ -2651,9 +2700,9 @@ _ANALYZE_HINTS = {
                 "description": "Slot-time no bucket claimed. Non-zero here "
                                "is a gap in the record, and it weakens "
                                "every share this object publishes."},
-            "reconciliation_error_pct": {
-                QUANTITY: "percent",
-                "description": "That gap as a percentage. The honesty "
+            "reconciliation_error_share": {
+                QUANTITY: "share",
+                "description": "That gap as a share of capacity. The honesty "
                                "check on this whole object: near zero "
                                "means the buckets really do cover it."},
             "potential_oversubscription": {
@@ -2667,17 +2716,17 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 "description": "The most tasks seen running together in "
                                "this accounting's own view of the run."},
-            "useful_pct": {
-                QUANTITY: "percent",
+            "useful_share": {
+                QUANTITY: "share",
                 "description": "Slot-time that did work kept, as a share "
                                "of capacity. Not a share of wall-clock."},
-            "idle_pct": {
-                QUANTITY: "percent",
+            "idle_share": {
+                QUANTITY: "share",
                 "description": "Slot-time with nothing to run. Bounded "
                                "below by the graph's shape, so it is never "
                                "entirely recoverable."},
-            "wasted_pct": {
-                QUANTITY: "percent",
+            "wasted_share": {
+                QUANTITY: "share",
                 "description": "Slot-time spent on work that was then "
                                "thrown away - retries and rebuilds. This "
                                "is the recoverable share."},
@@ -2799,8 +2848,8 @@ _COMPARE_HINTS = {
                 QUANTITY: "duration_us",
                 "description": "Change in time independent work spent "
                                "running one after another."},
-            "efficiency_pct": {
-                QUANTITY: "percent",
+            "efficiency_share": {
+                QUANTITY: "share",
                 "description": "Change in makespan against the certified "
                                "floor. Each run is measured against its "
                                "own floor, so this compares two ratios "
@@ -2811,7 +2860,39 @@ _COMPARE_HINTS = {
                                "`--fail-on` thresholds are read against."},
         },
     },
-    "attribution_deltas": {DIRECTION: "lower_is_better"},
+    "attribution_deltas": {
+        DIRECTION: "lower_is_better",
+        # UX-341: declared, and in one unit per dimension. These six
+        # were the last numbers in this document with no declaration at
+        # all, and three of them were 0..100 while every other bounded
+        # fraction the tool publishes is 0..1.
+        "additionalProperties": {"properties": {
+            "baseline_us": {
+                QUANTITY: "duration_us",
+                "description": "What this category cost in the baseline "
+                               "run."},
+            "candidate_us": {
+                QUANTITY: "duration_us",
+                "description": "What it cost in the candidate run."},
+            "delta_us": {
+                QUANTITY: "duration_us", DIRECTION: "lower_is_better",
+                "description": "Candidate minus baseline, in absolute "
+                               "time - negative is faster."},
+            "baseline_share": {
+                QUANTITY: "share",
+                "description": "That baseline cost as a share of the "
+                               "baseline run's own total."},
+            "candidate_share": {
+                QUANTITY: "share",
+                "description": "And as a share of the candidate run's "
+                               "own total, which is a different total."},
+            "delta_share": {
+                QUANTITY: "share", DIRECTION: "lower_is_better",
+                "description": "The change in that share. A category can "
+                               "grow in absolute time and shrink here, "
+                               "which is why both are published."},
+        }},
+    },
     "mismatches": {
         COLUMNS: [
             {"key": "field", "title": "Field", "sortable": True},
@@ -2856,8 +2937,8 @@ _BLAST_HINTS = {
         QUANTITY: "count",
         "description": "How many of the affected elements have a recorded "
                        "duration. The rest are counted, never estimated."},
-    "measured_seconds": {
-        QUANTITY: "seconds",
+    "measured_us": {
+        QUANTITY: "duration_us",
         "description": "Recorded rebuild time below this element. A sum over "
                        "the measured elements only, so it is a lower bound on "
                        "the real cost."},
@@ -2873,8 +2954,8 @@ _BLAST_HINTS = {
                             "so an element reachable by two paths is listed "
                             "at the shorter one."},
             {"key": "element_kind", "title": "Kind", "sortable": True},
-            {"key": "measured_seconds", "title": "Measured",
-             "quantity": "seconds", "sortable": True},
+            {"key": "measured_us", "title": "Measured",
+             "quantity": "duration_us", "sortable": True},
         ],
         "items": {
             "properties": {
@@ -2882,8 +2963,8 @@ _BLAST_HINTS = {
                     QUANTITY: "count",
                     "description": "Hops from the direct consumers, "
                                    "breadth-first."},
-                "measured_seconds": {
-                    QUANTITY: "seconds",
+                "measured_us": {
+                    QUANTITY: "duration_us",
                     "description": "This element's own recorded duration, not "
                                    "its subtree's."},
             },
@@ -3015,7 +3096,7 @@ _STORE_AGGREGATE_HINTS = {
                 "duration_us": _DISTRIBUTION,
                 "cache_hit_rate": _DISTRIBUTION,
                 "cores_busy": _DISTRIBUTION,
-                "peak_rss_mb": _DISTRIBUTION,
+                "peak_rss_bytes": _DISTRIBUTION,
                 "snapshot_bytes": _DISTRIBUTION,
                 "total_bytes": {
                     QUANTITY: "bytes",
@@ -3033,7 +3114,7 @@ _STORE_AGGREGATE_HINTS = {
                                    "samples."},
                 "resource_shortfall": {
                     "description": "Present instead of `cores_busy` and "
-                                   "`peak_rss_mb` when no run in this "
+                                   "`peak_rss_bytes` when no run in this "
                                    "class carries them. UX-296: the "
                                    "scalars are written beside the "
                                    "Plane 2 report at capture time, so a "
@@ -3060,7 +3141,7 @@ _STORE_AGGREGATE_HINTS = {
             "duration_us": _DISTRIBUTION,
             "cache_hit_rate": _DISTRIBUTION,
             "cores_busy": _DISTRIBUTION,
-            "peak_rss_mb": _DISTRIBUTION,
+            "peak_rss_bytes": _DISTRIBUTION,
             "snapshot_bytes": _DISTRIBUTION,
             "total_bytes": {
                 QUANTITY: "bytes",
@@ -3335,8 +3416,8 @@ _CORRELATE_HINTS = {
         QUESTION: 'How much memory would more builders need?',
         RAIL: "prove",
         "properties": {
-            "host_memory_mb": {
-                QUANTITY: "megabytes",
+            "host_memory_bytes": {
+                QUANTITY: "bytes",
                 "description": "Memory the host reported. The ceiling the "
                                "envelope below is judged against."},
             "builders": {
@@ -3348,8 +3429,8 @@ _CORRELATE_HINTS = {
                 "description": "Elements whose peak memory was actually "
                                "measured. The envelope is a bound over "
                                "these, and says nothing about the rest."},
-            "largest_element_peak_mb": {
-                QUANTITY: "megabytes",
+            "largest_element_peak_bytes": {
+                QUANTITY: "bytes",
                 "description": "The heaviest single element measured. One "
                                "builder must fit this no matter how few "
                                "builders run."},

@@ -91,13 +91,13 @@ def _rendered_comparison() -> str:
         attribution_deltas={
         'execution_on_chain_us': {
             'baseline_us': 9_000_000, 'candidate_us': 8_000_000,
-            'baseline_pct': 90.0, 'candidate_pct': 88.9,
-            'delta_us': -1_000_000, 'delta_pct_points': -1.1,
+            'baseline_share': 0.90, 'candidate_share': 0.889,
+            'delta_us': -1_000_000, 'delta_share': -0.011,
         },
         'retry_wait_us': {
             'baseline_us': 0, 'candidate_us': 0,
-            'baseline_pct': 0.0, 'candidate_pct': 0.0,
-            'delta_us': 0, 'delta_pct_points': 0.0,
+            'baseline_share': 0.0, 'candidate_share': 0.0,
+            'delta_us': 0, 'delta_share': 0.0,
         },
     })
     return format_compare_text(comparison)

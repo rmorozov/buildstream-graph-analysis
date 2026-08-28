@@ -30,6 +30,8 @@ moment the project and the run are both in hand.
 import os
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
+from .units import US_PER_S
+
 SCHEMA = "sources/v1"
 
 # How BuildStream keys each source kind, which is what decides blast.
@@ -330,7 +332,7 @@ def elements_by_resource(inventory: dict) -> Dict[Tuple[str, str], List[str]]:
 def resource_blast(inventory: dict,
                    downstream: Dict[str, Set[str]],
                    element_kinds: Dict[str, str],
-                   element_durations_s: Optional[Dict[str, float]] = None,
+                   element_durations_us: Optional[Dict[str, int]] = None,
                    minimum_elements: int = 2) -> List[dict]:
     """One row per resource more than one element sources.
 
@@ -344,7 +346,7 @@ def resource_blast(inventory: dict,
     for an element: this is the same distinction the rest of the tool
     keeps between "measured as nothing" and "not measured".
     """
-    durations = element_durations_s or {}
+    durations = element_durations_us or {}
     rows: List[dict] = []
     for (kind, identity), direct in elements_by_resource(inventory).items():
         if len(direct) < minimum_elements:
@@ -373,11 +375,11 @@ def resource_blast(inventory: dict,
             # UX-173: of the blast, how much of it actually builds.
             "building_count": building,
             "assembling_count": assembling,
-            "measured_seconds": sum(measured) if measured else None,
+            "measured_us": sum(measured) if measured else None,
             "measured_elements": len(measured),
             "staged_at": staged,
         })
-    rows.sort(key=lambda row: (-(row["measured_seconds"] or 0), -row["blast_count"],
+    rows.sort(key=lambda row: (-(row["measured_us"] or 0), -row["blast_count"],
                                row["identity"]))
     return rows
 
@@ -438,8 +440,9 @@ def monorepo_headline(rows: List[dict], element_count: int,
         if covered < share:
             continue
         cost = ""
-        if row["measured_seconds"]:
-            cost = f", {format_work(row['measured_seconds'])} of measured build work"
+        if row["measured_us"]:
+            cost = (f", {format_work(row['measured_us'] / US_PER_S)} of "
+                    "measured build work")
         return (f"One repository decides most of this build: any commit to "
                 f"{row['identity']} rebuilds {row['blast_count']} of "
                 f"{element_count} elements ({covered:.0%}{cost}), because its "

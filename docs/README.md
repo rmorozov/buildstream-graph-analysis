@@ -53,27 +53,33 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twelve ids, and what writes each:
+contracts. Seventeen ids, and what writes each:
 
 | document | written by |
 |---|---|
-| `analyze/v2` | `bga analyze --format json` — the analysis, its findings, and why each one is believed (`UX-229`) |
-| `compare/v1` | `bga compare --format json` — the verdict, the noise band, the culprit elements |
-| `blast/v1` | `bga blast --format json` — what a change to one resource rebuilds |
-| `correlate/v1` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
+| `analyze/v3` | `bga analyze --format json` — the analysis, its findings, and why each one is believed (`UX-229`) |
+| `compare/v2` | `bga compare --format json` — the verdict, the noise band, the culprit elements |
+| `blast/v2` | `bga blast --format json` — what a change to one resource rebuilds |
+| `correlate/v2` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
 | `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
 | `sweep/v1` | `bga sweep --format json` — what more capacity would buy, the knee past which it buys little, and where the model contradicted itself (`UX-339`) |
-| `host/v1` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
+| `host/v2` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
 | `sources/v1` | `bga extract`, at `sources.json` in a run directory — every element's sources, and how each one is keyed |
 | `plane2/v2` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured, as per-element reductions (`UX-297`) |
 | `plane2/v1` | the same file as a capture before `UX-297` wrote it, with every per-process record embedded. Still read, never written |
+| `analyze/v2` | what `bga analyze` wrote before `UX-341` unified the units — `measured_seconds`, `peak_rss_kb`, `useful_pct`. Still read, never written |
+| `compare/v1` | the same, for a comparison. Still read, never written |
+| `blast/v1` | the same, for a blast answer. Still read, never written |
+| `correlate/v1` | the same, for the two-plane join. Still read, never written |
+| `host/v1` | the host manifest with `memory_mb` where `host/v2` has `memory_bytes`. Read and converted on the way in, so an old baseline still compares — never written |
 
-The last four are written into a run directory rather than printed by a
-command, so no `--schema` invocation prints them, and `plane2/v1` is
-only ever read - it is the shape an older store's captures are in. The
-other eight each have a command that prints their contract, and
+The last nine are written into a run directory rather than printed by a
+command, so no `--schema` invocation prints them, and six of those are
+only ever *read* - they are the shapes an older store's artifacts are
+in (`plane2/v1` from `UX-297`, and five from `UX-341`). The other eight
+each have a command that prints their contract, and
 `tests/unit/test_every_emitted_contract_is_answerable.py` holds that
 split by running both sides rather than by reading this table
 (`UX-328`). Every command that prints a document now answers for it:

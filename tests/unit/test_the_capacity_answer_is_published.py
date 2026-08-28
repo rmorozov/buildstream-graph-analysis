@@ -78,7 +78,7 @@ class TestTheRecommendationReachesAConsumer:
         key-presence check and answer nothing."""
         block = published[KEY]
         for field in ("constraints", "binding_constraint",
-                      "recommended_builders", "change", "caveat"):
+                      "recommended_builders", "builders_change", "caveat"):
             assert field in block, f"{field} did not survive publication"
         assert block["constraints"], "the constraint list is empty"
         for constraint in block["constraints"]:

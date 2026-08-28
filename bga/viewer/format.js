@@ -72,6 +72,13 @@ export function quantity(value, kind) {
     case "duration_us": return duration(value);
     case "bytes": return bytes(value);
     case "share": return `${(value * 100).toFixed(1)}%`;
+    // UX-341 retired these four from the vocabulary a schema may
+    // *declare*: the payload is µs, bytes and 0..1. They stay here as
+    // renderer cases, because a value can still arrive carrying one -
+    // `guessQuantity` below is a fallback with its own history, and an
+    // external consumer may hand this function whatever it holds - and
+    // rendering a known unit correctly costs five lines.
+    //
     // UX-201: already 0..100. Multiplying again is how a 42% cpu_pct
     // rendered as "4200.0%".
     case "percent": return `${value.toFixed(1)}%`;

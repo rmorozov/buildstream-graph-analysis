@@ -101,8 +101,8 @@ class TestTheDiagnosisIsDecidedOnce:
         """Not just the verdict - the number, so a reader can see how
         close to the threshold this run sat."""
         headline = _report(run)["headline"]
-        assert headline["chain_bound_ratio"] == CHAIN_BOUND_RATIO
-        ratio = headline["chain_ratio"]
+        assert headline["chain_bound_share"] == CHAIN_BOUND_RATIO
+        ratio = headline["chain_share"]
         if expected == DIAGNOSIS_CHAIN_BOUND:
             assert ratio >= CHAIN_BOUND_RATIO, ratio
         else:
@@ -117,7 +117,7 @@ class TestTheDiagnosisIsDecidedOnce:
         payload = _report(run)
         expected_ratio = (payload["floors"]["t_infinity_observed"]
                           / payload["total_duration_us"])
-        assert payload["headline"]["chain_ratio"] == pytest.approx(expected_ratio)
+        assert payload["headline"]["chain_share"] == pytest.approx(expected_ratio)
 
     def test_the_findings_read_the_same_decision(self):
         """`compute_findings` used to recompute the ratio itself. Two
@@ -146,7 +146,7 @@ class TestTheDiagnosisIsDecidedOnce:
 
         answer = diagnose(Empty())
         assert answer["diagnosis"] == DIAGNOSIS_INCONCLUSIVE
-        assert answer["chain_ratio"] is None
+        assert answer["chain_share"] is None
         assert "did not record" in answer["sentence"]
 
 
@@ -283,7 +283,7 @@ class TestThePanel:
             "total_duration_us": 1000,
             "floors": {"t_infinity_observed": 950, "certified_headroom": 0},
             "headline": {"diagnosis": DIAGNOSIS_SCHEDULER_BOUND,
-                         "chain_ratio": 0.95, "chain_bound_ratio": 0.9,
+                         "chain_share": 0.95, "chain_bound_share": 0.9,
                          "sentence": "The pipeline said scheduler-bound.",
                          "top_actions": []},
         })

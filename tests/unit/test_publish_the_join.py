@@ -114,24 +114,31 @@ class TestTheDocumentIsPublished:
             assert roles["element"] == "element", key
 
     def test_every_join_column_that_is_a_quantity_says_which(self):
-        """`peak_rss_kb` is the one that matters: calling it `bytes`
-        would be wrong by 1024x, which is the exact class of error
-        `UX-201` exists to stop."""
+        """`peak_rss_bytes` is the one that matters. `UX-215` declared
+        it `kilobytes` because `ru_maxrss` is KiB and calling the raw
+        figure `bytes` would be wrong by 1024x - `UX-201`'s exact class
+        of error. `UX-341` fixed the *value* instead of the label: the
+        conversion happens at the input boundary, so the payload is in
+        bytes and the vocabulary has one spelling for memory."""
         columns = {c["key"]: c.get("quantity") for c in
                    schemas.schema(schemas.CORRELATE)["properties"]
                    ["elements"][schemas.COLUMNS]}
-        assert columns["peak_rss_kb"] == "kilobytes"
+        assert columns["peak_rss_bytes"] == "bytes"
         assert columns["potential_saving_us"] == "duration_us"
         assert columns["critical_path_share"] == "share"
         assert columns["cores_busy"] == "ratio"
 
-    def test_kilobytes_is_a_declared_quantity_the_viewer_renders(self):
-        assert "kilobytes" in schemas.QUANTITIES
+    def test_bytes_is_a_declared_quantity_the_viewer_renders(self):
+        """`UX-341` retired `kilobytes` from the vocabulary. The clause
+        it replaces is the same one: a quantity nothing renders is a
+        promise nothing keeps."""
+        assert "bytes" in schemas.QUANTITIES
+        assert "kilobytes" not in schemas.QUANTITIES
         # `UX-337`: the formatter moved out of `app.js` into
         # `format.js` with the hint keys that select it.
         source = open(os.path.join(REPO, "bga/viewer/format.js"),
                       encoding="utf-8").read()
-        assert 'case "kilobytes":' in source, (
+        assert 'case "bytes":' in source, (
             "a quantity nothing renders is a promise nothing keeps")
 
 
@@ -190,7 +197,7 @@ class TestItIsTheSameJoinOnACommittedFixture:
         assert base["critical_path_share"] == pytest.approx(0.42857, rel=1e-3)
         assert base["cores_busy"] == pytest.approx(0.87)
         assert base["requested_jobs"] == 1
-        assert base["peak_rss_kb"] == 157200
+        assert base["peak_rss_bytes"] == 157200 * 1024
 
     def test_an_element_plane2_never_saw_degrades_rather_than_zeroes(
             self, golden_plane2):
@@ -203,7 +210,7 @@ class TestItIsTheSameJoinOnACommittedFixture:
         assert "app.bst" in rows, "an unseen element must still be a row"
         app = rows["app.bst"]
         assert app.get("cores_busy") is None
-        assert app.get("peak_rss_kb") is None
+        assert app.get("peak_rss_bytes") is None
         assert app["on_critical_path"] is True, "its Plane 1 half survives"
         assert joined["coverage"]["plane1_elements"] > \
             joined["coverage"]["plane2_elements"]

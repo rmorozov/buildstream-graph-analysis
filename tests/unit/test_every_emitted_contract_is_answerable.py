@@ -92,12 +92,20 @@ NO_CONTRACT = {}
 #: rather than inferred - and the file name is what makes the claim
 #: checkable by a reader with a run directory in front of them.
 FILE_WRITTEN = {
-    "host/v1": "run-context.json (bga.hostinfo)",
+    "host/v2": "run-context.json (bga.hostinfo)",
     "sources/v1": "sources.json (bga extract)",
     "plane2/v2": "plane2.json (bga capture)",
     # `UX-297` retired this one. Still read, never written - which is a
     # third state, and the reason `contracts.superseded()` exists.
     "plane2/v1": "plane2.json, as a capture before UX-297 wrote it",
+    # `UX-341` put five more in that third state: the four documents
+    # whose units it renamed, and the host manifest, which is converted
+    # on the way in so an old baseline still compares.
+    "host/v1": "run-context.json, before UX-341 moved it to bytes",
+    "analyze/v2": "an older store's report.json",
+    "compare/v1": "an older store's comparison",
+    "blast/v1": "an older store's blast answer",
+    "correlate/v1": "an older store's two-plane join",
 }
 
 
@@ -291,7 +299,8 @@ class TestTheUnionIsTheInventory:
     def test_the_superseded_id_is_declared_and_not_answerable(self):
         """`plane2/v1` is read and never written. A third state, and one
         `--schema` must not offer as if a command produced it."""
-        assert contracts.superseded() == ["plane2/v1"], \
+        assert contracts.superseded() == ["analyze/v2", "blast/v1", "compare/v1", "correlate/v1", "host/v1",
+            "plane2/v1"], \
             contracts.superseded()
         assert "plane2/v1" in FILE_WRITTEN
 
@@ -353,7 +362,8 @@ class TestTheDocumentSaysWhatTheToolDoes:
             "the table and the derived inventory disagree",
             sorted(set(rows) ^ set(contracts.ids())))
         words = {"nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
-                 "thirteen": 13}
+                 "thirteen": 13, "fourteen": 14, "fifteen": 15,
+                 "sixteen": 16, "seventeen": 17, "eighteen": 18}
         claimed = re.search(r"\b(" + "|".join(words) + r")\b ids", block,
                             re.I)
         assert claimed, "the block no longer states a count at all"
@@ -369,16 +379,24 @@ class TestTheDocumentSaysWhatTheToolDoes:
             "the block still promises a global dispatcher; the working "
             "form is `bga <command> --schema`")
 
+    #: How the sentence spells its own count. `UX-341` retired five
+    #: more shapes into "written, or read, but never printed", so the
+    #: number moved - and the clause below holds the sentence to the
+    #: declaration rather than to any one spelling of it.
+    _COUNT_WORDS = {4: "four", 5: "five", 6: "six", 7: "seven",
+                    8: "eight", 9: "nine", 10: "ten"}
+
     def test_the_unknown_to_schema_sentence_counts_correctly(self):
         """It claimed "the last four" were unknown to `--schema` when
-        seven were. Now that whatif/store/store-aggregate answer, four
-        is the true number - and this holds it to the declaration
-        rather than to the sentence staying as it is."""
+        seven were. This holds the sentence to the declaration rather
+        than to the sentence staying as it is."""
         block = self._block()
-        assert len(FILE_WRITTEN) == 4, FILE_WRITTEN
-        assert "last four" in block, block[-800:]
+        word = self._COUNT_WORDS[len(FILE_WRITTEN)]
+        assert f"last {word}" in block, (
+            f"the block should say 'the last {word}'", block[-800:])
         rows = re.findall(r"^\| `([a-z][a-z0-9-]*/v\d+)` \|", block, re.M)
         assert set(rows[-len(FILE_WRITTEN):]) == set(FILE_WRITTEN), (
-            "the sentence says 'the last four' but the last four rows of "
-            "the table are not the four file-written ids",
+            f"the sentence says 'the last {word}' but the last "
+            f"{len(FILE_WRITTEN)} rows of the table are not the "
+            "file-written ids",
             rows[-len(FILE_WRITTEN):], sorted(FILE_WRITTEN))

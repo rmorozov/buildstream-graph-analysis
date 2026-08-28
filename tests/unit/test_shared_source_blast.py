@@ -84,7 +84,7 @@ class TestOneRepositoryConsumedTwoWays:
 
         inventory = build_source_inventory(project, sorted(elements))
         rows = sources.resource_blast(inventory, downstream, kinds,
-                                      {uid: 100.0 for uid in kinds})
+                                      {uid: 100_000_000 for uid in kinds})
         assert len(rows) == 1, rows
         row = rows[0]
         assert row["identity"] == "gitlab.example.com/org/monorepo"
@@ -94,7 +94,7 @@ class TestOneRepositoryConsumedTwoWays:
         # not rebuild what the monorepo consumes.
         assert row["blast_count"] == 7
         assert row["by_element_kind"] == {"cmake": 7}
-        assert row["measured_seconds"] == pytest.approx(700.0)
+        assert row["measured_us"] == 700_000_000
         assert "keys on ref" in sources.keying_clause(row)
         # Six different staging directories, one identity - which is the
         # whole trap.
@@ -126,7 +126,7 @@ class TestOneRepositoryConsumedTwoWays:
         project = _project(tmp_path, elements)
         inventory = build_source_inventory(project, sorted(elements))
         rows = sources.resource_blast(inventory, downstream, kinds,
-                                      {uid: 3600.0 for uid in kinds})
+                                      {uid: 3_600_000_000 for uid in kinds})
 
         # 7 of 8 elements is most of the graph.
         headline = sources.monorepo_headline(rows, element_count=8)
@@ -284,7 +284,7 @@ class TestTheRenderersAgree:
             "kind": "git", "identity": "host/repo", "keying": "ref",
             "direct_elements": ["a.bst", "b.bst"], "direct_count": 2,
             "blast_elements": ["a.bst", "b.bst"], "blast_count": 2,
-            "by_element_kind": {"manual": 2}, "measured_seconds": None,
+            "by_element_kind": {"manual": 2}, "measured_us": None,
             "measured_elements": 0, "staged_at": [],
         }]
         text = "\n".join(_format_resource_blast(self._result(rows)))

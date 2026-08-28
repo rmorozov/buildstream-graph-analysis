@@ -1,4 +1,4 @@
-"""UX-288: `analyze/v2` publishes each element population once.
+"""UX-288: `analyze/v3` publishes each element population once.
 
 Measured on the 1,202-element synthetic run, in `analyze/v1`:
 
@@ -304,7 +304,7 @@ class TestEachPopulationIsPublishedOnce:
     def test_the_version_moved_with_them(self, payload):
         """`architecture.md`'s rule: a removal bumps the version. This is
         the first time it has been exercised."""
-        assert payload["schema"] == "analyze/v2", payload["schema"]
+        assert payload["schema"] == "analyze/v3", payload["schema"]
 
 
 class TestWhatReplacedThem:

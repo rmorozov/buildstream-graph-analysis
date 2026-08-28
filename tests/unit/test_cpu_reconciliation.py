@@ -33,7 +33,7 @@ def test_exact_match_reconciles_cleanly():
         occupancy_segments=[],
     )
     assert result.capacity_cpu_us == 100000
-    assert result.reconciliation_error_pct == 0.0
+    assert result.reconciliation_error_share == 0.0
     assert result.unaccounted_us == 0
     assert result.buckets.get(CPUBucket.UNTRACKED, 0) == 0
 
@@ -49,7 +49,7 @@ def test_residual_within_tolerance_is_reported_but_not_a_violation():
         occupancy_segments=[],
     )
     assert result.capacity_cpu_us == 100000
-    assert 0 < result.reconciliation_error_pct <= 2.0
+    assert 0 < result.reconciliation_error_share <= 0.02
     assert result.unaccounted_us == 1000
     # Not flagged: the UNTRACKED bucket stays at 0, distinguishing
     # "reported, informational" from "flagged as a violation".
@@ -66,7 +66,7 @@ def test_residual_exceeding_tolerance_is_flagged_as_a_violation():
         occupancy_segments=[],
     )
     assert result.capacity_cpu_us == 100000
-    assert result.reconciliation_error_pct > 2.0
+    assert result.reconciliation_error_share > 0.02
     assert result.unaccounted_us == 5000
     assert result.buckets.get(CPUBucket.UNTRACKED, 0) == 5000
 
@@ -75,7 +75,7 @@ def test_missing_cpu_accounting_data_is_distinguishable_from_a_clean_pass():
     """No wall-clock time at all (wall_clock_us=0, the same fallback
     bga/analyzer.py uses when run_context.wall_clock_us is None) means
     capacity_cpu_us can never be established - reconciliation has
-    nothing to check against. reconciliation_error_pct reads 0.0 the
+    nothing to check against. reconciliation_error_share reads 0.0 the
     same as a genuine exact match (test_exact_match... above), so a
     caller must gate on capacity_cpu_us == 0 to tell "not applicable"
     apart from "passed cleanly" - both this test and the report
@@ -87,5 +87,5 @@ def test_missing_cpu_accounting_data_is_distinguishable_from_a_clean_pass():
         occupancy_segments=[],
     )
     assert result.capacity_cpu_us == 0
-    assert result.reconciliation_error_pct == 0.0
+    assert result.reconciliation_error_share == 0.0
     assert result.unaccounted_us == 0

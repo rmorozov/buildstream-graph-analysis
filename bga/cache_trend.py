@@ -49,7 +49,7 @@ from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
 # opposite move in either is good news that must not be reported as a
 # regression.
 TRENDED_METRICS = (
-    ('hit_ratio', 'cache hit ratio', 'lower_is_worse',
+    ('hit_share', 'cache hit ratio', 'lower_is_worse',
      'the cache is serving less of this build than it used to'),
     ('transfer_us', 'transfer seconds', 'higher_is_worse',
      'the cache remote is degrading, before any element gets slower'),
@@ -143,7 +143,7 @@ def _row(name: str, result, run_context, graph, tasks, previous) -> dict:
         'run_id': getattr(result, 'run_id', None),
         'run_mode': (result.confidence or {}).get('run_mode'),
         'total_duration_us': getattr(result, 'total_duration_us', None),
-        'hit_ratio': accounting.get('hit_ratio'),
+        'hit_share': accounting.get('hit_share'),
         'built_elements': accounting.get('built_elements'),
         'cached_elements': accounting.get('cached_elements'),
         'transfer_us': transfer_us,
@@ -230,7 +230,7 @@ def _band_findings(rows: List[dict]) -> List[dict]:
 
 
 def _render(key: str, value: float) -> str:
-    if key == 'hit_ratio':
+    if key == 'hit_share':
         return f"{value * 100:.1f}%"
     return f"{value / 1e6:.1f}s"
 
@@ -355,7 +355,7 @@ def format_trend_text(trend: dict) -> str:
                 churn_cell += f"+{churn['rebuilt_in_both_count']}r"
         else:
             churn_cell = '-'
-        hit = row['hit_ratio']
+        hit = row['hit_share']
         hit_cell = f"{hit * 100:.0f}%" if hit is not None else '-'
         built = row['built_elements']
         cached = row['cached_elements']

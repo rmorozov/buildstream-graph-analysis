@@ -1,10 +1,10 @@
 """UX-87: an efficiency gate that stops gating must say so.
 
-Both efficiency gates read `occupancy_ratio` and both return False -
+Both efficiency gates read `occupancy_share` and both return False -
 pass - when a run lacks it. That fail-open is deliberate and stays; what
 did not exist was any way to notice it. A pipeline that asked for
 `--fail-on-efficiency-regression` against a run directory with no
-`occupancy_ratio` saw exit 0, an empty stderr, and JSON that looked
+`occupancy_share` saw exit 0, an empty stderr, and JSON that looked
 exactly like a run that had passed the gate.
 
 This is the identical failure mode `UX-40` was filed to eliminate for
@@ -12,7 +12,7 @@ the confidence interaction, one field over, and `UX-40`'s own fix text
 is the precedent: fail-open is a legitimate policy, *silent* fail-open
 is not.
 
-A run can genuinely lack the signal - `occupancy_ratio` needs a
+A run can genuinely lack the signal - `occupancy_share` needs a
 `resource_capacities.PROCESS` in run-context.json, and any legacy or
 hand-built run directory may have none. That is what the fixtures below
 strip, rather than deleting the computed number afterwards: it is the
@@ -55,23 +55,23 @@ def _compare(*args):
 
 def test_the_fixture_really_loses_the_signal(tmp_path):
     """The premise, checked rather than assumed: stripping
-    `resource_capacities.PROCESS` is what makes `occupancy_ratio` None.
+    `resource_capacities.PROCESS` is what makes `occupancy_share` None.
     If a future change gave occupancy another source, every test below
     would silently start testing nothing."""
     from bga import analyze_run
 
     stripped = analyze_run(_run_dir(tmp_path, "stripped", with_occupancy=False))
     normal = analyze_run(_run_dir(tmp_path, "normal"))
-    assert stripped.floors["occupancy_ratio"] is None
-    assert normal.floors["occupancy_ratio"] is not None
+    assert stripped.floors["occupancy_share"] is None
+    assert normal.floors["occupancy_share"] is not None
 
 
 # --- the unit: which gates could run, and what was missing -------------
 
 class _Cmp:
     def __init__(self, baseline, candidate):
-        self.baseline_metrics = {"occupancy_ratio": baseline}
-        self.candidate_metrics = {"occupancy_ratio": candidate}
+        self.baseline_metrics = {"occupancy_share": baseline}
+        self.candidate_metrics = {"occupancy_share": candidate}
 
 
 def test_no_gate_requested_is_not_the_same_as_a_gate_that_failed_to_run():
@@ -122,7 +122,7 @@ def test_a_gate_that_cannot_run_fails_open_but_says_so(tmp_path):
     assert proc.returncode == 0
     assert "Efficiency gate NOT APPLIED" in proc.stderr
     assert "--fail-on-efficiency-regression" in proc.stderr
-    assert "the baseline run has no `occupancy_ratio`" in proc.stderr
+    assert "the baseline run has no `occupancy_share`" in proc.stderr
 
 
 def test_the_json_distinguishes_passed_from_did_not_run(tmp_path):

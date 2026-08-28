@@ -4,7 +4,7 @@ Every finding has carried a structured `evidence` dict since findings
 became data. Measured on `examples/06`:
 
 ```text
-cache-hit-ratio     hit_ratio, built_elements, cached_elements, run_mode
+cache-hit-ratio     hit_share, built_elements, cached_elements, run_mode
 confidence          primary, band, violation_count
 wait-category       category, category_us, share, hint
 time-concentration  path_us, share_of_path, chain_bound, rows
@@ -87,7 +87,7 @@ class TestTheVocabularyIsDeclared:
         assert declared["primary"][schemas.QUANTITY] == "share"
         assert declared["category_us"][schemas.QUANTITY] == "duration_us"
         assert declared["cores_busy"][schemas.QUANTITY] == "ratio"
-        assert declared["envelope_mb"][schemas.QUANTITY] == "megabytes"
+        assert declared["envelope_bytes"][schemas.QUANTITY] == "bytes"
         assert declared["host_cpu_count"][schemas.QUANTITY] == "count"
 
     def test_every_declared_unit_is_one_the_renderer_knows(self):

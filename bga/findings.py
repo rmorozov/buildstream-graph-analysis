@@ -36,6 +36,7 @@ from .cache_effectiveness import (
     HEALTHY_HIT_RATIO, POOR_HIT_RATIO, TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
+from .units import GIB
 
 # Severity is about what it means for the reader, not about size:
 #   critical - the run itself is not what it appears to be
@@ -233,8 +234,8 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
     changes is the severity and the sentence, not whether it appears.
     """
     cache = (result.signals or {}).get('cache') or {}
-    hit_ratio = cache.get('hit_ratio')
-    if hit_ratio is None:
+    hit_share = cache.get('hit_share')
+    if hit_share is None:
         return []
 
     built = cache.get('built_elements')
@@ -243,10 +244,10 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
     findings: List[dict] = []
 
     detail: List[str] = []
-    if closure.get('hit_ratio') is not None and closure.get('targets'):
+    if closure.get('hit_share') is not None and closure.get('targets'):
         detail.append(
             f"    -> for {', '.join(closure['targets'])}'s own closure it is "
-            f"{closure['hit_ratio'] * 100:.0f}% "
+            f"{closure['hit_share'] * 100:.0f}% "
             f"({closure['cached']} of {closure['elements']} elements cached)"
         )
 
@@ -266,19 +267,19 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
             f"rather than a finding",
             detail=detail,
             evidence={
-                'hit_ratio': hit_ratio, 'built_elements': built,
+                'hit_share': hit_share, 'built_elements': built,
                 'cached_elements': cached, 'run_mode': 'full',
             },
         )]
 
-    if hit_ratio < POOR_HIT_RATIO:
+    if hit_share < POOR_HIT_RATIO:
         severity, verdict = SEVERITY_HIGH, (
             "barely incremental - most of the project rebuilt. Look for a "
             "volatile cache key near the root before reading any efficiency "
             "number below: they describe how well this build ran, not how "
             "much of it should have run at all"
         )
-    elif hit_ratio < HEALTHY_HIT_RATIO:
+    elif hit_share < HEALTHY_HIT_RATIO:
         severity, verdict = SEVERITY_MEDIUM, (
             "under half the project was reused - worth checking what "
             "invalidated the rest"
@@ -288,13 +289,13 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
 
     findings.append(_finding(
         'cache-hit-ratio', severity,
-        f"Cache hit ratio: {hit_ratio * 100:.0f}% "
+        f"Cache hit ratio: {hit_share * 100:.0f}% "
         f"({cached} cached, {built} rebuilt) - {verdict}",
         detail=detail,
         evidence={
-            'hit_ratio': hit_ratio, 'built_elements': built,
+            'hit_share': hit_share, 'built_elements': built,
             'cached_elements': cached,
-            'target_closure_hit_ratio': closure.get('hit_ratio'),
+            'target_closure_hit_share': closure.get('hit_share'),
         },
     ))
 
@@ -520,10 +521,10 @@ def _memory_envelope_findings(result: AnalysisResult) -> List[str]:
     at_observed = envelope.get('at_observed_builders')
     if not envelope or not at_observed:
         return []
-    host_gb = envelope['host_memory_mb'] / 1024
+    host_gb = envelope['host_memory_bytes'] / GIB
     line = (
         f"{at_observed['builders']} builders of this shape peak at "
-        f"~{at_observed['envelope_mb'] / 1024:.1f} GB of {host_gb:.1f} GB "
+        f"~{at_observed['envelope_bytes'] / GIB:.1f} GB of {host_gb:.1f} GB "
         f"({at_observed['share_of_host'] * 100:.0f}%)"
     )
     ceiling = envelope.get('first_builders_that_does_not_fit')
@@ -537,7 +538,7 @@ def _memory_envelope_findings(result: AnalysisResult) -> List[str]:
         if higher:
             line += (
                 f"; {higher[-1]['builders']} would still fit at "
-                f"~{higher[-1]['envelope_mb'] / 1024:.1f} GB, so memory is not what "
+                f"~{higher[-1]['envelope_bytes'] / GIB:.1f} GB, so memory is not what "
                 f"binds first here"
             )
     return [line]
@@ -558,8 +559,8 @@ def _memory_refuses_more_builders(result: AnalysisResult) -> Optional[str]:
         return None
     return (
         f"do NOT raise --builders on this host - measured per-element peaks put "
-        f"{ceiling} builders at ~{next(p['envelope_mb'] for p in envelope['projections'] if p['builders'] == ceiling) / 1024:.1f} GB "
-        f"against {envelope['host_memory_mb'] / 1024:.1f} GB of RAM, so the extra "
+        f"{ceiling} builders at ~{next(p['envelope_bytes'] for p in envelope['projections'] if p['builders'] == ceiling) / GIB:.1f} GB "
+        f"against {envelope['host_memory_bytes'] / GIB:.1f} GB of RAM, so the extra "
         f"builder would swap. Swapping is the worst build slowdown there is and no "
         f"CPU-side signal predicts it (UX-104)"
     )
@@ -590,7 +591,7 @@ def _shared_source_findings(result: AnalysisResult) -> List[dict]:
             'direct_count': top.get('direct_count'),
             'blast_count': top.get('blast_count'),
             'element_count': blast.get('element_count'),
-            'measured_seconds': top.get('measured_seconds'),
+            'measured_us': top.get('measured_us'),
         },
         elements=top.get('direct_elements') or [],
     )]
@@ -620,8 +621,8 @@ def _memory_finding(result: AnalysisResult) -> List[dict]:
         'memory-envelope', severity, f"Memory: {lines[0]}",
         evidence={
             'builders': at_observed['builders'],
-            'envelope_mb': at_observed['envelope_mb'],
-            'host_memory_mb': envelope['host_memory_mb'],
+            'envelope_bytes': at_observed['envelope_bytes'],
+            'host_memory_bytes': envelope['host_memory_bytes'],
             'share_of_host': at_observed['share_of_host'],
             'fits': at_observed['fits'],
             'first_builders_that_does_not_fit': ceiling,
@@ -730,7 +731,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> List[dict]:
             'cores_busy': recommendation['cores_busy'],
             'binding_constraint': binding,
             'recommended_builders': recommended,
-            'change': recommendation['change'],
+            'builders_change': recommendation['builders_change'],
             'constraints': recommendation['constraints'],
         },
     )]
@@ -1171,14 +1172,14 @@ def diagnose(result: AnalysisResult) -> dict:
     total = result.total_duration_us or 0
     t_infinity = floors.get('t_infinity_observed') or 0
     if not total or not t_infinity:
-        return {'diagnosis': DIAGNOSIS_INCONCLUSIVE, 'chain_ratio': None,
-                'chain_bound_ratio': CHAIN_BOUND_RATIO,
+        return {'diagnosis': DIAGNOSIS_INCONCLUSIVE, 'chain_share': None,
+                'chain_bound_share': CHAIN_BOUND_RATIO,
                 'sentence': DIAGNOSIS_SENTENCES[DIAGNOSIS_INCONCLUSIVE]}
     ratio = t_infinity / total
     name = (DIAGNOSIS_CHAIN_BOUND if ratio >= CHAIN_BOUND_RATIO
             else DIAGNOSIS_SCHEDULER_BOUND)
-    return {'diagnosis': name, 'chain_ratio': ratio,
-            'chain_bound_ratio': CHAIN_BOUND_RATIO,
+    return {'diagnosis': name, 'chain_share': ratio,
+            'chain_bound_share': CHAIN_BOUND_RATIO,
             'sentence': DIAGNOSIS_SENTENCES[name].format(
                 ratio=ratio, bound=CHAIN_BOUND_RATIO)}
 

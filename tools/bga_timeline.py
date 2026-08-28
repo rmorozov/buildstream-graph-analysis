@@ -37,6 +37,8 @@ import sys
 import tempfile
 from typing import Dict, List, Optional
 
+from bga import hostinfo
+
 HELP = """Render one Chrome-trace timeline for a snapshot, both planes in it.
 
 Plane 1's element schedule always; Plane 2's process lanes underneath it
@@ -409,7 +411,7 @@ IDENTITY_ANNOTATIONS = (
     ("bst_version", "the BuildStream the capture ran against"),
     ("host_cpu_model", "the CPU the build ran on, from the host manifest"),
     ("host_cpu_count", "how many cores that host had"),
-    ("host_memory_mb", "how much memory it had"),
+    ("host_memory_bytes", "how much memory it had"),
     ("kernel_release", "the kernel the sandboxes ran under"),
     ("distro_id", "the distribution the capture was taken on"),
     ("builders", "BuildStream's element-dispatch concurrency for this run"),
@@ -507,7 +509,10 @@ def run_identity(snapshot: str) -> dict:
         "bst_version": toolchain.get("bst"),
         "host_cpu_model": manifest.get("cpu_model"),
         "host_cpu_count": manifest.get("cpu_count"),
-        "host_memory_mb": manifest.get("memory_mb"),
+        # UX-341: the manifest is `host/v2`, in bytes. An older
+        # capture is normalised on the way in.
+        "host_memory_bytes": hostinfo.normalised(
+            manifest or {}).get("memory_bytes"),
         "kernel_release": manifest.get("kernel_release"),
         "distro_id": manifest.get("distro_id"),
         "builders": scheduler.get("builders"),

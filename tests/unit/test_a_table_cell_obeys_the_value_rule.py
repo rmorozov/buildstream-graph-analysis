@@ -69,7 +69,7 @@ SHAPES = {
                       for i in range(40)},
     "high_fanin_elements": [[f"e{i}.bst", 8 - i % 5] for i in range(12)],
     "rule": {"name": "CHAIN_BOUND_RATIO", "threshold": 0.9,
-             "comparison": ">=", "observed_path": "headline.chain_ratio",
+             "comparison": ">=", "observed_path": "headline.chain_share",
              "sentence": "the chain binds"},
     "leaves": [f"layer10/mod{i:03d}.bst" for i in range(60)],
     "objects": [{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}],

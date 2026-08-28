@@ -22,7 +22,7 @@ def _row(name, subject, hit=0.7, built=25, cached=65):
     return {
         'run': name, 'subject': subject, 'run_id': 'abc',
         'run_mode': 'incremental', 'total_duration_us': 1_000_000,
-        'hit_ratio': hit, 'built_elements': built, 'cached_elements': cached,
+        'hit_share': hit, 'built_elements': built, 'cached_elements': cached,
         'transfer_us': None, 'transfer_per_artifact_us': None,
         'rebuild_us': 1_000_000, 'churn': None,
     }

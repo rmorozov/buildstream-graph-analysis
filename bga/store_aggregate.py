@@ -100,7 +100,7 @@ def distribution(samples: List[float]) -> Optional[dict]:
 # `name=value` - so adding one to `COMPARED_FIELDS` widens the grouping
 # immediately and only costs the label its polish, which is the right
 # way round for a guard nobody remembers to update.
-_FIELD_SUFFIX = {"cpu_count": " cores", "memory_mb": " MB"}
+_FIELD_SUFFIX = {"cpu_count": " cores", "memory_bytes": " B"}
 
 
 def host_class(manifest: Optional[dict]) -> str:
@@ -177,9 +177,9 @@ def _class_aggregate(label: str, manifest: Optional[dict],
         "cores_busy": distribution(
             [row["resource"]["cores_busy"] for row in rows
              if "cores_busy" in (row.get("resource") or {})]),
-        "peak_rss_mb": distribution(
-            [row["resource"]["peak_rss_mb"] for row in rows
-             if "peak_rss_mb" in (row.get("resource") or {})]),
+        "peak_rss_bytes": distribution(
+            [row["resource"]["peak_rss_bytes"] for row in rows
+             if "peak_rss_bytes" in (row.get("resource") or {})]),
         # UX-300: what these runs cost on disk. The rows have carried
         # `bytes` since `UX-159` and nothing read them, so a store whose
         # snapshots grew from kilobytes to gigabytes said nothing about
@@ -197,7 +197,7 @@ def _class_aggregate(label: str, manifest: Optional[dict],
     # `plane2.json` for these; a capture written before the sidecar has
     # them nowhere cheap, and "absent" must not read as "measured at
     # zero" or as "this run had no Plane 2".
-    if entry["cores_busy"] is None and entry["peak_rss_mb"] is None:
+    if entry["cores_busy"] is None and entry["peak_rss_bytes"] is None:
         entry["resource_shortfall"] = {
             "have": sum(1 for row in rows if row.get("resource")),
             "runs": len(rows),
@@ -406,7 +406,7 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         # and there is nothing to refuse.
         document["blended"] = dict(
             {k: classes[0][k] for k in
-             ("duration_us", "cache_hit_rate", "cores_busy", "peak_rss_mb",
+             ("duration_us", "cache_hit_rate", "cores_busy", "peak_rss_bytes",
               "snapshot_bytes", "total_bytes")},
             runs=classes[0]["runs"], mixes=1)
     return schemas.stamp(document, schemas.STORE_AGGREGATE)
@@ -424,9 +424,9 @@ def _blended(by_class: Dict[str, List[dict]]) -> dict:
         "cores_busy": distribution(
             [row["resource"]["cores_busy"] for row in every
              if "cores_busy" in (row.get("resource") or {})]),
-        "peak_rss_mb": distribution(
-            [row["resource"]["peak_rss_mb"] for row in every
-             if "peak_rss_mb" in (row.get("resource") or {})]),
+        "peak_rss_bytes": distribution(
+            [row["resource"]["peak_rss_bytes"] for row in every
+             if "peak_rss_bytes" in (row.get("resource") or {})]),
         # UX-300: disk is the one figure that *does* blend across host
         # classes without lying. A duration measured on two machines is
         # two populations (`UX-186`); a byte is a byte, and the question
@@ -478,7 +478,7 @@ _FIGURES = (
     ("duration_us", "Duration", 1e6, "s"),
     ("cache_hit_rate", "Cache hit rate", 0.01, "%"),
     ("cores_busy", "Cores busy", 1, ""),
-    ("peak_rss_mb", "Peak RSS", 1, " MB"),
+    ("peak_rss_bytes", "Peak RSS", 1024 * 1024, " MB"),
     # UX-300: in MiB, beside the other per-run figures, because the
     # question "which capture is the big one" is answered by a p95
     # against a median and not by a total.

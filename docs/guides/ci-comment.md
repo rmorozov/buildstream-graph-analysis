@@ -111,7 +111,7 @@ edge that cost 2.0s of critical path is not carrying anything.
   measured noise band instead of the fixed 1% rule.
 - **Every gate appears, every time.** A gate the invocation did not ask
   for reads `not requested`; a gate that could not run — no
-  `occupancy_ratio` in a run, or a change that added no measured work —
+  `occupancy_share` in a run, or a change that added no measured work —
   reads `not applied`, with the reason. Neither is a pass. A comment
   that showed only the gates which fired would read as a clean bill of
   health from a pipeline that checked nothing.
@@ -129,7 +129,7 @@ edge that cost 2.0s of critical path is not carrying anything.
   re-derived — the same published record `bga analyze RUN --explain`
   prints and the page draws — so the comment and the report cannot
   explain one build two ways. The paths in it are into the candidate
-  run's `analyze/v2`, which the block says out loud.
+  run's `analyze/v3`, which the block says out loud.
 - **The trailing line is the run instance** (`UX-95`), not the run
   identity. Two pushes of the same tree produce identical identity
   hashes; only the instant tells the two comments apart.

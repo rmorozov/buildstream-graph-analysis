@@ -62,7 +62,7 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
         data['headline'] = compute_headline(result, findings)
         # UX-218: and what to run next, chosen by what this run
         # measured. Decided here for the same reason the diagnosis is:
-        # a viewer that picked the next command from `chain_ratio`
+        # a viewer that picked the next command from `chain_share`
         # would be a second decision-maker, and the terminal and CI
         # would give different advice from the page.
         data['next_steps'] = compute_next_steps(result, data['headline'])

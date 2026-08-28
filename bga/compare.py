@@ -48,7 +48,7 @@ _FLOOR_KEYS = (
     # for is where the gap shows: on a real 30.5% improvement every other
     # metric in this list either stayed flat or moved backwards, and this
     # one moved 25% -> 63%.
-    'occupancy_ratio',
+    'occupancy_share',
 )
 
 
@@ -312,7 +312,7 @@ class ComparisonResult:
     # module never sees. Three states, and the distinction is the point:
     # None = no efficiency gate was asked for; True = asked for and
     # evaluated; False = asked for and could not run, because a run had
-    # no `occupancy_ratio`. A CI consumer keying on `false` learns
+    # no `occupancy_share`. A CI consumer keying on `false` learns
     # "nothing was checked", which a `0` exit code alone cannot say.
     efficiency_gate_evaluated: Optional[bool] = None
     efficiency_gate_signal: Optional[dict] = None
@@ -376,24 +376,31 @@ def _attribution_deltas(
     baseline_attr: dict, candidate_attr: dict,
     baseline_total_us: int, candidate_total_us: int,
 ) -> Dict[str, dict]:
-    """Per-category delta, both absolute (microseconds) and in
-    percentage-points of each run's own total - a category that grows in
-    absolute time but shrinks as a share of a much-larger total (or vice
-    versa) is a real, distinguishable signal worth keeping separate."""
+    """Per-category delta, both absolute (microseconds) and as a share
+    of each run's own total - a category that grows in absolute time but
+    shrinks as a share of a much-larger total (or vice versa) is a real,
+    distinguishable signal worth keeping separate.
+
+    `UX-341`: the shares are 0..1, like every other bounded fraction in
+    the payload. They were 0..100 while `occupancy_share` a few keys
+    away was 0..1.
+    """
     categories = sorted(set(baseline_attr) | set(candidate_attr))
     result: Dict[str, dict] = {}
     for cat in categories:
         b_us = baseline_attr.get(cat, 0)
         c_us = candidate_attr.get(cat, 0)
-        b_pct = (b_us / baseline_total_us * 100) if baseline_total_us > 0 else None
-        c_pct = (c_us / candidate_total_us * 100) if candidate_total_us > 0 else None
+        b_share = (b_us / baseline_total_us) if baseline_total_us > 0 else None
+        c_share = (c_us / candidate_total_us) if candidate_total_us > 0 else None
         result[cat] = {
             'baseline_us': b_us,
             'candidate_us': c_us,
             'delta_us': c_us - b_us,
-            'baseline_pct': b_pct,
-            'candidate_pct': c_pct,
-            'delta_pct_points': (c_pct - b_pct) if (b_pct is not None and c_pct is not None) else None,
+            'baseline_share': b_share,
+            'candidate_share': c_share,
+            'delta_share': ((c_share - b_share)
+                            if (b_share is not None and c_share is not None)
+                            else None),
         }
     return result
 
@@ -1197,7 +1204,7 @@ def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Op
     return delta_total > 0 and abs(delta_total) * 100 >= baseline_total * pct
 
 
-# UX-39: how far `occupancy_ratio` (UX-27) may fall, in percentage
+# UX-39: how far `occupancy_share` (UX-27) may fall, in percentage
 # points, before `--fail-on-efficiency-regression` fails a pipeline.
 #
 # Derived, not guessed. Three repeat captures of an *unchanged* project
@@ -1231,7 +1238,7 @@ def efficiency_signal_status(
     """UX-87: whether the requested efficiency gate(s) could actually be
     evaluated, and which run withheld the signal if not.
 
-    Both gates read `occupancy_ratio`, and both return False - pass -
+    Both gates read `occupancy_share`, and both return False - pass -
     when it is absent. That is a legitimate fail-open policy; a *silent*
     one is not, and this is the identical failure mode `UX-40` was filed
     to eliminate for the confidence interaction, one field over. A
@@ -1247,8 +1254,8 @@ def efficiency_signal_status(
     asked for" and "asked for and could not run" are different, and only
     the second is a problem.
     """
-    baseline = comparison.baseline_metrics.get('occupancy_ratio')
-    candidate = comparison.candidate_metrics.get('occupancy_ratio')
+    baseline = comparison.baseline_metrics.get('occupancy_share')
+    candidate = comparison.candidate_metrics.get('occupancy_share')
     missing = [
         label for label, value in (('baseline', baseline), ('candidate', candidate))
         if value is None
@@ -1276,7 +1283,7 @@ def efficiency_regression_exceeds_threshold(
     """UX-39: "did this change make the build *less efficient*", as
     distinct from "did it make the build slower".
 
-    Gates on `occupancy_ratio` (UX-27) because that is the one published
+    Gates on `occupancy_share` (UX-27) because that is the one published
     metric invariant to how much work the build does: adding three
     well-parallelized elements barely moves it, adding three serialized
     ones moves it sharply. Wall-clock cannot express that - it moves for
@@ -1291,8 +1298,8 @@ def efficiency_regression_exceeds_threshold(
     Returns False when either run lacks the metric - never fabricates a
     verdict from missing data.
     """
-    baseline = comparison.baseline_metrics.get('occupancy_ratio')
-    candidate = comparison.candidate_metrics.get('occupancy_ratio')
+    baseline = comparison.baseline_metrics.get('occupancy_share')
+    candidate = comparison.candidate_metrics.get('occupancy_share')
     if baseline is None or candidate is None:
         return False
     drop_pp = (baseline - candidate) * 100
@@ -1304,7 +1311,7 @@ def efficiency_below_floor(
     comparison: ComparisonResult, min_efficiency: Optional[float] = None,
 ) -> bool:
     """UX-39: an absolute floor on the candidate run's own
-    `occupancy_ratio`, independent of any baseline.
+    `occupancy_share`, independent of any baseline.
 
     The delta gate alone ratchets - a slow drift of 2pp per change never
     trips it, and after twenty changes the build is unrecognisable. The
@@ -1318,7 +1325,7 @@ def efficiency_below_floor(
     """
     if min_efficiency is None:
         return False
-    candidate = comparison.candidate_metrics.get('occupancy_ratio')
+    candidate = comparison.candidate_metrics.get('occupancy_share')
     if candidate is None:
         return False
     return candidate < min_efficiency

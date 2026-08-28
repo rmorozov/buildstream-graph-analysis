@@ -173,8 +173,8 @@ def test_the_marginal_gate_is_scale_invariant(tmp_path):
     large = compare_runs(large_base, large_bad)
 
     def occupancy_drop_pp(comparison):
-        before = comparison.baseline_metrics["occupancy_ratio"]
-        after = comparison.candidate_metrics["occupancy_ratio"]
+        before = comparison.baseline_metrics["occupancy_share"]
+        after = comparison.candidate_metrics["occupancy_share"]
         return (before - after) * 100
 
     # The whole-build signal dilutes by more than an order of magnitude.

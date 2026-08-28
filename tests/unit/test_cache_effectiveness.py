@@ -62,8 +62,8 @@ def test_the_real_capture_numbers():
     )
     assert accounting["built_elements"] == 25
     assert accounting["cached_elements"] == 65
-    assert round(accounting["hit_ratio"], 4) == 0.7222
-    assert accounting["fetch"]["hit_ratio"] == 1.0
+    assert round(accounting["hit_share"], 4) == 0.7222
+    assert accounting["fetch"]["hit_share"] == 1.0
 
 
 def test_a_capture_with_no_pipeline_summary_gets_no_block():
@@ -79,7 +79,7 @@ def test_an_empty_queue_has_no_hit_ratio_rather_than_a_perfect_one():
     accounting = compute_cache_accounting(
         _Ctx({"build": {"processed": 0, "skipped": 0}}),
     )
-    assert accounting["hit_ratio"] is None
+    assert accounting["hit_share"] is None
 
 
 def test_the_target_closure_is_accounted_separately():
@@ -125,8 +125,8 @@ class _Result:
         self.occupancy_stats = {}
 
 
-def _cache_finding(hit_ratio, run_mode=None, **extra):
-    cache = {"hit_ratio": hit_ratio, "built_elements": 10, "cached_elements": 90}
+def _cache_finding(hit_share, run_mode=None, **extra):
+    cache = {"hit_share": hit_share, "built_elements": 10, "cached_elements": 90}
     cache.update(extra)
     return findings_by_id(
         compute_findings(_Result(cache, run_mode=run_mode))

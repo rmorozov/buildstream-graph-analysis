@@ -106,15 +106,15 @@ def _gate_rows(comparison, args) -> List[dict]:
         runs = ' and '.join(signal.get('missing_occupancy_in') or [])
         rows.append({
             'gate': 'Whole-build efficiency', 'status': 'not applied',
-            'why': f"the {runs} run has no `occupancy_ratio` signal, so there is "
+            'why': f"the {runs} run has no `occupancy_share` signal, so there is "
                    f"nothing to gate on — an unevaluated check, not a pass",
         })
     else:
         floor = getattr(args, 'min_efficiency', None)
         below = floor_on and efficiency_below_floor(comparison, floor)
         dropped = drop_on and efficiency_regression_exceeds_threshold(comparison)
-        occupancy = (comparison.candidate_metrics or {}).get('occupancy_ratio')
-        delta = (comparison.deltas or {}).get('occupancy_ratio')
+        occupancy = (comparison.candidate_metrics or {}).get('occupancy_share')
+        delta = (comparison.deltas or {}).get('occupancy_share')
         if below:
             rows.append({'gate': 'Whole-build efficiency', 'status': 'FAIL',
                          'why': f"occupancy {occupancy:.0%} is below the "

@@ -37,6 +37,7 @@ The bounds are set with headroom against the measurement below rather
 than at it: a budget that reddens on the commit that lands it teaches
 the next person to raise it rather than to think.
 """
+import collections
 import pathlib
 import sys
 
@@ -141,6 +142,50 @@ BUDGETS = (
 )
 
 
+#: `UX-371`: repetition, as a share of the page's block characters.
+#:
+#: Counted over what a reader sees as a unit - every `p`, `li`,
+#: `summary`, `td`, `h3`, `h4` longer than `BLOCK_FLOOR_CHARS` - with
+#: every chapter and every `details` open. **Sentence-level counting
+#: says zero**: the first pass of this measurement split
+#: `main.textContent` on full stops and found no duplicates at all,
+#: because the repeated blocks sit inside different surrounding text
+#: and the splitter never produced identical strings. Any guard here
+#: has to count what a reader sees as a unit, not what a regex finds
+#: between full stops.
+#:
+#: Measured round 59, either side of this item's own reduction - one
+#: instrument, both readings, because round 58's 21.6% figure came from
+#: a different block population and could not be compared with either:
+#:
+#: ```text
+#:                      blocks  distinct  repeated chars  of total  share
+#: golden      before       81        61           1,876    11,048  17.0%
+#:             after        77        61           1,434     9,730  14.7%
+#: macro_micro before      180       138           4,769    26,919  17.7%
+#:             after       176       138           4,401    25,681  17.1%
+#: ```
+#:
+#: **Distinct is unchanged on both**, which is the half that says a
+#: copy was removed rather than a claim.
+#:
+#: Repetition is paid for out of the same budget as volume, which is
+#: why it is asserted in this file rather than beside a prose guard:
+#: a fifth of the page said twice is a fifth of the page.
+REPEATED_SHARE_MAX = 0.21
+
+#: Below this a repeated string is a **label** - a column header, a
+#: unit, a control name - and it repeats because it labels repeated
+#: things, which is what a table is. Above it, it is a sentence.
+BLOCK_FLOOR_CHARS = 40
+
+#: The distinct blocks each fixture publishes, so the share above
+#: cannot be met by deleting claims. Losing a claim is not
+#: deduplicating it, and the cheapest way to drive a repetition ratio
+#: down is to say less.
+DISTINCT_BLOCKS = {"golden": 61, "macro_micro": 138}
+
+
 def budget_for(elements):
     """The row `elements` is measured against.
 
@@ -156,7 +201,7 @@ def budget_for(elements):
         f"decide a bound for that size rather than inheriting one")
 
 
-_LOOK = """
+_LOOK = r"""
 (() => {
   const state = () => {
     const main = document.querySelector("main") || document.body;
@@ -168,13 +213,18 @@ _LOOK = """
       // budget is one number rather than a landed and an opened one -
       // the volume is there from the first byte, and folding moved
       // only how far a reader scrolls past it.
-      words: (main.textContent || "").trim().split(/\\s+/)
+      words: (main.textContent || "").trim().split(/\s+/)
         .filter(Boolean).length,
       controls: document.querySelectorAll("button, input, select, a").length,
       // `UX-366`: the one measure that sees a table. Elements rather
       // than nodes, because a text node per cell would make this a
       // second word count.
       nodes: document.querySelectorAll("*").length,
+      // `UX-371`: what a reader sees as a unit, and how much of it is
+      // said more than once.
+      blocks: [...main.querySelectorAll("p, li, summary, td, h3, h4")]
+        .map((n) => (n.textContent || "").replace(/\s+/g, " ").trim())
+        .filter((t) => t.length > 40),
       sections: main.querySelectorAll("section[data-section]").length,
       shown: [...main.querySelectorAll("section[data-section]")]
         .filter((s) => s.getBoundingClientRect().height > 0).length,
@@ -184,7 +234,12 @@ _LOOK = """
   for (const box of document.querySelectorAll("section.chapter")) {
     box.setAttribute("data-open", "true");
   }
-  return { landed, opened: state() };
+  // `UX-371` counts repetition over everything a reader can reach, so
+  // the folds come open too - after the height measurements above,
+  // which are about what "Expand all" gives.
+  const opened = state();
+  for (const fold of document.querySelectorAll("details")) fold.open = true;
+  return { landed, opened, everything: state() };
 })()
 """
 
@@ -358,6 +413,69 @@ class TestEverySizeClassIsActuallyMeasured:
         assert biggest > 100, (
             f"{biggest:,} elements is not a scale probe; the item this "
             f"clause belongs to is about measuring where the page is used")
+
+
+@needs_browser
+@pytest.mark.medium
+@pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+class TestRepetitionIsSpentFromTheSameBudget:
+    """`UX-371`: a sentence that appears nine times is not a sentence,
+    it is a footnote - and the page pays for every copy out of the
+    volume budget above.
+
+    Round 58 measured 4,742 repeated block characters on `macro_micro`
+    and three of the worst offenders sat on the **first screen at
+    once**: the decision chapter drew three top actions and each
+    carried the same ranking rule under it. This item states the rule
+    once below the list it ranked - the reader came for the actions -
+    and leaves the per-row folds to say what differs.
+    """
+
+    @staticmethod
+    def _counted(browser, booted, label):
+        out = browser.measure(booted[label], _LOOK, 1440, 900)
+        blocks = out["everything"]["blocks"]
+        counts = collections.Counter(blocks)
+        total = sum(len(text) for text in blocks)
+        repeated = sum(len(text) * (n - 1) for text, n in counts.items()
+                       if n > 1)
+        return counts, total, repeated
+
+    def test_repetition_is_under_the_budget(self, browser, booted, label):
+        counts, total, repeated = self._counted(browser, booted, label)
+        share = repeated / total if total else 0
+        worst = counts.most_common(3)
+        assert share <= REPEATED_SHARE_MAX, (
+            f"{label}: {repeated} of {total} block characters are said "
+            f"more than once ({share:.1%}), over the "
+            f"{REPEATED_SHARE_MAX:.0%} budget. Worst: "
+            + "; ".join(f"x{n} {text[:50]!r}" for text, n in worst))
+
+    def test_nothing_was_deleted_to_meet_it(self, browser, booted, label):
+        """The discriminating half. The cheapest way to drive a
+        repetition ratio down is to say less, so the count of
+        *distinct* blocks is held where it was measured."""
+        counts, _total, _repeated = self._counted(browser, booted, label)
+        floor = DISTINCT_BLOCKS[label]
+        assert len(counts) >= floor, (
+            f"{label} publishes {len(counts)} distinct blocks, under the "
+            f"{floor} measured when this budget was set - a claim was "
+            f"lost rather than a copy")
+
+    def test_the_count_is_of_blocks_and_not_sentences(self, browser,
+                                                      booted, label):
+        """The instrument, asserted. Splitting the page into sentences
+        found **zero** duplicates when this was filed, because the
+        repeated blocks sit inside different surrounding text. A guard
+        written the easy way would pass forever."""
+        out = browser.measure(booted[label], _LOOK, 1440, 900)
+        blocks = out["everything"]["blocks"]
+        assert blocks, f"{label}: the block walk found nothing"
+        assert all(len(text) > BLOCK_FLOOR_CHARS for text in blocks), (
+            "a block under the label floor reached the count")
+        assert len(set(blocks)) < len(blocks), (
+            f"{label} has no repeated block at all - either the page "
+            f"changed profoundly or this walk has stopped finding them")
 
 
 @needs_browser

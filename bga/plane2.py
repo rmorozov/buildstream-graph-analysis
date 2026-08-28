@@ -105,9 +105,17 @@ VIEW_MAX_BYTES = 64 * 1024 * 1024
 # hand). The first is a machine that could not capture; the second is a
 # complete measurement missing only its timeline. `UX-156`'s rule -
 # absence is stated, not implied - applied to the plane.
+# `UX-362`: this sentence says what it owns and stops. It used to end
+# "...no per-process detail **and no timeline**", and the timeline half
+# was never Plane 2's to claim: `bga timeline` renders from the wrapped
+# BuildStream log, and a Plane 1 capture with no Plane 2 has a timeline,
+# a working Perfetto button and an inlined trace. `UX-358`'s fixture is
+# exactly that run, and the page carried the button and this denial at
+# the same time for two rounds. Whether there is a timeline is
+# `run.has_timeline`, which the page reads and the handoff acts on.
 NOT_CAPTURED = ("Plane 2 was not captured for this run, so there is no "
-                "per-process detail and no timeline. `bga snapshot -- bst "
-                "build TARGET` captures both planes.")
+                "per-process detail. `bga snapshot -- bst build TARGET` "
+                "captures both planes.")
 CAPTURED_NO_RAW_LOG = ("Plane 2 was captured - its report is beside this run "
                        "- but the raw trace log it was built from was not "
                        "kept, so there is no timeline to render. `bga "

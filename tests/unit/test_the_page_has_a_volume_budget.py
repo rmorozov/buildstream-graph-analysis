@@ -297,6 +297,21 @@ class TestEverySizeClassIsActuallyMeasured:
             f"{missing} elements - those bounds govern nothing. The "
             f"population is {sizes}")
 
+    def test_a_run_past_every_class_is_refused_and_not_clamped(self):
+        """The other half of the population claim, and the second one
+        the sweep found unheld: `budget_for` clamping to the last row
+        instead of refusing passed every clause, because no run in the
+        population is big enough to reach the branch.
+
+        Inheriting the largest class silently is this item's defect at
+        the next size up - a bound stated for 4,000 elements quietly
+        governing 40,000 is exactly "nobody decided".
+        """
+        largest = BUDGETS[-1][0]
+        assert budget_for(largest) == BUDGETS[-1]
+        with pytest.raises(AssertionError, match="past every size class"):
+            budget_for(largest + 1)
+
     def test_the_largest_class_is_reached_by_a_real_run(self, sizes):
         """Narrower and harder to satisfy by accident: the *last* class
         is the one the item was filed about, and a run has to be in it

@@ -1,6 +1,6 @@
 # UX-366: "All rows" shows 25 of 1,202
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-289 (one element table, many presets), UX-349 (the table tools scale with the table) | **Serves:** anyone whose project has more than 25 elements | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-289 (one element table, many presets), UX-349 (the table tools scale with the table) | **Serves:** anyone whose project has more than 25 elements | **Topic:** viewer
 
 ## Motivation
 
@@ -143,11 +143,19 @@ against the committed tree.
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | `"bound": 25` back on the `All elements` preset | *pending* |
-| M2 | the caption counts `view.shown` again | *pending* |
-| M3 | the caption counts visible rows (stale on "All rows") | *pending* |
-| M4 | `TABLE_OPENS_BOUNDED_ABOVE` raised past the population | *pending* |
-| M5 | the DOM-element budget removed from `BUDGETS` | *pending* |
+| M1 | `"bound": 25` back on the `All elements` preset | 4 failed, 3 passed — `test_no_element_preset_carries_its_own_bound`, `…can_be_seen_whole`, `…still_opens_bounded`, `…say_different_true_things` |
+| M2 | the caption counts `view.shown` again | 1 failed, 6 passed — `test_the_caption_and_the_badge_say_different_true_things` |
+| M3 | the caption counts visible rows (stale on "All rows") | 1 failed, 6 passed — same clause, the other way |
+| M4 | `TABLE_OPENS_BOUNDED_ABOVE` raised past the population | 4 failed, 19 passed — three in this file plus `test_the_whole_page_is_bounded_too[scale]` |
+| M5 | the DOM-element bound set to 12,500 — just above the page **before** this item | 1 failed on the nodes clause alone: *"22977 DOM elements, over the 12500 budget"*. With the preset's bound restored and the same 12,500: **passes**. |
+
+**M5 is the one that had to be designed twice.** The first attempt
+deleted the `nodes` assertion and watched everything pass, which proves
+nothing — removing an assertion is not a mutation. The question worth
+asking about a *new metric* is whether it responds to the change the
+old ones missed, and the pair above answers it: at a bound of 12,500
+the nodes clause fires with this item in and is silent with it out,
+while height, words and controls say nothing in either direction.
 
 ### Deviation from the Required Fix
 

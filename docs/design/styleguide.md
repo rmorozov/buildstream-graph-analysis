@@ -565,6 +565,29 @@ part that moved. So the distance budget gains a sibling:
 - **The bound is set against a measured page and moves only with a
   filed reason** — the discipline §3c already uses for distance.
 
+Measured on the finished page at 1440x900 in round 56, and the bounds
+set from it with roughly a fifth of headroom on the larger fixture:
+
+```text
+                landed   opened    words   controls
+golden           3,501   14,493    5,279        409
+macro_micro      5,564   28,213    9,879        659
+budget           7,000   34,000   12,000        800
+```
+
+Words and controls are one number rather than two, and that is a fact
+about the mechanism rather than a simplification: the chapters hide
+their sections with CSS, so every word and every control is in the
+document from the first byte. Folding changed how far a reader scrolls
+past them and nothing else — which is precisely the cost this budget
+exists to keep visible.
+
+`tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
+in **one** guard, so a change trading one for the other has to say so.
+It also holds the bounds to being reachable: the larger fixture must
+sit within a factor of two of every one of them, because a bound
+nothing can reach is not a bound.
+
 ## 4c. A control acts on the scope its label names, and it acknowledges the press (round 55)
 
 Every control class on the page was pressed, on the page a user gets,

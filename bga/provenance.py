@@ -578,6 +578,18 @@ def attach(document: dict) -> dict:
     records += [record(finding, finding.get("id"), "finding", document)
                 for finding in document.get("findings") or []]
     document["provenance"] = records
+    # `UX-368`: and on the finding itself, from the same table, in the
+    # same pass. The mapping was published only on the record, and
+    # `UX-344` moved the records out of the findings into one list -
+    # after which `trace_context.js` read `finding.provenance
+    # .trace_query` for four rounds against a payload that no longer
+    # had it, and every Investigate button in the report was dead.
+    #
+    # Stamped here rather than in `findings.py` so the table stays in
+    # one module and the record and the finding cannot disagree about
+    # which query answers a claim.
+    for finding in document.get("findings") or []:
+        finding["trace_query"] = TRACE_QUERIES.get(finding.get("id"))
     return document
 
 

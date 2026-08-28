@@ -232,6 +232,10 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-368`, tiered on landing. Four browser clauses over the three
+    # committed captures - `with_timeline` for the page that has a
+    # handoff, the other two for the dead-control rule. 7.6s.
+    "tests/unit/test_a_finding_reaches_the_timeline.py",         #    7.6s
     # `UX-369`, tiered on landing. Four browser clauses over `golden`
     # plus one over the seeded 1,202-element run - the generate and the
     # export are 3.5s of it, the scale boot most of the rest. The scale

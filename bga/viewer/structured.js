@@ -62,7 +62,7 @@ export function columnSpecs(hint, rows, node) {
       ?? guessQuantity(spec.key);
     return {
       ...spec,
-      title: spec.title ?? title(spec.key),
+      title: spec.title ?? title(spec.key, quantityName),
       quantity: quantityName,
       // Numeric-ness is declared by carrying a quantity, or observed
       // only when nothing declared anything.
@@ -118,7 +118,7 @@ function inlineObject(value, node) {
   for (const [name, member] of Object.entries(value)) {
     const kind = quantityFor(childNode(node, name), name);
     parts.push(el("span", { class: "pair" },
-      el("span", { class: "pair-key" }, `${title(name)} `),
+      el("span", { class: "pair-key" }, `${title(name, kind)} `),
       el("span", { class: typeof member === "number" ? "num" : null,
                    "data-raw": member === null ? "" : String(member) },
          member === null ? "—" : quantity(member, kind))));
@@ -140,7 +140,7 @@ function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key) ?? "count";
     declared = { ...hint, [COLUMNS]: [
       { key: "key", title: "name" },
-      { key: "value", title: title(key), quantity: measure }] };
+      { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
   const box = el("div", { class: "map-table", "data-bounded": "map" },
@@ -813,7 +813,7 @@ function distributionStrip(table, specs, total, state, refresh) {
   const drawn = columnStrip(raw, {
     grade: GRADE_ANNOTATION,
     format: (n) => quantity(n, spec.quantity),
-    label: `${spec.title ?? title(spec.key)} across all ${
+    label: `${spec.title ?? title(spec.key, spec.quantity)} across all ${
       total.toLocaleString("en-US")} rows`,
   });
   drawn.setAttribute("data-column", spec.key);
@@ -1096,11 +1096,13 @@ export function elementSignalTable(elements, node, join = null,
     .filter((name) => name !== "element");
   const hint = {
     [COLUMNS]: [{ key: "element", title: "element" },
-                ...columns.map((name) => ({
-                  key: name, title: title(name),
-                  quantity: quantityFor(origin.get(name)
-                                        ?? childNode(node, name), name)
-                    ?? guessQuantity(name) ?? "count" }))],
+                ...columns.map((name) => {
+                  const measure = quantityFor(origin.get(name)
+                                              ?? childNode(node, name), name)
+                    ?? guessQuantity(name) ?? "count";
+                  return { key: name, title: title(name, measure),
+                           quantity: measure };
+                })],
     [QUESTION]: "Which element should I look at?",
   };
   return { rows, hint, merged: present, joined: joinedIn };
@@ -1283,7 +1285,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     //
     // UX-317 (§2b.3): and it has a door a reader can see.
     const { term, describe } = describedTerm(name, described, {},
-                                             hintsOf(child)[INLINE]);
+                                             hintsOf(child)[INLINE], kind);
     list.append(term, el("dd", {}, cell, describe));
   }
   const parts = [sectionHead(key, hint)];
@@ -1347,12 +1349,13 @@ export function renderPairs(key, object, hint = {}, node = undefined,
  * Returns `{ term, describe }` - the `<dt>`, and the node to put in the
  * `<dd>`, or `null` when the schema describes nothing.
  */
-export function describedTerm(name, description, attrs = {}, inline = null) {
+export function describedTerm(name, description, attrs = {}, inline = null,
+                              kind = null) {
   const term = el("dt", { ...attrs, "data-key": name,
                           title: description ?? null,
                           "data-described": description ? "true" : null,
                           "data-inline": inline ?? null },
-                  title(name));
+                  title(name, kind));
   if (!description) return { term, describe: null };
   // UX-346: a declared exception is not behind a door at all. There is
   // no marker for it either - a `?` beside a sentence already on screen
@@ -1373,7 +1376,7 @@ export function describedTerm(name, description, attrs = {}, inline = null) {
     type: "button", class: "describe", "data-describe": name,
     "aria-expanded": "false",
     // `UX-279`: the control says what it does before it is pressed.
-    title: `What ${title(name)} means`,
+    title: `What ${title(name, kind)} means`,
   }, "?");
   marker.addEventListener?.("click", () => {
     const open = marker.getAttribute("aria-expanded") === "true";

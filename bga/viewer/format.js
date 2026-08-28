@@ -125,8 +125,53 @@ export function guessQuantity(key) {
   return null;
 }
 
-export function title(key) {
-  return key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+/**
+ * `UX-351`: the suffix a quantity already accounts for, per quantity.
+ *
+ * Keyed by the *quantity*, not by the suffix, which is the property
+ * the item is about: `_us` comes off a `duration_us` and stays on
+ * anything else, so a key named like a duration and declared as
+ * something else looks as odd as it is instead of being quietly
+ * tidied. The retired spellings (`quantity` above keeps rendering
+ * them) are here for the same reason they are there - a value can
+ * still arrive carrying one.
+ *
+ * Only the quantities whose *rendered value* spells the unit are
+ * listed. A `count` renders as a bare number and a `ratio` as
+ * `1.5x`, so "Process count" and "Inefficiency ratio" are telling a
+ * reader something the value beside them does not.
+ */
+const UNIT_SUFFIX = {
+  duration_us: /_us$/,
+  seconds: /_seconds$/,
+  bytes: /_bytes$/,
+  megabytes: /_mb$/,
+  kilobytes: /_kb$/,
+  share: /_share$/,
+  percent: /_pct$/,
+};
+
+/**
+ * A payload key as a label.
+ *
+ * `UX-341` made every duration key end `_us` and every memory key end
+ * `_bytes`, so the reader met "Execution on chain us  43.2 s" - the
+ * suffix answering, in a spelling that is not English, a question the
+ * value beside it had already answered. The suffix is for the
+ * contract; this is for the reader, and `kind` is what tells the two
+ * apart.
+ *
+ * `kind` is the quantity the *value* is being rendered under - pass
+ * what `quantityFor` returned, so declared beats guessed here for the
+ * same reason it does there. Without one nothing is trimmed: a label
+ * whose value is rendered as a bare number keeps every token it has.
+ */
+export function title(key, kind = null) {
+  const suffix = UNIT_SUFFIX[kind];
+  // Never trim a key down to nothing: `_us` alone is not a label.
+  const trimmed = suffix ? key.replace(suffix, "") : key;
+  const named = trimmed || key;
+  return named.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
 
 /**

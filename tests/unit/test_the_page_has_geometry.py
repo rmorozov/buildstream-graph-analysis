@@ -354,17 +354,21 @@ class TestTheDocumentEndsWithItsIdentity:
         return {top: r.top + window.scrollY, bottom: r.bottom + window.scrollY};
       };
       const out = {total, vh};
-      for (const key of ["summary", "run_instance", "producer", "findings",
+      // `UX-344`: `document_shape` closes the identity chapter, so it
+      // is part of the group nothing may be drawn below.
+      for (const key of ["summary", "run_instance", "producer",
+                         "document_shape", "findings",
                          "headline", "next_steps", "blast-offline"])
         out[key] = box(key);
       // Everything below the identity group, by pixel rather than by
       // DOM order - the two agree on a page laid out in one column,
       // and disagreeing is itself worth knowing.
-      const producer = out["producer"];
-      out.below = producer === null ? [] :
+      // The last of the group, which `UX-344` made `document_shape`.
+      const last = out["document_shape"] ?? out["producer"];
+      out.below = last === null ? [] :
         [...document.querySelectorAll("main section[data-section]")]
           .filter((n) => n.getBoundingClientRect().bottom + window.scrollY
-                         > producer.bottom + 1)
+                         > last.bottom + 1)
           .map((n) => n.dataset.section);
       return out;
     })()
@@ -528,12 +532,23 @@ class TestChaptersCostNoHeight:
       const titles = [...document.querySelectorAll("h2.chapter-title")];
       const heads = titles.reduce(
         (sum, n) => sum + n.getBoundingClientRect().height, 0);
+      // `UX-344`: the chapter's own chrome - the head above its first
+      // section and whatever is left below its last - rather than the
+      // whole difference from the sum of its sections. Lifting the two
+      // namespaces took the `elements` chapter from two sections to
+      // thirteen, and the *gaps between* eleven more sections are
+      // layout, not padding: measured, they were 0.42 screens of it at
+      // 390px with no chapter having grown a pixel of head.
       const chapters = [...document.querySelectorAll("section.chapter")]
         .map((box) => {
-          const own = box.getBoundingClientRect().height;
-          const inner = [...box.querySelectorAll("section[data-section]")]
-            .reduce((sum, n) => sum + n.getBoundingClientRect().height, 0);
-          return { id: box.dataset.chapter, slack: (own - inner) / vh };
+          const rect = box.getBoundingClientRect();
+          const inner = [...box.querySelectorAll("section[data-section]")];
+          if (!inner.length) return { id: box.dataset.chapter, slack: 0 };
+          const first = inner[0].getBoundingClientRect();
+          const last = inner[inner.length - 1].getBoundingClientRect();
+          const head = first.top - rect.top;
+          const tail = rect.bottom - last.bottom;
+          return { id: box.dataset.chapter, slack: (head + tail) / vh };
         });
       const heights = [...document.querySelectorAll("main section[data-section]")]
         .map((s) => s.getBoundingClientRect().height / vh);
@@ -568,7 +583,13 @@ class TestChaptersCostNoHeight:
         golden report at 390x844, 0.16 at 1440. Raised to a third of a
         screen against those, and deliberately not further - the head
         is what a folded chapter *is*, so a head that grew past this
-        would be the padding this clause refuses."""
+        would be the padding this clause refuses.
+
+        `UX-344` changed what is measured rather than the bound: the
+        chapter's own chrome, head and tail, instead of the whole
+        difference from the sum of its sections. With thirteen sections
+        in one chapter the *gaps between them* are most of that
+        difference, and a gap is layout."""
         out = browser.measure(report, self._COST, width, height)
         padded = {chapter["id"]: round(chapter["slack"], 2)
                   for chapter in out["chapters"] if chapter["slack"] > 0.34}

@@ -67,7 +67,11 @@ def big_run(tmp_path_factory):
 def _signals(run):
     from tools.bga_view import payloads
 
-    return payloads(str(run)).get("report.json", {}).get("signals", {})
+    # `UX-344`: the tables `signals` held are keys of the document,
+    # and the element population is `elements`. This helper hands both
+    # halves back as one mapping so the clauses below read as they did.
+    document = payloads(str(run)).get("report.json", {})
+    return {**document, **(document.get("elements") or {})}
 
 
 class TestTheSplitIsADecision:

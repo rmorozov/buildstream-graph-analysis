@@ -77,9 +77,13 @@ def _pairs(document):
     `evidence["binding_constraint"]` are the same number by two routes.
     """
     found = []
+    # `UX-344`: one published list keyed by claim, rather than a record
+    # written into each finding.
+    chains = {entry.get("claim"): entry
+              for entry in document.get("provenance") or []}
     for finding in document.get("findings") or []:
         evidence = finding.get("evidence") or {}
-        for cite in (finding.get("provenance") or {}).get("evidence") or []:
+        for cite in (chains.get(finding.get("id")) or {}).get("evidence") or []:
             leaf = cite["path"].split(".")[-1].split("[")[0]
             if leaf in evidence:
                 found.append((finding["id"], leaf, evidence[leaf],
@@ -114,8 +118,10 @@ class TestTheCarriersAgree:
         document = request.getfixturevalue(run)
         wrong = []
         quoted = 0
+        chains = {entry.get("claim"): entry
+                  for entry in document.get("provenance") or []}
         for finding in document["findings"]:
-            for cite in (finding.get("provenance") or {}).get("evidence") or []:
+            for cite in (chains.get(finding.get("id")) or {}).get("evidence") or []:
                 if not cite["resolved"]:
                     continue
                 quoted += 1
@@ -134,9 +140,11 @@ class TestTheContractSaysWhichOneToBelieve:
     not a task file."""
 
     def test_the_finding_evidence_node_claims_the_authority(self):
-        node = schemas.schema(schemas.ANALYZE)["properties"]["findings"]
-        provenance_node = node["items"]["properties"]["provenance"]
-        cited = provenance_node["properties"]["evidence"]["description"]
+        # `UX-344`: the chain is published once, so its schema is the
+        # item schema of `provenance` rather than a node inside
+        # `findings[]`.
+        node = schemas.schema(schemas.ANALYZE)["properties"]["provenance"]
+        cited = node["items"]["properties"]["evidence"]["description"]
         assert "quotation" in cited.lower(), cited
         assert "believe" in cited.lower(), (
             "the contract does not say which carrier wins when two name "
@@ -154,7 +162,7 @@ class TestTheContractSaysWhichOneToBelieve:
 class TestTheDerivedFindingDoesNotOutliveItsSource:
     """The item's other example: `joint-saving` restates a whole signal.
 
-    `findings.py` derives it *from* `signals.joint_saving`, so the
+    `findings.py` derives it *from* `joint_saving`, so the
     direction is right and the signal is the source. What was unguarded
     is that the derived copy still equals it.
     """

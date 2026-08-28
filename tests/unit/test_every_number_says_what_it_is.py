@@ -44,14 +44,14 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # allowlist with reasons rather than a count: a count says how many are
 # missing, and a reason says whether that is acceptable.
 UNDECLARABLE = {
-    "findings.[].provenance.rule.threshold":
+    # `UX-344`: one list at the top level rather than a copy inside every
+    # claim, so there is one path here where there were three.
+    "provenance.[].rule.threshold":
         "A rule whose `observed_path` is null compares against a quantity "
         "the finding computes rather than publishes, so no path names the "
         "unit. Rules that do have one carry `threshold_quantity`.",
-    "findings.[].provenance.rule.threshold.[]":
+    "provenance.[].rule.threshold.[]":
         "The banded form of the same rule - two thresholds, same reason.",
-    "headline.provenance.rule.threshold":
-        "The diagnosis chain's own rule, same reason.",
 }
 
 _CENSUS = r"""
@@ -205,7 +205,7 @@ class TestAPathResolvesToItsUnit:
     uid, which contains a dot.
 
     Splitting the path on `.` before reading its subscripts turns
-    `signals.element_durations[app.bst]` into two nonsense segments that
+    `elements.element_durations[app.bst]` into two nonsense segments that
     resolve to nothing, and no payload in this repository publishes a
     provenance path in that form today. So the resolver would be wrong
     and every other clause would stay green.
@@ -216,14 +216,14 @@ class TestAPathResolvesToItsUnit:
         ("floors.lb", "duration_us"),
         ("headline.chain_share", "share"),
         # A list of records, subscripted by index.
-        ("signals.critical_path_detail[0].duration_us", "duration_us"),
+        ("critical_path_detail[0].duration_us", "duration_us"),
         # A table that declares columns instead of `items`.
         ("element_join[0].peak_rss_bytes", "bytes"),
         # A map keyed by an element uid - the dot inside the subscript
         # is the case a split-first walk loses.
-        ("signals.element_durations[app.bst]", "duration_us"),
-        ("signals.blast_radius[app.bst].risk_score", "ratio"),
-        ("signals.criticality_probability[lib.bst].probability", "share"),
+        ("elements.element_durations[app.bst]", "duration_us"),
+        ("elements.blast_radius[app.bst].risk_score", "ratio"),
+        ("elements.criticality_probability[lib.bst].probability", "share"),
         # The selector form the provenance grammar also allows.
         ("findings[id=x].evidence.share", "share"),
         # A path the schema does not describe resolves to nothing rather
@@ -245,11 +245,11 @@ class TestTheProducerMatchesItsOwnColumns:
     """
 
     @pytest.mark.parametrize("where,key,columns", [
-        ("structural.bottleneck", "high_fanin_elements",
+        ("bottleneck", "high_fanin_elements",
          {"element_uid", "fan_in"}),
-        ("structural.bottleneck", "high_fanout_elements",
+        ("bottleneck", "high_fanout_elements",
          {"element_uid", "fan_out"}),
-        ("structural.sensitivity", "top_opportunities",
+        ("sensitivity", "top_opportunities",
          {"element_uid", "sensitivity", "saving_us"}),
     ])
     def test_the_rows_carry_the_declared_keys(self, where, key, columns):
@@ -275,16 +275,17 @@ class TestTheProducerMatchesItsOwnColumns:
         from tools.bga_view import payloads
 
         payload = payloads(str(FIXTURES["macro_micro"]))["report.json"]
-        structural = schemas.schema(schemas.ANALYZE)[
-            "properties"]["structural"]["properties"]
+        # `UX-344`: the two blocks are keys of the document; the columns
+        # are declared where they always were, one level up.
+        properties = schemas.schema(schemas.ANALYZE)["properties"]
         for block, key in (("bottleneck", "high_fanin_elements"),
                            ("bottleneck", "high_fanout_elements"),
                            ("sensitivity", "top_opportunities")):
             declared = {spec["key"] for spec
-                        in structural[block]["properties"][key]["bga:columns"]
+                        in properties[block]["properties"][key]["bga:columns"]
                         if isinstance(spec, dict) and spec.get("key")}
-            published = set(payload["structural"][block][key][0])
+            published = set(payload[block][key][0])
             assert declared == published, (
-                f"structural.{block}.{key}: the schema declares "
+                f"{block}.{key}: the schema declares "
                 f"{sorted(declared)} and the payload publishes "
                 f"{sorted(published)}")

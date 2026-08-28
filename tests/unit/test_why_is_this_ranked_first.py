@@ -95,21 +95,24 @@ class TestEveryValueIsTraceable:
 
     def test_the_rule_that_ranked_it_comes_from_the_provenance_record(
             self, payload):
-        """UX-229's contract, followed through the top action's `see`
-        pointer. The composition this item was filed with is the
-        interim; the record is the destination."""
+        """UX-229's contract, reached by the `finding_id` the action
+        carries. The composition this item was filed with is the
+        interim; the record is the destination.
+
+        `UX-344`: one published list keyed by claim, so the lookup is by
+        id rather than through a `see` path into a nested copy."""
         out = _render(payload)
         for block, action in zip(out["blocks"],
                                  payload["headline"]["top_actions"]):
-            record = provenance.resolve(payload, action["provenance"]["see"])
-            assert record is not provenance.UNRESOLVED
+            record = provenance.for_claim(payload, action["finding_id"])
+            assert record is not None
             assert block["why"] == record["rule"]["sentence"]
 
     def test_an_element_no_source_knows_gets_no_block(self):
         """The block renders nothing rather than guessing - the same
         dead-control rule `UX-194` applies to buttons."""
         out = _render({
-            "schema": "analyze/v3",
+            "schema": "analyze/v4",
             "headline": {"diagnosis": "inconclusive", "sentence": "s",
                          "top_actions": [{"element_uid": "ghost.bst",
                                           "finding_id": "nope"}]},
@@ -121,10 +124,10 @@ class TestEveryValueIsTraceable:
         is nonsense the moment the path separator is taken literally -
         which is exactly what both resolvers did until this item."""
         payload = {
-            "schema": "analyze/v3",
-            "signals": {"critical_path_detail": [
+            "schema": "analyze/v4",
+            "critical_path_detail": [
                 {"element_uid": "layer07/mod084.bst", "share_of_path": 0.25,
-                 "duration_us": 9_000_000}]},
+                 "duration_us": 9_000_000}],
             "headline": {"diagnosis": "chain_bound", "sentence": "s",
                          "top_actions": [
                              {"element_uid": "layer07/mod084.bst",

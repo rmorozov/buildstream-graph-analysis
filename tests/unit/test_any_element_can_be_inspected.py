@@ -107,7 +107,7 @@ for (const href of dead) {
 
 // And an element the page names nowhere near the top: the last key of
 // the run's own element table, which no ranking reaches.
-const every = Object.keys(payload.signals?.element_durations ?? {});
+const every = Object.keys(payload.elements?.element_durations ?? {});
 // The first element the cap left without a block. Chosen by asking the
 // rendered document rather than by position: the *last* key of the
 // table is `all.bst`, the run's own target, which is in the eager set
@@ -249,7 +249,7 @@ class TestAnElementWithNothingSaysSo:
 
     def test_and_an_element_with_data_is_not_told_it_has_none(self, small):
         """The other side, so the note above cannot be unconditional."""
-        real = next(iter(small["signals"]["element_durations"]))
+        real = next(iter(small["elements"]["element_durations"]))
         drawn = _follow_uid(small, real)
         assert drawn["rows"] > 0, real
         assert drawn["note"] == 0

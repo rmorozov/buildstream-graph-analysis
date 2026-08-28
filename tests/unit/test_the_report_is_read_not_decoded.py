@@ -152,8 +152,13 @@ class TestALongValueIsTruncatedAndASentenceIsNot:
 
 class TestTheCriticalPathIsItsOwnSection:
     def test_it_is_lifted_out_of_the_pair_list(self):
+        """`UX-344` lifted the namespace it used to be a row of, so the
+        skip is gone and the *document* publishes it as a key. What is
+        still `UX-270`'s claim is that the page draws it as a section of
+        its own, with the chain's own fold, rather than as a table in a
+        pair list."""
         assert 'export const LIFTED_SECTION = "critical_path_detail"' in APP
-        assert "if (key === \"signals\" && name === LIFTED_SECTION) continue;" in APP
+        assert "liftedCriticalPath(payload, schema)" in APP
 
     def test_it_is_rendered_as_a_section_of_its_own(self):
         assert "export function liftedCriticalPath" in APP

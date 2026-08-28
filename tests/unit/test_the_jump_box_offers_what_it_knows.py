@@ -30,13 +30,13 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 _PAYLOAD = {
     "total_duration_us": 100_000_000,
-    "signals": {
-        "critical_path_detail": [
-            {"element_uid": "openssl.bst", "duration_us": 672_000_000,
-             "share_of_path": 0.186},
-            {"element_uid": "zlib.bst", "duration_us": 12_000_000,
-             "share_of_path": 0.02},
-        ],
+    "critical_path_detail": [
+        {"element_uid": "openssl.bst", "duration_us": 672_000_000,
+         "share_of_path": 0.186},
+        {"element_uid": "zlib.bst", "duration_us": 12_000_000,
+         "share_of_path": 0.02},
+    ],
+    "elements": {
         "element_durations": {"openssl.bst": 672_000_000,
                               "zlib.bst": 12_000_000,
                               "docs.bst": 900_000},
@@ -108,7 +108,7 @@ class TestTheNumbersAreRead:
         672 s, so anything derived from the total cannot match."""
         out = _palette("openssl")
         assert out["elements"][0]["facts"]["duration_us"] == \
-            _PAYLOAD["signals"]["critical_path_detail"][0]["duration_us"]
+            _PAYLOAD["critical_path_detail"][0]["duration_us"]
         assert out["elements"][0]["facts"]["duration_us"] != \
             _PAYLOAD["total_duration_us"]
 

@@ -53,7 +53,17 @@ from .findings import DIAGNOSES
 # now in - `measured_us`, `peak_rss_bytes`, `useful_share`,
 # `occupancy_share`. Renames are removals, so this is a version move by
 # the rule below and not an edit.
-ANALYZE = "analyze/v3"
+# `UX-344`: v4, and the largest move of the four. The `signals` and
+# `structural` namespaces are **gone** - every table they held is a
+# top-level key, `metrics` and `summary` renamed to `graph_metrics` and
+# `graph_summary`, and the six element-keyed maps grouped under
+# `elements`, the one table they always were. `provenance` is published
+# once per claim at the top level instead of three times inside the
+# claims that cite it, and `findings[].evidence.blast_radius` - a slice
+# of a population published in full beside it - is gone by `UX-288`'s
+# rule. Every one of those is a removal or a rename, which is what this
+# version move is for.
+ANALYZE = "analyze/v4"
 COMPARE = "compare/v2"
 BLAST = "blast/v2"
 STORE = "store/v1"
@@ -64,7 +74,8 @@ STORE = "store/v1"
 # reads a `v2` analyze document by name - the keys this item renamed
 # resolve through `guessQuantity` rather than through a declaration, so
 # an old snapshot still renders, with the fallback saying so.
-SUPERSEDED = ("analyze/v2", "compare/v1", "blast/v1", "correlate/v1")
+SUPERSEDED = ("analyze/v3", "analyze/v2", "compare/v1", "blast/v1",
+              "correlate/v1")
 # UX-234: the store as a distribution rather than as a list. Beside
 # `store/v1` rather than inside it: a listing is one row per snapshot
 # and this is one row per *host class*, and a consumer wanting the
@@ -579,8 +590,35 @@ _ANALYZE_OPTIONAL = {
     "attribution": "object",
     "attribution_hints": "object",
     "occupancy": "object",
-    "signals": "object",
-    "structural": "object",
+    # `UX-344`: what `signals` and `structural` held, each on its own.
+    # The order is the order the page reads them in, which is the order
+    # a lifted key was declared in inside the namespace it left.
+    "elements": "object",
+    "element_duration_distribution": "object",
+    "blast_radius_distribution": "object",
+    "critical_path_detail": "array",
+    "optimization_horizon": "array",
+    "latent_heavies": "array",
+    "wall_clock_share_us": "object",
+    "cache": "object",
+    "ready_queue": "object",
+    "fetch_build_overlap": "object",
+    "joint_saving": "object",
+    "leaf_analysis": "object",
+    "graph_metrics": "object",
+    "graph_summary": "object",
+    "deferrability": "object",
+    "parallelism": "object",
+    "bottleneck": "object",
+    "sensitivity": "object",
+    "serialization_point_risks": "array",
+    "batch_opportunities": "object",
+    "consolidation_candidates": "array",
+    # `UX-344`: one record per claim, beside the claims that carry ids
+    # into it. Optional for the reason `producer` is: a section report
+    # is not a full document and carries none.
+    "provenance": "array",
+    "document_shape": "object",
     "utilisation": "object",
     "confidence": "object",
     "violations": "array",
@@ -634,11 +672,16 @@ _ANALYZE_OPTIONAL = {
 # rename silently shortens. `edges_outside_band` (renamed from
 # `runs_outside_band` one round before this item was filed) is the case
 # in point.
-# UX-229: the chain behind one claim. Declared once and referenced from
-# the three places a claim is published - the diagnosis, each finding
-# and each top action - because a consumer that learns to read one has
-# learned to read all three, and a second shape would be a second
-# contract to keep in step.
+# UX-229: the chain behind one claim. One shape, because a consumer that
+# learns to read one has learned to read all of them.
+#
+# `UX-344`: and one *place*. It used to be nested in each of the three
+# claims that carry one - the diagnosis, every finding, every top action
+# - which put the deepest shape in the document (six levels, 81 leaves
+# on `macro_micro`) inside the record it explains, and wrote the top
+# action's chain as a `see` path into the finding's copy. This is the
+# item schema of the published `provenance` list now: one record per
+# claim, and the claim carries the id it already carried.
 _PROVENANCE = {
     "description": "Why this claim is made: the published fields it was "
                    "read from, the rule that fired, and the trace query "
@@ -648,7 +691,8 @@ _PROVENANCE = {
         "claim": {"description": "Which claim this explains - a finding "
                                  "id, or `diagnosis` for the headline."},
         "kind": {"description": "Where the claim is published: "
-                                "`diagnosis`, `finding` or `top_action`."},
+                                "`diagnosis` for the headline, `finding` "
+                                "for a row of `findings`."},
         "document": {"description": "The schema of the document every "
                                     "path below walks. Load-bearing the "
                                     "moment a record travels: "
@@ -727,10 +771,6 @@ _PROVENANCE = {
             },
             "required": ["comparison", "sentence"],
         },
-        "see": {"description": "On a top action: the path to the "
-                               "finding's record, which holds the chain. "
-                               "The action *is* a reference to that "
-                               "finding, so its provenance is one too."},
         "trace_query": {"description": "The `questions.js` query id that "
                                        "deepens this claim in the timeline, "
                                        "or null where none does."},
@@ -884,7 +924,19 @@ ANALYZE_FULL_KEYS = (
     # distinguishable.
     "next_steps",
     "findings", "floors", "capacity_verdict", "attribution",
-    "attribution_hints", "occupancy", "signals", "structural",
+    "attribution_hints", "occupancy",
+    # `UX-344`: the tables `signals` and `structural` used to hold. Only
+    # the ones a full report of a *normal* run always carries are here.
+    # Measured on the golden run, four are not: `cache` and the two
+    # distributions need a population to describe and
+    # `fetch_build_overlap` needs both phases, so each is a fact about
+    # the run rather than a shortened document - which is the
+    # distinction this list exists to keep.
+    "elements", "critical_path_detail", "optimization_horizon",
+    "latent_heavies", "wall_clock_share_us", "ready_queue", "joint_saving",
+    "leaf_analysis", "graph_metrics", "graph_summary", "deferrability",
+    "parallelism", "bottleneck", "sensitivity", "batch_opportunities",
+    "provenance", "document_shape",
     "utilisation", "confidence", "violations",
 )
 
@@ -899,6 +951,20 @@ ANALYZE_PLANE2_KEYS = (
     # the same list for the same reason: a full report is full with
     # either, and the pin must not demand both.
     "plane2_absence",
+)
+
+# `UX-344`: keys a full report carries when the run has something to put
+# in them. `signals` was always present because *something* in it always
+# was; lifted, four of its tables answer questions a given run may not
+# raise - there is no cache table without a cache, no duration or blast
+# distribution without a population to describe, and no fetch/build
+# overlap without both phases. Kept out of `ANALYZE_FULL_KEYS` for the
+# reason `ANALYZE_PLANE2_KEYS` is: that list is what the pin asserts is
+# *always* there, and a report missing one of these is still full.
+ANALYZE_RUN_DEPENDENT_KEYS = (
+    "cache", "element_duration_distribution", "blast_radius_distribution",
+    "fetch_build_overlap", "consolidation_candidates",
+    "serialization_point_risks",
 )
 
 _COMPARE_REQUIRED = {
@@ -1261,20 +1327,11 @@ EVIDENCE_QUANTITIES.update({
         "description": "`recommended_builders` minus `builders`, signed - "
                        "negative means the run asked for more than something "
                        "can serve."},
-    "blast_radius": {
-        "additionalProperties": {"properties": {
-            "downstream_count": {
-                QUANTITY: "count",
-                "description": "Elements this one's change rebuilds."},
-            "weighted_duration_us": {
-                QUANTITY: "duration_us",
-                "description": "What that rebuild costs, summed over the elements it touches."},
-            "risk_score": {
-                QUANTITY: "ratio",
-                "description": "Downstream work weighted by duration - a "
-                               "ranking within this run, not a measurement."},
-        }},
-        "description": "What each named element's change rebuilds."},
+    # `UX-344`: `findings[].evidence.blast_radius` is gone - it was a
+    # slice of `elements.blast_radius`, keyed by element uid, published
+    # a second time inside the finding that names those elements. What
+    # is left of that evidence is the distribution below, which is a
+    # property of the run and not of any element.
     "constraints": {"items": {"properties": {
         "allows": {
             QUANTITY: "count",
@@ -1309,6 +1366,691 @@ EVIDENCE_QUANTITIES.update({
             "description": "This element's duration, off the chain today."},
     }}},
 })
+
+
+# `UX-344`: the views over the one element table, now declared on
+# `elements` - the key that holds it - rather than on the namespace
+# it used to be a row of.
+# UX-289: the views over the one element table.
+#
+# `UX-268` joined the six element-keyed signals into one row per
+# element, and that table then had to serve every question at
+# once - 13 columns on the 1,202-element run. These name the
+# questions a reader actually arrives with, and each shows the
+# four to six columns that answer one.
+#
+# Every population here is a **filter over a published field**,
+# which is what `UX-288` made possible: `from` reads a selection
+# the payload already publishes once (and takes its order from
+# it), `where` tests a column the element records already carry.
+# Nothing here computes a membership the payload does not have -
+# Direction 7's boundary, and the reason `UX-288` came first.
+_ELEMENT_PRESETS = [
+    {"name": "All elements",
+     "question": "Which element should I look at?",
+     "columns": ["element", "element_durations", "downstream_count",
+                 "is_leaf", "observed_critical", "element_kind"],
+     "sort": {"column": "element_durations", "direction": "desc"},
+     "bound": 25},
+    {"name": "Critical path",
+     "question": "Which elements are on the chain that binds?",
+     # In the order the chain runs, which is the order the
+     # selection is published in - the page does not need to know
+     # what a critical path is to draw it in the right order.
+     "from": "critical_path_detail",
+     "columns": ["element", "element_durations", "slack",
+                 "element_kind", "probability"]},
+    {"name": "Leaves",
+     "question": "What could be deferred?",
+     "where": {"column": "is_leaf", "equals": True},
+     "columns": ["element", "element_durations", "downstream_count",
+                 "element_kind", "is_structural_kind"],
+     "sort": {"column": "element_durations", "direction": "desc"}},
+    {"name": "Choke points",
+     "question": "What does everything wait on?",
+     "from": "bottleneck.choke_points",
+     "columns": ["element", "element_durations", "downstream_count",
+                 "weighted_duration_us", "element_kind"]},
+    {"name": "Latent heavies",
+     "question": "What is big and off the chain?",
+     "where": {"column": "observed_critical", "equals": False},
+     "columns": ["element", "element_durations", "slack",
+                 "downstream_count", "risk_score"],
+     "sort": {"column": "element_durations", "direction": "desc"},
+     "bound": 25},
+    # UX-338: the two-plane join, as a *view* of this table
+    # rather than a second table of the same eleven elements.
+    # `UX-215` published `element_join` and the page drew it on
+    # its own, so every reader of a two-plane snapshot has seen
+    # the whole population twice since then - which `UX-289` had
+    # already ruled out. The columns are the join's: what the
+    # sandbox actually did with the cores it was given.
+    #
+    # A run with no Plane 2 report carries none of these
+    # columns, and `presetTable` drops a preset whose columns
+    # are all absent - so this appears exactly when there is
+    # something behind it, which is `UX-194`'s dead-control
+    # rule at the level of a view.
+    {"name": "Plane 2 (sandbox)",
+     "question": "Compute-bound, or badly built?",
+     "columns": ["element", "element_durations", "cores_busy",
+                 "requested_jobs", "peak_rss_bytes"],
+     # Without these the view is `element_durations` under a
+     # heading that promises the sandbox, so it is not offered
+     # at all on a run that captured no Plane 2.
+     "requires": ["cores_busy", "requested_jobs", "peak_rss_bytes"],
+     "sort": {"column": "element_durations", "direction": "desc"},
+     "bound": 25},
+]
+
+# `UX-344`: the two namespaces, and what stands where they did.
+#
+# Measured on the emitted `analyze/v3`: 57% of the golden report's
+# leaves and 67% of `macro_micro`'s sat deeper than three levels, and
+# two of those levels carried nothing at all. `signals` and `structural`
+# were maps of *named tables* - neither held a value of its own, and
+# both cost every table below them a level. Each table is a top-level
+# key now, carrying the `bga:rail` its namespace used to carry for it,
+# which is what the reader's rail and `UX-286`'s chapters group by
+# anyway.
+#
+# `metrics` and `summary` are `graph_metrics` and `graph_summary`: at
+# the top level they would be two of the most generic names in the
+# document, and the page already draws a `summary` section - the run's
+# own scalars - that a second one would have collided with.
+_STRUCTURAL_TABLES = {
+    # `UX-343`: `metrics`, `summary` and `deferrability` said
+    # nothing about a single one of their members - twenty-six
+    # leaves reaching the reader as bare numbers, in the block
+    # whose whole job is to describe the graph's shape.
+    "metrics": {
+        "description": "The graph's shape as numbers, "
+                       "independent of how long anything took.",
+        "properties": {
+            "num_elements": {
+                QUANTITY: "count",
+                "description": "How many elements this run's graph holds."},
+            "num_edges": {
+                QUANTITY: "count",
+                "description": "How many dependency edges this run's graph holds."},
+            "max_depth": {
+                QUANTITY: "count",
+                "description": "The longest chain of dependencies, "
+                               "counted in edges."},
+            "avg_fanin": {
+                QUANTITY: "ratio",
+                "description": "Direct dependents per element, "
+                               "averaged."},
+            "avg_fanout": {
+                QUANTITY: "ratio",
+                "description": "Direct dependencies per element, "
+                               "averaged."},
+            "max_parallelism": {
+                QUANTITY: "count",
+                "description": "The most elements that could run at "
+                               "once given the graph alone."},
+            "avg_parallelism": {
+                QUANTITY: "ratio",
+                "description": "Elements that could run at once, "
+                               "averaged over the graph's levels."},
+            "critical_path_length": {
+                QUANTITY: "count",
+                "description": "Elements on the chain, not its "
+                               "duration."},
+            "critical_path_share": {
+                QUANTITY: "share",
+                "description": "The chain's length over the graph's "
+                               "depth - how much of the shape the "
+                               "chain accounts for."},
+            "serialization_share": {
+                QUANTITY: "share",
+                "description": "How much of the graph has to run one "
+                               "thing after another."},
+            "cyclomatic_complexity": {
+                QUANTITY: "count",
+                "description": "Edges minus elements plus one - how "
+                               "tangled the graph is."},
+        }},
+    "summary": {
+        "description": "The headline shape numbers, for a reader "
+                       "who wants one line rather than the block.",
+        "properties": {
+            "total_elements": {
+                QUANTITY: "count",
+                "description": "How many elements this run's graph holds."},
+            "critical_path_length": {
+                QUANTITY: "count",
+                "description": "Elements on the chain, not its "
+                               "duration."},
+            "max_parallelism": {
+                QUANTITY: "count",
+                "description": "The most elements that could run at "
+                               "once given the graph alone."},
+            "bottleneck_count": {
+                QUANTITY: "count",
+                "description": "Elements everything funnels through."},
+            "deferrable_leaves": {
+                QUANTITY: "count",
+                "description": "Leaf elements nothing downstream is waiting on."},
+            "best_case_speedup": {
+                QUANTITY: "ratio",
+                "description": "How much faster an unlimited-"
+                               "capacity replay of this graph "
+                               "would be. A multiplier, and a "
+                               "ceiling rather than a plan."},
+        }},
+    "deferrability": {
+        "properties": {
+            "total_deferrable_work_us": {
+                QUANTITY: "duration_us",
+                "description": "Work that could be moved out of this "
+                               "build without anything waiting for it."},
+        }},
+    # UX-303: the graph's width, level by level - an ordered
+    # numeric array whose order *is* the axis, which is what
+    # `bga:series` says. Drawn as a sparkline with the sentence
+    # beside it naming the unit this hint declares; below three
+    # levels it is a sentence and no drawing, because two
+    # points joined by a line claim a trend two points cannot
+    # make.
+    "parallelism": {
+        "properties": {
+            # `UX-343`: the four scalars beside the series, and
+            # the series' own values.
+            "levels": {
+                QUANTITY: "count",
+                "description": "One entry per level of the graph, "
+                               "in order.",
+                "items": {
+                    QUANTITY: "count",
+                    "description": "How many elements sit at this level of the graph."}},
+            "min_width": {
+                QUANTITY: "count",
+                "description": "The narrowest level of the graph - "
+                               "where it is closest to serial."},
+            "max_width": {
+                QUANTITY: "count",
+                "description": "The widest level of the graph - its most parallel point."},
+            "mean_width": {
+                QUANTITY: "ratio",
+                "description": "Elements per level of the graph, averaged over the levels."},
+            "width_uniformity": {
+                QUANTITY: "share",
+                "description": "How evenly the width is spread. Low "
+                               "means the graph pinches somewhere."},
+            "width_at_level": {
+                # `UX-343`: the series declared its axis and not
+                # the values on it.
+                "items": {
+                    QUANTITY: "count",
+                    "description": "The graph's width at this "
+                                   "level."},
+                SERIES: "level",
+                "description": "How many elements sit at each "
+                               "depth of the graph, from the "
+                               "roots down. The shape of this "
+                               "series is the shape of what can "
+                               "run at once.",
+            },
+        },
+    },
+    "bottleneck": {
+        "description": "Where work funnels through one element, "
+                       "and how much waits behind it.",
+        "properties": {
+            "serial_chain_length": {
+                QUANTITY: "count",
+                "description": "The longest run of elements that must "
+                               "go one after another."},
+            # UX-283: the choke points are an element table like
+            # any other, so they earn the Inspect route and the
+            # sort every other element table has. Before this
+            # the whole `structural` section carried **zero**
+            # links out of it, measured on the 1,202-element run.
+            "choke_points": {
+                "description": "Elements every other element is "
+                               "either upstream or downstream of - "
+                               "the graph's waists, ranked by how "
+                               "much waits on them.",
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "downstream_count",
+                     "title": "Waiting on it",
+                     "quantity": "count", "sortable": True,
+                     "description": "How many elements are "
+                                    "downstream of this one, and "
+                                    "so cannot start until it "
+                                    "finishes."},
+                ]},
+            # UX-290: a tuple is described by naming its members
+            # in order. `bga:columns` already says what an array
+            # of *objects* holds; for an array of pairs, entry
+            # `i` describes position `i`. Before this the page
+            # drew them as `#1` and `#2`, which is honest about
+            # being a position and says nothing about the
+            # measure.
+            "high_fanin_elements": {
+                "description": "Elements many others depend on "
+                               "directly, with how many.",
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "fan_in", "title": "Direct dependents",
+                     "quantity": "count", "sortable": True,
+                     "description": "Elements naming this one as "
+                                    "a dependency - an in-degree, "
+                                    "not a transitive count."},
+                ]},
+            "high_fanout_elements": {
+                "description": "Elements that depend on many "
+                               "others directly, with how many.",
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "fan_out", "title": "Direct dependencies",
+                     "quantity": "count", "sortable": True,
+                     "description": "Dependencies this element "
+                                    "names - an out-degree, not a "
+                                    "transitive count."},
+                ]},
+        }},
+    "sensitivity": {
+        "properties": {
+            # `UX-343`: the three scalars beside the list.
+            "critical_path_us": {
+                QUANTITY: "duration_us",
+                "description": "The chain's duration, which the "
+                               "savings below are measured against."},
+            "total_improvable_time_us": {
+                QUANTITY: "duration_us",
+                "description": "How much of the chain sits in elements "
+                               "that could move."},
+            "best_case_speedup": {
+                QUANTITY: "ratio",
+                "description": "How much faster an unlimited-capacity "
+                               "replay would be. A ceiling, not a "
+                               "plan."},
+            "top_opportunities": {
+                "description": "Elements whose duration the "
+                               "makespan is most sensitive to.",
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "sensitivity", "title": "Sensitivity",
+                     "quantity": "share", "sortable": True,
+                     "description": "How much of the makespan "
+                                    "moves per unit this element "
+                                    "moves."},
+                    {"key": "saving_us", "title": "Worth fixing",
+                     "quantity": "duration_us", "sortable": True,
+                     "description": "What the makespan would drop "
+                                    "by, in seconds, if this "
+                                    "element cost nothing."},
+                ]},
+        }},
+    "serialization_point_risks": {
+        "items": {"properties": {
+            # `UX-343`: the record's own scalars, beside the
+            # nested element table that was already declared.
+            "builders": {
+                INLINE: "name",
+                QUANTITY: "count",
+                "description": "The builder count this risk was "
+                               "measured at."},
+            "governing_cores": {
+                QUANTITY: "count",
+                "description": "Cores the pinned elements were "
+                               "competing for."},
+            "typical_max_jobs": {
+                QUANTITY: "count",
+                "description": "The `-j` the pinned elements' own "
+                               "builds used."},
+            "downstream_count": {
+                QUANTITY: "count",
+                "description": "Elements downstream of this one."},
+            "pinned_elements": {
+                "description": "The elements pinned at this "
+                               "serialization point, and what each "
+                               "one was pinned to.",
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "max_jobs", "title": "Native jobs",
+                     "quantity": "count", "sortable": True,
+                     "description": "The parallelism this "
+                                    "element's own build system "
+                                    "was allowed."},
+                    {"key": "duration_us", "title": "Duration",
+                     "quantity": "duration_us", "sortable": True},
+                ]},
+        }}},
+    "batch_opportunities": {
+        "properties": {
+            "serialized_pairs": {
+                "description": "Pairs that ran one after the other "
+                               "with nothing forcing the order.",
+                COLUMNS: [
+                    {"key": "first", "title": "Ran first",
+                     "role": "element", "sortable": True},
+                    {"key": "then", "title": "Ran after it",
+                     "role": "element", "sortable": True},
+                ]},
+        }},
+    # `UX-344`: the one table `structural` carried with no declaration
+    # at all. A lifted table with no rail lands in "Everything else",
+    # which a guard reddens on - so the lift is what made this a gap
+    # rather than a silence.
+    "consolidation_candidates": {
+        "description": "Elements that are always consumed together and "
+                       "could be one element. Structural: read from the "
+                       "graph's own edges, never from a timing estimate.",
+        COLUMNS: [
+            {"key": "elements", "title": "Could be one element"},
+            {"key": "shared_consumers", "title": "Always consumed by"},
+        ]},
+}
+
+_SIGNALS_TABLES = {
+    # UX-303: the two populations `UX-260` publishes a shape
+    # for. Both are `{n, min, max, deciles, p95, p99, is_flat}`,
+    # so the hint names `n` as the count and one control draws
+    # them and the store aggregate's `samples` shape alike.
+    "element_duration_distribution": _distribution(
+        "duration_us", "element duration in this run",
+        "How this run's element durations are spread. The answer "
+        "to \"is 40s slow *here*?\", which has none without the "
+        "population. Nearest-rank percentiles, `null` below the "
+        "sample floor."),
+    "blast_radius_distribution": _distribution(
+        "count", "blast radius in this graph",
+        "How many elements sit downstream of each, spread across "
+        "this graph. \"753 downstream\" is p99.9 in a "
+        "1,202-element run and unremarkable in 40,000."),
+    "critical_path_detail": {
+        "description": "The chain itself, element by element. "
+                       "The longest path through the graph as "
+                       "this run recorded it - a cached element "
+                       "on it contributes its restore, not its "
+                       "build.",
+        COLUMNS: [
+            {"key": "element_uid", "title": "Element",
+             "role": "element", "sortable": True},
+            {"key": "element_kind", "title": "Kind", "sortable": True},
+            {"key": "duration_us", "title": "Duration",
+             "quantity": "duration_us", "sortable": True},
+            {"key": "share_of_path", "title": "Share of path",
+             "quantity": "share", "sortable": True},
+            {"key": "realizable_saving_us", "title": "Realizable",
+             "quantity": "duration_us", "sortable": True,
+             "description": "What removing this element entirely "
+                            "would take off the makespan, not off "
+                            "the path."},
+        ],
+    },
+    "optimization_horizon": {
+        "description": "What fixing the top elements in turn is "
+                       "worth, in order. The savings stop adding "
+                       "up because each fix lets other elements "
+                       "onto the path - which is why this is a "
+                       "sequence and not a sum.",
+        COLUMNS: [
+            {"key": "element_uid", "title": "Element",
+             "role": "element", "sortable": True},
+            {"key": "saving_us", "title": "Saving",
+             "quantity": "duration_us", "sortable": True},
+            {"key": "makespan_after_us", "title": "Makespan after",
+             "quantity": "duration_us", "sortable": True},
+            {"key": "cumulative_saving_us", "title": "Cumulative",
+             "quantity": "duration_us", "sortable": True},
+        ],
+    },
+    "latent_heavies": {
+        "description": "Heavy elements not on the path today. "
+                       "They cost nothing now and become the "
+                       "constraint once what is above them is "
+                       "fixed.",
+        COLUMNS: [
+            {"key": "element_uid", "title": "Element",
+             "role": "element", "sortable": True},
+            {"key": "duration_us", "title": "Duration",
+             "quantity": "duration_us", "sortable": True},
+        ],
+    },
+    # `UX-343`: the element-keyed maps. A map whose keys are
+    # *data* - an element uid - cannot name them in
+    # `properties`, so the value's schema is declared once under
+    # `additionalProperties` and every key resolves to it.
+    # Measured through the page's own resolution, these were 56
+    # leaves reaching the reader with no unit at all.
+    "element_durations": {
+        QUANTITY: "duration_us",
+        "additionalProperties": {
+            QUANTITY: "duration_us",
+            "description": "How long this element took in this run, restore or build."},
+        "description": "Each element's own duration, keyed by "
+                       "uid. A cached element contributes its "
+                       "restore, not its build."},
+    "slack": {
+        QUANTITY: "duration_us",
+        "additionalProperties": {
+            QUANTITY: "duration_us",
+            "description": "How long this element could have been "
+                           "delayed without moving the makespan."},
+        "description": "How long each element could have been "
+                       "delayed without moving the makespan. "
+                       "Zero is on the chain."},
+    "downstream_count": {
+        QUANTITY: "count",
+        "additionalProperties": {
+            QUANTITY: "count",
+            "description": "Elements downstream of this one."},
+        "description": "How many elements sit downstream of "
+                       "each - what a change to it rebuilds."},
+    "unweighted_depth": {
+        QUANTITY: "count",
+        "additionalProperties": {
+            QUANTITY: "count",
+            "description": "Edges from this element to the root."},
+        "description": "Edges from each element to the root, "
+                       "ignoring duration. The graph's shape "
+                       "rather than this run's timings."},
+    "wall_clock_share_us": {
+        INLINE: "name",
+        QUANTITY: "duration_us",
+        "additionalProperties": {
+            QUANTITY: "duration_us",
+            "description": "The wall-clock this task alone is "
+                           "responsible for - its marginal share of "
+                           "the active window, as time rather than "
+                           "as a fraction."},
+        "description": "How much of the active window each task "
+                       "alone accounts for, in microseconds. Keyed "
+                       "by the task's own identity, not by element, "
+                       "because one element can run more than one "
+                       "task."},
+    "criticality_probability": {
+        "additionalProperties": {
+            "properties": {
+                "probability": {
+                    QUANTITY: "share",
+                    "description": "How often this element lands "
+                                   "on the critical path under "
+                                   "the run's own perturbation - "
+                                   "1.0 is always."},
+                "slack_us": {
+                    QUANTITY: "duration_us",
+                    "description": "How long this element could "
+                                   "have been delayed - zero is "
+                                   "on the chain."},
+            }},
+        "description": "How reliably each element binds, rather "
+                       "than whether it happened to today."},
+    "blast_radius": {
+        "additionalProperties": {
+            "properties": {
+                "downstream_count": {
+                    QUANTITY: "count",
+                    "description": "Elements this one's change "
+                                   "rebuilds."},
+                "weighted_duration_us": {
+                    QUANTITY: "duration_us",
+                    "description": "What that rebuild costs, "
+                                   "summed over the elements it "
+                                   "touches."},
+                "risk_score": {
+                    QUANTITY: "ratio",
+                    "description": "Downstream work weighted by "
+                                   "duration. A ranking, not a "
+                                   "measurement - comparable "
+                                   "within a run, not across."},
+            }},
+        "description": "What one element's change rebuilds, and "
+                       "what that costs."},
+    "zero_slack_share": {
+        QUANTITY: "share",
+        "description": "The share of elements with no slack at "
+                       "all. High means the chain is wide, not "
+                       "long."},
+    "cache": {
+        "description": "What this run had to build and what it "
+                       "restored.",
+        "properties": {
+            "built_elements": {
+                QUANTITY: "count",
+                "description": "Elements this run had to build."},
+            "cached_elements": {
+                QUANTITY: "count",
+                "description": "Elements this run restored instead of "
+                               "building."},
+            "hit_share": {
+                QUANTITY: "share",
+                "description": "Elements restored over elements "
+                               "considered."},
+            "fetch": {
+                "description": "What this run pulled from a remote cache rather than rebuilding.",
+                "properties": {
+                    "fetched": {
+                        QUANTITY: "count",
+                        "description": "Artifacts pulled from a "
+                                       "remote."},
+                    "already_present": {
+                        QUANTITY: "count",
+                        "description": "Artifacts already local, "
+                                       "so nothing was pulled."},
+                    "hit_share": {
+                        QUANTITY: "share",
+                        "description": "Artifacts already local "
+                                       "over artifacts "
+                                       "considered."}}},
+            "target_closure": {
+                "description": "The same question restricted to "
+                               "what the target actually needs.",
+                "properties": {
+                    "elements": {
+                        QUANTITY: "count",
+                        "description": "Elements in the target's "
+                                       "closure."},
+                    "built": {
+                        QUANTITY: "count",
+                        "description": "Of the closure's elements, the ones that had to be built."},
+                    "cached": {
+                        QUANTITY: "count",
+                        "description": "Of those, the ones "
+                                       "restored."},
+                    "hit_share": {
+                        QUANTITY: "share",
+                        "description": "Restored over considered, "
+                                       "inside the closure."}}},
+        }},
+    "ready_queue": {
+        "description": "How much work was ready to run and had "
+                       "nowhere to run it.",
+        "properties": {
+            "average_depth": {
+                QUANTITY: "ratio",
+                "description": "How many elements were ready and "
+                               "waiting, averaged over the build."},
+            "peak_depth": {
+                QUANTITY: "count",
+                "description": "The most elements ready and waiting at "
+                               "once."},
+            "nonzero_fraction": {
+                QUANTITY: "share",
+                "description": "The share of the build spent with "
+                               "anything waiting. High means "
+                               "capacity bound, not graph "
+                               "bound."}}},
+    "fetch_build_overlap": {
+        "properties": {
+            "overlap_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock where fetching and building "
+                               "ran at the same time."},
+            "fetch_prefix_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock at the start spent fetching "
+                               "with nothing building."},
+            "build_suffix_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock at the end spent building "
+                               "with nothing left to fetch."},
+            "fraction": {
+                QUANTITY: "share",
+                "description": "The overlap over the span the two "
+                               "phases covered together."}}},
+    "joint_saving": {
+        "properties": {
+            "joint_saving_us": {
+                QUANTITY: "duration_us",
+                "description": "What fixing the candidates together is "
+                               "worth, simulated - not the sum of what "
+                               "each is worth alone."},
+            "sum_of_individual_us": {
+                # `UX-344`: the caveat `_EVIDENCE_INLINE` already puts on
+                # this key inside a finding. Lifting `joint_saving` made
+                # the number a row of a section rather than a value
+                # nested inside one, and a row draws a door - so the
+                # sentence a reader must not miss is declared on both
+                # carriers rather than on one.
+                INLINE: "caveat",
+                QUANTITY: "duration_us",
+                "description": "Those same savings added up, "
+                               "published so the difference from "
+                               "the joint figure is visible "
+                               "rather than implied."}}},
+    "leaf_analysis": {
+        "properties": {
+            "deferrable_count": {
+                QUANTITY: "count",
+                "description": "Leaf elements nothing else waits "
+                               "on, which could be built later or "
+                               "not at all."},
+            # `UX-344`: the one map keyed by element uid that declared
+            # nothing about its values - found by the clause this item
+            # added, not by reading the schema.
+            "leaves_detail": {
+                "description": "Each leaf, keyed by its element uid.",
+                "additionalProperties": {
+                    "properties": {
+                        "element_kind": {
+                            "description": "The kind BuildStream gives "
+                                           "this element."},
+                        "is_structural_kind": {
+                            "description": "Whether its dependents are "
+                                           "the graph's shape rather "
+                                           "than a task - a `stack` or "
+                                           "an `import`."},
+                        "is_potentially_deferrable": {
+                            "description": "Whether nothing in this run "
+                                           "waited on it, so building it "
+                                           "later would have cost the "
+                                           "makespan nothing."},
+                        "deferral_risk": {
+                            "description": "How safe deferring it looks: "
+                                           "`low`, `medium` or `high`."},
+                    }}}}},
+}
 
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
@@ -1493,289 +2235,53 @@ _ANALYZE_HINTS = {
         },
     },
     "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},
-    "structural": {
-        QUESTION: 'What shape is this dependency graph?',
-        RAIL: 'investigate',
+    # `UX-344`: every claim's chain, once, beside the claims.
+    "provenance": {
+        QUESTION: 'Why does bga believe this?',
+        RAIL: 'prove',
+        "description": "One record per claim this report makes: the "
+                       "published fields it was read from, the rule that "
+                       "fired, and the trace query that deepens it. "
+                       "`claim` is the finding's own id, or `diagnosis` "
+                       "for the headline.",
+        COLUMNS: [
+            {"key": "claim", "title": "Claim", "sortable": True},
+            {"key": "kind", "title": "Published as", "sortable": True},
+        ],
+        "items": _PROVENANCE,
+    },
+    # `UX-344`: what this document's own shape measures, published with
+    # it. The depth this item was filed against had to be measured by
+    # writing a script against two fixtures; the next round reads it off
+    # the document. Counts itself, so a consumer that re-measures gets
+    # these numbers back.
+    "document_shape": {
+        QUESTION: 'How deep is this document?',
+        RAIL: 'raw',
+        "description": "How deeply this document nests, measured on the "
+                       "document as published. A container step counts a "
+                       "level, so `findings[].evidence.rows[].duration_us` "
+                       "is six.",
         "properties": {
-            # `UX-343`: `metrics`, `summary` and `deferrability` said
-            # nothing about a single one of their members - twenty-six
-            # leaves reaching the reader as bare numbers, in the block
-            # whose whole job is to describe the graph's shape.
-            "metrics": {
-                "description": "The graph's shape as numbers, "
-                               "independent of how long anything took.",
-                "properties": {
-                    "num_elements": {
-                        QUANTITY: "count",
-                        "description": "How many elements this run's graph holds."},
-                    "num_edges": {
-                        QUANTITY: "count",
-                        "description": "How many dependency edges this run's graph holds."},
-                    "max_depth": {
-                        QUANTITY: "count",
-                        "description": "The longest chain of dependencies, "
-                                       "counted in edges."},
-                    "avg_fanin": {
-                        QUANTITY: "ratio",
-                        "description": "Direct dependents per element, "
-                                       "averaged."},
-                    "avg_fanout": {
-                        QUANTITY: "ratio",
-                        "description": "Direct dependencies per element, "
-                                       "averaged."},
-                    "max_parallelism": {
-                        QUANTITY: "count",
-                        "description": "The most elements that could run at "
-                                       "once given the graph alone."},
-                    "avg_parallelism": {
-                        QUANTITY: "ratio",
-                        "description": "Elements that could run at once, "
-                                       "averaged over the graph's levels."},
-                    "critical_path_length": {
-                        QUANTITY: "count",
-                        "description": "Elements on the chain, not its "
-                                       "duration."},
-                    "critical_path_share": {
-                        QUANTITY: "share",
-                        "description": "The chain's length over the graph's "
-                                       "depth - how much of the shape the "
-                                       "chain accounts for."},
-                    "serialization_share": {
-                        QUANTITY: "share",
-                        "description": "How much of the graph has to run one "
-                                       "thing after another."},
-                    "cyclomatic_complexity": {
-                        QUANTITY: "count",
-                        "description": "Edges minus elements plus one - how "
-                                       "tangled the graph is."},
-                }},
-            "summary": {
-                "description": "The headline shape numbers, for a reader "
-                               "who wants one line rather than the block.",
-                "properties": {
-                    "total_elements": {
-                        QUANTITY: "count",
-                        "description": "How many elements this run's graph holds."},
-                    "critical_path_length": {
-                        QUANTITY: "count",
-                        "description": "Elements on the chain, not its "
-                                       "duration."},
-                    "max_parallelism": {
-                        QUANTITY: "count",
-                        "description": "The most elements that could run at "
-                                       "once given the graph alone."},
-                    "bottleneck_count": {
-                        QUANTITY: "count",
-                        "description": "Elements everything funnels through."},
-                    "deferrable_leaves": {
-                        QUANTITY: "count",
-                        "description": "Leaf elements nothing downstream is waiting on."},
-                    "best_case_speedup": {
-                        QUANTITY: "ratio",
-                        "description": "How much faster an unlimited-"
-                                       "capacity replay of this graph "
-                                       "would be. A multiplier, and a "
-                                       "ceiling rather than a plan."},
-                }},
-            "deferrability": {
-                "properties": {
-                    "total_deferrable_work_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Work that could be moved out of this "
-                                       "build without anything waiting for it."},
-                }},
-            # UX-303: the graph's width, level by level - an ordered
-            # numeric array whose order *is* the axis, which is what
-            # `bga:series` says. Drawn as a sparkline with the sentence
-            # beside it naming the unit this hint declares; below three
-            # levels it is a sentence and no drawing, because two
-            # points joined by a line claim a trend two points cannot
-            # make.
-            "parallelism": {
-                "properties": {
-                    # `UX-343`: the four scalars beside the series, and
-                    # the series' own values.
-                    "levels": {
-                        QUANTITY: "count",
-                        "description": "One entry per level of the graph, "
-                                       "in order.",
-                        "items": {
-                            QUANTITY: "count",
-                            "description": "How many elements sit at this level of the graph."}},
-                    "min_width": {
-                        QUANTITY: "count",
-                        "description": "The narrowest level of the graph - "
-                                       "where it is closest to serial."},
-                    "max_width": {
-                        QUANTITY: "count",
-                        "description": "The widest level of the graph - its most parallel point."},
-                    "mean_width": {
-                        QUANTITY: "ratio",
-                        "description": "Elements per level of the graph, averaged over the levels."},
-                    "width_uniformity": {
-                        QUANTITY: "share",
-                        "description": "How evenly the width is spread. Low "
-                                       "means the graph pinches somewhere."},
-                    "width_at_level": {
-                        # `UX-343`: the series declared its axis and not
-                        # the values on it.
-                        "items": {
-                            QUANTITY: "count",
-                            "description": "The graph's width at this "
-                                           "level."},
-                        SERIES: "level",
-                        "description": "How many elements sit at each "
-                                       "depth of the graph, from the "
-                                       "roots down. The shape of this "
-                                       "series is the shape of what can "
-                                       "run at once.",
-                    },
-                },
-            },
-            "bottleneck": {
-                "description": "Where work funnels through one element, "
-                               "and how much waits behind it.",
-                "properties": {
-                    "serial_chain_length": {
-                        QUANTITY: "count",
-                        "description": "The longest run of elements that must "
-                                       "go one after another."},
-                    # UX-283: the choke points are an element table like
-                    # any other, so they earn the Inspect route and the
-                    # sort every other element table has. Before this
-                    # the whole `structural` section carried **zero**
-                    # links out of it, measured on the 1,202-element run.
-                    "choke_points": {
-                        "description": "Elements every other element is "
-                                       "either upstream or downstream of - "
-                                       "the graph's waists, ranked by how "
-                                       "much waits on them.",
-                        COLUMNS: [
-                            {"key": "element_uid", "title": "Element",
-                             "role": "element", "sortable": True},
-                            {"key": "downstream_count",
-                             "title": "Waiting on it",
-                             "quantity": "count", "sortable": True,
-                             "description": "How many elements are "
-                                            "downstream of this one, and "
-                                            "so cannot start until it "
-                                            "finishes."},
-                        ]},
-                    # UX-290: a tuple is described by naming its members
-                    # in order. `bga:columns` already says what an array
-                    # of *objects* holds; for an array of pairs, entry
-                    # `i` describes position `i`. Before this the page
-                    # drew them as `#1` and `#2`, which is honest about
-                    # being a position and says nothing about the
-                    # measure.
-                    "high_fanin_elements": {
-                        "description": "Elements many others depend on "
-                                       "directly, with how many.",
-                        COLUMNS: [
-                            {"key": "element_uid", "title": "Element",
-                             "role": "element", "sortable": True},
-                            {"key": "fan_in", "title": "Direct dependents",
-                             "quantity": "count", "sortable": True,
-                             "description": "Elements naming this one as "
-                                            "a dependency - an in-degree, "
-                                            "not a transitive count."},
-                        ]},
-                    "high_fanout_elements": {
-                        "description": "Elements that depend on many "
-                                       "others directly, with how many.",
-                        COLUMNS: [
-                            {"key": "element_uid", "title": "Element",
-                             "role": "element", "sortable": True},
-                            {"key": "fan_out", "title": "Direct dependencies",
-                             "quantity": "count", "sortable": True,
-                             "description": "Dependencies this element "
-                                            "names - an out-degree, not a "
-                                            "transitive count."},
-                        ]},
-                }},
-            "sensitivity": {
-                "properties": {
-                    # `UX-343`: the three scalars beside the list.
-                    "critical_path_us": {
-                        QUANTITY: "duration_us",
-                        "description": "The chain's duration, which the "
-                                       "savings below are measured against."},
-                    "total_improvable_time_us": {
-                        QUANTITY: "duration_us",
-                        "description": "How much of the chain sits in elements "
-                                       "that could move."},
-                    "best_case_speedup": {
-                        QUANTITY: "ratio",
-                        "description": "How much faster an unlimited-capacity "
-                                       "replay would be. A ceiling, not a "
-                                       "plan."},
-                    "top_opportunities": {
-                        "description": "Elements whose duration the "
-                                       "makespan is most sensitive to.",
-                        COLUMNS: [
-                            {"key": "element_uid", "title": "Element",
-                             "role": "element", "sortable": True},
-                            {"key": "sensitivity", "title": "Sensitivity",
-                             "quantity": "share", "sortable": True,
-                             "description": "How much of the makespan "
-                                            "moves per unit this element "
-                                            "moves."},
-                            {"key": "saving_us", "title": "Worth fixing",
-                             "quantity": "duration_us", "sortable": True,
-                             "description": "What the makespan would drop "
-                                            "by, in seconds, if this "
-                                            "element cost nothing."},
-                        ]},
-                }},
-            "serialization_point_risks": {
-                "items": {"properties": {
-                    # `UX-343`: the record's own scalars, beside the
-                    # nested element table that was already declared.
-                    "builders": {
-                        INLINE: "name",
-                        QUANTITY: "count",
-                        "description": "The builder count this risk was "
-                                       "measured at."},
-                    "governing_cores": {
-                        QUANTITY: "count",
-                        "description": "Cores the pinned elements were "
-                                       "competing for."},
-                    "typical_max_jobs": {
-                        QUANTITY: "count",
-                        "description": "The `-j` the pinned elements' own "
-                                       "builds used."},
-                    "downstream_count": {
-                        QUANTITY: "count",
-                        "description": "Elements downstream of this one."},
-                    "pinned_elements": {
-                        "description": "The elements pinned at this "
-                                       "serialization point, and what each "
-                                       "one was pinned to.",
-                        COLUMNS: [
-                            {"key": "element_uid", "title": "Element",
-                             "role": "element", "sortable": True},
-                            {"key": "max_jobs", "title": "Native jobs",
-                             "quantity": "count", "sortable": True,
-                             "description": "The parallelism this "
-                                            "element's own build system "
-                                            "was allowed."},
-                            {"key": "duration_us", "title": "Duration",
-                             "quantity": "duration_us", "sortable": True},
-                        ]},
-                }}},
-            "batch_opportunities": {
-                "properties": {
-                    "serialized_pairs": {
-                        "description": "Pairs that ran one after the other "
-                                       "with nothing forcing the order.",
-                        COLUMNS: [
-                            {"key": "first", "title": "Ran first",
-                             "role": "element", "sortable": True},
-                            {"key": "then", "title": "Ran after it",
-                             "role": "element", "sortable": True},
-                        ]},
-                }},
-        }},
+            "leaves": {
+                QUANTITY: "count",
+                "description": "Every value that is not a container."},
+            "deepest_depth": {
+                QUANTITY: "count",
+                "description": "How many levels down the deepest leaf in "
+                               "this document sits."},
+            "deepest_path": {
+                "description": "One path that reaches it, with `[]` for a "
+                               "list step."},
+            "deeper_than_three": {
+                QUANTITY: "count",
+                "description": "Leaves more than three levels down - the "
+                               "count `UX-344` was filed on."},
+            "deeper_than_three_share": {
+                QUANTITY: "share",
+                "description": "Those leaves as a share of all of them."},
+        },
+    },
     "occupancy": {
         QUESTION: 'Were the builders busy?',
         RAIL: 'prove',
@@ -1829,356 +2335,6 @@ _ANALYZE_HINTS = {
                                    "flight at once."},
                 "description": "The most in flight at once, per resource "
                                "kind."},
-        },
-    },
-    "signals": {
-        QUESTION: 'Which elements are on the chain that binds?',
-        RAIL: 'act',
-        # UX-289: the views over the one element table.
-        #
-        # `UX-268` joined the six element-keyed signals into one row per
-        # element, and that table then had to serve every question at
-        # once - 13 columns on the 1,202-element run. These name the
-        # questions a reader actually arrives with, and each shows the
-        # four to six columns that answer one.
-        #
-        # Every population here is a **filter over a published field**,
-        # which is what `UX-288` made possible: `from` reads a selection
-        # the payload already publishes once (and takes its order from
-        # it), `where` tests a column the element records already carry.
-        # Nothing here computes a membership the payload does not have -
-        # Direction 7's boundary, and the reason `UX-288` came first.
-        PRESETS: [
-            {"name": "All elements",
-             "question": "Which element should I look at?",
-             "columns": ["element", "element_durations", "downstream_count",
-                         "is_leaf", "observed_critical", "element_kind"],
-             "sort": {"column": "element_durations", "direction": "desc"},
-             "bound": 25},
-            {"name": "Critical path",
-             "question": "Which elements are on the chain that binds?",
-             # In the order the chain runs, which is the order the
-             # selection is published in - the page does not need to know
-             # what a critical path is to draw it in the right order.
-             "from": "signals.critical_path_detail",
-             "columns": ["element", "element_durations", "slack",
-                         "element_kind", "probability"]},
-            {"name": "Leaves",
-             "question": "What could be deferred?",
-             "where": {"column": "is_leaf", "equals": True},
-             "columns": ["element", "element_durations", "downstream_count",
-                         "element_kind", "is_structural_kind"],
-             "sort": {"column": "element_durations", "direction": "desc"}},
-            {"name": "Choke points",
-             "question": "What does everything wait on?",
-             "from": "structural.bottleneck.choke_points",
-             "columns": ["element", "element_durations", "downstream_count",
-                         "weighted_duration_us", "element_kind"]},
-            {"name": "Latent heavies",
-             "question": "What is big and off the chain?",
-             "where": {"column": "observed_critical", "equals": False},
-             "columns": ["element", "element_durations", "slack",
-                         "downstream_count", "risk_score"],
-             "sort": {"column": "element_durations", "direction": "desc"},
-             "bound": 25},
-            # UX-338: the two-plane join, as a *view* of this table
-            # rather than a second table of the same eleven elements.
-            # `UX-215` published `element_join` and the page drew it on
-            # its own, so every reader of a two-plane snapshot has seen
-            # the whole population twice since then - which `UX-289` had
-            # already ruled out. The columns are the join's: what the
-            # sandbox actually did with the cores it was given.
-            #
-            # A run with no Plane 2 report carries none of these
-            # columns, and `presetTable` drops a preset whose columns
-            # are all absent - so this appears exactly when there is
-            # something behind it, which is `UX-194`'s dead-control
-            # rule at the level of a view.
-            {"name": "Plane 2 (sandbox)",
-             "question": "Compute-bound, or badly built?",
-             "columns": ["element", "element_durations", "cores_busy",
-                         "requested_jobs", "peak_rss_bytes"],
-             # Without these the view is `element_durations` under a
-             # heading that promises the sandbox, so it is not offered
-             # at all on a run that captured no Plane 2.
-             "requires": ["cores_busy", "requested_jobs", "peak_rss_bytes"],
-             "sort": {"column": "element_durations", "direction": "desc"},
-             "bound": 25},
-        ],
-        "description": "The graph's own account of where the time is: "
-                       "which elements lie on the chain, what slack the "
-                       "rest have, and what fixing each in turn is worth.",
-        # UX-208: the three element tables a reader lands on from the
-        # decision panel. They carry element uids, so they say so - and
-        # every row earns the same Inspect with no per-table code.
-        "properties": {
-            # UX-303: the two populations `UX-260` publishes a shape
-            # for. Both are `{n, min, max, deciles, p95, p99, is_flat}`,
-            # so the hint names `n` as the count and one control draws
-            # them and the store aggregate's `samples` shape alike.
-            "element_duration_distribution": _distribution(
-                "duration_us", "element duration in this run",
-                "How this run's element durations are spread. The answer "
-                "to \"is 40s slow *here*?\", which has none without the "
-                "population. Nearest-rank percentiles, `null` below the "
-                "sample floor."),
-            "blast_radius_distribution": _distribution(
-                "count", "blast radius in this graph",
-                "How many elements sit downstream of each, spread across "
-                "this graph. \"753 downstream\" is p99.9 in a "
-                "1,202-element run and unremarkable in 40,000."),
-            "critical_path_detail": {
-                "description": "The chain itself, element by element. "
-                               "The longest path through the graph as "
-                               "this run recorded it - a cached element "
-                               "on it contributes its restore, not its "
-                               "build.",
-                COLUMNS: [
-                    {"key": "element_uid", "title": "Element",
-                     "role": "element", "sortable": True},
-                    {"key": "element_kind", "title": "Kind", "sortable": True},
-                    {"key": "duration_us", "title": "Duration",
-                     "quantity": "duration_us", "sortable": True},
-                    {"key": "share_of_path", "title": "Share of path",
-                     "quantity": "share", "sortable": True},
-                    {"key": "realizable_saving_us", "title": "Realizable",
-                     "quantity": "duration_us", "sortable": True,
-                     "description": "What removing this element entirely "
-                                    "would take off the makespan, not off "
-                                    "the path."},
-                ],
-            },
-            "optimization_horizon": {
-                "description": "What fixing the top elements in turn is "
-                               "worth, in order. The savings stop adding "
-                               "up because each fix lets other elements "
-                               "onto the path - which is why this is a "
-                               "sequence and not a sum.",
-                COLUMNS: [
-                    {"key": "element_uid", "title": "Element",
-                     "role": "element", "sortable": True},
-                    {"key": "saving_us", "title": "Saving",
-                     "quantity": "duration_us", "sortable": True},
-                    {"key": "makespan_after_us", "title": "Makespan after",
-                     "quantity": "duration_us", "sortable": True},
-                    {"key": "cumulative_saving_us", "title": "Cumulative",
-                     "quantity": "duration_us", "sortable": True},
-                ],
-            },
-            "latent_heavies": {
-                "description": "Heavy elements not on the path today. "
-                               "They cost nothing now and become the "
-                               "constraint once what is above them is "
-                               "fixed.",
-                COLUMNS: [
-                    {"key": "element_uid", "title": "Element",
-                     "role": "element", "sortable": True},
-                    {"key": "duration_us", "title": "Duration",
-                     "quantity": "duration_us", "sortable": True},
-                ],
-            },
-            # `UX-343`: the element-keyed maps. A map whose keys are
-            # *data* - an element uid - cannot name them in
-            # `properties`, so the value's schema is declared once under
-            # `additionalProperties` and every key resolves to it.
-            # Measured through the page's own resolution, these were 56
-            # leaves reaching the reader with no unit at all.
-            "element_durations": {
-                QUANTITY: "duration_us",
-                "additionalProperties": {
-                    QUANTITY: "duration_us",
-                    "description": "How long this element took in this run, restore or build."},
-                "description": "Each element's own duration, keyed by "
-                               "uid. A cached element contributes its "
-                               "restore, not its build."},
-            "slack": {
-                QUANTITY: "duration_us",
-                "additionalProperties": {
-                    QUANTITY: "duration_us",
-                    "description": "How long this element could have been "
-                                   "delayed without moving the makespan."},
-                "description": "How long each element could have been "
-                               "delayed without moving the makespan. "
-                               "Zero is on the chain."},
-            "downstream_count": {
-                QUANTITY: "count",
-                "additionalProperties": {
-                    QUANTITY: "count",
-                    "description": "Elements downstream of this one."},
-                "description": "How many elements sit downstream of "
-                               "each - what a change to it rebuilds."},
-            "unweighted_depth": {
-                QUANTITY: "count",
-                "additionalProperties": {
-                    QUANTITY: "count",
-                    "description": "Edges from this element to the root."},
-                "description": "Edges from each element to the root, "
-                               "ignoring duration. The graph's shape "
-                               "rather than this run's timings."},
-            "wall_clock_share_us": {
-                INLINE: "name",
-                QUANTITY: "duration_us",
-                "additionalProperties": {
-                    QUANTITY: "duration_us",
-                    "description": "The wall-clock this task alone is "
-                                   "responsible for - its marginal share of "
-                                   "the active window, as time rather than "
-                                   "as a fraction."},
-                "description": "How much of the active window each task "
-                               "alone accounts for, in microseconds. Keyed "
-                               "by the task's own identity, not by element, "
-                               "because one element can run more than one "
-                               "task."},
-            "criticality_probability": {
-                "additionalProperties": {
-                    "properties": {
-                        "probability": {
-                            QUANTITY: "share",
-                            "description": "How often this element lands "
-                                           "on the critical path under "
-                                           "the run's own perturbation - "
-                                           "1.0 is always."},
-                        "slack_us": {
-                            QUANTITY: "duration_us",
-                            "description": "How long this element could "
-                                           "have been delayed - zero is "
-                                           "on the chain."},
-                    }},
-                "description": "How reliably each element binds, rather "
-                               "than whether it happened to today."},
-            "blast_radius": {
-                "additionalProperties": {
-                    "properties": {
-                        "downstream_count": {
-                            QUANTITY: "count",
-                            "description": "Elements this one's change "
-                                           "rebuilds."},
-                        "weighted_duration_us": {
-                            QUANTITY: "duration_us",
-                            "description": "What that rebuild costs, "
-                                           "summed over the elements it "
-                                           "touches."},
-                        "risk_score": {
-                            QUANTITY: "ratio",
-                            "description": "Downstream work weighted by "
-                                           "duration. A ranking, not a "
-                                           "measurement - comparable "
-                                           "within a run, not across."},
-                    }},
-                "description": "What one element's change rebuilds, and "
-                               "what that costs."},
-            "zero_slack_share": {
-                QUANTITY: "share",
-                "description": "The share of elements with no slack at "
-                               "all. High means the chain is wide, not "
-                               "long."},
-            "cache": {
-                "description": "What this run had to build and what it "
-                               "restored.",
-                "properties": {
-                    "built_elements": {
-                        QUANTITY: "count",
-                        "description": "Elements this run had to build."},
-                    "cached_elements": {
-                        QUANTITY: "count",
-                        "description": "Elements this run restored instead of "
-                                       "building."},
-                    "hit_share": {
-                        QUANTITY: "share",
-                        "description": "Elements restored over elements "
-                                       "considered."},
-                    "fetch": {
-                        "description": "What this run pulled from a remote cache rather than rebuilding.",
-                        "properties": {
-                            "fetched": {
-                                QUANTITY: "count",
-                                "description": "Artifacts pulled from a "
-                                               "remote."},
-                            "already_present": {
-                                QUANTITY: "count",
-                                "description": "Artifacts already local, "
-                                               "so nothing was pulled."},
-                            "hit_share": {
-                                QUANTITY: "share",
-                                "description": "Artifacts already local "
-                                               "over artifacts "
-                                               "considered."}}},
-                    "target_closure": {
-                        "description": "The same question restricted to "
-                                       "what the target actually needs.",
-                        "properties": {
-                            "elements": {
-                                QUANTITY: "count",
-                                "description": "Elements in the target's "
-                                               "closure."},
-                            "built": {
-                                QUANTITY: "count",
-                                "description": "Of the closure's elements, the ones that had to be built."},
-                            "cached": {
-                                QUANTITY: "count",
-                                "description": "Of those, the ones "
-                                               "restored."},
-                            "hit_share": {
-                                QUANTITY: "share",
-                                "description": "Restored over considered, "
-                                               "inside the closure."}}},
-                }},
-            "ready_queue": {
-                "description": "How much work was ready to run and had "
-                               "nowhere to run it.",
-                "properties": {
-                    "average_depth": {
-                        QUANTITY: "ratio",
-                        "description": "How many elements were ready and "
-                                       "waiting, averaged over the build."},
-                    "peak_depth": {
-                        QUANTITY: "count",
-                        "description": "The most elements ready and waiting at "
-                                       "once."},
-                    "nonzero_fraction": {
-                        QUANTITY: "share",
-                        "description": "The share of the build spent with "
-                                       "anything waiting. High means "
-                                       "capacity bound, not graph "
-                                       "bound."}}},
-            "fetch_build_overlap": {
-                "properties": {
-                    "overlap_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Wall-clock where fetching and building "
-                                       "ran at the same time."},
-                    "fetch_prefix_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Wall-clock at the start spent fetching "
-                                       "with nothing building."},
-                    "build_suffix_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Wall-clock at the end spent building "
-                                       "with nothing left to fetch."},
-                    "fraction": {
-                        QUANTITY: "share",
-                        "description": "The overlap over the span the two "
-                                       "phases covered together."}}},
-            "joint_saving": {
-                "properties": {
-                    "joint_saving_us": {
-                        QUANTITY: "duration_us",
-                        "description": "What fixing the candidates together is "
-                                       "worth, simulated - not the sum of what "
-                                       "each is worth alone."},
-                    "sum_of_individual_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Those same savings added up, "
-                                       "published so the difference from "
-                                       "the joint figure is visible "
-                                       "rather than implied."}}},
-            "leaf_analysis": {
-                "properties": {
-                    "deferrable_count": {
-                        QUANTITY: "count",
-                        "description": "Leaf elements nothing else waits "
-                                       "on, which could be built later or "
-                                       "not at all."}}},
         },
     },
     "attribution": {
@@ -2364,7 +2520,6 @@ _ANALYZE_HINTS = {
                 # numbers or invent paths for them.
                 "evidence": {"type": ["object", "null"],
                              "properties": EVIDENCE_QUANTITIES},
-                "provenance": _PROVENANCE,
                 "copy_text": {
                     "description": "This finding as plain text: its "
                                    "title, its evidence in declared "
@@ -2567,7 +2722,6 @@ _ANALYZE_HINTS = {
                 "description": "Wall-clock beyond the critical path. "
                                "Published rather than left as a "
                                "subtraction for a consumer to perform."},
-            "provenance": _PROVENANCE,
             "top_actions": {
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element", "role": "element",
@@ -2589,7 +2743,6 @@ _ANALYZE_HINTS = {
                             "description": "Elements a change here "
                                            "rebuilds - the cost of "
                                            "touching it, beside the gain."},
-                        "provenance": _PROVENANCE,
                     },
                 },
             },
@@ -2802,6 +2955,106 @@ _ANALYZE_HINTS = {
         },
     },
 }
+
+# `UX-344`: where each lifted table went, and the question it answers
+# now that it has a heading of its own.
+#
+# A table that was a row of `signals` inherited its namespace's rail and
+# question; standing on its own it needs both. The rail is the one its
+# namespace carried unless the table is plainly somewhere else - the
+# ready queue is about the machine, not about which element to fix - and
+# `UX-286`'s chapters place a section by its rail when the chapter table
+# does not name it, so this is also what decides where each one lands.
+_LIFTED_HINTS = {
+    # From `structural`. The graph's shape, whatever the run did with it.
+    "graph_metrics": ('investigate', 'What shape is this dependency graph?'),
+    "graph_summary": ('investigate', 'What shape is this graph, in one line?'),
+    "bottleneck": ('investigate', 'What does everything wait on?'),
+    "parallelism": ('investigate', 'How wide can this graph run?'),
+    "sensitivity": ('investigate', 'How much faster could this graph go?'),
+    "deferrability": ('investigate', 'What could be built later, or not at all?'),
+    "batch_opportunities": ('investigate', 'What could be built together?'),
+    "consolidation_candidates": ('investigate', 'What could be merged?'),
+    "serialization_point_risks": ('investigate', 'What forces this run to serialize?'),
+    # From `signals`. What this run's own durations say about the graph.
+    "critical_path_detail": ('act', 'Which elements are on the chain that binds?'),
+    "optimization_horizon": ('act', 'What is fixing each element in turn worth?'),
+    "latent_heavies": ('act', 'What is big and off the chain?'),
+    "joint_saving": ('act', 'What is fixing these together worth?'),
+    "cache": ('act', 'How much of this run came from the cache?'),
+    "fetch_build_overlap": ('act', 'Did fetching wait for building?'),
+    "wall_clock_share_us": ('prove', 'How much of the run did each task hold?'),
+    "ready_queue": ('prove', 'How much work was waiting to start?'),
+    "leaf_analysis": ('investigate', 'Which elements does nothing wait on?'),
+    "element_duration_distribution":
+        ('investigate', "How are this run's element durations spread?"),
+    "blast_radius_distribution":
+        ('investigate', 'How are blast radii spread across this graph?'),
+}
+
+# The element population, as one key rather than six.
+#
+# `UX-268` joined the six element-keyed maps into one row per element
+# for the reader and `UX-289` gave that table its views - and to do it
+# the page kept **its own list** of which signals were element-keyed,
+# because the document did not say. Lifting the six to the top level
+# would have published one population as six sections, which is the
+# defect `UX-338` was filed against. So the grouping is published: these
+# are one table, and the page reads which columns it has rather than
+# remembering them.
+#
+# `zero_slack_share`, `top_blast_radius` and `blast_radius_ranked_by`
+# are here for the same reason - each describes the population rather
+# than any one element, and a scalar at the top level would be drawn
+# into the run-identity summary beside the run id.
+ELEMENT_KEYED = ("element_durations", "slack", "downstream_count",
+                 "unweighted_depth", "blast_radius",
+                 "criticality_probability")
+ELEMENT_POPULATION = ELEMENT_KEYED + ("zero_slack_share", "top_blast_radius",
+                                      "blast_radius_ranked_by")
+
+_ELEMENTS = {
+    QUESTION: 'Which element should I look at?',
+    RAIL: 'act',
+    PRESETS: _ELEMENT_PRESETS,
+    "description": "Every element this run built or restored, with what "
+                   "the graph and the schedule each say about it. One "
+                   "row per element; the views below name the columns "
+                   "that answer one question.",
+    "properties": {
+        **{name: _SIGNALS_TABLES[name] for name in ELEMENT_KEYED
+           if name in _SIGNALS_TABLES},
+        "zero_slack_share": _SIGNALS_TABLES["zero_slack_share"],
+        # `UX-344`: the two the namespace never declared. A member with
+        # no node renders from `guessQuantity`'s name-sniff, which is
+        # the gap `UX-343` closed everywhere else - and the census
+        # caught both the moment they moved.
+        "top_blast_radius": {
+            "description": "The elements whose change rebuilds the most, "
+                           "in that order. A ranking over the population "
+                           "below, so the order is the information - the "
+                           "records themselves are in `blast_radius`."},
+        "blast_radius_ranked_by": {
+            "description": "What the ranking above was computed from: "
+                           "`measured-rebuild-time` weights each "
+                           "dependent by how long it took in this run, "
+                           "`downstream-count` counts them."},
+    },
+}
+
+_RENAMED = {"metrics": "graph_metrics", "summary": "graph_summary"}
+
+_ANALYZE_HINTS["elements"] = _ELEMENTS
+for _table, _node in list(_STRUCTURAL_TABLES.items()) + list(_SIGNALS_TABLES.items()):
+    _key = _RENAMED.get(_table, _table)
+    if _key in ELEMENT_POPULATION:
+        continue
+    # `KeyError` rather than a default: a table added to either block
+    # with no question and no rail would land in `UX-286`'s "Everything
+    # else", and the guard that asserts that chapter is empty would name
+    # the page rather than the contract.
+    _rail, _question = _LIFTED_HINTS[_key]
+    _ANALYZE_HINTS[_key] = {QUESTION: _question, RAIL: _rail, **_node}
 
 _COMPARE_HINTS = {
     # UX-221: which elements the run's verdict is actually about.
@@ -3699,7 +3952,7 @@ def schema(name: str) -> dict:
     return build()
 
 
-def critical_path_uids(signals: dict) -> list:
+def critical_path_uids(document: dict) -> list:
     """The run's critical path, in order, from the one place it lives.
 
     `UX-288`: `signals.critical_path` used to publish exactly this and
@@ -3708,8 +3961,13 @@ def critical_path_uids(signals: dict) -> list:
     bare list is gone and this is the projection every reader that
     wanted it now shares, so "the path" has one definition rather than
     two that could drift.
+
+    `UX-344`: takes the document, which is where `critical_path_detail`
+    lives now. A `signals` block from an `analyze/v3` payload still
+    resolves, because the lookup is by key and that block had the same
+    one.
     """
-    signals = signals or {}
+    signals = document or {}
     detail = signals.get('critical_path_detail') or []
     if detail:
         return [entry.get('element_uid') for entry in detail

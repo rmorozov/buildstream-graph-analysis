@@ -3,7 +3,7 @@
 `bga` collapses an element's several tasks into one number in two
 places - `analyze_graph`, which feeds `floors.t_infinity_observed` and
 `signals.critical_path`, and `StructuralAnalyzer`, which feeds
-`structural.sensitivity.*`, the level decomposition and the choke
+`sensitivity.*`, the level decomposition and the choke
 points. UX-50 gave the second one its own construction (the *sum* of an
 element's tasks) while the first kept the *maximum*, so the two
 published a 22% disagreement on
@@ -116,15 +116,15 @@ def test_sensitivity_critical_path_agrees_with_t_infinity(multi_kind_report):
     """UX-52's acceptance criterion, on a fixture with more than one task
     per element. Before UX-53 this read 144_500_000 against 118_000_000."""
     assert (
-        multi_kind_report["structural"]["sensitivity"]["critical_path_us"]
+        multi_kind_report["sensitivity"]["critical_path_us"]
         == multi_kind_report["floors"]["t_infinity_observed"]
     )
 
 
 def test_critical_path_length_agrees_with_the_named_path(multi_kind_report):
-    assert multi_kind_report["structural"]["metrics"]["critical_path_length"] == len(
+    assert multi_kind_report["graph_metrics"]["critical_path_length"] == len(
         [e["element_uid"]
-         for e in multi_kind_report["signals"]["critical_path_detail"]]
+         for e in multi_kind_report["critical_path_detail"]]
     )
 
 
@@ -144,4 +144,4 @@ def test_t_infinity_is_not_the_summed_path(multi_kind_report):
     what this test exists to keep true.
     """
     assert multi_kind_report["floors"]["t_infinity_observed"] == 122_000_000
-    assert multi_kind_report["structural"]["sensitivity"]["critical_path_us"] != 144_500_000
+    assert multi_kind_report["sensitivity"]["critical_path_us"] != 144_500_000

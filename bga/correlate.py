@@ -204,10 +204,8 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
     know what it was ranked on - and because the two available metrics
     are not equivalent (`UX-71`).
     """
-    structural = analysis.get("structural") or {}
-    signals = analysis.get("signals") or {}
-    sensitivity = structural.get("sensitivity") or {}
-    critical_path = list(schemas.critical_path_uids(signals))
+    sensitivity = analysis.get("sensitivity") or {}
+    critical_path = list(schemas.critical_path_uids(analysis))
     critical_path_us = sensitivity.get("critical_path_us") or 0
     total_us = analysis.get("total_duration_us") or 0
 
@@ -219,7 +217,7 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
     # entry. Share of the path comes from here too: it is the same
     # quantity `bga analyze` prints, rather than the capped proxy, so the
     # two commands cannot describe the same element differently.
-    detail = signals.get("critical_path_detail") or []
+    detail = analysis.get("critical_path_detail") or []
     realizable: Dict[str, int] = {}
     for entry in detail:
         element = entry.get("element_uid")
@@ -259,7 +257,7 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
             record["potential_saving_us"] = int(score * critical_path_us)
             record["saving_share"] = score
 
-    blast = signals.get("blast_radius") or {}
+    blast = (analysis.get("elements") or {}).get("blast_radius") or {}
     for element, value in blast.items():
         count = value.get("downstream_count") if isinstance(value, dict) else value
         if count is not None:
@@ -287,14 +285,14 @@ def _declared_elements(analysis: dict) -> set:
     yields an empty set, and the caller then skips the check rather than
     rejecting everything.
     """
-    signals = analysis.get("signals") or {}
+    elements = analysis.get("elements") or {}
     known: set = set()
     for key in ("slack", "downstream_count", "blast_radius", "criticality_probability"):
-        value = signals.get(key)
+        value = elements.get(key)
         if isinstance(value, dict):
             known |= set(value)
-    known |= set(schemas.critical_path_uids(signals))
-    for entry in signals.get("critical_path_detail") or []:
+    known |= set(schemas.critical_path_uids(analysis))
+    for entry in analysis.get("critical_path_detail") or []:
         uid = entry.get("element_uid")
         if uid:
             known.add(uid)
@@ -394,7 +392,7 @@ def _unread_gating_edges(analysis: dict, native_report: dict) -> List[tuple]:
     consumer, so the graph edge runs `dependency -> element`.
     """
     declared = native_report.get("declared_vs_used") or {}
-    on_path = set(schemas.critical_path_uids(analysis.get("signals") or {}))
+    on_path = set(schemas.critical_path_uids(analysis))
     known = _declared_elements(analysis)
     edges = []
     for entry in declared.get("unused_candidates") or []:
@@ -1344,9 +1342,8 @@ def _project_with_reduced_durations(tasks, run_context, reductions) -> Optional[
 
 
 def _split_candidates(analysis, native_report) -> List[dict]:
-    signals = analysis.get('signals') or {}
-    durations = signals.get('element_durations') or {}
-    path = schemas.critical_path_uids(signals)
+    durations = (analysis.get('elements') or {}).get('element_durations') or {}
+    path = schemas.critical_path_uids(analysis)
     horizon = (analysis.get('floors') or {}).get('t_infinity_observed') or 0
     if not path or not horizon:
         return []

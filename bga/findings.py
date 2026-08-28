@@ -975,10 +975,15 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
             # `None`. A published null is a value a consumer has to
             # interpret; an absent key is the shape `UX-249` settled on
             # for "we do not have this".
-            evidence=dict(
-                {'blast_radius': {u: blast_radius.get(u, {}) for u in shown}},
-                **({'blast_radius_distribution': distribution}
-                   if distribution else {})),
+            #
+            # `UX-344`: the rows themselves are **not** repeated here.
+            # `elements.blast_radius` publishes every element's record
+            # once and `elements` above names which of them this finding
+            # is about, so a slice keyed by element uid was one
+            # population published twice - `UX-288`'s rule - and the
+            # deepest shape in the document for the sake of it.
+            evidence=({'blast_radius_distribution': distribution}
+                      if distribution else {}),
         ))
 
     if structural:
@@ -992,8 +997,6 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
             f"elements ({', '.join(sorted({(blast_radius.get(u) or {}).get('element_kind', 'unknown') for u in structural}))}) "
             f"whose dependents are the graph's shape, not a task",
             elements=list(structural[:BLAST_RADIUS_SHOWN]),
-            evidence={'blast_radius': {u: blast_radius.get(u, {})
-                                       for u in structural[:BLAST_RADIUS_SHOWN]}},
         ))
     return findings
 
@@ -1208,7 +1211,11 @@ def _top_actions(result: AnalysisResult, findings: List[dict]) -> List[dict]:
     # that matters is who-depends-on-me. Same shape, different source.
     ranking = by_id.get('blast-radius-ranking')
     if not actions and ranking:
-        blast = (ranking.get('evidence') or {}).get('blast_radius') or {}
+        # `UX-344`: the run's own blast table, not the finding's slice
+        # of it. The slice was a second copy of rows published in full
+        # beside it, which is what `UX-288` settled; the finding names
+        # the elements and the population says what they cost.
+        blast = (result.signals or {}).get('blast_radius') or {}
         for uid in ranking.get('elements') or []:
             actions.append({
                 'finding_id': 'blast-radius-ranking', 'element_uid': uid,
@@ -1391,7 +1398,7 @@ def compute_next_steps(result: AnalysisResult,
                 + (f", {share * 100:.0f}% of it" if share else "")
                 + " - the build cannot finish sooner than this chain."),
             'argv': ['bga', 'blast', longest['element_uid'], run_dir],
-            'follows_from': 'signals.critical_path_detail',
+            'follows_from': 'critical_path_detail',
         })
 
     if top and top.get('element_uid'):

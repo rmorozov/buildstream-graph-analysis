@@ -64,9 +64,9 @@ export const ELEMENTS_SHOWN = 24;
 export function uidForAnchor(payload, id) {
   if (!id || !String(id).startsWith("element-")) return null;
   const seen = new Set();
-  const maps = ["signals.element_durations", "signals.blast_radius",
-                "signals.criticality_probability",
-                "signals.leaf_analysis.leaves_detail"];
+  const maps = ["elements.element_durations", "elements.blast_radius",
+                "elements.criticality_probability",
+                "leaf_analysis.leaves_detail"];
   for (const path of maps) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
     for (const uid of Object.keys(map ?? {})) {
@@ -215,18 +215,18 @@ export function elementFacts(payload) {
 // one is a line and no new code, and nothing here derives: a value that
 // is not in the document does not appear.
 const ELEMENT_MAPS = [
-  ["signals.element_durations", null, "Duration", "duration_us"],
-  ["signals.slack", null, "Slack", "duration_us"],
-  ["signals.downstream_count", null, "Rebuilds", "count"],
-  ["signals.unweighted_depth", null, "Depth", "count"],
-  ["signals.blast_radius", "weighted_duration_us", "Blast radius", "duration_us"],
-  ["signals.blast_radius", "risk_score", "Risk score", "count"],
-  ["signals.blast_radius", "element_kind", "Kind", null],
-  ["signals.blast_radius", "is_leaf", "Is a leaf", null],
-  ["signals.criticality_probability", "probability", "On the path", "share"],
-  ["signals.criticality_probability", "observed_critical", "Observed critical", null],
-  ["signals.leaf_analysis.leaves_detail", "deferral_risk", "Deferral risk", null],
-  ["signals.leaf_analysis.leaves_detail", "is_potentially_deferrable",
+  ["elements.element_durations", null, "Duration", "duration_us"],
+  ["elements.slack", null, "Slack", "duration_us"],
+  ["elements.downstream_count", null, "Rebuilds", "count"],
+  ["elements.unweighted_depth", null, "Depth", "count"],
+  ["elements.blast_radius", "weighted_duration_us", "Blast radius", "duration_us"],
+  ["elements.blast_radius", "risk_score", "Risk score", "count"],
+  ["elements.blast_radius", "element_kind", "Kind", null],
+  ["elements.blast_radius", "is_leaf", "Is a leaf", null],
+  ["elements.criticality_probability", "probability", "On the path", "share"],
+  ["elements.criticality_probability", "observed_critical", "Observed critical", null],
+  ["leaf_analysis.leaves_detail", "deferral_risk", "Deferral risk", null],
+  ["leaf_analysis.leaves_detail", "is_potentially_deferrable",
    "Could be deferred", null],
 ];
 
@@ -313,14 +313,14 @@ const SOURCES = [
   ["headline.top_actions", "element_uid", [
     ["saving_us", "Worth fixing", "duration_us"],
     ["downstream_count", "Rebuilds", "count"]]],
-  ["signals.critical_path_detail", "element_uid", [
+  ["critical_path_detail", "element_uid", [
     ["share_of_path", "Share of path", "share"],
     ["duration_us", "Duration", "duration_us"],
     ["realizable_saving_us", "Realizable", "duration_us"],
     ["element_kind", "Kind", null]]],
-  ["signals.optimization_horizon", "element_uid", [
+  ["optimization_horizon", "element_uid", [
     ["makespan_after_us", "Makespan after", "duration_us"]]],
-  ["signals.latent_heavies", "element_uid", [
+  ["latent_heavies", "element_uid", [
     ["duration_us", "Duration", "duration_us"]]],
   ["element_join", "element", [
     ["cores_busy", "Cores busy", "ratio"],
@@ -583,7 +583,7 @@ function culpritRow(row) {
 
 // UX-219: the horizon, drawn.
 //
-// `signals.optimization_horizon` has carried the whole answer, per step,
+// `optimization_horizon` has carried the whole answer, per step,
 // since long before this: the saving, the makespan that remains, and -
 // the part a table hides - which elements *enter* the critical path once
 // that step is taken. That is the honest reason the savings stop adding
@@ -616,7 +616,7 @@ function culpritRow(row) {
  * about renders the question, never a guess.
  */
 export function renderWhatIf(payload, ask = null, options = {}) {
-  const steps = payload?.signals?.optimization_horizon ?? [];
+  const steps = payload?.optimization_horizon ?? [];
   if (!steps.length) return null;
   const run = options.run ?? "RUN";
 
@@ -669,7 +669,7 @@ export function renderWhatIf(payload, ask = null, options = {}) {
     if (published !== null) {
       answer.setAttribute("data-source", "published");
       answer.setAttribute("data-field",
-        `signals.optimization_horizon[${selected.length - 1}].makespan_after_us`);
+        `optimization_horizon[${selected.length - 1}].makespan_after_us`);
       answer.setAttribute("data-makespan-us", String(published));
       answer.textContent =
         `The build drops to ${seconds(published)} — published, the first `
@@ -730,7 +730,7 @@ export function renderWhatIf(payload, ask = null, options = {}) {
  * its answer.
  */
 export function publishedPrefix(payload, selected) {
-  const steps = payload?.signals?.optimization_horizon ?? [];
+  const steps = payload?.optimization_horizon ?? [];
   if (!selected.length || selected.length > steps.length) return null;
   for (let i = 0; i < selected.length; i += 1) {
     if (steps[i].element_uid !== selected[i]) return null;
@@ -746,7 +746,7 @@ export function whatIfCommand(run, selected) {
 }
 
 export function renderHorizon(payload) {
-  const steps = payload?.signals?.optimization_horizon ?? [];
+  const steps = payload?.optimization_horizon ?? [];
   const total = payload?.total_duration_us;
   if (!steps.length || !total) return null;
 

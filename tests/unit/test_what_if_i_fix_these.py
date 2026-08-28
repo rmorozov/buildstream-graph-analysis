@@ -1,6 +1,6 @@
 """UX-219: the horizon as a plan, drawn.
 
-`signals.optimization_horizon` has carried the whole answer per step for
+`optimization_horizon` has carried the whole answer per step for
 many rounds - the saving, the makespan that remains, and which elements
 *enter* the critical path once that step is taken. It rendered as a
 five-column table, and the question it answers - *if I fix the top
@@ -114,7 +114,7 @@ def drawn(report):
 class TestEveryWidthIsAPublishedMakespan:
 
     def test_one_row_per_published_step_plus_now(self, report, drawn):
-        steps = report["signals"]["optimization_horizon"]
+        steps = report["optimization_horizon"]
         assert len(drawn["rows"]) == len(steps) + 1, (
             "one row per step, plus the run as it stands")
 
@@ -124,7 +124,7 @@ class TestEveryWidthIsAPublishedMakespan:
         assert now["makespan"] == str(report["total_duration_us"])
 
     def test_each_bar_carries_the_payloads_own_makespan(self, report, drawn):
-        steps = report["signals"]["optimization_horizon"]
+        steps = report["optimization_horizon"]
         for step, row in zip(steps, drawn["rows"][1:]):
             assert row["element"] == step["element_uid"]
             assert row["makespan"] == str(step["makespan_after_us"]), row
@@ -149,7 +149,7 @@ class TestEveryWidthIsAPublishedMakespan:
         """The mutation this fixture discriminates: on every step the
         published makespan differs from `total - cumulative_saving`."""
         total = report["total_duration_us"]
-        steps = report["signals"]["optimization_horizon"]
+        steps = report["optimization_horizon"]
         for step, row in zip(steps, drawn["rows"][1:]):
             naive = total - step["cumulative_saving_us"]
             assert step["makespan_after_us"] != naive, (
@@ -161,13 +161,13 @@ class TestEveryWidthIsAPublishedMakespan:
 class TestTheDrawingNamesWhatEntersThePath:
 
     def test_entering_is_exactly_the_payloads(self, report, drawn):
-        steps = report["signals"]["optimization_horizon"]
+        steps = report["optimization_horizon"]
         for step, row in zip(steps, drawn["rows"][1:]):
             assert row["entering"] == list(step.get("entering") or []), row
 
     def test_the_fixture_has_a_step_that_enters(self, report):
         """Otherwise the guard above passes over four empty lists."""
-        entering = [s for s in report["signals"]["optimization_horizon"]
+        entering = [s for s in report["optimization_horizon"]
                     if s.get("entering")]
         assert entering, "the fixture must have at least one entering element"
 
@@ -188,17 +188,17 @@ class TestTheDrawingNamesWhatEntersThePath:
 class TestTheTotalIsPublishedValuesOnly:
 
     def test_the_total_reads_the_last_steps_cumulative_saving(self, report, drawn):
-        last = report["signals"]["optimization_horizon"][-1]
+        last = report["optimization_horizon"][-1]
         assert drawn["total"]["cumulative"] == str(last["cumulative_saving_us"])
         assert drawn["total"]["of"] == str(report["total_duration_us"])
 
     def test_the_share_is_that_over_the_total(self, report, drawn):
-        last = report["signals"]["optimization_horizon"][-1]
+        last = report["optimization_horizon"][-1]
         share = last["cumulative_saving_us"] / report["total_duration_us"] * 100
         assert f"{share:.0f}% faster" in drawn["total"]["text"], drawn["total"]
 
     def test_the_count_is_the_number_of_published_steps(self, report, drawn):
-        steps = report["signals"]["optimization_horizon"]
+        steps = report["optimization_horizon"]
         assert f"{len(steps)} fixes" in drawn["total"]["text"]
 
     def test_the_total_is_read_and_not_re_added(self):
@@ -218,17 +218,17 @@ class TestTheTotalIsPublishedValuesOnly:
         """
         payload = {
             "total_duration_us": 100,
-            "signals": {"optimization_horizon": [
+            "optimization_horizon": [
                 {"element_uid": "a.bst", "saving_us": 10,
                  "makespan_after_us": 90, "cumulative_saving_us": 10,
                  "entering": []},
                 {"element_uid": "b.bst", "saving_us": 10,
                  "makespan_after_us": 85, "cumulative_saving_us": 15,
                  "entering": []},
-            ]},
+            ],
         }
         assert sum(s["saving_us"] for s in
-                   payload["signals"]["optimization_horizon"]) == 20
+                   payload["optimization_horizon"]) == 20
         script = _SHIM + '''
           const { renderHorizon } = await import("./tests/viewer.mjs");
           const section = renderHorizon(%s);
@@ -263,18 +263,18 @@ class TestAbsenceStaysAbsent:
         return json.loads(result.stdout)
 
     def test_no_horizon_renders_nothing(self):
-        assert self._render({"total_duration_us": 1000, "signals": {}}) is True
+        assert self._render({"total_duration_us": 1000}) is True
 
     def test_no_total_renders_nothing(self):
         """Without a denominator there is no honest width to draw."""
-        assert self._render({"signals": {"optimization_horizon": [
+        assert self._render({"optimization_horizon": [
             {"element_uid": "a.bst", "makespan_after_us": 5,
-             "saving_us": 1, "cumulative_saving_us": 1}]}}) is True
+             "saving_us": 1, "cumulative_saving_us": 1}]}) is True
 
     def test_an_empty_horizon_renders_nothing(self):
         assert self._render(
             {"total_duration_us": 1000,
-             "signals": {"optimization_horizon": []}}) is True
+             "optimization_horizon": []}) is True
 
 
 def _decl(style, name):
@@ -298,8 +298,10 @@ class TestTheTableStays:
 
     def test_the_horizon_still_declares_its_columns(self):
         from bga import schemas
-        signals = schemas.schema(schemas.ANALYZE)["properties"]["signals"]
-        horizon = signals["properties"]["optimization_horizon"]
+        # `UX-344`: a key of the document, where it was a member of
+        # `signals`.
+        horizon = schemas.schema(schemas.ANALYZE)[
+            "properties"]["optimization_horizon"]
         assert schemas.COLUMNS in horizon, (
             "the table is the fold-out beneath the drawing and must keep "
             "its column declaration")

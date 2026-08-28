@@ -355,7 +355,9 @@ def test_cli_end_to_end_on_synthetic_project(run_dir):
     assert "floors" in output
     assert "attribution" in output
     assert "occupancy" in output
-    assert "signals" in output
+    # `UX-344`: `signals` was a namespace of named tables; the element
+    # population it held is `elements` now and the rest are keys.
+    assert "elements" in output
 
 
 def test_cli_json_includes_full_analysis_result(run_dir):
@@ -369,5 +371,7 @@ def test_cli_json_includes_full_analysis_result(run_dir):
     proc = subprocess.run(cmd, capture_output=True, text=True)
     assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"
     output = json.loads(proc.stdout)
-    for field in ("structural", "utilisation", "confidence", "violations"):
+    # `UX-344`: `structural` is nine keys of the document, of which
+    # `graph_metrics` is the one this guard was really about.
+    for field in ("graph_metrics", "utilisation", "confidence", "violations"):
         assert field in output, f"{field!r} missing from --format json output"

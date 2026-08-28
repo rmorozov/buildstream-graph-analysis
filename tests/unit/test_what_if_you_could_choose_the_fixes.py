@@ -113,11 +113,11 @@ class TestThePageReadsAsksOrSaysTheCommand:
     def test_a_prefix_is_read_from_the_payload(self):
         payload = _report_with_horizon()
         out = self._render(payload)
-        first = payload["signals"]["optimization_horizon"][0]
+        first = payload["optimization_horizon"][0]
         assert out["prefix"]["source"] == "published"
         assert out["prefix"]["makespan"] == str(first["makespan_after_us"])
         assert out["prefix"]["field"] == \
-            "signals.optimization_horizon[0].makespan_after_us"
+            "optimization_horizon[0].makespan_after_us"
 
     def test_any_other_subset_is_asked_rather_than_computed(self):
         payload = _report_with_horizon()
@@ -159,14 +159,14 @@ class TestThePageReadsAsksOrSaysTheCommand:
 
 def _report_with_horizon():
     return {
-        "schema": "analyze/v2",
+        "schema": "analyze/v4",
         "total_duration_us": 10_000,
-        "signals": {"optimization_horizon": [
+        "optimization_horizon": [
             {"element_uid": "a.bst", "saving_us": 6_000,
              "makespan_after_us": 8_000, "cumulative_saving_us": 6_000},
             {"element_uid": "b.bst", "saving_us": 4_000,
              "makespan_after_us": 4_000, "cumulative_saving_us": 10_000},
-        ]},
+        ],
     }
 
 

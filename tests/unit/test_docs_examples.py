@@ -52,7 +52,7 @@ def test_certified_headroom_field_name_matches_docs_cli_md(report_json):
 def test_criticality_probability_is_an_object_keyed_by_element_uid(report_json):
     """docs/guides/cli.md's other jq example must use to_entries first - this
     field is a JSON object, not an array."""
-    crit = report_json["signals"]["criticality_probability"]
+    crit = report_json["elements"]["criticality_probability"]
     assert isinstance(crit, dict)
     assert crit  # non-empty for this fixture
     for value in crit.values():
@@ -76,7 +76,7 @@ def test_docs_cli_md_jq_example_2_criticality_ranking(tmp_path, report_json):
     report_path = tmp_path / "report.json"
     report_path.write_text(json.dumps(report_json))
     proc = subprocess.run(
-        ["jq", ".signals.criticality_probability | to_entries | "
+        ["jq", ".elements.criticality_probability | to_entries | "
                 "sort_by(.value.probability) | reverse | .[0:10]", str(report_path)],
         capture_output=True, text=True,
     )

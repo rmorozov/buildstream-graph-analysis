@@ -1,14 +1,14 @@
-"""UX-288: `analyze/v3` publishes each element population once.
+"""UX-288: `analyze/v4` publishes each element population once.
 
 Measured on the 1,202-element synthetic run, in `analyze/v1`:
 
 ```text
-signals.leaf_analysis.leaves                 135 uids
-signals.leaf_analysis.leaves_detail          135 uids   identical: True
-structural.deferrability.{deferrable,non_}   135 uids   identical: True
+leaf_analysis.leaves                 135 uids
+leaf_analysis.leaves_detail          135 uids   identical: True
+deferrability.{deferrable,non_}   135 uids   identical: True
 signals.critical_path                         14 uids
-signals.critical_path_detail                  14 uids   identical, order too
-signals.element_durations                  1,202 uids   both are subsets
+critical_path_detail                  14 uids   identical, order too
+elements.element_durations                  1,202 uids   both are subsets
 ```
 
 The same membership three times for leaves and twice for the critical
@@ -21,7 +21,7 @@ The page rendered every copy it was given, which is how it surfaced:
 (Direction 14).
 
 What is *not* duplication, and was nearly removed as if it were:
-`structural.deferrability` partitioned the leaves by a duration-risk
+`deferrability` partitioned the leaves by a duration-risk
 rule that disagrees with `is_potentially_deferrable` by design - 8
 against 134 on that run. The membership was the third copy; the split
 was information, and it is published now as `deferral_risk` on each
@@ -62,7 +62,7 @@ def _is_narrative(path):
     A finding is the "so what" layer: it names the elements it is about
     and cites the numbers it read. On the macro/micro run that makes
     four pairs the sweep flags and none of them is this item's defect -
-    `signals.joint_saving.elements` against the `joint-saving` finding
+    `joint_saving.elements` against the `joint-saving` finding
     that reports it, `optimization-horizon`'s `evidence.steps` against
     its own `elements`, and the two findings that share one subject
     because they are two claims about the same three elements.
@@ -75,7 +75,7 @@ def _is_narrative(path):
     duplicate below so the exclusion cannot quietly become the whole
     check.
 
-    Whether `signals.joint_saving` should exist at all once a finding
+    Whether `joint_saving` should exist at all once a finding
     carries every one of its four fields is a fair question and a
     separate one - filed as `UX-291` rather than decided by loosening
     this guard until it passed.
@@ -94,7 +94,7 @@ def _per_element_measures(found):
 
     ```text
     element_join[i].worst_redundancy.elements   5 rows, 1 distinct set
-    element_join[6].unused_dependencies         vs signals.joint_saving.elements
+    element_join[6].unused_dependencies         vs joint_saving.elements
     ```
 
     Both were checked before being excused, and both are coincidences of
@@ -132,8 +132,8 @@ def _clashes(payload):
     """Every pair of published fields carrying one element selection.
 
     **Selections, not measures.** Written first over every element-keyed
-    field, this immediately found `signals.blast_radius` and
-    `signals.element_durations` carrying the same 11 elements - true,
+    field, this immediately found `elements.blast_radius` and
+    `elements.element_durations` carrying the same 11 elements - true,
     and not this item's defect. Those are two *measures* over the whole
     population ("the duration of each element", "the blast radius of
     each"), not two claims about which elements are interesting. Their
@@ -162,7 +162,7 @@ def _clashes(payload):
     `test_the_removed_fields_are_gone` names those fields directly so a
     re-add is caught here too.
     """
-    everyone = frozenset(payload["signals"].get("element_durations") or {})
+    everyone = frozenset((payload.get("elements") or {}).get("element_durations") or {})
     found = {name: members
              for name, members in sorted(_populations(payload).items())
              if len(members) >= 2 and members != everyone}
@@ -233,12 +233,12 @@ class TestEachPopulationIsPublishedOnce:
         was filed for, in the half of the document the exclusions do not
         cover."""
         planted = json.loads(json.dumps(payload))
-        planted["signals"]["critical_path"] = [
+        planted["critical_path"] = [
             entry["element_uid"]
-            for entry in planted["signals"]["critical_path_detail"]]
-        assert len(planted["signals"]["critical_path"]) >= 2, (
+            for entry in planted["critical_path_detail"]]
+        assert len(planted["critical_path"]) >= 2, (
             "the run's path is too short for the plant to mean anything")
-        assert any("signals.critical_path`" in clash
+        assert any("critical_path`" in clash
                    for clash in _clashes(planted)), _clashes(planted)
 
     def test_the_narrative_exclusion_is_bounded(self, payload):
@@ -273,11 +273,11 @@ class TestEachPopulationIsPublishedOnce:
         key **every** row answers; a selection copied onto one row is
         exactly what `UX-288` is about and must still fail."""
         planted = json.loads(json.dumps(payload))
-        path = planted["signals"]["critical_path_detail"]
+        path = planted["critical_path_detail"]
         assert len(path) >= 2, "the run's path is too short to plant with"
         planted["element_join"][0]["copied_critical_path"] = [
             entry["element_uid"] for entry in path]
-        planted["signals"]["critical_path"] = [
+        planted["critical_path"] = [
             entry["element_uid"] for entry in path]
         assert any("copied_critical_path" in clash
                    for clash in _clashes(planted)), _clashes(planted)
@@ -286,35 +286,36 @@ class TestEachPopulationIsPublishedOnce:
         """The full population is excluded in `_clashes`, so this
         asserts it is genuinely the full population and not an empty set
         that would silently excuse everything."""
-        everyone = frozenset(payload["signals"].get("element_durations") or {})
+        everyone = frozenset((payload.get("elements") or {}).get("element_durations") or {})
         assert len(everyone) >= 4, (
             f"the run has {len(everyone)} elements, too few for the "
             f"exclusion to mean anything")
 
     def test_the_removed_fields_are_gone(self, payload):
         """Named, so re-adding one is a decision rather than a slip."""
-        assert "critical_path" not in payload["signals"]
-        assert "leaves" not in (payload["signals"].get("leaf_analysis") or {})
-        deferrability = (payload.get("structural") or {}).get("deferrability") or {}
+        # `UX-344` lifted the two namespaces; the fields `UX-288`
+        # removed are named where they live now.
+        assert "critical_path" not in payload
+        assert "leaves" not in (payload.get("leaf_analysis") or {})
+        deferrability = payload.get("deferrability") or {}
         assert "deferrable_leaves" not in deferrability
         assert "non_deferrable_leaves" not in deferrability
-        bottleneck = (payload.get("structural") or {}).get("bottleneck") or {}
-        assert "choke_point_impact" not in bottleneck
+        assert "choke_point_impact" not in (payload.get("bottleneck") or {})
 
     def test_the_version_moved_with_them(self, payload):
         """`architecture.md`'s rule: a removal bumps the version. This is
         the first time it has been exercised."""
-        assert payload["schema"] == "analyze/v3", payload["schema"]
+        assert payload["schema"] == "analyze/v4", payload["schema"]
 
 
 class TestWhatReplacedThem:
     def test_the_path_is_still_reachable_in_order(self, payload):
         from bga import schemas
 
-        path = schemas.critical_path_uids(payload["signals"])
+        path = schemas.critical_path_uids(payload)
         assert path, "the critical path is unreachable"
         assert path == [e["element_uid"]
-                        for e in payload["signals"]["critical_path_detail"]]
+                        for e in payload["critical_path_detail"]]
 
     def test_a_v1_document_is_still_readable(self):
         """`bga` reads its own past output (`UX-249`) and `bga compare`
@@ -332,11 +333,11 @@ class TestWhatReplacedThem:
         be given up to publish the membership once."""
         from bga import schemas
 
-        points = payload["structural"]["bottleneck"]["choke_points"]
+        points = payload["bottleneck"]["choke_points"]
         assert points, "no choke points on this run"
         counts = [entry["downstream_count"] for entry in points]
         assert counts == sorted(counts, reverse=True), counts
-        assert schemas.choke_point_uids(payload["structural"]["bottleneck"]) == [
+        assert schemas.choke_point_uids(payload["bottleneck"]) == [
             entry["element_uid"] for entry in points]
 
     def test_a_v1_bottleneck_is_still_readable(self):
@@ -350,7 +351,7 @@ class TestWhatReplacedThem:
 
     def test_each_leaf_carries_its_risk(self, payload):
         """The information the split used to carry, now on the record."""
-        detail = ((payload["signals"].get("leaf_analysis") or {})
+        detail = ((payload.get("leaf_analysis") or {})
                   .get("leaves_detail") or {})
         assert detail, "no leaves on this run"
         assert all("deferral_risk" in leaf for leaf in detail.values())

@@ -1,5 +1,5 @@
 {
-    "schema": "analyze/v3",
+    "schema": "analyze/v4",
     "run_id": "golden-fixture-manifest-hash-v1",
     "total_duration_us": 16000,
     "section": null,
@@ -15,46 +15,7 @@
                 "band": "high",
                 "violation_count": 0
             },
-            "copy_text": "BGA finding: Confidence: 0.88 (high)\n  primary 88%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1",
-            "provenance": {
-                "claim": "confidence",
-                "kind": "finding",
-                "document": "analyze/v3",
-                "evidence": [
-                    {
-                        "path": "confidence.primary",
-                        "value": 0.875,
-                        "resolved": true,
-                        "quantity": "share"
-                    },
-                    {
-                        "path": "confidence.coverage_score",
-                        "value": 1.0,
-                        "resolved": true,
-                        "quantity": "share"
-                    },
-                    {
-                        "path": "confidence.task_coverage",
-                        "value": 1.0,
-                        "resolved": true,
-                        "quantity": "share"
-                    }
-                ],
-                "rule": {
-                    "name": "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
-                    "threshold": [
-                        0.5,
-                        0.8
-                    ],
-                    "comparison": "banded",
-                    "observed_path": "confidence.primary",
-                    "sentence": "0.88 bands as high against 0.50/0.80.",
-                    "module": "bga/findings.py",
-                    "threshold_quantity": "share"
-                },
-                "trace_query": null,
-                "unpublished_inputs": []
-            }
+            "copy_text": "BGA finding: Confidence: 0.88 (high)\n  primary 88%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1"
         },
         {
             "id": "wait-category",
@@ -70,36 +31,7 @@
                 "share": 0.125,
                 "hint": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             },
-            "copy_text": "BGA finding: Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
-            "provenance": {
-                "claim": "wait-category",
-                "kind": "finding",
-                "document": "analyze/v3",
-                "evidence": [
-                    {
-                        "path": "attribution.untracked_tail_us",
-                        "value": 2000,
-                        "resolved": true,
-                        "quantity": "duration_us"
-                    },
-                    {
-                        "path": "total_duration_us",
-                        "value": 16000,
-                        "resolved": true,
-                        "quantity": "duration_us"
-                    }
-                ],
-                "rule": {
-                    "name": "OPPORTUNITY_FLOOR_PCT",
-                    "threshold": 0.01,
-                    "comparison": ">=",
-                    "observed_path": null,
-                    "sentence": "The largest non-execution category is 12.5% of wall-clock, at or above the 1% floor below which the largest of the remainder is rounding rather than an opportunity.",
-                    "module": "bga/findings.py"
-                },
-                "trace_query": "stalls",
-                "unpublished_inputs": []
-            }
+            "copy_text": "BGA finding: Biggest Opportunity: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1"
         },
         {
             "id": "blast-radius-ranking",
@@ -115,59 +47,8 @@
                 "lib.bst",
                 "app.bst"
             ],
-            "evidence": {
-                "blast_radius": {
-                    "base.bst": {
-                        "downstream_count": 2,
-                        "weighted_duration_us": 8000,
-                        "is_leaf": false,
-                        "risk_score": 2,
-                        "element_kind": "unknown",
-                        "is_structural_kind": false
-                    },
-                    "lib.bst": {
-                        "downstream_count": 1,
-                        "weighted_duration_us": 3000,
-                        "is_leaf": false,
-                        "risk_score": 1,
-                        "element_kind": "unknown",
-                        "is_structural_kind": false
-                    },
-                    "app.bst": {
-                        "downstream_count": 0,
-                        "weighted_duration_us": 0,
-                        "is_leaf": true,
-                        "risk_score": 0,
-                        "element_kind": "unknown",
-                        "is_structural_kind": false
-                    }
-                }
-            },
-            "copy_text": "BGA finding: Elements Most Worth Optimizing First (by blast radius):\n      1. base.bst (2 downstream elements)\n      2. lib.bst (1 downstream elements)\n      3. app.bst (0 downstream elements)\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
-            "provenance": {
-                "claim": "blast-radius-ranking",
-                "kind": "finding",
-                "document": "analyze/v3",
-                "evidence": [
-                    {
-                        "path": "headline.chain_share",
-                        "value": 0.875,
-                        "resolved": true,
-                        "quantity": "share"
-                    }
-                ],
-                "rule": {
-                    "name": "CHAIN_BOUND_RATIO",
-                    "threshold": 0.9,
-                    "comparison": "<",
-                    "observed_path": "headline.chain_share",
-                    "sentence": "Who-depends-on-me is ranked only on a build the chain does not already constrain; above the threshold the ranking that matters is how long each element takes.",
-                    "module": "bga/findings.py",
-                    "threshold_quantity": "share"
-                },
-                "trace_query": "dependency-wait",
-                "unpublished_inputs": []
-            }
+            "evidence": {},
+            "copy_text": "BGA finding: Elements Most Worth Optimizing First (by blast radius):\n      1. base.bst (2 downstream elements)\n      2. lib.bst (1 downstream elements)\n      3. app.bst (0 downstream elements)\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1"
         },
         {
             "id": "efficiency-score",
@@ -179,40 +60,7 @@
                 "efficiency_score": 1.0,
                 "low_confidence": false
             },
-            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
-            "provenance": {
-                "claim": "efficiency-score",
-                "kind": "finding",
-                "document": "analyze/v3",
-                "evidence": [
-                    {
-                        "path": "floors.efficiency_score",
-                        "value": 1.0,
-                        "resolved": true,
-                        "quantity": "share"
-                    },
-                    {
-                        "path": "confidence.primary",
-                        "value": 0.875,
-                        "resolved": true,
-                        "quantity": "share"
-                    }
-                ],
-                "rule": {
-                    "name": "_EFFICIENCY_HIGH/_EFFICIENCY_MEDIUM",
-                    "threshold": [
-                        0.7,
-                        0.9
-                    ],
-                    "comparison": "banded",
-                    "observed_path": "floors.efficiency_score",
-                    "sentence": "1.00 is at or above 0.90 and at or above 0.70, which is what chooses the sentence beside it; the caveat below 0.8 confidence is a second rule, not this one.",
-                    "module": "bga/findings.py",
-                    "threshold_quantity": "share"
-                },
-                "trace_query": "cpu-versus-wall",
-                "unpublished_inputs": []
-            }
+            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1"
         }
     ],
     "headline": {
@@ -226,76 +74,19 @@
             {
                 "finding_id": "blast-radius-ranking",
                 "element_uid": "base.bst",
-                "downstream_count": 2,
-                "provenance": {
-                    "claim": "blast-radius-ranking",
-                    "kind": "top_action",
-                    "document": "analyze/v3",
-                    "see": "findings[id=blast-radius-ranking].provenance",
-                    "resolved": true
-                }
+                "downstream_count": 2
             },
             {
                 "finding_id": "blast-radius-ranking",
                 "element_uid": "lib.bst",
-                "downstream_count": 1,
-                "provenance": {
-                    "claim": "blast-radius-ranking",
-                    "kind": "top_action",
-                    "document": "analyze/v3",
-                    "see": "findings[id=blast-radius-ranking].provenance",
-                    "resolved": true
-                }
+                "downstream_count": 1
             },
             {
                 "finding_id": "blast-radius-ranking",
                 "element_uid": "app.bst",
-                "downstream_count": 0,
-                "provenance": {
-                    "claim": "blast-radius-ranking",
-                    "kind": "top_action",
-                    "document": "analyze/v3",
-                    "see": "findings[id=blast-radius-ranking].provenance",
-                    "resolved": true
-                }
+                "downstream_count": 0
             }
-        ],
-        "provenance": {
-            "claim": "diagnosis",
-            "kind": "diagnosis",
-            "document": "analyze/v3",
-            "evidence": [
-                {
-                    "path": "floors.t_infinity_observed",
-                    "value": 14000,
-                    "resolved": true,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "total_duration_us",
-                    "value": 16000,
-                    "resolved": true,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "headline.chain_share",
-                    "value": 0.875,
-                    "resolved": true,
-                    "quantity": "share"
-                }
-            ],
-            "rule": {
-                "name": "CHAIN_BOUND_RATIO",
-                "threshold": 0.9,
-                "comparison": "<",
-                "observed_path": "headline.chain_share",
-                "sentence": "The critical path is 87.5% of wall-clock, which is < the 90% at which the chain rather than the scheduler is called the constraint - so scheduler_bound.",
-                "module": "bga/findings.py",
-                "threshold_quantity": "share"
-            },
-            "trace_query": "element-time",
-            "unpublished_inputs": []
-        }
+        ]
     },
     "next_steps": [
         {
@@ -307,7 +98,7 @@
                 "base.bst",
                 "<run>"
             ],
-            "follows_from": "signals.critical_path_detail"
+            "follows_from": "critical_path_detail"
         },
         {
             "id": "blast-the-top-element",
@@ -392,38 +183,12 @@
             "Resource.DOWNLOAD": 1
         }
     },
-    "signals": {
-        "critical_path_detail": [
-            {
-                "element_uid": "base.bst",
-                "element_kind": "unknown",
-                "is_structural_kind": false,
-                "duration_us": 6000,
-                "share_of_path": 0.42857142857142855,
-                "realizable_saving_us": 6000
-            },
-            {
-                "element_uid": "lib.bst",
-                "element_kind": "unknown",
-                "is_structural_kind": false,
-                "duration_us": 5000,
-                "share_of_path": 0.35714285714285715,
-                "realizable_saving_us": 5000
-            },
-            {
-                "element_uid": "app.bst",
-                "element_kind": "unknown",
-                "is_structural_kind": false,
-                "duration_us": 3000,
-                "share_of_path": 0.21428571428571427,
-                "realizable_saving_us": 3000
-            }
-        ],
-        "downstream_count": {
-            "app.bst": 0,
-            "lib.bst": 1,
-            "extra.bst": 0,
-            "base.bst": 2
+    "elements": {
+        "element_durations": {
+            "base.bst": 6000,
+            "extra.bst": 4000,
+            "lib.bst": 5000,
+            "app.bst": 3000
         },
         "slack": {
             "base.bst": 0,
@@ -431,77 +196,17 @@
             "lib.bst": 0,
             "app.bst": 0
         },
-        "zero_slack_share": 0.75,
+        "downstream_count": {
+            "app.bst": 0,
+            "lib.bst": 1,
+            "extra.bst": 0,
+            "base.bst": 2
+        },
         "unweighted_depth": {
             "base.bst": 0,
             "extra.bst": 0,
             "lib.bst": 1,
             "app.bst": 2
-        },
-        "element_durations": {
-            "base.bst": 6000,
-            "extra.bst": 4000,
-            "lib.bst": 5000,
-            "app.bst": 3000
-        },
-        "optimization_horizon": [
-            {
-                "element_uid": "base.bst",
-                "saving_us": 6000,
-                "makespan_after_us": 8000,
-                "cumulative_saving_us": 6000,
-                "entering": []
-            },
-            {
-                "element_uid": "lib.bst",
-                "saving_us": 4000,
-                "makespan_after_us": 4000,
-                "cumulative_saving_us": 10000,
-                "entering": [
-                    "extra.bst"
-                ]
-            },
-            {
-                "element_uid": "extra.bst",
-                "saving_us": 1000,
-                "makespan_after_us": 3000,
-                "cumulative_saving_us": 11000,
-                "entering": []
-            },
-            {
-                "element_uid": "app.bst",
-                "saving_us": 3000,
-                "makespan_after_us": 0,
-                "cumulative_saving_us": 14000,
-                "entering": []
-            }
-        ],
-        "joint_saving": {
-            "elements": [
-                "base.bst",
-                "lib.bst",
-                "extra.bst"
-            ],
-            "joint_saving_us": 11000,
-            "sum_of_individual_us": 11000,
-            "savings_add": true
-        },
-        "latent_heavies": [
-            {
-                "element_uid": "extra.bst",
-                "duration_us": 4000
-            }
-        ],
-        "wall_clock_share_us": {
-            "base.bst|BUILD|BUILD|0": 4000.0,
-            "extra.bst|FETCH|FETCH|0": 2000.0,
-            "lib.bst|BUILD|BUILD|0": 5000.0,
-            "app.bst|BUILD|BUILD|0": 3000.0
-        },
-        "ready_queue": {
-            "average_depth": 0.0,
-            "peak_depth": 0,
-            "nonzero_fraction": 0.0
         },
         "blast_radius": {
             "base.bst": {
@@ -537,13 +242,6 @@
                 "is_structural_kind": false
             }
         },
-        "top_blast_radius": [
-            "base.bst",
-            "lib.bst",
-            "app.bst",
-            "extra.bst"
-        ],
-        "blast_radius_ranked_by": "measured-rebuild-time",
         "criticality_probability": {
             "base.bst": {
                 "probability": 1.0,
@@ -574,128 +272,219 @@
                 "is_structural_kind": false
             }
         },
-        "fetch_build_overlap": {
-            "overlap_us": 4000,
-            "fetch_prefix_us": 0,
-            "build_suffix_us": 10000,
-            "fraction": 0.2857142857142857
+        "zero_slack_share": 0.75,
+        "top_blast_radius": [
+            "base.bst",
+            "lib.bst",
+            "app.bst",
+            "extra.bst"
+        ],
+        "blast_radius_ranked_by": "measured-rebuild-time"
+    },
+    "critical_path_detail": [
+        {
+            "element_uid": "base.bst",
+            "element_kind": "unknown",
+            "is_structural_kind": false,
+            "duration_us": 6000,
+            "share_of_path": 0.42857142857142855,
+            "realizable_saving_us": 6000
         },
-        "leaf_analysis": {
-            "deferrable_count": 1,
-            "leaves_detail": {
-                "app.bst": {
-                    "element_kind": "unknown",
-                    "is_structural_kind": false,
-                    "is_potentially_deferrable": false,
-                    "deferral_risk": "medium"
-                },
-                "extra.bst": {
-                    "element_kind": "unknown",
-                    "is_structural_kind": false,
-                    "is_potentially_deferrable": true,
-                    "deferral_risk": "medium"
-                }
+        {
+            "element_uid": "lib.bst",
+            "element_kind": "unknown",
+            "is_structural_kind": false,
+            "duration_us": 5000,
+            "share_of_path": 0.35714285714285715,
+            "realizable_saving_us": 5000
+        },
+        {
+            "element_uid": "app.bst",
+            "element_kind": "unknown",
+            "is_structural_kind": false,
+            "duration_us": 3000,
+            "share_of_path": 0.21428571428571427,
+            "realizable_saving_us": 3000
+        }
+    ],
+    "optimization_horizon": [
+        {
+            "element_uid": "base.bst",
+            "saving_us": 6000,
+            "makespan_after_us": 8000,
+            "cumulative_saving_us": 6000,
+            "entering": []
+        },
+        {
+            "element_uid": "lib.bst",
+            "saving_us": 4000,
+            "makespan_after_us": 4000,
+            "cumulative_saving_us": 10000,
+            "entering": [
+                "extra.bst"
+            ]
+        },
+        {
+            "element_uid": "extra.bst",
+            "saving_us": 1000,
+            "makespan_after_us": 3000,
+            "cumulative_saving_us": 11000,
+            "entering": []
+        },
+        {
+            "element_uid": "app.bst",
+            "saving_us": 3000,
+            "makespan_after_us": 0,
+            "cumulative_saving_us": 14000,
+            "entering": []
+        }
+    ],
+    "joint_saving": {
+        "elements": [
+            "base.bst",
+            "lib.bst",
+            "extra.bst"
+        ],
+        "joint_saving_us": 11000,
+        "sum_of_individual_us": 11000,
+        "savings_add": true
+    },
+    "latent_heavies": [
+        {
+            "element_uid": "extra.bst",
+            "duration_us": 4000
+        }
+    ],
+    "wall_clock_share_us": {
+        "base.bst|BUILD|BUILD|0": 4000.0,
+        "extra.bst|FETCH|FETCH|0": 2000.0,
+        "lib.bst|BUILD|BUILD|0": 5000.0,
+        "app.bst|BUILD|BUILD|0": 3000.0
+    },
+    "ready_queue": {
+        "average_depth": 0.0,
+        "peak_depth": 0,
+        "nonzero_fraction": 0.0
+    },
+    "fetch_build_overlap": {
+        "overlap_us": 4000,
+        "fetch_prefix_us": 0,
+        "build_suffix_us": 10000,
+        "fraction": 0.2857142857142857
+    },
+    "leaf_analysis": {
+        "deferrable_count": 1,
+        "leaves_detail": {
+            "app.bst": {
+                "element_kind": "unknown",
+                "is_structural_kind": false,
+                "is_potentially_deferrable": false,
+                "deferral_risk": "medium"
+            },
+            "extra.bst": {
+                "element_kind": "unknown",
+                "is_structural_kind": false,
+                "is_potentially_deferrable": true,
+                "deferral_risk": "medium"
             }
         }
     },
-    "structural": {
-        "metrics": {
-            "num_elements": 4,
-            "num_edges": 2,
-            "max_depth": 2,
-            "avg_fanout": 0.5,
-            "avg_fanin": 0.5,
-            "critical_path_length": 3,
-            "critical_path_share": 0.75,
-            "max_parallelism": 2,
-            "avg_parallelism": 1.3333333333333333,
-            "cyclomatic_complexity": 0,
-            "serialization_share": 0.25
-        },
-        "bottleneck": {
-            "choke_points": [],
-            "resource_contention": {},
-            "longest_serial_chain": [
+    "graph_metrics": {
+        "num_elements": 4,
+        "num_edges": 2,
+        "max_depth": 2,
+        "avg_fanout": 0.5,
+        "avg_fanin": 0.5,
+        "critical_path_length": 3,
+        "critical_path_share": 0.75,
+        "max_parallelism": 2,
+        "avg_parallelism": 1.3333333333333333,
+        "cyclomatic_complexity": 0,
+        "serialization_share": 0.25
+    },
+    "bottleneck": {
+        "choke_points": [],
+        "resource_contention": {},
+        "longest_serial_chain": [
+            "base.bst",
+            "lib.bst",
+            "app.bst"
+        ],
+        "serial_chain_length": 3,
+        "high_fanin_elements": [],
+        "high_fanout_elements": []
+    },
+    "parallelism": {
+        "levels": [
+            0,
+            1,
+            2
+        ],
+        "width_at_level": [
+            2,
+            1,
+            1
+        ],
+        "max_width": 2,
+        "min_width": 1,
+        "mean_width": 1.3333333333333333,
+        "width_uniformity": 0.6666666666666666
+    },
+    "sensitivity": {
+        "top_opportunities": [
+            {
+                "element_uid": "base.bst",
+                "sensitivity": 0.42857142857142855,
+                "saving_us": 6000
+            },
+            {
+                "element_uid": "lib.bst",
+                "sensitivity": 0.35714285714285715,
+                "saving_us": 5000
+            },
+            {
+                "element_uid": "app.bst",
+                "sensitivity": 0.21428571428571427,
+                "saving_us": 3000
+            }
+        ],
+        "omitted_structural_opportunities": [],
+        "total_improvable_time_us": 10000,
+        "best_case_speedup": 3.5,
+        "critical_path_us": 14000
+    },
+    "batch_opportunities": {
+        "groups": [],
+        "omitted_zero_savings_groups": [],
+        "serialized_pairs": [
+            [
                 "base.bst",
-                "lib.bst",
+                "lib.bst"
+            ],
+            [
+                "base.bst",
                 "app.bst"
             ],
-            "serial_chain_length": 3,
-            "high_fanin_elements": [],
-            "high_fanout_elements": []
-        },
-        "parallelism": {
-            "levels": [
-                0,
-                1,
-                2
-            ],
-            "width_at_level": [
-                2,
-                1,
-                1
-            ],
-            "max_width": 2,
-            "min_width": 1,
-            "mean_width": 1.3333333333333333,
-            "width_uniformity": 0.6666666666666666
-        },
-        "sensitivity": {
-            "top_opportunities": [
-                {
-                    "element_uid": "base.bst",
-                    "sensitivity": 0.42857142857142855,
-                    "saving_us": 6000
-                },
-                {
-                    "element_uid": "lib.bst",
-                    "sensitivity": 0.35714285714285715,
-                    "saving_us": 5000
-                },
-                {
-                    "element_uid": "app.bst",
-                    "sensitivity": 0.21428571428571427,
-                    "saving_us": 3000
-                }
-            ],
-            "omitted_structural_opportunities": [],
-            "total_improvable_time_us": 10000,
-            "best_case_speedup": 3.5,
-            "critical_path_us": 14000
-        },
-        "batch_opportunities": {
-            "groups": [],
-            "omitted_zero_savings_groups": [],
-            "serialized_pairs": [
-                [
-                    "base.bst",
-                    "lib.bst"
-                ],
-                [
-                    "base.bst",
-                    "app.bst"
-                ],
-                [
-                    "lib.bst",
-                    "app.bst"
-                ]
+            [
+                "lib.bst",
+                "app.bst"
             ]
-        },
-        "serialization_point_risks": [],
-        "deferrability": {
-            "recommended_deferrals": [],
-            "total_deferrable_work_us": 7000
-        },
-        "summary": {
-            "total_elements": 4,
-            "critical_path_length": 3,
-            "max_parallelism": 2,
-            "bottleneck_count": 0,
-            "deferrable_leaves": 2,
-            "best_case_speedup": 3.5
-        },
-        "consolidation_candidates": []
+        ]
     },
+    "serialization_point_risks": [],
+    "deferrability": {
+        "recommended_deferrals": [],
+        "total_deferrable_work_us": 7000
+    },
+    "graph_summary": {
+        "total_elements": 4,
+        "critical_path_length": 3,
+        "max_parallelism": 2,
+        "bottleneck_count": 0,
+        "deferrable_leaves": 2,
+        "best_case_speedup": 3.5
+    },
+    "consolidation_candidates": [],
     "utilisation": {
         "cpu_accounting_available": true,
         "effective_cpus": 2,
@@ -748,5 +537,175 @@
         "run_identity_available": true,
         "band": "high"
     },
-    "violations": []
+    "violations": [],
+    "provenance": [
+        {
+            "claim": "diagnosis",
+            "kind": "diagnosis",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "floors.t_infinity_observed",
+                    "value": 14000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 16000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "headline.chain_share",
+                    "value": 0.875,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "CHAIN_BOUND_RATIO",
+                "threshold": 0.9,
+                "comparison": "<",
+                "observed_path": "headline.chain_share",
+                "sentence": "The critical path is 87.5% of wall-clock, which is < the 90% at which the chain rather than the scheduler is called the constraint - so scheduler_bound.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": "element-time",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "confidence",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "confidence.primary",
+                    "value": 0.875,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.coverage_score",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.task_coverage",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
+                "threshold": [
+                    0.5,
+                    0.8
+                ],
+                "comparison": "banded",
+                "observed_path": "confidence.primary",
+                "sentence": "0.88 bands as high against 0.50/0.80.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": null,
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "wait-category",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "attribution.untracked_tail_us",
+                    "value": 2000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 16000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": "OPPORTUNITY_FLOOR_PCT",
+                "threshold": 0.01,
+                "comparison": ">=",
+                "observed_path": null,
+                "sentence": "The largest non-execution category is 12.5% of wall-clock, at or above the 1% floor below which the largest of the remainder is rounding rather than an opportunity.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "stalls",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "blast-radius-ranking",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "headline.chain_share",
+                    "value": 0.875,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "CHAIN_BOUND_RATIO",
+                "threshold": 0.9,
+                "comparison": "<",
+                "observed_path": "headline.chain_share",
+                "sentence": "Who-depends-on-me is ranked only on a build the chain does not already constrain; above the threshold the ranking that matters is how long each element takes.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "efficiency-score",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "floors.efficiency_score",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.primary",
+                    "value": 0.875,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "_EFFICIENCY_HIGH/_EFFICIENCY_MEDIUM",
+                "threshold": [
+                    0.7,
+                    0.9
+                ],
+                "comparison": "banded",
+                "observed_path": "floors.efficiency_score",
+                "sentence": "1.00 is at or above 0.90 and at or above 0.70, which is what chooses the sentence beside it; the caveat below 0.8 confidence is a second rule, not this one.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": "cpu-versus-wall",
+            "unpublished_inputs": []
+        }
+    ],
+    "document_shape": {
+        "leaves": 462,
+        "deepest_depth": 5,
+        "deepest_path": "provenance.[].evidence.[].path",
+        "deeper_than_three": 184,
+        "deeper_than_three_share": 0.39826839826839827
+    }
 }

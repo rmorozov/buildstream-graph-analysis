@@ -65,6 +65,17 @@ answers, is declared, or reddens.
 declaration, and `signals.wall_clock_share` -> `wall_clock_share_us`);
 both fold into the same unshipped `v3` rather than a fourth version,
 since no release has ever written `v3`.
+`UX-344` does **not** fold in: it removes the `signals` and
+`structural` namespaces (every table they held is a top-level key,
+`metrics` and `summary` renamed `graph_metrics` and `graph_summary`,
+the six element-keyed maps grouped under `elements`), publishes
+`provenance` once per claim instead of writing it into every finding,
+the headline and each top action, and drops
+`findings[].evidence.blast_radius`, a slice of a population published
+in full beside it. That is `analyze/v4`, and `analyze/v3` joins the
+read-never-written set. Measured on the two fixtures: leaves deeper
+than three levels fell from 57% to 40% and from 67% to 53%, and the
+golden report's deepest path from six levels to five.
 The five predecessors stay in the set as **read, never written**: an
 older store still analyzes, and `host/v1`'s `memory_mb` is converted
 on the way in so an old baseline still compares rather than reading as
@@ -88,7 +99,7 @@ on the record rather than in someone's memory — `UX-92` and `UX-96`
 modules split along their seams).
 
 ```text state
-contracts: analyze/v2 analyze/v3 blast/v1 blast/v2 compare/v1 compare/v2 correlate/v1 correlate/v2 host/v1 host/v2 plane2/v1 plane2/v2 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
+contracts: analyze/v2 analyze/v3 analyze/v4 blast/v1 blast/v2 compare/v1 compare/v2 correlate/v1 correlate/v2 host/v1 host/v2 plane2/v1 plane2/v2 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
 commands: analyze baseline blast cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```
 

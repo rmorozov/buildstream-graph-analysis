@@ -477,7 +477,7 @@ export function renderBlastSearch(onQuery) {
  * is (an empty ranking means no chips, never invented ones).
  */
 export function blastChips(payload, onPick, make) {
-  const ranked = (payload?.signals?.top_blast_radius) || [];
+  const ranked = (payload?.elements?.top_blast_radius) || [];
   if (!ranked.length) return null;
   const row = make("p", { class: "blast-chips" });
   row.append(make("span", { class: "muted" }, "Try: "));
@@ -790,7 +790,7 @@ export const PATH_TAIL = 3;
  * drawing, and the middle is where a reader stops looking anyway.
  */
 export function renderCriticalPath(payload) {
-  const detail = payload?.signals?.critical_path_detail;
+  const detail = payload?.critical_path_detail;
   if (!Array.isArray(detail) || !detail.length) return null;
 
   const section = document.createElement("section");

@@ -19,13 +19,13 @@ bga:distribution  an object publishing percentiles; the value names
 What the booted exports draw with them today:
 
 ```text
-golden       structural.parallelism.width_at_level
+golden       parallelism.width_at_level
              "3 levels, 2 → 1, peak 2 at level 1."
-macro_micro  structural.parallelism.width_at_level
+macro_micro  parallelism.width_at_level
              "10 levels, 1 → 1, peak 2 at level 2."
-             signals.element_duration_distribution
+             element_duration_distribution
              "0 ms → 19.1 s, median 3.1 s, p95 19.1 s — n=11."
-             signals.blast_radius_distribution
+             blast_radius_distribution
              "0 → 10, median 5, p95 10 — n=11."
 ```
 
@@ -369,14 +369,14 @@ class TestTheHintsAreDeclaredWhereTheyBelong:
         (`UX-193`'s property, which is why the mapping is by shape)."""
         from bga import schemas
 
+        # `UX-344`: the two distributions and `parallelism` are keys of
+        # the document, where they were members of two namespaces.
         analyze = schemas.schema(schemas.ANALYZE)["properties"]
-        signals = analyze["signals"]["properties"]
         for name in ("element_duration_distribution",
                      "blast_radius_distribution"):
-            assert signals[name][schemas.DISTRIBUTION] == "n", name
-            assert schemas.QUANTITY in signals[name], name
-        width = (analyze["structural"]["properties"]["parallelism"]
-                 ["properties"]["width_at_level"])
+            assert analyze[name][schemas.DISTRIBUTION] == "n", name
+            assert schemas.QUANTITY in analyze[name], name
+        width = (analyze["parallelism"]["properties"]["width_at_level"])
         assert width[schemas.SERIES] == "level"
 
         aggregate = schemas.schema(schemas.STORE_AGGREGATE)["properties"]

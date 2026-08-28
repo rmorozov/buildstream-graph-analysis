@@ -223,7 +223,7 @@ class TestTheRankingSaysWhichOrderItIsIn:
              "--diagnostics", "--format", "json"],
             capture_output=True, text=True, cwd=REPO_ROOT, check=True,
         )
-        signals = json.loads(done.stdout)["signals"]
+        signals = json.loads(done.stdout)["elements"]
         assert signals["blast_radius_ranked_by"] == "measured-rebuild-time"
         weights = [signals["blast_radius"][uid]["weighted_duration_us"]
                    for uid in signals["top_blast_radius"]]

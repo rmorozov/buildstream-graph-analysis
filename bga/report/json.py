@@ -1,12 +1,92 @@
 """JSON report formatting (Part 32.4/37)."""
 import json as _json
-from typing import Optional
+from typing import Optional, Tuple
 
 from .. import producer, provenance, schemas
 from ..findings import (compute_findings, compute_headline,
                         compute_next_steps, finding_copy_text)
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
+
+
+# `UX-344`: `structural.metrics` and `structural.summary` under their
+# own names. At the top level `metrics` and `summary` would be two of
+# the most generic keys in the document, and the page already draws a
+# `summary` section - the run's own scalars - that a second one would
+# have collided with.
+_STRUCTURAL_RENAMES = {"metrics": "graph_metrics", "summary": "graph_summary"}
+
+
+def _lift(data: dict, block: dict, renames: Optional[dict] = None) -> None:
+    """`UX-344`: each named table of a namespace, as a key of its own.
+
+    A collision is a programming error rather than a run-time
+    possibility - two tables of one name in one document - so it is
+    raised here rather than resolved by whichever block was lifted last.
+    """
+    for key, value in block.items():
+        name = (renames or {}).get(key, key)
+        if name in data:
+            raise ValueError(
+                f"lifting {key!r} would overwrite the document's {name!r}")
+        data[name] = value
+
+
+def _measure_shape(document: dict) -> Tuple[int, int, str, int]:
+    """`(leaves, deepest_depth, deepest_path, deeper_than_three)`.
+
+    A container step counts a level, which is how `UX-344` measured the
+    depth it was filed against - so `findings[].evidence.rows[]` puts
+    its leaves at six and the numbers here are comparable with the ones
+    in that item.
+    """
+    leaves = deeper = 0
+    deepest_depth, deepest_path = 0, ""
+
+    def walk(value, path, depth):
+        nonlocal leaves, deeper, deepest_depth, deepest_path
+        if isinstance(value, dict):
+            for key, sub in value.items():
+                walk(sub, path + [str(key)], depth + 1)
+        elif isinstance(value, (list, tuple)):
+            for sub in value:
+                walk(sub, path + ["[]"], depth + 1)
+        else:
+            leaves += 1
+            if depth > 3:
+                deeper += 1
+            if depth > deepest_depth:
+                deepest_depth, deepest_path = depth, ".".join(path)
+
+    walk(document, [], 0)
+    return leaves, deepest_depth, deepest_path, deeper
+
+
+#: This block's own leaves (five, all at depth two) plus the `schema`
+#: stamp that `UX-190` puts on the front afterwards. Counted rather
+#: than ignored: the numbers describe the document a consumer receives.
+_SHAPE_OWN_LEAVES = 6
+
+
+def document_shape(document: dict, adding: int = _SHAPE_OWN_LEAVES) -> dict:
+    """How deep this document is, as a block that counts itself.
+
+    `UX-344` had to measure the depth with a script against two
+    fixtures to find out that 57% and 67% of their leaves were deeper
+    than three. The document says so now - and it says it about the
+    finished document, `adding` the leaves that arrive after the walk:
+    this block's own five, at depth two, and the `schema` stamp. A
+    consumer that re-measures gets these numbers back.
+    """
+    leaves, depth, path, deeper = _measure_shape(document)
+    leaves += adding
+    return {
+        "leaves": leaves,
+        "deepest_depth": depth,
+        "deepest_path": path,
+        "deeper_than_three": deeper,
+        "deeper_than_three_share": (deeper / leaves) if leaves else 0.0,
+    }
 
 
 def build_document(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> dict:
@@ -165,10 +245,17 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
             else:
                 signals_data[key] = value
         if signals_data:
-            data['signals'] = signals_data
+            # `UX-344`: the element population first, because it comes
+            # out of the block that is then lifted around it.
+            elements = {key: signals_data.pop(key)
+                        for key in schemas.ELEMENT_POPULATION
+                        if key in signals_data}
+            if elements:
+                data['elements'] = elements
+            _lift(data, signals_data)
 
     if section in (None, 'graph') and hasattr(result, 'structural') and result.structural:
-        data['structural'] = result.structural
+        _lift(data, result.structural, _STRUCTURAL_RENAMES)
 
     if section in (None, 'utilisation') and hasattr(result, 'utilisation') and result.utilisation:
         data['utilisation'] = result.utilisation
@@ -228,6 +315,9 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # document* - the paths are only checkable once the document they
     # point into exists. Same placement, and the same reason, as the
     # join above.
+    #
+    # `UX-344`: published as one list keyed by claim rather than written
+    # into each claim. The claims carry the ids they already carried.
     if section is None:
         provenance.attach(data)
 
@@ -237,6 +327,13 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # provenance, never a compatibility signal - the `contracts` list
     # beside it is what a reader compares (Direction 10).
     producer.add(data)
+
+    # `UX-344`: how deep this document turned out to be, measured on it.
+    # After `producer`, so the block describes the document a consumer
+    # actually receives - and before the stamp, which adds one more
+    # leaf at depth one that `document_shape` counts for itself.
+    if section is None:
+        data['document_shape'] = document_shape(data)
 
     # UX-190: the version leads. A consumer reading the first line of a
     # streamed or truncated document sees what it is before it sees

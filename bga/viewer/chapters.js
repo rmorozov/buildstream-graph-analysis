@@ -90,10 +90,10 @@ export const CHAPTERS = [
     // boundary is where that belongs, one heading below it.
     sections: ["resource_blast", "blast", "blast-offline", "blast-tree",
                "whatif", "perfetto-questions"],
-    // The widest change this graph can absorb, from `signals.blast_radius`
+    // The widest change this graph can absorb, from `elements.blast_radius`
     // - the population the chapter's own first table ranks.
     answer(payload) {
-      const worst = largest(payload?.signals?.blast_radius, "downstream_count");
+      const worst = largest(payload?.elements?.blast_radius, "downstream_count");
       if (!worst) return null;
       const cost = worst.row?.weighted_duration_us;
       return `A change to ${worst.key} rebuilds `
@@ -123,9 +123,15 @@ export const CHAPTERS = [
   {
     id: "time",
     title: "Where did the time go?",
-    sections: ["attribution", "attribution_hints", "signals",
+    // `UX-344`: the tables `signals` held that are about *time* rather
+    // than about an element - each its own section since the namespace
+    // was lifted, and each named here rather than left to its rail,
+    // because "act" reaches this chapter and "prove" does not.
+    sections: ["attribution", "attribution_hints",
                "critical_path_detail", "critical-path-drawn", "horizon",
-               "pipeline_overhead"],
+               "optimization_horizon", "latent_heavies", "joint_saving",
+               "cache", "fetch_build_overlap", "wall_clock_share_us",
+               "element_duration_distribution", "pipeline_overhead"],
     // The run's wall-clock and the biggest thing it went on, named by
     // the attribution split rather than by this file's opinion.
     answer(payload) {
@@ -148,7 +154,10 @@ export const CHAPTERS = [
     // what put it here rather than at the foot of the page under
     // "Everything else".
     sections: ["occupancy", "utilisation", "floors", "capacity_verdict",
-               "capacity_recommendation"],
+               // `UX-344`: how much was runnable and not running is a
+               // fact about the machine, not about an element - the one
+               // lifted table whose rail points at the wrong chapter.
+               "ready_queue", "capacity_recommendation"],
     // What the run was given and how much of it was used - the two
     // numbers the chapter's own verdict is computed from.
     answer(payload) {
@@ -164,12 +173,19 @@ export const CHAPTERS = [
   {
     id: "elements",
     title: "Which elements, and how do they connect?",
-    sections: ["structural", "element_join"],
+    // `UX-344`: `structural`'s nine tables, and the element population
+    // itself. The namespace was one section holding nine; these are the
+    // nine, in the order the document publishes them.
+    sections: ["elements", "graph_summary", "graph_metrics", "bottleneck",
+               "parallelism", "sensitivity", "deferrability",
+               "batch_opportunities", "consolidation_candidates",
+               "serialization_point_risks", "leaf_analysis",
+               "blast_radius_distribution", "element_join"],
     // How many elements, and the one that costs the most - the row a
     // reader opening this chapter is looking for.
     answer(payload) {
-      const count = payload?.structural?.summary?.total_elements;
-      const worst = largest(payload?.signals?.element_durations);
+      const count = payload?.graph_summary?.total_elements;
+      const worst = largest(payload?.elements?.element_durations);
       if (typeof count !== "number") return null;
       return `${quantity(count, "count")} elements`
         + (worst ? `; the slowest is ${worst.key} at ${duration(worst.value)}.`
@@ -184,6 +200,9 @@ export const CHAPTERS = [
     id: "believe",
     title: "How much of this can I believe?",
     sections: ["confidence", "violations", "timestamp_agreement",
+               // `UX-344`: every claim's chain, published once. It is
+               // this chapter's question by construction.
+               "provenance",
                "plane2_coverage", "element_join_coverage"],
     // The one number this chapter exists to qualify, and the count
     // that most often explains it.
@@ -202,7 +221,9 @@ export const CHAPTERS = [
     id: "run",
     title: "Which run is this?",
     // `UX-285`: the identity is reference, and reference goes last.
-    sections: ["summary", "run_instance", "producer"],
+    // `UX-344`: `document_shape` is a fact about the document rather
+    // than about the run it describes, which is what this chapter holds.
+    sections: ["summary", "run_instance", "producer", "document_shape"],
     // When it was taken, on what, and under which contract - the
     // three questions this chapter's own blocks answer. Not the run
     // identity hash: sixty-four characters of it is what the block

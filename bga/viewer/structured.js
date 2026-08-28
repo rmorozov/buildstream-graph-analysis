@@ -83,7 +83,7 @@ export function columnSpecs(hint, rows, node) {
 // behind it, arrays read as JSON, and nothing searchable or bounded.
 //
 // Measured on a served 44-element run: 34 such cells, 32,393 characters
-// of `<pre>`, the largest 8,191 - and `signals.blast_radius` scales to
+// of `<pre>`, the largest 8,191 - and `elements.blast_radius` scales to
 // ~224,000 characters at 1,202 elements behind a label saying `object`.
 //
 // **The rule is width, not depth.** The document is 7 levels deep and
@@ -763,12 +763,19 @@ export function interrogable(table, specs, total, depth = 0) {
   // reader's "enlarge table to occupy more space", and both enter the
   // same state - one control, not two features.
   //
-  // "Nested" is measured in *tables*, not in calls: `renderStructured`
-  // hands `mapTable` `depth + 1`, so a section's own fold already
-  // arrives here at depth 1. Depth 2 is a table inside another table's
-  // cell - the one with no room - and depth 3 does not exist, because
-  // `CELL_NEST_LIMIT` turns it into the fold that routes to focus.
-  const nested = depth > 1;
+  // "Nested" is measured in *tables*, not in calls: a section's own
+  // table and a table `renderPairs` puts straight into a cell both
+  // arrive at depth 0, and `renderStructured` hands `mapTable`
+  // `depth + 1` for every level it descends - so depth 1 is a table
+  // inside a value inside a cell, the one with no room.
+  //
+  // `UX-344` moved this bound by one. The threshold was `depth > 1`
+  // because `signals.leaf_analysis.leaves_detail` sat two levels inside
+  // its section; lifting the namespaces made `leaf_analysis` a section
+  // of its own and the same cramped table one level nearer the top. The
+  // rule is unchanged - a table inside a cell offers the way out - and
+  // the number it is spelled with followed the document.
+  const nested = depth > 0;
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;
   const tools = el("div", { class: "table-tools" }, box, badge,
@@ -917,8 +924,8 @@ function sortable(table, specs = []) {
 // beside a dozen unrelated quantities.
 export const LIFTED_SECTION = "critical_path_detail";
 
-export function liftedCriticalPath(signals, node) {
-  const rows = signals?.[LIFTED_SECTION];
+export function liftedCriticalPath(document, node) {
+  const rows = document?.[LIFTED_SECTION];
   if (!Array.isArray(rows) || !rows.length) return null;
   const child = childNode(node, LIFTED_SECTION);
   // `UX-319`: the chain's listing, folded by the chain's own numbers -
@@ -1001,35 +1008,31 @@ export function renderText(name, value) {
 // It shares no keys with the other six, and nothing on the page said
 // so. It stays its own table and says what its key is.
 //
-// Declared rather than sniffed: a new element-keyed signal has to join
-// this list or be argued into `NOT_ELEMENT_KEYED`, and a guard fails
-// on one that does neither.
-export const ELEMENT_KEYED_SIGNALS = [
-  "element_durations", "slack", "downstream_count", "unweighted_depth",
-  "blast_radius", "criticality_probability",
-];
-
-export const NOT_ELEMENT_KEYED = {
-  wall_clock_share_us: "keyed by task (`element|BUILD|BUILD|0`), not by "
-    + "element - it shares zero keys with the six and pooling them "
-    + "would put two populations in one table",
-};
-
+// `UX-344`: **the document says which six.** This file kept its own
+// list of the element-keyed signals - and a note arguing the seventh
+// out of it - because `signals` mixed the element population with
+// tables that were not it. `elements` *is* that population: every map
+// in it is keyed by element uid, and `wall_clock_share_us` is a key of
+// the document beside it, drawn as its own section, saying in its own
+// description that its keys are tasks. `top_blast_radius` is a ranking
+// over the same population, so it is a member and an array - which is
+// why the filter asks for a plain object rather than for an object.
 /**
  * One row per element, one column per element-keyed signal.
  *
  * Returns `null` when the run carries none of them, so a payload
  * without the signals renders exactly as it did.
  */
-export function elementSignalTable(signals, node, join = null,
+export function elementSignalTable(elements, node, join = null,
                                    joinNode = undefined) {
-  const present = ELEMENT_KEYED_SIGNALS.filter(
-    (name) => signals?.[name] && typeof signals[name] === "object");
+  const present = Object.keys(elements ?? {}).filter(
+    (name) => elements[name] && typeof elements[name] === "object"
+              && !Array.isArray(elements[name]));
   if (present.length < 2) return null;
   const byElement = new Map();
   // UX-343: a merged column's unit is declared where the field came
   // *from*, not under `signals` - `weighted_duration_us` is declared on
-  // `signals.blast_radius`'s value schema and `slack_us` on
+  // `elements.blast_radius`'s value schema and `slack_us` on
   // `element_join`'s item. Resolving every column against the signals
   // node alone found neither, so three columns of the report's central
   // table were rendered from `guessQuantity`'s name-sniff. Found by the
@@ -1037,7 +1040,7 @@ export function elementSignalTable(signals, node, join = null,
   const origin = new Map();
   for (const name of present) {
     const signalNode = childNode(node, name);
-    for (const [uid, value] of Object.entries(signals[name])) {
+    for (const [uid, value] of Object.entries(elements[name])) {
       const row = byElement.get(uid) ?? { element: uid };
       // A record-valued signal (`blast_radius`) contributes its own
       // fields; a scalar one contributes itself under its name.
@@ -1205,7 +1208,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   const list = el("dl", { class: "pairs" });
   // UX-268: the element-keyed signals leave the pair list and become
   // one table, so they are drawn once rather than six times.
-  const joined = key === "signals"
+  const joined = key === "elements"
     ? elementSignalTable(object, node, payload?.element_join,
                          childNode(root, "element_join"))
     : null;
@@ -1216,7 +1219,6 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // this one. It is also the one member that rendered a whole
     // `<section>` into a `<dd>` - the nesting UX-267 removed
     // everywhere else.
-    if (key === "signals" && name === LIFTED_SECTION) continue;
     // UX-201: each member resolved against *its own* schema node, not
     // guessed from its name. `deltas` was hinted at the top level and
     // still name-sniffed every member inside it.
@@ -1231,7 +1233,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     const described = hintsOf(child).description;
     let cell;
     // UX-208: a nested array of objects is a *table*, not a JSON dump.
-    // `signals.critical_path_detail` - the list of elements the whole
+    // `critical_path_detail` - the list of elements the whole
     // report is about - rendered as a `<pre>` of raw JSON, which is
     // why nothing in it was sortable, filterable or one click from
     // investigation. Same renderer, same declarations, one level down.
@@ -1249,15 +1251,6 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     } else if (value !== null && typeof value === "object") {
       cell = renderStructured(name, value, hintsOf(child), child, 0,
                               `${key}.${name}`);
-      // UX-268: a map whose keys are *not* elements says so, because
-      // the page draws it identically to the six that are and a reader
-      // comparing them would be comparing populations that share no
-      // keys at all.
-      if (NOT_ELEMENT_KEYED[name]) {
-        cell = el("span", {}, cell,
-                  el("span", { class: "muted key-note" },
-                     ` keyed by task, not by element`));
-      }
     } else if (typeof value === "number" && direction) {
       // A signed change, coloured by what the schema says "better" is,
       // without this file knowing which metric it is looking at.

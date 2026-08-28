@@ -232,7 +232,10 @@ def _headline_rule():
          "--diagnostics", "--explain"],
         capture_output=True, text=True, cwd=str(REPO), timeout=180)
     assert done.returncode == 0, done.stderr
-    return json.loads(done.stdout)["headline"]["provenance"]["rule"]
+    # `UX-344`: the chain is published once per claim, at the top level.
+    document = json.loads(done.stdout)
+    return next(entry for entry in document["provenance"]
+                if entry["claim"] == "diagnosis")["rule"]
 
 
 def _rules_for_the_fixture():

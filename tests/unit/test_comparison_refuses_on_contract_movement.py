@@ -146,9 +146,9 @@ class TestTheRefusalReachesTheCommandLine:
         data = json.loads(context.read_text())
         data["producer"]["version"] = "0.2.1"
         data["producer"]["contracts"] = [
-            # `UX-341` made `analyze/v3` the id both runs carry, so
+            # `UX-344` made `analyze/v4` the id both runs carry, so
             # the movement this drives has to be to one nothing writes.
-            name.replace("analyze/v3", "analyze/v4")
+            name.replace("analyze/v4", "analyze/v5")
             for name in data["producer"]["contracts"]]
         context.write_text(json.dumps(data, indent=1))
 
@@ -157,7 +157,7 @@ class TestTheRefusalReachesTheCommandLine:
         # The refusal goes to stderr, where every other `UX-78` refusal
         # goes: a caller piping stdout to a JSON parser gets an empty
         # document and a non-zero exit, not a half-parsed report.
-        assert "analyze/v3 → analyze/v4" in out.stderr, (
+        assert "analyze/v4 → analyze/v5" in out.stderr, (
             f"the refusal does not name the contract that moved: {out.stderr}")
         assert "producer_contracts" in out.stderr
 
@@ -168,9 +168,9 @@ class TestTheRefusalReachesTheCommandLine:
         context = candidate / "run-context.json"
         data = json.loads(context.read_text())
         data["producer"]["contracts"] = [
-            # `UX-341` made `analyze/v3` the id both runs carry, so
+            # `UX-344` made `analyze/v4` the id both runs carry, so
             # the movement this drives has to be to one nothing writes.
-            name.replace("analyze/v3", "analyze/v4")
+            name.replace("analyze/v4", "analyze/v5")
             for name in data["producer"]["contracts"]]
         context.write_text(json.dumps(data, indent=1))
 

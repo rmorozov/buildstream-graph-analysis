@@ -52,10 +52,12 @@ for the CLI table after the same drift happened three times.
   their round and `UX-347` re-measured the document under folding;
   restating round 39's numbers as round 53's would erase the history
   the attribution carries.
-- The chapter table itself. Declined because it is correct:
-  eight rows, one per member of `CHAPTERS`, in the module's
-  order - the sentence above it is the only thing that
-  disagrees with the module.
+- ~~The chapter table itself.~~ **Corrected while doing the work:
+  there is no chapter table.** This entry was written during review 5
+  and asserted rows nobody had counted; the bullet is prose from end
+  to end. It is also the explanation the filing was missing for why
+  three reviews read past the number - there were no rows to count
+  against the word.
 
 ## Acceptance Test
 

@@ -36,7 +36,6 @@ macro_micro  20,393 px    4,478          403  ( 9.0%)          18 / 146
 ```
 """
 import pathlib
-import shutil
 import sys
 
 import pytest
@@ -44,6 +43,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+from pages import snapshot_copy    # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -319,9 +319,7 @@ def pages(tmp_path_factory):
 
     out = {}
     for label, fixture in FIXTURES.items():
-        run = tmp_path_factory.mktemp(f"sentence-{label}") / "run"
-        shutil.copytree(fixture, run)
-        (run / "expected_output.json").unlink(missing_ok=True)
+        run = snapshot_copy(fixture, tmp_path_factory.mktemp(f"sentence-{label}"))
         path = tmp_path_factory.mktemp(f"sentence-page-{label}") / "report.html"
         export(str(run), str(path))
         out[label] = f"file://{path}"

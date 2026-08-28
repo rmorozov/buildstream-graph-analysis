@@ -54,6 +54,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -62,6 +63,9 @@ import pytest
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tests"))
+from pages import snapshot_copy    # noqa: E402
 GOLDEN = REPO / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
 MACRO = REPO / "tests" / "fixtures" / "macro_micro" / "run"
 VIEWER = REPO / "bga" / "viewer"
@@ -198,10 +202,7 @@ console.log(JSON.stringify({
 
 def _boot(run_dir, tmp):
     """Export the run, boot the exported page, and report what it holds."""
-    run = tmp / "run"
-    shutil.copytree(run_dir, run)
-    if (run / "expected_output.json").exists():
-        os.remove(run / "expected_output.json")
+    run = snapshot_copy(run_dir, tmp)
 
     import tools.bga_view as view
 

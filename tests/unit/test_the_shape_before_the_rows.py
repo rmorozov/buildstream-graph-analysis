@@ -55,6 +55,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tests"))
+from pages import snapshot_copy    # noqa: E402
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 GOLDEN = REPO / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
@@ -484,10 +486,7 @@ class TestTheRealPagesDrawThem:
         for name, run in (("golden", GOLDEN), ("macro_micro", MACRO)):
             tmp = Path(tempfile.mkdtemp())
             try:
-                target = tmp / "run"
-                shutil.copytree(run, target)
-                if (target / "expected_output.json").exists():
-                    os.remove(target / "expected_output.json")
+                target = snapshot_copy(run, tmp)
 
                 import tools.bga_view as view
 

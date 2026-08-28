@@ -24,7 +24,6 @@ through, open, before any fold; and the export's blast section prints
 the command the pipeline published for this run.
 """
 import re
-import shutil
 import sys
 from pathlib import Path
 
@@ -35,6 +34,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
 from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+from pages import snapshot_copy    # noqa: E402
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 MACRO = REPO / "tests/fixtures/macro_micro/run"
@@ -105,9 +105,7 @@ def pages(tmp_path_factory):
 
     made = {}
     for name, fixture in (("golden", GOLDEN), ("macro_micro", MACRO)):
-        run = tmp_path_factory.mktemp(f"capability-{name}") / "run"
-        shutil.copytree(fixture, run)
-        (run / "expected_output.json").unlink(missing_ok=True)
+        run = snapshot_copy(fixture, tmp_path_factory.mktemp(f"capability-{name}"))
         page = tmp_path_factory.mktemp(f"capability-page-{name}") / "report.html"
         view.export(str(run), str(page))
         # The run directory as well: the published command names the

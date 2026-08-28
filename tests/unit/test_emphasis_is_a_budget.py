@@ -53,6 +53,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from browser import NO_BROWSER, Browser, find_chrome   # noqa: E402
+from pages import snapshot_copy    # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
@@ -290,9 +291,7 @@ def browser():
 def _export(tmp_path_factory, run, name):
     from tools.bga_view import export
 
-    target = tmp_path_factory.mktemp(name) / "run"
-    shutil.copytree(run, target)
-    (target / "expected_output.json").unlink(missing_ok=True)
+    target = snapshot_copy(run, tmp_path_factory.mktemp(name))
     path = tmp_path_factory.mktemp(f"{name}-page") / "report.html"
     export(str(target), str(path))
     return path

@@ -48,6 +48,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tests"))
+from pages import snapshot_copy    # noqa: E402
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 VIEWER = REPO / "bga" / "viewer"
@@ -558,10 +560,7 @@ console.log(JSON.stringify({
 
 
 def _boot(run_dir, tmp, protocol, tail, extra_helpers=""):
-    run = tmp / "run"
-    shutil.copytree(run_dir, run)
-    if (run / "expected_output.json").exists():
-        os.remove(run / "expected_output.json")
+    run = snapshot_copy(run_dir, tmp)
 
     import tools.bga_view as view
 

@@ -104,21 +104,22 @@ def _findings():
         if path.name in DATED:
             continue
         for start, block in _blocks(path.read_text(encoding="utf-8")):
-            text = " ".join(block)
-            if any(marker in text for marker in MARKERS):
-                continue
-            for contract in retired:
-                if contract not in text:
+            for offset, line in enumerate(block):
+                # A **table row** answers for itself; a paragraph
+                # answers as a whole. Found by a mutation that
+                # survived: the architecture's contracts table is one
+                # block of thirty rows, and scoping it as a block let
+                # one row's "never written" license every id in the
+                # table - so dropping the marker from `correlate/v1`'s
+                # own row changed nothing.
+                scope = line if line.lstrip().startswith("|") else " ".join(block)
+                if any(marker in scope for marker in MARKERS):
                     continue
-                # The block decides whether it is a finding; the *line*
-                # is what a reader has to go and change, and a table is
-                # one block of forty rows.
-                for offset, line in enumerate(block):
+                for contract in retired:
                     if contract in line:
                         found.append((path.relative_to(REPO).as_posix(),
                                       start + offset, contract,
                                       line.strip()[:120]))
-                        break
     return found
 
 

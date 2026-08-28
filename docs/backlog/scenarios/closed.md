@@ -353,6 +353,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-341 | [one unit per dimension](UX-0341-one-unit-per-dimension.md) | Medium | — | 🟢 Done — The payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each - and the four contracts that carried the old spellings moved a version. | [UX-341](UX-0341-one-unit-per-dimension.md) |
 | UX-345 | [the chain's length is a duration wearing a count's declaration](UX-0345-the-chains-length-is-a-duration-wearing-a-counts-declaration.md) | High | — | 🟢 Done — one duration published three times, once as a count; the guard found two more | [UX-345](UX-0345-the-chains-length-is-a-duration-wearing-a-counts-declaration.md) |
 | UX-346 | [two thirds of the page is the schema's own sentences](UX-0346-two-thirds-of-the-page-is-the-schemas-own-sentences.md) | High | — | 🟢 Done — the ? door never closed: .description beat [hidden], and 43% of the page was the contract's glossary | [UX-346](UX-0346-two-thirds-of-the-page-is-the-schemas-own-sentences.md) |
+| UX-347 | [the click budget is satisfied by never folding](UX-0347-the-click-budget-is-satisfied-by-never-folding.md) | High | — | 🟢 Done — the click budget was met by never folding: 22.7 screens, zero clicks; chapters fold to a question, an answer and a count | [UX-347](UX-0347-the-click-budget-is-satisfied-by-never-folding.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

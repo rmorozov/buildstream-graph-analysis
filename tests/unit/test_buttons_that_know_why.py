@@ -15,10 +15,18 @@ needs the SQL most.
 """
 import json
 import os
+import pathlib
 import shutil
 import subprocess
+import sys
 
 import pytest
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tests"))
+
+import pages    # noqa: E402
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -62,11 +70,17 @@ class TestTheContextTravels:
         out = _node(
             'const t = await import("./bga/viewer/trace_context.js");'
             'console.log(JSON.stringify(t.investigationFor({'
-            '  id: "time-concentration",'
+            '  id: "latent-heavies",'
             '  title: "Where the time is: 4 elements are 71.9%",'
-            '  provenance: { trace_query: "element-time" },'
+            # `UX-368`: `trace_query` on the finding, which is where
+            # the payload publishes it. This read
+            # `provenance.trace_query` - a nested shape `UX-344`
+            # removed from the finding four rounds ago, so the clause
+            # passed over an object the pipeline had stopped writing
+            # while every button in the report was dead.
+            '  trace_query: "element-commands",'
             '  elements: ["core.bst", "lib-b.bst"] })));')
-        assert out["queryId"] == "element-time"
+        assert out["queryId"] == "element-commands"
         assert out["element"] == "core.bst"
         # The title is what Perfetto shows in its tab, so it carries the
         # reason rather than the file name.
@@ -81,10 +95,10 @@ class TestTheContextTravels:
             'const t = await import("./bga/viewer/trace_context.js");'
             'const q = await import("./bga/viewer/questions.js");'
             'const ctx = t.investigationFor({ id: "criticality",'
-            '  provenance: { trace_query: "dependency-wait" },'
+            '  trace_query: "dependency-wait",'
             '  title: "The chain", elements: ["core.bst"] });'
             'console.log(JSON.stringify({ ctx,'
-            '  entry: q.renderedSql({ ...q.byId(ctx.queryId), example: "core.bst" }) }));')
+            '  entry: q.renderedSql(q.byId(ctx.queryId), "core.bst") }));')
         assert out["ctx"]["sql"] == out["entry"]
 
     def test_the_element_is_substituted_not_appended(self):
@@ -107,7 +121,7 @@ class TestTheContextTravels:
             'const t = await import("./bga/viewer/trace_context.js");'
             'console.log(JSON.stringify({ v: t.investigationFor({'
             '  id: "confidence", title: "Confidence: 0.97",'
-            '  provenance: { trace_query: null }, elements: [] }) }));')
+            '  trace_query: null, elements: [] }) }));')
         assert out["v"] is None
 
     def test_a_context_naming_a_query_that_does_not_exist_is_refused(self):
@@ -155,6 +169,83 @@ class TestTheLibraryAndTheFindingsAgree:
             assert by_category[category] > 0, f"{category} has no questions"
 
 
+class TestTheShapeIsThePayloadsShape:
+    """`UX-368`: the clause whose absence let the button die quietly.
+
+    Every clause above builds its own finding object. That is fine for
+    a pure function and useless as a check that the object matches what
+    the pipeline writes - which is exactly how `queryFor` came to read
+    `finding.provenance.trace_query` for four rounds after `UX-344`
+    moved the records out of the findings. Measured on
+    `tests/fixtures/with_timeline`, the one committed capture whose
+    handoff works: four findings should have earned a button and
+    **zero** were drawn, with every guard in this file green.
+
+    So: the key is read off a real report, and the constructed findings
+    above are held to the same spelling.
+    """
+
+    @staticmethod
+    def _findings(fixture):
+        from tools.bga_view import payloads
+
+        return payloads(str(fixture))["report.json"]["findings"]
+
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+    def test_the_pipeline_publishes_the_key_the_page_reads(self, label):
+        published = self._findings(pages.FIXTURES[label])
+        assert published, label
+        missing = [f["id"] for f in published if "trace_query" not in f]
+        assert missing == [], (
+            f"{label}: finding(s) with no `trace_query` key at all: "
+            f"{missing}. The page's `queryFor` reads that key; a finding "
+            f"without it gets no button and says nothing about why")
+
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+    def test_the_mapping_reaches_the_finding_not_only_the_record(
+            self, label):
+        """The join, closed. `provenance[].trace_query` carried this
+        for four rounds and no consumer of the *finding* could see it."""
+        from bga.provenance import TRACE_QUERIES
+
+        published = self._findings(pages.FIXTURES[label])
+        wrong = [(f["id"], f.get("trace_query"))
+                 for f in published
+                 if f.get("trace_query") != TRACE_QUERIES.get(f["id"])]
+        assert wrong == [], (
+            f"{label}: finding(s) disagreeing with the published table: "
+            f"{wrong}")
+        carried = [f["id"] for f in published if f.get("trace_query")]
+        assert carried, (
+            f"{label}: not one finding carries a query - which is the "
+            f"state this item was filed for")
+
+    @needs_node
+    def test_this_file_constructs_the_shape_the_pipeline_writes(self):
+        """The other direction, and the one that would have caught it.
+        A finding built in a test harness has to be a finding the
+        pipeline could have produced."""
+        # Split so this clause does not match itself, and so does the
+        # negative probe below - the first draft of both failed on
+        # their own source, which is the cheapest possible version of
+        # an instrument measuring the wrong thing.
+        dead = "provenance: { trace_" + "query"
+        source = pathlib.Path(__file__).read_text(encoding="utf-8")
+        assert dead not in source, (
+            "a clause in this file still builds the nested shape "
+            "`UX-344` removed; it would pass over an object the "
+            "pipeline has not written since")
+        out = _node(
+            'const t = await import("./bga/viewer/trace_context.js");'
+            "console.log(JSON.stringify({"
+            '  nested: t.queryFor({ ' + dead + ': "stalls" } }),'
+            '  flat: t.queryFor({ trace_query: "stalls" }) }));')
+        assert out["flat"] == "stalls"
+        assert out["nested"] is None, (
+            "the page still reads the nested shape, so a payload written "
+            "either way passes and the two can drift again")
+
+
 @needs_node
 class TestTheButtonsInThePage:
     """Driven through `renderFindings` under a DOM shim - the wiring is
@@ -166,7 +257,7 @@ class TestTheButtonsInThePage:
     def test_a_finding_gets_a_button_carrying_its_query(self):
         out = self._render()
         button = [b for b in out["buttons"]
-                  if b["queryId"] == "element-time"]
+                  if b["queryId"] == "element-commands"]
         assert button, out["buttons"]
         assert button[0]["element"] == "core.bst"
 
@@ -208,17 +299,15 @@ const fn = (context) => { handedOff.push(context); return Promise.resolve({bytes
 const investigate = __INVESTIGATE__;
 
 const findings = [
-  { id: "time-concentration", severity: "high",
+  { id: "latent-heavies", severity: "high",
     title: "Where the time is: 4 elements are 71.9% of the path",
     detail: [], elements: ["core.bst", "lib-b.bst"],
-    provenance: { claim: "time-concentration", kind: "finding",
-                  trace_query: "element-time", evidence: [],
-                  rule: { comparison: "present", sentence: "because." } } },
+    // `UX-368`: the finding's own key, which is what the pipeline
+    // publishes. The nested `provenance.trace_query` this used to
+    // carry was removed from the finding by `UX-344`.
+    trace_query: "element-commands" },
   { id: "confidence", severity: "info", title: "Confidence: 0.97",
-    detail: [], elements: [],
-    provenance: { claim: "confidence", kind: "finding", trace_query: null,
-                  evidence: [],
-                  rule: { comparison: "banded", sentence: "banded." } } },
+    detail: [], elements: [], trace_query: null },
 ];
 const section = app.renderFindings(findings, investigate);
 

@@ -2565,6 +2565,32 @@ _ANALYZE_HINTS = {
                                    "wording it - a pasted finding and "
                                    "the CI comment cannot then say the "
                                    "same thing differently."},
+                # `UX-368`: the query that shows this finding in the
+                # timeline, by id into `questions.js`'s library.
+                #
+                # Published on the finding rather than left one join
+                # away. `UX-229` put the mapping on the provenance
+                # record; `UX-344` moved the records out of the
+                # findings into one list - and `trace_context.js` went
+                # on reading `finding.provenance.trace_query`, a path
+                # the payload had stopped having. Measured on
+                # `tests/fixtures/with_timeline`, whose handoff works:
+                # four findings earn an Investigate button and **zero**
+                # were drawn. A field a consumer has to join two lists
+                # to reach is a field the consumer stops reaching.
+                #
+                # Null where no query answers this finding, which is
+                # `UX-321`'s rule: the absence is published, not left
+                # to be inferred from an empty control.
+                "trace_query": {
+                    "type": ["string", "null"],
+                    "description": "The `questions.js` query id that "
+                                   "shows this finding in the "
+                                   "timeline, or null where none "
+                                   "does. The same mapping "
+                                   "`provenance[].trace_query` "
+                                   "carries, on the object a reader "
+                                   "is looking at."},
             },
             "required": ["id", "severity", "title"],
         },

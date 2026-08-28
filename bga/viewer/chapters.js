@@ -88,7 +88,9 @@ export const CHAPTERS = [
     // questions to ask the timeline once you leave this page.
     // `UX-285` put the blast control next to `findings`; a chapter
     // boundary is where that belongs, one heading below it.
-    sections: ["resource_blast", "blast", "blast-offline", "blast-tree",
+    // `UX-348`: `blast-offline` is gone - the export draws the same
+    // `blast` section, with the command instead of the search box.
+    sections: ["resource_blast", "blast", "blast-tree",
                "whatif", "perfetto-questions"],
     // The widest change this graph can absorb, from `elements.blast_radius`
     // - the population the chapter's own first table ranks.

@@ -61,6 +61,19 @@ export const QUESTIONS = [
     category: "execution",
     plane: "Plane 1",
     title: "Where did the time actually go, per element?",
+    // `UX-348`: what this query *answers with*. Declared rather than
+    // illustrated: a sample result would be numbers from some other
+    // run pasted into this one, and the thing a reader cannot guess
+    // from SQL they have not run is which columns come back and what
+    // each one holds.
+    returns: [
+      ["element", "the element uid - the same string this report "
+                  + "prints, because both planes tag their slices with it"],
+      ["spans", "how many slices that element has on the timeline: one "
+                + "per task it ran"],
+      ["seconds", "their total duration, which is the figure the "
+                  + "attribution table above is made of"],
+    ],
     why:
       "Plane 1's element spans, aggregated - scoped to the element " +
       "plane, so Plane 2 command names cannot crowd the answer. The " +
@@ -382,17 +395,50 @@ export function copyButton(make, text, deps = {}, noun = "query") {
 
 /** Render the questions as a page section. Used by the export and by
  *  `sql.html`, so the two cannot drift. */
-export function renderQuestions(make) {
+/** `UX-348`: the query the section is worked through, before the
+ *  library. Chosen because its answer is the figure the report's own
+ *  attribution table is made of, so a reader can check the page against
+ *  the timeline with one paste. */
+export const WORKED_EXAMPLE = "element-time";
+
+/**
+ * `UX-348`: the handoff, and one query worked through.
+ *
+ * Measured on the exported report when this was filed: 216 px, four
+ * `details` holding thirteen queries, **none of them open**, under one
+ * paragraph of instructions - the smallest section in its chapter, for
+ * the capability the tool is most distinguished by. Nothing on the page
+ * showed what a query *returns*, which is the one thing a reader cannot
+ * get from SQL they have not run yet.
+ *
+ * So the section leads with what the handoff is, then one query in
+ * full - its sentence, its SQL, a copy button, and the columns that
+ * come back - and only then the library. The four category folds stay
+ * closed: they are the library, not the pitch.
+ *
+ * The example's answer is *declared*, never illustrated. A sample
+ * result would be some other run's numbers pasted into this one, which
+ * is the shape of lie this repository spends most of its guards on.
+ */
+export function renderQuestions(make, options = {}) {
   const section = make("section", { "data-section": "perfetto-questions",
                                     id: "perfetto-questions" });
   section.append(make("h2", {}, "Questions worth asking in Perfetto"));
   const intro = make("p", { class: "muted" });
   intro.textContent =
-    "Load this run's timeline into ui.perfetto.dev, open Query (SQL), "
-    + "and paste one of these. Slices are what you query: Plane 1's "
-    + "element spans and Plane 2's process lanes are different tracks "
-    + "in the same trace.";
+    "Both planes of this run land in one trace: Plane 1's element spans "
+    + "and Plane 2's process lanes, on one clock, joined by the element "
+    + "uid this report prints. "
+    + (options.hasTimeline
+        ? "Open it with \u201cOpen timeline in Perfetto\u201d at the top "
+          + "of this page, then Query (SQL), and paste one of these."
+        : "This snapshot carries no build log, so there is no timeline "
+          + "to open here - a capture made with `bga capture` records "
+          + "one, and `bga timeline` writes the trace. The queries "
+          + "below are what to ask it.");
   section.append(intro);
+  const worked = byId(WORKED_EXAMPLE);
+  if (worked) section.append(workedExample(worked, make));
   for (const category of CATEGORIES) {
     const entries = inCategory(category);
     if (!entries.length) continue;
@@ -425,6 +471,47 @@ export function renderQuestions(make) {
     }
   }
   return section;
+}
+
+/**
+ * `UX-348`: one question, open, with the shape of its answer.
+ *
+ * Not a `details`: the acceptance is that a reader meets a worked
+ * example *before* any fold, and a fold that happens to be open is one
+ * click from being the closed thing this item was filed about.
+ */
+function workedExample(question, make) {
+  const box = make("div", { class: "worked-example",
+                            "data-worked": question.id });
+  box.append(make("p", { class: "worked-lead" },
+                  "One of them, worked through:"));
+  const heading = make("h3", {});
+  heading.setAttribute("data-query-id", question.id);
+  heading.textContent = question.title;
+  const why = make("p", { class: "muted" });
+  why.textContent = question.why;
+  const block = make("pre", {});
+  const code = make("code", {});
+  code.textContent = renderedSql(question);
+  block.append(code);
+  box.append(heading, why, block,
+             copyButton(make, renderedSql(question)));
+  const returns = question.returns ?? [];
+  if (returns.length) {
+    box.append(make("p", { class: "muted" },
+                    `What comes back: ${returns.length} columns, one row `
+                    + "per element."));
+    const list = make("dl", { class: "pairs", "data-role": "answer-shape" });
+    for (const [column, sentence] of returns) {
+      const term = make("dt", {});
+      term.textContent = column;
+      const value = make("dd", { class: "muted" });
+      value.textContent = sentence;
+      list.append(term, value);
+    }
+    box.append(list);
+  }
+  return box;
 }
 
 /** The query as the page shows it: the example element filled in, so a

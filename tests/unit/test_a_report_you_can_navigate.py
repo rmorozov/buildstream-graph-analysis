@@ -217,16 +217,25 @@ class TestTheExportKeepsItsFunctionality:
     def test_the_export_does_not_ship_a_search_box_that_cannot_work(
             self, exported, tmp_path):
         out = _boot(exported, tmp_path)
-        keys = [s["key"] for s in out["sections"]]
-        assert "blast" not in keys, (
-            "a control whose fetch can never succeed from file://")
-        assert "blast-offline" in keys, "and nothing says what to run instead"
+        blast = [s for s in out["sections"] if s["key"] == "blast"]
+        # `UX-348`: what may not ship is the box, not the section. The
+        # export draws `blast` with the command the pipeline published
+        # for this run where the search box would be - dropping the
+        # section left the reader with nothing to run instead.
+        assert blast, "the export draws no blast section at all"
+        assert blast[0]["inputs"] == 0, (
+            f"the export ships {blast[0]['inputs']} control(s) whose fetch "
+            f"can never succeed from file://")
 
     @needs_node
     def test_the_served_page_keeps_both(self, exported, tmp_path):
         out = _boot(exported, tmp_path, protocol="http:")
         keys = [s["key"] for s in out["sections"]]
         assert "blast" in keys, keys
+        served = next(s for s in out["sections"] if s["key"] == "blast")
+        assert served["inputs"] >= 1, (
+            "served, the section is the search box - both shapes drawing "
+            "the same thing would make the guard above vacuous")
         assert "perfetto-questions" not in keys, (
             "served, the questions have their own page to link to")
 
@@ -327,11 +336,28 @@ const report = named["report"] ?? make("div");
 // State *before* any interaction - "sections start open" is a
 // claim about what the reader first sees.
 const sections = [];
+// UX-348: a section can be present and still carry no live control, so
+// the probe reports the controls as well as the key - "does the export
+// ship a search box" is a question about the form, not the section.
+const liveControls = (n) => {
+  let found = 0;
+  (function count(node) {
+    for (const c of node.children ?? []) {
+      const role = c.attrs["data-role"] ?? "";
+      const tag = String(c.tagName ?? "").toLowerCase();
+      if (tag === "input" || tag === "form" || role.endsWith("-form")
+          || role.endsWith("-input")) found += 1;
+      count(c);
+    }
+  })(n);
+  return found;
+};
 (function walk(n) {
   for (const c of n.children ?? []) {
     if (c.attrs["data-section"]) {
       sections.push({ key: c.attrs["data-section"], id: c.attrs.id ?? null,
-                      collapsed: c.attrs["data-collapsed"] ?? null });
+                      collapsed: c.attrs["data-collapsed"] ?? null,
+                      inputs: liveControls(c) });
     }
     walk(c);
   }

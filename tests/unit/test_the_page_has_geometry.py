@@ -358,7 +358,7 @@ class TestTheDocumentEndsWithItsIdentity:
       // is part of the group nothing may be drawn below.
       for (const key of ["summary", "run_instance", "producer",
                          "document_shape", "findings",
-                         "headline", "next_steps", "blast-offline"])
+                         "headline", "next_steps", "blast"])
         out[key] = box(key);
       // Everything below the identity group, by pixel rather than by
       // DOM order - the two agree on a page laid out in one column,
@@ -430,8 +430,8 @@ class TestTheDocumentEndsWithItsIdentity:
     def test_the_blast_control_is_above_the_midpoint(self, browser, report,
                                                      width, height):
         out = browser.measure(report, self._WHERE, width, height)
-        assert out["blast-offline"], "the export drew no blast block"
-        at = out["blast-offline"]["top"] / out["total"]
+        assert out["blast"], "the export drew no blast block"
+        at = out["blast"]["top"] / out["total"]
         assert at < 0.5, (
             f"the blast block sits at {100 * at:.0f}% of the document at "
             f"{width}x{height}")
@@ -461,7 +461,7 @@ class TestTheDocumentEndsWithItsIdentity:
         ```
         """
         out = browser.measure(report, self._WHERE, width, height)
-        gap = (out["blast-offline"]["top"] - out["findings"]["bottom"]) / out["vh"]
+        gap = (out["blast"]["top"] - out["findings"]["bottom"]) / out["vh"]
         assert gap <= 2.0, (
             f"{gap:.2f} screens between the end of the findings and the "
             f"blast block at {width}x{height}")
@@ -476,7 +476,7 @@ class TestTheDocumentEndsWithItsIdentity:
         `bga blast` as the command to run. A block inserted between them
         widens this gap beyond what those two occupy, at any width."""
         out = browser.measure(report, self._WHERE, width, height)
-        gap = out["blast-offline"]["top"] - out["findings"]["bottom"]
+        gap = out["blast"]["top"] - out["findings"]["bottom"]
         narrative = out["headline"]["bottom"] - out["headline"]["top"] \
             + out["next_steps"]["bottom"] - out["next_steps"]["top"]
         # A quarter-screen of slack for the margins between four blocks;

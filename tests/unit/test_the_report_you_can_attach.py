@@ -281,7 +281,23 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # through, and the CSS for all of it. Both companion guards stayed
 # silent - every byte is a checked-in module, and none of it resembles
 # a vendored library.
-PAGE_BUDGET_B = 240_000
+#
+# Round 53 moved both sides, and in opposite directions:
+#
+#                       UX-347    UX-344    UX-348
+#     page             236,271   236,271   239,610   (+0, +3,339)
+#     data (golden)     89,148    85,387    85,387   (-3,761, +0)
+#     golden           325,419   321,658   324,997
+#     macro_micro      342,553   338,285   342,498
+#
+# `UX-344` is payload rather than page: lifting the two namespaces and
+# publishing `provenance` once took 3,761 B off the golden run's data,
+# and not a byte off the modules. `UX-348` is the other way round - the
+# worked Perfetto example, its declared answer shape, and the offline
+# blast section that spells the published command are all page, and
+# both companion guards stayed silent: every byte is a checked-in
+# module and none of it resembles a vendored library.
+PAGE_BUDGET_B = 248_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -738,11 +754,19 @@ class TestTheSizeDiscipline:
         code = len(page)
         contract = len(schemas)
         run_data = len(html) - code - contract
-        assert run_data > 2.9 * code, (
+        # `UX-348`: 2.8, measured at 685,355 B against 239,610 B of
+        # code - 2.860x. The page grew 3,339 B for the worked Perfetto
+        # example and the blast command an export can run; the run's
+        # data did not move, because a linear chain of a thousand
+        # elements publishes the same measurements either way. The
+        # claim the bound carries is "the data dwarfs the page", and
+        # 2.86x is what that looks like at this scale.
+        assert run_data > 2.8 * code, (
             f"{run_data} B of this run's data against {code} B of viewer "
             f"code ({run_data / code:.3f}x) - Direction 7's rule is that "
             f"the data is what an export weighs, and at this scale it "
-            f"should not be close. The embedded contract is {contract} B, "
+            f"should not be close (the bound is 2.8x). The embedded "
+            f"contract is {contract} B, "
             f"which this ratio deliberately does not count: it is prose, "
             f"and it grows when the schema says more")
 

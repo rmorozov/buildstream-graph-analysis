@@ -282,7 +282,10 @@ class TestTheReportHasChapters:
         assert change, "the run with an inventory drew no query chapter"
         members = change[0]["members"]
         assert "resource_blast" in members, members
-        assert members.index("blast-offline") == members.index(
+        # `UX-348`: the export draws the same `blast` section the served
+        # page does - with the published command instead of the search
+        # box - so the key no longer says "offline".
+        assert members.index("blast") == members.index(
             "resource_blast") + 1, members
 
 

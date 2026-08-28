@@ -228,10 +228,17 @@ console.log(JSON.stringify({
 _VIEWSTATE = """
 const app = await import("./tests/viewer.mjs");
 const vs = await import("./bga/viewer/viewstate.js");
+// `UX-349`: the filter row appears above the row cap, so a table with
+// three rows has no box to type into. The three named rows are the
+// ones the assertions below are about; the padding is what earns them
+// a filter, and it is padding rather than a longer fixture because
+// what is under test is the *fragment*, not the rows.
 const rows = [
   { element_uid: "openssl.bst", duration_us: 900000 },
   { element_uid: "openssl-docs.bst", duration_us: 400000 },
   { element_uid: "zlib.bst", duration_us: 100000 },
+  ...Array.from({ length: 45 }, (_, i) => (
+    { element_uid: `padding-${i}.bst`, duration_us: 1000 + i })),
 ];
 const hint = { "bga:columns": [
   { key: "element_uid", title: "Element", role: "element" },
@@ -294,8 +301,12 @@ console.log(JSON.stringify({
 _LINK = """
 const app = await import("./tests/viewer.mjs");
 const vs = await import("./bga/viewer/viewstate.js");
+// Padded past the row cap for `UX-349`'s reason: the filter row is
+// what this measures, and it appears on tables long enough to want one.
 const rows = [{ element_uid: "openssl.bst", duration_us: 900000 },
-              { element_uid: "zlib.bst", duration_us: 100000 }];
+              { element_uid: "zlib.bst", duration_us: 100000 },
+              ...Array.from({ length: 45 }, (_, i) => (
+                { element_uid: `padding-${i}.bst`, duration_us: 1000 + i }))];
 const hint = { "bga:columns": [
   { key: "element_uid", title: "Element" },
   { key: "duration_us", title: "Duration", quantity: "duration_us" } ] };

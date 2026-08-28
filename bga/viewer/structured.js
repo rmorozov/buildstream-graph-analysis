@@ -22,8 +22,8 @@ import { identify, labelFor } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
 // there.
-import { sparkline, strip, columnStrip, GRADE_ANNOTATION, GRADE_EXHIBIT }
-  from "./drawings.js";
+import { sparkline, strip, columnStrip, SERIES_MIN_POINTS,
+         GRADE_ANNOTATION, GRADE_EXHIBIT } from "./drawings.js";
 // UX-302: the style guide's §1 dispatch table, which decides *which*
 // control draws a structured value. The controls live here; the choice
 // between them lives there, so that "raw JSON unless deliberate" is a
@@ -528,8 +528,54 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   // chain's middle and `UX-196` taught the drawing to; this is the
   // third surface, folded by the same two numbers.
   if (options.fold) foldTheMiddle(table, rows.length, options.fold);
+  const uniform = statedOnce(table, specs, rows.length);
   const tools = interrogable(table, specs, rows.length, depth);
+  if (uniform) tools.prepend?.(uniform);
   return { table, tools };
+}
+
+/**
+ * `UX-349`: a column that never varies is a **fact about the table**.
+ *
+ * Measured when this was filed: fourteen columns across the signals
+ * tables had exactly one distinct value over more than three rows. On
+ * the eleven-row element table that is `false` printed eleven times
+ * under `Is leaf`, spending a sixth of the width to repeat itself.
+ *
+ * So it is said once, above the table, and the column goes. Where the
+ * value is *not* uniform nothing changes - this only ever removes a
+ * column whose every cell was the same.
+ *
+ * **Three rows is the floor**, and it is `UX-226`'s: two rows that
+ * happen to agree are a coincidence, not a fact about a population.
+ * The rows stay in the document either way; it is the *column* that
+ * goes, so `Copy 12 rows` and Ctrl-F still see what the payload had.
+ */
+function statedOnce(table, specs, total) {
+  if (total <= SERIES_MIN_POINTS) return null;
+  const said = [];
+  for (const spec of specs) {
+    if (!spec || spec.role === "element" || spec.key === elementColumn(specs)) {
+      continue;
+    }
+    const cells = [...table.querySelectorAll(
+      `td[data-column="${spec.key}"]`)];
+    if (cells.length !== total) continue;
+    const shown = cells.map((td) => td.textContent);
+    if (new Set(shown).size !== 1) continue;
+    said.push([spec.title ?? title(spec.key, spec.quantity), shown[0]]);
+    for (const cell of cells) cell.remove?.();
+    const head = [...table.querySelectorAll("th")].find(
+      (th) => th.getAttribute("data-column") === spec.key);
+    head?.remove?.();
+  }
+  if (!said.length) return null;
+  const note = el("p", { class: "muted uniform-columns",
+                         "data-role": "uniform-columns",
+                         "data-columns": String(said.length) });
+  note.textContent = `All ${total.toLocaleString("en-US")} rows: `
+    + said.map(([name, value]) => `${name} ${value}`).join(", ") + ".";
+  return note;
 }
 
 /**
@@ -597,19 +643,45 @@ export function interrogable(table, specs, total, depth = 0) {
     badge.textContent = badgeText(applyFilters(table, state), total);
   };
 
-  const box = el("input", {
+  // `UX-349`: **filters appear when the table is long enough to need
+  // them.** The bound is the row cap §3 already sets - below it the
+  // reader scans, at or above it the tools appear - and it is the same
+  // number that decides whether a table opens bounded, because it is
+  // the same question: is this a table somebody reads to the end.
+  //
+  // Measured before this: 12 of golden's 13 tables and 21 of
+  // `macro_micro`'s 22 carried a filter row, and every one of them was
+  // short enough to read at a glance. On the eleven-row element table
+  // that was five inputs above eleven rows.
+  const worthFiltering = total > TABLE_OPENS_BOUNDED_ABOVE;
+  const box = worthFiltering ? el("input", {
     type: "search", class: "table-filter",
     placeholder: "filter rows…",
     "aria-label": "filter rows",
-  });
-  identify(box, `filter-${key}`);
-  box.addEventListener("input", () => { state.text = box.value; refresh(); });
+  }) : null;
+  if (box) {
+    identify(box, `filter-${key}`);
+    box.addEventListener("input", () => { state.text = box.value; refresh(); });
+  }
 
   // A threshold per quantity column, in the header, where the column
   // says what unit it is in.
   table.querySelectorAll("th").forEach((th, index) => {
     const spec = specs[index];
-    if (!spec || !spec.quantity) return;
+    if (!worthFiltering || !spec || !spec.quantity) return;
+    // `UX-349`: and only where the column holds numbers. `> 10` under a
+    // boolean was the tell - a column whose quantity was *guessed*
+    // `count` by the fallback in `columnSpecs`, never declared, and
+    // then given a numeric threshold box. Read off the rendered cells
+    // rather than off the guess, which is where the truth is.
+    // A column key is a schema identifier, so it needs no escaping -
+    // the same reading `distributionStrip` makes two hundred lines
+    // down, and `CSS.escape` is a browser global the guards' shim does
+    // not have.
+    const numeric = [...table.querySelectorAll(
+      `td[data-column="${spec.key}"]`)]
+      .some((td) => Number.isFinite(Number(td.getAttribute("data-raw"))));
+    if (!numeric) return;
     const input = el("input", {
       type: "text", class: "th-filter", "data-column": spec.key,
       placeholder: PLACEHOLDER[spec.quantity] ?? "> 0",

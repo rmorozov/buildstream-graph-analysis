@@ -163,6 +163,20 @@ export function applyView(root, query, { dispatch } = {}) {
   for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
     const key = table.getAttribute("data-table");
     const tools = table.parentNode?.querySelector?.(".table-tools");
+    // `UX-349`: the Top-N select before the filter, for the reason
+    // `UX-289` gives the view select above - it rewrites the rows the
+    // filter is about, and firing it afterwards left the badge saying
+    // `25 of 48` on a page whose filter had matched two. Unreachable
+    // until this round: it needs a table with **both**, and the filter
+    // row used to appear at every length while the preset appears past
+    // the row cap, so no table on either fixture had one.
+    const preset = params.get(`n.${key}`);
+    const select = tools?.querySelector?.("select.top-n");
+    if (preset && select) {
+      select.value = preset;
+      fire(select, "change");
+      applied.push(`n:${key}`);
+    }
     const filter = params.get(`f.${key}`);
     const box = tools?.querySelector?.("input.table-filter");
     if (filter && box) { box.value = filter; fire(box, "input"); applied.push(`f:${key}`); }
@@ -182,13 +196,6 @@ export function applyView(root, query, { dispatch } = {}) {
         if (th.getAttribute("aria-sort") !== direction) fire(th, "click");
         applied.push(`s:${key}`);
       }
-    }
-    const preset = params.get(`n.${key}`);
-    const select = tools?.querySelector?.("select.top-n");
-    if (preset && select) {
-      select.value = preset;
-      fire(select, "change");
-      applied.push(`n:${key}`);
     }
   }
 

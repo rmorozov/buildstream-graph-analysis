@@ -142,6 +142,32 @@ VERDICT_MARKERS = {
     "within_observed_range": "circle-open",
     "not_comparable": "diamond",
 }
+# UX-346: **where a value's sentence lives.** `UX-220` gave every
+# declared quantity a sentence and `UX-201` sourced it from here, so it
+# cannot drift from the payload. What was never decided is where it
+# goes, and the page's answer was "beside the value, always": measured
+# on a real boot, 1,479 of the golden page's 3,466 words (43%) and
+# 2,312 of macro_micro's 6,283 (37%) were prose identical on every run,
+# printed beside a `?` door offering the same sentence again.
+#
+# The default is now the door. Two classes keep the sentence inline,
+# and both are declared here rather than decided per call site, so the
+# page cannot drift back:
+#
+#   `"name"`   - the label invites a reading the value does not have
+#                (`useful_share` is a share of *capacity*), or invites
+#                none at all (`t_infinity_observed`). The sentence is
+#                what makes the number readable, not what enriches it.
+#   `"caveat"` - reading the number without the sentence changes what
+#                a reader would *do*: a recommendation that is a
+#                hypothesis rather than a setting, a `false` that means
+#                "not measured" rather than "no", a non-zero that
+#                weakens every figure beside it.
+#
+# Anything else is a description, and a description is one click away.
+INLINE = "bga:inline"
+INLINE_REASONS = ("name", "caveat")
+
 SEVERITY = "bga:severity"          # this array carries findings
 COLUMNS = "bga:columns"            # column order for an array of objects
 DIRECTION = "bga:direction"        # what the sign of a delta means
@@ -1044,6 +1070,7 @@ _JOIN_ITEM_PROPERTIES = {
         QUANTITY: "count",
         "description": "How many elements a change here rebuilds."},
     "cores_busy": {
+        INLINE: "name",
         QUANTITY: "ratio",
         "description": "CPU-seconds per wall-second inside the "
                        "sandbox: 1.0 is one core saturated, 4.0 is "
@@ -1188,8 +1215,28 @@ _EVIDENCE_FIELDS = {
         "Wall-clock actually measured, as opposed to estimated."),
 }
 
+# `UX-346`: the evidence keys whose sentence stays beside the number,
+# by the same two rules the schema nodes use - a label that invites the
+# wrong reading, or a caveat that changes what a reader would do. A
+# finding is the one place on the page a reader acts from, so a denial
+# printed one click away is a denial nobody meets.
+_EVIDENCE_INLINE = {
+    "share_of_path": "name",             # not of wall-clock
+    "share_of_host": "name",             # not of what the build asked for
+    "path_us": "name",                   # the chain, not the wall-clock
+    "criticality_probability": "name",   # not a certainty
+    "sum_of_individual_us": "caveat",    # double-counts the overlap
+}
+# `certified_headroom_us` was a sixth candidate and is deliberately not
+# here: `decision.certified_headroom_us` carries a different sentence
+# for the same name - "repeated here from `floors`" rather than a
+# caveat - and a name that renders inline in one block and behind a
+# door in another is the drift `UX-341` forbids under a new heading.
+# One name, one treatment, or neither.
+
 EVIDENCE_QUANTITIES = {
-    key: {QUANTITY: quantity, "description": sentence}
+    key: ({QUANTITY: quantity, "description": sentence}
+          | ({INLINE: _EVIDENCE_INLINE[key]} if key in _EVIDENCE_INLINE else {}))
     for key, (quantity, sentence) in _EVIDENCE_FIELDS.items()
 }
 
@@ -1210,7 +1257,7 @@ EVIDENCE_QUANTITIES.update({
     # share went with it, because after the rename nothing emitted a
     # finding key called `change` at all.
     "builders_change": {
-        QUANTITY: "count", DIRECTION: "higher_is_better",
+        QUANTITY: "count", DIRECTION: "higher_is_better", INLINE: "name",
         "description": "`recommended_builders` minus `builders`, signed - "
                        "negative means the run asked for more than something "
                        "can serve."},
@@ -1241,6 +1288,7 @@ EVIDENCE_QUANTITIES.update({
             QUANTITY: "duration_us",
             "description": "What removing it would take off the makespan."},
         "share_of_path": {
+            INLINE: "name",
             QUANTITY: "share",
             "description": "How much of the chain this row's element accounts for."},
     }}},
@@ -1309,6 +1357,7 @@ _ANALYZE_HINTS = {
         QUESTION: 'Which capture is this?', RAIL: 'raw',
         "properties": {
             "started_at_us": {
+                INLINE: "name",
                 QUANTITY: "duration_us",
                 "description": "When the capture began, as microseconds "
                                "since the epoch. A point in time rather "
@@ -1335,6 +1384,7 @@ _ANALYZE_HINTS = {
                        "and it is the only one worth acting on.",
         "properties": {
             "builders": {
+                INLINE: "name",
                 QUANTITY: "count",
                 "description": "The builder count this run was given - what "
                                "everything below is measured at."},
@@ -1345,6 +1395,7 @@ _ANALYZE_HINTS = {
                                "the log did not record it, which is a "
                                "different claim from 1."},
             "host_cpu_count": {
+                INLINE: "name",
                 QUANTITY: "count",
                 "description": "Cores the host reported. The ceiling the "
                                "CPU constraint is computed against, and "
@@ -1352,6 +1403,7 @@ _ANALYZE_HINTS = {
                                "machine rather than about the graph "
                                "alone."},
             "cores_busy": {
+                INLINE: "name",
                 QUANTITY: "ratio",
                 "description": "Cores drawn on average across the whole "
                                "run, from Plane 2 - CPU-seconds per "
@@ -1384,6 +1436,7 @@ _ANALYZE_HINTS = {
                                "at 5 on a host already 85% drawn is not "
                                "'raise builders to 5'."},
             "recommended_builders": {
+                INLINE: "caveat",
                 QUANTITY: "count",
                 "description": "What the binding constraint allows. A "
                                "hypothesis to time, not a setting to "
@@ -1418,15 +1471,18 @@ _ANALYZE_HINTS = {
                        "that did not run is inert, not passing.",
         "properties": {
             "oversubscribed": {
+                INLINE: "caveat",
                 "description": "Whether the run asked for more parallelism "
                                "than the host could serve. False also when "
                                "the checks did not run - read `checks_ran` "
                                "before reading this."},
             "undersubscribed": {
+                INLINE: "caveat",
                 "description": "Whether the host could have served more "
                                "parallelism than the run asked for. Carries "
                                "the same caveat as `oversubscribed`."},
             "checks_ran": {
+                INLINE: "caveat",
                 "description": "Whether the inputs these checks need were "
                                "present. When false the two verdicts above "
                                "are silent, not negative."},
@@ -1676,6 +1732,7 @@ _ANALYZE_HINTS = {
                     # `UX-343`: the record's own scalars, beside the
                     # nested element table that was already declared.
                     "builders": {
+                        INLINE: "name",
                         QUANTITY: "count",
                         "description": "The builder count this risk was "
                                        "measured at."},
@@ -1744,6 +1801,7 @@ _ANALYZE_HINTS = {
                 "description": "Where it ends. Beyond it nothing was "
                                "scheduled, so nothing is counted."},
             "horizon_us": {
+                INLINE: "name",
                 QUANTITY: "duration_us",
                 "description": "The span the ratios below divide by - the "
                                "scheduled window, which can be shorter "
@@ -1958,6 +2016,7 @@ _ANALYZE_HINTS = {
                                "ignoring duration. The graph's shape "
                                "rather than this run's timings."},
             "wall_clock_share_us": {
+                INLINE: "name",
                 QUANTITY: "duration_us",
                 "additionalProperties": {
                     QUANTITY: "duration_us",
@@ -2175,6 +2234,7 @@ _ANALYZE_HINTS = {
                        "graph or the work to change, not the scheduler.",
         "properties": {
             "t_infinity_observed": {
+                INLINE: "name",
                 QUANTITY: "duration_us",
                 "description": "The critical path's duration - the floor "
                                "the graph's shape imposes on its own, with "
@@ -2216,6 +2276,7 @@ _ANALYZE_HINTS = {
                                "available. Unlike the efficiency score it "
                                "falls when independent work is serialized."},
             "t_infinity_cold": {
+                INLINE: "caveat",
                 QUANTITY: "duration_us",
                 "description": "The critical path with cached elements "
                                "costed at what building them would take. "
@@ -2561,6 +2622,7 @@ _ANALYZE_HINTS = {
                 "description": "Exits seen for a process that only ever forked "
                                "- no exec, so no command to name."},
             "unmatched_ends": {
+                INLINE: "caveat",
                 QUANTITY: "count",
                 "description": "Process ends with no matching start. Non-zero "
                                "here weakens every per-process figure."},
@@ -2635,14 +2697,17 @@ _ANALYZE_HINTS = {
             # peak-memory field (`UX-341` retired `megabytes` and
             # `kilobytes`; the payload is in bytes).
             "cpu_accounting_available": {
+                INLINE: "caveat",
                 "description": "Whether the run recorded enough to account "
                                "for its slot-time at all. When false every "
                                "figure below is absent, not zero."},
             "effective_cpus": {
+                INLINE: "name",
                 QUANTITY: "count",
                 "description": "The capacity this accounting divides by. "
                                "Builder slots as recorded, not host cores."},
             "effective_cpus_source": {
+                INLINE: "caveat",
                 "description": "How that capacity was established - "
                                "measured, declared, or assumed. An assumed "
                                "capacity makes every share below assumed."},
@@ -2698,6 +2763,7 @@ _ANALYZE_HINTS = {
                 "description": "The buckets summed. Compared against "
                                "capacity to check the accounting closes."},
             "unaccounted_us": {
+                INLINE: "caveat",
                 QUANTITY: "duration_us",
                 "description": "Slot-time no bucket claimed. Non-zero here "
                                "is a gap in the record, and it weakens "
@@ -2719,6 +2785,7 @@ _ANALYZE_HINTS = {
                 "description": "The most tasks seen running together in "
                                "this accounting's own view of the run."},
             "useful_share": {
+                INLINE: "name",
                 QUANTITY: "share",
                 "description": "Slot-time that did work kept, as a share "
                                "of capacity. Not a share of wall-clock."},
@@ -3292,6 +3359,7 @@ _STORE_HINTS = {
                                                          "element cost in "
                                                          "that run."},
                                       "share_of_path": {
+                                          INLINE: "name",
                                           QUANTITY: "share",
                                           "description": "Its share of "
                                                          "that run's "
@@ -3423,6 +3491,7 @@ _CORRELATE_HINTS = {
                 "description": "Memory the host reported. The ceiling the "
                                "envelope below is judged against."},
             "builders": {
+                INLINE: "name",
                 QUANTITY: "count",
                 "description": "The builder count this envelope is "
                                "computed for."},

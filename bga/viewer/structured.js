@@ -15,8 +15,8 @@
  */
 import { served, safeStorage } from "./primitives.js";
 import { QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
-         PRESETS, bytes, childNode, cssId, el, elementColumn, guessQuantity,
-         heading, hintsOf, quantity, quantityFor, sectionHead,
+         PRESETS, INLINE, bytes, childNode, cssId, el, elementColumn,
+         guessQuantity, heading, hintsOf, quantity, quantityFor, sectionHead,
          title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
@@ -1289,7 +1289,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // renderer where it would drift.
     //
     // UX-317 (§2b.3): and it has a door a reader can see.
-    const { term, describe } = describedTerm(name, described);
+    const { term, describe } = describedTerm(name, described, {},
+                                             hintsOf(child)[INLINE]);
     list.append(term, el("dd", {}, cell, describe));
   }
   const parts = [sectionHead(key, hint)];
@@ -1343,15 +1344,33 @@ export function renderPairs(key, object, hint = {}, node = undefined,
  * it costs nothing, and it is what a screen reader and a keyboard
  * focus already read.
  *
+ * `UX-346`: **and the door has to close.** It did not - `.description`
+ * sets `display`, which beats `[hidden]`'s UA rule, so the sentence
+ * rendered whatever the marker said, and 43% of the golden page's
+ * words were the contract's glossary. The CSS closes it; `inline` is the declared
+ * exception (`bga:inline`, `name` or `caveat`), which keeps its
+ * sentence beside the value and draws no marker at all.
+ *
  * Returns `{ term, describe }` - the `<dt>`, and the node to put in the
  * `<dd>`, or `null` when the schema describes nothing.
  */
-export function describedTerm(name, description, attrs = {}) {
+export function describedTerm(name, description, attrs = {}, inline = null) {
   const term = el("dt", { ...attrs, "data-key": name,
                           title: description ?? null,
-                          "data-described": description ? "true" : null },
+                          "data-described": description ? "true" : null,
+                          "data-inline": inline ?? null },
                   title(name));
   if (!description) return { term, describe: null };
+  // UX-346: a declared exception is not behind a door at all. There is
+  // no marker for it either - a `?` beside a sentence already on screen
+  // is the duplication this item was filed on.
+  if (inline) {
+    return { term, describe: el("span", { class: "description",
+                                          "data-role": "description",
+                                          "data-inline": inline,
+                                          "data-describes": name },
+                                description) };
+  }
   const sentence = el("span", { class: "description",
                                 "data-role": "description",
                                 "data-describes": name, hidden: "" },

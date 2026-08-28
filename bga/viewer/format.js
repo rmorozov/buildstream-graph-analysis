@@ -42,6 +42,15 @@ export const QUESTION = "bga:question";
 // UX-289: the named views over a table, declared in the schema.
 export const PRESETS = "bga:presets";
 
+// UX-346: where the schema's sentence lives. The default is the `?`
+// door - closed, so the page is this run's numbers rather than the
+// contract's glossary. Two classes of value keep the sentence beside
+// them, and both are declared here rather than decided per call site:
+// `"name"`, a label that invites a reading the value does not have,
+// and `"caveat"`, a sentence whose absence changes what a reader would
+// *do* with the number.
+export const INLINE = "bga:inline";
+
 const RAIL = "bga:rail";
 
 const ROLE = "bga:role";
@@ -202,7 +211,7 @@ export function hintsOf(node) {
   const hint = {};
   if (!node || typeof node !== "object") return hint;
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
-                      RAIL, PRESETS, SERIES, DISTRIBUTION]) {
+                      RAIL, PRESETS, SERIES, DISTRIBUTION, INLINE]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;

@@ -40,9 +40,12 @@ Sorting is deliberately untouched: it costs one header affordance at
 any length and helps at every one, so there is nothing for a threshold
 to scale.
 """
+import json
+import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 
 import pytest
@@ -115,6 +118,95 @@ _LOOK = """
   };
 })()
 """
+
+
+node = shutil.which("node")
+needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
+
+#: A long table with a boolean column beside a duration one. Long,
+#: because a short one has no filter row at all now - which is why the
+#: page-level clause below cannot see this rule any more, and why this
+#: one drives the renderer directly.
+_MIXED = """
+const app = await import("./tests/viewer.mjs");
+const rows = Array.from({ length: 48 }, (_, i) => ({
+  element_uid: `e${i}.bst`, duration_us: 1000 + i, is_leaf: i %% 2 === 0,
+  kind: "cmake",
+}));
+const hint = { "bga:columns": [
+  { key: "element_uid", title: "Element", role: "element" },
+  { key: "duration_us", title: "Duration", quantity: "duration_us" },
+  // `count`, exactly as the element-join builder hands it over: that
+  // path ends `?? guessQuantity(name) ?? "count"`, so a boolean column
+  // arrives declared a count and earns a `> 10` box. Written out here
+  // rather than left to the guess, because `guessQuantity("is_leaf")`
+  // is null - it is the *join's* fallback that produces the defect.
+  { key: "is_leaf", title: "Is leaf", quantity: "count" },
+  { key: "kind", title: "Kind" } ] };
+const root = make("div");
+root.append(app.renderTable("elements", rows, hint));
+const table = root.querySelectorAll("table[data-table]")[0];
+console.log(JSON.stringify({
+  thresholds: root.querySelectorAll("input.th-filter").map(
+    (i) => i.getAttribute("data-column")),
+  search: root.querySelectorAll("input.table-filter").length,
+  columns: table.querySelectorAll("th[data-column]").map(
+    (h) => h.getAttribute("data-column")),
+  note: (root.querySelectorAll('[data-role="uniform-columns"]')[0]
+    ?.textContent ?? ""),
+}));
+"""
+
+
+_SHIM = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+function make(tag) {
+  const node = _makeNode(tag);
+  node.open = false;
+  return node;
+}
+globalThis.Event = class { constructor(type) { this.type = type; } };
+globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
+                        getElementById: () => null };
+"""
+
+
+def _mixed_table():
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", _SHIM + (_MIXED % ())],
+        capture_output=True, text=True, cwd=REPO, timeout=120,
+        env={**os.environ,
+             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()})
+    assert done.returncode == 0, done.stderr[-2000:]
+    return json.loads(done.stdout)
+
+
+@needs_node
+class TestAThresholdBoxNeedsANumber:
+    """Driven directly, because the page cannot show it any more.
+
+    With filters gated to the row cap, neither fixture has a threshold
+    box at all - so the page-level clause below is 0 of 0 there, and a
+    mutation that put a box back over a boolean column passed it. This
+    is the case the item was filed on (`> 10` under `Is leaf`), on a
+    table long enough to have the tools.
+    """
+
+    def test_a_boolean_column_gets_no_threshold(self):
+        out = _mixed_table()
+        assert out["search"] == 1, out
+        assert "duration_us" in out["thresholds"], out
+        assert "is_leaf" not in out["thresholds"], (
+            "a boolean column carries a numeric threshold box; its "
+            "quantity was guessed `count`, never declared")
+
+    def test_the_uniform_column_is_stated_and_gone(self):
+        """The same table proves the second rule: `kind` is `cmake` in
+        all forty-eight rows, `is_leaf` alternates and stays."""
+        out = _mixed_table()
+        assert "kind" not in out["columns"], out["columns"]
+        assert "is_leaf" in out["columns"], out["columns"]
+        assert "Kind cmake" in out["note"], out["note"]
 
 
 @pytest.fixture(scope="module")

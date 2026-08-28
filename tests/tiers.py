@@ -141,6 +141,9 @@ MEDIUM = (
     "tests/unit/test_a_control_says_what_it_does.py",           #    2.7s
     "tests/unit/test_every_table_has_its_own_state_key.py",     #    1.5s
     "tests/unit/test_findings_carry_their_evidence.py",         #    1.5s
+    # `UX-343`: five node subprocesses, one per census. Tiered on
+    # landing rather than after the drift - `UX-336`'s rule.
+    "tests/unit/test_every_number_says_what_it_is.py",          #    1.3s
     "tests/unit/test_the_structural_block_is_reachable.py",     #    1.5s
     "tests/unit/test_dev_run_script.py",                        #    1.4s
     "tests/unit/test_focused_graphs_not_a_dag_viewer.py",       #    1.4s

@@ -561,9 +561,17 @@ function statedOnce(table, specs, total) {
     const cells = [...table.querySelectorAll(
       `td[data-column="${spec.key}"]`)];
     if (cells.length !== total) continue;
-    const shown = cells.map((td) => td.textContent);
-    if (new Set(shown).size !== 1) continue;
-    said.push([spec.title ?? title(spec.key, spec.quantity), shown[0]]);
+    // The **published** value, not the rendered one. Found by a
+    // synthetic case: forty-eight durations from 1000 to 1047 µs all
+    // format as `1 ms`, and keying on the text removed a column the
+    // payload varies in - taking its sort key with it. A formatter
+    // rounding a column flat is a fact about the formatter; this rule
+    // is about a column that never varies.
+    const raw = cells.map(
+      (td) => td.getAttribute?.("data-raw") ?? td.textContent);
+    if (new Set(raw).size !== 1) continue;
+    said.push([spec.title ?? title(spec.key, spec.quantity),
+               cells[0].textContent]);
     for (const cell of cells) cell.remove?.();
     const head = [...table.querySelectorAll("th")].find(
       (th) => th.getAttribute("data-column") === spec.key);

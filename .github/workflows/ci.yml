@@ -205,7 +205,8 @@ jobs:
           /tmp/pkgvenv/bin/python -c "import json,sys; \
             from bga import schemas; \
             d=json.load(open('/tmp/report.json')); \
-            assert d['schema']==sys.argv[1], (d.get('schema'), sys.argv[1]); \
+            key=schemas.VERSION_KEY; \
+            assert d[key]==sys.argv[1], (d.get(key), sys.argv[1]); \
             missing=[k for k in schemas.ANALYZE_FULL_KEYS if k not in d]; \
             assert not missing, ('the payload is missing', missing); \
             print('served', sys.argv[1], 'with all', \

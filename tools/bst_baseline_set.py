@@ -362,6 +362,27 @@ def _name_refs(refs: List[str], limit: int = 3) -> str:
     return shown if len(refs) <= limit else f"{shown}, +{len(refs) - limit} more"
 
 
+def trend_order(path: str) -> List[str]:
+    """The run directories of a `--format json` set, oldest first.
+
+    `UX-354`: the caller used to reach into the document -
+    `[m["run_dir"] for m in reversed(json.load(f)["members"])]`, written
+    out in a `python3 -c` inside a workflow step. Two key literals and
+    the ordering rule, in the one file no guard in this repository
+    reads, describing a document this module writes twenty lines above.
+
+    The ordering is the part worth stating once: `bga baseline` returns
+    **newest first**, because a reader asking "what is the baseline"
+    wants the most recent run at the top, and a *trend* reads forwards
+    in time. Nothing in a run directory records which build came before
+    it, so the order is the caller's to supply - and this is the caller
+    that knows.
+    """
+    with open(path, encoding='utf-8') as handle:
+        document = json.load(handle)
+    return [member['run_dir'] for member in reversed(document['members'])]
+
+
 def format_set_text(members: List[dict], homogeneity: dict) -> str:
     lines = [
         '=' * 60,

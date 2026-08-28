@@ -42,6 +42,8 @@ from .utilisation import (
 )
 from .diagnostics import analyze_diagnostics
 from .structural import StructuralAnalyzer
+from . import hostinfo
+from .units import s_to_us as _s_to_us
 from .validation import compute_confidence
 from .validation.provenance import Advisory, Certified, assemble_floors
 
@@ -135,7 +137,13 @@ def _run_instance(run_context, loaded_from) -> dict:
     # a second channel `bga compare` would have to load separately.
     manifest = getattr(run_context, 'host_manifest', None) if run_context else None
     if manifest:
-        instance['host_manifest'] = manifest
+        # UX-341: a capture older than `host/v2` recorded the host's RAM
+        # as `memory_mb`, and this republishes the manifest verbatim -
+        # so without the normalisation an old snapshot puts a megabyte
+        # figure into a document that says everywhere else it is in
+        # bytes. Measured: the committed `macro_micro` run does exactly
+        # that.
+        instance['host_manifest'] = hostinfo.normalised(manifest)
     # UX-326: what was asked to be built. Published because the advice
     # block has to *spell* the command that would capture this run
     # again, and `bga snapshot <project>` - which is what it printed
@@ -683,7 +691,7 @@ class BuildEfficiencyAnalyzer:
         # 0.00s -> 4.05s. Both moved backwards, correctly, by their own
         # definitions - which is exactly the problem.
         #
-        # occupancy_ratio does not consult the graph at all: it asks how
+        # occupancy_share does not consult the graph at all: it asks how
         # much of the available dispatch-slot-time the run actually used.
         # Chaining work that could have run concurrently lowers it;
         # unchaining raises it. On that same real pair: 25.4% -> 55.9%.
@@ -694,7 +702,7 @@ class BuildEfficiencyAnalyzer:
         # elements overlap. That makes this an honest directional signal,
         # not a precise one, and is why UX-39's CI gate needs a stated
         # tolerance rather than a hair-trigger threshold.
-        floors['occupancy_ratio'] = self._compute_occupancy_ratio(horizon_us)
+        floors['occupancy_share'] = self._compute_occupancy_ratio(horizon_us)
         floors['cold_partial'] = cold_floor['cold_partial']
         floors['cold_confidence'] = cold_floor['cold_confidence']
         # P2-06: per-tier duration-source provenance, additive - doesn't
@@ -1587,10 +1595,19 @@ class BuildEfficiencyAnalyzer:
             d for d in durations
             if resolution_s and d and resolution_s / d > _RESOLUTION_MATERIAL_SHARE
         ]
+        # UX-341: `run-context.json` records these four in seconds and
+        # is an input with its own conventions; the payload is in µs,
+        # like every other duration it publishes. The conversion is
+        # here, at the boundary, rather than in four readers.
+        published = {k: v for k, v in agreement.items()
+                     if k not in ("note", "worst_shortfall_s",
+                                  "worst_excess_s")}
         return {
-            **{k: v for k, v in agreement.items() if k != "note"},
-            "resolution_s": resolution_s,
-            "shortest_task_s": min(durations) if durations else None,
+            **published,
+            "worst_shortfall_us": _s_to_us(agreement.get("worst_shortfall_s")),
+            "worst_excess_us": _s_to_us(agreement.get("worst_excess_s")),
+            "resolution_us": _s_to_us(resolution_s),
+            "shortest_task_us": _s_to_us(min(durations)) if durations else None,
             "tasks_measured": len(durations),
             "tasks_where_material": len(material),
             "material_share": _RESOLUTION_MATERIAL_SHARE,
@@ -2389,11 +2406,11 @@ class BuildEfficiencyAnalyzer:
                 'avg_fanout': result.metrics.avg_fanout,
                 'avg_fanin': result.metrics.avg_fanin,
                 'critical_path_length': result.metrics.critical_path_length,
-                'critical_path_ratio': result.metrics.critical_path_ratio,
+                'critical_path_share': result.metrics.critical_path_share,
                 'max_parallelism': result.metrics.max_parallelism,
                 'avg_parallelism': result.metrics.avg_parallelism,
                 'cyclomatic_complexity': result.metrics.cyclomatic_complexity,
-                'serialization_ratio': result.metrics.serialization_ratio,
+                'serialization_share': result.metrics.serialization_share,
             },
             'bottleneck': {
                 # UX-288: `choke_points` (ranked uids) and

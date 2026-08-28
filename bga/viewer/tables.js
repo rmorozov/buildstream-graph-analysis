@@ -14,17 +14,13 @@
 /** How many microseconds/bytes/… one suffix is worth, per quantity. */
 const UNITS = {
   duration_us: { us: 1, ms: 1e3, s: 1e6, m: 60e6, h: 3600e6 },
-  seconds: { us: 1e-6, ms: 1e-3, s: 1, m: 60, h: 3600 },
+  // UX-341: one unit per dimension. `seconds`, `megabytes`,
+  // `kilobytes` and `percent` were retired from the vocabulary, so a
+  // column can no longer be declared in them and these tables no
+  // longer have to carry four extra conversion sets to filter one.
   bytes: { b: 1, kb: 1024, k: 1024, mb: 1024 ** 2, m: 1024 ** 2,
            gb: 1024 ** 3, g: 1024 ** 3 },
-  megabytes: { b: 1 / 1024 ** 2, kb: 1 / 1024, mb: 1, m: 1,
-               gb: 1024, g: 1024 },
-  // UX-215: `peak_rss_kb`. A threshold typed as `> 512mb` on a
-  // kilobyte column has to mean 524,288, not 512.
-  kilobytes: { b: 1 / 1024, kb: 1, k: 1, mb: 1024, m: 1024,
-               gb: 1024 ** 2, g: 1024 ** 2 },
   share: { "%": 0.01 },
-  percent: { "%": 1 },
 };
 
 /**

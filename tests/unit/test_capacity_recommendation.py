@@ -13,6 +13,7 @@ same bar `UX-83` uses.
 """
 from bga.correlate import compute_capacity_recommendation
 from bga.findings import _capacity_recommendation_finding
+from bga.units import MIB
 
 
 def _plane2(cores_busy=2.0, host=4, pinned=()):
@@ -23,11 +24,11 @@ def _plane2(cores_busy=2.0, host=4, pinned=()):
 def _envelope(fits_up_to, measured=None, host_mb=16000):
     measured = measured or fits_up_to
     return {
-        'host_memory_mb': host_mb,
+        'host_memory_bytes': host_mb,
         'elements_measured': measured,
-        'largest_element_peak_mb': 1000,
+        'largest_element_peak_bytes': 1000,
         'projections': [
-            {'builders': n, 'envelope_mb': 1000 * n,
+            {'builders': n, 'envelope_bytes': 1000 * n,
              'share_of_host': 1000 * n / host_mb, 'fits': n <= fits_up_to}
             for n in range(1, measured + 1)
         ],
@@ -45,7 +46,7 @@ class TestWhichConstraintBinds:
 
         assert recommendation['binding_constraint'] == 'CPU'
         assert recommendation['recommended_builders'] == 4
-        assert recommendation['change'] == 0
+        assert recommendation['builders_change'] == 0
 
     def test_the_graph_binds_when_the_schedule_runs_out_first(self):
         """More builders than the graph has parallelism for is capacity
@@ -76,7 +77,7 @@ class TestWhichConstraintBinds:
         )
 
         assert recommendation['recommended_builders'] == 6
-        assert recommendation['change'] == 4
+        assert recommendation['builders_change'] == 4
 
     def test_the_cpu_ceiling_is_derived_from_the_measured_draw(self):
         """Not a rule of thumb: `cores_busy / builders` is what one
@@ -287,14 +288,14 @@ class TestTheMemoryEnvelopeNoteDoesNotClaimADirectionItCannotShow:
         growth beside `+0.0 GB` is the observed defect."""
         from bga.report.text import memory_envelope_direction
 
-        assert memory_envelope_direction(12.0) == 'unchanged'
-        assert memory_envelope_direction(-12.0) == 'unchanged'
+        assert memory_envelope_direction(12 * MIB) == 'unchanged'
+        assert memory_envelope_direction(-12 * MIB) == 'unchanged'
 
     def test_real_growth_and_shrinkage_still_read_as_themselves(self):
         from bga.report.text import memory_envelope_direction
 
-        assert memory_envelope_direction(900.0) == 'grew'
-        assert memory_envelope_direction(-900.0) == 'shrank'
+        assert memory_envelope_direction(900 * MIB) == 'grew'
+        assert memory_envelope_direction(-900 * MIB) == 'shrank'
 
     def test_the_renderer_uses_it(self):
         """Testing the rule is not testing that anything applies it."""
@@ -303,4 +304,4 @@ class TestTheMemoryEnvelopeNoteDoesNotClaimADirectionItCannotShow:
         from bga.report import text
 
         source = inspect.getsource(text)
-        assert "memory_envelope_direction(memory_delta['delta_mb'])" in source
+        assert "memory_envelope_direction(memory_delta['delta_bytes'])" in source

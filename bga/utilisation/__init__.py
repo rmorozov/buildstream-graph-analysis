@@ -74,7 +74,7 @@ class UtilizationResult:
     # True only when effective_cpus came from a real measurement source
     # (an explicit cpu_accounting.effective_cpus or cgroup quota/period -
     # never a scheduling-capacity fallback). Every capacity-derived field
-    # below (capacity_cpu_us, the *_pct properties, reconciliation,
+    # below (capacity_cpu_us, the *_share properties, reconciliation,
     # config-based oversubscription) is only meaningful when this is True.
     cpu_accounting_available: bool = False
 
@@ -91,7 +91,7 @@ class UtilizationResult:
     # a fabricated capacity.
     total_accounted_us: int = 0
     unaccounted_us: int = 0
-    reconciliation_error_pct: Optional[float] = None
+    reconciliation_error_share: Optional[float] = None
 
     # Oversubscription analysis (Part 30.3). The *observed* evidence
     # checks (high utilization, concurrency exceeding effective_cpus) and
@@ -118,34 +118,39 @@ class UtilizationResult:
     high_utilization_periods: List[Tuple[int, int]] = field(default_factory=list)
     idle_periods: List[Tuple[int, int]] = field(default_factory=list)
 
+    # UX-341: 0..1, like every other bounded fraction the tool
+    # publishes. These were 0..100 while `cpu_coverage` beside them was
+    # 0..1, so a consumer comparing the two had to know which
+    # convention each was written under. The renderer already prints a
+    # `share` as a percentage; nothing a reader sees changes.
     @property
-    def useful_pct(self) -> Optional[float]:
-        """Percentage of CPU capacity used for useful work - None when
+    def useful_share(self) -> Optional[float]:
+        """Share of CPU capacity used for useful work - None when
         cpu_accounting_available is False (no real capacity to divide by)."""
         if not self.cpu_accounting_available or not self.capacity_cpu_us:
             return None
         useful = self.buckets.get(CPUBucket.USEFUL, 0)
-        return (useful / self.capacity_cpu_us) * 100.0
+        return useful / self.capacity_cpu_us
 
     @property
-    def idle_pct(self) -> Optional[float]:
-        """Percentage of CPU capacity that was idle - None when
+    def idle_share(self) -> Optional[float]:
+        """Share of CPU capacity that was idle - None when
         cpu_accounting_available is False."""
         if not self.cpu_accounting_available or not self.capacity_cpu_us:
             return None
         idle_no_tasks = self.buckets.get(CPUBucket.IDLE_NO_TASKS, 0)
         idle_underparallel = self.buckets.get(CPUBucket.IDLE_UNDERPARALLEL, 0)
-        return ((idle_no_tasks + idle_underparallel) / self.capacity_cpu_us) * 100.0
+        return (idle_no_tasks + idle_underparallel) / self.capacity_cpu_us
 
     @property
-    def wasted_pct(self) -> Optional[float]:
-        """Percentage of CPU capacity wasted on retries/rebuilds - None
+    def wasted_share(self) -> Optional[float]:
+        """Share of CPU capacity wasted on retries/rebuilds - None
         when cpu_accounting_available is False."""
         if not self.cpu_accounting_available or not self.capacity_cpu_us:
             return None
         wasted_retry = self.buckets.get(CPUBucket.WASTED_RETRY, 0)
         wasted_rebuild = self.buckets.get(CPUBucket.WASTED_REBUILD, 0)
-        return ((wasted_retry + wasted_rebuild) / self.capacity_cpu_us) * 100.0
+        return (wasted_retry + wasted_rebuild) / self.capacity_cpu_us
 
     def to_dict(self) -> dict:
         """Convert to analysis/v9 compatible dictionary."""
@@ -158,13 +163,13 @@ class UtilizationResult:
             "buckets": {b.value: v for b, v in self.buckets.items()},
             "total_accounted_us": self.total_accounted_us,
             "unaccounted_us": self.unaccounted_us,
-            "reconciliation_error_pct": self.reconciliation_error_pct,
+            "reconciliation_error_share": self.reconciliation_error_share,
             "potential_oversubscription": self.potential_oversubscription,
             "oversubscription_evidence": self.oversubscription_evidence,
             "max_observed_concurrency": self.max_observed_concurrency,
-            "useful_pct": self.useful_pct,
-            "idle_pct": self.idle_pct,
-            "wasted_pct": self.wasted_pct,
+            "useful_share": self.useful_share,
+            "idle_share": self.idle_share,
+            "wasted_share": self.wasted_share,
         }
 
 
@@ -176,7 +181,7 @@ class UtilizationAnalyzer:
     and provides bucket-based attribution.
     """
     
-    RECONCILIATION_TOLERANCE_PCT = 2.0  # Part 33.3: 2% tolerance
+    RECONCILIATION_TOLERANCE_SHARE = 0.02  # Part 33.3: 2% tolerance
     HIGH_UTILIZATION_THRESHOLD = 0.8  # 80% threshold for "high" utilization
     
     def __init__(
@@ -230,7 +235,7 @@ class UtilizationAnalyzer:
         # "a real capacity value is available" (see effective_cpus_source
         # for which tier it came from), not literally "cpu_accounting was
         # present." Kept as-is (not renamed) since every capacity-derived
-        # field below (capacity_cpu_us, the *_pct properties, I9
+        # field below (capacity_cpu_us, the *_share properties, I9
         # reconciliation, oversubscription evidence sources 2/3) is
         # correctly gated by it regardless of which real source populated
         # effective_cpus - a scheduling parameter (builders) is still
@@ -249,7 +254,7 @@ class UtilizationAnalyzer:
         # Reconciliation state
         self.total_accounted_us = 0
         self.unaccounted_us = 0
-        self.reconciliation_error_pct = 0.0
+        self.reconciliation_error_share = 0.0
         
         # Idle/high utilization periods
         self.idle_periods: List[Tuple[int, int]] = []
@@ -445,7 +450,7 @@ class UtilizationAnalyzer:
         # restructure dependencies), IDLE_UNDERPARALLEL means work was
         # ready and nothing ran it (raise `--builders`) - and until now
         # every run booked its whole idle to the first one, because
-        # IDLE_UNDERPARALLEL was declared, read by `idle_pct`, and never
+        # IDLE_UNDERPARALLEL was declared, read by `idle_share`, and never
         # assigned anywhere. A deliberately builder-starved capture with
         # four tasks ready and unscheduled reported 72.30s of "nothing
         # was ready to run".
@@ -624,7 +629,7 @@ class UtilizationAnalyzer:
         was left at 0 whenever the residual was under tolerance, hiding
         a real - just not violation-worthy - discrepancy.)
 
-        Requires real CPU-accounting data (P1-33): reconciliation_error_pct
+        Requires real CPU-accounting data (P1-33): reconciliation_error_share
         is None (genuinely not computed, not "computed as zero") when
         cpu_accounting_available is False - distinct from the
         wall_clock_us == 0 case (accounting *is* available, but there is
@@ -634,23 +639,24 @@ class UtilizationAnalyzer:
         self.total_accounted_us = sum(self.buckets.values())
 
         if not self.cpu_accounting_available:
-            self.reconciliation_error_pct = None
+            self.reconciliation_error_share = None
             self.unaccounted_us = 0
         elif self.capacity_cpu_us > 0:
             diff = abs(self.total_accounted_us - self.capacity_cpu_us)
-            self.reconciliation_error_pct = (diff / self.capacity_cpu_us) * 100.0
+            self.reconciliation_error_share = diff / self.capacity_cpu_us
             self.unaccounted_us = int(diff)
 
-            if self.reconciliation_error_pct > self.RECONCILIATION_TOLERANCE_PCT:
+            if self.reconciliation_error_share > self.RECONCILIATION_TOLERANCE_SHARE:
                 logger.warning(
                     "CPU reconciliation error %.2f%% exceeds %.2f%% tolerance "
                     "(accounted=%dus, capacity=%dus)",
-                    self.reconciliation_error_pct, self.RECONCILIATION_TOLERANCE_PCT,
+                    self.reconciliation_error_share * 100.0,
+                    self.RECONCILIATION_TOLERANCE_SHARE * 100.0,
                     self.total_accounted_us, self.capacity_cpu_us,
                 )
                 self.buckets[CPUBucket.UNTRACKED] = self.unaccounted_us
         else:
-            self.reconciliation_error_pct = 0.0
+            self.reconciliation_error_share = 0.0
             self.unaccounted_us = 0
     
     def _build_result(self) -> UtilizationResult:
@@ -663,7 +669,7 @@ class UtilizationAnalyzer:
             buckets=dict(self.buckets),
             total_accounted_us=self.total_accounted_us,
             unaccounted_us=self.unaccounted_us,
-            reconciliation_error_pct=self.reconciliation_error_pct,
+            reconciliation_error_share=self.reconciliation_error_share,
             potential_oversubscription=self.potential_oversubscription,
             oversubscription_evidence=self.oversubscription_evidence,
             max_observed_concurrency=self.max_observed_concurrency,

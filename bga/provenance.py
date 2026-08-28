@@ -39,13 +39,17 @@ meaningful once the document they point into exists.
 from typing import Any, List, Optional, Tuple
 
 from . import findings as _findings
+from . import schemas as _schemas
 from .cache_effectiveness import (HEALTHY_HIT_RATIO, POOR_HIT_RATIO,
                                   TRANSFER_SHARE_NOTABLE)
 
 # The module every threshold below is defined in, published so a record
 # names where to go and change it rather than only what it is called.
 # Which published document every `evidence[].path` below walks.
-ANALYZE_DOCUMENT = "analyze/v2"   # UX-288
+# `UX-341`: read from `schemas` rather than restated, so a
+# version move cannot leave every provenance path resolving
+# against a contract this release no longer builds.
+ANALYZE_DOCUMENT = _schemas.ANALYZE
 
 RULE_MODULE = "bga/findings.py"
 CACHE_RULE_MODULE = "bga/cache_effectiveness.py"
@@ -237,7 +241,7 @@ def _unconditional(sentence):
 
 
 def _diagnosis_rule(claim, document):
-    ratio = resolve(document, "headline.chain_ratio")
+    ratio = resolve(document, "headline.chain_share")
     name = resolve(document, "headline.diagnosis")
     if ratio is UNRESOLVED or ratio is None:
         return _unconditional(
@@ -246,7 +250,7 @@ def _diagnosis_rule(claim, document):
     fired = ">=" if name == _findings.DIAGNOSIS_CHAIN_BOUND else "<"
     return _rule(
         "CHAIN_BOUND_RATIO", _findings.CHAIN_BOUND_RATIO, fired,
-        "headline.chain_ratio",
+        "headline.chain_share",
         f"The critical path is {ratio:.1%} of wall-clock, which is {fired} "
         f"the {_findings.CHAIN_BOUND_RATIO:.0%} at which the chain rather "
         f"than the scheduler is called the constraint - so {name}.")
@@ -265,7 +269,7 @@ def _wait_category_rule(claim, document):
 
 
 def _cache_hit_rule(claim, document):
-    ratio = (claim.get("evidence") or {}).get("hit_ratio")
+    ratio = (claim.get("evidence") or {}).get("hit_share")
     if (claim.get("evidence") or {}).get("run_mode") == "full":
         return _rule(
             None, None, "present", "confidence.run_mode",
@@ -278,7 +282,7 @@ def _cache_hit_rule(claim, document):
             else "at or above HEALTHY_HIT_RATIO")
     return _rule(
         "POOR_HIT_RATIO/HEALTHY_HIT_RATIO", [POOR_HIT_RATIO, HEALTHY_HIT_RATIO],
-        "banded", "signals.cache.hit_ratio",
+        "banded", "signals.cache.hit_share",
         f"A {ratio:.0%} hit ratio is {band} "
         f"({POOR_HIT_RATIO:.0%}/{HEALTHY_HIT_RATIO:.0%}), which is what sets "
         f"this finding's severity.",
@@ -347,7 +351,7 @@ def _mesh_rule(claim, document):
 _CLAIMS = {
     "diagnosis": (
         ("floors.t_infinity_observed", "total_duration_us",
-         "headline.chain_ratio"),
+         "headline.chain_share"),
         _diagnosis_rule, ()),
     "build-failed": (
         ("violations[type=build_failed].failed_count",
@@ -368,7 +372,7 @@ _CLAIMS = {
             "mode is a fact about the capture, not a measurement to band."),
         ()),
     "cache-hit-ratio": (
-        ("signals.cache.hit_ratio", "signals.cache.built_elements",
+        ("signals.cache.hit_share", "signals.cache.built_elements",
          "signals.cache.cached_elements", "confidence.run_mode"),
         _cache_hit_rule, ()),
     "cache-transfer-cost": (
@@ -458,9 +462,9 @@ _CLAIMS = {
             "Published whenever elements off the critical path are heavy "
             "enough to bound how far shortening the chain can go."), ()),
     "blast-radius-ranking": (
-        ("headline.chain_ratio",),
+        ("headline.chain_share",),
         _rule("CHAIN_BOUND_RATIO", _findings.CHAIN_BOUND_RATIO, "<",
-              "headline.chain_ratio",
+              "headline.chain_share",
               "Who-depends-on-me is ranked only on a build the chain does "
               "not already constrain; above the threshold the ranking that "
               "matters is how long each element takes."), ()),

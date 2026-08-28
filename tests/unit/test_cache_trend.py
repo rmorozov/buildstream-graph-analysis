@@ -16,7 +16,7 @@ from bga.cache_trend import _band_findings, build_trend, format_trend_text
 def _row(name, **overrides):
     row = {
         'run': name, 'run_mode': 'incremental', 'total_duration_us': 1_000_000,
-        'hit_ratio': 0.72, 'built_elements': 25, 'cached_elements': 65,
+        'hit_share': 0.72, 'built_elements': 25, 'cached_elements': 65,
         'transfer_us': 130_000_000, 'transfer_per_artifact_us': 2_000_000,
         'rebuild_us': 4_740_000_000, 'churn': None,
     }
@@ -60,11 +60,11 @@ def test_a_faster_remote_is_not_a_regression():
 
 def test_a_falling_hit_ratio_is_a_regression_and_a_rising_one_is_not():
     """The opposite direction, for the metric where it is opposite."""
-    window = [_row(f'run{i}', hit_ratio=r) for i, r in enumerate([0.72, 0.71, 0.73])]
-    falling = _band_findings(window + [_row('newest', hit_ratio=0.20)])
-    assert [f['metric'] for f in falling] == ['hit_ratio']
+    window = [_row(f'run{i}', hit_share=r) for i, r in enumerate([0.72, 0.71, 0.73])]
+    falling = _band_findings(window + [_row('newest', hit_share=0.20)])
+    assert [f['metric'] for f in falling] == ['hit_share']
     assert 'serving less of this build' in falling[0]['title']
-    assert _band_findings(window + [_row('newest', hit_ratio=0.99)]) == []
+    assert _band_findings(window + [_row('newest', hit_share=0.99)]) == []
 
 
 def test_a_near_zero_band_is_widened_rather_than_believed():

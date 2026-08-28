@@ -28,7 +28,7 @@ class StructuralMetrics:
     
     # Critical path structure
     critical_path_length: int  # Number of elements
-    critical_path_ratio: float  # critical_path_length / num_elements
+    critical_path_share: float  # critical_path_length / num_elements
     
     # Parallelism potential
     max_parallelism: int  # Maximum width of any antichain
@@ -36,7 +36,7 @@ class StructuralMetrics:
     
     # Complexity metrics
     cyclomatic_complexity: int
-    serialization_ratio: float  # Elements that must run serially
+    serialization_share: float  # Elements that must run serially
 
 
 @dataclass(frozen=True)

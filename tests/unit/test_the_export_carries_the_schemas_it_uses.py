@@ -16,15 +16,15 @@ On the golden export the schemas were **4.7x the data**, and identical
 between two different runs because they were the published set rather
 than this page's. The page resolves a schema in exactly two places —
 `schemas[payload.schema]` and `schemas[store?.schema]` — so
-`blast/v1`, `compare/v1`, `whatif/v1`, `sweep/v1`, `correlate/v1` and
+`blast/v2`, `compare/v2`, `whatif/v1`, `sweep/v1`, `correlate/v2` and
 `store-aggregate/v1` were 35,185 B nothing could reach. `blast` and
 `whatif` are answers the *server* computes on demand, and in an export
 there is no server.
 
 **Why these clauses are shaped this way.** The set is asserted to equal
 what the embedded documents *declare*, derived on both sides. A clause
-naming `analyze/v2` would pass with the set hardcoded, and hardcoding is
-the failure this replaces: a page that later embeds a `correlate/v1`
+naming `analyze/v3` would pass with the set hardcoded, and hardcoding is
+the failure this replaces: a page that later embeds a `correlate/v2`
 document has to get that schema with no edit to the exporter.
 """
 import json
@@ -120,8 +120,8 @@ class TestItEmbedsWhatItsDocumentsDeclare:
             f"The page resolves `payload.schema` and `store.schema` and "
             f"nothing else, so the rest is bytes in an attachment nobody "
             f"can use")
-        assert {"blast/v1", "whatif/v1"} <= left_out, (
-            f"{label}: `blast/v1` and `whatif/v1` are answers the *server* "
+        assert {"blast/v2", "whatif/v1"} <= left_out, (
+            f"{label}: `blast/v2` and `whatif/v1` are answers the *server* "
             f"computes on demand. An export has no server, so carrying "
             f"their schemas is carrying a contract for a document this "
             f"file can never hold. Still embedded: "
@@ -170,10 +170,10 @@ class TestADeclarationDeeperInADocumentStillCounts:
     def test_a_nested_schema_id_is_found(self):
         from tools.bga_view import _declared_schemas
 
-        documents = {"report": {"schema": "analyze/v2",
+        documents = {"report": {"schema": "analyze/v3",
                                 "nested": [{"deep": {"schema": "store/v1"}}]}}
-        found = _declared_schemas(documents, {"analyze/v2", "store/v1"})
-        assert found == {"analyze/v2", "store/v1"}, found
+        found = _declared_schemas(documents, {"analyze/v3", "store/v1"})
+        assert found == {"analyze/v3", "store/v1"}, found
 
     def test_an_id_this_build_does_not_publish_is_dropped_not_raised(self):
         """A payload written by a newer build names a contract this one
@@ -182,5 +182,5 @@ class TestADeclarationDeeperInADocumentStillCounts:
         from tools.bga_view import _declared_schemas
 
         found = _declared_schemas({"report": {"schema": "analyze/v9"}},
-                                  {"analyze/v2"})
+                                  {"analyze/v3"})
         assert found == set(), found

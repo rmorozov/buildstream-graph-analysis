@@ -47,6 +47,7 @@ from tools.bga_timeline import (  # noqa: E402
     LANE_ORDER_RULE, identity_annotations, identity_track_name, render,
     run_identity)
 from tools.native_trace import trackevent  # noqa: E402
+from bga import hostinfo  # noqa: E402
 
 from test_the_timeline_speaks_perfetto import _fields  # noqa: E402
 
@@ -252,7 +253,10 @@ class TestTheTraceSaysWhoseBuildItWas:
         manifest = context["host_manifest"]
         assert args["host_cpu_model"] == manifest["cpu_model"]
         assert args["host_cpu_count"] == manifest["cpu_count"]
-        assert args["host_memory_mb"] == manifest["memory_mb"]
+        # UX-341: the fixture's manifest is a `host/v1` one, in MB;
+        # the annotation is in bytes, converted where it is read.
+        assert args["host_memory_bytes"] == hostinfo.normalised(
+            manifest)["memory_bytes"]
         assert args["kernel_release"] == manifest["kernel_release"]
         assert args["distro_id"] == manifest["distro_id"]
         assert args["bst_version"] == manifest["toolchain"]["bst"]

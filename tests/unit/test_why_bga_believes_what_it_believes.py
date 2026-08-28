@@ -98,9 +98,9 @@ class TestTheRuleIsTheLiveConstant:
         record = golden["headline"]["provenance"]
         assert record["rule"]["name"] == "CHAIN_BOUND_RATIO"
         assert record["rule"]["threshold"] == 0.9
-        assert record["rule"]["observed_path"] == "headline.chain_ratio"
+        assert record["rule"]["observed_path"] == "headline.chain_share"
         cited = [e["path"] for e in record["evidence"]]
-        assert "headline.chain_ratio" in cited
+        assert "headline.chain_share" in cited
         assert "floors.t_infinity_observed" in cited
 
     def test_moving_the_threshold_moves_the_published_record(self, monkeypatch):
@@ -237,11 +237,11 @@ class TestTheComparisonCitesTheCandidatesChain:
 
     def test_it_says_which_document_its_paths_walk(self, comparison, golden):
         """A record that travels needs to name where its paths resolve.
-        These are into the candidate run's `analyze/v2`, not into the
+        These are into the candidate run's `analyze/v3`, not into the
         comparison quoting it - and following them against the wrong
         document is the failure this field exists to prevent."""
         record = comparison.to_dict()["candidate_diagnosis"]["provenance"]
-        assert record["document"] == "analyze/v2"
+        assert record["document"] == "analyze/v3"
         for entry in record["evidence"]:
             assert provenance.resolve(comparison.to_dict(),
                                       entry["path"]) is provenance.UNRESOLVED

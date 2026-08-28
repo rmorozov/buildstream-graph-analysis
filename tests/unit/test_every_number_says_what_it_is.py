@@ -214,11 +214,11 @@ class TestAPathResolvesToItsUnit:
     @pytest.mark.parametrize("path,expected", [
         ("total_duration_us", "duration_us"),
         ("floors.lb", "duration_us"),
-        ("headline.chain_ratio", "share"),
+        ("headline.chain_share", "share"),
         # A list of records, subscripted by index.
         ("signals.critical_path_detail[0].duration_us", "duration_us"),
         # A table that declares columns instead of `items`.
-        ("element_join[0].peak_rss_kb", "kilobytes"),
+        ("element_join[0].peak_rss_bytes", "bytes"),
         # A map keyed by an element uid - the dot inside the subscript
         # is the case a split-first walk loses.
         ("signals.element_durations[app.bst]", "duration_us"),

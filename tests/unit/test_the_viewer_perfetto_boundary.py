@@ -44,7 +44,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 # The per-element half of each crossing the guide names. If one of
 # these disappears the guide's table is wrong.
-CROSSINGS = ("peak_rss_kb", "dominant_binary")
+CROSSINGS = ("peak_rss_bytes", "dominant_binary")
 
 # The questions the guide sorts as genuinely needing the trace.
 NEEDS_PERFETTO = frozenset((

@@ -31,7 +31,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
-| [0.3.0](#030--every-document-says-what-shape-it-is-2026-08-27) | 2026-08-27 | 332 | extending |
+| [0.3.0](#030--every-document-says-what-shape-it-is-2026-08-27) | 2026-08-27 | 332 | breaking |
 | [0.2.0](#020--the-build-that-says-what-it-is-2026-08-24) | 2026-08-24 | 243 | initial |
 
 ## 0.3.0 — every document says what shape it is (2026-08-27)
@@ -57,9 +57,14 @@ what is *written into a run directory* must union to the inventory
 `bga.contracts` derives from the package. The next emitter either
 answers, is declared, or reddens.
 
-**Contract delta:** one new contract, `sweep/v1`, and nothing removed
-or bumped — `extending`. No command or flag was added, renamed or
-removed. Three existing contracts (`store/v1`, `store-aggregate/v1`,
+**Contract delta:** one new contract, `sweep/v1`, and five bumped —
+`analyze/v3`, `compare/v2`, `blast/v2`, `correlate/v2` and `host/v2`
+(`UX-341`), which makes the row `breaking` rather than `extending`.
+The five predecessors stay in the set as **read, never written**: an
+older store still analyzes, and `host/v1`'s `memory_mb` is converted
+on the way in so an old baseline still compares rather than reading as
+a different machine. No command or flag was added, renamed or removed.
+Three existing contracts (`store/v1`, `store-aggregate/v1`,
 `whatif/v1`) became printable by `--schema`, which changes what the
 tool can *say* rather than what it writes.
 
@@ -78,7 +83,7 @@ on the record rather than in someone's memory — `UX-92` and `UX-96`
 modules split along their seams).
 
 ```text state
-contracts: analyze/v2 blast/v1 compare/v1 correlate/v1 host/v1 plane2/v1 plane2/v2 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
+contracts: analyze/v2 analyze/v3 blast/v1 blast/v2 compare/v1 compare/v2 correlate/v1 correlate/v2 host/v1 host/v2 plane2/v1 plane2/v2 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
 commands: analyze baseline blast cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```
 

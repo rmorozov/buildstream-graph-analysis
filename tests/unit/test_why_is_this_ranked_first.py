@@ -109,7 +109,7 @@ class TestEveryValueIsTraceable:
         """The block renders nothing rather than guessing - the same
         dead-control rule `UX-194` applies to buttons."""
         out = _render({
-            "schema": "analyze/v2",
+            "schema": "analyze/v3",
             "headline": {"diagnosis": "inconclusive", "sentence": "s",
                          "top_actions": [{"element_uid": "ghost.bst",
                                           "finding_id": "nope"}]},
@@ -121,7 +121,7 @@ class TestEveryValueIsTraceable:
         is nonsense the moment the path separator is taken literally -
         which is exactly what both resolvers did until this item."""
         payload = {
-            "schema": "analyze/v2",
+            "schema": "analyze/v3",
             "signals": {"critical_path_detail": [
                 {"element_uid": "layer07/mod084.bst", "share_of_path": 0.25,
                  "duration_us": 9_000_000}]},

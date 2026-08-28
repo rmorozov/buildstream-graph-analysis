@@ -6,7 +6,7 @@ schema determines what a field is* — held only at the **top level**.
 Every nested value fell to `guessQuantity(key)` name-sniffing, and the
 two systems demonstrably disagreed:
 
-    peak_rss_mb: 512   rendered "512 B"      (`_mb` guessed as bytes)
+    peak_rss_bytes: 512   rendered "512 B"      (`_mb` guessed as bytes)
     cpu_pct: 42        rendered "4200.0%"    (`_pct` guessed as a 0..1 share)
 
 Both measured against the shipped renderer. Same class, adjacent:
@@ -16,14 +16,17 @@ sampling row values; and `verdictClass` string-matched the verdict
 *sentence*, so rewording it would have silently restyled the banner.
 
 **UX-220 moved these fixtures, and the reason matters.** The two
-wrongnesses above were reproduced against `utilisation.peak_rss_mb` and
+wrongnesses above were reproduced against `utilisation.peak_rss_bytes` and
 `utilisation.cpu_pct` — and no code path has ever put either name in
 that object. The renderer bug was real and these guards did catch it,
 but they caught it on a shape the tool does not publish, which is why
 `utilisation`'s twelve real members went unhinted for four rounds
 without anything noticing. Same assertions now, against fields a run
-actually emits: `correlate/v1`'s `memory_envelope.host_memory_mb` for
-the megabytes case and `utilisation.useful_pct` for the percent case.
+actually emits: `correlate/v1`'s `memory_envelope.host_memory_bytes`
+for the memory case and `utilisation.useful_share` for the fraction
+case (`UX-341` retired the `megabytes` and `percent` spellings; the
+name-sniffing reproduction below still uses the old names, because that
+is what it is about).
 The name-sniffing reproduction below keeps the original two names
 deliberately — it asserts what `guessQuantity` does with a *name*, and
 needs no schema node at all.
@@ -53,25 +56,30 @@ def _js(script):
 class TestTheTwoLiveWrongnesses:
     """Fixtures now, per the acceptance."""
 
-    def test_nested_megabytes_render_as_megabytes(self):
+    def test_a_nested_byte_count_renders_as_one(self):
         out = _js('''
           const { quantity, quantityFor, childNode } =
             await import("./tests/viewer.mjs");
           const envelope = %s;
           console.log(JSON.stringify(
-            quantity(512, quantityFor(
-              childNode(envelope, "host_memory_mb"), "host_memory_mb"))));
+            quantity(512 * 1024 * 1024, quantityFor(
+              childNode(envelope, "host_memory_bytes"), "host_memory_bytes"))));
         ''' % json.dumps(
             schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"]))
         assert out == "512.0 MiB", out
 
-    def test_a_declared_percent_is_not_multiplied_again(self):
+    def test_a_declared_share_is_shown_as_a_percentage(self):
+        """`UX-341` retired `percent`: the payload carries 0..1 and the
+        renderer is what turns it into a percentage. The wrongness this
+        clause was written for - a 0..100 value multiplied by 100 again
+        - is now unreachable by construction, because there is no
+        0..100 member left to declare."""
         out = _js('''
           const { quantity, quantityFor, childNode } =
             await import("./tests/viewer.mjs");
           const util = %s;
-          console.log(JSON.stringify(
-            quantity(42, quantityFor(childNode(util, "useful_pct"), "useful_pct"))));
+          console.log(JSON.stringify(quantity(0.42, quantityFor(
+            childNode(util, "useful_share"), "useful_share"))));
         ''' % json.dumps(
             schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]))
         assert out == "42.0%", out
@@ -84,7 +92,7 @@ class TestTheTwoLiveWrongnesses:
         out = _js('''
           const { quantity, guessQuantity } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify([
-            quantity(512, guessQuantity("peak_rss_mb")),
+            quantity(512, guessQuantity("peak_rss_bytes")),
             quantity(42, guessQuantity("cpu_pct")),
           ]));
         ''')
@@ -109,14 +117,17 @@ class TestTheTwoLiveWrongnesses:
         ''' % json.dumps(
             schemas.schema(schemas.ANALYZE)["properties"]
             ["capacity_recommendation"]))
-        assert out == ["1.6", "4"], out
+        # `UX-341`: `cores_busy` is one measurement with one unit now.
+        # `capacity_recommendation` declared it `count` while the four
+        # element-level copies of the same figure declared `ratio`.
+        assert out == ["1.60\u00d7", "4"], out
 
     def test_declared_beats_guessed(self):
         out = _js('''
           const { quantityFor } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify([
-            quantityFor({"bga:quantity": "megabytes"}, "peak_rss_mb"),
-            quantityFor(undefined, "peak_rss_mb"),
+            quantityFor({"bga:quantity": "megabytes"}, "peak_rss_bytes"),
+            quantityFor(undefined, "peak_rss_bytes"),
           ]));
         ''')
         assert out == ["megabytes", "bytes"]
@@ -125,10 +136,10 @@ class TestTheTwoLiveWrongnesses:
 class TestTheSchemasCarryTheNestedSemantics:
     def test_utilisation_declares_the_two(self):
         util = schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]
-        assert util["properties"]["useful_pct"][schemas.QUANTITY] == "percent"
+        assert util["properties"]["useful_share"][schemas.QUANTITY] == "share"
         envelope = schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"]
-        assert envelope["properties"]["host_memory_mb"][schemas.QUANTITY] \
-            == "megabytes"
+        assert envelope["properties"]["host_memory_bytes"][schemas.QUANTITY] \
+            == "bytes"
 
     def test_the_declared_shapes_are_ones_a_run_publishes(self):
         """UX-220: the failure this file was pinned to for four rounds.
@@ -138,7 +149,7 @@ class TestTheSchemasCarryTheNestedSemantics:
         object's real members were never hinted at all.
         """
         util = schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]
-        for phantom in ("peak_rss_mb", "cpu_pct", "cpu_seconds"):
+        for phantom in ("peak_rss_bytes", "cpu_pct", "cpu_seconds"):
             assert phantom not in util["properties"], phantom
 
     def test_the_deltas_members_say_what_they_are(self):

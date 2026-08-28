@@ -45,7 +45,7 @@ def _detected_host_run():
         "cpu_accounting_available": True,
         "effective_cpus": 4.0,
         "effective_cpus_source": "detected_host_cpu_count",
-        "reconciliation_error_pct": 0.0,
+        "reconciliation_error_share": 0.0,
         "buckets": dict(_BUCKETS),
     })
 
@@ -55,7 +55,7 @@ def _measured_run():
         "cpu_accounting_available": True,
         "effective_cpus": 4.0,
         "effective_cpus_source": "measured",
-        "reconciliation_error_pct": 0.12,
+        "reconciliation_error_share": 0.0012,
         "buckets": dict(_BUCKETS),
     })
 

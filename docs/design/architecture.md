@@ -60,7 +60,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 
 Every conclusion the text report draws is also published by `--format json` as a `findings` array, each entry with a stable `id`, a `severity` and the numbers behind it (`UX-75`). Both renderers consume the same list, so they cannot disagree, and a CI consumer keys on `id` rather than re-deriving a threshold out of the renderer.
 
-**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v2` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
+**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v3` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
 
 ## Real package structure (Plane 1)
 
@@ -410,7 +410,7 @@ one-line fixes made a real build **30.5% faster** while
 `efficiency_score` moved **1.00 → 0.83** and `certified_headroom` moved
 **0.00s → 4.05s**. Both backwards.
 
-`floors.occupancy_ratio` (`UX-27`) is the second signal - `Σ task
+`floors.occupancy_share` (`UX-27`) is the second signal - `Σ task
 slot-occupancy / (horizon × builders)` - and it never consults the graph,
 so serializing work that could have run concurrently pushes it down. On
 the same pair: **27.8% → 63.0%**. Neither number is redundant and neither
@@ -448,7 +448,7 @@ check" are different claims, and the report says which one it is making.
 
 `--fail-on-regression` (`UX-03`) answers "did the build get slower".
 `--fail-on-efficiency-regression`/`--min-efficiency` (`UX-39`) answer
-"was the work this build does being done efficiently", on `occupancy_ratio`,
+"was the work this build does being done efficiently", on `occupancy_share`,
 with their own exit code `5`. The separation exists because on a growing
 project those verdicts diverge, and measurably do: two well-parallelized
 elements added to a real project took wall-clock **+2.5%** (failing the
@@ -581,7 +581,7 @@ The table covers `UX-01`..`UX-76`: the additions that shaped the architecture th
 | UX-24 | Chrome Trace export for Plane 2 + combined two-plane `perfetto.dev` view, real dual-plane single-invocation capture | 🟢 Done |
 | UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🟢 Done |
 | UX-26 | Batch/map-reduce report stops surfacing zero-savings groups | 🟢 Done |
-| UX-27 | `floors.occupancy_ratio` - a graph-shape-aware efficiency signal beside `efficiency_score`, which structurally cannot be one (real pair: +35.2pp where every other metric was flat or backwards) | 🟢 Done |
+| UX-27 | `floors.occupancy_share` - a graph-shape-aware efficiency signal beside `efficiency_score`, which structurally cannot be one (real pair: +35.2pp where every other metric was flat or backwards) | 🟢 Done |
 | UX-28 | Oversubscription bar re-based onto the real governing core count (was BuildStream's own defaults, whose ratio-to-cores collapsed as the host grew), plus a new `dispatch_oversubscription` check on `builders` alone | 🟢 Done |
 | UX-29 | `native_max_jobs` recovered from the wrapped log's own recorded invocation, with a `native_max_jobs_source` provenance field - the whole capacity-guard chain was inert on runs made by the documented pipeline | 🟢 Done |
 | UX-30 | Sweep knee point is the last capacity that bought a real gain, computed over the whole curve | 🟢 Done |
@@ -593,7 +593,7 @@ The table covers `UX-01`..`UX-76`: the additions that shaped the architecture th
 | UX-36 | Dispatch-occupancy block titled for what it measures; capacity shown with provenance; buckets labelled as occupancy | 🟢 Done |
 | UX-37 | Redundant-operation findings scored and ranked in recoverable wall-clock, filtered, elided readably, element build drivers excluded | 🟢 Done |
 | UX-38 | Tracer `report` detects and re-renders a saved JSON report; wrong input is an error, not a zero-process result | 🟢 Done |
-| UX-39 | Independent CI efficiency gate (`--fail-on-efficiency-regression`, `--min-efficiency`, exit code 5) on `occupancy_ratio`, with a default derived from measured run-to-run noise | 🟢 Done |
+| UX-39 | Independent CI efficiency gate (`--fail-on-efficiency-regression`, `--min-efficiency`, exit code 5) on `occupancy_share`, with a default derived from measured run-to-run noise | 🟢 Done |
 | UX-40 | Measured pipeline overhead no longer penalizes confidence (real capture 0.694 -> 0.869, CI gate live), plus `--fail-on-low-confidence` | 🟢 Done |
 | UX-41 | Parallelism levels decomposed by *longest* path from a root, not shortest | 🟢 Done |
 | UX-42 | Resource saturation computed once, not re-derived per wait gap (1200-element analyze: 68s → ~4s) | 🟢 Done |
@@ -863,22 +863,27 @@ renderers are built against, so nothing here is a second copy to drift.
 
 | schema | what it is | printed by |
 |---|---|---|
-| `analyze/v2` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim. **v2** (`UX-288`) removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists; the leaf's `deferral_risk` is published in their place | `bga analyze --schema` |
-| `compare/v1` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
-| `blast/v1` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
-| `correlate/v1` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
+| `analyze/v3` | one run's analysis: attribution, floors, signals, findings, the headline decision, next steps, and the provenance behind each claim. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists | `bga analyze --schema` |
+| `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
+| `blast/v2` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
+| `correlate/v2` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
 | `store/v1` | what the run store holds: one row per snapshot, with the alias, the verdict and why a capture is not a measurement | `bga snapshot --list --format json` |
 | `store-aggregate/v1` | that store as a distribution: min/median/p95/max/MAD per host class, and the refusal when a mix cannot be blended | `bga snapshot --aggregate --format json` |
 | `whatif/v1` | what the build would drop to for a chosen set of fixes - one projection, never a sum | `bga whatif --format json` |
 | `sweep/v1` | what more capacity would buy: one makespan per capacity tried, the knee past which it buys little, and where the replay model contradicted itself (`UX-339`) | `bga sweep --format json` |
-| `host/v1` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
+| `host/v2` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
 | `sources/v1` | every element's source resources and how each is keyed - the on-disk shape `bga blast` reads | inside `sources.json` |
 | `plane2/v2` | Plane 2's report: the per-element reductions a capture computed, and nothing else (`UX-297`) | at `plane2.json` beside a run |
 | `plane2/v1` | the same reductions plus every per-process record - the shape a capture before `UX-297` wrote. Read, never written | as above, in an older store |
+| `analyze/v2` | what `analyze` wrote before `UX-341` unified the units - `measured_seconds`, `peak_rss_kb`, `useful_pct`, `occupancy_ratio`. Read, never written | in an older store |
+| `compare/v1` | the same, for a comparison. Read, never written | in an older store |
+| `blast/v1` | the same, for a blast answer. Read, never written | in an older store |
+| `correlate/v1` | the same, for the two-plane join. Read, never written | in an older store |
+| `host/v1` | the host manifest with `memory_mb` where `host/v2` has `memory_bytes`. Read - and normalised on the way in, so an old baseline still compares - never written | inside an older `run-context.json` |
 
 **Every artifact says what wrote it** (`UX-249`): a `producer` block —
 tool, version, and the contract set the writing build had — rides in
-every run directory and every published `analyze/v2` document, because
+every run directory and every published `analyze/v3` document, because
 `bga` reads its own past output as input and until round 30 nothing in
 those artifacts said which build produced them. The version there is
 *provenance*; compatibility is decided per contract, which is why
@@ -1305,7 +1310,7 @@ Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
 module list, the published schema `bga analyze --schema` prints, and
 `docs/backlog/scenarios/closed.md`'s round-38 and round-39 rows: the
 viewer axis gained the chapters `UX-286` groups the document into, and
-the contracts table's `analyze/v2` row is checked against the keys the
+the contracts table's `analyze/v3` row is checked against the keys the
 schema declares - which `UX-275` added one to. The date on this line is
 guarded (`UX-247`): a commit that changes this document's prose without
 re-grounding it reddens

@@ -32,7 +32,14 @@ import shutil
 import subprocess
 from typing import Dict, List, Optional
 
-SCHEMA = "host/v1"
+from .units import mb_to_bytes
+
+SCHEMA = "host/v2"
+
+# `UX-341`: `v1` said `memory_mb`. A stored manifest from before that
+# is still read - `differing_fields` normalises it - so the id it was
+# written under is declared retired rather than forgotten.
+SUPERSEDED = ("host/v1",)
 
 # The fields a difference in which moves durations, and therefore the
 # fields a comparison is classified on. Kernel release, distro and
@@ -40,12 +47,12 @@ SCHEMA = "host/v1"
 # wants them, but they do not by themselves make two runs incomparable:
 # a point release of `bwrap` is not the reason a build took 12% longer,
 # and refusing on it would make the check noise that gets switched off.
-COMPARED_FIELDS = ("cpu_model", "cpu_count", "memory_mb")
+COMPARED_FIELDS = ("cpu_model", "cpu_count", "memory_bytes")
 
 _FIELD_LABELS = {
     "cpu_model": "CPU model",
     "cpu_count": "CPU count",
-    "memory_mb": "memory",
+    "memory_bytes": "memory",
 }
 
 
@@ -145,7 +152,9 @@ def collect(with_toolchain: bool = True) -> dict:
         "schema": SCHEMA,
         "cpu_model": _cpu_model(),
         "cpu_count": host_cpu_count(),
-        "memory_mb": host_memory_mb(),
+        # UX-341: the capture reads `/proc/meminfo` in MB; the
+        # manifest, which is embedded in `analyze`, publishes bytes.
+        "memory_bytes": mb_to_bytes(host_memory_mb()),
         "kernel_release": uname.release if uname else None,
         "distro_id": _distro_id(),
     }
@@ -165,9 +174,27 @@ def differing_fields(baseline: Optional[dict],
     """
     if not baseline or not candidate:
         return []
+    baseline, candidate = normalised(baseline), normalised(candidate)
     return [field for field in COMPARED_FIELDS
             if not (baseline.get(field) is None and candidate.get(field) is None)
             and baseline.get(field) != candidate.get(field)]
+
+
+def normalised(manifest: dict) -> dict:
+    """A `host/v1` manifest read in this release's units.
+
+    `UX-341`: `v1` recorded the host's RAM as `memory_mb`. An old
+    baseline in a store is exactly the case `classify`'s own docstring
+    argues for keeping readable - a tool that refused every capture
+    older than itself would be telling users to throw away the
+    baselines they came with - so the old spelling is converted here
+    rather than counted as a difference from every new candidate.
+    """
+    if "memory_bytes" in manifest or "memory_mb" not in manifest:
+        return manifest
+    converted = {k: v for k, v in manifest.items() if k != "memory_mb"}
+    converted["memory_bytes"] = mb_to_bytes(manifest["memory_mb"])
+    return converted
 
 
 def classify(baseline: Optional[dict], candidate: Optional[dict]) -> dict:

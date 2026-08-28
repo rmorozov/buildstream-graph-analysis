@@ -49,7 +49,7 @@ def test_a_tenth_of_a_second_of_ranlib_is_not_a_finding():
     """The real numbers from the capture: `ranlib`, one process, 0.2s,
     inside an element whose whole realizable saving is 3.0s."""
     assert 'serialization-point' not in _ids(
-        _joined(serial_binary={"binary": "ranlib", "wall_s": 0.2})
+        _joined(serial_binary={"binary": "ranlib", "wall_us": 200000})
     )
 
 
@@ -58,7 +58,7 @@ def test_a_real_serialization_point_still_reports():
     meaningful share of an element is exactly what it exists to name."""
     assert 'serialization-point' in _ids(
         _joined(potential_saving_us=60_000_000,
-                serial_binary={"binary": "ld", "wall_s": 12.0})
+                serial_binary={"binary": "ld", "wall_us": 12000000})
     )
 
 
@@ -69,11 +69,11 @@ def test_the_bar_is_relative_as_well_as_absolute():
     below the 1% share - and is not the next thing to do."""
     assert 'serialization-point' not in _ids(
         _joined(potential_saving_us=900_000_000,
-                serial_binary={"binary": "ld", "wall_s": 4.0})
+                serial_binary={"binary": "ld", "wall_us": 4000000})
     )
     assert 'serialization-point' in _ids(
         _joined(potential_saving_us=900_000_000,
-                serial_binary={"binary": "ld", "wall_s": 20.0})
+                serial_binary={"binary": "ld", "wall_us": 20000000})
     )
 
 
@@ -83,7 +83,7 @@ def test_the_absolute_backstop_holds_when_saving_was_never_evaluated():
     assert _SERIALIZATION_NOTABLE_S == 1.0
     assert 'serialization-point' not in _ids(
         _joined(potential_saving_us=0, saving_share=None, cores_busy=0.5,
-                serial_binary={"binary": "ranlib", "wall_s": 0.2})
+                serial_binary={"binary": "ranlib", "wall_us": 200000})
     )
 
 
@@ -239,7 +239,7 @@ def test_a_finding_whose_figures_do_not_generalize_keeps_its_own_words():
     say something the measurement does not. The block gets longer rather
     than wronger."""
     entries = [
-        _entry(name, ["peak-memory"], peak_rss_kb=2_000_000)
+        _entry(name, ["peak-memory"], peak_rss_bytes=2_000_000)
         for name in ("lib-a.bst", "lib-b.bst")
     ]
     text = format_correlation(_result(entries))

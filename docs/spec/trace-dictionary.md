@@ -50,7 +50,7 @@ TrackEvent format does not. Verified against Perfetto v49.0 on
 | `bst_version` | run | the BuildStream the capture ran against |
 | `host_cpu_model` | run | the CPU the build ran on, from the host manifest |
 | `host_cpu_count` | run | how many cores that host had |
-| `host_memory_mb` | run | how much memory it had |
+| `host_memory_bytes` | run | how much memory it had |
 | `kernel_release` | run | the kernel the sandboxes ran under |
 | `distro_id` | run | the distribution the capture was taken on |
 | `builders` | run | BuildStream's element-dispatch concurrency for this run |

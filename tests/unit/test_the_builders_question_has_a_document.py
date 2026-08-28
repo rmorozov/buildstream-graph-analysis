@@ -126,8 +126,9 @@ class TestEachOneSaysWhenItDeclines:
                 f"the memory-envelope subsection omits {phrase!r}")
 
     def test_the_envelope_names_its_unit(self):
-        """Megabytes. A memory figure without a unit is a number."""
-        assert "megabytes" in _flat(_section("memory envelope"))
+        """Bytes, since `UX-341`. A memory figure without a unit is a
+        number."""
+        assert "bytes" in _flat(_section("memory envelope"))
 
     def test_the_recommendation_says_it_tries_no_configuration(self):
         """The caveat that makes it safe to quote: one capture in, one
@@ -169,7 +170,7 @@ class TestThePastedFiguresAreTheToolsOwn:
         assert envelope, (
             "the committed snapshot no longer produces a memory envelope")
         section = _flat(_section("memory envelope"))
-        for key in ("host_memory_mb", "elements_measured"):
+        for key in ("host_memory_bytes", "elements_measured"):
             assert str(envelope[key]) in section, (
                 f"the memory-envelope subsection quotes no current value for "
                 f"{key} ({envelope[key]})")

@@ -121,11 +121,11 @@ def compute_cache_accounting(
     accounting = {
         'built_elements': built if isinstance(built, int) else None,
         'cached_elements': cached if isinstance(cached, int) else None,
-        'hit_ratio': _ratio(cached, built),
+        'hit_share': _ratio(cached, built),
         'fetch': {
             'fetched': fetch.get('processed') if isinstance(fetch.get('processed'), int) else None,
             'already_present': fetch.get('skipped') if isinstance(fetch.get('skipped'), int) else None,
-            'hit_ratio': _ratio(fetch.get('skipped'), fetch.get('processed')),
+            'hit_share': _ratio(fetch.get('skipped'), fetch.get('processed')),
         },
     }
 
@@ -156,7 +156,7 @@ def compute_cache_accounting(
             # this run did not build, and `UX-55` established that is
             # what "cached" means in a capture.
             'cached': len(closure) - len(in_closure_built),
-            'hit_ratio': (
+            'hit_share': (
                 (len(closure) - len(in_closure_built)) / len(closure) if closure else None
             ),
         }

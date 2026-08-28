@@ -9,7 +9,7 @@ answer as an indented list - and neither needs a layout algorithm.
 Both are under `UX-196`'s discipline: published JSON only, no viewer
 arithmetic, geometry asserted from data attributes. The widths are
 `share_of_path`, a field the report already publishes; the indentation
-is `depth`, a field that had to *enter* `blast/v1` first, because the
+is `depth`, a field that had to *enter* `blast/v2` first, because the
 filing's premise that the payload already carried it was wrong.
 """
 import io
@@ -108,7 +108,7 @@ def _decl(style, name):
 
 class TestTheDepthThatHadToBePublished:
     """The filing said the tree was "a `<details>` tree over data
-    `blast/v1` already carries". It was not: the payload had
+    `blast/v2` already carries". It was not: the payload had
     `direct_elements` and `blast_elements`, two flat lists, and no
     per-element depth, kind or cost. Deriving depth in the viewer means
     walking the graph in JavaScript, which is the second analysis the
@@ -118,7 +118,7 @@ class TestTheDepthThatHadToBePublished:
     def test_blast_publishes_each_element_at_a_depth(self, run, target):
         answer = _blast(run, target)
         tree = answer["blast_tree"]
-        assert tree, "blast/v1 carries no tree"
+        assert tree, "blast/v2 carries no tree"
         assert {row["element_uid"] for row in tree} == set(answer["blast_elements"])
         assert all(row["depth"] >= 0 for row in tree)
 
@@ -158,7 +158,9 @@ class TestTheDepthThatHadToBePublished:
         for row in answer["blast_tree"]:
             assert row["element_kind"], row
         costed = [r for r in answer["blast_tree"]
-                  if isinstance(r["measured_seconds"], float)]
+                  # `UX-341`: an integer count of microseconds, not a float
+                  # of seconds under a new name.
+                  if isinstance(r["measured_us"], int)]
         assert costed, "nothing carried a measured cost"
 
     def test_the_schema_declares_it(self):

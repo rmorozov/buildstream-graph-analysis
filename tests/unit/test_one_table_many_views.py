@@ -267,14 +267,14 @@ class TestThePresetsAreDeclaredNotCoded:
         exercised at a fixed width rather than at `PRESET_COLUMNS_MAX +
         1` - which would keep raising however far the constant moved."""
         with pytest.raises(ValueError, match="columns"):
-            schemas._check_hint("analyze/v2", "signals", {
+            schemas._check_hint("analyze/v3", "signals", {
                 schemas.PRESETS: [{"name": "wide", "columns":
                                    [f"c{n}" for n in
                                     range(VIEW_COLUMNS_BOUND + 1)]}]})
 
     def test_a_preset_choosing_rows_two_ways_is_refused(self):
         with pytest.raises(ValueError, match="two answers"):
-            schemas._check_hint("analyze/v2", "signals", {
+            schemas._check_hint("analyze/v3", "signals", {
                 schemas.PRESETS: [{"name": "both", "columns": ["element"],
                                    "from": "signals.critical_path_detail",
                                    "where": {"column": "is_leaf",
@@ -468,13 +468,13 @@ const signals = {
 // All three columns `Plane 2 (sandbox)` requires, so the view is
 // offered - plus one Plane 1 already owns, which it must not take.
 const join = [
-  { element: "a.bst", cores_busy: 0.5, requested_jobs: 2, peak_rss_kb: 100,
+  { element: "a.bst", cores_busy: 0.5, requested_jobs: 2, peak_rss_bytes: 100,
     downstream_count: 999 },   // `downstream_count` is Plane 1's
-  { element: "b.bst", cores_busy: 0.8, requested_jobs: 4, peak_rss_kb: 200 },
+  { element: "b.bst", cores_busy: 0.8, requested_jobs: 4, peak_rss_bytes: 200 },
   // An element Plane 1 never scheduled: the join "never introduces an
   // element", so this row has nowhere to land.
   { element: "ghost.bst", cores_busy: 0.9, requested_jobs: 1,
-    peak_rss_kb: 50 },
+    peak_rss_bytes: 50 },
 ];
 const out = app.elementSignalTable(signals, undefined, join);
 
@@ -569,7 +569,7 @@ class TestTheJoinMergesWithoutOverwriting:
         """The merge says what it merged, so the section's own sentence
         counts signals rather than guessing."""
         assert self._merge()["joined"] == ["cores_busy", "requested_jobs",
-                                           "peak_rss_kb"], self._merge()
+                                           "peak_rss_bytes"], self._merge()
 
 
 @needs_node

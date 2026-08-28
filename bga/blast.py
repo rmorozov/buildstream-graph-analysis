@@ -26,6 +26,7 @@ from . import sources as sources_mod
 from .graph.edg import (build_element_graph, compute_element_durations,
                        compute_reachability)
 from .ingest.loader import load_all
+from .units import US_PER_S
 
 
 # The order a target is resolved in, applied top to bottom and stated in
@@ -286,8 +287,11 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     for uid in direct:
         reachable |= set(downstream.get(uid) or ())
     building, assembling = sources_mod.split_by_kind(reachable, kinds)
-    durations = ({uid: micros / 1e6 for uid, micros
-                  in compute_element_durations(_tasks_of(run_dir)).items()}
+    # UX-341: the durations arrive as integer microseconds and stay
+    # that way. This divided them by 1e6 to publish `measured_seconds`,
+    # which was a lossy downgrade of a value the tool already held
+    # exactly, and put a second spelling of time in the payload.
+    durations = (compute_element_durations(_tasks_of(run_dir))
                  if measure else {})
     measured = [durations[uid] for uid in reachable if uid in durations]
     by_kind: Dict[str, int] = {}
@@ -311,7 +315,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
         "building_count": building,
         "assembling_count": assembling,
         "by_element_kind": dict(sorted(by_kind.items(), key=lambda kv: (-kv[1], kv[0]))),
-        "measured_seconds": sum(measured) if measured else None,
+        "measured_us": sum(measured) if measured else None,
         "measured_elements": len(measured),
         "element_count": len(graph.elements),
         "has_inventory": bool(inventory),
@@ -326,7 +330,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
 
 def _by_depth(direct, reachable, successors, kinds, durations) -> List[dict]:
     """The closure as a hierarchy: `{element_uid, depth, element_kind,
-    measured_seconds}`, direct consumers first.
+    measured_us}`, direct consumers first.
 
     `UX-206` asked for the blast answer as an indented tree "over data
     `blast/v1` already carries". It did not carry it: the payload had
@@ -350,7 +354,7 @@ def _by_depth(direct, reachable, successors, kinds, durations) -> List[dict]:
                 "element_uid": uid,
                 "depth": depth,
                 "element_kind": kinds.get(uid, "unknown"),
-                "measured_seconds": durations.get(uid),
+                "measured_us": durations.get(uid),
             })
         nxt = []
         for uid in frontier:
@@ -429,11 +433,11 @@ def format_blast_text(answer: dict) -> str:
     if not answer.get('measured', True):
         lines.append("  Cost: not measured - re-run without --no-cost for the "
                      "measured rebuild time")
-    elif answer['measured_seconds'] is None:
+    elif answer['measured_us'] is None:
         lines.append("  Cost: unmeasured - no element of the blast ran in this build")
     else:
         lines.append(
-            f"  Cost: {sources_mod.format_work(answer['measured_seconds'])} of build "
+            f"  Cost: {sources_mod.format_work(answer['measured_us'] / US_PER_S)} of build "
             f"work, measured for {answer['measured_elements']} of "
             f"{answer['blast_count']}")
     if answer['keying']:

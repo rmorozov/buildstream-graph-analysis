@@ -1,5 +1,5 @@
 {
-    "schema": "analyze/v2",
+    "schema": "analyze/v3",
     "run_id": "golden-fixture-manifest-hash-v1",
     "total_duration_us": 16000,
     "section": null,
@@ -19,22 +19,25 @@
             "provenance": {
                 "claim": "confidence",
                 "kind": "finding",
-                "document": "analyze/v2",
+                "document": "analyze/v3",
                 "evidence": [
                     {
                         "path": "confidence.primary",
                         "value": 0.875,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "share"
                     },
                     {
                         "path": "confidence.coverage_score",
                         "value": 1.0,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "share"
                     },
                     {
                         "path": "confidence.task_coverage",
                         "value": 1.0,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "share"
                     }
                 ],
                 "rule": {
@@ -46,7 +49,8 @@
                     "comparison": "banded",
                     "observed_path": "confidence.primary",
                     "sentence": "0.88 bands as high against 0.50/0.80.",
-                    "module": "bga/findings.py"
+                    "module": "bga/findings.py",
+                    "threshold_quantity": "share"
                 },
                 "trace_query": null,
                 "unpublished_inputs": []
@@ -70,17 +74,19 @@
             "provenance": {
                 "claim": "wait-category",
                 "kind": "finding",
-                "document": "analyze/v2",
+                "document": "analyze/v3",
                 "evidence": [
                     {
                         "path": "attribution.untracked_tail_us",
                         "value": 2000,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "duration_us"
                     },
                     {
                         "path": "total_duration_us",
                         "value": 16000,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "duration_us"
                     }
                 ],
                 "rule": {
@@ -141,21 +147,23 @@
             "provenance": {
                 "claim": "blast-radius-ranking",
                 "kind": "finding",
-                "document": "analyze/v2",
+                "document": "analyze/v3",
                 "evidence": [
                     {
-                        "path": "headline.chain_ratio",
+                        "path": "headline.chain_share",
                         "value": 0.875,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "share"
                     }
                 ],
                 "rule": {
                     "name": "CHAIN_BOUND_RATIO",
                     "threshold": 0.9,
                     "comparison": "<",
-                    "observed_path": "headline.chain_ratio",
+                    "observed_path": "headline.chain_share",
                     "sentence": "Who-depends-on-me is ranked only on a build the chain does not already constrain; above the threshold the ranking that matters is how long each element takes.",
-                    "module": "bga/findings.py"
+                    "module": "bga/findings.py",
+                    "threshold_quantity": "share"
                 },
                 "trace_query": "dependency-wait",
                 "unpublished_inputs": []
@@ -175,17 +183,19 @@
             "provenance": {
                 "claim": "efficiency-score",
                 "kind": "finding",
-                "document": "analyze/v2",
+                "document": "analyze/v3",
                 "evidence": [
                     {
                         "path": "floors.efficiency_score",
                         "value": 1.0,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "share"
                     },
                     {
                         "path": "confidence.primary",
                         "value": 0.875,
-                        "resolved": true
+                        "resolved": true,
+                        "quantity": "share"
                     }
                 ],
                 "rule": {
@@ -197,7 +207,8 @@
                     "comparison": "banded",
                     "observed_path": "floors.efficiency_score",
                     "sentence": "1.00 is at or above 0.90 and at or above 0.70, which is what chooses the sentence beside it; the caveat below 0.8 confidence is a second rule, not this one.",
-                    "module": "bga/findings.py"
+                    "module": "bga/findings.py",
+                    "threshold_quantity": "share"
                 },
                 "trace_query": "cpu-versus-wall",
                 "unpublished_inputs": []
@@ -206,8 +217,8 @@
     ],
     "headline": {
         "diagnosis": "scheduler_bound",
-        "chain_ratio": 0.875,
-        "chain_bound_ratio": 0.9,
+        "chain_share": 0.875,
+        "chain_bound_share": 0.9,
         "sentence": "This build is scheduler-bound, not chain-bound: the critical path is 88% of wall-clock, below the 90% chain-bound line, so the time is going somewhere other than the chain.",
         "certified_headroom_us": 0,
         "scheduling_gap_us": 2000,
@@ -219,7 +230,7 @@
                 "provenance": {
                     "claim": "blast-radius-ranking",
                     "kind": "top_action",
-                    "document": "analyze/v2",
+                    "document": "analyze/v3",
                     "see": "findings[id=blast-radius-ranking].provenance",
                     "resolved": true
                 }
@@ -231,7 +242,7 @@
                 "provenance": {
                     "claim": "blast-radius-ranking",
                     "kind": "top_action",
-                    "document": "analyze/v2",
+                    "document": "analyze/v3",
                     "see": "findings[id=blast-radius-ranking].provenance",
                     "resolved": true
                 }
@@ -243,7 +254,7 @@
                 "provenance": {
                     "claim": "blast-radius-ranking",
                     "kind": "top_action",
-                    "document": "analyze/v2",
+                    "document": "analyze/v3",
                     "see": "findings[id=blast-radius-ranking].provenance",
                     "resolved": true
                 }
@@ -252,31 +263,35 @@
         "provenance": {
             "claim": "diagnosis",
             "kind": "diagnosis",
-            "document": "analyze/v2",
+            "document": "analyze/v3",
             "evidence": [
                 {
                     "path": "floors.t_infinity_observed",
                     "value": 14000,
-                    "resolved": true
+                    "resolved": true,
+                    "quantity": "duration_us"
                 },
                 {
                     "path": "total_duration_us",
                     "value": 16000,
-                    "resolved": true
+                    "resolved": true,
+                    "quantity": "duration_us"
                 },
                 {
-                    "path": "headline.chain_ratio",
+                    "path": "headline.chain_share",
                     "value": 0.875,
-                    "resolved": true
+                    "resolved": true,
+                    "quantity": "share"
                 }
             ],
             "rule": {
                 "name": "CHAIN_BOUND_RATIO",
                 "threshold": 0.9,
                 "comparison": "<",
-                "observed_path": "headline.chain_ratio",
+                "observed_path": "headline.chain_share",
                 "sentence": "The critical path is 87.5% of wall-clock, which is < the 90% at which the chain rather than the scheduler is called the constraint - so scheduler_bound.",
-                "module": "bga/findings.py"
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
             },
             "trace_query": "element-time",
             "unpublished_inputs": []
@@ -324,7 +339,7 @@
         "model_slack": 0,
         "efficiency_score": 1.0,
         "t_infinity_cold": null,
-        "occupancy_ratio": 0.6428571428571429,
+        "occupancy_share": 0.6428571428571429,
         "cold_partial": false,
         "cold_confidence": null,
         "cold_duration_sources": {},
@@ -592,11 +607,11 @@
             "avg_fanout": 0.5,
             "avg_fanin": 0.5,
             "critical_path_length": 3,
-            "critical_path_ratio": 0.75,
+            "critical_path_share": 0.75,
             "max_parallelism": 2,
             "avg_parallelism": 1.3333333333333333,
             "cyclomatic_complexity": 0,
-            "serialization_ratio": 0.25
+            "serialization_share": 0.25
         },
         "bottleneck": {
             "choke_points": [],
@@ -628,21 +643,21 @@
         },
         "sensitivity": {
             "top_opportunities": [
-                [
-                    "base.bst",
-                    0.42857142857142855,
-                    42.857142857142854
-                ],
-                [
-                    "lib.bst",
-                    0.35714285714285715,
-                    35.714285714285715
-                ],
-                [
-                    "app.bst",
-                    0.21428571428571427,
-                    21.428571428571427
-                ]
+                {
+                    "element_uid": "base.bst",
+                    "sensitivity": 0.42857142857142855,
+                    "saving_us": 6000
+                },
+                {
+                    "element_uid": "lib.bst",
+                    "sensitivity": 0.35714285714285715,
+                    "saving_us": 5000
+                },
+                {
+                    "element_uid": "app.bst",
+                    "sensitivity": 0.21428571428571427,
+                    "saving_us": 3000
+                }
             ],
             "omitted_structural_opportunities": [],
             "total_improvable_time_us": 10000,
@@ -698,13 +713,13 @@
         },
         "total_accounted_us": 32000,
         "unaccounted_us": 0,
-        "reconciliation_error_pct": 0.0,
+        "reconciliation_error_share": 0.0,
         "potential_oversubscription": false,
         "oversubscription_evidence": "INSUFFICIENT_EVIDENCE",
         "max_observed_concurrency": 1,
-        "useful_pct": 56.25,
-        "idle_pct": 43.75,
-        "wasted_pct": 0.0
+        "useful_share": 0.5625,
+        "idle_share": 0.4375,
+        "wasted_share": 0.0
     },
     "confidence": {
         "primary": 0.875,

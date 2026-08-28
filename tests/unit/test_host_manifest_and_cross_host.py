@@ -6,7 +6,7 @@ enable comparison of runs from different build hosts, to compare
 comparable."*
 
 Before this, `run-context.json` recorded `host_cpu_count` and
-`host_memory_mb` - two numbers that call a laptop and a build runner
+`host_memory_bytes` - two numbers that call a laptop and a build runner
 with the same core count the same machine - and `bga compare` performed
 **no host check of any kind**. `UX-92` had already measured a 33%
 spread across five captures of one unchanged commit on nominally
@@ -30,14 +30,15 @@ from bga.compare import compare_runs
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 
 _XEON = {
-    "schema": "host/v1",
+    "schema": "host/v2",
     "cpu_model": "Intel(R) Xeon(R) Processor @ 2.80GHz",
     "cpu_count": 4,
-    "memory_mb": 16075,
+    "memory_bytes": 16075 * 1024 * 1024,
     "kernel_release": "6.18.44-fc-v21",
     "distro_id": "ubuntu 24.04",
 }
-_RYZEN = dict(_XEON, cpu_model="AMD Ryzen 9 7950X", cpu_count=32, memory_mb=64000)
+_RYZEN = dict(_XEON, cpu_model="AMD Ryzen 9 7950X", cpu_count=32,
+              memory_bytes=64000 * 1024 * 1024)
 
 
 def _run(tmp_path, name, manifest):
@@ -54,11 +55,11 @@ def _run(tmp_path, name, manifest):
 class TestTheManifestDescribesThisMachine:
     def test_it_records_what_it_can_read(self):
         manifest = hostinfo.collect(with_toolchain=False)
-        assert manifest["schema"] == "host/v1"
+        assert manifest["schema"] == "host/v2"
         # Plausible rather than exact: this runs on whatever machine CI
         # gave us, and a test that pins the CPU model pins the runner.
         assert manifest["cpu_count"] and manifest["cpu_count"] >= 1
-        assert manifest["memory_mb"] and manifest["memory_mb"] > 128
+        assert manifest["memory_bytes"] and manifest["memory_bytes"] > 128 * 1024 ** 2
         assert manifest["kernel_release"]
 
     def test_the_cpu_model_is_not_the_architecture(self):
@@ -84,7 +85,7 @@ class TestTheManifestDescribesThisMachine:
 
         context = {}
         add_host_manifest(context)
-        assert context["host_manifest"]["schema"] == "host/v1"
+        assert context["host_manifest"]["schema"] == "host/v2"
 
     def test_it_does_not_take_the_operator_supplied_host_field(self):
         """`--host ci-runner-1` has published an *identifier* under

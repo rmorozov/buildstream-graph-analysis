@@ -7,7 +7,7 @@ Measured on `examples/06-macro-micro-optimization`: three one-line fixes
 made a real build 30.5% faster while `efficiency_score` moved 1.00 ->
 0.83 and `certified_headroom` 0.00s -> 4.05s. Both backwards.
 
-`occupancy_ratio` does not consult the graph at all - it asks how much of
+`occupancy_share` does not consult the graph at all - it asks how much of
 the available dispatch-slot-time the run used - so serializing
 independent work lowers it and unchaining raises it. On that same real
 pair: 27.8% -> 63.0%.
@@ -70,7 +70,7 @@ def test_efficiency_score_cannot_tell_the_two_apart_and_occupancy_can():
     """The whole point. `efficiency_score` is LB/horizon, and LB is
     derived from the observed graph, so a perfectly-scheduled chain and a
     perfectly-scheduled fan-out both score 1.00 - the metric is blind to
-    the difference between them. `occupancy_ratio` is not.
+    the difference between them. `occupancy_share` is not.
 
     On a real project the inversion is stronger still, because a
     fanned-out build saturates its builders and picks up real resource
@@ -82,7 +82,7 @@ def test_efficiency_score_cannot_tell_the_two_apart_and_occupancy_can():
     fanned = _analyzer(*_FANNED_OUT).analyze()
 
     assert chained.floors["efficiency_score"] >= fanned.floors["efficiency_score"]
-    assert chained.floors["occupancy_ratio"] < fanned.floors["occupancy_ratio"]
+    assert chained.floors["occupancy_share"] < fanned.floors["occupancy_share"]
 
 
 def test_chained_build_has_zero_certified_headroom_despite_being_the_bad_one():

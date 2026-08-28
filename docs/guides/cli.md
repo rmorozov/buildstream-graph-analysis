@@ -650,10 +650,10 @@ Every machine-readable output declares its own shape as its **first
 key**:
 
 ```bash
-bga analyze RUN/ --format json | head -2      # "schema": "analyze/v2"
-bga compare A B --format json                 # "schema": "compare/v1"
-bga blast TARGET --format json                # "schema": "blast/v1"
-bga correlate RUN/ --format json              # "schema": "correlate/v1"
+bga analyze RUN/ --format json | head -2      # "schema": "analyze/v3"
+bga compare A B --format json                 # "schema": "compare/v2"
+bga blast TARGET --format json                # "schema": "blast/v2"
+bga correlate RUN/ --format json              # "schema": "correlate/v2"
 bga whatif RUN/ --element E --format json     # "schema": "whatif/v1"
 ```
 
@@ -666,11 +666,11 @@ bga compare --schema | jq '.required'
 ```
 
 **The versioning rule**: a field rename or removal bumps the version; an
-addition does not. Pin `analyze/v2` and your consumer keeps working
+addition does not. Pin `analyze/v3` and your consumer keeps working
 while the tool grows.
 
 A section subcommand (`bga floors`, `bga graph`, …) emits the same
-`analyze/v2` document restricted to its own keys, with a `section` key
+`analyze/v3` document restricted to its own keys, with a `section` key
 naming the restriction — so a missing key can be told from a removed
 one.
 
@@ -715,7 +715,7 @@ Three rules decide what it will and will not say:
   producer stamp counted separately as an explicit unknown. Unlike a
   host class, two contract sets are not two populations: what decides
   whether runs can be pooled is movement in the contracts this document
-  *reads* (`analyze/v2`, `store/v1`), never the package version — the
+  *reads* (`analyze/v3`, `store/v1`), never the package version — the
   rule `bga compare` already applies to a pair.
 
 Percentiles are **nearest-rank**: for `n` sorted samples, `p` is the
@@ -830,7 +830,7 @@ bga analyze RUN/ --explain
     rule: CHAIN_BOUND_RATIO = 0.9 (<, bga/findings.py)
       floors.t_infinity_observed = 14000
       total_duration_us = 16000
-      headline.chain_ratio = 0.875
+      headline.chain_share = 0.875
     deeper: trace query `element-time`
 ```
 
@@ -854,7 +854,7 @@ claim:
 - `document` — which schema the paths walk. Load-bearing when a record
   travels: `bga compare --format json` carries the candidate run's
   chain at `candidate_diagnosis`, and its paths resolve against that
-  run's `analyze/v2`, not against the comparison.
+  run's `analyze/v3`, not against the comparison.
 
 A top action's provenance is a **pointer** (`see`) at the finding's
 record, because the action is already a reference to that finding.
@@ -871,7 +871,7 @@ was unversioned until round 25 — no `schema` stamp, no view-hints,
 served by nothing — so the one place where *"this element is on the
 path, is worth 12.05s, and was pinned to one job on four cores"* is a
 single row was invisible to `bga view`, to CI and to every external
-consumer. It is `correlate/v1` now, with no change to what it computes.
+consumer. It is `correlate/v2` now, with no change to what it computes.
 
 ```bash
 bga correlate @last --schema | jq '.properties.elements["bga:columns"]'
@@ -938,7 +938,7 @@ answered.
 array, a table with these columns — and renders from that. Two things
 follow, and both are deliberate:
 
-- A field added to `analyze/v2` appears in the viewer with **no change
+- A field added to `analyze/v3` appears in the viewer with **no change
   to the viewer**.
 - Anything the viewer should show has to enter the published schema
   first, where `--format json`, CI and every external consumer get it
@@ -996,7 +996,7 @@ Above the sections, two things a list of tables could not say:
 
 **Every number in both is read from a published field.** Nothing is
 computed in the browser; the one division in the waterfall is a CSS
-width. A gap the JSON does not carry enters `analyze/v2` first, where
+width. A gap the JSON does not carry enters `analyze/v3` first, where
 `--format json`, CI and every other consumer get it too — which is why
 `confidence.band`, `run_instance.incomplete_reason` and
 `plane2_coverage` are fields rather than viewer logic.
@@ -1012,7 +1012,7 @@ export does not have one.
 ### What the page opens with (`UX-207`)
 
 The first screen is a **decision**, and everything below it is the
-evidence for that decision. `analyze/v2` publishes a `headline` block —
+evidence for that decision. `analyze/v3` publishes a `headline` block —
 the diagnosis (`chain_bound`, `scheduler_bound` or `inconclusive`), the
 ratio it was decided by, what the opportunity is worth, and the three
 elements to look at first, each pointing at the finding that reasons
@@ -1172,7 +1172,7 @@ how a thin viewer stops being one.
   middle (`UX-187`'s fold) and open in place.
 - **The blast tree** — a blast answer as an indented hierarchy, direct
   consumers first, then the closure by depth, each row with its kind
-  and measured work. The depth is published in `blast/v1` as
+  and measured work. The depth is published in `blast/v2` as
   `blast_tree`; the page does not walk a graph.
 
 A general BuildStream DAG rendering stays deliberately unbuilt — it
@@ -1388,7 +1388,7 @@ bga compare runs/baseline runs/candidate --fail-on-efficiency-regression
 bga compare runs/baseline runs/candidate --min-efficiency 0.45
 ```
 
-Exits `5` - a code distinct from `4`, so a pipeline can warn on "slower" and fail on "less efficient", or vice versa. Gates on **Dispatch Occupancy** (`floors.occupancy_ratio`, `docs/backlog/scenarios/UX-27`), which is invariant to how much work the build does: adding well-parallelized elements barely moves it, adding serialized ones moves it sharply.
+Exits `5` - a code distinct from `4`, so a pipeline can warn on "slower" and fail on "less efficient", or vice versa. Gates on **Dispatch Occupancy** (`floors.occupancy_share`, `docs/backlog/scenarios/UX-27`), which is invariant to how much work the build does: adding well-parallelized elements barely moves it, adding serialized ones moves it sharply.
 
 Real, measured illustration on one project (`examples/06-macro-micro-optimization`), same runner:
 
@@ -1531,7 +1531,7 @@ rather than overlap. The CPU ceiling is `host_cores × builders ÷
 cores_busy` — measured draw per concurrently-building element, not an
 assumption — and the memory ceiling comes from the envelope below.
 
-**Reading it as data.** The block is a key of `analyze/v2`, so a CI job
+**Reading it as data.** The block is a key of `analyze/v3`, so a CI job
 asks for it the same way it asks for anything else:
 
 ```bash
@@ -1593,18 +1593,18 @@ bga sweep tests/fixtures/macro_micro/run --format json | jq '.knee_points'
 | `calibration_capacities` | the capacities that had real measurements behind them. Empty means every point is a projection — the difference between a curve with data in it and one without |
 
 It had **no `schema:` key at all** until `UX-339`, and `bga sweep
---schema` answered `analyze/v2` — a contract this document has none of
+--schema` answered `analyze/v3` — a contract this document has none of
 the required keys of. `UX-328` found that while enrolling three others,
 said what was true in the meantime, and filed the contract this is.
 
 **Where it appears.** In the text report, under the headline. It is
-**not** a key of `analyze/v2` — `bga analyze -f json` does not carry it
+**not** a key of `analyze/v3` — `bga analyze -f json` does not carry it
 (`UX-275`).
 
 ### The memory envelope (`UX-104`)
 
 `memory_envelope` is what decides whether `--builders` can go up, and it
-is a published key of [`correlate/v1`](#the-two-plane-join-published-ux-215):
+is a published key of [`correlate/v2`](#the-two-plane-join-published-ux-215):
 
 ```bash
 bga correlate @last -f json | jq .memory_envelope
@@ -1612,18 +1612,20 @@ bga correlate @last -f json | jq .memory_envelope
 
 ```json
 {
-  "host_memory_mb": 16075,
+  "host_memory_bytes": 16855859200,
   "builders": 4,
   "elements_measured": 9,
-  "largest_element_peak_mb": 153.5,
-  "at_observed_builders": {"builders": 4, "envelope_mb": 613.7,
+  "largest_element_peak_bytes": 160956416,
+  "at_observed_builders": {"builders": 4, "envelope_bytes": 643497574,
                            "share_of_host": 0.038, "fits": true},
   "first_builders_that_does_not_fit": null
 }
 ```
 
-Every figure is in **megabytes**, and `share_of_host` is a fraction of
-`host_memory_mb`. The same thing in the text report reads:
+Every figure is in **bytes** (`UX-341`: the payload has one spelling
+per dimension, and `ru_maxrss` is converted once at the input
+boundary), and `share_of_host` is a fraction of `host_memory_bytes`.
+The same thing in the text report reads:
 
 ```text
   Memory: 4 builders of this shape peak at ~0.6 GB of 15.7 GB (4%); 9 would still fit at ~1.3 GB, so memory is not what binds first here
@@ -1690,7 +1692,7 @@ Two deliberate limits:
 
 ### When the efficiency gates cannot run
 
-Both efficiency gates read `occupancy_ratio`, which needs a
+Both efficiency gates read `occupancy_share`, which needs a
 `resource_capacities.PROCESS` in `run-context.json`. Any legacy or
 hand-built run directory may have none, and both gates then pass —
 correctly, since a verdict must not be fabricated from missing data, but
@@ -1701,7 +1703,7 @@ from a run that had really passed.
 Fail-open is still the default. It is no longer silent (`UX-87`):
 
 - stderr carries `Efficiency gate NOT APPLIED: … the baseline run has no
-  \`occupancy_ratio\` signal …`, naming the gate and the run.
+  \`occupancy_share\` signal …`, naming the gate and the run.
 - `--format json` publishes `efficiency_gate_evaluated` — `true` (asked
   for and evaluated), `false` (asked for, could not run), or `null`
   (no efficiency gate was requested), plus `efficiency_gate_signal` with
@@ -1810,7 +1812,7 @@ graph is a much smaller number than its share suggests.
   Read the stderr line, which names which of the three fired. All three are distinct from 1/2/3, which mean `bga` itself failed to run.
 - `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/backlog/scenarios/UX-39`).
 - `6`: **refused as not comparable** - not a verdict about the build at all, which is why it does not share a code with one. Two commands return it: `bga compare`, when the two runs share fewer than half their element UIDs or one is a caches-off run and the other incremental (`docs/backlog/scenarios/UX-78`; `--allow-mismatch` overrides); `bga cache-trend`, when the series is not all of one project and target set, in which case the per-run rows still print and only the band verdict is withheld (`docs/backlog/scenarios/UX-111`); and `bga baseline`, when the assembled set's captures are not comparable to each other (`docs/backlog/scenarios/UX-96`).
-- `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_ratio`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`docs/backlog/scenarios/UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
+- `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_share`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`docs/backlog/scenarios/UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
 - `130`: **interrupted** (`UX-157`, `UX-163`). Ctrl-C during a capture is
   not a failure and not a verdict: whatever the build completed is kept,
   analyzed, and labelled as a build that did not finish. A comparison

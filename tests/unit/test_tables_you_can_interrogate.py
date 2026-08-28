@@ -37,11 +37,13 @@ class TestTheThresholdParsesTheUnitTheColumnDeclares:
         ("> 5s", "duration_us", {"op": ">", "value": 5_000_000}),
         ("5s", "duration_us", {"op": ">=", "value": 5_000_000}),
         ("<= 500ms", "duration_us", {"op": "<=", "value": 500_000}),
-        ("> 2m", "seconds", {"op": ">", "value": 120}),
+        # `UX-341` retired `seconds`, `megabytes`, `kilobytes` and
+        # `percent` from the vocabulary, so no column can be declared in
+        # one and these tables no longer carry four conversion sets to
+        # filter a column that cannot exist.
         (">= 512mb", "bytes", {"op": ">=", "value": 536_870_912}),
-        ("> 1gb", "megabytes", {"op": ">", "value": 1024}),
+        ("> 1gb", "bytes", {"op": ">", "value": 1_073_741_824}),
         ("< 50%", "share", {"op": "<", "value": 0.5}),
-        ("< 50%", "percent", {"op": "<", "value": 50}),
         ("> 10", "count", {"op": ">", "value": 10}),
     ])
     def test_it_parses(self, text, quantity, expected):

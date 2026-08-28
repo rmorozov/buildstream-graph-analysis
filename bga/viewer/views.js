@@ -504,7 +504,7 @@ export function renderBlastAnswer(result) {
     ["Of which build", result.building_count],
     ["…and assemble", result.assembling_count],
     ["Measured", result.measured
-      ? `${result.measured_seconds?.toFixed?.(1) ?? result.measured_seconds}s `
+      ? `${seconds(result.measured_us)} `
         + `over ${result.measured_elements} element(s)`
       : "not measured (--no-cost, or no run)"],
   ];
@@ -661,7 +661,8 @@ export function renderEvidence(payload) {
   if (host.cpu_model) {
     rows.push(["Host",
                [host.cpu_model, host.cpu_count && `${host.cpu_count} cpu`,
-                host.memory_mb && `${Math.round(host.memory_mb / 1024)} GiB`]
+                host.memory_bytes
+                  && `${Math.round(host.memory_bytes / 1024 ** 3)} GiB`]
                  .filter(Boolean).join(" · "),
                "run_instance.host_manifest"]);
   }
@@ -925,11 +926,11 @@ export function renderBlastTree(payload) {
       badge.textContent = entry.element_kind;
       row.append(badge);
     }
-    if (typeof entry.measured_seconds === "number") {
+    if (typeof entry.measured_us === "number") {
       const cost = document.createElement("span");
       cost.className = "blast-cost num";
-      cost.setAttribute("data-raw", String(entry.measured_seconds));
-      cost.textContent = seconds(entry.measured_seconds * 1e6);
+      cost.setAttribute("data-raw", String(entry.measured_us));
+      cost.textContent = seconds(entry.measured_us);
       row.append(cost);
     }
     list.append(row);

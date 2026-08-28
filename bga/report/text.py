@@ -8,6 +8,7 @@ from .. import sources
 from ..findings import (compute_findings, compute_headline,
                         compute_next_steps, render_findings)
 from ..ingest.models import AnalysisResult
+from ..units import GIB, US_PER_S
 from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
 # Confidence-band labels for the Key Findings headline (P4-02) - a
@@ -329,7 +330,7 @@ def _format_timestamp_resolution(result: AnalysisResult) -> List[str]:
     duration that provably did not happen.
     """
     agreement = getattr(result, 'timestamp_agreement', None) or {}
-    resolution = agreement.get('resolution_s')
+    resolution = agreement.get('resolution_us')
     if not resolution:
         return []
     provably_short = agreement.get('tasks_shorter_than_bst') or 0
@@ -338,7 +339,7 @@ def _format_timestamp_resolution(result: AnalysisResult) -> List[str]:
         return []
     share = (agreement.get('material_share') or 0.05) * 100
     lines = [
-        f"  Duration resolution: ±{resolution:.2f}s, measured - each task's length "
+        f"  Duration resolution: ±{resolution / US_PER_S:.2f}s, measured - each task's length "
         f"is in this capture twice (the wrapped log's own timestamps, stamped when "
         f"the wrapper read each line, against BuildStream's own elapsed) and "
         f"{agreement['tasks_compared']} task(s) were compared",
@@ -347,7 +348,8 @@ def _format_timestamp_resolution(result: AnalysisResult) -> List[str]:
         lines.append(
             f"    that is more than {share:.0f}% of the duration for "
             f"{material} of {agreement.get('tasks_measured', material)} measured "
-            f"task(s) - the shortest is {agreement['shortest_task_s']:.2f}s"
+            f"task(s) - the shortest is "
+            f"{agreement['shortest_task_us'] / US_PER_S:.2f}s"
         )
     if provably_short:
         worst = (agreement.get('shorter_than_bst') or [{}])[0]
@@ -452,8 +454,8 @@ def _format_resource_blast(result, full_sections=frozenset()) -> List[str]:
     shown = rows if 'sources' in full_sections else rows[:_SHARED_SOURCE_ROWS]
     hidden_rows = len(rows) - len(shown)
     for row in shown:
-        cost = ("unmeasured" if row['measured_seconds'] is None
-                else f"{row['measured_seconds']:.0f}s")
+        cost = ("unmeasured" if row['measured_us'] is None
+                else f"{row['measured_us'] / US_PER_S:.0f}s")
         identity = row['identity']
         share = f"/{total}" if total else ""
         numbers = (f"{row['direct_count']:>7}"
@@ -641,13 +643,13 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         if efficiency_score is not None:
             lines.append(f"  Efficiency Score:            {efficiency_score:.2f} ({_efficiency_band(efficiency_score)})")
         # UX-27: the graph-shape-aware companion to the score above.
-        occupancy_ratio = floors.get('occupancy_ratio')
-        if occupancy_ratio is not None:
+        occupancy_share = floors.get('occupancy_share')
+        if occupancy_share is not None:
             # UX-220: the explanation is the schema's, not a second
             # wording kept here. This line used to carry its own.
             lines.append(
-                f"  Dispatch Occupancy:          {occupancy_ratio * 100:.1f}% "
-                f"({schemas.description(schemas.ANALYZE, 'floors.occupancy_ratio')})"
+                f"  Dispatch Occupancy:          {occupancy_share * 100:.1f}% "
+                f"({schemas.description(schemas.ANALYZE, 'floors.occupancy_share')})"
             )
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
@@ -778,8 +780,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
             source_text = f" (source: {source})" if source else " (source: unknown)"
             label = "Effective CPUs" if measured_cpu else "Capacity"
             lines.append(f"  {label}: {util['effective_cpus']}{source_text}")
-        if measured_cpu and util.get('reconciliation_error_pct') is not None:
-            lines.append(f"  Reconciliation Error: {util['reconciliation_error_pct']:.2f}%")
+        if measured_cpu and util.get('reconciliation_error_share') is not None:
+            lines.append("  Reconciliation Error: "
+                         f"{util['reconciliation_error_share'] * 100:.2f}%")
         elif not measured_cpu:
             # Previously rendered as `Reconciliation Error: 0.00%`, which
             # implies something was reconciled. Nothing was: I9
@@ -1098,7 +1101,7 @@ def format_csv(result: AnalysisResult) -> str:
     return "\n".join(lines)
 
 
-def memory_envelope_direction(delta_mb: float) -> str:
+def memory_envelope_direction(delta_bytes: float) -> str:
     """UX-145: the word, gated on the delta the line actually *prints*.
 
     It read "Memory envelope grew: 0.6 GB -> 0.6 GB (+0.0 GB, +0%)" on a
@@ -1107,9 +1110,9 @@ def memory_envelope_direction(delta_mb: float) -> str:
     zero is "unchanged" - and so is anything that rounds to zero at the
     one decimal place of GB this line renders.
     """
-    if abs(round(delta_mb / 1024, 1)) < 0.05:
+    if abs(round(delta_bytes / GIB, 1)) < 0.05:
         return 'unchanged'
-    return 'grew' if delta_mb > 0 else 'shrank'
+    return 'grew' if delta_bytes > 0 else 'shrank'
 
 
 def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> List[str]:
@@ -1132,7 +1135,7 @@ def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> List[str]:
     if not capacity:
         return []
     at_knee = next((p for p in projections if p['builders'] == capacity), None)
-    host_gb = envelope['host_memory_mb'] / 1024
+    host_gb = envelope['host_memory_bytes'] / GIB
     if at_knee is None:
         # The knee sits beyond the measured population - more builders
         # than there are elements with a measured peak - so the envelope
@@ -1144,13 +1147,13 @@ def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> List[str]:
         ]
     if at_knee['fits']:
         return [
-            f"  Memory: capacity {capacity} needs ~{at_knee['envelope_mb'] / 1024:.1f} GB "
+            f"  Memory: capacity {capacity} needs ~{at_knee['envelope_bytes'] / GIB:.1f} GB "
             f"of {host_gb:.1f} GB ({at_knee['share_of_host'] * 100:.0f}%) - memory is "
             f"not what binds at the knee."
         ]
     return [
         f"  MEMORY BINDS BEFORE THE KNEE: capacity {capacity} needs "
-        f"~{at_knee['envelope_mb'] / 1024:.1f} GB against {host_gb:.1f} GB of RAM. The "
+        f"~{at_knee['envelope_bytes'] / GIB:.1f} GB against {host_gb:.1f} GB of RAM. The "
         f"knee is a scheduling answer and the replay model does not know about "
         f"memory (UX-09/UX-14) - building there would swap."
     ]
@@ -1472,14 +1475,14 @@ def format_compare_text(comparison) -> str:
     memory_delta = getattr(comparison, 'memory_envelope_delta', None) or {}
     if memory_delta:
         share = memory_delta.get('delta_share')
-        direction = memory_envelope_direction(memory_delta['delta_mb'])
+        direction = memory_envelope_direction(memory_delta['delta_bytes'])
         lines.append(
             f"  Memory envelope {direction}: "
-            f"{memory_delta['baseline_envelope_mb'] / 1024:.1f} GB -> "
-            f"{memory_delta['candidate_envelope_mb'] / 1024:.1f} GB "
-            f"({memory_delta['delta_mb'] / 1024:+.1f} GB"
+            f"{memory_delta['baseline_envelope_bytes'] / GIB:.1f} GB -> "
+            f"{memory_delta['candidate_envelope_bytes'] / GIB:.1f} GB "
+            f"({memory_delta['delta_bytes'] / GIB:+.1f} GB"
             + (f", {share * 100:+.0f}%" if share is not None else "")
-            + f") against {memory_delta['host_memory_mb'] / 1024:.1f} GB of RAM"
+            + f") against {memory_delta['host_memory_bytes'] / GIB:.1f} GB of RAM"
             + ("" if memory_delta['candidate_fits'] else " - the candidate does NOT fit")
         )
 
@@ -1543,10 +1546,10 @@ def format_compare_text(comparison) -> str:
     # Score deliberately - on a real optimization the two move in
     # opposite directions, and seeing that side by side is the whole
     # point of publishing a second signal.
-    if b.get('occupancy_ratio') is not None or c.get('occupancy_ratio') is not None:
-        bo = b.get('occupancy_ratio')
-        co = c.get('occupancy_ratio')
-        do = d.get('occupancy_ratio')
+    if b.get('occupancy_share') is not None or c.get('occupancy_share') is not None:
+        bo = b.get('occupancy_share')
+        co = c.get('occupancy_share')
+        do = d.get('occupancy_share')
         bo_s = f"{bo * 100:.1f}%" if bo is not None else "n/a"
         co_s = f"{co * 100:.1f}%" if co is not None else "n/a"
         do_s = (
@@ -1572,9 +1575,15 @@ def format_compare_text(comparison) -> str:
             # through UX-111's whole audit, because the guard test
             # asserted the helper rather than any rendered output.
             label = _attribution_label(category)
-            b_pct = f"{entry['baseline_pct']:.1f}%" if entry['baseline_pct'] is not None else "n/a"
-            c_pct = f"{entry['candidate_pct']:.1f}%" if entry['candidate_pct'] is not None else "n/a"
-            delta_pp = entry['delta_pct_points']
+            # UX-341: the payload carries 0..1; the terminal keeps
+            # showing percentage points, which is what a reader of a
+            # comparison reads. The unit lives in the document, the
+            # presentation lives here.
+            b_share, c_share = entry['baseline_share'], entry['candidate_share']
+            b_pct = f"{b_share * 100:.1f}%" if b_share is not None else "n/a"
+            c_pct = f"{c_share * 100:.1f}%" if c_share is not None else "n/a"
+            delta = entry['delta_share']
+            delta_pp = None if delta is None else delta * 100
             delta_pp_s = f"{'+' if delta_pp is not None and delta_pp >= 0 else ''}{delta_pp:.1f}pp" if delta_pp is not None else "n/a"
             lines.append(
                 f"  {label:25s} {_fmt_us(entry['baseline_us']):>8s} ({b_pct:>6s}) -> "

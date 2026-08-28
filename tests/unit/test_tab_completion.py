@@ -201,7 +201,7 @@ class TestTheIntegrationIsInert:
              "['analyze', %r, '--format', 'json']))" % GOLDEN],
             capture_output=True, text=True, cwd=os.getcwd())
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout)["schema"] == "analyze/v2"
+        assert json.loads(result.stdout)["schema"] == "analyze/v3"
 
 
 class TestThroughArgcompleteItself:

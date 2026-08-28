@@ -348,7 +348,13 @@ COMMITTED_EXPORTS = [
     # source and 2,920 of payload, split between the two items in the
     # note above. The bounds are restated rather than the twelfth
     # contract left unpublished to fit a number nobody argued.
-    ("golden", GOLDEN, 352_000),                       #  346,521 B
+    # `UX-370` moved this one by 741 B, all of it **contract**: golden
+    # has no Plane 2 report, so it carries none of the three new keys -
+    # what grew is the embedded schema's prose for them, which every
+    # export carries whether or not the run has the data. That split is
+    # the whole reason `test_the_data_dwarfs_the_page` counts contract
+    # separately, and it is why this bound moved less than the other.
+    ("golden", GOLDEN, 353_500),                       #  352,741 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -360,7 +366,13 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 392_000),             #  386,817 B
+    # `UX-370` moved this one by 11,517 B: 741 of contract, as above,
+    # and ~10.8 KB of this run's own Plane 2 measurements -
+    # `by_binary`, `binary_cost` and `configure_phase`, which were
+    # published in `plane2.json` beside the run and reached no reader.
+    # Data rather than page, which is the half an export is supposed to
+    # be made of.
+    ("macro_micro", MACRO_MICRO, 405_000),             #  403,590 B
 ]
 
 

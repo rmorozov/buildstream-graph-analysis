@@ -49,6 +49,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
+import pages    # noqa: E402
 from pages import snapshot_copy    # noqa: E402
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -317,6 +318,17 @@ class TestEveryFoldStatesItsDepth:
 # --------------------------------------------------------------------------
 
 @needs_node
+def _row_cap():
+    """`TABLE_OPENS_BOUNDED_ABOVE`, read from the module that sets it
+    rather than repeated here - the number and the rule move together."""
+    import re
+
+    source = (REPO / "bga/viewer/structured.js").read_text(encoding="utf-8")
+    found = re.search(r"TABLE_OPENS_BOUNDED_ABOVE = (\d+)", source)
+    assert found, "the bound is no longer declared where this reads it"
+    return int(found.group(1))
+
+
 @pytest.mark.medium
 class TestANestedTableOpensInFocus:
     def test_the_export_offers_no_focus_machinery(self, booted):
@@ -328,12 +340,31 @@ class TestANestedTableOpensInFocus:
                 f"{page}'s export carries {len(out['expands'])} expand "
                 f"controls")
 
-    def test_a_served_page_offers_it_on_the_nested_tables(self, served):
+    def test_a_served_page_offers_it_where_the_rule_says(self, served):
+        """`structured.js`: `nested || total > TABLE_OPENS_BOUNDED_ABOVE`.
+
+        This clause asserted the first half alone - "every expand path
+        is nested" - and passed for four rounds because no *top-level*
+        table had ever exceeded the bound. `UX-370` published
+        `binary_cost` as 71 rows at the top level and the clause called
+        the control a defect. The code was right; the guard was reading
+        one of the two conditions it guards.
+        """
+        from tools.bga_view import payloads
+
+        bound = _row_cap()
         for page, out in served.items():
             assert out["expands"], f"{page} offered no expand control"
-            # Nested, not every fold: a section's own table has the
-            # column to itself already.
-            assert all("." in path for path in out["expands"]), out["expands"]
+            report = payloads(str(pages.FIXTURES[page]))["report.json"]
+            for path in out["expands"]:
+                if "." in path:
+                    continue                # nested: the first half
+                rows = report.get(path)
+                assert isinstance(rows, list) and len(rows) > bound, (
+                    f"{page}: {path!r} is a top-level table of "
+                    f"{len(rows) if isinstance(rows, list) else '?'} rows "
+                    f"and offers a focus control; the rule is nested or "
+                    f"longer than {bound}")
 
     def test_opening_gives_the_table_the_column_and_a_way_back(self, served):
         for page, out in served.items():

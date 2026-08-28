@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-372 scenarios: **6 open**, 366 closed.
+373 scenarios: **7 open**, 366 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 59 |
 | analysis | 0 | 52 |
 | contracts | 0 | 40 |
-| viewer | 4 | 107 |
+| viewer | 5 | 107 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -42,6 +42,7 @@ task file, which is the only place it ever lived twice.
 | UX-371 | [a fifth of the page is repeated text](UX-0371-a-fifth-of-the-page-is-repeated-text.md) | viewer | Medium | — | 🔴 |
 | UX-372 | [the page has one reader](UX-0372-the-page-has-one-reader.md) | viewer | Medium | — | 🔴 |
 | UX-373 | [two satellite pages for one handoff](UX-0373-two-satellite-pages-for-one-handoff.md) | viewer | Low | — | 🔴 |
+| UX-374 | [the page renames the reader's elements and programs](UX-0374-the-page-renames-the-readers-elements.md) | viewer | Medium | — | 🔴 |
 
 ## UX-355..UX-361: the fifty-fifth round — the page, opened rather than landed on (2026-08-28)
 

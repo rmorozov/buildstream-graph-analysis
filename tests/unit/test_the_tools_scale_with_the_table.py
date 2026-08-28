@@ -82,7 +82,20 @@ _LOOK = """
     box.setAttribute("data-open", "true");
   }
   const tables = [...document.querySelectorAll("table[data-table]")].map((t) => {
-    const scope = t.parentElement?.parentElement ?? t.parentElement;
+    // `UX-370`: the nearest ancestor holding **this table and no
+    // other**, not a fixed two levels up. The old walk swept in a
+    // sibling table's tools whenever the grandparent held both, so a
+    // 71-row table's filter was reported against the 10-row table
+    // beside it - and the clause read as "a short table carries a
+    // filter" when nothing of the sort had happened. Positional
+    // scoping, found the way the rest of this round's instrument bugs
+    // were: by a change that moved what was next to what.
+    let scope = t.parentElement;
+    while (scope?.parentElement
+           && scope.parentElement.querySelectorAll("table[data-table]").length
+              === 1) {
+      scope = scope.parentElement;
+    }
     const rows = t.querySelectorAll("tbody tr").length;
     const columns = [...t.querySelectorAll("th[data-column]")]
       .map((h) => h.getAttribute("data-column"));

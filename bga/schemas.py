@@ -679,6 +679,13 @@ _ANALYZE_OPTIONAL = {
     # Same rows as `correlate/v1`'s `elements`, from the same function.
     "element_join": "array",
     "element_join_coverage": "object",
+    # `UX-370`: what Plane 2 saw the build run, in calls and in CPU.
+    # Projected from the Plane 2 report beside the join, so present on
+    # exactly the runs the join is - additive, so `analyze/v4` does not
+    # bump.
+    "by_binary": "object",
+    "binary_cost": "array",
+    "configure_phase": "object",
     # UX-207: what to fix first, and what it is worth.
     "headline": "object",
     "next_steps": "array",
@@ -963,6 +970,8 @@ ANALYZE_FULL_KEYS = (
 # pin asserts is *always* there, and a run with one plane is still a
 # full report.
 ANALYZE_PLANE2_KEYS = (
+    # `UX-370`: what Plane 2 saw the build *run*, in calls and in CPU.
+    "by_binary", "binary_cost", "configure_phase",
     "plane2_coverage", "element_join", "element_join_coverage",
     # UX-329: the other side of the same conditional. `plane2_absence`
     # is present exactly when the three above are not, so it belongs in
@@ -2834,6 +2843,100 @@ _ANALYZE_HINTS = {
                        "was never captured, or it was captured and its raw "
                        "log was not kept, or this analysis was told to "
                        "ignore it. Absent when Plane 2 is here.",
+    },
+    # `UX-370`: what the build spent its time **running**.
+    #
+    # Round 58 asked what cmake configure costs and what generating a
+    # test image costs, in calls and in seconds. Plane 2 measures the
+    # first; the numbers sat in `plane2.json` beside the run and the
+    # page carried the binary *names* and none of the figures. These
+    # three are that answer, declared so the generic renderer draws
+    # them as quantities rather than as a wall of bare integers.
+    "by_binary": {
+        QUESTION: 'What did this build actually run, and how often?',
+        RAIL: 'act',
+        QUANTITY: "count",
+        "description": "Every binary Plane 2 saw exec, and how many "
+                       "times the whole run ran it. The frequency half "
+                       "of the question; `binary_cost` is the time "
+                       "half, per element.",
+        "additionalProperties": {QUANTITY: "count"},
+    },
+    "binary_cost": {
+        QUESTION: 'Which binaries cost this build its time?',
+        RAIL: 'act',
+        COLUMNS: ["element", "binary", "calls", "cpu_us", "cpu_share"],
+        "description": "One row per element and binary Plane 2 saw it "
+                       "run: how many calls, and what they cost. Two "
+                       "questions in one table because they disagree - "
+                       "a process-storm is many cheap calls and a "
+                       "compiler is few expensive ones, and a reader "
+                       "chasing one is not chasing the other. An "
+                       "element Plane 2 saw no process for contributes "
+                       "no rows; `plane2_coverage` is where that is "
+                       "stated.",
+        "items": {
+            "properties": {
+                "element": {"description": "The element that ran it."},
+                "binary": {"description": "The executable name, as it "
+                                          "was exec'd."},
+                "calls": {QUANTITY: "count",
+                          "description": "How many times this element "
+                                         "ran this binary."},
+                "cpu_us": {QUANTITY: "duration_us",
+                           "description": "CPU across those calls. Null "
+                                          "for a binary ranked by count "
+                                          "alone - it was too cheap to "
+                                          "reach the CPU ranking."},
+                "cpu_share": {QUANTITY: "share",
+                              "description": "That CPU as a share of "
+                                             "this element's measured "
+                                             "CPU."},
+                "wall_us": {QUANTITY: "duration_us",
+                            "description": "Wall-clock those calls "
+                                           "spanned. Plane 2 publishes "
+                                           "it in seconds; converted at "
+                                           "the boundary, because the "
+                                           "vocabulary carries one time "
+                                           "member and it is "
+                                           "microseconds."},
+            },
+        },
+    },
+    "configure_phase": {
+        QUESTION: 'What does configuring cost, before anything is built?',
+        RAIL: 'act',
+        "description": "The share of CPU spent in configure work rather "
+                       "than in building. A floor, for the reason "
+                       "`note` gives.",
+        "properties": {
+            "available": {
+                "description": "False where nothing classified as "
+                               "configure work."},
+            "configure_cpu_us": {
+                QUANTITY: "duration_us",
+                "description": "CPU spent in configure work across the "
+                               "whole run - summed over processes, so "
+                               "it exceeds wall-clock where they ran "
+                               "in parallel."},
+            "configure_share": {
+                QUANTITY: "share",
+                "description": "That CPU as a share of all CPU Plane 2 "
+                               "saw. A floor, for the reason `note` "
+                               "gives."},
+            "total_cpu_us": {
+                QUANTITY: "duration_us",
+                "description": "All CPU Plane 2 saw, configure and "
+                               "build together - the denominator "
+                               "`configure_share` is a share of."},
+            # `UX-346`: the caveat is the door's sentence, not a
+            # paragraph in the middle of the numbers. It is what makes
+            # the share a floor rather than a measurement.
+            "note": {
+                "description": "How a process is classified as "
+                               "configure work, and why the share is a "
+                               "floor rather than a total."},
+        },
     },
     "plane2_coverage": {
         QUESTION: 'How much did Plane 2 see?',

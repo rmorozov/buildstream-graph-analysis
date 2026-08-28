@@ -572,8 +572,8 @@ Round 59 (`UX-367`) added the third row and split the bounds by size:
 ```text
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,501   14,560    5,280        410    2,409
-macro_micro            11    5,541   28,257    9,883        660    4,586
-budget, to 50 elts             7,000   34,000   12,000        800    5,500
+macro_micro            11    5,541   28,257    9,883        660    6,548
+budget, to 50 elts             7,000   34,000   12,000        800    7,900
 
 scale               1,202    4,397   54,968   35,031      1,925   22,977
 budget, to 4,000 elts          7,000   66,000   41,000      2,300   27,500

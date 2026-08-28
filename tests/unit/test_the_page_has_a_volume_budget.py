@@ -59,7 +59,7 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: ```text
 #:              elements   landed   opened    words  controls  nodes
 #: golden              4    3,501   14,560    5,280       410   2,409
-#: macro_micro        11    5,541   28,257    9,883       660   4,586
+#: macro_micro        11    5,541   28,257    9,883       660   6,548
 #: scale           1,202    4,397   54,968   35,031     1,925  22,977
 #: ```
 #:
@@ -128,8 +128,15 @@ LANDED_HEIGHT_PX = 7_000
 #: six-column row as `layer00/mod023.bst9.0 s645falsecmakefalse` - one
 #: "word". A budget that cannot see the page's biggest population
 #: doubling is not measuring volume. `nodes` is the one that can.
+#:
+#: It earned itself one item later. `UX-370` projected Plane 2's
+#: `by_binary`, `binary_cost` and `configure_phase` into the report and
+#: `macro_micro` went 4,586 -> 6,548 DOM elements; the nodes clause is
+#: what fired, and the small class's bound moved 5,500 -> 7,900 with
+#: that as its reason. Height, words and controls all stayed inside
+#: their bounds, so nothing else would have noticed.
 BUDGETS = (
-    (50, 34_000, 12_000, 800, 5_500),
+    (50, 34_000, 12_000, 800, 7_900),
     (4_000, 66_000, 41_000, 2_300, 27_500),
 )
 

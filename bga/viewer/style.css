@@ -211,6 +211,24 @@ a { color: var(--accent); }
 .finding[data-severity="info"], .finding[data-severity="low"] {
   border-left-color: var(--accent);
 }
+/* UX-356: the join's own advice, at the grade of a finding because
+   that is what it is - a written recommendation with a severity. Tone
+   on the rule, never on the words (§4.4). */
+.advice {
+  border-left: 3px solid var(--line); padding: .4rem .8rem; margin: .5rem 0;
+}
+.advice[data-severity="critical"], .advice[data-severity="high"] {
+  border-left-color: var(--bad);
+}
+.advice[data-severity="warning"], .advice[data-severity="medium"] {
+  border-left-color: var(--warn);
+}
+.advice[data-severity="info"], .advice[data-severity="low"] {
+  border-left-color: var(--accent);
+}
+.join-evidence { margin: .5rem 0; }
+.join-evidence > p { margin: .5rem 0 .2rem; }
+
 .finding .title { font-weight: 600; }
 .finding .detail { margin: .2rem 0 0; }
 .badge {

@@ -297,7 +297,25 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # blast section that spells the published command are all page, and
 # both companion guards stayed silent: every byte is a checked-in
 # module and none of it resembles a vendored library.
-PAGE_BUDGET_B = 248_000
+# Round 56 moved the page and not the data:
+#
+#                       before   UX-356
+#     page             244,088  249,694   (+5,606)
+#     data (golden)     85,356   85,356   (+0)
+#     golden           329,444  335,050
+#     macro_micro      369,740  375,346
+#
+# `UX-356` is the join's withheld fields reaching a reader: the
+# `JOIN_EVIDENCE` declaration, `joinDetail`, the advice and evidence
+# blocks in `elementSection`, and their styles. Every byte is a
+# checked-in module and both companion guards stayed silent - and the
+# *data* did not move at all, which is the point: nothing was added to
+# the payload, twenty-three sentences it already carried stopped being
+# withheld. 5,606 B of page to stop dropping thirteen of twenty-eight
+# published fields is the trade, and the bounds are restated rather
+# than the sentences left in `script#bga-report` to fit a number
+# nobody argued.
+PAGE_BUDGET_B = 254_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -312,7 +330,7 @@ COMMITTED_EXPORTS = [
     # source and 2,920 of payload, split between the two items in the
     # note above. The bounds are restated rather than the twelfth
     # contract left unpublished to fit a number nobody argued.
-    ("golden", GOLDEN, 335_000),                       #  330,434 B
+    ("golden", GOLDEN, 341_000),                       #  335,050 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -324,7 +342,7 @@ COMMITTED_EXPORTS = [
     # `snapshot_bytes` distribution per host class and a document-level
     # total - which is the page telling a reader what their disk holds
     # without their having to go and ask a second command.
-    ("macro_micro", MACRO_MICRO, 375_000),             #  369,870 B
+    ("macro_micro", MACRO_MICRO, 381_000),             #  375,346 B
 ]
 
 
@@ -761,11 +779,24 @@ class TestTheSizeDiscipline:
         # elements publishes the same measurements either way. The
         # claim the bound carries is "the data dwarfs the page", and
         # 2.86x is what that looks like at this scale.
-        assert run_data > 2.8 * code, (
+        #
+        # `UX-356`: 2.6, measured at 685,355 B against 249,400 B -
+        # 2.748x. Same run, same data, 5,606 B more page for the
+        # element join's withheld fields. The claim still holds with
+        # 175% of margin, and the bound is restated rather than the
+        # sentences left unrendered to fit a number nobody argued.
+        #
+        # **Two rounds in a row have moved this in one direction**, and
+        # against a synthetic run whose data is fixed by construction -
+        # so the ratio measures the page alone and a third restatement
+        # would make it a record of the page's growth rather than a
+        # bound on it. That is `UX-360`'s volume budget, which is what
+        # should catch the next one; this number is not it.
+        assert run_data > 2.6 * code, (
             f"{run_data} B of this run's data against {code} B of viewer "
             f"code ({run_data / code:.3f}x) - Direction 7's rule is that "
             f"the data is what an export weighs, and at this scale it "
-            f"should not be close (the bound is 2.8x). The embedded "
+            f"should not be close (the bound is 2.6x). The embedded "
             f"contract is {contract} B, "
             f"which this ratio deliberately does not count: it is prose, "
             f"and it grows when the schema says more")

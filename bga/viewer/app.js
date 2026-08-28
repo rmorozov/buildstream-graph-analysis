@@ -288,10 +288,13 @@ export function renderVerdict(payload) {
 //: saying where is what stops this becoming a place to hide a section
 //: nobody wants to fix.
 export const DRAWN_ELSEWHERE = {
-  element_join: "merged into the one element table (`elements`), which "
-    + "is `UX-289`'s rule applied to the columns `UX-215` added - it is "
-    + "the same eleven elements, and drawing it twice is what `UX-338` "
-    + "was filed for",
+  element_join: "merged into the one element table (`elements`) and the "
+    + "element sections beneath it, which is `UX-289`'s rule applied to "
+    + "the columns `UX-215` added - it is the same eleven elements, and "
+    + "drawing it twice is what `UX-338` was filed for. Every published "
+    + "field arrives at one of those two except "
+    + "`recommendations[].id`, which is a slug used as a key and never "
+    + "shown, the way `next_steps[].id` is not shown",
 };
 
 export function renderSection(key, value, hint = {}, node = undefined,

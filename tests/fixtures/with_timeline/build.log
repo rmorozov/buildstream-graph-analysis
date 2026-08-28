@@ -1,0 +1,242 @@
+[wrapper][2026-08-21 17:01:28,483] INFO: Executing command: bst build all.bst
+[wrapper][2026-08-21 17:01:28,483] INFO: bga-clocks start wall=1787331688.483485 monotonic=1874.318860
+[wrapper][2026-08-21 17:01:28,761] INFO: [--:--:--][        ][    main:core activity                 ] START   Build
+[wrapper][2026-08-21 17:01:28,764] INFO: [--:--:--][        ][    main:core activity                 ] START   Loading elements
+[wrapper][2026-08-21 17:01:28,767] INFO: [00:00:00][        ][    main:core activity                 ] SUCCESS Loading elements
+[wrapper][2026-08-21 17:01:28,767] INFO: [--:--:--][        ][    main:core activity                 ] START   Resolving elements
+[wrapper][2026-08-21 17:01:29,790] INFO: [00:00:01][        ][    main:core activity                 ] SUCCESS Resolving elements
+[wrapper][2026-08-21 17:01:29,790] INFO: [--:--:--][        ][    main:core activity                 ] START   Initializing remote caches
+[wrapper][2026-08-21 17:01:29,791] INFO: [00:00:00][        ][    main:core activity                 ] SUCCESS Initializing remote caches
+[wrapper][2026-08-21 17:01:29,791] INFO: [--:--:--][        ][    main:core activity                 ] START   Query cache
+[wrapper][2026-08-21 17:01:30,205] INFO: [00:00:00][        ][    main:core activity                 ] SUCCESS Query cache
+[wrapper][2026-08-21 17:01:30,207] INFO: 
+[wrapper][2026-08-21 17:01:30,207] INFO: BuildStream Version 2.7.0
+[wrapper][2026-08-21 17:01:30,207] INFO:     Session Start: Friday, 21-08-2026 at 17:01:30
+[wrapper][2026-08-21 17:01:30,207] INFO:     Project:       macro-micro-optimization-example (/home/user/buildstream-graph-analysis/examples/06-macro-micro-optimization)
+[wrapper][2026-08-21 17:01:30,207] INFO:     Targets:       all.bst
+[wrapper][2026-08-21 17:01:30,207] INFO: 
+[wrapper][2026-08-21 17:01:30,207] INFO: User Configuration
+[wrapper][2026-08-21 17:01:30,208] INFO:     Configuration File:      Default Configuration
+[wrapper][2026-08-21 17:01:30,208] INFO:     Cache Directory:         /root/.cache/buildstream
+[wrapper][2026-08-21 17:01:30,208] INFO:     Log Files:               /root/.cache/buildstream/logs
+[wrapper][2026-08-21 17:01:30,208] INFO:     Source Mirrors:          /root/.cache/buildstream/sources
+[wrapper][2026-08-21 17:01:30,208] INFO:     Build Area:              /root/.cache/buildstream/build
+[wrapper][2026-08-21 17:01:30,208] INFO:     Strict Build Plan:       Yes
+[wrapper][2026-08-21 17:01:30,208] INFO:     Maximum Fetch Tasks:     10
+[wrapper][2026-08-21 17:01:30,208] INFO:     Maximum Build Tasks:     4
+[wrapper][2026-08-21 17:01:30,208] INFO:     Maximum Push Tasks:      4
+[wrapper][2026-08-21 17:01:30,208] INFO:     Maximum Network Retries: 2
+[wrapper][2026-08-21 17:01:30,208] INFO: 
+[wrapper][2026-08-21 17:01:30,208] INFO: Project: macro-micro-optimization-example
+[wrapper][2026-08-21 17:01:30,208] INFO: 
+[wrapper][2026-08-21 17:01:30,208] INFO:     Element Plugins
+[wrapper][2026-08-21 17:01:30,208] INFO:         stack:  core plugin
+[wrapper][2026-08-21 17:01:30,208] INFO:         cmake:  python package 'buildstream-plugins' version 2.7.0 at: /usr/local/lib/python3.11/dist-packages/buildstream_plugins/elements
+[wrapper][2026-08-21 17:01:30,208] INFO:         import: core plugin
+[wrapper][2026-08-21 17:01:30,208] INFO: 
+[wrapper][2026-08-21 17:01:30,208] INFO:     Source Plugins
+[wrapper][2026-08-21 17:01:30,208] INFO:         local: core plugin
+[wrapper][2026-08-21 17:01:30,208] INFO: 
+[wrapper][2026-08-21 17:01:30,208] INFO: Pipeline
+[wrapper][2026-08-21 17:01:30,208] INFO:    buildable f81ed53bcbdc09d81059698ee2e06605209a50b838917e99f854f79b92760662 toolchain.bst 
+[wrapper][2026-08-21 17:01:30,208] INFO:      waiting b7c2e411c43f1b23d691e686eedb96682f0474d024a858cbc7cddaca55170fbf core.bst 
+[wrapper][2026-08-21 17:01:30,208] INFO:      waiting d8d71e5f00d607a2f3239588a08c4b9de1c0aa90383e0e320e6d29ce51473b75 codegen.bst 
+[wrapper][2026-08-21 17:01:30,208] INFO:      waiting aa16694cf09bff9a63d2f344d8d1e90daa9e25076743c7e4a469f6afcc1e7b18 lib-a.bst 
+[wrapper][2026-08-21 17:01:30,208] INFO:      waiting 8afe51539b4c3a58dfd4329cf1e5ab78fc01a50dc63375d2cf27f3bc99ba5e38 lib-b.bst 
+[wrapper][2026-08-21 17:01:30,209] INFO:      waiting a3c7c3f9ff28324f630521f065ed86f6159edd8e29012554df5879cd9d36486a lib-c.bst 
+[wrapper][2026-08-21 17:01:30,209] INFO:      waiting 9749fd638487f467cdc213391aed6e4fe928ee620baf332e749691dd62f81986 lib-d.bst 
+[wrapper][2026-08-21 17:01:30,209] INFO:      waiting 87e3f3d2c8860cc169da36fa5e752db5058c982375e28c72787cfed55f7c3750 lib-e.bst 
+[wrapper][2026-08-21 17:01:30,209] INFO:      waiting cd7abacc0fb1bb3b0b2ab44021ee5df0bb6a35acac78a5819de77fd64f36e16b lib-f.bst 
+[wrapper][2026-08-21 17:01:30,209] INFO:      waiting 0b5380f28d5bc3d2e4bf4273d5f6531a320ed5cecfc4d98e061333cf823466ee app.bst 
+[wrapper][2026-08-21 17:01:30,209] INFO:      waiting 92f30592d3b6e3cd61bec903f9938a608afb56abd3bd1035e0d37134f6c04c17 all.bst 
+[wrapper][2026-08-21 17:01:30,209] INFO: ===============================================================================
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][f81ed53b][   build:toolchain.bst                 ] START   macro-micro-optimization-example/toolchain/f81ed53b-build.20260821-170130.log
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][f81ed53b][   build:toolchain.bst                 ] START   Staging sources
+[wrapper][2026-08-21 17:01:31,210] INFO: [00:00:00][f81ed53b][   build:toolchain.bst                 ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][f81ed53b][   build:toolchain.bst                 ] START   Caching artifact
+[wrapper][2026-08-21 17:01:31,210] INFO: [00:00:00][f81ed53b][   build:toolchain.bst                 ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:01:31,210] INFO: [00:00:00][f81ed53b][   build:toolchain.bst                 ] SUCCESS macro-micro-optimization-example/toolchain/f81ed53b-build.20260821-170130.log
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][b7c2e411][   build:core.bst                      ] START   macro-micro-optimization-example/core/b7c2e411-build.20260821-170130.log
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][d8d71e5f][   build:codegen.bst                   ] START   macro-micro-optimization-example/codegen/d8d71e5f-build.20260821-170130.log
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][b7c2e411][   build:core.bst                      ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][d8d71e5f][   build:codegen.bst                   ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:01:31,210] INFO: [00:00:00][b7c2e411][   build:core.bst                      ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][b7c2e411][   build:core.bst                      ] START   Integrating sandbox
+[wrapper][2026-08-21 17:01:31,210] INFO: [00:00:00][b7c2e411][   build:core.bst                      ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][b7c2e411][   build:core.bst                      ] START   Staging sources
+[wrapper][2026-08-21 17:01:31,210] INFO: [00:00:00][b7c2e411][   build:core.bst                      ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:01:31,210] INFO: [--:--:--][b7c2e411][   build:core.bst                      ] START   Running commands
+[wrapper][2026-08-21 17:01:31,210] INFO: 
+[wrapper][2026-08-21 17:01:31,210] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:01:31,210] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:01:31,210] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:01:31,210] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:01:31,210] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:01:31,210] INFO: 
+[wrapper][2026-08-21 17:01:31,211] INFO: [00:00:00][d8d71e5f][   build:codegen.bst                   ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:01:31,211] INFO: [--:--:--][d8d71e5f][   build:codegen.bst                   ] START   Integrating sandbox
+[wrapper][2026-08-21 17:01:31,211] INFO: [00:00:00][d8d71e5f][   build:codegen.bst                   ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:01:31,211] INFO: [--:--:--][d8d71e5f][   build:codegen.bst                   ] START   Staging sources
+[wrapper][2026-08-21 17:01:31,211] INFO: [00:00:00][d8d71e5f][   build:codegen.bst                   ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:01:31,211] INFO: [--:--:--][d8d71e5f][   build:codegen.bst                   ] START   Running commands
+[wrapper][2026-08-21 17:01:31,211] INFO: 
+[wrapper][2026-08-21 17:01:31,211] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:01:31,211] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:01:31,211] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:01:31,211] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:01:31,211] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:01:31,211] INFO: 
+[wrapper][2026-08-21 17:01:38,218] INFO: [00:00:07][d8d71e5f][   build:codegen.bst                   ] SUCCESS Running commands
+[wrapper][2026-08-21 17:01:38,218] INFO: [--:--:--][d8d71e5f][   build:codegen.bst                   ] START   Caching artifact
+[wrapper][2026-08-21 17:01:38,218] INFO: [00:00:00][d8d71e5f][   build:codegen.bst                   ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:01:38,218] INFO: [00:00:07][d8d71e5f][   build:codegen.bst                   ] SUCCESS macro-micro-optimization-example/codegen/d8d71e5f-build.20260821-170130.log
+[wrapper][2026-08-21 17:01:49,231] INFO: [00:00:18][b7c2e411][   build:core.bst                      ] SUCCESS Running commands
+[wrapper][2026-08-21 17:01:49,231] INFO: [--:--:--][b7c2e411][   build:core.bst                      ] START   Caching artifact
+[wrapper][2026-08-21 17:01:50,233] INFO: [00:00:00][b7c2e411][   build:core.bst                      ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:01:50,233] INFO: [00:00:19][b7c2e411][   build:core.bst                      ] SUCCESS macro-micro-optimization-example/core/b7c2e411-build.20260821-170130.log
+[wrapper][2026-08-21 17:01:50,233] INFO: [--:--:--][aa16694c][   build:lib-a.bst                     ] START   macro-micro-optimization-example/lib-a/aa16694c-build.20260821-170149.log
+[wrapper][2026-08-21 17:01:50,233] INFO: [--:--:--][aa16694c][   build:lib-a.bst                     ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:01:50,233] INFO: [00:00:00][aa16694c][   build:lib-a.bst                     ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:01:50,233] INFO: [--:--:--][aa16694c][   build:lib-a.bst                     ] START   Integrating sandbox
+[wrapper][2026-08-21 17:01:50,233] INFO: [00:00:00][aa16694c][   build:lib-a.bst                     ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:01:50,233] INFO: [--:--:--][aa16694c][   build:lib-a.bst                     ] START   Staging sources
+[wrapper][2026-08-21 17:01:50,233] INFO: [00:00:00][aa16694c][   build:lib-a.bst                     ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:01:50,233] INFO: [--:--:--][aa16694c][   build:lib-a.bst                     ] START   Running commands
+[wrapper][2026-08-21 17:01:50,233] INFO: 
+[wrapper][2026-08-21 17:01:50,233] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:01:50,233] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:01:50,233] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:01:50,233] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:01:50,233] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:01:50,233] INFO: 
+[wrapper][2026-08-21 17:01:53,237] INFO: [00:00:03][aa16694c][   build:lib-a.bst                     ] SUCCESS Running commands
+[wrapper][2026-08-21 17:01:53,238] INFO: [--:--:--][aa16694c][   build:lib-a.bst                     ] START   Caching artifact
+[wrapper][2026-08-21 17:01:53,238] INFO: [00:00:00][aa16694c][   build:lib-a.bst                     ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:01:53,238] INFO: [00:00:03][aa16694c][   build:lib-a.bst                     ] SUCCESS macro-micro-optimization-example/lib-a/aa16694c-build.20260821-170149.log
+[wrapper][2026-08-21 17:01:53,238] INFO: [--:--:--][8afe5153][   build:lib-b.bst                     ] START   macro-micro-optimization-example/lib-b/8afe5153-build.20260821-170152.log
+[wrapper][2026-08-21 17:01:53,238] INFO: [--:--:--][8afe5153][   build:lib-b.bst                     ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:01:53,238] INFO: [00:00:00][8afe5153][   build:lib-b.bst                     ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:01:53,238] INFO: [--:--:--][8afe5153][   build:lib-b.bst                     ] START   Integrating sandbox
+[wrapper][2026-08-21 17:01:53,238] INFO: [00:00:00][8afe5153][   build:lib-b.bst                     ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:01:53,238] INFO: [--:--:--][8afe5153][   build:lib-b.bst                     ] START   Staging sources
+[wrapper][2026-08-21 17:01:53,238] INFO: [00:00:00][8afe5153][   build:lib-b.bst                     ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:01:53,238] INFO: [--:--:--][8afe5153][   build:lib-b.bst                     ] START   Running commands
+[wrapper][2026-08-21 17:01:53,238] INFO: 
+[wrapper][2026-08-21 17:01:53,238] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:01:53,238] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:01:53,238] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:01:53,238] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:01:53,238] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:01:53,238] INFO: 
+[wrapper][2026-08-21 17:01:57,242] INFO: [00:00:03][8afe5153][   build:lib-b.bst                     ] SUCCESS Running commands
+[wrapper][2026-08-21 17:01:57,242] INFO: [--:--:--][8afe5153][   build:lib-b.bst                     ] START   Caching artifact
+[wrapper][2026-08-21 17:01:57,242] INFO: [00:00:00][8afe5153][   build:lib-b.bst                     ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:01:57,242] INFO: [00:00:03][8afe5153][   build:lib-b.bst                     ] SUCCESS macro-micro-optimization-example/lib-b/8afe5153-build.20260821-170152.log
+[wrapper][2026-08-21 17:01:57,242] INFO: [--:--:--][a3c7c3f9][   build:lib-c.bst                     ] START   macro-micro-optimization-example/lib-c/a3c7c3f9-build.20260821-170156.log
+[wrapper][2026-08-21 17:01:57,242] INFO: [--:--:--][a3c7c3f9][   build:lib-c.bst                     ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:01:57,242] INFO: [00:00:00][a3c7c3f9][   build:lib-c.bst                     ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:01:57,242] INFO: [--:--:--][a3c7c3f9][   build:lib-c.bst                     ] START   Integrating sandbox
+[wrapper][2026-08-21 17:01:57,242] INFO: [00:00:00][a3c7c3f9][   build:lib-c.bst                     ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:01:57,242] INFO: [--:--:--][a3c7c3f9][   build:lib-c.bst                     ] START   Staging sources
+[wrapper][2026-08-21 17:01:57,242] INFO: [00:00:00][a3c7c3f9][   build:lib-c.bst                     ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:01:57,242] INFO: [--:--:--][a3c7c3f9][   build:lib-c.bst                     ] START   Running commands
+[wrapper][2026-08-21 17:01:57,242] INFO: 
+[wrapper][2026-08-21 17:01:57,242] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:01:57,242] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:01:57,242] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:01:57,242] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:01:57,242] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:01:57,242] INFO: 
+[wrapper][2026-08-21 17:02:00,247] INFO: [00:00:03][a3c7c3f9][   build:lib-c.bst                     ] SUCCESS Running commands
+[wrapper][2026-08-21 17:02:00,247] INFO: [--:--:--][a3c7c3f9][   build:lib-c.bst                     ] START   Caching artifact
+[wrapper][2026-08-21 17:02:00,247] INFO: [00:00:00][a3c7c3f9][   build:lib-c.bst                     ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:02:00,247] INFO: [00:00:03][a3c7c3f9][   build:lib-c.bst                     ] SUCCESS macro-micro-optimization-example/lib-c/a3c7c3f9-build.20260821-170156.log
+[wrapper][2026-08-21 17:02:00,247] INFO: [--:--:--][9749fd63][   build:lib-d.bst                     ] START   macro-micro-optimization-example/lib-d/9749fd63-build.20260821-170159.log
+[wrapper][2026-08-21 17:02:00,247] INFO: [--:--:--][9749fd63][   build:lib-d.bst                     ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:02:00,247] INFO: [00:00:00][9749fd63][   build:lib-d.bst                     ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:02:00,247] INFO: [--:--:--][9749fd63][   build:lib-d.bst                     ] START   Integrating sandbox
+[wrapper][2026-08-21 17:02:00,247] INFO: [00:00:00][9749fd63][   build:lib-d.bst                     ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:02:00,247] INFO: [--:--:--][9749fd63][   build:lib-d.bst                     ] START   Staging sources
+[wrapper][2026-08-21 17:02:00,247] INFO: [00:00:00][9749fd63][   build:lib-d.bst                     ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:02:00,247] INFO: [--:--:--][9749fd63][   build:lib-d.bst                     ] START   Running commands
+[wrapper][2026-08-21 17:02:00,247] INFO: 
+[wrapper][2026-08-21 17:02:00,247] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:02:00,247] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:02:00,247] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:02:00,247] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:02:00,247] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:02:00,247] INFO: 
+[wrapper][2026-08-21 17:02:03,250] INFO: [00:00:03][9749fd63][   build:lib-d.bst                     ] SUCCESS Running commands
+[wrapper][2026-08-21 17:02:03,250] INFO: [--:--:--][9749fd63][   build:lib-d.bst                     ] START   Caching artifact
+[wrapper][2026-08-21 17:02:04,253] INFO: [00:00:00][9749fd63][   build:lib-d.bst                     ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:02:04,253] INFO: [00:00:03][9749fd63][   build:lib-d.bst                     ] SUCCESS macro-micro-optimization-example/lib-d/9749fd63-build.20260821-170159.log
+[wrapper][2026-08-21 17:02:04,253] INFO: [--:--:--][87e3f3d2][   build:lib-e.bst                     ] START   macro-micro-optimization-example/lib-e/87e3f3d2-build.20260821-170203.log
+[wrapper][2026-08-21 17:02:04,253] INFO: [--:--:--][87e3f3d2][   build:lib-e.bst                     ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:02:04,253] INFO: [00:00:00][87e3f3d2][   build:lib-e.bst                     ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:02:04,253] INFO: [--:--:--][87e3f3d2][   build:lib-e.bst                     ] START   Integrating sandbox
+[wrapper][2026-08-21 17:02:04,253] INFO: [00:00:00][87e3f3d2][   build:lib-e.bst                     ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:02:04,253] INFO: [--:--:--][87e3f3d2][   build:lib-e.bst                     ] START   Staging sources
+[wrapper][2026-08-21 17:02:04,253] INFO: [00:00:00][87e3f3d2][   build:lib-e.bst                     ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:02:04,253] INFO: [--:--:--][87e3f3d2][   build:lib-e.bst                     ] START   Running commands
+[wrapper][2026-08-21 17:02:04,253] INFO: 
+[wrapper][2026-08-21 17:02:04,253] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:02:04,253] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:02:04,253] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:02:04,253] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:02:04,253] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:02:04,253] INFO: 
+[wrapper][2026-08-21 17:02:07,257] INFO: [00:00:03][87e3f3d2][   build:lib-e.bst                     ] SUCCESS Running commands
+[wrapper][2026-08-21 17:02:07,257] INFO: [--:--:--][87e3f3d2][   build:lib-e.bst                     ] START   Caching artifact
+[wrapper][2026-08-21 17:02:07,257] INFO: [00:00:00][87e3f3d2][   build:lib-e.bst                     ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:02:07,257] INFO: [00:00:03][87e3f3d2][   build:lib-e.bst                     ] SUCCESS macro-micro-optimization-example/lib-e/87e3f3d2-build.20260821-170203.log
+[wrapper][2026-08-21 17:02:07,257] INFO: [--:--:--][cd7abacc][   build:lib-f.bst                     ] START   macro-micro-optimization-example/lib-f/cd7abacc-build.20260821-170206.log
+[wrapper][2026-08-21 17:02:07,257] INFO: [--:--:--][cd7abacc][   build:lib-f.bst                     ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:02:07,257] INFO: [00:00:00][cd7abacc][   build:lib-f.bst                     ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:02:07,257] INFO: [--:--:--][cd7abacc][   build:lib-f.bst                     ] START   Integrating sandbox
+[wrapper][2026-08-21 17:02:07,257] INFO: [00:00:00][cd7abacc][   build:lib-f.bst                     ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:02:07,257] INFO: [--:--:--][cd7abacc][   build:lib-f.bst                     ] START   Staging sources
+[wrapper][2026-08-21 17:02:07,257] INFO: [00:00:00][cd7abacc][   build:lib-f.bst                     ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:02:07,257] INFO: [--:--:--][cd7abacc][   build:lib-f.bst                     ] START   Running commands
+[wrapper][2026-08-21 17:02:07,257] INFO: 
+[wrapper][2026-08-21 17:02:07,257] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:02:07,258] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:02:07,258] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:02:07,258] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:02:07,258] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:02:07,258] INFO: 
+[wrapper][2026-08-21 17:02:11,261] INFO: [00:00:03][cd7abacc][   build:lib-f.bst                     ] SUCCESS Running commands
+[wrapper][2026-08-21 17:02:11,261] INFO: [--:--:--][cd7abacc][   build:lib-f.bst                     ] START   Caching artifact
+[wrapper][2026-08-21 17:02:11,261] INFO: [00:00:00][cd7abacc][   build:lib-f.bst                     ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:02:11,261] INFO: [00:00:03][cd7abacc][   build:lib-f.bst                     ] SUCCESS macro-micro-optimization-example/lib-f/cd7abacc-build.20260821-170206.log
+[wrapper][2026-08-21 17:02:11,261] INFO: [--:--:--][0b5380f2][   build:app.bst                       ] START   macro-micro-optimization-example/app/0b5380f2-build.20260821-170210.log
+[wrapper][2026-08-21 17:02:11,261] INFO: [--:--:--][0b5380f2][   build:app.bst                       ] START   Staging dependencies at: /
+[wrapper][2026-08-21 17:02:11,261] INFO: [00:00:00][0b5380f2][   build:app.bst                       ] SUCCESS Staging dependencies at: /
+[wrapper][2026-08-21 17:02:11,261] INFO: [--:--:--][0b5380f2][   build:app.bst                       ] START   Integrating sandbox
+[wrapper][2026-08-21 17:02:11,261] INFO: [00:00:00][0b5380f2][   build:app.bst                       ] SUCCESS Integrating sandbox
+[wrapper][2026-08-21 17:02:11,261] INFO: [--:--:--][0b5380f2][   build:app.bst                       ] START   Staging sources
+[wrapper][2026-08-21 17:02:11,261] INFO: [00:00:00][0b5380f2][   build:app.bst                       ] SUCCESS Staging sources
+[wrapper][2026-08-21 17:02:11,261] INFO: [--:--:--][0b5380f2][   build:app.bst                       ] START   Running commands
+[wrapper][2026-08-21 17:02:11,261] INFO: 
+[wrapper][2026-08-21 17:02:11,261] INFO:     cmake -B_builddir -H"." -G"Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=ON \
+[wrapper][2026-08-21 17:02:11,261] INFO:     -DCMAKE_INSTALL_PREFIX:PATH="/usr" \
+[wrapper][2026-08-21 17:02:11,261] INFO:     -DCMAKE_INSTALL_LIBDIR:PATH="lib"  
+[wrapper][2026-08-21 17:02:11,261] INFO:     cmake --build _builddir -- ${JOBS}
+[wrapper][2026-08-21 17:02:11,261] INFO:     env DESTDIR="/buildstream-install" cmake --build _builddir --target install
+[wrapper][2026-08-21 17:02:11,261] INFO: 
+[wrapper][2026-08-21 17:02:14,264] INFO: [00:00:03][0b5380f2][   build:app.bst                       ] SUCCESS Running commands
+[wrapper][2026-08-21 17:02:14,265] INFO: [--:--:--][0b5380f2][   build:app.bst                       ] START   Caching artifact
+[wrapper][2026-08-21 17:02:14,393] INFO: [00:00:00][0b5380f2][   build:app.bst                       ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:02:14,393] INFO: [00:00:03][0b5380f2][   build:app.bst                       ] SUCCESS macro-micro-optimization-example/app/0b5380f2-build.20260821-170210.log
+[wrapper][2026-08-21 17:02:14,393] INFO: [--:--:--][92f30592][   build:all.bst                       ] START   macro-micro-optimization-example/all/92f30592-build.20260821-170214.log
+[wrapper][2026-08-21 17:02:14,393] INFO: [--:--:--][92f30592][   build:all.bst                       ] START   Caching artifact
+[wrapper][2026-08-21 17:02:14,393] INFO: [00:00:00][92f30592][   build:all.bst                       ] SUCCESS Caching artifact
+[wrapper][2026-08-21 17:02:14,393] INFO: [00:00:00][92f30592][   build:all.bst                       ] SUCCESS macro-micro-optimization-example/all/92f30592-build.20260821-170214.log
+[wrapper][2026-08-21 17:02:14,393] INFO: [00:00:45][        ][    main:core activity                 ] SUCCESS Build
+[wrapper][2026-08-21 17:02:14,393] INFO: 
+[wrapper][2026-08-21 17:02:14,393] INFO: Pipeline Summary
+[wrapper][2026-08-21 17:02:14,393] INFO:     Total:       11
+[wrapper][2026-08-21 17:02:14,393] INFO:     Session:     11
+[wrapper][2026-08-21 17:02:14,393] INFO:     Fetch Queue: processed 0,  skipped 11, failed 0 
+[wrapper][2026-08-21 17:02:14,393] INFO:     Build Queue: processed 11, skipped 0,  failed 0 
+[wrapper][2026-08-21 17:02:14,616] INFO: bga-clocks end wall=1787331734.616231 monotonic=1920.451608
+[wrapper][2026-08-21 17:02:14,616] INFO: Return code: 0

@@ -145,11 +145,28 @@ class TestTheHandoffRendersWhereThereIsATrace:
         assert out["actionsHidden"] is False, out
         assert out["traceScript"], out
 
-    def test_the_page_states_no_absence(self, browser, booted):
-        """A page that carries its timeline has nothing to apologise
-        for, and `UX-329`'s sentences are for the runs that do."""
+    def test_the_page_says_which_plane_is_missing(self, browser, booted):
+        """The fixture found a defect the moment it existed, and this
+        clause records it rather than asserting it away.
+
+        This capture has Plane 1 and no Plane 2, so the page renders
+        `NOT_CAPTURED` - *"Plane 2 was not captured for this run, so
+        there is no per-process detail and no timeline"* - **while
+        carrying a Plane 1 timeline and a working Perfetto button.**
+        Whether there is a timeline is not Plane 2's fact alone, and
+        `UX-329` split that grammar one level too high.
+
+        Filed as `UX-362`. Asserted here as what is true today, so the
+        contradiction is visible in the suite rather than only in a
+        reader's eye - and so the clause reddens when `UX-362` fixes
+        it, which is where the wording change should be argued.
+        """
         out = browser.measure(booted["with_timeline"], _LOOK, 1440, 900)
-        assert out["absence"] == "none", out
+        assert out["height"], "the button does not render on this capture"
+        assert out["absence"] == "NOT_CAPTURED", (
+            "the Plane 2 absence sentence has changed on a capture that "
+            "has Plane 1 and no Plane 2 - if `UX-362` landed, this clause "
+            "is what it should have moved")
 
     def test_the_label_says_what_the_press_does(self, browser, booted):
         out = browser.measure(booted["with_timeline"], _LOOK, 1440, 900)

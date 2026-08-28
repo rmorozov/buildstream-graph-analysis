@@ -93,7 +93,7 @@ unconditionally reddens rather than passing the first clause.
 
 ## Outcome (round 56, 2026-08-28) — 🟢 Done
 
-### The gap, measured — and the filing's claim, corrected
+### The gap, measured
 
 ```text
                 has_timeline  #perfetto box  #bga-trace  absence
@@ -101,37 +101,81 @@ golden                 False              0       False  NOT_CAPTURED
 macro_micro            False              0       False  CAPTURED_NO_RAW_LOG
 ```
 
-The filing said *"no committed fixture can render a timeline"*. That is
-too broad, and the correction is the fix.
-`examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/`
-carries a **real capture** — `build.log`, `plane2.log.gz`,
-`plane2.json` and its run — and has since round 46. Four guards already
-read its *trace* under the name `REAL_CAPTURE`:
+### The first fix was wrong, and CI said so
+
+I first pointed `WITH_TIMELINE` at
+`examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/` — a
+**real** two-plane capture with a `build.log`, already read by four
+guards under the name `REAL_CAPTURE` — and recorded as a deviation that
+the filing's claim had been "too broad", because a committed capture
+existed and no synthetic log was needed.
+
+**It is not committed.** `examples/06/.bga/.gitignore` excludes it
+(`UX-189`: a clone does not ship the capture archive). It exists on a
+machine that ran the example and in no clone. The four guards that read
+it say so in a comment I did not read before writing over it:
+
+> `examples/06`'s capture is real and **gitignored** — it exists on
+> this machine and not in a clone.
+
+They gate on `REAL_CAPTURE.is_dir()` and skip. Mine did not, so it
+passed here and failed on the pull request:
 
 ```text
-tests/unit/test_the_arrows_say_why_now.py
-tests/unit/test_the_counter_the_constant_was_waiting_for.py
-tests/unit/test_the_slice_says_what_bga_knows.py
-tests/unit/test_the_trace_knows_whose_build.py
+test (3.11)
+  FAILED test_the_capture_has_the_log_the_renderer_reads
+    .../examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/
+    build.log is gone
+  FAILED test_every_state_has_a_fixture
+    {'golden': False, 'macro_micro': False, 'with_timeline': False}
+  8 errors, all FileNotFoundError on the same path
 ```
 
-None of them exported a **page** from it. So what was true is the
-narrower claim: no fixture *used to build a page* could render a
-timeline, and every page guard parametrised over the two in
-`tests/fixtures/` that cannot. The capability was reachable and nobody
-had reached it.
+That is this item's own defect happening to this item's own fix: a
+capability exercised by nothing a fresh checkout has. The deviation
+recorded below is struck through, and the Required Fix — *the smallest
+wrapped log `bga timeline` will accept*, committed — is what landed.
 
 ### After
 
+`tests/fixtures/with_timeline/`: the wrapped log and the run, **64 KB**,
+in the tree.
+
 ```text
-with_timeline           True             21        True  none
+$ trace_bytes("tests/fixtures/with_timeline/run")   1,775 bytes
+with_timeline           True             21        True
 ```
 
-`tests/pages.py` names the capture `WITH_TIMELINE` and deliberately
-keeps it **out of** `FIXTURES`: every guard that parametrises over
-those two would add a third browser boot for a page that differs from
-`macro_micro` in exactly one respect, and this exists for that one
-respect.
+Plane 1 only, and deliberately: the whole capture is 712 KB of which
+584 KB is `plane2.json`, and 64 KB against `synthetic_multi_subproject`'s
+228 KB is a fixture rather than an archive. What `UX-358` is about is
+the *handoff* — the button rendering, the trace inlining, the wiring
+running — and a Plane 1 trace exercises all three. A two-plane trace
+stays exercised only where the gitignored capture exists, which is a
+pre-existing gap in those four guards and not this item's to close.
+
+`tests/pages.py` names it `WITH_TIMELINE` and deliberately keeps it
+**out of** `FIXTURES`: every guard that parametrises over those two
+would add a third browser boot for a page that differs from them in
+exactly one respect, and this exists for that one respect.
+
+### The fixture found a defect on its first boot
+
+A capture with Plane 1 and no Plane 2 was unreachable before this — and
+the page renders the Perfetto button *and* says, three sections away:
+
+> Plane 2 was not captured for this run, so there is no per-process
+> detail **and no timeline**.
+
+Whether there is a timeline is not Plane 2's fact. Filed as `UX-362`,
+and recorded in
+`test_the_page_says_which_plane_is_missing` as what is true today, so
+the contradiction is in the suite rather than in a reader's eye and the
+clause reddens when `UX-362` moves it.
+
+That is the strongest possible argument for the item: the fixture
+existed for one boot and produced a finding two rounds of review had
+not.
 
 ### The pair is one file
 
@@ -164,14 +208,14 @@ repository was actually in for four rounds.
 
 ### Deviation from the Required Fix
 
-- The Required Fix asked for "the smallest wrapped log `bga timeline`
-  will accept", written for this item. **Not done, and deliberately.**
-  A real capture that already exists, is already committed, and is
-  already read by four guards is a better fixture than a synthetic log
-  in every respect that matters: it exercises the renderer's actual
-  input, and it cannot drift from what `bga snapshot` writes. Writing a
-  minimal log would have been inventing a second, weaker answer to a
-  question the tree had already answered.
+- ~~The Required Fix asked for "the smallest wrapped log `bga
+  timeline` will accept". **Not done, and deliberately** — a real
+  capture that already exists and is already committed is a better
+  fixture than a synthetic log.~~ **Wrong, and corrected above:** the
+  capture is real and *not committed*. What landed is the Required Fix
+  as written, using that capture's own wrapped log and run — so it is
+  still the renderer's actual input and still cannot drift from what
+  `bga snapshot` writes, and it is now in the tree.
 - The Required Fix's third clause — "a capability the page advertises
   is exercised by at least one fixture" — is landed as
   `TestBothStatesAreReachable` rather than as a general walk over

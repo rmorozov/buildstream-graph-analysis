@@ -1,0 +1,96 @@
+{
+  "schema": "sources/v1",
+  "elements": {
+    "app.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/app",
+        "declared": "files/src/app",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "codegen.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/codegen",
+        "declared": "files/src/codegen",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "core.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/core",
+        "declared": "files/src/core",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "lib-a.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/lib-a",
+        "declared": "files/src/lib-a",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "lib-b.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/lib-b",
+        "declared": "files/src/lib-b",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "lib-c.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/lib-c",
+        "declared": "files/src/lib-c",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "lib-d.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/lib-d",
+        "declared": "files/src/lib-d",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "lib-e.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/lib-e",
+        "declared": "files/src/lib-e",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "lib-f.bst": [
+      {
+        "kind": "local",
+        "identity": "files/src/lib-f",
+        "declared": "files/src/lib-f",
+        "keying": "content",
+        "staged_at": null
+      }
+    ],
+    "toolchain.bst": [
+      {
+        "kind": "local",
+        "identity": "files/toolchain",
+        "declared": "files/toolchain",
+        "keying": "content",
+        "staged_at": null
+      }
+    ]
+  },
+  "unreadable": {}
+}

@@ -52,14 +52,19 @@ FIXTURES = {
 #: UX-358: the one committed capture that can render a **timeline**.
 #:
 #: Not in `FIXTURES`, deliberately. Every guard that parametrises over
-#: those two would triple its browser time for a page that differs from
-#: `macro_micro` in exactly one respect, and this exists for that one
+#: those two would add a third browser boot for a page that differs
+#: from them in exactly one respect, and this exists for that one
 #: respect: it is the snapshot with a `build.log`, so `bga timeline`
 #: renders, `trace_bytes` is not `None`, and `#perfetto` gets a box.
-#: `tests/fixtures/` holds no capture that can - which is what let the
-#: flagship handoff go four rounds with no end-to-end exercise.
-WITH_TIMELINE = REPO / (
-    "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run")
+#:
+#: **A Plane 1 capture, and committed.** The first attempt at this
+#: pointed at `examples/06`'s real two-plane capture - which is real,
+#: and **gitignored** (`UX-189`: a clone does not ship the capture
+#: archive). It exists on a machine that ran the example and in no
+#: clone, so the guard passed here and failed in CI, which is the
+#: defect `UX-358` was filed about happening to its own fix. This is
+#: the wrapped log and the run, 64 KB, in the tree.
+WITH_TIMELINE = REPO / "tests/fixtures/with_timeline/run"
 
 #: `bga snapshot` writes it and `bga view` refuses to export beside it;
 #: removing it is the whole reason a copy is made.

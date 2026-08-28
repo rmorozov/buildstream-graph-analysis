@@ -52,7 +52,7 @@ import {
  * to scroll past the reason they did not ask for - `UX-209`'s rule for
  * evidence, applied one level up.
  */
-export function renderProvenance(provenance) {
+export function renderProvenance(provenance, options = {}) {
   if (!provenance || !provenance.rule) return null;
   const details = document.createElement("details");
   details.className = "provenance";
@@ -61,8 +61,22 @@ export function renderProvenance(provenance) {
   if (provenance.trace_query) {
     details.setAttribute("data-query", provenance.trace_query);
   }
+  // `UX-357` (§3a.1): the fold says how much is behind it. One level -
+  // the sentence, the rule, the evidence rows and the unpublished
+  // note are all siblings inside it - and the rows are the evidence
+  // references, which is the part a reader is deciding whether to
+  // open.
+  const evidence = Array.isArray(provenance.evidence)
+    ? provenance.evidence : [];
+  details.setAttribute("data-levels", "1");
+  details.setAttribute("data-rows", String(evidence.length));
   const summary = document.createElement("summary");
-  summary.textContent = "Why";
+  // Named by the claim where the caller has twelve of these in one
+  // section and "Why" twelve times names nothing.
+  const named = options.label ? `${options.label} · ` : "";
+  summary.textContent =
+    `${named}1 level, ${evidence.length} `
+    + `row${evidence.length === 1 ? "" : "s"}`;
   details.append(summary);
 
   const why = document.createElement("p");
@@ -71,19 +85,62 @@ export function renderProvenance(provenance) {
   why.textContent = provenance.rule.sentence ?? "";
   details.append(why);
 
-  if (provenance.rule.name) {
+  // `UX-357`: a name **or** a module. Six of `macro_micro`'s twelve
+  // records publish a module and a sentence and no named threshold -
+  // the claim is computed rather than gated - and the old condition
+  // gated the whole paragraph on the name, so those six said where
+  // they came from nowhere. "No named rule" is a fact about the claim,
+  // not a reason to withhold the file that made it.
+  if (provenance.rule.name || provenance.rule.module) {
     const rule = document.createElement("p");
     rule.className = "rule muted";
-    rule.setAttribute("data-rule", provenance.rule.name);
+    rule.setAttribute("data-rule", provenance.rule.name ?? "");
     rule.setAttribute("data-threshold", String(provenance.rule.threshold));
     rule.setAttribute("data-comparison", provenance.rule.comparison ?? "");
-    rule.textContent =
-      `${provenance.rule.name} = ${provenance.rule.threshold}` +
-      ` (${provenance.rule.module ?? ""})`;
+    // And the path the rule *observed*, which is the one address that
+    // says which published number it compared. It was published from
+    // the first and rendered nowhere.
+    if (provenance.rule.observed_path) {
+      rule.setAttribute("data-observed", provenance.rule.observed_path);
+    }
+    // `<span>` rather than `createTextNode`: the guards drive these
+    // renderers against a hand-built `document` that offers
+    // `createElement` and not much else, and a renderer that needs a
+    // DOM method thirty test stubs do not have is a renderer nothing
+    // can test. The shim exports `createTextNode`; the stubs predate
+    // it (`UX-264`'s complaint, still half-true).
+    const said = (text) => {
+      const span = document.createElement("span");
+      span.textContent = text;
+      return span;
+    };
+    if (provenance.rule.name) {
+      rule.append(said(`${provenance.rule.name} `));
+      const comparison = document.createElement("code");
+      comparison.textContent =
+        `${provenance.rule.observed_path ?? ""} `
+        + `${provenance.rule.comparison ?? "="} ${provenance.rule.threshold}`;
+      rule.append(comparison, said(" in "));
+    } else if (provenance.rule.observed_path) {
+      // A record can publish an observed path and no threshold -
+      // `confidence.run_mode present` is a rule with no number in it -
+      // and the address is the interesting half either way.
+      rule.append(said("No named threshold; "));
+      const observed = document.createElement("code");
+      observed.textContent =
+        `${provenance.rule.observed_path} `
+        + `${provenance.rule.comparison ?? ""}`.trim();
+      rule.append(observed, said(" read in "));
+    } else {
+      rule.append(said("No named threshold; computed in "));
+    }
+    const module = document.createElement("code");
+    module.textContent = provenance.rule.module ?? "";
+    rule.append(module);
     details.append(rule);
   }
 
-  const refs = Array.isArray(provenance.evidence) ? provenance.evidence : [];
+  const refs = evidence;
   if (refs.length) {
     const list = document.createElement("dl");
     list.className = "pairs evidence-refs";
@@ -107,6 +164,22 @@ export function renderProvenance(provenance) {
     details.append(list);
   }
 
+  // `UX-357`: the document every path above walks. A record that
+  // travels - a `compare/v1` chain read beside an `analyze/v4` one -
+  // resolves against a different document, and the schema calls this
+  // load-bearing the moment it does.
+  if (provenance.document) {
+    const against = document.createElement("p");
+    against.className = "muted";
+    against.setAttribute("data-document", provenance.document);
+    const lead = document.createElement("span");
+    lead.textContent = "Paths resolve against ";
+    const named = document.createElement("code");
+    named.textContent = provenance.document;
+    against.append(lead, named);
+    details.append(against);
+  }
+
   const unpublished = Array.isArray(provenance.unpublished_inputs)
     ? provenance.unpublished_inputs : [];
   if (unpublished.length) {
@@ -118,6 +191,49 @@ export function renderProvenance(provenance) {
     details.append(note);
   }
   return details;
+}
+
+/**
+ * `UX-357`: one provenance block per published claim, under the index.
+ *
+ * `provenance` renders as a table, because that is what its schema
+ * declares - `bga:columns` names `claim` and `kind`, and a table takes
+ * the two scalar columns and drops everything nested. Measured on
+ * `macro_micro`: the section drew the claim and the numbers, and
+ * withheld the four things that make it provenance -
+ *
+ * ```text
+ *   rule.module           0 of 12
+ *   rule.name             0 of 5
+ *   rule.observed_path    0 of 5
+ *   rule.sentence         1 of 12
+ *   unpublished_inputs    0 of 3
+ *   evidence[].path       7 of 29
+ * ```
+ *
+ * - which is the one section on the page whose whole job it fails by
+ * rendering. A provenance section that shows the verdict and hides the
+ * rule is an assertion.
+ *
+ * The shape is the page's own, not a new one: an **index table plus a
+ * detail block per row**, which is exactly what `elements` and the
+ * element sections are. `UX-338` forbids drawing one population twice
+ * as two full renderings; a two-column index over twelve claims and
+ * twelve folded records is the relationship that item's own fix left
+ * in place.
+ */
+export function renderProvenanceRecords(payload, root) {
+  const section = root?.querySelector?.('[data-section="provenance"]');
+  if (!section) return 0;
+  const records = Array.isArray(payload?.provenance) ? payload.provenance : [];
+  let drawn = 0;
+  for (const record of records) {
+    const block = renderProvenance(record, { label: record.claim ?? "" });
+    if (!block) continue;
+    section.append(block);
+    drawn += 1;
+  }
+  return drawn;
 }
 
 /**

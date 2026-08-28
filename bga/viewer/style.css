@@ -674,11 +674,22 @@ button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg);
   /* Room: the sentence sits to the right of the value on the same line. */
   .description { display: inline; margin: 0 0 0 .6rem; }
 }
-/* Paper has no pointer, so the marker cannot be the only door there -
-   but neither is the description forced open: §2b.3 says the *opened*
-   state renders, and a page that printed every sentence would print a
-   glossary nobody asked for. Nothing here hides either one, which is
-   the whole rule: hover is never the only way in (§4.3). */
+/* UX-346: **and the door has to close.** Both rules above set
+   `display`, which beats the `hidden` attribute's UA `display: none` -
+   so every sentence rendered on every load and the `?` toggled a
+   `hidden` property with no visual effect. Measured in Chrome at
+   1440px on the golden export: `hidden: true`, `display: "inline"`,
+   box 458x15. `UX-317`'s affordance has been decorative since it
+   landed, and 43% of the golden page's words - 37% of macro_micro's -
+   were the schema's glossary printed in full.
+
+   `.description[hidden]` is (0,2,0) against those (0,1,0), so it wins
+   in both blocks wherever it sits in the file. Paper gets the same
+   answer as the screen deliberately: a printed report carrying every
+   field's definition is the glossary nobody asked for, and the two
+   declared inline classes (`bga:inline`) print because they are not
+   behind the door at all. */
+.description[hidden] { display: none; }
 
 /* UX-318 (styleguide §3a.2/§3a.3): **table focus.** One table takes the
    content column, the rest of the report stands behind it, and the

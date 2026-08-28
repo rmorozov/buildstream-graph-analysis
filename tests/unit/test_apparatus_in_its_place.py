@@ -38,6 +38,15 @@ the golden page, 72 on macro_micro**, one marker each.
 The `title` stays. It costs nothing, it is what a screen reader and a
 keyboard focus already read, and §4.3's rule is that hover is never the
 *only* door — not that it must be shut.
+
+**`UX-346` closed the door.** The sentence rendered whatever the marker
+said — `.description { display: block }` beats `[hidden]`'s UA rule —
+so this file's clauses held a mechanism that had no visual effect, and
+43% of the golden page's words were the contract's glossary. The clause
+below now reads `markers == described - inlined`: a `bga:inline` value keeps
+its sentence and has no door, and everything else is behind one.
+`tests/unit/test_a_sentence_lives_on_its_door.py` measures the closing
+in a browser, where computed style is a fact rather than an attribute.
 """
 import json
 import os
@@ -212,6 +221,11 @@ const root = named["report"] ?? body;
 const described = all(root, (n) => n.attrs?.["data-described"] === "true");
 const markers = all(root, (n) => n.attrs?.["data-describe"]);
 const sentences = all(root, (n) => n.attrs?.["data-role"] === "description");
+// UX-346: a declared exception keeps its sentence beside the value and
+// therefore has no door - a `?` offering to show what is already shown
+// is the duplication that item removed.
+const inlined = all(root, (n) => n.attrs?.["data-inline"]
+                                 && n.attrs?.["data-role"] === "description");
 // Each sentence beside its value, not under its term: the `<dd>` is
 // where the number is.
 const parents = [...new Set(sentences.map((n) => n._parent?.tagName))];
@@ -228,7 +242,7 @@ for (let i = 0; i < 3; i++) {
 const titled = described.filter((n) => (n.attrs.title ?? "").length > 0).length;
 console.log(JSON.stringify({
   described: described.length, markers: markers.length,
-  sentences: sentences.length, parents, trip, titled,
+  sentences: sentences.length, inlined: inlined.length, parents, trip, titled,
   sample: shown ? text(shown) : null,
   error: failure }));
 """
@@ -276,11 +290,17 @@ class TestEveryDescribedValueShowsItsAffordance:
     def test_the_marker_count_equals_the_described_count(self, booted):
         """§2b.3, and the acceptance's own phrasing. Not "there are
         markers" - one per described value, so a renderer that grew a
-        fourth `<dt>` site and forgot the marker reddens."""
+        fourth `<dt>` site and forgot the marker reddens.
+
+        `UX-346` subtracts the declared exceptions: a `bga:inline`
+        value's sentence is beside it already, so it has no door and
+        must not have one. Measured on the golden export: 86 described,
+        12 inline, 74 markers."""
         for page, out in booted.items():
             assert out["described"] > 0, f"{page} describes nothing at all"
-            assert out["markers"] == out["described"], (page, out)
             assert out["sentences"] == out["described"], (page, out)
+            assert out["markers"] == out["described"] - out["inlined"], (page, out)
+            assert 0 < out["inlined"] < out["described"], (page, out)
 
     def test_the_sentence_opens_beside_the_value(self, booted):
         """Beside, not under the term: the `<dd>` holds the number, and

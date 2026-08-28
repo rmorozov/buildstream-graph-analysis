@@ -78,7 +78,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Eleven hints, and this table is the one place they are all written
+Twelve hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it. A hint the schemas emit and
 this table does not name is a hint whose meaning lives only in code,
@@ -99,6 +99,7 @@ sets equal in both directions.
 | `bga:presets` | a named view over one table — rows, columns, order, bound | the view selector and the rail's sub-entries |
 | `bga:series` | that an array is an ordered series, and the unit of one step | the sparkline and its sentence (§2) |
 | `bga:distribution` | that an object publishes percentiles, and where it counts | the density strip and its stated `n` (§2) |
+| `bga:inline` | that this value's sentence stays beside it rather than behind its `?` — `name` or `caveat` (§4a) | `describedTerm`, which then draws no door |
 
 Two properties this table is here to keep. **A hint is a declaration,
 never a guess**: the page reads what the schema says a value is and
@@ -357,24 +358,47 @@ before.
 ## 4a. Where a sentence lives (round 52)
 
 `UX-220` gave every declared quantity a sentence from the contract.
-Round 52 measured where they ended up: **67-72% of the page's words**
-are those sentences, printed beside every value on every run, while the
-same sentence is also behind a `?` door on the same line.
+Round 52 measured where they ended up: **43% of the golden page's words
+and 37% of `macro_micro`'s** are those sentences, printed beside every
+value on every run, while the same sentence sits behind a `?` door on
+the same line.
+
+(The round's first figure was 67-72%. It counted `.pairs dd` whole —
+the value cell, so every number on the page counted as prose. The
+figures above count `[data-role="description"]` and are the ones
+`UX-346` was verified against. The instrument was the defect, twice in
+one round: see `UX-343`'s census.)
 
 A description is **reference**, and §2b already decided where reference
 goes: on demand, near what it explains, not in the reading path. The
 sentence lives on the door.
 
-Two exceptions stay inline, and the list is closed:
+**And the door has to close.** `UX-317` built the door in round 41 and
+it never shut: `[hidden]` is a UA rule at specificity (0,0,0) and
+`.description { display: block }` beats it, so the sentence rendered
+whatever the `?` said. A control whose state nothing renders is not a
+control — before trusting a disclosure, measure the *computed style and
+the box*, never the attribute you set.
 
-- a value whose *name* misleads without it — the contract marks these,
-  so the page cannot decide case by case;
+Two exceptions stay inline, declared in the contract as `bga:inline`
+(`name` or `caveat`) so the page cannot decide case by case:
+
+- a value whose *name* invites a reading it does not have —
+  `useful_share` is a share of capacity, not of wall-clock — or invites
+  none at all, like `t_infinity_observed`;
 - a **caveat** rather than a description: the "this is a ranking, not a
-  measurement" class (`UX-129`, `UX-275`). A warning belongs where the
-  number is, because a reader who skips the door must still meet it.
+  measurement" class (`UX-129`, `UX-275`), a `false` that means "not
+  measured" rather than "no", a non-zero that weakens every figure
+  beside it. A warning belongs where the number is, because a reader
+  who skips the door must still meet it.
 
 The test for which one you have: a description answers *what is this?*
-and a caveat answers *what may I not conclude from it?*
+and a caveat answers *what may I not conclude from it?* A value with a
+declared exception carries **no** `?` — a door beside a sentence
+already on screen is the duplication this rule removes.
+
+Measured after: 11% and 9% of the two pages' words, 12 and 18 inline
+sentences of 86 and 146 described values.
 
 ## 4b. A label is for the reader; the suffix is for the contract
 

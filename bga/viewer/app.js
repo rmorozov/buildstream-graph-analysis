@@ -18,7 +18,7 @@
 // `import` lines, and a re-export is a module it would never inline
 // (`UX-199`).
 import { served, safeStorage } from "./primitives.js";
-import { QUANTITY, SEVERITY, COLUMNS, SERIES, DISTRIBUTION, bytes,
+import { QUANTITY, SEVERITY, COLUMNS, SERIES, DISTRIBUTION, INLINE, bytes,
          childNode, cssId, el, guessQuantity, heading, hintsOf, quantity,
          quantityFor, sectionHead, title } from "./format.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, OBJECT_INLINE_FIELDS,
@@ -99,7 +99,8 @@ export function renderFindingEvidence(evidence, node = undefined) {
     // any described value, anywhere - and this list is one of the three
     // places a `<dt>` is built.
     const { term, describe } = describedTerm(
-      key, hintsOf(childNode(node, key)).description);
+      key, hintsOf(childNode(node, key)).description, {},
+      hintsOf(childNode(node, key))[INLINE]);
     list.append(
       term,
       el("dd", { class: typeof value === "number" ? "num" : null,
@@ -352,7 +353,8 @@ export function renderSummary(payload, hints) {
   const list = el("dl", { class: "pairs" });
   for (const [key, value] of scalars) {
     const kind = hints[key]?.[QUANTITY] ?? guessQuantity(key);
-    const { term, describe } = describedTerm(key, hints[key]?.description);
+    const { term, describe } = describedTerm(key, hints[key]?.description, {},
+                                             hints[key]?.[INLINE]);
     list.append(
       term,
       el("dd", {}, el("span", {

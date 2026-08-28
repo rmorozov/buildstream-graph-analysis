@@ -537,6 +537,20 @@ def _boot(run_dir, tmp):
     return out
 
 
+def _declared(out):
+    """The drawings a *schema* asked for, which is this class's subject.
+
+    `UX-350` gave every table with a quantity column the strip §2 asks
+    for, so the page now also carries annotation-grade `columnStrip`s -
+    six on golden, sixteen on `macro_micro`. Those are a mark *beside*
+    a value; an exhibit **is** the value. `columnStrip` marks its own
+    with `density-self`, which is the split `drawings.js` already
+    makes, so this reads it rather than inventing a second rule.
+    """
+    return [one for one in out["drawings"]
+            if "density-self" not in one["klass"]]
+
+
 @pytest.fixture(scope="module")
 def booted():
     import tempfile
@@ -584,22 +598,37 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
         argued from the source."""
         seen = 0
         for page, out in booted.items():
-            for one in out["drawings"]:
+            for one in _declared(out):
                 assert one["grade"] == "exhibit", (page, one)
                 assert "exhibit" in one["klass"], (page, one)
                 seen += 1
         assert seen == 4, f"expected 3 on macro_micro + 1 on golden, saw {seen}"
 
+    def test_the_self_built_strips_are_annotations(self, booted):
+        """The other side of the same split, and new with `UX-350`:
+        that round gave every table with a quantity column its strip,
+        so annotation-grade drawings appear on both fixtures for the
+        first time. They are `columnStrip`'s, they are *not* exhibits,
+        and asserting that is what keeps the population above from
+        being whatever the page happens to draw."""
+        for page, out in booted.items():
+            built = [one for one in out["drawings"]
+                     if "density-self" in one["klass"]]
+            assert built, f"{page} draws no self-built strip at all"
+            for one in built:
+                assert one["grade"] == "annotation", (page, one)
+                assert "exhibit" not in one["klass"], (page, one)
+
     def test_each_one_is_drawn_at_the_scale_and_not_beside_a_cell(self, booted):
         for page, out in booted.items():
-            for one in out["drawings"]:
+            for one in _declared(out):
                 expected = "0 0 100 60" if one["role"] == "series" \
                     else "0 0 100 26"
                 assert one["viewBox"] == expected, (page, one)
 
     def test_each_one_labels_its_ends_and_carries_its_twin(self, booted):
         for page, out in booted.items():
-            for one in out["drawings"]:
+            for one in _declared(out):
                 assert one["axis"] == 1, (page, one)
                 assert one["twinRows"], (page, one)
 
@@ -609,7 +638,7 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
         same published numbers, so a twin computing its own would have to
         agree with the drawing to pass."""
         for page, out in booted.items():
-            for one in out["drawings"]:
+            for one in _declared(out):
                 rows = {label: value for label, value in one["twinRows"]}
                 if one["role"] == "series":
                     values = one["values"].split(",")

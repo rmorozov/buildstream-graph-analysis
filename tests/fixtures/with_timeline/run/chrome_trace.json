@@ -1,0 +1,310 @@
+[
+  {
+    "name": "bst build all.bst",
+    "cat": "bst-invocation",
+    "ph": "B",
+    "ts": 1787331688483000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Full Command": "bst build all.bst"
+    }
+  },
+  {
+    "name": "toolchain.bst [macro-micro-optimization-example/toolchain/f81ed53b-build.20260821-170130.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331691210000,
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "action": "build",
+      "element": "toolchain.bst"
+    }
+  },
+  {
+    "name": "toolchain.bst [macro-micro-optimization-example/toolchain/f81ed53b-build.20260821-170130.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331691210000,
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/toolchain/f81ed53b-build.20260821-170130.log",
+      "action": "build",
+      "element": "toolchain.bst"
+    }
+  },
+  {
+    "name": "core.bst [macro-micro-optimization-example/core/b7c2e411-build.20260821-170130.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331691210000,
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "action": "build",
+      "element": "core.bst"
+    }
+  },
+  {
+    "name": "codegen.bst [macro-micro-optimization-example/codegen/d8d71e5f-build.20260821-170130.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331691210000,
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "action": "build",
+      "element": "codegen.bst"
+    }
+  },
+  {
+    "name": "codegen.bst [macro-micro-optimization-example/codegen/d8d71e5f-build.20260821-170130.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331698218000,
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/codegen/d8d71e5f-build.20260821-170130.log",
+      "action": "build",
+      "element": "codegen.bst"
+    }
+  },
+  {
+    "name": "core.bst [macro-micro-optimization-example/core/b7c2e411-build.20260821-170130.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331710233000,
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/core/b7c2e411-build.20260821-170130.log",
+      "action": "build",
+      "element": "core.bst"
+    }
+  },
+  {
+    "name": "lib-a.bst [macro-micro-optimization-example/lib-a/aa16694c-build.20260821-170149.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331710233000,
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "action": "build",
+      "element": "lib-a.bst"
+    }
+  },
+  {
+    "name": "lib-a.bst [macro-micro-optimization-example/lib-a/aa16694c-build.20260821-170149.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331713238000,
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/lib-a/aa16694c-build.20260821-170149.log",
+      "action": "build",
+      "element": "lib-a.bst"
+    }
+  },
+  {
+    "name": "lib-b.bst [macro-micro-optimization-example/lib-b/8afe5153-build.20260821-170152.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331713238000,
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "action": "build",
+      "element": "lib-b.bst"
+    }
+  },
+  {
+    "name": "lib-b.bst [macro-micro-optimization-example/lib-b/8afe5153-build.20260821-170152.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331717242000,
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/lib-b/8afe5153-build.20260821-170152.log",
+      "action": "build",
+      "element": "lib-b.bst"
+    }
+  },
+  {
+    "name": "lib-c.bst [macro-micro-optimization-example/lib-c/a3c7c3f9-build.20260821-170156.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331717242000,
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "action": "build",
+      "element": "lib-c.bst"
+    }
+  },
+  {
+    "name": "lib-c.bst [macro-micro-optimization-example/lib-c/a3c7c3f9-build.20260821-170156.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331720247000,
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/lib-c/a3c7c3f9-build.20260821-170156.log",
+      "action": "build",
+      "element": "lib-c.bst"
+    }
+  },
+  {
+    "name": "lib-d.bst [macro-micro-optimization-example/lib-d/9749fd63-build.20260821-170159.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331720247000,
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "action": "build",
+      "element": "lib-d.bst"
+    }
+  },
+  {
+    "name": "lib-d.bst [macro-micro-optimization-example/lib-d/9749fd63-build.20260821-170159.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331724253000,
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/lib-d/9749fd63-build.20260821-170159.log",
+      "action": "build",
+      "element": "lib-d.bst"
+    }
+  },
+  {
+    "name": "lib-e.bst [macro-micro-optimization-example/lib-e/87e3f3d2-build.20260821-170203.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331724253000,
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "action": "build",
+      "element": "lib-e.bst"
+    }
+  },
+  {
+    "name": "lib-e.bst [macro-micro-optimization-example/lib-e/87e3f3d2-build.20260821-170203.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331727257000,
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/lib-e/87e3f3d2-build.20260821-170203.log",
+      "action": "build",
+      "element": "lib-e.bst"
+    }
+  },
+  {
+    "name": "lib-f.bst [macro-micro-optimization-example/lib-f/cd7abacc-build.20260821-170206.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331727257000,
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "action": "build",
+      "element": "lib-f.bst"
+    }
+  },
+  {
+    "name": "lib-f.bst [macro-micro-optimization-example/lib-f/cd7abacc-build.20260821-170206.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331731261000,
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/lib-f/cd7abacc-build.20260821-170206.log",
+      "action": "build",
+      "element": "lib-f.bst"
+    }
+  },
+  {
+    "name": "app.bst [macro-micro-optimization-example/app/0b5380f2-build.20260821-170210.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331731261000,
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "action": "build",
+      "element": "app.bst"
+    }
+  },
+  {
+    "name": "app.bst [macro-micro-optimization-example/app/0b5380f2-build.20260821-170210.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331734393000,
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/app/0b5380f2-build.20260821-170210.log",
+      "action": "build",
+      "element": "app.bst"
+    }
+  },
+  {
+    "name": "all.bst [macro-micro-optimization-example/all/92f30592-build.20260821-170214.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1787331734393000,
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "action": "build",
+      "element": "all.bst"
+    }
+  },
+  {
+    "name": "all.bst [macro-micro-optimization-example/all/92f30592-build.20260821-170214.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1787331734393000,
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "macro-micro-optimization-example/all/92f30592-build.20260821-170214.log",
+      "action": "build",
+      "element": "all.bst"
+    }
+  },
+  {
+    "name": "bst build all.bst",
+    "cat": "bst-invocation",
+    "ph": "E",
+    "ts": 1787331734616000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Return Code": "0"
+    }
+  }
+]

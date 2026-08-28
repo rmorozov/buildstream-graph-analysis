@@ -141,6 +141,15 @@ Thumbs.db
 *.log
 *.tmp
 
+# UX-358: the one wrapped BuildStream log that is a **fixture** rather
+# than a build's leavings. `bga timeline` renders from it, so without a
+# committed one the Perfetto handoff is exercised by nothing a fresh
+# checkout has - which is the defect UX-358 was filed about, and which
+# happened to UX-358's own first fix: it pointed at `examples/06`'s
+# real capture, which `*.log` and `examples/06/.bga/.gitignore` both
+# exclude, so the guard passed locally and failed in CI.
+!tests/fixtures/**/build.log
+
 # examples/: real BuildStream projects whose sandbox-shell binaries and
 # throwaway git remote are generated at build time (examples/stage_*.sh),
 # not committed - see examples/README.md.

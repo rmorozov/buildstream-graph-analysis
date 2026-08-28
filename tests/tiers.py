@@ -222,6 +222,13 @@ LARGE = (
     "tests/unit/test_a_sentence_lives_on_its_door.py",                #   20.2s
     "tests/unit/test_the_shape_channel_is_built.py",                  #   19.8s
     "tests/unit/test_the_tools_scale_with_the_table.py",              #   16.8s
+    # `UX-367` moved this one across the floor by adding the size it
+    # was missing: the volume budget now boots the seeded 1,202-element
+    # run beside the two fixtures, which is a `gen-synthetic`, a
+    # 1.16 MB export and a third browser page. 11.5s -> 22.3s, and the
+    # cost is the whole point of the item - a budget that never met the
+    # page is cheaper and worth nothing.
+    "tests/unit/test_the_page_has_a_volume_budget.py",                #   22.3s
 )
 
 MEDIUM = (
@@ -248,7 +255,6 @@ MEDIUM = (
     # above): over the medium floor, under the large one.
     "tests/unit/test_the_handoff_has_a_fixture.py",              #   12.6s
     "tests/unit/test_the_guards_measure_the_page.py",            #   11.5s
-    "tests/unit/test_the_page_has_a_volume_budget.py",           #   11.5s
     "tests/unit/test_the_merge_carries_every_field.py",          #    8.7s
     "tests/unit/test_the_label_is_for_the_reader.py",            #    6.4s
     # Re-measured 2026-08-25 (round 39). Twenty-four files had drifted

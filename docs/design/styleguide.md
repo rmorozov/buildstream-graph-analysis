@@ -565,15 +565,26 @@ part that moved. So the distance budget gains a sibling:
 - **The bound is set against a measured page and moves only with a
   filed reason** — the discipline §3c already uses for distance.
 
-Measured on the finished page at 1440x900 in round 56, and the bounds
-set from it with roughly a fifth of headroom on the larger fixture:
+Measured on the finished page at 1440x900, and the bounds set from it
+with roughly a fifth of headroom on the largest run in each class.
+Round 59 (`UX-367`) added the third row and split the bounds by size:
 
 ```text
-                landed   opened    words   controls
-golden           3,501   14,493    5,279        409
-macro_micro      5,564   28,213    9,879        659
-budget           7,000   34,000   12,000        800
+                 elements   landed   opened    words   controls
+golden                  4    3,501   14,560    5,280        410
+macro_micro            11    5,541   28,257    9,883        660
+budget, to 50 elts             7,000   34,000   12,000        800
+
+scale               1,202    4,397   54,968   33,864      1,922
+budget, to 4,000 elts          7,000   66,000   41,000      2,300
 ```
+
+**Landed height is one number for every class**, and that is the
+result rather than a shortcut: at 1,202 elements the page a reader
+lands on is 4,397 px — *shorter* than the 11-element fixture's 5,541.
+`UX-347`'s fold scales. The opened budgets are the ones that do not,
+and they are stated per class because 55,000 px at 1,202 elements may
+be acceptable while 55,000 px at eleven is not.
 
 Words and controls are one number rather than two, and that is a fact
 about the mechanism rather than a simplification: the chapters hide
@@ -584,9 +595,11 @@ exists to keep visible.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.
-It also holds the bounds to being reachable: the larger fixture must
-sit within a factor of two of every one of them, because a bound
-nothing can reach is not a bound.
+It also holds the bounds to being reachable: the largest run in each
+class must sit within a factor of two of every one of them, because a
+bound nothing can reach is not a bound. That clause is what forces a
+budget *down* when a later item makes the page smaller — `UX-366` is
+the next one due to.
 
 ## 4c. A control acts on the scope its label names, and it acknowledges the press (round 55)
 
@@ -669,12 +682,12 @@ runs. Measured on the seeded 1,202-element run — the size
 
 ```text
                     budget   macro_micro (11)   scale (1,202)
-opened height       34,000            28,213          70,577
-words               12,000             9,879          33,835
-controls               800               659           1,834
+opened height       34,000            28,257          54,968
+words               12,000             9,883          33,864
+controls               800               660           1,922
 ```
 
-Every bound is exceeded 2-3x where no guard looks. So the rule the
+Every bound is exceeded 1.6-2.8x where no guard looks. So the rule the
 budget needs is one level up from the numbers:
 
 **A bound is stated together with the size it was measured at, and it is
@@ -685,7 +698,19 @@ This is `UX-363`'s lesson about the tier budget, in the other document:
 there, one measurement was compared against the number that made it look
 sized. Here, one *population* is.
 
-`UX-367` is the item.
+`UX-367` is the item, and closing it taught the rule its own second
+half. **The filing's own scale figures were measured wrong**: it
+reported 70,577 px for the scale page against 28,213 for
+`macro_micro`, but the first was measured with every `<details>`
+forced open and the second with them closed. One row, two instruments.
+Same instrument both ways, the overrun is 1.6x and not 2.1x — real,
+and smaller than the number that argued for the item.
+
+So: **a comparison is made with one instrument, and the instrument is
+part of the measurement.** A budget stated at the size the page is used
+at is worth nothing if the two sizes were not measured the same way,
+and a table whose rows disagree about what was opened is the same class
+of error as a bound nobody enforces.
 
 ## 1c. A superlative is a measurement, not an adjective (round 58)
 

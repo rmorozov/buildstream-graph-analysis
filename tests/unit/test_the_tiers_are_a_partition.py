@@ -78,20 +78,84 @@ class TestTheTiersPartitionTheSuite:
 
 
 class TestTheDefaultTierStaysFast:
-    def test_ci_enforces_the_budget_the_table_declares(self):
+    #: `UX-363`: the small tier runs twice in CI and each run has its
+    #: own budget. The pairs are (what the workflow line looks like,
+    #: the constant it has to equal).
+    STEPS = ((r"timeout (\d+) make test-small", "SMALL_TIER_BUDGET_S"),
+             (r"PYTEST_XDIST= timeout (\d+) make test-small",
+              "SMALL_TIER_BUDGET_1P_S"))
+
+    @staticmethod
+    def _workflow():
+        return (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    @pytest.mark.parametrize("pattern,constant", STEPS)
+    def test_ci_enforces_the_budget_the_table_declares(self, pattern,
+                                                       constant):
         """The budget is a timeout in CI rather than a wall-clock
         assertion in a test: timing a suite from inside itself is the
         kind of guard that goes flaky and then gets muted. What is
-        checkable here is that the two numbers agree."""
-        workflow = (REPO / ".github/workflows/ci.yml").read_text(
-            encoding="utf-8")
+        checkable here is that the two numbers agree.
+
+        `UX-363`: **both** steps, because for three rounds only one was
+        checked. The old clause searched for the first `timeout` in the
+        file and stopped, so the single-process step's number was
+        guarded by nothing and could drift from the table freely.
+        """
+        workflow = self._workflow()
         assert "make test-small" in workflow, (
             "CI does not run the small tier, so its budget is unenforced")
-        budget = re.search(r"timeout (\d+) make test-small", workflow)
-        assert budget, "the small-tier step has no timeout, so no budget"
-        assert int(budget.group(1)) == int(tiers.SMALL_TIER_BUDGET_S), (
+        budget = re.search(pattern, workflow)
+        assert budget, f"no small-tier step matching {pattern!r}, so no budget"
+        declared = getattr(tiers, constant)
+        assert int(budget.group(1)) == int(declared), (
             f"CI budgets {budget.group(1)}s, tests/tiers.py declares "
-            f"{tiers.SMALL_TIER_BUDGET_S}s - two copies of one number")
+            f"{declared}s as {constant} - two copies of one number")
+
+    def test_the_two_steps_have_different_numbers_from_each_other(self):
+        """The parallel step is matched by a prefix of the
+        single-process step's line, so a regex that is too loose reads
+        one number twice and calls it agreement. This is what makes the
+        clause above a pair rather than the same check run twice."""
+        workflow = self._workflow()
+        found = {name: int(re.search(pattern, workflow).group(1))
+                 for pattern, name in self.STEPS}
+        assert len(set(found.values())) == 2, (
+            f"both steps read as the same budget: {found} - the patterns "
+            f"are not distinguishing the two lines")
+
+    @pytest.mark.parametrize("measured,budget", (
+        ("SMALL_TIER_CI_S", "SMALL_TIER_BUDGET_S"),
+        ("SMALL_TIER_CI_1P_S", "SMALL_TIER_BUDGET_1P_S")))
+    def test_each_budget_is_reachable_and_still_a_bound(self, measured,
+                                                        budget):
+        """`UX-363`, and the reason it was filed: a bound nothing can
+        reach is not a bound.
+
+            measured  <  budget  <  measured + LARGE_FLOOR_S
+
+        The left half says the budget is not tripped by normal running.
+        The right half is the job: one file above the large floor
+        landing in the default tier has to trip it. For three rounds
+        only the left half was true - 90s against a tier that each
+        re-tier moved further down, until a file at *twice* the large
+        floor tripped neither step and the guard that had caught three
+        drifts would have missed the fourth.
+
+        Re-measure both numbers when a re-tier moves the tier; that is
+        the edit, and it moves the budgets with it rather than leaving
+        them where a previous round happened to put them.
+        """
+        seen, bound = getattr(tiers, measured), getattr(tiers, budget)
+        assert seen < bound, (
+            f"{budget} is {bound}s and the tier measures {seen}s - the "
+            f"budget is below normal running and will red on every push")
+        assert bound < seen + tiers.LARGE_FLOOR_S, (
+            f"{budget} is {bound}s against a {seen}s tier, so a file of "
+            f"{tiers.LARGE_FLOOR_S}s - the large floor - can land in the "
+            f"default tier without tripping it. That is the slack "
+            f"`UX-363` was filed for; re-measure and restate rather than "
+            f"widening this")
 
     def test_the_makefile_offers_every_tier(self):
         makefile = (REPO / "Makefile").read_text(encoding="utf-8")

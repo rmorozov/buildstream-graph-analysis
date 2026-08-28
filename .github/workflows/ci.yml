@@ -43,13 +43,17 @@ jobs:
       # UX-238: the small tier is the inner loop's tier, and its value is
       # that it stays fast. Nothing stops a slow test landing in it -
       # it is the *default*, so a new file joins it silently - which is
-      # why the budget is enforced here rather than trusted. 30.6s
-      # measured; 90s is the bound, generous because the smallest large
-      # file is 15.4s on its own and one landing here should trip it
-      # long before a benchmark would. Keep in step with
-      # SMALL_TIER_BUDGET_S in tests/tiers.py.
+      # why the budget is enforced here rather than trusted.
+      #
+      # UX-363: 23.8s measured on this step; 35s is the bound. It is
+      # sized so that one *large* file landing in the default tier trips
+      # it (23.8 + 15.0 = 38.8s > 35s) while normal running does not -
+      # for three rounds it was 90s against a tier that kept shrinking,
+      # and a file at twice the large floor tripped nothing. Keep in
+      # step with SMALL_TIER_BUDGET_S in tests/tiers.py, which states
+      # the inequality and is guarded on it.
       - name: Test (small tier, budgeted)
-        run: timeout 90 make test-small
+        run: timeout 35 make test-small
 
       - name: Test
         run: make test
@@ -59,10 +63,16 @@ jobs:
       # that only ever runs parallel in one place is a suite whose
       # parallel-safety is untested where it matters. This re-runs the
       # tiers' own boundary single-process, so an ordering assumption
-      # that xdist happens to hide cannot ship. Cheap: the small tier is
-      # 25s single-process after the re-tier.
+      # that xdist happens to hide cannot ship.
+      #
+      # UX-363: its own budget, and a *lower* one than the parallel
+      # step's - on a two-core runner four workers cost more than they
+      # save, so this step is the faster of the two (21.4s against
+      # 23.8s). It went unguarded until now: the partition guard's
+      # regex stopped at the first `timeout` in this file.
+      # SMALL_TIER_BUDGET_1P_S in tests/tiers.py.
       - name: Test (small tier, single process)
-        run: PYTEST_XDIST= timeout 120 make test-small
+        run: PYTEST_XDIST= timeout 32 make test-small
 
   packaging:
     # UX-77: the front door. Every `bga wrap/extract/capture/...` alias

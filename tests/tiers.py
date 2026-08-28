@@ -97,11 +97,59 @@ slower. Re-measure with the command above before editing either list.
 LARGE_FLOOR_S = 15.0
 MEDIUM_FLOOR_S = 1.0
 
-# Wall-clock budget for the whole small tier, with headroom. Measured
-# at 18.2s of test time; the budget is generous because it is a
-# backstop against a *large* file landing in the default tier (the
-# smallest of those is 15.4s on its own), not a benchmark.
-SMALL_TIER_BUDGET_S = 90.0
+# `UX-363`: the two wall-clock budgets, and the measurement they are
+# sized against.
+#
+# The budgets are CI timeouts, so they are set from **CI's** clock, not
+# this container's. Measured on the last green run before this item
+# (`209812e`, `test (3.12)`), beside the same tier locally:
+#
+# ```text
+#                       CI       local    ratio
+# parallel (-n auto)  23.76s      8.5s     2.8x
+# single process      21.37s     21.7s     1.0x
+# ```
+#
+# Parallel is *slower* than single-process on CI, which is why the two
+# numbers below are not ordered the way they read: a two-core runner
+# spends more on four workers than it saves. Locally the ratio is 2.6x
+# the other way. A single budget for both would therefore be sized
+# against a machine neither step runs on.
+#
+# **What sizes them.** For three rounds the budget stayed at 90s while
+# each re-tier moved the tier further below it, until a file two large
+# floors over could land in the default tier and trip neither step. So
+# the rule is now stated as an inequality and *checked*, in
+# `test_the_tiers_are_a_partition.py`:
+#
+#   measured  <  budget  <  measured + LARGE_FLOOR_S
+#
+# The left half says the budget is reachable in normal running; the
+# right half says one large file landing in the default tier trips it,
+# which is the whole job. Both budgets carry ~1.5x of the measurement,
+# and re-measuring is what moves them - not a commit that needed room.
+SMALL_TIER_CI_S = 23.8            # parallel, `-n auto`, on CI
+SMALL_TIER_CI_1P_S = 21.4         # single process, on CI
+
+SMALL_TIER_BUDGET_S = 35.0        # the `-n auto` step's timeout
+SMALL_TIER_BUDGET_1P_S = 32.0     # the single-process step's timeout
+
+# **Do not re-size these against a local run.** Falsifying them here,
+# with the smallest `LARGE` file (16.4s) moved into the default tier:
+#
+# ```text
+#                        local        would be on CI
+# parallel   8.5 + 16.4 = 24.9s  <35   23.8 + 16.4 = 40.2s  >35   caught
+# 1 proc    21.7 + 16.4 = 38.1s  >32   21.4 + 16.4 = 37.8s  >32   caught
+# ```
+#
+# The single-process budget is falsifiable on a dev machine because
+# that step runs at the same speed in both places. The parallel one is
+# not: this container runs it 2.8x faster than CI does, so a floor-sized
+# file slips under 35s here and trips it there. Its evidence is the CI
+# measurement above plus the inequality, which
+# `test_the_tiers_are_a_partition.py` checks. Lowering it to whatever
+# would redden on a laptop reddens every push.
 
 LARGE = (
     # UX-257's geometry instrument: a real Chrome over CDP, an exported

@@ -1,6 +1,6 @@
 # UX-364: the Perfetto lead promises a plane the trace does not carry
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-348 (the lead sentence), UX-362 (the same defect, opposite sign) | **Serves:** anyone opening a Plane 1 capture's trace in Perfetto | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-348 (the lead sentence), UX-362 (the same defect, opposite sign) | **Serves:** anyone opening a Plane 1 capture's trace in Perfetto | **Topic:** viewer
 
 ## Motivation
 
@@ -82,3 +82,103 @@ above and is wrong exactly there.
   — whether those queries should be marked unanswerable is `UX-321`'s
   territory, not this item's.
 - `UX-362`'s absence sentence, which is done.
+
+## Outcome (round 58, 2026-08-28) — 🟢 Done
+
+### The predicate that did not exist
+
+The filing said the honest fact was "whether the trace was built with a
+Plane 2 raw log, and no published field says so". That was right about
+the gap and slightly wrong about the fix: the fact did not need
+deriving, because **`render` already computes it and every caller threw
+it away**. It returns `planes` — `["1"]` or `["1", "2"]`.
+
+So `trace_render` keeps the render's own result, `trace_with_planes`
+returns `(bytes, planes)`, and the export publishes
+`run.trace_planes`. `trace_bytes` still exists and delegates, so its
+five other callers are untouched.
+
+### Why neither existing predicate would do
+
+```text
+                       absence(run)                      trace planes
+two_plane snapshot     "Plane 2 was not captured…"       ["1", "2"]
+```
+
+`plane2_absence` answers "is Plane 2 in this **analysis**" and looks for
+the report beside the run; the lead asks "is Plane 2 in this **trace**",
+which the renderer decides from the raw log. They disagree outright on
+the fixture this item adds, and a fix keyed on the absence sentence
+would have told that page's reader the plane was never captured over a
+trace that carries it. `has_timeline` cannot tell the two trace shapes
+apart at all.
+
+The filing named `DECLINED` as the discriminating case. It is one, and
+constructing it needs a 46 KB Plane 2 *report* this guard would have to
+fake; the disagreement above needs nothing faked and refutes the same
+predicate, so that is what the file argues from. Recorded in the guard's
+docstring rather than left as a silent substitution.
+
+### The sentence, on every state
+
+```text
+fixture         trace_planes   the lead says
+golden                  None   no timeline to open here
+macro_micro             None   no timeline to open here
+with_timeline          ["1"]   Plane 2 is not in it
+two_plane          ["1","2"]   Both planes … land in one trace
+```
+
+**Three shapes, not two.** The first draft branched on the planes and
+kept the old *"lands in this run's trace"* opener for the other side,
+which then told `golden` and `macro_micro` — neither of which has a
+trace at all — that their element spans were in one. One false claim
+traded for another. The browser clause caught it; reading the diff did
+not.
+
+### The state that was unreachable
+
+`tests/pages.py` grows `two_plane_snapshot`: a four-line wrapped Plane 1
+log, two raw Plane 2 records and the golden run, merging into a real
+two-plane trace. Until it existed no guard could reach a page whose
+trace carries Plane 2 — which is exactly why the sentence could claim it
+unchecked for two rounds. `UX-358`'s lesson, applied before the fix
+rather than after it.
+
+### Mutations
+
+Four against the committed tree, all reverted:
+
+| | mutation | result |
+|---|---|---|
+| M1 | claim both planes unconditionally — the defect itself | 2 failed |
+| M2 | stop publishing `trace_planes` | 3 failed |
+| M3 | ignore the renderer and report both planes always | 3 failed |
+| M4 | the no-trace branch reverts to claiming a trace | 3 failed |
+
+### Three guards moved, none weakened
+
+- **`test_the_lead_says_how_to_open_the_timeline`** asserted `"one
+  trace" in lead` — wording this item deliberately changed, and not the
+  clause's own stated intent. Replaced by the how-to-open pair it is
+  named for, with the trace-contents half pointed at the new file.
+- **`test_an_over_threshold_export_carries_the_command_not_the_trace`**
+  faked `trace_bytes`, which the export no longer calls. Re-pointed at
+  the widened seam; same blob, same threshold, same claims.
+- **`test_the_quoted_button_label_is_the_one_the_page_draws`** read a
+  label split across a JS concatenation and reported a control named
+  ``Open "       + "timeline in Perfetto``. The sentence now keeps the
+  label contiguous *and* the guard joins adjacent literals, so a future
+  split reports the split.
+
+### Deviation from the Required Fix
+
+The field is `run.trace_planes` (a list) rather than the suggested
+`has_plane2_lanes` (a boolean). The renderer's answer is already a list
+of the planes it wrote, and a boolean would throw away which plane a
+one-plane trace has — a distinction the sentence uses.
+
+The query library's descriptions stay out of scope as filed; the lead
+now says in one clause that the Plane 2 queries return nothing on a
+Plane 1 trace, which is the reader-facing half of what `UX-321` would
+formalise.

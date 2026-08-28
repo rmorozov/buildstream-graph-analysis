@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-363 scenarios: **2 open**, 361 closed.
+372 scenarios: **11 open**, 361 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 59 |
-| analysis | 0 | 51 |
+| analysis | 1 | 52 |
 | contracts | 0 | 40 |
-| viewer | 0 | 99 |
+| viewer | 8 | 107 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -38,6 +38,15 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-365 | [the finding that claims the superlative is the small one](UX-0365-the-finding-that-claims-the-superlative-is-the-small-one.md) | analysis | High | — | 🔴 |
+| UX-366 | ["All rows" shows 25 of 1,202](UX-0366-all-rows-shows-twenty-five-of-twelve-hundred.md) | viewer | High | — | 🔴 |
+| UX-367 | [the volume budget is enforced at eleven elements](UX-0367-the-volume-budget-is-enforced-at-eleven-elements.md) | viewer | High | — | 🔴 |
+| UX-368 | [no finding carries a Perfetto query](UX-0368-no-finding-carries-a-perfetto-query.md) | viewer | High | — | 🔴 |
+| UX-369 | [the query library substitutes one project's element name](UX-0369-the-query-library-substitutes-one-projects-element.md) | viewer | Medium | — | 🔴 |
+| UX-370 | [Plane 2's frequency and time do not reach the page](UX-0370-plane-twos-frequency-and-time-do-not-reach-the-page.md) | viewer | Medium | — | 🔴 |
+| UX-371 | [a fifth of the page is repeated text](UX-0371-a-fifth-of-the-page-is-repeated-text.md) | viewer | Medium | — | 🔴 |
+| UX-372 | [the page has one reader](UX-0372-the-page-has-one-reader.md) | viewer | Medium | — | 🔴 |
+| UX-373 | [two satellite pages for one handoff](UX-0373-two-satellite-pages-for-one-handoff.md) | viewer | Low | — | 🔴 |
 
 ## UX-355..UX-361: the fifty-fifth round — the page, opened rather than landed on (2026-08-28)
 
@@ -941,3 +950,56 @@ one level down while it was being written: a finding carries each of its
 numbers in up to three places — `evidence`, `provenance.evidence[].value`
 and `copy_text` — each for a stated reason, and with no rule saying they
 must agree.
+
+## UX-365..UX-373: the fifty-eighth round — the walk out to Perfetto (2026-08-28)
+
+Walked as an outside user: clone the repository, `bga snapshot`, `bga
+view`, press the button, try to answer a question in Perfetto. Twelve
+questions, each measured rather than argued.
+
+```text
+                                          measured           verdict
+1  is the handoff always reachable?      2 of 4 fixtures      by design
+2  does it work at a considerable size?  70,577px / 33,835w   UX-367
+3  are the findings drawn?               18 svg / 13 at scale note below
+4  are the SQL queries usable?           core.bst hard-coded  UX-369
+5  do findings map to Perfetto?          0 of 11              UX-368
+6  do all the controls work?             1 dead, by design    yes
+7  does the top finding name the pain?   2.72s labelled       UX-365
+                                         "Biggest" vs 23.1s
+8  is there an answer per role?          0 roles published    UX-372
+9  can tables reach every item?          25 of 1,202          UX-366
+10 should the two pages be one?          3 pages, 2 errands   UX-373
+11 is text duplicated?                   21.6% of blocks      UX-371
+12 can Plane 2 attribute time+calls?     published, unrendered UX-370
+```
+
+**Two answers were "yes, and that is the design".** The Perfetto button
+renders on exactly the captures that have a timeline and is absent
+elsewhere — `UX-194`'s dead-control rule, working. Every other control
+on the page draws a box and responds: driving the element table's
+population select gives 1, 14 and 135 rows for `Choke points`,
+`Critical path` and `Leaves`.
+
+**The instrument was wrong before the page was.** The first pass at
+question 9 cached the `<table>` node, read 25 rows for every selection
+including `Choke points (1)`, and pointed at "no control works". The
+handler replaces the node; a cached reference reads a detached tree.
+Re-querying turned a false alarm into the real finding, which is
+narrower and worse: the controls work, and the one labelled **All rows**
+yields 25 of 1,202.
+
+**Question 7 is the one that changes what a reader does.** The page's
+own first screen is right — "What should I do?", the chain-bound
+sentence, `core.bst saves 12.1 s`. The *findings list* is not: its first
+two entries are `info`, the first of them saying it is not a finding,
+and the entry carrying the word "Biggest" is worth 2.72s against a
+sibling worth 23.1s. Everything downstream — `--format json`, the CI
+comment — reads the list, not the screen.
+
+**Question 3 has no item and a note.** The page draws 18 SVG figures on
+`macro_micro` and **13** on the 1,202-element run: the shape channel
+does not grow with the data, and at scale the drawings thin out while
+the text triples. That is a real asymmetry and it is not yet a defect
+anyone can act on, because nothing says how many figures a page that
+size should have. `UX-367` is the budget it would hang off.

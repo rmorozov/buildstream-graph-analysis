@@ -67,13 +67,15 @@ def _sensitivity():
 
 
 def test_structural_elements_are_not_ranked_as_improvement_opportunities():
-    ranked = [key for key, _, _ in _sensitivity()["top_opportunities"]]
+    ranked = [row["element_uid"]
+              for row in _sensitivity()["top_opportunities"]]
     assert "all.bst" not in ranked
     assert "toolchain.bst" not in ranked
 
 
 def test_real_elements_still_rank():
-    ranked = [key for key, _, _ in _sensitivity()["top_opportunities"]]
+    ranked = [row["element_uid"]
+              for row in _sensitivity()["top_opportunities"]]
     assert "app.bst" in ranked
     assert "lib-a.bst" in ranked
 
@@ -112,7 +114,9 @@ def test_report_states_what_was_omitted_and_why():
             "bottleneck": {},
             "parallelism": {},
             "sensitivity": {
-                "top_opportunities": [("app.bst", 0.82, 81.6)],
+                "top_opportunities": [{"element_uid": "app.bst",
+                                       "sensitivity": 0.82,
+                                       "saving_us": 816000}],
                 "omitted_structural_opportunities": [
                     {"element": "all.bst", "element_kind": "stack"},
                 ],

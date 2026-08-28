@@ -422,7 +422,7 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
             _check_hint(document, f"{key}[].{nested_key}", nested)
 
 
-def _distribution(quantity: str, description: str) -> dict:
+def _distribution(quantity: str, noun: str, description: str) -> dict:
     """`UX-343`: a distribution declares the unit of its own leaves.
 
     `{n, min, max, deciles{p10..p90}, p95, p99, is_flat}` is one shape
@@ -432,18 +432,32 @@ def _distribution(quantity: str, description: str) -> dict:
     reached the reader as bare numbers. The count is a count; everything
     else is the quantity the population is of.
     """
-    percentile = {QUANTITY: quantity}
+    # `UX-220`: a declared quantity carries a sentence. Generated rather
+    # than written out twenty-six times, because "the 30th percentile of
+    # this population" is the same sentence with a number in it, and
+    # twenty-six copies of it by hand is how one of them ends up saying
+    # the 40th.
+    def extreme(what):
+        return {QUANTITY: quantity, "description": f"The {what} {noun}."}
+
+    def rank(step):
+        return {QUANTITY: quantity,
+                "description": f"The {step}th percentile {noun}."}
+
     return {
         DISTRIBUTION: "n", QUANTITY: quantity, "description": description,
         "properties": {
-            "n": {QUANTITY: "count",
-                  "description": "How many values the percentiles are "
-                                 "over. A strip without its population "
-                                 "is a picture of an opinion."},
-            "min": dict(percentile), "max": dict(percentile),
-            "p95": dict(percentile), "p99": dict(percentile),
-            "deciles": {"properties": {f"p{step}": dict(percentile)
-                                       for step in range(10, 100, 10)}},
+            "n": {
+                QUANTITY: "count",
+                "description": "How many values the percentiles are over. A "
+                               "strip without its population is a picture of "
+                               "an opinion."},
+            "min": extreme("smallest"), "max": extreme("largest"),
+            "p95": rank(95), "p99": rank(99),
+            "deciles": {
+                "description": "The nine deciles, nearest-rank.",
+                "properties": {f"p{step}": rank(step)
+                               for step in range(10, 100, 10)}},
         },
     }
 
@@ -904,28 +918,54 @@ _JOIN_ITEM_PROPERTIES = {
     # element, and the count beside them. Thirty-one leaves reaching the
     # reader with no unit, in the block that exists to say what the
     # sandbox did with the cores it was given.
-    "redundancy_count": {QUANTITY: "count"},
+    "redundancy_count": {
+        QUANTITY: "count",
+        "description": "How many times this element repeated work it had "
+                       "already done."},
     "dominant_binary": {
         "description": "The one binary that took most of this element's "
                        "measured CPU.",
         "properties": {
-            "count": {QUANTITY: "count"},
-            "cpu_us": {QUANTITY: "duration_us"},
-            "cpu_share": {QUANTITY: "share"},
-            "wall_s": {QUANTITY: "seconds"},
+            "count": {
+                QUANTITY: "count",
+                "description": "Processes this binary accounted for."},
+            "cpu_us": {
+                QUANTITY: "duration_us",
+                "description": "CPU time those processes used between them."},
+            "cpu_share": {
+                QUANTITY: "share",
+                "description": "That CPU over the element's own. High means "
+                               "one binary is the element."},
+            "wall_s": {
+                QUANTITY: "seconds",
+                "description": "Wall-clock those processes spanned."},
         }},
     "serial_binary": {
         "description": "The binary whose work ran one process at a time.",
         "properties": {
-            "cpu_us": {QUANTITY: "duration_us"},
-            "wall_s": {QUANTITY: "seconds"},
+            "cpu_us": {
+                QUANTITY: "duration_us",
+                "description": "CPU time this binary used while running one "
+                               "process at a time."},
+            "wall_s": {
+                QUANTITY: "seconds",
+                "description": "Wall-clock it spanned doing so - close to "
+                               "`cpu_us` is the tell."},
         }},
     "worst_redundancy": {
         "description": "The repeated work this element paid for most.",
         "properties": {
-            "occurrence_count": {QUANTITY: "count"},
-            "total_duration_s": {QUANTITY: "seconds"},
-            "max_element_duration_s": {QUANTITY: "seconds"},
+            "occurrence_count": {
+                QUANTITY: "count",
+                "description": "How many times the repeated work ran."},
+            "total_duration_s": {
+                QUANTITY: "seconds",
+                "description": "Wall-clock the repeated work cost across all "
+                               "its occurrences."},
+            "max_element_duration_s": {
+                QUANTITY: "seconds",
+                "description": "The longest single occurrence of the repeated "
+                               "work."},
         }},
     "declared": {
         "type": "boolean",
@@ -947,10 +987,10 @@ _JOIN_ITEM_PROPERTIES = {
                        "would take off the makespan. Not off the path: "
                        "the difference is whatever enters the path "
                        "behind it."},
-    "saving_share": {QUANTITY: "share",
-                     "description": "What fixing this element would take "
-                                    "off the run, as a share of its "
-                                    "wall-clock."},
+    "saving_share": {
+        QUANTITY: "share",
+        "description": "What fixing this element would take off the run, as a "
+                       "share of its wall-clock."},
     "blast_radius": {
         QUANTITY: "count",
         "description": "How many elements a change here rebuilds."},
@@ -1091,7 +1131,7 @@ _EVIDENCE_FIELDS = {
         "Peak resident memory the run would need at the recommended "
         "builder count."),
     "host_memory_mb": ("megabytes",
-        "Memory the host reported."),
+        "Memory the host reported, which the memory ceiling is computed against."),
     "cores_busy": ("ratio",
         "CPU-seconds per wall-second inside the element - how much "
         "parallelism its own build actually achieved."),
@@ -1115,30 +1155,56 @@ EVIDENCE_QUANTITIES = {
 # a slice that disagreed with its source about a unit would be worse
 # than a slice with no unit at all.
 EVIDENCE_QUANTITIES.update({
-    "change": {QUANTITY: "share",
-               "description": "The signed change this finding is about, "
-                              "as a share of the baseline."},
+    "change": {
+        QUANTITY: "share",
+        "description": "The signed change this finding is about, as a share of "
+                       "the baseline."},
     "blast_radius": {
         "additionalProperties": {"properties": {
-            "downstream_count": {QUANTITY: "count"},
-            "weighted_duration_us": {QUANTITY: "duration_us"},
-            "risk_score": {QUANTITY: "ratio"},
+            "downstream_count": {
+                QUANTITY: "count",
+                "description": "Elements this one's change rebuilds."},
+            "weighted_duration_us": {
+                QUANTITY: "duration_us",
+                "description": "What that rebuild costs, summed over the elements it touches."},
+            "risk_score": {
+                QUANTITY: "ratio",
+                "description": "Downstream work weighted by duration - a "
+                               "ranking within this run, not a measurement."},
         }},
         "description": "What each named element's change rebuilds."},
     "constraints": {"items": {"properties": {
-        "allows": {QUANTITY: "count"}}}},
+        "allows": {
+            QUANTITY: "count",
+            "description": "How many builders this particular ceiling permits."},
+    }}},
     "rows": {"items": {"properties": {
-        "duration_us": {QUANTITY: "duration_us"},
-        "realizable_saving_us": {QUANTITY: "duration_us"},
-        "share_of_path": {QUANTITY: "share"},
+        "duration_us": {
+            QUANTITY: "duration_us",
+            "description": "How long this row's element took in this run."},
+        "realizable_saving_us": {
+            QUANTITY: "duration_us",
+            "description": "What removing it would take off the makespan."},
+        "share_of_path": {
+            QUANTITY: "share",
+            "description": "How much of the chain this row's element accounts for."},
     }}},
     "steps": {"items": {"properties": {
-        "saving_us": {QUANTITY: "duration_us"},
-        "makespan_after_us": {QUANTITY: "duration_us"},
-        "cumulative_saving_us": {QUANTITY: "duration_us"},
+        "saving_us": {
+            QUANTITY: "duration_us",
+            "description": "What taking this step alone is worth, before the ones after it."},
+        "makespan_after_us": {
+            QUANTITY: "duration_us",
+            "description": "Where the finish lands once this step is taken."},
+        "cumulative_saving_us": {
+            QUANTITY: "duration_us",
+            "description": "Everything saved up to and including it."},
     }}},
     "latent_heavies": {"items": {"properties": {
-        "duration_us": {QUANTITY: "duration_us"}}}},
+        "duration_us": {
+            QUANTITY: "duration_us",
+            "description": "This element's duration, off the chain today."},
+    }}},
 })
 
 _ANALYZE_HINTS = {
@@ -1149,15 +1215,40 @@ _ANALYZE_HINTS = {
         # `UX-341` will take to microseconds; declaring it is what makes
         # that a rename rather than a guess.
         "properties": {
-            "resolution_s": {QUANTITY: "seconds"},
-            "shortest_task_s": {QUANTITY: "seconds"},
-            "worst_excess_s": {QUANTITY: "seconds"},
-            "worst_shortfall_s": {QUANTITY: "seconds"},
-            "material_share": {QUANTITY: "share"},
-            "tasks_compared": {QUANTITY: "count"},
-            "tasks_measured": {QUANTITY: "count"},
-            "tasks_shorter_than_bst": {QUANTITY: "count"},
-            "tasks_where_material": {QUANTITY: "count"},
+            "resolution_s": {
+                QUANTITY: "seconds",
+                "description": "The finest interval the two planes' clocks can "
+                               "tell apart."},
+            "shortest_task_s": {
+                QUANTITY: "seconds",
+                "description": "The shortest task measured - the case the "
+                               "resolution above matters most for."},
+            "worst_excess_s": {
+                QUANTITY: "seconds",
+                "description": "The largest amount by which one plane's "
+                               "duration exceeded the other's."},
+            "worst_shortfall_s": {
+                QUANTITY: "seconds",
+                "description": "The largest amount by which one plane's "
+                               "duration fell short of the other's."},
+            "material_share": {
+                QUANTITY: "share",
+                "description": "The share of tasks where the disagreement is "
+                               "large enough to change a reading."},
+            "tasks_compared": {
+                QUANTITY: "count",
+                "description": "Tasks both planes recorded, so their clocks can be compared."},
+            "tasks_measured": {
+                QUANTITY: "count",
+                "description": "Tasks with a duration in both planes."},
+            "tasks_shorter_than_bst": {
+                QUANTITY: "count",
+                "description": "Tasks the sandbox measured as shorter than "
+                               "BuildStream did."},
+            "tasks_where_material": {
+                QUANTITY: "count",
+                "description": "Tasks where the disagreement is large enough "
+                               "to matter."},
         }},
     "run_instance": {
         QUESTION: 'Which capture is this?', RAIL: 'raw',
@@ -1169,8 +1260,12 @@ _ANALYZE_HINTS = {
                                "than a span - the unit is the same and "
                                "the reading is not."},
             "host_manifest": {"properties": {
-                "cpu_count": {QUANTITY: "count"},
-                "memory_mb": {QUANTITY: "megabytes"},
+                "cpu_count": {
+                    QUANTITY: "count",
+                    "description": "Cores the host reported, which the CPU ceiling is computed against."},
+                "memory_mb": {
+                    QUANTITY: "megabytes",
+                    "description": "Memory the host reported, which the memory ceiling is computed against."},
             }},
         }},
     "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
@@ -1291,30 +1386,71 @@ _ANALYZE_HINTS = {
                 "description": "The graph's shape as numbers, "
                                "independent of how long anything took.",
                 "properties": {
-                    "num_elements": {QUANTITY: "count"},
-                    "num_edges": {QUANTITY: "count"},
-                    "max_depth": {QUANTITY: "count"},
-                    "avg_fanin": {QUANTITY: "ratio"},
-                    "avg_fanout": {QUANTITY: "ratio"},
-                    "max_parallelism": {QUANTITY: "count"},
-                    "avg_parallelism": {QUANTITY: "ratio"},
+                    "num_elements": {
+                        QUANTITY: "count",
+                        "description": "How many elements this run's graph holds."},
+                    "num_edges": {
+                        QUANTITY: "count",
+                        "description": "How many dependency edges this run's graph holds."},
+                    "max_depth": {
+                        QUANTITY: "count",
+                        "description": "The longest chain of dependencies, "
+                                       "counted in edges."},
+                    "avg_fanin": {
+                        QUANTITY: "ratio",
+                        "description": "Direct dependents per element, "
+                                       "averaged."},
+                    "avg_fanout": {
+                        QUANTITY: "ratio",
+                        "description": "Direct dependencies per element, "
+                                       "averaged."},
+                    "max_parallelism": {
+                        QUANTITY: "count",
+                        "description": "The most elements that could run at "
+                                       "once given the graph alone."},
+                    "avg_parallelism": {
+                        QUANTITY: "ratio",
+                        "description": "Elements that could run at once, "
+                                       "averaged over the graph's levels."},
                     "critical_path_length": {
                         QUANTITY: "count",
                         "description": "Elements on the chain, not its "
                                        "duration."},
-                    "critical_path_ratio": {QUANTITY: "share"},
-                    "serialization_ratio": {QUANTITY: "share"},
-                    "cyclomatic_complexity": {QUANTITY: "count"},
+                    "critical_path_ratio": {
+                        QUANTITY: "share",
+                        "description": "The chain's length over the graph's "
+                                       "depth - how much of the shape the "
+                                       "chain accounts for."},
+                    "serialization_ratio": {
+                        QUANTITY: "share",
+                        "description": "How much of the graph has to run one "
+                                       "thing after another."},
+                    "cyclomatic_complexity": {
+                        QUANTITY: "count",
+                        "description": "Edges minus elements plus one - how "
+                                       "tangled the graph is."},
                 }},
             "summary": {
                 "description": "The headline shape numbers, for a reader "
                                "who wants one line rather than the block.",
                 "properties": {
-                    "total_elements": {QUANTITY: "count"},
-                    "critical_path_length": {QUANTITY: "count"},
-                    "max_parallelism": {QUANTITY: "count"},
-                    "bottleneck_count": {QUANTITY: "count"},
-                    "deferrable_leaves": {QUANTITY: "count"},
+                    "total_elements": {
+                        QUANTITY: "count",
+                        "description": "How many elements this run's graph holds."},
+                    "critical_path_length": {
+                        QUANTITY: "count",
+                        "description": "Elements on the chain, not its "
+                                       "duration."},
+                    "max_parallelism": {
+                        QUANTITY: "count",
+                        "description": "The most elements that could run at "
+                                       "once given the graph alone."},
+                    "bottleneck_count": {
+                        QUANTITY: "count",
+                        "description": "Elements everything funnels through."},
+                    "deferrable_leaves": {
+                        QUANTITY: "count",
+                        "description": "Leaf elements nothing downstream is waiting on."},
                     "best_case_speedup": {
                         QUANTITY: "ratio",
                         "description": "How much faster an unlimited-"
@@ -1324,7 +1460,10 @@ _ANALYZE_HINTS = {
                 }},
             "deferrability": {
                 "properties": {
-                    "total_deferrable_work_us": {QUANTITY: "duration_us"},
+                    "total_deferrable_work_us": {
+                        QUANTITY: "duration_us",
+                        "description": "Work that could be moved out of this "
+                                       "build without anything waiting for it."},
                 }},
             # UX-303: the graph's width, level by level - an ordered
             # numeric array whose order *is* the axis, which is what
@@ -1337,16 +1476,34 @@ _ANALYZE_HINTS = {
                 "properties": {
                     # `UX-343`: the four scalars beside the series, and
                     # the series' own values.
-                    "levels": {QUANTITY: "count",
-                               "items": {QUANTITY: "count"}},
-                    "min_width": {QUANTITY: "count"},
-                    "max_width": {QUANTITY: "count"},
-                    "mean_width": {QUANTITY: "ratio"},
-                    "width_uniformity": {QUANTITY: "share"},
+                    "levels": {
+                        QUANTITY: "count",
+                        "description": "One entry per level of the graph, "
+                                       "in order.",
+                        "items": {
+                            QUANTITY: "count",
+                            "description": "How many elements sit at this level of the graph."}},
+                    "min_width": {
+                        QUANTITY: "count",
+                        "description": "The narrowest level of the graph - "
+                                       "where it is closest to serial."},
+                    "max_width": {
+                        QUANTITY: "count",
+                        "description": "The widest level of the graph - its most parallel point."},
+                    "mean_width": {
+                        QUANTITY: "ratio",
+                        "description": "Elements per level of the graph, averaged over the levels."},
+                    "width_uniformity": {
+                        QUANTITY: "share",
+                        "description": "How evenly the width is spread. Low "
+                                       "means the graph pinches somewhere."},
                     "width_at_level": {
                         # `UX-343`: the series declared its axis and not
                         # the values on it.
-                        "items": {QUANTITY: "count"},
+                        "items": {
+                            QUANTITY: "count",
+                            "description": "The graph's width at this "
+                                           "level."},
                         SERIES: "level",
                         "description": "How many elements sit at each "
                                        "depth of the graph, from the "
@@ -1360,7 +1517,10 @@ _ANALYZE_HINTS = {
                 "description": "Where work funnels through one element, "
                                "and how much waits behind it.",
                 "properties": {
-                    "serial_chain_length": {QUANTITY: "count"},
+                    "serial_chain_length": {
+                        QUANTITY: "count",
+                        "description": "The longest run of elements that must "
+                                       "go one after another."},
                     # UX-283: the choke points are an element table like
                     # any other, so they earn the Inspect route and the
                     # sort every other element table has. Before this
@@ -1417,9 +1577,19 @@ _ANALYZE_HINTS = {
             "sensitivity": {
                 "properties": {
                     # `UX-343`: the three scalars beside the list.
-                    "critical_path_us": {QUANTITY: "duration_us"},
-                    "total_improvable_time_us": {QUANTITY: "duration_us"},
-                    "best_case_speedup": {QUANTITY: "ratio"},
+                    "critical_path_us": {
+                        QUANTITY: "duration_us",
+                        "description": "The chain's duration, which the "
+                                       "savings below are measured against."},
+                    "total_improvable_time_us": {
+                        QUANTITY: "duration_us",
+                        "description": "How much of the chain sits in elements "
+                                       "that could move."},
+                    "best_case_speedup": {
+                        QUANTITY: "ratio",
+                        "description": "How much faster an unlimited-capacity "
+                                       "replay would be. A ceiling, not a "
+                                       "plan."},
                     "top_opportunities": {
                         "description": "Elements whose duration the "
                                        "makespan is most sensitive to.",
@@ -1431,8 +1601,8 @@ _ANALYZE_HINTS = {
                              "description": "How much of the makespan "
                                             "moves per unit this element "
                                             "moves."},
-                            {"key": "saving_s", "title": "Worth fixing",
-                             "quantity": "seconds", "sortable": True,
+                            {"key": "saving_us", "title": "Worth fixing",
+                             "quantity": "duration_us", "sortable": True,
                              "description": "What the makespan would drop "
                                             "by, in seconds, if this "
                                             "element cost nothing."},
@@ -1442,10 +1612,21 @@ _ANALYZE_HINTS = {
                 "items": {"properties": {
                     # `UX-343`: the record's own scalars, beside the
                     # nested element table that was already declared.
-                    "builders": {QUANTITY: "count"},
-                    "governing_cores": {QUANTITY: "count"},
-                    "typical_max_jobs": {QUANTITY: "count"},
-                    "downstream_count": {QUANTITY: "count"},
+                    "builders": {
+                        QUANTITY: "count",
+                        "description": "The builder count this risk was "
+                                       "measured at."},
+                    "governing_cores": {
+                        QUANTITY: "count",
+                        "description": "Cores the pinned elements were "
+                                       "competing for."},
+                    "typical_max_jobs": {
+                        QUANTITY: "count",
+                        "description": "The `-j` the pinned elements' own "
+                                       "builds used."},
+                    "downstream_count": {
+                        QUANTITY: "count",
+                        "description": "Elements downstream of this one."},
                     "pinned_elements": {
                         "description": "The elements pinned at this "
                                        "serialization point, and what each "
@@ -1512,13 +1693,19 @@ _ANALYZE_HINTS = {
             "resource_occupancy": {
                 # `UX-343`: keyed by resource kind, which is data.
                 QUANTITY: "ratio",
-                "additionalProperties": {QUANTITY: "ratio"},
+                "additionalProperties": {
+                    QUANTITY: "ratio",
+                    "description": "How occupied this resource kind was, "
+                                   "averaged over the run."},
                 "description": "Occupancy per resource kind, so a "
                                "saturated fetcher is not averaged away by "
                                "idle builders."},
             "peak_resource_occupancy": {
                 QUANTITY: "count",
-                "additionalProperties": {QUANTITY: "count"},
+                "additionalProperties": {
+                    QUANTITY: "count",
+                    "description": "The most of this resource kind in "
+                                   "flight at once."},
                 "description": "The most in flight at once, per resource "
                                "kind."},
         },
@@ -1609,13 +1796,13 @@ _ANALYZE_HINTS = {
             # so the hint names `n` as the count and one control draws
             # them and the store aggregate's `samples` shape alike.
             "element_duration_distribution": _distribution(
-                "duration_us",
+                "duration_us", "element duration in this run",
                 "How this run's element durations are spread. The answer "
                 "to \"is 40s slow *here*?\", which has none without the "
                 "population. Nearest-rank percentiles, `null` below the "
                 "sample floor."),
             "blast_radius_distribution": _distribution(
-                "count",
+                "count", "blast radius in this graph",
                 "How many elements sit downstream of each, spread across "
                 "this graph. \"753 downstream\" is p99.9 in a "
                 "1,202-element run and unremarkable in 40,000."),
@@ -1677,30 +1864,42 @@ _ANALYZE_HINTS = {
             # leaves reaching the reader with no unit at all.
             "element_durations": {
                 QUANTITY: "duration_us",
-                "additionalProperties": {QUANTITY: "duration_us"},
+                "additionalProperties": {
+                    QUANTITY: "duration_us",
+                    "description": "How long this element took in this run, restore or build."},
                 "description": "Each element's own duration, keyed by "
                                "uid. A cached element contributes its "
                                "restore, not its build."},
             "slack": {
                 QUANTITY: "duration_us",
-                "additionalProperties": {QUANTITY: "duration_us"},
+                "additionalProperties": {
+                    QUANTITY: "duration_us",
+                    "description": "How long this element could have been "
+                                   "delayed without moving the makespan."},
                 "description": "How long each element could have been "
                                "delayed without moving the makespan. "
                                "Zero is on the chain."},
             "downstream_count": {
                 QUANTITY: "count",
-                "additionalProperties": {QUANTITY: "count"},
+                "additionalProperties": {
+                    QUANTITY: "count",
+                    "description": "Elements downstream of this one."},
                 "description": "How many elements sit downstream of "
                                "each - what a change to it rebuilds."},
             "unweighted_depth": {
                 QUANTITY: "count",
-                "additionalProperties": {QUANTITY: "count"},
+                "additionalProperties": {
+                    QUANTITY: "count",
+                    "description": "Edges from this element to the root."},
                 "description": "Edges from each element to the root, "
                                "ignoring duration. The graph's shape "
                                "rather than this run's timings."},
             "wall_clock_share": {
                 QUANTITY: "share",
-                "additionalProperties": {QUANTITY: "share"},
+                "additionalProperties": {
+                    QUANTITY: "share",
+                    "description": "This task's duration over the "
+                                   "makespan."},
                 "description": "Each task's duration over the makespan. "
                                "Keyed by the task's own identity, not by "
                                "element, because one element can run "
@@ -1714,15 +1913,26 @@ _ANALYZE_HINTS = {
                                            "on the critical path under "
                                            "the run's own perturbation - "
                                            "1.0 is always."},
-                        "slack_us": {QUANTITY: "duration_us"},
+                        "slack_us": {
+                            QUANTITY: "duration_us",
+                            "description": "How long this element could "
+                                           "have been delayed - zero is "
+                                           "on the chain."},
                     }},
                 "description": "How reliably each element binds, rather "
                                "than whether it happened to today."},
             "blast_radius": {
                 "additionalProperties": {
                     "properties": {
-                        "downstream_count": {QUANTITY: "count"},
-                        "weighted_duration_us": {QUANTITY: "duration_us"},
+                        "downstream_count": {
+                            QUANTITY: "count",
+                            "description": "Elements this one's change "
+                                           "rebuilds."},
+                        "weighted_duration_us": {
+                            QUANTITY: "duration_us",
+                            "description": "What that rebuild costs, "
+                                           "summed over the elements it "
+                                           "touches."},
                         "risk_score": {
                             QUANTITY: "ratio",
                             "description": "Downstream work weighted by "
@@ -1738,30 +1948,74 @@ _ANALYZE_HINTS = {
                                "through. A count of elements, not a "
                                "duration - `floors.t_infinity_observed` "
                                "is the time."},
-            "zero_slack_share": {QUANTITY: "share"},
+            "zero_slack_share": {
+                QUANTITY: "share",
+                "description": "The share of elements with no slack at "
+                               "all. High means the chain is wide, not "
+                               "long."},
             "cache": {
                 "description": "What this run had to build and what it "
                                "restored.",
                 "properties": {
-                    "built_elements": {QUANTITY: "count"},
-                    "cached_elements": {QUANTITY: "count"},
-                    "hit_ratio": {QUANTITY: "share"},
-                    "fetch": {"properties": {
-                        "fetched": {QUANTITY: "count"},
-                        "already_present": {QUANTITY: "count"},
-                        "hit_ratio": {QUANTITY: "share"}}},
-                    "target_closure": {"properties": {
-                        "elements": {QUANTITY: "count"},
-                        "built": {QUANTITY: "count"},
-                        "cached": {QUANTITY: "count"},
-                        "hit_ratio": {QUANTITY: "share"}}},
+                    "built_elements": {
+                        QUANTITY: "count",
+                        "description": "Elements this run had to build."},
+                    "cached_elements": {
+                        QUANTITY: "count",
+                        "description": "Elements this run restored instead of "
+                                       "building."},
+                    "hit_ratio": {
+                        QUANTITY: "share",
+                        "description": "Elements restored over elements "
+                                       "considered."},
+                    "fetch": {
+                        "description": "What this run pulled from a remote cache rather than rebuilding.",
+                        "properties": {
+                            "fetched": {
+                                QUANTITY: "count",
+                                "description": "Artifacts pulled from a "
+                                               "remote."},
+                            "already_present": {
+                                QUANTITY: "count",
+                                "description": "Artifacts already local, "
+                                               "so nothing was pulled."},
+                            "hit_ratio": {
+                                QUANTITY: "share",
+                                "description": "Artifacts already local "
+                                               "over artifacts "
+                                               "considered."}}},
+                    "target_closure": {
+                        "description": "The same question restricted to "
+                                       "what the target actually needs.",
+                        "properties": {
+                            "elements": {
+                                QUANTITY: "count",
+                                "description": "Elements in the target's "
+                                               "closure."},
+                            "built": {
+                                QUANTITY: "count",
+                                "description": "Of the closure's elements, the ones that had to be built."},
+                            "cached": {
+                                QUANTITY: "count",
+                                "description": "Of those, the ones "
+                                               "restored."},
+                            "hit_ratio": {
+                                QUANTITY: "share",
+                                "description": "Restored over considered, "
+                                               "inside the closure."}}},
                 }},
             "ready_queue": {
                 "description": "How much work was ready to run and had "
                                "nowhere to run it.",
                 "properties": {
-                    "average_depth": {QUANTITY: "ratio"},
-                    "peak_depth": {QUANTITY: "count"},
+                    "average_depth": {
+                        QUANTITY: "ratio",
+                        "description": "How many elements were ready and "
+                                       "waiting, averaged over the build."},
+                    "peak_depth": {
+                        QUANTITY: "count",
+                        "description": "The most elements ready and waiting at "
+                                       "once."},
                     "nonzero_fraction": {
                         QUANTITY: "share",
                         "description": "The share of the build spent with "
@@ -1770,17 +2024,42 @@ _ANALYZE_HINTS = {
                                        "bound."}}},
             "fetch_build_overlap": {
                 "properties": {
-                    "overlap_us": {QUANTITY: "duration_us"},
-                    "fetch_prefix_us": {QUANTITY: "duration_us"},
-                    "build_suffix_us": {QUANTITY: "duration_us"},
-                    "fraction": {QUANTITY: "share"}}},
+                    "overlap_us": {
+                        QUANTITY: "duration_us",
+                        "description": "Wall-clock where fetching and building "
+                                       "ran at the same time."},
+                    "fetch_prefix_us": {
+                        QUANTITY: "duration_us",
+                        "description": "Wall-clock at the start spent fetching "
+                                       "with nothing building."},
+                    "build_suffix_us": {
+                        QUANTITY: "duration_us",
+                        "description": "Wall-clock at the end spent building "
+                                       "with nothing left to fetch."},
+                    "fraction": {
+                        QUANTITY: "share",
+                        "description": "The overlap over the span the two "
+                                       "phases covered together."}}},
             "joint_saving": {
                 "properties": {
-                    "joint_saving_us": {QUANTITY: "duration_us"},
-                    "sum_of_individual_us": {QUANTITY: "duration_us"}}},
+                    "joint_saving_us": {
+                        QUANTITY: "duration_us",
+                        "description": "What fixing the candidates together is "
+                                       "worth, simulated - not the sum of what "
+                                       "each is worth alone."},
+                    "sum_of_individual_us": {
+                        QUANTITY: "duration_us",
+                        "description": "Those same savings added up, "
+                                       "published so the difference from "
+                                       "the joint figure is visible "
+                                       "rather than implied."}}},
             "leaf_analysis": {
                 "properties": {
-                    "deferrable_count": {QUANTITY: "count"}}},
+                    "deferrable_count": {
+                        QUANTITY: "count",
+                        "description": "Leaf elements nothing else waits "
+                                       "on, which could be built later or "
+                                       "not at all."}}},
         },
     },
     "attribution": {
@@ -1789,14 +2068,39 @@ _ANALYZE_HINTS = {
         # `guessQuantity` recognised `_us`. A guess that happens to be
         # right is still the gap UX-201 wrote the rule for.
         "properties": {
-            "execution_on_chain_us": {QUANTITY: "duration_us"},
-            "dependency_wait_us": {QUANTITY: "duration_us"},
-            "scheduler_wait_us": {QUANTITY: "duration_us"},
-            "resource_wait_us": {QUANTITY: "duration_us"},
-            "retry_wait_us": {QUANTITY: "duration_us"},
-            "idle_us": {QUANTITY: "duration_us"},
-            "untracked_head_us": {QUANTITY: "duration_us"},
-            "untracked_tail_us": {QUANTITY: "duration_us"},
+            "execution_on_chain_us": {
+                QUANTITY: "duration_us",
+                "description": "Time the chain's own elements spent executing "
+                               "- the part of the makespan that is work rather "
+                               "than waiting."},
+            "dependency_wait_us": {
+                QUANTITY: "duration_us",
+                "description": "Time a chain element spent ready but waiting "
+                               "on something it depends on."},
+            "scheduler_wait_us": {
+                QUANTITY: "duration_us",
+                "description": "Time work was ready and the scheduler had not "
+                               "started it."},
+            "resource_wait_us": {
+                QUANTITY: "duration_us",
+                "description": "Time work was ready and the capacity to run it "
+                               "was not free."},
+            "retry_wait_us": {
+                QUANTITY: "duration_us",
+                "description": "Time spent on attempts that were thrown away "
+                               "and run again."},
+            "idle_us": {
+                QUANTITY: "duration_us",
+                "description": "Time with nothing running at all."},
+            "untracked_head_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock before the first tracked task "
+                               "started - BuildStream's own startup, outside "
+                               "per-task tracking."},
+            "untracked_tail_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock after the last tracked task "
+                               "finished, outside per-task tracking."},
         }},
     # UX-220: a floor is the number in this report most easily read as a
     # prediction, and it is not one. Every member says what it is, what it
@@ -1888,10 +2192,10 @@ _ANALYZE_HINTS = {
              "quantity": "duration_us", "sortable": True},
         ],
         "properties": {
-            "total_us": {QUANTITY: "duration_us",
-                         "description": "Time BuildStream spent outside any "
-                                        "element - loading, resolving, cache "
-                                        "queries."},
+            "total_us": {
+                QUANTITY: "duration_us",
+                "description": "Time BuildStream spent outside any element - "
+                               "loading, resolving, cache queries."},
             "fraction_of_horizon": {
                 QUANTITY: "share",
                 "description": "That time as a share of the run. Overhead "
@@ -1957,28 +2261,60 @@ _ANALYZE_HINTS = {
             # `UX-343`: the scores are shares of a population, and
             # `ordering_violations` is a count of events. Both reached
             # the reader as bare numbers.
-            "attribution_score": {QUANTITY: "share"},
-            "model_score": {QUANTITY: "share"},
-            "provenance_score": {QUANTITY: "share"},
-            "duration_coverage": {QUANTITY: "share"},
-            "critical_path_coverage": {QUANTITY: "share"},
-            "dominator_coverage": {QUANTITY: "share"},
-            "blame_chain_coverage": {QUANTITY: "share"},
+            "attribution_score": {
+                QUANTITY: "share",
+                "description": "How much of the makespan the attribution split "
+                               "accounts for. Below one, the split is "
+                               "describing part of the run."},
+            "model_score": {
+                QUANTITY: "share",
+                "description": "How closely the replay model reproduced the "
+                               "run it is modelling."},
+            "provenance_score": {
+                QUANTITY: "share",
+                "description": "How much of what this report claims resolves "
+                               "back to a published field."},
+            "duration_coverage": {
+                QUANTITY: "share",
+                "description": "The share of elements whose duration was "
+                               "actually recorded."},
+            "critical_path_coverage": {
+                QUANTITY: "share",
+                "description": "The share of the chain whose elements carry a "
+                               "measured duration."},
+            "dominator_coverage": {
+                QUANTITY: "share",
+                "description": "The share of the graph the dominator analysis "
+                               "could reach."},
+            "blame_chain_coverage": {
+                QUANTITY: "share",
+                "description": "The share of waiting time that resolves to a "
+                               "named cause."},
             "ordering_violations": {
                 QUANTITY: "count",
                 "description": "Task pairs whose recorded order "
                                "contradicts the graph. Nonzero means the "
                                "clock, not the graph, is the thing to "
                                "distrust."},
-            "task_count": {QUANTITY: "count"},
-            "failed_task_count": {QUANTITY: "count"},
-            "failed_task_us": {QUANTITY: "duration_us"},
-            "explained_untracked_us": {QUANTITY: "duration_us"},
-            "primary": {QUANTITY: "share",
-                        "description": "How much of this run's own record "
-                                       "supports the conclusions above - "
-                                       "coverage, provenance and model fit "
-                                       "combined."},
+            "task_count": {
+                QUANTITY: "count",
+                "description": "How many tasks this run recorded at all."},
+            "failed_task_count": {
+                QUANTITY: "count",
+                "description": "Tasks that failed. A failed run is not a slow "
+                               "run, and the two must not be read together."},
+            "failed_task_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock spent on tasks that failed."},
+            "explained_untracked_us": {
+                QUANTITY: "duration_us",
+                "description": "How much of the untracked time this report can "
+                               "account for."},
+            "primary": {
+                QUANTITY: "share",
+                "description": "How much of this run's own record supports the "
+                               "conclusions above - coverage, provenance and "
+                               "model fit combined."},
             "band": {"description": "The score as a word, from the same "
                                     "thresholds the report's headline uses."},
             "coverage_score": {
@@ -2014,7 +2350,10 @@ _ANALYZE_HINTS = {
                        "different things, and an element only one of them "
                        "saw carries only that plane's fields.",
         "properties": {
-            "aggregating_dependency_pairs": {QUANTITY: "count"},
+            "aggregating_dependency_pairs": {
+                QUANTITY: "count",
+                "description": "Dependency pairs where one element's "
+                               "measurement includes another's."},
             "joined_elements": {
                 QUANTITY: "count",
                 "description": "Elements both planes saw - the only ones "
@@ -2080,14 +2419,14 @@ _ANALYZE_HINTS = {
                                          "scheduler is the constraint, or "
                                          "neither where the run did not "
                                          "record enough to say."},
-            "chain_ratio": {QUANTITY: "share",
-                            "description": "The critical path as a share "
-                                           "of wall-clock - the number the "
-                                           "diagnosis is decided by."},
-            "chain_bound_ratio": {QUANTITY: "share",
-                                  "description": "The threshold "
-                                                 "`chain_ratio` is compared "
-                                                 "against."},
+            "chain_ratio": {
+                QUANTITY: "share",
+                "description": "The critical path as a share of wall-clock - "
+                               "the number the diagnosis is decided by."},
+            "chain_bound_ratio": {
+                QUANTITY: "share",
+                "description": "The threshold `chain_ratio` is compared "
+                               "against."},
             "certified_headroom_us": {
                 QUANTITY: "duration_us",
                 "description": "What scheduling alone could still recover, "
@@ -2139,25 +2478,40 @@ _ANALYZE_HINTS = {
         RAIL: 'prove',
         "properties": {
             # `UX-343`: process counts, every one of them.
-            "cpu_reconciled_processes": {QUANTITY: "count"},
-            "cpu_from_spine_only": {QUANTITY: "count"},
-            "opens_covered_processes": {QUANTITY: "count"},
-            "fork_only_exits": {QUANTITY: "count"},
-            "unmatched_ends": {QUANTITY: "count"},
+            "cpu_reconciled_processes": {
+                QUANTITY: "count",
+                "description": "Processes whose CPU both planes agree on."},
+            "cpu_from_spine_only": {
+                QUANTITY: "count",
+                "description": "Processes whose CPU only the ptrace spine saw."},
+            "opens_covered_processes": {
+                QUANTITY: "count",
+                "description": "Processes the open-file hook covered."},
+            "fork_only_exits": {
+                QUANTITY: "count",
+                "description": "Exits seen for a process that only ever forked "
+                               "- no exec, so no command to name."},
+            "unmatched_ends": {
+                QUANTITY: "count",
+                "description": "Process ends with no matching start. Non-zero "
+                               "here weakens every per-process figure."},
             "by_coverage": {
                 QUANTITY: "count",
-                "additionalProperties": {QUANTITY: "count"},
+                "additionalProperties": {
+                    QUANTITY: "count",
+                    "description": "Processes in this coverage class."},
                 "description": "How many processes each coverage class "
                                "accounts for, keyed by the class."},
-            "processes": {QUANTITY: "count",
-                          "description": "Processes Plane 2 saw across both "
-                                         "record streams - the hook and the "
-                                         "spine, counted once each."},
-            "opens_coverage": {QUANTITY: "share",
-                               "description": "The share of those processes "
-                                              "whose opened paths were "
-                                              "recorded; only the hook can "
-                                              "see them."},
+            "processes": {
+                QUANTITY: "count",
+                "description": "Processes Plane 2 saw across both record "
+                               "streams - the hook and the spine, counted once "
+                               "each."},
+            "opens_coverage": {
+                QUANTITY: "share",
+                "description": "The share of those processes whose opened "
+                               "paths were recorded; only the hook can see "
+                               "them."},
             "cpu_disagreement_count": {
                 QUANTITY: "count",
                 "description": "Processes the hook and the spine costed "
@@ -2185,9 +2539,10 @@ _ANALYZE_HINTS = {
                     "records_embedded": {
                         "description": "Whether the file still carries the "
                                        "per-process record list."},
-                    "records": {QUANTITY: "count",
-                                "description": "How many records it carries; "
-                                               "zero for `plane2/v2`."},
+                    "records": {
+                        QUANTITY: "count",
+                        "description": "How many records it carries; zero for "
+                                       "`plane2/v2`."},
                     "note": {"description": "What that means for this run, "
                                             "in a sentence."},
                 },
@@ -2240,12 +2595,33 @@ _ANALYZE_HINTS = {
                                "idleness with too little parallelism, and "
                                "work thrown away by retry or rebuild.",
                 "properties": {
-                    "useful": {QUANTITY: "duration_us"},
-                    "idle_no_tasks": {QUANTITY: "duration_us"},
-                    "idle_underparallel": {QUANTITY: "duration_us"},
-                    "wasted_rebuild": {QUANTITY: "duration_us"},
-                    "wasted_retry": {QUANTITY: "duration_us"},
-                    "untracked": {QUANTITY: "duration_us"},
+                    "useful": {
+                        QUANTITY: "duration_us",
+                        "description": "Slot-time spent on work that "
+                                       "ended up in the result."},
+                    "idle_no_tasks": {
+                        QUANTITY: "duration_us",
+                        "description": "Slot-time with nothing ready to "
+                                       "run. The graph's shape, not the "
+                                       "capacity."},
+                    "idle_underparallel": {
+                        QUANTITY: "duration_us",
+                        "description": "Slot-time with work ready and too "
+                                       "few slots to take it. The "
+                                       "capacity, not the graph."},
+                    "wasted_rebuild": {
+                        QUANTITY: "duration_us",
+                        "description": "Slot-time rebuilding what a cache "
+                                       "could have supplied."},
+                    "wasted_retry": {
+                        QUANTITY: "duration_us",
+                        "description": "Slot-time on attempts that were "
+                                       "thrown away and run again."},
+                    "untracked": {
+                        QUANTITY: "duration_us",
+                        "description": "Slot-time no bucket claimed. A "
+                                       "gap in the record rather than a "
+                                       "kind of work."},
                 }},
             "total_accounted_us": {
                 QUANTITY: "duration_us",
@@ -2438,33 +2814,34 @@ _COMPARE_HINTS = {
 }
 
 _BLAST_HINTS = {
-    "direct_count": {QUANTITY: "count",
-                     "description": "Elements that depend on this one "
-                                    "directly. The first hop only."},
-    "blast_count": {QUANTITY: "count",
-                    "description": "Everything a change here rebuilds, "
-                                   "transitively - the number that makes "
-                                   "a small element expensive to touch."},
-    "building_count": {QUANTITY: "count",
-                       "description": "Of those, the ones that do real "
-                                      "build work."},
-    "assembling_count": {QUANTITY: "count",
-                         "description": "Of those, the ones that only "
-                                        "gather what is below them - they "
-                                        "rebuild, but cost little."},
-    "element_count": {QUANTITY: "count",
-                      "description": "Elements in the project, as the "
-                                     "denominator for the reach above."},
-    "measured_elements": {QUANTITY: "count",
-                          "description": "How many of the affected "
-                                         "elements have a recorded "
-                                         "duration. The rest are counted, "
-                                         "never estimated."},
-    "measured_seconds": {QUANTITY: "seconds",
-                         "description": "Recorded rebuild time below this "
-                                        "element. A sum over the measured "
-                                        "elements only, so it is a lower "
-                                        "bound on the real cost."},
+    "direct_count": {
+        QUANTITY: "count",
+        "description": "Elements that depend on this one directly. The first "
+                       "hop only."},
+    "blast_count": {
+        QUANTITY: "count",
+        "description": "Everything a change here rebuilds, transitively - the "
+                       "number that makes a small element expensive to touch."},
+    "building_count": {
+        QUANTITY: "count",
+        "description": "Of those, the ones that do real build work."},
+    "assembling_count": {
+        QUANTITY: "count",
+        "description": "Of those, the ones that only gather what is below them "
+                       "- they rebuild, but cost little."},
+    "element_count": {
+        QUANTITY: "count",
+        "description": "Elements in the project, as the denominator for the "
+                       "reach above."},
+    "measured_elements": {
+        QUANTITY: "count",
+        "description": "How many of the affected elements have a recorded "
+                       "duration. The rest are counted, never estimated."},
+    "measured_seconds": {
+        QUANTITY: "seconds",
+        "description": "Recorded rebuild time below this element. A sum over "
+                       "the measured elements only, so it is a lower bound on "
+                       "the real cost."},
     # UX-206: the closure as a hierarchy rather than a flat list. The
     # depth is what an indented tree needs, and deriving it in the
     # viewer would be a graph walk in JavaScript - a second analysis.
@@ -2482,13 +2859,14 @@ _BLAST_HINTS = {
         ],
         "items": {
             "properties": {
-                "depth": {QUANTITY: "count",
-                          "description": "Hops from the direct consumers, "
-                                         "breadth-first."},
-                "measured_seconds": {QUANTITY: "seconds",
-                                     "description": "This element's own "
-                                                    "recorded duration, "
-                                                    "not its subtree's."},
+                "depth": {
+                    QUANTITY: "count",
+                    "description": "Hops from the direct consumers, "
+                                   "breadth-first."},
+                "measured_seconds": {
+                    QUANTITY: "seconds",
+                    "description": "This element's own recorded duration, not "
+                                   "its subtree's."},
             },
         },
     },
@@ -2544,21 +2922,23 @@ _DISTRIBUTION = {
 
 _STORE_AGGREGATE_HINTS = {
     "project": {"description": "The project whose store this describes."},
-    "snapshots": {QUANTITY: "count",
-                  "description": "Snapshots on disk, finished or not."},
-    "measured": {QUANTITY: "count",
-                 "description": "Of those, the ones that finished and "
-                                "recorded a duration - the only ones any "
-                                "distribution here is computed from."},
+    "snapshots": {
+        QUANTITY: "count",
+        "description": "Snapshots on disk, finished or not."},
+    "measured": {
+        QUANTITY: "count",
+        "description": "Of those, the ones that finished and recorded a "
+                       "duration - the only ones any distribution here is "
+                       "computed from."},
     "excluded": {
         "description": "What was left out and why, counted by reason. "
                        "Published rather than dropped: \"we had nine "
                        "runs\" and \"we had nine and threw two away\" "
                        "are different claims (UX-156).",
         "properties": {
-            "count": {QUANTITY: "count",
-                      "description": "Snapshots excluded from every "
-                                     "distribution."},
+            "count": {
+                QUANTITY: "count",
+                "description": "Snapshots excluded from every distribution."},
             "by_reason": {"description": "How many were excluded for "
                                          "each distinct reason."},
         },
@@ -2610,17 +2990,18 @@ _STORE_AGGREGATE_HINTS = {
                                                  "class, or null where "
                                                  "the captures predate "
                                                  "it."},
-                "runs": {QUANTITY: "count",
-                         "description": "Finished runs in this class."},
+                "runs": {
+                    QUANTITY: "count",
+                    "description": "Finished runs in this class."},
                 "duration_us": _DISTRIBUTION,
                 "cache_hit_rate": _DISTRIBUTION,
                 "cores_busy": _DISTRIBUTION,
                 "peak_rss_mb": _DISTRIBUTION,
                 "snapshot_bytes": _DISTRIBUTION,
-                "total_bytes": {QUANTITY: "bytes",
-                                "description": "What this class's "
-                                               "snapshots weigh on disk, "
-                                               "summed."},
+                "total_bytes": {
+                    QUANTITY: "bytes",
+                    "description": "What this class's snapshots weigh on disk, "
+                                   "summed."},
                 "stamps": {"description": "Which snapshots these are, so "
                                           "a figure can be traced to the "
                                           "runs behind it."},
@@ -2650,19 +3031,22 @@ _STORE_AGGREGATE_HINTS = {
                        "caller passed --blend and took the mixed claim "
                        "themselves.",
         "properties": {
-            "runs": {QUANTITY: "count",
-                     "description": "Finished runs across all classes."},
-            "mixes": {QUANTITY: "count",
-                      "description": "How many host classes were mixed. "
-                                     "1 means nothing was."},
+            "runs": {
+                QUANTITY: "count",
+                "description": "Finished runs across all classes."},
+            "mixes": {
+                QUANTITY: "count",
+                "description": "How many host classes were mixed. 1 means "
+                               "nothing was."},
             "duration_us": _DISTRIBUTION,
             "cache_hit_rate": _DISTRIBUTION,
             "cores_busy": _DISTRIBUTION,
             "peak_rss_mb": _DISTRIBUTION,
             "snapshot_bytes": _DISTRIBUTION,
-            "total_bytes": {QUANTITY: "bytes",
-                            "description": "What every class's snapshots "
-                                           "weigh on disk, summed."},
+            "total_bytes": {
+                QUANTITY: "bytes",
+                "description": "What every class's snapshots weigh on disk, "
+                               "summed."},
         },
     },
     "store_bytes": {
@@ -2675,21 +3059,20 @@ _STORE_AGGREGATE_HINTS = {
                        "asking what their disk holds should not have to "
                        "pass --blend to be told.",
         "properties": {
-            "total": {QUANTITY: "bytes",
-                      "description": "Every snapshot this store holds, "
-                                     "including the ones excluded from "
-                                     "the distributions: a capture that "
-                                     "failed is not a sample, and still "
-                                     "occupies its disk."},
-            "snapshots": {QUANTITY: "count",
-                          "description": "How many snapshots that total "
-                                         "is spread over, finished or "
-                                         "not."},
-            "measured_total": {QUANTITY: "bytes",
-                               "description": "The subset that did "
-                                              "finish - what the "
-                                              "distributions above are "
-                                              "computed over."},
+            "total": {
+                QUANTITY: "bytes",
+                "description": "Every snapshot this store holds, including the "
+                               "ones excluded from the distributions: a "
+                               "capture that failed is not a sample, and still "
+                               "occupies its disk."},
+            "snapshots": {
+                QUANTITY: "count",
+                "description": "How many snapshots that total is spread over, "
+                               "finished or not."},
+            "measured_total": {
+                QUANTITY: "bytes",
+                "description": "The subset that did finish - what the "
+                               "distributions above are computed over."},
             "note": {"description": "What the figures mean, and what "
                                     "recovers the space."},
         },
@@ -2703,9 +3086,9 @@ _STORE_AGGREGATE_HINTS = {
             "check": {"description": "Which check refused - the name a "
                                      "caller matches on rather than the "
                                      "prose."},
-            "classes": {QUANTITY: "count",
-                        "description": "How many host classes the store "
-                                       "holds."},
+            "classes": {
+                QUANTITY: "count",
+                "description": "How many host classes the store holds."},
             "sentence": {"description": "The refusal in words, naming "
                                         "the classes and the flag that "
                                         "overrides it."},
@@ -2715,12 +3098,13 @@ _STORE_AGGREGATE_HINTS = {
 
 
 _STORE_HINTS = {
-    "total_bytes": {QUANTITY: "bytes",
-                    "description": "What the stored snapshots occupy on "
-                                   "disk, together."},
-    "count": {QUANTITY: "count",
-              "description": "Snapshots held. The length of every trend "
-                             "drawn from this store."},
+    "total_bytes": {
+        QUANTITY: "bytes",
+        "description": "What the stored snapshots occupy on disk, together."},
+    "count": {
+        QUANTITY: "count",
+        "description": "Snapshots held. The length of every trend drawn from "
+                       "this store."},
     # UX-203: duration leads, because "is this project drifting" is a
     # question about time. Size is still here - it is what the store
     # warning is about - but it stopped being the answer.

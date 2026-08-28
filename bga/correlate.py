@@ -225,9 +225,16 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
         # to join - degraded, not broken - and say which one was used.
         metric = "sensitivity_score"
         for entry in sensitivity.get("top_opportunities") or []:
-            # (key, score, impact_pct); score is the fraction of the
-            # finish this element could remove (UX-44).
-            element, score = entry[0], entry[1]
+            # `UX-343`: `{element_uid, sensitivity, saving_us}`.
+            # `sensitivity` is the fraction of the finish this element
+            # could remove (UX-44).
+            if isinstance(entry, dict):
+                element, score = entry["element_uid"], entry["sensitivity"]
+            else:
+                # A run captured before the producer matched its own
+                # declared columns holds `(key, score, impact)`, and a
+                # store outlives a release.
+                element, score = entry[0], entry[1]
             record = view.setdefault(element, {})
             record.setdefault("critical_path_share", score)
             record["potential_saving_us"] = int(score * critical_path_us)

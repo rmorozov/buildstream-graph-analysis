@@ -27,7 +27,9 @@ def test_text_report_surfaces_top_improvement_opportunities():
     # Real data from this fixture's own structural.sensitivity - not
     # just a section header with nothing under it.
     sensitivity = result.structural["sensitivity"]
-    top_key = sensitivity["top_opportunities"][0][0]
+    # `UX-343`: rows with named fields, matching the columns the
+    # schema has declared since `UX-290`.
+    top_key = sensitivity["top_opportunities"][0]["element_uid"]
     assert top_key in output
 
 
@@ -99,7 +101,8 @@ def test_element_that_cannot_move_the_finish_is_not_an_opportunity():
     ranked, and must not reach the batching tier either."""
     result = _analyze()
 
-    ranked = [key for key, _, _ in result.structural["sensitivity"]["top_opportunities"]]
+    ranked = [row["element_uid"]
+              for row in result.structural["sensitivity"]["top_opportunities"]]
     assert "extra.bst" not in ranked
     assert ranked == ["base.bst", "lib.bst", "app.bst"]
 

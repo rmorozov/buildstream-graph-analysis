@@ -102,6 +102,25 @@ class TestTheNamespacesAreGone:
             f"{label}: {unexplained} was published under a namespace and is "
             f"published nowhere now")
 
+    def test_the_element_population_is_one_key_rather_than_six(self, label):
+        """Lifting is not scattering. The six maps keyed by element uid
+        are one table - `UX-268` joined them for the reader and the page
+        had to keep its own list of which they were - so the document
+        groups them and says so. Six top-level sections of the same
+        eleven elements is `UX-338`'s defect, which the lift could
+        have introduced by doing the obvious thing."""
+        document = _document(label)
+        elements = document.get("elements") or {}
+        assert elements, f"{label}: no element population at all"
+        loose = [name for name in schemas.ELEMENT_POPULATION
+                 if name in document]
+        assert loose == [], (
+            f"{label}: {loose} is a key of the document; the element "
+            f"population is published as `elements`, once")
+        assert set(schemas.ELEMENT_KEYED) <= set(elements), (
+            f"{label}: `elements` is missing "
+            f"{sorted(set(schemas.ELEMENT_KEYED) - set(elements))}")
+
 
 @pytest.mark.parametrize("label", sorted(FIXTURES))
 class TestNoMapIsKeyedByDataItCannotDescribe:

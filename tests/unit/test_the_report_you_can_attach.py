@@ -354,7 +354,14 @@ COMMITTED_EXPORTS = [
     # export carries whether or not the run has the data. That split is
     # the whole reason `test_the_data_dwarfs_the_page` counts contract
     # separately, and it is why this bound moved less than the other.
-    ("golden", GOLDEN, 353_500),                       #  352,741 B
+    # `UX-371` moved this one by 567 B, all of it **source**: the
+    # decision chapter now decides whether the ranking rule is shared
+    # by every top action, states it once below the list when it is,
+    # and suppresses the per-row copies. Nothing was added to the
+    # payload - the data half is 89,154 B either side of the change -
+    # so the composition guard below still accounts for every embedded
+    # byte, and this is the case that split exists to tell apart.
+    ("golden", GOLDEN, 354_000),                       #  353,536 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A

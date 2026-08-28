@@ -100,13 +100,50 @@ class TestEveryValueIsTraceable:
         interim; the record is the destination.
 
         `UX-344`: one published list keyed by claim, so the lookup is by
-        id rather than through a `see` path into a nested copy."""
+        id rather than through a `see` path into a nested copy.
+
+        `UX-371`: **reachable, not positioned.** Where every top action
+        came from one finding - which is every run measured - the rule
+        is one sentence about the list, and stating it once per row put
+        three identical copies on the first screen. So the contract
+        asserted here is that a reader who opens a row can reach the
+        sentence that ranked it, from wherever the page states it; the
+        clause below then holds *which* placement the data calls for,
+        in both directions, so this one cannot be satisfied by dropping
+        the sentence from the rows and never printing it.
+        """
         out = _render(payload)
         for block, action in zip(out["blocks"],
                                  payload["headline"]["top_actions"]):
             record = provenance.for_claim(payload, action["finding_id"])
             assert record is not None
-            assert block["why"] == record["rule"]["sentence"]
+            assert (block["why"] or out["shared"]) == \
+                record["rule"]["sentence"], (
+                    f"{action['element_uid']}: neither its own fold nor the "
+                    f"list's rule carries the sentence that ranked it")
+
+    def test_the_rule_is_stated_where_the_findings_put_it(self, payload):
+        """The other direction, and the one that discriminates. One
+        finding behind every action -> one statement, above no row and
+        repeated on none. More than one -> no shared statement, because
+        there is no shared rule to state."""
+        out = _render(payload)
+        claims = {a.get("finding_id")
+                  for a in payload["headline"]["top_actions"]}
+        if len(claims) == 1:
+            assert out["heading"] is True, (
+                "every action came from one finding and the page names no "
+                "ranking rule for the list")
+            assert [b["why"] for b in out["blocks"]] == \
+                [None] * len(out["blocks"]), (
+                    "the shared rule is stated for the list and again on "
+                    f"every row: {[b['why'] for b in out['blocks']]}")
+        else:
+            assert out["heading"] is False, (
+                f"actions come from {sorted(claims)} yet the page states one "
+                f"rule as if it ranked them all")
+            for block in out["blocks"]:
+                assert block["why"], block["element"]
 
     def test_an_element_no_source_knows_gets_no_block(self):
         """The block renders nothing rather than guessing - the same
@@ -183,8 +220,13 @@ const payload = __PAYLOAD__;
 const store = __STORE__;
 const panel = views.renderDecision(payload, null, null, { store });
 const blocks = [];
+// `UX-371`: the rule can be stated once for the whole list instead of
+// once per row, so the harness reports both placements and the guard
+// decides which one the data calls for.
+let shared = null, heading = false;
 (function walk(n) {
   if (!n) return;
+  if (n.attrs?.["data-role"] === "ranking-rule") heading = true;
   if (n.className === "why-ranked") {
     const rows = [], findings = [];
     let why = null, history = null;
@@ -205,9 +247,12 @@ const blocks = [];
     blocks.push({ element: n.attrs["data-why"], rows, findings, why, history });
     return;
   }
+  // Only under the list's own rule: the headline has a chain of its
+  // own, and it is a different claim.
+  if (heading && n.className === "why" && shared === null) shared = n.textContent;
   (n.children ?? []).forEach(walk);
 })(panel);
-console.log(JSON.stringify({ blocks }));
+console.log(JSON.stringify({ blocks, shared, heading }));
 """
 
 

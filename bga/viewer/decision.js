@@ -270,7 +270,8 @@ export function renderWhyRanked(payload, action, options = {}) {
   // `UX-194`'s dead-control rule applied to an explanation.
   const rows = facts?.rows ?? [];
   const findings = facts?.findings ?? [];
-  if (!rows.length && !findings.length && !record && !history) return null;
+  const ownRule = record && options.ranking !== action?.finding_id;
+  if (!rows.length && !findings.length && !ownRule && !history) return null;
 
   const details = document.createElement("details");
   details.className = "why-ranked";
@@ -280,8 +281,10 @@ export function renderWhyRanked(payload, action, options = {}) {
     ? `Why #${options.rank}` : "Why this one";
   details.append(summary);
 
-  // The rule that ranked it, from the finding's own record.
-  if (record) {
+  // The rule that ranked it, from the finding's own record - unless
+  // every action shares that record, in which case `renderDecision`
+  // has already stated it once above the list (`UX-371`).
+  if (ownRule) {
     const chain = renderProvenance(record);
     if (chain) {
       chain.setAttribute("open", "");
@@ -568,6 +571,24 @@ export function renderDecision(payload, investigate = null, copy = null,
 
   const actions = Array.isArray(headline.top_actions) ? headline.top_actions : [];
   if (actions.length) {
+    // `UX-371`: **the rule that ranked them, once.**
+    //
+    // `renderWhyRanked` draws the provenance of the finding each
+    // action came from, and on every run measured they all come from
+    // one finding - so the same record was rendered once per row.
+    // Counted on `macro_micro` with everything open: 6 copies of "No
+    // named threshold; computed in ..." in this chapter alone, and 3
+    // of the finding's title, all of it on the first screen. A reader's
+    // first impression of the page was the same two sentences three
+    // times.
+    //
+    // Where the actions come from different findings the rule is not
+    // shared and the old per-row placement is right, so this is a
+    // branch rather than a move.
+    const claim = actions[0]?.finding_id;
+    const shared = claim && actions.every((a) => a?.finding_id === claim)
+      ? (payload?.provenance ?? []).find((e) => e?.claim === claim)
+      : null;
     const list = document.createElement("ol");
     list.className = "actions";
     for (const [index, action] of actions.entries()) {
@@ -575,9 +596,19 @@ export function renderDecision(payload, investigate = null, copy = null,
       // *why this one*, from the same published fields the rest of the
       // document draws.
       list.append(actionRow(action, investigate, renderWhyRanked(
-        payload, action, { ...options, rank: index + 1 })));
+        payload, action,
+        { ...options, rank: index + 1, ranking: shared && claim })));
     }
     section.append(list);
+    // Below the list it explains, not above it: the reader came for
+    // the actions.
+    const how = shared ? renderProvenance(shared) : null;
+    if (how) {
+      const rule = document.createElement("h3");
+      rule.textContent = "How these were ranked";
+      rule.setAttribute("data-role", "ranking-rule");
+      section.append(rule, how);
+    }
   }
 
   // UX-218: and what to run next. Read from `next_steps`, never

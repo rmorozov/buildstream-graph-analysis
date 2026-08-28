@@ -800,6 +800,40 @@ different surrounding text.
 
 `UX-371` is the item.
 
+Round 59 set the bound. Measured over every `p`, `li`, `summary`,
+`td`, `h3`, `h4` longer than 40 characters, with every chapter and
+every `details` open, after this item's own reduction:
+
+```text
+                     blocks  distinct  repeated chars  of total  share
+golden      before       81        61           1,876    11,048  17.0%
+            after        77        61           1,434     9,730  14.7%
+macro_micro before      180       138           4,769    26,919  17.7%
+            after       176       138           4,401    25,681  17.1%
+budget                                                           21%
+```
+
+Both readings come from one instrument. Round 58's 21.6% above was
+taken over a different block population and is not comparable with
+either column — the repeated character count agrees to within 27 B,
+the denominator does not.
+
+**The reduction, and why it was the right one.** Every repeat is
+individually defensible — a claim cited twice is cited twice — so the
+question is where a repeat is *not* a citation. The decision chapter
+drew three top actions and rendered the ranking rule under each: three
+copies of one record, on the first screen, saying nothing about the
+row they sat under. The rule is a property of the ranking, so it is
+stated once below the list it ranked — the reader came for the actions
+— and each fold says what differs. Where the actions come from
+different findings the rule is not shared and the per-row placement
+stands, so this is a branch and not a move.
+
+The budget has a second half, and it is the one that makes it mean
+anything: **the count of distinct blocks may not fall**. The cheapest
+way to drive a repetition ratio down is to say less, and losing a
+claim is not deduplicating it.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted

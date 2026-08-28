@@ -655,6 +655,7 @@ Round 55's sections were written before their guards, which is the state
 Landed since: **§4c** (`UX-355`,
 `test_a_control_acts_on_what_it_names.py`) and **§1b** entire
 (`UX-356`, `test_the_merge_carries_every_field.py`; `UX-357`,
-`test_the_provenance_names_its_rule.py`). Still waiting on its guard:
-§3e (`UX-360`), §2d (`UX-361`). A section here with no filed item behind it
+`test_the_provenance_names_its_rule.py`) and **§2d** (`UX-361`,
+`test_the_vocabulary_has_the_shape.py`). Still waiting on its guard:
+§3e (`UX-360`). A section here with no filed item behind it
 is the failure mode this paragraph exists to make visible.

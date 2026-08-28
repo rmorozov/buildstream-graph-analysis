@@ -1,6 +1,6 @@
 # UX-361: the drawing vocabulary is two shapes, and the tool's central claim has neither
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-350 (the shape channel, built), UX-303 (sparklines and density strips), UX-316 (drawing grades) | **Serves:** anyone deciding, at a glance, where a build's time actually goes | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-350 (the shape channel, built), UX-303 (sparklines and density strips), UX-316 (drawing grades) | **Serves:** anyone deciding, at a glance, where a build's time actually goes | **Topic:** viewer
 
 ## Motivation
 
@@ -92,3 +92,127 @@ interval bar the same, on `confidence`. And the census clause: no
 section publishing a declared decomposition or interval renders it as
 prose only — asserted against the payload's hints rather than a list
 of section names.
+
+## Outcome (round 56, 2026-08-28) — 🟢 Done
+
+### The gap, and why it was not neglect
+
+```text
+golden      43 sections, 6 drawings, 19 with >=6 numbers and none
+macro_micro 58 sections, 16 drawings, 29 with >=6 numbers and none
+```
+
+A density strip shows a **distribution**; a sparkline shows an
+**ordered series**. `floors` is a *total decomposed* and `confidence`
+is *values compared on one axis*, and neither existing shape can make
+either comparison. The vocabulary had no way to draw the tool's central
+claim, which is why 558 px of definition list was the honest rendering
+of it and not a lapse.
+
+### After
+
+```text
+=== macro_micro
+ decomposition  drawn=true
+   "46.1 s in total: 43.2 s critical path, 2.9 s off the path.
+    certified lower bound 43.2 s."
+   parts  chain 93.642% raw 43200000 | gap 6.358% raw 2933000
+   marks  lb at 93.642%
+ interval       drawn=true
+   "confidence 96.8%, provenance 100.0%, coverage 100.0%,
+    model 100.0%, attribution 96.8%."
+ svg 16 -> 18
+```
+
+93.642 + 6.358 = 100.000. The guard asserts every width against
+`data-raw` — `UX-196`'s discipline, geometry against the payload rather
+than against a screenshot.
+
+### Direction 7 lives in the declaration
+
+Both shapes are selected by a **declared hint**, `bga:decomposition`
+and `bga:interval`, and both hints name **published paths** in the
+grammar `resolvePath` and `bga/provenance.py` both walk. Every number a
+drawing gets comes back from one of them:
+
+```text
+floors.t_infinity_observed   43,200,000
+headline.scheduling_gap_us    2,933,000
+total_duration_us            46,133,000
+```
+
+The page does not choose the parts, does not compute a remainder and
+does not pick an axis from the data. That is what makes a decomposition
+drawable at all — a viewer that worked out what was left over would be
+a second analyzer, free to disagree with the report about the same
+build.
+
+`test_the_parts_sum_to_the_published_total` holds the other end of it,
+in the payload rather than the page: if a contract later published
+parts that do not sum to their declared total, the bar would be a
+picture of a subtraction nobody did, and that reddens before it draws.
+
+### The interval draws no tick row, and that is the finding inside the fix
+
+`UX-350`'s overlap guard reddened on the first run. Five scores that
+agree land within a few percent of each other, and five labels three
+percent apart are five labels on top of one another. Rather than tune a
+collision rule, the tick row went: each mark carries its own `<title>`,
+and the sentence and the table twin — both required of an exhibit by
+§2a — carry the labelled reading. §2 forbids apparatus, and a tick row
+that repeats the sentence beneath it is apparatus.
+
+### Mutations verified red and reverted (6)
+
+Counts are what the run printed, not what was expected of it. Run
+against the committed tree at `40b0f13`.
+
+| # | mutation | reddened |
+|---|---|---|
+| T1 | neither drawing is dispatched — the defect itself | 8 |
+| T2 | segment widths ignore the total and split evenly | 2 |
+| T3 | interval marks are evenly spaced rather than placed at their values | 2 |
+| T4 | the schema stops declaring the decomposition | 6 |
+| T5 | the exhibit stops offering its table twin | 2 |
+| T6 | the interval marks lose their titles | 2 |
+
+T4 is the one that matters for §2d's last clause: the drawing is
+selected by a declaration, so removing the declaration removes the
+drawing — which is what makes a schema addition of the same shape draw
+with no viewer edit, and what makes the hint documentable in §1a
+rather than only in code.
+
+### Bounds restated, the third and last time this round
+
+```text
+page          249,694 -> 260,369 B   budget 254,000 -> 265,000
+golden        335,050 -> 346,521 B   bound  341,000 -> 352,000
+macro_micro   375,346 -> 386,817 B   bound  381,000 -> 392,000
+data (golden)  85,356 ->  86,152 B   (+796)
+```
+
+The data moved this time as well, which the two previous restatements
+did not: the hints travel in the schemas, and the schemas travel with
+the document. That is `UX-342`'s trade taken deliberately — a
+declaration a consumer can read is worth 796 B.
+
+### Deviation from the Required Fix
+
+- The Required Fix named the second shape "the interval bar", with a
+  value, its range and a threshold. Landed as **marks on one axis with
+  an optional threshold**: `confidence` publishes five scores and no
+  range and no threshold, and drawing `min..max` of the components
+  would be the page deriving a range the payload does not publish. The
+  threshold parameter exists and is unused by either fixture's
+  declarations — recorded here rather than left as a silent
+  half-feature.
+- The Required Fix asked for the floors bar to be split into "chain,
+  waiting and slack". The payload publishes **two** parts that sum to
+  the total (`t_infinity_observed` and `scheduling_gap_us`); `waiting`
+  and `slack` are not published as a partition of wall clock, and
+  inventing a third segment would have been the derivation the whole
+  design forbids. The bar is two parts and a marked bound.
+- The other seventeen and twenty-seven naked sections stay naked, as
+  the filing's Out of Scope says. §2d's first clause — a drawing
+  answers a question, not a table — is what stops the census being read
+  as a work list.

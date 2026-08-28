@@ -80,7 +80,22 @@ _LOOK = r"""
   const target = options[options.length - 1] === chosen
     ? options[0] : options[options.length - 1];
   if (pick) { pick.value = target; pick.dispatchEvent(new Event("change")); }
+  // What the reader actually gets. Reading `data-copy` is not enough:
+  // `copyButton` closes over the text it was built with, and a button
+  // still handing that over would leave the attribute correct and the
+  // clipboard stale - which is the failure the item calls worse than
+  // no builder at all. So the clipboard is stubbed and the control is
+  // pressed, over `file://`, where the real one is unavailable anyway.
+  let pasted = null;
+  try {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: (t) => { pasted = t; return true; } },
+    });
+  } catch (error) { pasted = "could not stub the clipboard: " + error; }
+  copies.click();
   return {
+    pasted,
     chosen,
     chosenIsInTheSql: started.sql.includes("'" + chosen + "'"),
     options,
@@ -242,6 +257,19 @@ class TestThePageSubstitutesThisRun:
             "query")
         assert f"'{out['chosen']}'" not in out["afterCopy"], (
             "the paste still carries the element the reader moved off")
+
+    def test_pressing_copy_hands_over_the_query_now_on_screen(
+            self, browser, golden_page):
+        """The attribute is not the deliverable - the clipboard is.
+        `copyButton` closes over the text it was built with, so a
+        button reading the closure would leave `data-copy` correct and
+        hand the reader the query they moved off."""
+        out = browser.measure(golden_page, _LOOK, 1440, 900)
+        assert out["pasted"], f"nothing reached the clipboard: {out['pasted']}"
+        assert out["pasted"] == out["afterCopy"], out["pasted"]
+        assert f"'{out['target']}'" in out["pasted"], out["pasted"]
+        assert f"'{out['chosen']}'" not in out["pasted"], (
+            "the clipboard carries the element the reader moved off")
 
 
 @needs_browser

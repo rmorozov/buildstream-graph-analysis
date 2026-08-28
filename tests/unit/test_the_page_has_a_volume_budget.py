@@ -52,24 +52,85 @@ from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
-#: Measured on the finished page at 1440x900, round 56, exported from
-#: the fixtures in place (`UX-359`):
+#: Measured on the finished page at 1440x900, round 59, exported with
+#: `pages.export_uri` (`UX-359`), chapters opened and `details` left as
+#: they are found:
 #:
 #: ```text
-#:              landed    opened    words  controls  sections  svg
-#: golden        3,501    14,493    5,279       409     6/43     8
-#: macro_micro   5,564    28,213    9,879       659     6/58    18
+#:              elements   landed   opened    words  controls  sect  svg
+#: golden              4    3,501   14,560    5,280       410    43    8
+#: macro_micro        11    5,541   28,257    9,883       660    58   18
+#: scale           1,202    4,397   54,968   33,864     1,922    66   13
 #: ```
 #:
-#: The bounds carry roughly a fifth of headroom on the larger fixture.
-#: Moving one is a filed reason, in the item that moves it, the way
+#: `UX-367`: **the third row is the point.** Round 56 set one pair of
+#: bounds against two 11-element fixtures, and nothing measured the
+#: page at a size anyone builds at. Every opened bound was exceeded by
+#: 1.6-2.8x where no guard looked.
+#:
+#: Two things the third row says that the first two could not.
+#:
+#: **The fold holds.** Landed height at 1,202 elements is *4,397 px* -
+#: lower than `macro_micro`'s 5,541, and a fifth of the opened page.
+#: `UX-347`'s answer scales, which is not something the 11-element
+#: measurement could have shown. One landed bound serves every class.
+#:
+#: **The volume does not, and it is one section.** Of 33,864 words,
+#: `wall_clock_share_us` is **27,657** - 82% - with 1,204 of the 1,922
+#: controls and 30,859 of the 54,968 px. It is a flat
+#: `{uid|BUILD|BUILD|0: microseconds}` map rendered one row per
+#: element, uncapped, three sections from an element table capped at 25
+#: (`UX-366`). Every other section together is 6,200 words.
+#:
+#: So the large class's bounds are set where the page *is*, and the
+#: item that moves it is `UX-366`; this file's `not_slack` clause is
+#: what will force them down when it does.
+#:
+#: Moving a bound is a filed reason, in the item that moves it, the way
 #: `test_the_report_you_can_attach.py` records every size restatement.
-#: Three of those happened in round 56 alone, which is what this file
-#: exists to replace.
+#:
+#: **The round-58 filing's scale figures were measured wrong**, and the
+#: table above supersedes them. It reported 70,577 px against
+#: `macro_micro`'s 28,213 - but 70,577 was measured with every
+#: `<details>` forced open and 28,213 with them closed, so the row
+#: compared two instruments. Same instrument, both ways:
+#:
+#: ```text
+#:               chapters open   + every details open
+#: macro_micro          28,257                 45,829
+#: scale                54,968                 70,551
+#: ```
+#:
+#: The overrun is real either way and smaller than filed: 1.6x, not
+#: 2.1x. `_LOOK` opens chapters only, because that is what a reader
+#: gets from "Expand all"; a `details` is a second, deliberate click.
 LANDED_HEIGHT_PX = 7_000
-OPENED_HEIGHT_PX = 34_000
-WORDS = 12_000
-CONTROLS = 800
+
+#: `UX-367`: the opened bounds, per size class, largest class last.
+#: Each row is `(elements at most, opened px, words, controls)`, and a
+#: run is measured against the first row it fits. A page that is 55,000
+#: px at 1,202 elements may be acceptable; what was not acceptable is
+#: that nobody had decided.
+BUDGETS = (
+    (50, 34_000, 12_000, 800),
+    (4_000, 66_000, 41_000, 2_300),
+)
+
+
+def budget_for(elements):
+    """The row `elements` is measured against.
+
+    Deliberately not clamped: a run past the last class has no decided
+    budget, and inheriting the largest one silently would be the same
+    failure this item is about one size up.
+    """
+    for row in BUDGETS:
+        if elements <= row[0]:
+            return row
+    raise AssertionError(
+        f"{elements:,} elements is past every size class in BUDGETS; "
+        f"decide a bound for that size rather than inheriting one")
+
 
 _LOOK = """
 (() => {
@@ -106,14 +167,39 @@ def browser():
         yield opened
 
 
+#: `UX-367`: the population, which is no longer only the fixtures.
+#: The seeded 1,202-element run is generated rather than committed
+#: (`pages.scale_run`), so it costs a subprocess and not a megabyte in
+#: the tree, and it is the only member that exercises the large class.
+LABELS = sorted(pages.FIXTURES) + ["scale"]
+
+
 @pytest.fixture(scope="module")
 def booted(tmp_path_factory):
-    return pages.pages(tmp_path_factory, "volume")
+    made = pages.pages(tmp_path_factory, "volume")
+    into = tmp_path_factory.mktemp("volume-scale")
+    made["scale"] = pages.export_uri(pages.scale_run(into), into,
+                                     name="scale.html")
+    return made
+
+
+@pytest.fixture(scope="module")
+def sizes(tmp_path_factory):
+    """`{label: element count}`, read from the payload each page was
+    exported from - so the class a page is measured against is a fact
+    about the run rather than a constant beside the label."""
+    from tools.bga_view import payloads
+
+    runs = dict(pages.FIXTURES)
+    runs["scale"] = pages.scale_run(tmp_path_factory.mktemp("volume-count"))
+    return {label: len(payloads(str(run))["report.json"]
+                       ["elements"]["element_durations"])
+            for label, run in runs.items()}
 
 
 @needs_browser
 @pytest.mark.medium
-@pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+@pytest.mark.parametrize("label", LABELS)
 class TestBothBudgetsAreBound:
     """One class, on purpose. `UX-347`'s distance budget lives in
     `test_the_chain_folds_and_clicks_are_counted.py` and is met; this
@@ -127,20 +213,28 @@ class TestBothBudgetsAreBound:
             f"{label}: the page a reader lands on is {landed['height']} px, "
             f"over the {LANDED_HEIGHT_PX} px budget")
 
-    def test_the_whole_page_is_bounded_too(self, browser, booted, label):
+    def test_the_whole_page_is_bounded_too(self, browser, booted, sizes,
+                                           label):
         """The sibling `UX-347` did not have. A fold is not a licence:
-        answering the distance budget says nothing about this one."""
+        answering the distance budget says nothing about this one.
+
+        `UX-367`: against the bounds for **this run's size class**. One
+        pair of numbers for every run was the defect - it made the two
+        11-element fixtures the only page anyone had decided about.
+        """
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         opened = out["opened"]
-        assert opened["height"] <= OPENED_HEIGHT_PX, (
+        klass, height, words, controls = budget_for(sizes[label])
+        assert opened["height"] <= height, (
             f"{label}: the whole document is {opened['height']} px, over "
-            f"the {OPENED_HEIGHT_PX} px budget - folding it further is not "
-            f"an answer to this clause")
-        assert opened["words"] <= WORDS, (
-            f"{label}: {opened['words']} words, over the {WORDS} budget")
-        assert opened["controls"] <= CONTROLS, (
-            f"{label}: {opened['controls']} controls, over the {CONTROLS} "
-            f"budget")
+            f"the {height} px budget for runs up to {klass} elements - "
+            f"folding it further is not an answer to this clause")
+        assert opened["words"] <= words, (
+            f"{label}: {opened['words']} words, over the {words} budget "
+            f"for runs up to {klass} elements")
+        assert opened["controls"] <= controls, (
+            f"{label}: {opened['controls']} controls, over the {controls} "
+            f"budget for runs up to {klass} elements")
 
     def test_the_page_still_folds(self, browser, booted, label):
         """Without this, the landed clause is satisfied by a page that
@@ -151,23 +245,35 @@ class TestBothBudgetsAreBound:
         assert landed["height"] < opened["height"], (landed, opened)
         assert opened["sections"] >= 40, opened
 
-    def test_the_budgets_are_not_slack(self, browser, booted, label):
-        """A bound nothing can reach is not a bound. The larger fixture
-        has to be within a factor of two of every budget, or the number
-        was chosen to be safe rather than to be a limit."""
+    def test_the_budgets_are_not_slack(self, browser, booted, sizes, label):
+        """A bound nothing can reach is not a bound. The largest run in
+        a class has to be within a factor of two of every budget, or the
+        number was chosen to be safe rather than to be a limit.
+
+        `UX-367` made this the clause with teeth: `UX-366` is about to
+        cut `wall_clock_share_us` down, and when it does, the large
+        class's bounds stop being met from below and have to be
+        restated. That is the guard doing its job, not breaking.
+        """
+        largest = {}
+        for other in LABELS:
+            klass = budget_for(sizes[other])[0]
+            if sizes[other] >= sizes.get(largest.get(klass), -1):
+                largest[klass] = other
+        klass, height, words, controls = budget_for(sizes[label])
+        if largest[klass] != label:
+            pytest.skip(f"{largest[klass]} is the largest run in this class")
         out = browser.measure(booted[label], _LOOK, 1440, 900)
-        if label != "macro_micro":
-            pytest.skip("the bounds are set against the larger fixture")
         opened = out["opened"]
         for measured, bound, name in (
                 (out["landed"]["height"], LANDED_HEIGHT_PX, "landed height"),
-                (opened["height"], OPENED_HEIGHT_PX, "opened height"),
-                (opened["words"], WORDS, "words"),
-                (opened["controls"], CONTROLS, "controls")):
+                (opened["height"], height, "opened height"),
+                (opened["words"], words, "words"),
+                (opened["controls"], controls, "controls")):
             assert measured * 2 > bound, (
-                f"the {name} budget is {bound} and the page measures "
-                f"{measured}; a bound with that much slack is a number "
-                f"nobody will ever meet")
+                f"the {name} budget for runs up to {klass} elements is "
+                f"{bound} and {label} measures {measured}; a bound with "
+                f"that much slack is a number nobody will ever meet")
 
 
 @needs_browser
@@ -177,13 +283,31 @@ class TestTheBudgetIsWrittenWhereItIsRead:
     on the numbers, or the guide is describing a different page - which
     is what `UX-352` was filed for one document over."""
 
-    def test_the_style_guide_states_both_budgets(self):
+    def test_the_style_guide_states_every_budget(self):
+        """`UX-367`: **every** number, over every size class. The old
+        clause read four constants, so splitting the bounds by size
+        would have left half of them stated nowhere while it passed."""
         text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
         section = text.split("## 3e.", 1)[1].split("\n## ", 1)[0]
-        for number in (LANDED_HEIGHT_PX, OPENED_HEIGHT_PX, WORDS, CONTROLS):
+        numbers = [LANDED_HEIGHT_PX]
+        for row in BUDGETS:
+            numbers.extend(row)
+        for number in numbers:
             assert f"{number:,}" in section, (
                 f"§3e does not state the {number:,} bound this file "
                 f"asserts")
+
+    def test_the_size_classes_are_stated_too(self):
+        """A budget per class is only readable if the guide says which
+        class a run falls in - the number the class is named by is as
+        load-bearing as the bounds inside it."""
+        text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
+        section = text.split("## 3e.", 1)[1].split("\n## ", 1)[0]
+        assert len(BUDGETS) > 1, "one class is not a per-size budget"
+        for row in BUDGETS:
+            assert f"{row[0]:,}" in section, (
+                f"§3e does not name the size class for runs up to "
+                f"{row[0]:,} elements")
 
 
 if __name__ == "__main__":  # pragma: no cover

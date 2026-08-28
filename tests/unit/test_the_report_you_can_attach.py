@@ -649,6 +649,69 @@ class TestTheSizeDiscipline:
             f"these do not look like the hand-written modules this page is "
             f"supposed to be: {offenders}")
 
+    @staticmethod
+    def _weigh(tmp_path):
+        """`(code, contract, run_data)` of an export at 1,000 elements.
+
+        `UX-367` pulled this out of the ratio clause so the clause that
+        checks the ratio is not a second page bound measures the same
+        export the ratio does. Two clauses with two instruments would be
+        exactly the shape of defect they exist to hold.
+        """
+        import tools.bga_view as view
+
+        from tests.fixtures.topologies import linear_chain, write_run_dir
+
+        run = write_run_dir(tmp_path, linear_chain(1000))
+        out = tmp_path / "big.html"
+        view.export(str(run), str(out))
+        html = out.read_text(encoding="utf-8")
+        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+                      r".*?</script>", "", html, flags=re.S)
+        schemas = re.search(
+            r'<script type="application/json" id="bga-schemas">(.*?)'
+            r"</script>", html, re.S).group(1)
+        # `UX-342`: the schemas are apparatus, not this run's data -
+        # identical for every run of a given contract set, so they sit
+        # beside the modules and the stylesheet rather than beside the
+        # measurements.
+        return len(page), len(schemas), len(html) - len(page) - len(schemas)
+
+    def test_only_one_number_bounds_the_page(self, tmp_path):
+        """`UX-367`: the clause the fix above is falsifiable by.
+
+        Every bound in this class implies a maximum page size. There
+        must be exactly one of those anybody has to reason about -
+        `PAGE_BUDGET_B`, which has a stated procedure for moving and a
+        record of every time it moved. A second, tighter one arrived by
+        accident when the ratio was written against the **measured**
+        page, and it took four rounds and a 78 B margin to notice.
+
+        Asserted two ways, because the arithmetic one alone would pass
+        a rewritten clause that reintroduces the disguise with a looser
+        constant that later tightens.
+        """
+        import inspect
+
+        _code, _contract, run_data = self._weigh(tmp_path)
+        implied = run_data / 2.5
+        assert implied >= PAGE_BUDGET_B, (
+            f"the ratio clause permits a page of {implied:,.0f} B while "
+            f"PAGE_BUDGET_B permits {PAGE_BUDGET_B:,} B - the ratio is "
+            f"the real ceiling again, and it is the one nobody wrote "
+            f"down. Raise it or lower PAGE_BUDGET_B; do not leave two")
+
+        source = inspect.getsource(
+            TestTheSizeDiscipline
+            .test_the_data_dwarfs_the_page_on_a_report_worth_measuring)
+        claim = source.split("assert run_data", 1)[1].split(", (", 1)[0]
+        assert "code" not in claim, (
+            f"the ratio asserts against the measured page again "
+            f"({claim.strip()!r}). On a fixture whose data is fixed by "
+            f"construction that is an absolute page bound wearing a "
+            f"ratio's name - assert against PAGE_BUDGET_B, which is the "
+            f"page's one number")
+
     def test_the_data_dwarfs_the_page_on_a_report_worth_measuring(
             self, tmp_path):
         """Direction 7's sentence, on a report the sentence is about.
@@ -770,26 +833,7 @@ class TestTheSizeDiscipline:
         requires each to carry a sentence, so the two rules between them
         already say what it may contain.
         """
-        import tools.bga_view as view
-
-        from tests.fixtures.topologies import linear_chain, write_run_dir
-
-        run = write_run_dir(tmp_path, linear_chain(1000))
-        out = tmp_path / "big.html"
-        view.export(str(run), str(out))
-        html = out.read_text(encoding="utf-8")
-        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-                      r".*?</script>", "", html, flags=re.S)
-        schemas = re.search(
-            r'<script type="application/json" id="bga-schemas">(.*?)'
-            r"</script>", html, re.S).group(1)
-        # `UX-342`: the schemas are apparatus, not this run's data -
-        # identical for every run of a given contract set, so they sit
-        # beside the modules and the stylesheet rather than beside the
-        # measurements.
-        code = len(page)
-        contract = len(schemas)
-        run_data = len(html) - code - contract
+        code, contract, run_data = self._weigh(tmp_path)
         # `UX-348`: 2.8, measured at 685,355 B against 239,610 B of
         # code - 2.860x. The page grew 3,339 B for the worked Perfetto
         # example and the blast command an export can run; the run's
@@ -810,14 +854,44 @@ class TestTheSizeDiscipline:
         # would make it a record of the page's growth rather than a
         # bound on it. That is `UX-360`'s volume budget, which is what
         # should catch the next one; this number is not it.
-        assert run_data > 2.6 * code, (
-            f"{run_data} B of this run's data against {code} B of viewer "
-            f"code ({run_data / code:.3f}x) - Direction 7's rule is that "
-            f"the data is what an export weighs, and at this scale it "
-            f"should not be close (the bound is 2.6x). The embedded "
-            f"contract is {contract} B, "
-            f"which this ratio deliberately does not count: it is prose, "
-            f"and it grows when the schema says more")
+        #
+        # `UX-367` took the note above at its word and found what it was
+        # pointing at. On a fixture whose data is a constant,
+        # `run_data > 2.6 * code` **is** an absolute page bound:
+        #
+        #     685,327 / 2.6  =  263,587 B of page, at most
+        #     PAGE_BUDGET_B  =  265,000 B of page, at most
+        #
+        # Two absolute page bounds in one class, 1,413 B apart, and the
+        # tighter one was the shadow - unnamed, unstated, and forbidden
+        # by its own comment from being moved. `UX-369` landed 78 B
+        # under it. The next viewer item would not have fitted, and the
+        # failure would have read as a ratio when it was a byte count.
+        #
+        # So the page's size is `PAGE_BUDGET_B`'s job - one number, with
+        # the procedure above for moving it - and this clause goes back
+        # to asserting the claim it is named for, against the page the
+        # backstop **permits** rather than the page that happens to be
+        # here today. It can now fail for two reasons and both are worth
+        # looking at: the analysis published less, or the permitted page
+        # grew by a third. Neither is "a round landed".
+        #
+        # 2.5 rather than 2.6 because 2.5 is the largest round number
+        # the claim carries against the permitted page: 685,327 against
+        # 2.5 x 265,000 = 662,500, with 22,827 B to spare. This is a
+        # restatement, and the reason is not that the page grew - it is
+        # that the bound was two bounds and this was the wrong one.
+        assert run_data > 2.5 * PAGE_BUDGET_B, (
+            f"{run_data} B of this run's data against a page permitted "
+            f"{PAGE_BUDGET_B} B ({run_data / PAGE_BUDGET_B:.3f}x, bound "
+            f"2.5x) - Direction 7's rule is that the data is what an "
+            f"export weighs, and at this scale it should not be close. "
+            f"The page here measures {code} B and the embedded contract "
+            f"{contract} B, which this ratio deliberately does not "
+            f"count: it is prose, and it grows when the schema says "
+            f"more. If the page is what moved, "
+            f"`test_the_page_is_a_backstop_away_from_where_it_is` is the "
+            f"clause that owns that")
 
     def test_the_page_is_the_modules_and_nothing_else(self, exported):
         """What the ceiling is really guarding: that the page is the

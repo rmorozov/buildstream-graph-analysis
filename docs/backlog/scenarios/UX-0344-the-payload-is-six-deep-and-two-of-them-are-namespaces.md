@@ -15,6 +15,19 @@ macro_micro 1482 leaves   depth 1:6  2:126 3:393  4:547  5:280 6:129  7:1
                           deeper than three: 957 (65%)
 ```
 
+Re-measured on `analyze/v3` after `UX-343` and `UX-341` (the leaf count
+moved because `top_opportunities` became named rows and the retired
+units were renamed; the *shape* did not):
+
+```text
+golden       490 leaves   depth 1:5  2:80  3:124  4:151  5:76  6:54
+                          deeper than three: 281 (57%)
+                          deepest: findings.[].provenance.evidence.[].path
+macro_micro 1447 leaves   depth 1:5  2:118 3:353  4:533  5:286 6:151  7:1
+                          deeper than three: 971 (67%)
+                          deepest: findings.[].evidence.steps.[].entering.[]
+```
+
 The depth is not spread evenly — it is a handful of shapes:
 
 ```text
@@ -50,13 +63,36 @@ declared or tabulated — the schema cannot name `app.bst`, so it cannot
 say what `risk_score` is either. As a list of rows with an
 `element_uid` field it is depth 5 and declarable.
 
-**And the deepest shape is a repeated join.** `findings[].provenance`
-is `UX-229`'s explanation of one claim, nested inside the claim. It
-already carries `claim`, `kind` and `document`, and its `rule` block
-repeats per finding — 3 identical 145-byte `provenance` objects in the
-golden report, 3 identical 141-byte ones in `macro_micro`. Published as
-a top-level `provenance` list keyed by claim, `provenance[].evidence[]`
-is depth 3, findings link to it by id, and the repetition goes away.
+**And the deepest shape is a join nested inside one of its sides.**
+`findings[].provenance` is `UX-229`'s explanation of one claim, nested
+inside the claim. It already carries `claim`, `kind` and `document`.
+Published as a top-level `provenance` list keyed by claim,
+`provenance[].evidence[]` is depth 3 and findings link to it by id.
+
+> **The deduplication half of this argument no longer holds, measured
+> after `UX-343`.** This item was filed saying the block repeats — *3
+> identical 145-byte `provenance` objects in the golden report* — and
+> `UX-342` handed over 4,046 B of repeated prose as "all of it the
+> provenance block written three times". Re-measured on the emitted
+> `analyze/v3`:
+>
+> ```text
+> golden       4 provenance blocks, 4 distinct, 2,601 B
+> macro_micro 11 provenance blocks, 11 distinct, 7,442 B
+>
+> repeated object bytes (objects ≥60 B appearing more than once)
+> golden      1,374   largest: a 308 B provenance fragment x3, then a
+>                     280 B element record x3, then a 236 B one x3
+> macro_micro 3,054   largest: an 812 B element record x8
+> ```
+>
+> `UX-343` gave every evidence row a `quantity` and every rule a
+> `threshold_quantity`, which are drawn from the row's own path — so no
+> two provenance blocks are identical any more. What repeats now is
+> mostly **element records**, republished across sections, which is a
+> different item's shape. The normalisation is still worth doing for
+> *depth*; it is no longer worth doing for *bytes*, and the figure
+> `UX-342` handed over should not be quoted as if it were.
 
 **Three deep is not reachable everywhere, and should not be claimed.**
 `findings[].evidence.steps[].entering[]` is four real relations. What

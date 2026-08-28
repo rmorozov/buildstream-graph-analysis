@@ -279,7 +279,8 @@ export const DRAWN_ELSEWHERE = {
 };
 
 export function renderSection(key, value, hint = {}, node = undefined,
-                              investigate = null, payload = undefined) {
+                              investigate = null, payload = undefined,
+                              root = undefined) {
   if (value === null || value === undefined) return null;
   if (key in DRAWN_ELSEWHERE) return null;
   if (hint[SEVERITY] && Array.isArray(value)) {
@@ -339,7 +340,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
       // selection published elsewhere in it - `structural.bottleneck`
       // for the choke points. The section renders its own value; the
       // payload is only ever read for a declared `from` path.
-      ? renderPairs(key, value, hint, node, payload) : null;
+      ? renderPairs(key, value, hint, node, payload, root) : null;
   }
   return null;   // scalars belong in the summary, below
 }
@@ -377,7 +378,7 @@ export function render(payload, schema, root, investigate = null) {
   for (const [key, value] of Object.entries(payload)) {
     if (key === "schema") continue;
     const section = renderSection(key, value, hints[key] ?? {}, nodes[key],
-                                  investigate, payload);
+                                  investigate, payload, schema);
     // `UX-302`: what this section was rendered *from*, so the "view as
     // JSON" toggle has a published value to show rather than a
     // re-serialisation of the DOM. Only the schema-driven sections get

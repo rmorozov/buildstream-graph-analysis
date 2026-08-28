@@ -103,7 +103,13 @@ if (observing) {
   // Before the document exists, so a violation from the first
   // stylesheet is caught. `Page.navigate` below is what runs it.
   await send("Page.addScriptToEvaluateOnNewDocument", {
-    source: `window.__bgaCsp = [];
+    // UX-343: dev-mode strict hints, on for every observed boot. The
+    // complaint `quantityFor` makes when it had to name-sniff a unit
+    // is a console channel like any other, and this is the reader for
+    // it - set here, before the document, because the page resolves
+    // quantities during boot.
+    source: `window.BGA_STRICT_HINTS = true;
+      window.__bgaCsp = [];
       document.addEventListener("securitypolicyviolation", (event) => {
         window.__bgaCsp.push({
           directive: event.effectiveDirective || event.violatedDirective,

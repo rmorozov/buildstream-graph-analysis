@@ -188,6 +188,24 @@ class TestTheConsoleStaysClean:
                               "store-aggregate.json", "favicon.ico"))]
             assert not probes, (name, probes)
 
+    def test_no_number_renders_from_a_guess(self, observed):
+        """`UX-343`, read through this instrument rather than by eye.
+
+        `quantityFor` complains to the console under
+        `BGA_STRICT_HINTS` whenever it had to name-sniff a unit the
+        schema never declared, and `tests/cdp.mjs` now sets that flag
+        before the document exists - so this is the page's own account
+        of what it had to guess about, on the four boots above.
+
+        It is a `warning`, not an error, which is why it needs a clause
+        of its own: `BAD_LEVELS` deliberately excludes warnings so a
+        Chrome deprecation cannot redden the round it ships in.
+        """
+        for name, got in observed.items():
+            guessed = [e["text"] for e in got["console"]
+                       if "has no bga:quantity" in e["text"]]
+            assert not guessed, (name, sorted(set(guessed))[:8])
+
     def test_every_form_control_has_an_identity(self, observed):
         """The Issues panel's two form complaints, at zero.
 

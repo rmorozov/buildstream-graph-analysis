@@ -60,11 +60,14 @@ globalThis.document = { createElement: _makeNode,
                         createElementNS: (_n, t) => _makeNode(t),
                         getElementById: () => null, querySelector: () => null,
                         querySelectorAll: () => [], addEventListener: () => {} };
-// UX-343: the complaint `quantityFor` makes when it had to guess is the
-// signal this item empties. Captured rather than silenced.
-const warnings = [];
-console.warn = (text) => warnings.push(String(text));
-globalThis.BGA_STRICT_HINTS = true;
+// UX-343: this census reads `hintsOf`/`guessQuantity` directly rather
+// than calling `quantityFor`, because the two channels a declaration
+// can arrive through have to be read *apart* and `quantityFor` folds
+// them together. So the `BGA_STRICT_HINTS` complaint never fires here
+// - a first cut of this file asserted on it anyway, against a variable
+// nothing could ever write to. The strict-hints reading lives where it
+// belongs, on a real boot, in
+// `test_the_console_stays_clean.py::test_no_number_renders_from_a_guess`.
 
 const v = await import(process.env.BGA_VIEWER);
 const fs = await import("node:fs");
@@ -112,7 +115,6 @@ console.log(JSON.stringify({
   declared: declared.length,
   guessed: [...new Set(guessed)].sort(),
   neither: [...new Set(neither)].sort(),
-  warnings: [...new Set(warnings)].sort(),
 }));
 """
 
@@ -146,16 +148,15 @@ class TestEveryNumberResolvesToAUnit:
 
     def test_nothing_renders_from_a_guess(self, label):
         """`guessQuantity` is the fallback `UX-201` kept as a
-        *complaint*. This item empties its input, so the complaint
-        should never fire - and it is read from the console rather than
-        inferred, because the console is where a reader would meet it.
+        *complaint*. This item empties its input: no numeric leaf in
+        either fixture's payload should reach the page with nothing but
+        a name to sniff. What the complaint itself sounds like on a
+        real boot is read by the console guard, not here.
         """
         census = _census(label)
         assert census["guessed"] == [], (
             f"{label}: {len(census['guessed'])} numeric leaves render from "
             f"a name-sniffed guess: {census['guessed'][:8]}")
-        assert census["warnings"] == [], (
-            f"{label}: BGA_STRICT_HINTS complained: {census['warnings'][:5]}")
 
     def test_what_cannot_resolve_is_named_with_a_reason(self, label):
         """An allowlist with reasons, not a count.

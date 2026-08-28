@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-353 scenarios: **2 open**, 351 closed.
+360 scenarios: **9 open**, 351 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 59 |
 | analysis | 0 | 51 |
 | contracts | 0 | 40 |
-| viewer | 0 | 92 |
+| viewer | 5 | 97 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 0 | 43 |
+| guards | 2 | 45 |
 
 ## Open scenarios
 
@@ -38,6 +38,95 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-355 | [a fold that expands nothing, and a copy that says nothing](UX-0355-a-fold-that-expands-nothing-and-a-copy-that-says-nothing.md) | viewer | Medium | — | 🔴 |
+| UX-356 | [the element join is "merged into the element table", and the merge keeps four of its twenty-eight fields](UX-0356-the-merge-keeps-four-of-twenty-eight-fields.md) | viewer | High | — | 🔴 |
+| UX-357 | [the provenance section shows the claim and withholds the rule](UX-0357-the-provenance-shows-the-claim-and-withholds-the-rule.md) | viewer | Medium | — | 🔴 |
+| UX-358 | [no committed fixture can render a timeline, so the handoff the tool is for is never exercised](UX-0358-no-fixture-can-render-a-timeline.md) | guards | High | — | 🔴 |
+| UX-359 | [every guard measures a page with Plane 2 stripped out of it](UX-0359-every-guard-measures-a-plane-2-stripped-page.md) | guards | High | — | 🔴 |
+| UX-360 | [folding paid the distance, and the volume grew by a third](UX-0360-folding-paid-the-distance-and-the-volume-grew.md) | viewer | Medium | — | 🔴 |
+| UX-361 | [the drawing vocabulary is two shapes, and the tool's central claim has neither](UX-0361-the-drawing-vocabulary-is-two-shapes.md) | viewer | Medium | — | 🔴 |
+
+## UX-355..UX-361: the fifty-fifth round — the page, opened rather than landed on (2026-08-28)
+
+The user's brief: walk `bga view` again as somebody who arrives from
+the GitHub page and tries to analyse their own build's efficiency —
+how much has changed since round 52, what drawings would help, is the
+blast/Perfetto handoff integrated, do all the controls work, does
+everything in the JSON reach the page, and what is worth borrowing
+from Apple.
+
+Measured first, on the page an export actually produces, from the
+fixtures **in place** (see `UX-359` for why that matters):
+
+```text
+                 round 52      round 55 landed / opened
+golden height   11,286 px       3,548 / 13,844
+macro  height   18,148 px       5,588 / 24,689
+golden sections       28            43
+macro  sections       37            58
+golden words       3,448         5,034
+macro  words       5,026         8,174
+golden inputs         81            18
+macro  inputs        120            28
+schema sentences   67% of words          39% / 35%
+drawings      1 spark, 0 strips   1 spark + 5 / 15 strips
+```
+
+**Rounds 53 and 54 landed.** Distance is down 69%, the schema's
+sentences are behind a door, the table tools scale, and the shape
+channel is built. The tension the numbers show is that the *total*
+page grew by 23% and 36% while the landed page shrank — folding paid
+the distance and nothing measured what moved behind the fold
+(`UX-360`).
+
+Then the four checks the user asked for:
+
+- **Controls.** Every class pressed on the page a user gets. Ten of
+  twelve work. "Expand all" is a no-op — it walks *sections*, which
+  are default-open, while `UX-347` moved the fold to the *chapter*;
+  and `copy-rows`, the most numerous copy control, is the one of four
+  that acknowledges nothing (`UX-355`).
+- **The JSON.** 89% of `golden`'s leaves and 76% of `macro_micro`'s
+  reach a rendered node. 142 of the 239 misses are `element_join`:
+  `DRAWN_ELSEWHERE` promises it is "merged into the one element
+  table", and the merge keeps 4 of 28 fields — including twenty-three
+  written recommendation sentences that exist only inside the embedded
+  payload (`UX-356`). A further 71 are `provenance`, which draws the
+  claim and withholds the rule that produced it (`UX-357`).
+- **Blast and Perfetto.** Blast is integrated and correct: in the
+  "What if I change this?" chapter, 3.3 and 5.5 screens down, the
+  command read from `next_steps` with the real target and run, no dead
+  search form in the export. Perfetto is *unmeasurable*: no committed
+  fixture has a `build.log`, so `bga timeline` refuses, `trace_bytes`
+  is `None`, and the button has never rendered in any guard,
+  screenshot or review (`UX-358`).
+- **Drawings.** The vocabulary is two shapes. 19 of `golden`'s 43
+  sections and 29 of `macro_micro`'s 58 carry six or more numbers and
+  nothing drawn — `floors`, the tool's central claim, among them,
+  because neither existing shape can draw a decomposition
+  (`UX-361`).
+
+And one finding about the instruments rather than the page: every
+browser guard `copytree`s `macro_micro/run` into a temporary
+directory, which leaves the sibling `plane2.json` behind. Every budget
+in the repository is calibrated against a page 3,343 px shorter than
+the one users get (`UX-359`). It also produced — and cost this round —
+one retracted finding, which is recorded in that item.
+
+The style guide gains §1b (every published field reaches a reader),
+§2d (a drawing per question), §3e (volume is a budget, not only
+distance), §4c (a control acts on the scope its label names) and §6a,
+which is the Apple brainstorm written down: deference, symmetry,
+feedback, one primary action, and a default state that is a complete
+answer — with the measurement each would cost here, and the one rule
+the page already borrowed well (a fold that names its own weight:
+"Where did the time go? **Show 10 sections**").
+
+Order: `UX-359` first — it is an instrument defect and every other
+item's measurement runs through it. Then `UX-356`, the largest thing
+a reader is being denied, and `UX-358`, which is the only way the
+flagship capability becomes checkable. `UX-355` is small and
+independent. `UX-357`, `UX-360`, `UX-361` are the tail, in that order.
 
 ## UX-345..UX-351: the fifty-second round — the page, measured rather than described (2026-08-28)
 

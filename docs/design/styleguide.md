@@ -474,6 +474,162 @@ asserted against the payload rather than a list, and coincident marks
 merge into one label rather than overlapping (`19.1 s (p95, max)`, not
 `19.1 s19.1 s` printed over `max`). See `UX-350`.
 
+## 1b. Every published field reaches a reader, or the page names the ones that do not (round 55)
+
+`UX-338` gave the page `DRAWN_ELSEWHERE`: a population the page
+deliberately does not draw on its own, together with a sentence saying
+where it went instead. `element_join`'s entry says
+
+> merged into the one element table (`elements`)
+
+Round 55 measured that merge field by field. Of `element_join`'s **28
+published fields, 13 reach no rendered node** — among them twenty-three
+recommendation sentences the analyzer wrote for exactly this reader:
+
+```text
+holds 44% of the critical path and fixing it is worth 12.1s (26.1% of
+the build), but runs at only 0.90 cores busy - it is waiting, not
+computing, and its native build asked for -j1: remove `notparallel` /
+raise its job count before touching its sources
+```
+
+`severity` is drawn for all twenty-three. `text` is drawn for none: the
+sentence exists only inside `<script type="application/json"
+id="bga-report">`. So three clauses, all of them about the same
+distinction between a *promise* and a *projection*:
+
+- **"Drawn elsewhere" means every field arrives elsewhere.** A merge
+  that keeps four of twenty-eight columns is a projection, and a
+  projection says what it dropped, in the sentence, where the next
+  reviewer reads it.
+- **A published sentence outranks a published number.** Where the
+  payload carries prose written for this reader, the page prints the
+  prose. A severity chip beside a withheld sentence is that ordering
+  inverted.
+- **The embedded payload is not a reader.** `#bga-report` exists so the
+  export can boot from `file://`. A value that reaches only it has
+  reached nobody, and a coverage instrument that reads the file rather
+  than the DOM will say it arrived.
+
+The same measurement over `provenance` — `UX-229`'s "why bga believes
+what it believes" — found the claim drawn and the rule withheld:
+`rule.module` 0 of 12, `rule.name` 0 of 5, `rule.observed_path` 0 of 5,
+`rule.sentence` 1 of 12, `unpublished_inputs` 0 of 3. A provenance
+section that shows the conclusion and not the rule is the one section
+on the page whose whole job it fails.
+
+## 2d. A drawing per question; the vocabulary grows when a question needs a shape (round 55)
+
+`UX-350` built §2 and the census moved: 1 sparkline and 0 strips became
+1 sparkline and 5 strips on `golden`, 15 on `macro_micro`. The channel
+exists. What it does not yet have is *range*: the page's whole visual
+vocabulary is **two shapes**, the density strip and one sparkline, and
+19 of `golden`'s 43 sections and 29 of `macro_micro`'s 58 carry six or
+more numbers with nothing drawn at all.
+
+The rule is not "draw more". It is:
+
+- **A drawing answers a question, not a table.** The test is whether a
+  reader can state the question the shape answers before reading the
+  caption. `producer`'s 74 numbers are provenance and want no drawing;
+  `floors`' 11 are the tool's central claim — *how much of this build
+  is irreducible* — and want one badly.
+- **The vocabulary grows only where an existing shape cannot make the
+  comparison.** A strip shows a distribution; a sparkline shows an
+  ordered series. Neither shows a *decomposition* (wall-clock split
+  into chain, waiting and slack) or an *interval* (a confidence range
+  against a threshold). Those are the two shapes the payload is asking
+  for, and they are the only two this round proposes.
+- **A shape that is added is added to §1's table**, with the published
+  shape that selects it, so a schema addition of that shape draws with
+  no viewer edit — `UX-193`'s property, applied to drawings.
+
+## 3e. Volume is a budget, not only distance (round 55)
+
+`UX-347` bought the distance budget with chapters that fold, and it
+worked: the page a reader lands on went from 11,286 px to 3,548
+(`golden`) and 18,148 to 5,588 (`macro_micro`), −69%. Opened, the same
+two pages are **13,844 px and 24,689** — 23% and 36% *larger* than the
+pages the distance complaint was filed against.
+
+Folding moved the cost; it did not remove it, and nothing measured the
+part that moved. So the distance budget gains a sibling:
+
+- **Landed distance and total volume are two budgets and both are
+  bound.** Words, controls and height, measured with every chapter
+  open, on the page an export actually produces.
+- **A fold is not a licence.** "It is behind a chapter" answers the
+  distance budget and says nothing about the volume one.
+- **The bound is set against a measured page and moves only with a
+  filed reason** — the discipline §3c already uses for distance.
+
+## 4c. A control acts on the scope its label names, and it acknowledges the press (round 55)
+
+Every control class on the page was pressed, on the page a user gets,
+in the state a user lands in. Twelve classes; two of them do not keep
+the promise their label makes.
+
+**"Expand all" expands nothing.** The pair is built on
+`collapsible().all()`, which walks *sections*. `UX-347` moved the fold
+to the *chapter*. Sections are default-open, so from a fresh load
+`all(false)` sets open what is already open:
+
+```text
+                          height   chapters open   sections data-collapsed=true
+landed                    3,548              1/7                             0
+after "Expand all"        3,548              1/7                             0
+after opening each
+  chapter by hand        13,844              7/7                             0
+```
+
+"Collapse all" works, because sections are the layer it shuts — so the
+pair is not symmetric: one half acts on the fold the reader sees and
+the other on a fold that is already open. A reader who wants the whole
+document clicks six chapter headings.
+
+**"Copy 11 rows" says nothing.** Of four copy controls, `copy-step`,
+`copy-sql` and `copy-view` change their own label on success; the most
+numerous one — 13 of them on `golden`, 23 on `macro_micro` — writes to
+the clipboard and leaves no trace on the page at all.
+
+- **A control's label names its scope, and the scope is the layer the
+  reader is looking at.** When a fold moves to a new layer, every
+  control that names "all" moves with it.
+- **Every action is acknowledged where the finger is.** A clipboard
+  write is invisible by construction, so the control says so itself.
+  `UX-279` made every copy control say *what* it copies; this makes it
+  say *that it did*.
+- **A control is exercised in the state a reader meets it in.**
+  `UX-194` forbade dead controls and was satisfied by a listener being
+  attached. A listener that runs and changes nothing is the same defect
+  with a passing guard.
+
+## 6a. What this borrows from Apple, and what each borrowing costs (round 55)
+
+The user's standing reference for "considered". Five rules taken from
+Apple's human-interface tradition, each with the measurement that says
+what it would cost here, and one the page already gets right.
+
+| borrowed rule | measured here | what it costs |
+|---|---|---|
+| **Deference** — chrome recedes so content leads | the `?` door is 121 of `golden`'s 257 buttons (47%) and 175 of 381 (46%) | one door per *block* instead of per value; §4a already moved the sentence, this bounds the door |
+| **Symmetry** — every gesture has an inverse of equal cost | "Collapse all" shuts six sections; "Expand all" is a no-op | §4c |
+| **Feedback** — an action reports, at the point of action | 3 of 4 copy controls acknowledge; the most numerous does not | §4c |
+| **One primary action per view** | the emphasis budget (§4) bounds *color* per block and nothing bounds *actions* | extend §4's budget from tone to affordance: one emphasised action per block |
+| **The default state is a complete answer** | the landed page is 3,548 px, one chapter, and it does answer "what should I do?" — verdict, three ranked elements, a runnable command | nothing; this is the property §3e's volume budget exists to protect |
+
+And the one the page already borrowed well: **progressive disclosure
+that discloses**. A chapter heading reads "Where did the time go? **Show
+10 sections**" — the fold names its own weight before it is opened,
+which is the rule `UX-318`'s depth budget was filed for and the model
+the `?` door should be rebuilt on.
+
+Two Apple rules are deliberately **not** borrowed. *Consistency across
+an ecosystem* is a rule for a platform vendor and this is one page.
+*Delight* — motion, easing, ornament — is refused outright by the
+export constraint at the top of this document: a pattern that needs a
+server or a hover to mean anything is never the meaning.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -486,3 +642,10 @@ sibling reddens (booted check); sparkline/strip geometry asserts
 against `data-raw` (the UX-196 discipline); and the conformance
 checklist — shape in the table? sentence written? budget kept? —
 joins the fixing guide for any task that touches the page.
+
+Round 55's sections are written before their guards, which is the state
+`§2c` was in when it was written and the reason it says so out loud. The
+guard each one is waiting on: `UX-355` (§4c), `UX-356` (§1b),
+`UX-357` (§1b's provenance clause), `UX-360` (§3e), `UX-361` (§2d). A
+section here with no filed item behind it is the failure mode this
+paragraph exists to make visible.

@@ -232,8 +232,41 @@ class TestTheBlastSectionSpellsItsCommand:
         # inside the section, where a reader meets it.
         assert "server" in out["blast"]["text"], out["blast"]["text"][:200]
 
-    def test_no_rail_entry_says_offline(self, browser, pages, label):
-        """The navigation announced the capability as unavailable."""
+    def test_the_rail_names_the_capability_not_its_absence(
+            self, browser, pages, label):
+        """The navigation announced the capability as unavailable - and
+        the key alone titles to "Blast", which names a verb rather than
+        the question the section answers."""
         out = browser.measure(pages[label]["url"], _LOOK, 1440, 900)
         offline = [entry for entry in out["rail"] if "offline" in entry.lower()]
         assert offline == [], f"{label}: the rail still says {offline}"
+        assert "Blast radius" in out["rail"], (
+            f"{label}: the rail entries for this section are "
+            f"{[e for e in out['rail'] if 'blast' in e.lower()]}")
+
+
+class TestTheLeadQuotesAControlThatExists:
+    """`UX-326`: the tool's own sentences are contracts. The lead tells a
+    reader with a timeline to press a button by name, and a renamed
+    button would make that sentence a dead pointer - the defect
+    `UX-194` is about, one level of indirection away.
+
+    Source-level, so it holds for the run shape neither fixture has:
+    both committed fixtures are snapshots without a build log, so no
+    browser measurement of this page can ever reach the branch that
+    prints the label.
+    """
+
+    def test_the_quoted_button_label_is_the_one_the_page_draws(self):
+        questions = (REPO / "bga/viewer/questions.js").read_text(
+            encoding="utf-8")
+        page = (REPO / "bga/viewer/index.html").read_text(encoding="utf-8")
+        # The source spells the quotation marks as JS escapes, so
+        # this reads what a reader will see, not the bytes.
+        quoted = re.findall(r"\\u201c(.+?)\\u201d",
+                            questions.replace("\n", " "))
+        assert quoted, "the lead quotes no control at all"
+        for label in quoted:
+            assert f">{label}<" in page, (
+                f"the lead sends the reader to {label!r}, which "
+                f"index.html does not draw")

@@ -40,7 +40,7 @@ import { renderBand, renderTrend, renderBlastSearch, renderBlastOffline,
 import { renderCulprits, renderElementHistory, renderHorizon,
          renderElementSections, ensureElementSection, uidForAnchor,
          renderWhatIf } from "./element.js";
-import { renderDecision, renderProvenance,
+import { renderDecision, renderProvenance, renderProvenanceRecords,
          renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, jumpTargets, matches,
          paletteResults } from "./nav.js";
@@ -1022,6 +1022,12 @@ async function boot() {
     // `placeBlast` a day earlier; both are gone, because two mechanisms
     // deciding one order is how a page ends up with an order nobody can
     // predict.
+    // `UX-357`: the provenance index gains a block per claim, before
+    // the chapters file the sections. The same relationship `elements`
+    // has with the element sections - an index over the population and
+    // a detail block per row.
+    renderProvenanceRecords(payload, root);
+
     chapters(root, document, payload);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing

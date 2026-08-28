@@ -371,16 +371,37 @@ class TestThePageDrawsTheObject:
         out = self._render(record)
         published = {str(record["rule"]["sentence"]), str(record["rule"]["name"]),
                      str(record["rule"]["threshold"]),
-                     str(record["rule"]["module"]), "Why"}
+                     str(record["rule"]["module"]),
+                     # `UX-357`: three more the block draws, and each is
+                     # a field of the same record rather than a reading
+                     # of it.
+                     str(record["rule"].get("observed_path")),
+                     str(record["rule"].get("comparison")),
+                     str(record.get("document")),
+                     str(record.get("claim"))}
         for entry in record["evidence"]:
             published.add(str(entry["path"]))
             published.add(str(entry["value"]))
+
+        # Layout, named one string at a time rather than allowed by a
+        # pattern. `UX-357` put the depth count on the summary (§3a.1)
+        # and a lead in front of the document; both are apparatus - the
+        # count is a fact about the record's own shape, not about the
+        # build - and neither may grow into a sentence without being
+        # written down here.
+        layout = {"Why", " in ", "Paths resolve against ",
+                  "No named threshold; computed in ",
+                  f"1 level, {len(record['evidence'])} "
+                  f"row{'' if len(record['evidence']) == 1 else 's'}"}
+
         def accounted(text):
-            if text in published:
+            if text in published or text in layout:
                 return True
-            # The rule line is `NAME = threshold (module)` - three
+            if text.strip() in layout or text.strip() in published:
+                return True
+            # The rule line is `NAME observed comparison threshold` -
             # published fields with punctuation between them, which is
-            # layout rather than a fourth claim.
+            # layout rather than a further claim.
             words = [w.strip("()") for w in text.split()]
             return all(w in published or w == "=" for w in words)
 

@@ -124,6 +124,16 @@ class TestTheContractSaysWhichSentencesStayInline:
 
 _PAGE = r"""
 (() => {
+  // UX-347: every chapter but the first folds now, and a folded
+  // chapter draws nothing at all. These clauses are about what the
+  // page says *when it is read* - a note share measured over hidden
+  // sections would read as zero and mean nothing, and a door inside a
+  // fold cannot be clicked without opening the fold a reader would
+  // have opened first. So the document is opened here, in the
+  // instrument, rather than in the page.
+  for (const box of document.querySelectorAll("section.chapter")) {
+    box.setAttribute("data-open", "true");
+  }
   const words = (el) => ((el?.innerText || "").match(/\S+/g) || []).length;
   const seen = (el) => { const r = el.getBoundingClientRect();
                          return r.width > 0 && r.height > 0; };
@@ -150,6 +160,26 @@ _PAGE = r"""
 
 _EVERY_DOOR = r"""
 (() => {
+  // UX-347: every chapter but the first folds now, and a folded
+  // chapter draws nothing at all. These clauses are about what the
+  // page says *when it is read* - a note share measured over hidden
+  // sections would read as zero and mean nothing, and a door inside a
+  // fold cannot be clicked without opening the fold a reader would
+  // have opened first. So the document is opened here, in the
+  // instrument, rather than in the page.
+  for (const box of document.querySelectorAll("section.chapter")) {
+    box.setAttribute("data-open", "true");
+  }
+  // UX-347: every chapter but the first folds now, and a folded
+  // chapter draws nothing at all. These clauses are about what the
+  // page says *when it is read* - a note share measured over hidden
+  // sections would read as zero and mean nothing, and a door inside a
+  // fold cannot be clicked without opening the fold a reader would
+  // have opened first. So the document is opened here, in the
+  // instrument, rather than in the page.
+  for (const box of document.querySelectorAll("section.chapter")) {
+    box.setAttribute("data-open", "true");
+  }
   const shut = [], stuck = [], missing = [];
   for (const marker of document.querySelectorAll("button.describe")) {
     const term = marker.closest("dt");

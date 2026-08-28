@@ -338,6 +338,13 @@ class TestTheDocumentEndsWithItsIdentity:
 
     _WHERE = """
     (() => {
+      // UX-347: the identity closes the *document*, and a folded
+      // chapter draws nothing - so this opens every chapter before
+      // measuring where things sit. Folded, the identity group is at
+      // 0 px and so is everything else, which is not an order at all.
+      for (const box of document.querySelectorAll("section.chapter")) {
+        box.setAttribute("data-open", "true");
+      }
       const vh = window.innerHeight;
       const total = document.documentElement.scrollHeight;
       const box = (name) => {
@@ -504,6 +511,18 @@ class TestChaptersCostNoHeight:
 
     _COST = """
     (() => {
+      // UX-347: every chapter but the first folds now, and a folded
+      // chapter draws none of its sections. These three clauses are
+      // about what the document costs *when it is read* - a heading
+      // share measured over hidden sections would be a different
+      // claim, and the two clauses below would pass over nothing at
+      // all (a chapter with no drawn sections pads nothing, and a
+      // zero-height section makes any spread look enormous). So the
+      // document is opened first, deliberately and here rather than
+      // in the page.
+      for (const box of document.querySelectorAll("section.chapter")) {
+        box.setAttribute("data-open", "true");
+      }
       const vh = window.innerHeight;
       const total = document.documentElement.scrollHeight;
       const titles = [...document.querySelectorAll("h2.chapter-title")];
@@ -538,12 +557,21 @@ class TestChaptersCostNoHeight:
     def test_no_chapter_pads_its_sections(self, browser, report,
                                           width, height):
         """A chapter is as tall as what is in it. The difference between
-        a chapter's height and the sum of its sections is its heading
-        and the margins around it - a quarter-screen of slack, not the
-        several screens a fixed-height grid would introduce."""
+        a chapter's height and the sum of its sections is its heading,
+        `UX-347`'s one-line answer and the control that opens it - a
+        third of a screen of head, not the several screens a
+        fixed-height grid would introduce.
+
+        The bound was a quarter-screen until round 52. `UX-347` added
+        the answer and the control, which at 390px wrap to two or three
+        lines: measured 0.28 (`elements`) and 0.26 (`time`) on the
+        golden report at 390x844, 0.16 at 1440. Raised to a third of a
+        screen against those, and deliberately not further - the head
+        is what a folded chapter *is*, so a head that grew past this
+        would be the padding this clause refuses."""
         out = browser.measure(report, self._COST, width, height)
         padded = {chapter["id"]: round(chapter["slack"], 2)
-                  for chapter in out["chapters"] if chapter["slack"] > 0.25}
+                  for chapter in out["chapters"] if chapter["slack"] > 0.34}
         assert padded == {}, (
             f"{padded} screens of chapter beyond their sections at "
             f"{width}x{height}")

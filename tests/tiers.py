@@ -225,6 +225,13 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-364`, tiered on landing rather than after CI noticed - which
+    # it did, at 96% of `timeout 33 make test-small`. Four page exports
+    # and eleven clauses over a real Chromium; measured at 10.3s, which
+    # is `UX-359`'s rule costing what it costs. The file that measures
+    # the page a user gets is a medium test by construction, and this
+    # list is where that gets said rather than rediscovered.
+    "tests/unit/test_the_lead_names_the_planes_it_has.py",       #   10.3s
     # Round 56, the other five of the twelve (see the LARGE block
     # above): over the medium floor, under the large one.
     "tests/unit/test_the_handoff_has_a_fixture.py",              #   12.6s

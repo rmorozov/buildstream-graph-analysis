@@ -276,6 +276,42 @@ class TestBothBudgetsAreBound:
                 f"that much slack is a number nobody will ever meet")
 
 
+class TestEverySizeClassIsActuallyMeasured:
+    """`UX-367`'s own defect, as a clause.
+
+    The item exists because the population was two 11-element fixtures
+    while the bounds claimed to govern every page. Splitting the bounds
+    by size does not fix that on its own: a class with no run in the
+    population is a pair of numbers nothing can redden, which is the
+    same hole one level up.
+
+    Found by the mutation sweep rather than by writing it: deleting
+    `"scale"` from `LABELS` left the whole file green.
+    """
+
+    def test_every_class_has_a_run_behind_it(self, sizes):
+        covered = {budget_for(sizes[label])[0] for label in LABELS}
+        missing = [row[0] for row in BUDGETS if row[0] not in covered]
+        assert not missing, (
+            f"no run in the population falls in the class(es) bounded at "
+            f"{missing} elements - those bounds govern nothing. The "
+            f"population is {sizes}")
+
+    def test_the_largest_class_is_reached_by_a_real_run(self, sizes):
+        """Narrower and harder to satisfy by accident: the *last* class
+        is the one the item was filed about, and a run has to be in it
+        rather than merely near it."""
+        largest = BUDGETS[-1][0]
+        biggest = max(sizes.values())
+        assert budget_for(biggest)[0] == largest, (
+            f"the biggest run measured has {biggest:,} elements and falls "
+            f"in the class bounded at {budget_for(biggest)[0]:,} - nothing "
+            f"reaches the {largest:,} class these bounds were written for")
+        assert biggest > 100, (
+            f"{biggest:,} elements is not a scale probe; the item this "
+            f"clause belongs to is about measuring where the page is used")
+
+
 @needs_browser
 @pytest.mark.medium
 class TestTheBudgetIsWrittenWhereItIsRead:

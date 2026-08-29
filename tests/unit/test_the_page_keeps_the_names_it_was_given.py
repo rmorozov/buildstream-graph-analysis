@@ -268,5 +268,82 @@ class TestThePredicateIsTheSchemas:
         assert self._ask('f.title("path_us", "duration_us")') == "Path"
 
 
+#: The inline-object branch, driven without a browser. `renderStructured`
+#: is reached through `tests/viewer.mjs`, the one namespace `UX-337` set
+#: up for exactly this.
+_INLINE = """
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+const make = (tag) => _makeNode(tag);
+globalThis.document = { createElement: make,
+                        createElementNS: (_n, t) => make(t),
+                        getElementById: () => null };
+const v = await import("./tests/viewer.mjs");
+const out = v.renderStructured("m", __VALUE__, {}, __NODE__, 0, "m");
+const keys = [];
+(function walk(n) {
+  if (!n) return;
+  if (String(n.className || "").includes("pair-key")) {
+    keys.push({ key: n.attrs["data-key"],
+                shown: (n.textContent || "").trim() });
+  }
+  (n.children ?? []).forEach(walk);
+})(out);
+console.log(JSON.stringify(keys));
+"""
+
+
+@needs_node
+class TestTheInlineObjectAsksToo:
+    """`renderStructured`'s **inline object** branch, driven directly.
+
+    A map of four or fewer scalars renders as one line of `pair-key`
+    spans rather than a table (`shapes.js`'s `inlineFields`), through a
+    second call to `title` - so it is a second place a name can be
+    rewritten. Neither committed fixture publishes a data-keyed map
+    small enough to reach it: mutation M6 removed the predicate from
+    that call site and every browser clause above stayed green.
+
+    That is the gap `UX-368` spent four rounds inside and `UX-372`'s own
+    M6 hit again - a branch no fixture reaches is a branch asserted
+    against nothing. This drives the renderer with the shape rather than
+    waiting for a capture to produce one.
+    """
+
+    @staticmethod
+    def _render(value, schema):
+        """`schema`, not `node` - the module-level `node` is the
+        interpreter this runs in, and shadowing it handed `subprocess`
+        a dict."""
+        import json
+        import os
+
+        script = (_INLINE.replace("__VALUE__", json.dumps(value))
+                         .replace("__NODE__", json.dumps(schema)))
+        result = subprocess.run([node, "--input-type=module", "-e", script],
+                                capture_output=True, text=True,
+                                cwd=os.getcwd(), timeout=60)
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout)
+
+    def test_a_small_data_keyed_map_keeps_its_names(self):
+        keys = self._render({"cc1plus": 3, "cmake": 1},
+                            {"type": "object",
+                             "additionalProperties": {"type": "number"}})
+        assert keys, "the inline-object branch drew no pair keys"
+        renamed = [k for k in keys if k["shown"] != k["key"]]
+        assert renamed == [], (
+            f"the inline object renamed the reader's programs: {renamed}")
+
+    def test_a_small_declared_map_still_reads_as_english(self):
+        """The same shape, declared - so this cannot pass by the
+        renderer having stopped humanising everywhere."""
+        keys = self._render(
+            {"violation_count": 3},
+            {"type": "object",
+             "properties": {"violation_count": {"type": "number"}}})
+        assert keys, "the inline-object branch drew no pair keys"
+        assert keys[0]["shown"] == "Violation count", keys
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

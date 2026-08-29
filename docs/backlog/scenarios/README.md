@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-373 scenarios: **2 open**, 371 closed.
+381 scenarios: **10 open**, 371 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 59 |
+| capture | 5 | 64 |
 | analysis | 0 | 52 |
-| contracts | 0 | 40 |
-| viewer | 0 | 107 |
+| contracts | 2 | 42 |
+| viewer | 1 | 108 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -38,6 +38,115 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-375 | [the Plane 2 report has one uncapped population](UX-0375-the-plane-2-report-has-one-uncapped-population.md) | capture | Medium | anyone whose store has to hold a monorepo's captures | 🔴 |
+| UX-376 | [the census cannot see a tool this build produced, and the spine policy believes it](UX-0376-the-census-cannot-see-a-tool-this-build-produced.md) | capture | High | anyone whose project builds its own host tools | 🔴 |
+| UX-377 | [the run and the graph disagree about max-jobs, and on a default capture neither has it](UX-0377-the-run-and-the-graph-disagree-about-max-jobs.md) | capture | High | anyone who runs `bga snapshot` without extra flags | 🔴 |
+| UX-378 | [the host's memory is a number from before the build, and an OOM leaves no trace](UX-0378-the-hosts-memory-is-a-number-from-before-the-build.md) | capture | High | anyone whose build died and does not know why | 🔴 |
+| UX-379 | [the hook reads a rusage struct and publishes three of its fields](UX-0379-the-hook-reads-a-rusage-struct-and-publishes-three-fields.md) | capture | Medium | anyone whose build is I/O-bound or contended rather than compute-bound | 🔴 |
+| UX-380 | [the trace says what an element is, never where it sits](UX-0380-the-trace-says-what-an-element-is-never-where-it-sits.md) | viewer | Medium | anyone in Perfetto asking which level a slice belongs to | 🔴 |
+| UX-381 | [the capture directory is a contract nothing writes down](UX-0381-the-capture-directory-is-a-contract-nothing-writes-down.md) | contracts | Medium | anyone reading a snapshot with something other than bga | 🔴 |
+| UX-382 | [the element entity has two shapes, and they share one attribute](UX-0382-the-element-entity-has-two-shapes-sharing-one-attribute.md) | contracts | Medium | anyone writing a new view over an existing capture | 🔴 |
+
+## UX-375..UX-382: the sixtieth round — the capture, measured rather than assumed (2026-08-29)
+
+The user's brief: eight questions about the capturing flow. Is Plane 2
+memory-bounded all the way to the capture directory, across
+combinations of element count and native components? Does the spine
+cover a host tool this build produced itself? Is native `max-jobs`
+captured per recipe, and what happens when nothing sets it? Should the
+host's memory and swap be sampled so an OOM is diagnosable? Can a
+reader see which elements sit at which graph level? Is the `.bga`
+layout fixed anywhere? What else is captured and unreachable — or not
+captured at all? And would normalising the data model make viewer
+experiments cheaper?
+
+Every answer below is measured on real captures taken in this session:
+five generated BuildStream projects whose elements run a real `make -j4`
+over gcc, from 57 to 24,360 traced processes, plus a purpose-built
+fixture for the static-host-tool case.
+
+**On disk the capture is bounded; in RAM it is `O(processes)`, as
+`UX-297` said.**
+
+```text
+elements x native components            procs     raw log plane2.json    snapshot  peak RSS
+1 x (4 so, 2 a, 2 exe, 1 static)           57          4k         10k         65k    36.8 M
+1 x (100 so, 10 a, 10 exe, 1 static)      609         37k         10k        104k    37.7 M
+4 x (100 so, 10 a, 10 exe, 1 static)    2,436        153k        198k        432k    40.6 M
+10 x (100 so, 10 a, 10 exe, 1 static)    6,090        379k        248k        753k    46.2 M
+40 x (100 so, 10 a, 10 exe, 1 static)   24,360       1565k        506k       2414k    74.9 M
+```
+
+64 B a process on the raw log, 97 B in the snapshot, 1,644 B resident —
+which extrapolates to 4.1 GB at the 2.7 M processes `UX-297` names, and
+is `UX-313`'s answered floor rather than a new finding. The column that
+does *not* track processes is `plane2.json`, and one section is 77–92%
+of it (`UX-375`).
+
+**The spine's blind spot is a project shape, not an edge case.** A
+fixture where `hosttool.bst` produces a `-static` executable and
+`consumer.bst` runs it 200 times, captured twice:
+
+```text
+                              auto (the default)    --trace-spine=on
+processes traced                              21                 221
+consumer.bst                                   7                 207
+codegen (the tool it ran)                 absent                 200
+```
+
+while the capture printed *"none with static binaries (the spine is not
+needed)"*. The census reads local sources; a tool the build produces is
+outside it, and the policy acts on the census as though it were
+complete (`UX-376`). The cost of the other answer, five paired captures
+of a 6,090-process fully dynamic build: 18.6s off against 19.2s on,
++3.2% at the mean with overlapping ranges and an identical process
+count.
+
+**Native `max-jobs` is recorded from the command line and nowhere
+else.** Three routes, one project, one host:
+
+```text
+route                              scheduler.native_max_jobs   graph per-element max_jobs
+default (nothing set)                              None                              4
+$XDG_CONFIG_HOME/buildstream.conf: 2               None                              2
+bst --max-jobs 2 build                                2                              4
+```
+
+The two routes people use record nothing, and `bga analyze` says so —
+*"Capacity checks did not run for this run - missing: native_max_jobs"*
+— while `graph.json` in the same snapshot has the resolved value. The
+third route records the run and gets the graph wrong: a cold capture
+shows five sandboxes running `make -j2` and the graph saying 4
+(`UX-377`).
+
+Then the four remaining questions:
+
+- **Host memory.** Two numbers, taken once, before the build. No
+  `MemAvailable`, no swap, no fault counters — while bga's own advice
+  about swapping is the most repeated sentence it has. And a killed
+  process is indistinguishable from a wrapper that `_exit()`ed: the
+  spine writes `exit=signal:9`, `bga timeline` renders it, and
+  `plane2/v2` has no key for it (`UX-378`). Separately, `hook.c` calls
+  `getrusage` twice and writes three fields out of each — `ru_inblock`,
+  `ru_oublock`, `ru_majflt`, `ru_nvcsw`, `ru_nivcsw` are in the same
+  populated struct and are dropped, which is the entire I/O and
+  contention dimension for free (`UX-379`).
+- **Graph level.** Published (`elements.unweighted_depth`) and rendered
+  (the element table's `Depth` column). Absent from the trace: the
+  dictionary's complete key list gives a slice `element`,
+  `element_kind`, `task_type` and `outcome`, and no structural fact at
+  all, so every question about the build's *shape* is unanswerable in
+  Perfetto while every question about its timing is answerable
+  (`UX-380`).
+- **The `.bga` layout.** Fourteen paths, load-bearing in a dozen
+  places, one of them named in Part 32. The only file-layout table in
+  the docs describes a different directory with different names for the
+  same two files (`UX-381`).
+- **The data model.** The element entity is published in two shapes,
+  24 attributes, **one** of which is in both. Any question spanning
+  them is joined in the viewer, which is why a new view is expensive to
+  write; 16.6% of the payload is re-spelled element names, 51.9
+  occurrences each (`UX-382`).
 
 ## UX-355..UX-361: the fifty-fifth round — the page, opened rather than landed on (2026-08-28)
 

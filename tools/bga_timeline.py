@@ -1292,14 +1292,14 @@ def render(snapshot: str, output: str,
         if raw is None:
             shutil.copyfile(plane1, output)
             return {"planes": ["1"], "anchor": None, "raw_log": None,
-                    "format": fmt}
+                    "format": fmt, **_chrome_counts(output)}
 
         if anchor is None:
             # A raw log with no element-attributed span: the merge has
             # nothing to align on, so Plane 1 alone is the honest output.
             shutil.copyfile(plane1, output)
             return {"planes": ["1"], "anchor": None, "raw_log": raw,
-                    "format": fmt,
+                    "format": fmt, **_chrome_counts(output),
                     "omitted": "the Plane 2 capture attributes no span to an "
                                "element, so there is nothing to align the two "
                                "planes on"}
@@ -1316,9 +1316,52 @@ def render(snapshot: str, output: str,
         if code:
             raise RuntimeError(f"merging Plane 2 failed (exit {code})")
         return {"planes": ["1", "2"], "anchor": anchor, "raw_log": raw,
-                "format": fmt}
+                "format": fmt, **_chrome_counts(output)}
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+
+
+#: `UX-395`: what the chrome JSON carries, and what it does not.
+#:
+#: Measured on one snapshot, both formats from the same two logs:
+#:
+#: ```text
+#:                     slices   flows   counters
+#: trackevent             826     836        538
+#: chrome                 663       0        0
+#: ```
+#:
+#: The zeroes were **omitted** from the summary rather than printed, so
+#: the output did not hint that two thirds of the trace's structure was
+#: gone - and two of the fourteen canned questions read exactly the
+#: tables it lacks, returning zero rows. That is `UX-107`'s rule at the
+#: trace boundary: *nobody could look* rendered as *looked and found
+#: nothing*.
+CHROME_CARRIES_NO = ("flows", "counters")
+
+CHROME_COST = (
+    "This format carries slices only - no flows and no counters - so "
+    "the queries that read them (`waited-on-flow`, `concurrency-curve`) "
+    "return nothing. `--format trackevent` carries all three.")
+
+
+def _chrome_counts(output: str) -> dict:
+    """Slices in the written JSON, and the two structures it cannot hold.
+
+    Counted from the file rather than from the converter's own
+    bookkeeping: this path calls two converters that have always
+    written this shape, and what the summary should report is what
+    landed on disk.
+    """
+    try:
+        with open(output, "r", encoding="utf-8") as handle:
+            events = json.load(handle)
+    except (OSError, ValueError):                        # pragma: no cover
+        return {}
+    rows = events.get("traceEvents") if isinstance(events, dict) else events
+    slices = sum(1 for event in (rows or [])
+                 if isinstance(event, dict) and event.get("ph") in ("X", "B"))
+    return {"slices": slices, "flows": 0, "counters": 0}
 
 
 def describe(result: dict, output: str) -> str:
@@ -1335,13 +1378,21 @@ def describe(result: dict, output: str) -> str:
                    "one by default; a capture taken with --no-keep-raw, or "
                    "before UX-188, has only the processed report."))
     if result.get("format") == FORMAT_CHROME:
+        # `UX-395`: the two zeroes are *printed*, not omitted. A row a
+        # summary leaves out is a row a reader assumes was fine.
+        lines.append(f"  {result.get('slices', 0)} slices, "
+                     f"{result.get('flows', 0)} flows, "
+                     f"{result.get('counters', 0)} counters.")
+        lines.append(f"  {CHROME_COST}")
         lines.append("  Open it with Perfetto (https://ui.perfetto.dev) or "
                      "chrome://tracing.")
     else:
         # `chrome://tracing` is deliberately not offered here: it reads
         # the JSON shape, not this one, and naming a viewer that will
         # refuse the file is the kind of dead offer `UX-194` fixed.
-        lines.append(f"  {result.get('slices', 0)} slices on "
+        lines.append(f"  {result.get('slices', 0)} slices, "
+                     f"{result.get('flows', 0)} flows, "
+                     f"{result.get('counters', 0)} counters on "
                      f"{result.get('tracks', 0)} tracks. Open it with "
                      "Perfetto (https://ui.perfetto.dev), which reads this "
                      "format natively; `bga timeline --format chrome` writes "
@@ -1371,8 +1422,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--format", default=FORMAT_TRACKEVENT, choices=list(FORMATS),
         help="`trackevent` (the default) writes Perfetto's own protobuf "
-             "trace, gzipped and written as a stream. `chrome` writes the "
-             "legacy Chrome JSON, for `chrome://tracing` and for a pipeline "
+             "trace, gzipped and written as a stream, with the dependency "
+             "flows and the concurrency counters in it. `chrome` writes the "
+             "legacy Chrome JSON - slices only, no flows and no counters, so "
+             "the queries that read them return nothing - "
+             "for `chrome://tracing` and for a pipeline "
              "that already parses it (UX-298).")
     args = parser.parse_args(argv)
 

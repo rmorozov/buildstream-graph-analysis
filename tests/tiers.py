@@ -259,6 +259,10 @@ SMALL_TIER_BUDGET_1P_S = 30.0     # the single-process step's timeout
 # would redden on a laptop reddens every push.
 
 LARGE = (
+    # `UX-402`: the documented journey, walked. One cold `bst build`
+    # against an isolated artifact cache (so the durations are real),
+    # one incremental, then analyze, correlate, export and a browser.
+    "tests/unit/test_the_journey_has_an_answer_key.py",              #   50.0s
     # UX-257's geometry instrument: a real Chrome over CDP, an exported
     # report per class, and every claim measured at three viewports. It
     # was never listed, so it sat in the default tier at 42.6s and then

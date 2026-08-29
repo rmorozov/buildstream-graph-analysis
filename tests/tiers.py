@@ -182,23 +182,57 @@ MEDIUM_FLOOR_S = 1.0
 # **The window is closing, and it is arithmetic rather than bad luck.**
 # `slowest < budget < fastest + LARGE_FLOOR_S` has a solution only
 # while `slowest - fastest < LARGE_FLOOR_S`, and the spread between the
-# slowest and fastest interpreter is now 8.8s of a 15.0s floor. It is
-# the *spread*, not the total, that closes this: the small tier can
-# grow for a long time yet, but the day 3.9 and 3.12 are fifteen
-# seconds apart no budget satisfies both halves and the guard has to be
-# stated per interpreter instead. Written down here so the round that
-# meets it recognises it.
+# slowest and fastest run above is 8.8s of a 15.0s floor. It is the
+# *spread*, not the total, that closes this: the small tier can grow
+# for a long time yet, but the day two jobs of one run are fifteen
+# seconds apart, no budget satisfies both halves. Written down here so
+# the round that meets it recognises it.
+#
+# **The spread is the runner, not the interpreter.** The first draft of
+# this note read the table above as a per-interpreter ranking - 3.12
+# fast, 3.9 slow - and proposed stating the budget per interpreter when
+# the window closes. The very next run, green under these budgets,
+# falsified it:
+#
+# ```text
+#          parallel (31)   1 proc (30)      1 proc, the run before
+# 3.9          22.74          24.59          killed at 27.0
+# 3.10         21.16          19.60          25.83
+# 3.11         21.52          21.43          23.13
+# 3.12         23.60          23.50          17.03
+# ```
+#
+# 3.12 was the fastest of the four at 17.03 and is the second slowest
+# at 23.50; 3.10 was the slowest at 25.83 and is the fastest at 19.60.
+# The ordering did not survive one run, so what these numbers measure
+# is which runner a job landed on. Two consequences, both load-bearing
+# for whoever re-sizes next: a single run's fastest and slowest are one
+# sample of the runner population rather than four samples of four
+# interpreters, and a budget stated per interpreter would guard nothing
+# it does not already guard. Re-measure across runs, and keep the
+# extremes of all of them - which is what the constants below hold.
+#
+# The one claim the second run did strengthen is the other one: the two
+# steps cost the same. Which of the pair is slower flipped between them
+# (3.9 and 3.11 have `-n auto` faster, 3.10 and 3.12 slower), and the
+# gap is under 1.6s everywhere.
 #
 # ```text
 #             window                    chosen
 # parallel    (25.85, 32.34)              31.0
 # 1 proc      (27.0,  32.03)              30.0
 # ```
+# The extremes of both runs above, which is the whole population these
+# constants have. Named by the job that produced each, not because the
+# interpreter is the cause - see the note about the runner - but so a
+# later reader can find the log.
 SMALL_TIER_CI_SLOW_S = 25.85      # parallel, `-n auto`, slowest seen (3.10)
 SMALL_TIER_CI_FAST_S = 17.34      # parallel, fastest seen (3.12)
 # A floor, not a measurement: `test (3.9)` was killed at this value
 # with the run at 100%, so the figure this constant wants is somewhere
-# above it. The next green run on 3.9 supplies the real one.
+# above it. The green run's own 3.9 came in at 24.59 - well under, and
+# no help, because a killed run still proves the tier once cost more
+# than 27.0 and that is the number a budget has to clear.
 SMALL_TIER_CI_SLOW_1P_S = 27.0    # single process, slowest seen (3.9)
 SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
 

@@ -73,6 +73,33 @@ def _record(element="a.bst", **extra):
     return record
 
 
+@pytest.fixture(scope="module")
+def sampled(tmp_path_factory):
+    """One sampled series, and the bracket around it.
+
+    Three clauses below assert three properties of the *same* kind of
+    series - that it reads back, that its stamps are on the trace's
+    clock, that its header pairs to wall time - and the first draft ran
+    a sampler apiece, each with its own `time.sleep` so the thread had
+    something to sample. 0.65s of sleeping for one series' worth of
+    facts, in a file whose tier is a wall-clock budget: `UX-363`'s small
+    tier is measured in CI and enforced as a `timeout`, so a sleep
+    nobody needed is spent out of everyone's inner loop.
+
+    The bracket has to be taken here rather than in a clause, because
+    what the clock claim rests on is that the readings straddle the
+    sampler - which they only do if the same call that starts it takes
+    them.
+    """
+    path = tmp_path_factory.mktemp("host") / "host-samples.jsonl"
+    before = time.monotonic()
+    with HostSampler(str(path), interval_s=0.05):
+        time.sleep(0.3)
+    after = time.monotonic()
+    return {"path": path, "before": before, "after": after,
+            "back": read_host_samples(str(path))}
+
+
 class TestTheHostIsSampled:
     def test_a_sample_names_what_it_read(self):
         sample = read_host_sample()
@@ -82,25 +109,18 @@ class TestTheHostIsSampled:
             assert key in sample, key
         assert sample["mem_total_kb"] > 0
 
-    def test_the_series_lands_and_reads_back(self, tmp_path):
-        path = tmp_path / "host-samples.jsonl"
-        with HostSampler(str(path), interval_s=0.05):
-            time.sleep(0.3)
-        back = read_host_samples(str(path))
-        assert back["header"]["schema"] == HOST_SAMPLES_SCHEMA
-        assert back["samples"], "the sampler wrote a header and no samples"
+    def test_the_series_lands_and_reads_back(self, sampled):
+        assert sampled["back"]["header"]["schema"] == HOST_SAMPLES_SCHEMA
+        assert sampled["back"]["samples"], (
+            "the sampler wrote a header and no samples")
 
-    def test_it_stamps_the_traces_own_clock(self, tmp_path):
+    def test_it_stamps_the_traces_own_clock(self, sampled):
         """`hook.c` uses `clock_gettime(CLOCK_MONOTONIC)`; so does
         `time.monotonic()`. Asserted by bracketing, because the point is
         that no offset is needed - a sample taken between two readings
         of `time.monotonic()` must fall between them."""
-        before = time.monotonic()
-        path = tmp_path / "host-samples.jsonl"
-        with HostSampler(str(path), interval_s=0.05):
-            time.sleep(0.2)
-        after = time.monotonic()
-        back = read_host_samples(str(path))
+        before, after = sampled["before"], sampled["after"]
+        back = sampled["back"]
         if not back["samples"]:
             pytest.skip("this host exposes no /proc/meminfo")
         assert back["header"]["clock"] == "CLOCK_MONOTONIC"
@@ -110,13 +130,10 @@ class TestTheHostIsSampled:
                 f"the series is not on the trace's clock and every join "
                 f"against a process record would be silently wrong")
 
-    def test_the_header_carries_the_pair_that_reaches_wall_time(self, tmp_path):
+    def test_the_header_carries_the_pair_that_reaches_wall_time(self, sampled):
         """`UX-185`'s `bga-clocks` shape: a monotonic series is useless
         for "when did this happen" without one pairing to a wall clock."""
-        path = tmp_path / "host-samples.jsonl"
-        with HostSampler(str(path), interval_s=0.05):
-            time.sleep(0.15)
-        header = read_host_samples(str(path))["header"]
+        header = sampled["back"]["header"]
         assert header["wall_at_start"] > 1_600_000_000
         assert isinstance(header["monotonic_at_start"], float)
 

@@ -98,6 +98,19 @@ def small():
     return _analyze(SMALL)
 
 
+@pytest.fixture(scope="module")
+def probed(small):
+    """`_probe`'s answer, once.
+
+    Four clauses read it and the probe is deterministic for a payload,
+    so running it per clause bought four node starts and one answer.
+    `UX-363`'s small-tier budget is the thing that notices: the tier is
+    a wall-clock number, and a spawn nobody needed is the cheapest kind
+    of second over it.
+    """
+    return _probe(small)
+
+
 _PROBE = r"""
 const { readFileSync } = await import("node:fs");
 const payload = JSON.parse(readFileSync(%(payload)s, "utf8"));
@@ -284,39 +297,39 @@ class TestOneResolvedRecord:
     """The Required Fix's third bullet: one resolved element record,
     built once, is what a new view asks for."""
 
-    def test_a_record_spans_both_shapes(self, small):
+    def test_a_record_spans_both_shapes(self, probed):
         """Every element Plane 2 measured, not every element: `all.bst`
         and `toolchain.bst` carry no `peak_rss_bytes` because no
         sandbox process was billed to them, which is an absence rather
         than a gap (`UX-308`'s rule). Before this landed the count was
         zero on both runs."""
-        probe = _probe(small)
+        probe = probed
         assert probe["measured"] > 0, "no element has a Plane 2 measurement"
         assert probe["answerable"] == probe["measured"], (
             f"{probe['answerable']} of {probe['measured']} measured records "
             f"can answer a question spanning both shapes "
             f"({', '.join(SPANNING)})")
 
-    def test_the_ranked_and_the_unranked_get_the_same_shape(self, small):
+    def test_the_ranked_and_the_unranked_get_the_same_shape(self, probed):
         """The defect measured: a ranked element got the `SOURCES` rows
         and none of the column maps, so the report's own top elements
         were the ones the page knew least about."""
-        probe = _probe(small)
+        probe = probed
         for field in ("unweighted_depth", "slack"):
             assert field in (probe["ranked_fields"] or []), (
                 f"a ranked element's record has no `{field}` - the column "
                 f"maps every capture carries")
 
-    def test_no_attribute_lands_twice_in_one_record(self, small):
-        probe = _probe(small)
+    def test_no_attribute_lands_twice_in_one_record(self, probed):
+        probe = probed
         assert probe["duplicate_fields"] is False, (
             "one field reaches the resolved record from both shapes")
 
-    def test_no_label_carries_two_quantities(self, small):
+    def test_no_label_carries_two_quantities(self, probed):
         """`blast_radius` again, seen from the page: the map's is a
         duration and the join's is a count, both labelled "Blast
         radius". Two rows, one name, two units."""
-        probe = _probe(small)
+        probe = probed
         assert probe["label_clashes"] == [], probe["label_clashes"]
 
 

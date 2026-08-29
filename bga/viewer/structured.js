@@ -15,9 +15,9 @@
  */
 import { served, safeStorage } from "./primitives.js";
 import { QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
-         PRESETS, INLINE, bytes, childNode, cssId, el, elementColumn,
-         guessQuantity, heading, hintsOf, quantity, quantityFor, sectionHead,
-         title } from "./format.js";
+         PRESETS, INLINE, bytes, childNode, cssId, dataKeyed, el,
+         elementColumn, guessQuantity, heading, hintsOf, quantity,
+         quantityFor, sectionHead, title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -118,7 +118,8 @@ function inlineObject(value, node) {
   for (const [name, member] of Object.entries(value)) {
     const kind = quantityFor(childNode(node, name), name);
     parts.push(el("span", { class: "pair" },
-      el("span", { class: "pair-key" }, `${title(name, kind)} `),
+      el("span", { class: "pair-key", "data-key": name },
+        `${title(name, kind, dataKeyed(node, name))} `),
       el("span", { class: typeof member === "number" ? "num" : null,
                    "data-raw": member === null ? "" : String(member) },
          member === null ? "—" : quantity(member, kind))));
@@ -1387,8 +1388,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // renderer where it would drift.
     //
     // UX-317 (§2b.3): and it has a door a reader can see.
-    const { term, describe } = describedTerm(name, described, {},
-                                             hintsOf(child)[INLINE], kind);
+    const { term, describe } = describedTerm(
+      name, described, {}, hintsOf(child)[INLINE], kind, dataKeyed(node, name));
     list.append(term, el("dd", {}, cell, describe));
   }
   const parts = [sectionHead(key, hint)];
@@ -1453,12 +1454,13 @@ export function renderPairs(key, object, hint = {}, node = undefined,
  * `<dd>`, or `null` when the schema describes nothing.
  */
 export function describedTerm(name, description, attrs = {}, inline = null,
-                              kind = null) {
+                              kind = null, published = false) {
+  // `UX-374`: `published` -> the label *is* `data-key`, verbatim.
   const term = el("dt", { ...attrs, "data-key": name,
                           title: description ?? null,
                           "data-described": description ? "true" : null,
                           "data-inline": inline ?? null },
-                  title(name, kind));
+                  title(name, kind, published));
   if (!description) return { term, describe: null };
   // UX-346: a declared exception is not behind a door at all. There is
   // no marker for it either - a `?` beside a sentence already on screen
@@ -1479,7 +1481,7 @@ export function describedTerm(name, description, attrs = {}, inline = null,
     type: "button", class: "describe", "data-describe": name,
     "aria-expanded": "false",
     // `UX-279`: the control says what it does before it is pressed.
-    title: `What ${title(name, kind)} means`,
+    title: `What ${title(name, kind, published)} means`,
   }, "?");
   marker.addEventListener?.("click", () => {
     const open = marker.getAttribute("aria-expanded") === "true";

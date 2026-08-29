@@ -279,6 +279,10 @@ MEDIUM = (
     # forgetting is a red CI on somebody else's clock.
     "tests/unit/test_the_page_has_a_reader.py",                  #    6.3s
     "tests/unit/test_one_page_behind_the_button.py",             #    4.4s
+    # `UX-374`, tiered on landing - which is what the note above says
+    # to do. Two exports booted in a real Chromium plus seven node
+    # clauses on `format.js`; 4.2s.
+    "tests/unit/test_the_page_keeps_the_names_it_was_given.py",  #    4.2s
     # Round 56, the other five of the twelve (see the LARGE block
     # above): over the medium floor, under the large one.
     "tests/unit/test_the_handoff_has_a_fixture.py",              #   12.6s

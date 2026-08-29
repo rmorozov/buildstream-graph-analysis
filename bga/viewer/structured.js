@@ -15,9 +15,10 @@
  */
 import { served, safeStorage } from "./primitives.js";
 import { QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
-         PRESETS, INLINE, bytes, childNode, cssId, dataKeyed, el,
-         elementColumn, guessQuantity, heading, hintsOf, quantity,
-         quantityFor, sectionHead, title } from "./format.js";
+         PRESETS, INLINE, bytes, childNode, cssId, dataKeyed,
+         describedTerm, el, elementColumn, guessQuantity, heading, hintsOf,
+         keyAsShown, quantity, quantityFor, sectionHead,
+         title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -1388,8 +1389,18 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // renderer where it would drift.
     //
     // UX-317 (§2b.3): and it has a door a reader can see.
+    // `UX-391`: a task uid is an identity, not a label - the map says
+    // which it is, `data-key` keeps the composite, and the reader sees
+    // the element with a muted qualifier.
+    const shown = keyAsShown(name, hint);
     const { term, describe } = describedTerm(
-      name, described, {}, hintsOf(child)[INLINE], kind, dataKeyed(node, name));
+      shown ? shown.element : name, described, {}, hintsOf(child)[INLINE],
+      kind, shown ? true : dataKeyed(node, name));
+    if (shown) {
+      term.setAttribute?.("data-key", name);
+      if (shown.qualifier) term.append(
+        el("span", { class: "task-qualifier muted" }, ` ${shown.qualifier}`));
+    }
     list.append(term, el("dd", {}, cell, describe));
   }
   const parts = [sectionHead(key, hint)];
@@ -1427,70 +1438,6 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                         ...parts);
 }
 
-/**
- * `UX-317` (styleguide §2b.3): **a described value shows its
- * affordance.**
- *
- * `UX-201` sourced the "why does this number matter" sentence from the
- * schema and put it in a `title`, where discovery is hover archaeology:
- * the reader who does not know to hover never learns what
- * `scheduler_wait` means, and the one who does gets a tooltip they
- * cannot keep open while comparing two values.
- *
- * So the term carries a visible `?`, and the sentence opens **beside
- * the value** - which is why the description node is built here and
- * appended to the `<dd>` rather than to the `<dt>`. The `title` stays:
- * it costs nothing, and it is what a screen reader and a keyboard
- * focus already read.
- *
- * `UX-346`: **and the door has to close.** It did not - `.description`
- * sets `display`, which beats `[hidden]`'s UA rule, so the sentence
- * rendered whatever the marker said, and 43% of the golden page's
- * words were the contract's glossary. The CSS closes it; `inline` is the declared
- * exception (`bga:inline`, `name` or `caveat`), which keeps its
- * sentence beside the value and draws no marker at all.
- *
- * Returns `{ term, describe }` - the `<dt>`, and the node to put in the
- * `<dd>`, or `null` when the schema describes nothing.
- */
-export function describedTerm(name, description, attrs = {}, inline = null,
-                              kind = null, published = false) {
-  // `UX-374`: `published` -> the label *is* `data-key`, verbatim.
-  const term = el("dt", { ...attrs, "data-key": name,
-                          title: description ?? null,
-                          "data-described": description ? "true" : null,
-                          "data-inline": inline ?? null },
-                  title(name, kind, published));
-  if (!description) return { term, describe: null };
-  // UX-346: a declared exception is not behind a door at all. There is
-  // no marker for it either - a `?` beside a sentence already on screen
-  // is the duplication this item was filed on.
-  if (inline) {
-    return { term, describe: el("span", { class: "description",
-                                          "data-role": "description",
-                                          "data-inline": inline,
-                                          "data-describes": name },
-                                description) };
-  }
-  const sentence = el("span", { class: "description",
-                                "data-role": "description",
-                                "data-describes": name, hidden: "" },
-                      description);
-  sentence.hidden = true;
-  const marker = el("button", {
-    type: "button", class: "describe", "data-describe": name,
-    "aria-expanded": "false",
-    // `UX-279`: the control says what it does before it is pressed.
-    title: `What ${title(name, kind, published)} means`,
-  }, "?");
-  marker.addEventListener?.("click", () => {
-    const open = marker.getAttribute("aria-expanded") === "true";
-    marker.setAttribute("aria-expanded", open ? "false" : "true");
-    sentence.hidden = open;
-  });
-  term.append(marker);
-  return { term, describe: sentence };
-}
 
 // UX-262: above this many rows a table opens on its top 25 rather than
 // on everything. 40 is chosen against the shapes that occur: the

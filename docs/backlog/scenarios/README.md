@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-409 scenarios: **17 open**, 392 closed.
+409 scenarios: **16 open**, 393 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 69 |
 | analysis | 1 | 54 |
 | contracts | 0 | 46 |
-| viewer | 8 | 120 |
+| viewer | 7 | 120 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-389 | [fourteen of twenty-five Plane 2 blocks reach no browser](UX-0389-fourteen-plane-two-blocks-reach-no-browser.md) | viewer | High | anyone asking in a browser whether the instrument saw everything | 🔴 |
 | UX-390 | [attribution and its hints are one population in two sections](UX-0390-attribution-and-its-hints-are-one-population-in-two-sections.md) | viewer | Medium | anyone reading where a build's time went | 🔴 |
-| UX-391 | [`wall_clock_share_us` shows the reader a composite key](UX-0391-wall-clock-share-shows-the-reader-a-composite-key.md) | viewer | Medium | anyone searching the page for an element they built | 🔴 |
 | UX-392 | [thirty-one tables, one search box](UX-0392-thirty-one-tables-and-one-search-box.md) | viewer | High | anyone looking for one element in a report of a real project | 🔴 |
 | UX-393 | [nothing moves to the next section, or back to the top](UX-0393-nothing-moves-to-the-next-section-or-back-to-the-top.md) | viewer | Medium | anyone reading past the first screen | 🔴 |
 | UX-394 | [nothing in the page moves between runs](UX-0394-nothing-in-the-page-moves-between-runs.md) | viewer | Medium | anyone who has captured the same project twice | 🔴 |

@@ -861,7 +861,29 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
 _RUSAGE_KEYS = frozenset({"utime", "stime", "cutime", "cstime"})
 # UX-63: peak RSS from the same struct rusage. Integers in KiB (Linux),
 # not the float seconds the keys above carry, hence a separate set.
-_RUSAGE_INT_KEYS = frozenset({"maxrss_kb", "cmaxrss_kb"})
+# `UX-379`: six more counters out of the same struct. Integers like the
+# two above, so they join that set rather than getting a third.
+# `inblock`/`oublock` are the kernel's 512-byte block-layer units;
+# `_IO_BLOCK_BYTES` is where that is converted, once.
+_RUSAGE_INT_KEYS = frozenset({"maxrss_kb", "cmaxrss_kb",
+                              "inblock", "oublock", "majflt", "minflt",
+                              "nvcsw", "nivcsw"})
+
+#: `ru_inblock`/`ru_oublock` count 512-byte blocks (the kernel divides
+#: its byte counters by 512 on the way in), so this recovers bytes.
+#: Verified against a 64 MiB file read with a cold page cache: 135,264
+#: blocks x 512 = 69,255,168 B, against 67,108,864 B of file plus the
+#: reader's own binary and libraries.
+_IO_BLOCK_BYTES = 512
+
+#: `UX-379`'s six, in the record's own vocabulary. Named here because
+#: three places read the same list - the pairing pass carries them
+#: through, `_ResourcePressure` folds them, and `bga timeline` annotates
+#: with four of them - and a list written out three times is how a
+#: seventh field would reach two of them.
+_PRESSURE_FIELDS = ("read_bytes", "written_bytes", "major_faults",
+                    "minor_faults", "voluntary_switches",
+                    "involuntary_switches")
 
 # UX-57: `part=` is appended by hooks that flush more than one window
 # per process, and absent in logs written before that existed - optional
@@ -1125,6 +1147,22 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
             record["children_cpu_us"] = int(
                 round((rusage["cutime"] + rusage["cstime"]) * 1e6)
             )
+        # `UX-379`: the three axes the same struct was already carrying.
+        # Attached field by field rather than as a set, because a hook
+        # built before this wrote none of them and one built after
+        # writes all six - and a record with some is a record from a
+        # capture that ran out of line buffer, which is a fact to keep
+        # rather than a set to discard.
+        if "inblock" in rusage:
+            record["read_bytes"] = rusage["inblock"] * _IO_BLOCK_BYTES
+        if "oublock" in rusage:
+            record["written_bytes"] = rusage["oublock"] * _IO_BLOCK_BYTES
+        for key, field in (("majflt", "major_faults"),
+                           ("minflt", "minor_faults"),
+                           ("nvcsw", "voluntary_switches"),
+                           ("nivcsw", "involuntary_switches")):
+            if key in rusage:
+                record[field] = rusage[key]
         yield record
     tick.done()
 
@@ -1418,6 +1456,14 @@ def stream_records(events, counts: Optional[Dict[str, int]] = None):
                 record["max_rss_kb"] = ev["max_rss_kb"]
             if "children_max_rss_kb" in ev:
                 record["children_max_rss_kb"] = ev["children_max_rss_kb"]
+            # `UX-379`: the rest of the same struct, carried through
+            # pairing on the same rule - omitted rather than zeroed when
+            # the hook predates them, because a build that touched no
+            # disk and a capture that could not look are different
+            # claims.
+            for _field in _PRESSURE_FIELDS:
+                if _field in ev:
+                    record[_field] = ev[_field]
             # UX-106: only the spine has this - the hook's destructor
             # runs before the process has a status, and not at all when
             # it is killed.
@@ -3430,6 +3476,99 @@ class _PeakMemory:
         }
 
 
+def compute_resource_pressure(records: List[dict]) -> dict:
+    """What each element's processes did to the disk, to memory and to
+    the run queue (`UX-379`).
+
+    The three axes bga otherwise only models. `cpu_time` says how long a
+    process ran and `peak_memory` how large it got; neither can tell an
+    element that was slow because it read a gigabyte from one that was
+    slow because fifteen siblings preempted it, and both present as low
+    CPU concurrency. These counters separate them, and they cost nothing
+    - `hook.c` already reads the struct they live in.
+
+    **Summed, unlike `peak_memory`.** A block read and a fault are
+    events, not levels: two processes that each read 100 MB did read 200
+    MB between them, whichever order they ran in. That is the opposite
+    of `ru_maxrss`, and the reason the two aggregates look different.
+
+    **Self only.** Every child is traced and reports its own counts, so
+    folding a parent's `RUSAGE_CHILDREN` copy in would count each block
+    twice - which is why `hook.c` does not write one.
+
+    **Zero is a measurement here.** A read served from the page cache
+    never reaches the block layer, so `read_bytes` of 0 means "nothing
+    went to the device", not "unmeasured" - the unmeasured case is a
+    process that ran no destructor, counted separately as it is
+    everywhere else.
+    """
+    state = _ResourcePressure()
+    for record in records:
+        state.add(record)
+    return state.finish()
+
+
+class _ResourcePressure:
+    """`compute_resource_pressure`, one record at a time."""
+
+    #: The record fields this folds. All six are additive, which is what
+    #: lets one loop do them; the list is `_PRESSURE_FIELDS` rather than
+    #: a copy, so a seventh reaches the fold and the pairing pass at once.
+    FIELDS = _PRESSURE_FIELDS
+
+    def __init__(self):
+        self.per_element: Dict[str, dict] = {}
+
+    def add(self, record):
+        entry = self.per_element.get(record["element"])
+        if entry is None:
+            entry = {name: 0 for name in self.FIELDS}
+            entry["measured"] = 0
+            entry["unmeasured"] = 0
+            self.per_element[record["element"]] = entry
+        # One field decides, rather than all six: a hook that wrote the
+        # line writes every field, and a record carrying some but not
+        # all came from a truncated line - which `hook.c`'s buffer is
+        # sized against and which would otherwise read as a low count.
+        if "read_bytes" in record:
+            entry["measured"] += 1
+            for name in self.FIELDS:
+                entry[name] += record.get(name, 0)
+        else:
+            entry["unmeasured"] += 1
+
+    def finish(self):
+        per_element = self.per_element
+        measured_total = sum(e["measured"] for e in per_element.values())
+        if measured_total == 0:
+            return {
+                "available": False,
+                "note": "no process reported these counters - either the hook "
+                        "predates UX-379 or every traced process was killed "
+                        "before its destructor ran. Reported as unavailable "
+                        "rather than as zero, which here would read as a build "
+                        "that touched no disk.",
+            }
+        for entry in per_element.values():
+            total = entry["measured"] + entry["unmeasured"]
+            entry["coverage"] = entry["measured"] / total if total else 0.0
+        return {
+            "available": True,
+            "per_element": {k: per_element[k] for k in sorted(per_element)},
+            "measured": measured_total,
+            "unmeasured": sum(e["unmeasured"] for e in per_element.values()),
+            "note": "Summed per element over the processes whose destructor "
+                    "ran (getrusage at exit). `read_bytes`/`written_bytes` are "
+                    "block-layer I/O - what reached the device - so a read "
+                    "served from the page cache is genuinely zero and a large "
+                    "figure is genuinely disk. `involuntary_switches` is the "
+                    "run queue preempting a process that still had work, which "
+                    "rises with oversubscription; `voluntary_switches` is a "
+                    "process choosing to wait. `major_faults` is the page "
+                    "pressure a memory-starved host produces.",
+        }
+
+
 def compute_cpu_time(records: List[dict]) -> dict:
     """Real CPU time per element, from each process's own `getrusage`
     at exit (UX-45).
@@ -4018,6 +4157,7 @@ class Plane2Fold:
         self.cpu_time = _CpuTime()
         self.configure = _ConfigurePhase()
         self.peak_memory = _PeakMemory()
+        self.pressure = _ResourcePressure()
         self.binary_cost = _BinaryCost()
         self.parallelism = _PerElementParallelism()
         self.redundancy = _RedundantOperations()
@@ -4048,6 +4188,7 @@ class Plane2Fold:
         self.cpu_time.add(record)
         self.configure.add(record)
         self.peak_memory.add(record)
+        self.pressure.add(record)
         self.binary_cost.add(record)
         self.parallelism.add(record)
         self.redundancy.add(record)
@@ -4115,6 +4256,9 @@ def _summarize_folded(fold: "Plane2Fold", correlation: Optional[dict] = None,
         # how to build rather than building.
         "configure_phase": fold.configure.finish(),
         "peak_memory": fold.peak_memory.finish(),
+        # `UX-379`: disk, page pressure and preemption, from the struct
+        # `peak_memory` above already reads one field of.
+        "resource_pressure": fold.pressure.finish(),
         # UX-69: where the time went inside each element, not how many
         # times something ran.
         "binary_cost": fold.binary_cost.finish(),
@@ -4558,6 +4702,50 @@ def _format_peak_memory(peak_memory: dict) -> List[str]:
     return lines
 
 
+def _format_resource_pressure(pressure: dict) -> List[str]:
+    """`UX-379`'s per-element block, beside `peak_memory` because it is
+    the rest of the same `getrusage` call.
+
+    Sums, and says so: unlike the peak above these are events, and a
+    reader who has just been told not to sum one column must be told
+    that this one may be."""
+    if not pressure:
+        return []
+    if not pressure.get("available"):
+        return ["I/O and contention: unavailable - " + pressure.get("note", ""), ""]
+    lines = ["I/O, Faults and Contention (summed per element):",
+             f"  {'element':40s} {'read':>10s} {'written':>10s} "
+             f"{'majflt':>8s} {'preempted':>10s}"]
+    for element, entry in pressure["per_element"].items():
+        coverage = ""
+        if entry["unmeasured"]:
+            coverage = (f"  ({entry['measured']} of "
+                        f"{entry['measured'] + entry['unmeasured']} measured)")
+        lines.append(
+            f"  {element:40s} {_human_bytes(entry['read_bytes']):>10s} "
+            f"{_human_bytes(entry['written_bytes']):>10s} "
+            f"{entry['major_faults']:>8d} "
+            f"{entry['involuntary_switches']:>10d}{coverage}")
+    lines.append("  NOTE: read/written are block-layer I/O - what reached the "
+                 "device - so a cache-served read is genuinely 0. `preempted` "
+                 "is involuntary context switches, which rise with "
+                 "oversubscription rather than with work.")
+    lines.append("")
+    return lines
+
+
+def _human_bytes(value: int) -> str:
+    """Bytes at the width this block's column has. Local to the text
+    renderer: `bga.units` is the payload's boundary and this is not the
+    payload."""
+    size = float(value)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} GB"
+
+
 def _format_census_text(census: dict) -> str:
     """UX-105's standalone view: which elements have a static executable
     in their sandbox, and where it came from."""
@@ -4932,6 +5120,7 @@ def _format_text(report: dict) -> str:
             f"shown in the JSON report under `binary_cost`)"
         )
     lines.extend(_format_peak_memory(report.get("peak_memory") or {}))
+    lines.extend(_format_resource_pressure(report.get("resource_pressure") or {}))
     lines.extend(_format_declared_vs_used(report.get("declared_vs_used") or {}))
     # UX-32: per-element achieved parallelism.
     per_element = report.get("per_element_parallelism") or []

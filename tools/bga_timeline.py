@@ -127,6 +127,20 @@ PLANE2_ANNOTATIONS = (
                     "carries no key rather than a zero"),
     ("exec_chain", "how many `execve`s this one record collapses - a shell "
                    "that exec'd a compiler is one process and two commands"),
+    # `UX-379`: the three axes the same `getrusage` call already
+    # carried. Per process, like `cpu_us` and `max_rss_kb` beside them.
+    ("read_bytes", "block-layer bytes this process read - what reached the "
+                   "device, so a read served from the page cache is 0 and a "
+                   "large figure is genuinely disk"),
+    ("written_bytes", "block-layer bytes this process wrote, on the same "
+                      "terms as `read_bytes`"),
+    ("major_faults", "page faults this process had to go to disk for - the "
+                     "signal a memory-starved host produces"),
+    ("involuntary_switches", "times the run queue preempted this process "
+                             "while it still had work. Rises with "
+                             "oversubscription rather than with work, which "
+                             "is what separates a contended build from a "
+                             "busy one"),
 )
 
 PLANE1_ANNOTATIONS = (
@@ -191,6 +205,10 @@ def _plane2_annotations(record: dict):
         "max_rss_kb": record.get("max_rss_kb"),
         "exit_status": record.get("exit_status"),
         "exec_chain": record.get("exec_chain"),
+        "read_bytes": record.get("read_bytes"),
+        "written_bytes": record.get("written_bytes"),
+        "major_faults": record.get("major_faults"),
+        "involuntary_switches": record.get("involuntary_switches"),
     }
     return [(key, values[key]) for key, _ in PLANE2_ANNOTATIONS
             if values[key] is not None]

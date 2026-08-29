@@ -1,6 +1,6 @@
 # UX-386: `plane2/v2` is described as per-element, and mostly is not
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-297 (plane2/v2), UX-378 (two more run-level blocks), UX-381 (the layout that made the shape readable) | **Serves:** anyone opening a `plane2.json` after reading what it is | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-297 (plane2/v2), UX-378 (two more run-level blocks), UX-381 (the layout that made the shape readable) | **Serves:** anyone opening a `plane2.json` after reading what it is | **Topic:** contracts
 
 ## Motivation
 
@@ -82,3 +82,63 @@ element-keyed blocks are still named as such, because
 - `analyze/v4`'s own element/run split. `UX-382` declared that one, and
   whether `plane2/v2` should follow the same rule is a real question
   and a later one — its Out of Scope says so.
+
+## Outcome (round 62, 2026-08-29) — 🟢 Done
+
+### The gap, measured
+
+Re-measured on the committed fixture rather than taken from the filing,
+and unchanged: **3 of 24** top-level blocks are keyed by element uid —
+`binary_cost`, `by_element`, `opens_captured` — and 21 answer for the
+whole run.
+
+### After
+
+Both halves named, in every document that describes the contract:
+
+```text
+architecture.md   "Plane 2's report about one build: run-level
+                   measurements, with the per-element reductions among
+                   them - 21 of its 24 top-level blocks answer for the
+                   whole run and 3 are keyed by element uid..."
+
+docs/README.md    the same claim with the same numbers, plus what a
+                  reader after the host's peak memory, the build's
+                  process count or whether the spine ran is looking for
+
+bga/schemas.py    `plane2_coverage.source`, which said the same wrong
+                  thing behind `UX-346`'s `?` door
+```
+
+`UX-297`'s clause is kept and attached to what it was about — the
+per-process record list — rather than reading as a claim about the
+shape of what is left. A clause holds it there: citing `UX-297` without
+saying it is the record list that went reddens.
+
+**The filing named two documents and there were three.** The third is
+`bga/schemas.py`'s own sentence, reached by a reader who opens the `?`
+door instead of a document, and it carried the identical wrong claim.
+Found by looking for the sentence rather than for the files.
+
+### Falsification
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | the architecture row restored to the old sentence | 3 of 16 |
+| M2 | `docs/README.md` restored to the old sentence | 2 of 16 |
+| M3 | the fix over-corrects and drops the per-element half | 1 of 16 |
+| M4 | `UX-297` cited without saying what it retired | 1 of 16 |
+| M5 | the schema's own sentence keeps the old claim | 2 of 16 |
+| M6 | the live row names the retired id instead | 5 of 16 |
+
+Baseline: 16 passed. M3 is the direction that makes this a correction
+rather than a swap: a sentence naming only the run-level half sends the
+reader after `bga correlate`'s join somewhere else, which is the same
+defect from the other side.
+
+### Deviation from the Required Fix
+
+- None. The Required Fix's proposed sentence is the one used; the third
+  instance is an addition to its scope rather than a departure from it.

@@ -41,6 +41,10 @@ TrackEvent format does not. Verified against Perfetto v49.0 on
 | `max_rss_kb` | Plane 2 | peak resident kilobytes of this process alone - never summed with another's, which never held it at the same moment |
 | `exit_status` | Plane 2 | how it ended, in the spine's own vocabulary: a decimal exit code, or `signal:N` for a process the kernel killed. The hook cannot see one - its destructor runs before the process has a status, and not at all when it is killed - so a hook-only record carries no key rather than a zero |
 | `exec_chain` | Plane 2 | how many `execve`s this one record collapses - a shell that exec'd a compiler is one process and two commands |
+| `read_bytes` | Plane 2 | block-layer bytes this process read - what reached the device, so a read served from the page cache is 0 and a large figure is genuinely disk |
+| `written_bytes` | Plane 2 | block-layer bytes this process wrote, on the same terms as `read_bytes` |
+| `major_faults` | Plane 2 | page faults this process had to go to disk for - the signal a memory-starved host produces |
+| `involuntary_switches` | Plane 2 | times the run queue preempted this process while it still had work. Rises with oversubscription rather than with work, which is what separates a contended build from a busy one |
 | `run` | run | the snapshot directory's own stamp - which run this is |
 | `project` | run | the project identity the run was captured under |
 | `targets` | run | the elements `bst build` was asked for |

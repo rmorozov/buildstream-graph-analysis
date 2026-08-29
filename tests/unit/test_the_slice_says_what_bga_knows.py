@@ -124,9 +124,10 @@ def _raw():
 
     A spine process that exited 0; one that exited non-zero; one the
     kernel killed (`signal:9`, which is a status and not a number); a
-    hook process, which can carry no exit status at all; one with a
-    command longer than the name; and one still open when the capture
-    ended.
+    hook process, which can carry no exit status at all but does carry
+    `UX-379`'s I/O and contention counters, which the spine cannot; one
+    with a command longer than the name; and one still open when the
+    capture ended.
     """
     return "".join([
         "START pid=101 ppid=1 ts=1000.000000 element=work-a.bst inv=inv-a "
@@ -146,8 +147,15 @@ def _raw():
         "cmd=cc -c killed.c\n",
         f"START pid=104 ppid=1 ts=1000.300000 element=work-b.bst inv=inv-b "
         f"cmd={LONG_CMD}\n",
+        # `UX-379`'s six ride here and nowhere else, which is the fact
+        # rather than a convenience: only `hook.c` reads a `struct
+        # rusage`, and the spine's `/proc` read at the exit-stop has no
+        # equivalent - so the three spine records above carry none and
+        # the reverse-direction clause still has its case.
         f"END pid=104 ppid=1 ts=1000.800000 element=work-b.bst inv=inv-b "
-        f"utime=0.004 stime=0.001 maxrss_kb=4096 cmd={LONG_CMD}\n",
+        f"utime=0.004 stime=0.001 maxrss_kb=4096 "
+        f"inblock=128 oublock=16 majflt=3 minflt=210 nvcsw=9 nivcsw=41 "
+        f"cmd={LONG_CMD}\n",
         "START pid=105 ppid=1 ts=1000.400000 element=work-b.bst inv=inv-b "
         "src=spine cmd=cc -c never-exits.c\n",
     ])

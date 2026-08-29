@@ -369,14 +369,36 @@ static int format_rusage(char *buf, size_t size) {
      * overstates any concurrent total, which is the mistake that would
      * make it look like a memory measurement it is not. Emitted in KiB
      * verbatim; the reader converts and refuses to sum. */
+    /* UX-379: six more fields out of the struct that is already
+     * populated. `UX-63` took `ru_maxrss` on exactly this argument and
+     * the rest were left; they are the only measurement bga has of the
+     * two axes it otherwise only models - what a process actually read
+     * and wrote, and whether it was waiting or being preempted.
+     *
+     * Self only, unlike `cutime`/`cstime`. Children's CPU is published
+     * because a `make` or `sh` wrapper does no work itself and its
+     * subtree cost is the interesting figure; these counts are
+     * different, because every child is traced too and reports its own,
+     * so folding a parent's `RUSAGE_CHILDREN` copy in would count each
+     * block and each fault twice.
+     *
+     * `inblock`/`oublock` are the kernel's 512-byte block-layer counts,
+     * emitted verbatim - they are what actually reached the device, so
+     * a read served from page cache is genuinely zero and that is the
+     * fact worth keeping. The reader converts. */
     int n = snprintf(buf, size,
                      " utime=%.6f stime=%.6f cutime=%.6f cstime=%.6f"
-                     " maxrss_kb=%ld cmaxrss_kb=%ld",
+                     " maxrss_kb=%ld cmaxrss_kb=%ld"
+                     " inblock=%ld oublock=%ld majflt=%ld minflt=%ld"
+                     " nvcsw=%ld nivcsw=%ld",
                      timeval_seconds(&self.ru_utime),
                      timeval_seconds(&self.ru_stime),
                      timeval_seconds(&children.ru_utime),
                      timeval_seconds(&children.ru_stime),
-                     (long)self.ru_maxrss, (long)children.ru_maxrss);
+                     (long)self.ru_maxrss, (long)children.ru_maxrss,
+                     (long)self.ru_inblock, (long)self.ru_oublock,
+                     (long)self.ru_majflt, (long)self.ru_minflt,
+                     (long)self.ru_nvcsw, (long)self.ru_nivcsw);
     return (n < 0 || (size_t)n >= size) ? 0 : n;
 }
 
@@ -413,7 +435,11 @@ static void write_trace_line(const char *event, double ts, int with_rusage) {
         }
     }
 
-    char rusage[160];
+    /* UX-379: 160 fitted the six fields `UX-45`/`UX-63` wrote with
+     * little to spare; twelve need more. Oversized on purpose -
+     * `format_rusage` returns 0 when the line does not fit, which
+     * drops *every* field rather than the ones that overflowed. */
+    char rusage[384];
     rusage[0] = '\0';
     if (with_rusage) {
         format_rusage(rusage, sizeof(rusage));

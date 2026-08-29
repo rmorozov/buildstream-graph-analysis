@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 from .. import producer, provenance, schemas
 from ..findings import (compute_findings, compute_headline,
-                        compute_next_steps, finding_copy_text)
+                        compute_next_steps, finding_copy_text, reader_index)
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
 
@@ -198,6 +198,17 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
         # pipeline already made. Passed the findings it references so
         # the ranking is read once.
         data['headline'] = compute_headline(result, findings)
+        # `UX-372`: and who is served by what. Every finding already
+        # declares its `reader`; this is the index over them, so a
+        # consumer asking "what does this run say to the person who
+        # owns the machines" has one lookup rather than a scan and a
+        # severity ranking of its own. Only readers this run has
+        # something for - a report with no capacity numbers offers no
+        # capacity reader. After the headline because it defers to it.
+        if findings:
+            readers = reader_index(findings, data['headline'])
+            if readers:
+                data['readers'] = readers
         # UX-218: and what to run next, chosen by what this run
         # measured. Decided here for the same reason the diagnosis is:
         # a viewer that picked the next command from `chain_share`

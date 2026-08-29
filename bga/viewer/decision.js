@@ -521,6 +521,88 @@ function investigationActions(payload, uid, options) {
   return rows;
 }
 
+// ------------------------------------------------- UX-372: the reader
+
+/**
+ * `UX-372`: **the page had one reader.**
+ *
+ * It opened "What should I do?" and answered it once, for whoever was
+ * looking. Measured on `macro_micro`, the three top actions are the
+ * same advice three times - shorten this element, then that one, then
+ * the third - which is the right answer for the person who can change
+ * `core.bst` and no answer at all for the CI owner, whose lever is
+ * `capacity-recommendation`, finding nine of eleven.
+ *
+ * Nothing here decides anything. `payload.readers` is the producer's
+ * index - which reader, their question, and the finding that is their
+ * biggest lever on this run - so choosing a reader is a lookup. A page
+ * that ranked severities of its own would be a second decision-maker
+ * and the CI comment would route differently from the report
+ * (Direction 7).
+ *
+ * **The default answers.** With nobody chosen the chapter is what it
+ * was, byte for byte: this must not become a page that says nothing
+ * until a form is filled in.
+ */
+function readerLead(payload, entry) {
+  const finding = (payload?.findings ?? [])
+    .find((f) => f?.id === entry?.leads_with);
+  if (!finding) return null;
+  const block = document.createElement("div");
+  block.className = "reader-lead";
+  block.setAttribute("data-role", "reader-lead");
+  block.setAttribute("data-reader", entry.id);
+  block.setAttribute("data-finding", finding.id);
+  const asked = document.createElement("p");
+  asked.className = "muted";
+  asked.textContent = entry.question ?? "";
+  const said = document.createElement("p");
+  const answer = document.createElement("a");
+  answer.setAttribute("href", "#findings");
+  answer.textContent = finding.title ?? finding.id;
+  said.append(answer);
+  block.append(asked, said);
+  return block;
+}
+
+/** The picker, over the readers this run has something for.
+ *
+ *  Fewer than two is not a choice, so nothing is drawn - `UX-194`'s
+ *  dead-control rule. `slot` is where the answer lands. */
+function readerPicker(payload, slot) {
+  const readers = (Array.isArray(payload?.readers) ? payload.readers : [])
+    .filter((entry) => readerLead(payload, entry));
+  if (readers.length < 2) return null;
+  const wrap = document.createElement("div");
+  wrap.className = "reader-picker";
+  const select = document.createElement("select");
+  select.className = "top-n";
+  select.setAttribute("data-role", "reader");
+  for (const [value, text] of [["", "anyone"],
+                               ...readers.map((e) => [e.id, e.label])]) {
+    const option = document.createElement("option");
+    option.setAttribute("value", value);
+    option.textContent = text;
+    select.append(option);
+  }
+  const label = document.createElement("label");
+  label.textContent = "I am ";
+  labelFor(label, select, "reader");
+  select.addEventListener?.("change", () => applyReader(payload, slot,
+                                                        select.value));
+  wrap.append(label, select);
+  return wrap;
+}
+
+/** Put the chosen reader's biggest lever in `slot`, or empty it. */
+export function applyReader(payload, slot, reader) {
+  const entry = (payload?.readers ?? []).find((e) => e?.id === reader);
+  const block = entry ? readerLead(payload, entry) : null;
+  slot.replaceChildren(...(block ? [block] : []));
+  slot.setAttribute("data-reader", reader || "");
+  return block;
+}
+
 export function renderDecision(payload, investigate = null, copy = null,
                                options = {}) {
   const headline = payload?.headline;
@@ -541,6 +623,13 @@ export function renderDecision(payload, investigate = null, copy = null,
   sentence.setAttribute("data-field", "headline.sentence");
   sentence.textContent = headline.sentence ?? "";
   section.append(sentence);
+
+  // `UX-372`: and, for a reader who says who they are, their own
+  // biggest lever. Below the diagnosis, which is true for everyone.
+  const slot = document.createElement("div");
+  slot.setAttribute("data-role", "reader-slot");
+  const picker = readerPicker(payload, slot);
+  if (picker) section.append(picker, slot);
 
   // UX-229: and why. Directly under the claim it explains, folded -
   // the panel is a decision, and the chain is what a reader opens

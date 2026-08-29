@@ -77,7 +77,13 @@ export const CHAPTERS = [
     id: "decide",
     title: "What should I do?",
     // `UX-207`'s first screen, plus the diagnosis that justifies it.
-    sections: ["decision", "evidence", "overview",
+    // `UX-372` put `readers` directly after the decision panel whose
+    // picker narrows it: the panel answers for the reader who says who
+    // they are, and this says who else this run has something for.
+    // Ahead of `findings` because `UX-285`'s geometry - nothing but
+    // the diagnosis between the findings and the blast control -
+    // is a claim about what sits *after* them.
+    sections: ["decision", "readers", "evidence", "overview",
                "findings", "headline", "next_steps"],
   },
   {

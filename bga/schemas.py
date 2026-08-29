@@ -41,7 +41,7 @@ from typing import Dict, List
 # set this round adds. No cycle: `findings` reaches only
 # `ingest.models` and `cache_effectiveness`, neither of which
 # imports this module.
-from .findings import DIAGNOSES
+from .findings import DIAGNOSES, READERS
 
 # UX-288: v2. Three fields were **removed** - `signals.critical_path`,
 # `signals.leaf_analysis.leaves` and `structural.deferrability`'s two
@@ -604,6 +604,8 @@ _ANALYZE_REQUIRED = {
 
 _ANALYZE_OPTIONAL = {
     "findings": "array",
+    # `UX-372`: the index over `findings[].reader`.
+    "readers": "array",
     "floors": "object",
     "attribution": "object",
     "attribution_hints": "object",
@@ -948,6 +950,12 @@ ANALYZE_FULL_KEYS = (
     # dropping the key, so "no next step" and "no field" stay
     # distinguishable.
     "next_steps",
+    # `UX-372`: and who each finding is for. In this list rather than
+    # the conditional one: every finding declares a reader, so a report
+    # with findings has readers - the index is a fact about the same
+    # list, not about the run. Beside `headline` because it defers to
+    # it: the reader who owns the headline's action leads with it.
+    "readers",
     "findings", "floors", "capacity_verdict", "attribution",
     "attribution_hints", "occupancy",
     # `UX-344`: the tables `signals` and `structural` used to hold. Only
@@ -2525,6 +2533,64 @@ _ANALYZE_HINTS = {
                                "builder count reduces."},
         },
     },
+    # `UX-372`: who this run has something to say to.
+    #
+    # The page had one reader. It opened "What should I do?" and
+    # answered it once - and on `macro_micro` the three top actions are
+    # the same advice three times (shorten this element, then that one,
+    # then the third), which serves R1 and nobody else. The CI owner's
+    # lever, `capacity-recommendation`, was finding nine of eleven.
+    #
+    # `leads_with` is the *producer's* decision about a reader's biggest
+    # lever, for Direction 7's reason: a page that ranked severities of
+    # its own would be a second decision-maker, and the terminal and the
+    # CI comment would route differently from the report.
+    "readers": {
+        QUESTION: 'Who does this run have something to say to?',
+        RAIL: 'decide',
+        COLUMNS: [
+            {"key": "label", "title": "Reader", "sortable": False},
+            {"key": "question", "title": "Their question",
+             "sortable": False},
+            {"key": "leads_with", "title": "Leads with", "sortable": False},
+        ],
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string",
+                       "enum": [uid for uid, _r, _l, _q in READERS],
+                       "description": "The reader, by `roles.md` id."},
+                "role": {"type": "string",
+                         "description": "That reader's row in "
+                                        "`docs/design/roles.md` - `R1` "
+                                        "through `R5` - so the payload "
+                                        "and the role model share one "
+                                        "vocabulary rather than two."},
+                "label": {"type": "string",
+                          "description": "What this reader would say "
+                                         "about themselves, in the "
+                                         "first person. The selector's "
+                                         "option text."},
+                "question": {"type": "string",
+                             "description": "The question this reader "
+                                            "came with, which is what "
+                                            "the page answers when they "
+                                            "say who they are."},
+                "leads_with": {"type": "string",
+                               "description": "The id of the finding "
+                                              "that is this reader's "
+                                              "biggest lever on this "
+                                              "run: highest severity, "
+                                              "then published order."},
+                "findings": {"type": "array",
+                             "description": "Every finding id serving "
+                                            "this reader, in published "
+                                            "order. `leads_with` is one "
+                                            "of these."},
+            },
+            "required": ["id", "role", "label", "question", "leads_with"],
+        },
+    },
     "findings": {
         QUESTION: 'What did this run conclude?',
         RAIL: 'decide',
@@ -2597,6 +2663,19 @@ _ANALYZE_HINTS = {
                                    "`provenance[].trace_query` "
                                    "carries, on the object a reader "
                                    "is looking at."},
+                # `UX-372`: which of `docs/design/roles.md`'s readers
+                # this finding is for. Declared, never derived: the
+                # page routes by lookup, and a consumer asking what
+                # this run says to the person who owns the machines
+                # gets an answer without re-ranking severities of its
+                # own (Direction 7).
+                "reader": {
+                    "type": ["string", "null"],
+                    "enum": [uid for uid, _r, _l, _q in READERS] + [None],
+                    "description": "The reader this finding serves, by "
+                                   "`roles.md` id, or null where the "
+                                   "finding is for everyone. `readers` "
+                                   "is the index over these."},
             },
             "required": ["id", "severity", "title"],
         },

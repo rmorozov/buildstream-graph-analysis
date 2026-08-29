@@ -78,8 +78,8 @@ bga's captures *are* service-time distributions).
 
 ## Traceability
 
-Three rules, enforced by convention now and by guards when the
-backlog restructure (`UX-232`) lands:
+Four rules. The first three were convention when this file was
+written; the fourth is the payload:
 
 1. **Directions name their roles.** Every direction in
    [`directions.md`](directions.md) states which roles it serves —
@@ -90,6 +90,16 @@ backlog restructure (`UX-232`) lands:
 3. **This table is maintained, not archaeological.** A new role or a
    changed gap lands here in the same commit as the work that changes
    it — the same rule the status table already follows.
+4. **The report names its readers.** Since `UX-372`, every finding in
+   `analyze/v4` carries a `reader` — one of R1–R5, this table's own ids
+   — and the document publishes a `readers` index saying, for each
+   reader this run has something for, their question and the finding
+   that is their biggest lever on it. So "what does this build say to
+   the person who owns the machines" is a lookup rather than a read of
+   eleven findings, and the viewer's decision panel routes by it. R6–R8
+   are absent from that vocabulary for the reason the gap section above
+   gives: their questions live across builds, and one run's findings
+   have nothing to put under them.
 
 Current direction coverage, for orientation: Directions 1-7 serve
 R1-R4 (Direction 2 is R4's; Direction 6 serves R2/R3; Direction 7

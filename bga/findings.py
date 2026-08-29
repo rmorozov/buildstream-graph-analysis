@@ -48,6 +48,145 @@ SEVERITY_HIGH = "high"
 SEVERITY_MEDIUM = "medium"
 SEVERITY_INFO = "info"
 
+# `UX-372`: **which reader a finding is for.**
+#
+# `docs/design/roles.md` has named eight roles since round 27, and no
+# payload had ever said which one an answer serves - so the page opened
+# with one question, "What should I do?", answered once for whoever was
+# looking. Measured on `macro_micro`, all three top actions were the
+# same kind of advice (shorten this element, then that one, then the
+# third), which is the right answer for R1 and no answer at all for the
+# CI owner whose lever is `capacity-recommendation`, nine findings down.
+#
+# Five of the eight, because those are the readers a *single build's*
+# findings can serve: R5-R8's questions live across builds and this
+# report has none of that. The ids are `roles.md`'s, so the backlog's
+# `Serves:` lines and the payload speak one vocabulary rather than two.
+READERS = (
+    ("local-optimizer", "R1",
+     "I can change these elements",
+     "Which element should I shorten first?"),
+    ("recipe-author", "R2",
+     "I own one element's recipe",
+     "Is my element a problem, and what does changing it cost?"),
+    ("graph-owner", "R3",
+     "I own the dependency graph",
+     "What does the shape of this graph make impossible?"),
+    ("ci-gatekeeper", "R4",
+     "I decide whether this build passes",
+     "Is this number trustworthy, and is it normal?"),
+    ("capacity-operator", "R5",
+     "I own the machines it runs on",
+     "What should the fleet be configured as?"),
+)
+
+#: Every finding id this module can emit, and the reader it serves.
+#:
+#: A map rather than a `_finding()` argument on purpose: the assignment
+#: is a claim about the whole set - "who is left with nothing to read" -
+#: and nineteen call sites each naming their own reader is nineteen
+#: places for the answer to that question to hide.
+#: `test_the_page_has_a_reader.py` holds it exhaustive against the
+#: source, so a new finding with no reader fails rather than defaulting.
+FINDING_READERS = {
+    # R1 - the shortest path from "my build is slow" to a fix.
+    "build-failed": "local-optimizer",
+    "failed-task-time": "local-optimizer",
+    "time-concentration": "local-optimizer",
+    "joint-saving": "local-optimizer",
+    "optimization-horizon": "local-optimizer",
+    "blast-radius-ranking": "local-optimizer",
+    "certified-headroom": "local-optimizer",
+    "wait-category": "local-optimizer",
+    "execution-bound": "local-optimizer",
+    # R2 - the cost of *their* element, and what a change to it reaches.
+    "latent-heavies": "recipe-author",
+    "blast-radius-structural": "recipe-author",
+    "shared-source-blast": "recipe-author",
+    "cache-transfer-cost": "recipe-author",
+    # R3 - the structural answers.
+    "mesh-graph": "graph-owner",
+    "criticality": "graph-owner",
+    # R4 - whether the number can be trusted and whether it is normal.
+    "confidence": "ci-gatekeeper",
+    "efficiency-score": "ci-gatekeeper",
+    "cache-hit-ratio": "ci-gatekeeper",
+    "run-mode-incremental": "ci-gatekeeper",
+    # R5 - the fleet.
+    "memory-envelope": "capacity-operator",
+    "capacity-recommendation": "capacity-operator",
+}
+
+#: Rank order for choosing which of a reader's findings leads. Severity
+#: first, then publication order, which is `compute_findings`' own
+#: argued sequence - `UX-365` put the actions above the descriptions and
+#: `UX-116` put capacity after the envelope it consumes, and neither
+#: decision is re-litigated here.
+_LEAD_ORDER = (SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MEDIUM,
+               SEVERITY_INFO)
+
+
+def reader_index(findings, headline=None):
+    """The published readers, in `READERS` order, for one findings list.
+
+    One entry per reader that has something to say about *this* run, so
+    a report with no capacity numbers offers no capacity reader - the
+    dead-control rule (`UX-194`) applied to a selector. `leads_with` is
+    the producer's decision about which of that reader's findings is
+    their biggest lever, so the page routes by lookup rather than by
+    re-ranking severities of its own (Direction 7).
+
+    **The headline wins where it speaks.** `headline.top_actions`
+    already carries this pipeline's decision about the single biggest
+    lever, and the reader who owns the finding behind it must lead with
+    that finding or the page contradicts itself. Measured before this
+    rule existed, on `macro_micro`: severity-then-order gave R1
+    `wait-category` - "5.9% of wall-clock is UNTRACKED HEAD", 2.72s -
+    while `top_actions` and the decision chapter both named
+    `time-concentration`, worth 23.1s. That is round 58's defect
+    (`UX-365`) recreated one field over, and the fix is not a second
+    ranking but deferring to the first.
+
+    Severity, then published order, for every reader the headline does
+    not speak for. Published order is `compute_findings`' own argued
+    sequence and is not re-litigated here.
+    """
+    seen = {}
+    for position, finding in enumerate(findings):
+        reader = FINDING_READERS.get(finding.get("id"))
+        if not reader:
+            continue
+        seen.setdefault(reader, []).append((position, finding))
+    ranked = None
+    for action in ((headline or {}).get("top_actions") or []):
+        ranked = action.get("finding_id")
+        if ranked:
+            break
+    index = []
+    for uid, role, label, question in READERS:
+        rows = seen.get(uid)
+        if not rows:
+            continue
+        published = [finding.get("id") for _at, finding in rows]
+        if ranked in published:
+            leads_with = ranked
+        else:
+            _at, lead = min(
+                rows,
+                key=lambda row: (_LEAD_ORDER.index(row[1].get("severity"))
+                                 if row[1].get("severity") in _LEAD_ORDER
+                                 else len(_LEAD_ORDER), row[0]))
+            leads_with = lead.get("id")
+        index.append({
+            "id": uid,
+            "role": role,
+            "label": label,
+            "question": question,
+            "leads_with": leads_with,
+            "findings": published,
+        })
+    return index
+
 _CONFIDENCE_HIGH = 0.8
 _CONFIDENCE_MEDIUM = 0.5
 
@@ -1214,6 +1353,12 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     # rather than about this run - the reader has met the run's own
     # numbers by the time they reach "and one repo rebuilds all of it".
     findings.extend(_shared_source_findings(result))
+    # `UX-372`: and who each is for. Stamped here rather than at the
+    # nineteen construction sites, for the reason `FINDING_READERS`
+    # gives - and after the whole list exists, so the map is applied to
+    # exactly what gets published.
+    for finding in findings:
+        finding['reader'] = FINDING_READERS.get(finding['id'])
     return findings
 
 

@@ -436,7 +436,24 @@ COMMITTED_EXPORTS = [
     # `UX-399` moved this one by 1,922 B, all of it **source** - the
     # scrollspy and the two stylesheet rules; see the note on
     # `PAGE_BUDGET_B` above for what they buy and what they cost.
-    ("golden", GOLDEN, 370_000),                       #  368,268 B
+    # `UX-407` moved both by contract and by data, and barely by
+    # source. The restructuring synthesis - the one paragraph that
+    # names a whole restructuring, which `correlate/v2` published and
+    # the page never read - is now a key of `analyze/v4` too, declared
+    # once for both contracts:
+    #
+    #     source       273,340 -> 273,635   (+295, two comments)
+    #     contract      76,895 ->  79,107   (+2,212, the declaration)
+    #     data (golden) 18,786 ->  18,786   (+0: no Plane 2, no finding)
+    #     data (m_m)    71,587 ->  72,425   (+838, the finding itself)
+    #
+    # The contract half travels whether or not a run has the rows,
+    # which is the fact `UX-370`'s and `UX-382`'s notes above record -
+    # and it is why golden, which has no Plane 2 at all and gains no
+    # data, still moves by 2,507 B. Neither companion guard spoke:
+    # 295 B of source is two comments on `structured.js`, and nothing
+    # here resembles a vendored library.
+    ("golden", GOLDEN, 372_000),                       #  371,528 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -471,7 +488,10 @@ COMMITTED_EXPORTS = [
     # the half an export is supposed to be made of.
     # `UX-399` moved this one by the same 1,922 B of source as golden:
     # the page half is one file and both exports carry all of it.
-    ("macro_micro", MACRO_MICRO, 422_000),             #  421,099 B
+    # `UX-407`: +3,345 B, split in the note above the golden bound -
+    # 2,212 of contract, 838 of data (this run has the chain), 295 of
+    # source.
+    ("macro_micro", MACRO_MICRO, 426_000),             #  425,167 B
 ]
 
 

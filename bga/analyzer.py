@@ -1329,6 +1329,18 @@ class BuildEfficiencyAnalyzer:
         # which is exactly the situation the UX-81 baseline history now
         # creates every week.
         result.run_instance = _run_instance(self.run_context, self.loaded_from)
+        # `UX-407`: the two the restructuring projection needs. The
+        # join in `bga/report/json.py` already runs `correlate()`; it
+        # could not compute the *replay* without the normalized tasks
+        # and the run context, so the finding reached the document with
+        # `projection: null` and its whole point - the prize, replayed
+        # rather than guessed - stayed at the terminal.
+        #
+        # Held on the result rather than passed through, for the reason
+        # `plane2_report` is (`UX-215`): the join reads the finished
+        # analysis document, which does not exist at this point.
+        result.normalized_tasks = self.normalized_tasks
+        result.run_context = self.run_context
         
         # Compute horizon for total duration
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)

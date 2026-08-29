@@ -737,6 +737,14 @@ _ANALYZE_OPTIONAL = {
     "cpu_time": "object",
     "peak_memory": "object",
     "resource_pressure": "object",
+    # `UX-407`: the one paragraph that names a whole restructuring -
+    # the never-read edges, the elements they chain, and a replay of
+    # this run without them. Computed by the same join as
+    # `element_join` and published by `correlate/v2` under this name,
+    # in the same shape: two contracts carrying one finding, not two
+    # findings. Present on exactly the runs the join is - additive, so
+    # `analyze/v4` does not bump (`UX-190`).
+    "restructuring": "array",
     # UX-207: what to fix first, and what it is worth.
     "headline": "object",
     "next_steps": "array",
@@ -2194,6 +2202,101 @@ _SIGNALS_TABLES = {
                     }}}}},
 }
 
+# `UX-407`: the restructuring synthesis, declared **once** for the two
+# contracts that carry it.
+#
+# `correlate/v2` published it from the day `UX-82` was built and
+# `analyze/v4` now does too, from the same join and in the same shape.
+# One declaration rather than two, because two copies of a shape a
+# guard holds equal can still both be edited in one commit - the
+# lesson `UX-408` paid for one round earlier with a caption and a
+# description that said opposite things.
+#
+# Each row is a *group*: a set of elements chained by declared build
+# edges that Plane 2 measured never-read, and a replay of this run
+# without them. The edges are the table (`from` -> `to`, named by
+# `UX-290`'s tuple rule rather than `#1`/`#2`); the projection is the
+# sentence.
+_RESTRUCTURING_EDGE_COLUMNS = [
+    {"key": "from", "title": "Staged by", "role": "element"},
+    {"key": "to", "title": "Never read by", "role": "element"},
+]
+
+_RESTRUCTURING_ITEM_PROPERTIES = {
+    "id": {"type": "string",
+           "description": "Which synthesis this is. One id today - "
+                          "`unread-gating-chain`."},
+    "severity": {"type": "string", "enum": list(SEVERITIES)},
+    "elements": {
+        "type": "array",
+        "description": "The elements the unread edges chain together. "
+                       "Fanning them out is what the projection below "
+                       "replays."},
+    "edges": {
+        "type": "array",
+        COLUMNS: _RESTRUCTURING_EDGE_COLUMNS,
+        "description": "Each declared build edge Plane 2 measured "
+                       "never-read: the second element opened no file "
+                       "the first staged. Evidence, not a verdict - a "
+                       "runtime-only dependency looks identical here."},
+    "projection": {
+        "type": ["object", "null"],
+        "properties": {
+            "replayed_baseline_us": {
+                QUANTITY: "duration_us",
+                "description": "This run replayed as it ran, so the "
+                               "pair below is one replay against "
+                               "another rather than a replay against "
+                               "a measurement."},
+            "projected_us": {
+                QUANTITY: "duration_us",
+                "description": "The same replay with those edges "
+                               "removed - same durations, same "
+                               "capacity."},
+            "saving_us": {
+                QUANTITY: "duration_us",
+                "description": "The difference. A replay of this run's "
+                               "durations, not a re-capture."},
+            "capacities": {
+                # Keyed by resource name (`PROCESS`, `DOWNLOAD`,
+                # `UPLOAD`), so the unit is declared once for the map
+                # rather than per key - `UX-343`'s rule for a map keyed
+                # by data.
+                "additionalProperties": {
+                    QUANTITY: "count",
+                    "description": "Concurrent slots of this resource."},
+                "description": "The scheduler capacities the replay "
+                               "held fixed. Changing them is a different "
+                               "question, and `bga whatif` is where it "
+                               "is asked."},
+        },
+    },
+}
+
+_RESTRUCTURING_HINT = {
+    QUESTION: 'Which dependency edges are never read?',
+    RAIL: "act",
+    # `elements` is published and **not** drawn: it is the union of the
+    # edge endpoints (`bga/correlate.py` builds it as exactly that), so
+    # a column for it is the same population as the edge table beside
+    # it - `UX-338`'s rule, and `UX-288`'s sweep says so on the payload
+    # too. A consumer that wants the set has the key; a reader has the
+    # table it is the endpoints of.
+    COLUMNS: [
+        {"key": "severity", "title": "Severity"},
+        {"key": "edges", "title": "Unread edges"},
+        {"key": "projection", "title": "Replayed without them"},
+    ],
+    "items": {"type": "object", "properties": _RESTRUCTURING_ITEM_PROPERTIES,
+              "required": ["id", "severity", "elements", "edges"]},
+    "description": "The conclusion the per-element `unused_dependencies` "
+                   "rows jointly support: these elements form a chain "
+                   "whose every internal declared edge went unread, so "
+                   "fanning them out is one change rather than seven. "
+                   "Worth *checking* whether those edges are needed at "
+                   "build time - each one is evidence, not a verdict.",
+}
+
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
         QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove',
@@ -2905,6 +3008,7 @@ _ANALYZE_HINTS = {
         "items": {"type": "object", "properties": _JOIN_ITEM_PROPERTIES,
                   "required": ["element", "declared"]},
     },
+    "restructuring": _RESTRUCTURING_HINT,
     "element_join_coverage": {
         QUESTION: 'How much of the build did the two planes agree on?',
         RAIL: "prove",
@@ -4185,10 +4289,7 @@ _CORRELATE_HINTS = {
                        "ties in is not a ranking, and says so rather "
                        "than presenting an arbitrary order.",
     },
-    "restructuring": {
-        QUESTION: 'Which dependency edges are never read?',
-        RAIL: "act",
-    },
+    "restructuring": _RESTRUCTURING_HINT,
     "granularity": {
         QUESTION: 'Which elements pay more sandbox tax than they build?',
         RAIL: "act",

@@ -386,23 +386,35 @@ class TestTheCannedSql:
             assert question["category"] in question["categories"], question["id"]
 
     def test_the_page_renders_the_module_rather_than_a_copy(self):
-        """The drift this closes: `sql.html` carried its own copy of
-        every query."""
-        page = open("bga/viewer/sql.html", encoding="utf-8").read()
+        """The drift this closes: the page carried its own copy of
+        every query.
+
+        `UX-373` moved the list from `sql.html` into `perfetto.html`,
+        under the button that opens the trace it asks about, so this
+        reads the merged page and the script it loads."""
+        page = open("bga/viewer/perfetto.html", encoding="utf-8").read()
         # `UX-266`: the script moved out of the page into a file,
         # because the server's own `default-src 'self'` refuses an
         # inline one. The property is unchanged; where it is written
         # is not, and a guard still reading the page would pass on
         # markup that no longer runs anything.
-        script = open("bga/viewer/sql.js", encoding="utf-8").read()
-        assert 'src="sql.js"' in page
+        script = open("bga/viewer/perfetto_page.js", encoding="utf-8").read()
+        assert 'src="perfetto_page.js"' in page
         assert 'from "./questions.js"' in script
         assert "<pre><code>" not in page, (
-            "sql.html has a hand-written query again - it renders the "
-            "module, or the two drift")
+            "the handoff page has a hand-written query again - it renders "
+            "the module, or the two drift")
 
     def test_it_is_reachable_from_the_handoff_page(self, snapshot, served):
-        assert _get(served(snapshot / "run") + "sql.html")[0] == 200
+        """`UX-373`: it *is* the handoff page. The old URL stays, and
+        stays a page rather than a 404 - older exports and anything
+        pasted into an issue point at it."""
+        base = served(snapshot / "run")
+        assert _get(base + "perfetto.html")[0] == 200
+        code, _headers, body = _get(base + "sql.html")
+        assert code == 200
+        assert b"url=perfetto.html" in body, (
+            "sql.html no longer says where its content went")
 
     @pytest.mark.skipif(trace_processor.shell() is None,
                         reason=trace_processor.REASON)

@@ -177,12 +177,13 @@ class TestCollapse:
 
 class TestTheExportKeepsItsFunctionality:
     def test_the_questions_module_is_the_single_source(self):
-        """`sql.html` and the export must render the same list.
+        """The served page and the export must render the same list.
 
         This used to compare *titles* against a hand-written copy in
         `sql.html` - which would have passed while every query drifted.
         `UX-204` made the page render the module, so the assertion is
-        now that there is nothing left to drift *from*."""
+        now that there is nothing left to drift *from*. `UX-373` moved
+        the page: it is `perfetto.html`, under the handoff."""
         result = subprocess.run(
             [node, "--input-type=module", "-e",
              'const { QUESTIONS } = await import("./bga/viewer/questions.js");'
@@ -191,20 +192,23 @@ class TestTheExportKeepsItsFunctionality:
         assert result.returncode == 0, result.stderr
         titles = json.loads(result.stdout)
         assert len(titles) >= 4, titles
-        page = open("bga/viewer/sql.html", encoding="utf-8").read()
+        page = open("bga/viewer/perfetto.html", encoding="utf-8").read()
         # `UX-266`: the script moved out of the page into a file,
         # because the server's own `default-src 'self'` refuses an
         # inline one. The property is unchanged; where it is written
         # is not, and a guard still reading the page would pass on
         # markup that no longer runs anything.
-        script = open("bga/viewer/sql.js", encoding="utf-8").read()
-        assert 'src="sql.js"' in page
+        script = open("bga/viewer/perfetto_page.js", encoding="utf-8").read()
+        assert 'src="perfetto_page.js"' in page
         assert 'from "./questions.js"' in script
-        page = page + script
+        # The redirect too: a page that named a question would be a
+        # third copy, and it is the one place a merge could leave one.
+        page = page + script + open("bga/viewer/sql.html",
+                                    encoding="utf-8").read()
         for title in titles:
             assert title not in page, (
-                f"sql.html spells out {title!r} instead of rendering the "
-                f"module - that is the copy this closed")
+                f"the handoff page spells out {title!r} instead of "
+                f"rendering the module - that is the copy this closed")
 
     @needs_node
     def test_the_export_carries_the_questions(self, exported, tmp_path):

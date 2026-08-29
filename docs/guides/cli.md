@@ -1249,9 +1249,13 @@ it does not exit the moment the browser launches — Ctrl-C once Perfetto
 has it. A run with no raw Plane 2 log has no timeline to hand over and
 exits **7** rather than opening a page that would 404.
 
-The page also serves a list of **questions worth asking in Perfetto**
-(`sql.html`, beside the report) — thirteen paste-ready PerfettoSQL
-queries. It is a docs page, not a feature: the SQL engine is Perfetto's.
+The handoff page also carries a list of **questions worth asking in
+Perfetto** (`perfetto.html`, under the button that opens the trace they
+ask about) — thirteen paste-ready PerfettoSQL queries, with a control
+that swaps in whichever of this run's elements you are asking about.
+They are docs, not a feature: the SQL engine is Perfetto's. `UX-373`
+merged them in from the separate `sql.html`, whose URL still redirects
+here.
 
 **When to press the button.** The report has no time axis: every number
 in it is a total, a per-element aggregate or a ranking. So a question

@@ -55,7 +55,9 @@ def _code(source):
     return re.sub(r"^\s*//.*$", "", without_block, flags=re.M)
 
 
-_ENTRY_MODULES = ("app.js", "sql.js", "perfetto_page.js")
+# `UX-373`: `sql.js` is gone - `perfetto_page.js` renders the
+# library now, on the page that opens the trace it asks about.
+_ENTRY_MODULES = ("app.js", "perfetto_page.js")
 
 
 def _imports(path):
@@ -130,12 +132,21 @@ class TestNoPageRunsAnInlineScript:
         """The other direction, and the one that matters: a page with
         no script at all would also pass the ban above. Each served
         page names the module that drives it."""
-        expected = {"index.html": "app.js", "sql.html": "sql.js",
+        expected = {"index.html": "app.js",
                     "perfetto.html": "perfetto_page.js"}
         for name, module in expected.items():
             html = (VIEWER / name).read_text(encoding="utf-8")
             assert f'src="{module}"' in html, f"{name} no longer loads {module}"
             assert (VIEWER / module).exists(), f"{module} is not there"
+        # `UX-373`: `sql.html` runs nothing on purpose - it is a
+        # redirect to the page its content moved to. That is the one
+        # exemption from the clause above, and it is one only because
+        # the page still *does* something without script, which is the
+        # property being defended.
+        redirect = (VIEWER / "sql.html").read_text(encoding="utf-8")
+        assert "<script" not in redirect and 'http-equiv="refresh"' in redirect, (
+            "sql.html neither runs a module nor redirects, so it is the "
+            "blank page this clause exists to catch")
 
     def test_every_page_script_is_served(self):
         """A module the server does not list is a 404, which is the
@@ -150,7 +161,16 @@ class TestNoPageRunsAnInlineScript:
         A guard that checks the entry points of a module graph checks
         the one part of it that cannot go wrong."""
         server = (REPO / "tools/bga_view.py").read_text(encoding="utf-8")
-        assets = server.split("ASSETS = (", 1)[1].split(")", 1)[0]
+        # `UX-373`: to the tuple's **closing line**, not to the first
+        # `)`. The comments inside `ASSETS` are prose, and one of them
+        # acquired a parenthesis - which truncated this slice a third of
+        # the way in and reported six served modules as missing. The
+        # traversal floor below caught that it had stopped reading;
+        # nothing said why.
+        assets = server.split("ASSETS = (", 1)[1].split("\n)", 1)[0]
+        assert assets.count("\n") > 20, (
+            "the ASSETS slice stops early again; it is reading part of the "
+            "tuple and will report the rest as missing")
         wanted, seen = list(_ENTRY_MODULES), set()
         while wanted:
             module = wanted.pop()

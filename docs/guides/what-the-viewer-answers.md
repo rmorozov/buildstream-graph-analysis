@@ -50,8 +50,9 @@ because the page cannot answer it.
 
 ## The canned questions, sorted by whether you needed to leave
 
-`bga view` serves thirteen questions on its `sql.html` page, ready to
-paste into Perfetto's query box. Sorted against the rule above:
+`bga view` serves thirteen questions under the handoff on its
+`perfetto.html` page, ready to paste into Perfetto's query box. Sorted
+against the rule above:
 
 **Needs Perfetto — the answer is per-process or per-instant:**
 

@@ -928,9 +928,13 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
-Updated 2026-08-28 (after `UX-344`), re-grounded in the contracts
-table above against `bga.contracts`'s derived inventory and the ids
-`bga analyze --schema` actually prints. `analyze` is at **v4**: the two
+Updated 2026-08-29 (after `UX-372`), re-grounded in the contracts
+table above against `bga.contracts`'s derived inventory — eighteen
+ids, five of them marked superseded — and the keys
+`bga analyze --schema` actually prints: fifty-two top-level properties, `readers` among them,
+with `reader` declared on the findings item. That is an addition and
+not a version move — nothing changed meaning and nothing left — so
+`analyze` is still at **v4** for the reason it went there: the two
 namespaces are gone, `provenance` is published once per claim, and one
 evidence key that republished a population went with them — three
 removals, which is what a version move is for. The row is checked

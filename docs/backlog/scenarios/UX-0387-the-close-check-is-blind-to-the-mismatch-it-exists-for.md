@@ -1,6 +1,6 @@
 # UX-387: the close check is blind to the mismatch it exists for
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-131 (guard the status table against its task files), UX-336 (the loop that got slow) | **Serves:** anyone closing a task before running the full suite | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-131 (guard the status table against its task files), UX-336 (the loop that got slow) | **Serves:** anyone closing a task before running the full suite | **Topic:** guards
 
 ## Motivation
 
@@ -73,3 +73,83 @@ test collection.
   file it had never been pointed at, which is a different item
   (`--move` wrote the row for a task whose file it did not open) and
   arguably the same fix from the other side.
+
+## Outcome (round 62, 2026-08-29) — 🟢 Done
+
+### The gap, measured
+
+The defect, reproduced on a clean tree by flipping one *closed* task
+file's own status marker and leaving its row alone — which is the
+round-61 case exactly:
+
+```text
+$ python3 tools/dev_close_task.py --check
+0 problem(s)
+
+$ pytest ...::test_the_table_status_matches_the_task_files
+FAILED  1 failed in 0.28s
+```
+
+The cause is one line of scope. `UX-232` split the backlog by liveness
+and `check()` kept reading the open half:
+
+```text
+rows in docs/backlog/scenarios/README.md      7    read by --check
+rows in docs/backlog/scenarios/closed.md    379    read by the suite only
+                                            ---
+                                            386    --check answered for 1.8%
+```
+
+`BACKLOG_FILES`' own comment in the guard had already written the
+warning down — "a guard that kept looking at one file would go quiet
+for 225 of the 234 rows the day the split landed" — and the tool was
+the guard it was describing.
+
+### After
+
+```text
+$ python3 tools/dev_close_task.py --check
+  ok    every row's status glyph matches its task file's
+  ok    no closed row is left in the open index
+  ok    the index's open count matches its table
+0 problem(s) over 3 propert(y/ies), 386 backlog row(s)
+```
+
+And on the same mutated tree the fast check now refuses, naming the
+property and the item:
+
+```text
+  FAIL  every row's status glyph matches its task file's - 1 problem(s)
+          UX-382: table says 🟢, UX-0382-....md says 🔴
+```
+
+**One implementation, not two.** `table_statuses`, `file_statuses`,
+`status_marker` and `backlog_files` moved into
+`tools/dev_close_task.py`; `tests/unit/test_docs_links_and_commands.py`
+imports them instead of keeping its own copies, so the tool and the
+guard cannot drift again by construction — a clause asserts they are
+the same objects.
+
+`backlog_files()` is a call-time lookup rather than a module constant
+because `--scenarios` rebinds `INDEX` and `CLOSED` after import; a
+constant would have sent every reader at the real backlog while the
+caller believed it was pointed at a fixture. That is guarded.
+
+### Falsification
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `backlog_files()` returns `(INDEX,)` — the original defect | 4 of 10 |
+| M2 | the pair comparison never reports (`if False`) | 3 of 10 |
+| M3 | `--check` goes back to the bare `N problem(s)` | 5 of 10 |
+| M4 | `backlog_files()` frozen at first call, so `--scenarios` is ignored | 1 of 10 |
+| M5 | the guard keeps its own `_table_statuses` again | 1 of 10 |
+
+Baseline: 10 passed. `make lint` clean;
+`test_docs_links_and_commands.py` 36 passed.
+
+### Deviation from the Required Fix
+
+- None.

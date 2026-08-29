@@ -412,67 +412,36 @@ _TABLE_ROW = re.compile(r"^\|\s*UX-0*(\d+)\s*\|")
 _FILE_ID = re.compile(r"^UX-0*(\d+)-")
 
 
-def _status_marker(text):
-    return next((emoji for emoji in _STATUS_EMOJI if emoji in text), None)
-
-
 # UX-232 split the backlog by liveness: open rows in README.md, closed
 # ones verbatim in closed.md. Both are the backlog, so every guard over
 # it reads both - a guard that kept looking at one file would go quiet
 # for 225 of the 234 rows the day the split landed.
-BACKLOG_FILES = ("docs/backlog/scenarios/README.md",
-                 "docs/backlog/scenarios/closed.md")
-
-
-def _table_statuses():
-    """`{item number: status cell}` across both backlog files.
-
-    The two tables have different shapes on purpose - the open one is an
-    index (id, title, topic, priority, serves, status), the closed one
-    keeps its full narrative - so the status cell is found by *marker*
-    rather than by column number, which is the only thing both promise.
-    """
-    statuses = {}
-    for name in BACKLOG_FILES:
-        path = REPO / name
-        if not path.exists():
-            continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            match = _TABLE_ROW.match(line)
-            if not match:
-                continue
-            cells = [cell.strip() for cell in
-                     re.split(r"(?<!\\)\|", line.strip().strip("|"))]
-            marker = next((c for c in cells if c[:1] in "🔴🟡🟢⚪"), "")
-            statuses[int(match.group(1))] = marker
-    return statuses
+#
+# `UX-387`: that is exactly what had happened to `dev_close_task.py`,
+# the *fast* check a contributor runs before committing - it read the
+# open index only, so it answered for 7 rows of 386 and printed
+# "0 problem(s)" for the rest. Two readings of one property is how they
+# came to disagree, so there is now one: the tool's, imported here.
+from tools.dev_close_task import (  # noqa: E402
+    backlog_files as _backlog_files,
+    file_statuses as _file_statuses,
+    status_marker as _status_marker,
+    table_statuses as _table_statuses,
+)
 
 
 def _rows_by_file():
     """`{item number: [file, ...]}` - for the exactly-one-of-two guard."""
     where = {}
-    for name in BACKLOG_FILES:
-        path = REPO / name
+    for path in _backlog_files():
         if not path.exists():
             continue
+        name = path.relative_to(REPO).as_posix()
         for line in path.read_text(encoding="utf-8").splitlines():
             match = _TABLE_ROW.match(line)
             if match:
                 where.setdefault(int(match.group(1)), []).append(name)
     return where
-
-
-def _file_statuses():
-    """`{item number: (filename, status line)}` from the task files."""
-    statuses = {}
-    for path in sorted((REPO / "docs/backlog/scenarios").glob("UX-*.md")):
-        match = _FILE_ID.match(path.name)
-        if not match:
-            continue
-        header = path.read_text(encoding="utf-8").splitlines()[:8]
-        line = next((line for line in header if "**Status:**" in line), None)
-        statuses[int(match.group(1))] = (path.name, line)
-    return statuses
 
 
 def test_every_task_file_declares_a_status():

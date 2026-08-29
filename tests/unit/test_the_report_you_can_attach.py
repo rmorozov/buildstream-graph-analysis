@@ -453,7 +453,21 @@ COMMITTED_EXPORTS = [
     # data, still moves by 2,507 B. Neither companion guard spoke:
     # 295 B of source is two comments on `structured.js`, and nothing
     # here resembles a vendored library.
-    ("golden", GOLDEN, 372_000),                       #  371,528 B
+    # `UX-389` moved both again, and again mostly by contract. Six
+    # Plane 2 blocks that answer *did the instrument see everything* -
+    # whether the ptrace spine ran, how many processes were traced,
+    # which elements could hide a static binary - now travel in
+    # `plane2_coverage` instead of stopping at a terminal:
+    #
+    #     source       273,635 -> 273,635   (+0)
+    #     contract      79,107 ->  80,793   (+1,686, the declarations)
+    #     data (golden) 18,786 ->  18,786   (+0: no Plane 2, no blocks)
+    #     data (m_m)    72,425 ->  74,119   (+1,694, the blocks)
+    #
+    # Not one byte of source: the blocks render through the machinery
+    # that was already there, which is `UX-193`'s property and the
+    # reason a schema addition costs no viewer change.
+    ("golden", GOLDEN, 374_000),                       #  373,214 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -491,7 +505,8 @@ COMMITTED_EXPORTS = [
     # `UX-407`: +3,345 B, split in the note above the golden bound -
     # 2,212 of contract, 838 of data (this run has the chain), 295 of
     # source.
-    ("macro_micro", MACRO_MICRO, 426_000),             #  425,167 B
+    # `UX-389`: +3,380 B, split in the note above the golden bound.
+    ("macro_micro", MACRO_MICRO, 430_000),             #  428,547 B
 ]
 
 

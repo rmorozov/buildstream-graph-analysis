@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-414 scenarios: **8 open**, 406 closed.
+416 scenarios: **10 open**, 406 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 4 | 124 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
-| docs | 0 | 34 |
+| docs | 2 | 36 |
 | guards | 2 | 54 |
 
 ## Open scenarios
@@ -44,6 +44,8 @@ task file, which is the only place it ever lived twice.
 | UX-413 | [a population with nothing to rank by is never bounded](UX-0413-a-population-with-nothing-to-rank-by-is-never-bounded.md) | viewer | High | anyone whose run is big enough for the page to be long | 🔴 |
 | UX-414 | [two sections fall into "Everything else", and the guard's fixture cannot see it](UX-0414-two-sections-fall-into-everything-else.md) | viewer | Medium | anyone navigating a two-plane report | 🔴 |
 | UX-415 | [the shared node probe says `file:` and always measures `http:`](UX-0415-the-shared-probe-is-always-served.md) | guards | Medium | every guard that boots the page in node | 🔴 |
+| UX-416 | [the page moves between runs, and no document says so](UX-0416-the-page-moves-between-runs-and-no-document-says-so.md) | docs | Medium | anyone with more than one snapshot in a store | 🔴 |
+| UX-417 | [the guide's export figures are stale by 3.2x](UX-0417-the-export-figures-are-four-rounds-stale.md) | docs | Medium | anyone deciding whether to attach a report | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

@@ -82,6 +82,61 @@ def _capture_context(project: str, command: List[str], config: dict) -> str:
     ]) + "\n"
 
 
+def why_the_project_is_not_one(project: str):
+    """The sentence to print instead of capturing, or `None`.
+
+    `UX-410`. `--project` is taken on trust: a path that exists but
+    holds no `project.conf` was accepted, `.bga` was created under it,
+    `bst` ran with it as the working directory - and **bst walked up to
+    the enclosing project and built that instead.** Green snapshot,
+    store in a directory the user never meant, measuring a build of a
+    project the flag never named. Found through a mistyped relative
+    path that resolved to a real directory.
+
+    `bga doctor` has checked for `project.conf` since `UX-125`; the
+    command that writes a store did not. The asymmetry is the defect -
+    the same fact, known by one command and not by the one that acts
+    on it.
+
+    Refused **before anything is written**, for `UX-324`'s reason and
+    from the same place: the snapshot directory, the sticky config and
+    the store's `.gitignore` are all created on the way past here.
+
+    Not applied when `--project` was omitted: `run_store.project_root`
+    finds the enclosing project by looking for exactly this file, so a
+    resolved root always has one and a missing one already refuses with
+    its own sentence.
+    """
+    if os.path.isfile(os.path.join(project, "project.conf")):
+        return None
+    # Two different mistakes, and telling them apart is most of the
+    # value: the path that resolved to a real directory of the wrong
+    # kind, and the path that resolved to nothing at all. The walker who
+    # found this hit the second - `examples/06/examples/06` from inside
+    # `examples/06` - and "it has no project.conf" would have sent them
+    # looking for a file in a directory that does not exist.
+    if not os.path.isdir(project):
+        lines = [f"Error: {project} does not exist. Nothing was captured "
+                 f"and nothing was written."]
+    else:
+        lines = [
+            f"Error: {project} is not a BuildStream project - it has no "
+            f"project.conf. Nothing was captured and nothing was written.",
+        ]
+    # The nearest enclosing project, because the two ways to get here
+    # are a typo inside a project and a path that points at the wrong
+    # level of one, and both are answered by naming what is above.
+    enclosing = run_store.project_root(project)
+    if enclosing and os.path.abspath(enclosing) != os.path.abspath(project):
+        lines.append(f"  The nearest project above it is {enclosing}. "
+                     f"bst would have walked up to it and built *that* - "
+                     f"which is why this refuses rather than proceeding.")
+    else:
+        lines.append("  No enclosing project either. Check the path, or run "
+                     "`bga doctor` from inside the project you meant.")
+    return "\n".join(lines)
+
+
 def why_the_build_cannot_start(command: List[str]):
     """The sentence to print instead of capturing, or `None`.
 
@@ -361,6 +416,21 @@ def main(argv: Optional[List[str]] = None) -> int:
             "--project PATH.",
             file=sys.stderr,
         )
+        return 2
+
+    # `UX-410`: before `--aggregate`, `--list`, `prune` and the capture
+    # alike - each of them acts on a store under `project`, and a
+    # directory that is not a project has no store to act on.
+    #
+    # Unconditional, though only `--project` can fail it: a root that
+    # `project_root` resolved was found *by* looking for `project.conf`,
+    # so it always has one. The first version guarded this with
+    # `if args.project:` and a mutation removing that guard changed no
+    # behaviour at all - which is the argument for not having written
+    # the condition.
+    refusal = why_the_project_is_not_one(project)
+    if refusal is not None:
+        print(refusal, file=sys.stderr)
         return 2
 
     if args.aggregate:

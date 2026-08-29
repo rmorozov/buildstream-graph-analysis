@@ -224,12 +224,20 @@ def run_bst_show(
     project_dir: str,
     targets: Sequence[str],
     bst_bin: str = "bst",
+    bst_options: Optional[Sequence[str]] = None,
 ) -> str:
     """Run `bst show --deps all` against project_dir for the given
     targets and return raw stdout. Progress/log output goes to bst's
     own stderr, never mixed into stdout - confirmed empirically, so
     stdout only ever contains --format output."""
-    cmd = [bst_bin, "show", "--deps", "all", "--format", _FORMAT, *targets]
+    # `UX-377`: the build's own scheduler options, replayed. `max-jobs`
+    # is a *top-level* `bst` option and it reaches `%{vars}`, so a
+    # `bst show` run without it resolves whatever the config says and
+    # reports that as the element's `max_jobs` - which is not what the
+    # build ran at. Measured: a cold capture under `bst --max-jobs 2
+    # build` ran `make -j2` in five sandboxes and its graph said 4.
+    cmd = [bst_bin, *(bst_options or []),
+           "show", "--deps", "all", "--format", _FORMAT, *targets]
     # UX-183: on a large project this is minutes inside one phase line,
     # and there is nothing to count - `bst` is a subprocess and its
     # stdout is the payload, not a progress stream. Elapsed seconds are
@@ -339,11 +347,19 @@ def extract_graph(
     project_dir: str,
     targets: Sequence[str],
     bst_bin: str = "bst",
+    bst_options: Optional[Sequence[str]] = None,
 ) -> dict:
     """Run bst show and parse its output in one call - the entry point
     other tools/tests should import, rather than reaching for
-    run_bst_show/build_graph separately."""
-    stdout = run_bst_show(project_dir, targets, bst_bin=bst_bin)
+    run_bst_show/build_graph separately.
+
+    `bst_options` (`UX-377`) are the top-level options the build itself
+    ran with, replayed here so the resolved values this reads describe
+    that build rather than a fresh resolution. Empty for a graph
+    extracted without a build behind it, which is the same thing it
+    always did."""
+    stdout = run_bst_show(project_dir, targets, bst_bin=bst_bin,
+                          bst_options=bst_options)
     return build_graph(stdout, targets)
 
 

@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-409 scenarios: **18 open**, 391 closed.
+409 scenarios: **17 open**, 392 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 69 |
-| analysis | 2 | 54 |
+| analysis | 1 | 54 |
 | contracts | 0 | 46 |
 | viewer | 8 | 120 |
 | cli | 0 | 5 |
@@ -53,7 +53,6 @@ task file, which is the only place it ever lived twice.
 | UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | guards | Medium | the audit loop itself | 🔴 |
 | UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | guards | Medium | anyone reading a whatif or store number outside the page | 🔴 |
 | UX-407 | [the finding that *is* the answer stays at the terminal](UX-0407-the-finding-that-is-the-answer-stays-at-the-terminal.md) | analysis | High | R1 and R8 — the reader deciding what to restructure | 🔴 |
-| UX-409 | [the configure tax names one payer twice](UX-0409-the-configure-tax-names-one-payer-twice.md) | analysis | Medium | anyone reading a cache-logs finding | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

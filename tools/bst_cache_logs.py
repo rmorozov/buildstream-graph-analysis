@@ -387,7 +387,14 @@ def sandbox_tax(records: List[dict]) -> dict:
         ],
         # Ranked by toll seconds, not by share: a 90% toll on a 0.4s
         # element is arithmetic, a 40s toll on a 90s one is a finding.
-        'top_payers': sorted(payers, key=lambda p: (-p['toll_us'], p['element'])),
+        #
+        # `UX-409`: and **per element**, not per log. `payers` is built
+        # one row per build log above, so an element built twice in the
+        # kept history was ranked twice and the report listed it twice.
+        # The filing cleared this ranking in its Out of Scope ("already
+        # per-element"); it was not, and the guard that says so is
+        # `test_a_finding_names_four_payers.py`.
+        'top_payers': elements_by_toll(payers),
         'resolution_us': LOG_RESOLUTION_US,
         'caveat': (
             "BuildStream times these activities to the second, so a tax under a "
@@ -610,6 +617,68 @@ def repeated_operations(records: List[dict]) -> List[dict]:
     return sorted(findings, key=lambda f: (-f['element_count'], f['command']))
 
 
+def elements_by_toll(rows):
+    """`rows` (one per build log) grouped per element, worst first.
+
+    `UX-409`. Summed rather than maximised: two builds of one element
+    are two sandbox tolls that element's developers paid for. `cache_key`
+    and `started_at` are dropped rather than picked from an arbitrary
+    row - a group of builds has no single cache key, and naming one of
+    them would be a fact about the sort order.
+    """
+    totals = {}
+    for row in rows:
+        entry = totals.setdefault(row['element'], {
+            'element': row['element'], 'total_us': 0,
+            'work_us': 0, 'toll_us': 0, 'builds': 0,
+        })
+        entry['total_us'] += row['total_us']
+        entry['work_us'] += row['work_us']
+        entry['toll_us'] += row['toll_us']
+        entry['builds'] += 1
+    for entry in totals.values():
+        entry['toll_share'] = (entry['toll_us'] / entry['total_us']
+                               if entry['total_us'] else None)
+    return sorted(totals.values(),
+                  key=lambda entry: (-entry['toll_us'], entry['element']))
+
+
+#: How many payers a finding names. Four **distinct** elements
+#: (`UX-409`), not four rows.
+PAYERS_NAMED = 4
+
+
+def top_distinct_payers(rows, cost_key, limit=PAYERS_NAMED):
+    """The `limit` elements that paid most, each named once.
+
+    `UX-409`, from a real Plane 3 pass over 79 kept logs:
+
+    ```text
+    [medium] configure-tax: ... paid most by codegen.bst, core.bst,
+    codegen.bst, lib-f.bst
+    ```
+
+    Four slots, three elements. The rows are per **log**, and an element
+    built more than once in the kept history has one row per build, so a
+    `[:4]` taken before the group-by spends a slot twice and pushes a
+    real fourth payer out of the sentence.
+
+    Summed rather than max or first-seen: two expensive configures of one
+    element are two configures that element paid for, and the question
+    the sentence answers is who the cost is with.
+    """
+    totals = {}
+    for row in rows:
+        element = row.get('element')
+        if not element:
+            continue
+        totals[element] = totals.get(element, 0) + (row.get(cost_key) or 0)
+    # Ties broken by name, the same rule `top_payers` sorts by - a
+    # ranking whose ties move between runs is a diff nobody caused.
+    order = sorted(totals.items(), key=lambda pair: (-pair[1], pair[0]))
+    return [element for element, _cost in order[:limit]]
+
+
 def _plane3_findings(plane3_configure: dict, views: dict) -> List[dict]:
     """UX-102 item 3: one project-wide finding, with an id, naming the
     top payers and the size of the prize.
@@ -635,9 +704,12 @@ def _plane3_findings(plane3_configure: dict, views: dict) -> List[dict]:
     if (share or 0) < CONFIGURE_SHARE_NOTABLE and not plane2_share:
         return []
 
-    payers = [r['element'] for r in (plane3_configure.get('top_payers') or [])[:4]]
+    payers = top_distinct_payers(plane3_configure.get('top_payers') or [],
+                                 'configure_us')
     if views.get('elements'):
-        payers = payers or [r['element'] for r in views['elements'][:4] if r['plane2_configure_cpu_us']]
+        payers = payers or top_distinct_payers(
+            [r for r in views['elements'] if r['plane2_configure_cpu_us']],
+            'plane2_configure_cpu_us')
     prize = (
         f"{plane3_configure['configure_us'] / 1e6:.1f}s self-reported"
         if plane3_configure.get('configure_us') else None

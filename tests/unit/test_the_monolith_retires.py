@@ -107,8 +107,8 @@ class TestTheReportIsTheReductions:
             "measuring what the item measured")
 
     def test_it_stamps_the_shape_it_is(self, report):
-        assert report["schema"] == plane2.SCHEMA == "plane2/v2"
-        assert plane2.shape_of(report) == "plane2/v2"
+        assert report["schema"] == plane2.SCHEMA == "plane2/v3"
+        assert plane2.shape_of(report) == "plane2/v3"
 
 
 class TestAnOlderStoreStillReads:
@@ -122,12 +122,12 @@ class TestAnOlderStoreStillReads:
     def test_it_is_inventoried_as_read_and_never_written(self):
         assert contracts.superseded() == [
             "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
-            "correlate/v1", "host/v1", "plane2/v1"]
+            "correlate/v1", "host/v1", "plane2/v1", "plane2/v2"]
         assert "plane2/v1" in contracts.ids()
         assert plane2.SCHEMA in contracts.ids()
 
     def test_the_provenance_says_which_one_served_the_numbers(self):
-        new = plane2.provenance({"schema": "plane2/v2"})
+        new = plane2.provenance({"schema": "plane2/v3"})
         old = plane2.provenance({"process_count": 2, "processes": [1, 2]})
         assert new["records_embedded"] is False and new["records"] == 0
         assert old["records_embedded"] is True and old["records"] == 2
@@ -164,7 +164,8 @@ class TestTheAnalysisSaysWhichShapeItRead:
         document = json.loads(done.stdout)
         source = (document.get("plane2_coverage") or {}).get("source")
         assert source, "the payload does not say which Plane 2 shape it read"
-        assert source["schema"] in ("plane2/v1", "plane2/v2"), source
+        assert source["schema"] in ("plane2/v1", "plane2/v2",
+                                   "plane2/v3"), source
         assert source["records_embedded"] is False, (
             "the committed fixture carries no record list - it has not for "
             "many rounds, which is the item's own evidence that nothing "
@@ -175,7 +176,7 @@ class TestTheAnalysisSaysWhichShapeItRead:
 
         node = schemas.schema(schemas.ANALYZE)["properties"]["plane2_coverage"]
         source = node["properties"]["source"]
-        assert "plane2/v2" in source["description"], source["description"]
+        assert "plane2/v3" in source["description"], source["description"]
         for key in ("schema", "records_embedded", "records", "note"):
             assert key in source["properties"], key
 

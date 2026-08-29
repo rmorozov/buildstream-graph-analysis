@@ -149,7 +149,11 @@ def test_two_real_elements_are_still_a_finding():
     findings, coverage = detect_redundant_operations(records)
 
     assert len(findings) == 1
-    assert findings[0]["elements"] == ["components/a.bst", "components/b.bst"]
+    # `UX-384`: the names are no longer carried - `element_count` and
+    # `worst_element` are what a finding publishes about its width.
+    assert findings[0]["element_count"] == 2
+    assert findings[0]["worst_element"] in (
+        "components/a.bst", "components/b.bst")
     assert coverage["excluded_unresolved_only"] == 0
 
 

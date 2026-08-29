@@ -94,7 +94,7 @@ NO_CONTRACT = {}
 FILE_WRITTEN = {
     "host/v2": "run-context.json (bga.hostinfo)",
     "sources/v1": "sources.json (bga extract)",
-    "plane2/v2": "plane2.json (bga capture)",
+    "plane2/v3": "plane2.json (bga capture)",
     # `UX-381`: the directory itself, and the one file in it a module
     # outside `bga` writes. Both are on-disk shapes with no command to
     # print them, which is exactly what this list is for - and the
@@ -104,6 +104,10 @@ FILE_WRITTEN = {
     # `UX-297` retired this one. Still read, never written - which is a
     # third state, and the reason `contracts.superseded()` exists.
     "plane2/v1": "plane2.json, as a capture before UX-297 wrote it",
+    # `UX-384` retired the next one for the same reason one term down:
+    # it removed `elements` from each redundancy finding, and a store
+    # is full of captures that still carry it.
+    "plane2/v2": "plane2.json, as a capture before UX-384 wrote it",
     # `UX-341` put five more in that third state: the four documents
     # whose units it renamed, and the host manifest, which is converted
     # on the way in so an old baseline still compares.
@@ -307,11 +311,17 @@ class TestTheUnionIsTheInventory:
 
     def test_the_superseded_id_is_declared_and_not_answerable(self):
         """`plane2/v1` is read and never written. A third state, and one
-        `--schema` must not offer as if a command produced it."""
+        `--schema` must not offer as if a command produced it.
+
+        `UX-384` added `plane2/v2` to the same state - two retired
+        shapes of one report, which is what the chain in
+        `bga/plane2.py` is for."""
         assert contracts.superseded() == [
             "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
-            "correlate/v1", "host/v1", "plane2/v1"], contracts.superseded()
+            "correlate/v1", "host/v1", "plane2/v1",
+            "plane2/v2"], contracts.superseded()
         assert "plane2/v1" in FILE_WRITTEN
+        assert "plane2/v2" in FILE_WRITTEN
 
 
 class TestAnUnknownNameAndABrokenContractAreDifferentThings:

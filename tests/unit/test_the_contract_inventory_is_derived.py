@@ -76,7 +76,8 @@ class TestTheInventoryIsComplete:
         assert contracts.unprintable() == [
             "analyze/v2", "analyze/v3", "blast/v1", "capture-layout/v1",
             "compare/v1", "correlate/v1", "host-samples/v1", "host/v1",
-            "host/v2", "plane2/v1", "plane2/v2", "sources/v1"]
+            "host/v2", "plane2/v1", "plane2/v2", "plane2/v3",
+            "sources/v1"]
 
     def test_a_retired_shape_is_inventoried_as_one(self):
         """`UX-297`: the Plane 2 monolith is read and never written.
@@ -91,7 +92,7 @@ class TestTheInventoryIsComplete:
 
         assert contracts.superseded() == [
             "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
-            "correlate/v1", "host/v1", "plane2/v1"]
+            "correlate/v1", "host/v1", "plane2/v1", "plane2/v2"]
         assert "plane2/v1" in contracts.ids()
         assert "plane2/v1" not in contracts.printable()
 

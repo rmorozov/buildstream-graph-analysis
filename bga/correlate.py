@@ -95,6 +95,26 @@ def _durations_in_us(record: dict) -> dict:
             out[f"{name[:-2]}_us"] = s_to_us(record[name])
     return out
 
+def _other_element_count(redundancy: dict) -> int:
+    """How many elements besides this one run the same operation.
+
+    `UX-384` removed the `elements` list from a redundancy finding -
+    with the row cap in place it was the one term still `O(elements)`,
+    78% of the section at 40 elements and 99% at 1,200 - and this was
+    its only reader in the repository, which used it for `len()` alone.
+    The row is keyed by `worst_element`, so that length is exactly
+    `element_count - 1`.
+
+    The list is still read when a report carries it and no count: a
+    store is full of captures written before `UX-375` added the count,
+    and this sentence has to say the same thing about them.
+    """
+    count = redundancy.get("element_count")
+    if not isinstance(count, int):
+        count = len(redundancy.get("elements") or ())
+    return max(count - 1, 0)
+
+
 # UX-72: a redundant operation is worth naming in an element's row only
 # when it is a real fraction of what fixing that element is worth at all.
 # On the real capture `cmake-stage1` pays 2.2s for a shared `rm -rf`
@@ -785,11 +805,11 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
             joined.potential_saving_us / US_PER_S * _REDUNDANCY_NOTABLE_SHARE,
         )
         if redundancy and redundancy_s >= floor_s:
-            others = [e for e in redundancy.get("elements", []) if e != joined.element]
+            others = _other_element_count(redundancy)
             ranked.append((_EVIDENCE_REDUNDANCY, 'redundant-operation',
                 f"it pays {redundancy_s:.1f}s for an operation "
-                f"{_count(len(others), 'other element')} also run"
-                f"{'s' if len(others) == 1 else ''} "
+                f"{_count(others, 'other element')} also run"
+                f"{'s' if others == 1 else ''} "
                 f"({redundancy['occurrence_count']}x in total): "
                 f"{redundancy.get('signature', '').strip()[:60]}"))
 

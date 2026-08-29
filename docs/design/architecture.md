@@ -872,9 +872,10 @@ renderers are built against, so nothing here is a second copy to drift.
 | `sweep/v1` | what more capacity would buy: one makespan per capacity tried, the knee past which it buys little, and where the replay model contradicted itself (`UX-339`) | `bga sweep --format json` |
 | `host/v2` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
 | `sources/v1` | every element's source resources and how each is keyed - the on-disk shape `bga blast` reads | inside `sources.json` |
-| `plane2/v2` | Plane 2's report: the per-element reductions a capture computed, and nothing else (`UX-297`) | at `plane2.json` beside a run |
+| `plane2/v3` | Plane 2's report: the per-element reductions a capture computed, and nothing else (`UX-297`) | at `plane2.json` beside a run |
 | `capture-layout/v1` | the capture directory itself (`UX-381`): every path `.bga/` holds, what writes it, what reads it, whether it is required, conditional or derived, and what an absence means. Specification 32.6, declared as `run_store.CAPTURE_LAYOUT` beside the constants it names | the directory a capture writes |
 | `host-samples/v1` | the host's own memory and swap while the build ran, one JSON object per line (`UX-378`) - the series that says whether a slow build was an OOM. Written by `tools/bst_native_build_tracer.py`, which `bga.contracts`' package walk cannot see, so `run_store.OWNED` names it (`UX-381`) | at `host-samples.jsonl` beside a run |
+| `plane2/v2` | the same report with the element names of every redundancy finding embedded - the shape a capture before `UX-384` wrote. With the row cap in place that list was the one term still `O(elements)`: 78% of the section at 40 elements and 99% at 1,200. Read, never written | as above, in an older store |
 | `plane2/v1` | the same reductions plus every per-process record - the shape a capture before `UX-297` wrote. Read, never written | as above, in an older store |
 | `analyze/v3` | what `analyze` wrote before `UX-344` lifted the `signals` and `structural` namespaces and published `provenance` once. Read, never written | in an older store |
 | `analyze/v2` | what `analyze` wrote before `UX-341` unified the units - `measured_seconds`, `peak_rss_kb`, `useful_pct`, `occupancy_ratio`. Read, never written | in an older store |

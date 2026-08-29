@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-384 scenarios: **6 open**, 380 closed.
+384 scenarios: **5 open**, 381 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 65 |
 | analysis | 0 | 52 |
-| contracts | 2 | 44 |
+| contracts | 1 | 44 |
 | viewer | 1 | 109 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-383 | [Plane 2's per-element blocks reach the terminal, not the page](UX-0383-plane-2s-per-element-blocks-reach-the-terminal-not-the-page.md) | viewer | Medium | anyone reading the report in a browser | 🔴 |
-| UX-384 | [a redundancy finding still carries every element it spans](UX-0384-a-redundancy-finding-still-carries-every-element-it-spans.md) | contracts | Low | anyone whose store holds a monorepo's captures | 🔴 |
 | UX-385 | [a capture cannot detect the binary it never saw](UX-0385-a-capture-cannot-detect-the-binary-it-never-saw.md) | capture | Medium | anyone reading a capture taken with the spine off | 🔴 |
 | UX-386 | [`plane2/v2` is described as per-element, and mostly is not](UX-0386-plane2-v2-is-described-as-per-element-and-is-mostly-not.md) | contracts | Medium | anyone opening a `plane2.json` after reading what it is | 🔴 |
 

@@ -341,7 +341,9 @@ def test_detect_redundant_flags_signature_repeated_across_elements():
     findings, _coverage = detect_redundant_operations(records)
 
     assert len(findings) == 1
-    assert findings[0]["elements"] == ["core.bst", "lib-a.bst", "lib-b.bst"]
+    # `UX-384`: the width is `element_count`; the names are gone.
+    assert findings[0]["element_count"] == 3
+    assert "elements" not in findings[0]
     assert findings[0]["occurrence_count"] == 3
     assert findings[0]["total_duration_s"] == pytest.approx(0.3)
 
@@ -399,7 +401,7 @@ def test_summarize_includes_redundant_operations():
     report = summarize(records)
 
     assert len(report["redundant_operations"]) == 1
-    assert report["redundant_operations"][0]["elements"] == ["core.bst", "lib-a.bst"]
+    assert report["redundant_operations"][0]["element_count"] == 2  # UX-384
 
 
 # --- Real end-to-end: run_traced_build against a real bst build ------------

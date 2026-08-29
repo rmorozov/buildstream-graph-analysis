@@ -76,6 +76,7 @@ would have caught it; a bound at it would only just have.
 | 4 | 2026-08-26 | 318 | `UX-322`, `UX-323` |
 | 5 | 2026-08-28 | 346 | `UX-352`, `UX-353` |
 | 6 | 2026-08-29 | 379 | `UX-386`, `UX-387` |
+| 7 | 2026-08-29 | 406 | `UX-416`, `UX-417` |
 
 ### Review 3 — 2026-08-25
 
@@ -463,4 +464,99 @@ the claim; its newest entry reads "Updated 2026-08-28 (after
 the guard is in the suite and green rather than re-deriving it.
 
 **No code was produced by this review**, per the rule above. The two
+findings are filings.
+
+## Review 7 — 2026-08-29, at 406 closed rows
+
+Input: the twenty-seven rows closed since review 6 — round 63's tail
+(`UX-383`–`UX-387`) and the whole of round 64 (`UX-388`–`UX-410`, plus
+`UX-400`, `UX-401`, `UX-402`, `UX-404`). The axis of the round is the
+*reader*: what reaches a browser, what a control does, and what a guard
+freezes.
+
+**1. Does the code still do what it says?** The two chapters this
+round moved under are `The viewer axis (rounds 21-26)` and
+`The published contracts`. Opened both against the modules they name.
+
+The viewer chapter's `bga view` bullet describes the server's document
+table and says "**two** endpoints take a parameter -
+`blast.json?target=` and `whatif.json?elements=`". `tools/bga_view.py`
+now has three: `UX-394` added `?run=<stamp>`, which builds and caches
+another snapshot's documents on demand. The chapter is not wrong about
+the two it names; it is a count that a round moved. Filed as
+**`UX-416`**, with the guides that carry the same sentence.
+
+The contracts chapter's `analyze/v4` row survives `UX-407`, which
+published `restructuring` into that document: the versioning rule
+written three paragraphs below the table says an *addition* does not
+bump the version, and the row describes what the contract is for
+rather than enumerating its keys. Not filed.
+
+**2. Does every published contract have a home?** Eight printable
+contracts, twelve unprintable or superseded, and the mechanical half is
+green:
+
+```text
+$ PYTHONPATH=. python3 -m pytest \
+    tests/unit/test_the_documents_keep_up_with_the_contracts.py -q
+8 passed in 0.21s
+```
+
+The prose around each was re-read. `plane2/v3`'s row still counts "21
+of its 24 top-level blocks answer for the whole run and 3 are keyed by
+element uid"; `bga/plane2.py`'s `DESTINATIONS` now declares 25 entries
+and `resource_pressure` is declared-and-absent from the committed
+fixture by design, so the row's 24 is the number a capture writes and
+the two are consistent. Not filed.
+
+**3. Is any figure invalidated?** Yes, and it is the biggest single
+drift this cadence has caught. `docs/guides/cli.md`'s `--export`
+section says:
+
+> Measured on `examples/06`'s real 46 s two-plane capture: **158 KiB**,
+> of which the page is 90,611 B.
+
+Re-measured on a fresh 28 s two-plane capture of the same project,
+taken by `UX-402`'s journey guard:
+
+```text
+example 06 cold export: total=518,578 B (506 KiB)
+  source (modules+css) = 282,247 B
+  contract (schemas)   =  81,681 B
+  data (payload+trace) = 154,650 B
+```
+
+3.2x the total and 3.1x the page — and a third term the sentence has no
+word for, the embedded contracts, which `UX-342` split out in the guard
+and `UX-404` grew again this round. Filed as **`UX-417`**.
+
+The page/data ratio review 6 recorded as "2.8x" now reads 3.81
+(source over data, `macro_micro`) and 15.06 on `golden`, which is the
+same story from the other end: the source half grew by six rounds of
+viewer work while the golden fixture's data did not. That sentence sits
+in a dated log row rather than as a claim about today, so per review
+4's own precedent it is not re-filed — the current numbers are written
+here, where the next review will read them.
+
+**4. What shipped since the last review that no document names?** The
+inventories: `schemas.names()` is eight and all eight are homed (item 2
+above); `bga --help` gained no subcommand this round. Of the
+twenty-seven closed rows, the capability that reaches no document is
+`UX-394`'s run selector — filed above as `UX-416`. Two guards' own
+declarations are new and internal (`TERMINAL_ONLY` in `app.js`,
+`CONTRACT_RUNS` in the unit census) and are documented where they live,
+which is the rule for a mechanism no user meets.
+
+**5. Does each document's "last updated" claim match reality?**
+`architecture.md`'s Verification Log is still the only document making
+the claim. Its newest entry reads "Updated 2026-08-25 (after
+`UX-296`)"; `git log -1 --date=short -- docs/design/architecture.md`
+returns **2026-08-29**. The file moved this round without the log
+gaining an entry — which `UX-247`'s guard permits, because the guard
+asserts the newest *dated* entry is not in the future rather than that
+every edit adds one. Recorded here rather than filed: the entries are
+re-groundings, not a changelog, and this round re-grounded nothing in
+that document.
+
+**No code was produced by this review**, per the rule at the top. Both
 findings are filings.

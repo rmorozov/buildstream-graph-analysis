@@ -384,7 +384,13 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
         from bga.correlate import correlate as _correlate
 
         try:
-            joined = _correlate(data, native_report)
+            # `UX-407`: with the tasks and the run context, so the
+            # restructuring finding carries its replay rather than a
+            # null projection.
+            joined = _correlate(
+                data, native_report,
+                tasks=getattr(result, 'normalized_tasks', None),
+                run_context=getattr(result, 'run_context', None))
         except Exception:                       # pragma: no cover
             # A join that cannot be computed must not cost the reader
             # the analysis - `UX-83`'s rule for the Plane 2 path, and
@@ -394,6 +400,30 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
         if joined:
             data['element_join'] = joined.get('elements') or []
             data['element_join_coverage'] = joined.get('coverage') or {}
+            # `UX-407`: **the synthesis, not only the crumbs.**
+            #
+            # `correlate` already computes the one paragraph that names
+            # a whole restructuring - the never-read edges, the elements
+            # they chain, and a replay of this run without them - and
+            # publishes it as `restructuring` in `correlate/v2`. The
+            # page renders `analyze/v4` and embeds no other document, so
+            # the largest single saving the analysis computes reached a
+            # terminal and nothing else: on the round-64 walk, 12.9s
+            # against a 6.0s headline card.
+            #
+            # The page carried the per-element crumbs
+            # (`unused_dependencies`, "opened no file staged by 3
+            # declared build dependencies"), so a reader had to open
+            # seven element folds and re-do the aggregation the tool had
+            # already done, projection and all. `UX-82` asked for this
+            # finding rounds ago; it existed and never left the
+            # terminal.
+            #
+            # An addition, so no version bump (`UX-190`) - and the same
+            # join that already runs here, so no second computation.
+            restructuring = joined.get('restructuring')
+            if restructuring:
+                data['restructuring'] = restructuring
         # `UX-370`: what the build spent its time *running*, which
         # Plane 2 measures and nothing carried out of it. Round 58
         # asked what cmake configure costs and found the answer in

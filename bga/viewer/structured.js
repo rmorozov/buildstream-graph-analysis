@@ -139,7 +139,20 @@ function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
     // quantity: `presetColumns` selects on the declaration, so without
     // this the table gets no `Top N` control and therefore no bound
     // (`UX-262`).
-    const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key) ?? "count";
+    //
+    // `UX-407`: **unless the node is a record.** A schema that names
+    // its members in `properties` is describing one value per member,
+    // each with its own unit - `projection` holds three durations and
+    // a capacity map - and there is no column quantity to declare. The
+    // `?? "count"` fallback invented one anyway, which put `43200000`
+    // in a cell whose member is declared `duration_us` and drew a
+    // strip reading `19050000 -> 43200000 across 3 rows` over three
+    // numbers that are not a distribution. Left undeclared, the cell
+    // renders each member in its own unit (`buildTable`) and the strip
+    // is not drawn, which is the honest answer for a record.
+    const record = Boolean(node?.properties);
+    const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
+      ?? (record ? null : "count");
     declared = { ...hint, [COLUMNS]: [
       { key: "key", title: "name" },
       { key: "value", title: title(key, measure), quantity: measure }] };
@@ -457,7 +470,6 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       const column = spec.key;
       const raw = row?.[column];
       const numeric = typeof raw === "number";
-      const kind = numeric ? spec.quantity : null;
       // `UX-277`: the leaf every `<td>` in the report goes through.
       //
       // `UX-267` built `renderStructured` and wired it into
@@ -483,14 +495,44 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       const describes = column === "value" && row?.key !== undefined
         ? String(row.key) : column;
       const child = childNode(node, describes);
+      // `UX-407`: and the *unit* comes from there too.
+      //
+      // `mapTable` declares one quantity for the whole `value` column,
+      // falling back to `count` - which is right for a homogeneous map
+      // (`{element: duration_us}`) and wrong for a **record**, where
+      // every member has its own unit. `projection` is a record:
+      // `replayed_baseline_us` printed `43200000` on the page beside a
+      // terminal saying `43.2s`, two surfaces disagreeing about one
+      // number, which is the property this viewer is built on.
+      //
+      // Only an *explicit* per-member declaration wins, and only where
+      // the row key is the thing being described (`UX-290`'s rule,
+      // which resolved the schema node here and left the rendering
+      // reading the column's). A real table is untouched: there
+      // `describes === column`, and `columnSpecs` already consulted
+      // the same node.
+      const perMember = describes === column ? null : hintsOf(child)[QUANTITY];
+      const kind = numeric ? (perMember ?? spec.quantity) : null;
       tr.append(el("td",
         { class: numeric ? "num" : null,
           "data-column": column,
           "data-raw": raw === undefined || raw === null ? ""
             : structural ? JSON.stringify(raw) : String(raw) },
         structural
+          // `UX-407`: the column too, where it is not already the row.
+          //
+          // `UX-292` keyed a nested table by its row because a map
+          // table's cells are all in a column called `value`. A
+          // *record* row with several structural columns is the other
+          // half of the same problem, and `restructuring`'s one row
+          // holds three of them: its elements list, its edge table and
+          // its projection all opened and filtered as one state key.
+          // Where the row key already names the column (`describes ===
+          // rowId`, which is every map table) the path is unchanged.
           ? renderStructured(describes, raw, hintsOf(child), child, depth,
-                             `${key}.${rowId}`)
+                             String(describes) === String(rowId)
+                               ? `${key}.${rowId}`
+                               : `${key}.${rowId}.${column}`)
           : numeric ? quantity(raw, kind)
           : typeof raw === "string" ? renderText(column, raw)
           : (raw ?? "—")));

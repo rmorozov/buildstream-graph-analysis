@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-409 scenarios: **16 open**, 393 closed.
+409 scenarios: **15 open**, 394 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 69 |
-| analysis | 1 | 54 |
+| analysis | 0 | 54 |
 | contracts | 0 | 46 |
 | viewer | 7 | 120 |
 | cli | 0 | 5 |
@@ -51,7 +51,6 @@ task file, which is the only place it ever lived twice.
 | UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | guards | High | every future round, before its walk | 🔴 |
 | UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | guards | Medium | the audit loop itself | 🔴 |
 | UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | guards | Medium | anyone reading a whatif or store number outside the page | 🔴 |
-| UX-407 | [the finding that *is* the answer stays at the terminal](UX-0407-the-finding-that-is-the-answer-stays-at-the-terminal.md) | analysis | High | R1 and R8 — the reader deciding what to restructure | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

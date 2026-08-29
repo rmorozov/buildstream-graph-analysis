@@ -128,6 +128,35 @@ def _per_element_measures(found):
             if match and rows[match.group(1)] > 1}
 
 
+def _is_an_edge(path):
+    """A member of a published **edge list** is a relation, not a claim.
+
+    `UX-407` put `restructuring[].edges` into `analyze/v4`, and the
+    sweep immediately flagged seven pairs of it against
+    `batch_opportunities.serialized_pairs`:
+
+    ```text
+    restructuring[0].edges[0]  and batch_opportunities.serialized_pairs[3]
+    restructuring[0].edges[13] and batch_opportunities.serialized_pairs[8]
+    ...                                                    (7 in all)
+    ```
+
+    Both lists hold `[from, to]` pairs over one dependency graph, so
+    every unread declared edge *is* a pair on a dependency chain and
+    coincides with one by construction - the two lists answer different
+    questions ("which declared edges did Plane 2 measure never-read"
+    against "which pairs cannot be batched") about the same edges.
+
+    This is the two-element floor `_clashes` already documents, met
+    from the other side: a pair is the smallest set above it, and a
+    graph publishes many. The exclusion is on the **member**, not on
+    the list - `restructuring[0].elements` (8) is still swept against
+    everything, which is where a real duplicate selection here would
+    show.
+    """
+    return bool(re.search(r"(edges|_pairs)\[\d+\]$", path))
+
+
 def _clashes(payload):
     """Every pair of published fields carrying one element selection.
 
@@ -176,6 +205,8 @@ def _clashes(payload):
             if other >= name or members != others:
                 continue
             if _is_narrative(name) or _is_narrative(other):
+                continue
+            if _is_an_edge(name) and _is_an_edge(other):
                 continue
             if name in measures or other in measures:
                 continue

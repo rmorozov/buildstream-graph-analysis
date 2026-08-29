@@ -50,6 +50,10 @@ chrome://tracing.
 RAW_LOG_NAME = "plane2.log.gz"
 WRAPPED_LOG_NAME = "build.log"
 RUN_SUBDIR = "run"
+# `UX-380`: the analysis the capture wrote beside the run, which is
+# where the graph-structural facts a slice now carries come from.
+# Named in `run_store` so the layout has one authority.
+from bga.run_store import ANALYSIS_NAME    # noqa: E402
 
 # `UX-298`: the two shapes this command can write. TrackEvent is
 # Perfetto's own - a stream of packets, written as the records arrive
@@ -156,6 +160,19 @@ PLANE1_ANNOTATIONS = (
     ("outcome", "the status BuildStream's log closed the task with - "
                 "`SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache "
                 "outcome is the last two, and only where the log states it"),
+    # `UX-380`: where the element sits, not only what it is. Every one
+    # of these is published by the analyzer and read here rather than
+    # recomputed - a second implementation is how the timeline and the
+    # report come to disagree about one element.
+    ("depth", "how far down the dependency graph this element sits - the "
+              "longest path in edges from a source, which is the level "
+              "`parallelism.levels` decomposes the build by. Absent where the "
+              "snapshot carries no analysis"),
+    ("on_critical_path", "whether this element is on the chain that sets the "
+                         "build's finish time. The set every finding in the "
+                         "report is ranked against"),
+    ("downstream_count", "how many elements rebuild when this one changes - "
+                         "its blast radius in elements"),
 )
 
 # The one category, and the one already-pinned constant it earns
@@ -259,6 +276,47 @@ def element_kinds(snapshot: str) -> dict:
         if uid:
             kinds[uid] = element.get("element_kind") or "unknown"
     return kinds
+
+
+def element_structure(snapshot: str) -> dict:
+    """element uid -> where it sits in the graph (`UX-380`).
+
+    `{"depth": n, "on_critical_path": bool, "downstream_count": n}`, read
+    from the `analyze.json` the capture already wrote beside the run.
+
+    **Read, not recomputed.** All three are published by the analyzer -
+    `elements.unweighted_depth`, `elements.downstream_count` and
+    `element_join[].on_critical_path` - and a second implementation here
+    is exactly how the timeline and the report come to disagree about
+    the same element. A snapshot without an analysis (a run directory
+    rendered directly, or one captured before `UX-296` wrote one) yields
+    `{}`, and the keys are simply absent from every slice - the rule
+    every annotation here follows.
+
+    Depth is `UX-41`'s longest path from a source, which is the same
+    number `parallelism.levels` decomposes by; a query that groups on it
+    is asking the question that decomposition exists to answer.
+    """
+    path = os.path.join(snapshot, ANALYSIS_NAME)
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            analysis = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    elements = analysis.get("elements") or {}
+    depth = elements.get("unweighted_depth") or {}
+    downstream = elements.get("downstream_count") or {}
+    structure = {}
+    for uid, value in depth.items():
+        structure.setdefault(uid, {})["depth"] = value
+    for uid, value in downstream.items():
+        structure.setdefault(uid, {})["downstream_count"] = value
+    for row in analysis.get("element_join") or ():
+        uid = row.get("element")
+        if uid and row.get("on_critical_path") is not None:
+            structure.setdefault(uid, {})["on_critical_path"] = bool(
+                row["on_critical_path"])
+    return structure
 
 
 def _plane1_outcomes(events) -> dict:
@@ -433,6 +491,21 @@ IDENTITY_ANNOTATIONS = (
     ("kernel_release", "the kernel the sandboxes ran under"),
     ("distro_id", "the distribution the capture was taken on"),
     ("builders", "BuildStream's element-dispatch concurrency for this run"),
+    # `UX-380`: the second factor of `UX-116`'s question. `builders` was
+    # here and this was not, so a reader could see one of the two
+    # numbers whose product is the trace's own process count. Named for
+    # the run-context field it is copied from and not `max_jobs`,
+    # because run-context/v9's `max_jobs` means `builders` - the two
+    # would sit side by side here saying the same thing under different
+    # names.
+    ("native_max_jobs", "the per-element concurrency the native build "
+                        "systems ran with - `bst --max-jobs`, or what the "
+                        "graph resolved `%{max-jobs}` to. Absent where the "
+                        "capture could establish neither"),
+    ("native_max_jobs_source", "which of the three the number came from - "
+                               "`operator_declared`, "
+                               "`parsed_from_invocation` or "
+                               "`resolved_from_graph`"),
     ("incomplete_reason", "why this run is not a measurement - `failed`, "
                           "`interrupted` or `suspended`. Absent on a run "
                           "that finished, which is the only thing its "
@@ -534,6 +607,12 @@ def run_identity(snapshot: str) -> dict:
         "kernel_release": manifest.get("kernel_release"),
         "distro_id": manifest.get("distro_id"),
         "builders": scheduler.get("builders"),
+        # `UX-380`/`UX-377`: read from the run context's own resolved
+        # field rather than re-resolved here. A second implementation of
+        # the three-tier rule is how the trace and the report come to
+        # disagree about the number the whole capacity chain is keyed on.
+        "native_max_jobs": context.get("native_max_jobs"),
+        "native_max_jobs_source": context.get("native_max_jobs_source"),
         "incomplete_reason": _incomplete_reason(context.get("build_outcome")),
     }
 
@@ -730,14 +809,23 @@ def _plane2_flows(records, first_flow_id):
     return flows, flow_id
 
 
-def _plane1_annotations(event: dict, kinds: dict, outcome) -> list:
+def _plane1_annotations(event: dict, kinds: dict, outcome,
+                        structure: Optional[dict] = None) -> list:
     args = event.get("args") or {}
     element = args.get("element")
+    # `UX-380`: where this element sits, not only what it is. Absent
+    # rather than defaulted where the snapshot has no analysis - a
+    # `depth` of 0 written for an unknown element would put every
+    # unanalysed task at the graph's root.
+    place = ((structure or {}).get(element) or {}) if element else {}
     values = {
         "element": element,
         "element_kind": kinds.get(element, "unknown") if element else None,
         "task_type": args.get("action"),
         "outcome": outcome,
+        "depth": place.get("depth"),
+        "on_critical_path": place.get("on_critical_path"),
+        "downstream_count": place.get("downstream_count"),
     }
     return [(key, values[key]) for key, _ in PLANE1_ANNOTATIONS
             if values[key] is not None]
@@ -918,7 +1006,7 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
-                      kinds=None, edges=(), snapshot=None):
+                      kinds=None, edges=(), snapshot=None, structure=None):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -988,7 +1076,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 trace.slice_begin(
                     timestamp, track, event.get("name") or "task",
                     annotations=_plane1_annotations(
-                        event, kinds, outcomes.get(id(event))),
+                        event, kinds, outcomes.get(id(event)), structure),
                     categories=(CATEGORY_PLANE1,),
                     flows=sources, terminating_flows=sinks)
             else:
@@ -1172,7 +1260,8 @@ def render(snapshot: str, output: str,
             written = _write_trackevent(
                 plane1_events, raw if anchor else None, spans, anchor, output,
                 kinds=element_kinds(snapshot),
-                edges=dependency_edges(snapshot), snapshot=snapshot)
+                edges=dependency_edges(snapshot), snapshot=snapshot,
+                structure=element_structure(snapshot))
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
                       "anchor": anchor, "raw_log": raw, "format": fmt}
             result.update(written)

@@ -248,6 +248,17 @@ def capture_scratch(project_dir: str, prefix: str):
     """
     from bga.run_store import ensure_store_ignored, scratch_dir
 
+    # `UX-405`: the choke point. Every path this yields is joined onto,
+    # and two of the results leave the process - the shim directory on
+    # `PATH` and `BST_TRACE_BIND_SRC` - to be read by `bst` and by
+    # `buildbox-casd` after they have chdir'd. A relative `--project`
+    # made all of them relative, so nothing found the shim: the
+    # documented invocation traced 0 of 87 processes and exited 0.
+    #
+    # Absolutised here as well as at `run_traced_build`'s entry,
+    # because `scratch_mkdtemp` reaches this by a second path that
+    # never passes through there.
+    project_dir = os.path.abspath(project_dir)
     root = scratch_dir(project_dir)
     try:
         os.makedirs(root, exist_ok=True)
@@ -845,6 +856,22 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
     if warning:
         print(warning, file=sys.stderr)
 
+    # `UX-405`: **before the scratch is chosen.** Everything this
+    # function hands to another process is derived from `project_dir` -
+    # the scratch root, the shim directory that goes on `PATH`, and
+    # `BST_TRACE_BIND_SRC`. A relative `PATH` entry resolves against
+    # each process's *own* working directory, and `buildbox-casd`
+    # chdirs away, so with a relative `--project` nothing found the
+    # shim: the documented invocation from a repo root traced 0 of 87
+    # processes and exited 0.
+    #
+    # This is `UX-155`'s lesson one variable over. That item normalised
+    # `TMPDIR` for exactly the same reason - a relative path handed to a
+    # daemon that has moved - and the docstring above it records the
+    # user who was told to set a relative one and got `mkdtemp` errors
+    # out of C++ that Python had silently tolerated.
+    project_dir = os.path.abspath(project_dir)
+
     # UX-155: before anything here spawns a process. Correcting only the
     # build's own `env` left every other `bst` bga shells out to - the
     # census, the fingerprint probe, and `extract_run`'s `bst show` - on
@@ -854,8 +881,13 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
     open(raw_log_path, "w").close()  # truncate/create up front - the hook only ever appends
 
     with capture_scratch(project_dir, "trace-") as tmp:
-        shim_dir = os.path.join(tmp, "shim")
-        bind_dir = os.path.join(tmp, "bind")
+        # `UX-405`: absolute, and stated rather than inherited. `tmp` is
+        # already absolute because `project_dir` is, and these two are
+        # the values that leave this process - one on `PATH`, one in
+        # `BST_TRACE_BIND_SRC` - so they are the pair a guard can check
+        # without a build.
+        shim_dir = os.path.abspath(os.path.join(tmp, "shim"))
+        bind_dir = os.path.abspath(os.path.join(tmp, "bind"))
         os.makedirs(shim_dir)
         os.makedirs(bind_dir)
 
@@ -5989,6 +6021,39 @@ def _looks_mis_split(record: dict) -> bool:
     return "--" in command[1:]
 
 
+def format_untraced_build_warning(process_count: int,
+                                  sandbox_tasks: Optional[int]) -> Optional[str]:
+    """A Plane 2 capture that saw nothing while sandboxes ran, said loudly.
+
+    `UX-405`: the shape this exists for traced **0 of 87** processes and
+    exited 0, with an empty `plane2.log.gz` beside a green snapshot. The
+    capture half-knew - it printed "ELEMENT ATTRIBUTION UNRELIABLE" -
+    and completed as though nothing were wrong, so a stranger's first
+    capture silently has no second plane at all.
+
+    The three-state rule (`UX-376`'s vocabulary, `UX-107`'s law): zero
+    traced processes is a *result* when nothing launched a sandbox, and
+    a *failure to look* when something did. `None` sandbox tasks is
+    "cannot say" - there is no Plane 1 log to ask - and gets no verdict
+    either way, which is the state this function must not turn into a
+    false alarm.
+    """
+    if process_count or not sandbox_tasks:
+        return None
+    return (
+        f"\nPLANE 2 CAPTURED NOTHING: the build ran {sandbox_tasks} sandbox "
+        f"task(s) and the hook recorded 0 processes, so this snapshot has no "
+        f"second plane - every per-element CPU, memory and binary figure "
+        f"below is absent rather than zero.\n"
+        f"  What produces this: the bwrap shim was never reached. Check that "
+        f"`bwrap` resolves to bga's shim inside the build (a `PATH` bga "
+        f"cannot control, a sandbox that resets the environment), and re-run "
+        f"with --diagnose - it records what the shim received, and an "
+        f"invocation count of 0 separates 'never called' from 'called and "
+        f"failed'."
+    )
+
+
 def count_build_tasks(plane1_log_path: Optional[str]) -> Optional[int]:
     """How many element build tasks this run started, or `None`.
 
@@ -6765,6 +6830,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             else:
                 print(_format_text(report))
                 print(f"\nWrapped command exit code: {returncode}")
+            # `UX-405`: after the report, on stderr, so it survives a
+            # `> report.txt` and is the last thing a terminal shows.
+            untraced = format_untraced_build_warning(
+                report.get("process_count") or 0,
+                count_build_tasks(wrapped_log_path))
+            if untraced:
+                print(untraced, file=sys.stderr)
             # UX-147 item 5: the failing user is told what would answer the
             # question. Only when it was not already asked for, and only on a
             # failure - a working capture does not need advice.

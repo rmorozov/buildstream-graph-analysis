@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-409 scenarios: **20 open**, 389 closed.
+409 scenarios: **19 open**, 390 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 69 |
 | analysis | 2 | 54 |
 | contracts | 1 | 46 |
-| viewer | 9 | 120 |
+| viewer | 8 | 120 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-388 | [an empty population disappears without a word](UX-0388-an-empty-population-disappears-without-a-word.md) | viewer | High | anyone reading the report of an incremental build | 🔴 |
 | UX-389 | [fourteen of twenty-five Plane 2 blocks reach no browser](UX-0389-fourteen-plane-two-blocks-reach-no-browser.md) | viewer | High | anyone asking in a browser whether the instrument saw everything | 🔴 |
 | UX-390 | [attribution and its hints are one population in two sections](UX-0390-attribution-and-its-hints-are-one-population-in-two-sections.md) | viewer | Medium | anyone reading where a build's time went | 🔴 |
 | UX-391 | [`wall_clock_share_us` shows the reader a composite key](UX-0391-wall-clock-share-shows-the-reader-a-composite-key.md) | viewer | Medium | anyone searching the page for an element they built | 🔴 |

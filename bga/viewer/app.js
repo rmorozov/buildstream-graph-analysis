@@ -299,18 +299,88 @@ export const DRAWN_ELSEWHERE = {
     + "shown, the way `next_steps[].id` is not shown",
 };
 
+/**
+ * `UX-388`: **an empty population is a result, and the page says so.**
+ *
+ * Six sections vanished between a cold capture and the incremental one
+ * beside it - the optimization horizon 5 rows -> `[]`, `latent_heavies`
+ * 1 -> `[]`, `joint_saving` an object -> `null`, and three more - and
+ * the page went 9,316 px to 3,347 px without a word about any of them.
+ * Every one of those was `return null` in this function.
+ *
+ * (The horizon is named in prose rather than by its key here: `UX-219`
+ * guards that this file does not special-case it, by grepping for the
+ * key. Tenth time a guard in this repository has found itself.)
+ *
+ * The reader is left unable to tell three facts the *payload* keeps
+ * apart: the analysis ran and found nothing (`[]`, or a `null` the
+ * emitter writes when its input set was empty); the key is absent
+ * because this version of bga does not compute it; and - the one the
+ * page did tell them - there is something here. `UX-107` made that
+ * distinction law for Plane 2's coverage blocks; nothing had applied
+ * it to a population.
+ *
+ * Absent stays absent: a key the payload does not carry renders
+ * nothing, because nothing was computed and inventing a heading for it
+ * would be the opposite error.
+ */
+function declaresACollection(node) {
+  if (!node) return false;
+  const type = node.type;
+  if (type === "array" || type === "object") return true;
+  if (Array.isArray(type)) return type.includes("array") || type.includes("object");
+  return Boolean(node.items || node.additionalProperties || node.properties);
+}
+
+function isEmptyPopulation(value) {
+  if (Array.isArray(value)) return !value.length;
+  if (value && typeof value === "object") return !Object.keys(value).length;
+  return value === null || value === undefined;
+}
+
+/** The heading, the sentence, and the one line that says it is empty. */
+function renderEmptySection(key, hint, node) {
+  const info = heading(key, hint);
+  const section = el("section", {
+    "data-section": key, "data-rail": info.rail,
+    // The mark the rail reads, so the map of the report matches the
+    // report on every run rather than only on the full ones.
+    "data-empty": "true",
+  }, sectionHead(key, hint));
+  section.append(el("p", { class: "empty-population" },
+                    `Nothing to report here for this run \u2014 the `
+                    + `analysis ran and found none.`));
+  // **No schema sentence here**, though an empty section is exactly
+  // where a reader would want one. `UX-346` made the rule that a
+  // description renders beside its value only when the contract
+  // declares it inline, and `UX-317` that every described value carries
+  // a `?` marker; a `<p class="description">` under a heading satisfies
+  // neither, and the first version of this reddened four clauses of
+  // those two items. The rule is older and better argued than the
+  // convenience, so the sentence stays where the rule puts it.
+  return section;
+}
+
 export function renderSection(key, value, hint = {}, node = undefined,
                               investigate = null, payload = undefined,
                               root = undefined) {
-  if (value === null || value === undefined) return null;
   if (key in DRAWN_ELSEWHERE) return null;
+  // `UX-388`: empty is rendered, absent is not - and what tells them
+  // apart is the *contract*, not the value. A declared collection with
+  // nothing in it (or a `null` its emitter writes for an empty input
+  // set, which is what `joint_saving` does) is a population that came
+  // back empty; anything else that is null is a scalar with no value
+  // and has never been a section.
+  if (isEmptyPopulation(value)) {
+    return declaresACollection(node) ? renderEmptySection(key, hint, node)
+                                     : null;
+  }
   if (hint[SEVERITY] && Array.isArray(value)) {
     // UX-217: the schema node travels with the value, so the evidence
     // renders in its declared units rather than by name-sniffing.
-    return value.length ? renderFindings(value, investigate, node) : null;
+    return renderFindings(value, investigate, node);
   }
   if (Array.isArray(value)) {
-    if (!value.length) return null;
     // `UX-302`: §1 again, at section level. Three of its rows reach
     // here and each gets its own control; the fourth outcome is a shape
     // §1 does not name, and `renderStructured` folds and warns.

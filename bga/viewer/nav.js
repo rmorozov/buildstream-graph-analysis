@@ -396,6 +396,110 @@ export function toc(root, { document: doc, controls } = {}) {
  * Returns `{ node, next, previous, top }` so a guard can drive the
  * steps without a browser's chrome, or `null` where there is no rail.
  */
+/**
+ * `UX-394`: **a run selector, in the page.**
+ *
+ * Round 63 ran the capture cycle twice, so the store held two runs of
+ * one project while the report was open, and no control in the page
+ * reached the other:
+ *
+ * ```text
+ * runs in the store                        2
+ * controls in the page reaching another    0
+ * ```
+ *
+ * `bga view` was a single-run window. The tool already speaks about
+ * more than one run - `bga compare`, `@prev`, `@last`, the store's own
+ * listing - and all of it was CLI vocabulary, so a reader in a browser
+ * had to go back to a terminal and re-invoke.
+ *
+ * **A navigation, not a re-render.** The page reads its payload once
+ * at boot (`UX-296` - it parses nothing), so `?run=<stamp>` *is* the
+ * state: choosing a run loads that URL, and sending someone the URL
+ * sends them the same view of the same run (`UX-211`'s rule).
+ *
+ * **Absent, not empty** (`UX-388`). An export carries one run's
+ * payload and can reach no other, so it renders no selector rather
+ * than a control that fails - which is the Falsification's own
+ * "what it must not do". The list comes from `store.json`, which only
+ * a served page has.
+ *
+ * The identity is `UX-95`'s: what the run *is* - its stamp, its alias
+ * and what it measured - never a directory name.
+ */
+export function runSelector(nav, store, { document: doc, current = null,
+                                          location: where = null } = {}) {
+  const owner = doc ?? nav?.ownerDocument;
+  if (!nav || !owner) return null;
+  const runs = ((store ?? {}).snapshots ?? []).filter((row) => row?.has_run);
+  // One run is not a choice, and no store is not a page with a broken
+  // control on it.
+  if (runs.length < 2) return null;
+
+  // The URL a stamp opens, written on the control as well as followed
+  // by it. A guard cannot watch a navigation - it takes the page the
+  // evaluation is running in with it - so the control says where it
+  // goes, and the guard loads that URL itself and checks what comes
+  // back. Two halves of one claim, and neither is the other's proof.
+  const urlFor = (stamp) => `?run=${encodeURIComponent(stamp)}`;
+
+  const box = owner.createElement("p");
+  box.className = "run-picker";
+  const label = owner.createElement("label");
+  label.textContent = "Run: ";
+  label.setAttribute("for", "bga-run");
+  const select = owner.createElement("select");
+  select.id = "bga-run";
+  select.name = "run";
+  select.setAttribute("aria-label", "Which run this report is of");
+  for (const row of runs) {
+    const option = owner.createElement("option");
+    option.value = row.stamp;
+    option.setAttribute("data-run-url", urlFor(row.stamp));
+    // `UX-95`: what the run is. The alias a reader already types at a
+    // terminal, then what it measured - never the directory name.
+    const seconds = Number(row.total_duration_us);
+    option.textContent = row.stamp
+      + (row.alias ? ` (${row.alias})` : "")
+      + (Number.isFinite(seconds) ? ` \u2014 ${(seconds / 1e6).toFixed(1)}s` : "");
+    if (row.stamp === current) option.selected = true;
+    select.append(option);
+  }
+  const go = (stamp) => {
+    const target = where ?? owner.defaultView?.location ?? null;
+    if (!target || !stamp) return;
+    // The hash travels: a reader switching runs is usually looking at
+    // one section and wants the same section of the other.
+    target.assign(`${urlFor(stamp)}${target.hash || ""}`);
+  };
+  select.addEventListener("change", () => go(select.value));
+  label.append(select);
+  box.append(label);
+
+  // The two neighbours, one click each. `@prev` and `@last` are the
+  // aliases the store already publishes, so the page offers what the
+  // terminal offers rather than inventing a second vocabulary.
+  const at = runs.findIndex((row) => row.stamp === current);
+  const jump = (text, stamp, name) => {
+    if (!stamp || stamp === current) return;
+    const button = owner.createElement("button");
+    button.setAttribute("type", "button");
+    button.setAttribute("data-run-jump", name);
+    button.setAttribute("data-run", stamp);
+    button.setAttribute("data-run-url", urlFor(stamp));
+    button.textContent = text;
+    button.addEventListener("click", () => go(stamp));
+    box.append(button);
+  };
+  jump("\u2190 Previous run", at > 0 ? runs[at - 1].stamp : null, "previous");
+  jump("Latest run", runs[runs.length - 1].stamp, "latest");
+
+  const title = nav.querySelector?.(".toc-title");
+  if (title?.nextSibling) nav.insertBefore(box, title.nextSibling);
+  else nav.append(box);
+  return { node: box, select, go };
+}
+
 export function stepper(root, nav, { document: doc, window: win } = {}) {
   if (!nav) return null;
   const owner = doc ?? root?.ownerDocument;

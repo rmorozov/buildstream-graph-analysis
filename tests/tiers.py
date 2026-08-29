@@ -504,4 +504,7 @@ MEDIUM = (
     # `UX-397`: two browser boots - the export scrolled to its end and
     # a served two-plane snapshot where the button is drawn. 4.6s.
     "tests/unit/test_the_handoff_rides_the_rail.py",                 #    4.6s
+    # `UX-394`: builds a three-snapshot store, serves it and boots a
+    # browser four times, plus one export. 13.5s.
+    "tests/unit/test_the_page_moves_between_runs.py",                #   13.5s
 )

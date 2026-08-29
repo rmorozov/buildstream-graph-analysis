@@ -155,23 +155,50 @@ class TestEveryFindingNamesItsReader:
 class TestTheAssignmentIsExhaustive:
     """A map with a hole defaults silently, and a finding serving
     nobody is the state this item found. Held against the source rather
-    than against a fixture, because neither fixture publishes all
-    nineteen."""
+    than against a fixture: the module can emit twenty-one ids and
+    the larger fixture publishes eleven."""
 
-    def test_every_id_the_module_can_emit_has_a_reader(self):
+    #: Every `_finding(...)` call's first argument. **Not** the severity
+    #: form: the scan this was written with read
+    #: `'<id>', SEVERITY_<BAND>` and found nineteen of the twenty-one
+    #: ids, silently missing `memory-envelope` and
+    #: `capacity-recommendation` - the two whose severity is computed
+    #: into a local and passed as a variable. Both belong to
+    #: `capacity-operator`, so an instrument blind to exactly them
+    #: would have been blind to the reader this item was filed about.
+    #: Caught by mutation M1, which deleted `capacity-recommendation`
+    #: from the map and left this clause silent.
+    _EMITS = r"_finding\(\s*'([a-z0-9-]+)'"
+
+    def _emitted(self):
         import re
 
         from bga import findings as module
 
         source = pathlib.Path(module.__file__).read_text(encoding="utf-8")
-        emitted = set(re.findall(r"'([a-z0-9-]+)',\s*SEVERITY_[A-Z]+",
-                                 source))
-        assert emitted, "the id scan found nothing; it has stopped working"
-        missing = sorted(emitted - set(module.FINDING_READERS))
+        found = set(re.findall(self._EMITS, source))
+        assert len(found) >= 21, (
+            f"the id scan found {len(found)}; it has stopped seeing calls "
+            f"it used to see")
+        return found
+
+    def test_every_id_the_module_can_emit_has_a_reader(self):
+        from bga.findings import FINDING_READERS
+
+        missing = sorted(self._emitted() - set(FINDING_READERS))
         assert missing == [], (
             f"finding id(s) with no reader in FINDING_READERS: {missing} - "
             f"a new finding must name who it is for rather than defaulting "
             f"to nobody")
+
+    def test_the_map_names_no_finding_that_does_not_exist(self):
+        """The other direction. A stale entry is not harmless: it is the
+        evidence that the map was maintained, and it is not."""
+        from bga.findings import FINDING_READERS
+
+        stale = sorted(set(FINDING_READERS) - self._emitted())
+        assert stale == [], (
+            f"FINDING_READERS names finding id(s) nothing emits: {stale}")
 
     def test_no_reader_is_named_that_the_vocabulary_lacks(self):
         from bga.findings import FINDING_READERS, READERS

@@ -834,6 +834,77 @@ anything: **the count of distinct blocks may not fall**. The cheapest
 way to drive a repetition ratio down is to say less, and losing a
 claim is not deduplicating it.
 
+## 6b. What this page may depend on (round 65)
+
+The standing question `UX-397` filed — *has this page reached the point
+of needing a table library?* — is answered here as a **rule**, because
+the next candidate will arrive with the same argument and deserves the
+same arithmetic rather than the same debate.
+
+**A JS dependency is admitted only when both hold:**
+
+1. the behaviour **cannot** be met by the table factory plus a platform
+   primitive inside the volume budget (§3e), shown by a measured
+   before/after of the export's *page* half — the `UX-382` split, not
+   the total; and
+2. the library's wiring-plus-conformance cost **measurably undercuts**
+   the in-house cost, counting the work of making its DOM pass §1's
+   mapping, §2a's grades and §7's walks.
+
+The named prior is `tools/native_trace/trackevent.py`: a protobuf
+writer written here rather than a protobuf dependency taken, for
+exactly these two reasons.
+
+**Why condition 1 is harder to meet than it looks.** The argument for a
+library is normally *this behaviour would otherwise be re-implemented
+in every module*. Measured, that premise is false here:
+
+```text
+$ grep -ln 'renderTable\|buildTable' bga/viewer/*.js
+bga/viewer/app.js          the one caller outside the factory
+bga/viewer/primitives.js   the factory's parts
+bga/viewer/structured.js   the factory
+
+$ grep -rn 'el("table"' bga/viewer/*.js
+bga/viewer/structured.js:435    one <table> is constructed in the viewer
+
+viewer modules                21
+modules that construct a table 1
+```
+
+Every table on the page — 31 of them on the round-63 export — is built
+by `buildTable`/`renderTable` in `structured.js`, which already owns the
+declared column specs, declared-not-sampled sorting (§3, `UX-284`), the
+preset menus (`presetColumns`), Top-N and fold-the-middle, the density
+strip, the copy control and `interrogable`'s filter bar. The other
+twenty modules *consume* the factory; none hands one. So a behaviour
+wanted on all 31 tables is **one change to one function**, and every
+future table inherits it — which is the economics a library is adopted
+for, already owned.
+
+**And what condition 2 has to beat.** For the concrete candidate
+(Tabulator, ~400 KB) on the export this rule was written against:
+
+```text
+bga view tests/fixtures/macro_micro/run --export
+  export total   417,859 B
+    page half    269,531 B
+    data half    148,328 B
+```
+
+A 400 KB dependency is 1.5x the entire page half. Beyond the bytes it
+imports three costs the filing did not price: **the styleguide is law
+over this DOM**, so a library's markup either fails §1/§2a/§7's walks or
+gets wrapped until the visual contract is re-implemented on top of it;
+**the console guard** (`UX-334`) holds every served page to zero CSP
+violations, and table libraries write inline style attributes as a
+matter of course; and **there is no toolchain to carry it** — no npm, no
+bundler, no lockfile — so one runtime dependency imports the whole
+supply-chain and upgrade question `UX-296` was decided to avoid.
+
+The rule prices candidates; it does not blacklist them. What it forbids
+is adopting one on an impression.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted

@@ -507,4 +507,7 @@ MEDIUM = (
     # `UX-394`: builds a three-snapshot store, serves it and boots a
     # browser four times, plus one export. 13.5s.
     "tests/unit/test_the_page_moves_between_runs.py",                #   13.5s
+    # `UX-400`: one `analyze` subprocess and one node sweep that renders
+    # ten populations at three sizes each - the subprocess is all of it.
+    "tests/unit/test_every_population_at_zero_one_and_many.py",      #    1.3s
 )

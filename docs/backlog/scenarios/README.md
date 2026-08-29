@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-410 scenarios: **8 open**, 402 closed.
+413 scenarios: **10 open**, 403 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 69 |
 | analysis | 0 | 54 |
 | contracts | 0 | 46 |
-| viewer | 1 | 121 |
+| viewer | 4 | 124 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 5 | 53 |
+| guards | 4 | 53 |
 
 ## Open scenarios
 
@@ -38,12 +38,14 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-400 | [every population is tested at zero, one and many](UX-0400-every-population-is-tested-at-zero-one-and-many.md) | guards | High | every future section, before its bug is filed | 🔴 |
 | UX-401 | [no key is terminal-only in silence](UX-0401-no-key-is-terminal-only-in-silence.md) | guards | Medium | whoever adds the sixteenth block | 🔴 |
 | UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | guards | High | every future round, before its walk | 🔴 |
 | UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | guards | Medium | the audit loop itself | 🔴 |
 | UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | guards | Medium | anyone reading a whatif or store number outside the page | 🔴 |
 | UX-411 | [a ranked map has no instrument](UX-0411-a-ranked-map-has-no-instrument.md) | viewer | Low | anyone scanning a per-key measure for its shape | 🔴 |
+| UX-412 | [a table of one says "1 rows"](UX-0412-a-table-of-one-says-one-rows.md) | viewer | Medium | every reader of a run small enough to have one of something | 🔴 |
+| UX-413 | [a population with nothing to rank by is never bounded](UX-0413-a-population-with-nothing-to-rank-by-is-never-bounded.md) | viewer | High | anyone whose run is big enough for the page to be long | 🔴 |
+| UX-414 | [two sections fall into "Everything else", and the guard's fixture cannot see it](UX-0414-two-sections-fall-into-everything-else.md) | viewer | Medium | anyone navigating a two-plane report | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

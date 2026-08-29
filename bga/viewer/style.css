@@ -1062,3 +1062,17 @@ p.run-advice {
   color: var(--muted);
   max-width: 62ch;
 }
+
+/* `UX-393`: the rail's own step controls. In the rail, not a banner:
+   `UX-347`'s distance budget measures the reading column, and a
+   sticky bar costs it on every screen. */
+.toc-steps {
+  display: flex;
+  gap: .25rem;
+  margin: .35rem 0 .6rem;
+}
+.toc-steps button {
+  flex: 1;
+  font-size: .85em;
+  padding: .2rem .3rem;
+}

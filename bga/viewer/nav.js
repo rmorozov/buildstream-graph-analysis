@@ -365,6 +365,138 @@ export function toc(root, { document: doc, controls } = {}) {
  * mark; nothing here decides what is in it (`UX-199`'s rule for this
  * whole file).
  */
+/**
+ * `UX-393`: **next section, previous section, back to the top.**
+ *
+ * Counted on the round-63 export: 9,316 px of page (7.4 screens at
+ * 1,260), 77 rail entries, and *one* control matching next/prev/top -
+ * an ordinary link to `#next_steps` inside a sentence. A reader
+ * working through the findings in order had to move the pointer to
+ * the rail, find the entry after the one they were on among 77, and
+ * click it, for every section.
+ *
+ * **The rail is where they live, not a banner.** `UX-347`'s distance
+ * budget measures scroll distance to content, and a 60px chrome bar
+ * makes every measurement on every screen worse. The rail is already
+ * sticky and already beside the content, so three buttons at its head
+ * cost the reading column nothing.
+ *
+ * **The order is the rail's**, which is `anchor(root)`'s, which is
+ * `UX-235`'s declared order - so "next" means the next section the
+ * page says comes next, not the next one in the DOM. And "here" is
+ * `scrollspy`'s `data-current` mark, so the two controls cannot
+ * disagree about where the reader is: one of them puts the mark there
+ * and the other reads it.
+ *
+ * Moving is a **click on the rail link**, not a second implementation
+ * of what a rail link does. A folded chapter opens, the anchor
+ * updates, the scroll happens - whatever the rail does, this does
+ * (`UX-347`'s "every way in opens it first").
+ *
+ * Returns `{ node, next, previous, top }` so a guard can drive the
+ * steps without a browser's chrome, or `null` where there is no rail.
+ */
+export function stepper(root, nav, { document: doc, window: win } = {}) {
+  if (!nav) return null;
+  const owner = doc ?? root?.ownerDocument;
+  if (!owner) return null;
+  const view = win ?? owner.defaultView ?? null;
+
+  const links = () => [...(nav.querySelectorAll?.("[data-toc]") ?? [])];
+  //: Where the reader is, by `scrollspy`'s mark. With no mark - no
+  //: `IntersectionObserver`, or the page not yet scrolled - "next"
+  //: means the first section, which is what a reader at the top means.
+  const at = () => links().findIndex((link) => link.hasAttribute("data-current"));
+
+  // The mark is asynchronous: `IntersectionObserver` fires on a later
+  // task and the scroll it is watching is smooth, so two clicks in a
+  // row both read the *pre-click* mark and the second one goes
+  // nowhere. Measured in Chrome before this: six presses of Next, six
+  // times `decision`.
+  //
+  // So the stepper carries its own cursor and adopts the mark only
+  // when the mark has **moved on its own** - which is the reader
+  // scrolling, and is the one case where the mark knows something the
+  // cursor does not. A mark that is merely behind reads as the same
+  // value it had at the previous step, and that is what tells the two
+  // apart.
+  let cursor = -1;
+  let lastMark = -1;
+  const step = (by) => {
+    const all = links();
+    if (!all.length) return null;
+    const marked = at();
+    const behind = cursor >= 0 && marked >= 0
+      && marked === lastMark && marked !== cursor;
+    if (!behind && marked >= 0) cursor = marked;
+    lastMark = marked;
+    // From nowhere, `next` is the first and `previous` is the last:
+    // the ends of the order, not an error.
+    const to = cursor < 0 ? (by > 0 ? 0 : all.length - 1) : cursor + by;
+    // Clamped, not wrapped. The Falsification asks that pressing next
+    // past the end *stops*, and a reader who has reached the end of a
+    // report has not asked to start it again.
+    const bounded = Math.max(0, Math.min(all.length - 1, to));
+    cursor = bounded;
+    all[bounded].click?.();
+    return all[bounded];
+  };
+
+  const bar = owner.createElement("p");
+  bar.className = "toc-steps";
+  const button = (text, name, label, run) => {
+    const node = owner.createElement("button");
+    node.setAttribute("type", "button");
+    node.setAttribute("data-step", name);
+    node.setAttribute("aria-label", label);
+    node.textContent = text;
+    node.addEventListener("click", run);
+    bar.append(node);
+    return node;
+  };
+  const previous = () => step(-1);
+  const next = () => step(1);
+  const top = () => {
+    view?.scrollTo?.({ top: 0, behavior: "smooth" });
+    // The mark follows the scroll through `scrollspy`; nothing here
+    // writes it, so there is still one authority on "here".
+  };
+  button("\u2191 Top", "top", "Back to the top", top);
+  button("\u2190 Prev", "previous", "Previous section", previous);
+  button("Next \u2192", "next", "Next section", next);
+
+  // `UX-393`: back to the top appears once there *is* a top to go
+  // back to. Below the first screen it is a control that does nothing,
+  // which is the dead affordance `UX-194` ruled out.
+  const topButton = bar.querySelector?.('[data-step="top"]');
+  const showTop = () => {
+    const past = (view?.scrollY ?? 0) > (view?.innerHeight ?? 0);
+    if (topButton) topButton.hidden = !past;
+  };
+  showTop();
+  view?.addEventListener?.("scroll", showTop, { passive: true });
+
+  // The accelerator, for the keyboard reader `UX-223` established.
+  // Bracket keys because they are unmodified, unclaimed here, and on
+  // every layout; ignored while the reader is typing, or the palette
+  // would lose two characters.
+  owner.addEventListener?.("keydown", (event) => {
+    if (event.key !== "[" && event.key !== "]") return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const tag = event.target?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    event.preventDefault?.();
+    (event.key === "]" ? next : previous)();
+  });
+
+  // After the title, before the chapters: the first thing in the rail
+  // after its name, which is where a reader looks for its controls.
+  const title = nav.querySelector?.(".toc-title");
+  if (title?.nextSibling) nav.insertBefore(bar, title.nextSibling);
+  else nav.append(bar);
+  return { node: bar, next, previous, top };
+}
+
 export function scrollspy(root, nav, { observer } = {}) {
   const Observer = observer
     ?? (typeof IntersectionObserver === "function" ? IntersectionObserver

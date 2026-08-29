@@ -397,7 +397,22 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #     page            273,635 -> 274,589   (+954, source)
 #     golden          373,214 -> 374,209
 #     macro_micro     428,547 -> 429,542
-PAGE_BUDGET_B = 276_000
+# `UX-392` spent 584 B of it within the old bound - the filter and the
+# Top-N preset now narrow the same set in one pass - and `UX-393` the
+# remaining 2,652, all **source**: the rail gains a step
+# bar - next section, previous section, back to the top - with its
+# rationale, the cursor that makes two presses move two sections, the
+# bracket-key accelerator and eight lines of CSS. It is in the rail
+# rather than in a banner precisely so that `UX-347`'s distance budget
+# and `UX-360`'s volume budget do not move, and neither did: the
+# reading column is unchanged and the data half is 18,786 B (golden)
+# and 74,119 B (macro_micro) either side. Neither companion guard
+# spoke.
+#
+#     page            274,589 -> 277,825   (+3,236, source)
+#     golden          374,209 -> 377,445
+#     macro_micro     429,542 -> 432,778
+PAGE_BUDGET_B = 280_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -483,7 +498,8 @@ COMMITTED_EXPORTS = [
     # that was already there, which is `UX-193`'s property and the
     # reason a schema addition costs no viewer change.
     # `UX-390`: +995 B, all source; see the note on `PAGE_BUDGET_B`.
-    ("golden", GOLDEN, 376_000),                       #  374,209 B
+    # `UX-393`: +3,236 B, all source; see the note on `PAGE_BUDGET_B`.
+    ("golden", GOLDEN, 380_000),                       #  377,445 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -523,7 +539,8 @@ COMMITTED_EXPORTS = [
     # source.
     # `UX-389`: +3,380 B, split in the note above the golden bound.
     # `UX-390`: +995 B, all source.
-    ("macro_micro", MACRO_MICRO, 432_000),             #  429,542 B
+    # `UX-393`: +3,236 B, all source.
+    ("macro_micro", MACRO_MICRO, 435_000),             #  432,778 B
 ]
 
 

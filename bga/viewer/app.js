@@ -44,7 +44,7 @@ import { renderCulprits, renderElementHistory, renderHorizon,
          renderWhatIf, resolvePath, elementUids } from "./element.js";
 import { renderDecision, renderProvenance, renderProvenanceRecords,
          renderInvestigation } from "./decision.js";
-import { anchor, collapsible, toc, scrollspy, jumpTargets, matches,
+import { anchor, collapsible, toc, scrollspy, stepper, jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { chapters, fileInChapter, revealChapter,
          setAllOpen } from "./chapters.js";
@@ -1233,6 +1233,11 @@ async function boot() {
       // that is already on screen. A no-op under the shim, which has no
       // `IntersectionObserver` and no layout to observe.
       scrollspy(root, contents);
+      // `UX-393`: and a step through that order, in the rail rather
+      // than in a banner - `UX-347`'s budget measures the reading
+      // column, and a sticky bar costs it on every screen. After the
+      // spy, because "next" is read off the mark the spy writes.
+      stepper(root, contents);
     }
 
     // UX-278: any element the page can name can be inspected.

@@ -3338,6 +3338,70 @@ _ANALYZE_HINTS = {
                 "description": "Exec chains billed to one process rather "
                                "than counted repeatedly - a shell that "
                                "execs a compiler is one process, not two."},
+            # `UX-389`: the capture's own identity, carried here
+            # rather than left at a terminal. Six blocks that change
+            # how every number under them is read - a reader looking
+            # at an attribution table had no way to learn that the
+            # spine never ran, so those numbers are a floor rather
+            # than a measurement.
+            "process_count": {
+                QUANTITY: "count",
+                "description": "Processes the capture traced at all. "
+                               "The population every per-element "
+                               "reduction is drawn from."},
+            "max_concurrency": {
+                QUANTITY: "count",
+                "description": "The peak number of traced processes "
+                               "alive at once. A process with no "
+                               "observed exit is excluded rather than "
+                               "assumed to run for ever - the "
+                               "sentence beside this says why."},
+            "wall_span_us": {
+                QUANTITY: "duration_us",
+                "description": "The window the hook was actually "
+                               "watching. Shorter than the build means "
+                               "part of it ran uninstrumented."},
+            "spine_policy": {
+                "description": "Whether the ptrace spine ran, and over "
+                               "how many sandboxes. With `policy: off` "
+                               "every CPU figure below is the hook's "
+                               "alone, which is a floor.",
+                "properties": {
+                    "policy": {
+                        INLINE: "name",
+                        "description": "`off`, `on` or `auto` - what "
+                                       "the capture was asked for."},
+                    "sandboxes": {
+                        QUANTITY: "count",
+                        "description": "Sandboxes the build ran."},
+                    "spine_traced": {
+                        QUANTITY: "count",
+                        "description": "How many of them the spine "
+                                       "actually attached to."},
+                },
+            },
+            "static_census": {
+                "description": "Which elements could be hiding a "
+                               "statically-linked binary the hook can "
+                               "never see. Read from the project's own "
+                               "sources before anything runs.",
+                "properties": {
+                    "elements_at_risk": {
+                        "description": "Elements whose local sources "
+                                       "carry an ELF executable with no "
+                                       "PT_INTERP."},
+                },
+            },
+            "open_records_note": {
+                "description": "Why a process may be missing from "
+                               "`max_concurrency` - the caveat that "
+                               "belongs beside the number rather than "
+                               "at a terminal."},
+            "static_binary_disclaimer": {
+                "description": "What LD_PRELOAD cannot see, in the "
+                               "capture's own words. The census above "
+                               "bounds it; this says what is being "
+                               "bounded."},
             # UX-297: which shape of Plane 2 report served these
             # numbers. Not a qualifier on them - both shapes publish
             # the same aggregates - but the answer to "why is this

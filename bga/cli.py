@@ -189,7 +189,16 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # capture actually has.
     if result.plane2_coverage:
         result.plane2_coverage = dict(
-            result.plane2_coverage, source=plane2_shape.provenance(native_report))
+            result.plane2_coverage, source=plane2_shape.provenance(native_report),
+            # `UX-389`: and the rest of the capture's own identity.
+            # Whether the ptrace spine ran, how many processes were
+            # traced, how long the hook was watching, which elements
+            # could be hiding a static binary - six blocks that change
+            # how every number under them is read, and that reached a
+            # terminal and nothing else. They belong here rather than
+            # in six sections of their own: this is the block a reader
+            # already opens to ask how much of the build Plane 2 saw.
+            **plane2_shape.coverage_additions(native_report))
     # UX-215: the report keeps the Plane 2 report itself, so the JSON
     # renderer can publish the per-element join from the same function
     # `bga correlate` calls. Held rather than joined here because the

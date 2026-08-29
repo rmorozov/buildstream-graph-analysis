@@ -63,6 +63,167 @@ SUPERSEDED = (PREVIOUS_SCHEMA, LEGACY_SCHEMA)
 
 RECORDS_KEY = "processes"
 
+# `UX-389`: **where every block of a Plane 2 report goes.**
+#
+# Counted against an all-planes capture of
+# `examples/06-macro-micro-optimization` when this was filed:
+#
+# ```text
+# plane2 blocks in the capture            25
+#   a key in analyze/v4                    6
+#   reaching the page through the join     6
+#   terminal only                         14
+# ```
+#
+# Fourteen of them were the *did the instrument see everything*
+# questions - whether the ptrace spine ran, which elements could hide a
+# static binary, how long the hook was watching - and a reader in a
+# browser had no way to learn that the numbers under the attribution
+# table were a floor rather than a measurement. That is `UX-107`'s rule
+# one level up: the page cannot say "nobody could look" while the block
+# that knows is at a terminal.
+#
+# The gap grew every round, because nothing held the two ends together:
+# `UX-370` moved three blocks, `UX-383` three more, and `UX-385` added
+# a fifteenth terminal-only block in the same round it was filed.
+#
+# So each block declares one of three destinations, and **silence is
+# not one of them** - that is what produced fourteen. A block added
+# with no entry fails `test_every_plane2_block_has_a_destination.py`,
+# which is the whole point of writing the inventory down rather than
+# leaving it implied by what `bga/cli.py` happens to copy.
+PAYLOAD = "payload"          #: a named key of `analyze/v4`
+JOIN = "join"                #: a field on an `element_join` row (`UX-382`)
+TERMINAL = "terminal"        #: deliberately terminal-only, with a reason
+
+#: `{block: (destination, where, why)}` for every top-level key a
+#: `plane2/v3` report carries. `where` is the payload key or the join
+#: field it lands on; for a terminal-only block it is empty and `why`
+#: carries the reason.
+DESTINATIONS = {
+    # --- the run-level measurements the page draws in their own right
+    "by_binary": (PAYLOAD, "by_binary", ""),
+    "binary_cost": (PAYLOAD, "binary_cost", ""),
+    "configure_phase": (PAYLOAD, "configure_phase", ""),
+    "cpu_time": (PAYLOAD, "cpu_time", ""),
+    "peak_memory": (PAYLOAD, "peak_memory", ""),
+    "resource_pressure": (PAYLOAD, "resource_pressure", ""),
+
+    # --- the capture's own identity: what the instrument could see.
+    # All six land in `plane2_coverage`, which is the block a reader
+    # already opens to ask how much of the build Plane 2 saw - not six
+    # new sections scattered among the findings.
+    "stream_coverage": (PAYLOAD, "plane2_coverage", ""),
+    "spine_policy": (PAYLOAD, "plane2_coverage.spine_policy", ""),
+    "process_count": (PAYLOAD, "plane2_coverage.process_count", ""),
+    "max_concurrency": (PAYLOAD, "plane2_coverage.max_concurrency", ""),
+    # Renamed on the way in, and converted: the payload's one unit
+    # for a duration is microseconds (`bga:quantity: duration_us`), and
+    # a key that says `_s` while its neighbours say `_us` is the label
+    # `UX-351` is about.
+    "wall_span_s": (PAYLOAD, "plane2_coverage.wall_span_us", ""),
+    "static_census": (PAYLOAD, "plane2_coverage.static_census", ""),
+    # The two sentences that qualify the two blocks above them. A
+    # number whose caveat stayed at the terminal is the same defect in
+    # miniature, so they travel with what they qualify.
+    "open_records_note": (PAYLOAD, "plane2_coverage.open_records_note", ""),
+    "static_binary_disclaimer": (
+        PAYLOAD, "plane2_coverage.static_binary_disclaimer", ""),
+
+    # --- the per-element blocks, on the join row by `UX-382`'s rule
+    "per_element_parallelism": (JOIN, "requested_jobs", ""),
+    "redundant_operations": (JOIN, "redundancy_count", ""),
+    "declared_vs_used": (JOIN, "unused_dependencies", ""),
+
+    # --- terminal-only, on purpose, each with the reason
+    "by_element": (
+        TERMINAL, "",
+        "Processes per element, which is the input the attribution "
+        "table is built from rather than an answer of its own - and "
+        "`element_join` already carries one row per element. Publishing "
+        "it beside them would be `UX-288`'s duplicate population."),
+    "element_attribution": (
+        TERMINAL, "",
+        "How the capture labelled its processes, summarised. Its "
+        "`recognized_elements` is the join's own population and its "
+        "share is `plane2_coverage.opens_coverage` seen from the other "
+        "side; what is left is a debugging view of the labeller."),
+    "invocation_correlation": (
+        TERMINAL, "",
+        "The pid-to-element mapping itself, resolved and ambiguous. "
+        "Every join row rests on it, so it is apparatus rather than a "
+        "measurement - and it names pids, which mean nothing after the "
+        "build that owned them exited."),
+    "opens_captured": (
+        TERMINAL, "",
+        "Per-element open-window bookkeeping (paths, windows, dropped). "
+        "`plane2_coverage.opens_coverage` is the run-level answer a "
+        "reader needs; the per-element breakdown is for diagnosing a "
+        "capture, which is `bga doctor`'s job."),
+    "redundant_operations_coverage": (
+        TERMINAL, "",
+        "What the redundancy scan excluded and why. A caveat on a "
+        "population the join already caps (`UX-375`), and the cap is "
+        "stated where the rows are."),
+    "matched_count": (
+        TERMINAL, "",
+        "Records matched to an element, before the reductions. "
+        "`plane2_coverage.processes` is the same census at the level a "
+        "reader asks it."),
+    "open_count": (
+        TERMINAL, "",
+        "Raw open events, which is a size of the trace log rather than "
+        "a property of the build - the trace's own size is published "
+        "by the capture layout."),
+    "wrapped_command_exit_code": (
+        TERMINAL, "",
+        "Whether the wrapped `bst` command succeeded. Plane 1 publishes "
+        "the run's outcome (`UX-156`), and two documents answering that "
+        "differently is the disagreement this tool exists not to have."),
+}
+
+#: The blocks `coverage_additions` copies into `plane2_coverage`, in
+#: the order they are read. Derived from `DESTINATIONS` so the
+#: inventory above is the one place the carry is written down.
+COVERAGE_ADDITIONS = tuple(
+    block for block, (kind, where, _why) in DESTINATIONS.items()
+    if kind == PAYLOAD and where.startswith("plane2_coverage."))
+
+
+def coverage_additions(report: Optional[dict]) -> dict:
+    """The capture's own identity, for `plane2_coverage` to carry.
+
+    `UX-389`: six blocks that change how every other number is read -
+    whether the spine ran, how many processes were traced, how long the
+    hook was watching, which elements could be hiding a static binary -
+    plus the two sentences that qualify them. A block the report does
+    not carry is left out rather than published empty, which is
+    `UX-388`'s distinction between absent and none.
+    """
+    if not isinstance(report, dict):
+        return {}
+    carried = {}
+    for block in COVERAGE_ADDITIONS:
+        value = report.get(block)
+        if value is None:
+            continue
+        name = DESTINATIONS[block][1].split(".", 1)[1]
+        if name.endswith("_us"):
+            value = int(round(value * 1_000_000))
+        elif name == "static_census":
+            # The run-level half only. `per_element` is a map keyed by
+            # element uid holding one bookkeeping record each - the
+            # census's own working, 11 rows of it on this fixture and
+            # one per element at any scale. `UX-288`'s rule says a
+            # second copy of the element population needs a reason, and
+            # "what the census counted per element" is `bga doctor`'s
+            # question rather than a reader's; `elements_at_risk` is
+            # the answer this block exists to give.
+            value = {key: member for key, member in value.items()
+                     if key != "per_element"}
+        carried[name] = value
+    return carried
+
 
 def shape_of(report: Optional[dict]) -> Optional[str]:
     """Which contract this report is, from the report itself."""

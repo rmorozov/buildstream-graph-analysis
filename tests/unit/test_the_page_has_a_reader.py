@@ -78,9 +78,28 @@ _DRIVE = r"""
     seen.push({ chose: option.value, label: option.textContent,
                 got: lead() });
   }
-  return { picker: true, before, seen,
+  // The fragment. **A bubbling event**: `wireViewState` delegates one
+  // `change` listener at the root, and `new Event("change")` does not
+  // bubble - so the loop above drives the picker's own handler and
+  // tells you nothing about the link. The picker is set back to the
+  // last real reader here, with an event that reaches the root.
+  const last = [...select.options].filter((o) => o.value).pop();
+  select.value = last.value;
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  return { picker: true, before, seen, wanted: last.value,
+           hash: location.hash,
            labelled: Boolean(document.querySelector(
              `label[for=${JSON.stringify(select.getAttribute("id"))}]`)) };
+})()
+"""
+
+#: What a pasted link restores, read on a second load of the same file.
+_RESTORED = r"""
+(() => {
+  const n = document.querySelector("[data-role=reader-lead]");
+  const select = document.querySelector("select[data-role=reader]");
+  return { chosen: select ? select.value : null,
+           finding: n ? n.getAttribute("data-finding") : null };
 })()
 """
 
@@ -99,12 +118,17 @@ def browser():
 
 @pytest.fixture(scope="module")
 def driven(browser, tmp_path_factory):
+    """Every option driven, then the fragment the last choice wrote
+    loaded on a fresh page - the round trip, not the state object."""
     into = tmp_path_factory.mktemp("u372")
     out = {}
     for label in sorted(pages.FIXTURES):
         uri = pages.export_uri(pages.FIXTURES[label], into,
                                name=f"{label}.html")
-        out[label] = browser.measure(uri, _DRIVE, 1440, 900)
+        result = browser.measure(uri, _DRIVE, 1440, 900)
+        result["restored"] = browser.measure(
+            uri + result.get("hash", ""), _RESTORED, 1440, 900)
+        out[label] = result
     return out
 
 
@@ -279,6 +303,33 @@ class TestChoosingAReaderChangesTheAnswer:
             if not row["got"]:
                 continue
             assert asked[row["chose"]] in row["got"]["text"], row
+
+
+@needs_browser
+@pytest.mark.medium
+@pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+class TestTheChoiceTravelsInTheLink:
+    """`UX-211`'s rule applied to this control: "here is the report,
+    read as the person who owns the machines" is a link somebody pastes
+    into an issue, so it belongs in the fragment rather than in DOM
+    state that dies with the tab."""
+
+    def test_the_reader_reaches_the_fragment(self, driven, label):
+        out = driven[label]
+        assert f"r={out['wanted']}" in out["hash"], (
+            f"{label}: chose {out['wanted']!r} and the fragment says "
+            f"{out['hash']!r}")
+
+    def test_a_pasted_link_lands_on_the_same_answer(self, driven, label):
+        """The round trip on the real control, on a second load of the
+        file - not a state object surviving, which would only prove the
+        object survived."""
+        out = driven[label]
+        assert out["restored"]["chosen"] == out["wanted"], out["restored"]
+        declared = {e["id"]: e["leads_with"]
+                    for e in _payload(label).get("readers") or []}
+        assert out["restored"]["finding"] == declared[out["wanted"]], (
+            out["restored"])
 
 
 @needs_browser

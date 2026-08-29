@@ -1036,8 +1036,14 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                 # UX-187: `[:5]` was silent. A reader cannot act on a
                 # number they do not know is missing (`UX-160`).
                 hidden = len(serialized_pairs) - 5
+                # `UX-408`: the caption is the contract's own sentence,
+                # imported rather than restated. The two used to be
+                # separate strings and said opposite things - the page's
+                # said "with nothing forcing the order", which is the
+                # negation of what the computation selects for.
                 lines.append(
-                    "  Serialized (same dependency chain, not independently batchable): "
+                    f"  Serialized ({schemas.SERIALIZED_PAIRS_MEANING[0].lower()}"
+                    f"{schemas.SERIALIZED_PAIRS_MEANING[1:-1]}): "
                     + "; ".join(f"{a} -> {b}" for a, b in serialized_pairs[:5])
                     + (f" (+{hidden} more, see --format json)" if hidden > 0 else "")
                 )

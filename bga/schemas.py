@@ -99,6 +99,32 @@ SWEEP = "sweep/v1"
 # consumer could validate it.
 CORRELATE = "correlate/v2"
 
+#: `UX-408`: **what `serialized_pairs` is**, written once.
+#:
+#: The computation (`bga/structural/batching.py`) collects pairs that
+#: are **not** independent - same dependency chain - so a reader can see
+#: *why* two elements were not batched. The terminal said exactly that.
+#: The schema description the page renders said the opposite:
+#:
+#:     "Pairs that ran one after the other with nothing forcing the
+#:      order."
+#:
+#: A page reader was told these pairs are unforced serialization - free
+#: wins - when the computation selected them *because* the order is
+#: forced, and would have gone off to "fix" pairs the tool knows cannot
+#: be batched. The viewer and the terminal disagreed about the same rows
+#: at the caption level, which is the page's own never-disagree property
+#: broken.
+#:
+#: One string, imported by both, rather than a pinned pair: two copies
+#: held equal by a guard can still both be edited, and this one drifted
+#: for as long as it existed.
+#: Short enough to be a terminal caption and a page description both,
+#: which is what keeps it one string rather than two that agree today.
+SERIALIZED_PAIRS_MEANING = (
+    "Pairs on the same dependency chain, so not independently batchable."
+)
+
 # The key that carries the version, and the first key of every payload -
 # a consumer reading a truncated or streamed document sees it before it
 # sees anything it would have to interpret.
@@ -1825,8 +1851,7 @@ _STRUCTURAL_TABLES = {
     "batch_opportunities": {
         "properties": {
             "serialized_pairs": {
-                "description": "Pairs that ran one after the other "
-                               "with nothing forcing the order.",
+                "description": SERIALIZED_PAIRS_MEANING,
                 COLUMNS: [
                     {"key": "first", "title": "Ran first",
                      "role": "element", "sortable": True},

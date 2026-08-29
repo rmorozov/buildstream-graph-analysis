@@ -76,9 +76,32 @@ For the handoff: the driven browser scrolls to the bottom of the
 export and asserts the handoff control is still in the viewport and
 still opens the trace. Today it is 9,000 px above.
 
-For the library question: nothing to falsify until a direction is
-chosen. The decision is recorded here either way, with the export's
-measured page and data halves beside it.
+For the library question: **the decision is no library, taken in
+round 65 as `UX-398`.** Recorded here, with the halves beside it:
+
+```text
+bga view tests/fixtures/macro_micro/run --export
+  export total   417,859 B
+    page half    269,531 B
+    data half    148,328 B
+```
+
+A ~400 KB dependency is 1.5x the entire page half. And the argument
+this filing gave *for* adoption - "one dependency rather than
+twenty-one modules" - is false:
+
+```text
+$ grep -rn 'el("table"' bga/viewer/*.js
+bga/viewer/structured.js:435
+
+viewer modules                21
+modules that construct a table 1
+```
+
+One factory builds all 31 tables, so a behaviour wanted on all of them
+is one change to one function. The standing question is replaced by a
+priced rule in styleguide §6b, and `test_one_factory_builds_every_table.py`
+holds the premise the price is computed from.
 
 ## Out of Scope
 

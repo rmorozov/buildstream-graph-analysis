@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-409 scenarios: **25 open**, 384 closed.
+409 scenarios: **24 open**, 385 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 4 | 69 |
 | analysis | 2 | 54 |
 | contracts | 1 | 46 |
-| viewer | 11 | 120 |
+| viewer | 10 | 120 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-395 | [`--format chrome` silently drops the flows and counters](UX-0395-format-chrome-silently-drops-the-flows-and-counters.md) | capture | Medium | anyone who took the chrome trace to Perfetto | 🔴 |
 | UX-396 | [sixteen of forty-four sections draw something](UX-0396-sixteen-of-forty-four-sections-draw-something.md) | viewer | Medium | anyone scanning the report for where the time went | 🔴 |
 | UX-397 | [the Perfetto handoff sits outside the pinned rail](UX-0397-the-perfetto-handoff-sits-outside-the-pinned-rail.md) | viewer | Low | anyone who decides to open the trace after reading a finding | 🔴 |
-| UX-398 | [the library question, measured against the factory](UX-0398-the-library-question-measured-against-the-factory.md) | viewer | High | R8, and anyone deciding what this page may depend on | 🔴 |
 | UX-399 | [the browser is the library](UX-0399-the-browser-is-the-library.md) | viewer | High | R2, and every reader of a seven-screen report | 🔴 |
 | UX-400 | [every population is tested at zero, one and many](UX-0400-every-population-is-tested-at-zero-one-and-many.md) | guards | High | every future section, before its bug is filed | 🔴 |
 | UX-401 | [no key is terminal-only in silence](UX-0401-no-key-is-terminal-only-in-silence.md) | guards | Medium | whoever adds the sixteenth block | 🔴 |

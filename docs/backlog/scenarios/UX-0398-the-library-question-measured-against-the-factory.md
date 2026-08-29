@@ -1,6 +1,6 @@
 # UX-398: the library question, measured against the factory
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-397 (the filed question), UX-392 (the filters it would buy), UX-367 (the volume budget that arbitrates) | **Serves:** R8, and anyone deciding what this page may depend on | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done Done | **Depends on:** UX-397 (the filed question), UX-392 (the filters it would buy), UX-367 (the volume budget that arbitrates) | **Serves:** R8, and anyone deciding what this page may depend on | **Topic:** viewer
 
 ## Motivation
 
@@ -76,3 +76,98 @@ section beside §6's export rules):
 - `UX-397`'s file records the decision under its "Falsification"
   clause ("the decision is recorded here either way"), with the
   export's measured page and data halves beside it.
+
+## Outcome (round 65, 2026-08-29) — 🟢 Done
+
+Done, and the filing's measurement holds in a stronger form than it was
+written in.
+
+### The gap, measured
+
+`UX-397` priced the question against "twenty-one modules". The strongest
+version of the counter-measurement is not that three modules mention the
+factory — it is that **one line in the whole viewer constructs a table**:
+
+```text
+$ grep -rn 'el("table"' bga/viewer/*.js
+bga/viewer/structured.js:435
+
+viewer modules                21
+modules that construct a table 1
+modules that call the factory  2   (app.js, structured.js itself)
+```
+
+Nothing held that. The premise the price is computed from could have
+gone stale to a single hand-rolled table in any module, and the next
+person to ask the question would have been argued at with a number that
+was true in 2026 and false by the time they read it.
+
+### After
+
+`docs/design/styleguide.md` §6b carries the rule with both conditions,
+the named prior (`trackevent.py` instead of a protobuf dependency), the
+pasted factory measurement, and the export halves the price is against:
+
+```text
+bga view tests/fixtures/macro_micro/run --export
+  export total   417,859 B
+    page half    269,531 B
+    data half    148,328 B
+```
+
+`tests/unit/test_one_factory_builds_every_table.py` holds the premise —
+four clauses, 4 passed in 0.08s.
+
+### The shape: hold the premise, not the conclusion
+
+The guard deliberately does **not** assert "no library, ever". §6b
+prices candidates rather than blacklisting them, and a guard asserting
+the conclusion would have to be deleted the day a candidate met the
+price — which is the shape that teaches people to delete guards. What is
+guarded is the sentence the price is computed from: one factory, its two
+exported entry points, at least one caller outside it, and the rule's
+two clauses plus its measurement surviving an edit of the section.
+
+**A guard this round did not add.** The obvious one — the export
+references no external origin — already exists as
+`test_the_report_you_can_attach.py::test_no_reference_reaches_the_network_or_the_filesystem`,
+which allowlists `#`, `data:`, `mailto:` and `ui.perfetto.dev`. Writing
+a second copy would have been a fifth number in a fourth place.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | a second viewer module constructs `el("table", {})` | `test_one_module_constructs_a_table` (1 failed, 3 passed) |
+| A2 | the factory stops exporting `renderTable` | `test_the_factory_publishes_the_entry_points_the_page_uses` (1 failed, 3 passed) |
+| A3 | §6b's rule drops "inside the volume budget (§3e)" | `test_the_dependency_rule_states_both_of_its_conditions` (1 failed, 3 passed) |
+| A4 | §6b keeps its prose and drops the pasted command | `test_the_rule_carries_the_measurement_it_was_written_from` (1 failed, 3 passed) |
+
+A1 is the defect the rule's premise dies of. A3 and A4 are the pair the
+section is really about: a rule with one clause admits a library on
+bytes alone, and a rule with no measurement is an opinion.
+
+### Deviation from the Required Fix
+
+**None.** Both bullets landed: the rule with its two conditions and the
+trackevent prior in the styleguide, and the pasted factory measurement
+beside it. `UX-397`'s file records the decision under its Falsification
+clause with the export halves, as the Acceptance Test asks.
+
+`UX-397` itself stays open — its rail pin is untouched work and this
+item's Out of Scope says so.
+
+### Verification
+
+```text
+pytest tests/unit/test_one_factory_builds_every_table.py           4 passed
+pytest tests/unit/test_docs_links_and_commands.py                 36 passed
+make test-touching                              396 passed, 1 skipped, 132.8s
+make lint                                                          clean
+```
+
+The full suite runs once at the end of round 65's phase A rather than
+once per item; its line is in `docs/audits/round-65.md` beside the
+phase it covers.

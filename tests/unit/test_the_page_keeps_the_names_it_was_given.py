@@ -330,6 +330,13 @@ class TestTheInlineObjectAsksToo:
                             {"type": "object",
                              "additionalProperties": {"type": "number"}})
         assert keys, "the inline-object branch drew no pair keys"
+        # Named before it is used: without `data-key` the label has
+        # nothing to be compared against, and the clause would fail as
+        # a `KeyError` rather than as a sentence.
+        blind = [k for k in keys if not k.get("key")]
+        assert blind == [], (
+            f"{len(blind)} pair key(s) publish no `data-key`, so what the "
+            f"reader sees cannot be checked against what was given")
         renamed = [k for k in keys if k["shown"] != k["key"]]
         assert renamed == [], (
             f"the inline object renamed the reader's programs: {renamed}")

@@ -69,10 +69,12 @@ export function rowText(tr) {
  * Apply the text box and the per-column thresholds to a rendered table.
  * Returns how many rows survived, which is what the badge shows.
  */
-export function applyFilters(table, { text = "", thresholds = {} } = {}) {
+export function applyFilters(table, { text = "", thresholds = {},
+                                     top = null } = {}) {
   const needle = String(text).trim().toLowerCase();
   const body = table.querySelector("tbody");
   const rows = [...body.querySelectorAll("tr")];
+  const kept = [];
   let shown = 0;
   for (const tr of rows) {
     let keep = !needle || rowText(tr).includes(needle);
@@ -91,7 +93,34 @@ export function applyFilters(table, { text = "", thresholds = {} } = {}) {
       }
     }
     tr.hidden = !keep;
-    if (keep) shown += 1;
+    if (keep) { shown += 1; kept.push(tr); }
+  }
+  // `UX-392`: **and the preset, over what the filter left.**
+  //
+  // The Top-N menu used to be a second, separate pass: choosing one
+  // re-showed rows the filter had hidden, so a reader whose filter box
+  // still said `mod023` was looking at ten rows that had nothing to do
+  // with it. Measured on the 1,202-element run - filter to 12 rows,
+  // choose `Top 10`, and the table shows 10 rows drawn from all 1,202.
+  //
+  // Two controls answering different questions (`UX-392`'s own Out of
+  // Scope keeps both) must compose, and "the ten biggest **of the ones
+  // I asked for**" is what a reader typing in both means. One pass, so
+  // there is one place the shown-count comes from and the badge cannot
+  // describe a state the table is not in.
+  if (top && top.column && Number.isFinite(Number(top.n))) {
+    const value = (tr) => {
+      const cell = [...tr.children].find(
+        (td) => td.getAttribute("data-column") === top.column);
+      const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
+      return Number.isFinite(raw) ? raw : -Infinity;
+    };
+    kept.sort((a, b) => value(b) - value(a));
+    kept.forEach((tr, index) => {
+      tr.hidden = index >= Number(top.n);
+      body.append(tr);
+    });
+    shown = Math.min(Number(top.n), kept.length);
   }
   return shown;
 }

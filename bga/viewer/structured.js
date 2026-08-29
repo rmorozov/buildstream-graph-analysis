@@ -34,7 +34,7 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
-         copy, applyTopN, presetColumns, applyPreset,
+         copy, presetColumns, applyPreset,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -685,7 +685,7 @@ export function renderTable(key, rows, hint = {}, node = undefined,
  * is a `duration_us`, so the suffix has a meaning.
  */
 export function interrogable(table, specs, total, depth = 0) {
-  const state = { text: "", thresholds: {} };
+  const state = { text: "", thresholds: {}, top: null };
   // UX-334: what these controls are called. The table key is the name
   // `viewstate.js` already keys this table's url state by, so the
   // control's `name` and its bookmarked parameter say the same word.
@@ -785,10 +785,12 @@ export function interrogable(table, specs, total, depth = 0) {
                          `Top ${n} by ${column}`));
       }
     }
+    // `UX-392`: through the same `refresh`, so the preset narrows what
+    // the filter left rather than replacing it.
     preset.addEventListener("change", () => {
-      if (!preset.value) { refresh(); return; }
-      const [n, column] = preset.value.split(":");
-      badge.textContent = badgeText(applyTopN(table, column, Number(n)), total);
+      const [n, column] = preset.value ? preset.value.split(":") : [];
+      state.top = preset.value ? { n: Number(n), column } : null;
+      refresh();
     });
     // UX-262: a table longer than this opens bounded.
     //
@@ -806,7 +808,8 @@ export function interrogable(table, specs, total, depth = 0) {
     if (total > TABLE_OPENS_BOUNDED_ABOVE) {
       const [column] = presets;
       preset.value = `25:${column}`;
-      badge.textContent = badgeText(applyTopN(table, column, 25), total);
+      state.top = { n: 25, column };
+      refresh();
     }
     state.preset = preset;
   }

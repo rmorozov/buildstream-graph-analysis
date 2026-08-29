@@ -238,11 +238,25 @@ class TestNoSectionGrowsWithoutBound:
     def test_the_reader_still_sees_what_they_are_not_seeing(self):
         """`UX-208`'s rule: a reader who cannot see the denominator
         cannot tell a filtered table from a small one. Measured after:
-        the badge reads `25 of 122`."""
+        the badge reads `25 of 122`.
+
+        `UX-393`, one round later: the bounded-open block sets the
+        state and calls `refresh`, which is the *one* place the badge
+        is written now that the filter and the preset compose
+        (`UX-392`). So the clause follows the call rather than pinning
+        a spelling - and `refresh` is asserted to set the badge from
+        the total, which is the fact this is about.
+        """
         code = _code(APP)
         bounded = code.split("if (total > TABLE_OPENS_BOUNDED_ABOVE)", 1)[1]
         bounded = bounded.split("\n    }", 1)[0]
-        assert "badgeText(" in bounded and "total" in bounded, bounded
+        assert "refresh()" in bounded or "badgeText(" in bounded, bounded
+        # The one line that writes it, named rather than located: the
+        # concatenated modules hold several `const refresh`, and the
+        # first draft of this clause split on the wrong one.
+        assert "badgeText(applyFilters(table, state), total)" in code, (
+            "the badge is no longer written from the filtered count and "
+            "the total in one place")
 
     def test_all_rows_is_still_reachable(self):
         """Bounding the default must not remove the opt-out - `UX-187`

@@ -241,7 +241,15 @@ class TestNoLabelPrintsWhatItsValueCarries:
         drawn = browser.measure(pages[label], _LABELS, 1440, 900)
         empty = [item for item in drawn if not item["label"]]
         assert empty == [], f"{label}: {len(empty)} label(s) render empty"
-        assert len(drawn) >= 200, (
+        # `UX-390` lowered this from 200 to 190: `attribution_hints`
+        # stopped being a section of its own, so its eight labels left
+        # the page - and they left because the *same eight buckets* now
+        # carry their advice on the attribution row beside the number,
+        # which `test_one_bucket_one_row.py` asserts sentence by
+        # sentence. A floor is a floor, not a claim that no section
+        # ever merges; what it is here for is the rule above silently
+        # dropping terms, and 190 still catches that.
+        assert len(drawn) >= 190, (
             f"{label}: only {len(drawn)} labelled terms on the page")
 
 

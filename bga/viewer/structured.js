@@ -17,7 +17,7 @@ import { served, safeStorage } from "./primitives.js";
 import { QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
          PRESETS, INLINE, bytes, childNode, cssId, dataKeyed,
          describedTerm, el, elementColumn, guessQuantity, heading, hintsOf,
-         keyAsShown, quantity, quantityFor, sectionHead,
+         adviceFor, keyAsShown, quantity, quantityFor, sectionHead,
          title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
@@ -1443,7 +1443,12 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       if (shown.qualifier) term.append(
         el("span", { class: "task-qualifier muted" }, ` ${shown.qualifier}`));
     }
-    list.append(term, el("dd", {}, cell, describe));
+    // `UX-390`: and the run's own advice for this bucket, on its row,
+    // beside the schema's sentence rather than instead of it.
+    const advice = adviceFor(payload, hint, name);
+    list.append(term, el("dd", {}, cell, describe,
+                         advice ? el("p", { class: "run-advice" }, advice)
+                                : null));
   }
   const parts = [sectionHead(key, hint)];
   if (joined) {

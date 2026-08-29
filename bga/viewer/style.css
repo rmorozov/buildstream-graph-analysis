@@ -1052,3 +1052,13 @@ table.twin-table td { font-variant-numeric: tabular-nums; }
   table.twin-table { display: table !important; }
   button.twin-toggle { display: none; }
 }
+
+/* `UX-390`: the run's advice for one attribution bucket, under the
+   value it is about. Muted and narrow: it is a second sentence on a
+   row a reader is scanning for numbers, so it must not compete with
+   the number it explains (styleguide §4.4). */
+p.run-advice {
+  margin: .25rem 0 0;
+  color: var(--muted);
+  max-width: 62ch;
+}

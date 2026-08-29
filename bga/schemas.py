@@ -306,6 +306,23 @@ KEYED_BY = "bga:keyed_by"          # what the map's own keys are
 #: the part of it that is a name.
 KEYED_BY_TASK_UID = "task_uid"
 
+#: `UX-390`: **the run's own advice about this map's keys lives there.**
+#:
+#: `attribution` and `attribution_hints` were one population in two
+#: `<h2>` sections - the same eight bucket names, a number in one
+#: chapter and the sentence explaining it in another, and nothing in
+#: either saying they were the same eight things. That is `UX-288`'s
+#: one-population rule at section level.
+#:
+#: Two sentences, not one, and they are different things: the schema's
+#: `description` says what a bucket *is* and travels with the contract;
+#: the hint says what to do about it **on this run** and is computed -
+#: `resource_wait_us`'s names whether this run's capacity checks could
+#: run at all. So the hint is not a description, and declaring where it
+#: lives is what lets the page draw both on one row without sniffing a
+#: key named `<something>_hints`.
+EXPLAINED_BY = "bga:explained_by"
+
 PRESET_DIRECTIONS = ("asc", "desc")
 # The acceptance bound `UX-289` was filed with: a table that needs more
 # than this to answer one question is not a view of the data, it is the
@@ -2584,6 +2601,10 @@ _ANALYZE_HINTS = {
     },
     "attribution": {
         QUESTION: 'Where did the wall-clock go?', RAIL: 'act',
+        # `UX-390`: and the run's advice for each bucket, drawn on the
+        # bucket's own row rather than in a second section over the
+        # same eight names.
+        EXPLAINED_BY: "attribution_hints",
         # `UX-343`: eight durations that rendered correctly only because
         # `guessQuantity` recognised `_us`. A guess that happens to be
         # right is still the gap UX-201 wrote the rule for.

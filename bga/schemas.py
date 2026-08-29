@@ -688,6 +688,13 @@ _ANALYZE_OPTIONAL = {
     "by_binary": "object",
     "binary_cost": "array",
     "configure_phase": "object",
+    # `UX-383`: the run-level halves of the three blocks `UX-370` left
+    # in the terminal. Their per-element halves are fields on an
+    # `element_join` row, by `UX-382`'s placement rule - which is also
+    # what keeps one population from being drawn four times.
+    "cpu_time": "object",
+    "peak_memory": "object",
+    "resource_pressure": "object",
     # UX-207: what to fix first, and what it is worth.
     "headline": "object",
     "next_steps": "array",
@@ -980,6 +987,9 @@ ANALYZE_FULL_KEYS = (
 ANALYZE_PLANE2_KEYS = (
     # `UX-370`: what Plane 2 saw the build *run*, in calls and in CPU.
     "by_binary", "binary_cost", "configure_phase",
+    # `UX-383`: the three that were measured, published in `plane2.json`
+    # and read by nothing the page draws.
+    "cpu_time", "peak_memory", "resource_pressure",
     "plane2_coverage", "element_join", "element_join_coverage",
     # UX-329: the other side of the same conditional. `plane2_absence`
     # is present exactly when the three above are not, so it belongs in
@@ -1207,7 +1217,46 @@ _JOIN_ITEM_PROPERTIES = {
         QUANTITY: "bytes",
         "description": "The largest single process's resident memory, "
                        "which is what a builder count has to be "
-                       "multiplied against."},
+                       "multiplied against. A **maximum**: adding two "
+                       "elements' peaks claims they overlapped, which "
+                       "this cannot say - unlike the counters below, "
+                       "which are sums and may be added (`UX-383`)."},
+    # `UX-383`: the CPU quantity beside `cores_busy`'s ratio, and
+    # `UX-379`'s three pressure axes. All four counters are summed over
+    # the element's processes - the opposite of `peak_rss_bytes` above,
+    # and the reason each says which it is here rather than leaving a
+    # reader to guess from the name.
+    "cpu_us": {
+        QUANTITY: "duration_us",
+        "description": "CPU this element's own processes burned. "
+                       "`cores_busy` is the rate and this is the "
+                       "quantity: an element can be CPU-bound and "
+                       "cheap, or idle and enormous, and a reader "
+                       "chasing one is not chasing the other."},
+    "read_bytes": {
+        QUANTITY: "bytes",
+        "description": "Block-layer reads summed over this element's "
+                       "processes - what reached the device. Zero is a "
+                       "measurement rather than a gap: a read served "
+                       "from the page cache never got there."},
+    "written_bytes": {
+        QUANTITY: "bytes",
+        "description": "Block-layer writes summed the same way, which "
+                       "is what separates an element that was slow "
+                       "writing from one that was slow computing."},
+    "major_faults": {
+        QUANTITY: "count",
+        "description": "Faults that went to disk, summed - the page "
+                       "pressure a memory-starved host produces, and "
+                       "the signal that a build is swapping rather "
+                       "than working."},
+    "involuntary_switches": {
+        QUANTITY: "count",
+        "description": "The run queue preempting a process that still "
+                       "had work, summed. It rises with "
+                       "oversubscription, which is how an element "
+                       "slowed by its siblings is told from one slowed "
+                       "by its own work."},
     "native_findings": {"type": ["array", "null"]},
     "unused_dependencies": {"type": ["array", "null"]},
     "recommendations": {"type": ["array", "null"]},
@@ -2996,6 +3045,63 @@ _ANALYZE_HINTS = {
                                            "member and it is "
                                            "microseconds."},
             },
+        },
+    },
+    "cpu_time": {
+        QUESTION: 'What did the whole build cost in CPU?',
+        RAIL: 'prove',
+        "description": "The run-level totals beside `element_cpu_time`, "
+                       "and the sentence that says what a CPU figure "
+                       "here is and is not.",
+        "properties": {
+            "total_cpu_us": {QUANTITY: "duration_us",
+                             "description": "CPU across every measured "
+                                            "process in the build."},
+            "measured_processes": {
+                QUANTITY: "count",
+                "description": "How many processes that CPU was read "
+                               "from."},
+            "unmeasured_processes": {
+                QUANTITY: "count",
+                "description": "How many it could not be read from - a "
+                               "signal death or an exec replacement "
+                               "leaves no rusage behind."},
+            "spine_sourced_processes": {
+                QUANTITY: "count",
+                "description": "Of the measured, how many came from the "
+                               "ptrace spine rather than the hook."},
+            "note": {"description": "What a CPU figure here means, in a "
+                                    "sentence - `UX-346`'s door."},
+        },
+    },
+    "peak_memory": {
+        QUESTION: 'What does a peak-memory figure here mean?',
+        RAIL: 'prove',
+        "description": "The sentence beside `element_peak_memory`. It "
+                       "carries no totals on purpose: there is no "
+                       "run-level peak to publish, because summing "
+                       "per-process maxima would state something the "
+                       "measurement cannot support.",
+        "properties": {
+            "note": {"description": "What a peak figure is, and what "
+                                    "adding two of them would claim."},
+        },
+    },
+    "resource_pressure": {
+        QUESTION: 'How much of the build did the pressure counters cover?',
+        RAIL: 'prove',
+        "description": "The run-level coverage beside "
+                       "`element_resource_pressure`, and the sentence "
+                       "that says what each counter is.",
+        "properties": {
+            "measured": {QUANTITY: "count",
+                         "description": "Processes across the build "
+                                        "whose counters were read."},
+            "unmeasured": {QUANTITY: "count",
+                           "description": "Processes across the build "
+                                          "whose counters were not."},
+            "note": {"description": "What each counter measures, in a "
+                                    "sentence."},
         },
     },
     "configure_phase": {

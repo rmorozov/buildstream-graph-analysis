@@ -453,7 +453,21 @@ const SOURCES = [
     // is `potential_saving_us` as a share of the run, which is the
     // form the decision ranks in.
     ["cpu_coverage", "Plane 2 coverage", "share"],
-    ["saving_share", "Worth, as a share of the run", "share"]]],
+    ["saving_share", "Worth, as a share of the run", "share"],
+    // `UX-383`: the quantity beside `cores_busy`'s rate, and `UX-379`'s
+    // three pressure axes. `cores_busy` says an element was busy and
+    // this says what that cost; the three below say *why* it was slow
+    // when it was not busy - it read from the disk, it faulted, or the
+    // run queue kept taking its turn away.
+    //
+    // Summed over the element's processes, unlike `peak_rss_bytes`
+    // above, which is a maximum. Each field's own schema sentence says
+    // which it is, because that is the door a reader opens before
+    // adding two of them.
+    ["cpu_us", "CPU burned", "duration_us"],
+    ["read_bytes", "Read from disk", "bytes"],
+    ["major_faults", "Major faults", "count"],
+    ["involuntary_switches", "Preempted", "count"]]],
 ];
 
 // `UX-356` (styleguide §1b): the join's **nested** evidence, declared

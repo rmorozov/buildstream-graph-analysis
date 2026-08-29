@@ -5814,9 +5814,18 @@ def _format_text(report: dict) -> str:
                 f"up to {worst_s:.3f}s recoverable wall-clock (worst element: {worst})"
                 if worst_s is not None else "wall-clock impact unknown"
             )
+            # `UX-384` removed the `elements` list: with the row cap in
+            # place it was the one term still O(elements), and nothing
+            # read it but a `len()` here and one in `correlate`. The
+            # count it published beside itself is what both wanted, and
+            # an older report that carries the list and no count still
+            # renders.
+            spanned = finding.get("element_count")
+            if not isinstance(spanned, int):
+                spanned = len(finding.get("elements") or ())
             lines.append(
-                f"  {finding['occurrence_count']}x across {len(finding['elements'])} elements "
-                f"({', '.join(finding['elements'])}) - {wall_text}; "
+                f"  {finding['occurrence_count']}x across {spanned} elements "
+                f"(worst: {worst}) - {wall_text}; "
                 f"{finding['total_duration_s']:.3f}s total machine time"
             )
             lines.append(f"    {_elide_cmd(finding['example_cmd'])}")

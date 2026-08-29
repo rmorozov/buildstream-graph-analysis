@@ -200,6 +200,14 @@ class ElementJoin:
     # Plane 2
     cores_busy: Optional[float] = None
     cpu_coverage: Optional[float] = None
+    # `UX-383`: the CPU an element actually burned, beside the ratio.
+    cpu_us: Optional[int] = None
+    # `UX-383`: `UX-379`'s pressure counters, summed per element - the
+    # opposite of `peak_rss_bytes` below, which is a maximum.
+    read_bytes: Optional[int] = None
+    written_bytes: Optional[int] = None
+    major_faults: Optional[int] = None
+    involuntary_switches: Optional[int] = None
     requested_jobs: Optional[int] = None
     native_findings: List[str] = field(default_factory=list)
     unused_dependencies: List[str] = field(default_factory=list)
@@ -348,6 +356,32 @@ def _plane2_view(native_report: dict) -> Dict[str, dict]:
         record = view.setdefault(element, {})
         record["cores_busy"] = entry.get("cpu_per_wall_second")
         record["cpu_coverage"] = entry.get("coverage")
+        # `UX-383`: the ratio reached the join and the quantity did not,
+        # so "this element was CPU-bound" was answerable on the page and
+        # "and it burned four minutes doing it" was not.
+        if entry.get("cpu_us") is not None:
+            record["cpu_us"] = entry["cpu_us"]
+
+    # `UX-383`: `UX-379` measured what each element did to the disk, to
+    # memory and to the run queue, and none of it reached a reader in a
+    # browser. On the join row rather than in a table of its own, by
+    # `UX-382`'s rule - an attribute that needs Plane 2 to exist is a
+    # field here.
+    #
+    # **Summed, unlike `peak_rss_bytes` on the same row.** A block read
+    # and a fault are events rather than levels, so two processes that
+    # each read 100 MB did read 200 MB between them; a peak is the
+    # opposite and adding two of them claims something the measurement
+    # cannot support. Both rules are in the schema, on the fields
+    # themselves, because that is where a reader about to add them
+    # looks.
+    pressure = native_report.get("resource_pressure") or {}
+    for element, entry in (pressure.get("per_element") or {}).items():
+        record = view.setdefault(element, {})
+        for name in ("read_bytes", "written_bytes", "major_faults",
+                     "involuntary_switches"):
+            if entry.get(name) is not None:
+                record[name] = entry[name]
 
     declared = native_report.get("declared_vs_used") or {}
     for entry in declared.get("unused_candidates") or []:
@@ -1528,6 +1562,11 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
             blast_radius=p1.get("blast_radius"),
             cores_busy=p2.get("cores_busy"),
             cpu_coverage=p2.get("cpu_coverage"),
+            cpu_us=p2.get("cpu_us"),
+            read_bytes=p2.get("read_bytes"),
+            written_bytes=p2.get("written_bytes"),
+            major_faults=p2.get("major_faults"),
+            involuntary_switches=p2.get("involuntary_switches"),
             requested_jobs=p2.get("requested_jobs"),
             native_findings=p2.get("native_findings", []),
             unused_dependencies=p2.get("unused_dependencies", []),

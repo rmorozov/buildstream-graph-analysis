@@ -490,4 +490,9 @@ MEDIUM = (
     "tests/unit/test_a_capture_that_cannot_start.py",                #    1.5s
     "tests/unit/test_the_handoff_does_not_carry_the_trace.py",       #    1.3s
     "tests/unit/test_buttons_that_know_why.py",                      #    1.0s
+    # `UX-399`, tiered on landing. Two browser boots over
+    # `macro_micro` - one for the rail's scrollspy, one for the
+    # layout-cost pair with the optimisation forced off and on in
+    # the same page - plus five source clauses that need neither.
+    "tests/unit/test_the_browser_is_the_library.py",                 #    4.8s
 )

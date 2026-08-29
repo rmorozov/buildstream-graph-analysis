@@ -41,6 +41,31 @@ import shutil
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
+#: UX-399: one statement that turns the layout optimisation off.
+#:
+#: `content-visibility: auto` lets the browser skip laying out a section
+#: that is not near the viewport, which is what makes the fully expanded
+#: page cost ~2 ms a reflow instead of ~26 ms. The price is that
+#: `scrollHeight` is an *estimate* until a section has been rendered
+#: once, and the estimate depends on which sections the reader (or the
+#: guard) has scrolled past - so two routes to the same expanded page
+#: report heights 264 px apart.
+#:
+#: A guard whose claim is about the **document** - how much there is to
+#: read, whether two controls reach the same state - prepends this and
+#: measures the fully laid-out page. A guard whose claim is about what a
+#: reader *sees* must not: that reader has the optimisation on.
+#:
+#: `insertAdjacentHTML` rather than the node-building DOM call, because
+#: the shim census (`UX-264`) reads that call as a node harness which
+#: should be importing the shared shim, and this runs in a browser where
+#: there is no shim.
+FULL_LAYOUT_JS = (
+    'document.head.insertAdjacentHTML("beforeend",'
+    ' "<style>section.chapter > section[data-section]'
+    '{ content-visibility: visible !important; }</style>");'
+)
+
 #: The committed fixtures every browser guard walks, by the label they
 #: all already used. One definition, so a fixture added tomorrow reaches
 #: every guard that parametrises over this rather than none of them.

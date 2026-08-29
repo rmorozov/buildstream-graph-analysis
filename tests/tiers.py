@@ -264,6 +264,21 @@ MEDIUM = (
     # the page a user gets is a medium test by construction, and this
     # list is where that gets said rather than rediscovered.
     "tests/unit/test_the_lead_names_the_planes_it_has.py",       #   10.3s
+    # `UX-372` and `UX-373`, tiered **after** CI noticed - which is the
+    # part worth recording. Both landed in the default tier and neither
+    # was measured on landing, and the two of them put the small tier
+    # at 13.3s parallel and 32.0s single-process against budgets of 33s
+    # and 27s. `test (3.9)` and `test (3.10)` hit `timeout 33` at 95%;
+    # 3.11 and 3.12 got under it on faster runners, so the tier was
+    # already over on the two-core ones before anything reported.
+    #
+    # `UX-364`'s note four lines up says the same thing about the same
+    # mistake one round earlier. Two rounds running, so it is the
+    # default that is the trap rather than either author: a file that
+    # boots a page belongs here by construction, and the cost of
+    # forgetting is a red CI on somebody else's clock.
+    "tests/unit/test_the_page_has_a_reader.py",                  #    6.3s
+    "tests/unit/test_one_page_behind_the_button.py",             #    4.4s
     # Round 56, the other five of the twelve (see the LARGE block
     # above): over the medium floor, under the large one.
     "tests/unit/test_the_handoff_has_a_fixture.py",              #   12.6s

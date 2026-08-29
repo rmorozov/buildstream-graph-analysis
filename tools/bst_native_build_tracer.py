@@ -914,7 +914,10 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
                 # expensive outcome, and it used to produce no output at
                 # all. One line, before the build, so the price is at
                 # least visible when it is being paid.
-                print(format_census_coverage(project_dir, verdicts),
+                print(format_census_coverage(
+                          project_dir, verdicts,
+                          getattr(census_spine_verdicts,
+                                  "last_unassessable", None)),
                       file=sys.stderr)
         else:
             env.pop("BST_TRACE_SPINE", None)
@@ -2787,13 +2790,28 @@ def census_spine_verdicts(project_dir: str) -> Dict[str, bool]:
         census = census_project(project_dir, elements)
     except (OSError, ValueError):
         return {}
+    # `UX-376`: recorded on the function so the caller can say *why* an
+    # element is traced without running the census a second time - it is
+    # the expensive step (`UX-183` measured minutes on freedesktop-sdk).
+    census_spine_verdicts.last_unassessable = set(
+        census.get("elements_unassessable") or ())
+    # `UX-376`: an unassessable element gets the spine. The docstring
+    # above always said "not assessed" and "assessed and clean" are
+    # different claims and only one is safe to skip - and until this
+    # item every element was reported as assessed, because the census
+    # answered from local sources for elements whose sandboxes are
+    # mostly built. Measured on a fixture where one element produces a
+    # `-static` tool and a later one runs it 200 times: `auto` traced 21
+    # processes of 221 and printed "the spine is not needed".
     return {
         element: bool(entry.get("static_count"))
+        or not entry.get("assessable", True)
         for element, entry in (census.get("per_element") or {}).items()
     }
 
 
-def format_census_coverage(project_dir: str, verdicts: Dict[str, bool]) -> str:
+def format_census_coverage(project_dir: str, verdicts: Dict[str, bool],
+                           unassessable: Optional[Set[str]] = None) -> str:
     """One line naming what `--trace-spine=auto` decided, and on what.
 
     `UX-160` item 3. The unassessed count is the number that matters:
@@ -2803,17 +2821,35 @@ def format_census_coverage(project_dir: str, verdicts: Dict[str, bool]) -> str:
     hint that it is being charged.
     """
     declared = discover_element_names(project_dir)
-    assessed = len(verdicts)
-    traced = sum(1 for needs in verdicts.values() if needs)
-    unassessed = max(0, len(declared) - assessed)
+    unassessable = set(unassessable or ())
+    assessed = len(verdicts) - len(unassessable & set(verdicts))
+    # `UX-376`: the two reasons an element gets the spine, counted
+    # apart. They are different facts and a reader should do different
+    # things about them: "something static is staged here" is a
+    # property of the project, and "part of what will be staged here
+    # does not exist yet" is a limit of the instrument.
+    static = sum(1 for element, needs in verdicts.items()
+                 if needs and element not in unassessable)
+    produced = len(unassessable & set(verdicts))
+    unassessed = max(0, len(declared) - len(verdicts))
     # UX-168 item 5: "0 with static binaries (spine traced)" made the
     # parenthetical describe the zero elements, which is a riddle.
-    if traced:
+    # `UX-376`: and the sentence must not claim more than the census
+    # can support. "None with static binaries (the spine is not needed)"
+    # was printed for a build in which the spine was the difference
+    # between 21 processes and 221, because the tool the build produced
+    # was outside what a census of `local` sources can see.
+    if static:
         line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
-                f"{traced} with static binaries (those get the spine)")
+                f"{static} with static binaries (those get the spine)")
+    elif assessed:
+        line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
+                f"none of those staged a static binary")
     else:
-        line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
-                f"none with static binaries (the spine is not needed)")
+        line = f"Census: 0 of {len(declared)} element(s) could be assessed"
+    if produced:
+        line += (f"; {produced} stage what this build produces and cannot be "
+                 f"assessed before it runs - those get the spine")
     if unassessed:
         line += (f"; {unassessed} unassessed and therefore traced by default "
                  f"- `auto` is behaving as `on` for those")
@@ -2928,6 +2964,10 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
 
     _prime_closures()
 
+    # `UX-376`: which dependencies this build produces rather than
+    # stages. Read once for the whole census.
+    kinds = read_element_kinds(project_dir)
+
     per_element = {}
     for element in elements:
         static = set(own[element]["static"])
@@ -2935,6 +2975,15 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
                      for name in _closure(element)}
         for names in staged_by.values():
             static.update(names)
+        # `UX-376`: what this element's sandbox will hold that the
+        # census never saw. It reads `local` sources - files on disk
+        # before anything runs - so a dependency whose artifact this
+        # build *produces* stages contents that do not exist yet. An
+        # `import` element stages its sources verbatim and is therefore
+        # assessable; every other kind runs commands and produces
+        # something new.
+        produced = sorted(name for name in _closure(element)
+                          if kinds.get(name, "unknown") != "import")
         per_element[element] = {
             "static_executables": sorted(static),
             "static_count": len(static),
@@ -2943,6 +2992,12 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
                 name: names for name, names in sorted(staged_by.items()) if names
             },
             "dynamic_executables": own[element]["dynamic"],
+            # "assessed and clean" and "not assessed" are different
+            # claims and only one of them is safe to act on, which is
+            # the rule `census_spine_verdicts` was already written to -
+            # it just had no unassessable elements to apply it to.
+            "assessable": not produced,
+            "unassessable_because": produced,
         }
     total_static = sorted({
         name for entry in per_element.values()
@@ -2953,6 +3008,15 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
         "static_executables": total_static,
         "elements_at_risk": sorted(
             element for element, entry in per_element.items() if entry["static_count"]
+        ),
+        # `UX-376`: the elements this census could not answer for. Named
+        # rather than folded into `elements_at_risk`, because the reason
+        # is different and so is what a reader should do about it: a
+        # risk is "something static is staged here", and this is "part
+        # of what will be staged here does not exist yet".
+        "elements_unassessable": sorted(
+            element for element, entry in per_element.items()
+            if not entry["assessable"]
         ),
         "note": (
             "Read from the project's own `local` sources before anything runs: an "

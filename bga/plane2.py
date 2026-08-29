@@ -11,7 +11,7 @@ list is ~1.5 GB, parsed at a measured 2.9x bytes-to-RAM by anything
 that opened the file.
 
 So a report written from `UX-297` onward carries the reductions alone
-and stamps itself `plane2/v2`. The records live where they were always
+and stamps itself `plane2/v3`. The records live where they were always
 written: the raw trace log the snapshot keeps (`plane2.log.gz`), which
 is what the timeline is rendered from and what
 `bst_native_build_tracer.load_records` reads when something genuinely
@@ -27,7 +27,28 @@ mystery about the tool.
 import os
 from typing import Optional
 
-SCHEMA = "plane2/v2"
+SCHEMA = "plane2/v3"
+
+# `UX-384`: v3 removed `elements` from each `redundant_operations`
+# finding. `UX-375` capped that population at 40 rows and the *names
+# inside* the rows were the term left over - the one part still
+# O(elements). Measured with 40 capped rows and the element count
+# varied:
+#
+# ```text
+#  elements  rows  section B  elements B   share
+#        40    40     36,901      28,840   78.2%
+#       400    40    296,221     288,040   97.2%
+#      1200    40    880,341     872,040   99.1%
+# ```
+#
+# `element_count` and `worst_element` were already published beside it
+# and are what a consumer reads - `bga correlate`, the only consumer in
+# this repository, never opened the list. Removing a published key is
+# what makes this a version rather than an addition, on the precedent
+# `UX-297` set when it removed the per-process record list for the same
+# reason.
+PREVIOUS_SCHEMA = "plane2/v2"
 
 # The unstamped shape every capture wrote before `UX-297`: the same
 # aggregates, plus the record list. Named rather than left as "the old
@@ -35,10 +56,10 @@ SCHEMA = "plane2/v2"
 # an id is the only thing a machine can compare.
 LEGACY_SCHEMA = "plane2/v1"
 
-# Read, never written. `bga.contracts` inventories it as superseded, so
-# a release can say which shapes it still opens as well as which it
-# emits - an old store is full of the first kind.
-SUPERSEDED = (LEGACY_SCHEMA,)
+# Read, never written. `bga.contracts` inventories them as superseded,
+# so a release can say which shapes it still opens as well as which it
+# emits - an old store is full of both kinds.
+SUPERSEDED = (PREVIOUS_SCHEMA, LEGACY_SCHEMA)
 
 RECORDS_KEY = "processes"
 

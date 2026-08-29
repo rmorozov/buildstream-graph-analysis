@@ -53,7 +53,7 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twenty ids, and what writes each:
+contracts. Twenty-one ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -67,9 +67,10 @@ contracts. Twenty ids, and what writes each:
 | `sweep/v1` | `bga sweep --format json` — what more capacity would buy, the knee past which it buys little, and where the model contradicted itself (`UX-339`) |
 | `host/v2` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
 | `sources/v1` | `bga extract`, at `sources.json` in a run directory — every element's sources, and how each one is keyed |
-| `plane2/v2` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured, as per-element reductions (`UX-297`) |
+| `plane2/v3` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured, as per-element reductions (`UX-297`) |
 | `host-samples/v1` | `bga capture`, at `host-samples.jsonl` beside a run — the host's memory and swap while the build ran, one object per line (`UX-378`) |
 | `capture-layout/v1` | the capture directory `.bga/` itself — every path it holds, what writes it, what reads it, and what an absence means. Specification 32.6 (`UX-381`) |
+| `plane2/v2` | the same file as a capture before `UX-384` wrote it, with the element names of every redundancy finding embedded. Still read, never written |
 | `plane2/v1` | the same file as a capture before `UX-297` wrote it, with every per-process record embedded. Still read, never written |
 | `analyze/v3` | what `bga analyze` wrote before `UX-344` lifted the `signals` and `structural` namespaces. Still read, never written |
 | `analyze/v2` | what it wrote before `UX-341` unified the units — `measured_seconds`, `peak_rss_kb`, `useful_pct`. Still read, never written |
@@ -78,11 +79,11 @@ contracts. Twenty ids, and what writes each:
 | `correlate/v1` | the same, for the two-plane join. Still read, never written |
 | `host/v1` | the host manifest with `memory_mb` where `host/v2` has `memory_bytes`. Read and converted on the way in, so an old baseline still compares — never written |
 
-The last twelve are written into a run directory rather than printed by a
-command, so no `--schema` invocation prints them, and seven of those are
-only ever *read* - they are the shapes an older store's artifacts are
-in (`plane2/v1` from `UX-297`, five from `UX-341`, and `analyze/v3`
-from `UX-344`). The other eight
+The last thirteen are written into a run directory rather than printed by
+a command, so no `--schema` invocation prints them, and eight of those
+are only ever *read* - they are the shapes an older store's artifacts
+are in (`plane2/v1` from `UX-297`, `plane2/v2` from `UX-384`, five from
+`UX-341`, and `analyze/v3` from `UX-344`). The other eight
 each have a command that prints their contract, and
 `tests/unit/test_every_emitted_contract_is_answerable.py` holds that
 split by running both sides rather than by reading this table

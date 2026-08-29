@@ -153,7 +153,10 @@ class TestEveryFindingSaysHowWideItIs:
         findings, _ = detect_redundant_operations(
             _records(1, elements=("a.bst", "b.bst", "c.bst")))
         assert findings[0]["element_count"] == 3
-        assert findings[0]["element_count"] == len(findings[0]["elements"])
+        # `UX-384` removed the list this used to be checked against;
+        # the count is now the only place the width is published, which
+        # is what makes the section bounded.
+        assert "elements" not in findings[0], findings[0]
 
 
 class TestTheCommittedCaptureIsUnchangedByThis:

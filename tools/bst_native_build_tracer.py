@@ -2107,12 +2107,15 @@ class _RedundantOperations:
                                 key=lambda e: per_element_duration[e])
             findings.append({
                 "signature": signature,
-                "elements": elements,
-                # `UX-375`: the count beside the list. `correlate` reads
-                # `worst_element` and the durations and never the list,
-                # so this is what a consumer actually wants - and it is
-                # the number that stays true when the list is one day
-                # bounded (which needs a contract bump; see the item).
+                # `UX-375` added this beside the list; `UX-384` removed
+                # the list and this is what is left. `bga correlate` -
+                # the only consumer of a redundancy finding here - reads
+                # `worst_element` and the durations and never opened
+                # `elements`, and the list was the one term still
+                # O(elements) after the row cap: with 40 capped rows it
+                # is 78% of the section at 40 elements and 99% at 1,200.
+                # Removing a published key is what made this `plane2/v3`
+                # rather than an addition.
                 "element_count": len(elements),
                 "occurrence_count": count,
                 "total_duration_s": total_duration_s,

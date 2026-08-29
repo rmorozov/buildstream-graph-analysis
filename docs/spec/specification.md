@@ -1525,7 +1525,7 @@ host/v2                                                       (the measuring mac
 sources/v1                                                    (the source inventory - UX-171)
 capture-layout/v1                                             (the capture directory - UX-381)
 host-samples/v1                                               (the host while it built - UX-378)
-plane2/v2           plane2/v1                                 (the Plane 2 report - UX-297)
+plane2/v3           plane2/v2     plane2/v1                   (the Plane 2 report - UX-384)
 analyze/v3          analyze/v2                                (read, never written - UX-344)
 compare/v1          blast/v1      correlate/v1                  (read, never written - UX-341)
 host/v1                                                       (read, normalised in - UX-341)
@@ -1658,9 +1658,10 @@ key:
 | `bga sweep --format json` | `sweep/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v2` | `bga.hostinfo.collect` |
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
-| the Plane 2 report at `plane2.json` beside a run | `plane2/v2` | `bga.plane2` |
+| the Plane 2 report at `plane2.json` beside a run | `plane2/v3` | `bga.plane2` |
 | the capture directory `.bga/` itself - every path, what writes it, what reads it, and what an absence means (32.6) | `capture-layout/v1` | `bga.run_store` |
 | the host's memory and swap while the build ran, at `host-samples.jsonl` beside a run | `host-samples/v1` | `bga.run_store` names it (`OWNED`); `tools/bst_native_build_tracer.py` writes it |
+| the Plane 2 report a capture before `UX-384` wrote - read, never written | `plane2/v2` | `bga.plane2.SUPERSEDED` |
 | the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
 | what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, and what `analyze` wrote before `UX-344` lifted its two namespaces - read, never written | `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
@@ -1747,7 +1748,7 @@ cannot tell a broken capture from a cheap one:
 | `.bga/runs/<stamp>/run/run-context.json` | required | `run-context/v9` | what the run was: identity, host manifest (`host/v2` inside it), scheduler configuration, and the resolved `native_max_jobs` (`UX-377`). |
 | `.bga/runs/<stamp>/run/chrome_trace.json` | conditional | — | the Plane 1 trace in the legacy Chrome JSON shape. Written by the extraction; `bga timeline` writes the Perfetto form instead and nothing on a read path requires this. |
 | `.bga/runs/<stamp>/run/sources.json` | conditional | `sources/v1` | the source inventory (`UX-171`), read by `bga blast`. Absent means the capture could not resolve the project's sources, and `blast` says so rather than reporting an empty inventory. |
-| `.bga/runs/<stamp>/plane2.json` | conditional | `plane2/v2` | the Plane 2 report - what ran inside the sandboxes. Absent on a capture taken without Plane 2, and every Plane 2 section of every output is then absent rather than empty. |
+| `.bga/runs/<stamp>/plane2.json` | conditional | `plane2/v3` | the Plane 2 report - what ran inside the sandboxes. Absent on a capture taken without Plane 2, and every Plane 2 section of every output is then absent rather than empty. |
 | `.bga/runs/<stamp>/plane2.log.gz` | conditional | — | the raw per-process trace the report was folded from, gzipped. `bga timeline` renders from this; absent means no timeline, which is a different absence from no report (`UX-329`). |
 | `.bga/runs/<stamp>/plane2-resource.json` | conditional | — | the two capacity scalars, beside the report so the aggregator never opens the big file for them (`UX-296`). Absent where the report is. |
 | `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory and swap while the build ran, one JSON object per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |

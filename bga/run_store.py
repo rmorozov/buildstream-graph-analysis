@@ -632,7 +632,7 @@ CAPTURE_LAYOUT = (
      "the source inventory (`UX-171`), read by `bga blast`. Absent "
      "means the capture could not resolve the project's sources, and "
      "`blast` says so rather than reporting an empty inventory."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{PLANE2_NAME}", CONDITIONAL, "plane2/v2",
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{PLANE2_NAME}", CONDITIONAL, "plane2/v3",
      "the Plane 2 report - what ran inside the sandboxes. Absent on a "
      "capture taken without Plane 2, and every Plane 2 section of "
      "every output is then absent rather than empty."),

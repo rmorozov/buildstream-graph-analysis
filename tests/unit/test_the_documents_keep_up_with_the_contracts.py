@@ -172,9 +172,19 @@ def test_the_inventory_points_at_schema_rather_than_copying_it():
         f"the inventory reproduces schema internals ({pasted}) instead of "
         f"pointing at `--schema` - that is a second copy to maintain, "
         f"which is the defect, not the fix")
-    assert len(body.splitlines()) < 60, (
-        f"{len(body.splitlines())} lines - the inventory is meant to be one "
-        f"line per contract, not a copy of them")
+    # The bound is derived rather than a constant: it moves with the
+    # inventory, so adding a contract does not redden this and pasting
+    # a schema in still does. `UX-384` found it as a literal 60 against
+    # a 20-contract inventory, which meant the twenty-first row tripped
+    # a guard about *copying* by growing the table it is meant to
+    # describe.
+    from bga import contracts
+
+    budget = 3 * len(contracts.ids())
+    assert len(body.splitlines()) < budget, (
+        f"{len(body.splitlines())} lines against a budget of {budget} "
+        f"({len(contracts.ids())} contracts) - the inventory is meant to "
+        f"be one line per contract, not a copy of them")
 
 
 if __name__ == "__main__":  # pragma: no cover

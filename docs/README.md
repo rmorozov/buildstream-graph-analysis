@@ -67,7 +67,7 @@ contracts. Twenty-one ids, and what writes each:
 | `sweep/v1` | `bga sweep --format json` — what more capacity would buy, the knee past which it buys little, and where the model contradicted itself (`UX-339`) |
 | `host/v2` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
 | `sources/v1` | `bga extract`, at `sources.json` in a run directory — every element's sources, and how each one is keyed |
-| `plane2/v3` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured, as per-element reductions (`UX-297`) |
+| `plane2/v3` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured about one build: run-level measurements, with the per-element reductions among them. Measured on the committed fixture, 21 of 24 top-level blocks are run-level and 3 are keyed by element uid, so a reader after the host's peak memory, the build's process count or whether the spine ran is in the right file (`UX-386`). The per-process record list `UX-297` retired is gone |
 | `host-samples/v1` | `bga capture`, at `host-samples.jsonl` beside a run — the host's memory and swap while the build ran, one object per line (`UX-378`) |
 | `capture-layout/v1` | the capture directory `.bga/` itself — every path it holds, what writes it, what reads it, and what an absence means. Specification 32.6 (`UX-381`) |
 | `plane2/v2` | the same file as a capture before `UX-384` wrote it, with the element names of every redundancy finding embedded. Still read, never written |

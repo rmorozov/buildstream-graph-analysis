@@ -3195,12 +3195,14 @@ _ANALYZE_HINTS = {
             # capture's report a gigabyte".
             "source": {
                 "description": "Which Plane 2 report shape this run's "
-                               "numbers came from. `plane2/v3` carries "
-                               "the aggregates only; the unstamped "
-                               "`plane2/v1` a capture before `UX-297` "
-                               "wrote also embeds every per-process "
-                               "record, which no published number "
-                               "reads.",
+                               "numbers came from. `plane2/v3` is a "
+                               "report about one build - run-level "
+                               "measurements, with the per-element "
+                               "reductions among them (`UX-386`); the "
+                               "unstamped `plane2/v1` a capture before "
+                               "`UX-297` wrote also embeds every "
+                               "per-process record, which no published "
+                               "number reads.",
                 "properties": {
                     "schema": {"description": "The report's contract id."},
                     "records_embedded": {

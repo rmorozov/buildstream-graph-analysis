@@ -1,6 +1,6 @@
 # UX-375: the Plane 2 report has one uncapped population
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-297 (extraction streams), UX-300 (what a two-gigabyte snapshot does to a store) | **Serves:** anyone whose store has to hold a monorepo's captures | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-297 (extraction streams), UX-300 (what a two-gigabyte snapshot does to a store) | **Serves:** anyone whose store has to hold a monorepo's captures | **Topic:** capture
 
 ## Motivation
 
@@ -103,3 +103,102 @@ renders today.
 - The exported page. It does not carry this section at all, measured
   above on the 40-element capture, so nothing here changes what a
   reader sees.
+
+## Outcome
+
+Round 61. The population is bounded, and the *other* half of the
+Required Fix was declined with a measurement rather than done.
+
+**The cap.** `REDUNDANCY_FINDINGS_MAX = 40`, applied after the ranking
+that already existed, with what it dropped published. On the same
+40-element capture the filing measured:
+
+```text
+                    before      after
+findings stored        267         40
+section bytes      278,510     32,728
+share of report      76.8%      31.6%
+```
+
+40 rather than a round 10, and the same number as the viewer's
+`TABLE_OPENS_BOUNDED_ABOVE`: it is what this repository already uses
+for "more rows than a reader will act on", and the list is ranked by
+the figure a reader acts on, which is what makes cutting the tail safe.
+
+`redundant_operations_coverage` gains `findings_cap`,
+`omitted_beyond_cap`, `total_findings` and `display_floor_seconds`, so
+a shorter list cannot read as a cleaner build — `UX-73`'s own argument
+for the two exclusion counts that were already there.
+
+**The floor stayed in the renderer, and that is the finding.** The
+Required Fix offered two endings: move `_REDUNDANCY_MIN_SECONDS` into
+the contract so both agree, *or* leave it and have the contract say so.
+Moving it looked obviously right. It is not, and the committed fixture
+is what says so:
+
+```text
+tests/fixtures/macro_micro       20 findings
+  below the 50 ms display floor  14
+```
+
+`correlate.py` iterates **every** finding to build each element's
+`redundancy_count` and `worst_redundancy`. Moving the floor would have
+silently changed a published per-element number on every capture, for a
+reason no reader could see — a bigger defect than the one being fixed.
+So the floor stays a display threshold, the contract states plainly that
+the list includes findings the terminal will not show, and the terminal
+now has two sentences rather than one: a finding can be missing for
+being below the floor (it *is* in the JSON) or for falling outside the
+cap (it is in no output).
+
+This was found by writing the guard first. The clause asserting the
+fixture's findings all clear the floor failed at 14 of 20, which is how
+the wrong ending got caught before it shipped.
+
+**`element_count` is added; `elements` is not bounded.** With the rows
+capped, 64% of what remains is the `elements` lists, and they still
+grow with the run — 20,400 B of the capped 31,888 at 40 elements.
+Replacing that list with a count is what the filing's third bullet
+asks, `correlate` is the only consumer and reads `worst_element`
+instead, and removing a published key bumps `plane2/v2` to `v3` across
+five files. The count is added now (additive, no bump); the removal is
+`UX-384`.
+
+### Falsification run
+
+Six mutations against the committed tree. All six caught:
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | the cap is removed — the defect | 3 clauses |
+| M2 | the cap is applied before the ranking | `test_what_survives_the_cap_is_the_most_costly` |
+| M3 | the omitted count is not published | 2 clauses |
+| M4 | the display floor moves into the contract after all | 2 clauses |
+| M5 | the note stops saying the list holds what the terminal hides | `test_the_contract_says_the_list_holds_what_the_terminal_hides` |
+| M6 | a finding stops carrying its element count | `test_a_finding_carries_its_element_count` |
+
+M2 is the one worth keeping: a cap over an unranked list drops findings
+by accident of dictionary order, and every other clause stays green
+while it does.
+
+### Verification Log
+
+```text
+$ python3 -m pytest tests/unit/test_the_population_that_had_no_ceiling.py -q
+10 passed in 0.24s
+
+$ bga capture report <40-element capture>/plane2.log.gz
+Redundant cross-element operations (267 found, 40 above 0.05s):
+  40x across 40 elements (mod0.bst, ...) - up to 0.781s recoverable
+  wall-clock (worst element: mod23.bst); 12.756s total machine time
+    gcc -O0 -fPIC -static -o fs0 fs0.c
+  (227 further finding(s) fall outside the 40-finding cap and are in no
+   output; the list is the most costly first, so these are the cheapest
+   of what was found)
+
+$ coverage
+{"findings_cap": 40, "omitted_beyond_cap": 227, "total_findings": 267,
+ "display_floor_seconds": 0.05, ...}
+```
+
+Tiered small on landing at 0.24s.

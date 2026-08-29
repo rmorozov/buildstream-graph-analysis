@@ -1812,6 +1812,19 @@ def merge_record_streams(records: List[dict]) -> List[dict]:
 # findings ranked down to `uname -r` at 0.001s - true, and noise.
 _REDUNDANCY_MIN_SECONDS = 0.05
 
+#: `UX-375`: how many findings the report carries. Every other
+#: population in `plane2/v2` is bounded - `binary_cost` takes a `top_n`
+#: of 5, the rest are `O(elements)` or `O(distinct binaries)` - and this
+#: one was not, so it was 77-92% of the report on every capture with
+#: repeated work in it. Measured at 40 elements: 278,510 B of a 363 kB
+#: report, cut to 31,888 B by this cap.
+#:
+#: 40 rather than a round 10, and the same number as the viewer's
+#: `TABLE_OPENS_BOUNDED_ABOVE`: it is what this repository already uses
+#: for "more rows than a reader will act on", and the findings are
+#: ranked by the figure a reader acts on.
+REDUNDANCY_FINDINGS_MAX = 40
+
 # UX-37: how much of a command line to show. Truncating at 100 characters
 # cut every `cc1plus`/`ld` invocation off before anything distinguishing,
 # so two structurally different findings rendered identically.
@@ -2092,6 +2105,12 @@ class _RedundantOperations:
             findings.append({
                 "signature": signature,
                 "elements": elements,
+                # `UX-375`: the count beside the list. `correlate` reads
+                # `worst_element` and the durations and never the list,
+                # so this is what a consumer actually wants - and it is
+                # the number that stays true when the list is one day
+                # bounded (which needs a contract bump; see the item).
+                "element_count": len(elements),
                 "occurrence_count": count,
                 "total_duration_s": total_duration_s,
                 # UX-37: an upper bound on recoverable wall-clock, not a
@@ -2107,9 +2126,34 @@ class _RedundantOperations:
             1 for signature, buckets in unresolved_signatures.items()
             if signature not in by_signature and len(buckets) >= 2
         )
+        # Ranked by the wall-clock-relevant figure, not by the sum: a
+        # 6x-repeated 50ms probe across six concurrent elements is not a
+        # bigger finding than a 2x-repeated 5s codegen step. The rank is
+        # what makes the cap below safe: what it drops is the cheapest.
+        findings.sort(key=lambda f: -f["max_element_duration_s"])
+        total = len(findings)
+        omitted = max(0, total - REDUNDANCY_FINDINGS_MAX)
+        # `UX-375` took the second of its filing's two endings. The
+        # first - move `_REDUNDANCY_MIN_SECONDS` here, so the contract
+        # and the terminal agree about what a finding is - looked
+        # obviously right and is not: **14 of the 20 findings in
+        # `tests/fixtures/macro_micro` fall below that floor**, and
+        # `correlate.py` iterates every finding to build each element's
+        # `redundancy_count` and `worst_redundancy`. Moving the floor
+        # would therefore have changed a published per-element number
+        # for a reason no reader could see, which is a bigger defect
+        # than the one being fixed. So the floor stays a *display*
+        # threshold and the contract says so, which is the ending the
+        # filing offered beside it.
         coverage = {
             "excluded_unresolved_only": excluded_unresolved_only,
             "excluded_element_command_blocks": excluded_command_blocks,
+            # `UX-375`: what this list is not. A shorter list reads as a
+            # cleaner build unless the reason it is short is named.
+            "findings_cap": REDUNDANCY_FINDINGS_MAX,
+            "omitted_beyond_cap": omitted,
+            "total_findings": total,
+            "display_floor_seconds": _REDUNDANCY_MIN_SECONDS,
             "note": (
                 "Each finding's `max_element_duration_s` is an upper bound on what "
                 "sharing that one operation could recover, for the single "
@@ -2119,16 +2163,15 @@ class _RedundantOperations:
                 "signature is a finding only when it ran under 2+ *resolved* "
                 "elements (UX-73); processes in the unresolved attribution bucket "
                 "and each element's own top-level command block are excluded, and "
-                "counted above."
+                "counted above. The list holds at most `findings_cap` findings, "
+                "the most costly first, out of `total_findings`; "
+                "`omitted_beyond_cap` is how many were cut. It deliberately "
+                "*includes* findings below `display_floor_seconds`, which the "
+                "terminal does not show - they are still real repeats, and "
+                "each element's `redundancy_count` in `correlate` counts them."
             ),
         }
-        # Ranked by the wall-clock-relevant figure, not by the sum: a
-        # 6x-repeated 50ms probe across six concurrent elements is not a
-        # bigger finding than a 2x-repeated 5s codegen step.
-        return (
-            sorted(findings, key=lambda f: -f["max_element_duration_s"]),
-            coverage,
-        )
+        return findings[:REDUNDANCY_FINDINGS_MAX], coverage
 
 
 # UX-32: which traced binaries are doing the real work, and which are
@@ -5477,19 +5520,28 @@ def _format_text(report: dict) -> str:
                 + ")"
             )
     redundant = report.get("redundant_operations") or []
+    _coverage = report.get("redundant_operations_coverage") or {}
     if redundant:
         lines.append("")
         # UX-37: rank and filter on the wall-clock-relevant figure. A
         # finding worth a millisecond is noise however it is measured,
         # and the previous unfiltered list ran 37 entries deep down to
         # `uname -r` at 0.001s.
+        # `UX-375`: both of those now happen where the list is *built*,
+        # so the terminal and the contract agree about what a finding
+        # is. This reads the counts rather than re-deriving them - the
+        # filter lived here alone, and the stored list carried every
+        # finding while the terminal showed a shorter one.
         shown = [
             f for f in redundant
-            if f.get("max_element_duration_s", f["total_duration_s"]) >= _REDUNDANCY_MIN_SECONDS
+            if f.get("max_element_duration_s", f["total_duration_s"])
+            >= _REDUNDANCY_MIN_SECONDS
         ]
-        omitted = len(redundant) - len(shown)
+        below_floor = len(redundant) - len(shown)
+        beyond_cap = _coverage.get("omitted_beyond_cap", 0)
+        total = _coverage.get("total_findings", len(redundant))
         lines.append(
-            f"Redundant cross-element operations ({len(redundant)} found, "
+            f"Redundant cross-element operations ({total} found, "
             f"{len(shown)} above {_REDUNDANCY_MIN_SECONDS:.2f}s):"
         )
         for finding in shown:
@@ -5505,11 +5557,23 @@ def _format_text(report: dict) -> str:
                 f"{finding['total_duration_s']:.3f}s total machine time"
             )
             lines.append(f"    {_elide_cmd(finding['example_cmd'])}")
-        if omitted:
-            # No silent truncation (UX-26's own pattern).
+        # No silent truncation (UX-26's own pattern), and `UX-375` gave
+        # it a second reason: a finding can be missing from this list
+        # for being below the display floor - in which case it *is* in
+        # the JSON - or for falling outside the cap, in which case it is
+        # not. Two different facts, so two different sentences.
+        if below_floor:
             lines.append(
-                f"  ({omitted} further finding(s) below {_REDUNDANCY_MIN_SECONDS:.2f}s "
-                f"recoverable wall-clock, omitted - see --json for all of them)"
+                f"  ({below_floor} further finding(s) below "
+                f"{_REDUNDANCY_MIN_SECONDS:.2f}s recoverable wall-clock, "
+                f"omitted here - see --json for all of them)"
+            )
+        if beyond_cap:
+            lines.append(
+                f"  ({beyond_cap} further finding(s) fall outside the "
+                f"{_coverage.get('findings_cap')}-finding cap and are in no "
+                f"output; the list is the most costly first, so these are the "
+                f"cheapest of what was found)"
             )
         # UX-73: said under the list, because a reader scanning it
         # top-down will otherwise add the figures - and on the real
@@ -5520,7 +5584,7 @@ def _format_text(report: dict) -> str:
             "worst-affected element; they are maxima over concurrent elements "
             "and must not be summed)"
         )
-    coverage = report.get("redundant_operations_coverage") or {}
+    coverage = _coverage
     if coverage.get("excluded_unresolved_only") or coverage.get(
         "excluded_element_command_blocks"
     ):

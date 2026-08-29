@@ -183,6 +183,67 @@ class TestTheSentenceMatchesTheVerdict:
             getattr(census_spine_verdicts, "last_unassessable", None))
         assert "cannot be assessed" not in line, line
         assert "1 of 1 element(s) assessed" in line, line
+        # `UX-160`'s all-clear too, and this is the direction the first
+        # draft of this item lost: the parenthetical was removed from
+        # every sentence rather than from the ones that cannot support
+        # it, so the case where it is *true* stopped saying so. The
+        # census saw the whole project here - nothing deferred, nothing
+        # skipped - which is exactly when the claim is sound.
+        assert "the spine is not needed" in line, line
+
+    def test_the_all_clear_needs_the_whole_project_seen(self, tmp_path):
+        """And the other direction, on one project rather than two:
+        add an element the census cannot assess and the parenthetical
+        goes, while the elements it *could* read are unchanged."""
+        mixed = {"a.bst": """
+            kind: import
+            sources:
+            - kind: local
+              path: files
+            """}
+        mixed.update(PRODUCES_A_TOOL)
+        project = _project(tmp_path, mixed)
+        verdicts = census_spine_verdicts(project)
+        line = format_census_coverage(
+            project, verdicts,
+            getattr(census_spine_verdicts, "last_unassessable", None))
+        assert "the spine is not needed" not in line, (
+            f"the all-clear survives an element the census could not "
+            f"read: {line}")
+        assert "cannot be assessed" in line, line
+
+    def test_the_all_clear_needs_a_verdict_for_every_declared_element(
+            self, tmp_path):
+        """The third way the census can fall short, and the one a
+        mutation sweep found this clause did not cover: an element that
+        is *declared* and got no verdict at all. That is neither a
+        static binary nor something the build produces - it is an
+        element the walk never reached - and `auto` traces it, so the
+        all-clear would be claiming the spine is unneeded for elements
+        it is about to run on."""
+        only_imports = {"a.bst": """
+            kind: import
+            sources:
+            - kind: local
+              path: files
+            """, "b.bst": """
+            kind: import
+            sources:
+            - kind: local
+              path: files
+            """}
+        project = _project(tmp_path, only_imports)
+        verdicts = census_spine_verdicts(project)
+        assert len(verdicts) == 2, verdicts
+        # One declared element with no verdict: the shape `unassessed`
+        # counts, reached here by handing the formatter a short dict
+        # rather than by breaking the census.
+        partial = {name: needs for name, needs in list(verdicts.items())[:1]}
+        line = format_census_coverage(project, partial, set())
+        assert "unassessed" in line, line
+        assert "the spine is not needed" not in line, (
+            f"the all-clear survives a declared element with no verdict: "
+            f"{line}")
 
 
 if __name__ == "__main__":  # pragma: no cover

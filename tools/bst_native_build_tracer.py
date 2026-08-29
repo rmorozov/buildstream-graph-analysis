@@ -2845,6 +2845,15 @@ def format_census_coverage(project_dir: str, verdicts: Dict[str, bool],
     elif assessed:
         line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
                 f"none of those staged a static binary")
+        # `UX-376` removed this parenthetical because it had been
+        # printed for a build where the spine was the difference
+        # between 21 processes and 221 - but it removed it from the
+        # case that *can* support it too. The claim is sound exactly
+        # when the census saw the whole project: every declared element
+        # assessed, none deferred to what the build produces, none
+        # skipped. That is the reader's all-clear and it is true there.
+        if not produced and not unassessed:
+            line += " (the spine is not needed)"
     else:
         line = f"Census: 0 of {len(declared)} element(s) could be assessed"
     if produced:

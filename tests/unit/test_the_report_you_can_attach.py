@@ -499,7 +499,12 @@ COMMITTED_EXPORTS = [
     # reason a schema addition costs no viewer change.
     # `UX-390`: +995 B, all source; see the note on `PAGE_BUDGET_B`.
     # `UX-393`: +3,236 B, all source; see the note on `PAGE_BUDGET_B`.
-    ("golden", GOLDEN, 380_000),                       #  377,445 B
+    # `UX-396`: +789 B, all **contract** - `attribution` declares its
+    # eight parts as a `bga:decomposition`, and a declaration travels
+    # with every export whether or not a run has the numbers. The page
+    # half is 277,825 B either side: no new instrument was drawn, which
+    # is the Out of Scope this item was held to.
+    ("golden", GOLDEN, 380_000),                       #  378,234 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -539,8 +544,8 @@ COMMITTED_EXPORTS = [
     # source.
     # `UX-389`: +3,380 B, split in the note above the golden bound.
     # `UX-390`: +995 B, all source.
-    # `UX-393`: +3,236 B, all source.
-    ("macro_micro", MACRO_MICRO, 435_000),             #  432,778 B
+    # `UX-393`: +3,236 B, all source. `UX-396`: +789 B, all contract.
+    ("macro_micro", MACRO_MICRO, 435_000),             #  433,567 B
 ]
 
 

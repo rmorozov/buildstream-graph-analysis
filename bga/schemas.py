@@ -2601,6 +2601,36 @@ _ANALYZE_HINTS = {
     },
     "attribution": {
         QUESTION: 'Where did the wall-clock go?', RAIL: 'act',
+        # `UX-396`: the section that asks where the wall-clock went,
+        # drawing where it went. Eight published buckets of one
+        # published total, and they sum to it exactly - on
+        # `macro_micro`, 43,200,000 + 2,717,000 + 216,000 =
+        # 46,133,000 = `total_duration_us` - so the page lays out
+        # numbers it was handed rather than working out a remainder.
+        # `UX-361`'s instrument, on the section `UX-303` says wants
+        # its shape before its rows.
+        DECOMPOSITION: {
+            "total": "total_duration_us",
+            "quantity": "duration_us",
+            "parts": [
+                {"path": "attribution.execution_on_chain_us",
+                 "key": "execution", "label": "work on the chain"},
+                {"path": "attribution.dependency_wait_us",
+                 "key": "dependency", "label": "waiting upstream"},
+                {"path": "attribution.resource_wait_us",
+                 "key": "resource", "label": "capacity full"},
+                {"path": "attribution.scheduler_wait_us",
+                 "key": "scheduler", "label": "nothing dispatched"},
+                {"path": "attribution.idle_us",
+                 "key": "idle", "label": "nothing ready"},
+                {"path": "attribution.retry_wait_us",
+                 "key": "retry", "label": "retries"},
+                {"path": "attribution.untracked_head_us",
+                 "key": "head", "label": "before the first task"},
+                {"path": "attribution.untracked_tail_us",
+                 "key": "tail", "label": "after the last"},
+            ],
+        },
         # `UX-390`: and the run's advice for each bucket, drawn on the
         # bucket's own row rather than in a second section over the
         # same eight names.

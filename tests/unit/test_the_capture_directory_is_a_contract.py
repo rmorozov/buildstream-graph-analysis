@@ -42,6 +42,7 @@ own schema, and the *directory* they live in answered for nothing.
 """
 import pathlib
 import re
+import shutil
 import sys
 
 import pytest
@@ -165,40 +166,87 @@ class TestTheSpecificationAndTheModuleAgree:
         assert unknown == [], unknown
 
 
+FIXTURE = REPO / "tests/fixtures/macro_micro"
+
+
+def _committed_store(tmp_path):
+    """A `.bga`-shaped tree around the committed run fixture.
+
+    `UX-213`'s census caught the first draft of this file putting all
+    three of its directional clauses behind `needs_real_capture`, so
+    the Falsification - the half that checks the contract against a
+    *directory* rather than against the specification - ran on one
+    machine and skipped in CI. The clone has no `.bga` store, but it
+    does have a real run directory: `tests/fixtures/macro_micro`, whose
+    filenames are what the extraction actually wrote, not what this
+    contract says it should have.
+
+    So the store shape is assembled here and the *names inside it* come
+    from the fixture. What that leaves to the real-capture arm below is
+    exactly what only a live capture produces - `build.log`, `.size`,
+    `capture-context.txt` - which is one clause rather than three.
+    """
+    store = tmp_path / run_store.STORE_DIRNAME
+    snapshot = store / run_store.RUNS_DIRNAME / "20260821T120000Z"
+    snapshot.mkdir(parents=True)
+    shutil.copytree(FIXTURE / "run", snapshot / run_store.RUN_SUBDIR)
+    shutil.copy(FIXTURE / run_store.PLANE2_NAME,
+                snapshot / run_store.PLANE2_NAME)
+    (store / ".gitignore").write_text("*\n", encoding="utf-8")
+    (store / run_store.SCRATCH_DIRNAME).mkdir()
+    return store
+
+
+class TestACommittedCaptureSatisfiesIt:
+    """The Falsification, on a tree every clone has."""
+
+    def test_every_path_on_disk_is_named(self, tmp_path):
+        """The first direction. The `run/` subtree's filenames are the
+        extraction's own, carried by a committed fixture - so this is
+        the contract checked against something that did not come from
+        it."""
+        declared = set(run_store.layout_paths())
+        unnamed = sorted(_walked(_committed_store(tmp_path)) - declared)
+        assert unnamed == [], (
+            f"path(s) a capture holds that the contract does not name: "
+            f"{unnamed}")
+
+    def test_every_required_path_is_present(self, tmp_path):
+        on_disk = _walked(_committed_store(tmp_path))
+        absent = [path for path, presence, _c, _w in run_store.CAPTURE_LAYOUT
+                  if presence == run_store.REQUIRED and path not in on_disk]
+        assert absent == [], (
+            f"required path(s) this capture does not have: {absent}")
+
+    def test_a_capture_without_plane_two_still_satisfies_it(self, tmp_path):
+        """The other direction, so the fix is not "mark everything
+        required": this store carries no `plane2.log.gz`, no
+        `plane2-resource.json` and no `host-samples.jsonl` at all, and
+        the contract calls each of them conditional."""
+        store = _committed_store(tmp_path)
+        (store / run_store.RUNS_DIRNAME / "20260821T120000Z"
+         / run_store.PLANE2_NAME).unlink()
+        on_disk = _walked(store)
+        absent = [path for path, presence, _c, _w in run_store.CAPTURE_LAYOUT
+                  if presence == run_store.REQUIRED and path not in on_disk]
+        assert absent == [], (
+            "a Plane-2-less capture fails the required set, so a path "
+            f"that is conditional in practice is marked required: {absent}")
+
+
 @needs_real_capture
 class TestARealCaptureSatisfiesIt:
-    def test_every_path_on_disk_is_named(self):
-        """The Falsification's first direction. Before this landed it
-        failed on twenty of twenty-one."""
+    def test_every_path_a_live_capture_adds_is_named(self):
+        """What the committed fixture cannot carry: `build.log`,
+        `.size` and `capture-context.txt` are written by a capture that
+        actually ran, and `UX-189` keeps the archive out of a clone.
+        Before this landed the contract named one of twenty-one."""
         declared = set(run_store.layout_paths())
         unnamed = sorted(_walked(REAL) - declared)
         assert unnamed == [], (
             f"path(s) a real capture holds that the contract does not "
             f"name: {unnamed}")
 
-    def test_every_required_path_is_present(self):
-        on_disk = _walked(REAL)
-        absent = [path for path, presence, _c, _w in run_store.CAPTURE_LAYOUT
-                  if presence == run_store.REQUIRED and path not in on_disk]
-        assert absent == [], (
-            f"required path(s) a real capture does not have: {absent}")
-
-    def test_a_capture_without_plane_two_still_satisfies_it(self):
-        """The Falsification's other direction, so the fix is not "mark
-        everything required": the paths a `--trace-spine=off` capture
-        never writes are `conditional`, and the contract says what
-        their absence means rather than the capture failing the guard.
-        """
-        on_disk = _walked(REAL)
-        without = {p for p in on_disk
-                   if not p.endswith(("plane2.json", "plane2.log.gz",
-                                      "plane2-resource.json",
-                                      "host-samples.jsonl"))}
-        absent = [path for path, presence, _c, _w in run_store.CAPTURE_LAYOUT
-                  if presence == run_store.REQUIRED and path not in without]
-        assert absent == [], (
-            "a Plane-2-less capture fails the required set, so a path "
-            "that is conditional in practice is marked required")
 
 
 class TestTheOtherTableSaysWhichDirectoryItIs:

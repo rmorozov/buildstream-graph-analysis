@@ -71,6 +71,7 @@ the emitter's *encoding*, not of its numbering, and an earlier draft of
 this docstring claimed both.
 """
 import gzip
+import json
 import hashlib
 import os
 import pathlib
@@ -171,7 +172,11 @@ def _snapshot(tmp_path, kinds=True):
         # The golden graph carries no `element_kind`; a real capture
         # does, and the annotation is only worth asserting against a
         # graph that states one.
-        import json
+        #
+        # `UX-380`: the `import json` that used to be here shadowed the
+        # module-level one for the *whole* function, so the analysis
+        # written below it raised `UnboundLocalError` on the
+        # `kinds=False` path alone. The same trap `UX-374`'s own M6 hit.
         path = snapshot / "run" / "graph.json"
         graph = json.loads(path.read_text(encoding="utf-8"))
         for element in graph["elements"]:
@@ -180,6 +185,28 @@ def _snapshot(tmp_path, kinds=True):
                                   "requested_target": False,
                                   "element_kind": "autotools"})
         path.write_text(json.dumps(graph), encoding="utf-8")
+    # `UX-380`: the analysis a real capture writes beside the run, which
+    # is where a slice's `depth`, `on_critical_path` and
+    # `downstream_count` come from. Written here rather than left out:
+    # a snapshot without one emits none of the three, and the
+    # every-documented-key clause would then be asserting against a
+    # fixture that cannot produce the shape - which is the gap `UX-368`
+    # spent four rounds inside.
+    # Keyed on the elements the *Plane 1 log* has, which are not the
+    # golden graph's: `_WRAPPED` runs `work-a.bst` under `all.bst`, and
+    # an analysis keyed on `base/lib/app` would leave every slice
+    # without a structural key while looking correct in the file.
+    (snapshot / "analyze.json").write_text(json.dumps({
+        "schema": "analyze/v4",
+        "elements": {
+            "unweighted_depth": {"all.bst": 1, "work-a.bst": 0},
+            "downstream_count": {"all.bst": 0, "work-a.bst": 1},
+        },
+        "element_join": [
+            {"element": "work-a.bst", "on_critical_path": True},
+            {"element": "all.bst", "on_critical_path": False},
+        ],
+    }), encoding="utf-8")
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write(_raw())
     return snapshot

@@ -36,6 +36,9 @@ TrackEvent format does not. Verified against Perfetto v49.0 on
 | `element_kind` | Plane 1 | its kind from the run's own graph (`cmake`, `import`, `manual`, ...), or `unknown` where the capture recorded none |
 | `task_type` | Plane 1 | what the scheduler was doing: `build`, `fetch`, `pull`, `push`, `track` |
 | `outcome` | Plane 1 | the status BuildStream's log closed the task with - `SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache outcome is the last two, and only where the log states it |
+| `depth` | Plane 1 | how far down the dependency graph this element sits - the longest path in edges from a source, which is the level `parallelism.levels` decomposes the build by. Absent where the snapshot carries no analysis |
+| `on_critical_path` | Plane 1 | whether this element is on the chain that sets the build's finish time. The set every finding in the report is ranked against |
+| `downstream_count` | Plane 1 | how many elements rebuild when this one changes - its blast radius in elements |
 | `src` | Plane 2 | which mechanism recorded it: `hook` (the LD_PRELOAD hook, loaded at exec) or `spine` (the ptrace supervisor) |
 | `cpu_us` | Plane 2 | CPU microseconds this process itself used, from its own `getrusage` at exit or the spine's read at the exit-stop |
 | `max_rss_kb` | Plane 2 | peak resident kilobytes of this process alone - never summed with another's, which never held it at the same moment |
@@ -58,6 +61,8 @@ TrackEvent format does not. Verified against Perfetto v49.0 on
 | `kernel_release` | run | the kernel the sandboxes ran under |
 | `distro_id` | run | the distribution the capture was taken on |
 | `builders` | run | BuildStream's element-dispatch concurrency for this run |
+| `native_max_jobs` | run | the per-element concurrency the native build systems ran with - `bst --max-jobs`, or what the graph resolved `%{max-jobs}` to. Absent where the capture could establish neither |
+| `native_max_jobs_source` | run | which of the three the number came from - `operator_declared`, `parsed_from_invocation` or `resolved_from_graph` |
 | `incomplete_reason` | run | why this run is not a measurement - `failed`, `interrupted` or `suspended`. Absent on a run that finished, which is the only thing its absence means |
 | `anchor_element` | run | the element the two planes were aligned on |
 | `plane_offset_us` | run | the single offset that alignment applied, in microseconds |

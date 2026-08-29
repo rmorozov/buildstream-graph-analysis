@@ -1424,6 +1424,8 @@ the other rounds now:
 | [44](../audits/round-44.md) | the trace vocabulary verified seven for seven with one dead question surviving its own class's purge; the user's thirteen readability observations became four visual-contract sections — drawing grades, apparatus placement, the depth budget and table focus, the click budget (`UX-316`..`UX-321`) |
 | [45](../audits/round-45.md) | the guides walked by a stranger: four bugs forty-four feature rounds never saw — the no-bst traceback, the user-install crash, the self-crashing printed command, the ghost invocations — plus the round-44 landing verified with one cascade evasion (`UX-324`..`UX-332`) |
 | [46](../audits/round-46.md) | three field errors measured to mechanisms — the trim that interns 3,000 compiles to two names, the CSP that silently breaks tick labels on served pages, the TypeError that was never bga's — and the implementation loop re-tooled with a measured 2.5× (`UX-333`..`UX-336`) |
+| [63](../audits/round-63.md) | seventeen implementation rounds (47-62) recorded in the backlog's own sections, then the sibling's outsider walk run twice: six populations vanish between a cold and an incremental run, fourteen Plane 2 blocks reach no browser, and the Tabulator question filed as a product decision (`UX-388`..`UX-397`) |
+| [64](../audits/round-64.md) | the walk that judged the answers: against example 06's `optimized/` answer key, Plane 2 names every intended fix and correlate compresses them into one 12.9 s paragraph that reaches no page; the rounds 47-63 landing held eleven-of-twelve under falsification; the library question answered with a factory measurement, and the test plan built from the escape ledger (`UX-398`..`UX-410`) |
 
 ## Verification Log
 

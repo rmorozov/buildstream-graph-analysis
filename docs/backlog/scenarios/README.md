@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-396 scenarios: **12 open**, 384 closed.
+409 scenarios: **25 open**, 384 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 66 |
-| analysis | 0 | 52 |
-| contracts | 0 | 45 |
-| viewer | 9 | 118 |
+| capture | 4 | 69 |
+| analysis | 2 | 54 |
+| contracts | 1 | 46 |
+| viewer | 11 | 120 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 0 | 48 |
+| guards | 5 | 53 |
 
 ## Open scenarios
 
@@ -48,6 +48,73 @@ task file, which is the only place it ever lived twice.
 | UX-395 | [`--format chrome` silently drops the flows and counters](UX-0395-format-chrome-silently-drops-the-flows-and-counters.md) | capture | Medium | anyone who took the chrome trace to Perfetto | 🔴 |
 | UX-396 | [sixteen of forty-four sections draw something](UX-0396-sixteen-of-forty-four-sections-draw-something.md) | viewer | Medium | anyone scanning the report for where the time went | 🔴 |
 | UX-397 | [the Perfetto handoff sits outside the pinned rail](UX-0397-the-perfetto-handoff-sits-outside-the-pinned-rail.md) | viewer | Low | anyone who decides to open the trace after reading a finding | 🔴 |
+| UX-398 | [the library question, measured against the factory](UX-0398-the-library-question-measured-against-the-factory.md) | viewer | High | R8, and anyone deciding what this page may depend on | 🔴 |
+| UX-399 | [the browser is the library](UX-0399-the-browser-is-the-library.md) | viewer | High | R2, and every reader of a seven-screen report | 🔴 |
+| UX-400 | [every population is tested at zero, one and many](UX-0400-every-population-is-tested-at-zero-one-and-many.md) | guards | High | every future section, before its bug is filed | 🔴 |
+| UX-401 | [no key is terminal-only in silence](UX-0401-no-key-is-terminal-only-in-silence.md) | guards | Medium | whoever adds the sixteenth block | 🔴 |
+| UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | guards | High | every future round, before its walk | 🔴 |
+| UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | guards | Medium | the audit loop itself | 🔴 |
+| UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | guards | Medium | anyone reading a whatif or store number outside the page | 🔴 |
+| UX-405 | [a relative `--project` forfeits Plane 2 in silence](UX-0405-a-relative-project-forfeits-plane-2-in-silence.md) | capture | High | R1, on the first capture they ever run | 🔴 |
+| UX-406 | [the spine counts every process twice in the trace](UX-0406-the-spine-counts-every-process-twice-in-the-trace.md) | capture | High | anyone who takes the handoff and believes a number | 🔴 |
+| UX-407 | [the finding that *is* the answer stays at the terminal](UX-0407-the-finding-that-is-the-answer-stays-at-the-terminal.md) | analysis | High | R1 and R8 — the reader deciding what to restructure | 🔴 |
+| UX-408 | [`serialized_pairs` is described as its own opposite](UX-0408-serialized-pairs-described-as-its-own-opposite.md) | contracts | Medium | anyone reading the batching section on the page | 🔴 |
+| UX-409 | [the configure tax names one payer twice](UX-0409-the-configure-tax-names-one-payer-twice.md) | analysis | Medium | anyone reading a cache-logs finding | 🔴 |
+| UX-410 | [a `--project` that is not a project builds one anyway](UX-0410-a-project-flag-that-is-not-a-project-builds-one-anyway.md) | capture | Medium | R1, on a mistyped path | 🔴 |
+
+## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
+
+The round's brief: review the sibling's rounds 47-63, answer the
+JS-dependency question `UX-397` carries, repeat the outsider walk —
+this time judging whether optimization directions for the project
+under test were really findable in *all* planes — and design the
+test plan that catches most problems in few rounds. The full round,
+with the verification scoreboard and every walk figure, is
+[`docs/audits/round-64.md`](../../audits/round-64.md).
+
+**The landing held under falsification.** Twelve sampled closures
+(all eight of rounds 45-46's filings, four of the sibling's own) ran
+green at HEAD and eleven of twelve went red when their mechanism was
+reverted; the plane2/v3 bump correctly fired `UX-190`'s removal
+rule. The one gap: the `UX-343` unit census walks only the analyze
+document — a whatif hint can lose its unit silently (`UX-404`).
+
+**The walk had an answer key.** `examples/06-macro-micro-optimization`
+ships an `optimized/` twin, so the intended fixes were known before
+the tool spoke: fan the declared-only chain out, drop the codegen
+edge from five libs, delete `notparallel: True`. Verdict per plane:
+Plane 2 names the entire key verbatim and `bga correlate` compresses
+it into one paragraph with a 12.9 s projection; Plane 1 diagnoses
+the class ("chain-bound", core.bst first, the `notparallel` line
+named from declared variables); Plane 3 answers a real orthogonal
+question (configure tax 19.7 %); Perfetto adds the one direction no
+other surface gives (`waited-on-flow`: codegen slack 8,009 ms).
+Directions were genuinely findable in all planes — but only after
+re-running the capture from inside the project, because the
+documented relative `--project` shape had silently forfeited every
+Plane 2 byte (`UX-405`), and the page leaves the macro synthesis at
+the terminal (`UX-407`) while four canned queries answer ~2× with
+the spine on (`UX-406`).
+
+**The library question got a measurement.** `UX-397`'s one argument
+for Tabulator — sorting and filtering "in one dependency rather
+than in twenty-one modules" — is factually wrong: all 31 tables
+flow through one factory (`buildTable` in `structured.js`) that
+already owns sorting, the 22 preset menus, Top-N and the folds.
+`UX-398` records the recommendation (no library now) and replaces
+the standing question with a priced rule; `UX-399` inventories what
+the platform gives free — `content-visibility: auto` is virtual
+scrolling for zero bytes, `IntersectionObserver` is `UX-393`'s
+scrollspy.
+
+**The test plan is the escape ledger, mechanized.** Every defect
+class that mattered was caught by an audit round, not the suite —
+so the plan turns the rounds' own instruments into standing guards:
+the journey with its answer key (`UX-402`), populations at zero,
+one and many (`UX-400`), a reachability census so no key goes
+terminal-only in silence (`UX-401`), the unit census extended to
+every emitter (`UX-404`), and the falsify ritual run once as a full
+census (`UX-403`).
 
 ## UX-388..UX-397: the sixty-third round — the outsider walk, twice (2026-08-29)
 

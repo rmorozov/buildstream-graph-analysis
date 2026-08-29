@@ -1,6 +1,6 @@
 # UX-393: nothing moves to the next section, or back to the top
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-199 (a report you can find your way around), UX-286 (the report has chapters), UX-347 (the distance budget), UX-209 (the rail) | **Serves:** anyone reading past the first screen | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-199 (a report you can find your way around), UX-286 (the report has chapters), UX-347 (the distance budget), UX-209 (the rail) | **Serves:** anyone reading past the first screen | **Topic:** viewer
 
 ## Motivation
 
@@ -60,3 +60,77 @@ budget before it lands.
   page already declares.
 - The rail's contents. Seventy-seven entries is `UX-286`'s chapter
   question, and folding it is a different item.
+
+## Outcome (round 64, 2026-08-29) — 🟢 Done
+
+### The gap, and where the controls went
+
+The rail already said *where you are* — `UX-399` landed the scrollspy
+one phase earlier in this round, so the third Required Fix bullet was
+done before this started. What was missing is the step.
+
+Driven in Chrome on the exported `macro_micro` page:
+
+```text
+nav.toc .toc-steps            [top] [previous] [next]
+rail entries                  66
+
+six presses of Next   #readers #evidence #overview #findings
+                      #headline #next_steps
+two presses of Prev   #headline #findings
+86 more presses       #document_shape   (the last, and it stops)
+```
+
+**In the rail, not a banner.** `UX-347`'s distance budget measures
+scroll distance to *content*, and a 60 px chrome bar makes every
+measurement on every screen worse. The rail is already sticky and
+already beside the reading column, so three buttons at its head cost
+that column nothing — the distance and volume guards are unchanged.
+
+### The trap: the mark is asynchronous
+
+Reading `data-current` on every press means reading a mark an
+`IntersectionObserver` has not written yet, and the scroll it is
+watching is smooth. Measured before the cursor landed:
+
+```text
+six presses of Next   decision decision decision decision decision decision
+```
+
+So the stepper carries its own cursor and adopts the mark only when the
+mark has **moved on its own** — the reader scrolling, the one case
+where the mark knows something the cursor does not. A mark that is
+merely behind reads as the same value it had at the previous step, and
+that is what tells the two apart.
+
+`test_two_presses_move_two_sections` is what would catch it coming
+back, and the guard reads `location.hash` — set synchronously by the
+rail link — rather than the mark this item had to stop depending on.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| E1 | the stepper reads `data-current` on every press again | 5 of 8, incl. `test_two_presses_move_two_sections` |
+| E2 | wrap at the end instead of clamping | 1 of 8: `test_next_past_the_end_stops` |
+| E3 | show the Top button always | 1 of 8: `test_it_appears_only_once_there_is_a_top_to_go_back_to` |
+| E4 | drop the input/textarea/select check on the key handler | 1 of 8: `test_they_are_ignored_while_typing` |
+
+### Deviation from the Required Fix
+
+- **The third bullet was already done.** `UX-399` landed the rail's
+  `data-current` mark earlier in this round; this item consumes it
+  rather than repeating it, and the two cannot disagree about where the
+  reader is because one writes the mark and the other reads it.
+- **Keyboard reach is Tab plus `[` and `]`.** The three controls are
+  buttons, so the keyboard reader `UX-223` established reaches them
+  already; the bracket keys are an accelerator, unmodified and
+  unclaimed, ignored while the reader is typing so the palette does not
+  lose two characters.
+- **`PAGE_BUDGET_B` moved 276,000 → 280,000**, +2,652 B of source for
+  this item (`UX-392` had already spent 584 within the old bound, and
+  the note in the guard carries both). The reading column and both
+  payloads are unchanged — which is the point of putting the controls
+  in the rail rather than in a banner.

@@ -495,4 +495,10 @@ MEDIUM = (
     # layout-cost pair with the optimisation forced off and on in
     # the same page - plus five source clauses that need neither.
     "tests/unit/test_the_browser_is_the_library.py",                 #    4.8s
+    # `UX-392`: exports the 1,202-element synthetic run and boots a
+    # browser twice. Measured 7.7s total.
+    "tests/unit/test_a_filter_is_a_property_of_a_table.py",           #    7.7s
+    # `UX-393`: three browser boots on `macro_micro` - the walk, the
+    # scroll and the keyboard. 8.6s.
+    "tests/unit/test_the_rail_takes_a_step.py",                      #    8.6s
 )

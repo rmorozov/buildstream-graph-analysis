@@ -99,7 +99,10 @@ limit 25;`,
   },
   {
     id: "graph-levels",
-    category: "structure",
+    // `dependencies`, not a new category: the level *is* the dependency
+    // graph's own decomposition, and `CATEGORIES` is what the page
+    // renders - a question outside it draws nowhere.
+    category: "dependencies",
     plane: "Plane 1",
     title: "What ran at each level of the dependency graph?",
     // `UX-380`: the keys this asks on are new, and `UX-368`'s rule is
@@ -112,11 +115,13 @@ limit 25;`,
       ["on_path", "how many of them are on the critical path"],
     ],
     why:
-      "The shape of the build rather than its timing. A level that is " +
-      "wide and quick is parallelism working; one that is narrow and " +
-      "slow is a waist the whole build waits on, and the elements in " +
-      "it are where widening the graph would pay. Absent on a trace " +
-      "rendered from a snapshot with no analysis beside it.",
+      "Plane 1 only - the level rides the element task, and a Plane 2 " +
+      "slice carries no `depth`. The shape of the build rather than " +
+      "its timing: a level that is wide and quick is parallelism " +
+      "working; one that is narrow and slow is a waist the whole build " +
+      "waits on, and the elements in it are where widening the graph " +
+      "would pay. Absent on a trace rendered from a snapshot with no " +
+      "analysis beside it.",
     sql: `select extract_arg(s.arg_set_id, 'debug.depth') as depth,
        count(distinct extract_arg(s.arg_set_id, 'debug.element')) as elements,
        sum(s.dur) / 1e9 as seconds,

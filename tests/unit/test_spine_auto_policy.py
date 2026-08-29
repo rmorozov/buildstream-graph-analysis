@@ -88,13 +88,40 @@ class TestTheCensusVerdicts:
         assert verdicts, "the census produced no verdicts at all"
         assert all(verdicts.values()), "every element here runs static busybox"
 
-    def test_a_glibc_toolchain_needs_it_nowhere(self):
+    def test_a_glibc_toolchain_needs_it_nowhere_it_could_look(self):
+        """`UX-376` changed what this clause is allowed to claim.
+
+        It used to assert the spine is needed *nowhere* in this
+        project. That was only true because the census silently
+        verdicted `False` for every element it could not assess - and
+        assuming an element is dynamic because you could not look at it
+        is exactly the assumption `UX-105` says the hook cannot make.
+        `census_spine_verdicts` now returns `True` for an unassessable
+        element and records which ones in `last_unassessable`.
+
+        So the claim splits, and both halves are stronger than the one
+        they replace: every element the census *could* assess here is
+        dynamic, and the elements that verdict `True` are exactly the
+        ones it could not see - not a set that happens to overlap.
+        """
         project = staged_project(
             "06-macro-micro-optimization", "files", "toolchain", "usr", "bin", "gcc")
         verdicts = census_spine_verdicts(project)
+        unassessable = census_spine_verdicts.last_unassessable
 
         assert verdicts, "the census produced no verdicts at all"
-        assert not any(verdicts.values()), verdicts
+        assessable = {name: needs for name, needs in verdicts.items()
+                      if name not in unassessable}
+        assert assessable, (
+            "the census could assess nothing here, so this project no "
+            "longer discriminates the dynamic case at all")
+        assert not any(assessable.values()), (
+            "an element this census could read carries no static binary "
+            "and still asks for the spine", assessable)
+        assert {name for name, needs in verdicts.items() if needs} == set(
+            unassessable), (
+            "the spine is asked for somewhere other than where the census "
+            "could not look", verdicts, sorted(unassessable))
 
     def test_the_glibc_verdict_is_a_classification_not_an_empty_shelf(self):
         """`not any(...)` above is also what a census of nothing returns.

@@ -6290,11 +6290,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     run_parser.add_argument("--raw-log", help="Keep the raw trace log at PATH.")
     run_parser.add_argument(
         "--host-samples", metavar="PATH",
-        help="UX-378: where to write the host's memory series while the "
-             "build runs (JSON Lines, one sample every "
-             f"{HOST_SAMPLE_INTERVAL_S:g}s). Costs 37 microseconds a sample; "
-             "without it an OOM leaves no trace but a process with no "
-             "observed exit, which is also what a normal wrapper leaves."
+        # `UX-158`: the help is a line per flag. The measured cost, the
+        # OOM argument and why the series sits beside the report rather
+        # than inside it are in the task file and in `run_store`'s note
+        # on `HOST_SAMPLES_NAME` - not here, which is the budget this
+        # flag spent 5 of 45 lines of on its first day.
+        help="Where to write the host's memory series while the build "
+             f"runs (JSON Lines, one sample every "
+             f"{HOST_SAMPLE_INTERVAL_S:g}s)."
     )
     run_parser.add_argument(
         "--invocation-log", metavar="PATH",
@@ -6319,7 +6322,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     run_parser.add_argument(
         "--wrapped-log",
-        help='UX-24: also capture a real Plane-1-compatible wrapped-format log of this same bst invocation (tools/bst_log_to_chrome_trace.py-ready) - lets one real build feed both planes for tools/native_trace_to_chrome_trace.py\'s combined mode.'
+        # `UX-158`, again: this entry was five of the forty-five lines
+        # this help gets, and four of them were design history from
+        # `UX-24`. What a reader needs is what the flag writes; why one
+        # build can feed both planes is `docs/design/architecture.md`'s
+        # two-plane chapter.
+        help='Also capture a wrapped-format Plane 1 log of this same bst invocation.'
     )
     run_parser.add_argument(
         "--run-dir", metavar="PATH",

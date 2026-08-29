@@ -43,7 +43,7 @@ import { renderCulprits, renderElementHistory, renderHorizon,
          renderWhatIf, resolvePath, elementUids } from "./element.js";
 import { renderDecision, renderProvenance, renderProvenanceRecords,
          renderInvestigation } from "./decision.js";
-import { anchor, collapsible, toc, jumpTargets, matches,
+import { anchor, collapsible, toc, scrollspy, jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { chapters, fileInChapter, revealChapter,
          setAllOpen } from "./chapters.js";
@@ -1150,6 +1150,11 @@ async function boot() {
       }
       document.body.setAttribute("data-has-toc", "true");
       foldOnNarrow(contents, document);
+      // `UX-399`: the rail says where the reader is - after it is in
+      // the document, so the observer's first callback marks a link
+      // that is already on screen. A no-op under the shim, which has no
+      // `IntersectionObserver` and no layout to observe.
+      scrollspy(root, contents);
     }
 
     // UX-278: any element the page can name can be inspected.

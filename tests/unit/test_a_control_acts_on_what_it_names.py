@@ -52,6 +52,14 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: against opening every chapter by hand as the reference.
 _FOLDS = """
 (() => {
+  // `UX-399`: this file's claim is that two routes reach the *same
+  // document*, so it measures the fully laid-out one. With
+  // `content-visibility: auto` on, `scrollHeight` is an estimate that
+  // depends on which sections have been rendered, and the two routes
+  // reported heights 264 px apart while opening exactly the same
+  // sections. The clause that catches a real regression is the same
+  // either way; what the estimate adds is a difference that is not one.
+  """ + pages.FULL_LAYOUT_JS + """
   const state = () => ({
     height: document.documentElement.scrollHeight,
     open: document.querySelectorAll(

@@ -203,6 +203,19 @@ def budget_for(elements):
 
 _LOOK = r"""
 (() => {
+  // `UX-399`: measure the page with the layout optimisation forced off.
+  //
+  // `content-visibility: auto` gives an open chapter's offscreen
+  // sections a placeholder size until they have been rendered once, so
+  // `scrollHeight` becomes an estimate that converges as the reader
+  // scrolls. The volume budget is a question about **content** - how
+  // much there is to read - not about how much of it the compositor
+  // has painted, so it is asked of the fully laid-out document.
+  //
+  // Turning it off here would hide its removal, so the other half of
+  // this pair lives in `test_the_browser_is_the_library.py`: the
+  // shipped stylesheet really does carry the optimisation.
+  """ + pages.FULL_LAYOUT_JS + r"""
   const state = () => {
     const main = document.querySelector("main") || document.body;
     return {

@@ -339,6 +339,94 @@ export function toc(root, { document: doc, controls } = {}) {
 }
 
 /**
+ * The rail learns where the reader is (`UX-399`, styleguide §6c).
+ *
+ * The rail has 77 entries on a real report and is 7.4 screens tall in
+ * the document beside it, and until this it said nothing about which of
+ * the 77 you were looking at. `IntersectionObserver` is the platform's
+ * answer - no scroll handler, no layout read per frame, no library.
+ *
+ * `data-current` is the mark. One entry carries it: the topmost section
+ * currently intersecting the viewport, which is the one whose heading a
+ * reader would say they are "at". `aria-current="location"` is the same
+ * fact for a screen reader, and is the attribute the spec has for
+ * exactly this.
+ *
+ * Returns the observer so a caller can disconnect it, or `null` where
+ * the platform has none - the DOM shim the module guards run on, and
+ * any browser old enough to lack it. The rail is complete without the
+ * mark; nothing here decides what is in it (`UX-199`'s rule for this
+ * whole file).
+ */
+export function scrollspy(root, nav, { observer } = {}) {
+  const Observer = observer
+    ?? (typeof IntersectionObserver === "function" ? IntersectionObserver
+                                                   : null);
+  if (!Observer || !nav) return null;
+  const links = new Map(
+    [...(nav.querySelectorAll?.("[data-toc]") ?? [])]
+      .map((link) => [link.getAttribute("data-toc"), link]));
+  const targets = sections(root)
+    .filter((s) => links.has(s.getAttribute("data-section")));
+  if (!targets.length) return null;
+
+  const visible = new Set();
+  // Which of the sections on screen the reader would call "here": the
+  // last one that has already started above the reading line. Not the
+  // first in document order - the sticky header leaves the tail of the
+  // previous section on screen after a jump, and that section would
+  // keep the mark. Measured on `macro_micro`: jumping to `overview`
+  // marked `readers` under the first-in-order rule, and `evidence`
+  // under a nearest-to-the-top rule, because two headings 103px apart
+  // are both within a header's height of the top.
+  //
+  // The line is a fraction of the window rather than the header's
+  // measured height: the header is sticky and its height is a layout
+  // read of its own, and any line between the header and the first
+  // fifth of the screen picks the same section.
+  const READING_LINE = 0.15;
+  const here = (on, height) => {
+    const line = height * READING_LINE;
+    let started = null;
+    for (const section of on) {
+      if ((section.getBoundingClientRect?.().top ?? 0) <= line) started = section;
+    }
+    return started ?? on[0];
+  };
+  const mark = () => {
+    // Document order: `targets` is in document order and `visible` is a
+    // set, so filtering here rather than iterating the set is what makes
+    // "the last one that has started" mean anything.
+    const on = targets.filter((s) => visible.has(s));
+    const current = on.length
+      ? here(on, root.ownerDocument?.defaultView?.innerHeight ?? 900)
+      : null;
+    for (const link of links.values()) {
+      link.removeAttribute("data-current");
+      link.removeAttribute("aria-current");
+    }
+    const link = current && links.get(current.getAttribute("data-section"));
+    if (link) {
+      link.setAttribute("data-current", "true");
+      link.setAttribute("aria-current", "location");
+    }
+  };
+
+  const watch = new Observer((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) visible.add(entry.target);
+      else visible.delete(entry.target);
+    }
+    mark();
+  // The whole viewport, so a section taller than the screen still
+  // counts as on screen while the reader is inside it. The reading
+  // line above is what turns "on screen" into "here".
+  }, { threshold: 0 });
+  for (const section of targets) watch.observe(section);
+  return watch;
+}
+
+/**
  * Type-ahead over section names and element uids.
  *
  * Navigation, not analysis: it scrolls to something the page already

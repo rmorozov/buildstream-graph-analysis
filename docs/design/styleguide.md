@@ -905,6 +905,58 @@ supply-chain and upgrade question `UX-296` was decided to avoid.
 The rule prices candidates; it does not blacklist them. What it forbids
 is adopting one on an impression.
 
+## 6c. The browser is the library (round 65)
+
+§6b says a dependency is admitted only when the factory *plus a
+platform primitive* cannot do the job. This is the list of primitives,
+so "can the platform do it" is a question with an answer rather than a
+shrug. It is the living copy: a widget that wants a library checks here
+first.
+
+| primitive | what it replaces | state here |
+|---|---|---|
+| `content-visibility: auto` + `contain-intrinsic-size` | virtual scrolling — offscreen sections stop costing layout | **used** (`style.css`, sections inside a chapter) |
+| `IntersectionObserver` | a scroll handler that reads layout every frame; scrollspy | **used** (`nav.js scrollspy`) |
+| `scroll-margin-top` | anchors landing behind sticky chrome | **used** since `UX-317` |
+| `popover` / `<dialog>` | overlay plumbing for the `?` apparatus and table focus | not used — §2b's mechanism is hand-rolled and works; a rewrite needs its own filing |
+| `@container` | resize listeners for density adaptation | not used — §2a's grades are viewport-wide today |
+| `:target` | selecting the jumped-to section without JS | not used |
+
+**What `content-visibility: auto` bought, measured.** The page fully
+expanded — every chapter open, every fold open, which is the state a
+reader who opens the report is in — with the optimisation forced off
+and on in the same browser, median of 25 forced reflows:
+
+```text
+fixture       DOM nodes    off                     on
+scale (1,202)    23,040    70,932 px  25.9 ms      41,669 px   2.2 ms
+macro_micro       5,366    48,224 px  12.9 ms      42,777 px   2.3 ms
+golden            2,441    23,863 px   6.4 ms      27,214 px   1.9 ms
+```
+
+The number that matters is not the ratio at any one size — it is that
+**layout cost stops tracking the document**. Off, it is 6.4 → 25.9 ms
+as the run grows from 2,441 to 23,040 nodes; on, it is ~2 ms at every
+size, because the browser lays out the viewport rather than the report.
+That is the property `UX-397` was going to buy with 400 KB.
+
+**And what it costs, also measured.** `scrollHeight` becomes an
+estimate until a section has been rendered once: −41% at scale, +14% on
+`golden`, from the 600px placeholder being smaller than a scale
+section and larger than a golden one. `auto` in `contain-intrinsic-size`
+is what makes it converge — a section keeps its real size once seen —
+but a reader dragging the scrollbar before scrolling gets an estimate.
+The page's own volume guards therefore force the optimisation **off**
+before measuring: volume is a question about content, not about paint.
+Turning it off there would hide its removal, so
+`test_the_browser_is_the_library.py` holds the other half — the shipped
+stylesheet really does carry it.
+
+**Where the mark goes.** The rail's "you are here" is weight plus a
+marker, never a tone: §4's emphasis budget is spent on findings, and
+orientation is not severity. `aria-current="location"` carries the same
+fact to a screen reader.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted

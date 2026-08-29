@@ -336,6 +336,12 @@ body[data-has-toc] > .toc ul[data-rail="elements"] {
 }
 .toc a { font-size: .88rem; text-decoration: none; }
 .toc a:hover, .toc a:focus { text-decoration: underline; }
+/* UX-399: where the reader is. Weight and a marker rather than a tone -
+   §4's emphasis budget is spent on findings, and "you are here" is
+   orientation, not severity. The marker is what carries it where color
+   is unavailable (print, forced-colors, a monochrome screen). */
+.toc a[data-current] { font-weight: 600; color: var(--fg); }
+.toc a[data-current]::before { content: "\25b8\00a0"; }
 .toc-controls { margin: .5rem 0 0; display: flex; gap: .5rem; }
 .toc-controls button, button.collapse {
   font: inherit; font-size: .82rem; cursor: pointer;
@@ -382,6 +388,34 @@ section.chapter > section > h2 { margin-top: .9rem; }
    holds its sections behind one interaction; the heading, the answer
    line and the control stay. */
 section.chapter[data-open="false"] > section[data-section] { display: none; }
+
+/* UX-399 (styleguide §6c): **the browser is the library.** An open
+   chapter's sections are laid out only when they are near the viewport.
+   `content-visibility: auto` is the platform's virtual scrolling, and it
+   costs zero bytes - which is the alternative `UX-397` priced a 400 KB
+   dependency against.
+
+   Measured on the seeded 1,202-element run with every chapter and fold
+   opened - the state a reader who expands the report is in:
+
+       page height   70,932 px      23,039 elements
+       median forced reflow   26.8 ms  ->  2.1 ms
+
+   `auto` in `contain-intrinsic-size` is load-bearing: a section that has
+   been rendered once keeps its real size, so the scrollbar converges on
+   the true height instead of staying at the placeholder. Before it has
+   been rendered the estimate is 600px, which is why the page's own
+   volume guards force this off before measuring - volume is a question
+   about content, not about paint (`tests/pages.py`).
+
+   Applied to the sections *inside* a chapter rather than to the chapter
+   itself: a folded chapter is already `display: none` above, so the
+   chapter level had nothing to skip, and the placeholder there doubled
+   the reported height of an 11-element page for no layout win. */
+section.chapter > section[data-section] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
 p.chapter-answer {
   margin: .35rem 0 0; color: var(--muted); font-size: .95rem;
   max-width: 62ch;

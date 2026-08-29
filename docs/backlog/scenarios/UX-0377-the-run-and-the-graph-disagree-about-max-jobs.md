@@ -1,6 +1,6 @@
 # UX-377: the run and the graph disagree about max-jobs, and on a default capture neither has it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-29 (auto-extract native_max_jobs from the wrapped log), UX-31 (the resolved per-element max-jobs) | **Serves:** anyone who runs `bga snapshot` without extra flags | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done Done | **Depends on:** UX-29 (auto-extract native_max_jobs from the wrapped log), UX-31 (the resolved per-element max-jobs) | **Serves:** anyone who runs `bga snapshot` without extra flags | **Topic:** capture
 
 ## Motivation
 
@@ -106,3 +106,96 @@ recovered value never silently displaces a declared one.
   name that invites confusion with this one. Renaming a published field
   is its own item with its own compatibility question, and doing it
   inside a change about a missing value would hide one in the other.
+
+## Outcome
+
+Round 61. Both columns, and the three routes now agree with each other
+and with what the sandboxes ran:
+
+```text
+route              run   source                     graph   sandboxes ran
+default              4   resolved_from_graph          [4]   make -j4
+user config: 2       2   resolved_from_graph          [2]   make -j2
+bst --max-jobs 2     2   parsed_from_invocation       [2]   make -j2
+```
+
+against, before:
+
+```text
+default           None   —                            [4]
+user config: 2    None   —                            [2]
+bst --max-jobs 2     2   parsed_from_invocation       [4]   <- ran -j2
+```
+
+**The run-level value has a third source.**
+`NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH`, last of three, so a flag on the
+command line still wins and `native_max_jobs_source` keeps saying which
+route the published number took. `typical_resolved_max_jobs` is the
+**maximum** of the graph's resolved per-element values — the same rule
+`serialization_points.typical_max_jobs` uses, deliberately, because
+they are the same quantity and having the run level disagree with the
+per-element comparison would be the defect. An element carrying
+`notparallel` reads 1 and does not lower the run: it is a finding
+*against* that figure.
+
+What it bought, on a default capture:
+
+```text
+before  Capacity: builders 4 x max-jobs unrecorded on 4 core(s)
+        Capacity checks did not run for this run - missing: native_max_jobs
+after   Capacity: builders 4 x max-jobs 2 on 4 core(s): memory binds at 1,
+        below the 4 configured - more builders contend rather than overlap
+```
+
+**The graph is extracted with the build's own options.** `--max-jobs`
+is a *top-level* `bst` option — `bst show --max-jobs 2` is `No such
+option`, which is worth knowing and is what the argv clause holds — so
+it goes before the subcommand. Without it, the one route that recorded
+the run published a graph describing a fresh resolution: five sandboxes
+at `make -j2` under a graph saying 4.
+
+Reading the scheduler config moved above the graph extraction, which it
+could always have been: it only inspects what the converter already
+parsed.
+
+### Falsification run
+
+Seven mutations against the committed tree. All seven caught:
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | the graph tier is removed — the defect | `test_the_graph_answers_when_nothing_else_does` |
+| M2 | the graph tier outranks the invocation | `test_the_invocation_beats_the_graph` |
+| M3 | the typical value is the minimum | `test_a_notparallel_element_does_not_lower_the_run` |
+| M4 | an empty graph guesses 1 | `test_a_graph_with_no_resolved_value_says_nothing` |
+| M5 | the options land after the subcommand | `test_run_bst_show_puts_the_options_before_the_subcommand` |
+| M6 | the graph is extracted without the build's options | `test_the_extraction_replays_what_the_invocation_carried` |
+| M7 | the run context is not offered the graph's value | `test_the_run_context_is_offered_the_graphs_value` |
+
+M5 is the one a reader would not guess: the placement is the whole
+content of that claim, and a clause that only checked the option was
+*present* would stay green while every extraction failed.
+
+### Verification Log
+
+```text
+$ python3 -m pytest tests/unit/test_one_resolved_max_jobs.py -q
+12 passed in 0.22s
+
+$ # three captures of one project, reading run-context, graph and the
+$ # `make -jN` the raw trace shows
+default              run=4  src=resolved_from_graph     graph=[4]  ran=[4]
+user config max-jobs 2  run=2  src=resolved_from_graph  graph=[2]  ran=[2]
+bst --max-jobs 2     run=2  src=parsed_from_invocation  graph=[2]  ran=[2]
+
+$ bga analyze <default capture>/run --diagnostics | grep Capacity
+  Capacity: builders 4 x max-jobs 2 on 4 core(s): memory binds at 1 ...
+```
+
+Tiered small on landing at 0.22s.
+
+## Out of Scope (added on closing)
+
+- `run_context.max_jobs`, which holds `scheduler["builders"]`. Renaming
+  a published field is its own item with its own compatibility
+  question, and it stayed out as the filing said.

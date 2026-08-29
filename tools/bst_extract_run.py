@@ -40,7 +40,8 @@ from .chrome_trace_to_bga_trace import (
 from .bst_show_to_graph import extract_graph
 from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
                                   add_producer,
-                                  add_memory_capacity_fields)
+                                  add_memory_capacity_fields,
+                                  typical_resolved_max_jobs)
 
 
 def _parse_targets(targets_str: str):
@@ -339,8 +340,20 @@ def extract_run(
         warnings.append(f"{len(dropped)} log event(s) could not be converted to spans (see --verbose)")
 
     # graph.json
+    # `UX-377`: replayed with the build's own top-level options, so the
+    # per-element `max_jobs` this reads is the one that reached `make`.
+    # Without it a `bst --max-jobs 2 build` capture published a graph
+    # saying 4 while its own trace showed five sandboxes at `make -j2`.
+    # The scheduler config is read here rather than beside
+    # `run-context.json` below because it only inspects what the
+    # converter already parsed, and this needs it before the graph.
+    scheduler = converter.get_scheduler_config()
+    parsed_jobs = scheduler.get("native_max_jobs")
+    replayed = (["--max-jobs", str(parsed_jobs)]
+                if parsed_jobs is not None else [])
     try:
-        graph = extract_graph(project_dir, targets, bst_bin=bst_bin)
+        graph = extract_graph(project_dir, targets, bst_bin=bst_bin,
+                              bst_options=replayed)
     except RuntimeError as e:
         raise RuntimeError(f"graph extraction failed: {e}") from e
 
@@ -369,7 +382,6 @@ def extract_run(
         }
 
     # run-context.json
-    scheduler = converter.get_scheduler_config()
     wall_start_us, wall_end_us = invocation_wall_clock(converter.trace_events)
     run_context = {
         "trace_epsilon_us": trace_epsilon_us,
@@ -402,6 +414,13 @@ def extract_run(
         # --native-max-jobs still wins; `native_max_jobs_source` records
         # which of the two the published value came from.
         parsed_native_max_jobs=scheduler.get("native_max_jobs"),
+        # `UX-377`: and where the invocation carried no `--max-jobs` -
+        # the default capture, and a capture whose value came from
+        # `$XDG_CONFIG_HOME/buildstream.conf` - the graph beside this
+        # file already holds the resolved value for every element. The
+        # whole capacity chain sat inert on both of those, saying
+        # "missing: native_max_jobs" with the number in the next file.
+        graph_native_max_jobs=typical_resolved_max_jobs(graph),
     )
     # memory_budget_mb/estimated_job_memory_mb (UX-21) - same shared-
     # helper pattern, purely operator-declared, no auto-detection tier.

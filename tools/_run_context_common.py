@@ -11,6 +11,7 @@ shared piece here means a future addition to one reaches both instead of
 requiring a second, easy-to-forget edit.
 """
 import os
+from typing import Optional
 
 
 def host_cpu_count():
@@ -36,6 +37,38 @@ def host_cpu_count():
 # `effective_cpus_source`.
 NATIVE_MAX_JOBS_OPERATOR_DECLARED = "operator_declared"
 NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION = "parsed_from_invocation"
+# `UX-377`: the third route, and the one every default capture takes.
+# `--max-jobs` is a *top-level* `bst` option; it is also settable in
+# `$XDG_CONFIG_HOME/buildstream.conf` as `build: max-jobs:`, and its
+# default of 0 means the host's core count. Only the first of those
+# three reaches a command line, so `parsed_from_invocation` recovered
+# the value on exactly the route nobody uses and `None` on the two that
+# people do - while `graph.json`, in the same snapshot, held the
+# resolved value for every element.
+NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH = "resolved_from_graph"
+
+
+def typical_resolved_max_jobs(graph: dict) -> Optional[int]:
+    """The run's own native `max-jobs`, from the resolved per-element
+    values `bst show` reported (`UX-31`).
+
+    **The maximum, not the mean or the mode**, and the same rule
+    `bga/structural/serialization_points.py` uses for `typical_max_jobs`
+    - deliberately, because the two are the same quantity and having
+    them disagree would be the defect. An element carrying
+    `notparallel: True` resolves to 1 while its siblings resolve to the
+    project value; the run-level figure is what the run *generally*
+    gave, and the pinned element is a finding against it rather than a
+    reason to lower it.
+
+    `None` where no element reports one, which is a graph extracted from
+    a `bst` too old to have `max-jobs` in `%{vars}` - reported as absent
+    rather than guessed, as everything in this module is.
+    """
+    values = [element.get("max_jobs") for element in (graph or {}).get(
+        "elements", [])]
+    resolved = [value for value in values if isinstance(value, int)]
+    return max(resolved) if resolved else None
 
 
 def add_cpu_capacity_fields(
@@ -43,6 +76,7 @@ def add_cpu_capacity_fields(
     native_max_jobs: int = None,
     cpu_budget: int = None,
     parsed_native_max_jobs: int = None,
+    graph_native_max_jobs: int = None,
 ) -> None:
     """Mutates `run_context` in place, adding `native_max_jobs` (UX-12),
     `native_max_jobs_source` (UX-29), `host_cpu_count` (UX-12, always
@@ -66,7 +100,13 @@ def add_cpu_capacity_fields(
     making a deliberate statement, e.g. correcting for a wrapper script
     that rewrites flags), and the winner is recorded in
     `native_max_jobs_source` so a consumer can tell the two apart.
-    Neither present -> both fields omitted, never a guessed default.
+    `graph_native_max_jobs` (`UX-377`) is the third and last tier: the
+    typical resolved `max-jobs` from the graph beside this run context,
+    used when the invocation carried no flag - which is every default
+    capture and every capture whose value came from a user config.
+
+    None of the three present -> both fields omitted, never a guessed
+    default.
 
     `cpu_budget` stays purely operator-supplied. `host_cpu_count` is
     always queried directly from the extraction environment; omitted only
@@ -78,6 +118,15 @@ def add_cpu_capacity_fields(
     elif parsed_native_max_jobs is not None:
         run_context["native_max_jobs"] = parsed_native_max_jobs
         run_context["native_max_jobs_source"] = NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION
+    elif graph_native_max_jobs is not None:
+        # `UX-377`: last, so a value on the command line still wins and
+        # `native_max_jobs_source` keeps saying which of the three the
+        # published number came from. This is the branch a default
+        # `bga snapshot` takes, and before it the whole
+        # `UX-12`/`15`/`16`/`17`/`21` capacity chain reported
+        # "missing: native_max_jobs" with the number in the next file.
+        run_context["native_max_jobs"] = graph_native_max_jobs
+        run_context["native_max_jobs_source"] = NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH
     detected_host_cpu_count = host_cpu_count()
     if detected_host_cpu_count is not None:
         run_context["host_cpu_count"] = detected_host_cpu_count

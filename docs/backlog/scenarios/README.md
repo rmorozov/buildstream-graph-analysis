@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-384 scenarios: **2 open**, 384 closed.
+396 scenarios: **12 open**, 384 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 65 |
+| capture | 1 | 66 |
 | analysis | 0 | 52 |
-| contracts | 0 | 44 |
-| viewer | 0 | 109 |
+| contracts | 0 | 45 |
+| viewer | 9 | 118 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 0 | 47 |
+| guards | 0 | 48 |
 
 ## Open scenarios
 
@@ -38,6 +38,106 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-388 | [an empty population disappears without a word](UX-0388-an-empty-population-disappears-without-a-word.md) | viewer | High | anyone reading the report of an incremental build | 🔴 |
+| UX-389 | [fourteen of twenty-five Plane 2 blocks reach no browser](UX-0389-fourteen-plane-two-blocks-reach-no-browser.md) | viewer | High | anyone asking in a browser whether the instrument saw everything | 🔴 |
+| UX-390 | [attribution and its hints are one population in two sections](UX-0390-attribution-and-its-hints-are-one-population-in-two-sections.md) | viewer | Medium | anyone reading where a build's time went | 🔴 |
+| UX-391 | [`wall_clock_share_us` shows the reader a composite key](UX-0391-wall-clock-share-shows-the-reader-a-composite-key.md) | viewer | Medium | anyone searching the page for an element they built | 🔴 |
+| UX-392 | [thirty-one tables, one search box](UX-0392-thirty-one-tables-and-one-search-box.md) | viewer | High | anyone looking for one element in a report of a real project | 🔴 |
+| UX-393 | [nothing moves to the next section, or back to the top](UX-0393-nothing-moves-to-the-next-section-or-back-to-the-top.md) | viewer | Medium | anyone reading past the first screen | 🔴 |
+| UX-394 | [nothing in the page moves between runs](UX-0394-nothing-in-the-page-moves-between-runs.md) | viewer | Medium | anyone who has captured the same project twice | 🔴 |
+| UX-395 | [`--format chrome` silently drops the flows and counters](UX-0395-format-chrome-silently-drops-the-flows-and-counters.md) | capture | Medium | anyone who took the chrome trace to Perfetto | 🔴 |
+| UX-396 | [sixteen of forty-four sections draw something](UX-0396-sixteen-of-forty-four-sections-draw-something.md) | viewer | Medium | anyone scanning the report for where the time went | 🔴 |
+| UX-397 | [the Perfetto handoff sits outside the pinned rail](UX-0397-the-perfetto-handoff-sits-outside-the-pinned-rail.md) | viewer | Low | anyone who decides to open the trace after reading a finding | 🔴 |
+
+## UX-388..UX-397: the sixty-third round — the outsider walk, twice (2026-08-29)
+
+The user's brief: capture all planes, read the report in a browser,
+take the Perfetto handoff and run its SQL, and **repeat the
+`snapshot` → `view` cycle** looking for view elements nobody has
+noticed. Then eight design questions — can attribution and its hints
+merge, do the search boxes help, can the handoff be pinned into the
+rail, what would make the report navigable, does everything that could
+be drawn get drawn, should one `bga view` reach more than one run, and
+has the page reached the point of needing a table library.
+
+The full walk, with every command and every figure, is
+[`docs/audits/round-63.md`](../../audits/round-63.md).
+
+**Running the cycle twice is what found the largest defect.** A cold
+build and an incremental one over `examples/06-macro-micro-optimization`:
+
+```text
+                        run 1 (full)   run 2 (incremental)
+page height                  9,316 px            3,347 px
+sections                           71                  36
+payload keys                       51                  30
+```
+
+Six named populations empty out and their sections vanish — heading,
+sentence, rail entry and all — because `renderSection` returns `null`
+for an empty array. The reader cannot tell "this run has no
+optimization horizon" from "this version of `bga` does not compute
+one", which is `UX-107`'s rule applied to coverage blocks and never to
+populations (`UX-388`).
+
+**The direct answer to "is all the captured data reachable".** It is
+not: six of twenty-five Plane 2 blocks reach a browser, and the
+fourteen that do not are the *did the instrument see everything*
+questions — `static_census`, `spine_policy`, `max_concurrency`,
+`process_count`, `wall_span_s`, `stream_coverage`. `UX-385` added a
+fifteenth one round ago (`UX-389`).
+
+**The report is seven screens with no way through it.**
+
+```text
+tables                        31        rail entries              77
+  with a filter box            1        next/prev/top controls     1
+  with a preset menu          22        controls reaching a
+  >10 rows and no filter       4          different run            0
+sections                      44        buttons                  423
+  with a drawing              16
+  numbers but no drawing      10
+```
+
+There is no blast-radius search — the page has two search-shaped
+inputs in total (`UX-392`), the one next/prev control is a plain link
+to `#next_steps` (`UX-393`), and no control reaches the second run the
+store was holding while this was measured (`UX-394`).
+
+**Attribution and its hints are the same eight keys** under two `<h2>`
+headings, with the hints half rendering raw keys and their unit
+suffix — "Execution on chain us" (`UX-390`). One section over,
+`wall_clock_share_us` labels its rows with the composite task uid,
+`codegen.bst|BUILD|BUILD|0`, which is `UX-374`'s defect in the section
+it did not sweep (`UX-391`).
+
+**The Perfetto handoff, checked in Perfetto.** Twelve of the fourteen
+canned queries resolve against the emitted trace's real tables and arg
+keys. The other two read what `--format chrome` does not carry:
+
+```text
+                    slices   flows   counters
+trackevent             826     836        538
+chrome                 663       0          0
+```
+
+`waited-on-flow` and `concurrency-curve` return zero rows against a
+chrome trace and the reader concludes the build had no concurrency.
+The page's embedded handoff is the trackevent protobuf, so the shipped
+path is sound — this is the documented `--format chrome` invocation
+taken by hand (`UX-395`).
+
+**And the negative result the round was asked to look for.** Every one
+of the 44 anchors renders real content: a first pass suggested five
+blocks rendered nothing, and that was a crude string matcher rather
+than the page — `43200000` reaches the reader as "43.2 s". There is no
+unbound view element in the top-level payload.
+
+`UX-397` carries the user's own suggestion (pin the handoff into the
+already-sticky rail) and files the **Tabulator** question as a product
+decision with the volume budget (`UX-360`, `UX-367`) as its arbiter:
+31 hand-rolled tables across 21 viewer modules against a 400 KB
+dependency on a 477 KB export.
 
 ## UX-375..UX-382: the sixtieth round — the capture, measured rather than assumed (2026-08-29)
 

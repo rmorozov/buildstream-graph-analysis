@@ -1019,7 +1019,9 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     here rather than left to be discovered - and one record per
     process, which is what a per-process timeline is.
     """
-    from .bst_native_build_tracer import stream_records, stream_trace_events
+    from .bst_native_build_tracer import (merge_record_streams,
+                                          stream_records,
+                                          stream_trace_events)
     from .native_trace.trackevent import TrackEventWriter
 
     offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
@@ -1119,8 +1121,24 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             # change about memory, so the sort stays and the floor here
             # is O(processes) - the events, which are twice as many, are
             # the ones that no longer pile up.
-            records = sorted(stream_records(stream_trace_events(handle)),
-                             key=lambda record: record["start_ts"])
+            # `UX-406`: **the same join the report uses.** With the
+            # spine on, a dynamically-linked process is recorded twice -
+            # once by the hook and once by the spine - and this path
+            # emitted both, so the trace carried 813 `debug.src=hook`
+            # slices beside 813 `debug.src=spine` ones for 813
+            # processes. `merge_record_streams` is `UX-107`'s join and
+            # was already what stops the *report* double-counting; the
+            # timeline simply never called it.
+            #
+            # Everything below derives from this list - the slices, the
+            # exec-chain flows, the concurrency counter - so joining
+            # here fixes all three at once, and the counter's peak
+            # equals the report's `max_concurrency` again, which is what
+            # `docs/spec/trace-dictionary.md` promises "by construction"
+            # and `UX-310` was closed on.
+            records = merge_record_streams(
+                sorted(stream_records(stream_trace_events(handle)),
+                       key=lambda record: record["start_ts"]))
             # `UX-309`: the exec chain needs each record's parent, which
             # is a lookup over the list the sort already materialized -
             # no second read of the log, and no second copy of it.

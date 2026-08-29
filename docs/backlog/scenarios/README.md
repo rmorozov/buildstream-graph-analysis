@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-409 scenarios: **21 open**, 388 closed.
+409 scenarios: **20 open**, 389 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 69 |
+| capture | 1 | 69 |
 | analysis | 2 | 54 |
 | contracts | 1 | 46 |
 | viewer | 9 | 120 |
@@ -53,7 +53,6 @@ task file, which is the only place it ever lived twice.
 | UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | guards | High | every future round, before its walk | 🔴 |
 | UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | guards | Medium | the audit loop itself | 🔴 |
 | UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | guards | Medium | anyone reading a whatif or store number outside the page | 🔴 |
-| UX-406 | [the spine counts every process twice in the trace](UX-0406-the-spine-counts-every-process-twice-in-the-trace.md) | capture | High | anyone who takes the handoff and believes a number | 🔴 |
 | UX-407 | [the finding that *is* the answer stays at the terminal](UX-0407-the-finding-that-is-the-answer-stays-at-the-terminal.md) | analysis | High | R1 and R8 — the reader deciding what to restructure | 🔴 |
 | UX-408 | [`serialized_pairs` is described as its own opposite](UX-0408-serialized-pairs-described-as-its-own-opposite.md) | contracts | Medium | anyone reading the batching section on the page | 🔴 |
 | UX-409 | [the configure tax names one payer twice](UX-0409-the-configure-tax-names-one-payer-twice.md) | analysis | Medium | anyone reading a cache-logs finding | 🔴 |

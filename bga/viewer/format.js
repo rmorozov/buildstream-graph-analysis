@@ -173,12 +173,61 @@ const UNIT_SUFFIX = {
  * same reason it does there. Without one nothing is trimmed: a label
  * whose value is rendered as a bare number keeps every token it has.
  */
-export function title(key, kind = null) {
+export function title(key, kind = null, published = false) {
+  // `UX-374`: a key that is **data** is rendered as it was published.
+  //
+  // Everything below this line is right for a *schema* key and wrong
+  // for a name the tool was given. Measured on `macro_micro`, before:
+  //
+  // ```text
+  //   published                       rendered
+  //   codegen.bst|BUILD|BUILD|0       Codegen.bst|BUILD|BUILD|0
+  //   cmake                           Cmake
+  //   cc1plus                         Cc1plus
+  // ```
+  //
+  // Twenty-two of them, every one renamed. A reader searching the page
+  // for `cmake` did not find the row, and a reader copying one pasted
+  // a name their project does not have - `UX-326`'s rule about the
+  // tool's sentences, applied to the one class of string the tool must
+  // never author.
+  //
+  // The underscore and the unit trim are as wrong as the capital:
+  // `a_b.bst` is not "A b.bst", and a binary called `x_us` would lose
+  // its tail. So this returns before all three rather than skipping
+  // one.
+  if (published) return key;
   const suffix = UNIT_SUFFIX[kind];
   // Never trim a key down to nothing: `_us` alone is not a label.
   const trimmed = suffix ? key.replace(suffix, "") : key;
   const named = trimmed || key;
   return named.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
+/**
+ * `UX-374`: is `key` a name the *payload* chose, rather than the
+ * contract?
+ *
+ * The schema already draws this line and no new hint is needed:
+ * `childNode` has resolved a declared member through `properties` and
+ * a data-keyed one through `additionalProperties` since `UX-343` - a
+ * map whose keys are element uids or binary names cannot name them in
+ * `properties`, so it declares the *value* once underneath. That is
+ * the predicate, read off the same node.
+ *
+ * **False where there is no schema**, which is the status quo rather
+ * than a judgement: an undeclared node says nothing about its keys,
+ * and guessing that a key is data would rename contract keys the other
+ * way. The keys this item is about are all declared.
+ */
+export function dataKeyed(node, key) {
+  if (!node || typeof node !== "object") return false;
+  if (node.properties && key in node.properties) return false;
+  // An array's items are positional; `childNode` resolves through
+  // `items`, and neither branch is a data-keyed map.
+  if (node.items) return false;
+  return Boolean(node.additionalProperties
+                 && typeof node.additionalProperties === "object");
 }
 
 /**

@@ -104,8 +104,9 @@ KNOWN_SKIP_REASONS = {
     # by the suite (a guard that reaches the network fails for reasons
     # unrelated to the code). Measured on this container: 12 from
     # `test_the_real_reader_agrees.py`, 1 from the handoff guard.
+    # Re-measured 2026-08-29: 14. 13 -> 14.
     "trace_processor_shell is not installed": (
-        "Perfetto's shell is an optional local tool, not a dependency", 13),
+        "Perfetto's shell is an optional local tool, not a dependency", 14),
     # UX-313 reads the committed dual-plane capture of `examples/06` to
     # show that every element leaves a record whose exit was never
     # observed - the fact that makes the reorder window the whole record
@@ -157,8 +158,29 @@ KNOWN_SKIP_REASONS = {
     # capture can produce. Measured with that directory moved aside:
     # 3 from the annotations guard, 3 from the counter guard, 1 each
     # from the flows and identity guards - plus `UX-213`'s own arm.
+    #
+    # **8 -> 15**, re-measured 2026-08-29. Seven files carry the string
+    # as a `skipif` now rather than round 43's four - the pairing-pass,
+    # arrows, why-page, counter, capture-layout, slice and
+    # trace-identity guards - and the declaration stayed at what round
+    # 43 measured. It was inside its bound the whole time on
+    # `MAX_PER_REASON` of headroom rather than on its own count, which
+    # is the census going quiet by degrees instead of at once. Round 61
+    # found it the hard way: `UX-381`'s guard took the reason to 17
+    # against a bound of 16 and reddened CI, and the number that was
+    # actually stale was this one.
+    #
+    # Measured by running the suite in a worktree that has no `.bga`
+    # (`git worktree add --detach`) rather than by moving the real
+    # capture aside - a timeout during that move once left the
+    # directory renamed. **The count is the hook's own tally, not a
+    # `-rs` replay**: `pytest_runtest_logreport` counts `setup`-phase
+    # skips only, so a `pytest.skip()` in a test body is invisible to
+    # the census while `-rs` lists it, and two of these seven files
+    # have one. Reading a census off `-rs` gives a different number in
+    # both directions.
     "no real capture in this tree": (
-        "UX-213's second arm, where examples/06's capture is absent", 8),
+        "UX-213's second arm, where examples/06's capture is absent", 15),
     "the examples/06 capture is not here": (
         "UX-213's second arm, where examples/06's capture is absent", 10),
     # The seven CI's `test` job produces and a dev container does not.

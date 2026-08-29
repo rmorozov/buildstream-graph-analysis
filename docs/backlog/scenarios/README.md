@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-409 scenarios: **13 open**, 396 closed.
+409 scenarios: **12 open**, 397 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 69 |
 | analysis | 0 | 54 |
 | contracts | 0 | 46 |
-| viewer | 5 | 120 |
+| viewer | 4 | 120 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-392 | [thirty-one tables, one search box](UX-0392-thirty-one-tables-and-one-search-box.md) | viewer | High | anyone looking for one element in a report of a real project | 🔴 |
 | UX-393 | [nothing moves to the next section, or back to the top](UX-0393-nothing-moves-to-the-next-section-or-back-to-the-top.md) | viewer | Medium | anyone reading past the first screen | 🔴 |
 | UX-394 | [nothing in the page moves between runs](UX-0394-nothing-in-the-page-moves-between-runs.md) | viewer | Medium | anyone who has captured the same project twice | 🔴 |
 | UX-395 | [`--format chrome` silently drops the flows and counters](UX-0395-format-chrome-silently-drops-the-flows-and-counters.md) | capture | Medium | anyone who took the chrome trace to Perfetto | 🔴 |

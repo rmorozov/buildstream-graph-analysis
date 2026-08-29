@@ -1,6 +1,6 @@
 # UX-373: two satellite pages for one handoff
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-281 (the satellite pages are dead ends), UX-199 (a report you can find your way around), UX-369 (the substitution) | **Serves:** anyone following the handoff out of the report | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-281 (the satellite pages are dead ends), UX-199 (a report you can find your way around), UX-369 (the substitution) | **Serves:** anyone following the handoff out of the report | **Topic:** viewer
 
 ## Motivation
 
@@ -49,3 +49,88 @@ splits them.
 
 `index.html`. The report is the report; this is about the two pages
 behind the handoff.
+
+## Outcome
+
+Round 59. One page behind the button.
+
+**The merge.** `perfetto.html` carries the query library under the
+handoff, rendered by `perfetto_page.js` from `questions.js` — the same
+module `app.js` inlines into the export, so `UX-204`'s single source
+survives the operation most likely to break it. `sql.js` was fourteen
+lines and is now that function; the list has one renderer again.
+
+**And the run came with it, which the filing only implied.** `sql.html`
+had no documents beside it, so `UX-369`'s element control had no
+population and every element-scoped query showed the bare `{element}`
+token. The merged page is served next to `report.json` and `run.json`,
+so it reads the same three facts `app.js` passes — whether there is a
+timeline, which planes are in it, and this project's own element uids.
+Measured on `macro_micro`, served:
+
+```text
+handoff button      present
+questions           13, in 4 category folds
+element picker      11 options, defaulting to core.bst
+console             clean; no CSP violations
+```
+
+That is the Required Fix's third element built rather than described:
+the substitution control is on the merged page.
+
+**`sql.html` stays.** A `<meta http-equiv="refresh">` redirect with a
+visible link under it. The URL is published — the store's older exports
+point at it, and so does anything pasted into an issue — and `UX-281`'s
+rule is that a satellite page is not a dead end. Not a script redirect:
+this page's own `default-src 'self'` refuses inline script, which is
+exactly how it rendered nothing before `UX-266`.
+
+The Falsification's second clause held throughout and was not touched:
+the served page and the exported section render the same library from
+the same module.
+
+### What the merge made visible
+
+Served on `macro_micro`, the merged page said two things at once:
+
+```text
+top of page      [Open in Perfetto]
+one section down "This snapshot carries no build log, so there is no
+                  timeline to open here"
+```
+
+Both true of the page, one true of the run. `index.html` has gated its
+own button on `run.has_timeline` since `UX-194`; the standalone handoff
+page never had, and nothing on it contradicted the button until the
+questions moved in. So the gate is here now, and the page says what to
+run instead of leaving a blank where the button was (`UX-321`).
+
+**The library is not gated.** A reader deciding whether to capture a
+trace is exactly the reader who wants to know what they could ask it.
+
+### A guard fixed on the way
+
+`test_every_page_script_is_served` sliced `ASSETS` at the first `)`.
+The tuple's own prose is prose, and a comment added this round
+contained a parenthesis — which truncated the slice a third of the way
+in and reported six served modules as missing from a list that has
+them. It slices to the closing line now and asserts it read the whole
+tuple, so the next parenthesis fails nothing and the next real omission
+still does.
+
+### Falsification run
+
+Six mutations against the committed tree, all caught:
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | `sql.html` dead-ends — the deletion this item did not do | `test_it_names_where_the_content_went`, `test_it_redirects_without_script` |
+| M2 | a query title written out in the markup again | `test_nothing_writes_a_query_out_by_hand` |
+| M3 | the dead-button gate removed | `test_a_run_without_one_does_not`, `test_the_absence_is_said_and_not_just_shown` |
+| M4 | the library gated on the timeline too | `test_the_questions_are_still_there_without_a_timeline` |
+| M5 | the page renders the library without reading the run | `test_the_substitution_control_is_here`, `test_the_queries_name_the_chosen_element` |
+| M6 | the report links the old page | `test_the_report_points_at_the_merged_page` |
+
+M5 first failed with a `TypeError` rather than a sentence — `None in
+str` — so the clause names its precondition before using it. A guard
+that discriminates and cannot say why is half an instrument.

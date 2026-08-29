@@ -104,3 +104,150 @@ which is the property `UX-288` bought and this must not spend.
 - The store's cross-run shape (`store/v1`). That is a different entity
   keyed by run rather than by element, and folding it in would widen a
   question that is already about two shapes too many.
+
+## Outcome
+
+Done, and the answer is not "flatten one shape into the other". The
+key is declared, the rule is written where the code that follows it
+lives, both denormalisations are named and held equal to their source,
+and the viewer builds one resolved record. The payload does not change
+by a byte.
+
+**The rule is not the one this filing proposed.** It offered
+scalar-versus-structured; the data falsifies that - ten of the join's
+eighteen fields are scalars. The tree's real rule was already in the
+schema's own sentence for `element_join` ("there is no join with one
+plane"), just never stated as a rule: **an attribute the analysis
+knows from the graph and Plane 1 alone is a map under `elements`, on
+every capture; an attribute that needs Plane 2 to exist is a field on
+an `element_join` row.** That is now `schemas.ELEMENT_PLACEMENT_RULE`,
+and `bga/correlate.py`'s two copying sites carry a comment pointing at
+it.
+
+**Two denormalisations, and the filing counted one.** `blast_radius`
+is the one shared *name*, and the two do not even share a type -
+`elements.blast_radius[uid]` is a record and `element_join[].blast_radius`
+is that record's own `downstream_count` as an int, which
+`elements.downstream_count[uid]` publishes a third time.
+
+The second is invisible to a count of names, because it is one fact
+under two of them: `element_join[].on_critical_path` is
+`elements.criticality_probability[uid].observed_critical`. They agree
+on every element of every capture measured here, and nothing derived
+one from the other or held them equal - `on_critical_path` comes from
+`schemas.critical_path_uids` and `observed_critical` from the
+criticality map, so they agreed by both descending from the same
+critical path rather than by construction.
+
+Both are kept: the join table sorts on them, and deleting a rendered
+column to tidy the model would be a regression for a reader. Both are
+now declared as denormalisations, guarded equal to their map, and the
+resolved record takes the map's - which is what "resolves to one side"
+means once the join table's need is admitted.
+
+**A recorded deviation.** The Falsification asks that no attribute
+appear in both shapes. Two do, deliberately, for the reason above. The
+guard asserts the stronger property in its place: each is equal to the
+map it was copied from, on every element, and neither reaches the
+resolved element record twice.
+
+## Verification Log
+
+**The viewer-side defect, measured before and after.** `elementFactsFor`
+returned the `SOURCES` record where the report's ranking had reached an
+element and built from the column maps only where it had not, so no
+element ever had both:
+
+```text
+                                      before      after
+examples/06 (11 elements)
+  fields on a ranked element's record     12         20
+  records answering depth+critical+RSS   0/11       9/11
+
+synthetic (1,202 elements, Plane 1 only)
+  fields on a ranked element's record      1         10
+  fields on an unranked one               10         10
+```
+
+The two of eleven that still cannot answer are `all.bst` and
+`toolchain.bst`: no sandbox process was billed to either, so they carry
+no `peak_rss_bytes`. That is an absence rather than a gap (`UX-308`'s
+rule), and the guard asks the question of the elements Plane 2 measured
+rather than of all of them.
+
+At scale the before-figures are the item's own point in one line: the
+report's top twenty-six elements had **one** field each and the 1,176
+it never ranked had ten. Both are ten now.
+
+**The two denormalisations, on the committed fixture:**
+
+```text
+element_join[].blast_radius      vs elements.blast_radius[uid].downstream_count
+                                    11 rows, 0 disagreements
+                                 vs elements.downstream_count[uid]
+                                    11 rows, 0 disagreements
+element_join[].on_critical_path  vs elements.criticality_probability[uid]
+                                      .observed_critical
+                                    11 rows, 0 disagreements
+```
+
+**The payload does not grow** - `UX-288`'s property, which the Out of
+Scope section says this must not spend:
+
+```text
+bga analyze tests/fixtures/macro_micro/run --format json | wc -c
+  before   88,424 B
+  after    88,424 B
+```
+
+Nothing moved in the document. What changed is that the relationship
+between its two shapes is declared, and the viewer resolves it once.
+
+**Mutation sweep**, eleven mutations against the committed tree, each
+run against `tests/unit/test_one_element_one_record.py`:
+
+```text
+M1  elementFactsFor returns the ranked record alone     CAUGHT (2 failed)
+M2  a field already held is written twice               CAUGHT (1 failed)
+M3  the join's blast_radius returns beside the map's    CAUGHT (1 failed)
+M4  the declared key names a field the join has not     CAUGHT (6 failed)
+M5  the rule stops saying what decides the split        CAUGHT (1 failed)
+M6  blast_radius stops naming the map it copies         CAUGHT (1 failed)
+M7  on_critical_path stops naming observed_critical     CAUGHT (1 failed)
+M8  ELEMENT_KEYED gains a name that is not a map        CAUGHT (2 failed)
+M9  the join's blast_radius is derived differently      CAUGHT (2 failed)
+M10 the rule stops naming the two denormalisations      CAUGHT (1 failed)
+M11 on_critical_path comes from a different source      CAUGHT (1 failed)
+```
+
+**One mutation was rejected rather than counted.** Removing
+`blast_radius` from `ELEMENT_KEYED` reddens the file, but by raising
+`KeyError` at import - the tree does not build, so the guard is not
+what caught it. M8 above replaces it with one that leaves the module
+importable: a seventh name in `ELEMENT_KEYED` that is not a map, which
+two clauses discriminate on.
+
+M9 and M11 are the pair the item is really about: they make one
+denormalisation disagree with its source, which is the failure mode a
+declared-but-unguarded copy has and the reason the two clauses exist.
+
+**And what the export costs**, which the size discipline in
+`tests/unit/test_the_report_you_can_attach.py` made me measure rather
+than assert. Split into the page (the hand-written modules and the
+stylesheet) and the data (the embedded documents and their schema):
+
+```text
+                        total       page       data
+80097a5 (round start)  359,421    267,830     91,591   golden
+UX-380                 360,674    269,083     91,591   +1,253 page
+UX-382                 361,524    269,226     92,298   +143 page, +707 contract
+```
+
+`macro_micro` moved by the identical 2,103 B, split identically -
+which is what a source-and-schema change looks like from here: neither
+item added a row to any payload, and the prose travels whether or not
+a run has the data. Golden carries no `element_join` at all and still
+pays the 707 B, the same fact `UX-370`'s note in that file records.
+
+Both bounds are restated with that split rather than the two schema
+sentences trimmed to fit a number nobody argued.

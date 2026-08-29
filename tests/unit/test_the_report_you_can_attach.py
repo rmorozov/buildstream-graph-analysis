@@ -390,7 +390,18 @@ COMMITTED_EXPORTS = [
     # payload - the data half is 89,154 B either side of the change -
     # so the composition guard below still accounts for every embedded
     # byte, and this is the case that split exists to tell apart.
-    ("golden", GOLDEN, 360_000),                       #  358,687 B
+    # `UX-380` moved both by 1,253 B, all of it **source**: the query
+    # library gains the `graph-levels` question, which is a module the
+    # page carries. Nothing was added to the payload - the data half is
+    # 91,591 B either side of that commit.
+    # `UX-382` moved both by 850 B - 143 of source and 707 of
+    # **contract**. The source is `element.js`'s note on the one
+    # resolved record; the contract is two `description` strings saying
+    # which map each of the join's denormalised fields was copied from.
+    # Golden has no `element_join` at all and still carries that prose,
+    # which is the same fact `UX-370`'s note above records: the schema
+    # travels whole whether or not a run has the rows.
+    ("golden", GOLDEN, 362_000),                       #  361,524 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -412,7 +423,12 @@ COMMITTED_EXPORTS = [
     # 2,945 of data. More data than golden because `macro_micro`
     # publishes all five readers where golden publishes two, which is
     # the rows rather than the prose.
-    ("macro_micro", MACRO_MICRO, 412_000),             #  409,439 B
+    # `UX-380` and `UX-382` moved this one by the same 2,103 B, split
+    # the same way - see the two notes on golden above. Both halves of
+    # that move are prose rather than rows, so the two bounds moved by
+    # an identical amount, which is what a source-and-schema change
+    # looks like from here.
+    ("macro_micro", MACRO_MICRO, 413_000),             #  412,276 B
 ]
 
 

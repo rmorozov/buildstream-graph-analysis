@@ -210,6 +210,13 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
     total_us = analysis.get("total_duration_us") or 0
 
     view: Dict[str, dict] = {}
+    # `UX-382`: this and `blast_radius` below are the join's two
+    # denormalised Plane 1 facts - the same values `elements.*` already
+    # carries, copied onto the row so the join table can sort on them.
+    # `schemas.ELEMENT_PLACEMENT_RULE` states the rule and names both;
+    # `tests/unit/test_one_element_one_record.py` holds each equal to
+    # the map it came from, which is what keeps a second derivation
+    # here from quietly disagreeing with the analyzer's.
     for element in critical_path:
         view.setdefault(element, {})["on_critical_path"] = True
 
@@ -257,6 +264,8 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
             record["potential_saving_us"] = int(score * critical_path_us)
             record["saving_share"] = score
 
+    # The map is the authority, read here rather than recomputed - see
+    # the note on `on_critical_path` above.
     blast = (analysis.get("elements") or {}).get("blast_radius") or {}
     for element, value in blast.items():
         count = value.get("downstream_count") if isinstance(value, dict) else value

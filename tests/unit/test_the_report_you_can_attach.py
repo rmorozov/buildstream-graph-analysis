@@ -412,7 +412,18 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #     page            274,589 -> 277,825   (+3,236, source)
 #     golden          374,209 -> 377,445
 #     macro_micro     429,542 -> 432,778
-PAGE_BUDGET_B = 280_000
+# `UX-394` moved it by 2,923 B, all **source**: the run selector, the
+# `?run=` every document fetch now carries, and six lines of CSS. The
+# data half is unchanged - 18,786 B (golden) and 74,119 B
+# (macro_micro) either side - because nothing was added to any
+# payload; the run list is `store.json`, which a *served* page already
+# had and an export never has, which is why the export renders no
+# selector at all.
+#
+#     page            279,297 -> 282,220   (+2,923, source)
+#     golden          379,706 -> 382,629
+#     macro_micro     435,039 -> 437,962
+PAGE_BUDGET_B = 284_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -509,7 +520,8 @@ COMMITTED_EXPORTS = [
     # `UX-395`: +986 B, all source - `questions.js` gains the sentence
     # that says which trace format a canned query needs and why an
     # empty result is the format's, plus the two declarations it reads.
-    ("golden", GOLDEN, 382_000),                       #  379,706 B
+    # `UX-394`: +2,923 B, all source; see the note on `PAGE_BUDGET_B`.
+    ("golden", GOLDEN, 385_000),                       #  382,629 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -550,7 +562,7 @@ COMMITTED_EXPORTS = [
     # `UX-389`: +3,380 B, split in the note above the golden bound.
     # `UX-390`: +995 B, all source.
     # `UX-393`: +3,236 B, all source. `UX-396`: +789 B, all contract.
-    ("macro_micro", MACRO_MICRO, 437_000),             #  435,039 B
+    ("macro_micro", MACRO_MICRO, 440_000),             #  437,962 B
 ]
 
 

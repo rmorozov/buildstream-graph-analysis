@@ -968,6 +968,56 @@ class _Handler(http.server.BaseHTTPRequestHandler):
     documents: Dict[str, dict] = {}
     blobs: Dict[str, bytes] = {}
     run_root: str = ""
+    # `UX-394`: the other runs of this run's own store, by the stamp
+    # the store lists them under, and what has been built for each.
+    # Empty where there is no store, which is what makes the selector
+    # absent rather than empty (`UX-388`'s rule).
+    sibling_runs: Dict[str, str] = {}
+    sibling_documents: Dict[str, Dict[str, dict]] = {}
+    sibling_lock: Optional[threading.Lock] = None
+
+    def _for_run(self, raw: str) -> Dict[str, dict]:
+        """The documents for the run `?run=` names, or this one's.
+
+        **Built on request, cached per stamp.** `payloads` runs the
+        analysis, and a server that built every run in the store at
+        startup would pay for runs nobody opens - which is `UX-296`'s
+        rule for the timeline, applied to the second run.
+
+        An unknown stamp falls back to the run this server was started
+        on rather than refusing: the selector only ever offers stamps
+        from this store, so an unknown one is a hand-edited URL, and
+        the page it lands on is a real report of a real run.
+        """
+        query = raw.split("?", 1)[1] if "?" in raw else ""
+        wanted = urllib.parse.parse_qs(query).get("run", [None])[0]
+        target = self.sibling_runs.get(wanted or "")
+        if not wanted or not target or os.path.abspath(target) == self.run_root:
+            return self.documents
+        with (self.sibling_lock or contextlib.nullcontext()):
+            built = self.sibling_documents.get(wanted)
+            if built is None:
+                built = dict(payloads(target))
+                built.setdefault("schemas.json", schemas_payload())
+                # The store and its aggregate are properties of the
+                # *project*, not of the run, so the two are shared
+                # rather than recomputed - which also keeps the
+                # selector's own list identical on every run's page.
+                for shared in ("store.json", "store-aggregate.json"):
+                    if shared in self.documents:
+                        built.setdefault(shared, self.documents[shared])
+                built.setdefault("run.json", dict(
+                    self.documents.get("run.json") or {},
+                    run=os.path.abspath(target),
+                    name=os.path.basename(os.path.abspath(target)),
+                    payloads=_offered(built),
+                    # A trace belongs to the snapshot this server was
+                    # started on; offering one for a run it is not
+                    # serving would be the dead affordance `UX-194`
+                    # ruled out.
+                    has_timeline=False))
+                self.sibling_documents[wanted] = built
+            return built
 
     def log_message(self, format, *args):        # noqa: A002
         # `BaseHTTPRequestHandler` logs every hit to stderr, which would
@@ -994,8 +1044,13 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             # `default-src 'self'` refuses a `data:` image, so it
             # traded a 404 for a CSP violation, which is worse.
             return self._send(204, "image/x-icon", b"")
-        if path in self.documents:
-            return self._json(self.documents[path])
+        # `UX-394`: `?run=<stamp>` selects another run of this store.
+        # A full load rather than a re-render: the page reads its
+        # payload once at boot (`UX-296`), so the URL *is* the state,
+        # and a link to it reloads to the same view.
+        serving = self._for_run(raw)
+        if path in serving:
+            return self._json(serving[path])
         if path in self.blobs:
             # `UX-194`: already gzipped on disk-in-memory, and served
             # with its own type rather than Content-Encoding, because
@@ -1260,8 +1315,20 @@ def serve(run: str, port: int = 0,
         "trace_inline_max_bytes": TRACE_BUDGET_B,
     })
 
+    # `UX-394`: the store's other runs, so `?run=<stamp>` can reach
+    # them. Read from the listing the page is already given, so the
+    # selector and the server cannot disagree about what is on disk -
+    # and empty where there is no store, which is what makes the
+    # selector absent rather than empty.
+    from bga.run_store import RUN_SUBDIR
+
+    siblings = {row["stamp"]: os.path.join(row["path"], RUN_SUBDIR)
+                for row in ((store or {}).get("snapshots") or [])
+                if row.get("has_run") and row.get("path")}
     handler = type("_BoundHandler", (_Handler,),
                    {"documents": documents, "blobs": {},
+                    "sibling_runs": siblings, "sibling_documents": {},
+                    "sibling_lock": threading.Lock(),
                     "trace_run": os.path.abspath(run) if offered else None,
                     "trace_scratch": None, "trace_path": None,
                     "trace_lock": threading.Lock(),

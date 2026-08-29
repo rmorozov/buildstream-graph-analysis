@@ -1093,3 +1093,14 @@ p.run-advice {
 }
 .toc .actions-group p { margin: .3rem 0; }
 .toc .actions-group button { width: 100%; }
+
+/* `UX-394`: which run this report is of, and the store's others one
+   choice away. In the rail beside the handoff, so the two controls
+   that leave this page sit together. */
+.run-picker { margin: .4rem 0 .6rem; }
+.run-picker select { width: 100%; margin-top: .15rem; }
+.run-picker button {
+  margin-top: .25rem;
+  margin-right: .25rem;
+  font-size: .85em;
+}

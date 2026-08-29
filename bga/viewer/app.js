@@ -44,7 +44,8 @@ import { renderCulprits, renderElementHistory, renderHorizon,
          renderWhatIf, resolvePath, elementUids } from "./element.js";
 import { renderDecision, renderProvenance, renderProvenanceRecords,
          renderInvestigation } from "./decision.js";
-import { anchor, collapsible, toc, scrollspy, stepper, jumpTargets, matches,
+import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
+         jumpTargets, matches,
          paletteResults } from "./nav.js";
 import { chapters, fileInChapter, revealChapter,
          setAllOpen } from "./chapters.js";
@@ -901,11 +902,29 @@ export async function optional(run, name) {
   return load(name, null).catch(() => null);
 }
 
+/**
+ * `UX-394`: the `?run=` the current URL carries, or `""`.
+ *
+ * Read from `location` rather than remembered, so a reader who edits
+ * the URL, follows a link or presses Back gets the run the URL names -
+ * which is what makes the selection shareable at all.
+ */
+export function runQuery() {
+  const search = globalThis.location?.search ?? "";
+  const stamp = new URLSearchParams(search).get("run");
+  return stamp ? `?run=${encodeURIComponent(stamp)}` : "";
+}
+
 export async function load(name, fallback = null) {
   const here = inlined(name);
   if (here !== null) return here;
   try {
-    const response = await fetch(`${name}.json`);
+    // `UX-394`: the run selection travels on every document fetch.
+    // `?run=<stamp>` is the page's state (`UX-211`), and a page that
+    // asked for `report.json` without it would render the run the
+    // server was started on while its own selector said otherwise -
+    // two answers to one question, from one URL.
+    const response = await fetch(`${name}.json${runQuery()}`);
     if (!response.ok) throw new Error(String(response.status));
     return await response.json();
   } catch (error) {
@@ -1238,6 +1257,15 @@ async function boot() {
       // column, and a sticky bar costs it on every screen. After the
       // spy, because "next" is read off the mark the spy writes.
       stepper(root, contents);
+      // `UX-394`: and which run this is, with the store's others one
+      // choice away. Built from `store.json`, which only a served page
+      // has - so an export renders no selector rather than a control
+      // that cannot reach what it offers.
+      runSelector(contents, store, {
+        current: (run?.name === "run"
+          ? String(run?.run ?? "").split("/").filter(Boolean).slice(-2, -1)[0]
+          : run?.name) ?? null,
+      });
       // `UX-397`: **the handoff moves into the sticky rail.**
       //
       // Measured on the round-63 export: the button sat at y=137 in

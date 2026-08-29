@@ -518,4 +518,12 @@ MEDIUM = (
     # the census reads the keys off the payload and the destinations off
     # the booted document.
     "tests/unit/test_no_key_is_terminal_only_in_silence.py",         #    4.9s
+    # `UX-403`'s census found these four booting a real browser from the
+    # *small* tier - the escape `test_the_tiers_are_a_partition.py` is
+    # for and could not see, because its clauses read the lists against
+    # each other and nothing read the lists against the suite.
+    "tests/unit/test_a_shapeable_population_is_drawn.py",             #    2.2s
+    "tests/unit/test_a_task_uid_is_not_a_label.py",                   #    1.7s
+    "tests/unit/test_one_bucket_one_row.py",                          #    1.9s
+    "tests/unit/test_the_synthesis_reaches_the_page.py",              #    2.6s
 )

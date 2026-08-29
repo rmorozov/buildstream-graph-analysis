@@ -49,6 +49,53 @@ class TestTheListsNameRealFiles:
         assert tiers.SMALL_TIER_BUDGET_S > tiers.LARGE_FLOOR_S
 
 
+#: `UX-403`: what a file has to be listed *for*.
+#:
+#: Every other clause in this file reads the two lists against each
+#: other or against the filesystem, and the census found what that
+#: cannot see: a file that belongs in a tier and is simply **absent**
+#: from both lists is "small on purpose" and nothing says otherwise.
+#: Deleting a 50-second entry from `LARGE` left this file green on all
+#: fourteen clauses it had.
+#:
+#: Timing the suite from inside itself is what the module docstring
+#: rejects, and rightly. What can be read without timing anything is
+#: *construction*: a file that boots a real Chrome cannot be small, and
+#: says so in its own imports. Four were, when this was written.
+BOOTS_A_BROWSER = re.compile(r"from tests\.browser import|from browser import"
+                             r"|find_chrome\(")
+
+
+class TestNothingSlowByConstructionIsSmall:
+    def test_every_browser_guard_is_listed(self):
+        """The one class of slowness that is legible from the source.
+
+        Not a proxy for the whole table being right - a file can be
+        slow for a dozen reasons this cannot see, and `UX-418` carries
+        the direction that needs a measurement. This is the direction
+        that does not.
+        """
+        listed = set(tiers.LARGE) | set(tiers.MEDIUM)
+        small = sorted(
+            path for path in _test_files()
+            if BOOTS_A_BROWSER.search((REPO / path).read_text(encoding="utf-8"))
+            and path not in listed)
+        assert small == [], (
+            f"{len(small)} file(s) boot a real browser from the small "
+            f"tier: {small}. Measure each with `--durations=0` and list "
+            f"it in tests/tiers.py")
+
+    def test_the_rule_has_something_to_check(self):
+        """A pattern that stopped matching would empty the clause above
+        and pass forever."""
+        found = [path for path in _test_files()
+                 if BOOTS_A_BROWSER.search(
+                     (REPO / path).read_text(encoding="utf-8"))]
+        assert len(found) > 20, (
+            f"only {len(found)} browser guards found; the pattern has "
+            f"stopped matching the harness")
+
+
 class TestTheTiersPartitionTheSuite:
     def test_every_test_file_is_in_exactly_one_tier(self):
         """`small` is the default, so this is really: every file is

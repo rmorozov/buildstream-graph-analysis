@@ -208,6 +208,13 @@ TRACE_QUERIES = {
     "optimization-horizon": "time-by-kind",
     "run-mode-incremental": "which-run-is-this",
     "joint-saving": "waited-on-flow",
+    # `UX-380`: the level decomposition, opened from the claim it
+    # explains. `mesh-graph` says the graph is near-equal chains whose
+    # savings cap each other; `graph-levels` is that statement drawn -
+    # which level is wide and quick, which is narrow and slow, and
+    # which elements sit in the narrow one. `UX-368`'s rule again: a
+    # question no finding points at is a question nobody arrives at.
+    "mesh-graph": "graph-levels",
 }
 
 

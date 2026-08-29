@@ -844,9 +844,8 @@ description, and this table's job is only to say which one to open.
 | `controls.js` | `name`/`id` for every form control the page builds, and `for` on the labels beside them — imports nothing, so `views.js` may use it (`UX-334`) |
 | `rawjson.js` | the "view as JSON" toggles, and the record of which section each blob came from (`UX-302`) |
 | `questions.js` | the canned SQL library, its categories, and the `why` each question carries (`UX-210`, `UX-312`) |
-| `sql.js` | the Query (SQL) satellite page that renders that library |
 | `perfetto.js` | the handoff transports: `postMessage`, the `?url=` deep link, and what Perfetto's CSP will fetch (`UX-314`) |
-| `perfetto_page.js` | the standalone handoff page `bga view --perfetto` lands on |
+| `perfetto_page.js` | the standalone handoff page `bga view --perfetto` lands on — and, since `UX-373`, the query library under it, which was `sql.js` |
 | `trace_context.js` | the finding→query mapping that gives an investigate button its question (`UX-229`) |
 | `style.css` | every colour, the two token grades, and dark as the design surface (`UX-304`) |
 

@@ -85,13 +85,17 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # `default-src 'self'` refuses - `sql.html` rendered nothing
           # and `perfetto.html`'s button had no listener.
           "perfetto.html", "perfetto.js", "perfetto_page.js",
-          "sql.html", "sql.js",
+          # `UX-373`: `sql.html` is a redirect to `perfetto.html`, whose
+          # second half it used to be. Still served, because the URL is
+          # published and older exports point at it.
+          "sql.html",
           # UX-199: navigation, and the questions as data so the export
           # can inline what it used to strip.
           "nav.js", "questions.js",
           # UX-204: the link-builder the investigate buttons read, and
-          # `sql.html` now renders its list from `questions.js` rather
+          # `perfetto.html` renders its list from `questions.js` rather
           # than carrying a copy - so the page needs it served too.
+          # `UX-373` moved that list off `sql.html`.
           "trace_context.js",
           # UX-205: the filters, thresholds and copy helpers.
           "tables.js",
@@ -945,7 +949,8 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
     page = page.replace('<a href="report.json">report.json</a> ·\n     '
                         '<a href="schemas.json">schemas.json</a>',
                         "Everything it needs is in this file.")
-    page = page.replace('<a href="sql.html">Questions to ask it</a>', "")
+    page = page.replace(
+        '<a href="perfetto.html">Questions to ask it</a>', "")
 
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(page)

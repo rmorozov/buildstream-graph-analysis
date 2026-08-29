@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-384 scenarios: **7 open**, 379 closed.
+384 scenarios: **6 open**, 380 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 1 | 47 |
+| guards | 0 | 47 |
 
 ## Open scenarios
 
@@ -42,7 +42,6 @@ task file, which is the only place it ever lived twice.
 | UX-384 | [a redundancy finding still carries every element it spans](UX-0384-a-redundancy-finding-still-carries-every-element-it-spans.md) | contracts | Low | anyone whose store holds a monorepo's captures | 🔴 |
 | UX-385 | [a capture cannot detect the binary it never saw](UX-0385-a-capture-cannot-detect-the-binary-it-never-saw.md) | capture | Medium | anyone reading a capture taken with the spine off | 🔴 |
 | UX-386 | [`plane2/v2` is described as per-element, and mostly is not](UX-0386-plane2-v2-is-described-as-per-element-and-is-mostly-not.md) | contracts | Medium | anyone opening a `plane2.json` after reading what it is | 🔴 |
-| UX-387 | [the close check is blind to the mismatch it exists for](UX-0387-the-close-check-is-blind-to-the-mismatch-it-exists-for.md) | guards | Medium | anyone closing a task before running the full suite | 🔴 |
 
 ## UX-375..UX-382: the sixtieth round — the capture, measured rather than assumed (2026-08-29)
 

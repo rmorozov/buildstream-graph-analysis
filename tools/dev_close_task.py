@@ -84,31 +84,144 @@ def open_row(uid: str):
     return None, None
 
 
-def check():
-    """Every place the two copies of a status can disagree."""
-    text = INDEX.read_text(encoding="utf-8")
+# UX-232 split the backlog by liveness: open rows in README.md, closed
+# ones verbatim in closed.md. Both are the backlog, so anything that
+# reads a status reads both.
+#
+# `UX-387`: this tool read only the open index, and the guard that
+# holds the same property read both. Measured when that was filed, the
+# open table had 7 rows and `closed.md` had 379 - so `--check` was
+# answering for 1.8% of the backlog and printing "0 problem(s)" for the
+# other 98%. Round 61 hit it live: `UX-382`'s row moved to `closed.md`
+# and its file's marker stayed 🔴, `--check` passed, and a full
+# `make test-fast` two items later was what noticed.
+#
+# The readers below are the single implementation of that property.
+# `tests/unit/test_docs_links_and_commands.py` imports them rather than
+# keeping its own copy, because the two asserting one property by two
+# readings is how they came to disagree in the first place.
+STATUS_EMOJI = ("🔴", "🟡", "🟢", "⚪")
+_TABLE_ROW = re.compile(r"^\|\s*UX-0*(\d+)\s*\|")
+_FILE_ID = re.compile(r"^UX-0*(\d+)-")
+
+
+def backlog_files():
+    """Both halves of the backlog, read at call time.
+
+    A module-level tuple would be captured at import and `--scenarios`
+    rebinds `INDEX` and `CLOSED` after that, so a constant here would
+    send every reader below at the real backlog while the caller
+    believed it was pointed at a fixture.
+    """
+    return (INDEX, CLOSED)
+
+
+def status_marker(text):
+    """The status glyph in a cell or a header line, or `None`."""
+    return next((emoji for emoji in STATUS_EMOJI if emoji in text), None)
+
+
+def table_statuses():
+    """`{item number: status cell}` across both backlog files.
+
+    The two tables have different shapes on purpose - the open one is
+    an index (id, title, topic, priority, serves, status), the closed
+    one keeps its full narrative - so the status cell is found by
+    *marker* rather than by column number, which is the only thing both
+    promise.
+    """
+    statuses = {}
+    for path in backlog_files():
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = _TABLE_ROW.match(line)
+            if not match:
+                continue
+            cells = [cell.strip() for cell in
+                     re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+            marker = next((c for c in cells if c[:1] in "🔴🟡🟢⚪"), "")
+            statuses[int(match.group(1))] = marker
+    return statuses
+
+
+def file_statuses():
+    """`{item number: (filename, status line)}` from the task files."""
+    statuses = {}
+    for path in sorted(SCENARIOS.glob("UX-*.md")):
+        match = _FILE_ID.match(path.name)
+        if not match:
+            continue
+        header = path.read_text(encoding="utf-8").splitlines()[:8]
+        line = next((line for line in header if "**Status:**" in line), None)
+        statuses[int(match.group(1))] = (path.name, line)
+    return statuses
+
+
+def status_disagreements():
+    """`UX-131`'s property: each row's glyph equals its file's glyph.
+
+    Symmetric by construction - it compares the pair and does not care
+    which half moved - so flipping either one alone is reported.
+    """
+    rows = table_statuses()
     problems = []
-    for line in text.splitlines():
+    for number, (name, line) in sorted(file_statuses().items()):
+        if number not in rows:
+            continue
+        in_table = status_marker(rows[number])
+        in_file = status_marker(line or "")
+        if in_table != in_file:
+            problems.append(
+                f"UX-{number}: table says {in_table}, {name} says {in_file}")
+    return problems
+
+
+#: What `--check` holds, in the order it prints them. `UX-387`: the
+#: output used to be a bare "0 problem(s)", which reads the same for "I
+#: checked four properties and all passed" and "I checked three and the
+#: fourth is not implemented" - and a contributor cannot tell those
+#: apart, which is how the missing one went unnoticed for as long as it
+#: did.
+CHECKS = (
+    ("every row's status glyph matches its task file's",
+     lambda: status_disagreements()),
+    ("no closed row is left in the open index",
+     lambda: _closed_rows_left_open()),
+    ("the index's open count matches its table",
+     lambda: _open_count_disagreement()),
+)
+
+
+def _closed_rows_left_open():
+    problems = []
+    for line in INDEX.read_text(encoding="utf-8").splitlines():
         match = re.match(r"^\| (UX-\d+) \|", line)
         if not match:
             continue
         marker = line.rsplit("|", 2)[1].strip()
-        path = task_file(match.group(1))
-        head = path.read_text(encoding="utf-8")
-        declared = re.search(r"\*\*Status:\*\* (\S+)", head)
+        declared = re.search(r"\*\*Status:\*\* (\S+)",
+                             task_file(match.group(1)).read_text("utf-8"))
         declared = declared.group(1) if declared else "?"
         if marker == "🟢" or declared == "🟢":
             problems.append(f"{match.group(1)}: row {marker}, file {declared} "
                             "- a closed row belongs in closed.md")
-        elif marker != declared:
-            problems.append(f"{match.group(1)}: row {marker} != file {declared}")
+    return problems
 
+
+def _open_count_disagreement():
+    text = INDEX.read_text(encoding="utf-8")
     open_count = len(re.findall(r"^\| UX-\d+ \|", text, re.M))
     stated = re.search(r"\*\*(\d+) open\*\*", text)
     if stated and int(stated.group(1)) != open_count:
-        problems.append(f"the index says {stated.group(1)} open; "
-                        f"{open_count} rows are in the table")
-    return problems
+        return [f"the index says {stated.group(1)} open; "
+                f"{open_count} rows are in the table"]
+    return []
+
+
+def check():
+    """Every place the two copies of a status can disagree."""
+    return [problem for _what, run in CHECKS for problem in run()]
 
 
 def _shown(path: pathlib.Path) -> str:
@@ -223,10 +336,17 @@ def main(argv=None) -> int:
         CLOSED = SCENARIOS / "closed.md"
 
     if args.check:
-        problems = check()
-        for problem in problems:
-            print(problem)
-        print(f"{len(problems)} problem(s)")
+        problems = []
+        for what, run in CHECKS:
+            found = run()
+            problems.extend(found)
+            print(f"  {'FAIL' if found else 'ok  '}  {what}"
+                  + (f" - {len(found)} problem(s)" if found else ""))
+            for problem in found:
+                print(f"          {problem}")
+        rows = len(table_statuses())
+        print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), "
+              f"{rows} backlog row(s)")
         return 1 if problems else 0
     if not args.uid:
         parser.error("a UX id is required unless --check is given")

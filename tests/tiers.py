@@ -510,4 +510,8 @@ MEDIUM = (
     # `UX-400`: one `analyze` subprocess and one node sweep that renders
     # ten populations at three sizes each - the subprocess is all of it.
     "tests/unit/test_every_population_at_zero_one_and_many.py",      #    1.3s
+    # `UX-401`: one export, one page boot and one `analyze` subprocess -
+    # the census reads the keys off the payload and the destinations off
+    # the booted document.
+    "tests/unit/test_no_key_is_terminal_only_in_silence.py",         #    4.9s
 )

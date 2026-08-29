@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-413 scenarios: **10 open**, 403 closed.
+413 scenarios: **9 open**, 404 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
-| guards | 4 | 53 |
+| guards | 3 | 53 |
 
 ## Open scenarios
 
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-401 | [no key is terminal-only in silence](UX-0401-no-key-is-terminal-only-in-silence.md) | guards | Medium | whoever adds the sixteenth block | 🔴 |
 | UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | guards | High | every future round, before its walk | 🔴 |
 | UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | guards | Medium | the audit loop itself | 🔴 |
 | UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | guards | Medium | anyone reading a whatif or store number outside the page | 🔴 |

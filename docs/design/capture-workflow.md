@@ -283,6 +283,15 @@ would replace the fixed 1% significance rule used here
 
 Contents (uploaded and published on success *or* failure):
 
+**This is the CI field-capture bundle, not a snapshot** (`UX-381`). It
+is a separate artefact with a separate producer, and it names two files
+differently: `native-report.json` is what a snapshot calls
+`plane2.json`, and `native-trace.log` is `plane2.log.gz`. A reader who
+finds this table and goes looking for `native-report.json` inside a
+`.bga/runs/<stamp>/` directory will not find it. The capture directory
+`bga snapshot` writes is specification 32.6
+(`capture-layout/v1`), declared as `run_store.CAPTURE_LAYOUT`.
+
 | file | what it is |
 |---|---|
 | `run/` | the `bga`-ready run directory (`graph.json`, `trace.json`, `run-context.json`) |

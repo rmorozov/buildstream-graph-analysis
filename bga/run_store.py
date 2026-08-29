@@ -543,3 +543,143 @@ def human_bytes(size: int) -> str:
             return f"{size:.0f}{unit}" if unit == "B" else f"{size:.1f}{unit}"
         size /= 1024.0
     return f"{size:.1f}T"
+
+
+# `UX-381`: the capture directory as a stated contract.
+#
+# Every published `bga` command line names a path inside `.bga/`, and
+# the tool prints them itself at the end of every capture. `@last` and
+# `@prev` resolve by listing `runs/`; `bga view` reads `run/`; `bga
+# correlate` finds `plane2.json` as a sibling; `bga timeline` reads
+# `plane2.log.gz`; the aggregator walks the lot. The layout is
+# load-bearing in a dozen places and, until this, was written down in
+# none: Part 32's registry named one of fifteen paths, and the only
+# file-layout table in the documentation described a *different*
+# directory - the CI field-capture bundle, with different names for the
+# same two files.
+#
+# This is `UX-328`'s rule one level up. Every document `bga` emits
+# answers for its own schema; the directory those documents live in -
+# which is the thing users paste into issues, tar up, and hand to CI -
+# answered for nothing.
+#
+# The constants above are the values; this is the statement. Each row
+# says what writes a path, what reads it, which contract it carries
+# where it has one, and - the part a reader could previously only learn
+# from an error - whether it is required and what its absence means.
+SCHEMA = "capture-layout/v1"
+
+# And the one contract inside this directory that no `bga` module
+# stamps: `host-samples/v1` is written by
+# `tools/bst_native_build_tracer.py`, and `bga.contracts` walks the
+# `bga` package only - so without this the id is written to every
+# sampled capture and inventoried nowhere, which is `UX-248`'s defect
+# one directory over. The module that knows the directory names it.
+OWNED = ("host-samples/v1",)
+
+# Presence, as three words rather than a boolean, because "not there"
+# has three different meanings in this directory and a consumer that
+# cannot tell them apart cannot tell a broken capture from a cheap one.
+REQUIRED = "required"          # absent means the capture is unusable
+CONDITIONAL = "conditional"    # absent means that option was off
+DERIVED = "derived"            # absent means nothing; it is rebuilt on demand
+
+CAPTURE_LAYOUT = (
+    # (path relative to the project, presence, contract, what it is)
+    (f"{STORE_DIRNAME}/", REQUIRED, None,
+     "the project-local store `UX-126` introduced. Everything below is "
+     "relative to it; `bga` creates it on the first capture."),
+    (f"{STORE_DIRNAME}/.gitignore", DERIVED, None,
+     "written once so a clone does not ship the capture archive "
+     "(`UX-189`). Absent only in a store made before that item; the "
+     "next capture writes it."),
+    (f"{STORE_DIRNAME}/{CONFIG_NAME}", CONDITIONAL, None,
+     "the store's own settings, written when one is set. Absent means "
+     "every setting is at its default."),
+    (f"{STORE_DIRNAME}/{SCRATCH_DIRNAME}/", DERIVED, None,
+     "`bga`'s scratch: the `$PATH` shim, the compiled hook and spine, "
+     "and unnamed intermediates (`UX-155`). Never read across "
+     "captures; safe to delete."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/", REQUIRED, None,
+     "one directory per capture, named by UTC stamp. `@last` and "
+     "`@prev` resolve by listing it, so its ordering is part of the "
+     "contract: the names sort chronologically as strings."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/", REQUIRED, None,
+     "one capture: the snapshot `bga snapshot --list` enumerates and "
+     "`@last` names. The stamp is UTC and sorts chronologically as a "
+     "string, which is what makes the listing an ordering."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/", REQUIRED, None,
+     "the run directory - the unit every published command line takes "
+     "a path to. Absent on a build that failed before any element "
+     "completed (`UX-156`), which is a capture with nothing to "
+     "analyse rather than a corrupt one."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/graph.json", REQUIRED, "graph/v9",
+     "the declared element graph, from `bst show`."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/trace.json", REQUIRED, "trace/v9",
+     "the scheduler's own spans and phases - Plane 1."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/run-context.json", REQUIRED,
+     "run-context/v9",
+     "what the run was: identity, host manifest (`host/v2` inside it), "
+     "scheduler configuration, and the resolved `native_max_jobs` "
+     "(`UX-377`)."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/chrome_trace.json", CONDITIONAL,
+     None,
+     "the Plane 1 trace in the legacy Chrome JSON shape. Written by "
+     "the extraction; `bga timeline` writes the Perfetto form instead "
+     "and nothing on a read path requires this."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/sources.json", CONDITIONAL,
+     "sources/v1",
+     "the source inventory (`UX-171`), read by `bga blast`. Absent "
+     "means the capture could not resolve the project's sources, and "
+     "`blast` says so rather than reporting an empty inventory."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{PLANE2_NAME}", CONDITIONAL, "plane2/v2",
+     "the Plane 2 report - what ran inside the sandboxes. Absent on a "
+     "capture taken without Plane 2, and every Plane 2 section of "
+     "every output is then absent rather than empty."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RAW_LOG_NAME}", CONDITIONAL, None,
+     "the raw per-process trace the report was folded from, gzipped. "
+     "`bga timeline` renders from this; absent means no timeline, "
+     "which is a different absence from no report (`UX-329`)."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RESOURCE_NAME}", CONDITIONAL, None,
+     "the two capacity scalars, beside the report so the aggregator "
+     "never opens the big file for them (`UX-296`). Absent where the "
+     "report is."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{HOST_SAMPLES_NAME}", CONDITIONAL,
+     "host-samples/v1",
+     "the host's memory and swap while the build ran, one JSON object "
+     "per line (`UX-378`). Absent on a capture taken before that item "
+     "or with sampling unavailable."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}", CONDITIONAL, "analyze/v4",
+     "the analysis this capture published, so `bga view` renders "
+     "rather than re-deriving (`UX-296`). Absent means the viewer "
+     "parses the run itself, and the trace carries no graph structure "
+     "(`UX-380`)."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/build.log", CONDITIONAL, None,
+     "the wrapped BuildStream log, kept because its first line records "
+     "the real invocation (`UX-29`). `bga timeline` needs it and "
+     "refuses without it."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/element-slice.json", CONDITIONAL, None,
+     "which elements the capture was asked for, where it was asked "
+     "for a slice rather than the whole project."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/capture-context.txt", CONDITIONAL, None,
+     "what the capture did and why, in prose - the diagnostics "
+     "`UX-146` writes. Never parsed."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{SIZE_CACHE_NAME}", DERIVED, None,
+     "a cached size for this snapshot, so `--list` does not walk every "
+     "run. Rebuilt when the tree signature changes; safe to delete."),
+)
+
+
+def layout_paths() -> List[str]:
+    """Every path the capture directory contract names."""
+    return [path for path, _presence, _contract, _what in CAPTURE_LAYOUT]
+
+
+def layout_presence(path: str) -> Optional[str]:
+    """`REQUIRED`, `CONDITIONAL`, `DERIVED` - or `None` for a path the
+    contract does not name, which is the answer a guard is looking for.
+    """
+    for named, presence, _contract, _what in CAPTURE_LAYOUT:
+        if named == path:
+            return presence
+    return None

@@ -1523,6 +1523,8 @@ store/v1            store-aggregate/v1          whatif/v1     (published outputs
 sweep/v1                                                      (what capacity buys - 32.5)
 host/v2                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
+capture-layout/v1                                             (the capture directory - UX-381)
+host-samples/v1                                               (the host while it built - UX-378)
 plane2/v2           plane2/v1                                 (the Plane 2 report - UX-297)
 analyze/v3          analyze/v2                                (read, never written - UX-344)
 compare/v1          blast/v1      correlate/v1                  (read, never written - UX-341)
@@ -1657,6 +1659,8 @@ key:
 | the host manifest inside `run-context.json` | `host/v2` | `bga.hostinfo.collect` |
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
 | the Plane 2 report at `plane2.json` beside a run | `plane2/v2` | `bga.plane2` |
+| the capture directory `.bga/` itself - every path, what writes it, what reads it, and what an absence means (32.6) | `capture-layout/v1` | `bga.run_store` |
+| the host's memory and swap while the build ran, at `host-samples.jsonl` beside a run | `host-samples/v1` | `bga.run_store` names it (`OWNED`); `tools/bst_native_build_tracer.py` writes it |
 | the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
 | what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, and what `analyze` wrote before `UX-344` lifted its two namespaces - read, never written | `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
@@ -1699,6 +1703,66 @@ validates the golden run's real output against them
 They pin the top level only: the always-present keys, their types, and
 the `schema` key. Enumerating every nested object would be a second
 implementation of the renderer, drifting from the first.
+
+---
+
+## 32.6 The capture directory (`capture-layout/v1`, `UX-381`)
+
+32.5 says what every *document* answers for. This says what the
+*directory* they live in answers for — the thing a user pastes into an
+issue, tars up, and hands to CI.
+
+Every published `bga` command line names a path inside `.bga/`, and the
+tool prints them itself at the end of every capture. `@last` and
+`@prev` resolve by listing `runs/`; `bga view` reads `run/`; `bga
+correlate` finds `plane2.json` as a sibling; `bga timeline` reads
+`plane2.log.gz` and `build.log`; the store aggregator walks the lot.
+The layout was load-bearing in a dozen places and stated in none — the
+registry above named one of its twenty paths, and the only file-layout
+table in the documentation described a **different** directory (the CI
+field-capture bundle, `docs/design/capture-workflow.md`, which now says
+so).
+
+**Presence has three values, not two.** "Not there" means three
+different things here, and a consumer that cannot tell them apart
+cannot tell a broken capture from a cheap one:
+
+| presence | what an absence means |
+|---|---|
+| `required` | the capture is unusable, and the tool refuses rather than reporting an empty result |
+| `conditional` | that option was off, or that stage did not run. Every consumer of the path says so rather than substituting a zero |
+| `derived` | nothing. It is a cache or a convenience and is rebuilt on demand |
+
+| path | presence | contract | what it is |
+|---|---|---|---|
+| `.bga/` | required | — | the project-local store `UX-126` introduced. Everything below is relative to it; `bga` creates it on the first capture. |
+| `.bga/.gitignore` | derived | — | written once so a clone does not ship the capture archive (`UX-189`). Absent only in a store made before that item; the next capture writes it. |
+| `.bga/config` | conditional | — | the store's own settings, written when one is set. Absent means every setting is at its default. |
+| `.bga/tmp/` | derived | — | `bga`'s scratch: the `$PATH` shim, the compiled hook and spine, and unnamed intermediates (`UX-155`). Never read across captures; safe to delete. |
+| `.bga/runs/` | required | — | one directory per capture, named by UTC stamp. `@last` and `@prev` resolve by listing it, so its ordering is part of the contract: the names sort chronologically as strings. |
+| `.bga/runs/<stamp>/` | required | — | one capture: the snapshot `bga snapshot --list` enumerates and `@last` names. The stamp is UTC and sorts chronologically as a string, which is what makes the listing an ordering. |
+| `.bga/runs/<stamp>/run/` | required | — | the run directory - the unit every published command line takes a path to. Absent on a build that failed before any element completed (`UX-156`), which is a capture with nothing to analyse rather than a corrupt one. |
+| `.bga/runs/<stamp>/run/graph.json` | required | `graph/v9` | the declared element graph, from `bst show`. |
+| `.bga/runs/<stamp>/run/trace.json` | required | `trace/v9` | the scheduler's own spans and phases - Plane 1. |
+| `.bga/runs/<stamp>/run/run-context.json` | required | `run-context/v9` | what the run was: identity, host manifest (`host/v2` inside it), scheduler configuration, and the resolved `native_max_jobs` (`UX-377`). |
+| `.bga/runs/<stamp>/run/chrome_trace.json` | conditional | — | the Plane 1 trace in the legacy Chrome JSON shape. Written by the extraction; `bga timeline` writes the Perfetto form instead and nothing on a read path requires this. |
+| `.bga/runs/<stamp>/run/sources.json` | conditional | `sources/v1` | the source inventory (`UX-171`), read by `bga blast`. Absent means the capture could not resolve the project's sources, and `blast` says so rather than reporting an empty inventory. |
+| `.bga/runs/<stamp>/plane2.json` | conditional | `plane2/v2` | the Plane 2 report - what ran inside the sandboxes. Absent on a capture taken without Plane 2, and every Plane 2 section of every output is then absent rather than empty. |
+| `.bga/runs/<stamp>/plane2.log.gz` | conditional | — | the raw per-process trace the report was folded from, gzipped. `bga timeline` renders from this; absent means no timeline, which is a different absence from no report (`UX-329`). |
+| `.bga/runs/<stamp>/plane2-resource.json` | conditional | — | the two capacity scalars, beside the report so the aggregator never opens the big file for them (`UX-296`). Absent where the report is. |
+| `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory and swap while the build ran, one JSON object per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |
+| `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v4` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
+| `.bga/runs/<stamp>/build.log` | conditional | — | the wrapped BuildStream log, kept because its first line records the real invocation (`UX-29`). `bga timeline` needs it and refuses without it. |
+| `.bga/runs/<stamp>/element-slice.json` | conditional | — | which elements the capture was asked for, where it was asked for a slice rather than the whole project. |
+| `.bga/runs/<stamp>/capture-context.txt` | conditional | — | what the capture did and why, in prose - the diagnostics `UX-146` writes. Never parsed. |
+| `.bga/runs/<stamp>/.size` | derived | — | a cached size for this snapshot, so `--list` does not walk every run. Rebuilt when the tree signature changes; safe to delete. |
+
+The names are values in `bga/run_store.py` and the statement is
+`run_store.CAPTURE_LAYOUT` beside them, so the constants and this table
+are one declaration rather than two.
+`tests/unit/test_the_capture_directory_is_a_contract.py` walks a real
+capture and holds the three equal: every path on disk is named here,
+every `required` path is present, and this table matches the module.
 
 ---
 

@@ -143,6 +143,23 @@ unit on, so the census could not have been extended without closing it.
 All three are `None` on a refusal, so they are declared in
 `_COMPARE_OPTIONAL` rather than required.
 
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed. Each was applied to the committed tree
+and reverted with `git checkout` after the run.
+
+| # | mutation | reddened |
+|---|---|---|
+| C1 | `QUANTITY` removed from `_WHATIF_HINTS["total_duration_us"]` — **the mutation the filing names**, which left all three unit guards green before this | `test_nothing_renders_from_a_guess[whatif/v1]`, `test_the_walk_reached_the_document[whatif/v1]`; 2 failed, 45 passed |
+| C2 | `store-aggregate/v1` deleted from the census's contract table | `test_the_inventory_is_the_contract_list`; 1 failed, 43 passed |
+| C3 | `QUANTITY` removed from `_store_distribution`'s `p95` | `test_what_cannot_resolve_is_named_with_a_reason[store-aggregate/v1]`, naming all four `p95` leaves; 1 failed, 46 passed |
+| C4 | a `UNDECLARABLE_ELSEWHERE` entry for `deltas.total_duration_us`, which resolves | `test_no_excuse_outlives_what_it_excused`; 1 failed, 46 passed |
+
+C1 is the acceptance test's first clause, and C4 its second. C2 is what
+makes the table a census rather than a list: a contract removed from it
+reddens instead of going unchecked, which is precisely how four
+contracts went unchecked in the first place.
+
 ### Deviation from the Required Fix
 
 - The Required Fix says the census should walk the `UX-328` inventory

@@ -119,15 +119,27 @@ def browser():
 @pytest.fixture(scope="module")
 def driven(browser, tmp_path_factory):
     """Every option driven, then the fragment the last choice wrote
-    loaded on a fresh page - the round trip, not the state object."""
+    loaded on a fresh page - the round trip, not the state object.
+
+    **A second file, not the same one with a hash appended.** Appending
+    a fragment to the URL the browser is already on is a *same-document*
+    navigation: nothing reloads, the DOM survives, and the select is
+    still where the drive above left it. Measured against mutation M9,
+    which removed the apply half entirely and left this clause passing;
+    a direct probe on a fresh page showed the reader coming back empty
+    at the same moment. Two copies of the same export, so the second
+    URL is a document the browser has not got.
+    """
     into = tmp_path_factory.mktemp("u372")
     out = {}
     for label in sorted(pages.FIXTURES):
         uri = pages.export_uri(pages.FIXTURES[label], into,
                                name=f"{label}.html")
+        again = pages.export_uri(pages.FIXTURES[label], into,
+                                 name=f"{label}-pasted.html")
         result = browser.measure(uri, _DRIVE, 1440, 900)
         result["restored"] = browser.measure(
-            uri + result.get("hash", ""), _RESTORED, 1440, 900)
+            again + result.get("hash", ""), _RESTORED, 1440, 900)
         out[label] = result
     return out
 

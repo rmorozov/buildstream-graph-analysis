@@ -45,16 +45,18 @@ jobs:
       # it is the *default*, so a new file joins it silently - which is
       # why the budget is enforced here rather than trusted.
       #
-      # UX-363: 20.5-23.8s measured on this step; 33s is the bound. It
-      # is sized so that one *large* file landing in the default tier
-      # trips it even on the runner's fastest run (20.5 + 15.0 = 35.5s
-      # > 33s) while its slowest normal run does not -
-      # for three rounds it was 90s against a tier that kept shrinking,
-      # and a file at twice the large floor tripped nothing. Keep in
-      # step with SMALL_TIER_BUDGET_S in tests/tiers.py, which states
-      # the inequality and is guarded on it.
+      # UX-363: re-measured 2026-08-29 across all four interpreters -
+      # 17.3-25.9s on this step; 31s is the bound. It is sized so that
+      # one *large* file landing in the default tier trips it even on
+      # the runner's fastest run (17.3 + 15.0 = 32.3s > 31s) while its
+      # slowest normal run does not - for three rounds it was 90s
+      # against a tier that kept shrinking, and a file at twice the
+      # large floor tripped nothing. Keep in step with
+      # SMALL_TIER_BUDGET_S in tests/tiers.py, which states the
+      # inequality, carries the per-interpreter table and is guarded
+      # on it.
       - name: Test (small tier, budgeted)
-        run: timeout 33 make test-small
+        run: timeout 31 make test-small
 
       - name: Test
         run: make test
@@ -66,14 +68,18 @@ jobs:
       # tiers' own boundary single-process, so an ordering assumption
       # that xdist happens to hide cannot ship.
       #
-      # UX-363: its own budget, and a *lower* one than the parallel
-      # step's - on a two-core runner four workers cost more than they
-      # save, so this step is the faster of the two (13.8-21.4s against
-      # 20.5-23.8s). It went unguarded until now: the partition guard's
-      # regex stopped at the first `timeout` in this file.
-      # SMALL_TIER_BUDGET_1P_S in tests/tiers.py.
+      # UX-363: its own budget, still a *lower* one than the parallel
+      # step's, but only just. The original reason was that four
+      # workers on a two-core runner cost more than they save, making
+      # this the faster step by six seconds (13.8-21.4s against
+      # 20.5-23.8s). Re-measured 2026-08-29 the two are within a second
+      # of each other on every interpreter (17.03-27.0 here against
+      # 17.34-25.85 there), so the gap between the budgets is now one
+      # second rather than six. It went unguarded until UX-363: the
+      # partition guard's regex stopped at the first `timeout` in this
+      # file. SMALL_TIER_BUDGET_1P_S in tests/tiers.py.
       - name: Test (small tier, single process)
-        run: PYTEST_XDIST= timeout 27 make test-small
+        run: PYTEST_XDIST= timeout 30 make test-small
 
   packaging:
     # UX-77: the front door. Every `bga wrap/extract/capture/...` alias

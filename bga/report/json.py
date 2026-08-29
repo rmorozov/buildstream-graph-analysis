@@ -89,6 +89,22 @@ def document_shape(document: dict, adding: int = _SHAPE_OWN_LEAVES) -> dict:
     }
 
 
+def _run_level(block, keys):
+    """The scalars beside a `per_element` map, and its `note`.
+
+    Kept separate from the rows because they answer a different
+    question - "what did the whole run cost" against "which element
+    cost it" - and `UX-346`'s door is the block's own sentence, which
+    only exists at this level.
+    """
+    if not isinstance(block, dict) or not block.get("available"):
+        return None
+    out = {key: block[key] for key in keys if key in block}
+    if block.get("note"):
+        out["note"] = block["note"]
+    return out or None
+
+
 def _binary_rows(binary_cost):
     """Plane 2's per-element binary costs, as one flat table.
 
@@ -398,6 +414,34 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
             data['configure_phase'] = {
                 key: value for key, value in phase.items()
                 if key != 'per_element'}
+
+        # `UX-383`: the three blocks `UX-370` left in the terminal.
+        #
+        # **The per-element halves go on the join row, not into tables
+        # of their own.** `UX-382`'s placement rule: an attribute that
+        # needs Plane 2 to exist is a field on an `element_join` row.
+        # Three new per-element tables would also have drawn one
+        # population four times, which is `UX-288`'s rule and what
+        # `test_one_table_many_views.py` caught - `element_cpu_time`,
+        # `element_peak_memory` and `binary_cost` over the same nine
+        # elements. So `bga/correlate.py` carries the fields and this
+        # publishes what is genuinely run-level:
+        #
+        # the totals, and each block's own `note` - which is where the
+        # rule that must not be lost lives. `peak_memory` is a
+        # per-process maximum that must never be summed and
+        # `resource_pressure` is sums that may be; both notes say so,
+        # and `UX-346`'s door is what puts a sentence in front of a
+        # reader about to add two numbers that cannot be added.
+        for key, keep in (
+                ('cpu_time', ('total_cpu_us', 'measured_processes',
+                              'unmeasured_processes',
+                              'spine_sourced_processes')),
+                ('peak_memory', ()),
+                ('resource_pressure', ('measured', 'unmeasured'))):
+            run_level = _run_level(native_report.get(key), keep)
+            if run_level:
+                data[key] = run_level
 
     # UX-229: and why every claim above is made. Last, and reading the
     # finished dict, because provenance is *references into this

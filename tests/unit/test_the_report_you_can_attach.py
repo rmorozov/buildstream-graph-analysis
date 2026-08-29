@@ -401,7 +401,14 @@ COMMITTED_EXPORTS = [
     # Golden has no `element_join` at all and still carries that prose,
     # which is the same fact `UX-370`'s note above records: the schema
     # travels whole whether or not a run has the rows.
-    ("golden", GOLDEN, 362_000),                       #  361,524 B
+    # `UX-383` moved this one by 3,248 B, **all of it contract**: the
+    # schema sentences for `cpu_time`, `peak_memory` and
+    # `resource_pressure` and for the six fields the join row gained.
+    # The page half is 269,212 B either side of the change, so nothing
+    # was added to the source - and golden has no Plane 2 at all, which
+    # is why its whole move is prose. Same fact as `UX-370`'s note
+    # below: the schema travels whole whether or not a run has the rows.
+    ("golden", GOLDEN, 366_000),                       #  364,819 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -428,7 +435,13 @@ COMMITTED_EXPORTS = [
     # that move are prose rather than rows, so the two bounds moved by
     # an identical amount, which is what a source-and-schema change
     # looks like from here.
-    ("macro_micro", MACRO_MICRO, 413_000),             #  412,276 B
+    # `UX-383` moved this one by 5,307 B: the same 3,248 of contract as
+    # golden, plus **2,059 of this run's own measurements** - the CPU
+    # each element burned and the run's own CPU, peak-memory and
+    # pressure totals, published in `plane2.json` beside the run and
+    # reaching no reader in a browser. Data rather than page, which is
+    # the half an export is supposed to be made of.
+    ("macro_micro", MACRO_MICRO, 419_000),             #  417,650 B
 ]
 
 

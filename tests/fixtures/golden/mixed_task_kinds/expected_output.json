@@ -734,10 +734,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 486,
+        "leaves": 487,
         "deepest_depth": 5,
         "deepest_path": "provenance.[].evidence.[].path",
         "deeper_than_three": 188,
-        "deeper_than_three_share": 0.3868312757201646
+        "deeper_than_three_share": 0.3860369609856263
     }
 }

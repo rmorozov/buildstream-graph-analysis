@@ -319,6 +319,7 @@ limit 25;`,
     id: "waited-on-flow",
     category: "dependencies",
     plane: "Plane 1",
+    reads: "flow",
     title: "What did this element wait for, by the graph?",
     why:
       "Plane 1 again, by the graph rather than the clock: `UX-309` " +
@@ -466,6 +467,47 @@ export const WORKED_EXAMPLE = "element-time";
  * result would be some other run's numbers pasted into this one, which
  * is the shape of lie this repository spends most of its guards on.
  */
+/**
+ * `UX-395`: the tables a canned query needs beyond `slice`, and which
+ * trace format carries them.
+ *
+ * Measured on one snapshot, both formats from the same two logs:
+ *
+ * ```text
+ *                     slices   flows   counters
+ * trackevent             826     836        538
+ * chrome                 663       0          0
+ * ```
+ *
+ * Two of the fourteen questions read exactly what the chrome JSON does
+ * not carry, so against one they return zero rows and the reader
+ * concludes the build had no concurrency and that nothing waited on
+ * anything. That is `UX-107`'s rule at the trace boundary: *nobody
+ * could look* rendered as *looked and found nothing*.
+ *
+ * The declaration is on the query (`reads`), and this says what it
+ * costs. The shipped path is unaffected - the page's own handoff is
+ * the trackevent protobuf - so the sentence is a caveat on a hand-run
+ * `bga timeline --format chrome`, which is where the reader meets it.
+ */
+export const NEEDS_TRACKEVENT = {
+  flow: "the `flow` table",
+  counter: "the `counter` and `counter_track` tables",
+};
+
+export function requirementLine(question, make) {
+  const needs = NEEDS_TRACKEVENT[question?.reads];
+  if (!needs) return null;
+  const line = make("p", { class: "muted query-needs" });
+  line.setAttribute("data-reads", question.reads);
+  line.textContent =
+    `Needs a trackevent trace: this reads ${needs}, which `
+    + "`bga timeline --format chrome` does not write. Against the "
+    + "legacy JSON it returns no rows - which is the format missing "
+    + "the structure, not the build lacking it.";
+  return line;
+}
+
 export function renderQuestions(make, options = {}) {
   const section = make("section", { "data-section": "perfetto-questions",
                                     id: "perfetto-questions" });
@@ -535,7 +577,9 @@ export function renderQuestions(make, options = {}) {
       heading.textContent = question.title;
       const why = make("p", { class: "muted" });
       why.textContent = question.why;
-      fold.append(heading, why, ...sqlBlock(question, make, chosen));
+      const needs = requirementLine(question, make);
+      fold.append(heading, why, ...(needs ? [needs] : []),
+                  ...sqlBlock(question, make, chosen));
     }
   }
   return section;
@@ -654,7 +698,9 @@ function workedExample(question, make, element = null) {
   heading.textContent = question.title;
   const why = make("p", { class: "muted" });
   why.textContent = question.why;
-  box.append(heading, why, ...sqlBlock(question, make, element));
+  const needs = requirementLine(question, make);
+  box.append(heading, why, ...(needs ? [needs] : []),
+             ...sqlBlock(question, make, element));
   const returns = question.returns ?? [];
   if (returns.length) {
     box.append(make("p", { class: "muted" },

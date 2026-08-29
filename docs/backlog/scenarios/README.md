@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-384 scenarios: **6 open**, 378 closed.
+384 scenarios: **5 open**, 379 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 65 |
 | analysis | 0 | 52 |
-| contracts | 2 | 43 |
+| contracts | 1 | 43 |
 | viewer | 1 | 109 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-383 | [Plane 2's per-element blocks reach the terminal, not the page](UX-0383-plane-2s-per-element-blocks-reach-the-terminal-not-the-page.md) | viewer | Medium | anyone reading the report in a browser | 🔴 |
 | UX-384 | [a redundancy finding still carries every element it spans](UX-0384-a-redundancy-finding-still-carries-every-element-it-spans.md) | contracts | Low | anyone whose store holds a monorepo's captures | 🔴 |
 | UX-385 | [a capture cannot detect the binary it never saw](UX-0385-a-capture-cannot-detect-the-binary-it-never-saw.md) | capture | Medium | anyone reading a capture taken with the spine off | 🔴 |
-| UX-381 | [the capture directory is a contract nothing writes down](UX-0381-the-capture-directory-is-a-contract-nothing-writes-down.md) | contracts | Medium | anyone reading a snapshot with something other than bga | 🔴 |
 
 ## UX-375..UX-382: the sixtieth round — the capture, measured rather than assumed (2026-08-29)
 

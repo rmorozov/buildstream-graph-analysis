@@ -26,9 +26,19 @@ _LITERAL = re.compile(r'"([a-z][a-z0-9-]*/v\d+)"')
 # shape `bga` *reads* or converts, owned elsewhere - inventorying them
 # would claim we version them, which we do not.
 NOT_OURS = {
-    # The spec's own internal document versions (`trace/v9`,
-    # `analysis/v9`): they are the spec's, and Part 32.5 exists
-    # precisely because they are not what a consumer pins.
+    # The spec's own internal document versions: they are the spec's,
+    # and Part 32.5 exists precisely because they are not what a
+    # consumer pins - `bga` does not version them and inventorying them
+    # would claim it does.
+    #
+    # The set was empty until `UX-381`, which is not the same as saying
+    # nothing belonged in it: no source file had *cited* one of these
+    # ids until the capture-layout table named the contract each path
+    # in a run directory carries. The comment above described these
+    # three before there was anything to exclude.
+    "graph/v9",
+    "trace/v9",
+    "run-context/v9",
 }
 
 
@@ -58,10 +68,15 @@ class TestTheInventoryIsComplete:
         # units it renamed, and `host/v1`. All five are read and never
         # written, which is exactly the state this list is for.
         # `UX-344` added `analyze/v3`, for the same reason.
+        # `UX-381` added two more, both on-disk and neither printable:
+        # `capture-layout/v1` is the directory itself, and
+        # `host-samples/v1` is written by a module in `tools/` that the
+        # package walk cannot see - `run_store.OWNED` names it, which
+        # is how it reached this list at all.
         assert contracts.unprintable() == [
-            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
-            "correlate/v1", "host/v1", "host/v2", "plane2/v1", "plane2/v2",
-            "sources/v1"]
+            "analyze/v2", "analyze/v3", "blast/v1", "capture-layout/v1",
+            "compare/v1", "correlate/v1", "host-samples/v1", "host/v1",
+            "host/v2", "plane2/v1", "plane2/v2", "sources/v1"]
 
     def test_a_retired_shape_is_inventoried_as_one(self):
         """`UX-297`: the Plane 2 monolith is read and never written.

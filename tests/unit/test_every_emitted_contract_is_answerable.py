@@ -95,6 +95,12 @@ FILE_WRITTEN = {
     "host/v2": "run-context.json (bga.hostinfo)",
     "sources/v1": "sources.json (bga extract)",
     "plane2/v2": "plane2.json (bga capture)",
+    # `UX-381`: the directory itself, and the one file in it a module
+    # outside `bga` writes. Both are on-disk shapes with no command to
+    # print them, which is exactly what this list is for - and the
+    # capture layout is the *only* one whose "file" is the tree.
+    "capture-layout/v1": ".bga/ itself - specification 32.6",
+    "host-samples/v1": "host-samples.jsonl (bga capture, UX-378)",
     # `UX-297` retired this one. Still read, never written - which is a
     # third state, and the reason `contracts.superseded()` exists.
     "plane2/v1": "plane2.json, as a capture before UX-297 wrote it",
@@ -366,7 +372,12 @@ class TestTheDocumentSaysWhatTheToolDoes:
             sorted(set(rows) ^ set(contracts.ids())))
         words = {"nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
                  "thirteen": 13, "fourteen": 14, "fifteen": 15,
-                 "sixteen": 16, "seventeen": 17, "eighteen": 18}
+                 "sixteen": 16, "seventeen": 17, "eighteen": 18,
+                 # `UX-381` took the inventory past eighteen; the map is
+                 # the guard's vocabulary, not its claim, so it grows
+                 # ahead of the count rather than being chased by it.
+                 "nineteen": 19, "twenty": 20, "twenty-one": 21,
+                 "twenty-two": 22, "twenty-three": 23, "twenty-four": 24}
         claimed = re.search(r"\b(" + "|".join(words) + r")\b ids", block,
                             re.I)
         assert claimed, "the block no longer states a count at all"
@@ -387,7 +398,8 @@ class TestTheDocumentSaysWhatTheToolDoes:
     #: number moved - and the clause below holds the sentence to the
     #: declaration rather than to any one spelling of it.
     _COUNT_WORDS = {4: "four", 5: "five", 6: "six", 7: "seven",
-                    8: "eight", 9: "nine", 10: "ten"}
+                    8: "eight", 9: "nine", 10: "ten", 11: "eleven",
+                    12: "twelve", 13: "thirteen", 14: "fourteen"}
 
     def test_the_unknown_to_schema_sentence_counts_correctly(self):
         """It claimed "the last four" were unknown to `--schema` when

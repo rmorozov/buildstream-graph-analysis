@@ -116,6 +116,13 @@ _CONTEXT = {
     },
     "build_outcome": {"failed_elements": [], "failed_count": 0,
                       "interrupted": False},
+    # `UX-380` put the second factor of `UX-116`'s question on the run
+    # slice beside `builders`, and this fixture is the one that has to
+    # be able to produce every identity key or the coverage clause
+    # below cannot see it - the same gap `UX-368` spent four rounds
+    # inside, and the third time this round.
+    "native_max_jobs": 4,
+    "native_max_jobs_source": "resolved_from_graph",
 }
 
 

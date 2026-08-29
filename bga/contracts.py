@@ -50,6 +50,16 @@ _DECLARATION = "SCHEMA"
 # module that owns the shape.
 _RETIRED = "SUPERSEDED"
 
+# `UX-381`: and the shapes a module *owns* without stamping on a
+# document of its own. The walk below covers `bga` only - a module in
+# `tools/` that declares a `SCHEMA` is invisible to it, which is
+# `UX-248`'s own defect one directory over. `host-samples/v1` is
+# written by `tools/bst_native_build_tracer.py` into the capture
+# directory, and the module that knows that directory is `run_store`,
+# so `run_store` names it. Declared as a module-level tuple beside
+# `SCHEMA`, exactly as `SUPERSEDED` is.
+_OWNED = "OWNED"
+
 
 def _declared_in_modules() -> Dict[str, str]:
     """`{contract id: owning module}` from the package itself.
@@ -73,6 +83,9 @@ def _declared_in_modules() -> Dict[str, str]:
         for retired in getattr(loaded, _RETIRED, ()) or ():
             if isinstance(retired, str) and CONTRACT_ID.match(retired):
                 found.setdefault(retired, name)
+        for owned in getattr(loaded, _OWNED, ()) or ():
+            if isinstance(owned, str) and CONTRACT_ID.match(owned):
+                found.setdefault(owned, name)
     return found
 
 

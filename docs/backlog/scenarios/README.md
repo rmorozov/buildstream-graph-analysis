@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-382 scenarios: **9 open**, 373 closed.
+383 scenarios: **9 open**, 374 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 3 | 64 |
+| capture | 2 | 64 |
 | analysis | 0 | 52 |
-| contracts | 2 | 42 |
+| contracts | 3 | 43 |
 | viewer | 2 | 109 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -38,11 +38,11 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-375 | [the Plane 2 report has one uncapped population](UX-0375-the-plane-2-report-has-one-uncapped-population.md) | capture | Medium | anyone whose store has to hold a monorepo's captures | 🔴 |
 | UX-376 | [the census cannot see a tool this build produced, and the spine policy believes it](UX-0376-the-census-cannot-see-a-tool-this-build-produced.md) | capture | High | anyone whose project builds its own host tools | 🔴 |
 | UX-377 | [the run and the graph disagree about max-jobs, and on a default capture neither has it](UX-0377-the-run-and-the-graph-disagree-about-max-jobs.md) | capture | High | anyone who runs `bga snapshot` without extra flags | 🔴 |
 | UX-380 | [the trace says what an element is, never where it sits](UX-0380-the-trace-says-what-an-element-is-never-where-it-sits.md) | viewer | Medium | anyone in Perfetto asking which level a slice belongs to | 🔴 |
-| UX-383 | Plane 2's per-element `cpu_time`, `peak_memory` and `resource_pressure` reach the terminal and not the page | viewer | Medium | anyone reading the report in a browser | 🔴 |
+| UX-383 | [Plane 2's per-element blocks reach the terminal, not the page](UX-0383-plane-2s-per-element-blocks-reach-the-terminal-not-the-page.md) | viewer | Medium | anyone reading the report in a browser | 🔴 |
+| UX-384 | [a redundancy finding still carries every element it spans](UX-0384-a-redundancy-finding-still-carries-every-element-it-spans.md) | contracts | Low | anyone whose store holds a monorepo's captures | 🔴 |
 | UX-381 | [the capture directory is a contract nothing writes down](UX-0381-the-capture-directory-is-a-contract-nothing-writes-down.md) | contracts | Medium | anyone reading a snapshot with something other than bga | 🔴 |
 | UX-382 | [the element entity has two shapes, and they share one attribute](UX-0382-the-element-entity-has-two-shapes-sharing-one-attribute.md) | contracts | Medium | anyone writing a new view over an existing capture | 🔴 |
 

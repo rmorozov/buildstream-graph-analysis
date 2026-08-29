@@ -25,12 +25,31 @@ can declare a key no run emits, and a run can emit a key no schema
 declares; only the payload says which numbers a reader actually meets.
 The clause below therefore reads the emitted document and resolves each
 numeric leaf the way the page will.
+
+**`UX-404`: and every contract, not only the one it grew up on.** The
+census walked `report.json` and nothing else, so `schemas.py` validated
+that a declared quantity was *valid* while nobody checked that one was
+*present* on the other emitters. Round 64 proved the hole by mutation:
+removing `bga:quantity` from a `whatif/v1` hint left all three unit
+guards green. Measured when the second half of this file was written:
+
+```text
+                    declared  guessed  neither
+compare/v2                64       13       26
+correlate/v2             314        5        5
+sweep/v1                  22        0        4
+store-aggregate/v1        12        0       26
+```
+
+Seventy-nine numeric leaves outside the analyze door with no unit or a
+sniffed one - the exact class `UX-343` closed inside it.
 """
 import json
 import os
 import pathlib
 import shutil
 import subprocess
+import sys
 
 import pytest
 
@@ -178,6 +197,169 @@ class TestEveryNumberResolvesToAUnit:
         assert census["declared"] > 150, (
             f"{label}: only {census['declared']} declared leaves found - the "
             f"walk is not reaching the document")
+
+
+#: Every document `bga` emits, and the argv or builder that produces
+#: one. Derived from the emitter inventory
+#: `test_every_emitted_contract_is_answerable.py` already keeps
+#: structurally - a second list of commands here is exactly what fell
+#: behind on the way to `UX-328`.
+#:
+#: `store/v1` and `store-aggregate/v1` have no command: `bga view`
+#: builds them from a run store, which is what the two entries below
+#: with no argv are.
+CONTRACT_RUNS = {
+    "analyze/v4": ["analyze", str(FIXTURES["macro_micro"]), "--format",
+                   "json"],
+    "compare/v2": ["compare", str(FIXTURES["golden"]),
+                   str(FIXTURES["golden"]), "--format", "json"],
+    "correlate/v2": ["correlate", str(FIXTURES["macro_micro"]),
+                     str(REPO / "tests/fixtures/macro_micro/plane2.json"),
+                     "--format", "json"],
+    "blast/v2": ["blast", "toolchain.bst", str(FIXTURES["golden"]),
+                 "--format", "json"],
+    "whatif/v1": ["whatif", str(FIXTURES["macro_micro"]), "--format",
+                  "json"],
+    "sweep/v1": ["sweep", str(FIXTURES["macro_micro"]), "--format", "json"],
+    "store/v1": None,
+    "store-aggregate/v1": None,
+}
+
+#: What the `neither` bag is allowed to hold outside `analyze/v4`, and
+#: why. One entry, and it is `UNDECLARABLE`'s own case reached by the
+#: path a comparison publishes it under - the same rule object, quoted
+#: inside the candidate's diagnosis.
+UNDECLARABLE_ELSEWHERE = {
+    "compare/v2": {
+        "candidate_diagnosis.provenance.rule.threshold":
+            "`UNDECLARABLE`'s first entry, one document over: a rule "
+            "whose `observed_path` is null compares against a quantity "
+            "the finding computes rather than publishes.",
+    },
+}
+
+
+def _emitted(contract):
+    """The document one contract's emitter really writes."""
+    argv = CONTRACT_RUNS[contract]
+    if argv is None:
+        return _store_document(contract)
+    done = subprocess.run(
+        [sys.executable, "-m", "bga.cli", *argv],
+        capture_output=True, text=True, cwd=REPO, timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)})
+    assert done.returncode == 0, f"{contract}: {done.stderr[-2000:]}"
+    document = json.loads(done.stdout)
+    assert document.get("schema") == contract, (
+        f"{' '.join(argv)} emitted {document.get('schema')!r}, not "
+        f"{contract!r} - the inventory and the emitter disagree")
+    return document
+
+
+def _store_document(contract):
+    """`store/v1` and its aggregate, from a three-snapshot store.
+
+    `bga view` builds both; no command prints either, which is the one
+    legitimate reason for a contract to have no argv above and is the
+    same distinction `UX-328`'s guard draws for file-written ids.
+    """
+    import shutil
+    import tempfile
+
+    from tools.bga_view import store_payload, store_aggregate_payload
+
+    into = pathlib.Path(tempfile.mkdtemp())
+    (into / "project.conf").write_text("name: p\nmin-version: 2.0\n")
+    runs = []
+    for nth in (1, 2, 3):
+        run = into / ".bga" / "runs" / f"2026010{nth}T000000Z" / "run"
+        run.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(FIXTURES["golden"], run)
+        os.remove(run / "expected_output.json")
+        runs.append(str(run))
+    store = store_payload(runs[-1])
+    assert store, "the store fixture produced no store/v1 document"
+    if contract == "store/v1":
+        return store
+    aggregate = store_aggregate_payload(store)
+    assert aggregate, "the store fixture produced no aggregate"
+    return aggregate
+
+
+def _census_document(document):
+    from bga import schemas
+
+    import tempfile
+
+    scratch = pathlib.Path(tempfile.mkdtemp())
+    (scratch / "payload.json").write_text(json.dumps(document))
+    (scratch / "schemas.json").write_text(
+        json.dumps({name: schemas.schema(name) for name in schemas.names()}))
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", _CENSUS],
+        capture_output=True, text=True, cwd=REPO, timeout=120,
+        env={**os.environ,
+             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+             "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
+             "BGA_PAYLOAD": str(scratch / "payload.json"),
+             "BGA_SCHEMAS": str(scratch / "schemas.json")})
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
+@needs_node
+class TestTheCensusReachesEveryContract:
+    """`UX-404`: the same three questions, one document at a time."""
+
+    def test_the_inventory_is_the_contract_list(self):
+        """Neither side may grow without the other.
+
+        A contract missing here would be censused by nothing, which is
+        the state `whatif/v1`, `store/v1`, `store-aggregate/v1` and the
+        sweep were all in.
+        """
+        from bga import schemas
+
+        assert sorted(CONTRACT_RUNS) == sorted(schemas.names()), (
+            f"censused: {sorted(CONTRACT_RUNS)}; emitted: "
+            f"{sorted(schemas.names())}")
+
+    @pytest.mark.parametrize("contract", sorted(CONTRACT_RUNS))
+    def test_nothing_renders_from_a_guess(self, contract):
+        census = _census_document(_emitted(contract))
+        assert census["guessed"] == [], (
+            f"{contract}: {len(census['guessed'])} numeric leaves resolve "
+            f"only by name-sniffing: {census['guessed']}")
+
+    @pytest.mark.parametrize("contract", sorted(CONTRACT_RUNS))
+    def test_what_cannot_resolve_is_named_with_a_reason(self, contract):
+        census = _census_document(_emitted(contract))
+        excused = dict(UNDECLARABLE_ELSEWHERE.get(contract, {}))
+        if contract == "analyze/v4":
+            excused.update(UNDECLARABLE)
+        unexpected = sorted(set(census["neither"]) - set(excused))
+        assert unexpected == [], (
+            f"{contract}: numeric leaves with no unit at all and no entry "
+            f"saying why: {unexpected}")
+
+    @pytest.mark.parametrize("contract", sorted(CONTRACT_RUNS))
+    def test_the_walk_reached_the_document(self, contract):
+        """A contract whose emitter produced an empty document would
+        pass both clauses above by having nothing to complain about."""
+        census = _census_document(_emitted(contract))
+        assert census["declared"] > 0, (
+            f"{contract}: the walk found no declared numeric leaf at all")
+
+    def test_no_excuse_outlives_what_it_excused(self):
+        """`TestTheAllowlistIsNotAGraveyard`'s rule, for the second
+        allowlist: an entry excusing something that now resolves is a
+        note about history the next reader would trust."""
+        dead = []
+        for contract, entries in UNDECLARABLE_ELSEWHERE.items():
+            census = _census_document(_emitted(contract))
+            dead += [f"{contract}: {path}" for path in entries
+                     if path not in census["neither"]]
+        assert dead == [], dead
 
 
 @needs_node

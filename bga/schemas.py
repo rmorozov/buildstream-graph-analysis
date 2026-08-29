@@ -910,6 +910,13 @@ _SWEEP_HINTS = {
             {"key": "normalized_improvement", "title": "Improvement",
              "quantity": "ratio"},
         ],
+        "items": {
+            "properties": {
+                # The vector itself, keyed by resource name: `UX-404`
+                # again, one level in.
+                "capacity": {"additionalProperties": {QUANTITY: "count"}},
+            },
+        },
         "description": "One row per capacity tried: the full capacity "
                        "vector at that point, the makespan the replay "
                        "produced, and what that capacity bought over the "
@@ -917,6 +924,11 @@ _SWEEP_HINTS = {
                        "*step* gain, not a total - reading it as a total "
                        "is the mistake the column exists to prevent."},
     "knee_points": {
+        # `UX-404`: a map keyed by resource name, so its values cannot be
+        # named in `properties`. A capacity is a number of concurrent
+        # jobs - `count`, the same unit the vector inside a sweep row
+        # carries.
+        "additionalProperties": {QUANTITY: "count"},
         "description": "Per resource, the capacity past which more buys "
                        "little. Absent for a resource with no knee, "
                        "which is a different answer from a knee at the "
@@ -1111,6 +1123,15 @@ _COMPARE_REQUIRED = {
 # `test_compares_schema_requires_every_key_it_emits` exists to force.
 _COMPARE_OPTIONAL = {
     "element_diff": "object",
+    # `UX-404`: three more keys `to_dict` has always written and the
+    # contract never declared. Found by extending the unit census past
+    # the analyze door - a numeric leaf with no schema node to hang a
+    # unit on is the same gap one level up. All three are `None` on a
+    # refusal or on a run whose analysis carries no confidence block, so
+    # they are declared without being required.
+    "baseline_confidence": "number",
+    "candidate_confidence": "number",
+    "cache_churn": "object",
 }
 
 _BLAST_REQUIRED = {
@@ -2314,6 +2335,37 @@ _RESTRUCTURING_HINT = {
                    "build time - each one is evidence, not a verdict.",
 }
 
+# `UX-404`: the capture's identity, declared once.
+#
+# `analyze/v4` carried all four declarations and `correlate/v2` carried
+# `{question, rail}` and nothing under it, so `started_at_us`,
+# `cpu_count` and `memory_bytes` reached a reader of the join with no
+# unit - the same three fields, the same run, one document over. The
+# unit census only ever walked the analyze payload, which is why the
+# gap could sit there.
+_RUN_INSTANCE_HINT = {
+    QUESTION: 'Which capture is this?', RAIL: 'raw',
+    "properties": {
+        "started_at_us": {
+            INLINE: "name",
+            QUANTITY: "duration_us",
+            "description": "When the capture began, as microseconds "
+                           "since the epoch. A point in time rather "
+                           "than a span - the unit is the same and "
+                           "the reading is not."},
+        "host_manifest": {"properties": {
+            "cpu_count": {
+                QUANTITY: "count",
+                "description": "Cores the host reported, which the CPU "
+                               "ceiling is computed against."},
+            "memory_bytes": {
+                QUANTITY: "bytes",
+                "description": "Memory the host reported, which the "
+                               "memory ceiling is computed against."},
+        }},
+    }}
+
+
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
         QUESTION: 'Do the two planes agree about the clock?', RAIL: 'prove',
@@ -2357,25 +2409,7 @@ _ANALYZE_HINTS = {
                 "description": "Tasks where the disagreement is large enough "
                                "to matter."},
         }},
-    "run_instance": {
-        QUESTION: 'Which capture is this?', RAIL: 'raw',
-        "properties": {
-            "started_at_us": {
-                INLINE: "name",
-                QUANTITY: "duration_us",
-                "description": "When the capture began, as microseconds "
-                               "since the epoch. A point in time rather "
-                               "than a span - the unit is the same and "
-                               "the reading is not."},
-            "host_manifest": {"properties": {
-                "cpu_count": {
-                    QUANTITY: "count",
-                    "description": "Cores the host reported, which the CPU ceiling is computed against."},
-                "memory_bytes": {
-                    QUANTITY: "bytes",
-                    "description": "Memory the host reported, which the memory ceiling is computed against."},
-            }},
-        }},
+    "run_instance": _RUN_INSTANCE_HINT,
     "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
     "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
     "capacity_recommendation": {
@@ -3733,6 +3767,36 @@ for _table, _node in list(_STRUCTURAL_TABLES.items()) + list(_SIGNALS_TABLES.ite
     _rail, _question = _LIFTED_HINTS[_key]
     _ANALYZE_HINTS[_key] = {QUESTION: _question, RAIL: _rail, **_node}
 
+# `UX-404`: the seven figures a compared run states about itself.
+#
+# `baseline`, `candidate` and `deltas` publish the same members
+# `floors` does, and `compare/v2` declared none of them - so
+# `efficiency_score`, `occupancy_share`, `lb`, `t_c`,
+# `t_infinity_observed` and `certified_headroom` reached a reader of a
+# comparison with no unit, while the identical numbers in `analyze/v4`
+# were fully declared. Read off the analyze hints rather than restated,
+# because two copies of a unit is how `UX-341` got two units for one
+# number.
+_COMPARED_SIDE = {
+    key: _ANALYZE_HINTS["floors"]["properties"][key]
+    for key in ("t_infinity_observed", "lb", "certified_headroom", "t_c",
+                "efficiency_score", "occupancy_share")
+}
+_COMPARED_SIDE["total_duration_us"] = {
+    QUANTITY: "duration_us",
+    "description": "This run's wall-clock makespan - the figure every "
+                   "floor beside it is judged against."}
+
+#: How sure the verdict is, on each side. A fraction of 1, like every
+#: other bounded fraction the tool publishes (`UX-341`).
+_CONFIDENCE = {
+    QUANTITY: "share",
+    "description": "How much of this run the comparison could see - the "
+                   "share of its elements that carry what the verdict is "
+                   "computed from. A verdict over a partly-read run is "
+                   "still a verdict, and says how partly."}
+
+
 _COMPARE_HINTS = {
     # UX-221: which elements the run's verdict is actually about.
     "element_deltas": {
@@ -3754,6 +3818,8 @@ _COMPARE_HINTS = {
                                "left implicit: no per-element noise band "
                                "exists, so no row's verdict rests on one."},
             "counts": {
+                # `UX-404`: five counts, none of them declared.
+                "additionalProperties": {QUANTITY: "count"},
                 "description": "How many elements grew, shrank, stayed "
                                "put, appeared and disappeared - the shape "
                                "of the change before any single row."},
@@ -3818,7 +3884,62 @@ _COMPARE_HINTS = {
             },
         },
     },
+    "baseline": {"properties": _COMPARED_SIDE},
+    "candidate": {"properties": _COMPARED_SIDE},
+    "baseline_confidence": _CONFIDENCE,
+    "candidate_confidence": _CONFIDENCE,
+    "cache_churn": {
+        "properties": {
+            "comparable_elements": {
+                QUANTITY: "count",
+                "description": "Elements present in both runs with a cache "
+                               "key on each side - the population every "
+                               "count below is out of."},
+            "unchanged_keys": {
+                QUANTITY: "count",
+                "description": "Of those, the ones whose cache key did not "
+                               "move."},
+            "changed_keys": {
+                QUANTITY: "count",
+                "description": "Of those, the ones whose cache key did."},
+            "rebuilt_in_both_count": {
+                QUANTITY: "count",
+                "description": "Elements that rebuilt in both runs."},
+            "rebuilt_in_both_us": {
+                QUANTITY: "duration_us",
+                "description": "What those rebuilds cost, summed over the "
+                               "candidate run."},
+            "churned_count": {
+                QUANTITY: "count",
+                "description": "Elements that rebuilt in both runs with an "
+                               "unchanged key - work the cache should have "
+                               "served."},
+            "wasted_rebuild_us": {
+                QUANTITY: "duration_us",
+                "description": "What that churn cost. The number this "
+                               "block exists to put a figure on."},
+        },
+    },
     "element_diff": {
+        "properties": {
+            "baseline_element_count": {
+                QUANTITY: "count",
+                "description": "Elements the baseline run had, so a change in "
+                               "the count reads beside the two lists above."},
+            "candidate_element_count": {
+                QUANTITY: "count",
+                "description": "Elements the candidate run had, against which "
+                               "the appeared and removed lists balance."},
+            "baseline_path_us": {
+                QUANTITY: "duration_us",
+                "description": "The baseline's critical path, the duration "
+                               "the candidate's is judged against."},
+            "candidate_path_us": {
+                QUANTITY: "duration_us",
+                "description": "The candidate's, so a path that moved is "
+                               "readable beside the elements that moved "
+                               "it."},
+        },
         QUESTION: 'What did this change add or remove?',
         RAIL: 'investigate',
         "description": "The elements this change introduced, removed, or "
@@ -3857,6 +3978,10 @@ _COMPARE_HINTS = {
                 QUANTITY: "ratio",
                 "description": "Change in the gate's ratio - the figure "
                                "`--fail-on` thresholds are read against."},
+            # `UX-404`: the six that came across from the sides and had
+            # no declaration on either. A delta is in the unit of the
+            # thing it is a delta of.
+            **_COMPARED_SIDE,
         },
     },
     "attribution_deltas": {
@@ -3997,6 +4122,56 @@ _STORE_AGGREGATE_REQUIRED = {
 # UX-234: one distribution's shape. Declared once and referenced from
 # every figure, because a reader who has learned `duration_us` has
 # learned `cache_hit_rate` too.
+def _store_distribution(quantity):
+    """One distribution's shape, in the unit of the figure it is over.
+
+    `UX-404`: this object appeared five times per class and five more
+    on the blend, and every leaf inside it - `min`, `median`, `p95`,
+    `max`, `mad` - reached a reader with no unit at all. There was
+    nowhere to say what they were: the unit belongs to the *figure*
+    (`duration_us`, `snapshot_bytes`, ...) and the shape is shared, so
+    one constant could not carry it. Taking the figure's quantity as an
+    argument is what lets the shared shape stay shared.
+
+    `samples` is a count in every one of them, and `mad` is in the same
+    unit as the figure - a median absolute deviation of microseconds is
+    microseconds.
+    """
+    return {**_DISTRIBUTION,
+            "properties": {
+                "samples": {
+                    QUANTITY: "count",
+                    "description": "Finished runs this distribution was "
+                                   "computed from, after exclusions."},
+                "min": {
+                    QUANTITY: quantity,
+                    "description": "The lowest figure any of those runs "
+                                   "recorded - a value a build really "
+                                   "took, not a fitted bound."},
+                "median": {
+                    QUANTITY: quantity,
+                    "description": "The middle figure: half the runs came "
+                                   "in under it. The number to quote when "
+                                   "one number is wanted."},
+                "p95": {
+                    QUANTITY: quantity,
+                    "description": "Nearest-rank 95th percentile - the "
+                                   "value at index ceil(0.95*n)-1 of the "
+                                   "sorted samples, so it is a figure a "
+                                   "build actually took."},
+                "max": {
+                    QUANTITY: quantity,
+                    "description": "The worst figure recorded. Read with "
+                                   "`samples`: one bad run in three is a "
+                                   "different claim from one in thirty."},
+                "mad": {
+                    QUANTITY: quantity,
+                    "description": "Median absolute deviation, unscaled - "
+                                   "the robust spread, in the same unit "
+                                   "as the figure itself."},
+            }}
+
+
 _DISTRIBUTION = {
     # UX-303: and this *is* a distribution, so it draws as one. The
     # hint names where the sample count lives, which is what lets the
@@ -4092,11 +4267,11 @@ _STORE_AGGREGATE_HINTS = {
                 "runs": {
                     QUANTITY: "count",
                     "description": "Finished runs in this class."},
-                "duration_us": _DISTRIBUTION,
-                "cache_hit_rate": _DISTRIBUTION,
-                "cores_busy": _DISTRIBUTION,
-                "peak_rss_bytes": _DISTRIBUTION,
-                "snapshot_bytes": _DISTRIBUTION,
+                "duration_us": _store_distribution("duration_us"),
+                "cache_hit_rate": _store_distribution("share"),
+                "cores_busy": _store_distribution("count"),
+                "peak_rss_bytes": _store_distribution("bytes"),
+                "snapshot_bytes": _store_distribution("bytes"),
                 "total_bytes": {
                     QUANTITY: "bytes",
                     "description": "What this class's snapshots weigh on disk, "
@@ -4112,6 +4287,19 @@ _STORE_AGGREGATE_HINTS = {
                                    "than publishing a p95 of two "
                                    "samples."},
                 "resource_shortfall": {
+                    "properties": {
+                        "have": {
+                            QUANTITY: "count",
+                            "description": "Runs in this class that do "
+                                           "carry the scalars - zero is "
+                                           "the case this block exists "
+                                           "for."},
+                        "runs": {
+                            QUANTITY: "count",
+                            "description": "Runs in the class, so `have` "
+                                           "reads as a fraction of "
+                                           "something."},
+                    },
                     "description": "Present instead of `cores_busy` and "
                                    "`peak_rss_bytes` when no run in this "
                                    "class carries them. UX-296: the "
@@ -4137,11 +4325,11 @@ _STORE_AGGREGATE_HINTS = {
                 QUANTITY: "count",
                 "description": "How many host classes were mixed. 1 means "
                                "nothing was."},
-            "duration_us": _DISTRIBUTION,
-            "cache_hit_rate": _DISTRIBUTION,
-            "cores_busy": _DISTRIBUTION,
-            "peak_rss_bytes": _DISTRIBUTION,
-            "snapshot_bytes": _DISTRIBUTION,
+            "duration_us": _store_distribution("duration_us"),
+            "cache_hit_rate": _store_distribution("share"),
+            "cores_busy": _store_distribution("count"),
+            "peak_rss_bytes": _store_distribution("bytes"),
+            "snapshot_bytes": _store_distribution("bytes"),
             "total_bytes": {
                 QUANTITY: "bytes",
                 "description": "What every class's snapshots weigh on disk, "
@@ -4350,6 +4538,25 @@ _CORRELATE_OPTIONAL = {
     "attribution_partial": "",
 }
 
+# `UX-404`: one point on the memory envelope - the same three fields
+# whether it is the builder count observed or one projected, so the
+# declaration is written once and read twice.
+_ENVELOPE_POINT = {
+    "builders": {
+        QUANTITY: "count",
+        "description": "The builder count this point is computed for."},
+    "envelope_bytes": {
+        QUANTITY: "bytes",
+        "description": "Memory this many concurrent builders would need, "
+                       "bounded by the elements whose peak was measured."},
+    "share_of_host": {
+        QUANTITY: "share",
+        "description": "That envelope against the memory the host "
+                       "reported. Above 1 is a projection the host "
+                       "cannot hold."},
+}
+
+
 _CORRELATE_HINTS = {
     "elements": {
         QUESTION: 'What does each element look like from both planes?',
@@ -4388,6 +4595,12 @@ _CORRELATE_HINTS = {
                 QUANTITY: "count",
                 "description": "Elements the process capture saw inside. "
                                "Fewer whenever a capture was partial."},
+            # `UX-404`: `analyze/v4` declared this and the join did not,
+            # over the same number.
+            "aggregating_dependency_pairs": {
+                QUANTITY: "count",
+                "description": "Dependency pairs where one element's "
+                               "measurement includes another's."},
         },
     },
     "ranking": {
@@ -4432,9 +4645,15 @@ _CORRELATE_HINTS = {
                 "description": "The heaviest single element measured. One "
                                "builder must fit this no matter how few "
                                "builders run."},
+            # `UX-404`: the envelope's own three numbers, at the builder
+            # count this run really used and at each projected one. The
+            # block above declared the *inputs* and left the answers
+            # undeclared, which is the half a reader actually quotes.
+            "at_observed_builders": {"properties": _ENVELOPE_POINT},
+            "projections": {"items": {"properties": _ENVELOPE_POINT}},
         },
     },
-    "run_instance": {QUESTION: 'Which capture is this?', RAIL: "raw"},
+    "run_instance": _RUN_INSTANCE_HINT,
 }
 
 

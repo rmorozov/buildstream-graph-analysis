@@ -304,6 +304,13 @@ export function toc(root, { document: doc, controls } = {}) {
       const section = root.querySelector?.(`[data-section="${key}"]`);
       link.textContent = section?.getAttribute?.("data-toc-label")
         || label(key);
+      // `UX-388`: a section that came back empty is still in the map,
+      // and says so there. Before this it was not in the document at
+      // all, so the rail was a list of what happened to be non-empty on
+      // this run and a reader comparing two runs had nothing to compare.
+      if (section?.getAttribute?.("data-empty") === "true") {
+        link.setAttribute("data-empty", "true");
+      }
       item.append(link);
       // UX-271: one level of nesting, so the rail stops being a flat
       // list of 30+ entries.

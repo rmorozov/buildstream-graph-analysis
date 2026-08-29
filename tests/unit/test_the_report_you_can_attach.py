@@ -371,7 +371,18 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #     page            269,531 -> 271,453   (+1,922, source)
 #     golden          365,080 -> 367,002
 #     macro_micro     417,911 -> 419,833
-PAGE_BUDGET_B = 273_000
+# `UX-388` moved the page half by a further 1,266 B, again **all
+# source**: an empty population now renders its heading and one line
+# instead of vanishing, so the renderer gained the branch and the
+# stylesheet two rules. The data half is unchanged at 95,549 B (golden)
+# and 148,380 B (macro_micro) - nothing was added to any payload; what
+# changed is that three of golden's keys and two of macro_micro's now
+# reach a reader at all.
+#
+#     page            271,453 -> 272,719   (+1,266, source)
+#     golden          367,002 -> 368,268
+#     macro_micro     419,833 -> 421,099
+PAGE_BUDGET_B = 274_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -425,7 +436,7 @@ COMMITTED_EXPORTS = [
     # `UX-399` moved this one by 1,922 B, all of it **source** - the
     # scrollspy and the two stylesheet rules; see the note on
     # `PAGE_BUDGET_B` above for what they buy and what they cost.
-    ("golden", GOLDEN, 368_000),                       #  367,002 B
+    ("golden", GOLDEN, 370_000),                       #  368,268 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -460,7 +471,7 @@ COMMITTED_EXPORTS = [
     # the half an export is supposed to be made of.
     # `UX-399` moved this one by the same 1,922 B of source as golden:
     # the page half is one file and both exports carry all of it.
-    ("macro_micro", MACRO_MICRO, 421_000),             #  419,833 B
+    ("macro_micro", MACRO_MICRO, 422_000),             #  421,099 B
 ]
 
 

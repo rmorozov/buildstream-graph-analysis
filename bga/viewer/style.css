@@ -336,6 +336,14 @@ body[data-has-toc] > .toc ul[data-rail="elements"] {
 }
 .toc a { font-size: .88rem; text-decoration: none; }
 .toc a:hover, .toc a:focus { text-decoration: underline; }
+/* UX-388: a population that came back empty. Muted and marked in the
+   rail, and one line in the document - the section is present so a
+   reader can tell "the analysis found none" from "this version does not
+   compute it", which is the whole item. No tone: §4's emphasis budget
+   is for findings, and an empty section is the absence of one. */
+.toc a[data-empty]::after { content: " \2014 none"; color: var(--muted); }
+p.empty-population { margin: .35rem 0 0; color: var(--muted); max-width: 62ch; }
+
 /* UX-399: where the reader is. Weight and a marker rather than a tone -
    §4's emphasis budget is spent on findings, and "you are here" is
    orientation, not severity. The marker is what carries it where color

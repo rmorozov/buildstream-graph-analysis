@@ -1,6 +1,6 @@
 # UX-388: an empty population disappears without a word
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-107 ("nobody could look" is not "looked and found nothing"), UX-286 (the report has chapters), UX-320 (the page conforms to its sections) | **Serves:** anyone reading the report of an incremental build | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done Done | **Depends on:** UX-107 ("nobody could look" is not "looked and found nothing"), UX-286 (the report has chapters), UX-320 (the page conforms to its sections) | **Serves:** anyone reading the report of an incremental build | **Topic:** viewer
 
 ## Motivation
 
@@ -89,3 +89,106 @@ shell.
 - The terminal report. `bga analyze` already prints a sentence for
   most empty blocks; a comparison of the two vocabularies is `UX-329`
   territory.
+
+## Outcome (round 65, 2026-08-29) — 🟢 Done
+
+### After, on the two committed fixtures
+
+```text
+                         before   after   sections now marked empty
+golden                       44      47   consolidation_candidates,
+                                          serialization_point_risks, violations
+macro_micro                  64      66   consolidation_candidates, violations
+rail entries (golden)        44      47
+```
+
+Every one of those was invisible before — not folded, not stubbed:
+absent from the document, and therefore absent from the rail, so the
+map of the report described whatever happened to be non-empty on this
+run.
+
+### The rule: the contract decides, not the value
+
+```text
+[] or {} on a declared collection   -> a section, marked empty
+null on a declared collection       -> a section, marked empty
+null on a declared scalar           -> nothing, as before
+an empty value with no schema node  -> nothing, as before
+a key the payload does not carry    -> nothing, as before
+```
+
+The `null` row is load-bearing and was nearly missed. `joint_saving` is
+`None` — not `{}` — when its input set is empty
+(`bga/analyzer.py:1799`), so a rule that looked only at `[]` would have
+left one of the six sections the round found still vanishing. And a rule
+that rendered every `null` would have put a heading over every unset
+scalar in the payload; `section: null` is a declared **string** and has
+never been a section.
+
+### What this section deliberately does not do
+
+The Required Fix asks for the heading, **the schema sentence**, and one
+line. The sentence is not here. `UX-346` made the rule that a
+description renders beside its value only where the contract declares it
+inline, and `UX-317` that every described value carries a `?` marker; a
+`<p class="description">` under a heading satisfies neither. The first
+version did it anyway and reddened four clauses across
+`test_a_sentence_lives_on_its_door.py` and
+`test_apparatus_in_its_place.py`. The rule is older and better argued
+than the convenience, so the sentence stays where the rule puts it, and
+a clause of this item's own guard now holds it out.
+
+### Mutations verified red and reverted (5)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `return null` for every empty value — the defect | six of nine clauses (6 failed, 3 passed) |
+| A2 | the contract check dropped: every empty value is a section | the two absent-stays-absent clauses (2 failed, 7 passed) |
+| A3 | the heading renders and the "found none" line does not | the says-so-in-words clause (1 failed, 8 passed) |
+| A4 | `data-empty` is not set | the rail clause and two others (3 failed, 6 passed) |
+| A5 | a `null` collection vanishes again | the joint-saving clause (1 failed, 8 passed) |
+
+**Two of these did not discriminate on their first run**, and the fix
+was to the probe rather than to the count. A2 and A5 originally killed
+the harness — `JSON.stringify` on a DOM node is a circular structure —
+so the mutation "went red" by crashing rather than by failing a clause
+that says what is wrong. The two fields the mutations turn into nodes
+are now serialised as booleans, and A2 reddens two named clauses. A5's
+first form also crashed the *renderer* (a `null` falling through to code
+that dereferences it), which is a real fact about the mutation and not
+about the guard; the recorded A5 is the honest one — the null branch
+restored to `return null`, which is exactly the code this item replaced.
+
+### Deviation from the Required Fix
+
+- **No schema sentence in the empty section**, for the reason above. The
+  heading, the rail entry and the line all landed.
+- **The payload needed no change.** The Required Fix says "if
+  `analyze/v4` cannot tell 'computed, empty' from 'not computed', that
+  is the half that belongs in the contract". Measured: it already can —
+  `optimization_horizon: []` is present-and-empty and
+  `consolidation_candidates` is absent on a run that does not compute
+  it. The viewer was dropping a distinction the contract already made.
+
+### The export, split
+
+```text
+                page half     data half (golden / macro_micro)
+before           271,453        95,549 / 148,380
+after            272,719        95,549 / 148,380
+                  +1,266              unchanged
+```
+
+All source. Nothing was added to any payload; what changed is that
+three of golden's keys and two of macro_micro's now reach a reader.
+`PAGE_BUDGET_B` 273,000 → 274,000 and both export bounds restated with
+that split.
+
+### Verification
+
+```text
+pytest tests/unit/test_an_empty_population_says_so.py           9 passed
+pytest tests/unit/test_the_report_you_can_attach.py            24 passed
+make test                       4,995 passed, 26 skipped, 245.2s
+make lint                                                       clean
+```

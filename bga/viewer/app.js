@@ -298,6 +298,13 @@ export const DRAWN_ELSEWHERE = {
     + "field arrives at one of those two except "
     + "`recommendations[].id`, which is a slug used as a key and never "
     + "shown, the way `next_steps[].id` is not shown",
+  attribution_hints: "drawn on the row of the bucket it explains, which "
+    + "`attribution` names through `bga:explained_by` (`UX-390`). The two "
+    + "keys are the same eight bucket names, so a section each was one "
+    + "population in two chapters - the number in one and the sentence "
+    + "explaining it in another - which is `UX-288`'s rule at section "
+    + "level. Every hint present before the merge is reachable after it, "
+    + "on the row it belongs to",
 };
 
 /**

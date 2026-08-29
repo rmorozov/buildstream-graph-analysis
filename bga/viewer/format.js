@@ -71,6 +71,34 @@ export const INLINE = "bga:inline";
 // element are different rows - so it stays as the row's `data-key` and
 // what changes is only what is shown.
 export const KEYED_BY = "bga:keyed_by";
+
+/**
+ * `UX-390`: the payload key holding this map's per-key advice.
+ *
+ * Declared, never sniffed. A page that looked for `<key>_hints` would
+ * be the name-guessing `UX-201` removed, and the two sentences a bucket
+ * carries are different things: the schema's `description` says what
+ * the bucket is, this says what to do about it **on this run**.
+ */
+export const EXPLAINED_BY = "bga:explained_by";
+
+/**
+ * `UX-390`: the run's advice about one key of an explained map.
+ *
+ * `attribution` and `attribution_hints` were the same eight bucket
+ * names in two `<h2>` sections - a number in one chapter, the sentence
+ * explaining it in another, and nothing in either saying they were the
+ * same eight things (`UX-288`'s rule at section level). The contract
+ * names where the advice lives, so the renderer draws it without
+ * knowing which map it is looking at, and the hints key is
+ * `DRAWN_ELSEWHERE`: one section rather than two.
+ *
+ * `""` for anything else, so a caller can test it directly.
+ */
+export function adviceFor(payload, hint, name) {
+  const said = (payload?.[hint?.[EXPLAINED_BY]] ?? {})[name];
+  return typeof said === "string" ? said : "";
+}
 export const KEYED_BY_TASK_UID = "task_uid";
 
 /**
@@ -425,7 +453,8 @@ export function hintsOf(node) {
   if (!node || typeof node !== "object") return hint;
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
                       RAIL, PRESETS, SERIES, DISTRIBUTION, INLINE,
-                      DECOMPOSITION, INTERVAL, KEYED_BY]) {
+                      DECOMPOSITION, INTERVAL, KEYED_BY,
+                      EXPLAINED_BY]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;

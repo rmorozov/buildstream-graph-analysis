@@ -382,7 +382,22 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #     page            271,453 -> 272,719   (+1,266, source)
 #     golden          367,002 -> 368,268
 #     macro_micro     419,833 -> 421,099
-PAGE_BUDGET_B = 274_000
+# `UX-390` moved it by 954 B, all **source**, and this is the first
+# rise since `UX-360`'s volume budget that buys a page which is
+# *smaller* to read: `attribution` and `attribution_hints` were the
+# same eight bucket names in two `<h2>` sections, and they are now one.
+# The bytes are `bga:explained_by` in `format.js` with its rationale,
+# the row rendering in `structured.js`, the `DRAWN_ELSEWHERE` entry,
+# and four lines of CSS. The data half is unchanged - 18,786 B
+# (golden) and 74,119 B (macro_micro) either side - because nothing was
+# added to any payload; what changed is where two published keys are
+# drawn. Neither companion guard spoke: every added byte is a
+# checked-in module, and 954 B does not resemble a vendored library.
+#
+#     page            273,635 -> 274,589   (+954, source)
+#     golden          373,214 -> 374,209
+#     macro_micro     428,547 -> 429,542
+PAGE_BUDGET_B = 276_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -467,7 +482,8 @@ COMMITTED_EXPORTS = [
     # Not one byte of source: the blocks render through the machinery
     # that was already there, which is `UX-193`'s property and the
     # reason a schema addition costs no viewer change.
-    ("golden", GOLDEN, 374_000),                       #  373,214 B
+    # `UX-390`: +995 B, all source; see the note on `PAGE_BUDGET_B`.
+    ("golden", GOLDEN, 376_000),                       #  374,209 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -506,7 +522,8 @@ COMMITTED_EXPORTS = [
     # 2,212 of contract, 838 of data (this run has the chain), 295 of
     # source.
     # `UX-389`: +3,380 B, split in the note above the golden bound.
-    ("macro_micro", MACRO_MICRO, 430_000),             #  428,547 B
+    # `UX-390`: +995 B, all source.
+    ("macro_micro", MACRO_MICRO, 432_000),             #  429,542 B
 ]
 
 
@@ -840,7 +857,11 @@ class TestTheSizeDiscipline:
         import inspect
 
         _code, _contract, run_data = self._weigh(tmp_path)
-        implied = run_data / 2.5
+        # `UX-390`: 2.4, matching the clause below. This number is a
+        # *copy* of the ratio's constant and always was - it exists so
+        # the two ceilings cannot drift apart silently, which means it
+        # moves whenever that one does.
+        implied = run_data / 2.4
         assert implied >= PAGE_BUDGET_B, (
             f"the ratio clause permits a page of {implied:,.0f} B while "
             f"PAGE_BUDGET_B permits {PAGE_BUDGET_B:,} B - the ratio is "
@@ -1027,10 +1048,19 @@ class TestTheSizeDiscipline:
         # 2.5 x 265,000 = 662,500, with 22,827 B to spare. This is a
         # restatement, and the reason is not that the page grew - it is
         # that the bound was two bounds and this was the wrong one.
-        assert run_data > 2.5 * PAGE_BUDGET_B, (
+        #
+        # `UX-390`: 2.4. `PAGE_BUDGET_B` rose to 276,000 B and the
+        # largest round number the claim still carries against the
+        # *permitted* page is 2.4 - measured, 686,497 B of data against
+        # 2.4 x 276,000 = 662,400, with 24,097 B to spare. That is the
+        # procedure the paragraph above sets out, applied: the number
+        # follows the backstop rather than the backstop being trimmed
+        # to fit a ratio nobody argued, and `UX-367`'s clause below
+        # holds the two from becoming two ceilings again.
+        assert run_data > 2.4 * PAGE_BUDGET_B, (
             f"{run_data} B of this run's data against a page permitted "
             f"{PAGE_BUDGET_B} B ({run_data / PAGE_BUDGET_B:.3f}x, bound "
-            f"2.5x) - Direction 7's rule is that the data is what an "
+            f"2.4x) - Direction 7's rule is that the data is what an "
             f"export weighs, and at this scale it should not be close. "
             f"The page here measures {code} B and the embedded contract "
             f"{contract} B, which this ratio deliberately does not "

@@ -152,13 +152,58 @@ MEDIUM_FLOOR_S = 1.0
 # parallel    (23.8, 35.5)                33.0
 # 1 proc      (21.4, 28.8)                27.0
 # ```
-SMALL_TIER_CI_SLOW_S = 23.8       # parallel, `-n auto`, slowest seen
-SMALL_TIER_CI_FAST_S = 20.5       # parallel, fastest seen
-SMALL_TIER_CI_SLOW_1P_S = 21.4    # single process, slowest seen
-SMALL_TIER_CI_FAST_1P_S = 13.8    # single process, fastest seen
+#
+# **Re-measured 2026-08-29, on all four interpreters of one CI run**
+# (round 61, PR #177). The figures above were taken at `UX-363`'s own
+# landing; the tier has since grown from 2,486 tests to 2,595, and the
+# single-process step hit `timeout 27` on `test (3.9)` - killed with
+# the last file at 100%, so its true figure is above 27.0 and unknown.
+# Every number below is one green step's own summary line:
+#
+# ```text
+#          parallel (33)   1 proc (27)
+# 3.9          25.23        killed at 27.0
+# 3.10         25.85          25.83
+# 3.11         23.91          23.13
+# 3.12         17.34          17.03
+# ```
+#
+# Two things that table says, beyond the failure that produced it.
+#
+# **The two steps now cost the same.** The comment in `ci.yml` has the
+# single-process step as the faster of the two - 13.8-21.4s against
+# 20.5-23.8s, "on a two-core runner four workers cost more than they
+# save". On this run they are within a second of each other on every
+# interpreter and `-n auto` is the *slower* of the pair each time. The
+# premise held when the tier was 2,486 sub-second tests; it does not
+# now, and the two budgets are correspondingly close rather than six
+# seconds apart.
+#
+# **The window is closing, and it is arithmetic rather than bad luck.**
+# `slowest < budget < fastest + LARGE_FLOOR_S` has a solution only
+# while `slowest - fastest < LARGE_FLOOR_S`, and the spread between the
+# slowest and fastest interpreter is now 8.8s of a 15.0s floor. It is
+# the *spread*, not the total, that closes this: the small tier can
+# grow for a long time yet, but the day 3.9 and 3.12 are fifteen
+# seconds apart no budget satisfies both halves and the guard has to be
+# stated per interpreter instead. Written down here so the round that
+# meets it recognises it.
+#
+# ```text
+#             window                    chosen
+# parallel    (25.85, 32.34)              31.0
+# 1 proc      (27.0,  32.03)              30.0
+# ```
+SMALL_TIER_CI_SLOW_S = 25.85      # parallel, `-n auto`, slowest seen (3.10)
+SMALL_TIER_CI_FAST_S = 17.34      # parallel, fastest seen (3.12)
+# A floor, not a measurement: `test (3.9)` was killed at this value
+# with the run at 100%, so the figure this constant wants is somewhere
+# above it. The next green run on 3.9 supplies the real one.
+SMALL_TIER_CI_SLOW_1P_S = 27.0    # single process, slowest seen (3.9)
+SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
 
-SMALL_TIER_BUDGET_S = 33.0        # the `-n auto` step's timeout
-SMALL_TIER_BUDGET_1P_S = 27.0     # the single-process step's timeout
+SMALL_TIER_BUDGET_S = 31.0        # the `-n auto` step's timeout
+SMALL_TIER_BUDGET_1P_S = 30.0     # the single-process step's timeout
 
 # **Do not re-size these against a local run.** Falsifying them here,
 # with the smallest `LARGE` file (16.4s) moved into the default tier,
@@ -167,8 +212,8 @@ SMALL_TIER_BUDGET_1P_S = 27.0     # the single-process step's timeout
 #
 # ```text
 #                        local        on CI at its fastest
-# parallel   8.5 + 16.4 = 24.9s  <33   20.5 + 16.4 = 36.9s  >33   caught
-# 1 proc    21.7 + 16.4 = 38.1s  >27   13.8 + 16.4 = 30.2s  >27   caught
+# parallel   8.5 + 16.4 = 24.9s  <31   17.34 + 16.4 = 33.7s >31   caught
+# 1 proc    23.9 + 16.4 = 40.3s  >30   17.03 + 16.4 = 33.4s >30   caught
 # ```
 #
 # The single-process budget is falsifiable on a dev machine because

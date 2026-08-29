@@ -245,6 +245,12 @@ class TestTheServedPageCarriesBoth:
         """Not just that the control exists: the SQL under it asks
         about what it says."""
         out = looked["with_timeline"]
+        # Named before it is used: with no population the picker's
+        # value is `null`, and `None in str` is a TypeError rather than
+        # a sentence about what went wrong.
+        assert isinstance(out["chosen"], str) and out["chosen"], (
+            f"the picker chose nothing, so no query can be aimed: "
+            f"{out['chosen']!r}")
         asking = [sql for sql in out["sql"] if out["chosen"] in sql]
         assert asking, (
             f"the picker says {out['chosen']!r} and no query asks about it")

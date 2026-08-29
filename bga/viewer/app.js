@@ -20,10 +20,11 @@
 import { served, safeStorage } from "./primitives.js";
 import { QUANTITY, SEVERITY, COLUMNS, SERIES, DISTRIBUTION, INLINE,
          DECOMPOSITION, INTERVAL, bytes,
-         childNode, cssId, el, guessQuantity, heading, hintsOf, quantity,
-         quantityFor, sectionHead, title } from "./format.js";
+         childNode, cssId, describedTerm, el, guessQuantity, heading,
+         hintsOf, quantity, quantityFor, sectionHead,
+         title } from "./format.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, OBJECT_INLINE_FIELDS,
-         LIFTED_SECTION, describedTerm, liftedCriticalPath, renderPairs,
+         LIFTED_SECTION, liftedCriticalPath, renderPairs,
          renderStructured,
          renderTable } from "./structured.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,

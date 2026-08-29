@@ -336,6 +336,10 @@ body[data-has-toc] > .toc ul[data-rail="elements"] {
 }
 .toc a { font-size: .88rem; text-decoration: none; }
 .toc a:hover, .toc a:focus { text-decoration: underline; }
+/* UX-391: what the task uid says besides the element name. Muted and
+   small - it is a qualifier on a name, not a second name. */
+.task-qualifier { font-size: .85em; font-weight: normal; }
+
 /* UX-388: a population that came back empty. Muted and marked in the
    rail, and one line in the document - the section is present so a
    reader can tell "the analysis found none" from "this version does not

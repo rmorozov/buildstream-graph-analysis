@@ -290,6 +290,22 @@ SERIES_MIN_POINTS = 3
 # which rows would be two answers to one question, which is the defect
 # `UX-288` had just finished removing from the payload.
 PRESETS = "bga:presets"
+
+KEYED_BY = "bga:keyed_by"          # what the map's own keys are
+
+#: The one value `KEYED_BY` takes today. A task uid is
+#: `element|kind|phase|attempt` (`bga/ingest/models.py`'s `TaskKey`), and
+#: it is right as an *identity* - a retry and a fetch of one element are
+#: different rows - and wrong as a *label*: `UX-391` measured
+#: `codegen.bst|BUILD|BUILD|0` printed verbatim as a row name, so a
+#: reader searching the page for `codegen.bst` did not match it.
+#:
+#: `UX-374` established that a published key renders as it was
+#: published. This is the exception that proves it: the key is still
+#: published verbatim as the row's identity, and what the reader sees is
+#: the part of it that is a name.
+KEYED_BY_TASK_UID = "task_uid"
+
 PRESET_DIRECTIONS = ("asc", "desc")
 # The acceptance bound `UX-289` was filed with: a table that needs more
 # than this to answer one question is not a view of the data, it is the
@@ -1980,6 +1996,10 @@ _SIGNALS_TABLES = {
     "wall_clock_share_us": {
         INLINE: "name",
         QUANTITY: "duration_us",
+        # `UX-391`: the keys are task uids, not element names. Declared
+        # rather than sniffed - the page cannot tell `a.bst|BUILD|BUILD|0`
+        # from a binary called that without being told.
+        KEYED_BY: KEYED_BY_TASK_UID,
         "additionalProperties": {
             QUANTITY: "duration_us",
             "description": "The wall-clock this task alone is "

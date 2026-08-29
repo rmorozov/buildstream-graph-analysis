@@ -62,6 +62,28 @@ DATA_KEYED = (
     ("downstream_count", ("elements",)),
 )
 
+def _is_the_given_name(row):
+    """Is what the reader sees a name they gave, verbatim?
+
+    Usually that means the shown text *is* the key. `UX-391` added the
+    one exception the rule always needed: a **composite** key. A task uid
+    is `element|kind|phase|attempt`, and printing it whole was the defect
+    - a reader searching for `codegen.bst` did not match
+    `codegen.bst|BUILD|BUILD|0`. So a key the schema declares as a
+    composite (`bga:keyed_by`) satisfies this rule by showing one of its
+    components verbatim, with the whole key kept in `data-key`.
+
+    Deliberately narrow: the shown text must be a **field** of the key,
+    split on the delimiter - not a prefix, not a substring. `base` for
+    `base.bst|...` would still be a rename, and so would any humanised
+    form of the field.
+    """
+    key, shown = row["key"], row["shown"]
+    if shown == key:
+        return True
+    return "|" in key and shown in key.split("|")
+
+
 #: A schema key that must still read as English, and what it must read
 #: as. Two of them, because one could be satisfied by an accident.
 HUMANISED = {"element_durations": "Element durations",
@@ -138,7 +160,7 @@ class TestADataKeyIsRenderedAsPublished:
         if not data:
             pytest.skip(f"{label} publishes none of the data-keyed maps")
         renamed = [row for row in looked[label]["seen"]
-                   if row["key"] in data and row["shown"] != row["key"]]
+                   if row["key"] in data and not _is_the_given_name(row)]
         assert renamed == [], (
             f"{label}: the page renamed {len(renamed)} of the reader's own "
             f"names, e.g. {renamed[:3]}")

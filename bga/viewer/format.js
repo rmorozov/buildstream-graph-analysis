@@ -58,6 +58,46 @@ export const PRESETS = "bga:presets";
 // *do* with the number.
 export const INLINE = "bga:inline";
 
+// `UX-391`: what a map's own keys *are*, where they are not names.
+//
+// `UX-374` made a published key render verbatim, which is right for an
+// element uid and a binary name and wrong for a **task** uid:
+// `codegen.bst|BUILD|BUILD|0` went to the reader as a row label, so a
+// reader searching the page for `codegen.bst` did not match the row and
+// a reader reading it had to know the tool's key format to see that
+// three of the four fields are `BUILD`, `BUILD`, `0`.
+//
+// The composite is right as identity - a retry and a fetch of one
+// element are different rows - so it stays as the row's `data-key` and
+// what changes is only what is shown.
+export const KEYED_BY = "bga:keyed_by";
+export const KEYED_BY_TASK_UID = "task_uid";
+
+/**
+ * What a map's key should *show*, given the map's own declaration.
+ *
+ * `null` where the key is a name already, which is every map but one -
+ * so the call site is one branch rather than a rule restated there.
+ */
+export function keyAsShown(name, hint = {}) {
+  return hint[KEYED_BY] === KEYED_BY_TASK_UID ? taskUid(name) : null;
+}
+
+/** `element|kind|phase|attempt` split into a name and a qualifier. */
+export function taskUid(key) {
+  const parts = String(key).split("|");
+  if (parts.length < 4) return { element: String(key), qualifier: null };
+  const [element, kind, phase, attempt] = parts;
+  // The qualifier says what is *not* the element, and drops what would
+  // be noise: `BUILD|BUILD|0` is one BUILD task, first attempt, and
+  // printing all three tells the reader nothing they did not have.
+  const said = [];
+  if (phase && phase !== kind) said.push(phase);
+  said.push(kind);
+  if (attempt && attempt !== "0") said.push(`attempt ${attempt}`);
+  return { element, qualifier: said.join(", ") };
+}
+
 const RAIL = "bga:rail";
 
 const ROLE = "bga:role";
@@ -264,6 +304,78 @@ export function sectionHead(key, hint = {}) {
   return node;
 }
 
+// `UX-391` moved this here from `structured.js`. It is a *label* -
+// the term, its sentence and the `?` door - and every other label
+// mechanism (`title`, `heading`, `sectionHead`) already lives in this
+// module; `structured.js` was at `UX-337`'s 1,500-line ceiling and a
+// label branch was the wrong thing to spend the last lines on. Nothing
+// about the function changed, and `el`/`title` are both local here, so
+// the move adds no import edge (`bga/viewer` stays acyclic).
+/**
+ * `UX-317` (styleguide §2b.3): **a described value shows its
+ * affordance.**
+ *
+ * `UX-201` sourced the "why does this number matter" sentence from the
+ * schema and put it in a `title`, where discovery is hover archaeology:
+ * the reader who does not know to hover never learns what
+ * `scheduler_wait` means, and the one who does gets a tooltip they
+ * cannot keep open while comparing two values.
+ *
+ * So the term carries a visible `?`, and the sentence opens **beside
+ * the value** - which is why the description node is built here and
+ * appended to the `<dd>` rather than to the `<dt>`. The `title` stays:
+ * it costs nothing, and it is what a screen reader and a keyboard
+ * focus already read.
+ *
+ * `UX-346`: **and the door has to close.** It did not - `.description`
+ * sets `display`, which beats `[hidden]`'s UA rule, so the sentence
+ * rendered whatever the marker said, and 43% of the golden page's
+ * words were the contract's glossary. The CSS closes it; `inline` is the declared
+ * exception (`bga:inline`, `name` or `caveat`), which keeps its
+ * sentence beside the value and draws no marker at all.
+ *
+ * Returns `{ term, describe }` - the `<dt>`, and the node to put in the
+ * `<dd>`, or `null` when the schema describes nothing.
+ */
+export function describedTerm(name, description, attrs = {}, inline = null,
+                              kind = null, published = false) {
+  // `UX-374`: `published` -> the label *is* `data-key`, verbatim.
+  const term = el("dt", { ...attrs, "data-key": name,
+                          title: description ?? null,
+                          "data-described": description ? "true" : null,
+                          "data-inline": inline ?? null },
+                  title(name, kind, published));
+  if (!description) return { term, describe: null };
+  // UX-346: a declared exception is not behind a door at all. There is
+  // no marker for it either - a `?` beside a sentence already on screen
+  // is the duplication this item was filed on.
+  if (inline) {
+    return { term, describe: el("span", { class: "description",
+                                          "data-role": "description",
+                                          "data-inline": inline,
+                                          "data-describes": name },
+                                description) };
+  }
+  const sentence = el("span", { class: "description",
+                                "data-role": "description",
+                                "data-describes": name, hidden: "" },
+                      description);
+  sentence.hidden = true;
+  const marker = el("button", {
+    type: "button", class: "describe", "data-describe": name,
+    "aria-expanded": "false",
+    // `UX-279`: the control says what it does before it is pressed.
+    title: `What ${title(name, kind, published)} means`,
+  }, "?");
+  marker.addEventListener?.("click", () => {
+    const open = marker.getAttribute("aria-expanded") === "true";
+    marker.setAttribute("aria-expanded", open ? "false" : "true");
+    sentence.hidden = open;
+  });
+  term.append(marker);
+  return { term, describe: sentence };
+}
+
 export function elementColumn(specs = []) {
   const found = specs.find((spec) => spec.role === "element");
   return found ? found.key : null;
@@ -313,7 +425,7 @@ export function hintsOf(node) {
   if (!node || typeof node !== "object") return hint;
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
                       RAIL, PRESETS, SERIES, DISTRIBUTION, INLINE,
-                      DECOMPOSITION, INTERVAL]) {
+                      DECOMPOSITION, INTERVAL, KEYED_BY]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;

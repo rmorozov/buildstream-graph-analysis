@@ -102,6 +102,7 @@ sets equal in both directions.
 | `bga:inline` | that this value's sentence stays beside it rather than behind its `?` — `name` or `caveat` (§4a) | `describedTerm`, which then draws no door |
 | `bga:decomposition` | that a section's numbers are a published total split into published parts, each named by its path | the decomposition bar and its sentence (§2d) |
 | `bga:interval` | that a set of published values compare on one axis, each named by its path | the interval and its sentence (§2d) |
+| `bga:keyed_by` | what a map's own **keys** are, where they are not names — `task_uid` today | the row's label (the element) and its `data-key` (the composite), `UX-391` |
 
 Two properties this table is here to keep. **A hint is a declaration,
 never a guess**: the page reads what the schema says a value is and

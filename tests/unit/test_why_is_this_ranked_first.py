@@ -145,6 +145,37 @@ class TestEveryValueIsTraceable:
             for block in out["blocks"]:
                 assert block["why"], block["element"]
 
+    def test_two_findings_behind_two_actions_keep_their_own_rules(
+            self, payload):
+        """The branch no committed fixture reaches. Every run measured
+        ranks its top actions from one finding, so the `else` above is
+        asserted against a payload built for it: the second action is
+        re-pointed at another *published* claim, which is the shape a
+        report with two ranking rules would have.
+
+        Without this the guard holds one direction on real data and the
+        other on nothing - the gap `UX-368` spent four rounds inside."""
+        import copy
+
+        forked = copy.deepcopy(payload)
+        actions = forked["headline"]["top_actions"]
+        assert len(actions) > 1, "golden ranks one action; nothing to fork"
+        other = next(e["claim"] for e in forked["provenance"]
+                     if e["claim"] != actions[0]["finding_id"]
+                     and e.get("rule", {}).get("sentence"))
+        actions[1]["finding_id"] = other
+        out = _render(forked)
+        assert out["heading"] is False, (
+            "two findings rank these actions and the page still states one "
+            "rule for the list")
+        sentences = [b["why"] for b in out["blocks"]]
+        assert all(sentences), (
+            f"a row lost its own rule with no shared one to fall back on: "
+            f"{sentences}")
+        assert len(set(sentences)) > 1, (
+            f"both rows show the same sentence though they cite different "
+            f"claims: {sentences}")
+
     def test_an_element_no_source_knows_gets_no_block(self):
         """The block renders nothing rather than guessing - the same
         dead-control rule `UX-194` applies to buttons."""

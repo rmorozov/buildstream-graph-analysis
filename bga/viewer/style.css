@@ -514,7 +514,13 @@ input.table-filter { max-width: 100%; }
   }
   body[data-has-toc] > .toc ul { display: flex; }
   body[data-has-toc] > .toc a { display: inline; white-space: normal; }
-  body[data-has-toc] > .toc[data-folded="true"] > :not(.toc-title) {
+  /* `UX-397`: the handoff stays when the rail folds. A folded rail
+     hides its map, which is the point on a phone; hiding the control
+     that opens the trace would make the move a loss for the reader
+     with the least screen, and `UX-282`'s fallback travels inside the
+     same node. */
+  body[data-has-toc] > .toc[data-folded="true"]
+      > :not(.toc-title):not(.actions-group) {
     display: none;
   }
   .toc-title { cursor: pointer; }
@@ -1076,3 +1082,14 @@ p.run-advice {
   font-size: .85em;
   padding: .2rem .3rem;
 }
+
+/* `UX-397`: the Perfetto handoff, in the rail rather than in a header
+   row that scrolls away unused. Narrow, so it wraps rather than
+   widening the rail (`UX-254`'s reading width). */
+.toc .actions-group {
+  margin: .75rem 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: .6rem;
+}
+.toc .actions-group p { margin: .3rem 0; }
+.toc .actions-group button { width: 100%; }

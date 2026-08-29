@@ -501,4 +501,7 @@ MEDIUM = (
     # `UX-393`: three browser boots on `macro_micro` - the walk, the
     # scroll and the keyboard. 8.6s.
     "tests/unit/test_the_rail_takes_a_step.py",                      #    8.6s
+    # `UX-397`: two browser boots - the export scrolled to its end and
+    # a served two-plane snapshot where the button is drawn. 4.6s.
+    "tests/unit/test_the_handoff_rides_the_rail.py",                 #    4.6s
 )

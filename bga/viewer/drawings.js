@@ -543,6 +543,15 @@ function stripTicks(marks, format) {
  * bar - `t_infinity_observed` over a wall clock, which is the shape of
  * "this much of it could not have been shorter".
  */
+/**
+ * `UX-396`: the smallest share of a total that gets its own axis tick.
+ *
+ * Below it two labels land closer together than either is wide, and
+ * an axis of overlapping text says less than no axis at all. The part
+ * is still in the sentence and in the twin table.
+ */
+export const AXIS_TICK_MIN_SHARE = 0.02;
+
 export function decomposition(parts, {
   total = null, format = String, doc = document, label = null,
   grade = undefined, mark = null,
@@ -596,11 +605,28 @@ export function decomposition(parts, {
   }
   wrap.append(drawing);
 
+  // `UX-396`: a tick for every part **the axis has room for**, not for
+  // every part. `attribution` publishes eight buckets and on a clean
+  // run six of them are `0 ms`, so eight labels stacked at three
+  // positions; the two that were left after dropping the zeroes sat
+  // 71 px apart carrying 150 px of text each, and
+  // `test_the_shape_channel_is_built.py` counted both collisions.
+  //
+  // The bound is a *share of the total*, because that is what decides
+  // how far apart two ticks land. Measured on `macro_micro`: the parts
+  // are 93.6%, 5.9% and 0.5%, and 2% is the line that keeps the two a
+  // reader can read and drops the one that has nowhere to go.
+  //
+  // Nothing is lost - a dropped part keeps its place in the sentence
+  // below and in the twin table, which is where §2a says the rows a
+  // reader wants live - and `at` is still summed over *all* the parts
+  // before it, so a tick sits where its part actually starts.
   const ticks = named.map((part, index) => ({
     name: part.key, label: `${part.label} ${format(part.value)}`,
+    share: Number(part.value) / whole,
     at: (named.slice(0, index).reduce(
       (sum, before) => sum + Number(before.value), 0) / whole) * 100,
-  }));
+  })).filter((tick) => tick.share >= AXIS_TICK_MIN_SHARE);
   wrap.append(exhibitAxis(doc, ticks));
   wrap.append(box(doc, "span", { class: "density-sentence",
                                  "data-role": "density-sentence" },

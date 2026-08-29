@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-410 scenarios: **11 open**, 399 closed.
+410 scenarios: **10 open**, 400 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 69 |
 | analysis | 0 | 54 |
 | contracts | 0 | 46 |
-| viewer | 3 | 121 |
+| viewer | 2 | 121 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 34 |
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-394 | [nothing in the page moves between runs](UX-0394-nothing-in-the-page-moves-between-runs.md) | viewer | Medium | anyone who has captured the same project twice | 🔴 |
 | UX-395 | [`--format chrome` silently drops the flows and counters](UX-0395-format-chrome-silently-drops-the-flows-and-counters.md) | capture | Medium | anyone who took the chrome trace to Perfetto | 🔴 |
-| UX-397 | [the Perfetto handoff sits outside the pinned rail](UX-0397-the-perfetto-handoff-sits-outside-the-pinned-rail.md) | viewer | Low | anyone who decides to open the trace after reading a finding | 🔴 |
 | UX-400 | [every population is tested at zero, one and many](UX-0400-every-population-is-tested-at-zero-one-and-many.md) | guards | High | every future section, before its bug is filed | 🔴 |
 | UX-401 | [no key is terminal-only in silence](UX-0401-no-key-is-terminal-only-in-silence.md) | guards | Medium | whoever adds the sixteenth block | 🔴 |
 | UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | guards | High | every future round, before its walk | 🔴 |

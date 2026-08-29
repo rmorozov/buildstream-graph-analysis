@@ -504,7 +504,9 @@ COMMITTED_EXPORTS = [
     # with every export whether or not a run has the numbers. The page
     # half is 277,825 B either side: no new instrument was drawn, which
     # is the Out of Scope this item was held to.
-    ("golden", GOLDEN, 380_000),                       #  378,234 B
+    # `UX-397`: +486 B, all source - the handoff group moves into the
+    # rail, with the rationale and eight lines of CSS.
+    ("golden", GOLDEN, 380_000),                       #  378,720 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -545,7 +547,7 @@ COMMITTED_EXPORTS = [
     # `UX-389`: +3,380 B, split in the note above the golden bound.
     # `UX-390`: +995 B, all source.
     # `UX-393`: +3,236 B, all source. `UX-396`: +789 B, all contract.
-    ("macro_micro", MACRO_MICRO, 435_000),             #  433,567 B
+    ("macro_micro", MACRO_MICRO, 435_000),             #  434,053 B
 ]
 
 

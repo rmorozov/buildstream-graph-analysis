@@ -1238,6 +1238,36 @@ async function boot() {
       // column, and a sticky bar costs it on every screen. After the
       // spy, because "next" is read off the mark the spy writes.
       stepper(root, contents);
+      // `UX-397`: **the handoff moves into the sticky rail.**
+      //
+      // Measured on the round-63 export: the button sat at y=137 in
+      // the header of a 9,316 px page, and the decision to open the
+      // trace is almost never made on the first screen - it is made
+      // at a finding, four or five screens down, by which time the
+      // control is 9,000 px behind the reader. `UX-368` put a query
+      // on each finding for exactly that reason; the button that
+      // opens the trace to run it did not follow.
+      //
+      // The whole group moves, not the button: `UX-282`'s rule is
+      // that the fallback is not below the button that fails, and
+      // `UX-317`'s is that a control's explanation lives with the
+      // control. One node, so both hold by construction.
+      //
+      // At the *head* of the rail, not its foot. The rail scrolls on
+      // its own axis (`max-height: 100vh; overflow-y: auto`), so a
+      // control appended after 66 entries is only reachable after
+      // scrolling the rail - measured at 1,697 px below the viewport
+      // with the document scrolled to its end, which is the header's
+      // defect moved one column left. Above the chapters it is in
+      // view on every screen, which is the whole of what the item
+      // asks for.
+      const handoff = document.getElementById("actions-group");
+      const steps = contents.querySelector(".toc-steps");
+      if (handoff && steps?.nextSibling) {
+        contents.insertBefore(handoff, steps.nextSibling);
+      } else if (handoff) {
+        contents.append(handoff);
+      }
     }
 
     // UX-278: any element the page can name can be inspected.

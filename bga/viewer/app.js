@@ -308,23 +308,13 @@ export const DRAWN_ELSEWHERE = {
     + "on the row it belongs to",
 };
 
-//: `UX-401`: the fourth destination, and the only silent one there
-//: is allowed to be.
-//:
-//: A key of the analyze document reaches a reader one of four ways: as
-//: its own section, as a row of the `Run` block (which is where
-//: `renderSummary` puts every scalar), through a `DRAWN_ELSEWHERE`
-//: entry, or by being declared here with the reason it stops at the
-//: terminal. `test_no_key_is_terminal_only_in_silence` reads the keys
-//: off a real payload and off the booted page, so a key that reaches
-//: none of the four reddens rather than disappearing - which is what
-//: fourteen Plane 2 blocks did for six rounds (`UX-389`), and what
-//: `UX-385`'s fifteenth did one round after being added.
-//:
-//: **Empty is the measurement, not an oversight.** Every key of
-//: `analyze/v4` reaches a reader today. The slot exists so that the
-//: next key which genuinely cannot - and there will be one - is
-//: written down with its reason rather than left to the next walk.
+//: `UX-401`: the fourth destination, and the only silent one allowed.
+//: A key reaches a reader as its own section, as a `Run` row (every
+//: scalar), through `DRAWN_ELSEWHERE`, or declared here with the reason
+//: it stops at the terminal. Empty is the *measurement*: every key of
+//: `analyze/v4` reaches a reader today, and the slot exists so the next
+//: one that cannot is written down rather than left to the next walk -
+//: which is what fourteen Plane 2 blocks were for six rounds.
 export const TERMINAL_ONLY = {};
 
 /**

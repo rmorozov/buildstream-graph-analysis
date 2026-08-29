@@ -139,6 +139,16 @@ The clause now reads `data-key` off the terms the page actually drew
 difference between "the section mentions it" and "the section drew
 it". Only then did B4 go red.
 
+### One thing this landed and then had to trim
+
+`TERMINAL_ONLY`'s comment took `app.js` to **1,509** lines, nine over
+`UX-337`'s 1,500-line ceiling, and
+`test_every_viewer_module_is_under_the_ceiling` said so on the tier run
+rather than on the file's own. The declaration stayed where it belongs -
+beside `DRAWN_ELSEWHERE`, which is the other half of the same rule - and
+the comment lost its restatement of what the census does, which the
+guard's own docstring already says. 1,499 after.
+
 ### Deviation from the Required Fix
 
 - The Required Fix names "the analyze payload and the plane2

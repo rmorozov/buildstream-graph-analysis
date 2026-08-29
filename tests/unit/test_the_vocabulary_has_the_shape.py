@@ -129,6 +129,11 @@ def _at(document, path):
     return node
 
 
+def out_marks(browser, booted, label):
+    """The decompositions the booted page drew, with their marks."""
+    return browser.measure(booted[label], _LOOK, 1440, 900)["decomposition"]
+
+
 @pytest.fixture(scope="module")
 def browser():
     with Browser(chrome) as opened:
@@ -245,13 +250,40 @@ class TestTheDeclaredDrawingsAreDrawn:
 
     def test_the_bound_is_drawn_where_the_payload_puts_it(
             self, browser, booted, label):
-        out = browser.measure(booted[label], _LOOK, 1440, 900)
-        for one in out["decomposition"]:
-            marks = [mark for mark in one["marks"] if mark["key"] == "lb"]
+        """A mark is drawn where - and only where - one is declared.
+
+        This clause used to require an `lb` mark on *every*
+        decomposition, which was true while `floors` was the only one.
+        `UX-390` gave `attribution` a decomposition too, and attribution
+        has no lower bound to mark: the clause reddened on a section
+        that is drawn exactly as its hint asks. The declaration is
+        optional in the hint (`declared.get("mark")` above reads it that
+        way), so it is optional here, and the section that does declare
+        one still has to place it correctly.
+        """
+        _document, found = _declared(label)
+        decomposition, _interval = _hints()
+        want_mark = {section: declared["mark"]["key"]
+                     for section, (hint, declared) in found.items()
+                     if hint == decomposition and declared.get("mark")}
+        assert want_mark, f"{label}: no decomposition declares a mark"
+        seen = set()
+        for one in out_marks(browser, booted, label):
+            key = want_mark.get(one["section"])
+            marks = [mark for mark in one["marks"] if mark["key"] == key]
+            if key is None:
+                assert one["marks"] == [], (
+                    f"{label}: {one['section']} draws a mark its hint "
+                    f"does not declare: {one['marks']}")
+                continue
             assert marks, one
+            seen.add(one["section"])
             for mark in marks:
                 want = (float(mark["raw"]) / float(one["total"])) * 100
                 assert abs(mark["at"] - want) < 1, (one["section"], mark, want)
+        assert seen == set(want_mark), (
+            f"{label}: declared a mark on {sorted(want_mark)} and drew one "
+            f"on {sorted(seen)}")
 
     def test_every_interval_mark_sits_at_its_published_value(
             self, browser, booted, label):

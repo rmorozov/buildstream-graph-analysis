@@ -157,3 +157,25 @@ reddens two clauses.
   686,497 B against 2.4 × 276,000 with 24,097 B to spare. `UX-367`'s
   clause holds the two from becoming two ceilings again, so its copy of
   the constant moved with it.
+
+## Follow-up (round 64, later the same round)
+
+Giving `attribution` a `bga:decomposition` falsified a clause that had
+been true while `floors` was the only decomposition on the page:
+
+```text
+FAILED test_the_vocabulary_has_the_shape.py::TestTheDeclaredDrawingsAreDrawn
+       ::test_the_bound_is_drawn_where_the_payload_puts_it[golden]
+E   AssertionError: {'section': 'attribution', 'drawn': 'true',
+                     'total': '16000', 'n': None, ...}
+E   assert []
+```
+
+The clause required an `lb` mark on **every** decomposition. Attribution
+has no lower bound to mark, and the hint makes `mark` optional — the
+same file's own path-resolution clause already reads it as
+`declared.get("mark")`. So the browser clause now reads the declaration
+too: a mark is required where one is declared, forbidden where none is,
+and the set of sections that drew one must equal the set that declared
+one. `attribution` is drawn exactly as its hint asks, and a section that
+*does* declare a mark still has to place it correctly.

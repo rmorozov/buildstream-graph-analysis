@@ -3077,6 +3077,164 @@ def read_element_kinds(project_dir: str) -> Dict[str, str]:
     return kinds
 
 
+#: Shell words that begin a *construct* rather than name a program.
+#: The leading token of `for f in *.c; do` is `for`, and a check that
+#: reported it as a binary nobody observed would be noise on every
+#: element that writes a loop.
+_SHELL_KEYWORDS = frozenset((
+    "if", "then", "else", "elif", "fi", "for", "while", "until", "do",
+    "done", "case", "esac", "in", "function", "select", "time", "{", "}",
+    "(", ")", "[", "[[", "!", "&&", "||", ";", "coproc",
+))
+
+#: Builtins the shell runs itself: no `execve`, so no record, so their
+#: absence is not evidence of anything. `cd` and `export` are the two
+#: every `build-commands` block uses.
+_SHELL_BUILTINS = frozenset((
+    "cd", "export", "set", "unset", "shift", "return", "exit", "eval",
+    "exec", "source", ".", "alias", "unalias", "local", "readonly",
+    "trap", "wait", "umask", "read", "echo", "printf", "test", "true",
+    "false", "pwd", "break", "continue", "let", ":",
+))
+
+
+def _named_binaries(commands) -> Tuple[List[str], List[str]]:
+    """`(binaries named, lines this could not read)` for one command block.
+
+    `UX-385`'s Out of Scope is the whole of the parsing policy: **the
+    leading token of each line is what this compares**, and a command
+    assembled at runtime is out of reach by construction. So rather than
+    parse shell, every line this cannot answer for is *counted and
+    returned* - the published block says how many it skipped, because
+    "named nothing" and "could not read what it named" are different
+    facts and a reader does different things about them.
+
+    What is skipped, and why each one is not evidence: a shell keyword
+    or builtin never reaches `execve`, so no record could exist for it;
+    a token still holding a `%{...}` substitution is a name BuildStream
+    resolves and this does not; a leading `VAR=value` is an environment
+    prefix rather than a program.
+    """
+    named: List[str] = []
+    unread: List[str] = []
+    for entry in commands or []:
+        if not isinstance(entry, str):
+            continue
+        for raw in entry.splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            # A pipeline or a list is several commands; each segment's
+            # own leading token is a program name, so they all count.
+            for segment in re.split(r"[|;]|&&|\|\|", line):
+                # Leading keywords are *consumed* rather than skipped:
+                # the program in `do gcc -c $f` is the second word, and
+                # a check that stopped at `do` would miss every command
+                # inside a loop - which is where a generated tool tends
+                # to be run.
+                words = segment.strip().split()
+                # A loop or case *header* names a variable and a word
+                # list, never a program: `for f in *.c` would otherwise
+                # report `f`. Dropped whole rather than word by word.
+                if words and words[0] in ("for", "select", "case"):
+                    continue
+                while words and (words[0] in _SHELL_KEYWORDS
+                                 or (
+                                     "=" in words[0]
+                                     and "/" not in words[0].split("=", 1)[0])):
+                    words.pop(0)
+                if not words:
+                    continue
+                token = words[0]
+                if token in _SHELL_BUILTINS:
+                    continue
+                # What is left of `if [ -f x ]` after `if` and `[` is a
+                # test flag. An option is not a program name at any
+                # position, so this is a rule rather than a special case.
+                if token.startswith("-") or token in ("]", "]]"):
+                    continue
+                if "%{" in token or "$" in token or "`" in token:
+                    unread.append(segment.strip())
+                    continue
+                named.append(os.path.basename(token))
+    return sorted(set(named)), unread
+
+
+def detect_named_but_unobserved(project_dir: Optional[str],
+                                elements: List[str],
+                                observed: Dict[str, Set[str]]) -> dict:
+    """`UX-385`: the binaries an element names and no record for it shows.
+
+    `UX-105` established that the LD_PRELOAD hook "cannot detect its own
+    absence", and `UX-376` stopped the spine policy from *assuming* it
+    could. Neither closes the case where the spine is off - by policy,
+    by `--trace-spine=off`, or on an older capture - and a statically
+    linked binary ran anyway.
+
+    It is detectable, and one capture holds both halves. An element's
+    `build-commands` name the binaries it invokes; its records name the
+    binaries the hook saw. Measured on `UX-376`'s fixture with the spine
+    off:
+
+    ```text
+    consumer.bst build-commands name   codegen
+    consumer.bst records name          sh, mkdir
+    ```
+
+    **Evidence, not a verdict.** A command under a shell conditional
+    that did not fire, or one an element inherits from a `.bst` include,
+    is named and legitimately never ran - so the published key is
+    `named_not_observed` and the note says what it does and does not
+    mean. Calling it "missed" would be a finding, and this is the
+    measurement a finding would one day rest on.
+    """
+    per_element: Dict[str, dict] = {}
+    observed = observed or {}
+    if project_dir:
+        elements_dir = elements_dir_for(project_dir)
+        for element in elements or []:
+            data = read_element_yaml(os.path.join(elements_dir, element))
+            if data is None:
+                continue
+            config = data.get("config") or {}
+            commands = []
+            for key in ("configure-commands", "build-commands",
+                        "install-commands"):
+                commands.extend(config.get(key) or [])
+            named, unread = _named_binaries(commands)
+            if not named and not unread:
+                continue
+            seen = set(observed.get(element) or ())
+            per_element[element] = {
+                "named": named,
+                "observed": sorted(seen),
+                "named_not_observed": sorted(set(named) - seen),
+                "commands_not_read": len(unread),
+            }
+
+    gap = sorted(uid for uid, entry in per_element.items()
+                 if entry["named_not_observed"])
+    return {
+        "available": bool(project_dir),
+        "per_element": per_element,
+        "elements_with_gap": gap,
+        "note": (
+            "A binary an element's commands name and no record for that "
+            "element carries. This is evidence and not a verdict: a "
+            "command under a shell conditional that did not fire is "
+            "named and legitimately never ran, and `commands_not_read` "
+            "counts the lines whose program name is assembled at "
+            "runtime, which the leading-token comparison cannot reach. "
+            "Where the ptrace spine ran, a name here is close to a "
+            "statically linked process the hook could not see; where it "
+            "did not, that is what it would take to tell them apart "
+            "(`UX-105`, `UX-385`)."
+            if project_dir else
+            "Needs the BuildStream project directory to read each "
+            "element's own commands - pass --project-dir."),
+    }
+
+
 def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str, List[str]]:
     """`{element: [directly declared build dependencies]}`, read from the
     element files themselves.
@@ -3663,6 +3821,18 @@ class _BinaryCost:
             stat["measured"] += 1
         if record.get("duration_s") is not None:
             stat["wall_s"] += record["duration_s"]
+
+    def observed(self) -> Dict[str, Set[str]]:
+        """`{element: {binary, ...}}`, uncapped.
+
+        `UX-385` needs every binary an element's records name, and
+        `finish` keeps only the top `n` by count and by CPU - so a tool
+        that ran once would look unobserved if this read the published
+        block instead. The counter above already holds the full set; it
+        costs an accessor rather than a pass.
+        """
+        return {element: set(binaries)
+                for element, binaries in self.per_element.items()}
 
     def finish(self, top_n: int = 5):
         result: Dict[str, dict] = {}
@@ -4590,6 +4760,15 @@ class Plane2Fold:
         self.opens_coverage.add(record)
         self.sandboxes.add(record)
 
+    def observed_binaries(self) -> Dict[str, Set[str]]:
+        """`UX-385`: every binary each element's records named.
+
+        Delegated rather than recomputed - the binary counter has
+        already visited every record, and a second walk would be the
+        thing `UX-297` removed.
+        """
+        return self.binary_cost.observed()
+
     def report(self, correlation: Optional[dict] = None,
                fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
         return _summarize_folded(self, correlation=correlation,
@@ -4947,6 +5126,14 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
         elements = discover_element_names(project_dir)
         if elements:
             report["static_census"] = census_project(project_dir, elements)
+            # `UX-385`: the other half of `UX-105`'s blind spot. The
+            # census bounds what the hook *could* miss from the project
+            # on disk; this names what an element's own commands said it
+            # would run and no record for that element shows - which is
+            # the only thing a capture with the spine off can say about
+            # a statically linked process.
+            report["commands_not_observed"] = detect_named_but_unobserved(
+                project_dir, elements, fold.observed_binaries())
     elif opens_by_element:
         report["declared_vs_used"] = {
             "available": False,

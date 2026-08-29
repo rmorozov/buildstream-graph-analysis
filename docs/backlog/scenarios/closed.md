@@ -416,6 +416,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-400 | [every population is tested at zero, one and many](UX-0400-every-population-is-tested-at-zero-one-and-many.md) | High | every future section, before its bug is filed | 🟢 Done — the zero/one/many sweep, with a ledger of what its first run found (UX-412, UX-413, UX-414) | [UX-400](UX-0400-every-population-is-tested-at-zero-one-and-many.md) |
 | UX-401 | [no key is terminal-only in silence](UX-0401-no-key-is-terminal-only-in-silence.md) | Medium | whoever adds the sixteenth block | 🟢 Done — the reachability census over analyze/v4, and the plane2 destinations bound to the booted page | [UX-401](UX-0401-no-key-is-terminal-only-in-silence.md) |
 | UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | Medium | anyone reading a whatif or store number outside the page | 🟢 Done — the unit census walks every emitted contract; 79 undeclared leaves closed across compare, correlate, sweep and the store aggregate | [UX-404](UX-0404-the-unit-census-stops-at-the-analyze-door.md) |
+| UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | High | every future round, before its walk | 🟢 Done — the documented journey walked end to end against example 06's answer key, with an isolated artifact cache | [UX-402](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

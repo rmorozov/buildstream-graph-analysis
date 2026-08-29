@@ -95,6 +95,13 @@ RESOURCE_NAME = "plane2-resource.json"
 # exists.
 ANALYSIS_NAME = "analyze.json"
 
+# `UX-378`: the host's own memory while the build ran, sampled by the
+# capture. Beside the Plane 2 report rather than inside it, because it
+# is a series in its own clock rather than a per-element reduction - and
+# because an interrupted capture keeps the samples it took, which a key
+# inside a report written at the end would not.
+HOST_SAMPLES_NAME = "host-samples.jsonl"
+
 # UX-155: bga's own scratch — the shim it puts on `$PATH`, the compiled
 # hook and spine, and the unnamed intermediate logs. Project-local for
 # the same reason the runs are: `TMPDIR` is inherited by every service

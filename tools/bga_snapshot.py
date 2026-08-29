@@ -59,6 +59,8 @@ PLANE2_NAME = "plane2.json"
 # sits beside. `--no-keep-raw` turns it off.
 RAW_LOG_NAME = "plane2.log.gz"
 WRAPPED_LOG_NAME = "build.log"
+# `UX-378`, named in `run_store` so the layout has one authority.
+HOST_SAMPLES_NAME = run_store.HOST_SAMPLES_NAME
 CONTEXT_NAME = "capture-context.txt"
 
 
@@ -181,6 +183,10 @@ def take_snapshot(project: str, command: List[str], config: dict,
         # below: the tracer streams into it for hours and gzip is the
         # copy-out step, not the write path.
         argv += ["--raw-log", os.path.join(snapshot, RAW_LOG_NAME[:-3])]
+    # `UX-378`: always, not behind a flag. One sample is 37 microseconds
+    # and the question it answers - was the host out of memory when the
+    # build slowed down - has no other source in a capture.
+    argv += ["--host-samples", os.path.join(snapshot, HOST_SAMPLES_NAME)]
     if config.get("trace_opens", True):
         argv.append("--trace-opens")
     # `=` rather than a separate token: `--trace-spine` takes an optional

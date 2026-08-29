@@ -79,6 +79,8 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -651,9 +653,176 @@ def elements_dir_for(project_dir: str) -> str:
     return os.path.join(project_dir, element_path(project_dir))
 
 
+#: How often the host is sampled while the build runs. One sample costs
+#: 37 microseconds (measured: 1,000 reads of both files in 0.037 s), so
+#: the interval is set by how fast the thing being watched moves rather
+#: than by cost - memory pressure builds over seconds, and a 2-second
+#: series over a four-hour build is 7,200 lines.
+HOST_SAMPLE_INTERVAL_S = 2.0
+
+HOST_SAMPLES_SCHEMA = "host-samples/v1"
+
+#: `/proc/meminfo` keys kept, and the name each takes. Everything here
+#: is in kB as that file reports it; the reader converts.
+_MEMINFO_KEYS = {
+    "MemTotal": "mem_total_kb",
+    "MemFree": "mem_free_kb",
+    "MemAvailable": "mem_available_kb",
+    "Cached": "cached_kb",
+    "SwapTotal": "swap_total_kb",
+    "SwapFree": "swap_free_kb",
+}
+
+#: `/proc/vmstat` counters kept. All three are monotonic totals since
+#: boot, so a reader takes differences; publishing the raw value keeps
+#: that decision with the reader rather than baking a window in here.
+_VMSTAT_KEYS = ("pgmajfault", "pswpin", "pswpout")
+
+
+def read_host_sample() -> dict:
+    """One reading of what the host's memory is doing.
+
+    `UX-378`. Everything bga said about swapping - and it says it in
+    four separate places - was a model over `host_memory_mb` and a sum
+    of per-process peaks. This is the measurement.
+    """
+    sample = {}
+    try:
+        with open("/proc/meminfo", "r") as handle:
+            for line in handle:
+                key, _, rest = line.partition(":")
+                name = _MEMINFO_KEYS.get(key)
+                if name:
+                    sample[name] = int(rest.split()[0])
+    except (OSError, ValueError, IndexError):
+        return {}
+    try:
+        with open("/proc/vmstat", "r") as handle:
+            for line in handle:
+                key, _, value = line.partition(" ")
+                if key in _VMSTAT_KEYS:
+                    sample[key] = int(value)
+    except (OSError, ValueError):
+        pass
+    return sample
+
+
+class HostSampler:
+    """A background thread writing one JSON object per sample.
+
+    **The clock is the trace's own.** `hook.c` stamps every record with
+    `clock_gettime(CLOCK_MONOTONIC)` and `time.monotonic()` is the same
+    clock on Linux, so a sample and a process record can be put on one
+    timeline without an offset - which is the whole point, because the
+    question is *how many processes were alive when the memory ran out*.
+
+    **JSON Lines, flushed per sample**, for `UX-157`'s reason: a capture
+    killed partway keeps every sample it had taken, and the file a
+    reader gets is the file that was being written.
+
+    Best-effort throughout. A host with no `/proc/meminfo` writes a
+    header saying so and no samples; nothing here may change whether the
+    build itself succeeds.
+    """
+
+    def __init__(self, path: str, interval_s: float = HOST_SAMPLE_INTERVAL_S):
+        self.path = path
+        self.interval_s = interval_s
+        self._stop = threading.Event()
+        self._thread = None
+        self._handle = None
+        self.samples = 0
+
+    def __enter__(self):
+        try:
+            self._handle = open(self.path, "w", encoding="utf-8")
+        except OSError:
+            return self
+        first = read_host_sample()
+        header = {
+            "schema": HOST_SAMPLES_SCHEMA,
+            "interval_s": self.interval_s,
+            "clock": "CLOCK_MONOTONIC",
+            # The pair that puts this series on a wall clock, the same
+            # way `UX-185`'s `bga-clocks` line does for the build.
+            "wall_at_start": time.time(),
+            "monotonic_at_start": time.monotonic(),
+            "mem_total_kb": first.get("mem_total_kb"),
+            "swap_total_kb": first.get("swap_total_kb"),
+            # Named rather than inferred from an empty file: "this host
+            # exposes no /proc/meminfo" and "the build was too short to
+            # sample" are different facts.
+            "available": bool(first),
+        }
+        self._write(header)
+        if first:
+            self._thread = threading.Thread(target=self._run, daemon=True)
+            self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self.interval_s + 1.0)
+        if self._handle is not None:
+            try:
+                self._handle.close()
+            except OSError:
+                pass
+        return False
+
+    def _write(self, row: dict) -> None:
+        if self._handle is None:
+            return
+        try:
+            self._handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+            self._handle.flush()
+        except (OSError, ValueError):
+            pass
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            sample = read_host_sample()
+            if sample:
+                sample["t"] = round(time.monotonic(), 3)
+                # `mem_total_kb` is in the header and does not move.
+                sample.pop("mem_total_kb", None)
+                sample.pop("swap_total_kb", None)
+                self._write(sample)
+                self.samples += 1
+            self._stop.wait(self.interval_s)
+
+
+def read_host_samples(path: str) -> dict:
+    """A written series back, as `{header, samples}`.
+
+    Tolerates a truncated last line, which is what an interrupted
+    capture leaves.
+    """
+    header, samples = {}, []
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if row.get("schema") == HOST_SAMPLES_SCHEMA:
+                    header = row
+                else:
+                    samples.append(row)
+    except OSError:
+        return {"header": {}, "samples": []}
+    return {"header": header, "samples": samples}
+
+
 def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
-                     no_inject: bool = False, inhibit: bool = False) -> int:
+                     no_inject: bool = False, inhibit: bool = False,
+                     host_samples_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -830,21 +999,28 @@ def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrappe
             if invocation_log_path is not None and os.path.exists(captured_invocations):
                 shutil.copyfile(captured_invocations, invocation_log_path)
 
+        # `UX-378`: the host's own memory, sampled while the build runs.
+        # Around the build and nothing else - the census and the shim
+        # probe before it are bga's own work, and a series that included
+        # them would describe this tool rather than the build.
+        sampler = (HostSampler(host_samples_path) if host_samples_path
+                   else contextlib.nullcontext())
         try:
-            if wrapped_log_path is not None:
-                with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
-                    returncode = run_wrapped(project_dir, cmd, out_f, env=env,
-                                             inhibit=inhibit)
-            else:
-                # UX-157: same own-group treatment as the wrapped path,
-                # so an interrupt here cannot orphan the build either.
-                proc = subprocess.Popen(cmd, cwd=project_dir, env=env,
-                                        start_new_session=True)
-                try:
-                    returncode = proc.wait()
-                except BaseException:
-                    shutdown_build_group(proc)
-                    raise
+            with sampler:
+                if wrapped_log_path is not None:
+                    with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
+                        returncode = run_wrapped(project_dir, cmd, out_f,
+                                                 env=env, inhibit=inhibit)
+                else:
+                    # UX-157: same own-group treatment as the wrapped
+                    # path, so an interrupt here cannot orphan the build.
+                    proc = subprocess.Popen(cmd, cwd=project_dir, env=env,
+                                            start_new_session=True)
+                    try:
+                        returncode = proc.wait()
+                    except BaseException:
+                        shutdown_build_group(proc)
+                        raise
         except KeyboardInterrupt:
             # The trace is already on disk; `copy_out` in the `finally`
             # below is what saves it. Re-raised as `CaptureInterrupted`
@@ -3476,6 +3652,103 @@ class _PeakMemory:
         }
 
 
+def compute_process_outcomes(records: List[dict]) -> dict:
+    """How each element's processes ended (`UX-378`).
+
+    The spine reads the wait status from the kernel's own exit-stop
+    message, so a process the kernel killed is distinguishable from one
+    that returned that number - and that distinction reached `bga
+    timeline` and stopped there. `plane2/v2` had no key for it, so
+    neither the terminal report nor `bga view` could say a process had
+    been killed, which is the signature an OOM leaves.
+
+    **Unavailable is not zero, and here the difference is the whole
+    point.** Only the spine writes `exit_status`; under the default
+    policy there are usually no spine records at all, and a hook record
+    carries no status because its destructor runs before the process has
+    one. So a capture with no spine reports `available: false` rather
+    than "nothing was killed" - the second is a claim this capture
+    cannot make, and it is exactly the claim a reader whose build was
+    OOM-killed would be misled by.
+
+    Killed processes are counted **by signal**, because 9 and 15 mean
+    different things: `SIGKILL` with no `bst` cancellation around it is
+    the shape an OOM kill has, and `SIGTERM` is usually the build being
+    stopped on purpose.
+    """
+    state = _ProcessOutcomes()
+    for record in records:
+        state.add(record)
+    return state.finish()
+
+
+class _ProcessOutcomes:
+    """`compute_process_outcomes`, one record at a time."""
+
+    def __init__(self):
+        self.exited_zero = 0
+        self.exited_nonzero = 0
+        self.by_signal: Dict[str, int] = {}
+        self.unknown = 0
+        #: Only the elements with something to say appear, so this stays
+        #: `O(elements that had a failure)` rather than `O(elements)`.
+        self.per_element: Dict[str, dict] = {}
+
+    def add(self, record):
+        status = record.get("exit_status")
+        if status is None:
+            self.unknown += 1
+            return
+        if str(status).startswith("signal:"):
+            signal = str(status).split(":", 1)[1]
+            self.by_signal[signal] = self.by_signal.get(signal, 0) + 1
+            self._note(record["element"], "killed", signal)
+        elif str(status) == "0":
+            self.exited_zero += 1
+        else:
+            self.exited_nonzero += 1
+            self._note(record["element"], "exited_nonzero", str(status))
+
+    def _note(self, element, kind, detail):
+        entry = self.per_element.setdefault(
+            element, {"killed": 0, "exited_nonzero": 0, "statuses": {}})
+        entry[kind] += 1
+        entry["statuses"][detail] = entry["statuses"].get(detail, 0) + 1
+
+    def finish(self):
+        measured = self.exited_zero + self.exited_nonzero + sum(
+            self.by_signal.values())
+        if measured == 0:
+            return {
+                "available": False,
+                "unknown": self.unknown,
+                "note": "no process reported how it ended. Only the ptrace "
+                        "spine can - the hook's destructor runs before the "
+                        "process has a status, and not at all when one is "
+                        "killed - so this is a capture taken without it "
+                        "(`--trace-spine=on`). Reported as unavailable rather "
+                        "than as zero kills, which is a claim this capture "
+                        "cannot make.",
+            }
+        return {
+            "available": True,
+            "exited_zero": self.exited_zero,
+            "exited_nonzero": self.exited_nonzero,
+            "killed_by_signal": dict(sorted(self.by_signal.items())),
+            "killed": sum(self.by_signal.values()),
+            "unknown": self.unknown,
+            "per_element": {k: self.per_element[k]
+                            for k in sorted(self.per_element)},
+            "note": "How each traced process ended, from the spine's read of "
+                    "the kernel exit-stop. `unknown` is the processes no "
+                    "spine record covered - hook-only records carry no "
+                    "status, and one still running when the trace ended has "
+                    "none to carry. A `signal:9` with no cancellation around "
+                    "it is the shape an OOM kill leaves; `signal:15` is "
+                    "usually a build stopped on purpose.",
+        }
+
+
 def compute_resource_pressure(records: List[dict]) -> dict:
     """What each element's processes did to the disk, to memory and to
     the run queue (`UX-379`).
@@ -4158,6 +4431,7 @@ class Plane2Fold:
         self.configure = _ConfigurePhase()
         self.peak_memory = _PeakMemory()
         self.pressure = _ResourcePressure()
+        self.outcomes = _ProcessOutcomes()
         self.binary_cost = _BinaryCost()
         self.parallelism = _PerElementParallelism()
         self.redundancy = _RedundantOperations()
@@ -4189,6 +4463,7 @@ class Plane2Fold:
         self.configure.add(record)
         self.peak_memory.add(record)
         self.pressure.add(record)
+        self.outcomes.add(record)
         self.binary_cost.add(record)
         self.parallelism.add(record)
         self.redundancy.add(record)
@@ -4259,6 +4534,9 @@ def _summarize_folded(fold: "Plane2Fold", correlation: Optional[dict] = None,
         # `UX-379`: disk, page pressure and preemption, from the struct
         # `peak_memory` above already reads one field of.
         "resource_pressure": fold.pressure.finish(),
+        # `UX-378`: the evidence an OOM leaves, which the spine already
+        # wrote and no report had a key for.
+        "process_outcomes": fold.outcomes.finish(),
         # UX-69: where the time went inside each element, not how many
         # times something ran.
         "binary_cost": fold.binary_cost.finish(),
@@ -4746,6 +5024,41 @@ def _human_bytes(value: int) -> str:
     return f"{size:.1f} GB"
 
 
+def _format_process_outcomes(outcomes: dict) -> List[str]:
+    """`UX-378`'s block. Silent on a clean, fully-covered capture and
+    loud on a killed one - a heading that always fires teaches a reader
+    to skip it, and this is the line they must not skip."""
+    if not outcomes:
+        return []
+    if not outcomes.get("available"):
+        return ["How processes ended: unavailable - "
+                + outcomes.get("note", ""), ""]
+    killed = outcomes.get("killed", 0)
+    nonzero = outcomes.get("exited_nonzero", 0)
+    if not killed and not nonzero:
+        return [f"How processes ended: {outcomes['exited_zero']} exited 0, "
+                f"none killed, {outcomes['unknown']} not covered by a spine "
+                f"record.", ""]
+    lines = ["How Processes Ended:"]
+    lines.append(f"  exited 0        {outcomes['exited_zero']:>6d}")
+    if nonzero:
+        lines.append(f"  exited non-zero {nonzero:>6d}")
+    for signal, count in (outcomes.get("killed_by_signal") or {}).items():
+        lines.append(f"  killed signal:{signal:<3s} {count:>5d}")
+    lines.append(f"  not covered     {outcomes['unknown']:>6d}")
+    for element, entry in (outcomes.get("per_element") or {}).items():
+        detail = ", ".join(f"{k} x{v}" for k, v in entry["statuses"].items())
+        lines.append(f"    {element:38s} {detail}")
+    if killed:
+        lines.append("  NOTE: a process the kernel killed with signal:9, with "
+                     "no cancellation around it, is the shape an OOM kill "
+                     "leaves. The host memory series beside this run "
+                     "(host-samples.jsonl) says whether memory was the "
+                     "reason.")
+    lines.append("")
+    return lines
+
+
 def _format_census_text(census: dict) -> str:
     """UX-105's standalone view: which elements have a static executable
     in their sandbox, and where it came from."""
@@ -5121,6 +5434,7 @@ def _format_text(report: dict) -> str:
         )
     lines.extend(_format_peak_memory(report.get("peak_memory") or {}))
     lines.extend(_format_resource_pressure(report.get("resource_pressure") or {}))
+    lines.extend(_format_process_outcomes(report.get("process_outcomes") or {}))
     lines.extend(_format_declared_vs_used(report.get("declared_vs_used") or {}))
     # UX-32: per-element achieved parallelism.
     per_element = report.get("per_element_parallelism") or []
@@ -5847,6 +6161,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     run_parser.add_argument("output", help="Path to write the JSON report to")
     run_parser.add_argument("--raw-log", help="Keep the raw trace log at PATH.")
     run_parser.add_argument(
+        "--host-samples", metavar="PATH",
+        help="UX-378: where to write the host's memory series while the "
+             "build runs (JSON Lines, one sample every "
+             f"{HOST_SAMPLE_INTERVAL_S:g}s). Costs 37 microseconds a sample; "
+             "without it an OOM leaves no trace but a process with no "
+             "observed exit, which is also what a normal wrapper leaves."
+    )
+    run_parser.add_argument(
         "--invocation-log", metavar="PATH",
         help='Where to write the per-sandbox invocation record.'
     )
@@ -6009,7 +6331,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                                           trace_spine=_spine_policy(args.trace_spine),
                                           diagnostics_path=diagnostics_path,
                                           no_inject=args.no_inject,
-                                          inhibit=args.inhibit)
+                                          inhibit=args.inhibit,
+                                          host_samples_path=getattr(
+                                              args, "host_samples", None))
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was

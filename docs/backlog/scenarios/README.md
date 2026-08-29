@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-382 scenarios: **10 open**, 372 closed.
+382 scenarios: **9 open**, 373 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 4 | 64 |
+| capture | 3 | 64 |
 | analysis | 0 | 52 |
 | contracts | 2 | 42 |
 | viewer | 2 | 109 |
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-375 | [the Plane 2 report has one uncapped population](UX-0375-the-plane-2-report-has-one-uncapped-population.md) | capture | Medium | anyone whose store has to hold a monorepo's captures | 🔴 |
 | UX-376 | [the census cannot see a tool this build produced, and the spine policy believes it](UX-0376-the-census-cannot-see-a-tool-this-build-produced.md) | capture | High | anyone whose project builds its own host tools | 🔴 |
 | UX-377 | [the run and the graph disagree about max-jobs, and on a default capture neither has it](UX-0377-the-run-and-the-graph-disagree-about-max-jobs.md) | capture | High | anyone who runs `bga snapshot` without extra flags | 🔴 |
-| UX-378 | [the host's memory is a number from before the build, and an OOM leaves no trace](UX-0378-the-hosts-memory-is-a-number-from-before-the-build.md) | capture | High | anyone whose build died and does not know why | 🔴 |
 | UX-380 | [the trace says what an element is, never where it sits](UX-0380-the-trace-says-what-an-element-is-never-where-it-sits.md) | viewer | Medium | anyone in Perfetto asking which level a slice belongs to | 🔴 |
 | UX-383 | Plane 2's per-element `cpu_time`, `peak_memory` and `resource_pressure` reach the terminal and not the page | viewer | Medium | anyone reading the report in a browser | 🔴 |
 | UX-381 | [the capture directory is a contract nothing writes down](UX-0381-the-capture-directory-is-a-contract-nothing-writes-down.md) | contracts | Medium | anyone reading a snapshot with something other than bga | 🔴 |

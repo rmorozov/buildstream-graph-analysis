@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-384 scenarios: **7 open**, 377 closed.
+384 scenarios: **6 open**, 378 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 65 |
 | analysis | 0 | 52 |
-| contracts | 3 | 43 |
+| contracts | 2 | 43 |
 | viewer | 1 | 109 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -42,7 +42,6 @@ task file, which is the only place it ever lived twice.
 | UX-384 | [a redundancy finding still carries every element it spans](UX-0384-a-redundancy-finding-still-carries-every-element-it-spans.md) | contracts | Low | anyone whose store holds a monorepo's captures | 🔴 |
 | UX-385 | [a capture cannot detect the binary it never saw](UX-0385-a-capture-cannot-detect-the-binary-it-never-saw.md) | capture | Medium | anyone reading a capture taken with the spine off | 🔴 |
 | UX-381 | [the capture directory is a contract nothing writes down](UX-0381-the-capture-directory-is-a-contract-nothing-writes-down.md) | contracts | Medium | anyone reading a snapshot with something other than bga | 🔴 |
-| UX-382 | [the element entity has two shapes, and they share one attribute](UX-0382-the-element-entity-has-two-shapes-sharing-one-attribute.md) | contracts | Medium | anyone writing a new view over an existing capture | 🔴 |
 
 ## UX-375..UX-382: the sixtieth round — the capture, measured rather than assumed (2026-08-29)
 

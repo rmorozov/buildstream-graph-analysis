@@ -319,25 +319,58 @@ export function elementUids(payload) {
   return [...uids].filter(Boolean).sort();
 }
 
+/**
+ * `UX-382`: **the one resolved element record.** Both shapes of the
+ * entity, joined on the one key, for every element - which is what a
+ * new view asks for instead of discovering where its columns live.
+ *
+ * The entity has two shapes and `analyze/v4` publishes both: six maps
+ * under `elements`, keyed by uid, on every capture; and a wide
+ * `element_join` row, present only where Plane 2 supplied a report.
+ * `SOURCES` above reads the ranked arrays including the join;
+ * `ELEMENT_MAPS` reads the column maps.
+ *
+ * This function used to return the `SOURCES` record when the report's
+ * ranking had reached an element and build from the maps only when it
+ * had not - so **no element ever had both**. Measured on the synthetic
+ * 1,202-element run before this landed: a ranked element's record
+ * carried one field and an unranked one carried ten, so the report's
+ * own top twenty-six elements were the ones the page knew least about,
+ * and no record on either run could answer "at depth 3, on the
+ * critical path, and peaked above a gigabyte".
+ *
+ * The maps are merged **under** the ranked rows, and a field already
+ * present is not written twice - the ranked arrays are the report's
+ * own framing of a value and win where both name one. `blast_radius`
+ * is the single name in both shapes and is dropped from the join's
+ * `SOURCES` line rather than deduplicated here: it is an int where the
+ * map's is a record, and the same number `elements.downstream_count`
+ * already carries under the label "Rebuilds".
+ */
 export function elementFactsFor(payload, uid) {
   const known = elementFacts(payload).get(uid);
-  if (known) return known;
-  const record = { element: uid, rows: [], findings: [], entering: [],
-                   advice: [], evidence: [], lists: [], onDemand: true };
+  const record = known ?? { element: uid, rows: [], findings: [],
+                            entering: [], advice: [], evidence: [],
+                            lists: [], onDemand: true };
+  const held = new Set(record.rows.map((row) => row.field));
   for (const [path, field, label, kind] of ELEMENT_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
-    const held = map?.[uid];
-    if (held === null || held === undefined) continue;
-    const value = field === null ? held : held?.[field];
+    const entry = map?.[uid];
+    if (entry === null || entry === undefined) continue;
+    const value = field === null ? entry : entry?.[field];
     if (value === null || value === undefined) continue;
+    const name = field ?? path.split(".").pop();
+    if (held.has(name)) continue;
+    held.add(name);
     record.rows.push({
-      label, value, kind, field: field ?? path.split(".").pop(),
+      label, value, kind, field: name,
       // The same walk-back grammar `UX-227` established, and a uid
       // contains dots - so the bracket form, which `resolvePath` reads
       // as a key on an object.
       path: `${path}[${uid}]${field === null ? "" : `.${field}`}`,
     });
   }
+  if (known) return record;
   for (const finding of payload?.findings ?? []) {
     if ((finding.elements ?? []).includes(uid)) record.findings.push(finding);
   }
@@ -407,7 +440,13 @@ const SOURCES = [
     ["cores_busy", "Cores busy", "ratio"],
     ["requested_jobs", "Jobs asked for", "count"],
     ["peak_rss_bytes", "Peak RSS", "bytes"],
-    ["blast_radius", "Blast radius", "count"],
+    // `UX-382`: `blast_radius` was here and is gone. The join's field
+    // is an int where `elements.blast_radius[uid]` is a record - it is
+    // that record's own `downstream_count`, denormalised so the join
+    // table can sort on it, and `elements.downstream_count` publishes
+    // the same number under the label "Rebuilds" below. Two rows
+    // labelled "Blast radius" in one record, one a count and one a
+    // duration, is what merging the shapes made visible.
     // `UX-356`: two scalars the projection dropped. `cpu_coverage` is
     // the caveat on `cores_busy` beside it - a low coverage makes that
     // number a sample rather than a measurement - and `saving_share`

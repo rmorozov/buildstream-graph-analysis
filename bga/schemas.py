@@ -1150,7 +1150,17 @@ _JOIN_ITEM_PROPERTIES = {
                        "that looks like an element and is not one "
                        "(UX-66), and nothing may be recommended for "
                        "it."},
-    "on_critical_path": {"type": "boolean"},
+    "on_critical_path": {
+        "type": "boolean",
+        "description": "Whether this element is on the chain that sets the "
+                       "run's finish time. `UX-382`: the second of the "
+                       "join's two denormalised Plane 1 facts, and the one "
+                       "that hides - it is "
+                       "`elements.criticality_probability[<uid>]"
+                       ".observed_critical` under a different name, so a "
+                       "count of attributes appearing in both shapes does "
+                       "not see it. The map is the authority; the resolved "
+                       "element record takes it from there."},
     "critical_path_share": {
         QUANTITY: "share",
         "description": "This element's share of the critical path - "
@@ -1169,7 +1179,13 @@ _JOIN_ITEM_PROPERTIES = {
                        "share of its wall-clock."},
     "blast_radius": {
         QUANTITY: "count",
-        "description": "How many elements a change here rebuilds."},
+        "description": "How many elements a change here rebuilds. `UX-382`: "
+                       "the one attribute in both of the entity's shapes, "
+                       "and an int here where `elements.blast_radius[<uid>]` "
+                       "is a record - this is that record's own "
+                       "`downstream_count`, denormalised so the join table "
+                       "can sort on it. The map is the authority; the "
+                       "resolved element record takes it from there."},
     "cores_busy": {
         INLINE: "name",
         QUANTITY: "ratio",
@@ -3271,6 +3287,34 @@ _LIFTED_HINTS = {
 ELEMENT_KEYED = ("element_durations", "slack", "downstream_count",
                  "unweighted_depth", "blast_radius",
                  "criticality_probability")
+
+# `UX-382`: the element entity has two shapes, and this is the key that
+# joins them. The maps above are keyed by it and `element_join`'s rows
+# name it in a field - conventionally the same identifier until this
+# said so. `UX-216` made every element one object for the reader; this
+# makes it one object for the schema, which is what lets a guard hold
+# the two populations against each other.
+ELEMENT_KEY = "element"
+
+# And the rule for which shape a new attribute goes in, written beside
+# the two declarations it governs rather than in a task file nobody
+# reads. It is not scalar-versus-structured - ten of the join's
+# eighteen fields are scalars - it is what the attribute needs to
+# exist.
+ELEMENT_PLACEMENT_RULE = (
+    "An attribute the analysis knows from the graph and Plane 1 alone "
+    "is a map under `elements`, keyed by the element uid: it is on "
+    "every capture, and `additionalProperties` declares its value type "
+    "once for a population of any size (`UX-343`). An attribute that "
+    "needs Plane 2 to exist is a field on an `element_join` row, which "
+    "is present only where a capture supplied a Plane 2 report - there "
+    "is no join with one plane. A Plane 1 value repeated on a join row "
+    "is a denormalisation the join table needs to sort on; it is "
+    "declared as one, held equal to the map it came from, and the "
+    "resolved element record takes the map's. There are two: "
+    "`blast_radius`, which is `elements.blast_radius[<uid>]"
+    ".downstream_count`, and `on_critical_path`, which is "
+    "`elements.criticality_probability[<uid>].observed_critical`.")
 ELEMENT_POPULATION = ELEMENT_KEYED + ("zero_slack_share", "top_blast_radius",
                                       "blast_radius_ranked_by")
 

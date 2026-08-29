@@ -75,6 +75,7 @@ would have caught it; a bound at it would only just have.
 | 3 | 2026-08-25 | 290 | `UX-294`, `UX-295` |
 | 4 | 2026-08-26 | 318 | `UX-322`, `UX-323` |
 | 5 | 2026-08-28 | 346 | `UX-352`, `UX-353` |
+| 6 | 2026-08-29 | 379 | `UX-386`, `UX-387` |
 
 ### Review 3 — 2026-08-25
 
@@ -322,6 +323,59 @@ guard is in the suite and green rather than re-deriving its answer.
 
 **No code was produced by this review**, per the rule above. The two
 findings are filings.
+
+### Review 6 — 2026-08-29
+
+Thirty-three rows closed since review 5 — the furthest past the bound
+of any review so far, because round 61 landed eight items before the
+guard was answered. Run at 379 closed rows, against `bga/`, `tools/`,
+the architecture document, the specification's Part 32, the docs index
+and the four guides.
+
+**Checklist item 5 — currency claims.** Clean. Neither
+`docs/design/architecture.md`'s `2026-08-16` nor `docs/README.md`'s
+`2026-08-15` is a "last updated" claim: the first dates an audit round
+and the second a closed tracker. No document asserts a currency it
+does not have.
+
+**Checklist item 3 — invalidated figures.** Clean, and one moved
+correctly. `git grep` on the figures round 61 changed — the two export
+bounds and the contract count — found each restated where it lives and
+quoted nowhere else. `docs/README.md`'s "Eighteen ids" was the one
+count in prose and moved to twenty with the table it counts, held by
+`test_the_count_matches_the_inventory`.
+
+**Checklist item 4 — what shipped that no document names.** Four
+capabilities: `resource_pressure` and `process_outcomes` (`UX-379`,
+`UX-378`), the redundancy findings cap (`UX-375`) and the census's
+unassessable count (`UX-376`). Three are the page half of `UX-383`,
+already filed. The fourth is a documentation gap of the same shape and
+is folded into `UX-386` below, because the sentence that would have to
+name them is the sentence that finding is about.
+
+**Checklist item 2 — is the prose around each contract still true?**
+One finding, `UX-386`. Two documents call `plane2/v2` "per-element
+reductions"; measured on the committed fixture, 3 of its 24 top-level
+keys are element-keyed. The sentence has been wrong since `UX-297`
+retired the per-process record list — "and nothing else" was about what
+was removed and reads as a claim about the shape of what is left — and
+`UX-378`/`UX-379` moved the ratio further in the round that found it.
+
+**Checklist item 1 — does the code still do what it says?** One
+finding, `UX-387`. `tools/dev_close_task.py --check` is the fast
+command a contributor runs before committing a closure and it does not
+check the property `UX-131` created it for: reproduced deliberately,
+a tree with a task file at 🔴 and its index row at 🟢 gets
+`0 problem(s)` from `--check` and a failure from the suite. Round 61
+hit it live on `UX-382`.
+
+**What this review did not do, and did.** A review produces no code.
+It produced none. But the full-suite run it started with was red on six
+clauses — all of them round 61's own, and all of them invisible to the
+targeted runs each item had been verified with — and those were fixed
+in their own commit before the review's own findings were filed. The
+distinction the log cares about: the fixes are the round's, the
+findings are the review's.
 
 ### Review 5 — 2026-08-28
 

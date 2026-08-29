@@ -333,7 +333,31 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # This is the third page rise of the round, and the largest. It is also
 # the last: `UX-360` is next and sets the volume budget these three
 # restatements have been standing in for.
-PAGE_BUDGET_B = 265_000
+# Round 59, `UX-372`:
+#
+#                      UX-361   UX-372
+#     page            260,369  267,286   (+6,917)
+#     data (golden)    86,152   91,401   (+5,249)
+#     golden          346,521  358,687
+#     macro_micro     386,817  409,439
+#
+# The readers. `docs/design/roles.md` had named eight since round 27
+# and no payload said which one an answer served, so the page opened
+# with one question answered once for whoever was looking. The page
+# half is `decision.js`'s picker and its lead block, the fragment key
+# in `viewstate.js` and five lines of CSS; the data half is the
+# `readers` index and the schema's prose for it, which every export
+# carries. Both companion guards below stayed **silent** - every added
+# byte is a checked-in module or a declared contract, and none of it
+# resembles a vendored library - which is the check this procedure
+# asks for rather than assuming. So: "a round landed", looked at.
+#
+# The three intervening restatements (`UX-338`/`UX-339`, `UX-356`,
+# `UX-361`) each moved this number too; this is the fourth of the
+# viewer axis and the first since `UX-360`'s volume budget landed. The
+# volume budget is what bounds what a *reader* meets; this bounds what
+# the file weighs, and they are different questions.
+PAGE_BUDGET_B = 270_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -354,6 +378,11 @@ COMMITTED_EXPORTS = [
     # export carries whether or not the run has the data. That split is
     # the whole reason `test_the_data_dwarfs_the_page` counts contract
     # separately, and it is why this bound moved less than the other.
+    # `UX-372` moved this one by 5,151 B - 2,904 of source and 2,247
+    # of contract, the split the note on `PAGE_BUDGET_B` above sets
+    # out. Golden publishes two readers of the five, so most of the
+    # data half is the schema's prose, which travels whether or not a
+    # run has the rows.
     # `UX-371` moved this one by 567 B, all of it **source**: the
     # decision chapter now decides whether the ranking rule is shared
     # by every top action, states it once below the list when it is,
@@ -361,7 +390,7 @@ COMMITTED_EXPORTS = [
     # payload - the data half is 89,154 B either side of the change -
     # so the composition guard below still accounts for every embedded
     # byte, and this is the case that split exists to tell apart.
-    ("golden", GOLDEN, 354_000),                       #  353,536 B
+    ("golden", GOLDEN, 360_000),                       #  358,687 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -379,7 +408,11 @@ COMMITTED_EXPORTS = [
     # published in `plane2.json` beside the run and reached no reader.
     # Data rather than page, which is the half an export is supposed to
     # be made of.
-    ("macro_micro", MACRO_MICRO, 405_000),             #  403,590 B
+    # `UX-372` moved this one by 5,849 B - the same 2,904 of source and
+    # 2,945 of data. More data than golden because `macro_micro`
+    # publishes all five readers where golden publishes two, which is
+    # the rows rather than the prose.
+    ("macro_micro", MACRO_MICRO, 412_000),             #  409,439 B
 ]
 
 

@@ -72,10 +72,23 @@ class TestOneMechanismDecidesTheOrder:
     def test_the_authority_still_declares_an_order(self):
         """Non-vacuity: if `chapters.js` stopped ordering anything, the
         clauses above would be guarding an absence. The declared
-        sections are the order, so there have to be some."""
+        sections are the order, so there have to be some.
+
+        `UX-372`: **a relative order, not a literal prefix.** This
+        clause read `first[:3] == ["decision", "evidence", "overview"]`,
+        which is a list of the chapter's members rather than a property
+        of the ordering - so adding a section to the first chapter
+        failed it while the thing it is non-vacuous about was untouched.
+        The property is that the first chapter leads with the decision
+        (`UX-347`) and that its evidence follows in the order it argued.
+        """
         declared = re.findall(r'sections:\s*\[([^\]]*)\]',
                               CHAPTERS.read_text(encoding="utf-8"), re.S)
         assert len(declared) >= 6, declared
         first = [name.strip().strip('"') for name in declared[0].split(",")
                  if name.strip()]
-        assert first[:3] == ["decision", "evidence", "overview"], first
+        assert first[0] == "decision", first
+        at = [first.index(name) for name in ("evidence", "overview",
+                                             "findings")
+              if name in first]
+        assert len(at) == 3 and at == sorted(at), first

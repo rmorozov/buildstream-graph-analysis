@@ -70,6 +70,12 @@ export function captureView(root) {
     if (key && select.value) params.set(`v.${key}`, select.value);
   }
 
+  // `UX-372`: who the reader said they are. View state by the same
+  // argument as everything else here - "here is the report, read as
+  // the person who owns the machines" is a link somebody pastes.
+  const reader = root.querySelector?.("select[data-role=reader]");
+  if (reader?.value) params.set("r", reader.value);
+
   for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
     const key = table.getAttribute("data-table");
     const tools = table.parentNode?.querySelector?.(".table-tools");
@@ -158,6 +164,18 @@ export function applyView(root, query, { dispatch } = {}) {
     select.value = want;
     fire(select, "change");
     applied.push(`v:${key}`);
+  }
+
+  // `UX-372`. A reader this run does not offer is not applied, for the
+  // reason the view above gives: a link from a run with capacity
+  // numbers must not land on a different answer on a run without them.
+  const reader = root.querySelector?.("select[data-role=reader]");
+  const wantReader = params.get("r");
+  if (reader && wantReader && reader.value !== wantReader
+      && [...(reader.children ?? [])].some((o) => o.value === wantReader)) {
+    reader.value = wantReader;
+    fire(reader, "change");
+    applied.push("r");
   }
 
   for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {

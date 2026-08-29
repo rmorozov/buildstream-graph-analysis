@@ -554,6 +554,11 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
                     align-items: baseline; flex-wrap: wrap; }
 .decision .action .worth { color: var(--muted); font-size: .85rem; }
 .decision .action .why { font-size: .8rem; }
+/* UX-372: the reader says who they are, and gets their own lever. */
+.reader-picker { font-size: .85rem; margin: .1rem 0 .5rem; }
+.reader-lead { border-left: 2px solid var(--accent); padding-left: .6rem;
+               margin: 0 0 .6rem; }
+.reader-lead p { margin: .15rem 0; }
 .status-line { margin: .2rem 0 .4rem; font-size: .9rem; }
 .evidence-detail > summary { cursor: pointer; font-size: .85rem;
                              color: var(--muted); }

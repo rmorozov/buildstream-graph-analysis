@@ -49,7 +49,15 @@ from tools.bst_native_build_tracer import (        # noqa: E402
     run_traced_build,
 )
 
+#: One string each, so `UX-213`'s skip census counts them once.
 NO_CC = "no C compiler for the trace hook"
+#: `install_bwrap_shim` writes a shim that *falls back* to the real
+#: `bwrap`, and refuses when there is none to fall back to. This clause
+#: reaches that call before it reaches anything it is about, so on a
+#: machine without bwrap it fails rather than skipping - which is
+#: `UX-213`'s class, and is how it passed here and failed on every CI
+#: runner: the `test` job installs a C compiler and no sandbox.
+NO_BWRAP = "no bwrap for the capture's shim to fall back to"
 
 
 class TestThePathsTheBuildInherits:
@@ -71,6 +79,7 @@ class TestThePathsTheBuildInherits:
 
     @pytest.mark.skipif(shutil.which("cc") is None
                         and shutil.which("gcc") is None, reason=NO_CC)
+    @pytest.mark.skipif(shutil.which("bwrap") is None, reason=NO_BWRAP)
     def test_every_path_the_build_inherits_is_absolute(self, tmp_path,
                                                        monkeypatch):
         """The real environment, from a real relative invocation.

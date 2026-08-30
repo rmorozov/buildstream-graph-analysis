@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-417 scenarios: **7 open**, 410 closed.
+417 scenarios: **6 open**, 411 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 69 |
 | analysis | 0 | 54 |
 | contracts | 0 | 46 |
-| viewer | 2 | 124 |
+| viewer | 1 | 124 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 36 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-411 | [a ranked map has no instrument](UX-0411-a-ranked-map-has-no-instrument.md) | viewer | Low | anyone scanning a per-key measure for its shape | 🔴 |
-| UX-414 | [two sections fall into "Everything else", and the guard's fixture cannot see it](UX-0414-two-sections-fall-into-everything-else.md) | viewer | Medium | anyone navigating a two-plane report | 🔴 |
 | UX-416 | [the page moves between runs, and no document says so](UX-0416-the-page-moves-between-runs-and-no-document-says-so.md) | docs | Medium | anyone with more than one snapshot in a store | 🔴 |
 | UX-417 | [the guide's export figures are stale by 3.2x](UX-0417-the-export-figures-are-four-rounds-stale.md) | docs | Medium | anyone deciding whether to attach a report | 🔴 |
 | UX-418 | [a slow file is small until CI times out](UX-0418-a-slow-file-is-small-until-ci-times-out.md) | guards | Medium | the edit-run loop | 🔴 |

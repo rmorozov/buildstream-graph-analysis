@@ -175,12 +175,23 @@ for (const key of swept) {
 }
 
 // Where the ordering authority files each of them. `chapterFor` reads
-// the table first and the section's `bga:rail` second, exactly as the
-// page does - so this is the chapter a reader would find it under.
+// the table first and the section's rail second, exactly as the page
+// does - so this is the chapter a reader would find it under.
+//
+// `UX-414`: through `format.heading`, which is what the page calls.
+// This read `format.RAIL`, and `RAIL` is a module-private constant
+// that `format.js` does not export - so the expression was
+// `hints[undefined]`, every rail came back `undefined`, and every
+// unlisted section resolved to the fallback chapter. That produced a
+// ledger of two sections said to be in "Everything else" which are
+// not, and it is the fifth harness bug this sweep has had. `heading`
+// also applies the page's own `?? "raw"` default, so a section with
+// no declared rail lands where a reader would find it rather than in
+// a bucket the page never puts it in.
 const placed = {};
 for (const key of swept) {
-  const rail = app.hintsOf(schema.properties?.[key])[format.RAIL];
-  placed[key] = chapters.chapterFor(key, rail);
+  const hints = app.hintsOf(schema.properties?.[key]);
+  placed[key] = chapters.chapterFor(key, format.heading(key, hints).rail);
 }
 
 process.stdout.write(JSON.stringify({
@@ -259,12 +270,16 @@ class TestTheSweepReachesEveryPopulation:
                  for leg, seen in legs.items() if seen.get("threw")}
         assert threw == {}, threw
 
-    #: `UX-414`: two sections a reader only ever sees on a two-plane
-    #: run land in the fallback chapter. `chapters.js` says that
-    #: chapter "is not a hiding place" and points at
-    #: `test_the_report_has_chapters`, which does assert it is empty -
-    #: on a fixture with no Plane 2, where neither section exists.
-    UNPLACED = {"restructuring": "UX-414", "binary_cost": "UX-414"}
+    #: Empty, and it was empty all along: the two entries it held under
+    #: `UX-414` were an artefact of this file reading the rail through
+    #: `format.RAIL`, which `format.js` does not export. Every rail came
+    #: back `undefined` and every unlisted section resolved here. The
+    #: reading goes through `format.heading` now, which is what the page
+    #: calls - and `chapterFor` falls back to the rail, so a section
+    #: with one is never unplaced. What this clause still catches is a
+    #: section with neither an entry nor a rail, which is what
+    #: "Everything else" is for.
+    UNPLACED = {}
 
     def test_every_swept_population_is_filed_under_a_chapter(self, swept):
         """The acceptance test's enumeration clause, in the form the

@@ -96,7 +96,13 @@ export const CHAPTERS = [
     // boundary is where that belongs, one heading below it.
     // `UX-348`: `blast-offline` is gone - the export draws the same
     // `blast` section, with the command instead of the search box.
-    sections: ["resource_blast", "blast", "blast-tree",
+    // `UX-414`: `restructuring` is a list of dependency edges nothing
+    // ever read - the answer to "what if I change this" written as
+    // edges to delete rather than as a query to run. `UX-407`
+    // published it and it landed in "Everything else", because the
+    // chapters guard's fixture is a single-plane run and this section
+    // only exists when Plane 2 is present.
+    sections: ["resource_blast", "blast", "blast-tree", "restructuring",
                "whatif", "perfetto-questions"],
     // The widest change this graph can absorb, from `elements.blast_radius`
     // - the population the chapter's own first table ranks.
@@ -139,6 +145,12 @@ export const CHAPTERS = [
                "critical_path_detail", "critical-path-drawn", "horizon",
                "optimization_horizon", "latent_heavies", "joint_saving",
                "cache", "fetch_build_overlap", "wall_clock_share_us",
+               // `UX-414`: where the time went *inside* an element -
+               // one call count per binary, which is this chapter's
+               // question at the program level rather than the
+               // element's. Unchaptered since `UX-370`, for the same
+               // fixture reason `restructuring` was.
+               "binary_cost",
                "element_duration_distribution", "pipeline_overhead"],
     // The run's wall-clock and the biggest thing it went on, named by
     // the attribution split rather than by this file's opinion.
@@ -266,6 +278,13 @@ export const RAIL_CHAPTER = {
 // a hiding place: `test_the_report_has_chapters` asserts it is empty on
 // both runs, so a section that lands here reddens a guard rather than
 // disappearing into a bucket.
+//
+// `UX-414`: "both runs" used to mean two boots of the *same*
+// single-plane fixture, which is no runs at all for a section that
+// only exists when Plane 2 is present. It is the single-plane and the
+// two-plane export now. And the fallback is only half the question -
+// a section with a `bga:rail` always has *a* chapter, so being under
+// the wrong heading is invisible here; that is asserted by name.
 export const UNCHAPTERED = { id: "more", title: "Everything else" };
 
 // The focus panel `UX-222` prepends and removes again. It is not part

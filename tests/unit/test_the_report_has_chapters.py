@@ -38,6 +38,11 @@ node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
+#: `UX-414`: the two-plane run. Every section golden has, plus the ones
+#: that exist only when a capture carried Plane 2 - which is where the
+#: unchaptered sections were hiding.
+MACRO_MICRO = REPO / "tests" / "fixtures" / "macro_micro" / "run"
+FIXTURES = {"golden": GOLDEN, "macro_micro": MACRO_MICRO}
 CHAPTERS_JS = REPO / "bga" / "viewer" / "chapters.js"
 
 # The acceptance test's bound, stated here rather than counted off the
@@ -135,17 +140,33 @@ def _group(sections):
     return json.loads(done.stdout)
 
 
-def _boot_chapters(inventory=None):
+def _boot_chapters(inventory=None, source=GOLDEN):
     """What the booted export is actually grouped into.
 
     The export, not a shim document: this is the page a reader is sent
     (`UX-195`), assembled by `boot` rather than by a test that calls the
     same functions in the same order and proves nothing.
+
+    `source` since `UX-414`. This booted `GOLDEN` and nothing else, and
+    golden is a **single-plane** run: `restructuring` and `binary_cost`
+    only exist when Plane 2 is present, so both sat in the fallback
+    chapter while the clause asserting the fallback is empty was green.
+    "Asserted on both runs" was true of the two runs this fixture has,
+    and neither of them is a run where either section exists.
     """
     tmp = pathlib.Path(tempfile.mkdtemp())
     run = tmp / "run"
-    shutil.copytree(GOLDEN, run)
-    os.remove(run / "expected_output.json")
+    shutil.copytree(source, run)
+    # `UX-414`: the Plane 2 report is a *sibling* of the run directory,
+    # not a file inside it, so a `copytree` of the run alone silently
+    # produces a single-plane copy of a two-plane fixture. That is the
+    # second half of this item's finding: the guard would have gained a
+    # two-plane leg that measured the one-plane page.
+    sidecar = pathlib.Path(source).parent / "plane2.json"
+    if sidecar.exists():
+        shutil.copy(sidecar, tmp / "plane2.json")
+    if (run / "expected_output.json").exists():
+        os.remove(run / "expected_output.json")
     if inventory is not None:
         (run / "sources.json").write_text(json.dumps(inventory), encoding="utf-8")
 
@@ -230,16 +251,51 @@ class TestTheReportHasChapters:
             f"{counted} members across chapters, {len(out['all'])} sections "
             f"on the page - a section is in two chapters")
 
-    def test_nothing_falls_through_to_everything_else(self):
+    @pytest.mark.parametrize("fixture", sorted(FIXTURES))
+    def test_nothing_falls_through_to_everything_else(self, fixture):
         """The fallback chapter is not a hiding place. A section with no
         entry in the table and no `bga:rail` lands there, and on a real
         run there is no such section - so a new one that arrives
         unclassified reddens this instead of appearing at the foot of
-        the document under a heading that says nothing."""
-        out = _boot_chapters()
+        the document under a heading that says nothing.
+
+        `UX-414`: **on both runs, and now that means two different
+        payloads.** This clause was green over one single-plane fixture
+        while two Plane 2 sections sat in the bucket, which is the
+        shape of hollow guard `UX-403`'s census exists to find - not a
+        clause that cannot fail, but one whose only fixture cannot
+        produce the case.
+        """
+        out = _boot_chapters(source=FIXTURES[fixture])
         assert out["chapters"], "the page drew no chapters; nothing checked"
         more = [c for c in out["chapters"] if c["id"] == "more"]
         assert more == [], f"Everything else holds {more[0]['members']}"
+
+    #: `UX-414`: where the two Plane 2 sections belong, named because
+    #: nothing else can name it. The fallback clause catches a section
+    #: with *no* chapter; a section with a `bga:rail` always has one,
+    #: so a section filed under the wrong heading is invisible to every
+    #: other clause here. Both of these carry `bga:rail: act`, which
+    #: `RAIL_CHAPTER` sends to "Where did the time go?" - right for
+    #: `binary_cost`, wrong for `restructuring`, which is a list of
+    #: dependency edges to delete.
+    PLANE2_CHAPTERS = {"restructuring": "change", "binary_cost": "time"}
+
+    def test_the_two_plane_sections_are_where_they_answer(self):
+        where = dict(_boot_chapters(source=MACRO_MICRO)["all"])
+        got = {key: where.get(key) for key in self.PLANE2_CHAPTERS}
+        assert got == self.PLANE2_CHAPTERS, got
+
+    def test_the_two_plane_run_publishes_more_than_the_one_plane_run(self):
+        """What keeps the parametrisation above honest. If both
+        fixtures drew the same sections, the second leg would cost a
+        boot and assert nothing - and the sections it exists for are
+        exactly the ones golden does not have."""
+        one = {key for key, _ in _boot_chapters(source=GOLDEN)["all"]}
+        two = {key for key, _ in _boot_chapters(source=MACRO_MICRO)["all"]}
+        assert {"restructuring", "binary_cost"} <= two - one, (
+            f"the two-plane fixture adds {sorted(two - one)}, which does "
+            f"not include the sections this leg was added for")
 
     def test_each_chapter_is_a_named_landmark(self):
         """Item 2's other half: navigation moves chapter to chapter, and

@@ -81,3 +81,39 @@ Name the command and the fixture that produced it, in the sentence. "a
 be re-checked in three years; "roughly 5% run-to-run noise" cannot, and
 this repository has already been wrong that way — the same list at n=3
 supported a 5.8% figure that four documents quoted.
+
+## Before you trust the number: what is it a number *of*?
+
+The instrument is the thing this repository gets wrong most often. A
+round-68 sweep of the backlog, the guards and the design documents
+found about thirty sightings across about twenty-six items of one
+defect — **an instrument reading a proxy rather than the thing it
+names**. The fixing guide's §5 states it as a rule; this is where it
+gets asked, because the mistake is made while writing the measurement
+and is invisible when reading it back.
+
+Three questions, in order:
+
+1. **What quantity does this actually read?** Not what it is called —
+   what the code touches. `UX-204`'s page-size guard summed every file
+   in `bga/viewer/`, including two an export never carries.
+2. **Is that the quantity the name claims?** `UX-296` read
+   `ru_maxrss` in a subprocess, which returns the *parent's* high-water
+   mark: a 10 MB child reported 411 MB.
+3. **At the magnitudes it will see, can it tell the answers apart?**
+   A ratio of two hundredth-of-a-second numbers cannot. Measured on two
+   runs of this suite at one commit, a file under 0.1s ran **×4.21** its
+   own time with nothing changed (`UX-423`).
+
+The four shapes, so you can recognise yours:
+
+| shape | the tell | worked example |
+|---|---|---|
+| a text scan that cannot tell code from data | a longer regex keeps almost working | `UX-403` |
+| a ratio at the noise floor | the operands moved by different factors | `UX-420`, `UX-422` |
+| a comparison across machines | "it passed on mine" | `UX-418` |
+| the wrong artifact or population | the number is real, its subject is not | `UX-359` |
+
+**A guard you only read is a guard you have not checked.** Every one of
+those was found by running something — a mutation, a second machine, a
+census — and none by re-reading the code. See the `falsify` skill.

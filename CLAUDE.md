@@ -58,12 +58,11 @@ Section 6 of the fixing guide is the full map. Don't re-derive it.
 - **Runs a tier and commits.** A tier is a *selector*. `make test` is
   the gate, and skipping it shipped a slack budget in round 66.
 - **`git add -A` / `git add .`** — forbidden by §4a.1; stage paths.
-- **Compares timings across machines.** Per-file durations from another
-  runner cannot be compared to `tests/tiers.py` in any form — not
-  absolute, not scaled, not ranked (`UX-418`, three red CI rounds).
-- **Judges a small quantity by a ratio.** At the noise floor a ratio is
-  meaningless; require an absolute magnitude too (`UX-420`, `UX-422`,
-  found the same day in two different guards).
+- **Builds an instrument that reads a proxy** for the thing it names —
+  ~30 sightings in ~26 items, in four shapes: a text scan that cannot
+  tell code from data, a ratio at the noise floor, a comparison across
+  machines, the wrong population. The rule is fixing guide §5; the
+  three questions that catch it are in the `measure` skill.
 - **Writes a guard whose setup another gate already excludes**, so it
   passes whatever the gate under test does. Five found in `UX-420`
   alone. Mutate it; do not read it.

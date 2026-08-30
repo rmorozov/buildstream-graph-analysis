@@ -1,6 +1,6 @@
 # UX-425: the defect class this repository hits most often is in no rule document
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 67, a backlog-wide sweep run while filing `UX-423` | **Serves:** the next contributor, before they build the instrument rather than after | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 67, a backlog-wide sweep run while filing `UX-423` | **Serves:** the next contributor, before they build the instrument rather than after | **Topic:** docs
 
 ## Motivation
 
@@ -98,3 +98,78 @@ there should shrink to a reference.
   (`test_the_agent_configuration_holds.py::TestClaudeMdIsTrueAndShort`).
 - The `measure` skill's new clause names a sub-shape and the item that
   paid for it, so the rule can be re-checked against the record.
+
+## Outcome (round 68, 2026-08-30) — 🟢 Done
+
+### The gap, measured
+
+```console
+$ grep -rniE "proxy|noise floor|absolute magnitude|reading a proxy" \
+      docs/contributing/ .claude/skills/
+$ echo $?
+0
+```
+
+Zero hits across the fixing guide, the style guide and all four skills,
+against ~30 sightings in ~26 items. The most frequently repeated defect
+in the record was the one thing the rules did not mention.
+
+### After — three places, each doing a different job
+
+- **`docs/contributing/fixing-guide.md` §5** states it as a hard rule,
+  with the three questions and one worked example per shape. §5 is
+  where a contributor looks for what not to do.
+- **The `measure` skill** asks the three questions, because the mistake
+  is made *while writing the measurement* and is invisible when reading
+  it back. It carries the shape table and the tell for each.
+- **`CLAUDE.md`** now points at both instead of carrying two partial
+  restatements. The page went 69 → 68 lines, so the pointer is shorter
+  than the summaries it replaced and the 80-line bound is not touched.
+
+The four shapes, one example each rather than the census: `UX-403` (a
+text scan that cannot tell code from data), `UX-420` (a ratio at the
+noise floor), `UX-418` (a comparison across machines), `UX-359` (the
+wrong artifact or population). A rule with 26 citations is a rule
+nobody finishes reading.
+
+### The second non-discriminating guard of this round
+
+`test_each_shape_names_an_item_that_exists` checked the **union** of
+the two documents. R4 — a shape citing an id no task file has — left it
+green, because breaking the guide's citation left the same id in the
+skill.
+
+That is the `CLAUDE.md` defect of *a guard whose setup another gate
+already excludes*: the seventh sighting in this repository, the second
+in this round, and the second found by a mutation rather than by
+reading. It is now `test_every_item_the_rule_cites_resolves`,
+parametrised per document, and every id cited in either section must
+resolve to a real task file.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| R1 | §5 drops the rule | 1 failed, 67 passed |
+| R2 | the `measure` skill stops asking the questions | 1 failed, 67 passed |
+| R3 | `CLAUDE.md` stops naming where the rule is | 1 failed, 67 passed |
+| R4 | a shape cites an id no task file has | 1 failed, 67 passed |
+
+R3 is the one that keeps the three homes from collapsing into one: a
+session that meets the summary and never the rule is the state this
+item was filed about.
+
+```text
+baseline    68 passed in 0.94s
+reverted    68 passed in 0.91s
+```
+
+### Deviation from the Required Fix
+
+- **None.** All three placements landed, the census stayed out of the
+  documents as the filing asked, the product-level family was left
+  alone, and no hook was written for a class that is a judgement rather
+  than a payload — `UX-424`, the deterministic control that had this
+  very defect, is the counter-example the filing named.

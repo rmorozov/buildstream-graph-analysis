@@ -11,6 +11,8 @@
 // `UX-201`'s column metadata says which columns are quantities and in
 // what unit, which is what makes `> 5s` parseable at all.
 
+import { el } from "./format.js";
+
 /** How many microseconds/bytes/… one suffix is worth, per quantity. */
 const UNITS = {
   duration_us: { us: 1, ms: 1e3, s: 1e6, m: 60e6, h: 3600e6 },
@@ -108,14 +110,23 @@ export function applyFilters(table, { text = "", thresholds = {},
   // I asked for**" is what a reader typing in both means. One pass, so
   // there is one place the shown-count comes from and the badge cannot
   // describe a state the table is not in.
-  if (top && top.column && Number.isFinite(Number(top.n))) {
-    const value = (tr) => {
-      const cell = [...tr.children].find(
-        (td) => td.getAttribute("data-column") === top.column);
-      const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
-      return Number.isFinite(raw) ? raw : -Infinity;
-    };
-    kept.sort((a, b) => value(b) - value(a));
+  //
+  // `UX-413`: **and a column is optional.** `{n, column: null}` is "the
+  // first n, in the order the payload published them" - the bound for a
+  // population with nothing numeric to rank by, which used to get no
+  // bound at all because the caller had no column to name. Everything
+  // else about it is the same pass, so the badge, the filter and the
+  // copy control cannot tell the two apart.
+  if (top && Number.isFinite(Number(top.n))) {
+    if (top.column) {
+      const value = (tr) => {
+        const cell = [...tr.children].find(
+          (td) => td.getAttribute("data-column") === top.column);
+        const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
+        return Number.isFinite(raw) ? raw : -Infinity;
+      };
+      kept.sort((a, b) => value(b) - value(a));
+    }
     kept.forEach((tr, index) => {
       tr.hidden = index >= Number(top.n);
       body.append(tr);
@@ -125,10 +136,73 @@ export function applyFilters(table, { text = "", thresholds = {},
   return shown;
 }
 
+/**
+ * `UX-413`: what a table this long should *open* at, if anything.
+ *
+ * `UX-367` set the volume budget and `UX-262` made a long table open
+ * bounded, and both were enforced from inside `if (presets.length)` -
+ * the list of numeric columns worth ranking by. A table with none got
+ * no preset control, so `[column]` was `undefined` and the bound was
+ * never applied. The bound was therefore a *side effect of having
+ * something to rank by*, which is not what either filing meant.
+ *
+ * Measured by `UX-400`'s sweep at 120 rows: five populations opened at
+ * `25 of 120` and four drew every one of their 121 rows - `readers`,
+ * `next_steps`, `restructuring`, `provenance`, which are exactly the
+ * four with nothing numeric in them. `restructuring` is the one that
+ * made it urgent: a list of never-read dependency edges, published by
+ * `UX-407`, and the population most likely to be long on a real
+ * monorepo.
+ *
+ * With no column the head is the bound and the order is the payload's,
+ * which `UX-413`'s Out of Scope keeps as the emitter's decision rather
+ * than reopening it here.
+ */
+export function openingBound(presets, total, bound) {
+  if (total <= bound) return null;
+  const [column] = presets;
+  return column
+    ? { value: `25:${column}`, top: { n: 25, column } }
+    : { value: `${bound}:`, top: { n: bound, column: null } };
+}
+
 /** `12 of 1,202` - and just the total when nothing is filtered. */
 export function badgeText(shown, total) {
   const n = (value) => value.toLocaleString("en-US");
   return shown === total ? `${n(total)} rows` : `${n(shown)} of ${n(total)}`;
+}
+
+/**
+ * `UX-413`: the same bound, over cards instead of rows.
+ *
+ * `renderFindings` draws one `<article>` per finding rather than a
+ * table, so the row bound cannot see it at all - `UX-400`'s sweep at
+ * 120 measured **120 cards drawn**, on a page whose every table
+ * stopped at 25.
+ *
+ * The cards past the bound are *hidden*, not removed, for the reason
+ * `foldTheMiddle` hides rather than removes: Ctrl-F, the export and
+ * every `#anchor` into a finding keep working. One control says how
+ * many there are and shows them, and the badge beside it carries the
+ * denominator so a bounded list cannot be mistaken for a short one.
+ */
+export function boundCards(section, selector, bound, noun = "items") {
+  const cards = [...(section.querySelectorAll?.(selector) ?? [])];
+  if (cards.length <= bound) return null;
+  for (const [index, card] of cards.entries()) card.hidden = index >= bound;
+  const badge = el("span", { class: "badge" }, badgeText(bound, cards.length));
+  const n = cards.length.toLocaleString("en-US");
+  const more = el("button", { type: "button", class: "show-all-cards" },
+                  `Show all ${n} ${noun}`);
+  more.addEventListener("click", () => {
+    for (const card of cards) card.hidden = false;
+    badge.textContent = badgeText(cards.length, cards.length);
+    more.hidden = true;
+  });
+  const note = el("p", { class: "muted card-bound",
+                         "data-role": "card-bound" }, badge, " ", more);
+  section.append(note);
+  return note;
 }
 
 /** What "copy row" puts on the clipboard: the published values, keyed

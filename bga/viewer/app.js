@@ -24,9 +24,10 @@ import { QUANTITY, SEVERITY, COLUMNS, SERIES, DISTRIBUTION, INLINE,
          hintsOf, quantity, quantityFor, sectionHead,
          title } from "./format.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, OBJECT_INLINE_FIELDS,
-         LIFTED_SECTION, liftedCriticalPath, renderPairs,
-         renderStructured,
+         LIFTED_SECTION, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath,
+         renderPairs, renderStructured,
          renderTable } from "./structured.js";
+import { boundCards } from "./tables.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
          PERFETTO_FRIENDLY_URL } from "./perfetto.js";
 // `renderBlastTree` is *not* imported here: `views.js` draws the tree
@@ -121,12 +122,10 @@ export function renderFindingEvidence(evidence, node = undefined) {
   // eight rows of it above the next finding is a wall.
   //
   // `UX-359`: and it announces its depth, like every other value fold
-  // (§3a.1). It did not, for the same reason `evidence-detail` did not
-  // until `UX-320` - it is built by hand here rather than by
-  // `renderStructured`. What kept it hidden this time is that it only
-  // appears on a finding with more than `EVIDENCE_SHOWN` scalars, and
-  // the only fixture that has one is the Plane 2 half of `macro_micro`
-  // that every guard's `copytree` was dropping. One level, N rows.
+  // (§3a.1). It did not, because it is built by hand here rather than
+  // by `renderStructured`, and it only appears on a finding with more
+  // than `EVIDENCE_SHOWN` scalars - which only the Plane 2 half of
+  // `macro_micro` has, and every guard's `copytree` was dropping it.
   const rows = scalars.length;
   return el("details", { class: "evidence-fold", "data-fold": "evidence",
                          "data-levels": "1", "data-rows": String(rows) },
@@ -178,6 +177,8 @@ export function renderFindings(findings, investigate = null, node = undefined) {
         ? copyButton(el, finding.copy_text, {}, "finding")
         : null));
   }
+  //: `UX-413`: cards are bounded like rows - see `boundCards`.
+  boundCards(section, "article.finding", TABLE_OPENS_BOUNDED_ABOVE, "findings");
   return section;
 }
 

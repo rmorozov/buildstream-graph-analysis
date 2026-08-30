@@ -78,6 +78,13 @@ step says a file drifted and you cannot reproduce it here, that is the
 point — it is CI's clock, and the answer is `--record` from a green run
 rather than a number changed until it is quiet.
 
+`UX-442`: that step reports a file only when **two consecutive runs**
+of the branch agree it is over both gates, carried between runs in a
+cache. So a branch's first run cannot report drift, and a real
+regression is named one run after it lands. That is the price of the
+three round-69 reds that no diff could have caused; the run that sees
+an excursion once still prints it, marked as unconfirmed.
+
 `make test` before you mark anything done. A tier run is not evidence
 about the suite.
 

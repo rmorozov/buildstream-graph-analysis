@@ -695,6 +695,207 @@ class TestEachComparisonRunsWhereItMeansSomething:
         assert "matrix.python-version == '3.11'" in text, text[:0]
 
 
+class TestAnExcursionMustRepeat:
+    """`UX-442`: a series, not a run.
+
+    `test (3.11)` went red on `279900f`, a commit whose diff is one
+    backlog file and one index row. The suite passed; the drift step
+    reported `test_the_page_has_a_reader.py` at 13.9s against 7.1s
+    recorded. The same file over four runs of that branch read
+    `7.13, 7.13, 7.53, 13.85`, and the run that excursed had a *lower*
+    shift and a *lower* spread than the run before it, which passed. One
+    file swung; the machine did not.
+
+    `UX-418` set two gates so a small file could not trip on a ratio and
+    a big one could not trip on seconds. `UX-423` measured the shift's
+    own dispersion so a slow runner is not read as drift. Neither
+    measures **one file's** dispersion, and neither can - from a single
+    run there is nothing to disperse.
+
+    So the rule is agreement between runs, and the fixture has to be a
+    series. Every clause below runs `main` several times over one carry
+    file, which is what CI does with its cache.
+    """
+
+    #: Two files big enough that doubling them clears both gates -
+    #: `CI_DRIFT_FACTOR` needs x1.5 and `CI_DRIFT_SECONDS` needs five
+    #: seconds, and a file that only clears one is the case UX-418
+    #: already covers.
+    FLAKY = "tests/unit/test_the_page_has_geometry.py"
+    STEADY = "tests/unit/test_the_journey_has_an_answer_key.py"
+
+    def _run(self, tmp_path, capsys, over, carry=True):
+        """One CI run: `over` are the files at twice their recorded time."""
+        times = dict(tiers.recorded())
+        for name in over:
+            times[name] = times[name] * 2
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                             encoding="utf-8")
+        argv = [str(_report(tmp_path, times)), "--against", str(reference)]
+        if carry:
+            argv += ["--carry", str(tmp_path / "carry.json")]
+        code = drift.main(argv)
+        said = capsys.readouterr()
+        return code, said.out + said.err
+
+    def test_only_the_file_two_runs_agree_on_is_reported(self, tmp_path,
+                                                         capsys):
+        """The acceptance test. `FLAKY` is over the gates on runs 1 and
+        3 with a clean run between; `STEADY` is over on 2 and 3. Only
+        `STEADY` has drifted, and only `STEADY` is reported."""
+        first, _said = self._run(tmp_path, capsys, [self.FLAKY])
+        second, _said = self._run(tmp_path, capsys, [self.STEADY])
+        third, said = self._run(tmp_path, capsys,
+                                [self.STEADY, self.FLAKY])
+        assert (first, second) == (0, 0), (
+            f"a single run over the gates failed the build ({first}, "
+            f"{second}); that is the red UX-442 was filed for")
+        assert third == 1, (
+            f"{self.STEADY} was over the gates on two consecutive runs "
+            f"and nothing reported it - the rule now hides real drift")
+        reported = said.split("slower than CI's own record", 1)[1]
+        assert self.STEADY in reported, reported
+        assert self.FLAKY not in reported, (
+            f"{self.FLAKY} recovered on run 2 and excursed again on run "
+            f"3. Two excursions are not two *consecutive* excursions, "
+            f"and the run between is what says so")
+
+    def test_a_clean_run_between_them_breaks_the_chain(self, tmp_path,
+                                                       capsys):
+        """The half that needs the carry written on runs that find
+        nothing. An excursion, a run with nothing over the gates, then
+        the same excursion again is two excursions and not two
+        consecutive ones - and only an empty carry says so."""
+        self._run(tmp_path, capsys, [self.STEADY])
+        clean, _said = self._run(tmp_path, capsys, [])
+        third, said = self._run(tmp_path, capsys, [self.STEADY])
+        assert clean == 0, said
+        assert third == 0, (
+            "a run that found nothing left the previous run's finding in "
+            "the carry, so an excursion either side of it confirmed")
+
+    def test_the_run_that_only_saw_it_once_still_says_so(self, tmp_path,
+                                                        capsys):
+        """Not a failure and not silence. A gate that swallows the first
+        sample entirely would leave the second red with no history a
+        reader could see."""
+        _code, said = self._run(tmp_path, capsys, [self.FLAKY])
+        assert self.FLAKY in said and "UX-442" in said, said
+        assert f"{drift.CI_DRIFT_RUNS} consecutive runs" in said, said
+
+    def test_a_branch_with_no_history_reports_nothing(self, tmp_path,
+                                                      capsys):
+        """The cost, asserted rather than described: the first run of a
+        branch has nothing to agree with, so it cannot report. A cache
+        that failed to restore lands in the same state, which is why an
+        unreadable carry is an empty history and not an error."""
+        (tmp_path / "carry.json").write_text("not json", encoding="utf-8")
+        code, _said = self._run(tmp_path, capsys, [self.STEADY])
+        assert code == 0, (
+            "an unreadable carry failed the build over its own absence")
+        assert drift.carried(tmp_path / "carry.json") == [
+            {self.STEADY}], (
+            "the unreadable carry was not replaced by this run's finding, "
+            "so the next run has nothing to agree with either")
+
+    def test_without_a_carry_one_sample_still_decides(self, tmp_path,
+                                                     capsys):
+        """The rule needs memory, and a run given none has to say which
+        rule it applied. Silently passing would turn a forgotten flag
+        into a gate that cannot fail."""
+        code, said = self._run(tmp_path, capsys, [self.STEADY], carry=False)
+        assert code == 1, said
+        assert "no --carry" in said, said
+
+    def test_every_run_behind_this_one_must_agree(self):
+        """`repeated` called directly, with a two-run history, because
+        `CI_DRIFT_RUNS` is 2 today and no series the tool writes is long
+        enough to tell `all` from `any`. The contract is *consecutive*,
+        so a file missing from one of the runs behind this one has not
+        drifted through all of them - and if the constant is ever raised,
+        this is the clause that already says what raising it means."""
+        row = (self.STEADY, 20.0, 10.0, 2.0)
+        both = [{self.STEADY}, {self.STEADY}]
+        gap = [{self.STEADY}, {self.FLAKY}]
+        assert drift.repeated([row], both) == ([row], []), (
+            "a file every run behind this one found was not confirmed")
+        assert drift.repeated([row], gap) == ([], [row]), (
+            "one run in the history was enough to confirm, so the rule "
+            "is 'ever' rather than 'consecutively'")
+
+    def test_the_history_is_bounded_by_the_constant(self, tmp_path,
+                                                    capsys):
+        """`CI_DRIFT_RUNS` is the whole rule, so the file it writes must
+        not quietly accumulate a longer one - a carry holding every run
+        a branch ever had would confirm on agreement with a fortnight
+        ago."""
+        for _ in range(4):
+            self._run(tmp_path, capsys, [self.STEADY])
+        held = json.loads((tmp_path / "carry.json").read_text(
+            encoding="utf-8"))
+        assert len(held["runs"]) == drift.CI_DRIFT_RUNS - 1, held["runs"]
+
+
+class TestCiSuppliesTheMemoryTheRuleNeeds:
+    """The rule above is only in force where CI hands it a series. The
+    clauses that decide are in `TestAnExcursionMustRepeat`; these tie
+    the workflow to them, and they are text about YAML - which is why
+    they are not the ones the item rests on.
+    """
+
+    WORKFLOW = REPO / ".github/workflows/ci.yml"
+
+    def _text(self):
+        return self.WORKFLOW.read_text(encoding="utf-8")
+
+    def test_the_drift_step_is_given_a_carry(self):
+        text = self._text()
+        step = text.split("--against", 1)[1].split("\n\n", 1)[0]
+        assert "--carry" in step, (
+            f"CI's drift step has no run-to-run memory, so one sample "
+            f"decides it again - which is UX-442 undone: {step!r}")
+
+    def test_the_carry_is_restored_and_saved_around_it(self):
+        text = self._text()
+        path = re.search(r'--carry "([^"]+)"', text).group(1)
+        for action, why in (("cache/restore",
+                             "nothing restores it, so every run is a first "
+                             "run and the gate never reports"),
+                            ("cache/save",
+                             "nothing saves it, so this run's finding is "
+                             "thrown away with the runner")):
+            steps = [block for block in text.split("      - ")
+                     if action in block and path in block]
+            assert steps, f"{action}: {why}"
+
+    def test_the_save_runs_when_the_step_reported(self):
+        """The run worth remembering is the one that just failed, and
+        a save gated on success would forget exactly it."""
+        text = self._text()
+        save = [block for block in text.split("      - ")
+                if "cache/save" in block][0]
+        # The step's own `if:`, not the block - the comment introducing
+        # the next step says "always()" too, and reading the block let
+        # this clause pass a mutation that removed the gate (R9).
+        gate = [line for line in save.splitlines()
+                if line.startswith("        if:")]
+        assert gate and "always()" in gate[0], (
+            "the carry is saved only on a green run, so a reported file "
+            "cannot be confirmed by the run after it")
+
+    def test_a_branch_reads_its_own_series(self):
+        """Two branches sharing a carry would confirm one branch's
+        excursion with another's, which is not agreement about anything."""
+        text = self._text()
+        # `\S+` would stop inside `${{ github.ref }}`, which is the
+        # half that matters - take the rest of the line.
+        keys = re.findall(r"key: (tier-carry-.*)", text)
+        assert keys, "the carry cache has no key at all"
+        for key in keys:
+            assert "github.ref" in key, (
+                f"the carry cache key {key!r} does not name the branch")
+
 class TestTheRecordStepDoesNotBuryTheFailure:
     """`UX-441`. `UX-427`'s step prints this run's timings so the
     reference can be refreshed from a real runner, and `if: always()` is

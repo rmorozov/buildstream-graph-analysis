@@ -289,27 +289,71 @@ def recorded():
 # (3.9 and 3.11 have `-n auto` faster, 3.10 and 3.12 slower), and the
 # gap is under 1.6s everywhere.
 #
+# **Round 66 met a third runner, and the single-process step was
+# killed at 30.0.** Run 33303144837, head `0ace86b`, `test (3.9)`. Read
+# off the **job step timings** rather than pytest's summary line, which
+# is the instrument these constants should have been using all along -
+# see the note on units below:
+#
 # ```text
-#             window                    chosen
-# parallel    (25.85, 32.34)              31.0
-# 1 proc      (27.0,  32.03)              30.0
+#          parallel (31)   1 proc (30)     runner
+# 3.9          29             30, killed   ...2871
+# 3.10         27             26           ...2872
+# 3.11         23             26           ...2870
+# 3.12         19             19           ...2874
 # ```
-# The extremes of both runs above, which is the whole population these
-# constants have. Named by the job that produced each, not because the
-# interpreter is the cause - see the note about the runner - but so a
-# later reader can find the log.
-SMALL_TIER_CI_SLOW_S = 25.85      # parallel, `-n auto`, slowest seen (3.10)
+#
+# Three interpreters passed the same step on the same commit, so this
+# is the runner rather than the tier - the conclusion the previous
+# round already reached and this run confirms with a third sample. The
+# tier did grow slightly in round 66 (`UX-419` and `UX-420` add about
+# fifteen sub-second tests to 2,790), which is nowhere near the 4s
+# between 3.9 and its siblings.
+#
+# **A units defect, found here and worth stating.** Every figure above
+# this round came from pytest's own summary line, and the thing the
+# budget bounds is the *step*, which also pays for `make`, collection
+# and interpreter start - about 0.6s on 3.9, whose step read 30 while
+# its summary line read 29.36. So the recorded population and the
+# quantity being bounded were never the same measurement, and the gap
+# always ran the wrong way: the constants under-stated what the timeout
+# actually has to clear. The table above is step seconds; the two
+# `_S` constants below are now step seconds too, and the `_FAST_`
+# pair is left at its pytest-line value because converting a number
+# nobody re-measured would be inventing one - it is the conservative
+# direction, since a smaller fastest only tightens the upper bound.
+#
+# ```text
+#             window                    chosen     margin
+# parallel    (29.0,  32.34)              32.0     3.0 / 0.34
+# 1 proc      (30.0,  32.03)              31.0     1.0 / 1.03
+# ```
+#
+# **The window is now about a second wide on both steps**, which is the
+# closing this file predicted above ("written down here so the round
+# that meets it recognises it") arriving one round later. It has not
+# closed - `slowest - fastest` is 11.7s and 13.0s against a 15.0s floor
+# - but a budget with a second of headroom either side is one slow
+# runner from red and one re-tier from unsatisfiable. `UX-421` is filed
+# for it, because the answer is a design decision about how the guard
+# keeps its meaning and not another bump.
+#
+# The extremes of all three runs above, which is the whole population
+# these constants have. Named by the job that produced each, not
+# because the interpreter is the cause - see the note about the runner
+# - but so a later reader can find the log.
+SMALL_TIER_CI_SLOW_S = 29.0       # parallel, `-n auto`, slowest seen (3.9)
 SMALL_TIER_CI_FAST_S = 17.34      # parallel, fastest seen (3.12)
 # A floor, not a measurement: `test (3.9)` was killed at this value
 # with the run at 100%, so the figure this constant wants is somewhere
-# above it. The green run's own 3.9 came in at 24.59 - well under, and
-# no help, because a killed run still proves the tier once cost more
-# than 27.0 and that is the number a budget has to clear.
-SMALL_TIER_CI_SLOW_1P_S = 27.0    # single process, slowest seen (3.9)
+# above it. That has now happened twice - at 27.0 and again at 30.0 -
+# and a killed run still proves the tier once cost more than the number
+# it was killed at, which is what a budget has to clear.
+SMALL_TIER_CI_SLOW_1P_S = 30.0    # single process, slowest seen (3.9)
 SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
 
-SMALL_TIER_BUDGET_S = 31.0        # the `-n auto` step's timeout
-SMALL_TIER_BUDGET_1P_S = 30.0     # the single-process step's timeout
+SMALL_TIER_BUDGET_S = 32.0        # the `-n auto` step's timeout
+SMALL_TIER_BUDGET_1P_S = 31.0     # the single-process step's timeout
 
 # **Do not re-size these against a local run.** Falsifying them here,
 # with the smallest `LARGE` file (16.4s) moved into the default tier,

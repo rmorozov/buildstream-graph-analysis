@@ -86,18 +86,52 @@ SHAPES = {
         "`UX-260` published the percentiles."),
     "by_binary": (
         None,
-        "A ranked map - one call count per binary name - and the four "
-        "instruments draw a series, a distribution, a total in parts, "
-        "or a value on an axis. None of them is a *ranked map*, so this "
-        "needs a fifth shape and its own filing (UX-411), which is "
-        "what this item's Out of Scope says to do rather than "
-        "improvising one here."),
+        "A ranked map - one call count per binary name. `UX-411` "
+        "decided it gets no fifth instrument: the four each answer a "
+        "question no other one does (how did it change, how is it "
+        "spread, what is it made of, where does it sit), and *which "
+        "is biggest* is already answered by a mechanism the page has "
+        "everywhere - a sortable table with a Top-N preset, a filter "
+        "and `columnStrip` as its annotation-grade shape. A second "
+        "answer to an answered question is what `UX-305`'s emphasis "
+        "budget forbids. See RANKED_MAP below."),
     "wall_clock_share_us": (
         None,
         "The same shape as `by_binary` - one duration per task uid, "
-        "ranked - and the same answer: a ranked map is a fifth "
-        "instrument (UX-411), not one of the four."),
+        "ranked - and the same decision, for the same reasons: "
+        "`UX-411` closed as a decision, not as a fifth shape. The "
+        "population grows with the payload rather than with the run, "
+        "so a drawn bar per key is unbounded by construction, which "
+        "is the volume `UX-360`'s budget exists to prevent."),
 }
+
+
+#: `UX-411`'s decision, written where the census can read it.
+#:
+#: A **ranked map** is one measure over many data keys with no order
+#: the schema declares. It is a real shape and it is not one of the
+#: four - and the answer is that it wants no drawing of its own:
+#:
+#: 1. Each of the four instruments answers a question none of the
+#:    others does. *Which is biggest* is already answered, and by a
+#:    general mechanism rather than a drawing: sort, `Top N by
+#:    <column>`, the filter box, and `columnStrip` beside the column.
+#:    `UX-305` spends emphasis once per block; a fifth instrument
+#:    would be a second answer to an answered question.
+#: 2. A ranked map grows with the **payload**, not with the run - one
+#:    key per binary, per task uid - so a bar per key is unbounded by
+#:    construction, which is what `UX-360`'s volume budget exists to
+#:    stop.
+#: 3. `UX-193`: the page chooses nothing. Drawing a ranking asserts an
+#:    order the schema does not declare, which is the decision
+#:    `UX-413`'s Out of Scope deliberately left with the emitter.
+#:
+#: What this does *not* say is that the two sections below are finished
+#: - measured at 120 keys, both draw every pair and no table, which is
+#: `UX-413`'s defect in the shape its sweep cannot see. Filed as
+#: `UX-419`; it is a bound, not a drawing, which is why it is not this
+#: row.
+RANKED_MAP = "no instrument, by decision (UX-411)"
 
 
 def _quantities(value, node):
@@ -173,11 +207,33 @@ class TestTheCensusIsTheAnswer:
                 f"if the second state is a reason")
 
     def test_the_four_instruments_are_the_four_that_exist(self):
-        """No fifth shape landed here, which is the Out of Scope."""
+        """No fifth shape landed here, which is the Out of Scope.
+
+        `UX-411` asked whether a ranked map should make it five and
+        answered no - see `RANKED_MAP` above for why. So this clause is
+        the decision's guard as well as the item's: a fifth name
+        appearing here without that reasoning being revisited fails.
+        """
         drawn = {instrument for instrument, _why in SHAPES.values()
                  if instrument}
         assert drawn <= {"sparkline", "density strip", "decomposition",
                          "interval"}, drawn
+
+    def test_the_ranked_maps_are_decided_rather_than_pending(self):
+        """`UX-411` closes as a decision, and a decision that is not
+        written down where the next round reads it is not one.
+
+        Both reasons named an open filing before; a reason that says
+        "somebody will decide this" is the shape of the silence this
+        census replaced.
+        """
+        for key in ("by_binary", "wall_clock_share_us"):
+            instrument, why = SHAPES[key]
+            assert instrument is None, (key, instrument)
+            assert "UX-411" in why, why
+            assert "needs a fifth shape" not in why, (
+                f"`{key}`'s reason still defers the decision UX-411 made: "
+                f"{why!r}")
 
 
 class TestFindingsCannotTakeTheShapeTheFilingNames:

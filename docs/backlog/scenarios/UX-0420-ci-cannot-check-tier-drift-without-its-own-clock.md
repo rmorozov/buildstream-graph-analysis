@@ -306,3 +306,83 @@ median before judging any file precisely so that this does not make it
 a comparison against that afternoon, but the four rot modes in
 `tools/dev_tier_drift.py` are the standing answer to it going stale,
 not this paragraph.
+
+### Addendum 2 — the first armed run falsified the rule, on the first try
+
+The paragraph above said the next run would be both the first real
+check and the first sample. It was, and it reported **31 files on a
+suite nobody had touched** — run 33306283177, `test (3.11)`, carrying
+the same suite as the reference plus a JSON file and a document:
+
+```text
+                                   measured  recorded  ratio  added
+  test_one_page_behind_the_button       5.9       4.3   1.66  +2.4s
+  test_one_click_from_investigation     4.4       3.1   1.74  +1.9s
+  test_plane_two_says_what_it_ran       3.8       2.7   1.77  +1.6s
+  test_doctor                           1.9       1.2   1.90  +0.9s
+  test_a_clone_without_the_archive      1.3       0.5   3.29  +0.9s
+  ... 26 more, all adding under a second
+  test_the_skills_point_at_the_guides   0.3       0.0  18.27  +0.3s
+```
+
+**A ratio is meaningless at small magnitudes.** The x18.27 row is a
+file that went from twenty milliseconds to three hundred; the x3.29 row
+added nine hundredths of a second more than the x1.66 row leading the
+list. Sorting by ratio puts noise at the top and the only row worth
+reading at the bottom.
+
+That is `UX-422`'s defect in a different guard, found the same day: a
+ratio judging a quantity the noise floor dominates. Two sightings in
+one round is enough to call it a pattern rather than a coincidence.
+
+**The rule was also inconsistent with itself.** `against`'s
+unreferenced-file branch already had the answer — *"only where there is
+something at stake"*, a `MEDIUM_FLOOR_S` floor — and the drift branch,
+five lines above it, had no floor at all. The principle was written
+down and applied to one of the two branches.
+
+**The fix.** A file is reported only when it is slower by **both** a
+ratio and a number of seconds:
+
+```python
+expected = known[name] * shift
+if (ratio / shift > CI_DRIFT_FACTOR
+        and times[name] - expected >= CI_DRIFT_SECONDS):
+```
+
+`CI_DRIFT_SECONDS = 5.0`, sized from the run above: the largest
+*addition* on an unchanged suite was 2.4s, so five is that with the
+margin a single sample deserves. `expected` is the record on **this
+run's** clock, not the raw record, because the whole rule is one
+machine against itself over time.
+
+### Mutations verified red and reverted (3 more)
+
+| # | mutation | reddened |
+|---|---|---|
+| D1 | the seconds gate removed — a ratio alone, the rule as shipped | `test_the_rule_that_also_counts_seconds_reports_none`, `test_a_file_that_added_real_seconds_is_still_reported`, `test_seconds_alone_is_not_enough_either`; 3 failed, 45 passed |
+| D2 | the ratio gate removed — seconds alone | `test_seconds_alone_is_not_enough_either`; 1 failed, 48 passed |
+| D3 | seconds counted against the raw record, not this run's clock | `test_the_seconds_are_counted_on_this_run_s_clock`; 1 failed, 48 passed |
+
+### Two more guards of mine that did not discriminate
+
+Both found by mutating, both in clauses written minutes earlier — which
+is the argument for `falsify` being a step rather than a habit.
+
+- **`test_seconds_alone_is_not_enough_either` added four seconds**, and
+  the seconds gate alone already excluded that, so deleting the ratio
+  gate left it green (D2). It now adds six, and asserts the addition
+  clears `CI_DRIFT_SECONDS` before asserting the verdict is quiet — so
+  the clause cannot silently stop testing its own premise again.
+- **Nothing distinguished `expected = known * shift` from
+  `expected = known`** (D3). The two differ only where the shift is far
+  from 1.0 and the file sits near the seconds threshold, and no clause
+  went there. `test_the_seconds_are_counted_on_this_run_s_clock` is
+  that case, and it asserts the raw-record reading would be under the
+  floor before asserting the shifted one is over it.
+
+This item has now found **five** non-discriminating guards of its own
+(`UX-412`'s C3, and these), which is more than any other in the
+backlog. The common shape: a clause whose setup happens to be excluded
+by a *different* gate than the one it means to exercise, so it passes
+whatever the gate under test does.

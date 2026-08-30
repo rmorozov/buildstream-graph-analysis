@@ -234,9 +234,17 @@ class TestCiIsReadAgainstItsOwnRecord:
 
     def test_one_file_slower_is_drift_on_any_image(self):
         """Rot 2's other end: dividing the median out must not become an
-        excuse. The same file, on an unchanged and a 1.3x image."""
+        excuse. The same file, on an unchanged and a 1.3x image.
+
+        The victim is a `LARGE` file rather than the first `MEDIUM` one,
+        because a file has to add `CI_DRIFT_SECONDS` as well as clear
+        the ratio - and doubling a one-second file adds one second. That
+        is the rule working, not an obstacle to testing it: see
+        `TestTheFirstArmedRunIsTheRegressionSuite` for the run that put
+        the seconds gate there.
+        """
         reference = self._ref(dict(tiers.recorded()))
-        victim = tiers.MEDIUM[0]
+        victim = tiers.LARGE[0]
         for image in (1.0, 1.3):
             times = {name: seconds * image
                      for name, seconds in tiers.recorded().items()}
@@ -345,6 +353,128 @@ class TestCiIsReadAgainstItsOwnRecord:
         assert drift.CI_DRIFT_FACTOR > 1.0, drift.CI_DRIFT_FACTOR
         low, high = drift.IMAGE_BAND
         assert low < 1.0 < high, drift.IMAGE_BAND
+
+
+class TestTheFirstArmedRunIsTheRegressionSuite:
+    """`UX-420`'s reference, armed, immediately reported 31 files on a
+    suite nobody had touched. That run is this class.
+
+    The reference was recorded on run 33304444986; run 33306283177 was
+    the next one, carrying the same suite plus a JSON file and a
+    document. Everything it named was noise, and the shape of the noise
+    is the finding: **a ratio is meaningless at small magnitudes**. The
+    worst offender by ratio (x18.27) added three tenths of a second; the
+    file that led the list by seconds added 2.4 and read x1.66.
+    """
+
+    #: `(measured, recorded)` as the step printed them, worst first.
+    #: **Twelve of the thirty-one**, and only twelve on purpose: the
+    #: step prints seconds to one decimal, so a row reading "against
+    #: 0.0s recorded" is anywhere in 0.005-0.049 and its ratio cannot be
+    #: reconstructed. Reconstructing it would be inventing precision the
+    #: log does not have. These twelve are every row whose *recorded*
+    #: figure is 0.2s or more, which is where one decimal still says
+    #: something - and they carry the whole claim anyway, because the
+    #: largest addition in the entire report is the first row's 2.4s.
+    REPORTED = (
+        (5.9, 4.3), (4.4, 3.1), (3.8, 2.7), (1.9, 1.2), (1.3, 0.5),
+        (1.1, 0.7), (1.0, 0.7), (0.7, 0.4), (0.6, 0.4), (0.5, 0.3),
+        (0.4, 0.2), (0.3, 0.2))
+
+    #: The run's own median shift, as the step reported it.
+    SHIFT = 0.82
+
+    def _that_run(self):
+        """The reported files, plus enough unchanged ones to hold the
+        median at the shift the run actually had."""
+        reference, times = {}, {}
+        for index, (measured, recorded) in enumerate(self.REPORTED):
+            name = f"tests/unit/test_reported_{index}.py"
+            reference[name], times[name] = recorded, measured
+        for index in range(200):
+            name = f"tests/unit/test_steady_{index}.py"
+            reference[name] = 1.0 + index * 0.05
+            times[name] = reference[name] * self.SHIFT
+        return times, drift.record(reference and
+                                   {k: v for k, v in reference.items()})
+
+    def test_the_replay_really_is_that_run(self):
+        """The premise. If the synthetic run's median is not the shift
+        the step reported, this class is replaying something else."""
+        times, held = self._that_run()
+        _verdict, shift, _rows = drift.against(times, held)
+        assert shift == pytest.approx(self.SHIFT, abs=0.02), shift
+
+    def test_a_ratio_alone_reports_all_of_them(self):
+        """What the shipped rule did, so the clause below is a
+        difference and not a tautology."""
+        times, held = self._that_run()
+        known = held["files"]
+        loud = [name for name in known
+                if times[name] / known[name] / self.SHIFT
+                > drift.CI_DRIFT_FACTOR]
+        assert len(loud) == len(self.REPORTED), len(loud)
+
+    def test_the_rule_that_also_counts_seconds_reports_none(self):
+        """And the fix: nothing here added five seconds, so nothing here
+        is drift. The largest addition on that run was 2.4s."""
+        times, held = self._that_run()
+        verdict, _shift, rows = drift.against(times, held)
+        assert (verdict, rows) == ("ok", []), (verdict, rows[:3])
+
+    def test_a_file_that_added_real_seconds_is_still_reported(self):
+        """The half that must not be lost. Both gates, one file: a
+        thirty-second file that went to sixty on the same run."""
+        times, held = self._that_run()
+        victim = "tests/unit/test_steady_0.py"
+        held["files"][victim] = 30.0
+        times[victim] = 60.0
+        verdict, _shift, rows = drift.against(times, held)
+        assert verdict == "drift", verdict
+        assert [row[0] for row in rows] == [victim], rows
+
+    def test_seconds_alone_is_not_enough_either(self):
+        """A big file drifts by five seconds without drifting by much:
+        88s against 82s expected is six seconds and only x1.07, which is
+        this run's noise on a file that size rather than a regression.
+        The ratio gate is what says so.
+
+        The first draft of this clause added *four* seconds and proved
+        nothing - the seconds gate alone already excluded it, so
+        deleting the ratio gate left the file green. Found by mutating
+        (`D2`), which is the only way that kind of clause is found.
+        """
+        times, held = self._that_run()
+        victim = "tests/unit/test_steady_0.py"
+        held["files"][victim] = 100.0
+        times[victim] = 100.0 * self.SHIFT + 6.0
+        added = times[victim] - held["files"][victim] * self.SHIFT
+        assert added >= drift.CI_DRIFT_SECONDS, added
+        verdict, _shift, rows = drift.against(times, held)
+        assert (verdict, rows) == ("ok", []), rows
+
+    def test_the_seconds_are_counted_on_this_run_s_clock(self):
+        """`expected` is the record *times the shift*, not the record.
+        On a runner 18% faster than the one that recorded, a file at
+        13.7s against 8.2s expected has added 5.5 seconds; measured
+        against the raw 10.0s record it has added 3.7 and disappears.
+
+        The whole rule is one machine against itself over time, so the
+        seconds have to be counted on the clock the run actually had.
+        Also found by mutating (`D3`) rather than by reading.
+        """
+        times, held = self._that_run()
+        victim = "tests/unit/test_steady_0.py"
+        held["files"][victim] = 10.0
+        times[victim] = 10.0 * self.SHIFT + 5.5
+        raw = times[victim] - held["files"][victim]
+        assert raw < drift.CI_DRIFT_SECONDS, raw
+        verdict, _shift, rows = drift.against(times, held)
+        assert verdict == "drift", verdict
+        assert [row[0] for row in rows] == [victim], rows
+
+    def test_both_thresholds_are_stated(self):
+        assert drift.CI_DRIFT_SECONDS > 0, drift.CI_DRIFT_SECONDS
 
 
 class TestTheThreeFailuresAreTheRegressionSuite:

@@ -488,3 +488,58 @@ class TestTheProxyRuleIsWhereItGetsRead:
         assert "measure` skill" in text or "`measure`" in text, (
             "CLAUDE.md names the class but not where its rule is, so a "
             "session meets the summary and never the rule")
+
+
+class TestTheCiFirstAdviceStaysTrue:
+    """`UX-426`. The `verify` skill's section 7 tells a session to open
+    the PR before the work, and the whole reason is one fact about
+    `.github/workflows/ci.yml`: it runs on `pull_request` and pushes to
+    `main`, so a branch with no PR gets no runs.
+
+    That is two copies of one fact, which this repository has watched
+    drift three separate times. If someone adds `push:` on all branches
+    the advice becomes wrong *and* unnecessary, and nothing else would
+    say so.
+    """
+
+    VERIFY = SKILLS / "verify/SKILL.md"
+
+    @staticmethod
+    def _triggers():
+        """The branches each event in `on:` is filtered to."""
+        text = WORKFLOW.read_text(encoding="utf-8")
+        block = text.split("\non:\n", 1)[1].split("\n\n", 1)[0]
+        found, event = {}, None
+        for line in block.splitlines():
+            if re.fullmatch(r"  (\w+):", line):
+                event = line.strip().rstrip(":")
+            elif event and "branches:" in line:
+                found[event] = re.findall(r"[\w./-]+", line.split(":", 1)[1])
+        return found
+
+    def test_the_workflow_runs_only_where_the_skill_says(self):
+        assert self._triggers() == {"push": ["main"], "pull_request": ["main"]}, (
+            f"ci.yml's triggers are {self._triggers()}, and the verify "
+            f"skill's section 7 tells sessions to open a PR early because "
+            f"they are push-to-main plus pull_request. Fix whichever is "
+            f"wrong - if CI now runs on every push, the advice is obsolete")
+
+    def test_the_skill_states_the_fact_it_rests_on(self):
+        text = self.VERIFY.read_text(encoding="utf-8")
+        assert "pull_request" in text and "no PR collects no runs" in text, (
+            "section 7 gives the advice without the fact that justifies it, "
+            "so a later round cannot tell when it stops applying")
+
+    def test_it_is_guidance_and_says_so(self):
+        """The half that keeps this honest. One round is not a baseline,
+        and a process claim asserted on one sample is `UX-420`'s mistake
+        one level up - so section 7 must keep saying it is unmeasured,
+        and the hard rules must keep not carrying it."""
+        text = self.VERIFY.read_text(encoding="utf-8")
+        assert "One round is not a baseline" in text, (
+            "section 7 stopped admitting it is one session's experience")
+        rules = (REPO / "docs/contributing/fixing-guide.md").read_text(
+            encoding="utf-8").split("## 5. Hard rules")[1].split("\n## ")[0]
+        assert "draft" not in rules.lower(), (
+            "the PR-first loop was promoted into the hard rules; it has "
+            "not been measured against the alternative even once")

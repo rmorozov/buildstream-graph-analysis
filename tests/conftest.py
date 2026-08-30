@@ -206,6 +206,26 @@ KNOWN_SKIP_REASONS = {
         "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 5),
     "bwrap/cc not both on PATH": (
         "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 8),
+    # `UX-405`'s shim guard reaches `install_bwrap_shim`, which writes a
+    # shim that *falls back* to the real `bwrap` and refuses when there
+    # is none, before it reaches anything it is about. It declared a C
+    # compiler and not a sandbox, so it passed on a dev container and
+    # failed on every `test (3.x)` runner - `UX-213`'s class, found by
+    # CI rather than by this census, because the census only sees a
+    # skip that happens. Measured on `test (3.11)` of PR #181: 1.
+    "no bwrap for the capture's shim to fall back to": (
+        "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 1),
+    # `UX-402`'s journey walks the documented commands over a copy of
+    # `examples/06`, so it needs all three: a `bst` to build with, a
+    # `bwrap` to build in, and the staged toolchain
+    # `generate_sources.py` writes and `UX-189` keeps out of a clone.
+    # The `test` job has none of them and the whole file skips.
+    # Measured on `test (3.11)` of PR #181: 14, which is every clause
+    # in the file.
+    "the journey needs bst, bwrap and example 06's staged toolchain "
+    "(files/toolchain, written by generate_sources.py)": (
+        "UX-402's whole-journey arm; it runs where bst, bwrap and the "
+        "staged toolchain are all present", 14),
 }
 
 # One file going quiet is what this exists to catch, and it is also the

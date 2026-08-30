@@ -642,10 +642,15 @@ how it is *read*, and the shape is deliberately small.
 - **`bga view`** serves the run on `127.0.0.1` at a kernel-chosen port
   and opens a browser at it. The server is a `ThreadingHTTPServer` with
   a fixed document table: each url is a payload computed by the same
-  functions the CLI calls, so nothing is analysed differently. Two
-  endpoints take a parameter - `blast.json?target=` and
-  `whatif.json?elements=` - and both call the function their subcommand
-  calls.
+  functions the CLI calls, so nothing is analysed differently. Three
+  urls take a parameter - `blast.json?target=` and
+  `whatif.json?elements=`, both of which call the function their
+  subcommand calls, and `?run=<stamp>` (`UX-394`), which chooses
+  **which snapshot the whole page is of**. The server is started on one
+  run and serves any run in that project's store, building its
+  documents on demand; the stamp is the state, so a run is a link. The
+  rail draws a picker only where there is a choice - two or more runs -
+  and an export, which has no store, renders none.
 - **Startup computes nothing large** (`UX-296`, Direction 15's first
   rule: *capture computes, view serves*). Nothing on the path to the
   socket may do O(events) work, and a large artifact is opened only to

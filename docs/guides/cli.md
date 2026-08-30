@@ -933,6 +933,29 @@ kernel picks, and a fixed allowlist of documents — nothing else in the
 run is reachable, there is no directory listing, and no write method is
 answered.
 
+**It moves between runs** (`UX-394`). Three of those documents take a
+parameter:
+
+| | |
+| --- | --- |
+| `blast.json?target=…` | what one element rebuilds |
+| `whatif.json?elements=…` | what fixing a set would be worth |
+| `?run=<stamp>` | **which snapshot the whole page is of** |
+
+`bga view` is started on one run, but it serves any snapshot in that
+project's store: `?run=20260101T000000Z` builds that run's documents on
+demand and the page renders them. The rail draws a picker when the
+store holds **two or more** — below that there is no choice to offer,
+so there is no control. `?run=` naming a stamp the store does not have
+falls back to the run the server was started on, rendered whole rather
+than an error page.
+
+The stamp is in the URL, so a link to a run is a link somebody else can
+open, and the browser's back button moves between runs.
+
+An **export has no store** — it is one file over one run — so it
+renders no picker at all.
+
 **It renders the schema, not the report.** The page asks
 `schemas.json` what each key *is* — a duration, a share, a findings
 array, a table with these columns — and renders from that. Two things

@@ -106,6 +106,30 @@ about many. So "go look in Perfetto" can never be the answer to the
 roles the model already marks Gap or Partial. Whatever closes those has
 to be a new aggregate over runs, not a better view of one.
 
+## What the page answers about *more than one* run (`UX-394`)
+
+The rest of this document is about one snapshot. Two of the page's
+answers are not:
+
+- **"What changed since last time?"** — the noise band and the store
+  trend, which read the runs *around* this one.
+- **"Show me that other run"** — the rail's run picker. `bga view` is
+  started on one snapshot and serves any snapshot in that project's
+  store, so moving between them is a click and not a restart. The
+  stamp is in the URL (`?run=20260101T000000Z`), which means a run is a
+  link you can send, and the back button walks the ones you looked at.
+
+The picker appears only where there is a choice: a store with two or
+more runs. One run is not a choice, and an **exported report has no
+store at all** — it is one file over one snapshot, so it renders no
+picker. That is the one place in this document where the served page
+and the attachment answer differently, and it is a property of the
+artifact rather than of the page.
+
+What this does *not* make the page is a cross-run analyser. Comparing
+many runs is `bga snapshot --list` and the store aggregate; the picker
+moves the same single-run report from one snapshot to another.
+
 ## What the page will not do, on purpose
 
 - **It will not become a trace viewer.** `UX-193`'s standing rule is

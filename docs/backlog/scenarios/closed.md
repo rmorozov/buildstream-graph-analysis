@@ -425,6 +425,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-411 | [a ranked map has no instrument](UX-0411-a-ranked-map-has-no-instrument.md) | Low | anyone scanning a per-key measure for its shape | 🟢 Done — decided: no fifth instrument - ranking is a table's mechanism, and a bar per key is unbounded by construction | [UX-411](UX-0411-a-ranked-map-has-no-instrument.md) |
 | UX-418 | [a slow file is small until CI times out](UX-0418-a-slow-file-is-small-until-ci-times-out.md) | Medium | the edit-run loop | 🟢 Done — the suite's own junit report, read against the floors - it named three medium files that had grown large on its first run | [UX-418](UX-0418-a-slow-file-is-small-until-ci-times-out.md) |
 | UX-417 | [the guide's export figures are stale by 3.2x](UX-0417-the-export-figures-are-four-rounds-stale.md) | Medium | anyone deciding whether to attach a report | 🟢 Done — re-measured at 508 KiB with the three-way split, and both ceilings say which half they read | [UX-417](UX-0417-the-export-figures-are-four-rounds-stale.md) |
+| UX-416 | [the page moves between runs, and no document says so](UX-0416-the-page-moves-between-runs-and-no-document-says-so.md) | Medium | anyone with more than one snapshot in a store | 🟢 Done — ?run=, the picker's threshold and the export's absence of one, in the three documents a reader opens | [UX-416](UX-0416-the-page-moves-between-runs-and-no-document-says-so.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

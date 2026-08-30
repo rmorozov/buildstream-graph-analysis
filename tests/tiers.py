@@ -398,7 +398,10 @@ MEDIUM = (
     "tests/unit/test_the_timeline_speaks_perfetto.py",           #    6.0s
     "tests/unit/test_any_element_can_be_inspected.py",          #   12.3s
     "tests/unit/test_one_table_many_views.py",                  #    8.1s
-    "tests/unit/test_the_report_has_chapters.py",               #    4.9s
+    # `UX-414` gave it a second fixture: three of its clauses boot the
+    # two-plane export as well as the single-plane one, which is where
+    # `restructuring` and `binary_cost` exist at all.
+    "tests/unit/test_the_report_has_chapters.py",               #   14.7s
     "tests/unit/test_a_table_cell_obeys_the_value_rule.py",     #    3.2s
     "tests/unit/test_a_control_says_what_it_does.py",           #    2.7s
     "tests/unit/test_every_table_has_its_own_state_key.py",     #    1.5s

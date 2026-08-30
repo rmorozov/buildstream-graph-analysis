@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-437 scenarios: **11 open**, 426 closed.
+438 scenarios: **12 open**, 426 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 69 |
-| analysis | 0 | 54 |
+| analysis | 1 | 55 |
 | contracts | 2 | 48 |
 | viewer | 7 | 131 |
 | cli | 0 | 5 |
@@ -47,6 +47,7 @@ task file, which is the only place it ever lived twice.
 | UX-436 | [forty-four controls are the browser's, not the page's](UX-0436-the-page-has-no-control-style.md) | viewer | Medium | every reader, on every screen of the report | 🔴 |
 | UX-437 | [the host memory series is captured every run and read by nobody](UX-0437-the-host-series-is-captured-and-read-by-nobody.md) | viewer | High | anyone whose build was slow because the host ran out of memory | 🔴 |
 | UX-438 | [the page guesses a unit on a real capture, and says so on the console](UX-0438-the-page-guesses-a-unit-and-says-so.md) | contracts | Medium | every reader, and the next round that trusts a clean console | 🔴 |
+| UX-439 | [the blast-radius ranking ties, and the tie-break is unstable](UX-0439-the-blast-radius-ranking-ties-and-the-tie-break-is-unstable.md) | analysis | High | anyone who reads "the first thing to fix" and expects the same answer twice | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

@@ -34,7 +34,7 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
-         copy, presetColumns, applyPreset,
+         copy, presetColumns, applyPreset, openingBound,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -775,8 +775,12 @@ export function interrogable(table, specs, total, depth = 0) {
   // `10 of 1,202`, because a reader who cannot see the denominator
   // cannot tell a filtered table from a small one.
   const presets = presetColumns(specs);
-  if (presets.length) {
-    const preset = el("select", { class: "top-n", "aria-label": "Top rows" });
+  // `UX-413`: the bound is about *length*, not about rankability -
+  // `openingBound` carries why, and a table with nothing to rank by
+  // used to get no control and therefore no bound at all.
+  const opening = openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE);
+  if (presets.length || opening) {
+    const preset = el("select", { class: "top-n", "aria-label": "Rows shown" });
     identify(preset, `top-${key}`);
     preset.append(el("option", { value: "" }, "All rows"));
     for (const column of presets) {
@@ -785,30 +789,26 @@ export function interrogable(table, specs, total, depth = 0) {
                          `Top ${n} by ${column}`));
       }
     }
+    if (!presets.length) {
+      preset.append(el("option", { value: `${TABLE_OPENS_BOUNDED_ABOVE}:` },
+                       `First ${TABLE_OPENS_BOUNDED_ABOVE} rows`));
+    }
     // `UX-392`: through the same `refresh`, so the preset narrows what
     // the filter left rather than replacing it.
     preset.addEventListener("change", () => {
       const [n, column] = preset.value ? preset.value.split(":") : [];
-      state.top = preset.value ? { n: Number(n), column } : null;
+      state.top = preset.value ? { n: Number(n), column: column || null } : null;
       refresh();
     });
-    // UX-262: a table longer than this opens bounded.
-    //
-    // `UX-187` capped the tables that grow with *element count* and
-    // this one grows with **critical-path depth**, which nobody had a
-    // run deep enough to notice. Measured at 1440x900: a 122-deep path
-    // took the `signals` section from 1884px (2.1 screens, 24 rows) to
-    // 5539px (6.2 screens, 132 rows) - on a *smaller* run.
-    //
-    // The control already existed; `All rows` being its default was
-    // the defect. The badge still says `25 of 132`, per `UX-208`'s
-    // rule that a reader who cannot see the denominator cannot tell a
-    // filtered table from a small one - so this bounds the page
-    // without hiding the size of what it bounded.
-    if (total > TABLE_OPENS_BOUNDED_ABOVE) {
-      const [column] = presets;
-      preset.value = `25:${column}`;
-      state.top = { n: 25, column };
+    // UX-262: a table longer than this opens bounded. Measured at
+    // 1440x900, a 122-deep critical path took `signals` from 1884px
+    // (2.1 screens) to 5539px (6.2 screens) on a *smaller* run. The
+    // control already existed; `All rows` being its default was the
+    // defect. The badge still says `25 of 132`, per `UX-208`, so this
+    // bounds the page without hiding the size of what it bounded.
+    if (opening) {
+      preset.value = opening.value;
+      state.top = opening.top;
       refresh();
     }
     state.preset = preset;

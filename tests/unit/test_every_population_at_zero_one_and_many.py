@@ -142,8 +142,13 @@ const draw = (key, rows) => {
       shown: trs.filter((tr) => !tr.hidden).length,
       // `renderFindings` draws an article per finding, not a table -
       // so a population that grows without a table grows unbounded in
-      // a shape counting rows cannot see.
+      // a shape counting rows cannot see. Read visible-and-total, for
+      // the reason the rows are: `UX-413`'s `boundCards` hides the
+      // cards past the bound rather than removing them, and counting
+      // the elements would read a bounded list as an unbounded one.
       cards: all(section, (n) => n.tagName === "article").length,
+      cards_shown: all(section, (n) => n.tagName === "article")
+        .filter((card) => !card.hidden).length,
       badges: all(section, (n) => (n.attrs?.class || "") === "badge")
         .map(text),
     };
@@ -352,18 +357,14 @@ class TestOne:
 class TestMany:
     """`UX-367`: the size people build at, not the size a fixture has."""
 
-    #: `UX-413`: the bound is a side effect of having something to rank
-    #: by. `buildTable` opens bounded by setting the Top-N preset, and
-    #: a table with no numeric column has no preset to set - so four
-    #: populations draw all 120 rows, and `findings`, which draws
-    #: articles rather than a table, draws 120 cards.
-    UNBOUNDED = {
-        "readers": "UX-413",
-        "next_steps": "UX-413",
-        "restructuring": "UX-413",
-        "provenance": "UX-413",
-        "findings": "UX-413",
-    }
+    #: Empty since `UX-413`, and empty is the measurement: every
+    #: published population is bounded at 120, whether or not it has a
+    #: column worth ranking by and whether it is drawn as rows or as
+    #: cards. It held five entries when this sweep was written - four
+    #: tables with nothing numeric in them, which got no preset control
+    #: and therefore no bound, and `findings`, which draws articles and
+    #: which the row bound could not see at all.
+    UNBOUNDED = {}
 
     def test_a_long_population_opens_bounded(self, swept):
         drawn_whole = {}
@@ -373,8 +374,8 @@ class TestMany:
             # `BOUND` rows plus it.
             if many.get("shown", 0) > BOUND + 1:
                 drawn_whole[key] = many["shown"]
-            elif many.get("cards", 0) > BOUND:
-                drawn_whole[key] = many["cards"]
+            elif many.get("cards_shown", 0) > BOUND:
+                drawn_whole[key] = many["cards_shown"]
         assert drawn_whole.keys() == self.UNBOUNDED.keys(), (
             f"drawing every one of {MANY} at once: {drawn_whole}; the "
             f"ledger says {sorted(self.UNBOUNDED)}")

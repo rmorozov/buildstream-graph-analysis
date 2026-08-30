@@ -423,7 +423,23 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #     page            279,297 -> 282,220   (+2,923, source)
 #     golden          379,706 -> 382,629
 #     macro_micro     435,039 -> 437,962
-PAGE_BUDGET_B = 284_000
+#
+# `UX-413` moved it again, and again all of it **source**: the bound a
+# long table opens at is now decided on the total rather than on
+# whether the table has a column worth ranking by, which needs a
+# `First 40 rows` option for the tables that have none, and cards get
+# the same bound through `boundCards`. Measured with this module's own
+# instrument (`export` then `_embedded`), before and after:
+#
+#     page            282,543 -> 283,964   (+1,421, source)
+#     golden          382,864 -> 384,218
+#     macro_micro     438,227 -> 439,581
+#
+# Neither companion guard spoke: the contract half is 81,623 B either
+# side (no declaration changed) and the data half moves only with
+# `run_instance`, which is why the two totals move by exactly what the
+# page did.
+PAGE_BUDGET_B = 286_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes

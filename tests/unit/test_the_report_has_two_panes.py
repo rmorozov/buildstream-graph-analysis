@@ -41,7 +41,12 @@ CSS = (REPO / "bga/viewer/style.css").read_text(encoding="utf-8")
 # clauses are about what the viewer declares, not about which file
 # declares it, so they read all three; pointing them at `app.js` alone
 # would have quietly stopped seeing the constants they defend.
-APP_MODULES = ("app.js", "format.js", "structured.js")
+#
+# `UX-413`: and `tables.js`, for the same reason and by the same route.
+# The rule deciding what a long table opens at moved there, and this
+# list is where a move that outruns its guards is caught - so the move
+# and the list change together rather than the clauses going quiet.
+APP_MODULES = ("app.js", "format.js", "structured.js", "tables.js")
 APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
                 for _name in APP_MODULES)
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")
@@ -220,7 +225,16 @@ class TestNoSectionGrowsWithoutBound:
         assert "TABLE_OPENS_BOUNDED_ABOVE" in code, (
             "nothing bounds a table's default, so depth goes straight to "
             "the page")
-        assert "if (total > TABLE_OPENS_BOUNDED_ABOVE)" in code, code[-1500:]
+        # `UX-413`: the decision is `openingBound`, which takes the
+        # total and answers with the state to open at. It used to be an
+        # `if` inside the block that builds the Top-N control, and a
+        # table with no column to rank by never reached it - so the
+        # bound was a side effect of being rankable. Both halves are
+        # asserted: that the caller asks, and that the answer is
+        # decided on the *total*.
+        assert "openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE)" in code, (
+            code[-1500:])
+        assert "if (total <= bound) return null;" in code, code[-1500:]
 
     def test_the_bound_clears_the_ordinary_case(self):
         """A bound that fired on the ordinary table would train readers
@@ -248,7 +262,7 @@ class TestNoSectionGrowsWithoutBound:
         the total, which is the fact this is about.
         """
         code = _code(APP)
-        bounded = code.split("if (total > TABLE_OPENS_BOUNDED_ABOVE)", 1)[1]
+        bounded = code.split("if (opening) {", 1)[1]
         bounded = bounded.split("\n    }", 1)[0]
         assert "refresh()" in bounded or "badgeText(" in bounded, bounded
         # The one line that writes it, named rather than located: the

@@ -1,6 +1,6 @@
 # UX-423: the drift shift is a median taken at the noise floor
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 67, a red `test (3.11)` on PR #185 that a re-run turned green | **Serves:** every contributor, at the point CI tells them something is wrong | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 67, a red `test (3.11)` on PR #185 that a re-run turned green | **Serves:** every contributor, at the point CI tells them something is wrong | **Topic:** guards
 
 ## Motivation
 
@@ -151,3 +151,116 @@ And, in `tests/unit/test_a_slow_file_says_which_file.py`:
 
 Each of the three must be shown red under a mutation that removes the
 clause it tests, per the `falsify` skill.
+
+## Outcome (round 68, 2026-08-30) — 🟢 Done
+
+### The gap, measured
+
+The filing measured the reference's *population*. This measures the
+thing that actually matters — how noisy a per-file ratio is at each
+size. Two runs of the whole suite on one machine at one commit, so
+every departure from the median is noise and nothing else:
+
+```text
+369 files measured twice, same machine, same commit
+median run-to-run ratio: 0.983
+
+band (run 1 seconds)   files  median  p90 |r-1|   worst
+0 - 0.1                  144   1.000      0.983   4.208
+0.1 - 0.5                 46   0.978      0.294   1.292
+0.5 - 1                   24   1.030      0.402   1.390
+1 - 5                     74   0.961      0.260   1.777
+5+                        57   0.994      0.124   1.170
+```
+
+**A file under a tenth of a second ran ×4.21 its own time with nothing
+changed.** 144 of 345 files sit in that band, so 42% of the population
+the median was taken over carried no information about the runner.
+
+### After
+
+```text
+shift over files >= 0.0s: 0.983  from 345 files, IQR 0.151
+shift over files >= 1.0s: 0.980  from 131 files, IQR 0.099
+shift over files >= 5.0s: 0.994  from  57 files, IQR 0.044
+```
+
+And the check now says what its estimate rests on, every run:
+
+```text
+369 file(s) measured against ci_reference.json (github-actions
+ubuntu-latest, test (3.11), -n auto), this run x0.96 from 112 file(s)
+over 1s, IQR 0.20
+```
+
+### The premise was half right, and the half that was wrong is the interesting one
+
+The filing implied the shift was **badly estimated**. It is not: a
+median is robust, and the point estimate moved 0.983 → 0.980, which is
+nothing. What the measurement actually shows is a **precision**
+problem — the IQR of the population behind the median falls 0.151 →
+0.099, a 34% tightening.
+
+That is a weaker claim than filed and it is the one that ships. Said
+here rather than quietly retold, because the filing's own Motivation is
+now partly false and a later round reading it needs to know which half.
+
+Two things still argue for the change on the measurement's own terms:
+
+- The estimator's stated justification — *"the run's median ratio to
+  the reference"* — silently rested on a population where 42% of
+  members are noise. The median survived them; the sentence did not.
+- The suite is **getting smaller-grained**: 144 of 345 files already
+  run under 0.1s. As that share grows the median migrates into the
+  noisiest half, and a robust statistic stops being robust when the
+  contaminated fraction passes half.
+
+`MEDIUM_FLOOR_S` was taken rather than 5.0s, which is tighter (IQR
+0.044). 57 files is a thin population for a median, and choosing
+between the two on one machine's pair of runs would be the
+sizing-on-one-sample mistake `UX-420` paid three red CI rounds for.
+
+**The class hypothesis is untestable here and stays at one
+observation.** On this idle machine browser-driven files shift ×0.998
+against ×0.976 for everything else — indistinguishable. The mechanism
+the filing proposed is a *contention* effect, and an idle machine
+cannot produce it. Recorded, not resolved.
+
+`CI_DRIFT_FACTOR` and `CI_DRIFT_SECONDS` were not touched, per Out of
+Scope. Worth noting for whoever does: the 1–5s band's worst ratio was
+×1.78 on an unchanged suite, which is above `CI_DRIFT_FACTOR`. The
+seconds gate is what keeps that from firing, which is a second
+independent argument for the rule `UX-420` landed.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| N1 | the shift is taken over every file again | 4 failed, 51 passed |
+| N2 | the floor is read on this run, not the reference | 1 failed, 54 passed |
+| N3 | the population is never widened when it is thin | 1 failed, 54 passed |
+| N4 | the run stops printing its shift's precision | 1 failed, 54 passed |
+
+N2 is the one worth keeping: without it a file that got slower buys its
+way into the population *by* getting slower, and drags the baseline
+toward itself. Nothing in the first draft distinguished the two, and
+the clause was written before the code.
+
+```text
+baseline    55 passed in 1.04s
+reverted    55 passed in 0.20s
+```
+
+### Deviation from the Required Fix
+
+- **Only the first of the two fixes shipped.** The second — shift a
+  class by its own class median — needed the second sample the filing
+  said to wait for, and the measurement above shows an idle machine
+  cannot supply it. The row's mechanism stands unconfirmed.
+- **`IMAGE_BAND` was not re-read**, though the Required Fix asks for
+  it. The band is 0.6–1.7 and the estimator moved by 0.003 on the only
+  pair of runs available; re-sizing it on that would be the mistake the
+  same paragraph warns against. Left as it is, deliberately, and the
+  printed IQR is what a later round needs to do it properly.

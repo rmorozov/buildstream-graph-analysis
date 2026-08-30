@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-424 scenarios: **6 open**, 418 closed.
+424 scenarios: **5 open**, 419 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 1 | 37 |
-| guards | 3 | 59 |
+| guards | 2 | 59 |
 
 ## Open scenarios
 
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-421 | [the small tier's budget window is a second wide](UX-0421-the-small-tier-budget-window-is-a-second-wide.md) | guards | Medium | every contributor, at the point CI tells them something is wrong | 🔴 |
 | UX-422 | [the layout-cost guard measures the runner as well as the page](UX-0422-the-layout-ratio-guard-measures-the-runner-too.md) | guards | Medium | every contributor, at the point CI tells them something is wrong | 🔴 |
-| UX-423 | [the drift shift is a median taken at the noise floor](UX-0423-the-drift-shift-is-a-median-taken-at-the-noise-floor.md) | guards | Medium | every contributor, at the point CI tells them something is wrong | 🔴 |
 | UX-425 | [the defect class this repository hits most often is in no rule document](UX-0425-the-proxy-instrument-class-is-in-no-rule-document.md) | docs | Medium | the next contributor, before they build the instrument rather than after | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)

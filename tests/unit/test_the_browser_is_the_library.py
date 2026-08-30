@@ -44,6 +44,14 @@ sys.path.insert(0, str(REPO))
 from tests import pages                                      # noqa: E402
 from tests.browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
 
+#: Milliseconds of forced-reflow time that `content-visibility` must
+#: save on the `macro_micro` export. `UX-422`: an absolute quantity,
+#: because the ratio this replaced was swamped by a fixed additive term
+#: on a loaded runner. Sized at a third of the smallest saving measured
+#: on two machines (13.2 ms on CI, 13.5 ms here) - see the clause that
+#: uses it for the table and the reasoning.
+LAYOUT_SAVING_FLOOR_MS = 4.5
+
 STYLE = REPO / "bga/viewer/style.css"
 NAV = REPO / "bga/viewer/nav.js"
 APP = REPO / "bga/viewer/app.js"
@@ -200,10 +208,38 @@ class TestInARealBrowser:
             seen = browser.measure(page, look, 1440, 900)
 
         assert seen["nodes"] > 2000, seen
-        # Measured 2.3 ms against 12.9 ms on this fixture and 2.2 against
-        # 25.9 at 1,202 elements. Held as a ratio with room, not as the
-        # figure: the number is the machine's, the property is the page's.
-        assert seen["on"] < seen["off"] / 2, (
-            f"content-visibility bought nothing: {seen['on']:.1f} ms with "
-            f"it against {seen['off']:.1f} ms without, on a "
+        # `UX-422`. This was `on < off / 2` - a ratio, on the argument
+        # that "the number is the machine's, the property is the
+        # page's". It went red on CI at 15.4 against 28.6 with nothing
+        # about the page changed, and the reason is that the two
+        # operands did not move together: `on` was 5x its local value
+        # and `off` only 1.6x, the signature of a *fixed additive* term
+        # on each measurement rather than of a slower machine.
+        #
+        # A ratio is invariant under a multiplicative change and not
+        # under an additive one, and the smaller operand is the one an
+        # additive term swamps - so the guard whose job is to prove
+        # `on` is small failed exactly when the harness made small
+        # things unmeasurable.
+        #
+        # **The saving is the quantity that survives**, because an
+        # additive term cancels in a difference. Three measurements of
+        # it, and the ratio beside it for contrast:
+        #
+        #     on     off    ratio   off - on
+        #     15.4   28.6   1.86     13.2     CI, the red run
+        #      3.0   16.5   5.50     13.5     here, idle
+        #      2.9   16.6   5.72     13.7     here, 8 spinners on 4 CPUs
+        #
+        # The ratio spans 1.86 to 5.72 across those rows; the saving
+        # spans 13.2 to 13.7. The floor below is a third of the
+        # smallest of them, which is margin for a machine slower than
+        # either - and it is an absolute quantity in milliseconds, so
+        # `UX-420`'s rule applies to it and not the noise-floor ratio
+        # that `UX-422` and this clause were both filed about.
+        saving = seen["off"] - seen["on"]
+        assert saving >= LAYOUT_SAVING_FLOOR_MS, (
+            f"content-visibility bought {saving:.1f} ms, under the "
+            f"{LAYOUT_SAVING_FLOOR_MS} ms floor: {seen['on']:.1f} ms with it "
+            f"against {seen['off']:.1f} ms without, on a "
             f"{seen['nodes']}-element page")

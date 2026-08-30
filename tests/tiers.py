@@ -121,12 +121,33 @@ MEDIUM_FLOOR_S = 1.0
 #    `test_report_stays_readable_at_scale` is recorded below all 22
 #    `LARGE` files here, and on CI it read 25.3s - above 11 of them.
 #
-# So the check runs where the floors mean something (`make test-tiers`)
-# and not in CI, where these seconds describe a different machine. CI
-# keeps `SMALL_TIER_BUDGET_S` below, whose whole point is that it is
-# sized against CI's own clock - the distinction this file already drew
-# once and `UX-418` had to learn again. A CI-side check needs a CI-side
-# reference; that is `UX-420`.
+# `UX-420` could not reconcile the two figures in 2 and 3. Its file,
+# `tests/unit/test_output_schemas.py`, is recorded at 5.7s below, and
+# re-measured single-process while UX-420 was being written it read
+# 7.1s wall - so CI's 25.3s is x3.5-4.4 of the record, not the x1.61
+# item 2 states. One of the two was taken over the file and the other
+# over the single test, or the -n auto contention on the runner is not
+# uniform across a file; nothing in the repository says which, and
+# settling it needs another CI run rather than a re-reading.
+#
+# **Neither conclusion rests on the figure.** Item 2 is a statement
+# about the *spread* between the median and the outliers, which three
+# separate ratios support, and item 3 needs only that the ordering
+# changed. `UX-420`'s rule reads neither number: it compares CI to CI,
+# and never opens this file's records at all.
+#
+# So the check against these floors runs where they mean something
+# (`make test-tiers`) and not in CI, where these seconds describe a
+# different machine. `SMALL_TIER_BUDGET_S` below is the CI-side guard
+# that does work, and for the same reason: it is sized against CI's own
+# clock. That is the distinction this file already drew once and
+# `UX-418` had to learn again.
+#
+# `UX-420` gave CI the other half - `tests/ci_reference.json`, one full
+# run's per-file totals taken *on the runner*, so a later run is read
+# against CI rather than against these numbers. One machine against
+# itself over time is the only comparison the three failures above
+# leave standing.
 
 
 def recorded():

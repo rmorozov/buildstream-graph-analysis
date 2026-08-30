@@ -58,21 +58,34 @@ jobs:
       - name: Test (small tier, budgeted)
         run: timeout 31 make test-small
 
+      # UX-420: one interpreter writes a report, because one is enough
+      # to read this runner against its own past and four would be four
+      # references to keep true.
       - name: Test
         run: make test
+        if: matrix.python-version != '3.11'
 
-      # UX-418: the tier-drift check is deliberately **not** here, and
-      # that is a measured decision rather than an omission. It compares
-      # each file's seconds against the floors in tests/tiers.py, and
-      # those are seconds measured on a developer machine. Three CI runs
-      # showed they do not travel: a fixed slack, a scale derived from
-      # the report, and a rank comparison each reported files that had
-      # not drifted, because this runner differs from that one *per
-      # file* rather than by a factor. `make test-tiers` runs it where
-      # the floors mean something. What a check here would need is a
-      # CI-side reference set - filed as UX-420. The small-tier timeout
-      # below is the CI-side guard that does work, because its budget is
-      # sized against CI's own clock.
+      - name: Test (with a timing report)
+        run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
+        if: matrix.python-version == '3.11'
+
+      # UX-418 established that CI's seconds cannot be compared to the
+      # floors in tests/tiers.py, which describe a developer machine:
+      # a fixed slack, a scale derived from the report and a rank
+      # comparison each reported files that had not drifted, because the
+      # two runners differ *per file* rather than by a factor.
+      #
+      # UX-420 is what is left standing - CI against its own recorded
+      # numbers, one machine against itself over time. The reference is
+      # tests/ci_reference.json; the run's median shift is divided out
+      # first, so a new runner image is not read as every file drifting.
+      # `make test-tiers` remains the developer-side check against the
+      # floors, where those seconds mean something.
+      - name: Tiers match CI's own record of them
+        run: |
+          python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
+            --against --source "github-actions ubuntu-latest, test (3.11), -n auto"
+        if: matrix.python-version == '3.11'
 
       # UX-336: `make test` runs `-n auto` (see the Makefile). CI is not
       # the loop this item was about - the local one is - but a suite

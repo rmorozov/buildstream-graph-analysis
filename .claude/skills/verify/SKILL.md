@@ -71,8 +71,12 @@ make test-tiers   # the same run, plus which files outgrew their tier
 the floors in `tests/tiers.py`. It costs a parse, not a second suite.
 **Here and not in CI** — the floors are seconds measured on this kind of
 machine, and CI's runner differs from it per file rather than by a
-factor, which three CI runs established the hard way. `UX-420` is what a
-CI-side check would need.
+factor, which three CI runs established the hard way. CI runs its own
+half (`UX-420`): the same tool with `--against`, reading
+`tests/ci_reference.json`, which is one CI run's own totals. When that
+step says a file drifted and you cannot reproduce it here, that is the
+point — it is CI's clock, and the answer is `--record` from a green run
+rather than a number changed until it is quiet.
 
 `make test` before you mark anything done. A tier run is not evidence
 about the suite.

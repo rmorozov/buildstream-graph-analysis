@@ -138,10 +138,16 @@ MEDIUM_FLOOR_S = 1.0
 #
 # So the check against these floors runs where they mean something
 # (`make test-tiers`) and not in CI, where these seconds describe a
-# different machine. `SMALL_TIER_BUDGET_S` below is the CI-side guard
-# that does work, and for the same reason: it is sized against CI's own
-# clock. That is the distinction this file already drew once and
-# `UX-418` had to learn again.
+# different machine. That is the distinction this file already drew
+# once and `UX-418` had to learn again.
+#
+# For three rounds `SMALL_TIER_BUDGET_S` below was the CI-side guard
+# that did the work, sized against CI's own clock. `UX-421` retired it:
+# a wall-clock step budget cannot separate *a runner four seconds
+# slower than its siblings* from *a fifteen-second file in the default
+# tier*, and by round 67 its window was a second wide either side. It
+# is now `SMALL_TIER_BACKSTOP_S`, a hang-catcher, and the per-file rule
+# below does the job it was doing.
 #
 # `UX-420` gave CI the other half - `tests/ci_reference.json`, one full
 # run's per-file totals taken *on the runner*, so a later run is read
@@ -329,14 +335,18 @@ def recorded():
 # 1 proc      (30.0,  32.03)              31.0     1.0 / 1.03
 # ```
 #
-# **The window is now about a second wide on both steps**, which is the
+# **The window was about a second wide on both steps**, which is the
 # closing this file predicted above ("written down here so the round
-# that meets it recognises it") arriving one round later. It has not
-# closed - `slowest - fastest` is 11.7s and 13.0s against a 15.0s floor
-# - but a budget with a second of headroom either side is one slow
-# runner from red and one re-tier from unsatisfiable. `UX-421` is filed
-# for it, because the answer is a design decision about how the guard
-# keeps its meaning and not another bump.
+# that meets it recognises it") arriving one round later. It never
+# quite closed arithmetically - `slowest - fastest` is 11.7s and 13.0s
+# against a 15.0s floor - and `UX-421` did not wait for it to. A budget
+# with a second of headroom either side is one slow runner from red and
+# one re-tier from unsatisfiable, and the deeper problem is that no
+# width of window would have helped: the quantity being bounded moves
+# for two different reasons and the bound cannot tell them apart.
+#
+# The table above is kept as the record of what was measured. It is no
+# longer what sizes anything - see `SMALL_TIER_BACKSTOP_S` below.
 #
 # The extremes of all three runs above, which is the whole population
 # these constants have. Named by the job that produced each, not
@@ -352,13 +362,32 @@ SMALL_TIER_CI_FAST_S = 17.34      # parallel, fastest seen (3.12)
 SMALL_TIER_CI_SLOW_1P_S = 30.0    # single process, slowest seen (3.9)
 SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
 
-SMALL_TIER_BUDGET_S = 32.0        # the `-n auto` step's timeout
-SMALL_TIER_BUDGET_1P_S = 31.0     # the single-process step's timeout
+# `UX-421`. **These are backstops, not budgets.** The distinction is
+# the whole item: a budget claims to bound the tier, and a wall-clock
+# step timeout cannot, because two different causes move it the same
+# way. Round 66 met the proof - `test (3.9)` was killed at 30s while
+# 3.10, 3.11 and 3.12 passed the same step on the same commit at 26,
+# 26 and 19s. Nothing about the tier differed between those four jobs.
+#
+# Sized to catch a hang and nothing finer: about four times the
+# slowest step ever seen (30.0s), and far enough below the job's own
+# timeout that it fails fast with a legible message instead of burning
+# six minutes. A number in this range needs no re-measuring when the
+# tier grows by a second, which was the maintenance the old budget
+# demanded every re-tier.
+#
+# **What actually catches a large file in the default tier** is
+# `tools/dev_tier_drift.py --against`, run in CI on the 3.11 job. It
+# compares each file to CI's own recorded seconds with the run's median
+# shift divided out, so a slow runner is not read as a slow file - and
+# it names the file, which a timeout never could.
+SMALL_TIER_BACKSTOP_S = 120.0     # the `-n auto` step's timeout
+SMALL_TIER_BACKSTOP_1P_S = 120.0  # the single-process step's timeout
 
-# **Do not re-size these against a local run.** Falsifying them here,
-# with the smallest `LARGE` file (16.4s) moved into the default tier,
-# and on CI against the *fastest* run, which is the case that has to
-# hold:
+# The sizing this replaced, kept because it is the argument `UX-421`
+# had to answer rather than a number to restore. The old budget was
+# falsified with the smallest `LARGE` file (16.4s) moved into the
+# default tier, on CI against the *fastest* run:
 #
 # ```text
 #                        local        on CI at its fastest
@@ -366,13 +395,12 @@ SMALL_TIER_BUDGET_1P_S = 31.0     # the single-process step's timeout
 # 1 proc    23.9 + 16.4 = 40.3s  >30   17.03 + 16.4 = 33.4s >30   caught
 # ```
 #
-# The single-process budget is falsifiable on a dev machine because
-# that step runs at the same speed in both places. The parallel one is
-# not: this container runs it 2.8x faster than CI does, so a floor-sized
-# file slips under 35s here and trips it there. Its evidence is the CI
-# measurement above plus the inequality, which
-# `test_the_tiers_are_a_partition.py` checks. Lowering it to whatever
-# would redden on a laptop reddens every push.
+# That inequality worked, and it is not what failed. What failed is
+# that satisfying it also required the budget to sit *below* the
+# slowest ordinary run, and by round 66 the two constraints left about
+# a second between them - so an unlucky runner and a mis-tiered file
+# produced the same red. The per-file rule has no such problem: it
+# divides the runner out before it looks at any file.
 
 LARGE = (
     # `UX-402`: the documented journey, walked. One cold `bst build`

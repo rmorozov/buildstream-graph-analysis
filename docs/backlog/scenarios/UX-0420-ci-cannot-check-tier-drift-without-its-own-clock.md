@@ -237,13 +237,11 @@ number.
   report came from, and by
   `test_an_unlisted_file_over_the_medium_floor_is_named`. The second
   clause is answered in full, as a class.
-- **The reference itself is not recorded yet.** `tests/ci_reference.json`
-  is committed with `"files": {}` and a `bootstrap` field saying so.
-  Recording it on a developer machine is precisely what `UX-418` spent
-  three CI rounds proving does not travel, so the first CI run prints
-  the document and the numbers are committed from its log. Until then
-  the step says on every run that nothing is being checked, which is the
-  one behaviour rot 4 forbids it from doing silently.
+- **The reference itself was not recorded when this item closed**, and
+  is now — see the addendum below. It shipped with `"files": {}` and a
+  `bootstrap` field saying so, because recording it on a developer
+  machine is precisely what `UX-418` spent three CI rounds proving does
+  not travel.
 - `CI_DRIFT_FACTOR = 1.5` and `IMAGE_BAND = (0.6, 1.7)` are **stated
   starting values, not measurements**, and say so where they are
   defined. There is no CI-to-CI spread in the repository to size them
@@ -266,3 +264,45 @@ All checks passed!
 `make test-tiers` is the whole suite plus the parse, so the suite line
 and the tier line above come from one run — which is the property the
 CI half is built on and the reason the target exists.
+
+### Addendum — the reference, recorded
+
+The bootstrap this item designed, carried out. The `test (3.11)` job of
+run 33304444986 (head `03b291e`, the round's last commit before merge)
+printed the document its own numbers make, and it is committed verbatim
+as `tests/ci_reference.json`:
+
+```text
+measured_on: github-actions ubuntu-latest, test (3.11), -n auto
+files      : 367
+seconds    : min 0.00  median 0.10  max 59.69  total 966.1
+slowest 5:
+    59.7  tests/unit/test_the_page_has_geometry.py
+    41.7  tests/unit/test_a_control_acts_on_what_it_names.py
+    37.7  tests/unit/test_a_sentence_lives_on_its_door.py
+    34.4  tests/unit/test_the_page_has_a_volume_budget.py
+    29.0  tests/unit/test_the_two_capabilities_are_offered.py
+```
+
+Taken from the job log and not edited: the committed file round-trips
+through `record()` byte for byte, `note` and `files` both, which is the
+check that it is the tool's own output rather than something assembled
+by hand. It carries no `spread`, correctly — there was no prior
+reference to measure one against, and inventing a 1.0 there is what
+`test_the_first_record_states_no_spread_rather_than_a_made_up_one`
+forbids.
+
+**What this arms, and the one thing it cannot yet know.**
+`CI_DRIFT_FACTOR = 1.5` is a stated starting value; there is still no
+measurement of CI's *own* run-to-run spread, because measuring one
+needs two references and this is the first. So the next run is both the
+first real check and the first sample. If it reports files that did not
+grow, the factor is too tight and the numbers it prints are what sizes
+it — which is the loop `spread` was added for, now that a refresh has
+something to compare against.
+
+The reference is one runner's afternoon. `against` divides out the
+median before judging any file precisely so that this does not make it
+a comparison against that afternoon, but the four rot modes in
+`tools/dev_tier_drift.py` are the standing answer to it going stale,
+not this paragraph.

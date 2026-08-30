@@ -31,6 +31,7 @@ HOOKS = REPO / ".claude/hooks"
 SETTINGS = REPO / ".claude/settings.json"
 CLAUDE_MD = REPO / "CLAUDE.md"
 REVIEW_MD = REPO / "REVIEW.md"
+AGENTS = REPO / ".claude/agents"
 
 #: Built rather than written, because `keep-the-guards-able-to-fail.sh`
 #: blocks an edit that carries the literal - including this one. The
@@ -39,6 +40,9 @@ REVIEW_MD = REPO / "REVIEW.md"
 SKIP = "@pytest.mark." + "skip"
 XFAIL = "@pytest.mark." + "xfail"
 SKIPIF = "@pytest.mark." + "skipif"
+
+
+_FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
 
 def fire(name, payload):
@@ -247,3 +251,56 @@ class TestTheReviewPolicyIsReadable:
         """Separation of duties is the reason this file is committed
         rather than prompted."""
         assert "has no route to approve" in self._text()
+
+
+class TestTheSubagentsAreWellFormed:
+    """A subagent is a scoped helper with its own context window. Its
+    frontmatter is what decides whether it is offered at all, so a
+    missing field is a helper nobody is ever handed."""
+
+    @staticmethod
+    def _files():
+        return sorted(AGENTS.glob("*.md"))
+
+    def test_there_are_some(self):
+        assert self._files(), ".claude/agents/ is empty"
+
+    @pytest.mark.parametrize("field", ("name", "description", "tools"))
+    def test_each_declares_the_field(self, field):
+        for path in self._files():
+            head = _FRONTMATTER.match(path.read_text(encoding="utf-8"))
+            assert head, f"{path.name} has no frontmatter"
+            assert re.search(rf"^{field}:", head.group(1), re.M), (
+                f"{path.name} declares no {field}")
+
+    def test_the_name_matches_the_filename(self):
+        """Two names for one helper is the drift this repository has
+        fixed more often than any other."""
+        for path in self._files():
+            head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
+            declared = re.search(r"^name:\s*(\S+)", head, re.M).group(1)
+            assert declared == path.stem, (path.name, declared)
+
+    def test_neither_can_edit_the_tree(self):
+        """Both are read-and-report. A verifier that could fix what it
+        found would be judging its own work, which is the one thing it
+        exists not to do."""
+        for path in self._files():
+            head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
+            tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
+            for forbidden in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+                assert forbidden not in tools, (
+                    f"{path.name} may use {forbidden}; both agents report only")
+
+    def test_the_verifier_says_it_does_not_fix(self):
+        body = (AGENTS / "verifier.md").read_text(encoding="utf-8")
+        assert "Fix nothing" in body or "fix nothing" in body
+        assert "falsify" in body.lower() or "mutation" in body.lower(), (
+            "a verifier for this repository that never asks whether a new "
+            "guard can fail is checking the wrong thing")
+
+    def test_the_researcher_is_told_to_name_what_it_could_not_find(self):
+        """Silence reading as "there is none" is how a false premise
+        reaches a task file."""
+        body = (AGENTS / "researcher.md").read_text(encoding="utf-8")
+        assert "could not establish" in body or "did not find" in body

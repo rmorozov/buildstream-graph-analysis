@@ -281,7 +281,7 @@ class TestTheExportSaysWhatToRunInstead:
         monkeypatch.setattr(
             view, "trace_with_planes",
             lambda _run: (b"\x1f\x8b" + b"x" * (view.TRACE_BUDGET_B * 2),
-                          ["1", "2"]))
+                          ["1", "2"], None))
 
         path = tmp_path / "report.html"
         result = view.export(str(run), str(path))

@@ -47,6 +47,7 @@ picture, and that is Perfetto's own UI to decide.
 import gzip
 import hashlib
 import json
+import re
 import pathlib
 import shutil
 import struct
@@ -58,11 +59,15 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+from bga.run_store import ANALYSIS_NAME  # noqa: E402
 from tools.bga_timeline import (  # noqa: E402
-    DEFAULT_OUTPUT, FORMAT_TRACKEVENT, dependency_edges, render)
+    DEFAULT_OUTPUT, FLOW_LOSS_REASONS, FORMAT_TRACKEVENT, dependency_edges,
+    describe, element_structure, render)
 from tools.native_trace import trackevent  # noqa: E402
 
 from test_the_timeline_speaks_perfetto import _fields  # noqa: E402
+from test_one_click_from_investigation import (  # noqa: E402
+    _node, needs_node)
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
@@ -250,7 +255,7 @@ class TestThePlane1ArrowsAreTheGraphsEdges:
         """`top.bst` finishes in the microsecond `mid.bst` starts, so
         nothing in the capture says which came first. Perfetto would
         pick one; this drops it and says how many it dropped."""
-        assert rendered["result"]["flows_dropped"] == 1
+        assert rendered["result"]["flow_losses"]["out_of_order"] == 1
         pairs = _pairs(rendered["events"])
         assert not any(source and source.startswith("top.bst")
                        for source, _ in pairs.values())
@@ -284,7 +289,9 @@ class TestThePlane1ArrowsAreTheGraphsEdges:
         pairs = _pairs(decode(out))
         assert not any(source and "[" in source
                        for source, _ in pairs.values())
-        assert result["flows_dropped"] == 0
+        assert result["flow_losses"] == {"edges": 0, "drawn": 0,
+                                         "no_task": 0,
+                                         "out_of_order": 0}
 
 
 class TestThePlane2ArrowsAreTheExecChain:
@@ -403,7 +410,7 @@ class TestTheArrowsRideThePacketsThatExist:
             withf["packets"], without["packets"])
         assert withf["slices"] == without["slices"]
         assert without["flows"] == 0 and withf["flows"] == 836, withf["flows"]
-        assert withf["flows_dropped"] == 2, (
+        assert withf["flow_losses"]["out_of_order"] == 2, (
             "`toolchain.bst` is instantaneous and shares its microsecond "
             "with both dependents - if that changed, so did the capture")
         # 836 flows, two ids each, nine bytes an id plus the growth of
@@ -432,3 +439,230 @@ class TestTheArrowsRideThePacketsThatExist:
         assert withf["flows"] == 7 and without["flows"] == 0
         assert withf["packets"] == without["packets"]
         assert withf["slices"] == without["slices"]
+
+
+# `UX-431`: a graph whose every edge names elements this run never built.
+# That is what a mostly-cached build looks like from here, and it is the
+# ordinary case - the build people profile is the one where most
+# elements are already in the cache.
+_CACHED_GRAPH = {
+    "elements": [{"uid": uid, "cache_key": "k", "requested_target": False,
+                  "element_kind": "manual"}
+                 for uid in ("cached-a.bst", "cached-b.bst", "cached-c.bst")],
+    "dependencies": [
+        {"predecessor": "cached-a.bst", "successor": "cached-b.bst",
+         "dependency_type": "build"},
+        {"predecessor": "cached-b.bst", "successor": "cached-c.bst",
+         "dependency_type": "build"},
+    ],
+    "run_identity_hash": "flows-fixture-cached",
+}
+
+
+class TestTheLostEdgesAreAccountedFor:
+    """`UX-431`: every edge is an arrow or a named reason there is none.
+
+    Two real captures of `examples/06` - 11 elements, 34 edges in
+    `run/graph.json` - measured in round 69:
+
+    ```text
+                            edges   flows   flows_dropped
+    mostly-cached build        34       0               0
+    full rebuild               34      24              24
+    ```
+
+    The cached build drew nothing and reported no losses, because
+    `_plane1_flows` had two skip paths and counted one. A zero meaning
+    "nothing was lost" and a zero meaning "this counter does not watch
+    that door" are indistinguishable, and the second is worse than no
+    counter: it converts an absence the reader might have questioned
+    into an assurance.
+
+    So the property is an **identity**, not a threshold: drawn plus every
+    named reason equals the edge count, on every capture. A reason
+    nobody counts breaks it, which is what makes it a guard rather than
+    a restatement.
+    """
+
+    def test_every_edge_is_an_arrow_or_a_named_reason(self, rendered):
+        losses = rendered["result"]["flow_losses"]
+        edges = len(dependency_edges(str(rendered["snapshot"])))
+        named = sum(losses[reason] for reason in FLOW_LOSS_REASONS)
+        assert losses["edges"] == edges, (losses, edges)
+        assert losses["drawn"] + named == edges, (
+            f"{edges} edges, {losses['drawn']} drawn, {named} accounted "
+            f"for by a named reason - the rest vanished without one, "
+            f"which is the silence UX-431 was filed for: {losses}")
+
+    def test_the_two_reasons_are_told_apart(self, rendered):
+        """The fixture has one of each, so a single counter covering
+        both would still balance and still say nothing useful. `top.bst`
+        ties with `mid.bst`; `spare.bst` was never built."""
+        losses = rendered["result"]["flow_losses"]
+        assert losses["out_of_order"] == 1, losses
+        assert losses["no_task"] == 1, losses
+
+    def test_a_cached_build_says_why_it_drew_nothing(self, tmp_path):
+        """The capture the item was filed on, in miniature: every edge
+        names an element this run did not build. Before `UX-431` this
+        rendered zero arrows and reported zero losses."""
+        snapshot = _snapshot(tmp_path, graph=_CACHED_GRAPH)
+        result = render(str(snapshot), str(tmp_path / "trace.gz"))
+        losses = result["flow_losses"]
+        assert (losses["edges"], losses["drawn"]) == (2, 0), losses
+        assert losses["no_task"] == 2, (
+            f"a build that drew no arrows at all accounted for none of "
+            f"its {losses['edges']} edges: {losses}")
+
+    def test_the_reader_is_told_and_not_only_the_result(self, tmp_path):
+        """The count was in the render result and in one test, and
+        `describe` never printed it - so even the reason that *was*
+        counted reached nobody."""
+        snapshot = _snapshot(tmp_path, graph=_CACHED_GRAPH)
+        result = render(str(snapshot), str(tmp_path / "trace.gz"))
+        said = describe(result, str(tmp_path / "trace.gz"))
+        assert "0 of 2 dependency edge(s) drawn" in said, said
+        assert FLOW_LOSS_REASONS["no_task"] in said, said
+        assert FLOW_LOSS_REASONS["out_of_order"] not in said, (
+            "a reason that took no edge is named anyway, so the summary "
+            "reads as a list of things that went wrong")
+
+    def test_a_run_that_drew_them_all_still_says_so(self, tmp_path):
+        """The other half of the same rule. A line that appears only on
+        loss teaches a reader that its absence means nothing was lost,
+        which is the reading this item removes."""
+        graph = dict(_CACHED_GRAPH, dependencies=[
+            {"predecessor": "mid.bst", "successor": "leaf.bst",
+             "dependency_type": "build"}])
+        snapshot = _snapshot(tmp_path, graph=graph)
+        result = render(str(snapshot), str(tmp_path / "trace.gz"))
+        said = describe(result, str(tmp_path / "trace.gz"))
+        assert result["flow_losses"]["drawn"] == 1, result["flow_losses"]
+        assert "1 of 1 dependency edge(s) drawn" in said, said
+        assert "not drawn" not in said, said
+
+    def test_the_export_is_given_the_accounting(self, tmp_path):
+        """`describe` serves whoever ran `bga timeline`. The reader who
+        opens the report goes to the handoff to look for the arrows, so
+        the payload carries it too - measured from the export, which is
+        where the trace is rendered while the payload is being built.
+        The **served** page is `UX-443`: `UX-296` moved the render off
+        the startup path deliberately, so `run.json` is written before
+        anything has counted an edge."""
+        from tools import bga_view
+
+        snapshot = _snapshot(tmp_path)
+        path = tmp_path / "report.html"
+        bga_view.export(str(snapshot / "run"), str(path))
+        payload = json.loads(re.search(
+            r'id="bga-run">(.*?)</script>',
+            path.read_text(encoding="utf-8"), re.S).group(1))
+        held = payload.get("trace_flow_losses")
+        assert held, (
+            "the run payload carries no edge accounting, so the page "
+            "that sends a reader to look for the arrows cannot say why "
+            "they are missing")
+        assert (held["edges"], held["drawn"]) == (3, 1), held
+
+
+@needs_node
+class TestTheHandoffSectionNamesTheMissingArrows:
+    """The rendered half. The payload above is only worth carrying if
+    the page draws it, and `questions.js` is where the reader is told
+    what to open the trace for."""
+
+    SCRIPT = (
+        'const q = await import("./bga/viewer/questions.js");'
+        'const make = (t, a = {}, ...c) => ({ tagName: t, attrs: {...a},'
+        '  children: [], textContent: c.join(""),'
+        '  setAttribute(k, v) { this.attrs[k] = v; },'
+        '  getAttribute(k) { return this.attrs[k] ?? null; },'
+        '  addEventListener() {}, append(...x) {'
+        '    for (const y of x) if (y) this.children.push(y); } });'
+        'const found = [];'
+        '(function walk(n) { if (!n) return;'
+        '  if (n.attrs && n.attrs["data-flow-accounting"] !== undefined)'
+        '    found.push(n.textContent);'
+        '  (n.children ?? []).forEach(walk); })('
+        '  q.renderQuestions(make, %s));'
+        'console.log(JSON.stringify({ found }));')
+
+    def _render(self, options):
+        return _node(self.SCRIPT % json.dumps(options))["found"]
+
+    def test_the_paragraph_names_the_count_and_the_reason(self):
+        found = self._render({
+            "hasTimeline": True, "tracePlanes": ["1"],
+            "flowLosses": {"edges": 34, "drawn": 0, "no_task": 34,
+                           "out_of_order": 0}})
+        assert len(found) == 1, found
+        assert "0 of 34 dependency edges" in found[0], found
+        assert "cached or built earlier" in found[0], found
+        assert "point the wrong way" not in found[0], (
+            "a reason that took no edge is named anyway")
+
+    def test_a_run_with_no_timeline_draws_no_accounting(self):
+        """The section already tells that reader there is nothing to
+        open; a count of edges in a trace that does not exist is a
+        second answer to a question nobody asked."""
+        assert self._render({
+            "hasTimeline": False,
+            "flowLosses": {"edges": 34, "drawn": 0, "no_task": 34,
+                           "out_of_order": 0}}) == []
+
+    def test_a_graph_with_no_edges_draws_no_accounting(self):
+        assert self._render({
+            "hasTimeline": True,
+            "flowLosses": {"edges": 0, "drawn": 0, "no_task": 0,
+                           "out_of_order": 0}}) == []
+
+
+class TestTheCommittedFixtureCarriesTheGraphAnnotations:
+    """`UX-431`'s third clause: no fixture in this repository had an
+    `analyze.json`, so `depth`, `on_critical_path` and
+    `downstream_count` were absent from every fixture-rendered trace and
+    the questions that group by them were exercised by nobody. A real
+    `bga snapshot` writes one; this is that file, produced by running
+    `bga analyze` on the fixture's own run.
+
+    It also closed a defect the fixture found. `element_structure` read
+    `on_critical_path` from `element_join`, which is **Plane 2's**
+    table - so a Plane 1 capture lost the annotation entirely while
+    `critical_path_detail`, in the same document, named the path.
+    """
+
+    FIXTURE = REPO / "tests/fixtures/with_timeline"
+
+    def test_the_analysis_is_beside_the_run(self):
+        assert (self.FIXTURE / ANALYSIS_NAME).is_file(), (
+            f"{ANALYSIS_NAME} is gone, and with it the only committed "
+            f"capture that exercises the graph annotations")
+
+    def test_all_three_annotations_reach_every_element(self):
+        structure = element_structure(str(self.FIXTURE))
+        assert len(structure) == 11, sorted(structure)
+        missing = {uid: sorted(facts) for uid, facts in structure.items()
+                   if set(facts) != {"depth", "downstream_count",
+                                     "on_critical_path"}}
+        assert missing == {}, (
+            f"an annotation present on some elements and absent from "
+            f"others is a `group by` that silently drops rows: {missing}")
+
+    def test_the_chain_is_nine_levels_deep(self):
+        """The shape `UX-434`'s query has to be able to see. One row per
+        depth is the answer; a fixture with one depth could not tell a
+        working query from the collapsed one."""
+        depths = {facts["depth"]
+                  for facts in element_structure(str(self.FIXTURE)).values()}
+        assert len(depths) == 10, sorted(depths)
+
+    def test_the_critical_path_comes_from_the_analysis(self):
+        """Not every element, which a `True` default would give, and not
+        none, which reading only `element_join` gave."""
+        structure = element_structure(str(self.FIXTURE))
+        on_path = {uid for uid, facts in structure.items()
+                   if facts["on_critical_path"]}
+        assert "codegen.bst" not in on_path, (
+            "every element is on the path, so the annotation says "
+            "nothing - `codegen.bst` is the one this fixture has off it")
+        assert {"core.bst", "lib-a.bst", "app.bst"} <= on_path, sorted(on_path)

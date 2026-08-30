@@ -41,8 +41,14 @@ PYTEST_XDIST ?= -n auto
 
 # Run the tier your change touches while you work; run `make test`
 # before you mark anything done.
+# `PYTEST_ARGS` is for a caller that needs one more flag on the same
+# run - CI passes `--junitxml=...` so `tools/dev_tier_drift.py` can read
+# the timings the suite already produced (`UX-418`) rather than running
+# it twice.
+PYTEST_ARGS ?=
+
 test:
-	python -m pytest tests/ -q $(PYTEST_XDIST)
+	python -m pytest tests/ -q $(PYTEST_XDIST) $(PYTEST_ARGS)
 
 test-small:
 	python -m pytest tests/ -m small -q $(PYTEST_XDIST)

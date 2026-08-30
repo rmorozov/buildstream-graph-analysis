@@ -97,6 +97,38 @@ slower. Re-measure with the command above before editing either list.
 LARGE_FLOOR_S = 15.0
 MEDIUM_FLOOR_S = 1.0
 
+# `UX-418`: how much a *parallel* report over-reads, and why the step
+# that reads one is told about it.
+#
+# The floors above are measured single-process - that is the `measure`
+# skill's recipe, `python3 -m pytest tests/ --durations=0 -q`. CI's full
+# run is `-n auto`, and a test's wall clock inside a worker carries the
+# contention of its neighbours, so the same file reads higher there.
+# Measured on this container (4 workers), the four files `UX-418`'s
+# first run flagged:
+#
+# ```text
+#                                           -n auto   single   ratio
+# test_the_chain_folds_and_clicks_are_counted  26.2s    24.5s   1.07
+# test_any_element_can_be_inspected            18.1s    16.6s   1.09
+# test_the_handoff_has_a_fixture               16.2s    15.5s   1.05
+# test_the_order_the_page_has                  15.2s    11.9s   1.28
+# ```
+#
+# Three were genuinely over the large floor and are listed there now.
+# The fourth is not, and is the case this number exists for: without
+# it the step reds on an ordinary parallel run, and a step that reds on
+# an ordinary run is one somebody mutes - which is the failure mode
+# `UX-418` was filed to avoid, not to reproduce.
+#
+# 1.35 is the worst ratio seen with headroom. It is a property of the
+# *report*, not of the tier: `--exact` turns it off for a report taken
+# single-process, and the floors stay the authority either way. The
+# cost is stated rather than hidden: on a parallel report the step
+# catches a medium-listed file only past 20.25s, so it is a ratchet
+# against drift rather than a re-measurement.
+PARALLEL_REPORT_SLACK = 1.35
+
 # `UX-363`: the two wall-clock budgets, and the measurement they are
 # sized against.
 #
@@ -263,6 +295,15 @@ LARGE = (
     # against an isolated artifact cache (so the durations are real),
     # one incremental, then analyze, correlate, export and a browser.
     "tests/unit/test_the_journey_has_an_answer_key.py",              #   50.0s
+    # `UX-418`'s first catch, and the reason that item exists. All three
+    # were listed medium and had grown past the large floor, and nothing
+    # said so: `test_the_tiers_are_a_partition.py` reads the lists
+    # against each other, not against a clock. Re-measured
+    # single-process, which is what the `measure` skill's recipe uses -
+    # the CI report is `-n auto` and reads 5-9% higher on these three.
+    "tests/unit/test_the_chain_folds_and_clicks_are_counted.py",     #   24.5s
+    "tests/unit/test_any_element_can_be_inspected.py",               #   16.6s
+    "tests/unit/test_the_handoff_has_a_fixture.py",                  #   15.5s
     # UX-257's geometry instrument: a real Chrome over CDP, an exported
     # report per class, and every claim measured at three viewports. It
     # was never listed, so it sat in the default tier at 42.6s and then
@@ -368,7 +409,6 @@ MEDIUM = (
     "tests/unit/test_the_page_keeps_the_names_it_was_given.py",  #    4.2s
     # Round 56, the other five of the twelve (see the LARGE block
     # above): over the medium floor, under the large one.
-    "tests/unit/test_the_handoff_has_a_fixture.py",              #   12.6s
     "tests/unit/test_the_guards_measure_the_page.py",            #   11.5s
     "tests/unit/test_the_merge_carries_every_field.py",          #    8.7s
     "tests/unit/test_the_label_is_for_the_reader.py",            #    6.4s
@@ -396,12 +436,13 @@ MEDIUM = (
     # UX-298's emitter: a 40,000-process trace written twice, once for
     # the ceiling and once for the bytes-before-close clause.
     "tests/unit/test_the_timeline_speaks_perfetto.py",           #    6.0s
-    "tests/unit/test_any_element_can_be_inspected.py",          #   12.3s
     "tests/unit/test_one_table_many_views.py",                  #    8.1s
     # `UX-414` gave it a second fixture: three of its clauses boot the
     # two-plane export as well as the single-plane one, which is where
-    # `restructuring` and `binary_cost` exist at all.
-    "tests/unit/test_the_report_has_chapters.py",               #   14.7s
+    # `restructuring` and `binary_cost` exist at all. That took it to
+    # 15.9s - over the large floor - and `UX-418`'s new step is what
+    # said so. One export and one boot per fixture now, cached.
+    "tests/unit/test_the_report_has_chapters.py",               #    4.9s
     "tests/unit/test_a_table_cell_obeys_the_value_rule.py",     #    3.2s
     "tests/unit/test_a_control_says_what_it_does.py",           #    2.7s
     "tests/unit/test_every_table_has_its_own_state_key.py",     #    1.5s
@@ -486,7 +527,6 @@ MEDIUM = (
     # aggregate. Together they were 46.2s of the small tier's 81.7s.
     "tests/unit/test_emphasis_is_a_budget.py",                       #   12.4s
     "tests/unit/test_the_documented_invocations_parse.py",           #    5.6s
-    "tests/unit/test_the_chain_folds_and_clicks_are_counted.py",     #    4.8s
     "tests/unit/test_the_fold_says_how_deep_it_goes.py",             #    4.4s
     "tests/unit/test_the_shape_before_the_rows.py",                  #    3.6s
     "tests/unit/test_a_drawing_is_graded.py",                        #    3.1s

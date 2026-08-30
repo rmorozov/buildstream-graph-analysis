@@ -424,6 +424,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-414 | [two sections fall into "Everything else", and the guard's fixture cannot see it](UX-0414-two-sections-fall-into-everything-else.md) | Medium | anyone navigating a two-plane report | 🟢 Done — both sections filed by name; the ledger that found them was a harness bug, and the defect underneath was a wrong chapter, not a missing one | [UX-414](UX-0414-two-sections-fall-into-everything-else.md) |
 | UX-411 | [a ranked map has no instrument](UX-0411-a-ranked-map-has-no-instrument.md) | Low | anyone scanning a per-key measure for its shape | 🟢 Done — decided: no fifth instrument - ranking is a table's mechanism, and a bar per key is unbounded by construction | [UX-411](UX-0411-a-ranked-map-has-no-instrument.md) |
 | UX-418 | [a slow file is small until CI times out](UX-0418-a-slow-file-is-small-until-ci-times-out.md) | Medium | the edit-run loop | 🟢 Done — the suite's own junit report, read against the floors - it named three medium files that had grown large on its first run | [UX-418](UX-0418-a-slow-file-is-small-until-ci-times-out.md) |
+| UX-417 | [the guide's export figures are stale by 3.2x](UX-0417-the-export-figures-are-four-rounds-stale.md) | Medium | anyone deciding whether to attach a report | 🟢 Done — re-measured at 508 KiB with the three-way split, and both ceilings say which half they read | [UX-417](UX-0417-the-export-figures-are-four-rounds-stale.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

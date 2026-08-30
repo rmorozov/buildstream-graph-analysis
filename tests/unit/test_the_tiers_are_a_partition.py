@@ -19,8 +19,13 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tests"))
+sys.path.insert(0, str(REPO))
 
 import tiers  # noqa: E402  - needs the path above
+# `UX-421`: the half of `UX-363`'s inequality that a step timeout could
+# not hold moved to the per-file rule, so this file now checks that
+# rule rather than asserting about a wall clock.
+from tools import dev_tier_drift as drift                      # noqa: E402
 
 
 def _test_files():
@@ -42,11 +47,15 @@ class TestTheListsNameRealFiles:
         both = sorted(set(tiers.LARGE) & set(tiers.MEDIUM))
         assert both == [], f"listed in both LARGE and MEDIUM: {both}"
 
-    def test_the_floors_are_ordered_and_the_budget_clears_them(self):
+    def test_the_floors_are_ordered_and_the_backstop_clears_them(self):
         assert tiers.MEDIUM_FLOOR_S < tiers.LARGE_FLOOR_S
-        # A single large file must be able to blow the small budget on
-        # its own, or the budget cannot catch the thing it is for.
-        assert tiers.SMALL_TIER_BUDGET_S > tiers.LARGE_FLOOR_S
+        # `UX-421`: the backstop no longer has to be *reachable* by one
+        # large file - the per-file rule catches that, and this catches
+        # a hang. It still has to be above the tier plus such a file,
+        # or it would red on the case the other instrument is reporting
+        # and bury the legible message under a timeout.
+        assert (tiers.SMALL_TIER_BACKSTOP_S
+                > tiers.SMALL_TIER_CI_SLOW_S + tiers.LARGE_FLOOR_S)
 
 
 #: `UX-403`: what a file has to be listed *for*.
@@ -161,9 +170,9 @@ class TestTheDefaultTierStaysFast:
     #: `UX-363`: the small tier runs twice in CI and each run has its
     #: own budget. The pairs are (what the workflow line looks like,
     #: the constant it has to equal).
-    STEPS = ((r"timeout (\d+) make test-small", "SMALL_TIER_BUDGET_S"),
+    STEPS = ((r"timeout (\d+) make test-small", "SMALL_TIER_BACKSTOP_S"),
              (r"PYTEST_XDIST= timeout (\d+) make test-small",
-              "SMALL_TIER_BUDGET_1P_S"))
+              "SMALL_TIER_BACKSTOP_1P_S"))
 
     @staticmethod
     def _workflow():
@@ -202,64 +211,111 @@ class TestTheDefaultTierStaysFast:
             f"CI budgets {budget.group(1)}s, tests/tiers.py declares "
             f"{declared}s as {constant} - two copies of one number")
 
-    def test_the_two_steps_have_different_numbers_from_each_other(self):
+    def test_the_two_steps_are_different_lines_of_the_workflow(self):
         """The parallel step is matched by a prefix of the
         single-process step's line, so a regex that is too loose reads
-        one number twice and calls it agreement. This is what makes the
-        clause above a pair rather than the same check run twice."""
-        workflow = self._workflow()
-        found = {name: int(re.search(pattern, workflow).group(1))
-                 for pattern, name in self.STEPS}
-        assert len(set(found.values())) == 2, (
-            f"both steps read as the same budget: {found} - the patterns "
-            f"are not distinguishing the two lines")
+        one line twice and calls it agreement. This is what makes the
+        clause above a pair rather than the same check run twice.
 
-    @pytest.mark.parametrize("slowest,fastest,budget", (
-        ("SMALL_TIER_CI_SLOW_S", "SMALL_TIER_CI_FAST_S",
-         "SMALL_TIER_BUDGET_S"),
-        ("SMALL_TIER_CI_SLOW_1P_S", "SMALL_TIER_CI_FAST_1P_S",
-         "SMALL_TIER_BUDGET_1P_S")))
-    def test_each_budget_is_reachable_and_still_a_bound(self, slowest,
-                                                        fastest, budget):
-        """`UX-363`, and the reason it was filed: a bound nothing can
-        reach is not a bound.
+        `UX-421` had to rewrite it: the two backstops are deliberately
+        the *same* number now, so comparing the values no longer
+        distinguishes anything and the old clause would have passed
+        while reading one line twice. The positions are what differ.
+        """
+        workflow = self._workflow()
+        where = {name: re.search(pattern, workflow).start()
+                 for pattern, name in self.STEPS}
+        assert len(set(where.values())) == 2, (
+            f"both patterns matched the same workflow line: {where} - "
+            f"the single-process step is going unchecked")
+
+    @pytest.mark.parametrize("slowest,backstop", (
+        ("SMALL_TIER_CI_SLOW_S", "SMALL_TIER_BACKSTOP_S"),
+        ("SMALL_TIER_CI_SLOW_1P_S", "SMALL_TIER_BACKSTOP_1P_S")))
+    def test_each_backstop_is_far_above_normal_running(self, slowest,
+                                                       backstop):
+        """`UX-421` retired `UX-363`'s inequality:
 
             measured  <  budget  <  measured + LARGE_FLOOR_S
 
-        The left half says the budget is not tripped by normal running.
-        The right half is the job: one file above the large floor
-        landing in the default tier has to trip it. For three rounds
-        only the left half was true - 90s against a tier that each
-        re-tier moved further down, until a file at *twice* the large
-        floor tripped neither step and the guard that had caught three
-        drifts would have missed the fourth.
+        The right half was the job - one file above the large floor
+        landing in the default tier had to trip it - and it is gone,
+        because a wall-clock step timeout cannot do that job. Round 66
+        is the proof: `test (3.9)` was killed at its 30s budget while
+        3.10, 3.11 and 3.12 passed the same step on the same commit at
+        26, 26 and 19s. Nothing about the tier differed. The bound was
+        being asked to separate two causes it cannot see apart, and by
+        round 67 the two halves left a second of room between them.
 
-        Re-measure both numbers when a re-tier moves the tier; that is
-        the edit, and it moves the budgets with it rather than leaving
-        them where a previous round happened to put them.
+        What is left is the left half, with room: a backstop catches a
+        hang, so it must sit far enough above ordinary running that no
+        runner reaches it. `test_the_per_file_rule_is_what_catches_a
+        _large_file_now` is where the retired half went.
         """
         slow = getattr(tiers, slowest)
-        fast = getattr(tiers, fastest)
-        bound = getattr(tiers, budget)
-        assert fast <= slow, (
-            f"{fastest} ({fast}s) is not faster than {slowest} ({slow}s); "
-            f"the two measurements are the wrong way round")
-        # Each half against the measurement that makes it hard. The
-        # first draft used one number for both and the second clause
-        # then checked the bound against the *slow* run, which is the
-        # side that makes any budget look sized: 32s passed against a
-        # 21.4s tier while the same runner's 13.8s day let a floor-sized
-        # file through. Caught by reading the first green run's log.
-        assert slow < bound, (
-            f"{budget} is {bound}s and the tier's slowest run measures "
-            f"{slow}s - the budget is below normal running and will red "
-            f"on an ordinary bad day")
-        assert bound < fast + tiers.LARGE_FLOOR_S, (
-            f"{budget} is {bound}s against a {fast}s tier at its fastest, "
-            f"so a file of {tiers.LARGE_FLOOR_S}s - the large floor - can "
-            f"land in the default tier without tripping it. That is the "
-            f"slack `UX-363` was filed for; re-measure and restate rather "
-            f"than widening this")
+        bound = getattr(tiers, backstop)
+        assert bound >= slow * 3, (
+            f"{backstop} is {bound}s against a slowest-seen {slow}s. A "
+            f"backstop that close to normal running is a budget again, "
+            f"and UX-421 is the record of why that does not work")
+        assert bound == int(bound), (
+            f"{backstop} is {bound}s, and a CI `timeout` is whole "
+            f"seconds - there is no workflow line this can equal")
+
+    def test_the_per_file_rule_is_what_catches_a_large_file_now(self):
+        """The half the backstop gave up, held somewhere it works.
+
+        A file above `LARGE_FLOOR_S` that has landed in the default
+        tier reaches CI as a file whose seconds disagree with the
+        reference's, and `tools/dev_tier_drift.py --against` reports it
+        **by name** with the runner's shift already divided out. That
+        is the property `UX-363`'s inequality was standing in for, and
+        it is checked here against the real rule rather than asserted
+        about a timeout.
+        """
+        reference = {f"tests/unit/test_small_{index}.py": 0.4
+                     for index in range(60)}
+        reference.update({f"tests/unit/test_real_{index}.py": 6.0
+                          for index in range(30)})
+        times = dict(reference)
+        # One small file grows past the large floor - the exact event
+        # the budget existed for - while the whole runner is 30% slower,
+        # which is the confound that made the budget unusable.
+        times = {name: seconds * 1.3 for name, seconds in times.items()}
+        victim = "tests/unit/test_small_0.py"
+        times[victim] = tiers.LARGE_FLOOR_S + 1.0
+        verdict, _shift, rows = drift.against(times, {"files": reference})
+        assert verdict == "drift", verdict
+        assert [row[0] for row in rows] == [victim], rows
+
+    def test_a_slower_runner_alone_is_not_reported(self):
+        """The other direction, and the one the budget got wrong. The
+        table from round 66 - four jobs of one run, spread 19s to 30s,
+        tier unchanged - must stay quiet.
+
+        **This clause needs a double mutation to redden, and that is a
+        property of the rule rather than a weakness here.** Under a
+        uniform shift `times[name] - known[name] * shift` is exactly
+        zero for every file, so the seconds gate holds the row back
+        whatever the ratio gate does - and `ratio / shift` is exactly
+        1.0, so the ratio gate holds it back whatever the seconds gate
+        does. Either gate alone is sufficient. Only P5, which makes
+        *both* read the raw ratio, turns a slower runner into drift.
+
+        Two wrong guesses were recorded before that was established -
+        the first draft used 6s files on the theory that the seconds
+        gate was doing the excluding, which is the `CLAUDE.md` defect
+        of a guard whose setup another gate already excludes. The files
+        are 20s now because at that size the arithmetic is legible in
+        the fixture; it is not what makes the clause discriminate.
+        """
+        reference = {f"tests/unit/test_real_{index}.py": 20.0
+                     for index in range(30)}
+        for factor in (30.0 / 19.0, 1.3, 1.0):
+            times = {name: seconds * factor
+                     for name, seconds in reference.items()}
+            verdict, _shift, rows = drift.against(times, {"files": reference})
+            assert (verdict, rows) == ("ok", []), (factor, verdict, rows)
 
     def test_the_makefile_offers_every_tier(self):
         makefile = (REPO / "Makefile").read_text(encoding="utf-8")

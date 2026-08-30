@@ -1190,22 +1190,55 @@ both modules inlined, the timeline carried as a `data:` URL. No port, no
 server, no network — it opens from a downloads folder, a CI artifact
 viewer, or an email.
 
-Measured on `examples/06`'s real 46 s two-plane capture: **158 KiB**,
-of which the page is 90,611 B. Rounds 22 and 23 grew the page — the
-decision panel, the rails, the table tools, the view state — and the
-export's own comment stripping paid part of it back. On the
-1,202-element synthetic run (**638 KiB**, page 6.0%, measured in round
-21) the data still dwarfs the page by an order of magnitude, which is
-the ratio the thinness rule is about; on a small project the page is
-the larger half, which is a property of small reports.
+**What it weighs, in three parts.** A report is not "page plus data":
+it also carries the JSON Schema for every document in it, so a reader
+can ask what a number means with no network. That third part travels
+whole whether or not a run has the rows it describes, which is why it
+is counted separately (`UX-342`).
+
+Measured in round 65 on a cold two-plane capture of `examples/06`
+(38 s, `bga snapshot -- bst build all.bst` against an isolated
+`XDG_CACHE_HOME`, then `bga view <run> --export report.html`):
+
+```text
+total       520,048 B   508 KiB
+  source    283,979 B   54.6%   the modules and the stylesheet
+  contract   81,623 B   15.7%   the embedded schemas
+  data      154,446 B   29.7%   the payload and the inlined timeline
+```
+
+And on the 1,202-element synthetic run
+(`bga gen-synthetic /tmp/scale --seed 1`), same round:
+
+```text
+total     1,197,665 B  1170 KiB
+  source    283,922 B   23.7%
+  contract   81,623 B    6.8%
+  data      832,120 B   69.5%
+```
+
+**Source and contract are the same bytes on both runs** — they are the
+page, and a bigger project does not make them bigger. What scales is
+the data. On a small project the page is the larger half; on a real one
+the data passes it and keeps going, which is the ratio the thinness
+rule is about.
+
+> Round 21 measured 638 KiB with the page at 6.0% on the same synthetic
+> run, and round 23 measured 158 KiB with the page at 90,611 B on
+> `examples/06`. Both are superseded by the figures above — kept
+> because a dated measurement is evidence about when the page grew, and
+> `UX-132`'s rule is to mark such a figure rather than to rewrite it.
+> The page has roughly tripled across rounds 24–64 (the decision panel,
+> the rails, the chapters, the table tools, the shape channel, the
+> query library) and the embedded contract is new since round 51.
 
 Two ceilings, both **reported and never enforced** — a report that large
-is still your report:
+is still your report. They are read against different halves:
 
-| | |
-| --- | --- |
-| the file | 8 MiB, past which an attachment starts being refused |
-| the timeline alone | 4 MiB, and it is dropped with the reason said |
+| | | measured against |
+| --- | --- | --- |
+| the file | 8 MiB, past which an attachment starts being refused | the whole written file: source + contract + data |
+| the timeline alone | 4 MiB, and it is dropped with the reason said | the **gzipped trace** before it is base64-encoded — one part of the data half, and the only part either ceiling singles out |
 
 For CI, put it beside the comment step — see
 [`ci-comment.md`](ci-comment.md).

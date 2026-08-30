@@ -1,0 +1,674 @@
+[
+  {
+    "name": "bst --no-interactive --builders 4 --max-jobs 4 build --ignore-project-artifact-remotes --ignore-project-source-remotes c...",
+    "cat": "bst-invocation",
+    "ph": "B",
+    "ts": 1788079401332000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Full Command": "bst --no-interactive --builders 4 --max-jobs 4 build --ignore-project-artifact-remotes --ignore-project-source-remotes components/libxml2.bst"
+    }
+  },
+  {
+    "name": "components/ninja.bst [freedesktop-sdk/components-ninja/0c5e035f-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079404850000,
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "action": "build",
+      "element": "components/ninja.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-flit-core.bst [freedesktop-sdk/components-_private-python3-flit-core/63a69b31-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079404850000,
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "action": "build",
+      "element": "components/_private/python3-flit-core.bst"
+    }
+  },
+  {
+    "name": "components/openssl.bst [freedesktop-sdk/components-openssl/5d83c19e-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079404850000,
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "action": "build",
+      "element": "components/openssl.bst"
+    }
+  },
+  {
+    "name": "components/which.bst [freedesktop-sdk/components-which/d402f55f-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079404850000,
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "action": "build",
+      "element": "components/which.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-flit-core.bst [freedesktop-sdk/components-_private-python3-flit-core/63a69b31-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079406852000,
+    "pid": 1,
+    "tid": 101,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-python3-flit-core/63a69b31-build.20260830-084323.log",
+      "action": "build",
+      "element": "components/_private/python3-flit-core.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-installer.bst [freedesktop-sdk/components-_private-python3-installer/dfe04e5e-build.20260830-084326.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079406853000,
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "action": "build",
+      "element": "components/_private/python3-installer.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-installer.bst [freedesktop-sdk/components-_private-python3-installer/dfe04e5e-build.20260830-084326.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079407854000,
+    "pid": 1,
+    "tid": 104,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-python3-installer/dfe04e5e-build.20260830-084326.log",
+      "action": "build",
+      "element": "components/_private/python3-installer.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-packaging.bst [freedesktop-sdk/components-_private-python3-packaging/f0d78136-build.20260830-084327.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079407854000,
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "action": "build",
+      "element": "components/_private/python3-packaging.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-packaging.bst [freedesktop-sdk/components-_private-python3-packaging/f0d78136-build.20260830-084327.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079409859000,
+    "pid": 1,
+    "tid": 105,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-python3-packaging/f0d78136-build.20260830-084327.log",
+      "action": "build",
+      "element": "components/_private/python3-packaging.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-pyproject-hooks.bst [freedesktop-sdk/components-_private-python3-pyproject-hooks/d32b63bb-build.20260830-084329.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079409859000,
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "action": "build",
+      "element": "components/_private/python3-pyproject-hooks.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-pyproject-hooks.bst [freedesktop-sdk/components-_private-python3-pyproject-hooks/d32b63bb-build.20260830-084329.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079410867000,
+    "pid": 1,
+    "tid": 106,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-python3-pyproject-hooks/d32b63bb-build.20260830-084329.log",
+      "action": "build",
+      "element": "components/_private/python3-pyproject-hooks.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-build.bst [freedesktop-sdk/components-_private-python3-build/6306a0f3-build.20260830-084330.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079410867000,
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "action": "build",
+      "element": "components/_private/python3-build.bst"
+    }
+  },
+  {
+    "name": "components/which.bst [freedesktop-sdk/components-which/d402f55f-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079412002000,
+    "pid": 1,
+    "tid": 103,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-which/d402f55f-build.20260830-084323.log",
+      "action": "build",
+      "element": "components/which.bst"
+    }
+  },
+  {
+    "name": "public-stacks/buildsystem-autotools.bst [freedesktop-sdk/public-stacks-buildsystem-autotools/30bbe22a-build.20260830-084331.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079412002000,
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "action": "build",
+      "element": "public-stacks/buildsystem-autotools.bst"
+    }
+  },
+  {
+    "name": "public-stacks/buildsystem-autotools.bst [freedesktop-sdk/public-stacks-buildsystem-autotools/30bbe22a-build.20260830-084331.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079412868000,
+    "pid": 1,
+    "tid": 108,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/public-stacks-buildsystem-autotools/30bbe22a-build.20260830-084331.log",
+      "action": "build",
+      "element": "public-stacks/buildsystem-autotools.bst"
+    }
+  },
+  {
+    "name": "components/gdbm.bst [freedesktop-sdk/components-gdbm/20879dcf-build.20260830-084332.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079412868000,
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "action": "build",
+      "element": "components/gdbm.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-build.bst [freedesktop-sdk/components-_private-python3-build/6306a0f3-build.20260830-084330.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079412868000,
+    "pid": 1,
+    "tid": 107,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-python3-build/6306a0f3-build.20260830-084330.log",
+      "action": "build",
+      "element": "components/_private/python3-build.bst"
+    }
+  },
+  {
+    "name": "components/libffi.bst [freedesktop-sdk/components-libffi/c7e8b6bc-build.20260830-084332.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079412868000,
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "action": "build",
+      "element": "components/libffi.bst"
+    }
+  },
+  {
+    "name": "components/gdbm.bst [freedesktop-sdk/components-gdbm/20879dcf-build.20260830-084332.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079431898000,
+    "pid": 1,
+    "tid": 109,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-gdbm/20879dcf-build.20260830-084332.log",
+      "action": "build",
+      "element": "components/gdbm.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-setuptools.bst [freedesktop-sdk/components-_private-python3-setuptools/2525e98a-build.20260830-084351.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079431898000,
+    "pid": 1,
+    "tid": 111,
+    "args": {
+      "action": "build",
+      "element": "components/_private/python3-setuptools.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-setuptools.bst [freedesktop-sdk/components-_private-python3-setuptools/2525e98a-build.20260830-084351.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079447265000,
+    "pid": 1,
+    "tid": 111,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-python3-setuptools/2525e98a-build.20260830-084351.log",
+      "action": "build",
+      "element": "components/_private/python3-setuptools.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-wheel.bst [freedesktop-sdk/components-_private-python3-wheel/e48dc6f5-build.20260830-084406.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079447265000,
+    "pid": 1,
+    "tid": 112,
+    "args": {
+      "action": "build",
+      "element": "components/_private/python3-wheel.bst"
+    }
+  },
+  {
+    "name": "components/_private/python3-wheel.bst [freedesktop-sdk/components-_private-python3-wheel/e48dc6f5-build.20260830-084406.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079450299000,
+    "pid": 1,
+    "tid": 112,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-python3-wheel/e48dc6f5-build.20260830-084406.log",
+      "action": "build",
+      "element": "components/_private/python3-wheel.bst"
+    }
+  },
+  {
+    "name": "components/help2man.bst [freedesktop-sdk/components-help2man/75879d67-build.20260830-084409.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079450299000,
+    "pid": 1,
+    "tid": 113,
+    "args": {
+      "action": "build",
+      "element": "components/help2man.bst"
+    }
+  },
+  {
+    "name": "components/help2man.bst [freedesktop-sdk/components-help2man/75879d67-build.20260830-084409.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079455309000,
+    "pid": 1,
+    "tid": 113,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-help2man/75879d67-build.20260830-084409.log",
+      "action": "build",
+      "element": "components/help2man.bst"
+    }
+  },
+  {
+    "name": "components/icu.bst [freedesktop-sdk/components-icu/b07192c1-build.20260830-084414.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079455309000,
+    "pid": 1,
+    "tid": 114,
+    "args": {
+      "action": "build",
+      "element": "components/icu.bst"
+    }
+  },
+  {
+    "name": "components/libffi.bst [freedesktop-sdk/components-libffi/c7e8b6bc-build.20260830-084332.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079466321000,
+    "pid": 1,
+    "tid": 110,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-libffi/c7e8b6bc-build.20260830-084332.log",
+      "action": "build",
+      "element": "components/libffi.bst"
+    }
+  },
+  {
+    "name": "components/ninja.bst [freedesktop-sdk/components-ninja/0c5e035f-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079546660000,
+    "pid": 1,
+    "tid": 100,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-ninja/0c5e035f-build.20260830-084323.log",
+      "action": "build",
+      "element": "components/ninja.bst"
+    }
+  },
+  {
+    "name": "components/_private/meson.bst [freedesktop-sdk/components-_private-meson/643e7ef1-build.20260830-084546.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788079546660000,
+    "pid": 1,
+    "tid": 115,
+    "args": {
+      "action": "build",
+      "element": "components/_private/meson.bst"
+    }
+  },
+  {
+    "name": "components/_private/meson.bst [freedesktop-sdk/components-_private-meson/643e7ef1-build.20260830-084546.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079573696000,
+    "pid": 1,
+    "tid": 115,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-meson/643e7ef1-build.20260830-084546.log",
+      "action": "build",
+      "element": "components/_private/meson.bst"
+    }
+  },
+  {
+    "name": "components/icu.bst [freedesktop-sdk/components-icu/b07192c1-build.20260830-084414.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788079881060000,
+    "pid": 1,
+    "tid": 114,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-icu/b07192c1-build.20260830-084414.log",
+      "action": "build",
+      "element": "components/icu.bst"
+    }
+  },
+  {
+    "name": "components/openssl.bst [freedesktop-sdk/components-openssl/5d83c19e-build.20260830-084323.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788080066242000,
+    "pid": 1,
+    "tid": 102,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-openssl/5d83c19e-build.20260830-084323.log",
+      "action": "build",
+      "element": "components/openssl.bst"
+    }
+  },
+  {
+    "name": "components/_private/cmake-stage1.bst [freedesktop-sdk/components-_private-cmake-stage1/0b0e308b-build.20260830-085425.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788080066242000,
+    "pid": 1,
+    "tid": 116,
+    "args": {
+      "action": "build",
+      "element": "components/_private/cmake-stage1.bst"
+    }
+  },
+  {
+    "name": "components/_private/cmake-stage1.bst [freedesktop-sdk/components-_private-cmake-stage1/0b0e308b-build.20260830-085425.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788081600918000,
+    "pid": 1,
+    "tid": 116,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-cmake-stage1/0b0e308b-build.20260830-085425.log",
+      "action": "build",
+      "element": "components/_private/cmake-stage1.bst"
+    }
+  },
+  {
+    "name": "components/_private/buildsystem-cmake.bst [freedesktop-sdk/components-_private-buildsystem-cmake/9ce35d87-build.20260830-092000.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788081600918000,
+    "pid": 1,
+    "tid": 117,
+    "args": {
+      "action": "build",
+      "element": "components/_private/buildsystem-cmake.bst"
+    }
+  },
+  {
+    "name": "components/_private/buildsystem-cmake.bst [freedesktop-sdk/components-_private-buildsystem-cmake/9ce35d87-build.20260830-092000.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788081600918000,
+    "pid": 1,
+    "tid": 117,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-buildsystem-cmake/9ce35d87-build.20260830-092000.log",
+      "action": "build",
+      "element": "components/_private/buildsystem-cmake.bst"
+    }
+  },
+  {
+    "name": "components/expat.bst [freedesktop-sdk/components-expat/ee4a447c-build.20260830-092000.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788081600918000,
+    "pid": 1,
+    "tid": 118,
+    "args": {
+      "action": "build",
+      "element": "components/expat.bst"
+    }
+  },
+  {
+    "name": "components/expat.bst [freedesktop-sdk/components-expat/ee4a447c-build.20260830-092000.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788081606925000,
+    "pid": 1,
+    "tid": 118,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-expat/ee4a447c-build.20260830-092000.log",
+      "action": "build",
+      "element": "components/expat.bst"
+    }
+  },
+  {
+    "name": "components/_private/git-minimal.bst [freedesktop-sdk/components-_private-git-minimal/df8200e0-build.20260830-092006.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788081606925000,
+    "pid": 1,
+    "tid": 119,
+    "args": {
+      "action": "build",
+      "element": "components/_private/git-minimal.bst"
+    }
+  },
+  {
+    "name": "components/python3.bst [freedesktop-sdk/components-python3/93426a61-build.20260830-092006.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788081606925000,
+    "pid": 1,
+    "tid": 120,
+    "args": {
+      "action": "build",
+      "element": "components/python3.bst"
+    }
+  },
+  {
+    "name": "components/_private/git-minimal.bst [freedesktop-sdk/components-_private-git-minimal/df8200e0-build.20260830-092006.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788082134554000,
+    "pid": 1,
+    "tid": 119,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-_private-git-minimal/df8200e0-build.20260830-092006.log",
+      "action": "build",
+      "element": "components/_private/git-minimal.bst"
+    }
+  },
+  {
+    "name": "components/python3.bst [freedesktop-sdk/components-python3/93426a61-build.20260830-092006.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788082223643000,
+    "pid": 1,
+    "tid": 120,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-python3/93426a61-build.20260830-092006.log",
+      "action": "build",
+      "element": "components/python3.bst"
+    }
+  },
+  {
+    "name": "components/gperf.bst [freedesktop-sdk/components-gperf/3d786c65-build.20260830-093023.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788082223643000,
+    "pid": 1,
+    "tid": 121,
+    "args": {
+      "action": "build",
+      "element": "components/gperf.bst"
+    }
+  },
+  {
+    "name": "components/gperf.bst [freedesktop-sdk/components-gperf/3d786c65-build.20260830-093023.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788082245666000,
+    "pid": 1,
+    "tid": 121,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-gperf/3d786c65-build.20260830-093023.log",
+      "action": "build",
+      "element": "components/gperf.bst"
+    }
+  },
+  {
+    "name": "components/bison.bst [freedesktop-sdk/components-bison/94a8a918-build.20260830-093045.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788082245666000,
+    "pid": 1,
+    "tid": 122,
+    "args": {
+      "action": "build",
+      "element": "components/bison.bst"
+    }
+  },
+  {
+    "name": "components/bison.bst [freedesktop-sdk/components-bison/94a8a918-build.20260830-093045.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788082386810000,
+    "pid": 1,
+    "tid": 122,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-bison/94a8a918-build.20260830-093045.log",
+      "action": "build",
+      "element": "components/bison.bst"
+    }
+  },
+  {
+    "name": "components/doxygen.bst [freedesktop-sdk/components-doxygen/76bd242b-build.20260830-093306.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788082386810000,
+    "pid": 1,
+    "tid": 123,
+    "args": {
+      "action": "build",
+      "element": "components/doxygen.bst"
+    }
+  },
+  {
+    "name": "components/doxygen.bst [freedesktop-sdk/components-doxygen/76bd242b-build.20260830-093306.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788082883340000,
+    "pid": 1,
+    "tid": 123,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-doxygen/76bd242b-build.20260830-093306.log",
+      "action": "build",
+      "element": "components/doxygen.bst"
+    }
+  },
+  {
+    "name": "components/libxml2.bst [freedesktop-sdk/components-libxml2/d3d094e2-build.20260830-094123.log]",
+    "cat": "bst-builder",
+    "ph": "B",
+    "ts": 1788082883340000,
+    "pid": 1,
+    "tid": 124,
+    "args": {
+      "action": "build",
+      "element": "components/libxml2.bst"
+    }
+  },
+  {
+    "name": "components/libxml2.bst [freedesktop-sdk/components-libxml2/d3d094e2-build.20260830-094123.log]",
+    "cat": "bst-builder",
+    "ph": "E",
+    "ts": 1788082924641000,
+    "pid": 1,
+    "tid": 124,
+    "args": {
+      "Status": "SUCCESS",
+      "Message": "freedesktop-sdk/components-libxml2/d3d094e2-build.20260830-094123.log",
+      "action": "build",
+      "element": "components/libxml2.bst"
+    }
+  },
+  {
+    "name": "bst --no-interactive --builders 4 --max-jobs 4 build --ignore-project-artifact-remotes --ignore-project-source-remotes c...",
+    "cat": "bst-invocation",
+    "ph": "E",
+    "ts": 1788082924846000,
+    "pid": 1,
+    "tid": 1,
+    "args": {
+      "Return Code": "0"
+    }
+  }
+]

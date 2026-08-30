@@ -114,6 +114,38 @@ jobs:
       - name: Test (small tier, single process)
         run: PYTEST_XDIST= timeout 31 make test-small
 
+  # The AI-native SDLC playbook's Test stage: the eval suite runs "on
+  # any change to `CLAUDE.md`, skills or hooks, since that configuration
+  # steers the agent and deserves the regression testing that code
+  # gets." `make test` already runs this file, so the job is not extra
+  # coverage - it is coverage that fires on the branch where it matters.
+  # A hook edited in a docs-only PR is exactly the change whose author
+  # has least reason to run the whole suite, and a hook that has stopped
+  # blocking is not visible by reading it: the first draft of
+  # keep-the-guards-able-to-fail.sh read correctly and was inert.
+  #
+  # The model-in-the-loop half of the play - twenty to fifty real tasks
+  # replayed through `claude -p` - needs an API key and a budget and is
+  # not built. This is the deterministic half, and says so.
+  agent-config:
+    # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer
+    # a session. The workflow triggers on every push and pull request, so
+    # this job always runs; the list is what it is *for*, and
+    # test_it_watches_every_file_that_steers_the_agent holds it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: The configuration that steers the agent
+        run: |
+          python3 -m pytest tests/unit/test_the_agent_configuration_holds.py -q
+
   packaging:
     # UX-77: the front door. Every `bga wrap/extract/capture/...` alias
     # dispatches by importing `tools.<module>`, and `pyproject.toml`

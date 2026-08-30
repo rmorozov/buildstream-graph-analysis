@@ -32,6 +32,8 @@ SETTINGS = REPO / ".claude/settings.json"
 CLAUDE_MD = REPO / "CLAUDE.md"
 REVIEW_MD = REPO / "REVIEW.md"
 AGENTS = REPO / ".claude/agents"
+SKILLS = REPO / ".claude/skills"
+WORKFLOW = REPO / ".github/workflows/ci.yml"
 
 #: Built rather than written, because `keep-the-guards-able-to-fail.sh`
 #: blocks an edit that carries the literal - including this one. The
@@ -304,3 +306,61 @@ class TestTheSubagentsAreWellFormed:
         reaches a task file."""
         body = (AGENTS / "researcher.md").read_text(encoding="utf-8")
         assert "could not establish" in body or "did not find" in body
+
+
+class TestEverySkillWouldLoad:
+    """`test_the_skills_point_at_the_guides.py` holds a skill to its
+    guide. This holds it to the thing that decides whether it is offered
+    at all: a description with no trigger in it is a skill Claude has to
+    guess its way to."""
+
+    @staticmethod
+    def _skills():
+        return sorted(SKILLS.glob("*/SKILL.md"))
+
+    def test_each_declares_a_name_and_a_description(self):
+        for path in self._skills():
+            head = _FRONTMATTER.match(path.read_text(encoding="utf-8"))
+            assert head, f"{path.parent.name} has no frontmatter"
+            for field in ("name", "description"):
+                assert re.search(rf"^{field}:", head.group(1), re.M), (
+                    f"{path.parent.name} declares no {field}")
+
+    def test_each_description_says_when_to_use_it(self):
+        """The frontmatter's job is triggering. A description that only
+        says what the skill *is* leaves the deciding to chance."""
+        for path in self._skills():
+            head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
+            description = re.search(r"^description:\s*(.+?)(?=^\w+:|\Z)",
+                                    head, re.M | re.S).group(1)
+            assert re.search(r"\buse (when|after|before)\b", description,
+                             re.I), (
+                f"{path.parent.name}'s description never says when to use "
+                f"it: {description.strip()[:120]!r}")
+
+
+class TestTheConfigurationHasItsOwnGate:
+    """The playbook: the suite runs "on any change to `CLAUDE.md`,
+    skills or hooks, since that configuration steers the agent and
+    deserves the regression testing that code gets." A gate that only
+    fires as part of the whole suite is fine until somebody edits a
+    hook in a docs-only branch."""
+
+    @staticmethod
+    def _text():
+        return WORKFLOW.read_text(encoding="utf-8")
+
+    def test_ci_has_a_job_for_it(self):
+        assert "agent-config" in self._text(), (
+            "ci.yml runs no job named for the agent configuration")
+
+    def test_it_watches_every_file_that_steers_the_agent(self):
+        text = self._text()
+        block = text.split("agent-config", 1)[1]
+        for path in (".claude/**", "CLAUDE.md", "REVIEW.md"):
+            assert path in block, (
+                f"the agent-config job does not watch {path}, so a change "
+                f"to it reaches main without this suite running")
+
+    def test_it_runs_this_file(self):
+        assert "test_the_agent_configuration_holds.py" in self._text()

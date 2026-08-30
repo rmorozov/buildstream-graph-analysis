@@ -246,6 +246,7 @@ docs/design/directions.md    where the tool is going, argued · roles.md  who it
 docs/backlog/scenarios/README.md   active backlog index - start here
 docs/backlog/scenarios/closed.md   every closed row, verbatim
 docs/backlog/progress-tracker.md   closed spec-compliance backlog - archaeology only
+CLAUDE.md                  the day-one page, loaded every session; this guide is the rule
 ```
 
 ## 6a. Which kind of session is this?

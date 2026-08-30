@@ -400,9 +400,13 @@ def test_the_docs_lint_scans_the_tree_it_names():
         "the docs lint must recurse, or it scans README.md and docs/README.md "
         f"and nothing else: {lint_line.strip()}"
     )
-    # And it must still name both roots, so a future edit cannot narrow
-    # the scope by dropping one instead of the flag.
-    assert "README.md" in lint_line and "docs/" in lint_line
+    # And it must still name every root, so a future edit cannot narrow
+    # the scope by dropping one instead of the flag. `CLAUDE.md` and
+    # `REVIEW.md` joined the list when they were written: both steer an
+    # agent, so an unlinted one is the same hole in a newer place.
+    for root in ("README.md", "docs/", "CLAUDE.md", "REVIEW.md", ".claude/"):
+        assert root in lint_line, (
+            f"the docs lint no longer scans {root}: {lint_line.strip()}")
 
 
 # `**Status:** 🟢 Done | ...` on the task file's header line, and the

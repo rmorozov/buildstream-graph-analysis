@@ -98,8 +98,7 @@ class TestTheReportIsReadTheWayPytestWritesIt:
 
 
 class TestTheRuleReadsTheFloors:
-    """The floors stay the authority for *placing* a file, and
-    `--exact` is where they are read directly."""
+    """The floors stay the authority; this only reads them."""
 
     def test_the_boundaries_are_the_declared_floors(self):
         assert drift.tier_for(tiers.MEDIUM_FLOOR_S - 0.001) == "small"
@@ -108,85 +107,34 @@ class TestTheRuleReadsTheFloors:
         assert drift.tier_for(tiers.LARGE_FLOOR_S) == "large"
 
 
-class TestItComparesRankAndNotSeconds:
-    """`UX-418`'s two CI runs are why this class exists.
+class TestTheReferenceIsReadableAndComplete:
+    """Every tier entry states the measurement that placed it.
 
-    The step first called three medium files large at 20.4-21.5s; on the
-    machine `tests/tiers.py`'s numbers were taken on they are 11.3-13.5s
-    single-process. A fixed slack was the first answer and was wrong by
-    a factor on the first foreign clock it met. A scale derived from the
-    report was the second, and was wrong too: on CI the **median**
-    listed file ran at 1.05x its recorded number while those two ran at
-    1.61x and 1.73x, neither having grown. The difference is per file.
-
-    So the comparison is the order, which travels. These clauses are
-    about that and about the one thing it costs.
+    `recorded()` is what makes the lists a record and not only a
+    selector, and `UX-418` needed it: a step that reports a file has
+    outgrown its tier is answering a question about a number, and the
+    number should be findable.
     """
 
     def test_every_listed_file_carries_the_measurement_that_placed_it(self):
-        """A tier entry without its seconds is a file whose placement
-        has no stated evidence - and `recorded()` is what reads them."""
         reference = tiers.recorded()
         missing = [name for name in (*tiers.LARGE, *tiers.MEDIUM)
                    if name not in reference]
         assert missing == [], (
             f"{missing} are listed with no measured seconds beside them")
 
-    def test_the_boundary_is_the_middle_of_the_tier_above(self, tmp_path):
-        report = _report(tmp_path, tiers.recorded())
-        limits = drift.boundaries(drift.measured(report))
-        assert set(limits) == {"small", "medium"}, limits
-        large = sorted(tiers.recorded()[n] for n in tiers.LARGE)
-        assert limits["medium"] == pytest.approx(
-            large[len(large) // 2] if len(large) % 2
-            else (large[len(large) // 2 - 1] + large[len(large) // 2]) / 2)
-        assert limits["small"] < limits["medium"], limits
-
-    @pytest.mark.parametrize("factor", [0.5, 1.0, 2.0, 5.0])
-    def test_a_uniformly_different_clock_changes_nothing(self, tmp_path,
-                                                         factor):
-        """The property the whole redesign is for: multiply every
-        measurement and the verdict is identical, because both sides of
-        every comparison move together."""
-        report = _report(tmp_path, {name: seconds * factor for name, seconds
-                                    in tiers.recorded().items()})
-        times = drift.measured(report)
-        assert drift.drift(times, drift.boundaries(times)) == []
-
-    def test_a_real_drift_shows_through_any_clock(self, tmp_path):
-        """And calibration must not become an excuse."""
-        times = {name: seconds * 5 for name, seconds
-                 in tiers.recorded().items()}
-        victim = tiers.MEDIUM[0]
-        times[victim] = max(times[n] for n in tiers.LARGE) * 2
-        report = _report(tmp_path, times)
-        read = drift.measured(report)
-        found = drift.drift(read, drift.boundaries(read))
-        assert [row[0] for row in found] == [victim], found
-
-    def test_what_the_rank_rule_costs_is_a_file_just_over_its_floor(
-            self, tmp_path):
-        """Stated as a clause rather than left to be discovered: a
-        medium file a second over the large floor is *not* reported,
-        because it has not outrun its neighbours. `--exact` is the more
-        sensitive rule, and only means anything on the machine the
-        floors were measured on."""
-        times = dict(tiers.recorded())
-        victim = tiers.MEDIUM[0]
-        times[victim] = tiers.LARGE_FLOOR_S + 1
-        report = _report(tmp_path, times)
-        read = drift.measured(report)
-        assert drift.drift(read, drift.boundaries(read)) == []
-        assert [row[0] for row in drift.by_floors(read)] == [victim]
-
-    def test_it_refuses_a_report_it_cannot_place_a_boundary_from(
-            self, tmp_path):
-        """A median drawn from almost nothing is not a boundary, and
-        comparing against one is the shape of guard `UX-403`'s census
-        exists to find."""
-        report = _report(tmp_path, {SMALL_FILE: 99.0})
-        assert drift.boundaries(drift.measured(report)) == {}
-        assert drift.main([str(report)]) == 2
+    def test_the_record_agrees_with_the_tier_it_is_in(self):
+        """The lists and their own numbers, checked against each other -
+        which nothing did before. A `LARGE` entry recorded at 3s is
+        either a stale number or a wrong list, and both want looking at.
+        """
+        reference = tiers.recorded()
+        wrong = {name: reference[name] for name in tiers.LARGE
+                 if drift.tier_for(reference[name]) != "large"}
+        wrong.update({name: reference[name] for name in tiers.MEDIUM
+                      if drift.tier_for(reference[name]) != "medium"})
+        assert wrong == {}, (
+            f"listed in one tier and recorded in another: {wrong}")
 
 
 class TestItFailsNamingTheFile:
@@ -196,14 +144,14 @@ class TestItFailsNamingTheFile:
 
     def test_an_unlisted_file_over_the_medium_floor_is_named(self, tmp_path):
         report = _report(tmp_path, {SMALL_FILE: tiers.MEDIUM_FLOOR_S + 0.5})
-        found = drift.by_floors(drift.measured(report))
+        found = drift.drift(drift.measured(report))
         assert [row[0] for row in found] == [SMALL_FILE], found
         assert found[0][2:] == ("small", "medium"), found
 
     def test_the_message_carries_the_name_and_the_seconds(self, tmp_path,
                                                           capsys):
         report = _report(tmp_path, {**tiers.recorded(), SMALL_FILE: 51.0})
-        assert drift.main([str(report), "--exact"]) == 1
+        assert drift.main([str(report)]) == 1
         said = capsys.readouterr().err
         assert SMALL_FILE in said, said
         assert "51.0s" in said, said
@@ -211,17 +159,17 @@ class TestItFailsNamingTheFile:
 
     def test_a_file_inside_its_tier_is_not_named(self, tmp_path):
         report = _report(tmp_path, {SMALL_FILE: tiers.MEDIUM_FLOOR_S - 0.1})
-        assert drift.by_floors(drift.measured(report)) == []
+        assert drift.drift(drift.measured(report)) == []
 
     def test_a_listed_file_at_its_own_size_is_not_named(self, tmp_path):
         report = _report(tmp_path, {tiers.LARGE[0]: tiers.LARGE_FLOOR_S + 30})
-        assert drift.by_floors(drift.measured(report)) == []
+        assert drift.drift(drift.measured(report)) == []
 
     def test_a_file_that_got_faster_is_not_a_failure(self, tmp_path):
         """The other direction wastes nothing, and reporting it would
         red the build on an ordinary fast run."""
         report = _report(tmp_path, {tiers.LARGE[0]: 0.1})
-        assert drift.by_floors(drift.measured(report)) == []
+        assert drift.drift(drift.measured(report)) == []
 
 
 class TestItCannotPassOverNothing:
@@ -234,7 +182,6 @@ class TestItCannotPassOverNothing:
         path.write_text("<testsuites><testsuite /></testsuites>",
                         encoding="utf-8")
         assert drift.main([str(path)]) == 2
-        assert drift.main([str(path), "--exact"]) == 2
 
     def test_a_report_of_unresolvable_names_is_an_error(self, tmp_path):
         path = tmp_path / "junit.xml"
@@ -244,26 +191,48 @@ class TestItCannotPassOverNothing:
         assert drift.main([str(path)]) == 2
 
 
-class TestItRunsWhereAFullRunAlreadyHappens:
-    """`UX-418`: *it runs where a full run already happens, so it costs
-    a parse rather than a second suite.* Both halves of that are facts
-    about the workflow, and nothing else reads them."""
+class TestItRunsWhereItsNumbersMeanSomething:
+    """`UX-418` asks for a CI step and this is not one, which is a
+    deviation with three CI runs behind it: the floors are seconds
+    measured on a developer machine, and CI's runner differs from it
+    *per file* rather than by a factor, so a fixed slack, a derived
+    scale and a rank comparison each reported files that had not
+    drifted. These clauses hold the decision in place - a later round
+    that moves the step into CI without a CI-side reference will find
+    them.
+    """
 
+    MAKEFILE = REPO / "Makefile"
     WORKFLOW = REPO / ".github/workflows/ci.yml"
 
-    def test_the_suite_writes_the_report_the_step_reads(self):
-        text = self.WORKFLOW.read_text(encoding="utf-8")
-        assert "--junitxml=" in text, (
-            "no CI step writes a junit report, so the drift step has "
-            "nothing to read")
-        assert "tools/dev_tier_drift.py" in text, (
-            "the tool is not run in CI, which is the only place a full "
-            "run happens")
+    def test_one_command_runs_the_suite_and_reads_its_report(self):
+        text = self.MAKEFILE.read_text(encoding="utf-8")
+        assert "test-tiers:" in text, (
+            "no target runs the drift check, so nothing does")
+        target = text.split("test-tiers:", 1)[1].split("\n\n", 1)[0]
+        assert "--junitxml=" in target, target
+        assert "tools/dev_tier_drift.py" in target, target
+        assert ".PHONY:" in text and "test-tiers" in text.split(
+            ".PHONY:", 1)[1].splitlines()[0], "test-tiers is not phony"
 
-    def test_it_does_not_run_a_second_suite(self):
+    def test_it_costs_a_parse_and_not_a_second_suite(self):
+        target = self.MAKEFILE.read_text(encoding="utf-8").split(
+            "test-tiers:", 1)[1].split("\n\n", 1)[0]
+        assert target.count("pytest") == 0, target
+        assert target.count("$(MAKE) test") == 1, target
+
+    def test_ci_does_not_run_it_and_says_why(self):
+        """An absence a later round could read as an oversight is one
+        somebody restores. The workflow states the reason where the
+        step would have gone."""
         text = self.WORKFLOW.read_text(encoding="utf-8")
-        step = text.split("tools/dev_tier_drift.py", 1)[1].splitlines()[0]
-        assert "pytest" not in step and "make test" not in step, step
+        assert "tools/dev_tier_drift.py" not in text.replace(
+            "`make test-tiers`", ""), (
+            "the drift check is back in CI - see UX-418's outcome and "
+            "UX-420 for what that needs first")
+        assert "UX-420" in text, (
+            "the workflow does not say why the check is absent, so the "
+            "absence reads as an oversight")
 
 
 class TestTheToolIsRunnable:
@@ -277,7 +246,8 @@ class TestTheToolIsRunnable:
         # The boundaries, printed whether or not anything drifted: they
         # are what decides, and the run that reddens is not the first
         # place they should be visible.
-        assert "the median of the tier above" in done.stdout, done.stdout
+        assert "against the declared floors" in done.stdout, done.stdout
+        assert str(tiers.LARGE_FLOOR_S) in done.stdout, done.stdout
 
 
 if __name__ == "__main__":  # pragma: no cover

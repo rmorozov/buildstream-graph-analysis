@@ -181,27 +181,53 @@ median listed file and is 1.6–1.7x slower on those two. The difference
 is *per file*, so there is no single scale to find, and a third attempt
 at one would have been the same mistake a third time.
 
-**What survives a change of machine is the order.** The tier lists are
-a ranking by construction, so the rule is: a file has drifted when it
-is slower than the **middle of the tier above it, in the same report**
-— two numbers from one run, one clock, no constant between them.
-`boundaries()` computes it and the step prints it on every run.
+**Comparing rank rather than seconds was the third answer, and it is
+wrong too.** The argument was that the *order* survives a change of
+machine even when the seconds do not, so a file has drifted when it is
+slower than the middle of the tier above it in the same report. It
+reddened on the next CI run, at 25.3s against a 24.3s boundary, and the
+measurement says why:
 
-Re-checked across four synthetic clocks (×0.5, ×1, ×2, ×5): the verdict
-is identical, because both sides of every comparison move together.
+```text
+test_report_stays_readable_at_scale, recorded at 12.8s
+  large files recorded slower than it:  22 of 22
+  on CI it read 25.3s, above 11 of them
+```
 
-**What it costs, stated rather than discovered.** The rank rule catches
-a file that has outrun its neighbours, not one a second over its floor.
-`test_what_the_rank_rule_costs_is_a_file_just_over_its_floor` is that
-sentence as a clause. `--exact` restores the floor comparison for a
-report taken on the machine the floors were measured on, where seconds
-are the right question — and locally that is the rule worth running.
+Per-file scaling differences **reorder the ranking**. The file sits
+below every one of the 22 `LARGE` entries here and above half of them
+there, without changing.
+
+### The conclusion, after three measurements
+
+**Per-file timings from another runner cannot be compared to this
+repository's tier record in any form** — not absolute, not scaled, not
+ranked — because the two machines differ *per file* rather than by a
+factor. Each of the three rules was a different way of assuming a
+relationship that does not exist.
+
+So the check runs where its numbers mean something. `make test-tiers`
+is the full suite plus the parse of its own report, one command, and it
+is named in the `verify` skill's step 3 beside `make test`. CI keeps the
+small-tier timeout, which works precisely because
+`SMALL_TIER_BUDGET_S` is sized against **CI's own clock** — the
+distinction `tests/tiers.py` had already drawn once, for this exact
+reason, and that this had to learn again.
+
+**What that costs is the filing's own premise**, and it is written down
+rather than absorbed: the check now runs when somebody runs it, not on
+every push. A CI-side check needs a CI-side reference, which is
+`UX-420` — filed rather than guessed at a fourth time. Three clauses in
+`TestItRunsWhereItsNumbersMeanSomething` hold the decision in place, and
+the workflow states the reason where the step would have gone, so the
+absence cannot read as an oversight.
 
 Bumping a constant was available at each step, and is the move this
 item's own filing warns about: *"a step that reds on an ordinary run is
 one somebody mutes."* A number re-sized per machine is a mute switch
-with extra steps; the second attempt proved a *derived* number is one
-too, when the thing it derives does not exist.
+with extra steps; the second and third attempts proved that a *derived*
+number and a *dimensionless* comparison are too, when the relationship
+they assume is not there.
 
 ### The fourth file, and the number this needed
 
@@ -240,16 +266,16 @@ Counts are what the run printed, not what was expected of it.
 | F1 | `test_the_journey_has_an_answer_key.py` deleted from `LARGE` (the Acceptance Test) | the step, naming the file and `107.8s`; exit 1 |
 | F2 | `test_process_spine.py` deleted from `LARGE` — `UX-403`'s exact mutation shape, on a file that boots no browser | the step, naming it and `36.4s`; the partition guard stayed at 16 passed, which is the filed state |
 | F3 | `PARALLEL_REPORT_SLACK` raised to 100.0, so nothing can ever drift | `test_the_message_carries_the_name_and_the_seconds`; 1 failed, 18 passed |
-| H1 | one medium file really triples, on a 1.5x-slower simulated clock | the step, at 62.6s against this run's 33.1s median large file; exit 1 |
-| H2 | `test_the_journey_has_an_answer_key.py` deleted from `LARGE` — `UX-403`'s own mutation — on the same slower clock | the step, at 164.7s against a 4.3s median medium file; exit 1 |
-
-H1 and H2 are the rank rule's falsification, and both are run on a
-clock slow enough that the *first* rule flagged nine innocent files —
-the fix must not become an excuse. F3 named a constant that no longer
-exists; its successors are
-`test_a_uniformly_different_clock_changes_nothing` and
-`test_a_real_drift_shows_through_any_clock`, which are the same two
-questions about the mechanism that replaced it.
+F1 and F2 stand; F3 named a constant that no longer exists, and neither
+do the two rules that followed it. What replaced them all is the
+comparison the tool started with — the declared floors, read against a
+report from the machine they describe — plus two clauses that were not
+there before:
+`test_the_record_agrees_with_the_tier_it_is_in`, which checks the lists
+against their own numbers (a `LARGE` entry recorded at 3s is a stale
+number or a wrong list, and nothing looked), and
+`test_ci_does_not_run_it_and_says_why`, which keeps the deviation from
+reading as an oversight.
 
 F2 is the falsification the filing asks for — *the same deletion with
 the step removed passes* — measured both ways in one run. F3 is the
@@ -260,16 +286,13 @@ tolerance nothing guards is a mute switch.
 
 - **`--junitxml` instead of `--durations=0`**, for the measured reason
   above. Same run, same cost, no threshold.
-- **The comparison is a rank, not the floors**, and the filing did not
-  anticipate that — it says "compares each file against the floors in
-  `tests/tiers.py`", which assumes the report and the floors share a
-  clock. They do not, and two CI runs proved that no constant and no
-  derived scale bridges them. The floors remain the authority for
-  *placing* a file, which is a decision made on this machine with
-  `--durations=0`; the step reports a file that has outrun its
-  neighbours. Its cost — insensitivity to a file just over a floor — is
-  asserted by a clause rather than left implicit, and `--exact` keeps
-  the floor rule for the machine where it means something.
+- **It is not a CI step**, and the filing asks for one: *"It runs where
+  a full run already happens, so it costs a parse rather than a second
+  suite."* Three CI runs established that the floors cannot be compared
+  to a report from CI's runner in any form. It costs a parse and not a
+  second suite, as asked — but after a full run somebody starts, not
+  after every push. The gap that leaves is `UX-420`, and it is the
+  filing's own premise, so it is stated here rather than buried.
 - **`tests/tiers.py` gained `recorded()`**, which reads each entry's
   own trailing seconds. Not asked for, and load-bearing for the above:
   a step that compares two clocks needs the numbers the floors were

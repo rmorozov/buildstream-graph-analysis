@@ -59,6 +59,21 @@ make test    # ~3m15s at -n auto (10m40s single-process)
 make lint    # ruff + PyMarkdown; both must be clean
 ```
 
+And when your change moved what a file does rather than only what it
+asserts:
+
+```bash
+make test-tiers   # the same run, plus which files outgrew their tier
+```
+
+`UX-418`: the suite with a junit report, then
+[`tools/dev_tier_drift.py`](../../../tools/dev_tier_drift.py) against
+the floors in `tests/tiers.py`. It costs a parse, not a second suite.
+**Here and not in CI** — the floors are seconds measured on this kind of
+machine, and CI's runner differs from it per file rather than by a
+factor, which three CI runs established the hard way. `UX-420` is what a
+CI-side check would need.
+
 `make test` before you mark anything done. A tier run is not evidence
 about the suite.
 

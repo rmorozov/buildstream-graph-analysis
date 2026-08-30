@@ -59,22 +59,20 @@ jobs:
         run: timeout 31 make test-small
 
       - name: Test
-        run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
+        run: make test
 
-      # UX-418: the half of the tier partition that needs a measurement.
-      # `test_the_tiers_are_a_partition.py` reads the two lists against
-      # each other and against the filesystem, and `small` is the
-      # default - so a file that belongs in a tier and is in neither
-      # list is "small on purpose" and nothing says otherwise. UX-403's
-      # census proved it by deleting a fifty-second entry from LARGE and
-      # watching all fourteen clauses stay green.
-      #
-      # This reads the report the step above already wrote, so it costs
-      # a parse rather than a second suite, and it fails naming the file
-      # and its measured seconds - which the small-tier timeout, the
-      # only thing catching this today, cannot do.
-      - name: Tiers match their measurement
-        run: python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml"
+      # UX-418: the tier-drift check is deliberately **not** here, and
+      # that is a measured decision rather than an omission. It compares
+      # each file's seconds against the floors in tests/tiers.py, and
+      # those are seconds measured on a developer machine. Three CI runs
+      # showed they do not travel: a fixed slack, a scale derived from
+      # the report, and a rank comparison each reported files that had
+      # not drifted, because this runner differs from that one *per
+      # file* rather than by a factor. `make test-tiers` runs it where
+      # the floors mean something. What a check here would need is a
+      # CI-side reference set - filed as UX-420. The small-tier timeout
+      # below is the CI-side guard that does work, because its budget is
+      # sized against CI's own clock.
 
       # UX-336: `make test` runs `-n auto` (see the Makefile). CI is not
       # the loop this item was about - the local one is - but a suite

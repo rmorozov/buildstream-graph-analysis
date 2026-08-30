@@ -1,6 +1,6 @@
 # BuildStream Build Efficiency Analyzer - Makefile
 
-.PHONY: test test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs dev-run clean check-clean install dev help
+.PHONY: test test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs dev-run clean check-clean install dev help
 
 # Default target
 help:
@@ -42,13 +42,23 @@ PYTEST_XDIST ?= -n auto
 # Run the tier your change touches while you work; run `make test`
 # before you mark anything done.
 # `PYTEST_ARGS` is for a caller that needs one more flag on the same
-# run - CI passes `--junitxml=...` so `tools/dev_tier_drift.py` can read
-# the timings the suite already produced (`UX-418`) rather than running
-# it twice.
+# run - `test-tiers` below passes `--junitxml=...` so
+# `tools/dev_tier_drift.py` can read the timings the suite already
+# produced (`UX-418`) rather than running it twice.
 PYTEST_ARGS ?=
 
 test:
 	python -m pytest tests/ -q $(PYTEST_XDIST) $(PYTEST_ARGS)
+
+# UX-418: the full suite, then which files have outgrown their tier.
+# One command because the check reads the run's own report - it costs a
+# parse, not a second suite. Here and not in CI: the floors are seconds
+# measured on this kind of machine, and CI's runner differs from it per
+# file rather than by a factor (see tools/dev_tier_drift.py).
+test-tiers:
+	@$(MAKE) test PYTEST_ARGS="--junitxml=$(CURDIR)/.tier-report.xml"
+	@python tools/dev_tier_drift.py "$(CURDIR)/.tier-report.xml"; \
+	  status=$$?; rm -f "$(CURDIR)/.tier-report.xml"; exit $$status
 
 test-small:
 	python -m pytest tests/ -m small -q $(PYTEST_XDIST)

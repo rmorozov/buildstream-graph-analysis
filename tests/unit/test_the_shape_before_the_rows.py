@@ -71,7 +71,13 @@ globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis.document = { createElement: _makeNode,
                         createElementNS: (_n, t) => _makeNode(t),
                         getElementById: () => null };
-globalThis.location = { protocol: process.env.PROTOCOL, href: "http://x/" };
+// `UX-415`: the second copy of the same inconsistency. This probe
+// calls render functions directly rather than booting, so no
+// consumer here resolves a URL today - which is exactly why it
+// would have been the next one to bite.
+globalThis.location = { protocol: process.env.PROTOCOL,
+                        href: process.env.PROTOCOL.startsWith("http")
+                            ? "http://x/" : "file:///x/report.html" };
 globalThis.window = { localStorage: { getItem: () => null, setItem: () => {} } };
 globalThis.CSS = { escape: (s) => s };
 globalThis.Event = class { constructor(t) { this.type = t; } };

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-417 scenarios: **10 open**, 407 closed.
+417 scenarios: **9 open**, 408 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 36 |
-| guards | 2 | 55 |
+| guards | 1 | 55 |
 
 ## Open scenarios
 
@@ -42,7 +42,6 @@ task file, which is the only place it ever lived twice.
 | UX-412 | [a table of one says "1 rows"](UX-0412-a-table-of-one-says-one-rows.md) | viewer | Medium | every reader of a run small enough to have one of something | 🔴 |
 | UX-413 | [a population with nothing to rank by is never bounded](UX-0413-a-population-with-nothing-to-rank-by-is-never-bounded.md) | viewer | High | anyone whose run is big enough for the page to be long | 🔴 |
 | UX-414 | [two sections fall into "Everything else", and the guard's fixture cannot see it](UX-0414-two-sections-fall-into-everything-else.md) | viewer | Medium | anyone navigating a two-plane report | 🔴 |
-| UX-415 | [the shared node probe says `file:` and always measures `http:`](UX-0415-the-shared-probe-is-always-served.md) | guards | Medium | every guard that boots the page in node | 🔴 |
 | UX-416 | [the page moves between runs, and no document says so](UX-0416-the-page-moves-between-runs-and-no-document-says-so.md) | docs | Medium | anyone with more than one snapshot in a store | 🔴 |
 | UX-417 | [the guide's export figures are stale by 3.2x](UX-0417-the-export-figures-are-four-rounds-stale.md) | docs | Medium | anyone deciding whether to attach a report | 🔴 |
 | UX-418 | [a slow file is small until CI times out](UX-0418-a-slow-file-is-small-until-ci-times-out.md) | guards | Medium | the edit-run loop | 🔴 |

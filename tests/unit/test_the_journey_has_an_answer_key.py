@@ -38,6 +38,7 @@ means the guard never touches the developer's artifacts.
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -48,6 +49,40 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 EXAMPLE = REPO / "examples/06-macro-micro-optimization"
+
+node = shutil.which("node")
+
+#: One string each, so `UX-213`'s skip census counts them once.
+NO_NODE = "node is not installed"
+NO_CHROME = "a Chrome/Chromium binary is required"
+
+#: The tail this file appends to the shared probe. The probe boots the
+#: export's own inline module; this reads back the two facts `UX-388`
+#: is about - which sections were drawn empty, and whether each says so.
+_TAIL = """
+const found = [];
+// `report`, not `body`: the page appends its sections into the element
+// it looks up by id, which this shim synthesises detached. A walk from
+// `body` alone finds nothing and reads as "the page drew no empty
+// section", which is the very defect UX-388 was filed on - a harness
+// that reports it falsely is worse than one that cannot see it.
+(function walk(n) {
+  for (const c of n.children ?? []) {
+    if (String(c.tagName).toLowerCase() === "section"
+        && c.attrs["data-empty"] !== undefined) {
+      found.push([c.attrs["data-section"] ?? null,
+                  (c.textContent || "").includes("found none")]);
+    }
+    walk(c);
+  }
+})(report);
+console.log("EMPTY " + JSON.stringify({ found, error }));
+"""
+
+
+def _empty_sections(probe_output):
+    """[(section, says "found none")], as the probe read them."""
+    return sorted(tuple(row) for row in probe_output)
 
 #: One string, so the skip census counts it once (`UX-213`).
 WHY_SKIPPED = (
@@ -114,6 +149,40 @@ def cold(walked):
 @pytest.fixture(scope="module")
 def joined(walked):
     return _json(walked, ["correlate", walked["cold_run"], "--format", "json"])
+
+
+@pytest.fixture(scope="module")
+def exported(walked, tmp_path_factory):
+    """The incremental run as an export, and the probe's reading of it.
+
+    The boot is the one every navigation guard uses, so this reads the
+    document a reader gets rather than one assembled here."""
+    import tools.bga_view as view
+
+    if node is None:
+        pytest.skip(NO_NODE)
+    into = tmp_path_factory.mktemp("incremental")
+    page = into / "incremental.html"
+    view.export(walked["warm_run"], str(page))
+    html = page.read_text(encoding="utf-8")
+    (into / "inline.mjs").write_text(
+        re.search(r'<script type="module">(.*?)</script>', html, re.S).group(1),
+        encoding="utf-8")
+    probe = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text(
+        encoding="utf-8").split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0]
+    (into / "probe.mjs").write_text(probe + _TAIL, encoding="utf-8")
+    done = subprocess.run(
+        [node, str(into / "probe.mjs")], capture_output=True, text=True,
+        cwd=REPO, timeout=120,
+        env=dict(os.environ, PAGE=str(page), MOD=str(into / "inline.mjs"),
+                 PROTOCOL="file:",
+                 BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs")))
+    assert done.returncode == 0, done.stderr[-3000:]
+    line = [ln for ln in done.stdout.splitlines()
+            if ln.startswith("EMPTY ")][-1]
+    read = json.loads(line[len("EMPTY "):])
+    assert read["error"] is None, read["error"]
+    return {"page": page, "probe": read["found"]}
 
 
 class TestTheJourneyRuns:
@@ -233,28 +302,35 @@ class TestTheIncrementalRunIsStillAReport:
             "the incremental run published no empty collection, so this "
             "file is no longer walking the case UX-388 was filed on")
 
-    def test_the_page_says_the_analysis_found_none(self, walked, tmp_path):
-        """Rendered in a real browser, not in the shim.
+    def test_the_page_says_the_analysis_found_none(self, exported):
+        """Read through the shared node probe, which now can read it.
 
-        An export is a static page plus its data; the sections are
-        drawn on load, so the sentence is not in the file. And this one
-        cannot be read through the shared node probe either: its
-        `location.href` is a hard-coded `http://` URL whatever
-        `PROTOCOL` says, so a run whose trace is large enough to be
-        served as a *path* rather than inlined as a `data:` URL takes
-        the served branch of the Perfetto handoff and the boot fails on
-        a detached element. That is the probe, not the page - filed as
-        `UX-415` - and Chrome is the ground truth either way.
-        """
+        This clause needed a real Chrome until `UX-415`: the probe's
+        `location.href` was a served URL whatever `PROTOCOL` said, and
+        this run's trace is far too large to inline - so it is written
+        as a *path*, resolved to `http:` against that base, and the
+        boot died inside the Perfetto handoff on a detached element.
+        That was the instrument, not the page. With the base following
+        the protocol it is an export here as it is in a browser, and
+        the clause below measures that the two agree."""
+        drawn = _empty_sections(exported["probe"])
+        assert drawn, (
+            "the incremental page drew no empty section at all - which is "
+            "exactly the disappearance UX-388 was filed on")
+        silent = [section for section, says in drawn if not says]
+        assert silent == [], silent
+
+    def test_a_real_browser_reads_the_same_page(self, exported):
+        """`UX-415`'s other half: the shim is only worth its speed if
+        it agrees with the thing it stands in for. Chrome renders the
+        same export and the two readings must match exactly - a probe
+        that drifts from the browser is the defect this whole item is,
+        one layer down."""
         from tests.browser import Browser, find_chrome
-
-        import tools.bga_view as view
 
         chrome = find_chrome()
         if not chrome:
-            pytest.skip("a Chrome/Chromium binary is required")
-        page = tmp_path / "incremental.html"
-        view.export(walked["warm_run"], str(page))
+            pytest.skip(NO_CHROME)
         # `section[data-empty]`, not `[data-empty]`: the rail's own
         # link carries the same mark on purpose, so that the map of the
         # report matches the report on an incremental run. Selecting on
@@ -264,9 +340,8 @@ class TestTheIncrementalRunIsStillAReport:
             .map((n) => [n.getAttribute('data-section'),
                          n.textContent.includes('found none')]))()"""
         with Browser(chrome) as opened:
-            drawn = opened.measure(page.as_uri(), look, 1440, 900)
-        assert drawn, (
-            "the incremental page drew no empty section at all - which is "
-            "exactly the disappearance UX-388 was filed on")
-        silent = [section for section, says in drawn if not says]
-        assert silent == [], silent
+            seen = opened.measure(exported["page"].as_uri(), look, 1440, 900)
+        assert sorted(map(tuple, seen)) == sorted(_empty_sections(
+            exported["probe"])), (
+            "the probe and the browser disagree about which sections are "
+            "empty and which of them say so")

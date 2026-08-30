@@ -26,6 +26,7 @@ import os
 import re
 import shutil
 import subprocess
+from urllib.parse import urljoin
 
 import pytest
 
@@ -244,8 +245,53 @@ class TestTheExportKeepsItsFunctionality:
             "served, the questions have their own page to link to")
 
 
+class TestTheProbeMeasuresTheShapeItIsToldTo:
+    """`UX-415`: the instrument's own fidelity.
+
+    `UX-264` wrote the rule for `dom_shim.mjs` - *every behaviour here
+    is what a real browser does, measured rather than assumed* - and
+    the probe that wraps it never got it. `PROTOCOL` set
+    `location.protocol` and left `location.href` on the served URL, so
+    a guard asking for an export got the served page's answer from
+    every consumer that resolves a URL. That is most of them:
+    `wireTheHandoff`, `perfetto_page.js`, anything reaching for a
+    trace.
+
+    Two clauses, because the string and the resolution are different
+    claims and only the second is what a consumer does."""
+
+    @needs_node
+    @pytest.mark.parametrize("protocol", ["file:", "http:"])
+    def test_the_url_agrees_with_the_protocol(self, exported, tmp_path,
+                                              protocol):
+        out = _boot(exported, tmp_path, protocol=protocol)
+        where = out["location"]
+        assert where["protocol"] == protocol, where
+        assert where["href"].startswith(protocol), (
+            f"told {protocol!r}, the probe's URL is {where['href']!r} - "
+            f"every consumer resolving against it measures the other shape")
+
+    @needs_node
+    @pytest.mark.parametrize("protocol", ["file:", "http:"])
+    def test_a_relative_trace_resolves_to_that_protocol(self, exported,
+                                                        tmp_path, protocol):
+        """The consumer's own computation, run over the probe's base.
+
+        `new URL(traceUrl(), location.href)` is what `wireTheHandoff`
+        does, and a trace too large to inline *is* a relative path -
+        which is the case the committed fixtures cannot show, because
+        a `data:` URL keeps its own protocol whatever the base is."""
+        out = _boot(exported, tmp_path, protocol=protocol)
+        resolved = urljoin(out["location"]["href"], "timeline.json.gz")
+        assert resolved.startswith(protocol), (
+            f"a relative trace resolves to {resolved!r} under "
+            f"{protocol!r} - the branch a reader's browser takes and "
+            f"this harness cannot see")
+
+
 _PROBE = r"""
 import fs from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const protocol = process.env.PROTOCOL;
 const throwing = protocol.endsWith("throwing");
@@ -319,8 +365,22 @@ globalThis.document = {
     return body.querySelector?.(sel) ?? null;
   },
 };
-globalThis.location = { protocol: protocol.startsWith("http") ? "http:" : "file:",
-                        href: "http://127.0.0.1:8000/index.html" };
+// `UX-415`: one shape, read twice, and for six rounds the two copies
+// disagreed. `protocol` followed `PROTOCOL` and `href` was the served
+// URL whatever it said, so every consumer that resolves a *URL* rather
+// than reading `location.protocol` measured the served page under an
+// export's name. `wireTheHandoff` is exactly such a consumer, and the
+// gap is invisible on the committed fixtures only because both inline
+// their trace as a `data:` URL - which `new URL()` keeps whatever the
+// base is. A real capture too large to inline writes a relative path,
+// and that resolved to `http:` here and to `file:` in the reader's
+// browser. Derived from one boolean now, so they cannot drift.
+const served = protocol.startsWith("http");
+globalThis.location = {
+  protocol: served ? "http:" : "file:",
+  href: served ? "http://127.0.0.1:8000/index.html"
+               : pathToFileURL(process.env.PAGE).href,
+};
 globalThis.window = {
   get localStorage() {
     if (throwing) throw new Error("site data blocked");
@@ -398,7 +458,9 @@ let error = failure;
   }
 })(report);
 
-console.log(JSON.stringify({ sections, toc, error, storageWrites: writes }));
+console.log(JSON.stringify({ sections, toc, error, storageWrites: writes,
+                            location: { protocol: location.protocol,
+                                        href: location.href } }));
 """
 
 

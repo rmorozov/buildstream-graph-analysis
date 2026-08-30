@@ -418,6 +418,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-404 | [the unit census stops at the analyze door](UX-0404-the-unit-census-stops-at-the-analyze-door.md) | Medium | anyone reading a whatif or store number outside the page | 🟢 Done — the unit census walks every emitted contract; 79 undeclared leaves closed across compare, correlate, sweep and the store aggregate | [UX-404](UX-0404-the-unit-census-stops-at-the-analyze-door.md) |
 | UX-402 | [the journey is a guard with an answer key](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) | High | every future round, before its walk | 🟢 Done — the documented journey walked end to end against example 06's answer key, with an isolated artifact cache | [UX-402](UX-0402-the-journey-is-a-guard-with-an-answer-key.md) |
 | UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | Medium | the audit loop itself | 🟢 Done — eleven families, one mechanism-revert mutation each: ten discriminate, the tier guard did not and was hollow over four browser guards running in the small tier | [UX-403](UX-0403-the-guard-census.md) |
+| UX-415 | [the shared node probe says `file:` and always measures `http:`](UX-0415-the-shared-probe-is-always-served.md) | Medium | every guard that boots the page in node | 🟢 Done — the probe's href follows PROTOCOL; UX-402 reads the page through it, and a browser clause keeps the two honest | [UX-415](UX-0415-the-shared-probe-is-always-served.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

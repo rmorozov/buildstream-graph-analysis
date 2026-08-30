@@ -122,11 +122,44 @@ RANK = {"small": 0, "medium": 1, "large": 2}
 CI_REFERENCE = REPO / "tests" / "ci_reference.json"
 
 #: How much slower than its own CI reference a file may run before it is
-#: reported, *after* the run's median shift is divided out. 1.5 is not a
-#: measurement - there is no CI-to-CI spread recorded yet - so it is
-#: stated as the starting value it is, and `--record`'s output carries
-#: the spread each run saw so the next round can size it from data.
+#: reported, *after* the run's median shift is divided out.
 CI_DRIFT_FACTOR = 1.5
+
+#: And how many seconds slower, which it must **also** be. A ratio alone
+#: was the first rule and the first armed run falsified it: 31 files
+#: reported on a suite that had not changed, 24 of them under a second.
+#:
+#: Run 33306283177, `test (3.11)`, against the reference recorded one
+#: run earlier - the same suite plus a JSON file and a document:
+#:
+#: ```text
+#:                                    measured  recorded  ratio  added
+#:   test_one_page_behind_the_button       5.9       4.3   1.66  +2.4s
+#:   test_one_click_from_investigation     4.4       3.1   1.74  +1.9s
+#:   test_plane_two_says_what_it_ran       3.8       2.7   1.77  +1.6s
+#:   test_doctor                           1.9       1.2   1.90  +0.9s
+#:   test_a_clone_without_the_archive      1.3       0.5   3.29  +0.9s
+#:   ... 26 more, all adding under a second
+#:   test_the_skills_point_at_the_guides   0.3       0.0  18.27  +0.3s
+#: ```
+#:
+#: **A ratio is meaningless at small magnitudes** - the x18 row is a
+#: file that went from 20ms to 300ms, and the x3.29 row added nine
+#: hundredths of a second more than the x1.66 row that leads the list.
+#: `UX-422` names the same defect in a different guard on the same day:
+#: a ratio judges a quantity the noise floor dominates.
+#:
+#: So a file is reported only when it is slower by **both** measures.
+#: The seconds floor is what makes the ratio mean something, and it is
+#: sized from the run above: the largest *addition* on an unchanged
+#: suite was 2.4s, so 5.0 is that with the margin a single sample
+#: deserves. It is still one sample - `spread` on each `--record` is
+#: what accumulates the rest.
+#:
+#: This is the same rule the unreferenced-file branch below already
+#: applied ("only where there is something at stake"), which the drift
+#: branch should have had from the start and did not.
+CI_DRIFT_SECONDS = 5.0
 
 #: Outside this, the whole reference is stale rather than any one file
 #: drifting - a new runner image, a Python bump, a changed default
@@ -263,6 +296,10 @@ def against(times, reference):
     a comparison of one machine against itself *over time* rather than
     against one particular afternoon: a runner image that got 20%
     slower moves every file together and is not drift.
+
+    A file is reported only when it is slower by a ratio **and** by a
+    number of seconds - see `CI_DRIFT_SECONDS` for the run that proved
+    a ratio alone reports thirty-one files on a suite nobody touched.
     """
     known = reference.get("files") or {}
     ratios = {name: times[name] / known[name] for name in known
@@ -275,7 +312,12 @@ def against(times, reference):
 
     rows = []
     for name, ratio in ratios.items():
-        if ratio / shift > CI_DRIFT_FACTOR:
+        # Both, not either: see CI_DRIFT_SECONDS. `expected` is what the
+        # reference says this file costs *on this run's clock*, so the
+        # seconds added are the ones the run really paid.
+        expected = known[name] * shift
+        if (ratio / shift > CI_DRIFT_FACTOR
+                and times[name] - expected >= CI_DRIFT_SECONDS):
             rows.append((name, times[name], known[name], ratio / shift))
     # A file with no reference at all is checked by nothing, which is
     # the silence this whole item is about - but only where there is

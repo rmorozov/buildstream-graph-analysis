@@ -78,7 +78,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Fourteen hints, and this table is the one place they are all written
+Sixteen hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it. A hint the schemas emit and
 this table does not name is a hint whose meaning lives only in code,
@@ -1008,6 +1008,142 @@ fifth name appearing there means this reasoning was revisited.
 keys, both sections draw every pair and no table — `UX-413`'s defect in
 the shape its sweep cannot see, filed as `UX-419`.
 
+## 1d. A command is a shape, and the shape is one line (round 69)
+
+The page's "What should I run next?" control is a table whose middle
+column is headed `Run`. Probed in the booted export of a 1,202-element
+run, at 1440x900:
+
+```text
+mono=False code=False btn=False  bga, blast, layer08/mod073.bst, /tmp/…
+```
+
+not monospace, no `code` element, no copy control. Behind it:
+
+```json
+"argv": ["bga", "blast", "layer08/mod073.bst", "/tmp/…/run"]
+```
+
+**The same field renders correctly two other places.** `decision.js:737`
+and `views.js:500` both do `argv.join(" ")` and attach a copy control.
+The third site declares it a table column (`bga/schemas.py:3134`) and
+gets the generic array path.
+
+The generic path is not misbehaving. `["bga", "blast", …]` is a *short
+scalar array*, and §1 says a short scalar array renders as the inline
+`code` list — values, separated by commas. **The mapping is being
+followed. The mapping has no row for a command.**
+
+So the rule is one level up from the bug:
+
+**A value the reader is meant to paste into a shell is one string, not
+a list of its words.** It renders as a single line, monospace, with the
+copy affordance §4c requires, and its separator is the shell's — never
+the comma a list-rendering control supplies. A command is a *shape*, so
+it lands in §1's table with a hint that declares it, rather than each
+site joining the array itself and one site forgetting.
+
+This is `§4d`'s failure wearing different clothes. There, a query was
+handed over filled with somebody else's element; here, a command is
+handed over punctuated so it cannot run. Both look complete. Neither
+works when pasted, which is the only test either one has.
+
+The general form, and the reason this sits in §1 rather than in a
+bug report: **where one payload field is rendered by more than one
+site, the shape is what they must agree on.** Two sites knowing a
+private fact about a field — that its elements join with a space — is
+the drift the shape-dispatch exists to prevent, and the third site is
+not the defect so much as the proof.
+
+`UX-429` is the item. Its row in §1's table and its hint in §1a land
+together with the schema change, because
+`tests/unit/test_the_contract_names_its_vocabulary.py` holds §1a and
+`bga/schemas.py` equal in both directions: a documented hint nothing
+emits reddens exactly as an undocumented one does.
+
+## 3g. A budget counts what its consumer spends (round 69)
+
+`tools/bga_view.py:601` carries the only bound the Perfetto handoff has:
+
+```python
+TRACE_BUDGET_B = 4 * 1024 * 1024
+```
+
+Measured on a 1,202-element run with both planes, 14,424 traced
+processes:
+
+```text
+                      measured        bound
+trace bytes            795,371    4,194,304    19.0% of it
+slices                  14,446            -
+tracks                  15,650            -    nothing bounds this
+```
+
+The trace sits at a fifth of its byte budget and carries **more tracks
+than slices** — one process track per element, one thread track per
+traced pid. Perfetto draws a row per track, so the reported freeze is a
+drawing cost. Bytes are what the budget counts; tracks are what the
+consumer spends.
+
+**A budget is stated in the unit its consumer actually spends, and a
+bound on a proxy for that unit is not a bound.** §3f gave the budget
+family its first half — a bound is enforced at the largest size the
+tool tells people to use. This is the second: measured in the right
+currency. A capture can pass this budget with room to spare and be
+unopenable.
+
+What makes this one hard to see, and worth a section rather than a
+fix: **the byte figure is not wrong.** It is real, cheap to obtain,
+honestly reported, and it correctly bounds the thing it was written
+for — transfer, and whether the export inlines. It simply is not a
+measurement of what the reader is complaining about. That is the
+fixing guide's §5 arriving on the design side, where the tell is not a
+bad number but a good number answering an unasked question.
+
+The test to apply to any bound on this page: *name the thing that goes
+wrong when it is exceeded, then check the budget counts that thing.*
+Here the thing that goes wrong is Perfetto not drawing, and nothing in
+the budget's units appears in that sentence.
+
+`UX-430` is the item.
+
+## 4e. A handoff says what it could not carry (round 69)
+
+Same capture. `run/graph.json` holds 3,500 dependency edges; the
+emitter reported:
+
+```json
+{"flows": 19, "flows_dropped": 0}
+```
+
+3,481 edges reached no arrow, and the counter that exists to report
+loss read zero. `_plane1_flows` has two skip paths and counts one — the
+uncounted one means "one end of this edge produced no task", which is
+what a cached element is, and therefore what most edges of an
+incremental build are.
+
+**A handoff that drops part of what it was given states how much and
+why, and a counter that names one reason for loss reports every
+reason.** §4d says a handoff hands over this run's values; this is its
+converse — where it cannot, it says so rather than handing over a
+smaller thing silently.
+
+The sharp edge is the zero. A zero meaning "nothing was lost" and a
+zero meaning "this counter does not watch that door" are
+indistinguishable to the reader, and the second is strictly worse than
+no counter at all: **it converts an absence the reader might have
+questioned into an assurance.** A reader who sees 19 arrows and no
+count wonders. A reader who sees 19 arrows and `dropped: 0` concludes
+the graph really is that sparse, and stops.
+
+So the rule has a second clause: **a count of what went wrong is
+reported to the reader, not only to the caller.** `flows_dropped` rides
+the render result and is asserted in a guard; `describe()` never prints
+it and nothing under `bga/viewer/` reads it. A number that only a test
+can see is not a report.
+
+`UX-431` is the item.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -1058,3 +1194,20 @@ fifth. A guard for §5a that measures the easy way will pass forever.
 This paragraph found one while it was being written: §7 itself carried
 the same sentence twice, in slightly different words, which is the
 defect §5a is about happening to the document that describes it.
+
+Round 69's three sections are in that same state — written from a
+measurement taken on a two-plane capture of the seeded 1,202-element
+run, each with a filed item, none with a guard yet:
+
+| section | measured | item |
+|---|---|---|
+| §1d | `bga, blast, layer08/…` in the `Run` column, against `argv.join(" ")` at two other sites | `UX-429` |
+| §3g | 795,371 B against a 4 MiB bound, on 15,650 tracks nothing bounds | `UX-430` |
+| §4e | 3,500 edges in, 19 flows out, `flows_dropped: 0` | `UX-431` |
+
+§3g's guard has the same trap §5a's does, from the other direction.
+The easy guard reads `TRACE_BUDGET_B` and checks the trace against it —
+which is the instrument under suspicion, grading itself. A guard for
+§3g must count tracks in an emitted trace and must redden on a mutation
+that raises the track count while leaving the bytes alone.
+

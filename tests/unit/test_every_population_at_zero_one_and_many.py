@@ -53,6 +53,7 @@ would have been filed as a defect in the page:
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -150,6 +151,11 @@ const draw = (key, rows) => {
       cards_shown: all(section, (n) => n.tagName === "article")
         .filter((card) => !card.hidden).length,
       badges: all(section, (n) => (n.attrs?.class || "") === "badge")
+        .map(text),
+      // `UX-412`: the copy control's label carries the same count in
+      // the same words, so a fix to one and not the other would leave
+      // a reader `1 rows` beside `Copy 1 row`.
+      copies: all(section, (n) => (n.attrs?.class || "") === "copy-rows")
         .map(text),
     };
   } catch (error) {
@@ -314,21 +320,13 @@ class TestOne:
     """`UX-365`'s class: what a page written for a population says over
     a single row."""
 
-    #: `UX-412`: `badgeText(1, 1)` returns `1 rows`. Every table that
-    #: draws its own badge says it, which is why the ledger is the
-    #: whole set rather than a couple of sections - one shared helper,
-    #: one wrong sentence, nine places a reader meets it.
-    PLURAL = {
-        "readers": "UX-412",
-        "next_steps": "UX-412",
-        "critical_path_detail": "UX-412",
-        "optimization_horizon": "UX-412",
-        "latent_heavies": "UX-412",
-        "serialization_point_risks": "UX-412",
-        "restructuring": "UX-412",
-        "binary_cost": "UX-412",
-        "provenance": "UX-412",
-    }
+    #: Empty since `UX-412`. It held nine entries - every table that
+    #: draws its own badge - because `badgeText(1, 1)` returned
+    #: `1 rows`: one shared helper, one wrong sentence, nine places a
+    #: reader meets it. Pluralising where the count is written is what
+    #: made the whole ledger go at once, and is why the entry that
+    #: comes back will be a *new* call site rather than a missed one.
+    PLURAL = {}
 
     def test_one_row_still_draws_a_section(self, swept):
         missing = [key for key, legs in swept["out"].items()
@@ -344,6 +342,24 @@ class TestOne:
         assert lying.keys() == self.PLURAL.keys(), (
             f"badges over one row: {lying}; the ledger says "
             f"{sorted(self.PLURAL)}")
+
+    def test_no_copy_control_pluralises_a_single_row(self, swept):
+        """`UX-412`'s second call site. The badge and this label are
+        written from the same count and used to disagree with the same
+        noun, which is why the fix is one helper rather than two
+        edits."""
+        lying = {key: legs["one"]["copies"]
+                 for key, legs in swept["out"].items()
+                 if any("1 rows" in label
+                        for label in legs["one"].get("copies") or [])}
+        assert lying == {}, lying
+
+    def test_the_copy_controls_are_there_to_be_read(self, swept):
+        """What keeps the clause above from passing on an empty set -
+        the mistake `UX-403`'s census exists to find."""
+        seen = sum(len(legs["one"].get("copies") or [])
+                   for legs in swept["out"].values())
+        assert seen >= 5, f"only {seen} copy control(s) rendered at one row"
 
     def test_a_population_of_one_is_never_bounded(self, swept):
         """A Top-N over one row would hide the only row there is."""
@@ -379,6 +395,22 @@ class TestMany:
         assert drawn_whole.keys() == self.UNBOUNDED.keys(), (
             f"drawing every one of {MANY} at once: {drawn_whole}; the "
             f"ledger says {sorted(self.UNBOUNDED)}")
+
+    def test_no_control_singularises_a_population(self, swept):
+        """`UX-412`'s other direction, and the reason this clause
+        exists at all: a `plural` that dropped the count test entirely
+        still passed every clause in `TestOne`, because `1 row` is what
+        those assert. Agreement is two claims, and the many leg is
+        where the second one can be read."""
+        lying = {}
+        for key, legs in swept["out"].items():
+            said = [*(legs["many"].get("copies") or []),
+                    *(legs["many"].get("badges") or [])]
+            wrong = [text for text in said
+                     if re.search(r"\b(?!1\b)[\d,]+ row\b", text)]
+            if wrong:
+                lying[key] = wrong
+        assert lying == {}, lying
 
     def test_a_bounded_table_says_what_it_is_bounding(self, swept):
         """`UX-208`: a reader who cannot see the denominator cannot

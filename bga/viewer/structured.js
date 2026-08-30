@@ -34,7 +34,7 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
-         copy, presetColumns, applyPreset, openingBound,
+         copy, presetColumns, applyPreset, openingBound, plural,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -845,7 +845,9 @@ export function interrogable(table, specs, total, depth = 0) {
   const label = () => {
     const n = shownRows().length;
     const form = markdownBox?.checked ? "Markdown" : "JSON";
-    const rows = `${n.toLocaleString("en-US")} row${n === 1 ? "" : "s"}`;
+    // `UX-412`: through the shared helper, so this label and the badge
+    // beside it agree with the count in one place rather than two.
+    const rows = plural(n, "row");
     copyRows.textContent = `Copy ${rows}`;
     copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
       + `with their published values`;

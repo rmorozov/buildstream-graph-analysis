@@ -166,10 +166,28 @@ export function openingBound(presets, total, bound) {
     : { value: `${bound}:`, top: { n: bound, column: null } };
 }
 
+/**
+ * `UX-412`: a count and a noun that agrees with it.
+ *
+ * `1 rows` was written in two places and read on every run small
+ * enough to have one of something - one finding, one next step, one
+ * heavy element, which is the shape of somebody's first run.
+ * `UX-400`'s sweep at a single row found nine badges saying it.
+ *
+ * Pluralised where the count is written rather than at each call site,
+ * which is the fix `UX-365` asked for the first time this class of bug
+ * appeared: a sentence written for a population and read over one row.
+ */
+export function plural(count, noun) {
+  return `${count.toLocaleString("en-US")} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 /** `12 of 1,202` - and just the total when nothing is filtered. */
 export function badgeText(shown, total) {
   const n = (value) => value.toLocaleString("en-US");
-  return shown === total ? `${n(total)} rows` : `${n(shown)} of ${n(total)}`;
+  // The `N of M` form needs no agreement: a denominator is always a
+  // population, and `1 of 12` is right as it stands.
+  return shown === total ? plural(total, "row") : `${n(shown)} of ${n(total)}`;
 }
 
 /**
@@ -186,14 +204,13 @@ export function badgeText(shown, total) {
  * many there are and shows them, and the badge beside it carries the
  * denominator so a bounded list cannot be mistaken for a short one.
  */
-export function boundCards(section, selector, bound, noun = "items") {
+export function boundCards(section, selector, bound, noun = "item") {
   const cards = [...(section.querySelectorAll?.(selector) ?? [])];
   if (cards.length <= bound) return null;
   for (const [index, card] of cards.entries()) card.hidden = index >= bound;
   const badge = el("span", { class: "badge" }, badgeText(bound, cards.length));
-  const n = cards.length.toLocaleString("en-US");
   const more = el("button", { type: "button", class: "show-all-cards" },
-                  `Show all ${n} ${noun}`);
+                  `Show all ${plural(cards.length, noun)}`);
   more.addEventListener("click", () => {
     for (const card of cards) card.hidden = false;
     badge.textContent = badgeText(cards.length, cards.length);

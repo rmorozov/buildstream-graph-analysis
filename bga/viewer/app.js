@@ -178,7 +178,7 @@ export function renderFindings(findings, investigate = null, node = undefined) {
         : null));
   }
   //: `UX-413`: cards are bounded like rows - see `boundCards`.
-  boundCards(section, "article.finding", TABLE_OPENS_BOUNDED_ABOVE, "findings");
+  boundCards(section, "article.finding", TABLE_OPENS_BOUNDED_ABOVE, "finding");
   return section;
 }
 

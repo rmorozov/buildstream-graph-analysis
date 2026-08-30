@@ -420,6 +420,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-403 | [the guard census — every guard proves it can fail](UX-0403-the-guard-census.md) | Medium | the audit loop itself | 🟢 Done — eleven families, one mechanism-revert mutation each: ten discriminate, the tier guard did not and was hollow over four browser guards running in the small tier | [UX-403](UX-0403-the-guard-census.md) |
 | UX-415 | [the shared node probe says `file:` and always measures `http:`](UX-0415-the-shared-probe-is-always-served.md) | Medium | every guard that boots the page in node | 🟢 Done — the probe's href follows PROTOCOL; UX-402 reads the page through it, and a browser clause keeps the two honest | [UX-415](UX-0415-the-shared-probe-is-always-served.md) |
 | UX-413 | [a population with nothing to rank by is never bounded](UX-0413-a-population-with-nothing-to-rank-by-is-never-bounded.md) | High | anyone whose run is big enough for the page to be long | 🟢 Done — the bound is decided on the total, not on having something to rank by; cards get it too | [UX-413](UX-0413-a-population-with-nothing-to-rank-by-is-never-bounded.md) |
+| UX-412 | [a table of one says "1 rows"](UX-0412-a-table-of-one-says-one-rows.md) | Medium | every reader of a run small enough to have one of something | 🟢 Done — one helper agrees with its count, read by the badge and the copy label | [UX-412](UX-0412-a-table-of-one-says-one-rows.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

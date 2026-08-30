@@ -1,6 +1,6 @@
 {
   "measured_on": "github-actions ubuntu-latest, test (3.11), -n auto",
-  "note": "UX-420: one CI run's per-file totals, so a later CI run can be read against CI rather than against the floors in tests/tiers.py, which describe a developer machine. Refresh with tools/dev_tier_drift.py --record. UX-427: two files added in round 67 were absent and were appended from run 33318288027 (test (3.11), head 2527114) rather than by re-recording the whole document - that run's own spread reached x28.4, so its numbers are not a baseline for the other 369 files.",
+  "note": "UX-420: one CI run's per-file totals, so a later CI run can be read against CI rather than against the floors in tests/tiers.py, which describe a developer machine. Refresh with tools/dev_tier_drift.py --record. UX-427: two files added in round 67 were absent and were appended from run 33318288027 (test (3.11), head 2527114) rather than by re-recording the whole document - that run's own spread reached x28.4, so its numbers are not a baseline for the other 369 files. UX-432: this round's new file was appended the same way, from run 33325461816 (test (3.11), head 26f5db9) at 6.12s - that run's spread reached x5.87 against a shift of x1.23, healthy enough to read one file's number from but still not a re-record of the other 370.",
   "files": {
     "tests/test_cli.py": 1.44,
     "tests/test_e2e.py": 0.04,
@@ -311,6 +311,7 @@
     "tests/unit/test_the_process_is_measured.py": 0.2,
     "tests/unit/test_the_provenance_names_its_rule.py": 24.19,
     "tests/unit/test_the_query_asks_about_this_run.py": 16.06,
+    "tests/unit/test_the_questions_are_asked_of_a_real_trace.py": 6.12,
     "tests/unit/test_the_questions_ask_what_the_trace_answers.py": 0.2,
     "tests/unit/test_the_rail_takes_a_step.py": 9.27,
     "tests/unit/test_the_readme_block_is_the_real_output.py": 0.75,

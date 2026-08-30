@@ -99,11 +99,11 @@ import re
 LARGE_FLOOR_S = 15.0
 MEDIUM_FLOOR_S = 1.0
 
-# `UX-418`: **the floors are seconds on one machine, and a report can
-# come from another.** The step that reads one compares *rank* instead.
+# `UX-418`: **the floors are seconds on one machine, and a report from
+# another cannot be compared to them.** Not in any form.
 #
 # The numbers beside every entry below were measured on a developer
-# container. Two CI runs of the drift step taught, in order, that they
+# container. Three CI runs of the drift step taught, in order, that they
 # do not travel:
 #
 # 1. It called three medium files large at 20.4-21.5s; here they are
@@ -116,12 +116,17 @@ MEDIUM_FLOOR_S = 1.0
 #    had grown: here they are 1.05-1.10x their records. The difference
 #    is *per file*, so no single scale exists to find.
 #
-# What survives a change of machine is the **order**. These lists are a
-# ranking, so `tools/dev_tier_drift.py` reports a file that is slower
-# than the middle of the tier above it *in the same report* - two
-# numbers from one run on one clock. The floors below stay the
-# authority for **placing** a file, which is a decision made here, on
-# this clock, with `--durations=0`.
+# 3. Comparing **rank** rather than seconds was the third answer, on the
+#    argument that the order survives a change of machine. It does not:
+#    `test_report_stays_readable_at_scale` is recorded below all 22
+#    `LARGE` files here, and on CI it read 25.3s - above 11 of them.
+#
+# So the check runs where the floors mean something (`make test-tiers`)
+# and not in CI, where these seconds describe a different machine. CI
+# keeps `SMALL_TIER_BUDGET_S` below, whose whole point is that it is
+# sized against CI's own clock - the distinction this file already drew
+# once and `UX-418` had to learn again. A CI-side check needs a CI-side
+# reference; that is `UX-420`.
 
 
 def recorded():

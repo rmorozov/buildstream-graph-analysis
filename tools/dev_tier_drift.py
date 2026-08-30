@@ -161,6 +161,49 @@ CI_DRIFT_FACTOR = 1.5
 #: branch should have had from the start and did not.
 CI_DRIFT_SECONDS = 5.0
 
+#: `UX-442`: how many **consecutive** runs a file must exceed both gates
+#: above in before it is reported. One is what shipped, and one is what
+#: this constant exists to stop.
+#:
+#: `test (3.11)` went red on `279900f`, whose diff is one backlog file
+#: and one index row. The suite passed; the drift step did not. The same
+#: file across four CI runs of that branch, read from the documents
+#: those runs recorded:
+#:
+#: ```text
+#:   run   test_the_page_has_a_reader.py   run's shift   run's spread max
+#:    1                   7.13                   -               -
+#:    2                   7.13                   -               -
+#:    3                   7.53                 1.227           5.87
+#:    4                  13.85                 1.180           4.872
+#: ```
+#:
+#: Three samples at 7.1-7.5 and one at 13.9, and **the outlier run was
+#: not a contended run**: its shift and spread are both lower than run
+#: 3's, which passed. `UX-423` measured the dispersion of the *shift*, so
+#: a globally slow runner is not read as drift. Nothing measured the
+#: dispersion of one file, and a file that boots a browser can swing six
+#: seconds once in four runs.
+#:
+#: **What two costs.** Real drift is reported one run later than it used
+#: to be, and a branch's first run reports nothing at all, because there
+#: is no previous run to agree with it. That is the price of not crying
+#: wolf, and it is the whole price - the gates themselves are unchanged
+#: (`UX-418` measured them; this adds a repetition rule rather than
+#: retuning either).
+#:
+#: **Why not a second, higher bound that trips on one sample.** It would
+#: need a number, and the only series anybody has is the four runs above.
+#: Sizing a constant from one excursion is the mistake `UX-420` paid
+#: three red CI rounds for. A hang is already caught by the small tier's
+#: `timeout 120` backstop; drift, by definition, repeats.
+#:
+#: An excursion is remembered between runs in the **carry** file
+#: (`--carry`), which CI restores and saves around the step. Without one
+#: the tool has no memory, says so, and decides on the single sample it
+#: has.
+CI_DRIFT_RUNS = 2
+
 #: Outside this, the whole reference is stale rather than any one file
 #: drifting - a new runner image, a Python bump, a changed default
 #: parallelism. Wide on purpose: inside it the median is divided out
@@ -383,6 +426,10 @@ def against(times, reference):
     A file is reported only when it is slower by a ratio **and** by a
     number of seconds - see `CI_DRIFT_SECONDS` for the run that proved
     a ratio alone reports thirty-one files on a suite nobody touched.
+
+    This says what **one run** found. Whether that is drift or one slow
+    afternoon needs the run before it, and that decision is `repeated()`
+    one level up - `UX-442`.
     """
     known = reference.get("files") or {}
     ratios = {name: times[name] / known[name] for name in known
@@ -413,6 +460,68 @@ def against(times, reference):
         rows, key=lambda row: -row[1])
 
 
+def carried(path):
+    """`UX-442`: what the runs before this one found over both gates.
+
+    A list of name-sets, most recent first, at most `CI_DRIFT_RUNS - 1`
+    long - which is exactly the memory the rule needs and no more.
+
+    A missing or unreadable carry is an empty history rather than an
+    error: the first run on a branch has no previous run, and a cache
+    that did not restore must not fail the build over its own absence.
+    """
+    try:
+        held = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    runs = held.get("runs")
+    if not isinstance(runs, list):
+        return []
+    return [set(one) for one in runs[:CI_DRIFT_RUNS - 1]
+            if isinstance(one, list)]
+
+
+def carry(path, names, source, history):
+    """Write what this run found, for the next run to agree or disagree.
+
+    Written on **every** `--against` run, including the runs that find
+    nothing: a file that excurses, recovers and excurses again has not
+    drifted twice in a row, and an empty run is what says so.
+    """
+    runs = [sorted(names)] + [sorted(one) for one in history]
+    pathlib.Path(path).write_text(json.dumps(
+        {"runs": runs[:CI_DRIFT_RUNS - 1], "measured_on": source},
+        indent=2) + "\n", encoding="utf-8")
+
+
+def repeated(rows, history):
+    """Split `against`'s rows into the confirmed and the ones waiting.
+
+    A row is confirmed when every one of the `CI_DRIFT_RUNS - 1` runs
+    behind this one found the same file over both gates. A history
+    shorter than that confirms nothing - the branch has not run enough
+    times to tell an excursion from drift, and saying so is the point.
+
+    `history` is `None` when the run was given no carry at all. Then
+    nothing can be confirmed by agreement and every row decides on its
+    single sample, which is the behaviour this item replaced; it is kept
+    so that a missing `--carry` is loud rather than silently green.
+
+    **A file with no reference entry is never held back.** It is not an
+    excursion - it is a file the reference does not describe, which is
+    true of every run until the reference is refreshed, and waiting a
+    run to say so buys nothing.
+    """
+    if history is None:
+        return list(rows), []
+    enough = len(history) >= CI_DRIFT_RUNS - 1
+    confirmed, waiting = [], []
+    for row in rows:
+        agreed = enough and all(row[0] in one for one in history)
+        (confirmed if row[2] is None or agreed else waiting).append(row)
+    return confirmed, waiting
+
+
 def _against(times, path, args):
     """`--against`: this run read against CI's own recorded numbers."""
     reference = (json.loads(path.read_text(encoding="utf-8"))
@@ -431,6 +540,14 @@ def _against(times, path, args):
         return 0
     verdict, shift, rows = against(times, reference)
     where = reference.get("measured_on", "unknown")
+    # `UX-442`. Read before anything is printed and written before
+    # anything returns, so the next run's memory is this run's finding
+    # whatever this run decides - a `stale` or `ok` run breaks the chain
+    # exactly as it should.
+    history = carried(args.carry) if args.carry else None
+    if args.carry:
+        over = {name for name, _s, was, _r in rows if was is not None}
+        carry(args.carry, over, args.source, history or [])
     if verdict == "empty":
         print(f"{path} names none of the {len(times)} file(s) this run "
               f"measured, so it cannot be a reference for it. Re-record "
@@ -458,14 +575,37 @@ def _against(times, path, args):
         if not args.quiet:
             print(f"tiers ok: {line}")
         return 0
+    confirmed, waiting = repeated(rows, history)
+
+    def say(row):
+        name, seconds, was, ratio = row
+        return (f"  {name}  {seconds:.1f}s"
+                + (f"  against {was:.1f}s recorded, x{ratio:.2f} after "
+                   f"this run's x{shift:.2f} shift" if was is not None
+                   else "  and not in the reference at all"))
+
+    if waiting:
+        # Not a failure and not silence. One sample does not separate a
+        # file that got slower from a file that had a slow afternoon,
+        # and the run that saw it is the only place to say so.
+        print(f"{len(waiting)} file(s) over both gates on this run only, "
+              f"and {CI_DRIFT_RUNS} consecutive runs are what reports "
+              f"(UX-442):", file=sys.stderr)
+        for row in waiting:
+            print(say(row), file=sys.stderr)
+    if not confirmed:
+        if not args.quiet:
+            print(f"tiers ok: {line}")
+        return 0
     print(line, file=sys.stderr)
-    print(f"{len(rows)} file(s) slower than CI's own record of them:",
+    print(f"{len(confirmed)} file(s) slower than CI's own record of them:",
           file=sys.stderr)
-    for name, seconds, was, ratio in rows:
-        print(f"  {name}  {seconds:.1f}s"
-              + (f"  against {was:.1f}s recorded, x{ratio:.2f} after this "
-                 f"run's x{shift:.2f} shift" if was is not None
-                 else "  and not in the reference at all"), file=sys.stderr)
+    for row in confirmed:
+        print(say(row), file=sys.stderr)
+    if history is None:
+        print("\nThis run was given no --carry, so one sample decided it. "
+              "CI restores and saves one; a local run has no series to "
+              "read (UX-442).", file=sys.stderr)
     print("\nMake it faster, or - if it is meant to cost this - re-record "
           "with --record and commit, which is how the reference stays "
           "true rather than becoming an alarm nobody reads.",
@@ -486,6 +626,11 @@ def main(argv=None):
                         help="check against a CI reference rather than "
                              "against the floors - the only comparison "
                              "that means anything on a foreign runner")
+    parser.add_argument("--carry", metavar="PATH",
+                        help=f"where this run's excursions are left for the "
+                             f"next one; a file is reported only after "
+                             f"{CI_DRIFT_RUNS} consecutive runs find it "
+                             f"(UX-442). Without it one sample decides")
     parser.add_argument("--source", default="unknown",
                         help="what produced this report, recorded with it")
     args = parser.parse_args(argv)

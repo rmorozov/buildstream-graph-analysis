@@ -84,11 +84,39 @@ jobs:
       # first, so a new runner image is not read as every file drifting.
       # `make test-tiers` remains the developer-side check against the
       # floors, where those seconds mean something.
+      #
+      # `UX-442`: the step is given a memory. One CI run cannot tell a
+      # file that got slower from a file that had a slow afternoon -
+      # round 69 was stopped three times by this step, none of them by
+      # a test, one of them by a single 13.9s sample of a file whose
+      # other three samples were 7.1-7.5s. So a file is reported only
+      # when consecutive runs agree, and the carry file is where a run
+      # leaves its finding for the next one. Keyed by ref, so a branch
+      # reads its own series and not another branch's.
+      - name: What the last run of this branch found over the gates
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/tier_carry.json
+          key: tier-carry-${{ github.ref }}-${{ github.run_id }}
+          restore-keys: |
+            tier-carry-${{ github.ref }}-
+        if: matrix.python-version == '3.11'
+
       - name: Tiers match CI's own record of them
         run: |
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
-            --against --source "github-actions ubuntu-latest, test (3.11), -n auto"
+            --against --carry "${{ runner.temp }}/tier_carry.json" \
+            --source "github-actions ubuntu-latest, test (3.11), -n auto"
         if: matrix.python-version == '3.11'
+
+      # `always()`, because the run this most needs to remember is the
+      # one that just reported - and the step above exits 1 on it.
+      - name: Leave it for the next run
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/tier_carry.json
+          key: tier-carry-${{ github.ref }}-${{ github.run_id }}
+        if: always() && matrix.python-version == '3.11'
 
       # UX-427: the half of UX-420's design that was missing. The
       # reference can be *recorded* - `--record` writes it - but nothing

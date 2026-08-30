@@ -168,6 +168,51 @@ CI_DRIFT_SECONDS = 5.0
 #: that names the wrong thing.
 IMAGE_BAND = (0.6, 1.7)
 
+#: The shift is estimated only from files that run at least this long.
+#: `UX-423`. The shift stands for "how much slower this runner is", and
+#: a ratio of two hundredth-of-a-second numbers does not carry that.
+#: Two runs of the whole suite on one machine at one commit, so every
+#: departure from the median is noise and nothing else:
+#:
+#: ```text
+#:   band (run 1 seconds)   files  median  p90 |r-1|   worst
+#:   0 - 0.1                  144   1.000      0.983   4.208
+#:   0.1 - 0.5                 46   0.978      0.294   1.292
+#:   0.5 - 1                   24   1.030      0.402   1.390
+#:   1 - 5                     74   0.961      0.260   1.777
+#:   5+                        57   0.994      0.124   1.170
+#: ```
+#:
+#: A file under a tenth of a second ran **x4.21** its own time with
+#: nothing changed. 144 of 345 files are in that band, so 42% of the
+#: population the median was taken over carried no information about
+#: the runner.
+#:
+#: **What this did and did not buy, stated because the filing implied
+#: more.** A median is robust, so the point estimate barely moved -
+#: 0.983 over all files against 0.980 over these. What tightened is the
+#: precision, and that is the honest claim:
+#:
+#: ```text
+#:   shift over files >= 0.0s: 0.983  from 345 files, IQR 0.151
+#:   shift over files >= 1.0s: 0.980  from 131 files, IQR 0.099
+#:   shift over files >= 5.0s: 0.994  from  57 files, IQR 0.044
+#: ```
+#:
+#: `MEDIUM_FLOOR_S` rather than a new number, because it is already
+#: this repository's line for "this file is not trivial", and inventing
+#: a second one would need a sample nobody has. 5.0s is tighter still
+#: and was not taken: 57 files is a thin population for a median, and
+#: choosing between them on one machine's pair of runs is the sizing-on
+#: -one-sample mistake `UX-420` paid three red CI rounds for.
+SHIFT_FLOOR_S = tiers.MEDIUM_FLOOR_S
+
+#: Below this many files over the floor, the floor is abandoned and the
+#: whole population is used. A median of four ratios is worse than a
+#: median of four hundred noisy ones, and a suite that shrinks must not
+#: silently lose its estimator.
+SHIFT_MIN_FILES = 20
+
 #: The tier each one is measured against - see `boundaries`.
 ABOVE = {"small": "medium", "medium": "large"}
 
@@ -286,6 +331,40 @@ def record(times, source="unknown", reference=None):
     return document
 
 
+def shift_population(ratios, known):
+    """The names whose ratio is allowed to estimate the runner's shift.
+
+    Files at or over `SHIFT_FLOOR_S` in the **reference**, not in this
+    run: a file that got genuinely slower must not join the population
+    by getting slower, or a regression drags the baseline toward
+    itself.
+    """
+    over = [name for name in ratios if known.get(name, 0) >= SHIFT_FLOOR_S]
+    return over if len(over) >= SHIFT_MIN_FILES else list(ratios)
+
+
+def shift_of(ratios, known):
+    """The run's shift: the median ratio among files worth measuring."""
+    return statistics.median(ratios[name]
+                             for name in shift_population(ratios, known))
+
+
+def shift_spread(ratios, known):
+    """`(files, iqr)` behind the shift, so a later round can band it.
+
+    Reported rather than judged. `UX-420` sized a threshold on one
+    sample and its first armed run named thirty-one files on an
+    unchanged suite; `tools/dev_process_bands.py` says in its own
+    output that a band needs a baseline and one reading is not one.
+    This is what accumulates the readings.
+    """
+    kept = sorted(ratios[name] for name in shift_population(ratios, known))
+    if len(kept) < 4:
+        return len(kept), None
+    quarter, three = kept[len(kept) // 4], kept[(len(kept) * 3) // 4]
+    return len(kept), three - quarter
+
+
 def against(times, reference):
     """`(verdict, shift, rows)` for a run read against CI's own numbers.
 
@@ -297,6 +376,10 @@ def against(times, reference):
     against one particular afternoon: a runner image that got 20%
     slower moves every file together and is not drift.
 
+    That median is taken over files at or above `SHIFT_FLOOR_S` only -
+    `UX-423`. A ratio of two hundredth-of-a-second numbers says nothing
+    about a runner, and 42% of the reference is that small.
+
     A file is reported only when it is slower by a ratio **and** by a
     number of seconds - see `CI_DRIFT_SECONDS` for the run that proved
     a ratio alone reports thirty-one files on a suite nobody touched.
@@ -306,7 +389,7 @@ def against(times, reference):
               if times.get(name) and known[name] > 0}
     if not ratios:
         return "empty", None, []
-    shift = statistics.median(ratios.values())
+    shift = shift_of(ratios, known)
     if not IMAGE_BAND[0] <= shift <= IMAGE_BAND[1]:
         return "stale", shift, []
 
@@ -360,8 +443,17 @@ def _against(times, path, args):
               f"re-record with --record and commit it, rather than "
               f"reading the per-file numbers below.", file=sys.stderr)
         return 1
+    known = reference.get("files") or {}
+    ratios = {name: times[name] / known[name] for name in known
+              if times.get(name) and known[name] > 0}
+    behind, iqr = shift_spread(ratios, known)
+    # The shift's own precision, printed on every run so a later round
+    # has the series `UX-423` could not size a band from with one.
+    estimate = (f"x{shift:.2f} from {behind} file(s) over "
+                f"{SHIFT_FLOOR_S:g}s"
+                + (f", IQR {iqr:.2f}" if iqr is not None else ""))
     line = (f"{len(times)} file(s) measured against {path.name} "
-            f"({where}), this run x{shift:.2f}")
+            f"({where}), this run {estimate}")
     if verdict == "ok":
         if not args.quiet:
             print(f"tiers ok: {line}")

@@ -355,6 +355,99 @@ class TestCiIsReadAgainstItsOwnRecord:
         assert low < 1.0 < high, drift.IMAGE_BAND
 
 
+class TestTheShiftIsEstimatedWhereARatioMeansSomething:
+    """`UX-423`. The shift stands for "how much slower this runner is",
+    and it was a median over every referenced file - 42% of which run
+    under a tenth of a second, where a ratio is noise.
+
+    Two runs of the whole suite on one machine at one commit measured
+    the noise directly: a file under 0.1s ran x4.21 its own time with
+    nothing changed, against x1.17 worst for files over five seconds.
+
+    A median is robust, so this is a **precision** fix and not an
+    accuracy one - the point estimate moved 0.983 to 0.980 - and these
+    clauses hold the property that survives that: what the estimate is
+    computed *from*.
+    """
+
+    def _pair(self, small_ratio, big_ratio=1.0, smalls=200, bigs=40):
+        """A reference and a run where the two size classes disagree."""
+        reference = {f"tests/unit/test_tiny_{i}.py": 0.05
+                     for i in range(smalls)}
+        reference.update({f"tests/unit/test_big_{i}.py": 8.0
+                          for i in range(bigs)})
+        times = {name: seconds * (small_ratio if "tiny" in name else
+                                  big_ratio)
+                 for name, seconds in reference.items()}
+        return times, {"files": reference}
+
+    def test_a_crowd_of_tiny_files_does_not_set_the_shift(self):
+        """The failure this item is about. Two hundred sub-second files
+        all reading x1.6 must not persuade the rule that the runner got
+        60% slower, because at 0.05s that ratio is a measurement of the
+        timer."""
+        times, reference = self._pair(small_ratio=1.6, big_ratio=1.0)
+        _verdict, shift, _rows = drift.against(times, reference)
+        assert shift == pytest.approx(1.0), (
+            f"shift {shift:.3f} - the tiny files outvoted the ones that "
+            f"carry the runner's speed")
+
+    def test_the_files_that_carry_the_runner_do_set_it(self):
+        """The other direction, so the fix is a distinction and not a
+        rule that ignores small files' existence."""
+        times, reference = self._pair(small_ratio=1.0, big_ratio=1.4)
+        _verdict, shift, _rows = drift.against(times, reference)
+        assert shift == pytest.approx(1.4), shift
+
+    def test_the_floor_is_read_on_the_reference_not_the_run(self):
+        """A file that got slower must not buy its way into the
+        population by getting slower - that would let a regression drag
+        the baseline toward itself."""
+        reference = {f"tests/unit/test_big_{i}.py": 8.0 for i in range(40)}
+        reference["tests/unit/test_was_tiny.py"] = 0.05
+        times = dict.fromkeys(reference, 8.0)
+        times["tests/unit/test_was_tiny.py"] = 30.0     # x600, and small
+        assert "tests/unit/test_was_tiny.py" not in drift.shift_population(
+            {n: times[n] / reference[n] for n in reference}, reference)
+
+    def test_a_suite_with_too_few_big_files_keeps_its_estimator(self):
+        """A median of four ratios is worse than a median of four
+        hundred noisy ones. Below `SHIFT_MIN_FILES` the floor is
+        abandoned rather than the estimate being made from nearly
+        nothing."""
+        reference = {f"tests/unit/test_tiny_{i}.py": 0.05 for i in range(200)}
+        reference["tests/unit/test_big.py"] = 8.0
+        ratios = dict.fromkeys(reference, 1.2)
+        assert len(drift.shift_population(ratios, reference)) == len(reference)
+
+    def test_the_run_reports_the_precision_of_its_own_shift(self, tmp_path,
+                                                            capsys):
+        """`UX-420` sized a threshold on one sample and its first armed
+        run named thirty-one files on an unchanged suite. A later round
+        can only do better with a series, so every run prints the
+        population and spread behind its shift."""
+        times = dict(tiers.recorded())
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(drift.record(times, "a runner")),
+                             encoding="utf-8")
+        report = _report(tmp_path, times)
+        assert drift.main([str(report), "--against", str(reference)]) == 0
+        said = capsys.readouterr()
+        assert "IQR" in said.out, said.out
+        assert f"over {drift.SHIFT_FLOOR_S:g}s" in said.out, said.out
+
+    def test_the_floor_is_the_repositorys_own_and_is_stated(self):
+        """Not a new number. `MEDIUM_FLOOR_S` is already the line for
+        "this file is not trivial", and a second one would need a
+        sample nobody has."""
+        assert drift.SHIFT_FLOOR_S == tiers.MEDIUM_FLOOR_S
+        source = pathlib.Path(drift.__file__).read_text(encoding="utf-8")
+        assert "UX-423" in source
+        assert "4.208" in source, (
+            "the noise measurement that sized this is not in the file, so "
+            "the next round cannot re-check the choice")
+
+
 class TestTheFirstArmedRunIsTheRegressionSuite:
     """`UX-420`'s reference, armed, immediately reported 31 files on a
     suite nobody had touched. That run is this class.

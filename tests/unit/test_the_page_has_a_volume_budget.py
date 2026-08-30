@@ -136,9 +136,40 @@ LANDED_HEIGHT_PX = 7_000
 #: what fired, and the small class's bound moved 5,500 -> 7,900 with
 #: that as its reason. Height, words and controls all stayed inside
 #: their bounds, so nothing else would have noticed.
+#: `UX-419` restated the large class's **opened height**, and
+#: `test_the_budgets_are_not_slack` is what asked for it - exactly the
+#: way that clause's docstring predicted a bound would come to be
+#: restated. A `dl` had no bound at all, so every map drew every pair;
+#: bounding them halved the opened page. Measured either side of the
+#: change, one instrument, all three runs:
+#:
+#: ```text
+#:                        landed   opened    words   controls    nodes
+#: golden        before    3,800   15,618    5,565        427    2,498
+#:               after     3,800   15,618    5,565        427    2,498
+#: macro_micro   before    5,965   31,804   11,127        750    5,686
+#:               after     5,965   31,804   11,127        750    5,686
+#: scale         before    4,763   55,998   36,536      1,940   24,291
+#:               after     4,763   26,242   36,542      1,941   24,294
+#: ```
+#:
+#: Only `scale` moves, because only there does a map hold more than
+#: forty pairs - and there only height moves far, for the same reason
+#: `UX-366`'s table found only `nodes` did: a bounded pair is `hidden`,
+#: so it stops occupying pixels while its text and its nodes stay in
+#: the document. The +6 words, +1 control and +3 nodes are the one
+#: bound's badge and its "Show all N pairs" button.
+#:
+#: So the large class's opened height is now **below** the small
+#: class's, which reads wrong and is not. Every population on the scale
+#: page is bounded; the small fixtures' populations are mostly under
+#: their bounds and draw in full, so the 11-element page is the denser
+#: of the two once the 1,202-element one stops drawing 1,202 of
+#: anything. The other four large-class bounds are still met from below
+#: and are left where they are.
 BUDGETS = (
     (50, 34_000, 12_000, 800, 7_900),
-    (4_000, 66_000, 41_000, 2_300, 27_500),
+    (4_000, 32_000, 41_000, 2_300, 27_500),
 )
 
 

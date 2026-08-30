@@ -569,16 +569,17 @@ part that moved. So the distance budget gains a sibling:
 
 Measured on the finished page at 1440x900, and the bounds set from it
 with roughly a fifth of headroom on the largest run in each class.
-Round 59 (`UX-367`) added the third row and split the bounds by size:
+Round 59 (`UX-367`) added the third row and split the bounds by size;
+the readings below are round 66's, taken after `UX-419`:
 
 ```text
                  elements   landed   opened    words   controls    nodes
-golden                  4    3,501   14,560    5,280        410    2,409
-macro_micro            11    5,541   28,257    9,883        660    6,548
+golden                  4    3,800   15,618    5,565        427    2,498
+macro_micro            11    5,965   31,804   11,127        750    5,686
 budget, to 50 elts             7,000   34,000   12,000        800    7,900
 
-scale               1,202    4,397   54,968   35,031      1,925   22,977
-budget, to 4,000 elts          7,000   66,000   41,000      2,300   27,500
+scale               1,202    4,763   26,242   36,542      1,941   24,294
+budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
 ```
 
 **`nodes` is the fifth column because the other four are blind to a
@@ -593,10 +594,17 @@ is not measuring volume.
 
 **Landed height is one number for every class**, and that is the
 result rather than a shortcut: at 1,202 elements the page a reader
-lands on is 4,397 px — *shorter* than the 11-element fixture's 5,541.
-`UX-347`'s fold scales. The opened budgets are the ones that do not,
-and they are stated per class because 55,000 px at 1,202 elements may
-be acceptable while 55,000 px at eleven is not.
+lands on is 4,763 px — *shorter* than the 11-element fixture's 5,965.
+`UX-347`'s fold scales.
+
+The opened budgets were stated per class because they did not, and
+`UX-419` is why they now nearly do. A map (`dl`) had no bound at all,
+so at 1,202 elements every one of them drew every pair and the opened
+page was 55,998 px; bounded, it is 26,242 — *below* the 11-element
+page's 31,804. The large class's opened bound came down 66,000 →
+32,000 with that as its reason, and the two rows are kept apart anyway:
+`words` and `nodes` still grow with the run by 3.3x and 4.3x, which is
+the growth the split was for.
 
 Words and controls are one number rather than two, and that is a fact
 about the mechanism rather than a simplification: the chapters hide

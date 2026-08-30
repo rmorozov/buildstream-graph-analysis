@@ -67,6 +67,11 @@ Put this run's numbers where the next session can read them.
 - **Uploading the report as a build artifact**: a second mechanism for
   the same fact, and reading a log is a route this session already has.
   Worth revisiting if a human ever needs it outside a session.
+  *Revisited and reversed by `UX-441` (round 70)*: reading the log was
+  not a route it had. The document is 370 lines and it printed after
+  the suite, so on two reds of round 69 the failing assertion was off
+  the end of the tail. The artifact is now the only copy CI keeps, and
+  the step prints one line naming it.
 - **Changing the unreferenced-file rule**: it is right, and it is what
   found this. Suppressing it would trade a true alarm for silence, which
   is `UX-418`'s defect exactly.
@@ -102,6 +107,11 @@ and CI's junit dies with the runner.
 
 `ci.yml` runs `--record -` on every 3.11 run, with `always()`. Run
 `33318288027` printed the document, and it carries both:
+
+> **Superseded by `UX-441` (round 70).** The `always()` half stands; the
+> `-` does not. CI now records to `${{ runner.temp }}/…json` and uploads
+> it as `ci-reference-candidate`, because printing the document after
+> the suite put it between the reader and every failure it followed.
 
 ```text
 "tests/unit/test_the_agent_configuration_holds.py": 1.43,

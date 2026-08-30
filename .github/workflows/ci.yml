@@ -103,11 +103,31 @@ jobs:
       # This prints the refreshed document on every run, so refreshing
       # is a copy rather than a guess. `always()` because the step above
       # fails the job precisely when the refresh is wanted.
+      # `UX-441`: to a **file**, not to stdout. `if: always()` is right -
+      # a red run's timings are still timings, and gating the record on
+      # success would lose exactly the runs worth re-recording from. But
+      # the document is one line per test file, and printed here it
+      # trailed the failure it followed: on two reds this round the tail
+      # of this job's log was 370 lines of reference and the failing
+      # assertion was out of reach. `--record PATH` writes the file and
+      # prints one line, so the failure stays the last thing in the log
+      # and the document is still a click away.
       - name: This run's timings, for refreshing the reference
         run: |
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
-            --record - --source "github-actions ubuntu-latest, test (3.11), -n auto"
+            --record "${{ runner.temp }}/ci_reference.candidate.json" \
+            --source "github-actions ubuntu-latest, test (3.11), -n auto"
+          echo "Refresh tests/ci_reference.json from the" \
+               "ci-reference-candidate artifact on this run."
         if: always() && matrix.python-version == '3.11'
+
+      - name: Upload it, so refreshing the reference needs no scrolling
+        if: always() && matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-reference-candidate
+          path: ${{ runner.temp }}/ci_reference.candidate.json
+          retention-days: 30
 
       # UX-336: `make test` runs `-n auto` (see the Makefile). CI is not
       # the loop this item was about - the local one is - but a suite

@@ -681,4 +681,11 @@ MEDIUM = (
     "tests/unit/test_a_task_uid_is_not_a_label.py",                   #    1.7s
     "tests/unit/test_one_bucket_one_row.py",                          #    1.9s
     "tests/unit/test_the_synthesis_reaches_the_page.py",              #    2.6s
+    # `UX-432`, tiered after CI caught it rather than on landing - the
+    # note twelve lines up says a file like this belongs here by
+    # construction and this round forgot anyway. Seven clauses, each
+    # spawning `dev_perfetto_queries.py`, which itself spawns `node` to
+    # read the question library: the subprocesses are all of it, and no
+    # browser is involved. 4.6s here, 6.1s on CI.
+    "tests/unit/test_the_questions_are_asked_of_a_real_trace.py",     #    4.6s
 )

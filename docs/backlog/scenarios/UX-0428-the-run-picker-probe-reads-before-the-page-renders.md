@@ -1,6 +1,6 @@
 # UX-428: the run-picker probe reads the page before it has rendered
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 68, a red `test (3.10)` on PR #187 that no other interpreter reproduced | **Serves:** every contributor, at the point CI reddens on something their diff cannot reach | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 68, a red `test (3.10)` on PR #187 that no other interpreter reproduced | **Serves:** every contributor, at the point CI reddens on something their diff cannot reach | **Topic:** guards
 
 ## Motivation
 
@@ -73,3 +73,70 @@ empty, or simply not built yet.
   1s delay, and fails when the picker is genuinely absent from the
   document — both on the real fixture.
 - The failure message names what was present at the deadline.
+
+## Outcome (round 69, 2026-08-30) — 🟢 Done
+
+### The gap, measured
+
+```text
+FAILED tests/unit/test_the_page_moves_between_runs.py::TestTheSelectorIsThere
+       ::test_it_lists_the_store_s_runs
+  AssertionError: the page still reaches no other run
+```
+
+`test (3.10)` on run 393 only. 3.9, 3.11 and 3.12 passed the same
+commit; 3.10 passed the two runs either side; three of three locally.
+
+### After
+
+The probe waits — and waits for **the state it is about to read**
+rather than a fixed interval: the box, its `select`, and at least one
+option, which is the precondition all four clauses in the class share.
+`tests/cdp.mjs` already settles 1200 ms after load, and that is the
+interval this contradicts; a longer one would only move the race.
+
+On the deadline it returns what *was* there:
+
+```text
+AssertionError: no run picker after 5000ms; the page had
+  {'title': 'bga — run', 'rail': True, 'railChildren': ...}
+```
+
+`rail: True` with no picker is a different defect from no rail at all,
+and the old `sections: document.title` could not tell them apart.
+
+### Mutations verified red and reverted (3)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | result |
+|---|---|---|
+| T1 | the rail is removed and put back after 1s | **4 passed** in 20.75s |
+| T2 | the picker is genuinely absent | 4 failed in 26.86s |
+| T3 | the rail arrives late **and** the wait is removed | 4 failed in 6.70s |
+
+T1 and T2 are the two clauses the Acceptance Test asked for. **T3 is
+the one that earns the change**: with the same late rail, removing the
+wait reddens it again, so the wait is what makes T1 pass rather than
+something incidental to the fixture. T1's runtime — 20.75s against a
+6.76s baseline — is the wait engaging, four clauses each holding for
+their own second.
+
+```text
+baseline    4 passed in 6.76s
+reverted    4 passed in 6.62s
+8 passed in 20.44s   (the whole file)
+```
+
+### Deviation from the Required Fix
+
+- **None.** The Required Fix offered polling to a bounded deadline over
+  a fixed `setTimeout`, and named the fixed timeout's cost — "trades
+  one race for a slower one". The polling shape was taken. The
+  diagnostic fields the filing asked for (`document.title`, whether
+  `nav.toc` exists, its child count) are all present, plus whether the
+  picker and its `select` had appeared, which distinguishes two more
+  states for the same cost.
+- The filing's Out of Scope holds: the fixture's 0.3s server sleep is
+  untouched, and no census of other probes was attempted. `UX-425`'s
+  sweep suggests there are more; that remains its own item.

@@ -1,6 +1,6 @@
 # UX-439: the blast-radius ranking ties, and the tie-break is unstable
 
-**Priority:** High | **Status:** 🔴 Not Started | **Found by:** round 69, `bst-tests` red on PR #188 with a diff that touches no analysis code | **Serves:** anyone who reads "the first thing to fix" and expects the same answer twice | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done Done | **Found by:** round 69, `bst-tests` red on PR #188 with a diff that touches no analysis code | **Serves:** anyone who reads "the first thing to fix" and expects the same answer twice | **Topic:** analysis
 
 ## Motivation
 
@@ -110,4 +110,72 @@ guard.
 
 ## Outcome
 
-_Not started._
+**Round 69, 2026-08-30.** The order is total, in one named function.
+
+`order_blast_radius(results, element_durations)` in
+`bga/diagnostics/analyzer.py`, called by `compute_blast_radius`. The
+key, after the two `UX-173` chose: `risk_score`, then the element's own
+duration, then the uid. Negated keys with an ascending sort rather than
+`reverse=True`, which would have reversed the uid too and made the last
+key descending for no reason.
+
+`risk_score` turned out to be the whole discriminator and not merely
+one of two: it is `downstream_count` on the critical path and 0 off it,
+so it already encodes critical-path membership. A separate
+`is_on_critical_path` key would have been a second copy of the same
+fact, and was dropped.
+
+**The guard, mutated.** First attempt restated the key in the test and
+linked the two by a source grep. Two of four mutations passed against
+it:
+
+```text
+baseline                                        6 passed
+R1 the old two-key sort, back                   1 failed, 5 passed
+R2 risk_score dropped, uid still last           1 failed, 5 passed
+R3 the uid key removed (order not total)        6 passed   <-- did not
+R4 the fallback branch left un-total            6 passed   <-- did not
+```
+
+`R3` survived because removing `x.element_uid` from the sort key left
+it in `-element_durations.get(x.element_uid, 0)`, so the grep still
+found the string; `R4` for the same reason. **A guard that
+reimplements what it guards tests its own copy** - the tenth sighting
+of the class, and the reason the ordering became a function rather than
+two inline `sort` calls. Pointing the guard at the real function:
+
+```text
+baseline                                        6 passed
+R1 the old two-key sort, back                   4 failed, 2 passed
+R2 risk_score dropped, uid still last           3 failed, 3 passed
+R3 the uid key removed (order not total)        1 failed, 5 passed
+R4 the fallback branch left un-total            1 failed, 5 passed
+reverted                                        6 passed
+```
+
+**What moved in the published output**, and only this: the golden
+snapshot's `app.bst` and `extra.bst` swap places. Both have
+`downstream_count: 0` and `weighted_duration_us: 0` - a tie, ordered
+now by their own duration. Eight lines of the fixture and one line of
+the README block, all that pair. Regenerated with the `measure` skill's
+recipe, and the diff read before it was accepted.
+
+The two clauses that started it, against a real `bst` build:
+
+```text
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_the_journey_has_an_answer_key.py
+15 passed in 50.60s
+```
+
+**Deviation from the Required Fix:** two. The item proposed
+critical-path membership as a key of its own — dropped as redundant,
+above. And it left "one ranking, or a stated reason for two" open:
+`top_blast_radius` and `optimization_horizon` now agree because both
+read one total order, so the question does not arise, but nothing
+asserts they agree and no reason for two lists is written down. That
+clause is unfinished and should be its own row.
+
+```text
+make lint    clean
+make test    5331 passed, 26 skipped, 286.48s
+```

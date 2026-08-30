@@ -44,7 +44,7 @@ Key Findings:
   Elements Most Worth Optimizing First (by blast radius):
     1. base.bst (2 downstream elements)
     2. lib.bst (1 downstream elements)
-    3. app.bst (0 downstream elements)
+    3. extra.bst (0 downstream elements)
   Confidence: 0.88 (high)
   Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
 

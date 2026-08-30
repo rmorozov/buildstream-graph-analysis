@@ -80,6 +80,52 @@ class BlastRadiusResult:
         return self.downstream_count if self.is_on_critical_path else 0
 
 
+def order_blast_radius(results: List["BlastRadiusResult"],
+                       element_durations: Dict[str, int]) -> None:
+    """Rank blast-radius results in place, with a **total** order.
+
+    `UX-173` chose the key: what a change to each element would cost,
+    not how many names it touches, falling back to the count when the
+    run measured nothing (a fully cached build has no durations at all).
+    That much is unchanged.
+
+    `UX-439` made it total. Two elements with the same downstream *set*
+    have the same count and the same weighted duration **by
+    construction** - in `examples/06` every `lib-*.bst` declares a build
+    dependency on both `core.bst` and `codegen.bst`, so those two tie on
+    every run, forever. With only those two keys the winner fell to
+    whatever `sort` did with equals: stable in Python, but resting on
+    the input order, and that is not stable across machines. CI ranked
+    `codegen.bst` first where this tree ranked `core.bst`, and
+    `top_blast_radius` and `optimization_horizon` disagreed about the
+    pair inside one `analyze.json`.
+
+    `risk_score` is the discriminator the data already carries -
+    `downstream_count` on the critical path and 0 off it - so it
+    separates the element the build actually waits for from the one it
+    merely declares. Then the element's own duration, then the uid, so
+    no pair is ever ordered by chance.
+
+    Negated keys and an ascending sort rather than `reverse=True`, which
+    would also reverse the uid and make the last key descending for no
+    reason.
+
+    **A function rather than two `sort` calls inline**, because a guard
+    that restates the key is a second copy that drifts: written that
+    way first, two of its four mutations did not redden.
+    """
+    if any(r.downstream_weighted_duration_us for r in results):
+        results.sort(key=lambda x: (-x.downstream_weighted_duration_us,
+                                    -x.downstream_count,
+                                    -x.risk_score,
+                                    -element_durations.get(x.element_uid, 0),
+                                    x.element_uid))
+    else:
+        results.sort(key=lambda x: (-x.downstream_count,
+                                    -x.risk_score,
+                                    x.element_uid))
+
+
 @dataclass
 class CriticalityProbability:
     """
@@ -632,11 +678,29 @@ class DiagnosticsAnalyzer:
         # count says they are. Falls back to the count when this run
         # measured nothing (a fully cached build has no durations at
         # all), and the report says which order it is showing.
-        if any(r.downstream_weighted_duration_us for r in results):
-            results.sort(key=lambda x: (x.downstream_weighted_duration_us,
-                                        x.downstream_count), reverse=True)
-        else:
-            results.sort(key=lambda x: x.downstream_count, reverse=True)
+        # `UX-439`: **the order is total, because the key ties.** Two
+        # elements with the same downstream *set* have the same count
+        # and the same weighted duration by construction - in
+        # `examples/06` every `lib-*.bst` declares a build dependency on
+        # both `core.bst` and `codegen.bst`, so those two tie on every
+        # run, forever. With only those two keys the winner fell to
+        # whatever `sort` did with equal keys, which is stable in Python
+        # but rests on the input order, and that is not stable across
+        # machines: CI ranked `codegen.bst` first where this tree ranks
+        # `core.bst`, and `top_blast_radius` and `optimization_horizon`
+        # disagreed about the pair inside one `analyze.json`.
+        #
+        # `risk_score` is the discriminator the data already carries -
+        # `downstream_count` when the element is on the critical path
+        # and 0 when it is not - so it separates the element the build
+        # actually waits for from the one it merely declares. Then the
+        # element's own duration, then the uid, so no pair is ever
+        # ordered by chance.
+        #
+        # Negated keys and an ascending sort rather than `reverse=True`,
+        # because `reverse` would also reverse the uid and make the last
+        # key descending for no reason.
+        order_blast_radius(results, element_durations)
         
         return results
     

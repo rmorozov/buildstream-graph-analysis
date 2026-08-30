@@ -42,9 +42,52 @@ from tests.browser import NO_BROWSER, Browser, find_chrome     # noqa: E402
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 
-_PICKER = """(() => {
-  const box = document.querySelector("nav.toc .run-picker");
-  if (!box) return { found: false, sections: document.title };
+#: `UX-428`. This read the DOM synchronously and reported "the page
+#: reaches no other run" whenever `boot()` had not built the rail yet -
+#: red on `test (3.10)` once while three other interpreters passed the
+#: same commit, and green on the two runs either side of it. The
+#: observation was true and what it was a fact *about* was the
+#: scheduler.
+#:
+#: So it waits, and it waits for **the state it is about to read**
+#: rather than for a fixed interval: the box, its `select`, and at
+#: least one option. Every clause in the class shares that
+#: precondition. `tests/cdp.mjs` already settles 1200 ms after load;
+#: that was the interval this contradicts, and a longer one would only
+#: move the race.
+#:
+#: On the deadline it returns what *was* there, so a later red build
+#: can tell "not rendered yet" from "not rendered at all" - which the
+#: old `sections: document.title` gestured at and nothing asserted on.
+_PICKER = """(async () => {
+  const deadline = Date.now() + 5000;
+  const ready = () => {
+    const box = document.querySelector("nav.toc .run-picker");
+    const select = box && box.querySelector("select");
+    return select && select.options.length ? box : null;
+  };
+  let box = ready();
+  while (!box && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 50));
+    box = ready();
+  }
+  if (!box) {
+    const rail = document.querySelector("nav.toc");
+    const partial = document.querySelector("nav.toc .run-picker");
+    return {
+      found: false,
+      waitedMs: 5000,
+      saw: {
+        title: document.title,
+        rail: Boolean(rail),
+        railChildren: rail ? rail.childElementCount : 0,
+        picker: Boolean(partial),
+        select: Boolean(partial && partial.querySelector("select")),
+        options: partial && partial.querySelector("select")
+          ? partial.querySelector("select").options.length : 0,
+      },
+    };
+  }
   const select = box.querySelector("select");
   return {
     found: true,
@@ -110,7 +153,12 @@ class TestTheSelectorIsThere:
     def test_it_lists_the_store_s_runs(self, served):
         browser, url, _ = served
         seen = browser.measure(url, _PICKER, 1440, 900)
-        assert seen["found"], "the page still reaches no other run"
+        # `UX-428`: the message names what was present when the wait
+        # ran out, because "no picker" has two causes and only one of
+        # them is a defect in the page.
+        assert seen["found"], (
+            f"no run picker after {seen.get('waitedMs')}ms; the page had "
+            f"{seen.get('saw')}")
         assert seen["inRail"]
         assert seen["options"] == ["20260101T000000Z", "20260102T000000Z",
                                    "20260103T000000Z"], seen["options"]

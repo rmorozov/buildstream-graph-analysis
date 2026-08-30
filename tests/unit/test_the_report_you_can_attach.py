@@ -439,6 +439,12 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # side (no declaration changed) and the data half moves only with
 # `run_instance`, which is why the two totals move by exactly what the
 # page did.
+# `UX-431`: 284,584 -> 285,704, so the page half now sits 296 B under
+# this budget. Left where it is on purpose - the budget is `UX-360`'s
+# judgement about what a reader downloads, not a high-water mark, and
+# raising it needs that argument rather than a diff that happened to
+# arrive next. The next source addition trips this, which is what a
+# budget is for.
 PAGE_BUDGET_B = 286_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
@@ -541,7 +547,18 @@ COMMITTED_EXPORTS = [
     # `macro_micro` bound below. 384,838 leaves 162 B of headroom, so
     # the bound moves with the measurement rather than being ridden to
     # its edge by the next change.
-    ("golden", GOLDEN, 386_000),                       #  384,838 B
+    # `UX-431`: +1,120 B on both, **all of it source** - `questions.js`
+    # gains the paragraph that says what the dependency graph's edges
+    # became, and the sentence per reason one did not become an arrow.
+    # The data half is 100,264 B (golden) and 155,617 B (macro_micro)
+    # either side of the change, and that is not an accident worth
+    # hiding: neither committed export carries a timeline at all, so
+    # neither publishes `trace_flow_losses` and the new paragraph does
+    # not render in either. The measurement is what says so - the guard
+    # that exercises it is `TestTheLostEdgesAreAccountedFor`, on
+    # `with_timeline`, which is the only committed fixture with a
+    # `build.log`.
+    ("golden", GOLDEN, 387_500),                       #  385,968 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -590,7 +607,9 @@ COMMITTED_EXPORTS = [
     # `TABLE_OPENS_BOUNDED_ABOVE` keys. That is the same absence that
     # let the defect live - the bound is measured by `UX-400`'s sweep at
     # 120 keys, not by a fixture.
-    ("macro_micro", MACRO_MICRO, 441_000),             #  440,201 B
+    # `UX-431`: +1,120 B, all source - the same paragraph as golden;
+    # the split is in the note above that bound.
+    ("macro_micro", MACRO_MICRO, 443_000),             #  441,321 B
 ]
 
 

@@ -508,6 +508,51 @@ export function requirementLine(question, make) {
   return line;
 }
 
+/**
+ * `UX-431`: what the dependency graph's edges became, in the section
+ * that sends the reader to look for them.
+ *
+ * The arrows are the answer to "why did this start when it did", and on
+ * a mostly-cached build there are none: measured on two real captures of
+ * `examples/06`, 34 edges produced 0 flows on the cached build and 10 on
+ * the full rebuild. Neither number reached this page, so the reader met
+ * an empty timeline and no reason - and the render result's own counter
+ * said nothing had been dropped, because it watched one of the two doors.
+ *
+ * Rendered whenever the run has edges at all, including the run that drew
+ * every one of them: a sentence that appears only on loss teaches the
+ * reader that its absence means nothing was lost.
+ */
+function flowAccounting(make, options) {
+  const losses = options.flowLosses;
+  const edges = Number(losses?.edges) || 0;
+  if (!options.hasTimeline || !edges) return null;
+  const drawn = Number(losses.drawn) || 0;
+  const parts = [`${drawn} of ${edges} dependency edges are drawn as `
+                 + `arrows in this trace.`];
+  for (const [reason, sentence] of Object.entries(LOSS_SENTENCES)) {
+    const count = Number(losses[reason]) || 0;
+    if (count) parts.push(`${count} are not: ${sentence}.`);
+  }
+  const node = make("p", { class: "muted",
+                           "data-flow-accounting": String(edges - drawn) });
+  node.textContent = parts.join(" ");
+  return node;
+}
+
+/**
+ * One sentence per reason an edge produced no arrow. The keys are
+ * `FLOW_LOSS_REASONS` in `tools/bga_timeline.py`, which is what writes
+ * them; a key that arrives without a sentence here is simply not named,
+ * rather than printed as a bare identifier at the reader.
+ */
+const LOSS_SENTENCES = {
+  no_task: "one end of the edge built nothing in this run, because it "
+    + "was cached or built earlier, so there is no span to draw from",
+  out_of_order: "the two spans do not begin in the dependency's order, "
+    + "so an arrow would point the wrong way",
+};
+
 export function renderQuestions(make, options = {}) {
   const section = make("section", { "data-section": "perfetto-questions",
                                     id: "perfetto-questions" });
@@ -550,6 +595,8 @@ export function renderQuestions(make, options = {}) {
         + "here and the ones scoped to Plane 1 answer.") + openIt;
   }
   section.append(intro);
+  const accounting = flowAccounting(make, options);
+  if (accounting) section.append(accounting);
   // `UX-369`: the element these queries ask about, and the control
   // that swaps it. Before the worked example, because the example is
   // one of the queries the choice applies to.

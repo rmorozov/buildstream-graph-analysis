@@ -1166,9 +1166,9 @@ async function boot() {
       // dead-control rule gates the header button on.
       root.append(renderQuestions(el, {
         hasTimeline: Boolean(run.has_timeline),
-        // UX-364: which planes are actually in the trace, so the lead
-        // names what the reader will see rather than both by default.
-        tracePlanes: run.trace_planes,
+        // UX-364: which planes are in the trace, so the lead names what
+        // the reader sees. `UX-431`: and what the edges became.
+        tracePlanes: run.trace_planes, flowLosses: run.trace_flow_losses,
         // `UX-369`: this run's own elements, and the one the report is
         // already pointing at. The three element-scoped queries used
         // to substitute `macro_micro`'s `core.bst` on every project.

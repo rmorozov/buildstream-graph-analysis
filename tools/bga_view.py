@@ -484,21 +484,28 @@ def trace_bytes(run: str) -> Optional[bytes]:
 
 
 def trace_with_planes(run: str):
-    """`(bytes, planes)` - the trace, and which planes are in it.
+    """`(bytes, planes, flow_losses)` - and what the edges became.
 
-    `UX-364`. `trace_bytes` is the same call with the second half
-    dropped; the export wants both, because the section that pitches the
-    handoff has to name what the reader will actually see.
+    `UX-364`. `trace_bytes` is the same call with the rest dropped; the
+    export wants all of it, because the section that pitches the handoff
+    has to name what the reader will actually see.
+
+    `UX-431` adds the third: the graph's edges, how many became arrows,
+    and the named reason for each one that did not. The page draws no
+    arrows on a mostly-cached build and used to say nothing about it,
+    which reads as "your graph has no edges" rather than "nothing in
+    this run was built".
     """
     scratch = tempfile.mkdtemp(prefix="bga-view-")
     try:
         rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"))
         if rendered is None:
-            return None, None
+            return None, None, None
         with open(rendered["path"], "rb") as handle:
-            return handle.read(), list(rendered.get("planes") or [])
+            return (handle.read(), list(rendered.get("planes") or []),
+                    rendered.get("flow_losses"))
     except OSError:
-        return None, None
+        return None, None, None
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -875,8 +882,8 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                         # that gets tested on one side only.
                         "payloads": _offered(documents)}
 
-    trace, trace_planes = (trace_with_planes(run) if with_trace
-                           else (None, None))
+    trace, trace_planes, flow_losses = (trace_with_planes(run) if with_trace
+                                        else (None, None, None))
     omitted = None
     if trace is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
@@ -913,6 +920,11 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
     # unconditionally, on a capture that had one.
     if trace is not None:
         documents["run"]["trace_planes"] = trace_planes
+        # `UX-431`: and what the graph's edges became. The handoff page
+        # is where the reader goes to look for the arrows, so it is
+        # where their absence has to be accounted for.
+        if flow_losses:
+            documents["run"]["trace_flow_losses"] = flow_losses
     # UX-299: the threshold travels with the payload rather than being
     # written down twice. The page applies the same number to the same
     # decision on the served side, where the size is only knowable once

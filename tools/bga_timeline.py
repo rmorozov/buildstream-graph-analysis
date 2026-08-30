@@ -311,11 +311,32 @@ def element_structure(snapshot: str) -> dict:
         structure.setdefault(uid, {})["depth"] = value
     for uid, value in downstream.items():
         structure.setdefault(uid, {})["downstream_count"] = value
+    on_path = set()
+    joined = False
     for row in analysis.get("element_join") or ():
         uid = row.get("element")
         if uid and row.get("on_critical_path") is not None:
+            joined = True
             structure.setdefault(uid, {})["on_critical_path"] = bool(
                 row["on_critical_path"])
+    if joined:
+        return structure
+    # `UX-431`: the join is Plane 2's table, and a Plane 1 capture has
+    # none - so `on_critical_path` was absent from every slice of every
+    # single-plane run, while `critical_path_detail` sat in the same
+    # document naming the path. The analyzer's answer either way; this
+    # only stops asking the plane that does not have to be there.
+    #
+    # Every element the analysis knows gets the key, `false` included.
+    # A key present on some slices and missing from others is a `group
+    # by` that silently drops rows, which is the shape `UX-434` is about.
+    for row in analysis.get("critical_path_detail") or ():
+        uid = row.get("element_uid")
+        if uid:
+            on_path.add(uid)
+    if on_path:
+        for uid in structure:
+            structure[uid]["on_critical_path"] = uid in on_path
     return structure
 
 
@@ -681,6 +702,22 @@ def identity_track_name(reason) -> str:
 FLOW_DEPENDENCY = "dependency"
 FLOW_EXEC = "parent"
 
+#: `UX-431`: why a graph edge produced no arrow. One key per reason,
+#: and the render result carries the whole mapping rather than a single
+#: total, so a reader who finds no arrows can tell "your build was
+#: cached" from "the trace could not order these".
+#:
+#: The sentence each one prints is here rather than in `describe`,
+#: because the reason and its wording are one fact.
+LOSS_NO_TASK = "no_task"
+LOSS_OUT_OF_ORDER = "out_of_order"
+FLOW_LOSS_REASONS = {
+    LOSS_NO_TASK: "one end built nothing in this run (cached, or built "
+                  "earlier), so there is no slice to draw from",
+    LOSS_OUT_OF_ORDER: "the two slices do not begin in the dependency's "
+                       "order, so an arrow would point the wrong way",
+}
+
 
 def dependency_edges(snapshot: str):
     """`(predecessor, successor)` for every build-order edge in the run.
@@ -716,7 +753,19 @@ def _first_to_begin(spans):
 def _plane1_flows(plane1_events, edges, first_flow_id):
     """Which begin-event carries which flow id, for the graph's edges.
 
-    Returns `(by_event_id, dropped)`. An element's **last-ending** slice
+    Returns `(by_event_id, losses, next_flow_id)`, where `losses` names
+    **every** reason an edge produced no arrow and how many it took -
+    `UX-431`. Until round 70 one of the two reasons was counted and the
+    other was not, and the uncounted one is the ordinary case: on a
+    mostly-cached build of `examples/06` all 34 edges took it, and the
+    render result said nothing had been dropped. A zero meaning "nothing
+    was lost" and a zero meaning "this counter does not watch that door"
+    are indistinguishable, and the second converts an absence the reader
+    might have questioned into an assurance. The invariant a guard can
+    hold is the whole point of naming them: **emitted plus every reason
+    equals the edge count.**
+
+    An element's **last-ending** slice
     is the source of its outgoing edges and its **first-beginning**
     slice is the sink of its incoming ones - the dependency is satisfied
     when the predecessor has finished, and it constrains when the
@@ -744,14 +793,18 @@ def _plane1_flows(plane1_events, edges, first_flow_id):
 
     flows = {}
     flow_id = first_flow_id
-    dropped = 0
+    losses = dict.fromkeys(FLOW_LOSS_REASONS, 0)
     for predecessor, successor in edges:
         source = _last_to_end(spans.get(predecessor))
         sink = _first_to_begin(spans.get(successor))
         if source is None or sink is None:
             # One end of the edge produced no task in this run - a
             # cached element, or one built earlier. Nothing to connect,
-            # and an arrow to nowhere is not an improvement.
+            # and an arrow to nowhere is not an improvement. Counted
+            # since `UX-431`: this is the *usual* case on the build
+            # people actually profile, and the reader who finds no
+            # arrows is owed the reason.
+            losses[LOSS_NO_TASK] += 1
             continue
         if source["ts"] >= sink["ts"]:
             # The flow ids ride the **begin** events, so the begins are
@@ -760,12 +813,12 @@ def _plane1_flows(plane1_events, edges, first_flow_id):
             # pick one at random. On `examples/06` this is two edges:
             # `toolchain.bst` is instantaneous and both its dependents
             # begin in the microsecond it does.
-            dropped += 1
+            losses[LOSS_OUT_OF_ORDER] += 1
             continue
         flows.setdefault(id(source), ([], []))[0].append(flow_id)
         flows.setdefault(id(sink), ([], []))[1].append(flow_id)
         flow_id += 1
-    return flows, dropped, flow_id
+    return flows, losses, flow_id
 
 
 def _plane2_flows(records, first_flow_id):
@@ -1031,8 +1084,12 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     # `UX-309`: flow ids are global within a trace, so one counter runs
     # through both planes. Plane 1's are assigned first because Plane 1
     # is written first; Plane 2's continue from wherever that ended.
-    plane1_flows, dropped, next_flow = _plane1_flows(plane1_events, edges, 1)
+    plane1_flows, losses, next_flow = _plane1_flows(plane1_events, edges, 1)
     flow_count = next_flow - 1
+    # `UX-431`: the accounting, not a total. Every edge in `graph.json`
+    # is either an arrow or a named reason there is none, and these four
+    # numbers are what lets a reader - or a guard - check that.
+    accounting = {"edges": len(edges), "drawn": flow_count, **losses}
 
     with TrackEventWriter(output) as trace:
         # `UX-311`: say once that the lane order is the ranks below, or
@@ -1087,7 +1144,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         if not raw_log:
             return {"packets": trace.packets, "slices": trace.slices,
                     "tracks": trace.tracks, "flows": flow_count,
-                    "flows_dropped": dropped, "incomplete_reason": reason,
+                    "flow_losses": accounting, "incomplete_reason": reason,
                     "lane_order": LANE_ORDER_RULE, "counters": 0,
                     "counter_peak": None}
 
@@ -1225,7 +1282,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 trace.slice_end(max(end_ns, start_ns), thread)
         return {"packets": trace.packets, "slices": trace.slices,
                 "tracks": trace.tracks, "flows": flow_count,
-                "flows_dropped": dropped, "incomplete_reason": reason,
+                "flow_losses": accounting, "incomplete_reason": reason,
                 "lane_order": LANE_ORDER_RULE,
                 "counters": trace.counters,
                 "counter_peak": max((v for _t, v in series), default=None)}
@@ -1364,6 +1421,28 @@ def _chrome_counts(output: str) -> dict:
     return {"slices": slices, "flows": 0, "counters": 0}
 
 
+def _flow_accounting_lines(result: dict) -> List[str]:
+    """`UX-431`: what the graph's edges became, one line each.
+
+    Printed whenever the run had edges at all, including the run where
+    every edge became an arrow - a summary that speaks up only on loss
+    teaches a reader that silence means nothing was lost, which is the
+    reading this item exists to remove. Only the reasons that actually
+    took an edge are named, so an ordinary build is one line.
+    """
+    accounting = result.get("flow_losses") or {}
+    edges = accounting.get("edges") or 0
+    if not edges:
+        return []
+    drawn = accounting.get("drawn") or 0
+    lines = [f"  {drawn} of {edges} dependency edge(s) drawn as arrows."]
+    for reason, sentence in FLOW_LOSS_REASONS.items():
+        count = accounting.get(reason) or 0
+        if count:
+            lines.append(f"    {count} not drawn: {sentence}.")
+    return lines
+
+
 def describe(result: dict, output: str) -> str:
     lines = []
     if result["planes"] == ["1", "2"]:
@@ -1397,6 +1476,12 @@ def describe(result: dict, output: str) -> str:
                      "Perfetto (https://ui.perfetto.dev), which reads this "
                      "format natively; `bga timeline --format chrome` writes "
                      "the legacy JSON for chrome://tracing.")
+    # `UX-431`: after the totals, whatever the graph's edges became. The
+    # chrome format drops flows entirely (`UX-395`), so this is where a
+    # reader who ran the default command is told - and it is printed on
+    # both branches, because a `chrome` run's edges are lost too and
+    # saying so once is cheaper than a reader deducing it.
+    lines.extend(_flow_accounting_lines(result))
     return "\n".join(lines)
 
 

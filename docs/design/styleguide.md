@@ -1164,6 +1164,15 @@ can see is not a report.
 
 `UX-431` is the item.
 
+**Closed in round 70.** `flows_dropped` is now `flow_losses` - the edge
+count, how many became arrows, and one key per named reason for the
+rest, with the invariant that they sum. `describe()` prints it on every
+run that had edges, including the run that drew them all, and
+`questions.js` renders the same sentence on the handoff page. The
+served page is the half still missing (`UX-443`): `UX-296` moved the
+render off the startup path on purpose, so `run.json` is written before
+anything has counted an edge.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -1223,7 +1232,7 @@ run, each with a filed item, none with a guard yet:
 |---|---|---|
 | §1d | `bga, blast, layer08/…` in the `Run` column, against `argv.join(" ")` at two other sites | `UX-429` |
 | §3g | 795,371 B against a 4 MiB bound, on 15,650 tracks nothing bounds; the handoff box 4.9% of the rail exported and 19.5% served | `UX-430`, `UX-435` |
-| §4e | 3,500 edges in, 19 flows out, `flows_dropped: 0` | `UX-431` |
+| §4e | 3,500 edges in, 19 flows out, `flows_dropped: 0` | `UX-431` 🟢 |
 
 §3g's guard has the same trap §5a's does, from the other direction.
 The easy guard reads `TRACE_BUDGET_B` and checks the trace against it —

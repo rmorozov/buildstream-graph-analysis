@@ -402,3 +402,89 @@ class TestTheConfigurationHasItsOwnGate:
 
     def test_it_runs_this_file(self):
         assert "test_the_agent_configuration_holds.py" in self._text()
+
+
+class TestTheProxyRuleIsWhereItGetsRead:
+    """`UX-425`. A round-68 sweep found ~30 sightings across ~26 items
+    of one defect - an instrument reading a proxy rather than the thing
+    it names - and found the repository naming it in four places, none
+    of which was a rule document:
+
+        $ grep -rniE "proxy|noise floor|absolute magnitude" \\
+              docs/contributing/ .claude/skills/
+        $ echo $?
+        0
+
+    Zero hits across the fixing guide, the style guide and all four
+    skills. The most frequently repeated defect in the record was the
+    one thing the rules did not mention. These clauses hold the three
+    places it now lives, and that they stay three rather than one.
+    """
+
+    GUIDE = REPO / "docs/contributing/fixing-guide.md"
+    MEASURE = SKILLS / "measure/SKILL.md"
+
+    def test_the_hard_rules_name_the_class(self):
+        """§5 is where a contributor looks for what not to do."""
+        text = self.GUIDE.read_text(encoding="utf-8")
+        rules = text.split("## 5. Hard rules")[1].split("\n## ")[0]
+        assert "proxy" in rules.lower(), (
+            "fixing guide section 5 does not name the defect this "
+            "repository repeats most - see UX-425")
+
+    def test_the_measure_skill_asks_the_three_questions(self):
+        """The rule is stated in the guide and *asked* here, because
+        the mistake is made while writing the measurement and is
+        invisible when reading it back."""
+        text = self.MEASURE.read_text(encoding="utf-8").lower()
+        for phrase in ("what quantity does this actually read",
+                       "is that the quantity the name claims",
+                       "can it tell the answers apart"):
+            assert phrase in text, f"the measure skill stops asking: {phrase}"
+
+    @pytest.mark.parametrize("shape,item", (
+        ("a text scan that cannot tell code from data", "UX-403"),
+        ("a ratio at the noise floor", "UX-420"),
+        ("a comparison across machines", "UX-418"),
+        ("the wrong artifact or population", "UX-359"),
+    ))
+    def test_each_shape_names_an_item_that_exists(self, shape, item):
+        """A rule with a worked example can be re-checked against the
+        record; one without is an assertion. Both documents are allowed
+        to cite different examples, so this checks the union."""
+        both = (self.GUIDE.read_text(encoding="utf-8")
+                + self.MEASURE.read_text(encoding="utf-8"))
+        assert item in both, f"nothing cites {item} for {shape!r}"
+
+    @pytest.mark.parametrize("where", ("GUIDE", "MEASURE"))
+    def test_every_item_the_rule_cites_resolves(self, where):
+        """Per document, not over their union.
+
+        The first draft checked the union and could not discriminate:
+        a mutation that broke the guide's citation left the same id in
+        the skill and the clause passed. That is the `CLAUDE.md` defect
+        of a guard whose setup another gate already excludes - the
+        seventh sighting in this repository, and the second in this
+        round. Found by the mutation, as both were.
+        """
+        text = getattr(self, where).read_text(encoding="utf-8")
+        section = (text.split("## 5. Hard rules")[1].split("\n## ")[0]
+                   if where == "GUIDE"
+                   else text.split("## Before you trust the number")[1])
+        cited = sorted(set(re.findall(r"UX-(\d+)", section)))
+        assert cited, f"{where} cites no worked example, so the rule " \
+                      f"cannot be re-checked against the record"
+        missing = [f"UX-{number}" for number in cited
+                   if not list((REPO / "docs/backlog/scenarios")
+                               .glob(f"UX-{int(number):04d}-*.md"))]
+        assert missing == [], (
+            f"{where} cites {missing}, and no task file has those ids")
+
+    def test_claude_md_points_at_the_rule_rather_than_restating_it(self):
+        """The page is under an 80-line bound, and two summaries of a
+        rule that lives nowhere else is how the rule stops being one."""
+        text = CLAUDE_MD.read_text(encoding="utf-8")
+        assert "proxy" in text, "the day-one page dropped the class entirely"
+        assert "measure` skill" in text or "`measure`" in text, (
+            "CLAUDE.md names the class but not where its rule is, so a "
+            "session meets the summary and never the rule")

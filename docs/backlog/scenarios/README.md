@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-427 scenarios: **2 open**, 425 closed.
+430 scenarios: **5 open**, 425 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 69 |
 | analysis | 0 | 54 |
-| contracts | 0 | 46 |
-| viewer | 0 | 124 |
+| contracts | 1 | 47 |
+| viewer | 2 | 126 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 38 |
@@ -38,6 +38,9 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-429 | [a command is rendered as a list of its words](UX-0429-a-command-is-rendered-as-a-list-of-its-words.md) | viewer | High | every reader who is handed a command and expected to run it | 🔴 |
+| UX-430 | [the trace budget counts bytes, and Perfetto spends tracks](UX-0430-the-trace-budget-counts-bytes-and-perfetto-spends-tracks.md) | viewer | High | anyone who clicks "Open timeline in Perfetto" on a build big enough to be worth analysing | 🔴 |
+| UX-431 | [the arrow count reports zero losses, having dropped 3,481 of 3,500](UX-0431-the-arrow-count-reports-zero-losses-having-dropped-most.md) | contracts | High | anyone opening the timeline to see why an element started when it did | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

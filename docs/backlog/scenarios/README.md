@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-425 scenarios: **2 open**, 423 closed.
+426 scenarios: **3 open**, 423 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 38 |
-| guards | 0 | 59 |
+| guards | 1 | 60 |
 
 ## Open scenarios
 
@@ -38,6 +38,7 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-427 | [the CI reference can be recorded but never refreshed](UX-0427-the-reference-can-be-recorded-but-never-refreshed.md) | guards | High | every contributor, at the point CI tells them a file is not in the reference | 🟡 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

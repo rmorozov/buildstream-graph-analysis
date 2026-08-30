@@ -90,6 +90,25 @@ jobs:
             --against --source "github-actions ubuntu-latest, test (3.11), -n auto"
         if: matrix.python-version == '3.11'
 
+      # UX-427: the half of UX-420's design that was missing. The
+      # reference can be *recorded* - `--record` writes it - but nothing
+      # put CI's own report where a contributor could record from it,
+      # and UX-418 established that a local report cannot stand in. So
+      # the step above could say "re-record with --record and commit"
+      # while nobody had the numbers to do it, and the reference went
+      # stale the first time a round added a file. Round 68 met that:
+      # two files added in round 67 were absent, and one of them crossed
+      # the medium floor here and started reporting.
+      #
+      # This prints the refreshed document on every run, so refreshing
+      # is a copy rather than a guess. `always()` because the step above
+      # fails the job precisely when the refresh is wanted.
+      - name: This run's timings, for refreshing the reference
+        run: |
+          python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
+            --record - --source "github-actions ubuntu-latest, test (3.11), -n auto"
+        if: always() && matrix.python-version == '3.11'
+
       # UX-336: `make test` runs `-n auto` (see the Makefile). CI is not
       # the loop this item was about - the local one is - but a suite
       # that only ever runs parallel in one place is a suite whose

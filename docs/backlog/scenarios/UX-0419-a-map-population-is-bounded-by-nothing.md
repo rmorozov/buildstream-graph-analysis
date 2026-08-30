@@ -182,3 +182,64 @@ That clause names the shape.
   control that shows the rest; the sweep reaches map populations at all
   three sizes. The Out of Scope holds: no map became a table, and no
   order was chosen — publication order is still the emitter's.
+
+### Addendum — what the volume budget said afterwards
+
+This item was committed on a tier run, and the **full suite** that
+followed it went red:
+
+```text
+FAILED tests/unit/test_the_page_has_a_volume_budget.py::
+    TestBothBudgetsAreBound::test_the_budgets_are_not_slack[scale]
+the opened height budget for runs up to 4000 elements is 66000 and
+scale measures 26312; a bound with that much slack is a number nobody
+will ever meet
+```
+
+Committing before `make test` is the deviation, and it is recorded
+rather than hidden: the tier run this item's Acceptance Test names is a
+selector, and the verify skill's step 3 says in as many words that it is
+not evidence about the suite.
+
+What it caught is the size of the fix. Measured on both trees with one
+instrument, at 1440x900, all three runs — `UX-418`'s worktree at
+`ae981dc` for *before*:
+
+```text
+                      landed   opened    words   controls    nodes
+golden      before     3,800   15,618    5,565        427    2,498
+            after      3,800   15,618    5,565        427    2,498
+macro_micro before     5,965   31,804   11,127        750    5,686
+            after      5,965   31,804   11,127        750    5,686
+scale       before     4,763   55,998   36,536      1,940   24,291
+            after      4,763   26,242   36,542      1,941   24,294
+```
+
+**The opened page at 1,202 elements halved**, 55,998 → 26,242 px, and
+nothing else moved: the two small fixtures are untouched (no map of
+theirs holds forty pairs), and on `scale` the +6 words, +1 control and
++3 nodes are the single bound's badge and its "Show all N pairs"
+button. A bounded pair is `hidden`, so it stops occupying pixels while
+its text and its nodes stay in the document — the same asymmetry
+`UX-366` recorded from the other side, where only `nodes` could see a
+table double.
+
+So the large class's opened-height bound came down 66,000 → **32,000**
+in `tests/unit/test_the_page_has_a_volume_budget.py` and in
+`docs/design/styleguide.md` §3e, which is `test_the_budgets_are_not_slack`
+doing exactly what its docstring said it would do rather than breaking.
+The scale row's other three bounds are still met from below and are
+left where they are. §3e's whole table was refreshed with this reading
+while it was being edited — `golden` and `macro_micro` had drifted from
+their round-59 figures and were being presented as current.
+
+One consequence is worth stating because it reads as a bug and is not:
+the large class's opened height is now **below** the small class's
+(26,242 against 31,804). Every population on the scale page is bounded
+now; the small fixtures' populations are mostly under their bounds and
+draw in full. The 11-element page is the denser of the two once the
+1,202-element one stops drawing 1,202 of anything. §3e says so in
+place, since the split's original justification — "55,000 px at 1,202
+elements may be acceptable while 55,000 px at eleven is not" — is no
+longer the page's shape. `words` and `nodes` still grow 3.3x and 4.3x
+with the run, which is what keeps the two classes apart.

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-417 scenarios: **6 open**, 411 closed.
+418 scenarios: **6 open**, 412 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -38,10 +38,10 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-411 | [a ranked map has no instrument](UX-0411-a-ranked-map-has-no-instrument.md) | viewer | Low | anyone scanning a per-key measure for its shape | 🔴 |
 | UX-416 | [the page moves between runs, and no document says so](UX-0416-the-page-moves-between-runs-and-no-document-says-so.md) | docs | Medium | anyone with more than one snapshot in a store | 🔴 |
 | UX-417 | [the guide's export figures are stale by 3.2x](UX-0417-the-export-figures-are-four-rounds-stale.md) | docs | Medium | anyone deciding whether to attach a report | 🔴 |
 | UX-418 | [a slow file is small until CI times out](UX-0418-a-slow-file-is-small-until-ci-times-out.md) | guards | Medium | the edit-run loop | 🔴 |
+| UX-419 | [a map population is bounded by nothing](UX-0419-a-map-population-is-bounded-by-nothing.md) | viewer | High | anyone whose run has many binaries or many tasks | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

@@ -959,6 +959,47 @@ marker, never a tone: §4's emphasis budget is spent on findings, and
 orientation is not severity. `aria-current="location"` carries the same
 fact to a screen reader.
 
+## 2e. A ranked map is a table's question, not a fifth shape (round 65)
+
+§2d says the vocabulary grows *only where an existing shape cannot make
+the comparison*. `UX-411` is the first time that rule was applied to
+refuse one, and the refusal is worth writing down beside the rule.
+
+`UX-396`'s census found two sections publishing a **ranked map** — one
+measure over many data keys, with no order the schema declares:
+
+```text
+by_binary            11 values, all count          one call count per binary
+wall_clock_share_us  11 values, all duration_us    one duration per task uid
+```
+
+None of the four instruments draws it. A series is ordered, a
+distribution is a percentile record, a decomposition is a published
+total in published parts, an interval is a value on an axis. So the
+question §2d asks is whether the comparison can be made without a new
+shape, and it can:
+
+- **The page already answers "which is biggest", and not with a
+  drawing.** Sort a column, choose `Top N by <column>`, type in the
+  filter box, read `columnStrip` beside the header (§3d, §2a). That
+  mechanism is general and every table has it. §4's emphasis budget
+  spends emphasis once per block; a fifth instrument would be a second
+  answer to a question already answered.
+- **A ranked map grows with the payload, not with the run** — one key
+  per binary, per task uid. A bar per key is unbounded by
+  construction, which is what §3e's volume budget exists to stop.
+- **`UX-193`: the page chooses nothing.** Drawing a ranking asserts an
+  order the schema does not declare.
+
+The decision is recorded where the census reads it, in
+`tests/unit/test_a_shapeable_population_is_drawn.py`'s `RANKED_MAP`,
+and `test_the_four_instruments_are_the_four_that_exist` is its guard: a
+fifth name appearing there means this reasoning was revisited.
+
+**This is a refusal of a drawing, not of the bound.** Measured at 120
+keys, both sections draw every pair and no table — `UX-413`'s defect in
+the shape its sweep cannot see, filed as `UX-419`.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted

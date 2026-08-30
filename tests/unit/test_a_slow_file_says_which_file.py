@@ -20,6 +20,7 @@ assert the failing case without a fifty-second file existing to produce
 it. The real run is in CI; what is checked here is that the rule reads
 the floors, names the file, and can fail.
 """
+import json
 import pathlib
 import subprocess
 import sys
@@ -191,15 +192,232 @@ class TestItCannotPassOverNothing:
         assert drift.main([str(path)]) == 2
 
 
-class TestItRunsWhereItsNumbersMeanSomething:
-    """`UX-418` asks for a CI step and this is not one, which is a
-    deviation with three CI runs behind it: the floors are seconds
-    measured on a developer machine, and CI's runner differs from it
-    *per file* rather than by a factor, so a fixed slack, a derived
-    scale and a rank comparison each reported files that had not
-    drifted. These clauses hold the decision in place - a later round
-    that moves the step into CI without a CI-side reference will find
-    them.
+class TestCiIsReadAgainstItsOwnRecord:
+    """`UX-420`: the comparison the three failures leave standing.
+
+    `UX-418` established that CI's seconds cannot be compared to the
+    floors in `tests/tiers.py` in any form. What is left is CI against
+    **CI** - one machine against itself over time - and the whole
+    difficulty is the reference, which is what the filing says to design
+    first. These clauses are the four ways it rots.
+    """
+
+    def _ref(self, times, source="a runner"):
+        return drift.record(times, source)
+
+    def test_a_run_read_against_itself_is_quiet(self):
+        times = dict(tiers.recorded())
+        verdict, shift, rows = drift.against(times, self._ref(times))
+        assert (verdict, rows) == ("ok", []), (verdict, rows)
+        assert shift == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("factor", [0.7, 1.0, 1.3, 1.6])
+    def test_the_whole_runner_moving_is_not_drift(self, factor):
+        """Rot 2. A new image shifts every file together, and per file
+        that reads as drift everywhere. The median goes out first."""
+        reference = self._ref(dict(tiers.recorded()))
+        moved = {name: seconds * factor
+                 for name, seconds in tiers.recorded().items()}
+        verdict, shift, rows = drift.against(moved, reference)
+        assert verdict == "ok", (verdict, rows[:3])
+        assert shift == pytest.approx(factor)
+
+    def test_a_runner_that_moved_too_far_says_the_reference_is_stale(self):
+        """And past the band it stops naming files, because naming them
+        would name the wrong thing."""
+        reference = self._ref(dict(tiers.recorded()))
+        moved = {name: seconds * 3
+                 for name, seconds in tiers.recorded().items()}
+        verdict, _shift, rows = drift.against(moved, reference)
+        assert verdict == "stale", verdict
+        assert rows == [], rows
+
+    def test_one_file_slower_is_drift_on_any_image(self):
+        """Rot 2's other end: dividing the median out must not become an
+        excuse. The same file, on an unchanged and a 1.3x image."""
+        reference = self._ref(dict(tiers.recorded()))
+        victim = tiers.MEDIUM[0]
+        for image in (1.0, 1.3):
+            times = {name: seconds * image
+                     for name, seconds in tiers.recorded().items()}
+            times[victim] *= drift.CI_DRIFT_FACTOR + 0.5
+            verdict, _shift, rows = drift.against(times, reference)
+            assert verdict == "drift", (image, verdict)
+            assert [row[0] for row in rows] == [victim], (image, rows)
+
+    def test_a_new_slow_file_with_no_entry_is_reported(self):
+        """Rot 1. An unreferenced file is checked by nothing, which is
+        the silence this whole item is about one level along."""
+        reference = self._ref(dict(tiers.recorded()))
+        times = dict(tiers.recorded())
+        times["tests/unit/test_a_slow_file_says_which_file.py"] = 30.0
+        verdict, _shift, rows = drift.against(times, reference)
+        assert verdict == "drift", verdict
+        assert [(row[0], row[2]) for row in rows] == [
+            ("tests/unit/test_a_slow_file_says_which_file.py", None)], rows
+
+    def test_a_new_fast_file_needs_no_entry(self):
+        """The proportionate half of rot 1: every PR adding a test would
+        fail otherwise, and nothing about a fast file is at risk."""
+        reference = self._ref(dict(tiers.recorded()))
+        times = dict(tiers.recorded())
+        times["tests/unit/test_a_slow_file_says_which_file.py"] = 0.2
+        verdict, _shift, rows = drift.against(times, reference)
+        assert (verdict, rows) == ("ok", []), rows
+
+    def test_a_reference_of_other_files_is_refused_not_believed(self):
+        """A reference naming nothing this run measured is not a
+        reference for it, and comparing against it would be the
+        pass-over-nothing this file exists to prevent."""
+        verdict, _shift, rows = drift.against(
+            dict(tiers.recorded()), self._ref({"tests/unit/nope.py": 1.0}))
+        assert (verdict, rows) == ("empty", []), (verdict, rows)
+
+    def test_recording_round_trips_and_says_where_it_came_from(self,
+                                                               tmp_path):
+        times = dict(tiers.recorded())
+        report = _report(tmp_path, times)
+        out = tmp_path / "ref.json"
+        assert drift.main([str(report), "--record", str(out),
+                           "--source", "a named runner"]) == 0
+        written = json.loads(out.read_text(encoding="utf-8"))
+        assert written["measured_on"] == "a named runner"
+        assert set(written["files"]) == set(times)
+        assert drift.main([str(report), "--against", str(out)]) == 0
+
+    @pytest.mark.parametrize("shape", ["absent", "unrecorded"])
+    def test_the_step_says_so_rather_than_passing_over_no_reference(
+            self, tmp_path, capsys, shape):
+        """Rot 4, and the one that would make this a guard that cannot
+        fail. With nothing to compare against, the step prints the
+        document to commit and says nothing is being checked - it does
+        not quietly pass. Both shapes of nothing: no file at all, and
+        the committed file before its first CI run."""
+        report = _report(tmp_path, dict(tiers.recorded()))
+        path = tmp_path / "ref.json"
+        if shape == "unrecorded":
+            path.write_text(json.dumps({"files": {}}), encoding="utf-8")
+        assert drift.main([str(report), "--against", str(path)]) == 0
+        said = capsys.readouterr()
+        assert "nothing is being checked" in said.err, said.err
+        assert json.loads(said.out)["files"], said.out
+
+    def test_the_committed_reference_is_in_one_of_those_two_states(self):
+        """It is either waiting for its first CI run or it has real
+        numbers - and if it has them, they came from a runner rather
+        than from somebody's laptop, which is the whole point."""
+        held = json.loads(
+            drift.CI_REFERENCE.read_text(encoding="utf-8"))
+        assert "files" in held, held.keys()
+        if held["files"]:
+            assert "github" in held.get("measured_on", "").lower(), (
+                f"the reference was recorded on {held.get('measured_on')!r}, "
+                f"which is not the runner - see UX-418's outcome for the "
+                f"three ways a developer machine's seconds fail here")
+        else:
+            assert held.get("bootstrap"), (
+                "an empty reference with no note reads as a bug rather "
+                "than as a state")
+
+    def test_a_refreshed_reference_carries_the_spread_it_saw(self):
+        """Rot 3's other half, and `CI_DRIFT_FACTOR`'s only route to
+        being a measurement. The factor is admittedly a guess; the
+        quantity it should be sized against is how far one file departs
+        from its peers between two CI runs, and only a refresh can see
+        it. So the refresh writes it down."""
+        first = self._ref(dict(tiers.recorded()))
+        times = {name: seconds * 1.2
+                 for name, seconds in tiers.recorded().items()}
+        victim = tiers.MEDIUM[0]
+        times[victim] *= 2.0
+        second = drift.record(times, "a runner, later", first)
+        assert second["spread"]["shift"] == pytest.approx(1.2, abs=0.05)
+        assert second["spread"]["max"] == pytest.approx(2.0, abs=0.05)
+        assert second["spread"]["files"] == len(first["files"])
+
+    def test_the_first_record_states_no_spread_rather_than_a_made_up_one(
+            self):
+        """With nothing to compare against there is no spread, and a
+        1.0 written in its place would read as a measurement."""
+        assert "spread" not in drift.record(dict(tiers.recorded()), "a runner")
+
+    def test_the_factor_and_the_band_are_stated(self):
+        assert drift.CI_DRIFT_FACTOR > 1.0, drift.CI_DRIFT_FACTOR
+        low, high = drift.IMAGE_BAND
+        assert low < 1.0 < high, drift.IMAGE_BAND
+
+
+class TestTheThreeFailuresAreTheRegressionSuite:
+    """`UX-420`'s acceptance test, second clause: *the three failures
+    above, replayed against the new rule, report nothing.*
+
+    Each replays the **shape** `UX-418` measured, not a re-run of the
+    numbers: CI is 1.05x the developer machine on the median listed file
+    and 1.61-1.73x on two particular ones, neither having grown. Against
+    the floors that shape is drift; against CI's own record of the same
+    files it is a run that has not changed since the last one.
+    """
+
+    #: `tests/tiers.py`'s comment block, as ratios. The distortion is
+    #: per file, which is the whole finding - so it is applied per file.
+    OUTLIERS = {"tests/unit/test_output_schemas.py": 1.61,
+                "tests/unit/test_marginal_efficiency_gate.py": 1.73}
+    MEDIAN_SHIFT = 1.05
+
+    def _a_ci_run(self):
+        """The developer machine's record, distorted the way CI was."""
+        return {name: seconds * self.OUTLIERS.get(name, self.MEDIAN_SHIFT)
+                for name, seconds in tiers.recorded().items()}
+
+    def test_the_two_outliers_are_still_files_in_the_lists(self):
+        """If either is renamed this class silently stops replaying
+        anything, which is how a regression suite becomes decoration."""
+        listed = set(tiers.LARGE) | set(tiers.MEDIUM)
+        assert set(self.OUTLIERS) <= listed, set(self.OUTLIERS) - listed
+
+    def test_against_the_floors_that_run_is_exactly_the_three_failures(self):
+        """The premise. Read against `tests/tiers.py` this synthetic run
+        does report files - it has to, or the clauses below would be
+        asserting that nothing happens to nothing."""
+        found = drift.drift(self._a_ci_run())
+        assert found, "the replayed distortion moves no file's tier"
+
+    def test_read_against_cis_own_record_it_reports_nothing(self):
+        """Failures 1 and 2 together: neither a fixed slack nor a single
+        derived scale can absorb a per-file distortion, and neither has
+        to, because the reference carries each file's own number."""
+        on_ci = self._a_ci_run()
+        verdict, _shift, rows = drift.against(on_ci, drift.record(on_ci))
+        assert (verdict, rows) == ("ok", []), (verdict, rows[:3])
+
+    def test_the_order_it_could_not_preserve_is_never_consulted(self):
+        """Failure 3. Rank was the third answer and it does not survive
+        a per-file distortion: on this run the two outliers pass files
+        they are recorded below. The rule reports nothing anyway,
+        because it compares each file to itself and not to its
+        neighbours."""
+        on_ci = self._a_ci_run()
+        by_seconds = sorted(on_ci, key=on_ci.get, reverse=True)
+        recorded_order = sorted(tiers.recorded(),
+                                key=tiers.recorded().get, reverse=True)
+        assert by_seconds != recorded_order, (
+            "the replayed distortion did not reorder anything, so this "
+            "clause is not replaying failure 3")
+        verdict, _shift, rows = drift.against(on_ci, drift.record(on_ci))
+        assert (verdict, rows) == ("ok", []), (verdict, rows[:3])
+
+
+class TestEachComparisonRunsWhereItMeansSomething:
+    """Two checks, two machines, and neither reads the other's numbers.
+
+    `UX-418` established that the **floors** in `tests/tiers.py` describe
+    a developer machine and cannot be compared to a report from CI's
+    runner - a fixed slack, a derived scale and a rank comparison each
+    reported files that had not drifted. `UX-420` added the comparison
+    that does travel: CI against its own recorded numbers.
+
+    So `make test-tiers` reads the floors here, CI reads the reference
+    there, and a later round that crosses them will find these clauses.
     """
 
     MAKEFILE = REPO / "Makefile"
@@ -216,23 +434,41 @@ class TestItRunsWhereItsNumbersMeanSomething:
             ".PHONY:", 1)[1].splitlines()[0], "test-tiers is not phony"
 
     def test_it_costs_a_parse_and_not_a_second_suite(self):
-        target = self.MAKEFILE.read_text(encoding="utf-8").split(
-            "test-tiers:", 1)[1].split("\n\n", 1)[0]
-        assert target.count("pytest") == 0, target
-        assert target.count("$(MAKE) test") == 1, target
+        for text, where in ((self.MAKEFILE.read_text(encoding="utf-8"),
+                             "test-tiers:"),
+                            (self.WORKFLOW.read_text(encoding="utf-8"),
+                             "--against")):
+            step = text.split(where, 1)[1].split("\n\n", 1)[0]
+            assert "pytest" not in step, (where, step)
 
-    def test_ci_does_not_run_it_and_says_why(self):
-        """An absence a later round could read as an oversight is one
-        somebody restores. The workflow states the reason where the
-        step would have gone."""
+    def test_ci_reads_the_reference_and_not_the_floors(self):
+        """The distinction the three failures bought. A CI step reading
+        the floors is the defect; a CI step reading the reference is the
+        fix, and they are one flag apart."""
         text = self.WORKFLOW.read_text(encoding="utf-8")
-        assert "tools/dev_tier_drift.py" not in text.replace(
-            "`make test-tiers`", ""), (
-            "the drift check is back in CI - see UX-418's outcome and "
-            "UX-420 for what that needs first")
-        assert "UX-420" in text, (
-            "the workflow does not say why the check is absent, so the "
-            "absence reads as an oversight")
+        runs = [line for line in text.splitlines()
+                if "dev_tier_drift.py" in line and not
+                line.strip().startswith("#")]
+        assert runs, "CI runs no drift check at all"
+        for line in runs:
+            assert "--against" in line or "--against" in text.split(
+                line, 1)[1].split("\n\n", 1)[0], (
+                f"a CI step reads the developer floors: {line.strip()!r} - "
+                f"see UX-418's outcome for the three ways that fails")
+
+    def test_ci_writes_the_report_the_step_reads(self):
+        text = self.WORKFLOW.read_text(encoding="utf-8")
+        assert "--junitxml=" in text, (
+            "no CI step writes a junit report, so the check reads nothing")
+
+    def test_one_interpreter_records_so_there_is_one_reference(self):
+        """Four jobs would be four references to keep true, which is the
+        rot this item is mostly about."""
+        text = self.WORKFLOW.read_text(encoding="utf-8")
+        assert text.count("--junitxml=") == 1, (
+            "more than one CI job writes a timing report; the reference "
+            "is per runner-and-interpreter, so this needs a decision")
+        assert "matrix.python-version == '3.11'" in text, text[:0]
 
 
 class TestTheToolIsRunnable:

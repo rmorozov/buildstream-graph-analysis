@@ -1,0 +1,6 @@
+{
+  "measured_on": "not recorded yet",
+  "note": "UX-420: one CI run's per-file totals, so a later CI run can be read against CI rather than against the floors in tests/tiers.py, which describe a developer machine. Refresh with tools/dev_tier_drift.py --record.",
+  "bootstrap": "`files` is empty until CI records it, and the check says so on every run rather than passing quietly. It must be recorded on the runner: a reference taken on a developer machine is exactly what UX-418 spent three CI rounds proving does not travel. The CI step prints the document to commit.",
+  "files": {}
+}

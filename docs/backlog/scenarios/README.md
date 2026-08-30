@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-440 scenarios: **13 open**, 427 closed.
+441 scenarios: **14 open**, 427 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 38 |
-| guards | 1 | 63 |
+| guards | 2 | 64 |
 
 ## Open scenarios
 
@@ -49,6 +49,7 @@ task file, which is the only place it ever lived twice.
 | UX-438 | [the page guesses a unit on a real capture, and says so on the console](UX-0438-the-page-guesses-a-unit-and-says-so.md) | contracts | Medium | every reader, and the next round that trusts a clean console | 🔴 |
 | UX-440 | [two rankings over one order, and nothing says why there are two](UX-0440-two-rankings-over-one-order.md) | contracts | Low | anyone comparing the page's ranked list against the terminal's | 🔴 |
 | UX-441 | [the reference dump buries the failure it follows](UX-0441-the-reference-dump-buries-the-failure-it-follows.md) | guards | Medium | whoever reads the next red CI run | 🔴 |
+| UX-442 | [one slow sample reddens CI, and nothing asks it to repeat](UX-0442-one-slow-sample-reddens-ci.md) | guards | High | every contributor whose PR the drift gate stops for a number that will not reproduce | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

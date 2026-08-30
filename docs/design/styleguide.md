@@ -1107,6 +1107,26 @@ the budget's units appears in that sentence.
 
 `UX-430` is the item.
 
+**And a page has modes, not only sizes.** `#actions-group`, the Perfetto
+handoff in the rail, measured on the same capture in both:
+
+```text
+                 group      share of rail    visible paragraphs
+export           208x39px          4.9%              1 of 3
+served          208x157px         19.5%              2 of 3
+```
+
+Four times the height in the mode `bga view` opens by default — the
+export hides two of the three paragraphs, so a guard whose fixture is
+the export reports a box the reader never has. Its fixture says the
+choice out loud, and reasonably: "the header, its budget and the room
+rule are identical in both". They are. The handoff group is not, and it
+is the thing being measured.
+
+So §3f's rule has a second dimension. **A bound is enforced at the
+largest size the tool tells people to use, and in the mode people use
+it in.** `UX-435` is the item.
+
 ## 4e. A handoff says what it could not carry (round 69)
 
 Same capture. `run/graph.json` holds 3,500 dependency edges; the
@@ -1202,7 +1222,7 @@ run, each with a filed item, none with a guard yet:
 | section | measured | item |
 |---|---|---|
 | §1d | `bga, blast, layer08/…` in the `Run` column, against `argv.join(" ")` at two other sites | `UX-429` |
-| §3g | 795,371 B against a 4 MiB bound, on 15,650 tracks nothing bounds | `UX-430` |
+| §3g | 795,371 B against a 4 MiB bound, on 15,650 tracks nothing bounds; the handoff box 4.9% of the rail exported and 19.5% served | `UX-430`, `UX-435` |
 | §4e | 3,500 edges in, 19 flows out, `flows_dropped: 0` | `UX-431` |
 
 §3g's guard has the same trap §5a's does, from the other direction.

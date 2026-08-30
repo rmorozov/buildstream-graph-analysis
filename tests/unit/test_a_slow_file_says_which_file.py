@@ -22,6 +22,7 @@ the floors, names the file, and can fail.
 """
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -693,6 +694,128 @@ class TestEachComparisonRunsWhereItMeansSomething:
             "is per runner-and-interpreter, so this needs a decision")
         assert "matrix.python-version == '3.11'" in text, text[:0]
 
+
+class TestTheRecordStepDoesNotBuryTheFailure:
+    """`UX-441`. `UX-427`'s step prints this run's timings so the
+    reference can be refreshed from a real runner, and `if: always()` is
+    right: a red run's timings are still timings, and the reds are the
+    runs a refresh most wants. But the document is one line per test
+    file, it ran *after* the suite, and printed to stdout it was the
+    last thing in the job's log. Twice in round 69 a red arrived that
+    way; on `9675209` the failing assertion was never reached, because
+    the dump is longer than any tail worth fetching.
+
+    So the property is not "the step is gated" - it must not be - it is
+    **the step prints a handful of lines**, and the document stays
+    reachable somewhere that is not the log. The clause that decides is
+    `test_a_recorded_run_prints_a_line_and_not_the_document`, which runs
+    the tool both ways and counts; the workflow clauses only tie CI to
+    the mode that measurement covers.
+    """
+
+    WORKFLOW = REPO / ".github/workflows/ci.yml"
+
+    @classmethod
+    def _steps(cls):
+        """`{name: body}` for the job's steps, comments dropped."""
+        text = cls.WORKFLOW.read_text(encoding="utf-8")
+        steps, name = {}, None
+        for line in text.splitlines():
+            if line.strip().startswith("#"):
+                continue
+            started = re.match(r"      - name: (.+)", line)
+            if started:
+                name = started.group(1).strip()
+                steps[name] = []
+            elif name is not None and line.startswith("      - "):
+                name = None
+            elif name is not None and (line.startswith("        ")
+                                       or not line.strip()):
+                steps[name].append(line)
+            elif name is not None:
+                name = None
+        return {key: "\n".join(body) for key, body in steps.items()}
+
+    @classmethod
+    def _recording(cls):
+        """The step that runs `--record`, and the path it records to."""
+        found = [(name, body) for name, body in cls._steps().items()
+                 if "--record" in body]
+        assert len(found) == 1, (
+            f"{len(found)} CI steps record the timings, so which one this "
+            f"item is about is a guess: {[name for name, _ in found]}")
+        name, body = found[0]
+        # Quoted, because the path CI records to contains a space
+        # inside `${{ runner.temp }}` and `\S+` stops at it.
+        argument = re.search(r'--record\s+("[^"]*"|\S+)',
+                             body).group(1).strip('"')
+        return name, body, argument
+
+    def test_a_recorded_run_prints_a_line_and_not_the_document(self,
+                                                               tmp_path,
+                                                               capsys):
+        """The measurement the rest of this class rests on. Both modes,
+        same report, counted - because "writes a file" is only worth
+        asserting in CI if it is what shortens the log."""
+        report = _report(tmp_path, dict(tiers.recorded()))
+        assert drift.main([str(report), "--record",
+                           str(tmp_path / "ref.json")]) == 0
+        to_a_file = capsys.readouterr().out.splitlines()
+        assert drift.main([str(report), "--record", "-"]) == 0
+        to_the_log = capsys.readouterr().out.splitlines()
+        assert len(to_a_file) <= 2, (
+            f"recording to a file printed {len(to_a_file)} lines; the "
+            f"whole point is that the failure above it stays readable")
+        assert len(to_the_log) > 50, (
+            f"recording to stdout printed {len(to_the_log)} lines, so the "
+            f"two modes no longer differ and this guard decides nothing")
+
+    def test_ci_records_to_a_file(self):
+        name, _body, argument = self._recording()
+        assert argument != "-", (
+            f"the {name!r} step dumps the whole reference to stdout again. "
+            f"It runs after the suite, so on a red the document is the "
+            f"tail of the log and the failing assertion is not - which is "
+            f"the two reds UX-441 was filed for")
+        assert "${{ runner.temp }}" in argument, (
+            f"the {name!r} step records to {argument!r}, which is inside "
+            f"the checkout - a workspace the next step and check-clean "
+            f"both read")
+
+    def test_it_still_runs_when_the_suite_fails(self):
+        """The half `UX-427` chose and this item must not undo: gating
+        the record on success loses exactly the runs worth recording."""
+        name, body, _argument = self._recording()
+        assert "always()" in body, (
+            f"the {name!r} step no longer runs on a red, so the runs a "
+            f"refresh most wants are the ones that record nothing")
+
+    def test_the_document_is_still_a_click_away(self):
+        """Writing it to a file and stopping there would not shorten the
+        log, it would delete the record - which is `UX-427` undone."""
+        _name, _body, argument = self._recording()
+        uploads = [body for body in self._steps().values()
+                   if "upload-artifact" in body and argument in body]
+        assert uploads, (
+            f"nothing uploads {argument!r}, so the timings are written "
+            f"into a runner that is thrown away and UX-427's step now "
+            f"records for nobody")
+
+    def test_the_log_says_where_the_document_went(self):
+        """The cost of taking it out of the log. The tool's own advice
+        is *re-record with --record and commit*, and before this item
+        the document that advice needs was the next thing on screen.
+        Now it is an artifact, so the step has to name it - otherwise
+        the reader is left with advice and no numbers."""
+        _name, body, _argument = self._recording()
+        uploaded = [re.search(r"\n          name: (\S+)", other).group(1)
+                    for other in self._steps().values()
+                    if "upload-artifact" in other]
+        assert uploaded, "no artifact is uploaded at all"
+        assert any(name in body for name in uploaded), (
+            f"the recording step's own output never names any of "
+            f"{uploaded}, so a reader following 're-record with --record' "
+            f"has nowhere to get this run's numbers from")
 
 class TestTheToolIsRunnable:
     def test_it_runs_as_a_module_and_says_what_it_checked(self, tmp_path):

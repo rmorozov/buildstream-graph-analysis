@@ -253,6 +253,28 @@ baseline    55 passed in 1.04s
 reverted    55 passed in 0.20s
 ```
 
+### The second sample, arriving the same day (round 68, `UX-427`)
+
+`test_the_order_the_page_has.py` was reported on run 392 at 20.6s
+against 11.14s recorded, ×1.51 after that run's ×1.22 shift — and the
+IQR this item added read **0.52** on that run, against 0.099 measured
+locally over the same population. The argument from that alone was
+"contention, not drift". Run 394 settled it:
+
+| run | seconds | against the reference |
+|---|---|---|
+| 392 (`51b6c76`) | 20.6 | ×1.85 raw — reported |
+| 394 (`2527114`) | 13.64 | ×1.22 — quiet |
+
+**The rule needs no change**, and the IQR is what made the call before
+the second reading arrived. That is the first time this repository has
+had a dispersion figure to reason from rather than a single ratio, and
+it is the argument for keeping it printed on every run.
+
+It is still **not** the second sample for the *class* hypothesis — that
+file is not browser-driven, so the browser-class question from this
+item's Motivation remains at one observation.
+
 ### Deviation from the Required Fix
 
 - **Only the first of the two fixes shipped.** The second — shift a

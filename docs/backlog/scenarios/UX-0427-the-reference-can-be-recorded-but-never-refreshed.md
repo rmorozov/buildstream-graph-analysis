@@ -1,6 +1,6 @@
 # UX-427: the CI reference can be recorded but never refreshed
 
-**Priority:** High | **Status:** 🟡 In Progress | **Found by:** round 68, three red CI runs on PR #187 | **Serves:** every contributor, at the point CI tells them a file is not in the reference | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 68, three red CI runs on PR #187 | **Serves:** every contributor, at the point CI tells them a file is not in the reference | **Topic:** guards
 
 ## Motivation
 
@@ -81,3 +81,92 @@ Put this run's numbers where the next session can read them.
   tree, with no entry missing.
 - `tests/ci_reference.json` refreshed from a named run, and the drift
   step green on the run after it.
+
+## Outcome (round 68, 2026-08-30) — 🟢 Done
+
+### The gap, measured
+
+```console
+$ python3 - <<'PY'   # the reference against the tree
+test files present but absent from the reference: 2
+   tests/unit/test_the_agent_configuration_holds.py
+   tests/unit/test_the_process_is_measured.py
+PY
+```
+
+Reported intermittently on three of five runs of PR #187, and
+unanswerable: the step's own advice is *"re-record with `--record`"*,
+and CI's junit dies with the runner.
+
+### After
+
+`ci.yml` runs `--record -` on every 3.11 run, with `always()`. Run
+`33318288027` printed the document, and it carries both:
+
+```text
+"tests/unit/test_the_agent_configuration_holds.py": 1.43,
+"tests/unit/test_the_process_is_measured.py": 0.2,
+```
+
+`1.43` is corroborated: run `33316532360` reported the same file at
+`1.4s` through a different code path (the unreferenced-file branch),
+one runner and twenty minutes apart.
+
+### Two entries appended, not a re-record — and the reason is in the output
+
+The obvious move is `--record` over the whole document. **This run was
+not fit to record from**, and the instrument `UX-423` added on the same
+day is what says so:
+
+```json
+"spread": { "files": 305, "shift": 1.0, "min": 0.1,
+            "p25": 0.833, "p75": 1.353, "max": 28.4 }
+```
+
+A run where some file read **×28.4** its recorded value is not a
+baseline. Re-recording from it would have replaced 369 known-good
+numbers with one contended afternoon's — including
+`test_the_order_the_page_has.py`, which this item's Out of Scope
+explicitly refused to silence.
+
+So the two absent entries were appended and everything else left alone,
+with the provenance written into the document's own `note` field. That
+is a departure from how the reference is meant to be maintained and it
+is recorded as one, in the file a later round will read.
+
+### The second sample this refresh was not supposed to provide, provided anyway
+
+| run | `test_the_order_the_page_has.py` | verdict |
+|---|---|---|
+| reference | 11.14s | — |
+| 392 (`51b6c76`) | 20.6s, ×1.51 after ×1.22 | reported |
+| 394 (`2527114`) | **13.64s**, ×1.22 of the reference | quiet |
+
+Ordinary variation on the second reading. Run 392's 20.6s was
+contention, which is what the comment on PR #187 argued from that run's
+IQR of 0.52 before this run existed. Nothing to change in the rule, and
+`UX-423`'s record now has a second sample that says so.
+
+### Mutations
+
+**None applied, and that is a gap.** This item is a workflow step and a
+data file: the step either prints the document or it does not, and the
+run above is the evidence that it does. The clause that would need
+falsifying — *a CI run prints a document covering every test file* —
+cannot be mutated from here, because mutating `ci.yml` proves nothing
+until CI runs it. `UX-426`'s section 7 is exactly about this class of
+claim. The next run against this reference is the test, and it is the
+one that closes the acceptance test's second clause.
+
+### Deviation from the Required Fix
+
+- **The Required Fix said "refresh the reference from that output".**
+  Two entries were appended instead, because the output's own `spread`
+  showed the run was unfit to be a baseline. The Required Fix assumed
+  any run's document is a refresh; it is not, and the instrument that
+  reveals that shipped this morning.
+- **The acceptance test's second clause is not yet met** — "the drift
+  step green on the run after it". That run has not happened. This is
+  🟢 for the mechanism and the data; if the next run reports either
+  file again, the item reopens rather than the reference being edited
+  again.

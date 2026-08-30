@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-434 scenarios: **8 open**, 426 closed.
+435 scenarios: **9 open**, 426 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 69 |
 | analysis | 0 | 54 |
 | contracts | 1 | 47 |
-| viewer | 5 | 129 |
+| viewer | 6 | 130 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 38 |
@@ -44,6 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-433 | [nothing pivots by executable, because no annotation names one](UX-0433-nothing-pivots-by-executable.md) | viewer | Medium | anyone asking which program their build spends its time and memory in | 🔴 |
 | UX-434 | [the graph-shape query collapses every level into one row](UX-0434-the-graph-shape-query-collapses-every-level.md) | viewer | High | anyone opening the timeline to see the shape of their dependency graph | 🔴 |
 | UX-435 | [the handoff box is measured in the mode where it is smallest](UX-0435-the-handoff-box-is-measured-in-the-mode-it-is-smallest.md) | viewer | Medium | anyone reading the rail while a server is behind the page | 🔴 |
+| UX-436 | [forty-four controls are the browser's, not the page's](UX-0436-the-page-has-no-control-style.md) | viewer | Medium | every reader, on every screen of the report | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

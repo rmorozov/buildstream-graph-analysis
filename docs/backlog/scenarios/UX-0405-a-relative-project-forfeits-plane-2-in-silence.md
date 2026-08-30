@@ -151,3 +151,36 @@ pytest -k "capture or trace or snapshot or scratch or tmpdir"
                                               663 passed, 2 skipped
 make lint                                                      clean
 ```
+
+## Follow-up (round 64, from CI)
+
+The guard this item landed
+(`test_every_path_the_build_inherits_is_absolute`, in
+`test_a_capture_finds_its_own_shim.py`) was skip-gated on a C compiler
+and not on `bwrap`, so it passed here and failed on **every** CI
+runner:
+
+```text
+tools/bst_native_build_tracer.py:179: in install_bwrap_shim
+    raise TraceError("no real bwrap found on PATH - required for the
+                      shim to fall back to")
+E   TraceError: no real bwrap found on PATH
+============ 1 failed, 2748 passed, 39 skipped in 21.61s ============
+```
+
+`install_bwrap_shim` writes a shim that *falls back* to the real
+`bwrap` and refuses when there is none. The clause reaches that call
+before it reaches anything it is about, and the `test` job installs a
+compiler and no sandbox - so the environment it needs is wider than the
+one it declared.
+
+That is `UX-213`'s class exactly: a guard that only guards one machine.
+Fixed with a second `skipif` and a one-string reason
+(`NO_BWRAP`) so the skip census counts it once. Verified by running the
+file with a PATH that has no `bwrap`:
+
+```text
+SKIPPED [1] tests/unit/test_a_capture_finds_its_own_shim.py:80:
+            no bwrap for the capture's shim to fall back to
+========================= 5 passed, 1 skipped =========================
+```

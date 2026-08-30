@@ -59,7 +59,22 @@ jobs:
         run: timeout 31 make test-small
 
       - name: Test
-        run: make test
+        run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
+
+      # UX-418: the half of the tier partition that needs a measurement.
+      # `test_the_tiers_are_a_partition.py` reads the two lists against
+      # each other and against the filesystem, and `small` is the
+      # default - so a file that belongs in a tier and is in neither
+      # list is "small on purpose" and nothing says otherwise. UX-403's
+      # census proved it by deleting a fifty-second entry from LARGE and
+      # watching all fourteen clauses stay green.
+      #
+      # This reads the report the step above already wrote, so it costs
+      # a parse rather than a second suite, and it fails naming the file
+      # and its measured seconds - which the small-tier timeout, the
+      # only thing catching this today, cannot do.
+      - name: Tiers match their measurement
+        run: python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml"
 
       # UX-336: `make test` runs `-n auto` (see the Makefile). CI is not
       # the loop this item was about - the local one is - but a suite

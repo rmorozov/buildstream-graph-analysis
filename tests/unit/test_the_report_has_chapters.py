@@ -24,6 +24,7 @@ item makes two kinds of claim:
 - *That grouping costs no height* is a pixel claim, and lives with the
   other pixel claims in `test_the_page_has_geometry.py`.
 """
+import functools
 import json
 import os
 import pathlib
@@ -140,7 +141,27 @@ def _group(sections):
     return json.loads(done.stdout)
 
 
+@functools.lru_cache(maxsize=None)
+def _cached_boot(source):
+    """One export and one node boot per fixture, per process.
+
+    `UX-418`'s new step measured this file at 15.9s once `UX-414` gave
+    it a second fixture - over the large floor, for fifteen clauses
+    reading the same two documents. The boot is deterministic and every
+    clause only reads what it returns, so it is taken once. The
+    inventory-carrying calls below are not cached: each one is a
+    different document by construction.
+    """
+    return _boot_chapters_uncached(source=source)
+
+
 def _boot_chapters(inventory=None, source=GOLDEN):
+    if inventory is None:
+        return _cached_boot(str(source))
+    return _boot_chapters_uncached(inventory=inventory, source=source)
+
+
+def _boot_chapters_uncached(inventory=None, source=GOLDEN):
     """What the booted export is actually grouped into.
 
     The export, not a shim document: this is the page a reader is sent

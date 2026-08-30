@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-435 scenarios: **9 open**, 426 closed.
+437 scenarios: **11 open**, 426 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 69 |
 | analysis | 0 | 54 |
-| contracts | 1 | 47 |
-| viewer | 6 | 130 |
+| contracts | 2 | 48 |
+| viewer | 7 | 131 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 38 |
@@ -45,6 +45,8 @@ task file, which is the only place it ever lived twice.
 | UX-434 | [the graph-shape query collapses every level into one row](UX-0434-the-graph-shape-query-collapses-every-level.md) | viewer | High | anyone opening the timeline to see the shape of their dependency graph | 🔴 |
 | UX-435 | [the handoff box is measured in the mode where it is smallest](UX-0435-the-handoff-box-is-measured-in-the-mode-it-is-smallest.md) | viewer | Medium | anyone reading the rail while a server is behind the page | 🔴 |
 | UX-436 | [forty-four controls are the browser's, not the page's](UX-0436-the-page-has-no-control-style.md) | viewer | Medium | every reader, on every screen of the report | 🔴 |
+| UX-437 | [the host memory series is captured every run and read by nobody](UX-0437-the-host-series-is-captured-and-read-by-nobody.md) | viewer | High | anyone whose build was slow because the host ran out of memory | 🔴 |
+| UX-438 | [the page guesses a unit on a real capture, and says so on the console](UX-0438-the-page-guesses-a-unit-and-says-so.md) | contracts | Medium | every reader, and the next round that trusts a clean console | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

@@ -30,6 +30,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 HOOKS = REPO / ".claude/hooks"
 SETTINGS = REPO / ".claude/settings.json"
 CLAUDE_MD = REPO / "CLAUDE.md"
+REVIEW_MD = REPO / "REVIEW.md"
 
 #: Built rather than written, because `keep-the-guards-able-to-fail.sh`
 #: blocks an edit that carries the literal - including this one. The
@@ -199,3 +200,50 @@ class TestClaudeMdIsTrueAndShort:
         assert len(text.splitlines()) < len(
             (REPO / "docs/contributing/fixing-guide.md").read_text(
                 encoding="utf-8").splitlines())
+
+
+class TestTheReviewPolicyIsReadable:
+    """`REVIEW.md` is what a reviewer - human or agent - is held to. A
+    policy that names a pass it does not define, or an item that does
+    not exist, is the "claim a document's own body does not do" finding
+    turned on the file that lists it."""
+
+    @staticmethod
+    def _text():
+        return REVIEW_MD.read_text(encoding="utf-8")
+
+    @pytest.mark.parametrize("pass_name", ("Bugs", "Security", "Compliance",
+                                           "Evidence"))
+    def test_each_named_pass_has_a_section(self, pass_name):
+        assert f"**{pass_name}.**" in self._text(), (
+            f"REVIEW.md's passes list names {pass_name} without defining it")
+
+    def test_it_says_how_many_passes_there_are_and_has_that_many(self):
+        text = self._text()
+        stated = re.search(r"Run (\w+) passes", text)
+        assert stated, "REVIEW.md does not say how many passes to run"
+        words = {"three": 3, "four": 4, "five": 5}
+        defined = len(re.findall(r"^\*\*[A-Z][a-z]+\.\*\*", text, re.M))
+        assert words[stated.group(1)] == defined, (
+            f"REVIEW.md says {stated.group(1)} passes and defines {defined}")
+
+    def test_it_draws_the_important_line_and_caps_the_nits(self):
+        text = self._text()
+        assert "Important" in text and "nit" in text.lower()
+        assert re.search(r"[Aa]t most \w+ nits", text), (
+            "REVIEW.md does not cap nit volume, so a review nobody "
+            "finishes reading is a review that did not happen")
+
+    def test_every_item_it_cites_exists(self):
+        cited = set(re.findall(r"`(UX-\d+)`", self._text()))
+        assert cited, "REVIEW.md cites no item, so its rules have no provenance"
+        scenarios = REPO / "docs/backlog/scenarios"
+        missing = sorted(
+            uid for uid in cited
+            if not list(scenarios.glob(f"UX-0*{uid.split('-')[1]}-*.md")))
+        assert missing == [], f"REVIEW.md cites absent item(s): {missing}"
+
+    def test_it_keeps_the_agent_off_its_own_approval(self):
+        """Separation of duties is the reason this file is committed
+        rather than prompted."""
+        assert "has no route to approve" in self._text()

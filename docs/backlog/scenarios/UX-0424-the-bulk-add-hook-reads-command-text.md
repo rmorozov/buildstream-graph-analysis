@@ -1,6 +1,6 @@
 # UX-424: the bulk-add hook matches command text, not command effect
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Found by:** round 67, while writing the hook — recorded in commit `af209a7`'s message and nowhere else | **Serves:** every contributor, at the point a hook blocks them | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 67, while writing the hook — recorded in commit `af209a7`'s message and nowhere else | **Serves:** every contributor, at the point a hook blocks them | **Topic:** guards
 
 ## Motivation
 
@@ -77,3 +77,121 @@ is taken:
 
 Each new clause shown red under a mutation that reverts the change it
 tests, per the `falsify` skill.
+
+## Outcome (round 68, 2026-08-30) — 🟢 Done
+
+### The gap, measured
+
+A probe firing the hook at twenty payloads. It could not be run from
+the shell: the hook blocked the probe script itself, because the script
+*mentions* the pattern inside quoted arguments. That is the defect,
+demonstrated by the attempt to measure it — the fifth and sixth
+sightings in this repository, both today.
+
+```text
+want   got     case
+BLOCK  BLOCK   bare
+BLOCK  BLOCK   bare dot
+BLOCK  BLOCK   bare --all
+BLOCK  BLOCK   after &&
+BLOCK  BLOCK   after ;
+pass   pass    a named path
+pass   pass    a dot-slash path
+pass   pass    two named paths
+pass   pass    quoted in a commit message
+pass   BLOCK   inside a heredoc, prose   <-- wrong
+pass   pass    inside a heredoc, a markdown table row
+pass   pass    inside a heredoc, a bullet
+pass   pass    an argument to grep
+pass   pass    an argument to echo, after a pipe
+
+1 of 14 wrong
+```
+
+The anchor `(^|[;&|(]\s*)` narrowed the old regex more than expected —
+a bullet and a table row both passed. What it cannot do is tell a
+separator in *prose* from a separator between commands, and it cannot
+see quoting at all.
+
+### After
+
+Six more payloads, including the two that blocked this session live and
+the hole a quote-stripping fix would have opened:
+
+```text
+pass   pass    single-quoted arg holding a separator
+pass   pass    a python -c whose source mentions it
+BLOCK  BLOCK   the flag itself quoted
+BLOCK  BLOCK   the flag in a short cluster
+BLOCK  BLOCK   a second line of a script
+BLOCK  BLOCK   unbalanced quote falls back to the regex
+
+0 of 20 wrong
+```
+
+### Tokenise, do not lengthen the regex
+
+The same move `UX-403` made for the same defect one file over: a longer
+pattern chases an unbounded class of confusions, and a token stream
+does not have them. Heredoc bodies are dropped, then `shlex` splits the
+rest under shell quoting rules, and `git` counts only in **command
+position** — first token, or straight after a separator `shlex` emits.
+
+Two alternatives were considered and rejected in the file's docstring:
+
+- **Strip quoted spans, re-run the regex.** `git add "-A"` then reads
+  as a bare `git add` and passes — a real bulk add lost. Tokenising
+  keeps it, because `shlex` removes the quotes and leaves the word.
+  Both quoted forms are now clauses.
+- **Accept the false blocks and document them.** Cheap, and it leaves a
+  control whose failure mode is *"you may not write about the rule I
+  enforce"*. That control gets switched off, which is how a control
+  stops existing.
+
+Two things the measurement changed rather than the design:
+
+- `shlex` treats a **newline as whitespace**, so `make test\ngit add -A`
+  put `git` in argument position and passed. `_as_one_line` substitutes
+  `;` first. Found by writing the clause, not by reading the code.
+- An **unparseable** command (an unbalanced quote is ordinary) falls
+  back to the old regex. Conservative on purpose: a false block costs
+  one retry with explicit paths, a missed one costs a tree somebody
+  else unpicks.
+
+`-u` was **not** added to the bulk operands. It stages every tracked
+modification and is arguably a fourth, but it was never blocked, and
+adding it would be a rule change wearing an instrument fix's clothes.
+
+`make lint` now runs ruff over `.claude/hooks/` too, since the decision
+is Python and was previously unlinted.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | the decision goes back to scanning raw text | 6 failed, 53 passed |
+| M2 | heredoc bodies are not dropped | 1 failed, 58 passed |
+| M3 | a newline is not turned into a separator | 1 failed, 58 passed |
+| M4 | an unparseable command passes instead of falling back | 1 failed, 58 passed |
+
+M1 takes out the whole new class at once, which is the point of it.
+M2, M3 and M4 each redden exactly one clause, which is what says the
+three parts of the fix are separately load-bearing rather than one
+change described three ways.
+
+```text
+baseline    59 passed in 38.85s
+reverted    59 passed in 0.86s
+```
+
+### Deviation from the Required Fix
+
+- **The Required Fix offered two options and this took the first**,
+  which the filing allowed. The second — document the acceptance —
+  survives in the hook's docstring as a rejected alternative with its
+  reason, so the next round does not re-open the question cold.
+- The filing scoped the acceptance test to three payloads. It ships
+  with twenty, because writing the three surfaced two cases neither the
+  filing nor the design had (the newline, and the quoted flag).

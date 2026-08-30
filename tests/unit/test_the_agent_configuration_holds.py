@@ -68,11 +68,49 @@ class TestTheHooksBlockWhatTheyClaim:
         "git add --all",
         "make test && git add -A",
         "cd /tmp; git add -A",
+        # UX-424. The first three are what a quote-stripping fix would
+        # have lost: strip the quotes and `git add "-A"` reads as a
+        # bare `git add`, which passes. Tokenising keeps them, because
+        # `shlex` removes the quoting and leaves the word.
+        'git add "-A"',
+        "git add '-A'",
+        "git add -vA",
+        # `shlex` treats a newline as whitespace, so without the
+        # substitution in `_as_one_line` this puts `git` in argument
+        # position and passes.
+        "make test\ngit add -A",
+        # No parse, so the old regex decides - and it must still block.
+        "echo 'unterminated && git add -A",
     ))
     def test_a_bulk_add_is_blocked(self, command):
         code, said = fire("no-bulk-add.sh", {"tool_input": {"command": command}})
         assert code == 2, (command, code, said)
         assert "4a.1" in said, said
+
+    @pytest.mark.parametrize("command", (
+        # Every one of these blocked before UX-424, and each cost a
+        # retry in round 67. A commit message quoting the rule is the
+        # commonest: this repository's messages describe the rules they
+        # enforce, so the control was firing on its own documentation.
+        'git commit -m "never use git add -A here"',
+        "cat > /tmp/m.txt <<'EOF'\nThe rule is old; git add -A is banned.\nEOF",
+        "cat > /tmp/m.txt <<'EOF'\n| `git add -A` | forbidden |\nEOF",
+        "probe 'make test && git add -A'",
+        'grep -rn "git add -A" docs/',
+        'echo "git add -A" | wc -l',
+    ))
+    def test_writing_about_the_rule_is_not_blocked(self, command):
+        """`UX-424`: the fourth sighting of an instrument reading a
+        proxy rather than the thing, and the one that obstructed its
+        own fix - the hook blocked two of the probes written to measure
+        it, and three commits in the round that introduced it.
+
+        A control whose failure mode is "you may not write about the
+        rule I enforce" gets switched off, which is how a control stops
+        existing (`UX-403` makes the same argument for the same shape).
+        """
+        code, said = fire("no-bulk-add.sh", {"tool_input": {"command": command}})
+        assert code == 0, (command, code, said)
 
     @pytest.mark.parametrize("command", (
         "git add bga/analysis.py",

@@ -90,7 +90,7 @@ test-e2e:
 
 # Code linting (ruff, pyflakes rule set - see pyproject.toml's [tool.ruff])
 lint: lint-docs
-	ruff check bga/ tools/ tests/
+	ruff check bga/ tools/ tests/ .claude/hooks/
 
 # UX-98: markdown correctness. Only the class that changes how a document
 # renders is enabled - see .pymarkdown.json for why each disabled rule is

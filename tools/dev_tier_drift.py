@@ -42,14 +42,29 @@ threshold, which is the same measurement without the hole.
 it reads `LARGE_FLOOR_S` and `MEDIUM_FLOOR_S` and reports the files
 whose measurement disagrees with where they are listed.
 
-**And it calibrates first, because those floors are seconds on one
-clock.** The first CI run of this step called three medium files large
-at 20.4-21.5s; single-process on the machine the tiers were measured on
-they are 11.3-13.5s. Nothing had drifted - CI's runner is slower. So
-the scale is derived from the report: for every listed file it also
-measured, `measured / recorded` reads this runner against the tiers'
-own, and the median of those readings moves the floors. See
-`TIER_DRIFT_MARGIN` and `recorded()` in `tests/tiers.py`.
+**And it compares rank, not seconds, because those floors are seconds
+on one machine.** Two CI runs taught that, in order:
+
+1. The step called three medium files large at 20.4-21.5s. On the
+   machine the tiers were measured on they are 11.3-13.5s. Nothing had
+   drifted. A fixed slack was the first answer and was wrong by a
+   factor on the first foreign clock it met.
+2. A derived scale was the second answer, and it is wrong too: measured
+   on CI, the **median** listed file runs at 1.05x this repository's
+   recorded numbers while `test_report_stays_readable_at_scale` runs at
+   1.61x and `test_marginal_efficiency_gate` at 1.73x. Neither had
+   grown - here they are 1.05-1.10x their records. The difference is
+   *per file*, so there is no single scale to find.
+
+What survives a change of machine is the **order**. The tiers are a
+ranking, so a file has drifted when it is slower than the middle of the
+tier above it **in the same report** - two numbers from one run, one
+clock. `boundaries()` below is that rule.
+
+The cost is stated rather than hidden: this catches a file that has
+outrun its neighbours, not one a second over its floor. `--exact`
+restores the floor comparison for a report taken on the machine they
+were measured on, which is where seconds are the right question.
 
     python tools/dev_tier_drift.py <junit.xml>
 """
@@ -66,6 +81,9 @@ from tests import tiers                                        # noqa: E402
 
 #: Ordered, so "measured above where it is listed" is a comparison.
 RANK = {"small": 0, "medium": 1, "large": 2}
+
+#: The tier each one is measured against - see `boundaries`.
+ABOVE = {"small": "medium", "medium": "large"}
 
 
 def file_of(classname):
@@ -96,37 +114,45 @@ def measured(report):
     return dict(total)
 
 
-def clock(times):
-    """How much slower this report's runner is than the tiers' own.
+def boundaries(times, minimum=8):
+    """`{tier: the median measured time of the tier above it}`.
 
-    For every listed file the report also measured, `measured/recorded`
-    is one reading of this runner against the machine the tiers were
-    taken on. The **median** of those readings is the scale.
+    **The comparison is a rank, not a number of seconds**, and that is
+    the whole design. Two CI runs taught it: the floors in
+    `tests/tiers.py` are seconds on one machine, and a report can come
+    from another, where the same file takes a different time. A fixed
+    slack could not fix that (wrong by a factor on the first foreign
+    clock it met) and neither could a derived one - measured on CI, the
+    *median* listed file runs at 1.05x this repository's recorded
+    numbers while two particular files run at 1.61x and 1.73x. The
+    difference is per-file, so no single scale exists to find.
 
-    A median, not a mean: one file that changed since it was recorded
-    is a wrong reading, and a scale that any single file can move is a
-    scale a slow test can talk its way out of.
+    What is portable is the order. The tiers are a ranking by
+    construction, so a file drifts when it is slower than the *middle*
+    of the tier above it **in the same report** - both numbers measured
+    on one machine, one run, one clock.
 
-    Returns 1.0 when there is nothing to calibrate against, which is
-    the honest answer and not a safe one - `main` says so rather than
-    comparing against a number it did not derive.
+    `minimum` is how many members of the tier above must appear before
+    a median means anything; below it the boundary is not returned and
+    `main` refuses rather than comparing against a number it derived
+    from three files.
     """
-    reference = tiers.recorded()
-    ratios = sorted(times[name] / reference[name] for name in reference
-                    if times.get(name) and reference[name] > 0)
-    if not ratios:
-        return None
-    middle = len(ratios) // 2
-    return (ratios[middle] if len(ratios) % 2
-            else (ratios[middle - 1] + ratios[middle]) / 2)
+    out = {}
+    for tier, names in (("small", tiers.MEDIUM), ("medium", tiers.LARGE)):
+        seen = sorted(times[name] for name in names if times.get(name))
+        if len(seen) >= minimum:
+            middle = len(seen) // 2
+            out[tier] = (seen[middle] if len(seen) % 2
+                         else (seen[middle - 1] + seen[middle]) / 2)
+    return out
 
 
 def tier_for(seconds, scale=1.0):
-    """The tier a measurement puts a file in, on this report's clock.
+    """The tier a measurement puts a file in, by the declared floors.
 
-    `scale` moves the floors, not the measurement, so the message still
-    prints the seconds that were actually read - a step that reported a
-    number nobody could reproduce would be worse than none.
+    Used by `--exact`, for a report taken on the machine the floors were
+    measured on - where seconds are the right question and this is the
+    more sensitive rule. Across machines, see `boundaries`.
     """
     if seconds >= tiers.LARGE_FLOOR_S * scale:
         return "large"
@@ -143,15 +169,25 @@ def listed_tier(name):
     return "small"
 
 
-def drift(times, scale=1.0):
-    """`[(file, seconds, listed, measured)]`, worst first.
+def drift(times, limits):
+    """`[(file, seconds, listed, over)]`, worst first.
 
-    Only the direction that hides cost: a file measured *above* the
-    tier it is listed in. The other direction - a file that got faster
-    and now sits in a slower tier - wastes nothing and is left to the
-    re-measure ritual, because reporting it would make this step fail
-    on an ordinary fast run.
+    `limits` is `boundaries(...)`: a file is reported when it is slower
+    than the middle of the tier above the one it is listed in. Only
+    that direction - a file that got faster wastes nothing, and
+    reporting it would red the build on an ordinary good run.
     """
+    found = []
+    for name, seconds in times.items():
+        was = listed_tier(name)
+        limit = limits.get(was)
+        if limit is not None and seconds > limit:
+            found.append((name, seconds, was, limit))
+    return sorted(found, key=lambda row: -row[1])
+
+
+def by_floors(times, scale=1.0):
+    """The `--exact` rule: the declared floors, on their own clock."""
     found = []
     for name, seconds in times.items():
         was, now = listed_tier(name), tier_for(seconds, scale)
@@ -166,8 +202,10 @@ def main(argv=None):
     parser.add_argument("--quiet", action="store_true",
                         help="print nothing when there is no drift")
     parser.add_argument("--exact", action="store_true",
-                        help="compare against the floors as they stand, "
-                             "for a report taken on the tiers' own clock")
+                        help="compare against the declared floors instead, "
+                             "for a report taken on the machine they were "
+                             "measured on - more sensitive, and only "
+                             "meaningful on that machine")
     args = parser.parse_args(argv)
 
     times = measured(args.report)
@@ -176,25 +214,30 @@ def main(argv=None):
               f"this step measured nothing", file=sys.stderr)
         return 2
     if args.exact:
-        scale, how = 1.0, "no calibration (--exact)"
+        found = by_floors(times)
+        line = (f"{len(times)} file(s) measured against the declared floors "
+                f"(medium {tiers.MEDIUM_FLOOR_S}s, large "
+                f"{tiers.LARGE_FLOOR_S}s)")
+        detail = [f"  {name}  {seconds:.1f}s  listed {was}, measured {now}"
+                  for name, seconds, was, now in found]
     else:
-        ratio = clock(times)
-        if ratio is None:
-            print(f"{args.report}: measured none of the {len(tiers.recorded())} "
-                  f"listed files, so this runner's clock cannot be read "
-                  f"against the tiers'. Refusing to compare seconds from "
-                  f"one machine to floors from another.", file=sys.stderr)
+        limits = boundaries(times)
+        if not limits:
+            print(f"{args.report}: too few listed files in it to place a "
+                  f"boundary. Refusing to compare against a median drawn "
+                  f"from almost nothing.", file=sys.stderr)
             return 2
-        scale = ratio * tiers.TIER_DRIFT_MARGIN
-        how = (f"x{ratio:.2f} this runner against the tiers' own clock, "
-               f"x{tiers.TIER_DRIFT_MARGIN} margin")
-    found = drift(times, scale)
-    # Printed whether or not anything drifted: the scale is the number
-    # that decides, and the run that reddens is not the first place it
-    # should be visible.
-    line = (f"{len(times)} file(s) measured; floors x{scale:.2f} "
-            f"= medium {tiers.MEDIUM_FLOOR_S * scale:.1f}s, "
-            f"large {tiers.LARGE_FLOOR_S * scale:.1f}s ({how})")
+        found = drift(times, limits)
+        line = (f"{len(times)} file(s) measured; this run's boundaries are "
+                + ", ".join(f"{tier} > {limit:.1f}s"
+                            for tier, limit in sorted(limits.items()))
+                + " (the median of the tier above, in this report)")
+        detail = [f"  {name}  {seconds:.1f}s  listed {was}, and slower than "
+                  f"this run's median {ABOVE[was]} file ({limit:.1f}s)"
+                  for name, seconds, was, limit in found]
+    # Printed whether or not anything drifted: the boundary is what
+    # decides, and the run that reddens is not the first place it should
+    # be visible.
     if not found:
         if not args.quiet:
             print(f"tiers ok: {line}")
@@ -202,14 +245,13 @@ def main(argv=None):
     print(line, file=sys.stderr)
     print(f"{len(found)} file(s) measured above the tier tests/tiers.py "
           f"lists them in:", file=sys.stderr)
-    for name, seconds, was, now in found:
-        print(f"  {name}  {seconds:.1f}s  listed {was}, measured {now}",
-              file=sys.stderr)
-    print("\nRe-measure each on this machine and add it to the named list "
-          "in tests/tiers.py with its seconds, or make it faster. The "
-          f"floors are the authority (medium {tiers.MEDIUM_FLOOR_S}s, "
-          f"large {tiers.LARGE_FLOOR_S}s on the tiers' own clock); this "
-          "only reads them, and calibrates before it does.",
+    for row in detail:
+        print(row, file=sys.stderr)
+    print("\nRe-measure each on this machine and move it in tests/tiers.py "
+          "with its seconds, or make it faster. The floors are the "
+          f"authority for placing a file (medium {tiers.MEDIUM_FLOOR_S}s, "
+          f"large {tiers.LARGE_FLOOR_S}s on the machine they were measured "
+          "on); this only reports one that has outrun its neighbours.",
           file=sys.stderr)
     return 1
 

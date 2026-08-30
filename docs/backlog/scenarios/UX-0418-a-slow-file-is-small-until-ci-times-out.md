@@ -160,33 +160,48 @@ measurement does, and this file already knew better: `SMALL_TIER_BUDGET_S`
 keeps CI and local numbers apart for exactly this reason, with the
 ratio written down.
 
-**The fix is to calibrate rather than to widen.** For every listed file
-the report also measured, `measured / recorded` is one reading of this
-runner's clock against the tiers' own; the **median** of those readings
-scales the floors. `tiers.recorded()` reads the reference off each
-entry's own trailing `# N.Ns` — the lists have carried that number since
-`UX-238`, so the calibration cannot drift away from the tiers it
-calibrates, and there is no second copy to disagree. A median, not a
-mean, so no single file can talk the scale up.
-
-`TIER_DRIFT_MARGIN = 1.15` covers the residual: files do not all scale
-by the same factor (1.59–1.81 across the three above). The scale is
-printed on every run, drift or not, so the number that decides is
-visible before the run that reddens.
-
-Reproduced and re-checked, per the fixing guide's rule for a CI fix —
-the same report both ways:
+**A derived scale was the second answer, and it is wrong too.** The fix
+after the first CI run replaced the constant with a calibration: for
+every listed file the report also measured, `measured / recorded` reads
+this runner against the tiers' own clock, and the median of those
+readings scales the floors. It reddened on the next CI run, and the
+numbers say why:
 
 ```text
-the shipped rule (fixed x1.35), on a slower clock:   9 files flagged
-the calibrated rule, on the same report:             tiers ok, x1.59
-                                                     (large floor 27.5s)
+                                       CI/recorded
+median over the 140 listed files            1.05
+test_report_stays_readable_at_scale         1.61
+test_marginal_efficiency_gate               1.73
 ```
 
-Bumping the constant would have been the other option, and it is the
-one this item's own filing warns about: *"a step that reds on an
-ordinary run is one somebody mutes."* A number that has to be re-sized
-for every machine is a mute switch with extra steps.
+Neither file had grown — on this machine they run at 1.05–1.10x their
+recorded numbers, so **the records are accurate and the files are
+medium**. CI is not uniformly slower: it matches this machine on the
+median listed file and is 1.6–1.7x slower on those two. The difference
+is *per file*, so there is no single scale to find, and a third attempt
+at one would have been the same mistake a third time.
+
+**What survives a change of machine is the order.** The tier lists are
+a ranking by construction, so the rule is: a file has drifted when it
+is slower than the **middle of the tier above it, in the same report**
+— two numbers from one run, one clock, no constant between them.
+`boundaries()` computes it and the step prints it on every run.
+
+Re-checked across four synthetic clocks (×0.5, ×1, ×2, ×5): the verdict
+is identical, because both sides of every comparison move together.
+
+**What it costs, stated rather than discovered.** The rank rule catches
+a file that has outrun its neighbours, not one a second over its floor.
+`test_what_the_rank_rule_costs_is_a_file_just_over_its_floor` is that
+sentence as a clause. `--exact` restores the floor comparison for a
+report taken on the machine the floors were measured on, where seconds
+are the right question — and locally that is the rule worth running.
+
+Bumping a constant was available at each step, and is the move this
+item's own filing warns about: *"a step that reds on an ordinary run is
+one somebody mutes."* A number re-sized per machine is a mute switch
+with extra steps; the second attempt proved a *derived* number is one
+too, when the thing it derives does not exist.
 
 ### The fourth file, and the number this needed
 
@@ -204,16 +219,9 @@ a parallel report over-reads, by 5–28% on these four.
 Without a number for that, the step reds on an ordinary run — and a
 step that reds on an ordinary run is one somebody mutes, which is the
 failure mode this item was filed to avoid rather than to reproduce.
-This is the observation the first version answered with a constant and
-the second answers with a measurement — the section above is the whole
-story. `--exact` compares against the floors as they stand, for a
-report taken on the tiers' own clock.
-
-**The cost is stated rather than hidden**, in the margin's own comment
-and in a clause: a file 15% over its floor *on the report's own clock*
-is not reported. It is a ratchet against drift, not a re-measurement —
-and `test_a_real_drift_still_shows_through_a_slow_runner` holds the
-other end.
+This is the observation the first version answered with a constant, the
+second with a derived scale, and the third with a rank — the section
+above is the whole story.
 
 ### `test_the_report_has_chapters.py`, caught the same hour
 
@@ -232,15 +240,16 @@ Counts are what the run printed, not what was expected of it.
 | F1 | `test_the_journey_has_an_answer_key.py` deleted from `LARGE` (the Acceptance Test) | the step, naming the file and `107.8s`; exit 1 |
 | F2 | `test_process_spine.py` deleted from `LARGE` — `UX-403`'s exact mutation shape, on a file that boots no browser | the step, naming it and `36.4s`; the partition guard stayed at 16 passed, which is the filed state |
 | F3 | `PARALLEL_REPORT_SLACK` raised to 100.0, so nothing can ever drift | `test_the_message_carries_the_name_and_the_seconds`; 1 failed, 18 passed |
-| G1 | one medium file really triples, on a 1.5x-slower simulated clock | the step, naming it at 64.8s against a calibrated 27.5s floor; exit 1 |
-| G2 | `test_process_spine.py` deleted from `LARGE`, on the same slower clock | the step, naming it at 53.7s; exit 1 |
+| H1 | one medium file really triples, on a 1.5x-slower simulated clock | the step, at 62.6s against this run's 33.1s median large file; exit 1 |
+| H2 | `test_the_journey_has_an_answer_key.py` deleted from `LARGE` — `UX-403`'s own mutation — on the same slower clock | the step, at 164.7s against a 4.3s median medium file; exit 1 |
 
-G1 and G2 are the calibration's own falsification: the fix must not
-become an excuse, so both are run on a clock slow enough that the
-uncalibrated rule flagged nine innocent files. F3 named a constant that
-no longer exists; its successor is
-`test_one_file_cannot_move_the_scale`, which is the same question about
-the mechanism that replaced it.
+H1 and H2 are the rank rule's falsification, and both are run on a
+clock slow enough that the *first* rule flagged nine innocent files —
+the fix must not become an excuse. F3 named a constant that no longer
+exists; its successors are
+`test_a_uniformly_different_clock_changes_nothing` and
+`test_a_real_drift_shows_through_any_clock`, which are the same two
+questions about the mechanism that replaced it.
 
 F2 is the falsification the filing asks for — *the same deletion with
 the step removed passes* — measured both ways in one run. F3 is the
@@ -251,13 +260,16 @@ tolerance nothing guards is a mute switch.
 
 - **`--junitxml` instead of `--durations=0`**, for the measured reason
   above. Same run, same cost, no threshold.
-- **The clock calibration is new**, and the filing did not anticipate
-  it — it assumes the report and the floors share a clock, and they do
-  not. It is a deviation in the direction of the filing's own warning
-  ("goes flaky and then gets muted"): the alternative was a constant
-  re-sized per machine, which is a mute switch with extra steps. Its
-  cost is written into `TIER_DRIFT_MARGIN` and asserted by clauses
-  rather than left implicit.
+- **The comparison is a rank, not the floors**, and the filing did not
+  anticipate that — it says "compares each file against the floors in
+  `tests/tiers.py`", which assumes the report and the floors share a
+  clock. They do not, and two CI runs proved that no constant and no
+  derived scale bridges them. The floors remain the authority for
+  *placing* a file, which is a decision made on this machine with
+  `--durations=0`; the step reports a file that has outrun its
+  neighbours. Its cost — insensitivity to a file just over a floor — is
+  asserted by a clause rather than left implicit, and `--exact` keeps
+  the floor rule for the machine where it means something.
 - **`tests/tiers.py` gained `recorded()`**, which reads each entry's
   own trailing seconds. Not asked for, and load-bearing for the above:
   a step that compares two clocks needs the numbers the floors were

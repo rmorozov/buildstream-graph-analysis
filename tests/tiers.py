@@ -99,46 +99,29 @@ import re
 LARGE_FLOOR_S = 15.0
 MEDIUM_FLOOR_S = 1.0
 
-# `UX-418`: **the floors are seconds on one clock, and a report can come
-# from another.** The step that reads one calibrates before comparing.
+# `UX-418`: **the floors are seconds on one machine, and a report can
+# come from another.** The step that reads one compares *rank* instead.
 #
 # The numbers beside every entry below were measured on a developer
-# container. CI's runner is slower, and `-n auto` there has two workers
-# rather than four, so the same file reads higher. The first CI run of
-# the drift step measured three medium files at 20.4-21.5s and called
-# them large; single-process here they are 11.3-13.5s:
+# container. Two CI runs of the drift step taught, in order, that they
+# do not travel:
 #
-# ```text
-#                                      CI (-n auto)   here (1 proc)  ratio
-# test_report_stays_readable_at_scale        21.5s          13.5s     1.59
-# test_one_table_many_views                  20.8s          12.4s     1.68
-# test_marginal_efficiency_gate              20.4s          11.3s     1.81
-# ```
+# 1. It called three medium files large at 20.4-21.5s; here they are
+#    11.3-13.5s single-process. A fixed slack was the first answer, and
+#    was wrong by a factor on the first foreign clock it met.
+# 2. A scale derived from the report was the second answer, and is
+#    wrong too. Measured on CI, the **median** listed file runs at
+#    1.05x its recorded number - while `test_report_stays_readable_at_scale`
+#    runs at 1.61x and `test_marginal_efficiency_gate` at 1.73x. Neither
+#    had grown: here they are 1.05-1.10x their records. The difference
+#    is *per file*, so no single scale exists to find.
 #
-# **None of them had drifted.** A fixed slack cannot fix that: the same
-# constant is too small for CI and too large here, and the version of
-# this comment that carried one (`PARALLEL_REPORT_SLACK = 1.35`, sized
-# on this container) was wrong by a factor on the first foreign clock
-# it met. This file already knows the two clocks differ - see
-# `SMALL_TIER_BUDGET_S` above, which keeps CI and local numbers apart
-# for exactly this reason.
-#
-# So the step derives the ratio from the report itself: for every listed
-# file the report also measured, `measured / recorded` is one reading of
-# this runner's clock against the one the tiers were taken on, and the
-# **median** of those readings is the scale. Self-calibrating, correct
-# on any runner, and it needs no table of machines. `recorded()` below
-# is where the reference values come from, and they are the same
-# numbers a re-measure updates - so the calibration cannot drift away
-# from the tiers it calibrates.
-#
-# The margin on top is for the residual: files do not all scale by the
-# same factor (1.59-1.81 across the three above, and a browser-bound
-# file and a CPU-bound one need not agree at all). 1.15 covers that
-# spread with headroom. Its cost is stated rather than hidden: a file
-# 15% over its floor on the report's own clock is not reported, so this
-# is a ratchet against drift rather than a re-measurement.
-TIER_DRIFT_MARGIN = 1.15
+# What survives a change of machine is the **order**. These lists are a
+# ranking, so `tools/dev_tier_drift.py` reports a file that is slower
+# than the middle of the tier above it *in the same report* - two
+# numbers from one run on one clock. The floors below stay the
+# authority for **placing** a file, which is a decision made here, on
+# this clock, with `--durations=0`.
 
 
 def recorded():

@@ -66,6 +66,39 @@ BOOTS_A_BROWSER = re.compile(r"from tests\.browser import|from browser import"
                              r"|find_chrome\(")
 
 
+def _code(path):
+    """`path`'s source with string literals and comments removed.
+
+    Round 67: the pattern above is a text scan, and a text scan cannot
+    tell code from data. `test_the_agent_configuration_holds.py` names
+    `find_chrome()` inside a *string* - it is test data for a hook that
+    decides whether a skip is conditional - and was reported as a
+    browser guard sitting in the small tier. It runs in 0.26s and boots
+    nothing.
+
+    The same defect, in the same week, as `.claude/hooks/no-bulk-add.sh`
+    blocking a command that merely quotes the pattern it looks for, and
+    as `UX-420`'s ratio judging a quantity at the noise floor: an
+    instrument reading a proxy rather than the thing.
+
+    Tokenising is the fix rather than a longer regex, because the class
+    of confusion is unbounded and the token stream simply does not have
+    it. A file that will not tokenise falls back to its raw text, which
+    is the conservative direction: a false name is a red clause somebody
+    reads, a missed one is a slow file nobody sees.
+    """
+    source = path.read_text(encoding="utf-8")
+    try:
+        import io
+        import tokenize as _tokenize
+        kept = [tok.string for tok in
+                _tokenize.generate_tokens(io.StringIO(source).readline)
+                if tok.type not in (_tokenize.STRING, _tokenize.COMMENT)]
+    except Exception:                                  # pragma: no cover
+        return source
+    return " ".join(kept)
+
+
 class TestNothingSlowByConstructionIsSmall:
     def test_every_browser_guard_is_listed(self):
         """The one class of slowness that is legible from the source.
@@ -78,7 +111,7 @@ class TestNothingSlowByConstructionIsSmall:
         listed = set(tiers.LARGE) | set(tiers.MEDIUM)
         small = sorted(
             path for path in _test_files()
-            if BOOTS_A_BROWSER.search((REPO / path).read_text(encoding="utf-8"))
+            if BOOTS_A_BROWSER.search(_code(REPO / path))
             and path not in listed)
         assert small == [], (
             f"{len(small)} file(s) boot a real browser from the small "

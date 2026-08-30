@@ -165,8 +165,12 @@ one that closes the acceptance test's second clause.
   showed the run was unfit to be a baseline. The Required Fix assumed
   any run's document is a refresh; it is not, and the instrument that
   reveals that shipped this morning.
-- **The acceptance test's second clause is not yet met** — "the drift
-  step green on the run after it". That run has not happened. This is
-  🟢 for the mechanism and the data; if the next run reports either
-  file again, the item reopens rather than the reference being edited
-  again.
+- **None.** The acceptance test's second clause — "the drift step green
+  on the run after it" — was open when this Outcome was first written
+  and is now met: run `33318972985`, job `99277452407`, `test (3.11)`,
+  head `ba452ce`, conclusion **success**. The drift step carries no
+  `continue-on-error`, so a green job is a green step. Neither appended
+  file was reported.
+
+  `test (3.10)` also passed on that run, so `UX-428`'s race did not
+  recur — it remains filed, not fixed, and intermittent.

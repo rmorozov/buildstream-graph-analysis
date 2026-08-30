@@ -54,6 +54,89 @@ backstop on the golden export is a measurement, so when it moves, say
 which half moved — a composition guard exists precisely so the ceiling
 cannot be raised without one.
 
+## A real capture, with both planes in it
+
+The scale run (`gen-synthetic`) has Plane 1 only — it fabricates a
+schedule, not processes. For anything about Plane 2, the sandbox tax,
+the process population or the trace's real shape, capture a real build.
+`examples/06-macro-micro-optimization` is the one built for it: 11
+elements, a deliberate six-deep chain, translation units calibrated to
+about a second of real `g++` each.
+
+```bash
+cd examples/06-macro-micro-optimization
+bga snapshot --project "$PWD" -- bst build all.bst
+```
+
+**Three things cost a round each to rediscover:**
+
+- The flag is `--project`, and it wants the project directory. There is
+  no `--into`; the store is `<project>/.bga/runs/<stamp>`.
+- **A warm build gives you Plane 1 only.** Everything caches, no
+  sandbox runs, `plane2.log.gz` comes back at 31 bytes and `bga
+  timeline` says *"the Plane 2 capture attributes no span to an
+  element"*. That is not a failure — it is the incremental build, and
+  it is worth capturing deliberately, because several defects only
+  appear there (`UX-431`).
+- To get **both** planes, bust the cache first. Copy the project out of
+  the tree and change a source in the copy, so the repository stays
+  clean:
+
+  ```bash
+  cp -r examples/06-macro-micro-optimization /tmp/ex06 && rm -rf /tmp/ex06/.bga
+  for f in $(find /tmp/ex06/files/src -name "unit_0.cpp"); do
+      echo "// cache-buster $(date +%s)" >> "$f"
+  done
+  cd /tmp/ex06 && bga snapshot --project "$PWD" -- bst build all.bst
+  ```
+
+  Measured that way: 9 elements rebuilt, **813 hook-covered processes**,
+  a 311 KB snapshot, about 40 s of wall clock.
+
+Then the trace, and the questions:
+
+```bash
+bga timeline /tmp/ex06/.bga/runs/<stamp> -o /tmp/six.pftrace
+python tools/dev_perfetto_queries.py /tmp/six.pftrace --fetch
+```
+
+**Capture both shapes when the round is about the trace.** The cached
+run and the full rebuild disagree about almost everything that matters —
+on the same 34-edge graph, one drew 0 arrows and reported 0 dropped,
+the other drew 10 and reported 24. A round that measures only the full
+rebuild sees a working tool.
+
+## Asking the canned questions of a real trace
+
+```bash
+bga timeline /path/to/snapshot -o /tmp/two.pftrace
+python tools/dev_perfetto_queries.py /tmp/two.pftrace --fetch
+```
+
+Runs all fourteen questions in `bga/viewer/questions.js` against the
+trace and says, per question, whether it answered. `--fetch` downloads
+the pinned reader if none is on `PATH` — Perfetto's own prebuilt, from
+`commondatastorage.googleapis.com` and not `get.perfetto.dev`, which is
+a redirector some proxies refuse.
+
+**Do this whenever a round touches the emitter, the annotations or the
+library.** `UX-312`'s guard checks the questions name only vocabulary
+the trace emits, which runs everywhere and is not the same claim: a
+question whose keys all exist still answers nothing if the values are
+absent, because `extract_arg` returns null rather than failing. Round
+69 ran them for the first time and three came back empty, one of them
+the question that resolves the graph's shape.
+
+The gate for this is optional and skips when the reader is missing
+(`tests/trace_processor.py`), and it had skipped on every machine this
+project ever ran on — so "the suite is green" has never meant these
+questions work. `--fetch` exists because that download was the whole
+of the friction.
+
+An empty answer and a refused query are different findings, and the
+exit code says which: 0 with an `empty:` list means the trace cannot
+answer, 1 means a question is malformed.
+
 ## Re-timing the tiers
 
 ```bash

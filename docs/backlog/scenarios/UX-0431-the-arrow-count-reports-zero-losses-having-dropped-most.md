@@ -1,23 +1,26 @@
-# UX-431: the arrow count reports zero losses, having dropped 3,481 of 3,500
+# UX-431: the arrow count reports zero losses, having drawn no arrows
 
-**Priority:** High | **Status:** 🔴 Not Started | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto — a field report that the graph shape could not be resolved in the trace | **Serves:** anyone opening the timeline to see why an element started when it did | **Topic:** contracts
+**Priority:** High | **Status:** 🔴 Not Started | **Found by:** round 69, two real captures of `examples/06` — a field report that the graph shape could not be resolved in the trace | **Serves:** anyone opening the timeline to see why an element started when it did | **Topic:** contracts
 
 ## Motivation
 
 The dependency graph reaches the trace as Perfetto flows, one per
-element→element edge. Measured on a 1,202-element run:
+element→element edge. Measured on two **real** captures of
+`examples/06-macro-micro-optimization` — 11 elements, 34 edges in
+`run/graph.json` — taken with `bga snapshot -- bst build all.bst`:
 
 ```text
-edges in run/graph.json      3,500
-flows emitted                   19
-flows_dropped                    0
+                        edges   flows   flows_dropped
+mostly-cached build        34       0               0
+full rebuild               34      24              24
 ```
 
-3,481 edges reached no arrow, and the counter that exists to report
-loss read **zero**.
+Two different failures, and the first is the silent one.
 
-`_plane1_flows` (`tools/bga_timeline.py:716-768`) has two skip paths and
-counts one of them:
+**The cached build drew no arrows at all and reported no losses.** That
+is the ordinary case — the build people actually profile is the one
+where most elements are already built. `_plane1_flows`
+(`tools/bga_timeline.py:716-768`) has two skip paths and counts one:
 
 ```python
 if source is None or sink is None:
@@ -27,34 +30,40 @@ if source["ts"] >= sink["ts"]:
     continue
 ```
 
-The uncounted path is the one that fires in practice. It means "one end
-of this edge produced no task in this run" — a cached element, or one
-built earlier. That is not an edge case; **it is what most edges of an
-incremental build are**, which is the build people actually profile.
+The uncounted path means "one end of this edge produced no task in this
+run", which is exactly what a cached element is. So the reader opens
+the timeline, finds no arrows, and is told in the same breath that
+nothing was dropped.
 
-So the reader opens the timeline, finds almost no arrows, and is told
-in the same breath that nothing was dropped. A zero meaning "nothing
-was lost" and a zero meaning "this counter does not watch that door"
-are indistinguishable, and the second is worse than no counter at all:
-it converts an absence the reader might have questioned into an
-assurance.
+A zero meaning "nothing was lost" and a zero meaning "this counter does
+not watch that door" are indistinguishable, and the second is worse
+than no counter: **it converts an absence the reader might have
+questioned into an assurance.**
 
-**The count is also never shown.** `flows_dropped` is in the render
-result and asserted in `tests/unit/test_the_arrows_say_why_now.py`, but
+**The full rebuild exposes the second failure.** There the count works —
+and says 24 of 34 edges were refused for endpoint ordering, leaving ten
+arrows out of thirty-four. 71% of the graph's edges are dropped on a
+successful, fully-parallel build, which is a far larger share than the
+"two edges on `examples/06`" the code comment cites as the case it was
+written for. Whether that is correct behaviour badly explained, or a
+rule that is too strict, is the question this item has to answer — but
+it cannot be answered while the number reaches no reader.
+
+**The count is never shown.** `flows_dropped` is in the render result
+and asserted in `tests/unit/test_the_arrows_say_why_now.py`, but
 `describe()` does not print it and nothing under `bga/viewer/` reads
 it — so even the reason that *is* counted reaches no reader.
 
-Two neighbours found while measuring this, both feeding the same field
-report:
+Two neighbours found on the same captures:
 
-- **`graph-levels` returns no rows without `analyze.json`.** `depth`,
-  `on_critical_path` and `downstream_count` are read from the analysis
-  beside the snapshot and silently omitted when it is absent. No
-  fixture in this repository has an `analyze.json` (`find tests/fixtures
-  -name analyze.json` finds nothing), so the query is exercised by
-  nothing at any level.
-- **`on_critical_path` was still absent with `analyze.json` present**,
-  because it is read from `element_join`, which was empty for that run.
+- **No fixture in this repository carries an `analyze.json`**
+  (`find tests/fixtures -name analyze.json` finds nothing), so `depth`,
+  `on_critical_path` and `downstream_count` are absent from every
+  fixture-rendered trace and the questions that group by them are
+  exercised by nothing. A real `bga snapshot` **does** write one — this
+  is a fixture gap, not a product one.
+- `graph-levels` is separately broken in a way real data revealed, and
+  is filed as `UX-434`.
 
 ## Required Fix
 
@@ -85,8 +94,9 @@ report:
 ## Acceptance Test
 
 ```bash
-bga gen-synthetic /tmp/scale --seed 1
-bga timeline /tmp/snapshot -o /tmp/two.pftrace
+cd examples/06-macro-micro-optimization
+bga snapshot -- bst build all.bst      # once warm, so most elements cache
+bga timeline .bga/runs/<stamp> -o /tmp/six.pftrace
 ```
 
 The result accounts for every edge in `graph.json`: emitted plus each

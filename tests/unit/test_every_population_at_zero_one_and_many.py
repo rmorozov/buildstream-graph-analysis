@@ -117,13 +117,41 @@ const all = (n, pred, out = []) => {
 // Discovered from the payload, not listed here: a sweep that only sees
 // what it was told about cannot catch the next section, which is the
 // whole reason each of the three bugs above waited for an audit round.
+const scalar = (v) => v === null || typeof v !== "object";
 const records = Object.entries(payload)
   .filter(([, v]) => Array.isArray(v) && v.length
                      && v.every((r) => r && typeof r === "object"
                                         && !Array.isArray(r)))
   .map(([k]) => k);
+// `UX-419`: **and the maps.** The rule above discovers a population as
+// an array of objects, and `renderPairs` draws a second shape it cannot
+// see - one measure per key. That hole is why nothing bounded
+// `by_binary` or `wall_clock_share_us`, and it is the half of `UX-419`
+// worth more than the bound: an instrument with a shape-shaped hole
+// lets the next section of that shape through too.
+const maps = Object.entries(payload)
+  .filter(([, v]) => v && typeof v === "object" && !Array.isArray(v)
+                     && Object.keys(v).length
+                     && Object.values(v).every(scalar))
+  .map(([k]) => k);
 const elsewhere = Object.keys(app.DRAWN_ELSEWHERE ?? {});
-const swept = records.filter((k) => !elsewhere.includes(k));
+const swept = [...records, ...maps].filter((k) => !elsewhere.includes(k));
+const shape = Object.fromEntries([...records.map((k) => [k, "record"]),
+                                  ...maps.map((k) => [k, "map"])]);
+
+// Each population at a size, in the shape the payload publishes it in.
+const sized = (key, n) => {
+  const held = payload[key];
+  if (shape[key] === "map") {
+    const names = Object.keys(held), out = {};
+    for (let i = 0; i < n; i++) out[`${names[i % names.length]}-${i}`] =
+      held[names[i % names.length]];
+    return out;
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(held[i % held.length]);
+  return out;
+};
 
 const draw = (key, rows) => {
   const node = schema.properties?.[key];
@@ -150,6 +178,12 @@ const draw = (key, rows) => {
       cards: all(section, (n) => n.tagName === "article").length,
       cards_shown: all(section, (n) => n.tagName === "article")
         .filter((card) => !card.hidden).length,
+      // `UX-419`: and a map's pairs, which are neither rows nor cards.
+      // A `<dt>` and its `<dd>` are one thing to a reader, so the
+      // count is of terms.
+      pairs: all(section, (n) => n.tagName === "dt").length,
+      pairs_shown: all(section, (n) => n.tagName === "dt")
+        .filter((dt) => !dt.hidden).length,
       badges: all(section, (n) => (n.attrs?.class || "") === "badge")
         .map(text),
       // `UX-412`: the copy control's label carries the same count in
@@ -165,12 +199,10 @@ const draw = (key, rows) => {
 
 const out = {};
 for (const key of swept) {
-  const lots = [];
-  for (let i = 0; i < many; i++) lots.push(payload[key][i % payload[key].length]);
   out[key] = {
-    zero: draw(key, []),
-    one: draw(key, payload[key].slice(0, 1)),
-    many: draw(key, lots),
+    zero: draw(key, sized(key, 0)),
+    one: draw(key, sized(key, 1)),
+    many: draw(key, many === 0 ? sized(key, 0) : sized(key, many)),
   };
 }
 
@@ -195,7 +227,7 @@ for (const key of swept) {
 }
 
 process.stdout.write(JSON.stringify({
-  records, elsewhere, swept, placed, out,
+  records, maps, shape, elsewhere, swept, placed, out,
   registered: chapters.CHAPTERS.flatMap((c) => c.sections),
   unchaptered: chapters.UNCHAPTERED.id,
 }) + "\n");
@@ -230,6 +262,24 @@ def swept(tmp_path_factory):
     return json.loads(result.stdout.strip().splitlines()[-1])
 
 
+#: `UX-419`: the three shapes a population is drawn in, and the one
+#: question every clause below asks of them - *how many of these can a
+#: reader see, out of how many there are*. Rows came first, `UX-413`
+#: added cards, and the map went unread for six rounds because nothing
+#: named the shape. A clause that reads one shape is a clause the next
+#: shape walks past.
+DRAWN_AS = (("shown", "rows"), ("cards_shown", "cards"),
+            ("pairs_shown", "pairs"))
+
+
+def _seen(leg):
+    """`(visible, total)` for whichever shape this leg drew, or None."""
+    for visible, total in DRAWN_AS:
+        if leg.get(total):
+            return leg.get(visible, 0), leg[total]
+    return None
+
+
 @needs_node
 class TestTheSweepReachesEveryPopulation:
     """The instrument's own coverage, before any leg is read."""
@@ -245,14 +295,30 @@ class TestTheSweepReachesEveryPopulation:
             assert named in swept["swept"], swept["swept"]
 
     def test_nothing_published_is_left_out(self, swept):
-        """Every record population is either swept or has a written
+        """Every published population is either swept or has a written
         reason not to be. `DRAWN_ELSEWHERE` is that reason and it is a
         sentence per key, so this cannot be satisfied by a bare skip
-        list."""
-        missed = [key for key in swept["records"]
+        list.
+
+        `UX-419`: **and maps count as published.** This read
+        `swept["records"]` only, so a whole shape could be left out
+        without the clause noticing - which is exactly what happened,
+        for six rounds."""
+        missed = [key for key in (*swept["records"], *swept["maps"])
                   if key not in swept["swept"]
                   and key not in swept["elsewhere"]]
         assert missed == [], missed
+
+    def test_it_sweeps_both_shapes(self, swept):
+        """What keeps the clause above from being satisfied by an empty
+        set of maps: the payload really does publish both, and the
+        sweep really does reach both."""
+        drawn = {swept["shape"][key] for key in swept["swept"]}
+        assert drawn == {"record", "map"}, drawn
+        maps = [k for k in swept["swept"] if swept["shape"][k] == "map"]
+        assert len(maps) >= 5, maps
+        for named in ("by_binary", "wall_clock_share_us"):
+            assert named in maps, maps
 
     def test_the_threshold_is_the_one_this_sweep_was_sized_for(self):
         """`MANY` is three times the threshold *as measured*, not three
@@ -376,6 +442,23 @@ class TestOne:
                    for legs in swept["out"].values())
         assert seen >= 5, f"only {seen} copy control(s) rendered at one row"
 
+    def test_a_map_of_many_is_bounded_like_a_table(self, swept):
+        """`UX-419` named, so the shape cannot go quiet again.
+
+        The clauses above read whichever shape a section drew, which is
+        the right rule and also the one that hides a regression: if
+        every map stopped drawing pairs, `_seen` would return `None`
+        and they would all pass. This asserts the maps are there and
+        bounded, by name."""
+        maps = {key: _seen(legs["many"]) for key, legs in swept["out"].items()
+                if swept["shape"][key] == "map"}
+        drawing = {key: seen for key, seen in maps.items() if seen}
+        assert len(drawing) >= 5, maps
+        for key, (shown, total) in drawing.items():
+            if total <= BOUND:
+                continue
+            assert shown <= BOUND, (key, shown, total)
+
     def test_a_population_of_one_is_never_bounded(self, swept):
         """A Top-N over one row would hide the only row there is."""
         hiding = {key: legs["one"] for key, legs in swept["out"].items()
@@ -400,13 +483,13 @@ class TestMany:
     def test_a_long_population_opens_bounded(self, swept):
         drawn_whole = {}
         for key, legs in swept["out"].items():
-            many = legs["many"]
-            # The header row rides along with the body, so the bound is
-            # `BOUND` rows plus it.
-            if many.get("shown", 0) > BOUND + 1:
-                drawn_whole[key] = many["shown"]
-            elif many.get("cards_shown", 0) > BOUND:
-                drawn_whole[key] = many["cards_shown"]
+            seen = _seen(legs["many"])
+            # The header row rides along with the body, so a table's
+            # bound is `BOUND` rows plus it; a card or a pair has no
+            # header, so `BOUND` is the whole allowance.
+            allowed = BOUND + (1 if legs["many"].get("rows") else 0)
+            if seen and seen[0] > allowed:
+                drawn_whole[key] = seen[0]
         assert drawn_whole.keys() == self.UNBOUNDED.keys(), (
             f"drawing every one of {MANY} at once: {drawn_whole}; the "
             f"ledger says {sorted(self.UNBOUNDED)}")
@@ -432,10 +515,10 @@ class TestMany:
         tell a filtered table from a small one."""
         silent = {}
         for key, legs in swept["out"].items():
-            many = legs["many"]
-            if key in self.UNBOUNDED or not many.get("rows"):
+            seen = _seen(legs["many"])
+            if key in self.UNBOUNDED or not seen or seen[0] == seen[1]:
                 continue
-            badges = many.get("badges") or []
+            badges = legs["many"].get("badges") or []
             if not any(f" of {MANY}" in badge for badge in badges):
                 silent[key] = badges
         assert silent == {}, silent
@@ -445,8 +528,10 @@ class TestMany:
         """The ledger's other half: everything not in it is bounded to
         the viewer's own number, so raising `TABLE_OPENS_BOUNDED_ABOVE`
         without saying so moves this rather than passing quietly."""
-        bounded = {key: legs["many"]["shown"]
+        bounded = {key: _seen(legs["many"])
                    for key, legs in swept["out"].items()
-                   if key not in self.UNBOUNDED and legs["many"].get("rows")}
+                   if key not in self.UNBOUNDED and _seen(legs["many"])}
         assert bounded, "nothing was bounded; the sweep measured nothing"
-        assert all(shown <= BOUND + 1 for shown in bounded.values()), bounded
+        over = {key: seen for key, seen in bounded.items()
+                if seen[0] > BOUND + 1}
+        assert over == {}, over

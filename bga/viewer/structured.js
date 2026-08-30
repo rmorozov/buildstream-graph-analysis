@@ -35,6 +35,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, applyPreset, openingBound, plural,
+         boundPairs,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -1387,9 +1388,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     const described = hintsOf(child).description;
     let cell;
     // UX-208: a nested array of objects is a *table*, not a JSON dump.
-    // `critical_path_detail` - the list of elements the whole
-    // report is about - rendered as a `<pre>` of raw JSON, which is
-    // why nothing in it was sortable, filterable or one click from
+    // `critical_path_detail` rendered as a `<pre>` of raw JSON, so
+    // nothing in it was sortable, filterable or one click from
     // investigation. Same renderer, same declarations, one level down.
     if (Array.isArray(value) && value.length
         && value.every((item) => item && typeof item === "object"
@@ -1485,7 +1485,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                     tools, table));
     }
   }
-  parts.push(list);
+  // `UX-419`: a map grows with the payload too, and had no bound at all.
+  parts.push(list, boundPairs(list, TABLE_OPENS_BOUNDED_ABOVE));
   return el("section", { "data-section": key, "data-rail": heading(key, hint).rail },
                         ...parts);
 }

@@ -537,7 +537,11 @@ COMMITTED_EXPORTS = [
     # that says which trace format a canned query needs and why an
     # empty result is the format's, plus the two declarations it reads.
     # `UX-394`: +2,923 B, all source; see the note on `PAGE_BUDGET_B`.
-    ("golden", GOLDEN, 385_000),                       #  382,629 B
+    # `UX-419`: +620 B here too, all source - see the note on the
+    # `macro_micro` bound below. 384,838 leaves 162 B of headroom, so
+    # the bound moves with the measurement rather than being ridden to
+    # its edge by the next change.
+    ("golden", GOLDEN, 386_000),                       #  384,838 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -578,7 +582,15 @@ COMMITTED_EXPORTS = [
     # `UX-389`: +3,380 B, split in the note above the golden bound.
     # `UX-390`: +995 B, all source.
     # `UX-393`: +3,236 B, all source. `UX-396`: +789 B, all contract.
-    ("macro_micro", MACRO_MICRO, 440_000),             #  437,962 B
+    # `UX-419`: +620 B, all **source** - `boundGroups` and `boundPairs`,
+    # the bound a map section never had. Both committed fixtures move by
+    # the same 620 and the page half moves with them (283,964 ->
+    # 284,584), which is the signature of source: no control is rendered
+    # here at all, because neither fixture publishes a map over
+    # `TABLE_OPENS_BOUNDED_ABOVE` keys. That is the same absence that
+    # let the defect live - the bound is measured by `UX-400`'s sweep at
+    # 120 keys, not by a fixture.
+    ("macro_micro", MACRO_MICRO, 441_000),             #  440,201 B
 ]
 
 

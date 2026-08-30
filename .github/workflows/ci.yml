@@ -46,17 +46,19 @@ jobs:
       # why the budget is enforced here rather than trusted.
       #
       # UX-363: re-measured 2026-08-29 across all four interpreters -
-      # 17.3-25.9s on this step; 31s is the bound. It is sized so that
-      # one *large* file landing in the default tier trips it even on
-      # the runner's fastest run (17.3 + 15.0 = 32.3s > 31s) while its
-      # slowest normal run does not - for three rounds it was 90s
+      # 17.3-25.9s on this step; 31s was the bound. Round 66 met a
+      # slower runner still (29s on 3.9, run 33303144837) and the bound
+      # is 32s. It is sized so that one *large* file landing in the
+      # default tier trips it even on the runner's fastest run
+      # (17.3 + 15.0 = 32.3s > 32s) while its slowest normal run does
+      # not - for three rounds it was 90s
       # against a tier that kept shrinking, and a file at twice the
       # large floor tripped nothing. Keep in step with
       # SMALL_TIER_BUDGET_S in tests/tiers.py, which states the
       # inequality, carries the per-interpreter table and is guarded
       # on it.
       - name: Test (small tier, budgeted)
-        run: timeout 31 make test-small
+        run: timeout 32 make test-small
 
       # UX-420: one interpreter writes a report, because one is enough
       # to read this runner against its own past and four would be four
@@ -101,11 +103,16 @@ jobs:
       # 20.5-23.8s). Re-measured 2026-08-29 the two are within a second
       # of each other on every interpreter (17.03-27.0 here against
       # 17.34-25.85 there), so the gap between the budgets is now one
-      # second rather than six. It went unguarded until UX-363: the
+      # second rather than six. Round 66 kept that gap and moved both
+      # up one - this step was killed at 30s on 3.9 (run 33303144837)
+      # while three interpreters passed it, so the extreme is the
+      # runner rather than the tier and 31s is the new bound. Its
+      # window is now about a second wide either side; UX-421 is filed
+      # for what to do when it closes. It went unguarded until UX-363: the
       # partition guard's regex stopped at the first `timeout` in this
       # file. SMALL_TIER_BUDGET_1P_S in tests/tiers.py.
       - name: Test (small tier, single process)
-        run: PYTEST_XDIST= timeout 30 make test-small
+        run: PYTEST_XDIST= timeout 31 make test-small
 
   packaging:
     # UX-77: the front door. Every `bga wrap/extract/capture/...` alias

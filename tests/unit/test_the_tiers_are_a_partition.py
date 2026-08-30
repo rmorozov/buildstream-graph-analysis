@@ -155,7 +155,17 @@ class TestTheDefaultTierStaysFast:
         budget = re.search(pattern, workflow)
         assert budget, f"no small-tier step matching {pattern!r}, so no budget"
         declared = getattr(tiers, constant)
-        assert int(budget.group(1)) == int(declared), (
+        # `int(declared)` was the comparison until round 66, and it
+        # truncated: a declared 31.5 read as equal to `timeout 31`, so
+        # the two copies could disagree by up to a second and this
+        # clause - whose whole job is that they do not - saw nothing.
+        # Found by mutating the constant rather than by reading it.
+        # `timeout` takes whole seconds, so a fractional budget is not a
+        # near-miss to be tolerated but a number CI cannot express.
+        assert declared == int(declared), (
+            f"{constant} is {declared}s, and a CI `timeout` is whole "
+            f"seconds - there is no workflow line this can equal")
+        assert int(budget.group(1)) == declared, (
             f"CI budgets {budget.group(1)}s, tests/tiers.py declares "
             f"{declared}s as {constant} - two copies of one number")
 

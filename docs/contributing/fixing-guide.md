@@ -228,6 +228,8 @@ tools/dev_process_bands.py  what the process did to itself, from the committed O
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
+tools/dev_perfetto_queries.py  the canned questions, run against a real
+                             trace with Perfetto's own reader (UX-432)
 ```
 
 **Tests and docs:**

@@ -1,6 +1,6 @@
 # UX-419: a map population is bounded by nothing, and the sweep cannot see it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Found by:** UX-411's measurement | **Serves:** anyone whose run has many binaries or many tasks | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** UX-411's measurement | **Serves:** anyone whose run has many binaries or many tasks | **Topic:** viewer
 
 ## Motivation
 
@@ -70,3 +70,115 @@ three bugs — steps over every section of this shape.
 - `UX-400`'s sweep discovers `by_binary` and `wall_clock_share_us` and
   asserts all three legs over them, with the ledger for each leg
   empty or filed.
+
+## Outcome (round 66, 2026-08-30) — 🟢 Done
+
+### The gap, measured
+
+Each of `UX-396`'s two ranked maps rendered at 120 keys, in the shim,
+exactly as `UX-400`'s sweep renders a record population:
+
+```text
+by_binary            entries 120   drawn 120   shown 120   tables 0
+wall_clock_share_us  entries 120   drawn 120   shown 120   tables 0
+```
+
+Every pair drawn, nothing hidden, no table and therefore no badge, no
+filter, no preset and no `N of M`.
+
+### After
+
+```text
+by_binary            entries 120   drawn 120   shown 40
+                     badge "40 of 120"   control "Show all 120 rows"
+wall_clock_share_us  entries 120   drawn 120   shown 40
+                     badge "40 of 120"   control "Show all 120 rows"
+```
+
+`drawn` stays 120 because the pairs are **hidden, not removed** — the
+rule `foldTheMiddle` and `boundCards` already follow, so Ctrl-F, the
+export and every anchor keep working.
+
+### One bound, three shapes
+
+`boundCards` was already the right shape for a different element, so it
+was generalised rather than copied. `boundGroups(groups, bound, noun)`
+takes *groups of nodes* — one card, or a `<dt>` and its `<dd>` — hides
+past the bound and returns the badge-plus-control. `boundCards` is now
+three lines on top of it and `boundPairs` collects the pairs.
+
+A `<dt>` and its `<dd>` are one thing to a reader, so they are one
+group. Hiding the value and leaving the term is its own bug, and
+mutation A3 below is that mutation.
+
+### The half worth more than the bound
+
+`UX-400`'s sweep discovered its populations as **arrays of objects**:
+
+```js
+.filter(([, v]) => Array.isArray(v) && v.length && v.every(...))
+```
+
+A map of numbers is not one, so the file written to stop the next
+population shipping the same three bugs stepped over an entire shape —
+which is why this defect survived. The discovery rule now finds both,
+and the sweep renders each at zero, one and many *in the shape the
+payload publishes it in*:
+
+```text
+records: 11   maps: 11   swept: 20
+maps swept: attribution, by_binary, configure_phase, cpu_time,
+            document_shape, graph_metrics, graph_summary, peak_memory,
+            ready_queue, wall_clock_share_us
+```
+
+**Ten new populations, and every leg is clean** — no ledger. The zero
+leg marks `data-empty` and says "found none" on all ten, which is
+`UX-388`'s fix reaching a shape nobody had checked it against; the one
+leg draws one pair; the many leg draws 40 of 120.
+
+Every clause that reads a count now reads it through `_seen`, which
+returns `(visible, total)` from whichever of rows, cards or pairs the
+section drew. A clause that reads one shape is a clause the next shape
+walks past, and that is the whole finding.
+
+### The export moved, and the way it moved is the point
+
+```text
+page          283,964 -> 284,584   (+620, source)
+golden        384,218 -> 384,838
+macro_micro   439,581 -> 440,201
+```
+
+Both fixtures move by exactly the same 620 B as the page, which is the
+signature of source: **no control is rendered on either of them**,
+because neither publishes a map over 40 keys. That is the same absence
+that let the defect live — the bound is measured by `UX-400`'s sweep at
+120 keys, not by a fixture. Both bounds restated with the measurement.
+
+### Mutations verified red and reverted (3)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | the pair list unbounded again — the filed defect | `test_a_map_of_many_is_bounded_like_a_table`, `test_a_long_population_opens_bounded`, `test_the_bound_holds_at_the_threshold_the_viewer_declares`; 3 failed, 16 passed |
+| A2 | the sweep's map discovery matches nothing — the shape-shaped hole restored | `test_it_sweeps_both_shapes`, `test_a_map_of_many_is_bounded_like_a_table`; 2 failed, 17 passed |
+| A3 | `boundPairs` groups on `<dd>`, hiding each value and leaving its term | the same three as A1; 3 failed, 16 passed |
+
+A2 is the one that matters most: it proves the *instrument* is what
+changed, not only the page. A3 is the direction that would have looked
+right — 40 values shown — while leaving 120 terms on screen.
+
+`test_a_map_of_many_is_bounded_like_a_table` exists because the other
+clauses read whichever shape a section drew: if every map stopped
+drawing pairs, `_seen` would return `None` and they would all pass.
+That clause names the shape.
+
+### Deviation from the Required Fix
+
+- **None.** The bound folds to the first `TABLE_OPENS_BOUNDED_ABOVE`
+  entries in the payload's order, says `40 of 120`, and gives one
+  control that shows the rest; the sweep reaches map populations at all
+  three sizes. The Out of Scope holds: no map became a table, and no
+  order was chosen — publication order is still the emitter's.

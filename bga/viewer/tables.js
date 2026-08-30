@@ -205,21 +205,65 @@ export function badgeText(shown, total) {
  * denominator so a bounded list cannot be mistaken for a short one.
  */
 export function boundCards(section, selector, bound, noun = "item") {
-  const cards = [...(section.querySelectorAll?.(selector) ?? [])];
-  if (cards.length <= bound) return null;
-  for (const [index, card] of cards.entries()) card.hidden = index >= bound;
-  const badge = el("span", { class: "badge" }, badgeText(bound, cards.length));
+  const note = boundGroups(
+    [...(section.querySelectorAll?.(selector) ?? [])].map((c) => [c]),
+    bound, noun);
+  if (note) section.append(note);
+  return note;
+}
+
+/**
+ * The same bound over anything drawn as repeated groups of nodes.
+ *
+ * `groups[i]` is every node belonging to the i-th thing - one card, or
+ * a `<dt>` and its `<dd>`. Past `bound` they are hidden, not removed,
+ * for the reason `foldTheMiddle` hides rather than removes: Ctrl-F, the
+ * export and every anchor keep working. Returns the control, or `null`
+ * when there was nothing to bound.
+ */
+export function boundGroups(groups, bound, noun = "item") {
+  if (groups.length <= bound) return null;
+  for (const [index, group] of groups.entries()) {
+    for (const node of group) node.hidden = index >= bound;
+  }
+  const badge = el("span", { class: "badge" },
+                   badgeText(bound, groups.length));
   const more = el("button", { type: "button", class: "show-all-cards" },
-                  `Show all ${plural(cards.length, noun)}`);
+                  `Show all ${plural(groups.length, noun)}`);
   more.addEventListener("click", () => {
-    for (const card of cards) card.hidden = false;
-    badge.textContent = badgeText(cards.length, cards.length);
+    for (const group of groups) for (const node of group) node.hidden = false;
+    badge.textContent = badgeText(groups.length, groups.length);
     more.hidden = true;
   });
-  const note = el("p", { class: "muted card-bound",
-                         "data-role": "card-bound" }, badge, " ", more);
-  section.append(note);
-  return note;
+  return el("p", { class: "muted card-bound", "data-role": "card-bound" },
+            badge, " ", more);
+}
+
+/**
+ * `UX-419`: the same bound over a pair list.
+ *
+ * `UX-413` bounded tables and `boundCards` bounded the cards
+ * `renderFindings` draws, and both missed the third shape the page has:
+ * a section whose payload is a **map** - one measure per key - is drawn
+ * by `renderPairs`, which had no bound at all. Measured at 120 keys,
+ * `by_binary` and `wall_clock_share_us` drew every pair, no table, no
+ * badge and no control.
+ *
+ * The sizes are not hypothetical: `wall_clock_share_us` is one duration
+ * *per task uid*, so it is the element population by another name -
+ * 1,202 keys on the scale run.
+ *
+ * A `<dt>` and its `<dd>` are one thing to a reader, so they are one
+ * group here; hiding the term and leaving the value is the shape of bug
+ * this file exists to avoid.
+ */
+export function boundPairs(list, bound, noun = "row") {
+  const groups = [];
+  for (const node of list.children ?? []) {
+    if (String(node.tagName).toLowerCase() === "dt") groups.push([node]);
+    else if (groups.length) groups[groups.length - 1].push(node);
+  }
+  return boundGroups(groups, bound, noun);
 }
 
 /** What "copy row" puts on the clipboard: the published values, keyed

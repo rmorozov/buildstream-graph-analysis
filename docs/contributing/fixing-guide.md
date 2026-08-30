@@ -39,6 +39,13 @@ guide is right and the skill is a bug.
 
 **A task may only be marked 🟢 Fixed & Verified if you have personally run its Acceptance Test in this session and it passed.** Self-assessment ("this looks correct now") is not sufficient — that is exactly how the scheduler-wait regression above happened.
 
+**Some acceptance tests cannot run here.** A claim about behaviour
+across machines — more than one runner, a loaded runner, CI's own clock —
+has no local instrument, and `make test` in this container cannot falsify
+it. CI runs on `pull_request` and pushes to `main` only, so for that kind
+of work open the PR (draft is fine) before starting rather than after.
+The `verify` skill's section 7 has the sequence and its limits.
+
 For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.

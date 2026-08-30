@@ -135,3 +135,55 @@ will read it instead of the code:
   before the commit lands (§3.11) — id, one line, 🔴, topic `docs`.
 - Did a number an earlier task file presents as current move? Annotate
   that file (§3.6); `git grep <old figure> docs/backlog/scenarios`.
+
+## 7. When the gate is not on this machine
+
+Some claims cannot be checked here at all. Three of round 68's five
+items were about measuring *across* machines, and a session container
+has one machine and one clock:
+
+- `UX-421` — "fails on the fastest runner seen and on the slowest"
+  needs more than one runner to mean anything.
+- `UX-422` — the failure was a loaded runner, and eight CPU spinners
+  on four cores did not reproduce it. The floor probe read 0.00 ms
+  every time.
+- `UX-423` — the reference is CI's own clock, and `UX-418` established
+  that a local report cannot be read against it in any form.
+
+For those, CI is not a slower copy of `make test`. It is the only
+instrument that exists.
+
+**CI runs on `pull_request` and on pushes to `main`, and nothing
+else** — see `.github/workflows/ci.yml`, and
+`test_the_workflow_runs_only_where_the_skill_says` holds these two
+copies of that fact together. A branch with no PR collects no runs at
+all, however many times you push. So when the round's work is of that
+kind, open the PR — a draft is fine — *before* the work rather than
+after, and let each commit collect a run while you move on.
+
+What follows from that:
+
+1. **Per item:** implement, `make test-touching`, mutate every new
+   guard until it reddens, commit, push. Do not wait for the run.
+2. **Between items:** read the check runs — one call, and no log
+   unless something is red.
+3. **At the end:** `make test` here, plus whatever CI has batched up.
+
+**Batch what is cheap to fix late; never batch a design decision.**
+Lint, a docs link, an index count, an unrelated module you broke — all
+cheap, and CI finds them while you work on the next thing. A wrong
+*design* is not: round 66 spent three red CI rounds on three wrong
+designs for one check, and four items built on top of one of those
+would have meant unwinding four commits.
+
+### Why this is here and not in the fixing guide's hard rules
+
+**One round is not a baseline.** The sequence above is one session's
+experience, and nobody has measured whether it costs less than the
+alternative — no wall-clock or context figures were collected, so
+"it was faster" is not a claim this repository is entitled to make yet.
+`UX-420` sized a threshold on one sample and its first armed run named
+thirty-one files on an unchanged suite; asserting a process rule on one
+round is the same shape of mistake one level up. The trigger fact is a
+fact and is stated as one; the loop is guidance until some round
+measures it.

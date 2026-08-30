@@ -1,6 +1,6 @@
 # UX-415: the shared node probe says `file:` and always measures `http:`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** UX-402's journey guard | **Serves:** every guard that boots the page in node | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-402's journey guard | **Serves:** every guard that boots the page in node | **Topic:** guards
 
 ## Motivation
 
@@ -69,3 +69,116 @@ other half of the harness, which never got it.
 - With `PROTOCOL="file:"`, `location.href` starts with `file:`.
 - `UX-402`'s empty-population clause runs green through the probe
   rather than needing a browser, and the browser reading agrees.
+
+## Outcome (round 65, 2026-08-30) — 🟢 Done
+
+### The gap, measured
+
+The probe set one of the two halves of a URL from `PROTOCOL` and left
+the other on a constant:
+
+```js
+globalThis.location = { protocol: protocol.startsWith("http") ? "http:" : "file:",
+                        href: "http://127.0.0.1:8000/index.html" };
+```
+
+Measured through the new clause, with the old line restored:
+
+```text
+AssertionError: a relative trace resolves to
+'http://127.0.0.1:8000/timeline.json.gz' under 'file:' - the branch a
+reader's browser takes and this harness cannot see
+2 failed, 16 passed in 13.70s
+```
+
+And on a run whose trace really is a path — `UX-402`'s journey capture,
+booted through the probe rather than through Chrome:
+
+```text
+AssertionError: Could not load this run
+1 passed, 12 deselected, 2 errors in 45.70s
+```
+
+### After
+
+```text
+tests/unit/test_a_report_you_can_navigate.py  18 passed in 13.40s
+tests/unit/test_the_journey_has_an_answer_key.py -k Incremental
+                                               3 passed in 45.96s
+```
+
+### One boolean, read twice
+
+`protocol` and `href` are now derived from a single `served`, so they
+cannot drift:
+
+```js
+const served = protocol.startsWith("http");
+globalThis.location = {
+  protocol: served ? "http:" : "file:",
+  href: served ? "http://127.0.0.1:8000/index.html"
+               : pathToFileURL(process.env.PAGE).href,
+};
+```
+
+The clause that keeps them honest is in two parts, because the string
+and the resolution are different claims: one reads `location.href`'s
+prefix, the other runs `wireTheHandoff`'s own computation
+(`new URL(traceUrl(), location.href)`) over the probe's base. Only the
+second is what a consumer does, and only the second would have caught
+this — an `href` of `http://…` under a `file:` protocol is wrong in a
+way a prefix check finds, but the reason it *matters* is the join.
+
+### The second half of the finding is empty, and that is a measurement
+
+The filing asks: re-run every guard that passes `PROTOCOL="file:"`, and
+any clause that moves was measuring the served path under an export's
+name. Eleven files, 222 clauses:
+
+```text
+222 passed in 37.19s
+```
+
+**Nothing moved.** Not because the defect was harmless, but because
+every one of those guards renders a *committed fixture*, and both
+fixtures inline their trace as a `data:` URL — which `new URL()` keeps
+whatever the base is. The only reading that could move is one over a
+capture too large to inline, and there was exactly one such guard:
+`UX-402`'s, which is why it is the one that found this.
+
+### `UX-402` reads the page through the probe now
+
+The filing's acceptance test, delivered: the empty-population clause
+boots the shared probe instead of Chrome, and a second clause asserts a
+real browser reads the same page identically. The agreement is a guard
+rather than a one-off check, because a shim that drifts from the
+browser is this same defect one layer down.
+
+### A second site, found on the way
+
+`tests/unit/test_the_shape_before_the_rows.py` carries its own probe
+with the same inconsistency (`href: "http://x/"` under any `PROTOCOL`).
+No consumer there resolves a URL today — it calls render functions
+directly and its `getElementById` returns `null`, so `wireTheHandoff`
+exits early — which is precisely why it would have been the next one to
+bite. Fixed in the same commit and recorded rather than left.
+
+### Mutations verified red and reverted (2)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `href` back to the served constant | `test_the_url_agrees_with_the_protocol[file:]` and `test_a_relative_trace_resolves_to_that_protocol[file:]`; 2 failed, 16 passed |
+| A2 | the same, against a real path-shaped trace | `UX-402`'s `exported` fixture, on `Could not load this run`; 1 passed, 2 errors |
+
+A2 is the one that matters: A1 proves the strings agree, A2 proves the
+page boots. The mutation is the same edit both times and the two
+failures are different, which is the distinction this item is about.
+
+### Deviation from the Required Fix
+
+- **None** on the three bullets. The second — "any clause that moves
+  was measuring the served path under an export's name" — returned an
+  empty set, and the reason is written above rather than reported as a
+  clean bill of health.

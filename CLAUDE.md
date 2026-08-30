@@ -37,6 +37,10 @@ with `-x` or under `pdb`.
   index row. `dev_close_task.py` edits both.
 - `docs/spec/specification.md` is ground truth — read line ranges,
   never the whole file, and never edit it outside the Part 32 registry.
+- **Send wide reading to a subagent.** A backlog sweep, a "where is
+  this" question, a large log — `.claude/agents/researcher.md` reads it
+  and returns the conclusion, so the reading never enters the main
+  session's context. One CI job log ran to 63 KB in round 66.
 
 ## Architecture
 

@@ -380,7 +380,20 @@ def test_the_two_line_loop_on_a_real_build(tmp_path):
     from tests.unit._bst_env import isolated_bst_env
 
     project = tmp_path / "proj"
-    shutil.copytree(source, project, symlinks=True)
+    # `UX-459`: without the exclusion this copies the example's own
+    # committed capture, and the project arrives with a store already in
+    # it - so the clause below, which asserts the words "first snapshot",
+    # reads a *comparison* instead. That is what this looked like:
+    #
+    #   assert "first snapshot" in first.stdout
+    #   E  ... '... 246.4K over 2 snapshot(s).'
+    #
+    # `test_the_journey_has_an_answer_key.py` has excluded `.bga` since it
+    # was written, for the same reason on the one example that already had
+    # one. Copying an example project root is now a thing with a
+    # precondition.
+    shutil.copytree(source, project, symlinks=True,
+                    ignore=shutil.ignore_patterns(".bga"))
     # Prepended, not assigned: `isolated_bst_env` may have put the real
     # user site-packages on PYTHONPATH to survive the changed HOME, and
     # replacing it takes jinja2 away from `bst` (UX-84's own trap).

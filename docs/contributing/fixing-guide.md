@@ -230,6 +230,8 @@ tools/dev_tier_drift.py      which files outgrew their tier, from the
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
 tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)
+tools/dev_finding_coverage.py  which findings a committed capture really
+                             produces, read off analyze (UX-460)
 ```
 
 **Tests and docs:**

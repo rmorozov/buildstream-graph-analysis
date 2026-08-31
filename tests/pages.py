@@ -169,7 +169,8 @@ def scale_run(into) -> pathlib.Path:
     return run
 
 
-def scale_two_plane_snapshot(into, per_element=12) -> pathlib.Path:
+def scale_two_plane_snapshot(into, per_element=12,
+                             programs=("cc",)) -> pathlib.Path:
     """`UX-430`: the scale run, wrapped as a two-plane **snapshot**.
 
     `scale_run` gives 1,202 elements as a run directory; a timeline needs
@@ -184,6 +185,12 @@ def scale_two_plane_snapshot(into, per_element=12) -> pathlib.Path:
     (`_write_trackevent`). Twelve is a plausible compile job - a shell
     and eleven children - and the caller can ask for another number,
     which is what makes the bound measurable rather than asserted.
+
+    `programs` are the executables the processes run, cycled through.
+    The default is one, which keeps the track measurement above about
+    tracks; `UX-433` passes a real toolchain's worth, because the cost of
+    a per-slice executable annotation depends on how many distinct ones
+    there are and a fixture with one program measures the best case.
 
     Returns the **snapshot**, not the run: `bga timeline` takes it.
     """
@@ -217,12 +224,14 @@ def scale_two_plane_snapshot(into, per_element=12) -> pathlib.Path:
         for child in range(per_element):
             pid += 1
             began = 1000.0 + index + child / 100.0
+            program = programs[(index + child) % len(programs)]
+            command = f"{program} -c f{child}.c"
             raw.append(f"START pid={pid} ppid=1 ts={began:.6f} element={uid} "
-                       f"inv=inv-{index} src=spine cmd=cc -c f{child}.c\n")
+                       f"inv=inv-{index} src=spine cmd={command}\n")
             raw.append(f"END pid={pid} ppid=1 ts={began + 0.05:.6f} "
                        f"element={uid} inv=inv-{index} src=spine exit=0 "
                        f"utime=0.01 stime=0.01 maxrss_kb=1024 "
-                       f"cmd=cc -c f{child}.c\n")
+                       f"cmd={command}\n")
     lines.append(f"[wrapper][{stamp(2.0 + len(elements))}] INFO: Return "
                  f"code: 0")
     (snapshot / "build.log").write_text("\n".join(lines) + "\n",

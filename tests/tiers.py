@@ -468,6 +468,10 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-433`, tiered on landing. One `gen-synthetic` run and one
+    # render of a 1,202-element two-plane snapshot, then the pivot
+    # queries against a SQLite table. 1.6s.
+    "tests/unit/test_the_build_pivots_by_program.py",             #  1.6s
     # `UX-430`, tiered on landing. Two `gen-synthetic` runs and six
     # renders of a 1,202-element two-plane snapshot - the size the
     # track bound is measured at, which is the whole point of the

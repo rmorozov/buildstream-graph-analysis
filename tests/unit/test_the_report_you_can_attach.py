@@ -603,7 +603,11 @@ COMMITTED_EXPORTS = [
     # `build.log`.
     # `UX-434`: +320 B on both, all source - see the note on
     # `PAGE_BUDGET_B` above for what the query bought and what it cost.
-    ("golden", GOLDEN, 387_500),                       #  386,192 B
+    # `UX-433`: +1,841 B on both, all **source** - `debug.exe` and the
+    # `cost-by-executable` pivot it made possible. No payload: neither
+    # committed export carries a timeline, so neither has a Plane 2
+    # slice to annotate.
+    ("golden", GOLDEN, 390_000),                       #  388,033 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -654,7 +658,7 @@ COMMITTED_EXPORTS = [
     # 120 keys, not by a fixture.
     # `UX-431`: +1,120 B, all source - the same paragraph as golden;
     # the split is in the note above that bound.
-    ("macro_micro", MACRO_MICRO, 443_000),             #  441,545 B
+    ("macro_micro", MACRO_MICRO, 445_000),             #  443,386 B
 ]
 
 

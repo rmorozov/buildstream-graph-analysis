@@ -234,6 +234,52 @@ order by s.dur desc
 limit 40;`,
   },
   {
+    // `UX-433`: the pivot the library had no key for. `element-commands`
+    // above groups by `s.name`, which is the whole command line - 14,424
+    // near-unique strings on the audited capture - so it answers one row
+    // per invocation and cannot answer one per program. `debug.exe` is
+    // the key; these two are what it is for.
+    id: "cost-by-executable",
+    category: "resources",
+    plane: "Plane 2",
+    title: "Which programs is this build made of?",
+    returns: [
+      ["exe", "the program, argv stripped - the path as it was exec'd"],
+      ["runs", "how many times it ran"],
+      ["wall_seconds", "wall time summed over those runs"],
+      ["cpu_seconds", "CPU time summed over them, which exceeds wall "
+                      + "where they overlapped"],
+      ["peak_rss_kb", "the largest single resident set any one of them "
+                      + "reached - never a sum, which no moment held"],
+    ],
+    why:
+      "Plane 2 only - the executable rides the process record, and a " +
+      "Plane 1 slice is a task rather than a program. The pivot: how " +
+      "much of this build is the compiler, how much the linker, how " +
+      "much the shell. Wall time says what the build waited " +
+      "on and CPU says what it burned - a program whose CPU far exceeds " +
+      "its wall ran in parallel with itself, and one whose wall exceeds " +
+      "its CPU was waiting. Group on the path rather than the basename " +
+      "so a compiler's own `cc1` stays separate from the `cc` that ran " +
+      "it; trim it in the query if the coarser answer is the one you " +
+      "want.",
+    sql: `select exe,
+       count(*) as runs,
+       sum(dur) / 1e9 as wall_seconds,
+       sum(cpu_us) / 1e6 as cpu_seconds,
+       max(rss_kb) as peak_rss_kb
+from (select extract_arg(s.arg_set_id, 'debug.exe') as exe,
+             extract_arg(s.arg_set_id, 'debug.cpu_us') as cpu_us,
+             extract_arg(s.arg_set_id, 'debug.max_rss_kb') as rss_kb,
+             s.dur
+      from slice s
+      where s.category glob '*native-process*'
+        and extract_arg(s.arg_set_id, 'debug.exe') is not null)
+group by exe
+order by wall_seconds desc
+limit 40;`,
+  },
+  {
     id: "dependency-wait",
     category: "dependencies",
     plane: "Plane 1",

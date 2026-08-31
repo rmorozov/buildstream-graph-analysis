@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-450 scenarios: **11 open**, 439 closed.
+451 scenarios: **11 open**, 440 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 69 |
 | analysis | 0 | 55 |
-| contracts | 0 | 49 |
-| viewer | 4 | 134 |
+| contracts | 1 | 50 |
+| viewer | 3 | 134 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 40 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-437 | [the host memory series is captured every run and read by nobody](UX-0437-the-host-series-is-captured-and-read-by-nobody.md) | viewer | High | anyone whose build was slow because the host ran out of memory | 🔴 |
 | UX-443 | [the served handoff cannot count its own edges](UX-0443-the-served-handoff-cannot-count-its-own-edges.md) | viewer | Medium | anyone who runs `bga view` and opens the handoff page instead of exporting a report | 🔴 |
 | UX-445 | [the track bound is one sample, and nothing has measured the cost it stands for](UX-0445-the-track-bound-is-one-sample.md) | guards | Medium | anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | 🔴 |
 | UX-446 | [a third ceiling, and no reader-facing document has it](UX-0446-a-third-ceiling-no-reader-facing-document-has.md) | docs | Medium | anyone whose export drops the timeline and goes looking for the reason | 🔴 |
@@ -47,6 +46,7 @@ task file, which is the only place it ever lived twice.
 | UX-449 | [a skip reason is only checked where the skip happens](UX-0449-a-skip-reason-is-only-checked-where-the-skip-happens.md) | guards | Medium | the contributor whose new guard skips for a reason nobody declared, who finds out from CI rather than from `make test` | 🔴 |
 | UX-450 | [two viewer modules sit exactly on the line-count ceiling](UX-0450-two-viewer-modules-sit-exactly-on-the-ceiling.md) | guards | Medium | the next round that adds anything to the viewer's two largest modules | 🔴 |
 | UX-451 | [the hand-off's refusal sentence is written into a 208px column](UX-0451-the-handoff-refusal-sentence-has-the-rails-width.md) | viewer | Medium | the reader whose hand-off failed - the only reader who ever sees this sentence | 🔴 |
+| UX-452 | [every capture writes a legacy Chrome trace that no reader opens](UX-0452-the-legacy-chrome-trace-is-written-and-never-read.md) | contracts | Low | the reader who tars a capture up for an issue, and pays for a file nobody reads | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

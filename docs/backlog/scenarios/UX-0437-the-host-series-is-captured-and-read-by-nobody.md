@@ -1,6 +1,6 @@
 # UX-437: the host memory series is captured every run and read by nobody
 
-**Priority:** High | **Status:** 🔴 Not Started | **Found by:** round 69, strand (a) of the outside walk — is every captured thing reachable? | **Serves:** anyone whose build was slow because the host ran out of memory | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, strand (a) of the outside walk — is every captured thing reachable? | **Serves:** anyone whose build was slow because the host ran out of memory | **Topic:** viewer
 
 ## Motivation
 
@@ -99,4 +99,176 @@ file is the defect this item is.
 
 ## Outcome
 
-_Not started._
+**Round 70, 2026-08-31.** The destination is the trace; the census that
+would have found this eight rounds ago now exists and found a second
+instance on its first run.
+
+### The destination, and why not the other two
+
+The trace, as counter tracks on the Plane 1 lane. A sample every two
+seconds is a **time series**, and the trace is the only surface in this
+tool with the build's own time axis to draw one against - the page has
+sections, not seconds. `UX-310` had already built the counter machinery
+for exactly this shape, so the cost is five track descriptors and one
+packet per sample. Naming a host as starved stays a finding and stays
+out, which is the split `UX-378` made.
+
+Placed **before** the `if not raw_log` return rather than beside the
+concurrency counter below it, because the host was sampled whether or
+not the build was traced: gating it on Plane 2's records would make the
+one series that says "the machine ran out of memory" visible only on
+captures that already had Plane 2.
+
+### The clock, which was wrong before it was right
+
+The first cut placed the samples with `offset_us` - the Plane 1 ↔ Plane
+2 alignment offset. That is the wrong number twice over: it is 0 on a
+capture with no Plane 2, which is exactly the capture this series is
+most worth having, and it is an *offset* rather than an origin, so the
+samples landed at the epoch. Measured, on the fixture:
+
+```text
+sample stamps, ns:  1874318860000  1876318860000  1878318860000
+the build:          1787331688483000000 .. 1787331734616000000
+```
+
+Fifty-six years early. The sampler writes the **pair** it read at one
+instant - `monotonic_at_start` and `wall_at_start` - so the walk from
+one clock to the other needs no anchor element at all, and
+`host_series` now returns wall-clock microseconds. The clause that
+caught it is the one this item's own falsification table calls M4: the
+first version of that clause checked only the *spacing* between
+samples, which is identical on any epoch, and it passed the bug. It
+reads the build's `wall_clock` window out of `run-context.json` now.
+
+### The series, on the capture the item was filed against
+
+```console
+$ PYTHONPATH=. python3 -m tools.bga_timeline \
+    examples/06-macro-micro-optimization/.bga/runs/20260830T171837Z \
+    -o /tmp/t437.pftrace
+Wrote Plane 1 to /tmp/t437.pftrace.
+  Plane 2 is not in it: the Plane 2 capture attributes no span to an element, ...
+  2 slices, 0 flows, 0 counters on 8 tracks. Open it with Perfetto ...
+  10 host counters on 5 tracks: host major faults, host memory available,
+  host pages swapped in, host pages swapped out, host swap free.
+```
+
+Decoded off the wire, with the units the descriptors carry:
+
+```text
+host major faults            faults   [39076, 39076]
+host memory available        bytes    [15907303424, 15884218368]
+host pages swapped in        pages    [0, 0]
+host pages swapped out       pages    [0, 0]
+host swap free               bytes    [0, 0]
+```
+
+`mem_available_kb` is multiplied by 1,024 once, here, so the counter a
+reader sees is in the unit its label claims - the item's second bullet.
+The three `/proc/vmstat` totals are cumulative since boot and are drawn
+as sampled; `docs/spec/trace-dictionary.md` says which three, because a
+reader differencing a level or levelling a difference gets a wrong
+answer either way.
+
+### `counters` is still the concurrency series
+
+`trace.counters` is the writer's total and three guards read the
+reported `counters` as `UX-310`'s series - `UX-430`'s narrowing guard
+compares `one["counters"] < whole["counters"]`, which folding a second
+population into would leave measuring something else. So the result
+gained `host_counters` and `host_series` of its own, and `counters`
+became `len(series)` - the same number it was, said in terms of the
+population it names. The Plane-1-only return hardcoded `"counters": 0`
+and would otherwise have reported zero on a trace with fifty samples in
+it.
+
+### The census, which is the third bullet
+
+`tests/unit/test_every_captured_file_has_a_consumer.py`. The
+instrument is deliberately **not** a text scan for the file name -
+fixing guide §5, and "the string `host-samples.jsonl` appears in a
+module" is its own example: it cannot tell a reader from a writer, from
+a constant, from a comment. `builtins.open` is wrapped while eight
+readers run over a complete capture, and the question is answered by
+what was actually opened. `gzip.open`, `json.load` off a path and
+`pathlib.read_text` all bottom out there.
+
+```text
+readers asked  bga analyze, bga blast, bga correlate, bga timeline,
+               bga view --export, bga view (payloads), the store
+               listing, the store's settings
+before         host-samples.jsonl    written every capture, opened by nobody
+               run/chrome_trace.json written every capture, opened by nobody
+after          host-samples.jsonl    opened by bga timeline
+               run/chrome_trace.json declared against `UX-452`
+```
+
+Two clauses keep the census from passing by having nothing to check:
+every reader must have run clean (a non-zero exit counts as a failure,
+because a command that stopped early opens nothing after it stopped),
+and the fixture must carry every file row the capture layout names.
+A third asserts each declared exemption is *still* unread, so a
+declaration cannot outlive the defect it describes.
+
+One correction inside the instrument, found by mutation: the first
+version recorded the path *before* calling through to `open`, so an
+attempted read of a missing file counted as a consumer -
+`read_host_samples` opens the path whether or not it is there, and the
+census would have passed on the very absence this item is about. It
+records after the open returns.
+
+### Falsification
+
+| # | mutation | result |
+|---|---|---|
+| M1 | delete the whole emission block | **red** — 8 clauses |
+| M2 | the fixture stops writing `host-samples.jsonl` (the item's own acceptance mutation) | **red** — 9 clauses, including the fixture-coverage one |
+| M3 | drop the kB → bytes scale | **red** — `test_the_kilobyte_fields_are_published_in_bytes` only |
+| M4 | place the samples with `offset_us` — the bug above | **red** — `test_the_samples_sit_inside_the_build_they_were_taken_during` |
+| M5 | add a file to the capture that nothing reads | **red** — `test_nothing_in_the_capture_is_written_and_never_read` |
+| M6 | report `trace.counters` as `counters` again | **red** — `test_the_result_counts_the_two_populations_apart` |
+| M7 | drop the store listing from the readers | **red** — the census, on `.size` and `element-slice.json` |
+| M8 | delete the "No host series" branch of the summary | **red** — `test_it_says_so_when_there_are_none` |
+| M9 | give a declared exemption a reader | **red** — `test_every_declared_exemption_is_still_unread` |
+| M10 | the fixture stops writing `plane2-resource.json` | **red** — `test_the_fixture_carries_every_file_the_layout_names` |
+| M11 | a reader that exits non-zero | **red** — `test_every_reader_ran_clean` |
+
+M4 and M11 are the two worth reading. M4 passed the first version of
+its own clause, which is §5 in miniature: "the samples are two seconds
+apart" is a proxy for "the samples are on the build's axis", and an
+interval is the same on any epoch. M11 passed too, until the clause
+stopped believing that a reader which returned `1` had read anything.
+
+### Filed rather than fixed
+
+- **`UX-452`** (contracts, Low): `run/chrome_trace.json`, the second
+  file the census found unread. The capture layout's own row already
+  says nothing on a read path requires it. Deleting a path from the
+  layout is a contract change with its own blast radius, so it is a row
+  rather than a line in this commit (§3.11).
+
+### Deviation from the Required Fix
+
+None on the three bullets. Two notes on scope:
+
+- The item's Motivation says the series reaches "no payload, no page,
+  no query". It still reaches no payload and no page — the destination
+  chosen is the trace, which the first bullet asks to be *decided*
+  rather than to be all three. The canned question library gains no
+  entry here; a query over these tracks is `trace_processor` work and
+  the dictionary rows are what a query needs first.
+- The census covers the whole `.bga/` tree of a fixture project, which
+  is one capture. A store with several snapshots in different states is
+  not exercised, and does not need to be for the question asked: a file
+  that no reader opens on a complete capture opens on no capture.
+
+### The suite
+
+```console
+$ make lint
+All checks passed!
+
+$ make test
+5442 passed, 28 skipped, 1 warning in 268.05s (0:04:28)
+```

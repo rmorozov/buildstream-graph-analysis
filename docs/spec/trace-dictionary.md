@@ -93,6 +93,19 @@ string — which is why a query matches with `glob` and not `=`:
 | track | unit | what it counts |
 |---|---|---|
 | `traced processes running` | `processes` | traced processes running at that instant; its peak equals the report's `max_concurrency` by construction |
+| `host memory available` | `bytes` | `MemAvailable` from the host's `/proc/meminfo`, in bytes |
+| `host swap free` | `bytes` | `SwapFree` from the host's `/proc/meminfo`, in bytes |
+| `host major faults` | `faults` | `pgmajfault` from `/proc/vmstat`, cumulative since boot |
+| `host pages swapped in` | `pages` | `pswpin` from `/proc/vmstat`, cumulative since boot |
+| `host pages swapped out` | `pages` | `pswpout` from `/proc/vmstat`, cumulative since boot |
+
+The first is Plane 2's, folded from the records. The five `host` tracks
+are `UX-378`'s sampler, read from `host-samples.jsonl` and placed on the
+build's own time axis by `UX-437` — the sampler runs whether or not the
+build was traced, so they are on every capture that has the file,
+including one with no Plane 2 at all. Three of them are **cumulative
+counters, not levels**: a query wanting the rate over a window has to
+difference them.
 
 ## Flows
 

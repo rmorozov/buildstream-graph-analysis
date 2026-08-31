@@ -55,12 +55,17 @@ def snapshot(tmp_path_factory):
         tmp_path_factory.mktemp("tracks"), per_element=PER_ELEMENT)
 
 
-def _population(snapshot):
-    """`(elements, pids)` from the fixture's own two logs."""
+def _population(snapshot, per_element=None):
+    """`(elements, pids)` from the fixture's own two logs.
+
+    `per_element` defaults to this file's own fixture density; `UX-445`
+    passes another so the same identity can be asked at a second point.
+    """
     with open(pathlib.Path(snapshot) / "run" / "graph.json",
               encoding="utf-8") as handle:
         elements = len(json.load(handle)["elements"])
-    return elements, elements * PER_ELEMENT
+    return elements, elements * (PER_ELEMENT if per_element is None
+                                 else per_element)
 
 
 class TestTheBoundIsInTheUnitTheViewerSpends:
@@ -95,6 +100,56 @@ class TestTheBoundIsInTheUnitTheViewerSpends:
             f"{size} B is no longer a small share of the "
             f"{view.TRACE_BUDGET_B} B bound, so this fixture no longer "
             f"shows the two quantities disagreeing")
+
+
+class TestTheCostModelIsLinearAndNotFittedAtOnePoint:
+    """`UX-445`, the half of it this repository can measure.
+
+    The clause above asserts the identity at **one** population, which
+    is enough to catch a second track per pid and not enough to say the
+    relationship is linear - and `TRACE_TRACK_BUDGET` is a threshold on
+    a line. Measured on the seeded scale run at four process densities:
+
+    ```text
+      per element   tracks   slices     bytes   render s   --planes 1
+                1    3,610    2,406   138,489        0.3        1,205
+                4    7,216    6,012   240,398        0.6        1,205
+               12   16,832   15,628   491,397        1.4        1,205
+               24   31,256   30,052   865,529        2.5        1,205
+    ```
+
+    `tracks = 2,407 + 1,202 x per_element` across all four, and Plane
+    1's own track count does not move at all - so `--planes 1` is a
+    3.0x reduction at one process an element and a **25.9x** reduction
+    at twenty-four. The narrowing control gets better exactly where the
+    reader needs it, which is a fact `UX-430` could not state from its
+    single point.
+
+    Two densities are exercised here rather than four: the identity is
+    what is being checked, and a third and fourth point cost a fixture
+    each without changing what a red would mean.
+    """
+
+    @pytest.mark.parametrize("per_element", [1, 8])
+    def test_the_identity_holds_at_another_density(
+            self, tmp_path_factory, tmp_path, per_element):
+        other = pages.scale_two_plane_snapshot(
+            tmp_path_factory.mktemp(f"tracks{per_element}"),
+            per_element=per_element)
+        whole = render(str(other), str(tmp_path / "both.pftrace"))
+        plane1 = render(str(other), str(tmp_path / "p1.pftrace"),
+                        planes=PLANE1_ONLY)
+        elements, pids = _population(other, per_element)
+        assert whole["tracks"] - plane1["tracks"] == elements + pids + 1, (
+            f"at {per_element} processes an element the emitter added "
+            f"{whole['tracks'] - plane1['tracks']} tracks for {elements} "
+            f"elements and {pids} pids - the cost model is not the line "
+            f"`TRACE_TRACK_BUDGET` is a threshold on")
+        assert plane1["tracks"] == 1_205, (
+            f"Plane 1 opened {plane1['tracks']} tracks at "
+            f"{per_element} processes an element; it does not depend on "
+            f"the process population, which is what makes `--planes 1` a "
+            f"reduction that grows with the density")
 
 
 class TestTheReaderCanAskForLess:
